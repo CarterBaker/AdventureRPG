@@ -5,12 +5,12 @@ import application.bootstrap.calendarpipeline.calendar.SeasonKeyframeStruct;
 import application.bootstrap.calendarpipeline.calendar.SeasonRangeStruct;
 import application.bootstrap.weatherpipeline.season.SeasonHandle;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
-import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class SeasonBlendBranch extends BranchPackage {
+class SeasonBlendSystem extends SystemPackage {
 
     /*
      * Resolves the calendar's own season date keyframes into a smoothly

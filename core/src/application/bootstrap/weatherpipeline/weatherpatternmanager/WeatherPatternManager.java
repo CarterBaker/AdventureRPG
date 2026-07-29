@@ -3,37 +3,43 @@ package application.bootstrap.weatherpipeline.weatherpatternmanager;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
      * The Determined Weather Pattern system. Streams jittered spatial cells
-     * around the player and tracks which weather each resolves to for the
-     * GPU weather map, drifting them with world rotation until they retire.
-     * Also resolves one pattern pinned to the player's own reference
-     * coordinate, never streamed, whose blended values drive temperature
-     * and local wind. Reevaluation cadence for both derives from the
-     * world's KPH-based drift speed rather than a fixed timer.
+     * around every active grid into one shared pool, keyed by world cell —
+     * two players close enough to share a cell see the exact same pattern —
+     * and drifts them with world rotation until they retire from every
+     * active grid's range. Also resolves one non-streamed pattern pinned to
+     * each active grid's own exact position, whose blended values drive
+     * that grid's own temperature and (for now, globally-shared) local
+     * wind. Reevaluation cadence derives from the world's KPH-based drift
+     * speed.
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
 
-    private static final long LOCAL_PATTERN_KEY = Long.MIN_VALUE;
+    private static final long LOCAL_PATTERN_KEY_SEED = Long.MIN_VALUE;
     private static final int LOCAL_PATTERN_SLOT = -1;
 
     private WeatherManager weatherManager;
     private WorldManager worldManager;
-    private TemperatureBranch temperatureBranch;
+    private WorldStreamManager worldStreamManager;
+    private TemperatureSystem temperatureSystem;
     private WeatherMapBufferSystem weatherMapBufferSystem;
 
     private int patternCellSizeChunks;
@@ -51,7 +57,8 @@ public class WeatherPatternManager extends ManagerPackage {
     private float fadeOutRate;
 
     private Long2ObjectOpenHashMap<WeatherPatternStruct> activePatterns;
-    private WeatherPatternStruct localPattern;
+    private Object2ObjectOpenHashMap<GridInstance, WeatherPatternStruct> gridToLocalPattern;
+    private Object2ObjectOpenHashMap<GridInstance, Float> gridToTemperature;
 
     private IntArrayList freeSlots;
 
@@ -83,6 +90,8 @@ public class WeatherPatternManager extends ManagerPackage {
         this.fadeOutRate = EngineSetting.WEATHER_PATTERN_FADE_OUT_RATE;
 
         this.activePatterns = new Long2ObjectOpenHashMap<>();
+        this.gridToLocalPattern = new Object2ObjectOpenHashMap<>();
+        this.gridToTemperature = new Object2ObjectOpenHashMap<>();
 
         this.freeSlots = new IntArrayList(maxActivePatternCount);
         for (int i = 0; i < maxActivePatternCount; i++)
@@ -97,7 +106,7 @@ public class WeatherPatternManager extends ManagerPackage {
         this.retiredThisFrame = new ObjectArrayList<>();
         this.refreshedThisFrame = new ObjectArrayList<>();
 
-        this.temperatureBranch = create(TemperatureBranch.class);
+        this.temperatureSystem = create(TemperatureSystem.class);
         this.weatherMapBufferSystem = create(WeatherMapBufferSystem.class);
     }
 
@@ -105,6 +114,7 @@ public class WeatherPatternManager extends ManagerPackage {
     protected void get() {
         this.weatherManager = get(WeatherManager.class);
         this.worldManager = get(WorldManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     @Override
@@ -122,23 +132,20 @@ public class WeatherPatternManager extends ManagerPackage {
         refreshedThisFrame.clear();
 
         if (!weatherManager.hasActiveWeatherPool()) {
-            localPattern = null;
+            gridToLocalPattern.clear();
+            gridToTemperature.clear();
             return;
         }
 
-        long referenceCoordinate = weatherManager.getReferenceCoordinate();
-        int playerChunkX = Coordinate2Long.unpackX(referenceCoordinate);
-        int playerChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
 
         advanceWorldDrift();
-        advanceWeatherReevaluation();
-        advanceLocalWeather(referenceCoordinate);
-        advanceIntensity();
+        advanceWeatherReevaluation(grids);
+        advanceLocalWeather(grids);
+        advanceIntensity(grids);
         advanceIntensitySmoothing();
-        advanceFadesAndRetire(playerChunkX, playerChunkZ);
-        streamInBudgeted(playerChunkX, playerChunkZ);
-
-        temperatureBranch.updateTemperature(localPattern);
+        advanceFadesAndRetire(grids);
+        streamInBudgeted(grids);
     }
 
     // Candidate cells sorted upwind-first, then nearest-first.
@@ -173,10 +180,31 @@ public class WeatherPatternManager extends ManagerPackage {
         return offsets;
     }
 
-    private void streamInBudgeted(int playerChunkX, int playerChunkZ) {
+    // Streaming \\
+
+    private void streamInBudgeted(ObjectArrayList<GridInstance> grids) {
 
         if (activePatterns.size() >= maxActivePatternCount)
             return;
+
+        Object[] elements = grids.elements();
+        int gridCount = grids.size();
+        int streamedTotal = 0;
+
+        for (int g = 0; g < gridCount
+                && streamedTotal < maxPatternsStreamedPerFrame
+                && activePatterns.size() < maxActivePatternCount; g++) {
+
+            long referenceCoordinate = ((GridInstance) elements[g]).getActiveChunkCoordinate();
+            int playerChunkX = Coordinate2Long.unpackX(referenceCoordinate);
+            int playerChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
+
+            streamedTotal += streamInForReference(
+                    playerChunkX, playerChunkZ, maxPatternsStreamedPerFrame - streamedTotal);
+        }
+    }
+
+    private int streamInForReference(int playerChunkX, int playerChunkZ, int budget) {
 
         int playerCellX = Math.floorDiv(playerChunkX, patternCellSizeChunks);
         int playerCellZ = Math.floorDiv(playerChunkZ, patternCellSizeChunks);
@@ -189,7 +217,7 @@ public class WeatherPatternManager extends ManagerPackage {
         int attempts = 0;
         int maxAttempts = candidateOffsets.size();
 
-        while (streamed < maxPatternsStreamedPerFrame
+        while (streamed < budget
                 && activePatterns.size() < maxActivePatternCount
                 && attempts < maxAttempts) {
 
@@ -222,9 +250,12 @@ public class WeatherPatternManager extends ManagerPackage {
             int wrappedHomeChunkX = Coordinate2Long.unpackX(wrappedHome);
             int wrappedHomeChunkZ = Coordinate2Long.unpackY(wrappedHome);
 
-            if (streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ, trueDistanceChunks))
+            if (streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ, trueDistanceChunks,
+                    playerChunkX, playerChunkZ))
                 streamed++;
         }
+
+        return streamed;
     }
 
     private int[] computeHomeJitter(long patternKey) {
@@ -242,13 +273,16 @@ public class WeatherPatternManager extends ManagerPackage {
         return new int[] { jitterX, jitterZ };
     }
 
-    private boolean streamInPattern(long patternKey, int homeChunkX, int homeChunkZ, double distanceChunks) {
+    private boolean streamInPattern(
+            long patternKey, int homeChunkX, int homeChunkZ, double distanceChunks,
+            int referenceChunkX, int referenceChunkZ) {
 
         if (freeSlots.isEmpty())
             return false;
 
         long chunkCoordinate = Coordinate2Long.pack(homeChunkX, homeChunkZ);
-        weatherManager.resolveWeatherBandTowardHorizon(bandScratch, chunkCoordinate);
+        long referenceCoordinate = Coordinate2Long.pack(referenceChunkX, referenceChunkZ);
+        weatherManager.resolveWeatherBandTowardHorizon(bandScratch, chunkCoordinate, referenceCoordinate);
 
         WeatherHandle weatherHandle = bandScratch.getPrimary();
         float spread = bandScratch.getIntensityFor(weatherHandle);
@@ -293,7 +327,43 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
-    private void advanceWeatherReevaluation() {
+    // Nearest Reference \\
+
+    private long resolveNearestReferenceCoordinate(int chunkX, int chunkZ, ObjectArrayList<GridInstance> grids) {
+
+        Object[] elements = grids.elements();
+        int count = grids.size();
+
+        if (count == 0)
+            return Coordinate2Long.pack(chunkX, chunkZ);
+
+        WorldHandle activeWorld = worldManager.getActiveWorld();
+        int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
+        int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
+
+        long nearest = ((GridInstance) elements[0]).getActiveChunkCoordinate();
+        double bestDistSq = Double.MAX_VALUE;
+
+        for (int i = 0; i < count; i++) {
+
+            long candidate = ((GridInstance) elements[i]).getActiveChunkCoordinate();
+            int refX = Coordinate2Long.unpackX(candidate);
+            int refZ = Coordinate2Long.unpackY(candidate);
+
+            double dx = WorldWrapUtility.wrappedDelta(chunkX, refX, worldWidthChunks);
+            double dz = WorldWrapUtility.wrappedDelta(chunkZ, refZ, worldHeightChunks);
+            double distSq = dx * dx + dz * dz;
+
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq;
+                nearest = candidate;
+            }
+        }
+
+        return nearest;
+    }
+
+    private void advanceWeatherReevaluation(ObjectArrayList<GridInstance> grids) {
 
         float deltaTime = internal.getDeltaTime();
         elapsedSimTime += deltaTime;
@@ -309,8 +379,11 @@ public class WeatherPatternManager extends ManagerPackage {
                 continue;
 
             long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
-            weatherManager.resolveWeatherBandTowardHorizonBiased(bandScratch, homeCoordinate,
-                    pattern.getWeatherHandle());
+            long referenceCoordinate = resolveNearestReferenceCoordinate(
+                    pattern.getHomeChunkX(), pattern.getHomeChunkZ(), grids);
+
+            weatherManager.resolveWeatherBandTowardHorizonBiased(
+                    bandScratch, homeCoordinate, referenceCoordinate, pattern.getWeatherHandle());
 
             WeatherHandle resolved = bandScratch.getPrimary();
 
@@ -328,47 +401,86 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Local Weather \\
 
-    private void advanceLocalWeather(long referenceCoordinate) {
+    private void advanceLocalWeather(ObjectArrayList<GridInstance> grids) {
 
         float deltaTime = internal.getDeltaTime();
+        temperatureSystem.advanceClock();
 
-        if (localPattern == null) {
+        Object[] elements = grids.elements();
+        int count = grids.size();
 
-            weatherManager.resolveWeatherBandTowardHorizon(bandScratch, referenceCoordinate);
-            WeatherHandle initial = bandScratch.getPrimary();
-            float spread = bandScratch.getIntensityFor(initial);
+        for (int i = 0; i < count; i++) {
 
-            this.localPattern = new WeatherPatternStruct(
-                    LOCAL_PATTERN_KEY,
-                    Coordinate2Long.unpackX(referenceCoordinate),
-                    Coordinate2Long.unpackY(referenceCoordinate),
-                    initial,
-                    DEFAULT_DRIFT_SPEED_SCALE,
-                    spread * initial.getCloudCoverage(),
-                    spread,
-                    LOCAL_PATTERN_SLOT);
+            GridInstance grid = (GridInstance) elements[i];
+            long referenceCoordinate = grid.getActiveChunkCoordinate();
 
-            localPattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(LOCAL_PATTERN_KEY));
-            return;
+            WeatherPatternStruct pattern = gridToLocalPattern.get(grid);
+
+            if (pattern == null) {
+
+                weatherManager.resolveWeatherBandTowardHorizon(bandScratch, referenceCoordinate, referenceCoordinate);
+                WeatherHandle initial = bandScratch.getPrimary();
+                float spread = bandScratch.getIntensityFor(initial);
+
+                long localPatternKey = LOCAL_PATTERN_KEY_SEED
+                        ^ (((long) System.identityHashCode(grid)) * 0x9E3779B97F4A7C15L);
+
+                pattern = new WeatherPatternStruct(
+                        localPatternKey,
+                        Coordinate2Long.unpackX(referenceCoordinate),
+                        Coordinate2Long.unpackY(referenceCoordinate),
+                        initial,
+                        DEFAULT_DRIFT_SPEED_SCALE,
+                        spread * initial.getCloudCoverage(),
+                        spread,
+                        LOCAL_PATTERN_SLOT);
+
+                pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(localPatternKey));
+                gridToLocalPattern.put(grid, pattern);
+
+            } else {
+
+                pattern.advanceWeatherTransition(deltaTime);
+
+                if (elapsedSimTime >= pattern.getNextReevaluationTime()) {
+
+                    weatherManager.resolveWeatherBandTowardHorizonBiased(
+                            bandScratch, referenceCoordinate, referenceCoordinate, pattern.getWeatherHandle());
+
+                    WeatherHandle resolved = bandScratch.getPrimary();
+
+                    if (resolved != pattern.getWeatherHandle())
+                        pattern.beginWeatherTransition(resolved);
+
+                    pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(pattern.getPatternKey()));
+                }
+            }
+
+            double visualTimeOfDay = grid.getLocationTimeStruct().getVisualTimeOfDay();
+            float temperature = temperatureSystem.computeTemperature(pattern, visualTimeOfDay);
+            gridToTemperature.put(grid, temperature);
         }
 
-        localPattern.advanceWeatherTransition(deltaTime);
-
-        if (elapsedSimTime < localPattern.getNextReevaluationTime())
-            return;
-
-        weatherManager.resolveWeatherBandTowardHorizonBiased(
-                bandScratch, referenceCoordinate, localPattern.getWeatherHandle());
-
-        WeatherHandle resolved = bandScratch.getPrimary();
-
-        if (resolved != localPattern.getWeatherHandle())
-            localPattern.beginWeatherTransition(resolved);
-
-        localPattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(LOCAL_PATTERN_KEY));
+        pruneStaleLocalPatterns(grids);
     }
 
-    private void advanceIntensity() {
+    private void pruneStaleLocalPatterns(ObjectArrayList<GridInstance> grids) {
+
+        if (gridToLocalPattern.isEmpty())
+            return;
+
+        var iterator = gridToLocalPattern.keySet().iterator();
+
+        while (iterator.hasNext()) {
+            GridInstance grid = iterator.next();
+            if (!grids.contains(grid)) {
+                iterator.remove();
+                gridToTemperature.remove(grid);
+            }
+        }
+    }
+
+    private void advanceIntensity(ObjectArrayList<GridInstance> grids) {
 
         intensityUpdateAccumulator += internal.getDeltaTime();
 
@@ -383,7 +495,10 @@ public class WeatherPatternManager extends ManagerPackage {
                 continue;
 
             long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
-            weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate);
+            long referenceCoordinate = resolveNearestReferenceCoordinate(
+                    pattern.getHomeChunkX(), pattern.getHomeChunkZ(), grids);
+
+            weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate, referenceCoordinate);
 
             float purity = bandScratch.getIntensityFor(pattern.getWeatherHandle());
 
@@ -424,7 +539,7 @@ public class WeatherPatternManager extends ManagerPackage {
         return clampedSeconds * jitterScale;
     }
 
-    private void advanceFadesAndRetire(int playerChunkX, int playerChunkZ) {
+    private void advanceFadesAndRetire(ObjectArrayList<GridInstance> grids) {
 
         float deltaTime = internal.getDeltaTime();
         LongArrayList toRemove = null;
@@ -433,16 +548,36 @@ public class WeatherPatternManager extends ManagerPackage {
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
+        Object[] gridElements = grids.elements();
+        int gridCount = grids.size();
+
         for (WeatherPatternStruct pattern : activePatterns.values()) {
 
-            double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), playerChunkX, worldWidthChunks);
-            double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), playerChunkZ, worldHeightChunks);
-            double distChunks = Math.sqrt(dx * dx + dz * dz);
+            double minDistChunks = 0.0;
 
-            pattern.setDistanceFromReferenceChunks((float) distChunks);
+            if (gridCount > 0) {
+
+                minDistChunks = Double.MAX_VALUE;
+
+                for (int g = 0; g < gridCount; g++) {
+
+                    long referenceCoordinate = ((GridInstance) gridElements[g]).getActiveChunkCoordinate();
+                    int refChunkX = Coordinate2Long.unpackX(referenceCoordinate);
+                    int refChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
+
+                    double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
+                    double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
+                    double distChunks = Math.sqrt(dx * dx + dz * dz);
+
+                    if (distChunks < minDistChunks)
+                        minDistChunks = distChunks;
+                }
+            }
+
+            pattern.setDistanceFromReferenceChunks((float) minDistChunks);
             pattern.updateBounds();
 
-            if (distChunks > outerRangeChunks && !pattern.isRetiring())
+            if (minDistChunks > outerRangeChunks && !pattern.isRetiring())
                 pattern.setRetiring(true);
 
             float alpha = pattern.getFadeAlpha();
@@ -529,47 +664,65 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Local Weather Accessible \\
 
+    private WeatherPatternStruct resolvePrimaryLocalPattern() {
+
+        if (!worldStreamManager.hasGrids())
+            return null;
+
+        return gridToLocalPattern.get(worldStreamManager.getGrids().get(0));
+    }
+
     public boolean hasLocalWeather() {
-        return localPattern != null;
+        return resolvePrimaryLocalPattern() != null;
     }
 
     public WeatherHandle getCurrentWeatherHandle() {
-        return localPattern != null ? localPattern.getWeatherHandle() : null;
+        WeatherPatternStruct pattern = resolvePrimaryLocalPattern();
+        return pattern != null ? pattern.getWeatherHandle() : null;
     }
 
     public float getWindSpeedScale() {
-        return localPattern != null
-                ? localPattern.getBlendedWindSpeedScale()
+        WeatherPatternStruct pattern = resolvePrimaryLocalPattern();
+        return pattern != null
+                ? pattern.getBlendedWindSpeedScale()
                 : EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE;
     }
 
     public float getWindTurbulenceScale() {
-        return localPattern != null
-                ? localPattern.getBlendedWindTurbulenceScale()
+        WeatherPatternStruct pattern = resolvePrimaryLocalPattern();
+        return pattern != null
+                ? pattern.getBlendedWindTurbulenceScale()
                 : EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE;
     }
 
     public float getHumidity() {
-        return localPattern != null
-                ? localPattern.getBlendedHumidity()
+        WeatherPatternStruct pattern = resolvePrimaryLocalPattern();
+        return pattern != null
+                ? pattern.getBlendedHumidity()
                 : EngineSetting.DEFAULT_WEATHER_HUMIDITY;
     }
 
     public float getVisibility() {
-        return localPattern != null
-                ? localPattern.getBlendedVisibility()
+        WeatherPatternStruct pattern = resolvePrimaryLocalPattern();
+        return pattern != null
+                ? pattern.getBlendedVisibility()
                 : EngineSetting.DEFAULT_WEATHER_VISIBILITY;
     }
 
     public float getFogDensityScale() {
-        return localPattern != null
-                ? localPattern.getBlendedFogDensityScale()
+        WeatherPatternStruct pattern = resolvePrimaryLocalPattern();
+        return pattern != null
+                ? pattern.getBlendedFogDensityScale()
                 : EngineSetting.DEFAULT_WEATHER_FOG_DENSITY_SCALE;
     }
 
-    public float getCurrentTemperature() {
+    public float getCurrentTemperature(GridInstance grid) {
+
         if (!weatherManager.hasActiveWeatherPool())
             return EngineSetting.DEFAULT_BASE_TEMPERATURE;
-        return temperatureBranch.getCurrentTemperature();
+
+        Float temperature = gridToTemperature.get(grid);
+
+        return temperature != null ? temperature : EngineSetting.DEFAULT_BASE_TEMPERATURE;
     }
 }

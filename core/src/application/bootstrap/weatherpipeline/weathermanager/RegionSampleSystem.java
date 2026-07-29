@@ -15,8 +15,9 @@ class RegionSampleSystem extends SystemPackage {
     /*
      * Resolves the regional weather noise field against a chance-weighted
      * pool, either at an exact chunk coordinate or blended toward a
-     * horizon-direction sample. Pure resolution logic — callers own their
-     * own state and smoothing on top of whatever this returns.
+     * horizon-direction sample. Pure resolution logic — every caller owns
+     * its own reference coordinate and any state/smoothing on top of
+     * whatever this returns.
      */
 
     private static final long NOISE_SEED = 0x51A5F00DCAFEBEEFL;
@@ -24,25 +25,10 @@ class RegionSampleSystem extends SystemPackage {
     private GlobalNoiseSystem globalNoiseSystem;
     private WorldManager worldManager;
 
-    private long referenceCoordinate;
-
-    @Override
-    protected void create() {
-        this.referenceCoordinate = Coordinate2Long.pack(0, 0);
-    }
-
     @Override
     protected void get() {
         this.globalNoiseSystem = get(GlobalNoiseSystem.class);
         this.worldManager = get(WorldManager.class);
-    }
-
-    void setReferenceCoordinate(long chunkCoordinate) {
-        this.referenceCoordinate = chunkCoordinate;
-    }
-
-    long getReferenceCoordinate() {
-        return referenceCoordinate;
     }
 
     float getEffectiveOuterRangeChunks() {

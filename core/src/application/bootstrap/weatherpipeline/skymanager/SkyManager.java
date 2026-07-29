@@ -14,14 +14,14 @@ public class SkyManager extends ManagerPackage {
 
     private ClockManager clockManager;
 
-    private SeasonBlendBranch seasonColorBlendBranch;
+    private SeasonBlendSystem seasonBlendSystem;
     private SkyColorSystem skyColorSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
-        this.seasonColorBlendBranch = create(SeasonBlendBranch.class);
+        this.seasonBlendSystem = create(SeasonBlendSystem.class);
         this.skyColorSystem = create(SkyColorSystem.class);
     }
 
@@ -32,8 +32,8 @@ public class SkyManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        seasonColorBlendBranch.assignData(clockManager.getCalendarHandle());
-        skyColorSystem.assignData(seasonColorBlendBranch);
+        seasonBlendSystem.assignData(clockManager.getCalendarHandle());
+        skyColorSystem.assignData(seasonBlendSystem);
     }
 
     /*
@@ -41,6 +41,6 @@ public class SkyManager extends ManagerPackage {
      * calendar. Call after ClockManager.switchWorld().
      */
     public void refreshCalendar() {
-        seasonColorBlendBranch.assignData(clockManager.getCalendarHandle());
+        seasonBlendSystem.assignData(clockManager.getCalendarHandle());
     }
 }

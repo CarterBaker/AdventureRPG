@@ -1,15 +1,11 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
-import application.bootstrap.entitypipeline.entity.EntityInstance;
-import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.WeatherChanceStruct;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
-import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -18,21 +14,21 @@ import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
-/*
- * Owns the weather definition palette and resolves the active biome/season
- * into a chance-weighted pool of candidate weathers. The actual noise-driven
- * resolution of that pool is driven by WeatherPatternManager — the single
- * "Determined Weather Pattern" system every downstream consumer (temperature,
- * wind, the GPU weather map) reads from.
- */
 public class WeatherManager extends ManagerPackage {
+
+    /*
+     * Owns the weather definition palette and resolves the active biome/
+     * season into a chance-weighted pool of candidate weathers. Band
+     * resolution is reference-agnostic — callers supply whichever chunk
+     * coordinate they want the "toward horizon" blend measured from, so
+     * WeatherPatternManager can resolve bands relative to any number of
+     * active grids rather than one pinned reference.
+     */
 
     private static final float NEXT_WEATHER_SUGGESTION_INFLUENCE = 1.5f;
 
     private ClockManager clockManager;
     private BiomeManager biomeManager;
-    private WindowManager windowManager;
-    private PlayerManager playerManager;
     private SeasonManager seasonManager;
 
     private GlobalNoiseSystem globalNoiseSystem;
@@ -43,8 +39,6 @@ public class WeatherManager extends ManagerPackage {
 
     private String lastSeason;
     private ObjectArrayList<WeatherPoolEntryStruct> activeWeatherPool;
-
-    // Base \\
 
     @Override
     protected void create() {
@@ -62,15 +56,11 @@ public class WeatherManager extends ManagerPackage {
     protected void get() {
         this.clockManager = get(ClockManager.class);
         this.biomeManager = get(BiomeManager.class);
-        this.windowManager = get(WindowManager.class);
-        this.playerManager = get(PlayerManager.class);
         this.seasonManager = get(SeasonManager.class);
     }
 
     @Override
     protected void update() {
-
-        updateReferenceCoordinate();
 
         String currentSeason = clockManager.getClockHandle().getCurrentSeason();
 
@@ -79,25 +69,6 @@ public class WeatherManager extends ManagerPackage {
             this.activeWeatherPool = resolveWeatherPool(activeBiome, currentSeason);
             this.lastSeason = currentSeason;
         }
-    }
-
-    // Reference Coordinate \\
-
-    private void updateReferenceCoordinate() {
-
-        WindowInstance mainWindow = windowManager.getMainWindow();
-
-        if (mainWindow == null)
-            return;
-
-        int windowID = mainWindow.getWindowID();
-
-        if (!playerManager.hasPlayerForWindow(windowID))
-            return;
-
-        EntityInstance player = playerManager.getPlayerForWindow(windowID);
-
-        setReferenceCoordinate(player.getWorldPositionStruct().getChunkCoordinate());
     }
 
     // Biome Selection \\
@@ -230,14 +201,6 @@ public class WeatherManager extends ManagerPackage {
         return getWeatherHandleFromWeatherID(getWeatherIDFromWeatherName(weatherName));
     }
 
-    public void setReferenceCoordinate(long chunkCoordinate) {
-        regionSampleSystem.setReferenceCoordinate(chunkCoordinate);
-    }
-
-    public long getReferenceCoordinate() {
-        return regionSampleSystem.getReferenceCoordinate();
-    }
-
     public boolean hasActiveWeatherPool() {
         return activeWeatherPool != null;
     }
@@ -265,25 +228,30 @@ public class WeatherManager extends ManagerPackage {
                     + "Callers should check hasActiveWeatherPool() first.");
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
-        int chunkY = Coordinate2Long.unpackY(chunkCoordinate);
+        int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
 
-        regionSampleSystem.resolveBand(out, chunkX, chunkY, activeWeatherPool);
+        regionSampleSystem.resolveBand(out, chunkX, chunkZ, activeWeatherPool);
     }
 
-    public void resolveWeatherBandTowardHorizon(WeatherBandStruct out, long homeChunkCoordinate) {
-        resolveWeatherBandTowardHorizonInternal(out, homeChunkCoordinate, null);
+    public void resolveWeatherBandTowardHorizon(
+            WeatherBandStruct out,
+            long homeChunkCoordinate,
+            long referenceChunkCoordinate) {
+        resolveWeatherBandTowardHorizonInternal(out, homeChunkCoordinate, referenceChunkCoordinate, null);
     }
 
     public void resolveWeatherBandTowardHorizonBiased(
             WeatherBandStruct out,
             long homeChunkCoordinate,
+            long referenceChunkCoordinate,
             WeatherHandle currentWeather) {
-        resolveWeatherBandTowardHorizonInternal(out, homeChunkCoordinate, currentWeather);
+        resolveWeatherBandTowardHorizonInternal(out, homeChunkCoordinate, referenceChunkCoordinate, currentWeather);
     }
 
     private void resolveWeatherBandTowardHorizonInternal(
             WeatherBandStruct out,
             long homeChunkCoordinate,
+            long referenceChunkCoordinate,
             WeatherHandle currentWeather) {
 
         if (activeWeatherPool == null)
@@ -293,9 +261,8 @@ public class WeatherManager extends ManagerPackage {
         int homeChunkX = Coordinate2Long.unpackX(homeChunkCoordinate);
         int homeChunkZ = Coordinate2Long.unpackY(homeChunkCoordinate);
 
-        long referenceCoordinate = getReferenceCoordinate();
-        int referenceChunkX = Coordinate2Long.unpackX(referenceCoordinate);
-        int referenceChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
+        int referenceChunkX = Coordinate2Long.unpackX(referenceChunkCoordinate);
+        int referenceChunkZ = Coordinate2Long.unpackY(referenceChunkCoordinate);
 
         ObjectArrayList<WeatherPoolEntryStruct> pool = currentWeather == null
                 ? activeWeatherPool

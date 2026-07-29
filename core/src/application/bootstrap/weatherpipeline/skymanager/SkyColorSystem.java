@@ -21,8 +21,9 @@ class SkyColorSystem extends SystemPackage {
      * fog tints from those same keyframes, and pushes all four into that
      * grid's own SkyColorData UBO every frame. Season tint and sunrise/
      * sunset color come from SeasonColorBlendBranch; current temperature
-     * comes from WeatherPatternManager and biases the sunrise/sunset glow
-     * and cloud color toward a cold or hot accent palette.
+     * is resolved per grid from WeatherPatternManager and biases the
+     * sunrise/sunset glow and cloud color toward a cold or hot accent
+     * palette independently for each grid.
      */
 
     private static final float[] NIGHT_TOP = {
@@ -39,7 +40,7 @@ class SkyColorSystem extends SystemPackage {
     private WeatherPatternManager weatherPatternManager;
     private ClockManager clockManager;
     private ClockHandle clockHandle;
-    private SeasonBlendBranch seasonColorBlendBranch;
+    private SeasonBlendSystem seasonBlendSystem;
 
     // Scratch — reused every push, never reallocated
     private final float[] temperatureAccentScratch = new float[3];
@@ -71,8 +72,8 @@ class SkyColorSystem extends SystemPackage {
 
     // Assignment \\
 
-    void assignData(SeasonBlendBranch seasonColorBlendBranch) {
-        this.seasonColorBlendBranch = seasonColorBlendBranch;
+    void assignData(SeasonBlendSystem seasonBlendBranch) {
+        this.seasonBlendSystem = seasonBlendBranch;
     }
 
     // Update \\
@@ -80,14 +81,15 @@ class SkyColorSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        resolveTemperatureAccent(weatherPatternManager.getCurrentTemperature());
-
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
         Object[] elements = grids.elements();
         int size = grids.size();
 
-        for (int i = 0; i < size; i++)
-            pushData((GridInstance) elements[i]);
+        for (int i = 0; i < size; i++) {
+            GridInstance grid = (GridInstance) elements[i];
+            resolveTemperatureAccent(weatherPatternManager.getCurrentTemperature(grid));
+            pushData(grid);
+        }
     }
 
     // Temperature Accent \\
@@ -124,7 +126,7 @@ class SkyColorSystem extends SystemPackage {
         blend2(horizonScratch, NIGHT_BOTTOM, cycleScratch[1], DAY_BOTTOM, dayF);
         blend2(zenithScratch, NIGHT_TOP, cycleScratch[1], DAY_TOP, dayF);
 
-        Vector3 seasonTint = seasonColorBlendBranch.getTintColorForYearProgress(yearProgress);
+        Vector3 seasonTint = seasonBlendSystem.getTintColorForYearProgress(yearProgress);
         float dailySeasonStr = dailyRandom * dailyVar;
         float seasonStrength = dayF * dailySeasonStr * EngineSetting.SKY_SEASONAL_STRENGTH_SCALE;
         float tintScale = EngineSetting.SKY_SEASONAL_TINT_OFFSET_SCALE;
@@ -147,7 +149,7 @@ class SkyColorSystem extends SystemPackage {
         addScaled(horizonScratch, offsetScratch, dailyStrength);
         addScaled(zenithScratch, offsetScratch, dailyStrength);
 
-        Vector3 seasonSunrise = seasonColorBlendBranch.getSunriseColorForYearProgress(yearProgress);
+        Vector3 seasonSunrise = seasonBlendSystem.getSunriseColorForYearProgress(yearProgress);
         sunriseScratch[0] = seasonSunrise.x;
         sunriseScratch[1] = seasonSunrise.y;
         sunriseScratch[2] = seasonSunrise.z;
