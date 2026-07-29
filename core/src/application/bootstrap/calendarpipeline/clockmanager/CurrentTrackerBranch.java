@@ -24,7 +24,7 @@ class CurrentTrackerBranch extends BranchPackage {
     private double LATITUDE_CURVE_POWER;
 
     // Seasonal Bending — safety bounds only; the shift amount itself comes
-    // from SeasonBlendBranch's data-driven day length.
+    // from the calendar's own data-driven day length.
     private double SUNRISE_MIN;
     private double SUNRISE_MAX;
     private double SUNSET_MIN;
@@ -35,7 +35,6 @@ class CurrentTrackerBranch extends BranchPackage {
 
     // Calendar
     private CalendarHandle calendarHandle;
-    private SeasonBlendBranch seasonBlendBranch;
 
     // Per-world
     private int daysPerDay;
@@ -70,10 +69,8 @@ class CurrentTrackerBranch extends BranchPackage {
     void assignData(
             CalendarHandle calendarHandle,
             ClockHandle clockHandle,
-            float axialTilt,
-            SeasonBlendBranch seasonBlendBranch) {
+            float axialTilt) {
         this.clockHandle = clockHandle;
-        this.seasonBlendBranch = seasonBlendBranch;
         setCalendarHandle(calendarHandle);
         setAxialTilt(axialTilt);
     }
@@ -157,7 +154,7 @@ class CurrentTrackerBranch extends BranchPackage {
 
     double calculateVisualTimeOfDay(double rawTimeOfDay, double yearProgress, double latitudeFactor) {
 
-        float seasonDayLength = seasonBlendBranch.getDayLengthForYearProgress(yearProgress);
+        float seasonDayLength = calendarHandle.getDayLengthForYearProgress(yearProgress);
         double dayLength = applyLatitudeBend(seasonDayLength, latitudeFactor);
         double shift = (dayLength - 0.5) * 0.5;
 

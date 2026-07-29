@@ -1,16 +1,17 @@
+// RegionSampleSystem.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
-import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.random.WeightedChanceUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class RegionSampleBranch extends BranchPackage {
+class RegionSampleSystem extends SystemPackage {
 
     /*
      * Owns the coherent regional weather noise field and resolves it against

@@ -39,7 +39,7 @@ class SkyColorSystem extends SystemPackage {
     private WeatherPatternManager weatherPatternManager;
     private ClockManager clockManager;
     private ClockHandle clockHandle;
-    private SeasonColorBlendBranch seasonColorBlendBranch;
+    private SeasonBlendBranch seasonColorBlendBranch;
 
     // Scratch — reused every push, never reallocated
     private final float[] temperatureAccentScratch = new float[3];
@@ -71,7 +71,7 @@ class SkyColorSystem extends SystemPackage {
 
     // Assignment \\
 
-    void assignData(SeasonColorBlendBranch seasonColorBlendBranch) {
+    void assignData(SeasonBlendBranch seasonColorBlendBranch) {
         this.seasonColorBlendBranch = seasonColorBlendBranch;
     }
 

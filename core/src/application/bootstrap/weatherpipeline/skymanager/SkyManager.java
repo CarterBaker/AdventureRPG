@@ -14,14 +14,14 @@ public class SkyManager extends ManagerPackage {
 
     private ClockManager clockManager;
 
-    private SeasonColorBlendBranch seasonColorBlendBranch;
+    private SeasonBlendBranch seasonColorBlendBranch;
     private SkyColorSystem skyColorSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
-        this.seasonColorBlendBranch = create(SeasonColorBlendBranch.class);
+        this.seasonColorBlendBranch = create(SeasonBlendBranch.class);
         this.skyColorSystem = create(SkyColorSystem.class);
     }
 

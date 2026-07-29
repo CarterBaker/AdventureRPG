@@ -126,4 +126,8 @@ public class CalendarHandle extends HandlePackage {
     public SeasonKeyframeStruct getSeasonKeyframes() {
         return calendarData.getSeasonKeyframes();
     }
+
+    public float getDayLengthForYearProgress(double yearProgress) {
+        return calendarData.getDayLengthForYearProgress(yearProgress);
+    }
 }

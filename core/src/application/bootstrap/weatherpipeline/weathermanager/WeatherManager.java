@@ -36,7 +36,7 @@ public class WeatherManager extends ManagerPackage {
     private SeasonManager seasonManager;
 
     private GlobalNoiseSystem globalNoiseSystem;
-    private RegionSampleBranch regionSampleBranch;
+    private RegionSampleSystem regionSampleSystem;
 
     private Object2ShortOpenHashMap<String> weatherName2WeatherID;
     private Short2ObjectOpenHashMap<WeatherHandle> weatherID2WeatherHandle;
@@ -53,7 +53,7 @@ public class WeatherManager extends ManagerPackage {
         this.weatherID2WeatherHandle = new Short2ObjectOpenHashMap<>();
 
         this.globalNoiseSystem = create(GlobalNoiseSystem.class);
-        this.regionSampleBranch = create(RegionSampleBranch.class);
+        this.regionSampleSystem = create(RegionSampleSystem.class);
 
         create(WeatherLoader.class);
     }
@@ -231,11 +231,11 @@ public class WeatherManager extends ManagerPackage {
     }
 
     public void setReferenceCoordinate(long chunkCoordinate) {
-        regionSampleBranch.setReferenceCoordinate(chunkCoordinate);
+        regionSampleSystem.setReferenceCoordinate(chunkCoordinate);
     }
 
     public long getReferenceCoordinate() {
-        return regionSampleBranch.getReferenceCoordinate();
+        return regionSampleSystem.getReferenceCoordinate();
     }
 
     public boolean hasActiveWeatherPool() {
@@ -243,11 +243,11 @@ public class WeatherManager extends ManagerPackage {
     }
 
     public float getEffectiveOuterRangeChunks() {
-        return regionSampleBranch.getEffectiveOuterRangeChunks();
+        return regionSampleSystem.getEffectiveOuterRangeChunks();
     }
 
     public float getEffectiveNearRangeChunks() {
-        return regionSampleBranch.getEffectiveNearRangeChunks();
+        return regionSampleSystem.getEffectiveNearRangeChunks();
     }
 
     public float getWorldDriftChunksPerSecondX() {
@@ -267,7 +267,7 @@ public class WeatherManager extends ManagerPackage {
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkY = Coordinate2Long.unpackY(chunkCoordinate);
 
-        regionSampleBranch.resolveBand(out, chunkX, chunkY, activeWeatherPool);
+        regionSampleSystem.resolveBand(out, chunkX, chunkY, activeWeatherPool);
     }
 
     public void resolveWeatherBandTowardHorizon(WeatherBandStruct out, long homeChunkCoordinate) {
@@ -301,7 +301,7 @@ public class WeatherManager extends ManagerPackage {
                 ? activeWeatherPool
                 : buildBiasedPool(currentWeather);
 
-        regionSampleBranch.resolveBandTowardHorizon(
+        regionSampleSystem.resolveBandTowardHorizon(
                 out, homeChunkX, homeChunkZ, referenceChunkX, referenceChunkZ, pool);
     }
 }

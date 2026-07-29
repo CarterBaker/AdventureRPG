@@ -40,7 +40,6 @@ public class ClockManager extends ManagerPackage {
     private MonthTrackerBranch monthTracker;
     private YearTrackerBranch yearTracker;
     private ClockBufferSystem internalBuffer;
-    private SeasonBlendBranch seasonBlendBranch;
 
     // Clock
     private CalendarHandle calendarHandle;
@@ -58,7 +57,6 @@ public class ClockManager extends ManagerPackage {
         this.monthTracker = create(MonthTrackerBranch.class);
         this.yearTracker = create(YearTrackerBranch.class);
         this.internalBuffer = create(ClockBufferSystem.class);
-        this.seasonBlendBranch = create(SeasonBlendBranch.class);
 
         // Clock
         this.clockHandle = create(ClockHandle.class);
@@ -97,12 +95,10 @@ public class ClockManager extends ManagerPackage {
     // Clock \\
 
     private void wireData(WorldHandle activeWorld) {
-        seasonBlendBranch.assignData(calendarHandle);
         currentTracker.assignData(
                 calendarHandle,
                 clockHandle,
-                activeWorld.getAxialTilt(),
-                seasonBlendBranch);
+                activeWorld.getAxialTilt());
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
@@ -179,7 +175,6 @@ public class ClockManager extends ManagerPackage {
         currentTracker.setCalendarHandle(calendarHandle);
         currentTracker.setAxialTilt(newWorld.getAxialTilt());
 
-        seasonBlendBranch.assignData(calendarHandle);
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
@@ -193,6 +188,16 @@ public class ClockManager extends ManagerPackage {
 
     public CalendarHandle getCalendarHandle() {
         return calendarHandle;
+    }
+
+    /*
+     * Day length for the active calendar at the given point in the year —
+     * backed by CalendarHandle.getDayLengthForYearProgress(). Exposed here
+     * so any pipeline needing it (weather included) reads it directly
+     * rather than plumbing a CalendarHandle reference through itself.
+     */
+    public float getDayLengthForYearProgress(double yearProgress) {
+        return calendarHandle.getDayLengthForYearProgress(yearProgress);
     }
 
     /*

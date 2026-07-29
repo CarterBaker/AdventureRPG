@@ -7,18 +7,17 @@ import application.bootstrap.weatherpipeline.season.SeasonHandle;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
-import engine.util.mathematics.extras.SeasonBlendResultStruct;
-import engine.util.mathematics.extras.SeasonBlendUtility;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class SeasonColorBlendBranch extends BranchPackage {
+class SeasonBlendBranch extends BranchPackage {
 
     /*
      * Resolves the calendar's own season date keyframes into a smoothly
      * blended sky tint and sunrise color for the current point in the
-     * year. Keyframe centers come from CalendarHandle.getSeasonKeyframes();
-     * the color values themselves come from each season's own SeasonHandle.
+     * year. Keyframe centers and blend resolution come from
+     * CalendarHandle.getSeasonKeyframes(); the color values themselves
+     * come from each season's own SeasonHandle.
      */
 
     private SeasonManager seasonManager;
@@ -30,15 +29,13 @@ class SeasonColorBlendBranch extends BranchPackage {
     private double lastYearProgress;
     private final Vector3 lastTintColor = new Vector3();
     private final Vector3 lastSunriseColor = new Vector3();
-    private float RECOMPUTE_EPSILON;
 
-    private final SeasonBlendResultStruct blendResult = new SeasonBlendResultStruct();
+    private final int[] blendIndexScratch = new int[2];
 
     // Internal \\
 
     @Override
     protected void create() {
-        this.RECOMPUTE_EPSILON = EngineSetting.SEASON_BLEND_RECOMPUTE_EPSILON;
         this.lastYearProgress = -1.0;
         this.lastTintColor.set(1f, 1f, 1f);
         this.lastSunriseColor.set(1f, 1f, 1f);
@@ -98,32 +95,48 @@ class SeasonColorBlendBranch extends BranchPackage {
             return;
         }
 
-        double t = SeasonBlendUtility.wrapFraction(yearProgress);
+        double t = wrapFraction(yearProgress);
 
         if (lastYearProgress >= 0.0
-                && Math.abs(SeasonBlendUtility.wrappedDiff(t, lastYearProgress)) < RECOMPUTE_EPSILON)
+                && Math.abs(wrappedDiff(t, lastYearProgress)) < EngineSetting.SEASON_BLEND_RECOMPUTE_EPSILON)
             return;
 
-        SeasonBlendUtility.resolve(keyframes.getCenters(), count, t, blendResult);
+        double eased = keyframes.resolveEasedT(yearProgress, blendIndexScratch);
 
-        int prevIndex = blendResult.getPrevIndex();
-        int nextIndex = blendResult.getNextIndex();
-        double eased = blendResult.getEasedT();
+        int prevIndex = blendIndexScratch[0];
+        int nextIndex = blendIndexScratch[1];
 
         Vector3 prevTint = seasonTintColors[prevIndex];
         Vector3 nextTint = seasonTintColors[nextIndex];
         lastTintColor.set(
-                SeasonBlendUtility.lerp(prevTint.x, nextTint.x, eased),
-                SeasonBlendUtility.lerp(prevTint.y, nextTint.y, eased),
-                SeasonBlendUtility.lerp(prevTint.z, nextTint.z, eased));
+                lerp(prevTint.x, nextTint.x, eased),
+                lerp(prevTint.y, nextTint.y, eased),
+                lerp(prevTint.z, nextTint.z, eased));
 
         Vector3 prevSunrise = seasonSunriseColors[prevIndex];
         Vector3 nextSunrise = seasonSunriseColors[nextIndex];
         lastSunriseColor.set(
-                SeasonBlendUtility.lerp(prevSunrise.x, nextSunrise.x, eased),
-                SeasonBlendUtility.lerp(prevSunrise.y, nextSunrise.y, eased),
-                SeasonBlendUtility.lerp(prevSunrise.z, nextSunrise.z, eased));
+                lerp(prevSunrise.x, nextSunrise.x, eased),
+                lerp(prevSunrise.y, nextSunrise.y, eased),
+                lerp(prevSunrise.z, nextSunrise.z, eased));
 
         lastYearProgress = t;
+    }
+
+    private double wrapFraction(double value) {
+        double wrapped = value % 1.0;
+        if (wrapped < 0)
+            wrapped += 1.0;
+        return wrapped;
+    }
+
+    private double wrappedDiff(double a, double b) {
+        double d = a - b;
+        d = ((d + 0.5) % 1.0 + 1.0) % 1.0 - 0.5;
+        return d;
+    }
+
+    private float lerp(float a, float b, double t) {
+        return (float) (a + (b - a) * t);
     }
 }
