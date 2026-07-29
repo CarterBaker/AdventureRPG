@@ -28,7 +28,10 @@ public class WeatherPatternManager extends ManagerPackage {
      * each active grid's own exact position, whose blended values drive
      * that grid's own temperature and (for now, globally-shared) local
      * wind. Reevaluation cadence derives from the world's KPH-based drift
-     * speed.
+     * speed. The streamed pool is a fixed set of pre-allocated
+     * WeatherPatternStruct slots — freeSlots/pendingFreeSlots track which
+     * are idle, never which are allocated, since none ever are or need to
+     * be.
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
@@ -60,7 +63,9 @@ public class WeatherPatternManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<GridInstance, WeatherPatternStruct> gridToLocalPattern;
     private Object2ObjectOpenHashMap<GridInstance, Float> gridToTemperature;
 
+    private WeatherPatternStruct[] patternPool;
     private IntArrayList freeSlots;
+    private IntArrayList pendingFreeSlots;
 
     private ObjectArrayList<int[]> candidateOffsets;
     private int scanCursor;
@@ -94,8 +99,13 @@ public class WeatherPatternManager extends ManagerPackage {
         this.gridToTemperature = new Object2ObjectOpenHashMap<>();
 
         this.freeSlots = new IntArrayList(maxActivePatternCount);
-        for (int i = 0; i < maxActivePatternCount; i++)
+        this.pendingFreeSlots = new IntArrayList(maxActivePatternCount);
+        this.patternPool = new WeatherPatternStruct[maxActivePatternCount];
+
+        for (int i = 0; i < maxActivePatternCount; i++) {
             freeSlots.add(i);
+            patternPool[i] = new WeatherPatternStruct(i);
+        }
 
         this.scanCursor = 0;
 
@@ -130,6 +140,11 @@ public class WeatherPatternManager extends ManagerPackage {
         streamedInThisFrame.clear();
         retiredThisFrame.clear();
         refreshedThisFrame.clear();
+
+        if (!pendingFreeSlots.isEmpty()) {
+            freeSlots.addAll(pendingFreeSlots);
+            pendingFreeSlots.clear();
+        }
 
         if (!weatherManager.hasActiveWeatherPool()) {
             gridToLocalPattern.clear();
@@ -289,11 +304,10 @@ public class WeatherPatternManager extends ManagerPackage {
         float intensity = spread * weatherHandle.getCloudCoverage();
 
         int slot = freeSlots.removeInt(freeSlots.size() - 1);
+        WeatherPatternStruct pattern = patternPool[slot];
 
-        WeatherPatternStruct pattern = new WeatherPatternStruct(
-                patternKey, homeChunkX, homeChunkZ, weatherHandle,
-                DEFAULT_DRIFT_SPEED_SCALE, intensity, spread, slot);
-
+        pattern.activate(patternKey, homeChunkX, homeChunkZ, weatherHandle, DEFAULT_DRIFT_SPEED_SCALE, intensity,
+                spread);
         pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
         pattern.setDistanceFromReferenceChunks((float) distanceChunks);
         pattern.updateBounds();
@@ -425,15 +439,15 @@ public class WeatherPatternManager extends ManagerPackage {
                 long localPatternKey = LOCAL_PATTERN_KEY_SEED
                         ^ (((long) System.identityHashCode(grid)) * 0x9E3779B97F4A7C15L);
 
-                pattern = new WeatherPatternStruct(
+                pattern = new WeatherPatternStruct(LOCAL_PATTERN_SLOT);
+                pattern.activate(
                         localPatternKey,
                         Coordinate2Long.unpackX(referenceCoordinate),
                         Coordinate2Long.unpackY(referenceCoordinate),
                         initial,
                         DEFAULT_DRIFT_SPEED_SCALE,
                         spread * initial.getCloudCoverage(),
-                        spread,
-                        LOCAL_PATTERN_SLOT);
+                        spread);
 
                 pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(localPatternKey));
                 gridToLocalPattern.put(grid, pattern);
@@ -610,7 +624,7 @@ public class WeatherPatternManager extends ManagerPackage {
         if (pattern == null)
             return;
 
-        freeSlots.add(pattern.getSlot());
+        pendingFreeSlots.add(pattern.getSlot());
         retiredThisFrame.add(pattern);
     }
 

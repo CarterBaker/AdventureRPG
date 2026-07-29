@@ -8,33 +8,28 @@ import engine.util.mathematics.vectors.Vector4;
 public class WeatherPatternStruct extends StructPackage {
 
     /*
-     * One persistent weather system — either a spatial cell streamed for
-     * the visual weather map, or the single instance pinned to the
-     * player's own reference coordinate for temperature and wind. Which
-     * clouds a spatial pattern draws is read directly off
-     * getWeatherHandle().getCloudEntries() — no separate per-pattern cloud
-     * list is kept here. getIntensity() folds in a transition damper so a
-     * weather swap reads as thickening/clearing rather than an instant pop
-     * for cloud coverage. The getBlended*() family instead cross-fades a
-     * raw previous/current weather value directly across the same window —
-     * the right choice for a number like temperature or wind speed, where
-     * dipping toward zero would read as a calm/cold snap that never happened.
+     * One pool-owned weather pattern slot — either a spatial cell streamed
+     * for the visual weather map, or the single instance pinned to a
+     * grid's own reference coordinate for temperature and wind. Every
+     * slot is constructed once by WeatherPatternManager and held for the
+     * engine's lifetime; activate() recycles a slot for a new pattern
+     * instead of a fresh instance ever being built or discarded.
      */
 
     private static final float TRANSITION_DIP_STRENGTH = 0.6f;
 
-    private final long patternKey;
+    private final int slot;
+
+    private long patternKey;
 
     private WeatherHandle weatherHandle;
     private WeatherHandle previousWeatherHandle;
     private float transitionT;
 
-    private final int homeChunkX;
-    private final int homeChunkZ;
+    private int homeChunkX;
+    private int homeChunkZ;
 
     private float driftSpeedScale;
-
-    private final int slot;
 
     private double driftChunkX;
     private double driftChunkZ;
@@ -53,15 +48,20 @@ public class WeatherPatternStruct extends StructPackage {
     private float distanceFromReferenceChunks;
     private final Vector4 bounds = new Vector4();
 
-    public WeatherPatternStruct(
+    public WeatherPatternStruct(int slot) {
+        this.slot = slot;
+    }
+
+    // Pool Lifecycle \\
+
+    public void activate(
             long patternKey,
             int homeChunkX,
             int homeChunkZ,
             WeatherHandle weatherHandle,
             float driftSpeedScale,
             float intensity,
-            float spread,
-            int slot) {
+            float spread) {
 
         this.patternKey = patternKey;
         this.weatherHandle = weatherHandle;
@@ -70,13 +70,15 @@ public class WeatherPatternStruct extends StructPackage {
         this.homeChunkX = homeChunkX;
         this.homeChunkZ = homeChunkZ;
         this.driftSpeedScale = driftSpeedScale;
-        this.slot = slot;
+        this.driftChunkX = 0.0;
+        this.driftChunkZ = 0.0;
         this.fadeAlpha = 0f;
         this.retiring = false;
         this.intensity = intensity;
         this.targetIntensity = intensity;
         this.spread = spread;
         this.targetSpread = spread;
+        this.distanceFromReferenceChunks = 0f;
     }
 
     public void advanceDrift(double deltaChunkX, double deltaChunkZ) {
