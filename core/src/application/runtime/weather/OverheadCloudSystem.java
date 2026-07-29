@@ -8,7 +8,6 @@ import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.world.WorldSystem;
@@ -19,16 +18,15 @@ public class OverheadCloudSystem extends SystemPackage {
 
     /*
      * Renders the overhead volumetric cloud box each frame — a single
-     * shared box mesh, drawn once per near-range WeatherMapData entry via
-     * instancing. gl_InstanceID indexes directly into the same UBO slots
-     * WeatherMapBufferSystem already wrote (nearest-first, so the leading
-     * N slots are always exactly the near-range entries) — no separate
-     * per-instance CPU buffer exists or is needed. Composites into the
-     * world scene beneath the sky dome via FboRenderSystem, at
-     * LAYER_OVERHEAD, filling the gap the skybox's own distant cloud
-     * sampling leaves directly above the player. ensureFboRendered() keeps
-     * the FBO clearing correctly on a clear-sky frame even when zero
-     * instances are drawn.
+     * shared box mesh, drawn once per this grid's own near-range
+     * WeatherMapData entry via instancing. gl_InstanceID indexes directly
+     * into this grid's own weather map UBO slots (nearest-first, so the
+     * leading N slots are always exactly the near-range entries for this
+     * window). Composites into the world scene beneath the sky dome via
+     * FboRenderSystem, at LAYER_OVERHEAD, filling the gap the skybox's own
+     * distant cloud sampling leaves directly above the player.
+     * ensureFboRendered() keeps the FBO clearing correctly on a clear-sky
+     * frame even when zero instances are drawn.
      */
 
     // Internal
@@ -37,7 +35,6 @@ public class OverheadCloudSystem extends SystemPackage {
     private RenderManager renderManager;
     private FboManager fboManager;
     private FboRenderSystem fboRenderSystem;
-    private WeatherPatternManager weatherPatternManager;
     private WorldSystem worldSystem;
 
     // Render Target
@@ -53,7 +50,6 @@ public class OverheadCloudSystem extends SystemPackage {
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FboManager.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
-        this.weatherPatternManager = get(WeatherPatternManager.class);
         this.worldSystem = get(WorldSystem.class);
     }
 
@@ -72,13 +68,15 @@ public class OverheadCloudSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        bindGridLightingData();
+        GridInstance grid = worldSystem.getGridInstance();
+
+        bindGridLightingData(grid);
 
         // Registers the FBO for this frame's clear/bind even if zero
         // instances end up drawn — see class doc comment.
         renderManager.ensureFboRendered(overheadFbo, context.getWindow());
 
-        int instanceCount = weatherPatternManager.getNearRangeWeatherMapEntryCount();
+        int instanceCount = grid != null ? grid.getWeatherMapNearRangeCount() : 0;
 
         if (instanceCount > 0)
             renderManager.pushRenderCall(cloudBoxModel, overheadFbo, 0, instanceCount, context.getWindow());
@@ -88,9 +86,7 @@ public class OverheadCloudSystem extends SystemPackage {
 
     // Grid Lighting \\
 
-    private void bindGridLightingData() {
-
-        GridInstance grid = worldSystem.getGridInstance();
+    private void bindGridLightingData(GridInstance grid) {
 
         if (grid == null)
             return;
@@ -101,6 +97,7 @@ public class OverheadCloudSystem extends SystemPackage {
         mat.setUBO(grid.getSkyColorUBO());
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());
+        mat.setUBO(grid.getWeatherMapUBO());
     }
 
     // Accessible \\

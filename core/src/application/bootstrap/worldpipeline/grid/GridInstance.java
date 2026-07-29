@@ -26,10 +26,11 @@ public class GridInstance extends InstancePackage {
      * The active spatial grid for a single focal entity — one per window.
      * Owns the load order, slot handles, active chunks, active mega chunks,
      * pending load/unload requests, and the render queues for this grid.
-     * clockInstance and the Time/Sun/Moon/Sky UBO instances are all handed
-     * to this grid by GridBuildSystem — clockInstance from ClockManager,
-     * the UBOs cloned from their shared base handles — so every window
-     * tracks its own location's time, sun, moon, and sky independently.
+     * clockInstance and the Time/Sun/Moon/Sky/Weather-Map UBO instances are
+     * all handed to this grid by GridBuildSystem — clockInstance from
+     * ClockManager, the UBOs cloned from their shared base handles — so
+     * every window tracks its own location's time, sun, moon, sky, and
+     * weather independently.
      */
 
     // Focal
@@ -57,6 +58,10 @@ public class GridInstance extends InstancePackage {
     private UBOInstance sunLightUBO;
     private UBOInstance moonLightUBO;
     private UBOInstance skyColorUBO;
+
+    // Weather Map
+    private UBOInstance weatherMapUBO;
+    private int weatherMapNearRangeCount;
 
     // Chunk State
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
@@ -90,7 +95,8 @@ public class GridInstance extends InstancePackage {
             UBOInstance timeDataUBO,
             UBOInstance sunLightUBO,
             UBOInstance moonLightUBO,
-            UBOInstance skyColorUBO) {
+            UBOInstance skyColorUBO,
+            UBOInstance weatherMapUBO) {
 
         // Focal
         this.focalEntity = focalEntity;
@@ -117,6 +123,10 @@ public class GridInstance extends InstancePackage {
         this.sunLightUBO = sunLightUBO;
         this.moonLightUBO = moonLightUBO;
         this.skyColorUBO = skyColorUBO;
+
+        // Weather Map
+        this.weatherMapUBO = weatherMapUBO;
+        this.weatherMapNearRangeCount = 0;
 
         // Chunk State
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
@@ -293,6 +303,18 @@ public class GridInstance extends InstancePackage {
 
     public UBOInstance getSkyColorUBO() {
         return skyColorUBO;
+    }
+
+    public UBOInstance getWeatherMapUBO() {
+        return weatherMapUBO;
+    }
+
+    public int getWeatherMapNearRangeCount() {
+        return weatherMapNearRangeCount;
+    }
+
+    public void setWeatherMapNearRangeCount(int weatherMapNearRangeCount) {
+        this.weatherMapNearRangeCount = weatherMapNearRangeCount;
     }
 
     public Long2ObjectLinkedOpenHashMap<ChunkInstance> getActiveChunks() {

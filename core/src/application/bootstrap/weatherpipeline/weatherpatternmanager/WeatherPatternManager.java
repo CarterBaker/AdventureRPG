@@ -43,7 +43,6 @@ public class WeatherPatternManager extends ManagerPackage {
     private WorldManager worldManager;
     private WorldStreamManager worldStreamManager;
     private TemperatureSystem temperatureSystem;
-    private WeatherMapBufferSystem weatherMapBufferSystem;
 
     private int patternCellSizeChunks;
     private float outerRangeChunks;
@@ -74,6 +73,7 @@ public class WeatherPatternManager extends ManagerPackage {
     private float intensityUpdateAccumulator;
 
     private final WeatherBandStruct bandScratch = new WeatherBandStruct();
+    private final int[] homeJitterScratch = new int[2];
 
     private ObjectArrayList<WeatherPatternStruct> streamedInThisFrame;
     private ObjectArrayList<WeatherPatternStruct> retiredThisFrame;
@@ -117,7 +117,7 @@ public class WeatherPatternManager extends ManagerPackage {
         this.refreshedThisFrame = new ObjectArrayList<>();
 
         this.temperatureSystem = create(TemperatureSystem.class);
-        this.weatherMapBufferSystem = create(WeatherMapBufferSystem.class);
+        create(WeatherMapBufferSystem.class);
     }
 
     @Override
@@ -250,9 +250,9 @@ public class WeatherPatternManager extends ManagerPackage {
             int homeChunkX = cellX * patternCellSizeChunks + patternCellSizeChunks / 2;
             int homeChunkZ = cellZ * patternCellSizeChunks + patternCellSizeChunks / 2;
 
-            int[] jitter = computeHomeJitter(patternKey);
-            homeChunkX += jitter[0];
-            homeChunkZ += jitter[1];
+            computeHomeJitter(patternKey);
+            homeChunkX += homeJitterScratch[0];
+            homeChunkZ += homeJitterScratch[1];
 
             double dx = WorldWrapUtility.wrappedDelta(homeChunkX, playerChunkX, worldWidthChunks);
             double dz = WorldWrapUtility.wrappedDelta(homeChunkZ, playerChunkZ, worldHeightChunks);
@@ -273,7 +273,7 @@ public class WeatherPatternManager extends ManagerPackage {
         return streamed;
     }
 
-    private int[] computeHomeJitter(long patternKey) {
+    private void computeHomeJitter(long patternKey) {
 
         long jitterSeed = patternKey ^ 0x2545F4914F6CDD1DL;
 
@@ -282,10 +282,8 @@ public class WeatherPatternManager extends ManagerPackage {
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
 
-        int jitterX = Math.round((jitterTX - 0.5f) * jitterRangeChunks);
-        int jitterZ = Math.round((jitterTZ - 0.5f) * jitterRangeChunks);
-
-        return new int[] { jitterX, jitterZ };
+        homeJitterScratch[0] = Math.round((jitterTX - 0.5f) * jitterRangeChunks);
+        homeJitterScratch[1] = Math.round((jitterTZ - 0.5f) * jitterRangeChunks);
     }
 
     private boolean streamInPattern(
@@ -670,10 +668,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     public float getNearRangeChunks() {
         return nearRangeChunks;
-    }
-
-    public int getNearRangeWeatherMapEntryCount() {
-        return weatherMapBufferSystem.getNearRangeEntryCount();
     }
 
     // Local Weather Accessible \\
