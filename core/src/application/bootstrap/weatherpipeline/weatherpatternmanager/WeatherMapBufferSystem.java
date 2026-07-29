@@ -6,6 +6,7 @@ import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
+import application.bootstrap.weatherpipeline.weatherpattern.WeatherPatternInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -102,7 +103,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         float outerRangeChunks = weatherPatternManager.getOuterRangeChunks();
         float nearRangeChunks = weatherPatternManager.getNearRangeChunks();
 
-        WeatherPatternStruct[] pool = weatherPatternManager.getPatternPool();
+        WeatherPatternInstance[] pool = weatherPatternManager.getPatternPool();
         int patternCount = 0;
 
         for (int slot = 0; slot < pool.length; slot++) {
@@ -110,7 +111,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             if (!weatherPatternManager.isPatternActive(slot))
                 continue;
 
-            WeatherPatternStruct pattern = pool[slot];
+            WeatherPatternInstance pattern = pool[slot];
 
             double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
             double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
@@ -136,7 +137,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             int slot = (int) (packed & 0xFFFFFFFFL);
             float distanceChunks = Float.intBitsToFloat((int) (packed >>> 32));
 
-            WeatherPatternStruct pattern = pool[slot];
+            WeatherPatternInstance pattern = pool[slot];
 
             if (resolvedNearRangeCount < 0 && distanceChunks > nearRangeChunks)
                 resolvedNearRangeCount = entryCount;
@@ -169,7 +170,7 @@ class WeatherMapBufferSystem extends SystemPackage {
 
     private void writeEntry(
             int index,
-            WeatherPatternStruct pattern,
+            WeatherPatternInstance pattern,
             float distanceChunks,
             WeatherHandle weatherHandle,
             CloudChanceStruct cloudEntry) {

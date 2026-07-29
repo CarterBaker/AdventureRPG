@@ -4,6 +4,7 @@ import application.bootstrap.calendarpipeline.clock.ClockInstance;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
+import application.bootstrap.weatherpipeline.weatherpattern.WeatherPatternInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
@@ -26,11 +27,10 @@ public class GridInstance extends InstancePackage {
      * The active spatial grid for a single focal entity — one per window.
      * Owns the load order, slot handles, active chunks, active mega chunks,
      * pending load/unload requests, and the render queues for this grid.
-     * clockInstance and the Time/Sun/Moon/Sky/Weather-Map UBO instances are
-     * all handed to this grid by GridBuildSystem — clockInstance from
-     * ClockManager, the UBOs cloned from their shared base handles — so
-     * every window tracks its own location's time, sun, moon, sky, and
-     * weather independently.
+     * clockInstance, localWeatherPattern, and the Time/Sun/Moon/Sky/Weather-Map
+     * UBO instances are all handed to this grid by GridBuildSystem — cloned or
+     * created fresh from their owning manager — so every window tracks its own
+     * location's time, weather, sun, moon, sky, and weather map independently.
      */
 
     // Focal
@@ -62,6 +62,9 @@ public class GridInstance extends InstancePackage {
     // Weather Map
     private UBOInstance weatherMapUBO;
     private int weatherMapNearRangeCount;
+
+    // Local Weather
+    private WeatherPatternInstance localWeatherPattern;
 
     // Chunk State
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
@@ -96,7 +99,8 @@ public class GridInstance extends InstancePackage {
             UBOInstance sunLightUBO,
             UBOInstance moonLightUBO,
             UBOInstance skyColorUBO,
-            UBOInstance weatherMapUBO) {
+            UBOInstance weatherMapUBO,
+            WeatherPatternInstance localWeatherPattern) {
 
         // Focal
         this.focalEntity = focalEntity;
@@ -127,6 +131,9 @@ public class GridInstance extends InstancePackage {
         // Weather Map
         this.weatherMapUBO = weatherMapUBO;
         this.weatherMapNearRangeCount = 0;
+
+        // Local Weather
+        this.localWeatherPattern = localWeatherPattern;
 
         // Chunk State
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
@@ -315,6 +322,10 @@ public class GridInstance extends InstancePackage {
 
     public void setWeatherMapNearRangeCount(int weatherMapNearRangeCount) {
         this.weatherMapNearRangeCount = weatherMapNearRangeCount;
+    }
+
+    public WeatherPatternInstance getLocalWeatherPattern() {
+        return localWeatherPattern;
     }
 
     public Long2ObjectLinkedOpenHashMap<ChunkInstance> getActiveChunks() {

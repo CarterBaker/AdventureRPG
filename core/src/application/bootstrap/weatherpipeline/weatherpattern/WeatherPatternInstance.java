@@ -1,25 +1,28 @@
-package application.bootstrap.weatherpipeline.weatherpatternmanager;
+package application.bootstrap.weatherpipeline.weatherpattern;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import engine.root.EngineSetting;
-import engine.root.StructPackage;
+import engine.root.InstancePackage;
 import engine.util.mathematics.vectors.Vector4;
 
-public class WeatherPatternStruct extends StructPackage {
+public class WeatherPatternInstance extends InstancePackage {
 
     /*
-     * One pool-owned weather pattern slot — either a spatial cell streamed
-     * for the visual weather map, or the single instance pinned to a
-     * grid's own reference coordinate for temperature and wind. Every
-     * slot is constructed once by WeatherPatternManager and held for the
-     * engine's lifetime; activate() recycles a slot for a new pattern
-     * instead of a fresh instance ever being built or discarded.
+     * One weather pattern occurrence — either a pool-recycled spatial cell
+     * streamed for the visual weather map, or the single instance a grid
+     * holds for its own reference coordinate's local wind and temperature.
+     * Pool slots are assigned once via assignSlot() and never change;
+     * constructor() (re)arms an instance for a new occurrence every time
+     * one is handed out, whether freshly created or recycled from the pool.
      */
 
     private static final float TRANSITION_DIP_STRENGTH = 0.6f;
 
-    private final int slot;
+    // Identity
+    private int slot;
+    private boolean configured;
 
+    // Pattern
     private long patternKey;
 
     private WeatherHandle weatherHandle;
@@ -46,15 +49,34 @@ public class WeatherPatternStruct extends StructPackage {
     private double nextReevaluationTime;
 
     private float distanceFromReferenceChunks;
-    private final Vector4 bounds = new Vector4();
+    private Vector4 bounds;
 
-    public WeatherPatternStruct(int slot) {
+    // Internal \\
+
+    @Override
+    protected void create() {
+        this.bounds = new Vector4();
+        this.slot = -1;
+        this.configured = false;
+    }
+
+    // Identity \\
+
+    public void assignSlot(int slot) {
         this.slot = slot;
     }
 
-    // Pool Lifecycle \\
+    public int getSlot() {
+        return slot;
+    }
 
-    public void activate(
+    public boolean isConfigured() {
+        return configured;
+    }
+
+    // Constructor \\
+
+    public void constructor(
             long patternKey,
             int homeChunkX,
             int homeChunkZ,
@@ -79,12 +101,33 @@ public class WeatherPatternStruct extends StructPackage {
         this.spread = spread;
         this.targetSpread = spread;
         this.distanceFromReferenceChunks = 0f;
+        this.configured = true;
     }
+
+    // Drift \\
 
     public void advanceDrift(double deltaChunkX, double deltaChunkZ) {
         this.driftChunkX += deltaChunkX;
         this.driftChunkZ += deltaChunkZ;
     }
+
+    public void setDriftSpeedScale(float driftSpeedScale) {
+        this.driftSpeedScale = driftSpeedScale;
+    }
+
+    public float getDriftSpeedScale() {
+        return driftSpeedScale;
+    }
+
+    public double getCurrentChunkX() {
+        return homeChunkX + driftChunkX;
+    }
+
+    public double getCurrentChunkZ() {
+        return homeChunkZ + driftChunkZ;
+    }
+
+    // Weather Transition \\
 
     public void beginWeatherTransition(WeatherHandle newWeatherHandle) {
         this.previousWeatherHandle = this.weatherHandle;
@@ -98,10 +141,6 @@ public class WeatherPatternStruct extends StructPackage {
         transitionT = Math.min(1f, transitionT + deltaTime / EngineSetting.WEATHER_PATTERN_TRANSITION_DURATION_SECONDS);
     }
 
-    public void setDriftSpeedScale(float driftSpeedScale) {
-        this.driftSpeedScale = driftSpeedScale;
-    }
-
     public float getTransitionT() {
         return transitionT;
     }
@@ -110,13 +149,35 @@ public class WeatherPatternStruct extends StructPackage {
         return previousWeatherHandle;
     }
 
+    public WeatherHandle getWeatherHandle() {
+        return weatherHandle;
+    }
+
+    private float transitionDampingMultiplier() {
+        if (transitionT >= 1f)
+            return 1f;
+        return 1f - (float) Math.sin(transitionT * Math.PI) * TRANSITION_DIP_STRENGTH;
+    }
+
+    // Lifecycle \\
+
     public void setRetiring(boolean retiring) {
         this.retiring = retiring;
+    }
+
+    public boolean isRetiring() {
+        return retiring;
     }
 
     public void setFadeAlpha(float fadeAlpha) {
         this.fadeAlpha = fadeAlpha;
     }
+
+    public float getFadeAlpha() {
+        return fadeAlpha;
+    }
+
+    // Intensity / Spread \\
 
     public void setTargetIntensity(float targetIntensity) {
         this.targetIntensity = targetIntensity;
@@ -126,6 +187,10 @@ public class WeatherPatternStruct extends StructPackage {
         this.intensity += (targetIntensity - this.intensity) * alpha;
     }
 
+    public float getIntensity() {
+        return intensity * transitionDampingMultiplier();
+    }
+
     public void setTargetSpread(float targetSpread) {
         this.targetSpread = targetSpread;
     }
@@ -133,6 +198,12 @@ public class WeatherPatternStruct extends StructPackage {
     public void advanceSpreadSmoothing(float alpha) {
         this.spread += (targetSpread - this.spread) * alpha;
     }
+
+    public float getSpread() {
+        return spread;
+    }
+
+    // Reevaluation \\
 
     public double getNextReevaluationTime() {
         return nextReevaluationTime;
@@ -152,48 +223,6 @@ public class WeatherPatternStruct extends StructPackage {
 
     public int getHomeChunkZ() {
         return homeChunkZ;
-    }
-
-    public float getDriftSpeedScale() {
-        return driftSpeedScale;
-    }
-
-    public int getSlot() {
-        return slot;
-    }
-
-    public double getCurrentChunkX() {
-        return homeChunkX + driftChunkX;
-    }
-
-    public double getCurrentChunkZ() {
-        return homeChunkZ + driftChunkZ;
-    }
-
-    public float getFadeAlpha() {
-        return fadeAlpha;
-    }
-
-    public boolean isRetiring() {
-        return retiring;
-    }
-
-    public float getIntensity() {
-        return intensity * transitionDampingMultiplier();
-    }
-
-    public float getSpread() {
-        return spread;
-    }
-
-    public WeatherHandle getWeatherHandle() {
-        return weatherHandle;
-    }
-
-    private float transitionDampingMultiplier() {
-        if (transitionT >= 1f)
-            return 1f;
-        return 1f - (float) Math.sin(transitionT * Math.PI) * TRANSITION_DIP_STRENGTH;
     }
 
     // Blended Atmosphere \\

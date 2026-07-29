@@ -7,6 +7,7 @@ import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
+import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
@@ -25,7 +26,8 @@ class GridBuildSystem extends SystemPackage {
 
     /*
      * Constructs a GridInstance and all GridSlotHandles for a given focal
-     * entity and window. Each grid gets its own ClockInstance and its own
+     * entity and window. Each grid gets its own ClockInstance, its own
+     * WeatherPatternInstance for local wind/temperature, and its own
      * Time/Sun/Moon/Sky/Weather-Map UBO instances cloned from the shared
      * base handles, so every window tracks its own location independently.
      */
@@ -34,6 +36,7 @@ class GridBuildSystem extends SystemPackage {
     private UBOManager uboManager;
     private ClockManager clockManager;
     private WeatherManager weatherManager;
+    private WeatherPatternManager weatherPatternManager;
 
     // Config
     private int chunkSize;
@@ -61,6 +64,7 @@ class GridBuildSystem extends SystemPackage {
         this.uboManager = get(UBOManager.class);
         this.clockManager = get(ClockManager.class);
         this.weatherManager = get(WeatherManager.class);
+        this.weatherPatternManager = get(WeatherPatternManager.class);
     }
 
     @Override
@@ -111,7 +115,8 @@ class GridBuildSystem extends SystemPackage {
                 uboManager.createUBOInstance(sunLightBase),
                 uboManager.createUBOInstance(moonLightBase),
                 uboManager.createUBOInstance(skyColorBase),
-                buildWeatherMapUBO());
+                buildWeatherMapUBO(),
+                weatherPatternManager.createLocalPatternInstance());
 
         return gridInstance;
     }
