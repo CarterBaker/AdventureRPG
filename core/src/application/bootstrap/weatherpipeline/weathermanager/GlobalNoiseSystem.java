@@ -1,3 +1,4 @@
+// GlobalNoiseSystem.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
@@ -13,7 +14,9 @@ class GlobalNoiseSystem extends SystemPackage {
     /*
      * Drives the planet-scale motion behind the regional weather noise
      * field — rotation, meander, and seasonal drift — and exposes a
-     * coarser second noise layer for global storm intensity.
+     * coarser second noise layer for global storm intensity. Wraps
+     * seamlessly on both world axes the same way WeatherNoiseUtility
+     * does: X rides the rotation circle, Y cross-fades across its seam.
      */
 
     private static final long GLOBAL_INTENSITY_SEED = 0xB16B00B5DEADC0DEL;
@@ -23,6 +26,7 @@ class GlobalNoiseSystem extends SystemPackage {
 
     private WorldHandle activeWorld;
     private double worldWidthChunks;
+    private double worldHeightChunks;
     private float worldDriftChunksPerSecondX;
 
     private double elapsedDriftChunksX;
@@ -45,9 +49,10 @@ class GlobalNoiseSystem extends SystemPackage {
             throwException("GlobalNoiseSystem could not resolve an active world.");
 
         this.worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
+        this.worldHeightChunks = activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE;
 
-        if (worldWidthChunks <= 0.0)
-            throwException("Active world resolved a non-positive width in chunks.");
+        if (worldWidthChunks <= 0.0 || worldHeightChunks <= 0.0)
+            throwException("Active world resolved a non-positive width or height in chunks.");
 
         float driftMetersPerSecond = EngineSetting.WEATHER_BASE_DRIFT_SPEED_KPH
                 * EngineSetting.KPH_TO_METERS_PER_SECOND;
@@ -102,11 +107,25 @@ class GlobalNoiseSystem extends SystemPackage {
 
         double ex = Math.cos(spatialAngle) * embeddingRadius;
         double ey = Math.sin(spatialAngle) * embeddingRadius;
-        double ez = chunkZ / EngineSetting.GLOBAL_WEATHER_NOISE_CELL_SIZE;
 
-        float raw = NoiseUtility.noise3_ImproveXY(GLOBAL_INTENSITY_SEED, ex, ey, ez);
+        double zWavelength = EngineSetting.GLOBAL_WEATHER_NOISE_CELL_SIZE;
+        double z = wrapIntoRange(chunkZ, worldHeightChunks);
+
+        float direct = NoiseUtility.noise3_ImproveXY(GLOBAL_INTENSITY_SEED, ex, ey, z / zWavelength);
+        float oneWorldBack = NoiseUtility.noise3_ImproveXY(
+                GLOBAL_INTENSITY_SEED, ex, ey, (z - worldHeightChunks) / zWavelength);
+
+        float t = (float) (z / worldHeightChunks);
+        float raw = direct * (1f - t) + oneWorldBack * t;
 
         return clamp01(raw * 0.5f + 0.5f);
+    }
+
+    private static double wrapIntoRange(double value, double range) {
+        double wrapped = value % range;
+        if (wrapped < 0)
+            wrapped += range;
+        return wrapped;
     }
 
     private static float clamp01(float value) {

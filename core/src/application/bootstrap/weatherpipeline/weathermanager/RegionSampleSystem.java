@@ -1,3 +1,4 @@
+// RegionSampleSystem.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
@@ -148,6 +149,7 @@ class RegionSampleSystem extends SystemPackage {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
         double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
+        double worldHeightChunks = activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE;
         double wavelengthChunks = EngineSetting.WEATHER_NOISE_CELL_SIZE;
 
         double rotationPhase = (globalNoiseSystem.getRotationAngleDegrees() / EngineSetting.DEGREES_PER_FULL_ROTATION)
@@ -159,6 +161,7 @@ class RegionSampleSystem extends SystemPackage {
                 NOISE_SEED,
                 chunkX, chunkZ,
                 worldWidthChunks,
+                worldHeightChunks,
                 wavelengthChunks,
                 rotationPhase,
                 globalNoiseSystem.getSeasonalDriftZChunks(),
