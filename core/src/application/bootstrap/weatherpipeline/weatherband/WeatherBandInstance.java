@@ -1,26 +1,25 @@
-package application.bootstrap.weatherpipeline.weathermanager;
+package application.bootstrap.weatherpipeline.weatherband;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
-import engine.root.StructPackage;
+import engine.root.InstancePackage;
 
-public class WeatherBandStruct extends StructPackage {
+public class WeatherBandInstance extends InstancePackage {
 
     /*
      * Raw result of resolving a world coordinate against a chance-weighted
      * weather pool. Exposes the discrete pair of weathers noise currently
      * sits between and how far across that pair's blend band it sits.
-     * Never remembers anything between calls — a caller that wants a
-     * stable, persistent identity should read getPrimary() once and hold
-     * the result itself.
+     * Recycled scratch — a caller wanting a stable, persistent identity
+     * should read getPrimary() once and hold the result itself.
      */
 
     private WeatherHandle low;
     private WeatherHandle high;
     private float blendFactor;
 
-    // Internal \\
+    // Assignment \\
 
-    void set(WeatherHandle low, WeatherHandle high, float blendFactor) {
+    public void assign(WeatherHandle low, WeatherHandle high, float blendFactor) {
         this.low = low;
         this.high = high;
         this.blendFactor = blendFactor;
@@ -40,19 +39,10 @@ public class WeatherBandStruct extends StructPackage {
         return blendFactor;
     }
 
-    /*
-     * The single weather this coordinate currently sits closer to.
-     */
     public WeatherHandle getPrimary() {
         return blendFactor < 0.5f ? low : high;
     }
 
-    /*
-     * How strongly getPrimary()'s current answer is expressed at this
-     * coordinate, in [0, 1] — 1.0 at the purest point of the primary
-     * weather's own share of the band, 0.0 right at the boundary where
-     * primary would flip.
-     */
     public float getPrimaryIntensity() {
 
         if (blendFactor < 0.5f)
@@ -61,11 +51,6 @@ public class WeatherBandStruct extends StructPackage {
         return (blendFactor - 0.5f) / 0.5f;
     }
 
-    /*
-     * Intensity of a specific weather handle within this resolved band,
-     * regardless of whether it currently reads as primary. Returns 0 for a
-     * handle that is neither this band's low nor high side.
-     */
     public float getIntensityFor(WeatherHandle handle) {
 
         if (handle == low)

@@ -2,7 +2,7 @@
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
-import application.bootstrap.weatherpipeline.weathermanager.WeatherBandStruct;
+import application.bootstrap.weatherpipeline.weatherband.WeatherBandInstance;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.weatherpipeline.weatherpattern.WeatherPatternInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -65,7 +65,7 @@ public class WeatherPatternManager extends ManagerPackage {
     private double elapsedSimTime;
     private float intensityUpdateAccumulator;
 
-    private final WeatherBandStruct bandScratch = new WeatherBandStruct();
+    private WeatherBandInstance bandScratch;
     private final int[] homeJitterScratch = new int[2];
 
     private ObjectArrayList<WeatherPatternInstance> streamedInThisFrame;
@@ -113,6 +113,8 @@ public class WeatherPatternManager extends ManagerPackage {
 
         this.temperatureSystem = create(TemperatureSystem.class);
         create(WeatherMapBufferSystem.class);
+
+        this.bandScratch = create(WeatherBandInstance.class);
     }
 
     @Override

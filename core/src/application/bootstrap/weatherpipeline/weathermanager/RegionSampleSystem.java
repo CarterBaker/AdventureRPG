@@ -1,7 +1,8 @@
-// RegionSampleSystem.java
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
+import application.bootstrap.weatherpipeline.weather.WeatherPoolEntryInstance;
+import application.bootstrap.weatherpipeline.weatherband.WeatherBandInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
@@ -57,17 +58,17 @@ class RegionSampleSystem extends SystemPackage {
         return lerp(localNoise, globalIntensity, globalNoiseSystem.getGlobalInfluence());
     }
 
-    void resolveBand(WeatherBandStruct out, int chunkX, int chunkZ, ObjectArrayList<WeatherPoolEntryStruct> pool) {
+    void resolveBand(WeatherBandInstance out, int chunkX, int chunkZ, ObjectArrayList<WeatherPoolEntryInstance> pool) {
         bandFromPool(out, pool, combinedNoiseAt(chunkX, chunkZ));
     }
 
     void resolveBandTowardHorizon(
-            WeatherBandStruct out,
+            WeatherBandInstance out,
             int homeChunkX,
             int homeChunkZ,
             int referenceChunkX,
             int referenceChunkZ,
-            ObjectArrayList<WeatherPoolEntryStruct> pool) {
+            ObjectArrayList<WeatherPoolEntryInstance> pool) {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
 
@@ -104,11 +105,11 @@ class RegionSampleSystem extends SystemPackage {
         bandFromPool(out, pool, blendedNoise);
     }
 
-    private void bandFromPool(WeatherBandStruct out, ObjectArrayList<WeatherPoolEntryStruct> pool, float noise) {
+    private void bandFromPool(WeatherBandInstance out, ObjectArrayList<WeatherPoolEntryInstance> pool, float noise) {
 
         if (pool.size() == 1) {
             WeatherHandle only = pool.get(0).getWeatherHandle();
-            out.set(only, only, 0f);
+            out.assign(only, only, 0f);
             return;
         }
 
@@ -116,7 +117,7 @@ class RegionSampleSystem extends SystemPackage {
 
         if (total <= 0f) {
             WeatherHandle first = pool.get(0).getWeatherHandle();
-            out.set(first, first, 0f);
+            out.assign(first, first, 0f);
             return;
         }
 
@@ -138,7 +139,7 @@ class RegionSampleSystem extends SystemPackage {
                 float bandWidth = Math.max(bandEnd - cumulative, 0.0001f);
                 float t = clamp01((target - cumulative) / bandWidth);
 
-                out.set(low, high, t);
+                out.assign(low, high, t);
                 return;
             }
 

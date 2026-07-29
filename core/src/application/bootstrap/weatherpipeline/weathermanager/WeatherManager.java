@@ -3,6 +3,8 @@ package application.bootstrap.weatherpipeline.weathermanager;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
+import application.bootstrap.weatherpipeline.weather.WeatherPoolEntryInstance;
+import application.bootstrap.weatherpipeline.weatherband.WeatherBandInstance;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.WeatherChanceStruct;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
@@ -20,7 +22,8 @@ public class WeatherManager extends ManagerPackage {
      * Owns the weather definition palette and resolves the active biome/season
      * into a chance-weighted pool of candidate weathers. Band resolution is
      * reference-agnostic — callers supply whichever chunk coordinate they want
-     * the "toward horizon" blend measured from.
+     * the "toward horizon" blend measured from. Pool entries are recycled
+     * WeatherPoolEntryInstances, grown once and never reallocated per-entry.
      */
 
     private static final float NEXT_WEATHER_SUGGESTION_INFLUENCE = 1.5f;
@@ -36,10 +39,15 @@ public class WeatherManager extends ManagerPackage {
     private Short2ObjectOpenHashMap<WeatherHandle> weatherID2WeatherHandle;
 
     private String lastSeason;
-    private ObjectArrayList<WeatherPoolEntryStruct> activeWeatherPool;
+    private boolean weatherPoolResolved;
 
-    private WeatherPoolEntryStruct[] biasedEntryPool;
-    private final ObjectArrayList<WeatherPoolEntryStruct> biasedPoolScratch = new ObjectArrayList<>();
+    // Active Pool — recycled across season changes
+    private WeatherPoolEntryInstance[] activeEntryPool;
+    private final ObjectArrayList<WeatherPoolEntryInstance> activeWeatherPool = new ObjectArrayList<>();
+
+    // Biased Pool — recycled scratch for "next weather" biasing
+    private WeatherPoolEntryInstance[] biasedEntryPool;
+    private final ObjectArrayList<WeatherPoolEntryInstance> biasedPoolScratch = new ObjectArrayList<>();
 
     @Override
     protected void create() {
@@ -50,7 +58,8 @@ public class WeatherManager extends ManagerPackage {
         this.globalNoiseSystem = create(GlobalNoiseSystem.class);
         this.regionSampleSystem = create(RegionSampleSystem.class);
 
-        this.biasedEntryPool = new WeatherPoolEntryStruct[0];
+        this.activeEntryPool = new WeatherPoolEntryInstance[0];
+        this.biasedEntryPool = new WeatherPoolEntryInstance[0];
 
         create(WeatherLoader.class);
     }
@@ -69,7 +78,7 @@ public class WeatherManager extends ManagerPackage {
 
         if (currentSeason != null && !currentSeason.equals(lastSeason)) {
             BiomeHandle activeBiome = resolveActiveBiome();
-            this.activeWeatherPool = resolveWeatherPool(activeBiome, currentSeason);
+            resolveWeatherPool(activeBiome, currentSeason);
             this.lastSeason = currentSeason;
         }
     }
@@ -106,7 +115,7 @@ public class WeatherManager extends ManagerPackage {
 
     // Biome Resolution \\
 
-    private ObjectArrayList<WeatherPoolEntryStruct> resolveWeatherPool(BiomeHandle biomeHandle, String season) {
+    private void resolveWeatherPool(BiomeHandle biomeHandle, String season) {
 
         String resolvedSeason = season;
         ObjectArrayList<WeatherChanceStruct> entries = biomeHandle.getWeatherEntriesForSeason(season);
@@ -117,10 +126,12 @@ public class WeatherManager extends ManagerPackage {
         }
 
         float precipitationBias = resolvePrecipitationBias(resolvedSeason);
+        int size = entries.size();
 
-        ObjectArrayList<WeatherPoolEntryStruct> pool = new ObjectArrayList<>(entries.size());
+        activeEntryPool = growEntryPool(activeEntryPool, size);
+        activeWeatherPool.clear();
 
-        for (int i = 0; i < entries.size(); i++) {
+        for (int i = 0; i < size; i++) {
 
             WeatherChanceStruct entry = entries.get(i);
             WeatherHandle handle = getWeatherHandleFromWeatherName(entry.getWeatherName());
@@ -129,10 +140,12 @@ public class WeatherManager extends ManagerPackage {
             if (handle.getPrecipitationIntensity() > 0f)
                 chance *= precipitationBias;
 
-            pool.add(new WeatherPoolEntryStruct(handle, chance));
+            WeatherPoolEntryInstance scratchEntry = activeEntryPool[i];
+            scratchEntry.constructor(handle, chance);
+            activeWeatherPool.add(scratchEntry);
         }
 
-        return pool;
+        weatherPoolResolved = true;
     }
 
     private float resolvePrecipitationBias(String season) {
@@ -157,42 +170,45 @@ public class WeatherManager extends ManagerPackage {
 
     // Next Weather Bias \\
 
-    private ObjectArrayList<WeatherPoolEntryStruct> buildBiasedPool(WeatherHandle currentWeather) {
+    private ObjectArrayList<WeatherPoolEntryInstance> buildBiasedPool(WeatherHandle currentWeather) {
 
         if (!currentWeather.hasNextWeatherSuggestions())
             return activeWeatherPool;
 
         int size = activeWeatherPool.size();
-        ensureBiasedPoolCapacity(size);
+        biasedEntryPool = growEntryPool(biasedEntryPool, size);
 
         biasedPoolScratch.clear();
 
         for (int i = 0; i < size; i++) {
 
-            WeatherPoolEntryStruct entry = activeWeatherPool.get(i);
+            WeatherPoolEntryInstance entry = activeWeatherPool.get(i);
             float suggestionChance = currentWeather.getNextWeatherChanceFor(entry.getWeatherHandle());
             float biasedChance = entry.getChance() + suggestionChance * NEXT_WEATHER_SUGGESTION_INFLUENCE;
 
-            WeatherPoolEntryStruct scratchEntry = biasedEntryPool[i];
-            scratchEntry.set(entry.getWeatherHandle(), biasedChance);
+            WeatherPoolEntryInstance scratchEntry = biasedEntryPool[i];
+            scratchEntry.constructor(entry.getWeatherHandle(), biasedChance);
             biasedPoolScratch.add(scratchEntry);
         }
 
         return biasedPoolScratch;
     }
 
-    private void ensureBiasedPoolCapacity(int size) {
+    private WeatherPoolEntryInstance[] growEntryPool(WeatherPoolEntryInstance[] pool, int size) {
 
-        if (biasedEntryPool.length >= size)
-            return;
+        if (pool.length >= size)
+            return pool;
 
-        WeatherPoolEntryStruct[] grown = new WeatherPoolEntryStruct[size];
-        System.arraycopy(biasedEntryPool, 0, grown, 0, biasedEntryPool.length);
+        WeatherPoolEntryInstance[] grown = new WeatherPoolEntryInstance[size];
+        System.arraycopy(pool, 0, grown, 0, pool.length);
 
-        for (int i = biasedEntryPool.length; i < grown.length; i++)
-            grown[i] = new WeatherPoolEntryStruct(null, 0f);
+        for (int i = pool.length; i < grown.length; i++) {
+            WeatherPoolEntryInstance entry = create(WeatherPoolEntryInstance.class);
+            entry.constructor(null, 0f);
+            grown[i] = entry;
+        }
 
-        biasedEntryPool = grown;
+        return grown;
     }
 
     // Accessible \\
@@ -224,7 +240,7 @@ public class WeatherManager extends ManagerPackage {
     }
 
     public boolean hasActiveWeatherPool() {
-        return activeWeatherPool != null;
+        return weatherPoolResolved;
     }
 
     public float getEffectiveOuterRangeChunks() {
@@ -243,9 +259,9 @@ public class WeatherManager extends ManagerPackage {
         return globalNoiseSystem.sampleGlobalIntensity(chunkCoordinate);
     }
 
-    public void resolveWeatherBand(WeatherBandStruct out, long chunkCoordinate) {
+    public void resolveWeatherBand(WeatherBandInstance out, long chunkCoordinate) {
 
-        if (activeWeatherPool == null)
+        if (!weatherPoolResolved)
             throwException("Cannot resolve a weather band before any season has been resolved. "
                     + "Callers should check hasActiveWeatherPool() first.");
 
@@ -256,14 +272,14 @@ public class WeatherManager extends ManagerPackage {
     }
 
     public void resolveWeatherBandTowardHorizon(
-            WeatherBandStruct out,
+            WeatherBandInstance out,
             long homeChunkCoordinate,
             long referenceChunkCoordinate) {
         resolveWeatherBandTowardHorizonInternal(out, homeChunkCoordinate, referenceChunkCoordinate, null);
     }
 
     public void resolveWeatherBandTowardHorizonBiased(
-            WeatherBandStruct out,
+            WeatherBandInstance out,
             long homeChunkCoordinate,
             long referenceChunkCoordinate,
             WeatherHandle currentWeather) {
@@ -271,12 +287,12 @@ public class WeatherManager extends ManagerPackage {
     }
 
     private void resolveWeatherBandTowardHorizonInternal(
-            WeatherBandStruct out,
+            WeatherBandInstance out,
             long homeChunkCoordinate,
             long referenceChunkCoordinate,
             WeatherHandle currentWeather) {
 
-        if (activeWeatherPool == null)
+        if (!weatherPoolResolved)
             throwException("Cannot resolve a weather band before any season has been resolved. "
                     + "Callers should check hasActiveWeatherPool() first.");
 
@@ -286,7 +302,7 @@ public class WeatherManager extends ManagerPackage {
         int referenceChunkX = Coordinate2Long.unpackX(referenceChunkCoordinate);
         int referenceChunkZ = Coordinate2Long.unpackY(referenceChunkCoordinate);
 
-        ObjectArrayList<WeatherPoolEntryStruct> pool = currentWeather == null
+        ObjectArrayList<WeatherPoolEntryInstance> pool = currentWeather == null
                 ? activeWeatherPool
                 : buildBiasedPool(currentWeather);
 
