@@ -17,12 +17,10 @@ import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 public class WeatherManager extends ManagerPackage {
 
     /*
-     * Owns the weather definition palette and resolves the active biome/
-     * season into a chance-weighted pool of candidate weathers. Band
-     * resolution is reference-agnostic — callers supply whichever chunk
-     * coordinate they want the "toward horizon" blend measured from, so
-     * WeatherPatternManager can resolve bands relative to any number of
-     * active grids rather than one pinned reference.
+     * Owns the weather definition palette and resolves the active biome/season
+     * into a chance-weighted pool of candidate weathers. Band resolution is
+     * reference-agnostic — callers supply whichever chunk coordinate they want
+     * the "toward horizon" blend measured from.
      */
 
     private static final float NEXT_WEATHER_SUGGESTION_INFLUENCE = 1.5f;
@@ -40,8 +38,6 @@ public class WeatherManager extends ManagerPackage {
     private String lastSeason;
     private ObjectArrayList<WeatherPoolEntryStruct> activeWeatherPool;
 
-    // Next Weather Bias Scratch — grown once, never shrunk, mutated in
-    // place each reevaluation instead of allocating a fresh pool/entries.
     private WeatherPoolEntryStruct[] biasedEntryPool;
     private final ObjectArrayList<WeatherPoolEntryStruct> biasedPoolScratch = new ObjectArrayList<>();
 
@@ -161,14 +157,6 @@ public class WeatherManager extends ManagerPackage {
 
     // Next Weather Bias \\
 
-    /*
-     * Biases the active pool toward currentWeather's own suggested next
-     * weathers. Reuses a grow-only pool of scratch entries and a single
-     * scratch list rather than allocating fresh ones per pattern
-     * reevaluation — the result is only ever read synchronously by the
-     * caller within the same call and never retained past it, so reuse
-     * across successive calls is safe.
-     */
     private ObjectArrayList<WeatherPoolEntryStruct> buildBiasedPool(WeatherHandle currentWeather) {
 
         if (!currentWeather.hasNextWeatherSuggestions())
@@ -218,7 +206,7 @@ public class WeatherManager extends ManagerPackage {
         if (!weatherName2WeatherID.containsKey(weatherName))
             request(weatherName);
 
-        return RegistryUtility.toShortID(weatherName);
+        return weatherName2WeatherID.getShort(weatherName);
     }
 
     public WeatherHandle getWeatherHandleFromWeatherID(short weatherID) {

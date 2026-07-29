@@ -6,7 +6,7 @@ import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
+import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
@@ -25,16 +25,15 @@ class GridBuildSystem extends SystemPackage {
 
     /*
      * Constructs a GridInstance and all GridSlotHandles for a given focal
-     * entity and window. Each grid gets its own ClockInstance from
-     * ClockManager and its own Time/Sun/Moon/Sky/Weather-Map UBO instances
-     * cloned from the shared base handles, so every window tracks its own
-     * location — and its own view of the weather — independently.
+     * entity and window. Each grid gets its own ClockInstance and its own
+     * Time/Sun/Moon/Sky/Weather-Map UBO instances cloned from the shared
+     * base handles, so every window tracks its own location independently.
      */
 
     // Internal
     private UBOManager uboManager;
     private ClockManager clockManager;
-    private WeatherPatternManager weatherPatternManager;
+    private WeatherManager weatherManager;
 
     // Config
     private int chunkSize;
@@ -61,7 +60,7 @@ class GridBuildSystem extends SystemPackage {
     protected void get() {
         this.uboManager = get(UBOManager.class);
         this.clockManager = get(ClockManager.class);
-        this.weatherPatternManager = get(WeatherPatternManager.class);
+        this.weatherManager = get(WeatherManager.class);
     }
 
     @Override
@@ -119,17 +118,12 @@ class GridBuildSystem extends SystemPackage {
 
     // Weather Map \\
 
-    /*
-     * Seeds this grid's own weather map UBO with the static outer/near
-     * sampling ranges once, at creation — the per-frame entry data is
-     * written later by WeatherMapBufferSystem.
-     */
     private UBOInstance buildWeatherMapUBO() {
 
         UBOInstance weatherMapUBO = uboManager.createUBOInstance(weatherMapBase);
 
-        weatherMapUBO.updateUniform("u_weatherOuterRangeChunks", weatherPatternManager.getOuterRangeChunks());
-        weatherMapUBO.updateUniform("u_weatherNearRangeChunks", weatherPatternManager.getNearRangeChunks());
+        weatherMapUBO.updateUniform("u_weatherOuterRangeChunks", weatherManager.getEffectiveOuterRangeChunks());
+        weatherMapUBO.updateUniform("u_weatherNearRangeChunks", weatherManager.getEffectiveNearRangeChunks());
 
         uboManager.push(weatherMapUBO);
 
