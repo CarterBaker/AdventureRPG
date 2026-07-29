@@ -20,19 +20,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class WeatherMapBufferSystem extends SystemPackage {
 
     /*
-     * Flattens the shared active weather-pattern pool into each active
-     * grid's own WeatherMapData UBO every frame. One array slot is written
-     * per (pattern, cloud entry) pair, nearest-first RELATIVE TO THAT GRID —
-     * two players standing far enough apart need different distances, a
-     * different near/far split, and possibly different entries entirely, so
-     * every grid gets its own sort, its own entry count, and its own near-
-     * range count rather than sharing one global view. The overhead
-     * volumetric render system draws its box mesh instanced exactly this
-     * grid's own near-range-entry-count times and indexes gl_InstanceID
-     * directly into this same grid's UBO slots, so the leading N entries
-     * must always be exactly that grid's near-range entries. The static
-     * near/outer sampling ranges are seeded once per grid at grid creation
-     * (see GridBuildSystem) — only the per-frame entry data is written here.
+     * Flattens the shared active weather-pattern pool into each active grid's
+     * own WeatherMapData UBO every frame, nearest-first relative to that grid,
+     * with the near-range/outer-range split the overhead volumetric renderer
+     * depends on. The per-grid sort key packs distance and pool slot into a
+     * single long so ordering never allocates.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
@@ -53,10 +45,9 @@ class WeatherMapBufferSystem extends SystemPackage {
     private Vector4[] cloudVariance0;
     private Vector4[] cloudVariance1;
 
-    // Per-grid sort scratch — cleared and refilled for every grid, every frame
-    private ObjectArrayList<WeatherPatternStruct> sortScratch;
-    private float[] distanceScratch;
-    private Integer[] indexScratch;
+    // Per-grid sort scratch — each entry packs (distanceBits << 32 | poolSlot)
+    // so Arrays.sort(long[]) orders by distance with zero allocation
+    private long[] sortScratch;
 
     // Internal \\
 
@@ -74,11 +65,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         this.cloudVariance0 = allocate(capacity);
         this.cloudVariance1 = allocate(capacity);
 
-        int patternCapacity = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
-
-        this.sortScratch = new ObjectArrayList<>(patternCapacity);
-        this.distanceScratch = new float[patternCapacity];
-        this.indexScratch = new Integer[patternCapacity];
+        this.sortScratch = new long[EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT];
     }
 
     @Override
@@ -115,9 +102,15 @@ class WeatherMapBufferSystem extends SystemPackage {
         float outerRangeChunks = weatherPatternManager.getOuterRangeChunks();
         float nearRangeChunks = weatherPatternManager.getNearRangeChunks();
 
-        sortScratch.clear();
+        WeatherPatternStruct[] pool = weatherPatternManager.getPatternPool();
+        int patternCount = 0;
 
-        for (WeatherPatternStruct pattern : weatherPatternManager.getActivePatterns().values()) {
+        for (int slot = 0; slot < pool.length; slot++) {
+
+            if (!weatherPatternManager.isPatternActive(slot))
+                continue;
+
+            WeatherPatternStruct pattern = pool[slot];
 
             double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
             double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
@@ -126,15 +119,12 @@ class WeatherMapBufferSystem extends SystemPackage {
             if (distanceChunks > outerRangeChunks)
                 continue;
 
-            int slot = sortScratch.size();
-            sortScratch.add(pattern);
-            distanceScratch[slot] = distanceChunks;
-            indexScratch[slot] = slot;
+            int distanceBits = Float.floatToRawIntBits(distanceChunks);
+            sortScratch[patternCount] = ((long) distanceBits << 32) | (slot & 0xFFFFFFFFL);
+            patternCount++;
         }
 
-        int patternCount = sortScratch.size();
-
-        Arrays.sort(indexScratch, 0, patternCount, (a, b) -> Float.compare(distanceScratch[a], distanceScratch[b]));
+        Arrays.sort(sortScratch, 0, patternCount);
 
         int capacity = EngineSetting.WEATHER_MAP_UBO_MAX_ENTRIES;
         int entryCount = 0;
@@ -142,15 +132,12 @@ class WeatherMapBufferSystem extends SystemPackage {
 
         for (int i = 0; i < patternCount && entryCount < capacity; i++) {
 
-            int sortedIndex = indexScratch[i];
-            WeatherPatternStruct pattern = sortScratch.get(sortedIndex);
-            float distanceChunks = distanceScratch[sortedIndex];
+            long packed = sortScratch[i];
+            int slot = (int) (packed & 0xFFFFFFFFL);
+            float distanceChunks = Float.intBitsToFloat((int) (packed >>> 32));
 
-            // Sorted ascending, so the first pattern beyond the near range
-            // marks the boundary — every entry after it is guaranteed to be
-            // at least as far, so entryCount right now is exactly how many
-            // leading slots this grid's overhead box mesh should instance
-            // against.
+            WeatherPatternStruct pattern = pool[slot];
+
             if (resolvedNearRangeCount < 0 && distanceChunks > nearRangeChunks)
                 resolvedNearRangeCount = entryCount;
 

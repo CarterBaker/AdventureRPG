@@ -20,18 +20,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
-     * The Determined Weather Pattern system. Streams jittered spatial cells
-     * around every active grid into one shared pool, keyed by world cell —
-     * two players close enough to share a cell see the exact same pattern —
-     * and drifts them with world rotation until they retire from every
-     * active grid's range. Also resolves one non-streamed pattern pinned to
-     * each active grid's own exact position, whose blended values drive
-     * that grid's own temperature and (for now, globally-shared) local
-     * wind. Reevaluation cadence derives from the world's KPH-based drift
-     * speed. The streamed pool is a fixed set of pre-allocated
-     * WeatherPatternStruct slots — freeSlots/pendingFreeSlots track which
-     * are idle, never which are allocated, since none ever are or need to
-     * be.
+     * Streams jittered spatial cells around every active grid into one shared,
+     * pool-recycled pattern set keyed by world cell, so any two grids sharing
+     * a cell see the exact same weather. Also resolves one non-streamed
+     * pattern pinned to each grid's own position for local temperature/wind.
+     * Every per-frame pass over active patterns walks the fixed-size pool
+     * array directly instead of the lookup map, so nothing allocates per frame.
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
@@ -63,6 +57,7 @@ public class WeatherPatternManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<GridInstance, Float> gridToTemperature;
 
     private WeatherPatternStruct[] patternPool;
+    private boolean[] slotActive;
     private IntArrayList freeSlots;
     private IntArrayList pendingFreeSlots;
 
@@ -101,6 +96,7 @@ public class WeatherPatternManager extends ManagerPackage {
         this.freeSlots = new IntArrayList(maxActivePatternCount);
         this.pendingFreeSlots = new IntArrayList(maxActivePatternCount);
         this.patternPool = new WeatherPatternStruct[maxActivePatternCount];
+        this.slotActive = new boolean[maxActivePatternCount];
 
         for (int i = 0; i < maxActivePatternCount; i++) {
             freeSlots.add(i);
@@ -163,7 +159,8 @@ public class WeatherPatternManager extends ManagerPackage {
         streamInBudgeted(grids);
     }
 
-    // Candidate cells sorted upwind-first, then nearest-first.
+    // Candidate Offsets \\
+
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
@@ -311,6 +308,7 @@ public class WeatherPatternManager extends ManagerPackage {
         pattern.updateBounds();
 
         activePatterns.put(patternKey, pattern);
+        slotActive[slot] = true;
         streamedInThisFrame.add(pattern);
 
         return true;
@@ -333,9 +331,13 @@ public class WeatherPatternManager extends ManagerPackage {
         float deltaTime = internal.getDeltaTime();
         double baseDeltaChunkX = weatherManager.getWorldDriftChunksPerSecondX() * deltaTime;
 
-        for (WeatherPatternStruct pattern : activePatterns.values()) {
-            float patternDriftScale = pattern.getDriftSpeedScale();
-            pattern.advanceDrift(baseDeltaChunkX * patternDriftScale, 0.0);
+        for (int i = 0; i < patternPool.length; i++) {
+
+            if (!slotActive[i])
+                continue;
+
+            WeatherPatternStruct pattern = patternPool[i];
+            pattern.advanceDrift(baseDeltaChunkX * pattern.getDriftSpeedScale(), 0.0);
         }
     }
 
@@ -380,7 +382,12 @@ public class WeatherPatternManager extends ManagerPackage {
         float deltaTime = internal.getDeltaTime();
         elapsedSimTime += deltaTime;
 
-        for (WeatherPatternStruct pattern : activePatterns.values()) {
+        for (int i = 0; i < patternPool.length; i++) {
+
+            if (!slotActive[i])
+                continue;
+
+            WeatherPatternStruct pattern = patternPool[i];
 
             pattern.advanceWeatherTransition(deltaTime);
 
@@ -501,7 +508,12 @@ public class WeatherPatternManager extends ManagerPackage {
 
         intensityUpdateAccumulator = 0f;
 
-        for (WeatherPatternStruct pattern : activePatterns.values()) {
+        for (int i = 0; i < patternPool.length; i++) {
+
+            if (!slotActive[i])
+                continue;
+
+            WeatherPatternStruct pattern = patternPool[i];
 
             if (pattern.isRetiring())
                 continue;
@@ -524,16 +536,16 @@ public class WeatherPatternManager extends ManagerPackage {
         float deltaTime = internal.getDeltaTime();
         float alpha = 1f - (float) Math.exp(-deltaTime / intensitySmoothingTimeSeconds);
 
-        for (WeatherPatternStruct pattern : activePatterns.values()) {
-            pattern.advanceIntensitySmoothing(alpha);
-            pattern.advanceSpreadSmoothing(alpha);
+        for (int i = 0; i < patternPool.length; i++) {
+
+            if (!slotActive[i])
+                continue;
+
+            patternPool[i].advanceIntensitySmoothing(alpha);
+            patternPool[i].advanceSpreadSmoothing(alpha);
         }
     }
 
-    // Base cadence: time for the world to drift one
-    // WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION of a full noise
-    // wavelength at its current KPH-derived speed, clamped, then jittered
-    // per pattern so the active set never reevaluates in lockstep.
     private float reevaluationIntervalFor(long patternKey) {
 
         float driftChunksPerSecond = Math.abs(weatherManager.getWorldDriftChunksPerSecondX());
@@ -563,7 +575,12 @@ public class WeatherPatternManager extends ManagerPackage {
         Object[] gridElements = grids.elements();
         int gridCount = grids.size();
 
-        for (WeatherPatternStruct pattern : activePatterns.values()) {
+        for (int i = 0; i < patternPool.length; i++) {
+
+            if (!slotActive[i])
+                continue;
+
+            WeatherPatternStruct pattern = patternPool[i];
 
             double minDistChunks = 0.0;
 
@@ -622,6 +639,7 @@ public class WeatherPatternManager extends ManagerPackage {
         if (pattern == null)
             return;
 
+        slotActive[pattern.getSlot()] = false;
         pendingFreeSlots.add(pattern.getSlot());
         retiredThisFrame.add(pattern);
     }
@@ -644,6 +662,14 @@ public class WeatherPatternManager extends ManagerPackage {
 
     public Long2ObjectOpenHashMap<WeatherPatternStruct> getActivePatterns() {
         return activePatterns;
+    }
+
+    public WeatherPatternStruct[] getPatternPool() {
+        return patternPool;
+    }
+
+    public boolean isPatternActive(int slot) {
+        return slotActive[slot];
     }
 
     public ObjectArrayList<WeatherPatternStruct> getPatternsStreamedInThisFrame() {
