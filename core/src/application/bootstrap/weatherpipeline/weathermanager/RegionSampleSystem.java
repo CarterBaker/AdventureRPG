@@ -32,8 +32,17 @@ class RegionSampleSystem extends SystemPackage {
         this.worldManager = get(WorldManager.class);
     }
 
+    /*
+     * Fixed, terrain-independent ranges — the sky/weather map is resolved
+     * from UBO data and a ray/plane intersection, never from loaded chunk
+     * geometry, so it must never be clamped against the terrain streaming
+     * radius (settings.maxRenderDistance). These are the sole authority for
+     * how far the CPU weather simulation and the skybox's distant cloud
+     * sampling reach.
+     */
+
     float getEffectiveOuterRangeChunks() {
-        return Math.min(settings.maxRenderDistance, (float) EngineSetting.WEATHER_OUTER_RANGE_CHUNKS);
+        return EngineSetting.WEATHER_OUTER_RANGE_CHUNKS;
     }
 
     float getEffectiveNearRangeChunks() {

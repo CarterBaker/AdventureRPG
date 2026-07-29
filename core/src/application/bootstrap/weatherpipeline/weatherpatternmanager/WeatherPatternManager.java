@@ -1,3 +1,4 @@
+// WeatherPatternManager.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
@@ -158,6 +159,15 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Candidate Offsets \\
 
+    /*
+     * Every cell within the outer range, sorted nearest-to-player first.
+     * Nearest-first is a hard requirement, not a tuning preference — the
+     * overhead volumetric box only ever reads the near-range prefix of the
+     * pool, so if the pool fills toward capacity before the near ring is
+     * fully covered, the overhead box goes empty even though the skybox
+     * ring is fine. Sorting any other way (e.g. by raw world axis) risks
+     * exactly that starvation under streaming-budget pressure.
+     */
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
@@ -181,10 +191,7 @@ public class WeatherPatternManager extends ManagerPackage {
             }
         }
 
-        offsets.sort((a, b) -> {
-            int upwind = Integer.compare(a[0], b[0]);
-            return upwind != 0 ? upwind : Integer.compare(a[2], b[2]);
-        });
+        offsets.sort((a, b) -> Integer.compare(a[2], b[2]));
 
         return offsets;
     }

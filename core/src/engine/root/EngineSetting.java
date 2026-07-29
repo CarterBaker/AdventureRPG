@@ -375,7 +375,9 @@ public class EngineSetting {
         // Weather Sampling Ranges \\
 
         // Outer boundary of the CPU weather-pattern simulation and the sky
-        // dome's distant cloud sampling.
+        // dome's distant cloud sampling. Independent of terrain streaming
+        // distance — clouds are read straight from the weather map UBO, not
+        // from loaded chunks, so this is never clamped against render distance.
         public static final int WEATHER_OUTER_RANGE_CHUNKS = 192;
 
         // Inner boundary, always closer than the outer range above, that the
@@ -405,11 +407,16 @@ public class EngineSetting {
 
         // Overhead — Weather Patterns \\
 
-        public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
-        public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 8;
+        // Cell size matches WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS so adjacent
+        // patterns' visual footprints tile with neither large gaps nor heavy
+        // overlap. Active count sized so the near range can fully populate
+        // (~50 cells at this cell size) well before the pool fills, leaving
+        // the remainder for the outer skybox ring.
+        public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 128;
+        public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 24;
         public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 24.0f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
-        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 8;
+        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 16;
 
         // Weather Pattern Lifecycle \\
 
@@ -440,7 +447,7 @@ public class EngineSetting {
         // WEATHER_PATTERN_MAX_ACTIVE_COUNT since a single pattern can occupy
         // more than one slot (one per cloud archetype it draws).
         public static final String WEATHER_MAP_UBO = "WeatherMapData";
-        public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 128;
+        public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 256;
 
         // Wind \\
 

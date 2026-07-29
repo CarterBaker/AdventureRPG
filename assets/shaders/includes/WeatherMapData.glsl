@@ -1,8 +1,9 @@
+// WeatherMapData.glsl
 #ifndef WEATHER_MAP_DATA_GLSL
 #define WEATHER_MAP_DATA_GLSL
 
 // Must match EngineSetting.WEATHER_MAP_UBO_MAX_ENTRIES.
-#define WEATHER_MAP_MAX_ENTRIES 128
+#define WEATHER_MAP_MAX_ENTRIES 256
 
 // One entry = one (weather pattern × cloud archetype) pair.
 // bounds:              xy = world min corner (chunkX, chunkZ), zw = max corner
