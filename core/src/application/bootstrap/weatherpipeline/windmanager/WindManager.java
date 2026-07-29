@@ -38,6 +38,9 @@ public class WindManager extends ManagerPackage {
     private double skyDriftX;
     private double skyDriftZ;
 
+    // Scratch — reused every push, never reallocated
+    private final Vector2 windDriftOffsetScratch = new Vector2();
+
     // Internal \\
 
     @Override
@@ -91,8 +94,9 @@ public class WindManager extends ManagerPackage {
 
         windData.updateUniform(EngineSetting.UNIFORM_WIND_DIRECTION, windHandle.getLocalWindDirection());
         windData.updateUniform(EngineSetting.UNIFORM_WIND_SPEED, windHandle.getLocalWindSpeed());
-        windData.updateUniform(EngineSetting.UNIFORM_WIND_DRIFT_OFFSET,
-                new Vector2((float) skyDriftX, (float) skyDriftZ));
+
+        windDriftOffsetScratch.set((float) skyDriftX, (float) skyDriftZ);
+        windData.updateUniform(EngineSetting.UNIFORM_WIND_DRIFT_OFFSET, windDriftOffsetScratch);
 
         uboManager.push(windData);
     }
