@@ -6,7 +6,7 @@ import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
-import application.bootstrap.weatherpipeline.weatherpattern.WeatherPatternInstance;
+import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -21,22 +21,19 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class WeatherMapBufferSystem extends SystemPackage {
 
     /*
-     * Flattens the shared active weather-pattern pool into each active grid's
-     * own WeatherMapData UBO every frame, nearest-first relative to that grid,
-     * with the near-range/outer-range split the overhead volumetric renderer
-     * depends on. The per-grid sort key packs distance and pool slot into a
-     * single long so ordering never allocates.
+     * Flattens the shared active weather-instance pool into each active
+     * grid's own WeatherMapData UBO every frame, nearest-first relative to
+     * that grid, with the near-range/outer-range split the overhead
+     * volumetric renderer depends on.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
 
-    // Internal
     private WeatherPatternManager weatherPatternManager;
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
     private WorldManager worldManager;
 
-    // Scratch — sized once at create(), mutated in place every frame
     private Vector4[] bounds;
     private Vector4[] patternState;
     private Vector4[] cloudColorScale;
@@ -46,11 +43,7 @@ class WeatherMapBufferSystem extends SystemPackage {
     private Vector4[] cloudVariance0;
     private Vector4[] cloudVariance1;
 
-    // Per-grid sort scratch — each entry packs (distanceBits << 32 | poolSlot)
-    // so Arrays.sort(long[]) orders by distance with zero allocation
     private long[] sortScratch;
-
-    // Internal \\
 
     @Override
     protected void create() {
@@ -88,8 +81,6 @@ class WeatherMapBufferSystem extends SystemPackage {
             writeEntriesForGrid((GridInstance) elements[i]);
     }
 
-    // Flatten \\
-
     private void writeEntriesForGrid(GridInstance grid) {
 
         long referenceCoordinate = grid.getActiveChunkCoordinate();
@@ -103,7 +94,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         float outerRangeChunks = weatherPatternManager.getOuterRangeChunks();
         float nearRangeChunks = weatherPatternManager.getNearRangeChunks();
 
-        WeatherPatternInstance[] pool = weatherPatternManager.getPatternPool();
+        WeatherInstance[] pool = weatherPatternManager.getPatternPool();
         int patternCount = 0;
 
         for (int slot = 0; slot < pool.length; slot++) {
@@ -111,7 +102,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             if (!weatherPatternManager.isPatternActive(slot))
                 continue;
 
-            WeatherPatternInstance pattern = pool[slot];
+            WeatherInstance pattern = pool[slot];
 
             double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
             double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
@@ -137,7 +128,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             int slot = (int) (packed & 0xFFFFFFFFL);
             float distanceChunks = Float.intBitsToFloat((int) (packed >>> 32));
 
-            WeatherPatternInstance pattern = pool[slot];
+            WeatherInstance pattern = pool[slot];
 
             if (resolvedNearRangeCount < 0 && distanceChunks > nearRangeChunks)
                 resolvedNearRangeCount = entryCount;
@@ -170,7 +161,7 @@ class WeatherMapBufferSystem extends SystemPackage {
 
     private void writeEntry(
             int index,
-            WeatherPatternInstance pattern,
+            WeatherInstance pattern,
             float distanceChunks,
             WeatherHandle weatherHandle,
             CloudChanceStruct cloudEntry) {
@@ -219,8 +210,6 @@ class WeatherMapBufferSystem extends SystemPackage {
                 WeatherPatternManager.hash01(pattern.getPatternKey() ^ RENDER_SEED_MIX),
                 0f);
     }
-
-    // Utility \\
 
     private static Vector4[] allocate(int size) {
         Vector4[] array = new Vector4[size];

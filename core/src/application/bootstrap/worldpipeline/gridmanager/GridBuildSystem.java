@@ -8,6 +8,7 @@ import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
+import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
@@ -27,30 +28,28 @@ class GridBuildSystem extends SystemPackage {
     /*
      * Constructs a GridInstance and all GridSlotHandles for a given focal
      * entity and window. Each grid gets its own ClockInstance, its own
-     * WeatherPatternInstance for local wind/temperature, and its own
-     * Time/Sun/Moon/Sky/Weather-Map UBO instances cloned from the shared
-     * base handles, so every window tracks its own location independently.
+     * WeatherInstance, TemperatureInstance, and WindInstance, and its own
+     * Time/Sun/Moon/Sky/Weather-Map/Wind UBO instances cloned from the
+     * shared base handles, so every window tracks its own location fully
+     * independently.
      */
 
-    // Internal
     private UBOManager uboManager;
     private ClockManager clockManager;
     private WeatherManager weatherManager;
     private WeatherPatternManager weatherPatternManager;
+    private WindManager windManager;
 
-    // Config
     private int chunkSize;
     private int megaChunkSize;
     private int chunkPoolMaxOverflow;
 
-    // Base UBO Handles
     private UBOHandle timeDataBase;
     private UBOHandle sunLightBase;
     private UBOHandle moonLightBase;
     private UBOHandle skyColorBase;
     private UBOHandle weatherMapBase;
-
-    // Internal \\
+    private UBOHandle windDataBase;
 
     @Override
     protected void create() {
@@ -65,6 +64,7 @@ class GridBuildSystem extends SystemPackage {
         this.clockManager = get(ClockManager.class);
         this.weatherManager = get(WeatherManager.class);
         this.weatherPatternManager = get(WeatherPatternManager.class);
+        this.windManager = get(WindManager.class);
     }
 
     @Override
@@ -74,6 +74,7 @@ class GridBuildSystem extends SystemPackage {
         this.moonLightBase = uboManager.getUBOHandleFromUBOName(EngineSetting.MOON_LIGHT_UBO);
         this.skyColorBase = uboManager.getUBOHandleFromUBOName(EngineSetting.SKY_COLOR_UBO);
         this.weatherMapBase = uboManager.getUBOHandleFromUBOName(EngineSetting.WEATHER_MAP_UBO);
+        this.windDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.WIND_DATA_UBO);
     }
 
     // Build \\
@@ -116,7 +117,10 @@ class GridBuildSystem extends SystemPackage {
                 uboManager.createUBOInstance(moonLightBase),
                 uboManager.createUBOInstance(skyColorBase),
                 buildWeatherMapUBO(),
-                weatherPatternManager.createLocalPatternInstance());
+                weatherPatternManager.createLocalWeatherInstance(),
+                weatherPatternManager.createTemperatureInstance(),
+                windManager.createWindInstance(),
+                uboManager.createUBOInstance(windDataBase));
 
         return gridInstance;
     }

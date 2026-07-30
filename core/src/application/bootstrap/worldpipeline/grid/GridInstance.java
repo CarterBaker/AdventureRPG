@@ -4,7 +4,9 @@ import application.bootstrap.calendarpipeline.clock.ClockInstance;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
-import application.bootstrap.weatherpipeline.weatherpattern.WeatherPatternInstance;
+import application.bootstrap.weatherpipeline.temperature.TemperatureInstance;
+import application.bootstrap.weatherpipeline.weather.WeatherInstance;
+import application.bootstrap.weatherpipeline.wind.WindInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
@@ -27,10 +29,11 @@ public class GridInstance extends InstancePackage {
      * The active spatial grid for a single focal entity — one per window.
      * Owns the load order, slot handles, active chunks, active mega chunks,
      * pending load/unload requests, and the render queues for this grid.
-     * clockInstance, localWeatherPattern, and the Time/Sun/Moon/Sky/Weather-Map
-     * UBO instances are all handed to this grid by GridBuildSystem — cloned or
-     * created fresh from their owning manager — so every window tracks its own
-     * location's time, weather, sun, moon, sky, and weather map independently.
+     * clockInstance, weatherInstance, temperatureInstance, windInstance, and
+     * every per-grid UBO instance are handed to this grid by GridBuildSystem
+     * — cloned or created fresh from their owning manager — so every window
+     * tracks its own location's time, weather, temperature, wind, sun, moon,
+     * sky, and weather map independently.
      */
 
     // Focal
@@ -63,8 +66,13 @@ public class GridInstance extends InstancePackage {
     private UBOInstance weatherMapUBO;
     private int weatherMapNearRangeCount;
 
-    // Local Weather
-    private WeatherPatternInstance localWeatherPattern;
+    // Weather / Temperature
+    private WeatherInstance weatherInstance;
+    private TemperatureInstance temperatureInstance;
+
+    // Wind
+    private WindInstance windInstance;
+    private UBOInstance windDataUBO;
 
     // Chunk State
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
@@ -100,7 +108,10 @@ public class GridInstance extends InstancePackage {
             UBOInstance moonLightUBO,
             UBOInstance skyColorUBO,
             UBOInstance weatherMapUBO,
-            WeatherPatternInstance localWeatherPattern) {
+            WeatherInstance weatherInstance,
+            TemperatureInstance temperatureInstance,
+            WindInstance windInstance,
+            UBOInstance windDataUBO) {
 
         // Focal
         this.focalEntity = focalEntity;
@@ -132,8 +143,13 @@ public class GridInstance extends InstancePackage {
         this.weatherMapUBO = weatherMapUBO;
         this.weatherMapNearRangeCount = 0;
 
-        // Local Weather
-        this.localWeatherPattern = localWeatherPattern;
+        // Weather / Temperature
+        this.weatherInstance = weatherInstance;
+        this.temperatureInstance = temperatureInstance;
+
+        // Wind
+        this.windInstance = windInstance;
+        this.windDataUBO = windDataUBO;
 
         // Chunk State
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
@@ -324,8 +340,20 @@ public class GridInstance extends InstancePackage {
         this.weatherMapNearRangeCount = weatherMapNearRangeCount;
     }
 
-    public WeatherPatternInstance getLocalWeatherPattern() {
-        return localWeatherPattern;
+    public WeatherInstance getWeatherInstance() {
+        return weatherInstance;
+    }
+
+    public TemperatureInstance getTemperatureInstance() {
+        return temperatureInstance;
+    }
+
+    public WindInstance getWindInstance() {
+        return windInstance;
+    }
+
+    public UBOInstance getWindDataUBO() {
+        return windDataUBO;
     }
 
     public Long2ObjectLinkedOpenHashMap<ChunkInstance> getActiveChunks() {

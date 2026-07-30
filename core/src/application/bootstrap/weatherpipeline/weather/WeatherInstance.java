@@ -1,19 +1,17 @@
-package application.bootstrap.weatherpipeline.weatherpattern;
+package application.bootstrap.weatherpipeline.weather;
 
-import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import engine.util.mathematics.vectors.Vector4;
 
-public class WeatherPatternInstance extends InstancePackage {
+public class WeatherInstance extends InstancePackage {
 
     /*
-     * One weather pattern occurrence — either a pool-recycled spatial cell
-     * streamed for the visual weather map, or the single instance a grid
-     * holds for its own reference coordinate's local wind and temperature.
-     * Pool slots are assigned once via assignSlot() and never change;
-     * constructor() (re)arms an instance for a new occurrence every time
-     * one is handed out, whether freshly created or recycled from the pool.
+     * One weather occurrence — either a pool-recycled spatial cell streamed
+     * into the shared weather map, or the single instance a grid holds for
+     * its own location's wind, temperature, and humidity. Pool slots are
+     * assigned once via assignSlot(); constructor() (re)arms an instance for
+     * a new occurrence every time one is handed out.
      */
 
     private static final float TRANSITION_DIP_STRENGTH = 0.6f;

@@ -1,10 +1,10 @@
-// WeatherPatternManager.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
+import application.bootstrap.weatherpipeline.temperature.TemperatureInstance;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weatherband.WeatherBandInstance;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
-import application.bootstrap.weatherpipeline.weatherpattern.WeatherPatternInstance;
+import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -16,17 +16,17 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
-     * Streams jittered spatial cells around every active grid into one shared,
-     * pool-recycled pattern set keyed by world cell, so any two grids sharing
-     * a cell see the exact same weather. Each grid also owns its own
-     * WeatherPatternInstance (held directly on GridInstance) resolved against
-     * that grid's own reference coordinate, driving local temperature and wind.
+     * Streams jittered spatial cells around every active grid into one
+     * shared, pool-recycled WeatherInstance set keyed by world cell, so any
+     * two grids sharing a cell see the exact same weather. Each grid also
+     * owns its own WeatherInstance (held directly on GridInstance) resolved
+     * against that grid's own reference coordinate, driving that grid's own
+     * TemperatureInstance and local wind.
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
@@ -51,10 +51,9 @@ public class WeatherPatternManager extends ManagerPackage {
     private float fadeInRate;
     private float fadeOutRate;
 
-    private Long2ObjectOpenHashMap<WeatherPatternInstance> activePatterns;
-    private Object2ObjectOpenHashMap<GridInstance, Float> gridToTemperature;
+    private Long2ObjectOpenHashMap<WeatherInstance> activePatterns;
 
-    private WeatherPatternInstance[] patternPool;
+    private WeatherInstance[] patternPool;
     private boolean[] slotActive;
     private IntArrayList freeSlots;
     private IntArrayList pendingFreeSlots;
@@ -68,9 +67,9 @@ public class WeatherPatternManager extends ManagerPackage {
     private WeatherBandInstance bandScratch;
     private final int[] homeJitterScratch = new int[2];
 
-    private ObjectArrayList<WeatherPatternInstance> streamedInThisFrame;
-    private ObjectArrayList<WeatherPatternInstance> retiredThisFrame;
-    private ObjectArrayList<WeatherPatternInstance> refreshedThisFrame;
+    private ObjectArrayList<WeatherInstance> streamedInThisFrame;
+    private ObjectArrayList<WeatherInstance> retiredThisFrame;
+    private ObjectArrayList<WeatherInstance> refreshedThisFrame;
 
     @Override
     protected void create() {
@@ -88,16 +87,15 @@ public class WeatherPatternManager extends ManagerPackage {
         this.fadeOutRate = EngineSetting.WEATHER_PATTERN_FADE_OUT_RATE;
 
         this.activePatterns = new Long2ObjectOpenHashMap<>();
-        this.gridToTemperature = new Object2ObjectOpenHashMap<>();
 
         this.freeSlots = new IntArrayList(maxActivePatternCount);
         this.pendingFreeSlots = new IntArrayList(maxActivePatternCount);
-        this.patternPool = new WeatherPatternInstance[maxActivePatternCount];
+        this.patternPool = new WeatherInstance[maxActivePatternCount];
         this.slotActive = new boolean[maxActivePatternCount];
 
         for (int i = 0; i < maxActivePatternCount; i++) {
             freeSlots.add(i);
-            WeatherPatternInstance pattern = create(WeatherPatternInstance.class);
+            WeatherInstance pattern = create(WeatherInstance.class);
             pattern.assignSlot(i);
             patternPool[i] = pattern;
         }
@@ -143,10 +141,8 @@ public class WeatherPatternManager extends ManagerPackage {
             pendingFreeSlots.clear();
         }
 
-        if (!weatherManager.hasActiveWeatherPool()) {
-            gridToTemperature.clear();
+        if (!weatherManager.hasActiveWeatherPool())
             return;
-        }
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
 
@@ -161,15 +157,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Candidate Offsets \\
 
-    /*
-     * Every cell within the outer range, sorted nearest-to-player first.
-     * Nearest-first is a hard requirement, not a tuning preference — the
-     * overhead volumetric box only ever reads the near-range prefix of the
-     * pool, so if the pool fills toward capacity before the near ring is
-     * fully covered, the overhead box goes empty even though the skybox
-     * ring is fine. Sorting any other way (e.g. by raw world axis) risks
-     * exactly that starvation under streaming-budget pressure.
-     */
     private ObjectArrayList<int[]> buildCandidateOffsets() {
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
@@ -305,7 +292,7 @@ public class WeatherPatternManager extends ManagerPackage {
         float intensity = spread * weatherHandle.getCloudCoverage();
 
         int slot = freeSlots.removeInt(freeSlots.size() - 1);
-        WeatherPatternInstance pattern = patternPool[slot];
+        WeatherInstance pattern = patternPool[slot];
 
         pattern.constructor(patternKey, homeChunkX, homeChunkZ, weatherHandle, DEFAULT_DRIFT_SPEED_SCALE, intensity,
                 spread);
@@ -342,7 +329,7 @@ public class WeatherPatternManager extends ManagerPackage {
             if (!slotActive[i])
                 continue;
 
-            WeatherPatternInstance pattern = patternPool[i];
+            WeatherInstance pattern = patternPool[i];
             pattern.advanceDrift(baseDeltaChunkX * pattern.getDriftSpeedScale(), 0.0);
         }
     }
@@ -393,7 +380,7 @@ public class WeatherPatternManager extends ManagerPackage {
             if (!slotActive[i])
                 continue;
 
-            WeatherPatternInstance pattern = patternPool[i];
+            WeatherInstance pattern = patternPool[i];
 
             pattern.advanceWeatherTransition(deltaTime);
 
@@ -419,7 +406,7 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
-    private void tryRefreshWeather(WeatherPatternInstance pattern, WeatherHandle resolved) {
+    private void tryRefreshWeather(WeatherInstance pattern, WeatherHandle resolved) {
         pattern.beginWeatherTransition(resolved);
         refreshedThisFrame.add(pattern);
     }
@@ -438,7 +425,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
             GridInstance grid = (GridInstance) elements[i];
             long referenceCoordinate = grid.getActiveChunkCoordinate();
-            WeatherPatternInstance pattern = grid.getLocalWeatherPattern();
+            WeatherInstance pattern = grid.getWeatherInstance();
 
             if (!pattern.isConfigured()) {
 
@@ -480,22 +467,8 @@ public class WeatherPatternManager extends ManagerPackage {
 
             double visualTimeOfDay = grid.getClockInstance().getVisualTimeOfDay();
             float temperature = temperatureSystem.computeTemperature(pattern, visualTimeOfDay);
-            gridToTemperature.put(grid, temperature);
+            grid.getTemperatureInstance().setTemperature(temperature);
         }
-
-        pruneStaleTemperatures(grids);
-    }
-
-    private void pruneStaleTemperatures(ObjectArrayList<GridInstance> grids) {
-
-        if (gridToTemperature.isEmpty())
-            return;
-
-        var iterator = gridToTemperature.keySet().iterator();
-
-        while (iterator.hasNext())
-            if (!grids.contains(iterator.next()))
-                iterator.remove();
     }
 
     private void advanceIntensity(ObjectArrayList<GridInstance> grids) {
@@ -512,7 +485,7 @@ public class WeatherPatternManager extends ManagerPackage {
             if (!slotActive[i])
                 continue;
 
-            WeatherPatternInstance pattern = patternPool[i];
+            WeatherInstance pattern = patternPool[i];
 
             if (pattern.isRetiring())
                 continue;
@@ -579,7 +552,7 @@ public class WeatherPatternManager extends ManagerPackage {
             if (!slotActive[i])
                 continue;
 
-            WeatherPatternInstance pattern = patternPool[i];
+            WeatherInstance pattern = patternPool[i];
 
             double minDistChunks = 0.0;
 
@@ -633,7 +606,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
     private void removePattern(long patternKey) {
 
-        WeatherPatternInstance pattern = activePatterns.remove(patternKey);
+        WeatherInstance pattern = activePatterns.remove(patternKey);
 
         if (pattern == null)
             return;
@@ -659,11 +632,11 @@ public class WeatherPatternManager extends ManagerPackage {
         return a + (b - a) * t;
     }
 
-    public Long2ObjectOpenHashMap<WeatherPatternInstance> getActivePatterns() {
+    public Long2ObjectOpenHashMap<WeatherInstance> getActivePatterns() {
         return activePatterns;
     }
 
-    public WeatherPatternInstance[] getPatternPool() {
+    public WeatherInstance[] getPatternPool() {
         return patternPool;
     }
 
@@ -671,15 +644,15 @@ public class WeatherPatternManager extends ManagerPackage {
         return slotActive[slot];
     }
 
-    public ObjectArrayList<WeatherPatternInstance> getPatternsStreamedInThisFrame() {
+    public ObjectArrayList<WeatherInstance> getPatternsStreamedInThisFrame() {
         return streamedInThisFrame;
     }
 
-    public ObjectArrayList<WeatherPatternInstance> getPatternsRetiredThisFrame() {
+    public ObjectArrayList<WeatherInstance> getPatternsRetiredThisFrame() {
         return retiredThisFrame;
     }
 
-    public ObjectArrayList<WeatherPatternInstance> getPatternsRefreshedThisFrame() {
+    public ObjectArrayList<WeatherInstance> getPatternsRefreshedThisFrame() {
         return refreshedThisFrame;
     }
 
@@ -697,72 +670,13 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Grid Factory \\
 
-    public WeatherPatternInstance createLocalPatternInstance() {
-        return create(WeatherPatternInstance.class);
+    public WeatherInstance createLocalWeatherInstance() {
+        return create(WeatherInstance.class);
     }
 
-    // Local Weather Accessible \\
-
-    private WeatherPatternInstance resolvePrimaryLocalPattern() {
-
-        if (!worldStreamManager.hasGrids())
-            return null;
-
-        WeatherPatternInstance pattern = worldStreamManager.getGrids().get(0).getLocalWeatherPattern();
-        return pattern.isConfigured() ? pattern : null;
-    }
-
-    public boolean hasLocalWeather() {
-        return resolvePrimaryLocalPattern() != null;
-    }
-
-    public WeatherHandle getCurrentWeatherHandle() {
-        WeatherPatternInstance pattern = resolvePrimaryLocalPattern();
-        return pattern != null ? pattern.getWeatherHandle() : null;
-    }
-
-    public float getWindSpeedScale() {
-        WeatherPatternInstance pattern = resolvePrimaryLocalPattern();
-        return pattern != null
-                ? pattern.getBlendedWindSpeedScale()
-                : EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE;
-    }
-
-    public float getWindTurbulenceScale() {
-        WeatherPatternInstance pattern = resolvePrimaryLocalPattern();
-        return pattern != null
-                ? pattern.getBlendedWindTurbulenceScale()
-                : EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE;
-    }
-
-    public float getHumidity() {
-        WeatherPatternInstance pattern = resolvePrimaryLocalPattern();
-        return pattern != null
-                ? pattern.getBlendedHumidity()
-                : EngineSetting.DEFAULT_WEATHER_HUMIDITY;
-    }
-
-    public float getVisibility() {
-        WeatherPatternInstance pattern = resolvePrimaryLocalPattern();
-        return pattern != null
-                ? pattern.getBlendedVisibility()
-                : EngineSetting.DEFAULT_WEATHER_VISIBILITY;
-    }
-
-    public float getFogDensityScale() {
-        WeatherPatternInstance pattern = resolvePrimaryLocalPattern();
-        return pattern != null
-                ? pattern.getBlendedFogDensityScale()
-                : EngineSetting.DEFAULT_WEATHER_FOG_DENSITY_SCALE;
-    }
-
-    public float getCurrentTemperature(GridInstance grid) {
-
-        if (!weatherManager.hasActiveWeatherPool())
-            return EngineSetting.DEFAULT_BASE_TEMPERATURE;
-
-        Float temperature = gridToTemperature.get(grid);
-
-        return temperature != null ? temperature : EngineSetting.DEFAULT_BASE_TEMPERATURE;
+    public TemperatureInstance createTemperatureInstance() {
+        TemperatureInstance instance = create(TemperatureInstance.class);
+        instance.constructor();
+        return instance;
     }
 }

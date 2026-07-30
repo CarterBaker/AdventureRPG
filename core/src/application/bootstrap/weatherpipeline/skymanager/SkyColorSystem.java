@@ -87,7 +87,7 @@ class SkyColorSystem extends SystemPackage {
 
         for (int i = 0; i < size; i++) {
             GridInstance grid = (GridInstance) elements[i];
-            resolveTemperatureAccent(weatherPatternManager.getCurrentTemperature(grid));
+            resolveTemperatureAccent(grid.getTemperatureInstance().getTemperature());
             pushData(grid);
         }
     }

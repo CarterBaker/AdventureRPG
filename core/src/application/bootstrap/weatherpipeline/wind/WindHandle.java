@@ -6,24 +6,15 @@ import engine.util.mathematics.vectors.Vector3;
 public class WindHandle extends HandlePackage {
 
     /*
-     * Runtime handle wrapping WindData. Owned by WindManager and passed to
-     * GlobalWindBranch and LocalWindBranch for reading and writing wind
-     * state each frame. Delegates all accessors and mutators through
-     * WindData.
+     * Runtime handle wrapping the session-wide global wind. Owned by
+     * WindManager and passed to GlobalWindBranch/LocalWindBranch.
      */
 
-    // Internal
     private WindData windData;
 
-    // Constructor \\
-
     public void constructor(WindData windData) {
-
-        // Internal
         this.windData = windData;
     }
-
-    // Accessible \\
 
     public WindData getWindData() {
         return windData;
@@ -43,21 +34,5 @@ public class WindHandle extends HandlePackage {
 
     public void setGlobalWindSpeed(float globalWindSpeed) {
         windData.setGlobalWindSpeed(globalWindSpeed);
-    }
-
-    public Vector3 getLocalWindDirection() {
-        return windData.getLocalWindDirection();
-    }
-
-    public void setLocalWindDirection(float x, float y, float z) {
-        windData.setLocalWindDirection(x, y, z);
-    }
-
-    public float getLocalWindSpeed() {
-        return windData.getLocalWindSpeed();
-    }
-
-    public void setLocalWindSpeed(float localWindSpeed) {
-        windData.setLocalWindSpeed(localWindSpeed);
     }
 }

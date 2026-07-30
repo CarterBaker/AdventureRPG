@@ -3,7 +3,7 @@ package application.bootstrap.weatherpipeline.weatherpatternmanager;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.weatherpipeline.season.SeasonHandle;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
-import application.bootstrap.weatherpipeline.weatherpattern.WeatherPatternInstance;
+import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
@@ -12,8 +12,8 @@ class TemperatureSystem extends SystemPackage {
     /*
      * Computes ambient temperature from the active season's base and
      * variance, shaped by a diurnal curve and a slow shared drift, cooled
-     * by a local pattern's precipitation and offset by its temperature
-     * modifier.
+     * by a local weather instance's precipitation and offset by its
+     * temperature modifier.
      */
 
     private ClockManager clockManager;
@@ -35,7 +35,7 @@ class TemperatureSystem extends SystemPackage {
         resolveActiveSeason();
     }
 
-    float computeTemperature(WeatherPatternInstance localPattern, double visualTimeOfDay) {
+    float computeTemperature(WeatherInstance localPattern, double visualTimeOfDay) {
 
         float baseTemperature = EngineSetting.DEFAULT_BASE_TEMPERATURE;
         float temperatureVariance = 0f;

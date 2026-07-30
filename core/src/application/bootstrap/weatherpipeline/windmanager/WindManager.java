@@ -1,47 +1,37 @@
 package application.bootstrap.weatherpipeline.windmanager;
 
-import application.bootstrap.shaderpipeline.ubo.UBOHandle;
+import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.wind.WindData;
 import application.bootstrap.weatherpipeline.wind.WindHandle;
+import application.bootstrap.weatherpipeline.wind.WindInstance;
+import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector2;
-import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WindManager extends ManagerPackage {
 
     /*
-     * Owns the world's wind simulation. Global wind is the planet's fixed
-     * prevailing airflow, resolved once by GlobalWindBranch. Local wind is
-     * that airflow blended with season and the active weather, recomputed
-     * every frame by LocalWindBranch. Also owns the WindData GPU UBO — live
-     * local wind plus a continuously accumulated sky-dome drift offset,
-     * integrated incrementally each frame so a wind change never
-     * retroactively replays the session's drift history as a visible pop.
+     * Owns the world's global prevailing wind, resolved once by
+     * GlobalWindBranch. Local wind is computed every frame per grid by
+     * LocalWindBranch, blending that global airflow with each grid's own
+     * season and active weather, and lives on that grid's own WindInstance
+     * — never a single shared value — so every window's location tracks
+     * its own wind and sky-dome drift independently.
      */
 
-    // Internal
     private UBOManager uboManager;
+    private WorldStreamManager worldStreamManager;
 
-    // Branches
     private GlobalWindBranch globalWindBranch;
     private LocalWindBranch localWindBranch;
 
-    // Wind
     private WindHandle windHandle;
 
-    // GPU
-    private UBOHandle windData;
-
-    // Sky Drift
-    private double skyDriftX;
-    private double skyDriftZ;
-
-    // Scratch — reused every push, never reallocated
     private final Vector2 windDriftOffsetScratch = new Vector2();
-
-    // Internal \\
 
     @Override
     protected void create() {
@@ -56,49 +46,57 @@ public class WindManager extends ManagerPackage {
     @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     @Override
     protected void awake() {
         globalWindBranch.assignData(windHandle);
-        localWindBranch.assignData(windHandle);
-
-        this.windData = uboManager.getUBOHandleFromUBOName(EngineSetting.WIND_DATA_UBO);
+        localWindBranch.assignGlobalWind(windHandle);
     }
 
     @Override
     protected void update() {
-        localWindBranch.updateLocalWind();
-        advanceSkyDrift();
-        pushWindData();
-    }
 
-    // Sky Drift \\
-
-    private void advanceSkyDrift() {
-
-        Vector3 direction = windHandle.getLocalWindDirection();
-        float speed = windHandle.getLocalWindSpeed();
         float deltaTime = internal.getDeltaTime();
+        localWindBranch.advanceTime(deltaTime);
 
-        skyDriftX += direction.x * speed * EngineSetting.SKY_WIND_DRIFT_SCALE * deltaTime;
-        skyDriftZ += direction.z * speed * EngineSetting.SKY_WIND_DRIFT_SCALE * deltaTime;
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
 
-        skyDriftX %= EngineSetting.SKY_WIND_DRIFT_WRAP;
-        skyDriftZ %= EngineSetting.SKY_WIND_DRIFT_WRAP;
+        for (int i = 0; i < size; i++) {
+
+            GridInstance grid = (GridInstance) elements[i];
+            WindInstance windInstance = grid.getWindInstance();
+
+            localWindBranch.updateLocalWind(windInstance, grid.getWeatherInstance(), grid.getClockInstance());
+            windInstance.advanceSkyDrift(deltaTime);
+            pushWindData(grid, windInstance);
+        }
     }
 
     // GPU Push \\
 
-    private void pushWindData() {
+    private void pushWindData(GridInstance grid, WindInstance windInstance) {
 
-        windData.updateUniform(EngineSetting.UNIFORM_WIND_DIRECTION, windHandle.getLocalWindDirection());
-        windData.updateUniform(EngineSetting.UNIFORM_WIND_SPEED, windHandle.getLocalWindSpeed());
+        UBOInstance windData = grid.getWindDataUBO();
 
-        windDriftOffsetScratch.set((float) skyDriftX, (float) skyDriftZ);
+        windData.updateUniform(EngineSetting.UNIFORM_WIND_DIRECTION, windInstance.getLocalWindDirection());
+        windData.updateUniform(EngineSetting.UNIFORM_WIND_SPEED, windInstance.getLocalWindSpeed());
+
+        windDriftOffsetScratch.set((float) windInstance.getSkyDriftX(), (float) windInstance.getSkyDriftZ());
         windData.updateUniform(EngineSetting.UNIFORM_WIND_DRIFT_OFFSET, windDriftOffsetScratch);
 
         uboManager.push(windData);
+    }
+
+    // Grid Factory \\
+
+    public WindInstance createWindInstance() {
+        WindInstance instance = create(WindInstance.class);
+        instance.constructor();
+        return instance;
     }
 
     // Accessible \\
