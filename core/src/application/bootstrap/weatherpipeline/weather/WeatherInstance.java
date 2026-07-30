@@ -11,7 +11,10 @@ public class WeatherInstance extends InstancePackage {
      * into the shared weather map, or the single instance a grid holds for
      * its own location's wind, temperature, and humidity. Pool slots are
      * assigned once via assignSlot(); constructor() (re)arms an instance for
-     * a new occurrence every time one is handed out.
+     * a new occurrence every time one is handed out. Exactly one weather is
+     * ever active at a time — previousWeatherHandle/transitionT exist only
+     * to cross-fade from the old weather to the new one over time when the
+     * active weather actually changes, never to blend two weathers at once.
      */
 
     private static final float TRANSITION_DIP_STRENGTH = 0.6f;
@@ -40,9 +43,6 @@ public class WeatherInstance extends InstancePackage {
 
     private float intensity;
     private float targetIntensity;
-
-    private float spread;
-    private float targetSpread;
 
     private double nextReevaluationTime;
 
@@ -80,8 +80,7 @@ public class WeatherInstance extends InstancePackage {
             int homeChunkZ,
             WeatherHandle weatherHandle,
             float driftSpeedScale,
-            float intensity,
-            float spread) {
+            float intensity) {
 
         this.patternKey = patternKey;
         this.weatherHandle = weatherHandle;
@@ -96,8 +95,6 @@ public class WeatherInstance extends InstancePackage {
         this.retiring = false;
         this.intensity = intensity;
         this.targetIntensity = intensity;
-        this.spread = spread;
-        this.targetSpread = spread;
         this.distanceFromReferenceChunks = 0f;
         this.configured = true;
     }
@@ -131,6 +128,7 @@ public class WeatherInstance extends InstancePackage {
         this.previousWeatherHandle = this.weatherHandle;
         this.weatherHandle = newWeatherHandle;
         this.transitionT = 0f;
+        this.targetIntensity = newWeatherHandle.getCloudCoverage();
     }
 
     public void advanceWeatherTransition(float deltaTime) {
@@ -175,7 +173,7 @@ public class WeatherInstance extends InstancePackage {
         return fadeAlpha;
     }
 
-    // Intensity / Spread \\
+    // Intensity \\
 
     public void setTargetIntensity(float targetIntensity) {
         this.targetIntensity = targetIntensity;
@@ -187,18 +185,6 @@ public class WeatherInstance extends InstancePackage {
 
     public float getIntensity() {
         return intensity * transitionDampingMultiplier();
-    }
-
-    public void setTargetSpread(float targetSpread) {
-        this.targetSpread = targetSpread;
-    }
-
-    public void advanceSpreadSmoothing(float alpha) {
-        this.spread += (targetSpread - this.spread) * alpha;
-    }
-
-    public float getSpread() {
-        return spread;
     }
 
     // Reevaluation \\

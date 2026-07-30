@@ -1,7 +1,6 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
-import application.bootstrap.weatherpipeline.weatherband.WeatherBandInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
@@ -14,12 +13,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RegionSampleSystem extends SystemPackage {
 
     /*
-     * Resolves the regional weather noise field against a chance-weighted
-     * pool, either at an exact chunk coordinate or blended toward a
-     * horizon-direction sample. Pure resolution logic — every caller owns
-     * its own reference coordinate and any state/smoothing on top of
-     * whatever this returns. Pools are supplied as parallel fastutil
-     * lists — handles alongside their chance weights.
+     * Resolves the regional weather noise field into exactly one weather
+     * handle from a chance-weighted pool — no blending between candidates.
+     * Callers own their own reference coordinate and any state/smoothing on
+     * top of whatever this returns.
      */
 
     private static final long NOISE_SEED = 0x51A5F00DCAFEBEEFL;
@@ -58,16 +55,14 @@ class RegionSampleSystem extends SystemPackage {
         return lerp(localNoise, globalIntensity, globalNoiseSystem.getGlobalInfluence());
     }
 
-    void resolveBand(
-            WeatherBandInstance out,
+    WeatherHandle resolveWeather(
             int chunkX, int chunkZ,
             ObjectArrayList<WeatherHandle> poolHandles,
             FloatArrayList poolChances) {
-        bandFromPool(out, poolHandles, poolChances, combinedNoiseAt(chunkX, chunkZ));
+        return pickFromPool(poolHandles, poolChances, combinedNoiseAt(chunkX, chunkZ));
     }
 
-    void resolveBandTowardHorizon(
-            WeatherBandInstance out,
+    WeatherHandle resolveWeatherTowardHorizon(
             int homeChunkX,
             int homeChunkZ,
             int referenceChunkX,
@@ -89,10 +84,8 @@ class RegionSampleSystem extends SystemPackage {
 
         float nearNoise = combinedNoiseAt(homeChunkX, homeChunkZ);
 
-        if (distanceT <= 0.0001f) {
-            bandFromPool(out, poolHandles, poolChances, nearNoise);
-            return;
-        }
+        if (distanceT <= 0.0001f)
+            return pickFromPool(poolHandles, poolChances, nearNoise);
 
         int farChunkX = homeChunkX;
         int farChunkZ = homeChunkZ;
@@ -107,31 +100,29 @@ class RegionSampleSystem extends SystemPackage {
         float farNoise = combinedNoiseAt(farChunkX, farChunkZ);
         float blendedNoise = lerp(nearNoise, farNoise, distanceT);
 
-        bandFromPool(out, poolHandles, poolChances, blendedNoise);
+        return pickFromPool(poolHandles, poolChances, blendedNoise);
     }
 
-    private void bandFromPool(
-            WeatherBandInstance out,
+    /*
+     * Noise picks exactly one weather from the pool — whichever chance-
+     * weighted band it falls into. No blending between candidates; a
+     * weather either owns this sample or it doesn't.
+     */
+    private WeatherHandle pickFromPool(
             ObjectArrayList<WeatherHandle> poolHandles,
             FloatArrayList poolChances,
             float noise) {
 
-        if (poolHandles.size() == 1) {
-            WeatherHandle only = poolHandles.get(0);
-            out.assign(only, only, 0f);
-            return;
-        }
+        if (poolHandles.size() == 1)
+            return poolHandles.get(0);
 
         float total = 0f;
 
         for (int i = 0; i < poolChances.size(); i++)
             total += Math.max(0f, poolChances.getFloat(i));
 
-        if (total <= 0f) {
-            WeatherHandle first = poolHandles.get(0);
-            out.assign(first, first, 0f);
-            return;
-        }
+        if (total <= 0f)
+            return poolHandles.get(0);
 
         float target = clamp01(noise) * total;
         float cumulative = 0f;
@@ -139,24 +130,15 @@ class RegionSampleSystem extends SystemPackage {
         for (int i = 0; i < poolHandles.size(); i++) {
 
             float chance = Math.max(0f, poolChances.getFloat(i));
-            float bandEnd = cumulative + chance;
+            cumulative += chance;
+
             boolean isLast = i == poolHandles.size() - 1;
 
-            if (target <= bandEnd || isLast) {
-
-                WeatherHandle low = poolHandles.get(i);
-                int nextIndex = isLast ? i : i + 1;
-                WeatherHandle high = poolHandles.get(nextIndex);
-
-                float bandWidth = Math.max(bandEnd - cumulative, 0.0001f);
-                float t = clamp01((target - cumulative) / bandWidth);
-
-                out.assign(low, high, t);
-                return;
-            }
-
-            cumulative = bandEnd;
+            if (target <= cumulative || isLast)
+                return poolHandles.get(i);
         }
+
+        return poolHandles.get(poolHandles.size() - 1);
     }
 
     private float lerp(float a, float b, float t) {

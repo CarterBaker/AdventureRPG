@@ -3,7 +3,6 @@ package application.bootstrap.weatherpipeline.weathermanager;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
-import application.bootstrap.weatherpipeline.weatherband.WeatherBandInstance;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import engine.root.EngineSetting;
@@ -19,12 +18,12 @@ public class WeatherManager extends ManagerPackage {
 
     /*
      * Owns the weather definition palette and resolves the active biome/
-     * season into a chance-weighted pool of candidate weathers. Band
-     * resolution is reference-agnostic — callers supply whichever chunk
-     * coordinate they want the "toward horizon" blend measured from. The
-     * active and biased pools are held as parallel fastutil lists —
-     * handles alongside their chance weights — cleared and rebuilt in
-     * place rather than reallocated, so resolving a pool never allocates.
+     * season into a chance-weighted pool of candidate weathers, then hands
+     * that pool to RegionSampleSystem to pick exactly one weather — never a
+     * blend of two. The active and biased pools are held as parallel
+     * fastutil lists — handles alongside their chance weights — cleared and
+     * rebuilt in place rather than reallocated, so resolving weather never
+     * allocates.
      */
 
     private static final float NEXT_WEATHER_SUGGESTION_INFLUENCE = 1.5f;
@@ -51,7 +50,7 @@ public class WeatherManager extends ManagerPackage {
     private final FloatArrayList biasedWeatherChances = new FloatArrayList();
 
     // Resolved Pool — points at either the active or biased pool above,
-    // reassigned fresh by resolvePool() ahead of every band resolution
+    // reassigned fresh by resolvePool() ahead of every weather resolution
     private ObjectArrayList<WeatherHandle> resolvedPoolHandles;
     private FloatArrayList resolvedPoolChances;
 
@@ -248,41 +247,41 @@ public class WeatherManager extends ManagerPackage {
         return globalNoiseSystem.sampleGlobalIntensity(chunkCoordinate);
     }
 
-    public void resolveWeatherBand(WeatherBandInstance out, long chunkCoordinate) {
+    /*
+     * Resolves the single active weather at an exact chunk coordinate — no
+     * horizon blending, no next-weather bias, just the unbiased pool read
+     * straight against the noise field.
+     */
+    public WeatherHandle resolveWeather(long chunkCoordinate) {
 
         if (!weatherPoolResolved)
-            throwException("Cannot resolve a weather band before any season has been resolved. "
+            throwException("Cannot resolve weather before any season has been resolved. "
                     + "Callers should check hasActiveWeatherPool() first.");
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
 
-        regionSampleSystem.resolveBand(out, chunkX, chunkZ, activeWeatherHandles, activeWeatherChances);
+        return regionSampleSystem.resolveWeather(chunkX, chunkZ, activeWeatherHandles, activeWeatherChances);
     }
 
-    public void resolveWeatherBandTowardHorizon(
-            WeatherBandInstance out,
-            long homeChunkCoordinate,
-            long referenceChunkCoordinate) {
-        resolveWeatherBandTowardHorizonInternal(out, homeChunkCoordinate, referenceChunkCoordinate, null);
+    public WeatherHandle resolveWeatherTowardHorizon(long homeChunkCoordinate, long referenceChunkCoordinate) {
+        return resolveWeatherTowardHorizonInternal(homeChunkCoordinate, referenceChunkCoordinate, null);
     }
 
-    public void resolveWeatherBandTowardHorizonBiased(
-            WeatherBandInstance out,
+    public WeatherHandle resolveWeatherTowardHorizonBiased(
             long homeChunkCoordinate,
             long referenceChunkCoordinate,
             WeatherHandle currentWeather) {
-        resolveWeatherBandTowardHorizonInternal(out, homeChunkCoordinate, referenceChunkCoordinate, currentWeather);
+        return resolveWeatherTowardHorizonInternal(homeChunkCoordinate, referenceChunkCoordinate, currentWeather);
     }
 
-    private void resolveWeatherBandTowardHorizonInternal(
-            WeatherBandInstance out,
+    private WeatherHandle resolveWeatherTowardHorizonInternal(
             long homeChunkCoordinate,
             long referenceChunkCoordinate,
             WeatherHandle currentWeather) {
 
         if (!weatherPoolResolved)
-            throwException("Cannot resolve a weather band before any season has been resolved. "
+            throwException("Cannot resolve weather before any season has been resolved. "
                     + "Callers should check hasActiveWeatherPool() first.");
 
         int homeChunkX = Coordinate2Long.unpackX(homeChunkCoordinate);
@@ -293,8 +292,8 @@ public class WeatherManager extends ManagerPackage {
 
         resolvePool(currentWeather);
 
-        regionSampleSystem.resolveBandTowardHorizon(
-                out, homeChunkX, homeChunkZ, referenceChunkX, referenceChunkZ,
+        return regionSampleSystem.resolveWeatherTowardHorizon(
+                homeChunkX, homeChunkZ, referenceChunkX, referenceChunkZ,
                 resolvedPoolHandles, resolvedPoolChances);
     }
 }

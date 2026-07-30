@@ -2,7 +2,6 @@ package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.temperature.TemperatureInstance;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
-import application.bootstrap.weatherpipeline.weatherband.WeatherBandInstance;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -26,7 +25,9 @@ public class WeatherPatternManager extends ManagerPackage {
      * two grids sharing a cell see the exact same weather. Each grid also
      * owns its own WeatherInstance (held directly on GridInstance) resolved
      * against that grid's own reference coordinate, driving that grid's own
-     * TemperatureInstance and local wind.
+     * TemperatureInstance and local wind. Every pattern holds exactly one
+     * active weather at a time — noise picks a single categorical weather
+     * outright, with no spatial blending between candidates.
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
@@ -62,9 +63,7 @@ public class WeatherPatternManager extends ManagerPackage {
     private int scanCursor;
 
     private double elapsedSimTime;
-    private float intensityUpdateAccumulator;
 
-    private WeatherBandInstance bandScratch;
     private final int[] homeJitterScratch = new int[2];
 
     private ObjectArrayList<WeatherInstance> streamedInThisFrame;
@@ -103,7 +102,6 @@ public class WeatherPatternManager extends ManagerPackage {
         this.scanCursor = 0;
 
         this.elapsedSimTime = 0.0;
-        this.intensityUpdateAccumulator = 0f;
 
         this.streamedInThisFrame = new ObjectArrayList<>();
         this.retiredThisFrame = new ObjectArrayList<>();
@@ -111,8 +109,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
         this.temperatureSystem = create(TemperatureSystem.class);
         create(WeatherMapBufferSystem.class);
-
-        this.bandScratch = create(WeatherBandInstance.class);
     }
 
     @Override
@@ -149,7 +145,6 @@ public class WeatherPatternManager extends ManagerPackage {
         advanceWorldDrift();
         advanceWeatherReevaluation(grids);
         advanceLocalWeather(grids);
-        advanceIntensity(grids);
         advanceIntensitySmoothing();
         advanceFadesAndRetire(grids);
         streamInBudgeted(grids);
@@ -285,17 +280,14 @@ public class WeatherPatternManager extends ManagerPackage {
 
         long chunkCoordinate = Coordinate2Long.pack(homeChunkX, homeChunkZ);
         long referenceCoordinate = Coordinate2Long.pack(referenceChunkX, referenceChunkZ);
-        weatherManager.resolveWeatherBandTowardHorizon(bandScratch, chunkCoordinate, referenceCoordinate);
 
-        WeatherHandle weatherHandle = bandScratch.getPrimary();
-        float spread = bandScratch.getIntensityFor(weatherHandle);
-        float intensity = spread * weatherHandle.getCloudCoverage();
+        WeatherHandle weatherHandle = weatherManager.resolveWeatherTowardHorizon(chunkCoordinate, referenceCoordinate);
 
         int slot = freeSlots.removeInt(freeSlots.size() - 1);
         WeatherInstance pattern = patternPool[slot];
 
-        pattern.constructor(patternKey, homeChunkX, homeChunkZ, weatherHandle, DEFAULT_DRIFT_SPEED_SCALE, intensity,
-                spread);
+        pattern.constructor(patternKey, homeChunkX, homeChunkZ, weatherHandle, DEFAULT_DRIFT_SPEED_SCALE,
+                weatherHandle.getCloudCoverage());
         pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
         pattern.setDistanceFromReferenceChunks((float) distanceChunks);
         pattern.updateBounds();
@@ -394,10 +386,8 @@ public class WeatherPatternManager extends ManagerPackage {
             long referenceCoordinate = resolveNearestReferenceCoordinate(
                     pattern.getHomeChunkX(), pattern.getHomeChunkZ(), grids);
 
-            weatherManager.resolveWeatherBandTowardHorizonBiased(
-                    bandScratch, homeCoordinate, referenceCoordinate, pattern.getWeatherHandle());
-
-            WeatherHandle resolved = bandScratch.getPrimary();
+            WeatherHandle resolved = weatherManager.resolveWeatherTowardHorizonBiased(
+                    homeCoordinate, referenceCoordinate, pattern.getWeatherHandle());
 
             if (resolved != pattern.getWeatherHandle())
                 tryRefreshWeather(pattern, resolved);
@@ -429,9 +419,8 @@ public class WeatherPatternManager extends ManagerPackage {
 
             if (!pattern.isConfigured()) {
 
-                weatherManager.resolveWeatherBandTowardHorizon(bandScratch, referenceCoordinate, referenceCoordinate);
-                WeatherHandle initial = bandScratch.getPrimary();
-                float spread = bandScratch.getIntensityFor(initial);
+                WeatherHandle initial = weatherManager.resolveWeatherTowardHorizon(
+                        referenceCoordinate, referenceCoordinate);
 
                 long localPatternKey = LOCAL_PATTERN_KEY_SEED
                         ^ (((long) System.identityHashCode(grid)) * 0x9E3779B97F4A7C15L);
@@ -442,8 +431,7 @@ public class WeatherPatternManager extends ManagerPackage {
                         Coordinate2Long.unpackY(referenceCoordinate),
                         initial,
                         DEFAULT_DRIFT_SPEED_SCALE,
-                        spread * initial.getCloudCoverage(),
-                        spread);
+                        initial.getCloudCoverage());
 
                 pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(localPatternKey));
 
@@ -453,10 +441,8 @@ public class WeatherPatternManager extends ManagerPackage {
 
                 if (elapsedSimTime >= pattern.getNextReevaluationTime()) {
 
-                    weatherManager.resolveWeatherBandTowardHorizonBiased(
-                            bandScratch, referenceCoordinate, referenceCoordinate, pattern.getWeatherHandle());
-
-                    WeatherHandle resolved = bandScratch.getPrimary();
+                    WeatherHandle resolved = weatherManager.resolveWeatherTowardHorizonBiased(
+                            referenceCoordinate, referenceCoordinate, pattern.getWeatherHandle());
 
                     if (resolved != pattern.getWeatherHandle())
                         pattern.beginWeatherTransition(resolved);
@@ -471,38 +457,6 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
-    private void advanceIntensity(ObjectArrayList<GridInstance> grids) {
-
-        intensityUpdateAccumulator += internal.getDeltaTime();
-
-        if (intensityUpdateAccumulator < EngineSetting.WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS)
-            return;
-
-        intensityUpdateAccumulator = 0f;
-
-        for (int i = 0; i < patternPool.length; i++) {
-
-            if (!slotActive[i])
-                continue;
-
-            WeatherInstance pattern = patternPool[i];
-
-            if (pattern.isRetiring())
-                continue;
-
-            long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
-            long referenceCoordinate = resolveNearestReferenceCoordinate(
-                    pattern.getHomeChunkX(), pattern.getHomeChunkZ(), grids);
-
-            weatherManager.resolveWeatherBandTowardHorizon(bandScratch, homeCoordinate, referenceCoordinate);
-
-            float purity = bandScratch.getIntensityFor(pattern.getWeatherHandle());
-
-            pattern.setTargetSpread(purity);
-            pattern.setTargetIntensity(purity * pattern.getWeatherHandle().getCloudCoverage());
-        }
-    }
-
     private void advanceIntensitySmoothing() {
 
         float deltaTime = internal.getDeltaTime();
@@ -514,7 +468,6 @@ public class WeatherPatternManager extends ManagerPackage {
                 continue;
 
             patternPool[i].advanceIntensitySmoothing(alpha);
-            patternPool[i].advanceSpreadSmoothing(alpha);
         }
     }
 

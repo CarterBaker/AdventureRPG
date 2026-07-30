@@ -172,7 +172,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         patternState[index].set(
                 distanceChunks,
                 pattern.getIntensity(),
-                pattern.getSpread(),
+                0f,
                 pattern.getFadeAlpha());
 
         CloudHandle cloudHandle = weatherHandle.getCloudHandle(cloudIndex);

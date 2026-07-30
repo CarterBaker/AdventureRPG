@@ -350,10 +350,6 @@ public class EngineSetting {
 
         public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 48.0f;
         public static final int MAX_CLOUD_TYPES = 8;
-
-        // Cloud Box Mesh/Material — the overhead volumetric render system's
-        // single shared box and shader, drawn once per near-range weather
-        // map entry via instancing; see OverheadCloudSystem.
         public static final String CLOUD_BOX_MESH_NAME = "clouds/CloudVolumeMesh";
         public static final String CLOUD_VOLUME_DEFAULT_MATERIAL = "clouds/CloudVolumeMaterial";
 
@@ -374,18 +370,8 @@ public class EngineSetting {
 
         // Weather Sampling Ranges \\
 
-        // Outer boundary of the CPU weather-pattern simulation and the sky
-        // dome's distant cloud sampling. Independent of terrain streaming
-        // distance — clouds are read straight from the weather map UBO, not
-        // from loaded chunks, so this is never clamped against render distance.
         public static final int WEATHER_OUTER_RANGE_CHUNKS = 192;
-
-        // Inner boundary, always closer than the outer range above, that the
-        // overhead volumetric mesh samples against instead of the full range.
         public static final int WEATHER_NEAR_RANGE_CHUNKS = 96;
-
-        // Directional lookahead distance for RegionSampleBranch's own
-        // horizon-direction probe — unrelated to the near/outer pair above.
         public static final int WEATHER_FAR_RANGE_CHUNKS = 384;
 
         // Global Weather Noise \\
@@ -407,11 +393,6 @@ public class EngineSetting {
 
         // Overhead — Weather Patterns \\
 
-        // Cell size matches WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS so adjacent
-        // patterns' visual footprints tile with neither large gaps nor heavy
-        // overlap. Active count sized so the near range can fully populate
-        // (~50 cells at this cell size) well before the pool fills, leaving
-        // the remainder for the outer skybox ring.
         public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 128;
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 24;
         public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 24.0f;
@@ -420,21 +401,11 @@ public class EngineSetting {
 
         // Weather Pattern Lifecycle \\
 
-        // A pattern re-samples the noise field once the world has drifted this
-        // fraction of one noise wavelength — cadence is derived directly from
-        // the same KPH-based drift speed the noise field itself scrolls at.
-        // Jittered per pattern between the two ratios below so many active
-        // patterns never all reevaluate on the same frame.
         public static final float WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION = 0.12f;
         public static final float WEATHER_PATTERN_REEVALUATION_JITTER_MIN = 0.5f;
         public static final float WEATHER_PATTERN_REEVALUATION_JITTER_MAX = 1.5f;
         public static final float WEATHER_PATTERN_REEVALUATION_MIN_SECONDS = 20.0f;
         public static final float WEATHER_PATTERN_REEVALUATION_MAX_SECONDS = 180.0f;
-        public static final float WEATHER_PATTERN_INTENSITY_UPDATE_INTERVAL_SECONDS = 2.0f;
-
-        // How quickly a pattern's blended intensity/spread glide toward their
-        // freshly resolved targets, and how quickly its fade-in/fade-out alpha
-        // and cross-fade between two weather handles progress.
         public static final float WEATHER_PATTERN_INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
         public static final float WEATHER_PATTERN_TRANSITION_DURATION_SECONDS = 10.0f;
         public static final float WEATHER_PATTERN_FADE_IN_RATE = 0.4f;
@@ -442,10 +413,6 @@ public class EngineSetting {
 
         // Weather Map (GPU) \\
 
-        // Flattened (pattern × cloud entry) capacity of WeatherMapData — must
-        // match WeatherMapData.json/.glsl. Deliberately larger than
-        // WEATHER_PATTERN_MAX_ACTIVE_COUNT since a single pattern can occupy
-        // more than one slot (one per cloud archetype it draws).
         public static final String WEATHER_MAP_UBO = "WeatherMapData";
         public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 256;
 
@@ -519,42 +486,23 @@ public class EngineSetting {
 
         // Sky Temperature Accent \\
 
-        // Reference range temperature is normalized against before lerping
-        // between the cold and hot accent colors below.
         public static final float SKY_TEMPERATURE_COLD_REFERENCE = -10.0f;
         public static final float SKY_TEMPERATURE_HOT_REFERENCE = 30.0f;
-
-        // Cotton-candy pink/lavender at the cold end...
         public static final float SKY_TEMPERATURE_COLD_ACCENT_R = 0.95f;
         public static final float SKY_TEMPERATURE_COLD_ACCENT_G = 0.75f;
         public static final float SKY_TEMPERATURE_COLD_ACCENT_B = 0.88f;
-
-        // ...fiery orange/yellow at the hot end.
         public static final float SKY_TEMPERATURE_HOT_ACCENT_R = 1.00f;
         public static final float SKY_TEMPERATURE_HOT_ACCENT_G = 0.55f;
         public static final float SKY_TEMPERATURE_HOT_ACCENT_B = 0.18f;
-
-        // How strongly the temperature accent overrides the season's own
-        // authored sunrise/sunset color during the sunrise/sunset window.
         public static final float SKY_TEMPERATURE_ACCENT_STRENGTH = 0.55f;
 
         // Sky Cloud Color \\
 
-        // Cloud color leans mostly on horizon rather than zenith — clouds
-        // catch horizon-level light far more than they catch zenith light.
         public static final float SKY_CLOUD_COLOR_HORIZON_WEIGHT = 0.65f;
-
-        // Clouds pick up an even stronger dose of the temperature accent
-        // than the sky itself during sunrise/sunset.
         public static final float SKY_CLOUD_COLOR_ACCENT_STRENGTH = 0.7f;
 
         // Sky Fog Color \\
 
-        // Fog is the atmosphere's own haze color — a lifted, hazier version
-        // of the horizon color rather than an exact copy of it. Computed
-        // once here, alongside horizon/zenith/cloud, so every shader that
-        // ever needs a fog tint reads the same authoritative value instead
-        // of re-deriving its own.
         public static final float SKY_FOG_COLOR_LIFT = 0.04f;
 
         // Lighting \\
