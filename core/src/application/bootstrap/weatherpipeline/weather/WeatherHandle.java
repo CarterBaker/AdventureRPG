@@ -1,18 +1,21 @@
 package application.bootstrap.weatherpipeline.weather;
 
+import application.bootstrap.weatherpipeline.cloud.CloudHandle;
 import engine.root.HandlePackage;
-import engine.util.random.WeightedChanceUtility;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WeatherHandle extends HandlePackage {
 
     /*
      * Persistent reference to a loaded weather definition, owned by
-     * WeatherManager. A weather may define no clouds at all (clear skies),
-     * in which case hasClouds() is false and getPrimaryCloud()/pickCloud()
-     * return null rather than throwing. nextWeatherChances are consulted
-     * only as a bias on top of the biome/season pool's own noise-driven
-     * pick — see WeatherManager.resolveWeatherBandTowardHorizonBiased().
+     * WeatherManager. A weather may define no clouds at all (clear
+     * skies), in which case getCloudCount() is 0. Cloud entries and
+     * next-weather suggestions are read by index against parallel
+     * fastutil lists on WeatherData rather than a wrapper type per entry.
+     * nextWeatherChances are consulted only as a bias on top of the
+     * biome/season pool's own noise-driven pick — see
+     * WeatherManager.resolveWeatherBandTowardHorizonBiased().
      */
 
     private WeatherData weatherData;
@@ -33,39 +36,77 @@ public class WeatherHandle extends HandlePackage {
         return weatherData.getWeatherID();
     }
 
-    public ObjectArrayList<CloudChanceStruct> getCloudEntries() {
-        return weatherData.getCloudEntries();
+    // Clouds \\
+
+    public int getCloudCount() {
+        return weatherData.getCloudHandles().size();
     }
 
     public boolean hasClouds() {
-        return !weatherData.getCloudEntries().isEmpty();
+        return !weatherData.getCloudHandles().isEmpty();
     }
 
-    public CloudChanceStruct getPrimaryCloud() {
+    public CloudHandle getCloudHandle(int index) {
+        return weatherData.getCloudHandles().get(index);
+    }
 
-        ObjectArrayList<CloudChanceStruct> entries = weatherData.getCloudEntries();
+    public float getCloudChance(int index) {
+        return weatherData.getCloudChances().getFloat(index);
+    }
 
-        if (entries.isEmpty())
-            return null;
+    public float getCloudDensityMultiplier(int index) {
+        return weatherData.getCloudDensityMultipliers().getFloat(index);
+    }
 
-        CloudChanceStruct best = entries.get(0);
+    public float getCloudEffectiveAltitude(int index) {
+        float override = weatherData.getCloudAltitudeOverrides().getFloat(index);
+        return override >= 0f ? override : getCloudHandle(index).getBaseAltitude();
+    }
 
-        for (int i = 1; i < entries.size(); i++)
-            if (entries.get(i).getChance() > best.getChance())
-                best = entries.get(i);
+    public int getPrimaryCloudIndex() {
+
+        FloatArrayList chances = weatherData.getCloudChances();
+
+        if (chances.isEmpty())
+            return -1;
+
+        int best = 0;
+
+        for (int i = 1; i < chances.size(); i++)
+            if (chances.getFloat(i) > chances.getFloat(best))
+                best = i;
 
         return best;
     }
 
-    public CloudChanceStruct pickCloud(float noise01) {
+    public int pickCloudIndex(float noise01) {
 
-        ObjectArrayList<CloudChanceStruct> entries = weatherData.getCloudEntries();
+        FloatArrayList chances = weatherData.getCloudChances();
 
-        if (entries.isEmpty())
-            return null;
+        if (chances.isEmpty())
+            return -1;
 
-        return WeightedChanceUtility.pickWeighted(entries, noise01);
+        float total = 0f;
+
+        for (int i = 0; i < chances.size(); i++)
+            total += Math.max(0f, chances.getFloat(i));
+
+        if (total <= 0f)
+            return 0;
+
+        float target = Math.max(0f, Math.min(1f, noise01)) * total;
+        float cumulative = 0f;
+
+        for (int i = 0; i < chances.size(); i++) {
+            cumulative += Math.max(0f, chances.getFloat(i));
+            if (target <= cumulative)
+                return i;
+        }
+
+        return chances.size() - 1;
     }
+
+    // Atmosphere \\
 
     public float getCloudCoverage() {
         return weatherData.getCloudCoverage();
@@ -110,16 +151,17 @@ public class WeatherHandle extends HandlePackage {
     // Next Weather Suggestions \\
 
     public boolean hasNextWeatherSuggestions() {
-        return !weatherData.getNextWeatherChances().isEmpty();
+        return !weatherData.getNextWeatherNames().isEmpty();
     }
 
     public float getNextWeatherChanceFor(WeatherHandle candidate) {
 
-        ObjectArrayList<NextWeatherChanceStruct> suggestions = weatherData.getNextWeatherChances();
+        ObjectArrayList<String> names = weatherData.getNextWeatherNames();
+        FloatArrayList chances = weatherData.getNextWeatherChances();
 
-        for (int i = 0; i < suggestions.size(); i++)
-            if (suggestions.get(i).getWeatherName().equals(candidate.getWeatherName()))
-                return suggestions.get(i).getChance();
+        for (int i = 0; i < names.size(); i++)
+            if (names.get(i).equals(candidate.getWeatherName()))
+                return chances.getFloat(i);
 
         return 0f;
     }

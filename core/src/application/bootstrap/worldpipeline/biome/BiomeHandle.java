@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.biome;
 
 import engine.graphics.color.Color;
 import engine.root.HandlePackage;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class BiomeHandle extends HandlePackage {
@@ -10,6 +11,9 @@ public class BiomeHandle extends HandlePackage {
      * Persistent biome record. Wraps BiomeData and delegates all access
      * through it. Registered in BiomeManager from bootstrap to shutdown.
      */
+
+    private static final ObjectArrayList<String> EMPTY_NAMES = new ObjectArrayList<>();
+    private static final FloatArrayList EMPTY_CHANCES = new FloatArrayList();
 
     // Internal
     private BiomeData biomeData;
@@ -38,18 +42,18 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getBiomeColor();
     }
 
-    public ObjectArrayList<WeatherChanceStruct> getWeatherEntriesForSeason(String seasonName) {
+    public ObjectArrayList<String> getWeatherNamesForSeason(String seasonName) {
+        ObjectArrayList<String> names = biomeData.getWeatherNamesForSeason(seasonName);
+        return names != null ? names : EMPTY_NAMES;
+    }
 
-        ObjectArrayList<WeatherChanceStruct> entries = biomeData.getSeasonWeatherEntries().get(seasonName);
-
-        if (entries == null)
-            return new ObjectArrayList<>();
-
-        return entries;
+    public FloatArrayList getWeatherChancesForSeason(String seasonName) {
+        FloatArrayList chances = biomeData.getWeatherChancesForSeason(seasonName);
+        return chances != null ? chances : EMPTY_CHANCES;
     }
 
     public boolean hasWeathersForSeason(String seasonName) {
-        return biomeData.getSeasonWeatherEntries().containsKey(seasonName);
+        return biomeData.getWeatherNamesForSeason(seasonName) != null;
     }
 
     /*

@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.bootstrap.weatherpipeline.weather.CloudChanceStruct;
+import application.bootstrap.weatherpipeline.cloud.CloudHandle;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -134,10 +134,10 @@ class WeatherMapBufferSystem extends SystemPackage {
                 resolvedNearRangeCount = entryCount;
 
             WeatherHandle weatherHandle = pattern.getWeatherHandle();
-            ObjectArrayList<CloudChanceStruct> cloudEntries = weatherHandle.getCloudEntries();
+            int cloudCount = weatherHandle.getCloudCount();
 
-            for (int c = 0; c < cloudEntries.size() && entryCount < capacity; c++) {
-                writeEntry(entryCount, pattern, distanceChunks, weatherHandle, cloudEntries.get(c));
+            for (int c = 0; c < cloudCount && entryCount < capacity; c++) {
+                writeEntry(entryCount, pattern, distanceChunks, weatherHandle, c);
                 entryCount++;
             }
         }
@@ -164,7 +164,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             WeatherInstance pattern,
             float distanceChunks,
             WeatherHandle weatherHandle,
-            CloudChanceStruct cloudEntry) {
+            int cloudIndex) {
 
         Vector4 patternBounds = pattern.getBounds();
         bounds[index].set(patternBounds.x, patternBounds.y, patternBounds.z, patternBounds.w);
@@ -175,7 +175,7 @@ class WeatherMapBufferSystem extends SystemPackage {
                 pattern.getSpread(),
                 pattern.getFadeAlpha());
 
-        var cloudHandle = cloudEntry.getCloudHandle();
+        CloudHandle cloudHandle = weatherHandle.getCloudHandle(cloudIndex);
         var color = cloudHandle.getCloudColor();
 
         cloudColorScale[index].set(color.x, color.y, color.z, cloudHandle.getScale());
@@ -184,11 +184,11 @@ class WeatherMapBufferSystem extends SystemPackage {
 
         float resolvedDensity = cloudHandle.getDensity()
                 * weatherHandle.getCloudDensityMultiplier()
-                * cloudEntry.getDensityMultiplier();
+                * weatherHandle.getCloudDensityMultiplier(cloudIndex);
 
         cloudShape[index].set(
                 cloudHandle.getVerticalThickness(),
-                cloudEntry.getEffectiveAltitude(),
+                weatherHandle.getCloudEffectiveAltitude(cloudIndex),
                 resolvedDensity,
                 pattern.getDriftSpeedScale() * cloudHandle.getDriftSpeedScale());
 

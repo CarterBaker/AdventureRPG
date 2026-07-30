@@ -1,6 +1,8 @@
 package application.bootstrap.weatherpipeline.weather;
 
+import application.bootstrap.weatherpipeline.cloud.CloudHandle;
 import engine.root.DataPackage;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WeatherData extends DataPackage {
@@ -8,18 +10,28 @@ public class WeatherData extends DataPackage {
     /*
      * Immutable weather definition loaded from JSON — the condition-level
      * atmosphere values for one named weather, its chance-weighted cloud
-     * pool, and its own list of suggested next weathers. cloudCoverage is
-     * the fraction of sky/area this weather's clouds occupy; cloudDensityMultiplier
-     * separately scales how thick/opaque those clouds read, independent of
-     * how much area they cover. visualScale controls how large this weather
-     * reads in the sky.
+     * pool, and its own suggested next weathers. Cloud entries and next-
+     * weather suggestions are parallel fastutil lists rather than a
+     * wrapper type per entry. cloudCoverage is the fraction of sky/area
+     * this weather's clouds occupy; cloudDensityMultiplier separately
+     * scales how thick/opaque those clouds read, independent of how much
+     * area they cover. visualScale controls how large this weather reads
+     * in the sky.
      */
+
+    public static final float NO_ALTITUDE_OVERRIDE = -1f;
+    public static final float DEFAULT_CLOUD_DENSITY_MULTIPLIER = 1.0f;
 
     private final String weatherName;
     private final short weatherID;
 
-    private final ObjectArrayList<CloudChanceStruct> cloudEntries;
-    private final ObjectArrayList<NextWeatherChanceStruct> nextWeatherChances;
+    private final ObjectArrayList<CloudHandle> cloudHandles;
+    private final FloatArrayList cloudChances;
+    private final FloatArrayList cloudAltitudeOverrides;
+    private final FloatArrayList cloudDensityMultipliers;
+
+    private final ObjectArrayList<String> nextWeatherNames;
+    private final FloatArrayList nextWeatherChances;
 
     private final float cloudCoverage;
     private final float cloudDensityMultiplier;
@@ -36,8 +48,12 @@ public class WeatherData extends DataPackage {
     public WeatherData(
             String weatherName,
             short weatherID,
-            ObjectArrayList<CloudChanceStruct> cloudEntries,
-            ObjectArrayList<NextWeatherChanceStruct> nextWeatherChances,
+            ObjectArrayList<CloudHandle> cloudHandles,
+            FloatArrayList cloudChances,
+            FloatArrayList cloudAltitudeOverrides,
+            FloatArrayList cloudDensityMultipliers,
+            ObjectArrayList<String> nextWeatherNames,
+            FloatArrayList nextWeatherChances,
             float cloudCoverage,
             float cloudDensityMultiplier,
             float precipitationIntensity,
@@ -51,7 +67,11 @@ public class WeatherData extends DataPackage {
 
         this.weatherName = weatherName;
         this.weatherID = weatherID;
-        this.cloudEntries = cloudEntries;
+        this.cloudHandles = cloudHandles;
+        this.cloudChances = cloudChances;
+        this.cloudAltitudeOverrides = cloudAltitudeOverrides;
+        this.cloudDensityMultipliers = cloudDensityMultipliers;
+        this.nextWeatherNames = nextWeatherNames;
         this.nextWeatherChances = nextWeatherChances;
         this.cloudCoverage = cloudCoverage;
         this.cloudDensityMultiplier = cloudDensityMultiplier;
@@ -73,11 +93,27 @@ public class WeatherData extends DataPackage {
         return weatherID;
     }
 
-    public ObjectArrayList<CloudChanceStruct> getCloudEntries() {
-        return cloudEntries;
+    public ObjectArrayList<CloudHandle> getCloudHandles() {
+        return cloudHandles;
     }
 
-    public ObjectArrayList<NextWeatherChanceStruct> getNextWeatherChances() {
+    public FloatArrayList getCloudChances() {
+        return cloudChances;
+    }
+
+    public FloatArrayList getCloudAltitudeOverrides() {
+        return cloudAltitudeOverrides;
+    }
+
+    public FloatArrayList getCloudDensityMultipliers() {
+        return cloudDensityMultipliers;
+    }
+
+    public ObjectArrayList<String> getNextWeatherNames() {
+        return nextWeatherNames;
+    }
+
+    public FloatArrayList getNextWeatherChances() {
         return nextWeatherChances;
     }
 
