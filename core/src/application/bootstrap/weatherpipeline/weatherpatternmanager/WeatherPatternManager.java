@@ -382,12 +382,19 @@ public class WeatherPatternManager extends ManagerPackage {
             if (elapsedSimTime < pattern.getNextReevaluationTime())
                 continue;
 
-            long homeCoordinate = Coordinate2Long.pack(pattern.getHomeChunkX(), pattern.getHomeChunkZ());
-            long referenceCoordinate = resolveNearestReferenceCoordinate(
-                    pattern.getHomeChunkX(), pattern.getHomeChunkZ(), grids);
+            // Sampled from the pattern's current drift-integrated position, not its
+            // frozen home anchor — the noise field's rotation embedding only stays
+            // stable when the sampled chunk coordinate advances in step with the
+            // rotation phase, which the drift accumulator (never the home anchor)
+            // actually does.
+            int currentChunkX = (int) Math.round(pattern.getCurrentChunkX());
+            int currentChunkZ = (int) Math.round(pattern.getCurrentChunkZ());
+
+            long currentCoordinate = Coordinate2Long.pack(currentChunkX, currentChunkZ);
+            long referenceCoordinate = resolveNearestReferenceCoordinate(currentChunkX, currentChunkZ, grids);
 
             WeatherHandle resolved = weatherManager.resolveWeatherTowardHorizonBiased(
-                    homeCoordinate, referenceCoordinate, pattern.getWeatherHandle());
+                    currentCoordinate, referenceCoordinate, pattern.getWeatherHandle());
 
             if (resolved != pattern.getWeatherHandle())
                 tryRefreshWeather(pattern, resolved);

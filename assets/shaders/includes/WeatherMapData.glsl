@@ -2,7 +2,7 @@
 #define WEATHER_MAP_DATA_GLSL
 
 // Must match EngineSetting.WEATHER_MAP_UBO_MAX_ENTRIES.
-#define WEATHER_MAP_MAX_ENTRIES 96
+#define WEATHER_MAP_MAX_ENTRIES 32
 
 // bounds:          xy = footprint center in blocks, already relative to this
 //                  grid's own reference chunk and already wrap-corrected —
