@@ -23,8 +23,10 @@ class WeatherMapBufferSystem extends SystemPackage {
     /*
      * Flattens the shared active weather-instance pool into each active
      * grid's own WeatherMapData UBO every frame, nearest-first relative to
-     * that grid, with the near-range/outer-range split the overhead
-     * volumetric renderer depends on.
+     * that grid's own reference chunk. Every position written here is
+     * already wrap-corrected and already relative to that same reference
+     * chunk — the UBO is self-contained and never needs a second, separately
+     * updated "where is the player" source to be placed on screen correctly.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
@@ -93,6 +95,7 @@ class WeatherMapBufferSystem extends SystemPackage {
 
         float outerRangeChunks = weatherPatternManager.getOuterRangeChunks();
         float nearRangeChunks = weatherPatternManager.getNearRangeChunks();
+        float chunkSizeBlocks = EngineSetting.CHUNK_SIZE;
 
         WeatherInstance[] pool = weatherPatternManager.getPatternPool();
         int patternCount = 0;
@@ -133,11 +136,22 @@ class WeatherMapBufferSystem extends SystemPackage {
             if (resolvedNearRangeCount < 0 && distanceChunks > nearRangeChunks)
                 resolvedNearRangeCount = entryCount;
 
+            // Recomputed (not reused from the scan above) so the position is
+            // always derived the same wrap-safe way the distance test used —
+            // this is what the shader used to redo itself, unsafely, against
+            // a different reference chunk source.
+            double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
+            double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
+            float centerXBlocks = (float) (dx * chunkSizeBlocks);
+            float centerZBlocks = (float) (dz * chunkSizeBlocks);
+            float radiusBlocks = pattern.getFootprintRadiusChunks() * chunkSizeBlocks;
+
             WeatherHandle weatherHandle = pattern.getWeatherHandle();
             int cloudCount = weatherHandle.getCloudCount();
 
             for (int c = 0; c < cloudCount && entryCount < capacity; c++) {
-                writeEntry(entryCount, pattern, distanceChunks, weatherHandle, c);
+                writeEntry(entryCount, pattern, distanceChunks, centerXBlocks, centerZBlocks, radiusBlocks,
+                        weatherHandle, c);
                 entryCount++;
             }
         }
@@ -163,11 +177,13 @@ class WeatherMapBufferSystem extends SystemPackage {
             int index,
             WeatherInstance pattern,
             float distanceChunks,
+            float centerXBlocks,
+            float centerZBlocks,
+            float radiusBlocks,
             WeatherHandle weatherHandle,
             int cloudIndex) {
 
-        Vector4 patternBounds = pattern.getBounds();
-        bounds[index].set(patternBounds.x, patternBounds.y, patternBounds.z, patternBounds.w);
+        bounds[index].set(centerXBlocks, centerZBlocks, radiusBlocks, 0f);
 
         patternState[index].set(
                 distanceChunks,
