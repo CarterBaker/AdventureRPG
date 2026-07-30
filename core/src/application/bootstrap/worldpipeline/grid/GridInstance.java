@@ -30,10 +30,11 @@ public class GridInstance extends InstancePackage {
      * Owns the load order, slot handles, active chunks, active mega chunks,
      * pending load/unload requests, and the render queues for this grid.
      * clockInstance, weatherInstance, temperatureInstance, windInstance, and
-     * every per-grid UBO instance are handed to this grid by GridBuildSystem
-     * — cloned or created fresh from their owning manager — so every window
-     * tracks its own location's time, weather, temperature, wind, sun, moon,
-     * sky, and weather map independently.
+     * the Time/Sun/Moon/Sky/Weather-Map/Wind UBO instances are all handed to
+     * this grid by GridBuildSystem — cloned or created fresh from their
+     * owning manager — so every window tracks its own location's time,
+     * weather, temperature, wind, sun, moon, sky, and weather map
+     * independently.
      */
 
     // Focal

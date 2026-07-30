@@ -98,6 +98,7 @@ public class OverheadCloudSystem extends SystemPackage {
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());
         mat.setUBO(grid.getWeatherMapUBO());
+        mat.setUBO(grid.getWindDataUBO());
     }
 
     // Accessible \\

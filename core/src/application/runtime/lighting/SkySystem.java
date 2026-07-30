@@ -17,10 +17,11 @@ public class SkySystem extends SystemPackage {
     /*
      * Submits the sky pass render call each frame and queues the sky FBO
      * for compositing into the final scene. Binds this window's own grid's
-     * Time/Sky/Sun/Moon/Weather-Map UBO instances onto the sky pass
+     * Time/Sky/Sun/Moon/Wind/Weather-Map UBO instances onto the sky pass
      * material each frame so the sky color and distant weather preview
-     * (see sky/util/Clouds.glsl) read this grid's own location and its own
-     * weather map instead of whichever window updated last.
+     * (see sky/util/Clouds.glsl) read this grid's own location, its own
+     * wind drift, and its own weather map instead of whichever window
+     * updated last.
      */
 
     // Internal
@@ -76,6 +77,7 @@ public class SkySystem extends SystemPackage {
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());
         mat.setUBO(grid.getWeatherMapUBO());
+        mat.setUBO(grid.getWindDataUBO());
     }
 
     // Accessible \\

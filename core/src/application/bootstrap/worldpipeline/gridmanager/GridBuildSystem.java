@@ -28,28 +28,33 @@ class GridBuildSystem extends SystemPackage {
     /*
      * Constructs a GridInstance and all GridSlotHandles for a given focal
      * entity and window. Each grid gets its own ClockInstance, its own
-     * WeatherInstance, TemperatureInstance, and WindInstance, and its own
-     * Time/Sun/Moon/Sky/Weather-Map/Wind UBO instances cloned from the
-     * shared base handles, so every window tracks its own location fully
-     * independently.
+     * WeatherInstance/TemperatureInstance for local weather and temperature,
+     * its own WindInstance and WindData UBO instance, and its own
+     * Time/Sun/Moon/Sky/Weather-Map UBO instances cloned from the shared
+     * base handles, so every window tracks its own location independently.
      */
 
+    // Internal
     private UBOManager uboManager;
     private ClockManager clockManager;
     private WeatherManager weatherManager;
     private WeatherPatternManager weatherPatternManager;
     private WindManager windManager;
 
+    // Config
     private int chunkSize;
     private int megaChunkSize;
     private int chunkPoolMaxOverflow;
 
+    // Base UBO Handles
     private UBOHandle timeDataBase;
     private UBOHandle sunLightBase;
     private UBOHandle moonLightBase;
     private UBOHandle skyColorBase;
     private UBOHandle weatherMapBase;
     private UBOHandle windDataBase;
+
+    // Internal \\
 
     @Override
     protected void create() {
