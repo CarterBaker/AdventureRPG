@@ -2,8 +2,6 @@
 #define CLOUDS_GLSL
 
 #include "includes/CameraData.glsl"
-#include "includes/PlayerPositionData.glsl"
-#include "includes/SettingsData.glsl"
 #include "includes/TimeData.glsl"
 #include "includes/WindData.glsl"
 #include "includes/WeatherMapData.glsl"
@@ -80,7 +78,6 @@ vec4 calculateClouds(vec3 dir) {
 
     vec3 rayOrigin = u_cameraPosition;
     vec2 windDrift = u_windDriftOffset;
-    float chunkSizeBlocks = u_chunkSize;
 
     vec3 sunDir = normalize(u_sunDirection);
     float sunGlow = pow(clamp(dot(dir, -sunDir), 0.0, 1.0), SKY_CLOUD_SUN_GLOW_POWER) * SKY_CLOUD_SUN_GLOW_STRENGTH;
@@ -107,9 +104,14 @@ vec4 calculateClouds(vec3 dir) {
         if (!cloudPlaneHit(dir, rayOrigin, shape.y, hitXZ))
         continue;
 
+        // bounds.xy is the footprint center in blocks, already relative to
+        // this grid's own reference chunk — no player-chunk correction
+        // needed. bounds.z is the footprint radius in blocks.
         vec4 bounds = u_weatherBounds[i];
-        vec2 relMin = (bounds.xy - vec2(u_playerChunkX, u_playerChunkZ)) * chunkSizeBlocks;
-        vec2 relMax = (bounds.zw - vec2(u_playerChunkX, u_playerChunkZ)) * chunkSizeBlocks;
+        vec2 footprintCenter = bounds.xy;
+        float footprintRadius = max(bounds.z, 1.0);
+        vec2 relMin = footprintCenter - vec2(footprintRadius);
+        vec2 relMax = footprintCenter + vec2(footprintRadius);
 
         vec4 noise = u_weatherCloudNoise[i];
         float thicknessSoftness = clamp(shape.x / 64.0, 0.05, 1.0) * 0.2;
