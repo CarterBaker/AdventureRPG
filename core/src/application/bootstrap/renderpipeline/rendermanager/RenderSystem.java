@@ -39,21 +39,19 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RenderSystem extends SystemPackage {
 
+    /*
+     * Drives all draw submission and flushing for a window's render queue —
+     * depth-sorted batches, screen passes, skinned characters, and generic
+     * world-space instanced draws (e.g. weather clouds).
+     */
+
     private CompositeRenderSystem compositeRenderSystem;
     private VAOManager vaoManager;
     private CameraManager cameraManager;
     private SkinnedBufferManager skinnedBufferManager;
 
-    // Skinned — per-window instanced VAO cache. VAOs are context-local and
-    // cannot be shared, so each window gets its own compiled VAO the first
-    // time a given SkinnedBufferInstance is drawn in it, mirroring
-    // CompositeRenderSystem.windowID2BufferGpuState.
     private Int2ObjectOpenHashMap<Object2IntOpenHashMap<SkinnedBufferInstance>> windowID2SkinnedVAOCache;
 
-    // Generic world-space instanced draws (e.g. physical weather clouds) —
-    // the instance VBO lives on the CompositeBufferInstance itself and is
-    // shared across every window's GL context; only the VAO wrapping it is
-    // context-local and cached per window here.
     private Int2ObjectOpenHashMap<Object2ObjectOpenHashMap<CompositeBufferInstance, InstancedBufferGpuState>> windowID2InstancedGpuState;
     private FloatBuffer instancedUploadBuffer;
     private int instancedUploadBufferCapacity;
@@ -101,14 +99,6 @@ class RenderSystem extends SystemPackage {
             drawDepthSortedBatches(queue, target, window);
             drawSkinnedBatches(queue, target, window);
 
-            // Cloud boxes are a closed convex mesh raymarched from the
-            // camera in the fragment shader (see CloudVolumeShader.fsh) —
-            // back-face culling here is a pure performance win (half the
-            // fragment invocations per box) and never a correctness
-            // requirement, since the raymarch resolves the same result
-            // regardless of which face triggered it. Accepted trade-off:
-            // a box the camera is literally inside has no front face left
-            // to cull to, so it stops rendering until the camera exits it.
             RenderGLSLUtility.enableCulling();
             drawInstancedCompositeBatches(queue, target, window);
             RenderGLSLUtility.disableCulling();
@@ -253,12 +243,27 @@ class RenderSystem extends SystemPackage {
         }
     }
 
+    /*
+     * UBOs attached to a material per-call via MaterialInstance.setUBO()
+     * (grid-scoped data — time, sky color, sun/moon, weather map, wind)
+     * still need their block bound to THIS program's binding point, the
+     * same as a source UBO — glUniformBlockBinding is per-program state,
+     * so skipping this step leaves the block reading whatever happens to
+     * already sit at its default binding point instead of the buffer
+     * being updated every frame.
+     */
     private void pushInstanceUBOs(RenderCallStruct renderCall) {
 
         UBOInstance[] instances = renderCall.getCachedInstanceUBOs();
 
+        if (instances.length == 0)
+            return;
+
+        int shaderHandle = renderCall.getMaterialInstance().getShaderHandle().getGpuHandle();
+
         for (int i = 0; i < instances.length; i++) {
             UBOInstance ubo = instances[i];
+            RenderGLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
             RenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
         }
     }
@@ -307,13 +312,6 @@ class RenderSystem extends SystemPackage {
         pushRenderCall(modelInstance, fbo, depth, mask, window, 1);
     }
 
-    /*
-     * instanceCount > 1 issues a glDrawElementsInstanced call against this
-     * mesh's normal (non-instanced) VAO — no per-instance CPU buffer is
-     * built or uploaded. The shader is expected to index any per-instance
-     * data it needs from gl_InstanceID against a UBO already bound as a
-     * source UBO on the material.
-     */
     void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
             WindowInstance window, int instanceCount) {
 
@@ -419,13 +417,6 @@ class RenderSystem extends SystemPackage {
 
     // Skinned \\
 
-    /*
-     * Queues one entity's contribution into the shared instanced buffer for
-     * its (mesh, material) pair, creating that buffer on first use. Actual
-     * upload and drawing happen once per buffer in drawSkinnedBatches, not
-     * here — this only ever appends CPU-side instance data and makes sure
-     * the batch is registered against this fbo for the current frame.
-     */
     void pushSkinnedCall(
             MeshHandle meshHandle,
             MaterialInstance material,
@@ -564,12 +555,6 @@ class RenderSystem extends SystemPackage {
         }
     }
 
-    /*
-     * One instanced VAO per (window, SkinnedBufferInstance) pair — never
-     * shared across windows, since VAOs are context-local. The instance
-     * attribute layout is always {4,4,4,4}: the four vec4 columns GLSL
-     * packs automatically into a single mat4 instance attribute.
-     */
     private int getOrCreateSkinnedVAO(SkinnedBufferInstance skinnedBuffer, WindowInstance window) {
 
         int windowID = window.getWindowID();
@@ -602,13 +587,6 @@ class RenderSystem extends SystemPackage {
 
     // Generic Instanced Composite \\
 
-    /*
-     * Builds a CPU-side instance buffer bound to a shared mesh. The
-     * instance VBO is created immediately — it's an ordinary GL buffer
-     * object, shareable across every window's context. The VAO wrapping it
-     * is context-local and only ever created lazily per window, inside
-     * drawInstancedBatch().
-     */
     CompositeBufferInstance createInstancedBuffer(MeshHandle meshHandle, int[] instanceAttrSizes) {
 
         CompositeBufferData data = new CompositeBufferData(meshHandle, instanceAttrSizes);
@@ -696,13 +674,6 @@ class RenderSystem extends SystemPackage {
         RenderGLSLUtility.unbindVAO();
     }
 
-    /*
-     * Reallocates the shared instance VBO once per growth event — whichever
-     * window/buffer combination hits it first clears the flag, so any other
-     * window drawing the same buffer later this same frame sees
-     * needsGpuRealloc() already false and only rebuilds its own now-stale
-     * VAO against the fresh handle.
-     */
     private void reallocateInstancedBuffer(CompositeBufferInstance buffer) {
         RenderGLSLUtility.deleteBuffer(buffer.getInstanceVBO());
         int vbo = RenderGLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(), buffer.getFloatsPerInstance());
@@ -746,13 +717,6 @@ class RenderSystem extends SystemPackage {
         pushMaterialUniforms(material);
     }
 
-    /*
-     * There is exactly one shared instance VBO per buffer regardless of
-     * how many windows draw it, so a single needsUpload()/markUploaded()
-     * check is enough — whichever window draws the buffer first this
-     * frame uploads it, every later window this frame sees it already
-     * current.
-     */
     private void uploadInstancedBufferIfNeeded(CompositeBufferInstance buffer) {
 
         if (!buffer.needsUpload())

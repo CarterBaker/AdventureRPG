@@ -4,8 +4,6 @@
 layout (location = 0) in vec3 aPos;
 
 #include "includes/CameraData.glsl"
-#include "includes/PlayerPositionData.glsl"
-#include "includes/SettingsData.glsl"
 #include "includes/WeatherMapData.glsl"
 
 flat out int  vInstanceID;
@@ -25,26 +23,22 @@ void main() {
     vec4 variance0 = u_weatherCloudVariance0[gl_InstanceID];
     vec4 variance1 = u_weatherCloudVariance1[gl_InstanceID];
 
-    float chunkSizeBlocks = u_chunkSize;
-
-    float relMinX = (bounds.x - float(u_playerChunkX)) * chunkSizeBlocks;
-    float relMinZ = (bounds.y - float(u_playerChunkZ)) * chunkSizeBlocks;
-    float relMaxX = (bounds.z - float(u_playerChunkX)) * chunkSizeBlocks;
-    float relMaxZ = (bounds.w - float(u_playerChunkZ)) * chunkSizeBlocks;
-
-    float centerX = (relMinX + relMaxX) * 0.5;
-    float centerZ = (relMinZ + relMaxZ) * 0.5;
-    float halfX   = max((relMaxX - relMinX) * 0.5, 0.01);
-    float halfZ   = max((relMaxZ - relMinZ) * 0.5, 0.01);
+    // bounds.xy is the footprint center in blocks, already relative to this
+    // grid's own reference chunk and already wrap-corrected. bounds.z is
+    // the footprint radius in blocks.
+    float centerX = bounds.x;
+    float centerZ = bounds.y;
+    float halfX   = max(bounds.z, 0.01);
+    float halfZ   = max(bounds.z, 0.01);
     float centerY = shape.y;
     float halfY   = max(shape.x * 0.5, 0.01);
 
     // Per-instance footprint variance, stable across frames via patternSeed,
     // so identical bounds never read as a grid of identical rectangular slabs.
-    float seed     = variance1.z;
-    float sizeT     = hash01(seed * 12.9898);
-    float elongateT = hash01(seed * 78.233 + 3.7);
-    float axisPick  = hash01(seed * 37.719 + 9.1);
+    float seed      = variance1.z;
+    float sizeT      = hash01(seed * 12.9898);
+    float elongateT  = hash01(seed * 78.233 + 3.7);
+    float axisPick   = hash01(seed * 37.719 + 9.1);
 
     float sizeScale  = mix(variance0.y, variance0.z, sizeT);
     float elongation = mix(variance0.w, variance1.x, elongateT);
