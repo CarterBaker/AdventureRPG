@@ -414,7 +414,7 @@ public class EngineSetting {
         // Weather Map (GPU) \\
 
         public static final String WEATHER_MAP_UBO = "WeatherMapData";
-        public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 256;
+        public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 96;
 
         // Wind \\
 
