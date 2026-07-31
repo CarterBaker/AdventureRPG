@@ -18,7 +18,7 @@
             ]
         },
         {
-            "name": "OverheadScene",
+            "name": "WeatherScene",
             "sizingStrategy": "WINDOW_RELATIVE",
             "attachments": [
                 { "type": "color", "format": "RGBA8", "name": "color" }
