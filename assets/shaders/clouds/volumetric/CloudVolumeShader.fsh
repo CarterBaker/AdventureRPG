@@ -21,10 +21,11 @@ const float CLOUD_DENSITY_ABSORPTION   = 1.35;
 const float CLOUD_TRANSMITTANCE_CUTOFF = 0.01;
 const float CLOUD_DENSITY_EPSILON      = 0.001;
 
-// Local horizontal/coverage density for one weather-map entry at a world
-// sample position. heightNorm is written out so the caller can reuse it
-// for that same entry's vertical falloff and ambient lighting without
-// re-deriving it from the entry's own altitude/thickness a second time.
+// heightNorm is written out for the caller's vertical falloff/ambient use.
+// The raw vertical distance is checked first, before any noise — a sample
+// outside an entry's own thin band always ends up contributing zero either
+// way, so bailing here skips the warp/shape noise entirely for the large
+// majority of step×entry pairs in the box.
 float sampleEntryDensity(
     vec4 bounds,
     vec4 shape,
@@ -33,15 +34,19 @@ float sampleEntryDensity(
     float intensity,
     vec3 worldPos,
     out float heightNorm) {
+    float halfThickness = max(shape.x * 0.5, 0.01);
+    float rawHeightT = (worldPos.y - shape.y) / halfThickness;
+    heightNorm = clamp(rawHeightT * 0.5 + 0.5, 0.0, 1.0);
+
+    if (abs(rawHeightT) > 1.0)
+    return 0.0;
+
     float footprintRadius = max(bounds.z, 1.0);
     vec2 planarNorm = (worldPos.xz - bounds.xy) / footprintRadius;
 
     float edgeDist = 1.0 - max(abs(planarNorm.x), abs(planarNorm.y));
     float softness = max(noiseParams.w, 0.02);
     float edgeShape = smoothstep(0.0, softness, edgeDist);
-
-    float halfThickness = max(shape.x * 0.5, 0.01);
-    heightNorm = clamp(((worldPos.y - shape.y) / halfThickness) * 0.5 + 0.5, 0.0, 1.0);
 
     if (edgeShape <= 0.0)
     return 0.0;
