@@ -1,63 +1,19 @@
-// CloudVolumeShader.vsh
 #version 330 core
 
 layout (location = 0) in vec3 aPos;
 
 #include "includes/CameraData.glsl"
-#include "includes/WeatherMapData.glsl"
 
-flat out int  vInstanceID;
-out vec3      vLocalPos;
-flat out vec3 vBoxCenter;
-flat out vec3 vBoxHalfExtent;
+out vec3 vLocalPos;
 
-float hash01(float n) {
-    return fract(sin(n) * 43758.5453123);
-}
+uniform vec3 u_boxCenter;
+uniform vec3 u_boxHalfExtent;
 
 void main() {
-    vInstanceID = gl_InstanceID;
-
-    vec4 bounds    = u_weatherBounds[gl_InstanceID];
-    vec4 shape     = u_weatherCloudShape[gl_InstanceID];
-    vec4 variance0 = u_weatherCloudVariance0[gl_InstanceID];
-    vec4 variance1 = u_weatherCloudVariance1[gl_InstanceID];
-
-    // bounds.xy is the footprint center in blocks, already relative to this
-    // grid's own reference chunk and already wrap-corrected. bounds.z is
-    // the footprint radius in blocks.
-    float centerX = bounds.x;
-    float centerZ = bounds.y;
-    float halfX   = max(bounds.z, 0.01);
-    float halfZ   = max(bounds.z, 0.01);
-    float centerY = shape.y;
-    float halfY   = max(shape.x * 0.5, 0.01);
-
-    // Per-instance footprint variance, stable across frames via patternSeed,
-    // so identical bounds never read as a grid of identical rectangular slabs.
-    float seed      = variance1.z;
-    float sizeT      = hash01(seed * 12.9898);
-    float elongateT  = hash01(seed * 78.233 + 3.7);
-    float axisPick   = hash01(seed * 37.719 + 9.1);
-
-    float sizeScale  = mix(variance0.y, variance0.z, sizeT);
-    float elongation = mix(variance0.w, variance1.x, elongateT);
-
-    halfX *= sizeScale;
-    halfZ *= sizeScale;
-
-    if (axisPick > 0.5)
-    halfX *= elongation;
-    else
-    halfZ *= elongation;
-
     vec3 localPos = aPos - vec3(0.5);
+    vLocalPos = localPos;
 
-    vBoxCenter     = vec3(centerX, centerY, centerZ);
-    vBoxHalfExtent = vec3(halfX, halfY, halfZ);
-    vLocalPos      = localPos;
-
-    vec3 worldPos = vBoxCenter + localPos * vBoxHalfExtent * 2.0;
+    vec3 worldPos = u_boxCenter + localPos * u_boxHalfExtent * 2.0;
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

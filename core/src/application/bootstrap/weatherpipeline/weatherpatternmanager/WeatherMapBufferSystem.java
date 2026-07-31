@@ -27,6 +27,9 @@ class WeatherMapBufferSystem extends SystemPackage {
      * already wrap-corrected and already relative to that same reference
      * chunk — the UBO is self-contained and never needs a second, separately
      * updated "where is the player" source to be placed on screen correctly.
+     * Near-range gating is left entirely to the shaders — they already read
+     * u_weatherNearRangeChunks off this same UBO and can break out of the
+     * (still nearest-first sorted) entry array themselves.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
@@ -94,7 +97,6 @@ class WeatherMapBufferSystem extends SystemPackage {
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
         float outerRangeChunks = weatherPatternManager.getOuterRangeChunks();
-        float nearRangeChunks = weatherPatternManager.getNearRangeChunks();
         float chunkSizeBlocks = EngineSetting.CHUNK_SIZE;
 
         WeatherInstance[] pool = weatherPatternManager.getPatternPool();
@@ -123,7 +125,6 @@ class WeatherMapBufferSystem extends SystemPackage {
 
         int capacity = EngineSetting.WEATHER_MAP_UBO_MAX_ENTRIES;
         int entryCount = 0;
-        int resolvedNearRangeCount = -1;
 
         for (int i = 0; i < patternCount && entryCount < capacity; i++) {
 
@@ -132,9 +133,6 @@ class WeatherMapBufferSystem extends SystemPackage {
             float distanceChunks = Float.intBitsToFloat((int) (packed >>> 32));
 
             WeatherInstance pattern = pool[slot];
-
-            if (resolvedNearRangeCount < 0 && distanceChunks > nearRangeChunks)
-                resolvedNearRangeCount = entryCount;
 
             // Recomputed (not reused from the scan above) so the position is
             // always derived the same wrap-safe way the distance test used —
@@ -155,8 +153,6 @@ class WeatherMapBufferSystem extends SystemPackage {
                 entryCount++;
             }
         }
-
-        grid.setWeatherMapNearRangeCount(resolvedNearRangeCount < 0 ? entryCount : resolvedNearRangeCount);
 
         UBOInstance weatherMapUBO = grid.getWeatherMapUBO();
 

@@ -1,5 +1,3 @@
-// EngineSetting.java
-// EngineSetting.java
 package engine.root;
 
 import engine.graphics.color.Color;
@@ -399,6 +397,11 @@ public class EngineSetting {
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 16;
 
+        // Overhead Cloud Box \\
+
+        public static final float OVERHEAD_CLOUD_BOX_MIN_ALTITUDE = 0.0f;
+        public static final float OVERHEAD_CLOUD_BOX_MAX_ALTITUDE = 320.0f;
+
         // Weather Pattern Lifecycle \\
 
         public static final float WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION = 0.12f;
@@ -414,7 +417,7 @@ public class EngineSetting {
         // Weather Map (GPU) \\
 
         public static final String WEATHER_MAP_UBO = "WeatherMapData";
-        public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 32;
+        public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 96;
 
         // Wind \\
 

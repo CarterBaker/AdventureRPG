@@ -65,7 +65,6 @@ public class GridInstance extends InstancePackage {
 
     // Weather Map
     private UBOInstance weatherMapUBO;
-    private int weatherMapNearRangeCount;
 
     // Weather / Temperature
     private WeatherInstance weatherInstance;
@@ -142,7 +141,6 @@ public class GridInstance extends InstancePackage {
 
         // Weather Map
         this.weatherMapUBO = weatherMapUBO;
-        this.weatherMapNearRangeCount = 0;
 
         // Weather / Temperature
         this.weatherInstance = weatherInstance;
@@ -331,14 +329,6 @@ public class GridInstance extends InstancePackage {
 
     public UBOInstance getWeatherMapUBO() {
         return weatherMapUBO;
-    }
-
-    public int getWeatherMapNearRangeCount() {
-        return weatherMapNearRangeCount;
-    }
-
-    public void setWeatherMapNearRangeCount(int weatherMapNearRangeCount) {
-        this.weatherMapNearRangeCount = weatherMapNearRangeCount;
     }
 
     public WeatherInstance getWeatherInstance() {

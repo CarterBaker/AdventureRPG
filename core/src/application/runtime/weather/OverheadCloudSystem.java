@@ -8,25 +8,27 @@ import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.world.WorldSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class OverheadCloudSystem extends SystemPackage {
 
     /*
      * Renders the overhead volumetric cloud box each frame — a single
-     * shared box mesh, drawn once per this grid's own near-range
-     * WeatherMapData entry via instancing. gl_InstanceID indexes directly
-     * into this grid's own weather map UBO slots (nearest-first, so the
-     * leading N slots are always exactly the near-range entries for this
-     * window). Composites into the world scene beneath the sky dome via
-     * FboRenderSystem, at LAYER_OVERHEAD, filling the gap the skybox's own
-     * distant cloud sampling leaves directly above the player.
-     * ensureFboRendered() keeps the FBO clearing correctly on a clear-sky
-     * frame even when zero instances are drawn.
+     * static box, built once at awake to cover the weather system's near
+     * range, pushed as one ordinary (non-instanced) render call exactly
+     * like world chunk geometry. No geometry is ever created per cloud or
+     * per weather pattern — the box's own fragment shader loops over the
+     * shared WeatherMapData entries and raymarches every overlapping
+     * pattern in a single pass. Composites into the world scene beneath
+     * the sky dome via FboRenderSystem, at LAYER_OVERHEAD, filling the
+     * gap the skybox's own distant cloud sampling leaves directly above
+     * the player.
      */
 
     // Internal
@@ -36,6 +38,7 @@ public class OverheadCloudSystem extends SystemPackage {
     private FboManager fboManager;
     private FboRenderSystem fboRenderSystem;
     private WorldSystem worldSystem;
+    private WeatherManager weatherManager;
 
     // Render Target
     private FboInstance overheadFbo;
@@ -51,6 +54,7 @@ public class OverheadCloudSystem extends SystemPackage {
         this.fboManager = get(FboManager.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
+        this.weatherManager = get(WeatherManager.class);
     }
 
     @Override
@@ -63,6 +67,29 @@ public class OverheadCloudSystem extends SystemPackage {
 
         this.cloudBoxModel = create(ModelInstance.class);
         cloudBoxModel.constructor(meshData, material);
+
+        assignBoxBounds(material);
+    }
+
+    // Box Bounds \\
+
+    /*
+     * Sized once and never touched again — the box only ever needs to
+     * comfortably contain every near-range weather pattern's footprint,
+     * since the grid system already keeps the player-relative coordinate
+     * space centered near the origin every frame.
+     */
+    private void assignBoxBounds(MaterialInstance material) {
+
+        float radiusBlocks = (weatherManager.getEffectiveNearRangeChunks()
+                + EngineSetting.WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS) * EngineSetting.CHUNK_SIZE;
+
+        float minAltitude = EngineSetting.OVERHEAD_CLOUD_BOX_MIN_ALTITUDE;
+        float maxAltitude = EngineSetting.OVERHEAD_CLOUD_BOX_MAX_ALTITUDE;
+
+        material.setUniform("u_boxCenter", new Vector3(0f, (minAltitude + maxAltitude) * 0.5f, 0f));
+        material.setUniform("u_boxHalfExtent",
+                new Vector3(radiusBlocks, (maxAltitude - minAltitude) * 0.5f, radiusBlocks));
     }
 
     @Override
@@ -72,15 +99,7 @@ public class OverheadCloudSystem extends SystemPackage {
 
         bindGridLightingData(grid);
 
-        // Registers the FBO for this frame's clear/bind even if zero
-        // instances end up drawn — see class doc comment.
-        renderManager.ensureFboRendered(overheadFbo, context.getWindow());
-
-        int instanceCount = grid != null ? grid.getWeatherMapNearRangeCount() : 0;
-
-        if (instanceCount > 0)
-            renderManager.pushRenderCall(cloudBoxModel, overheadFbo, 0, instanceCount, context.getWindow());
-
+        renderManager.pushRenderCall(cloudBoxModel, overheadFbo, 0, context.getWindow());
         fboRenderSystem.pushFbo(overheadFbo, RuntimeSetting.LAYER_OVERHEAD, context.getWindow());
     }
 
