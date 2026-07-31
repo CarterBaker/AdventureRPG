@@ -15,6 +15,13 @@ public class WeatherInstance extends InstancePackage {
      * ever active at a time — previousWeatherHandle/transitionT exist only
      * to cross-fade from the old weather to the new one over time when the
      * active weather actually changes, never to blend two weathers at once.
+     *
+     * Position is the single source of truth for this pattern's world
+     * location and is only ever changed by advancePosition() — a continuous
+     * integration of the persisted velocity set via setVelocity(). Weather
+     * reevaluation (see WeatherPatternManager) only ever swaps which
+     * WeatherHandle — and therefore which Cloud Settings — this pattern
+     * renders; it never touches position or velocity.
      */
 
     private static final float TRANSITION_DIP_STRENGTH = 0.6f;
@@ -35,8 +42,12 @@ public class WeatherInstance extends InstancePackage {
 
     private float driftSpeedScale;
 
-    private double driftChunkX;
-    private double driftChunkZ;
+    // Position — the only mutation path is advancePosition(), a continuous
+    // integration of the persisted velocity below.
+    private double positionX;
+    private double positionZ;
+    private double velocityXChunksPerSecond;
+    private double velocityZChunksPerSecond;
 
     private float fadeAlpha;
     private boolean retiring;
@@ -89,8 +100,10 @@ public class WeatherInstance extends InstancePackage {
         this.homeChunkX = homeChunkX;
         this.homeChunkZ = homeChunkZ;
         this.driftSpeedScale = driftSpeedScale;
-        this.driftChunkX = 0.0;
-        this.driftChunkZ = 0.0;
+        this.positionX = homeChunkX;
+        this.positionZ = homeChunkZ;
+        this.velocityXChunksPerSecond = 0.0;
+        this.velocityZChunksPerSecond = 0.0;
         this.fadeAlpha = 0f;
         this.retiring = false;
         this.intensity = intensity;
@@ -99,11 +112,19 @@ public class WeatherInstance extends InstancePackage {
         this.configured = true;
     }
 
-    // Drift \\
+    // Velocity \\
 
-    public void advanceDrift(double deltaChunkX, double deltaChunkZ) {
-        this.driftChunkX += deltaChunkX;
-        this.driftChunkZ += deltaChunkZ;
+    public void setVelocity(double velocityXChunksPerSecond, double velocityZChunksPerSecond) {
+        this.velocityXChunksPerSecond = velocityXChunksPerSecond;
+        this.velocityZChunksPerSecond = velocityZChunksPerSecond;
+    }
+
+    public double getVelocityXChunksPerSecond() {
+        return velocityXChunksPerSecond;
+    }
+
+    public double getVelocityZChunksPerSecond() {
+        return velocityZChunksPerSecond;
     }
 
     public void setDriftSpeedScale(float driftSpeedScale) {
@@ -114,12 +135,26 @@ public class WeatherInstance extends InstancePackage {
         return driftSpeedScale;
     }
 
+    // Position \\
+
+    /*
+     * The only place this pattern's world position ever changes after
+     * stream-in. Called exactly once per frame for every active pattern —
+     * see WeatherPatternManager.advanceWorldDrift() — entirely independent
+     * of weather reevaluation, so the rendered location never has a
+     * discrete jump no matter how often the weather itself is reassessed.
+     */
+    public void advancePosition(double deltaTime) {
+        positionX += velocityXChunksPerSecond * deltaTime;
+        positionZ += velocityZChunksPerSecond * deltaTime;
+    }
+
     public double getCurrentChunkX() {
-        return homeChunkX + driftChunkX;
+        return positionX;
     }
 
     public double getCurrentChunkZ() {
-        return homeChunkZ + driftChunkZ;
+        return positionZ;
     }
 
     // Weather Transition \\

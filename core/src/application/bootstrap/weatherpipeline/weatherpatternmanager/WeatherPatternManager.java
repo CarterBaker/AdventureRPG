@@ -288,6 +288,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
         pattern.constructor(patternKey, homeChunkX, homeChunkZ, weatherHandle, DEFAULT_DRIFT_SPEED_SCALE,
                 weatherHandle.getCloudCoverage());
+        assignVelocity(pattern);
         pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
         pattern.setDistanceFromReferenceChunks((float) distanceChunks);
         pattern.updateBounds();
@@ -311,18 +312,30 @@ public class WeatherPatternManager extends ManagerPackage {
         return Coordinate2Long.pack(wrappedX, wrappedZ);
     }
 
+    // Velocity \\
+
+    /*
+     * Derives this pattern's persisted world-drift velocity from the same
+     * world-rotation KPH that drives the noise field, scaled by its own
+     * driftSpeedScale. Assigned exactly once, at stream-in — from that
+     * point on advanceWorldDrift() integrates position from this value
+     * alone, and weather reevaluation never touches it.
+     */
+    private void assignVelocity(WeatherInstance pattern) {
+        double baseVelocityXChunksPerSecond = weatherManager.getWorldDriftChunksPerSecondX();
+        pattern.setVelocity(baseVelocityXChunksPerSecond * pattern.getDriftSpeedScale(), 0.0);
+    }
+
     private void advanceWorldDrift() {
 
-        float deltaTime = internal.getDeltaTime();
-        double baseDeltaChunkX = weatherManager.getWorldDriftChunksPerSecondX() * deltaTime;
+        double deltaTime = internal.getDeltaTime();
 
         for (int i = 0; i < patternPool.length; i++) {
 
             if (!slotActive[i])
                 continue;
 
-            WeatherInstance pattern = patternPool[i];
-            pattern.advanceDrift(baseDeltaChunkX * pattern.getDriftSpeedScale(), 0.0);
+            patternPool[i].advancePosition(deltaTime);
         }
     }
 
