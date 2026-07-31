@@ -24,26 +24,14 @@ public class RenderCallStruct extends StructPackage {
     private UniformStruct<?>[] cachedUniforms;
     private UBOInstance[] cachedInstanceUBOs;
     private MaskStruct mask;
-    private int instanceCount;
 
     // Init \\
 
     public void init(ModelInstance modelInstance, MaskStruct mask) {
-        init(modelInstance, mask, 1);
-    }
 
-    /*
-     * instanceCount drives glDrawElementsInstanced when greater than 1. No
-     * per-instance CPU buffer is required for this path — the shader is
-     * expected to derive per-instance data from gl_InstanceID against a
-     * UBO already bound as a source UBO on the material (the overhead
-     * cloud box reading WeatherMapData is the intended consumer).
-     */
-    public void init(ModelInstance modelInstance, MaskStruct mask, int instanceCount) {
         this.modelInstance = modelInstance;
         this.materialInstance = modelInstance.getMaterial();
         this.mask = mask;
-        this.instanceCount = instanceCount;
 
         var keys = materialInstance.getUniformKeys();
         if (keys != null && !keys.isEmpty()) {
@@ -85,9 +73,5 @@ public class RenderCallStruct extends StructPackage {
 
     public boolean hasMask() {
         return mask != null;
-    }
-
-    public int getInstanceCount() {
-        return instanceCount;
     }
 }

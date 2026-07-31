@@ -1,10 +1,5 @@
 package application.bootstrap.renderpipeline.rendermanager;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
-
-import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferData;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
@@ -14,9 +9,7 @@ import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBuffer
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
-import application.bootstrap.renderpipeline.fbo.FboData;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.instancedbatch.InstancedBatchStruct;
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
 import application.bootstrap.renderpipeline.renderqueue.RenderQueueHandle;
@@ -26,7 +19,6 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
-import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -34,15 +26,13 @@ import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RenderSystem extends SystemPackage {
 
     /*
      * Drives all draw submission and flushing for a window's render queue —
-     * depth-sorted batches, screen passes, skinned characters, and generic
-     * world-space instanced draws (e.g. weather clouds).
+     * depth-sorted batches, screen passes, and skinned characters.
      */
 
     private CompositeRenderSystem compositeRenderSystem;
@@ -52,14 +42,9 @@ class RenderSystem extends SystemPackage {
 
     private Int2ObjectOpenHashMap<Object2IntOpenHashMap<SkinnedBufferInstance>> windowID2SkinnedVAOCache;
 
-    private Int2ObjectOpenHashMap<Object2ObjectOpenHashMap<CompositeBufferInstance, InstancedBufferGpuState>> windowID2InstancedGpuState;
-    private FloatBuffer instancedUploadBuffer;
-    private int instancedUploadBufferCapacity;
-
     @Override
     protected void create() {
         this.windowID2SkinnedVAOCache = new Int2ObjectOpenHashMap<>();
-        this.windowID2InstancedGpuState = new Int2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -98,10 +83,6 @@ class RenderSystem extends SystemPackage {
 
             drawDepthSortedBatches(queue, target, window);
             drawSkinnedBatches(queue, target, window);
-
-            RenderGLSLUtility.enableCulling();
-            drawInstancedCompositeBatches(queue, target, window);
-            RenderGLSLUtility.disableCulling();
 
             compositeRenderSystem.draw(queue, target, window);
             target.unbind();
@@ -299,8 +280,6 @@ class RenderSystem extends SystemPackage {
         if (tessellated)
             RenderGLSLUtility.drawPatches(
                     model.getIndexCount() / EngineSetting.QUAD_INDEX_COUNT * EngineSetting.QUAD_VERTEX_COUNT);
-        else if (renderCall.getInstanceCount() > 1)
-            RenderGLSLUtility.drawElementsInstanced(model.getIndexCount(), renderCall.getInstanceCount());
         else
             RenderGLSLUtility.drawElements(model.getIndexCount());
 
@@ -309,11 +288,6 @@ class RenderSystem extends SystemPackage {
 
     void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
             WindowInstance window) {
-        pushRenderCall(modelInstance, fbo, depth, mask, window, 1);
-    }
-
-    void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
-            WindowInstance window, int instanceCount) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
@@ -321,7 +295,7 @@ class RenderSystem extends SystemPackage {
             return;
 
         RenderCallStruct renderCall = queue.nextCall();
-        renderCall.init(modelInstance, mask, instanceCount);
+        renderCall.init(modelInstance, mask);
 
         MaterialInstance material = modelInstance.getMaterial();
         int materialID = material.getMaterialID();
@@ -404,15 +378,7 @@ class RenderSystem extends SystemPackage {
     }
 
     void removeWindowResources(WindowInstance window) {
-
         compositeRenderSystem.removeWindow(window.getWindowID());
-
-        Object2ObjectOpenHashMap<CompositeBufferInstance, InstancedBufferGpuState> instancedState = windowID2InstancedGpuState
-                .remove(window.getWindowID());
-
-        if (instancedState != null)
-            for (InstancedBufferGpuState state : instancedState.values())
-                RenderGLSLUtility.deleteVAO(state.vao);
     }
 
     // Skinned \\
@@ -583,170 +549,5 @@ class RenderSystem extends SystemPackage {
         buffer2VAO.put(skinnedBuffer, vao);
 
         return vao;
-    }
-
-    // Generic Instanced Composite \\
-
-    CompositeBufferInstance createInstancedBuffer(MeshHandle meshHandle, int[] instanceAttrSizes) {
-
-        CompositeBufferData data = new CompositeBufferData(meshHandle, instanceAttrSizes);
-        CompositeBufferInstance buffer = create(CompositeBufferInstance.class);
-        buffer.constructor(data);
-
-        int vbo = RenderGLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(), buffer.getFloatsPerInstance());
-        buffer.setInstanceVBO(vbo);
-
-        return buffer;
-    }
-
-    void pushInstancedCompositeCall(
-            CompositeBufferInstance buffer,
-            MaterialInstance material,
-            FboInstance fbo,
-            WindowInstance window) {
-
-        RenderQueueHandle queue = window.getRenderQueueHandle();
-
-        if (queue == null || fbo == null)
-            return;
-
-        ObjectArrayList<InstancedBatchStruct> batches = queue.fbo2InstancedBatchList.get(fbo);
-
-        if (batches == null) {
-            batches = new ObjectArrayList<>();
-            queue.fbo2InstancedBatchList.put(fbo, batches);
-        }
-
-        Object[] elements = batches.elements();
-        int count = batches.size();
-
-        for (int i = 0; i < count; i++)
-            if (((InstancedBatchStruct) elements[i]).getBuffer() == buffer)
-                return;
-
-        batches.add(new InstancedBatchStruct(buffer, material));
-        ensureFboQueued(queue, fbo, window);
-    }
-
-    private void drawInstancedCompositeBatches(RenderQueueHandle queue, FboInstance fbo, WindowInstance window) {
-
-        ObjectArrayList<InstancedBatchStruct> batches = queue.fbo2InstancedBatchList.get(fbo);
-
-        if (batches == null || batches.isEmpty())
-            return;
-
-        Object[] elements = batches.elements();
-        int count = batches.size();
-
-        for (int i = 0; i < count; i++)
-            drawInstancedBatch((InstancedBatchStruct) elements[i], window);
-    }
-
-    private void drawInstancedBatch(InstancedBatchStruct batch, WindowInstance window) {
-
-        CompositeBufferInstance buffer = batch.getBuffer();
-
-        if (buffer.isEmpty())
-            return;
-
-        if (buffer.needsGpuRealloc())
-            reallocateInstancedBuffer(buffer);
-
-        InstancedBufferGpuState gpuState = getOrCreateInstancedGpuState(buffer, window.getWindowID());
-
-        if (gpuState.vao == EngineSetting.GL_HANDLE_NONE || gpuState.maxInstances != buffer.getMaxInstances()) {
-            RenderGLSLUtility.deleteVAO(gpuState.vao);
-            gpuState.vao = RenderGLSLUtility.createInstancedVAO(
-                    buffer.getMeshHandle().getVertexHandle(),
-                    buffer.getMeshHandle().getAttrSizes(),
-                    buffer.getMeshHandle().getIndexHandle(),
-                    buffer.getInstanceVBO(),
-                    buffer.getInstanceAttrSizes());
-            gpuState.maxInstances = buffer.getMaxInstances();
-        }
-
-        uploadInstancedBufferIfNeeded(buffer);
-
-        bindInstancedMaterial(batch, batch.getMaterial());
-
-        RenderGLSLUtility.bindVAO(gpuState.vao);
-        RenderGLSLUtility.drawElementsInstanced(buffer.getIndexCount(), buffer.getInstanceCount());
-        RenderGLSLUtility.unbindVAO();
-    }
-
-    private void reallocateInstancedBuffer(CompositeBufferInstance buffer) {
-        RenderGLSLUtility.deleteBuffer(buffer.getInstanceVBO());
-        int vbo = RenderGLSLUtility.createDynamicInstanceVBO(buffer.getMaxInstances(), buffer.getFloatsPerInstance());
-        buffer.setInstanceVBO(vbo);
-        buffer.clearNeedsGpuRealloc();
-    }
-
-    private InstancedBufferGpuState getOrCreateInstancedGpuState(CompositeBufferInstance buffer, int windowID) {
-
-        Object2ObjectOpenHashMap<CompositeBufferInstance, InstancedBufferGpuState> buffer2State = windowID2InstancedGpuState
-                .get(windowID);
-
-        if (buffer2State == null) {
-            buffer2State = new Object2ObjectOpenHashMap<>();
-            windowID2InstancedGpuState.put(windowID, buffer2State);
-        }
-
-        InstancedBufferGpuState gpuState = buffer2State.get(buffer);
-
-        if (gpuState != null)
-            return gpuState;
-
-        gpuState = new InstancedBufferGpuState();
-        buffer2State.put(buffer, gpuState);
-        return gpuState;
-    }
-
-    private void bindInstancedMaterial(InstancedBatchStruct batch, MaterialInstance material) {
-
-        int shaderHandle = material.getShaderHandle().getGpuHandle();
-        RenderGLSLUtility.useShader(shaderHandle);
-
-        UBOHandle[] handles = batch.getCachedSourceUBOs();
-
-        for (int i = 0; i < handles.length; i++) {
-            UBOHandle ubo = handles[i];
-            RenderGLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
-            RenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
-        }
-
-        pushMaterialUniforms(material);
-    }
-
-    private void uploadInstancedBufferIfNeeded(CompositeBufferInstance buffer) {
-
-        if (!buffer.needsUpload())
-            return;
-
-        int floatCount = buffer.getInstanceCount() * buffer.getFloatsPerInstance();
-        ensureInstancedUploadBuffer(floatCount);
-
-        instancedUploadBuffer.clear();
-        instancedUploadBuffer.put(buffer.getInstanceData(), 0, floatCount);
-        instancedUploadBuffer.flip();
-
-        RenderGLSLUtility.updateInstanceVBO(buffer.getInstanceVBO(), instancedUploadBuffer, floatCount);
-        buffer.markUploaded();
-    }
-
-    private void ensureInstancedUploadBuffer(int floatCount) {
-
-        if (floatCount <= instancedUploadBufferCapacity)
-            return;
-
-        instancedUploadBufferCapacity = floatCount * EngineSetting.COMPOSITE_UPLOAD_BUFFER_GROWTH_FACTOR;
-        instancedUploadBuffer = ByteBuffer
-                .allocateDirect(instancedUploadBufferCapacity * Float.BYTES)
-                .order(ByteOrder.nativeOrder())
-                .asFloatBuffer();
-    }
-
-    private static class InstancedBufferGpuState {
-        private int vao = EngineSetting.GL_HANDLE_NONE;
-        private int maxInstances;
     }
 }

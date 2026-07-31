@@ -23,22 +23,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RenderManager extends ManagerPackage {
 
     /*
-     * Drives the draw phase. Two-pass loop over all windows registered in
-     * WindowManager:
-     *
-     * Pass 1 — logical windows (tabs, no native handle): make their composite
-     * target's GL context current, push their own camera to the UBO, render
-     * their content, push FBOs onto the OS window's blit queue. No buffer swap.
-     *
-     * Pass 2 — OS windows (native handle): make context current, sync size,
-     * push camera, render content, flush blit queue (which now includes any
-     * logical window FBOs from pass 1), swap buffers.
-     *
-     * Both passes call the same draw(window) — no special-casing per window type.
-     *
-     * Screen pass is split around the compositor:
-     * order 0 — drawn before FBO composite (game UI, menus)
-     * order 1 — drawn after FBO composite (dock chrome, always on top)
+     * Drives the draw phase across all registered windows — logical windows
+     * queue into their OS window's blit queue, OS windows flush their full
+     * queue and swap buffers. Screen pass order 0 draws before FBO composite,
+     * order 1 after.
      */
 
     private CameraManager cameraManager;
@@ -83,14 +71,7 @@ public class RenderManager extends ManagerPackage {
             return;
         }
 
-        // Pass 1 — logical windows: intentionally no render work.
-        // Context systems run at update time. All render calls are queued
-        // into the composite OS window's render queue and flushed in pass 2
-        // under the correct OS window camera.
-        //
-        // Future: this is where per-tab scene FBOs get rendered using
-        // per-tab cameras (editor free cam, game cam, etc.) before the
-        // UI compositing pass. That work lands here once scene FBOs exist.
+        // Pass 1 — logical windows queue into their OS window; no render work here.
 
         // Pass 2 — OS windows: correct camera, full queue, composite blits, swap.
         for (int i = 0; i < count; i++) {
@@ -165,17 +146,6 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushRenderCall(modelInstance, fbo, depth, mask, window);
     }
 
-    /*
-     * instanceCount > 1 draws the model's mesh via glDrawElementsInstanced
-     * with no per-instance CPU buffer — see RenderSystem.pushRenderCall for
-     * the shader-side contract (gl_InstanceID against a bound UBO). The
-     * overhead cloud box is the first consumer of this overload.
-     */
-    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, int instanceCount,
-            WindowInstance window) {
-        renderSystem.pushRenderCall(modelInstance, fbo, depth, null, window, instanceCount);
-    }
-
     public void pushScreenCall(ModelInstance modelInstance) {
         renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow(), 0);
     }
@@ -220,26 +190,12 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushCompositeCall(material, buffer, fbo, window);
     }
 
-    // Generic Instanced Composite Calls \\
-
-    public CompositeBufferInstance createInstancedCompositeBuffer(MeshHandle meshHandle, int[] instanceAttrSizes) {
-        return renderSystem.createInstancedBuffer(meshHandle, instanceAttrSizes);
-    }
-
-    public void pushInstancedCompositeCall(
-            CompositeBufferInstance buffer,
-            MaterialInstance material,
-            FboInstance fbo,
-            WindowInstance window) {
-        renderSystem.pushInstancedCompositeCall(buffer, material, fbo, window);
-    }
-
     /*
      * Guarantees the given FBO is registered as a render target for this
      * window this frame — bound, cleared, and processed by
      * drawToMappedTargets() — even if no draw calls are ever queued into
      * it this frame. Overhead weather needs this: a clear-sky frame pushes
-     * zero cloud instances, but the FBO still has to come back transparent
+     * zero cloud draws, but the FBO still has to come back transparent
      * rather than showing whatever it last held.
      */
     public void ensureFboRendered(FboInstance fbo, WindowInstance window) {

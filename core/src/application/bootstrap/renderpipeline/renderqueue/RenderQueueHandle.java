@@ -2,7 +2,6 @@ package application.bootstrap.renderpipeline.renderqueue;
 
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
-import application.bootstrap.renderpipeline.instancedbatch.InstancedBatchStruct;
 import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
 import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
 import application.bootstrap.renderpipeline.skinnedbatch.SkinnedBatchStruct;
@@ -30,7 +29,6 @@ public class RenderQueueHandle extends HandlePackage {
     public Int2ObjectOpenHashMap<CompositeBatchStruct> screenCompositeMaterialBatches;
     public ObjectArrayList<CompositeBatchStruct> screenCompositeBatchList;
     public Object2ObjectOpenHashMap<FboInstance, ObjectArrayList<SkinnedBatchStruct>> fbo2SkinnedBatchList;
-    public Object2ObjectOpenHashMap<FboInstance, ObjectArrayList<InstancedBatchStruct>> fbo2InstancedBatchList;
 
     public void constructor() {
         this.renderCallBuffer = new RenderCallStruct[EngineSetting.MAX_RENDER_CALLS_PER_FRAME];
@@ -49,7 +47,6 @@ public class RenderQueueHandle extends HandlePackage {
         this.screenCompositeMaterialBatches = new Int2ObjectOpenHashMap<>();
         this.screenCompositeBatchList = new ObjectArrayList<>();
         this.fbo2SkinnedBatchList = new Object2ObjectOpenHashMap<>();
-        this.fbo2InstancedBatchList = new Object2ObjectOpenHashMap<>();
     }
 
     public RenderCallStruct nextCall() {
@@ -75,6 +72,5 @@ public class RenderQueueHandle extends HandlePackage {
         screenCompositeMaterialBatches.clear();
         screenCompositeBatchList.clear();
         fbo2SkinnedBatchList.clear();
-        fbo2InstancedBatchList.clear();
     }
 }
