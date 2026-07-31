@@ -7,7 +7,7 @@ import application.runtime.menueventsmanager.MenuEventsManager;
 import application.runtime.player.PlayerRenderSystem;
 import application.runtime.player.PlayerSystem;
 import application.runtime.postprocessing.PostProcessingManager;
-import application.runtime.weather.OverheadCloudSystem;
+import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.ContextPackage;
 
@@ -31,7 +31,7 @@ public class RuntimeContext extends ContextPackage {
     private InputSystem playerInputSystem;
     private PostProcessingManager postProcessingManager;
     private PlayerRenderSystem playerRenderSystem;
-    private OverheadCloudSystem overheadCloudSystem;
+    private WeatherSystem weatherSystem;
 
     // Internal \\
 
@@ -47,6 +47,6 @@ public class RuntimeContext extends ContextPackage {
         this.playerInputSystem = create(InputSystem.class);
         this.postProcessingManager = create(PostProcessingManager.class);
         this.playerRenderSystem = create(PlayerRenderSystem.class);
-        this.overheadCloudSystem = create(OverheadCloudSystem.class);
+        this.weatherSystem = create(WeatherSystem.class);
     }
 }

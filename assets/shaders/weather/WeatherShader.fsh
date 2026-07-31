@@ -1,7 +1,7 @@
 #version 330 core
 
-in vec3 vLocalPos;
-
+in vec3 v_dir;
+in vec2 v_screenPos;
 out vec4 fragColor;
 
 #include "includes/CameraData.glsl"
@@ -13,8 +13,9 @@ out vec4 fragColor;
 #include "includes/WeatherMapData.glsl"
 #include "includes/NoiseUtility.glsl"
 
-uniform vec3 u_boxCenter;
-uniform vec3 u_boxHalfExtent;
+uniform float u_cloudAltitudeMin;
+uniform float u_cloudAltitudeMax;
+uniform float u_cloudMaxDistance;
 
 const int   CLOUD_RAYMARCH_STEPS       = 28;
 const float CLOUD_DENSITY_ABSORPTION   = 1.35;
@@ -22,10 +23,6 @@ const float CLOUD_TRANSMITTANCE_CUTOFF = 0.01;
 const float CLOUD_DENSITY_EPSILON      = 0.001;
 
 // heightNorm is written out for the caller's vertical falloff/ambient use.
-// The raw vertical distance is checked first, before any noise — a sample
-// outside an entry's own thin band always ends up contributing zero either
-// way, so bailing here skips the warp/shape noise entirely for the large
-// majority of step×entry pairs in the box.
 float sampleEntryDensity(
     vec4 bounds,
     vec4 shape,
@@ -65,40 +62,49 @@ float sampleEntryDensity(
     return coverage * edgeShape;
 }
 
-void main() {
-    vec3 localCamPos  = (u_cameraPosition - u_boxCenter) / u_boxHalfExtent;
-    vec3 localFragPos = vLocalPos * 2.0;
-    vec3 rayDirLocal  = normalize(localFragPos - localCamPos);
-
-    vec3 invDir = 1.0 / rayDirLocal;
-    vec3 t0 = (vec3(-1.0) - localCamPos) * invDir;
-    vec3 t1 = (vec3(1.0) - localCamPos) * invDir;
-    vec3 tMinV = min(t0, t1);
-    vec3 tMaxV = max(t0, t1);
-    float tNear = max(max(tMinV.x, tMinV.y), tMinV.z);
-    float tFar  = min(min(tMaxV.x, tMaxV.y), tMaxV.z);
-
-    if (tFar <= max(tNear, 0.0))
-    discard;
-
-    tNear = max(tNear, 0.0);
-
-    vec3 entryWorld = u_boxCenter + (localCamPos + rayDirLocal * tNear) * u_boxHalfExtent;
-    vec3 exitWorld  = u_boxCenter + (localCamPos + rayDirLocal * tFar)  * u_boxHalfExtent;
-
-    // Entries are written nearest-first every frame, so the near-range
-    // cutoff is just wherever that sorted distance first exceeds it.
-    int entryCount = min(u_weatherEntryCount, WEATHER_MAP_MAX_ENTRIES);
-    int nearEntryCount = 0;
-
-    for (int i = 0; i < entryCount; i++) {
-        if (u_weatherPatternState[i].x > u_weatherNearRangeChunks)
-        break;
-        nearEntryCount++;
+// Ray-vs-horizontal-slab test — the fullscreen pass has no box mesh to
+// bound it anymore, so the raymarch range comes from where the camera
+// ray crosses the shared min/max cloud altitude planes instead.
+bool intersectAltitudeSlab(vec3 origin, vec3 dir, float minY, float maxY, out float tNear, out float tFar) {
+    if (abs(dir.y) < 0.0001) {
+        if (origin.y < minY || origin.y > maxY)
+        return false;
+        tNear = 0.0;
+        tFar  = 1000000.0;
+        return true;
     }
 
-    if (nearEntryCount == 0)
+    float t0 = (minY - origin.y) / dir.y;
+    float t1 = (maxY - origin.y) / dir.y;
+
+    tNear = max(min(t0, t1), 0.0);
+    tFar  = max(t0, t1);
+
+    return tFar > tNear;
+}
+
+void main() {
+    vec3 rayDir    = normalize(v_dir);
+    vec3 rayOrigin = u_cameraPosition;
+
+    float tNear, tFar;
+    if (!intersectAltitudeSlab(rayOrigin, rayDir, u_cloudAltitudeMin, u_cloudAltitudeMax, tNear, tFar))
     discard;
+
+    tFar = min(tFar, u_cloudMaxDistance);
+
+    if (tFar <= tNear)
+    discard;
+
+    // Every entry the CPU wrote this frame already passed the near-range
+    // cull in WeatherMapBufferSystem — no per-entry range check needed here.
+    int entryCount = min(u_weatherEntryCount, WEATHER_MAP_MAX_ENTRIES);
+
+    if (entryCount == 0)
+    discard;
+
+    vec3 entryWorld = rayOrigin + rayDir * tNear;
+    vec3 exitWorld  = rayOrigin + rayDir * tFar;
 
     vec3  stepVec    = (exitWorld - entryWorld) / float(CLOUD_RAYMARCH_STEPS);
     float stepLength = length(stepVec);
@@ -117,10 +123,10 @@ void main() {
         if (transmittance < CLOUD_TRANSMITTANCE_CUTOFF)
         break;
 
-        for (int i = 0; i < nearEntryCount; i++) {
+        for (int i = 0; i < entryCount; i++) {
             vec4 patternState = u_weatherPatternState[i];
-            float intensity  = patternState.y;
-            float fadeAlpha  = patternState.w;
+            float intensity  = patternState.x;
+            float fadeAlpha  = patternState.y;
 
             if (intensity <= CLOUD_DENSITY_EPSILON || fadeAlpha <= CLOUD_DENSITY_EPSILON)
             continue;

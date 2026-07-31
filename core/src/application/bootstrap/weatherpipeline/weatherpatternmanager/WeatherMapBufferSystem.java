@@ -22,14 +22,11 @@ class WeatherMapBufferSystem extends SystemPackage {
 
     /*
      * Flattens the shared active weather-instance pool into each active
-     * grid's own WeatherMapData UBO every frame, nearest-first relative to
-     * that grid's own reference chunk. Every position written here is
-     * already wrap-corrected and already relative to that same reference
-     * chunk — the UBO is self-contained and never needs a second, separately
-     * updated "where is the player" source to be placed on screen correctly.
-     * Near-range gating is left entirely to the shaders — they already read
-     * u_weatherNearRangeChunks off this same UBO and can break out of the
-     * (still nearest-first sorted) entry array themselves.
+     * grid's own WeatherMapData UBO every frame, culled to that grid's own
+     * near range and sorted nearest-first — every entry written is one the
+     * fullscreen weather pass can draw outright, no further range check
+     * needed in the shader. Every position written here is already
+     * wrap-corrected and already relative to that same reference chunk.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
@@ -96,7 +93,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
-        float outerRangeChunks = weatherPatternManager.getOuterRangeChunks();
+        float nearRangeChunks = weatherPatternManager.getNearRangeChunks();
         float chunkSizeBlocks = EngineSetting.CHUNK_SIZE;
 
         WeatherInstance[] pool = weatherPatternManager.getPatternPool();
@@ -113,7 +110,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
             float distanceChunks = (float) Math.sqrt(dx * dx + dz * dz);
 
-            if (distanceChunks > outerRangeChunks)
+            if (distanceChunks > nearRangeChunks)
                 continue;
 
             int distanceBits = Float.floatToRawIntBits(distanceChunks);
@@ -130,14 +127,9 @@ class WeatherMapBufferSystem extends SystemPackage {
 
             long packed = sortScratch[i];
             int slot = (int) (packed & 0xFFFFFFFFL);
-            float distanceChunks = Float.intBitsToFloat((int) (packed >>> 32));
 
             WeatherInstance pattern = pool[slot];
 
-            // Recomputed (not reused from the scan above) so the position is
-            // always derived the same wrap-safe way the distance test used —
-            // this is what the shader used to redo itself, unsafely, against
-            // a different reference chunk source.
             double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
             double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
             float centerXBlocks = (float) (dx * chunkSizeBlocks);
@@ -148,8 +140,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             int cloudCount = weatherHandle.getCloudCount();
 
             for (int c = 0; c < cloudCount && entryCount < capacity; c++) {
-                writeEntry(entryCount, pattern, distanceChunks, centerXBlocks, centerZBlocks, radiusBlocks,
-                        weatherHandle, c);
+                writeEntry(entryCount, pattern, centerXBlocks, centerZBlocks, radiusBlocks, weatherHandle, c);
                 entryCount++;
             }
         }
@@ -172,7 +163,6 @@ class WeatherMapBufferSystem extends SystemPackage {
     private void writeEntry(
             int index,
             WeatherInstance pattern,
-            float distanceChunks,
             float centerXBlocks,
             float centerZBlocks,
             float radiusBlocks,
@@ -182,10 +172,10 @@ class WeatherMapBufferSystem extends SystemPackage {
         bounds[index].set(centerXBlocks, centerZBlocks, radiusBlocks, 0f);
 
         patternState[index].set(
-                distanceChunks,
                 pattern.getIntensity(),
+                pattern.getFadeAlpha(),
                 0f,
-                pattern.getFadeAlpha());
+                0f);
 
         CloudHandle cloudHandle = weatherHandle.getCloudHandle(cloudIndex);
         var color = cloudHandle.getCloudColor();

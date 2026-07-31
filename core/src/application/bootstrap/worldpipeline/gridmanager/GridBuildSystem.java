@@ -6,7 +6,6 @@ import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
 import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -37,7 +36,6 @@ class GridBuildSystem extends SystemPackage {
     // Internal
     private UBOManager uboManager;
     private ClockManager clockManager;
-    private WeatherManager weatherManager;
     private WeatherPatternManager weatherPatternManager;
     private WindManager windManager;
 
@@ -67,7 +65,6 @@ class GridBuildSystem extends SystemPackage {
     protected void get() {
         this.uboManager = get(UBOManager.class);
         this.clockManager = get(ClockManager.class);
-        this.weatherManager = get(WeatherManager.class);
         this.weatherPatternManager = get(WeatherPatternManager.class);
         this.windManager = get(WindManager.class);
     }
@@ -121,27 +118,13 @@ class GridBuildSystem extends SystemPackage {
                 uboManager.createUBOInstance(sunLightBase),
                 uboManager.createUBOInstance(moonLightBase),
                 uboManager.createUBOInstance(skyColorBase),
-                buildWeatherMapUBO(),
+                uboManager.createUBOInstance(weatherMapBase),
                 weatherPatternManager.createLocalWeatherInstance(),
                 weatherPatternManager.createTemperatureInstance(),
                 windManager.createWindInstance(),
                 uboManager.createUBOInstance(windDataBase));
 
         return gridInstance;
-    }
-
-    // Weather Map \\
-
-    private UBOInstance buildWeatherMapUBO() {
-
-        UBOInstance weatherMapUBO = uboManager.createUBOInstance(weatherMapBase);
-
-        weatherMapUBO.updateUniform("u_weatherOuterRangeChunks", weatherManager.getEffectiveOuterRangeChunks());
-        weatherMapUBO.updateUniform("u_weatherNearRangeChunks", weatherManager.getEffectiveNearRangeChunks());
-
-        uboManager.push(weatherMapUBO);
-
-        return weatherMapUBO;
     }
 
     // Radius \\

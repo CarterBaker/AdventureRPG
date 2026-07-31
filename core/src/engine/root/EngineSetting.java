@@ -348,8 +348,6 @@ public class EngineSetting {
 
         public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 48.0f;
         public static final int MAX_CLOUD_TYPES = 8;
-        public static final String CLOUD_BOX_MESH_NAME = "clouds/CloudVolumeMesh";
-        public static final String CLOUD_VOLUME_DEFAULT_MATERIAL = "clouds/CloudVolumeMaterial";
 
         // Weather \\
 
@@ -397,10 +395,11 @@ public class EngineSetting {
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 16;
 
-        // Overhead Cloud Box \\
+        // Weather Rendering \\
 
-        public static final float OVERHEAD_CLOUD_BOX_MIN_ALTITUDE = 0.0f;
-        public static final float OVERHEAD_CLOUD_BOX_MAX_ALTITUDE = 320.0f;
+        public static final String WEATHER_DEFAULT_MATERIAL = "weather/WeatherMaterial";
+        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 0.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 320.0f;
 
         // Weather Pattern Lifecycle \\
 
