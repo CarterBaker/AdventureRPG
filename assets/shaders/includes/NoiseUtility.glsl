@@ -5,7 +5,7 @@
 // Value noise stays in place for the existing sky background variation;
 // everything below it is the cloud-facing toolkit — gradient noise, fbm,
 // ridged fbm, Worley/cellular noise, a Perlin-Worley hybrid for billowy
-// cumulus shapes, and curl-based domain warp.
+// cumulus shapes, and a cheap domain warp.
 
 // ── Hashing ──────────────────────────────────────────────────────────────
 
@@ -221,24 +221,36 @@ float worleyFbm3D(vec3 p) {
     return worleyFbm3D(p, 3, 2.4, 0.55);
 }
 
-// ── Perlin-Worley hybrid ──────────────────────────────────────────────────
-// The standard volumetric-cloud base shape: a low-frequency gradient fbm
-// gives the billowy macro silhouette, and a Worley layer is inverted and
-// used to erode only ITS OWN low end via a subtractive remap. That means
-// erosion concentrates at Worley cell borders — carving cauliflower lobes
-// into the silhouette — rather than multiplying noise straight through the
-// whole volume, which is what punches random holes through a cloud's core.
+// ── Perlin-Worley hybrid (cloud shape) ────────────────────────────────────
+// Cloud base shape: a low-frequency gradient fbm gives the billowy macro
+// silhouette, and a Worley layer is inverted and used to erode only ITS OWN
+// low end via a subtractive remap — erosion concentrates at Worley cell
+// borders, carving cauliflower lobes into the silhouette. Octaves and
+// lacunarity are kept deliberately low: pushing either field past a
+// handful of octaves bakes in detail finer than a raymarch step can
+// resolve, which reads as speckled static instead of soft, puffy volume.
 float perlinWorley3D(vec3 p, float worleyFrequencyMul) {
-    float perlin = fbmGradient3D(p, 5, 2.02, 0.5);
-    float worley = worleyFbm3D(p * worleyFrequencyMul, 3, 2.2, 0.5);
+    float perlin = fbmGradient3D(p, 3, 2.0, 0.5);
+    float worley = worleyFbm3D(p * worleyFrequencyMul, 2, 1.8, 0.5);
     float worleyErosion = (1.0 - worley) * 0.5;
     return remapClamped(perlin, worleyErosion, 1.0, 0.0, 1.0);
 }
 
+// Cheap directional pseudo-warp for breaking up cloud silhouette symmetry —
+// two gradient-noise taps instead of a true curl field's nine. Not
+// divergence-free, but a cloud's domain warp only needs to look organic,
+// not satisfy an actual incompressible flow.
+vec3 cloudWarp3D(vec3 p) {
+    float wx = gradientNoise3D(p + vec3(19.19, 0.0, 0.0));
+    float wz = gradientNoise3D(p + vec3(0.0, 0.0, 47.47));
+    return vec3(wx, 0.0, wz);
+}
+
 // ── Curl noise (divergence-free warp) ─────────────────────────────────────
 // Finite-difference curl of a 3-component gradient-noise potential field.
-// Meant for one evaluation per macro-shape sample, never per raymarch
-// light tap — nine gradientNoise3D calls is too costly for a hot loop.
+// Retained as a general utility; the cloud shape path uses the cheaper
+// cloudWarp3D above instead — nine gradientNoise3D calls per evaluation is
+// too costly for a per-step, per-cloud-entry raymarch tap.
 
 vec3 curlNoise3D(vec3 p) {
     const float e = 0.1;

@@ -44,8 +44,9 @@ const float CLOUD_DENSITY_EPSILON      = 0.001;
 const float CLOUD_WIND_SCROLL_SCALE = 1.2;
 const float CLOUD_DRIFT_TIME_SCALE  = 0.1;
 const float CLOUD_PUFF_ANGLE_WOBBLE = 1.2;
-const float CLOUD_EDGE_EROSION_HARD = 1.9;
-const float CLOUD_EDGE_EROSION_SOFT = 0.7;
+const float CLOUD_EDGE_EROSION_HARD = 1.2;
+const float CLOUD_EDGE_EROSION_SOFT = 0.4;
+const float CLOUD_MIN_EDGE_BAND     = 0.16;
 const float CLOUD_OUTER_FADE_START  = 0.85;
 const float CLOUD_OUTER_FADE_END    = 1.35;
 
@@ -128,8 +129,8 @@ float sampleEntryDensity(
     vec3 instanceOffset = vec3(patternSeed, fract(instanceHash * 7.0), fract(instanceHash * 13.0)) * 128.0;
     vec3 noisePos = evolvePos / instanceScale * max(noiseParams.x, 0.01) + instanceOffset;
 
-    vec3 warp = curlNoise3D(noisePos * 0.6) * noiseParams.y;
-    float shapeNoise = perlinWorley3D(noisePos + warp, 3.0);
+    vec3 warp = cloudWarp3D(noisePos * 0.35) * noiseParams.y;
+    float shapeNoise = perlinWorley3D(noisePos + warp, 1.4);
 
     float softness        = clamp(noiseParams.w, 0.0, 1.0);
     float erosionStrength = mix(CLOUD_EDGE_EROSION_HARD, CLOUD_EDGE_EROSION_SOFT, softness);
@@ -137,7 +138,13 @@ float sampleEntryDensity(
     float baseBias        = clamp(intensity + archetypeBias, 0.02, 0.95);
     float effectiveBias   = clamp(baseBias - radialDist * erosionStrength, 0.0, 0.98);
 
-    float coverage = remapClamped(shapeNoise, 1.0 - effectiveBias, 1.0, 0.0, 1.0);
+    // Coverage amount is still governed by effectiveBias (how far into the
+    // noise range counts as "inside"), but the width of the ramp from clear
+    // to opaque is decoupled and floored — a thin, low-coverage weather no
+    // longer gets a razor-sharp threshold, it just gets a smaller soft puff.
+    float insideThreshold = 1.0 - effectiveBias;
+    float softBand        = max(CLOUD_MIN_EDGE_BAND, effectiveBias * 0.5);
+    float coverage         = remapClamped(shapeNoise, insideThreshold, insideThreshold + softBand, 0.0, 1.0);
 
     return coverage * outerFade;
 }
