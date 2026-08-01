@@ -76,7 +76,12 @@ class RenderSystem extends SystemPackage {
 
             bindTarget(window, target);
             RenderGLSLUtility.enableDepth();
-            RenderGLSLUtility.enableBlending();
+
+            if (target.getFboData().isPremultipliedBlend())
+                RenderGLSLUtility.enablePremultipliedBlending();
+            else
+                RenderGLSLUtility.enableBlending();
+
             RenderGLSLUtility.disableCulling();
             RenderGLSLUtility.clearBuffer(0f, 0f, 0f, 0f);
             RenderGLSLUtility.clearDepthBuffer();

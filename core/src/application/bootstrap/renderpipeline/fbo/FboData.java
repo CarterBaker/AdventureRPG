@@ -12,6 +12,12 @@ public class FboData extends DataPackage {
      * GL textures and configure draw buffer targets. colorName2Index maps
      * attachment names to their color texture list index for semantic lookup.
      * Width and height are only meaningful when strategy is FIXED.
+     *
+     * premultipliedBlend marks targets whose content is written in
+     * premultiplied-alpha form (volumetric/raymarched passes). RenderSystem
+     * uses GL_ONE instead of GL_SRC_ALPHA as the source blend factor for
+     * these, so a transparent-cleared target receives an unmodified copy of
+     * what the shader wrote rather than an extra, incorrect alpha multiply.
      */
 
     // Identity
@@ -19,6 +25,7 @@ public class FboData extends DataPackage {
     private final ObjectArrayList<AttachmentStruct> attachments;
     private final Object2IntOpenHashMap<String> colorName2Index;
     private final FboSizingStrategy sizingStrategy;
+    private final boolean premultipliedBlend;
 
     // Dimensions
     private final int width;
@@ -31,13 +38,15 @@ public class FboData extends DataPackage {
             ObjectArrayList<AttachmentStruct> attachments,
             FboSizingStrategy sizingStrategy,
             int width,
-            int height) {
+            int height,
+            boolean premultipliedBlend) {
 
         this.name = name;
         this.attachments = attachments;
         this.sizingStrategy = sizingStrategy;
         this.width = width;
         this.height = height;
+        this.premultipliedBlend = premultipliedBlend;
         this.colorName2Index = new Object2IntOpenHashMap<>();
         this.colorName2Index.defaultReturnValue(-1);
 
@@ -71,6 +80,10 @@ public class FboData extends DataPackage {
 
     public FboSizingStrategy getSizingStrategy() {
         return sizingStrategy;
+    }
+
+    public boolean isPremultipliedBlend() {
+        return premultipliedBlend;
     }
 
     public int getWidth() {

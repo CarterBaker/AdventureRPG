@@ -20,8 +20,9 @@
         {
             "name": "WeatherScene",
             "sizingStrategy": "WINDOW_RELATIVE",
+            "premultipliedBlend": true,
             "attachments": [
-                { "type": "color", "format": "RGBA8", "name": "color" }
+                { "type": "color", "format": "RGBA16F", "name": "color" }
             ]
         },
         {

@@ -55,6 +55,7 @@ public class EngineSetting {
         public static final int GL_BLEND = 0x0BE2;
         public static final int GL_CULL_FACE = 0x0B44;
         public static final int GL_SCISSOR_TEST = 0x0C11;
+        public static final int GL_ONE = 0x0001;
         public static final int GL_SRC_ALPHA = 0x0302;
         public static final int GL_ONE_MINUS_SRC_ALPHA = 0x0303;
         public static final int GL_BACK = 0x0405;

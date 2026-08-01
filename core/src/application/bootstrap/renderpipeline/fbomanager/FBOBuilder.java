@@ -99,6 +99,7 @@ class FBOBuilder extends BuilderPackage {
                 .valueOf(JsonUtility.getString(json, "sizingStrategy", "WINDOW_RELATIVE"));
         int width = JsonUtility.getInt(json, "width", settings.windowWidth);
         int height = JsonUtility.getInt(json, "height", settings.windowHeight);
+        boolean premultipliedBlend = json.has("premultipliedBlend") && json.get("premultipliedBlend").getAsBoolean();
 
         ObjectArrayList<AttachmentStruct> attachments = new ObjectArrayList<>();
         JsonArray attArray = JsonUtility.validateArray(json, "attachments");
@@ -111,7 +112,7 @@ class FBOBuilder extends BuilderPackage {
             attachments.add(new AttachmentStruct(attName, isDepth, resolveInternalFormat(formatName)));
         }
 
-        return new FboData(name, attachments, strategy, width, height);
+        return new FboData(name, attachments, strategy, width, height, premultipliedBlend);
     }
 
     private int resolveInternalFormat(String formatName) {

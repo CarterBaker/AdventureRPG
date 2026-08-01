@@ -70,6 +70,18 @@ class RenderGLSLUtility extends EngineUtility {
         EngineContext.gl20.glBlendFunc(EngineSetting.GL_SRC_ALPHA, EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
     }
 
+    /*
+     * For targets that receive premultiplied-alpha shader output (volumetric/
+     * raymarched passes such as weather) — GL_ONE as the source factor stores
+     * exactly what the shader wrote instead of multiplying its color by alpha
+     * a second time, which is what GL_SRC_ALPHA does and is only correct for
+     * straight (non-premultiplied) alpha sources.
+     */
+    static void enablePremultipliedBlending() {
+        EngineContext.gl20.glEnable(EngineSetting.GL_BLEND);
+        EngineContext.gl20.glBlendFunc(EngineSetting.GL_ONE, EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
     static void disableBlending() {
         EngineContext.gl20.glDisable(EngineSetting.GL_BLEND);
     }

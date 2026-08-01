@@ -19,12 +19,6 @@ uniform float u_cloudAltitudeMin;
 uniform float u_cloudAltitudeMax;
 uniform float u_cloudMaxDistance;
 
-// Fullscreen raymarched cloud pass. Reads the weather map UBO and draws
-// every near-range weather pattern's clouds using its own Cloud Settings.
-// Entries are culled analytically against the ray before the raymarch
-// ever runs, so the step loop only pays the noise cost for entries the
-// ray can actually reach.
-
 const int   CLOUD_RAYMARCH_STEPS       = 40;
 const float CLOUD_DENSITY_ABSORPTION   = 1.35;
 const float CLOUD_TRANSMITTANCE_CUTOFF = 0.01;
@@ -37,8 +31,20 @@ const float CLOUD_EDGE_EROSION_HARD = 1.9;
 const float CLOUD_EDGE_EROSION_SOFT = 0.7;
 const float CLOUD_OUTER_FADE_START  = 0.85;
 const float CLOUD_OUTER_FADE_END    = 1.35;
-const float CLOUD_CULL_PADDING      = CLOUD_OUTER_FADE_END * 2.0;
 
+// heightNorm is written out for the caller's vertical falloff/ambient use.
+// chunkOffsetBlocks reconstructs a world coordinate that stays continuous
+// across a reference-chunk requantization for the noise sample only —
+// worldPos itself resets by a full chunk width whenever that happens, and
+// the bounds/edge test tolerates that (both sides shift together), but raw
+// noise coordinates do not.
+//
+// The silhouette is a rotated, anisotropic "puff" region derived from
+// bounds rather than the box itself, aligned to the local wind direction
+// and randomized per pattern instance. Coverage erodes toward the edge of
+// that region through the noise field, so the boundary reads as ragged and
+// organic instead of a hard rectangle; a generous soft multiply past the
+// nominal radius is only a final backstop.
 float sampleEntryDensity(
     vec4 bounds,
     vec4 shape,
@@ -62,6 +68,10 @@ float sampleEntryDensity(
     vec2 boxCenter     = (bounds.xy + bounds.zw) * 0.5;
     vec2 boxHalfExtent = max((bounds.zw - bounds.xy) * 0.5, vec2(1.0));
     vec2 fromCenter    = worldPos.xz - boxCenter;
+
+    vec2 cullExtent = boxHalfExtent * (CLOUD_OUTER_FADE_END * 2.0);
+    if (abs(fromCenter.x) > cullExtent.x || abs(fromCenter.y) > cullExtent.y)
+    return 0.0;
 
     float patternSeed    = variance1.z;
     float cloudTypeIndex = variance1.y;
@@ -104,6 +114,10 @@ float sampleEntryDensity(
     vec3 warp = curlNoise3D(noisePos * 0.6) * noiseParams.y;
     float shapeNoise = perlinWorley3D(noisePos + warp, 3.0);
 
+    // intensity (the weather's own cloudCoverage) is the primary driver of
+    // how much of the footprint fills in. Each cloud archetype's own
+    // coverageBias only nudges that up or down around a neutral 0.6 — it no
+    // longer multiplies intensity down into a fraction of itself.
     float softness        = clamp(noiseParams.w, 0.0, 1.0);
     float erosionStrength = mix(CLOUD_EDGE_EROSION_HARD, CLOUD_EDGE_EROSION_SOFT, softness);
     float archetypeBias   = (noiseParams.z - 0.6) * 0.5;
@@ -115,6 +129,9 @@ float sampleEntryDensity(
     return coverage * outerFade;
 }
 
+// Ray-vs-horizontal-slab test — the fullscreen pass has no box mesh to
+// bound it anymore, so the raymarch range comes from where the camera
+// ray crosses the shared min/max cloud altitude planes instead.
 bool intersectAltitudeSlab(vec3 origin, vec3 dir, float minY, float maxY, out float tNear, out float tFar) {
     if (abs(dir.y) < 0.0001) {
         if (origin.y < minY || origin.y > maxY)
@@ -133,64 +150,16 @@ bool intersectAltitudeSlab(vec3 origin, vec3 dir, float minY, float maxY, out fl
     return tFar > tNear;
 }
 
-// Coarse per-entry visibility test — the same padded horizontal footprint
-// sampleEntryDensity itself culls against, combined with the entry's own
-// altitude band. Run once per entry per fragment, before any noise
-// sampling, so the step loop below only ever evaluates entries (and only
-// the t-span within them) the ray can actually reach.
-bool intersectEntryRange(
-    vec3 origin, vec3 dir,
-    vec4 bounds, vec4 shape,
-    float globalNear, float globalFar,
-    out float outNear, out float outFar) {
-    vec2 boxCenter     = (bounds.xy + bounds.zw) * 0.5;
-    vec2 boxHalfExtent = max((bounds.zw - bounds.xy) * 0.5, vec2(1.0)) * CLOUD_CULL_PADDING;
-    vec2 originXZ      = origin.xz - boxCenter;
-    vec2 dirXZ         = dir.xz;
-
-    float tMinX, tMaxX;
-    if (abs(dirXZ.x) < 0.0001) {
-        if (abs(originXZ.x) > boxHalfExtent.x)
-        return false;
-        tMinX = -1000000.0;
-        tMaxX = 1000000.0;
-    } else {
-        float t1 = (-boxHalfExtent.x - originXZ.x) / dirXZ.x;
-        float t2 = (boxHalfExtent.x - originXZ.x) / dirXZ.x;
-        tMinX = min(t1, t2);
-        tMaxX = max(t1, t2);
-    }
-
-    float tMinZ, tMaxZ;
-    if (abs(dirXZ.y) < 0.0001) {
-        if (abs(originXZ.y) > boxHalfExtent.y)
-        return false;
-        tMinZ = -1000000.0;
-        tMaxZ = 1000000.0;
-    } else {
-        float t1 = (-boxHalfExtent.y - originXZ.y) / dirXZ.y;
-        float t2 = (boxHalfExtent.y - originXZ.y) / dirXZ.y;
-        tMinZ = min(t1, t2);
-        tMaxZ = max(t1, t2);
-    }
-
-    float halfThickness = max(shape.x * 0.5, 0.01);
-    float tBandNear, tBandFar;
-    if (!intersectAltitudeSlab(origin, dir, shape.y - halfThickness, shape.y + halfThickness, tBandNear, tBandFar))
-    return false;
-
-    outNear = max(max(max(tMinX, tMinZ), tBandNear), globalNear);
-    outFar  = min(min(min(tMaxX, tMaxZ), tBandFar), globalFar);
-
-    return outFar > outNear;
-}
-
 void main() {
     int entryCount = min(u_weatherEntryCount, WEATHER_MAP_MAX_ENTRIES);
 
     if (entryCount == 0)
     discard;
 
+    // u_cloudAltitudeMin/Max are only a safety envelope; the per-frame
+    // layer bounds computed on the CPU from this frame's actual entries are
+    // what keep the raymarch tight to where cloud volume can physically
+    // exist instead of stepping through the whole atmosphere column.
     float layerMinY = max(u_weatherCloudLayerMinY, u_cloudAltitudeMin);
     float layerMaxY = min(u_weatherCloudLayerMaxY, u_cloudAltitudeMax);
 
@@ -217,32 +186,11 @@ void main() {
     windDirNorm = u_windDirection.xz / windXZLen;
     float windSpeed = u_windSpeed;
 
-    float entryNear[WEATHER_MAP_MAX_ENTRIES];
-    float entryFar[WEATHER_MAP_MAX_ENTRIES];
-    bool  entryVisible[WEATHER_MAP_MAX_ENTRIES];
+    vec3 entryWorld = rayOrigin + rayDir * tNear;
+    vec3 exitWorld  = rayOrigin + rayDir * tFar;
 
-    for (int i = 0; i < entryCount; i++) {
-        vec4 patternState = u_weatherPatternState[i];
-
-        if (patternState.x <= CLOUD_DENSITY_EPSILON || patternState.y <= CLOUD_DENSITY_EPSILON
-            || patternState.w <= CLOUD_DENSITY_EPSILON) {
-            entryVisible[i] = false;
-            continue;
-        }
-
-        vec4 shape = u_weatherCloudShape[i];
-
-        if (shape.z <= CLOUD_DENSITY_EPSILON) {
-            entryVisible[i] = false;
-            continue;
-        }
-
-        entryVisible[i] = intersectEntryRange(
-            rayOrigin, rayDir, u_weatherBounds[i], shape, tNear, tFar, entryNear[i], entryFar[i]);
-    }
-
-    float stepT      = (tFar - tNear) / float(CLOUD_RAYMARCH_STEPS);
-    float stepLength = stepT;
+    vec3  stepVec    = (exitWorld - entryWorld) / float(CLOUD_RAYMARCH_STEPS);
+    float stepLength = length(stepVec);
 
     float sunFacing  = clamp(dot(vec3(0.0, 1.0, 0.0), normalize(u_sunDirection)), 0.0, 1.0);
     float moonFacing = clamp(dot(vec3(0.0, 1.0, 0.0), normalize(u_moonDirection)), 0.0, 1.0);
@@ -252,33 +200,33 @@ void main() {
 
     float transmittance    = 1.0;
     vec3  accumulatedColor = vec3(0.0);
+    vec3  samplePos        = entryWorld + stepVec * 0.5;
 
     for (int s = 0; s < CLOUD_RAYMARCH_STEPS; s++) {
         if (transmittance < CLOUD_TRANSMITTANCE_CUTOFF)
         break;
 
-        float t = tNear + (float(s) + 0.5) * stepT;
-        vec3 samplePos = rayOrigin + rayDir * t;
-
         for (int i = 0; i < entryCount; i++) {
-            if (!entryVisible[i])
-            continue;
-
-            if (t < entryNear[i] || t > entryFar[i])
-            continue;
-
             vec4 patternState = u_weatherPatternState[i];
             float intensity  = patternState.x;
             float fadeAlpha  = patternState.y;
             float rangeFade  = patternState.w;
 
-            vec4 shape          = u_weatherCloudShape[i];
-            vec4 bounds         = u_weatherBounds[i];
-            vec4 noiseParams    = u_weatherCloudNoise[i];
-            vec4 colorScale     = u_weatherCloudColorScale[i];
+            if (intensity <= CLOUD_DENSITY_EPSILON || fadeAlpha <= CLOUD_DENSITY_EPSILON
+                || rangeFade <= CLOUD_DENSITY_EPSILON)
+            continue;
+
+            vec4 shape = u_weatherCloudShape[i];
+
+            if (shape.z <= CLOUD_DENSITY_EPSILON)
+            continue;
+
+            vec4 bounds      = u_weatherBounds[i];
+            vec4 noiseParams = u_weatherCloudNoise[i];
+            vec4 colorScale  = u_weatherCloudColorScale[i];
             vec4 materialParams = u_weatherCloudMaterial[i];
-            vec4 variance0      = u_weatherCloudVariance0[i];
-            vec4 variance1      = u_weatherCloudVariance1[i];
+            vec4 variance0   = u_weatherCloudVariance0[i];
+            vec4 variance1   = u_weatherCloudVariance1[i];
 
             float heightNorm;
             float density = sampleEntryDensity(
@@ -309,6 +257,8 @@ void main() {
             accumulatedColor += litColor * stepAbsorption * transmittance;
             transmittance    *= (1.0 - stepAbsorption);
         }
+
+        samplePos += stepVec;
     }
 
     float coverage = 1.0 - transmittance;
@@ -316,5 +266,15 @@ void main() {
     if (coverage <= 0.003)
     discard;
 
-    fragColor = vec4(accumulatedColor, coverage);
+    // accumulatedColor is premultiplied (front-to-back integration already
+    // weights each contribution by remaining transmittance). This target's
+    // render-into blend is GL_ONE/GL_ONE_MINUS_SRC_ALPHA (see FboData's
+    // premultipliedBlend flag), which stores that premultiplied pair into
+    // WeatherScene unmodified. Un-premultiplying here means the FINAL blit
+    // of WeatherScene onto the screen — which uses the normal straight-alpha
+    // blend shared with every other pass — reconstructs the correct
+    // premultiplied-over composite on its own: color*coverage + dst*(1-coverage).
+    vec3 straightColor = accumulatedColor / max(coverage, 0.0001);
+
+    fragColor = vec4(straightColor, coverage);
 }
