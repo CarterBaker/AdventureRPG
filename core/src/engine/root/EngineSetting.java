@@ -390,11 +390,11 @@ public class EngineSetting {
 
         // Overhead — Weather Patterns \\
 
-        public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 128;
-        public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 24;
-        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 24.0f;
+        public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 48;
+        public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 56;
+        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 72.0f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
-        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 16;
+        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4;
 
         // Weather Rendering \\
 
@@ -418,6 +418,7 @@ public class EngineSetting {
 
         public static final String WEATHER_MAP_UBO = "WeatherMapData";
         public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 32;
+        public static final int MAX_CLOUDS_PER_WEATHER = 3;
 
         // Wind \\
 

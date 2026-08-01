@@ -19,7 +19,19 @@ uniform float u_cloudAltitudeMin;
 uniform float u_cloudAltitudeMax;
 uniform float u_cloudMaxDistance;
 
-const int   CLOUD_RAYMARCH_STEPS       = 40;
+// Step count adapts to how far a ray actually travels through the layer —
+// a steep ray crosses a thin altitude band and sits near the minimum; a
+// grazing, near-horizontal ray can cross thousands of blocks and climbs
+// toward the maximum. A fixed step count starved grazing rays of samples,
+// which is what produced the low-resolution, angle-dependent "clipping".
+const int   CLOUD_RAYMARCH_MIN_STEPS          = 40;
+const int   CLOUD_RAYMARCH_MAX_STEPS          = 80;
+const float CLOUD_RAYMARCH_TARGET_STEP_LENGTH = 20.0;
+
+// Fraction of the ray's total travel used to fade the far end out smoothly
+// instead of hard-clipping at u_cloudMaxDistance.
+const float CLOUD_FAR_FADE_FRACTION = 0.2;
+
 const float CLOUD_DENSITY_ABSORPTION   = 1.35;
 const float CLOUD_TRANSMITTANCE_CUTOFF = 0.01;
 const float CLOUD_DENSITY_EPSILON      = 0.001;
@@ -114,10 +126,6 @@ float sampleEntryDensity(
     vec3 warp = curlNoise3D(noisePos * 0.6) * noiseParams.y;
     float shapeNoise = perlinWorley3D(noisePos + warp, 3.0);
 
-    // intensity (the weather's own cloudCoverage) is the primary driver of
-    // how much of the footprint fills in. Each cloud archetype's own
-    // coverageBias only nudges that up or down around a neutral 0.6 — it no
-    // longer multiplies intensity down into a fraction of itself.
     float softness        = clamp(noiseParams.w, 0.0, 1.0);
     float erosionStrength = mix(CLOUD_EDGE_EROSION_HARD, CLOUD_EDGE_EROSION_SOFT, softness);
     float archetypeBias   = (noiseParams.z - 0.6) * 0.5;
@@ -129,9 +137,6 @@ float sampleEntryDensity(
     return coverage * outerFade;
 }
 
-// Ray-vs-horizontal-slab test — the fullscreen pass has no box mesh to
-// bound it anymore, so the raymarch range comes from where the camera
-// ray crosses the shared min/max cloud altitude planes instead.
 bool intersectAltitudeSlab(vec3 origin, vec3 dir, float minY, float maxY, out float tNear, out float tFar) {
     if (abs(dir.y) < 0.0001) {
         if (origin.y < minY || origin.y > maxY)
@@ -156,10 +161,6 @@ void main() {
     if (entryCount == 0)
     discard;
 
-    // u_cloudAltitudeMin/Max are only a safety envelope; the per-frame
-    // layer bounds computed on the CPU from this frame's actual entries are
-    // what keep the raymarch tight to where cloud volume can physically
-    // exist instead of stepping through the whole atmosphere column.
     float layerMinY = max(u_weatherCloudLayerMinY, u_cloudAltitudeMin);
     float layerMaxY = min(u_weatherCloudLayerMaxY, u_cloudAltitudeMax);
 
@@ -186,11 +187,22 @@ void main() {
     windDirNorm = u_windDirection.xz / windXZLen;
     float windSpeed = u_windSpeed;
 
+    float rayLength = tFar - tNear;
+    int stepCount = clamp(
+        int(rayLength / CLOUD_RAYMARCH_TARGET_STEP_LENGTH),
+        CLOUD_RAYMARCH_MIN_STEPS,
+        CLOUD_RAYMARCH_MAX_STEPS);
+
+    // Per-pixel dither on the start offset breaks up the banding a fixed
+    // sample grid produces on long, coarsely-stepped grazing-angle rays.
+    float dither = hash31(vec3(gl_FragCoord.xy, 0.0)) - 0.5;
+
     vec3 entryWorld = rayOrigin + rayDir * tNear;
     vec3 exitWorld  = rayOrigin + rayDir * tFar;
 
-    vec3  stepVec    = (exitWorld - entryWorld) / float(CLOUD_RAYMARCH_STEPS);
-    float stepLength = length(stepVec);
+    vec3  stepVec      = (exitWorld - entryWorld) / float(stepCount);
+    float stepLength   = length(stepVec);
+    float farFadeStart = tFar - rayLength * CLOUD_FAR_FADE_FRACTION;
 
     float sunFacing  = clamp(dot(vec3(0.0, 1.0, 0.0), normalize(u_sunDirection)), 0.0, 1.0);
     float moonFacing = clamp(dot(vec3(0.0, 1.0, 0.0), normalize(u_moonDirection)), 0.0, 1.0);
@@ -200,65 +212,71 @@ void main() {
 
     float transmittance    = 1.0;
     vec3  accumulatedColor = vec3(0.0);
-    vec3  samplePos        = entryWorld + stepVec * 0.5;
+    float traveled         = tNear + stepLength * (0.5 + dither);
+    vec3  samplePos        = entryWorld + stepVec * (0.5 + dither);
 
-    for (int s = 0; s < CLOUD_RAYMARCH_STEPS; s++) {
+    for (int s = 0; s < stepCount; s++) {
         if (transmittance < CLOUD_TRANSMITTANCE_CUTOFF)
         break;
 
-        for (int i = 0; i < entryCount; i++) {
-            vec4 patternState = u_weatherPatternState[i];
-            float intensity  = patternState.x;
-            float fadeAlpha  = patternState.y;
-            float rangeFade  = patternState.w;
+        float farFade = 1.0 - smoothstep(farFadeStart, tFar, traveled);
 
-            if (intensity <= CLOUD_DENSITY_EPSILON || fadeAlpha <= CLOUD_DENSITY_EPSILON
-                || rangeFade <= CLOUD_DENSITY_EPSILON)
-            continue;
+        if (farFade > CLOUD_DENSITY_EPSILON) {
+            for (int i = 0; i < entryCount; i++) {
+                vec4 patternState = u_weatherPatternState[i];
+                float intensity  = patternState.x;
+                float fadeAlpha  = patternState.y;
+                float rangeFade  = patternState.w;
 
-            vec4 shape = u_weatherCloudShape[i];
+                if (intensity <= CLOUD_DENSITY_EPSILON || fadeAlpha <= CLOUD_DENSITY_EPSILON
+                    || rangeFade <= CLOUD_DENSITY_EPSILON)
+                continue;
 
-            if (shape.z <= CLOUD_DENSITY_EPSILON)
-            continue;
+                vec4 shape = u_weatherCloudShape[i];
 
-            vec4 bounds      = u_weatherBounds[i];
-            vec4 noiseParams = u_weatherCloudNoise[i];
-            vec4 colorScale  = u_weatherCloudColorScale[i];
-            vec4 materialParams = u_weatherCloudMaterial[i];
-            vec4 variance0   = u_weatherCloudVariance0[i];
-            vec4 variance1   = u_weatherCloudVariance1[i];
+                if (shape.z <= CLOUD_DENSITY_EPSILON)
+                continue;
 
-            float heightNorm;
-            float density = sampleEntryDensity(
-                bounds, shape, noiseParams, colorScale, variance0, variance1,
-                intensity, samplePos, chunkOffsetBlocks, windDirNorm, windSpeed, heightNorm)
-            * fadeAlpha * rangeFade;
+                vec4 bounds      = u_weatherBounds[i];
+                vec4 noiseParams = u_weatherCloudNoise[i];
+                vec4 colorScale  = u_weatherCloudColorScale[i];
+                vec4 materialParams = u_weatherCloudMaterial[i];
+                vec4 variance0   = u_weatherCloudVariance0[i];
+                vec4 variance1   = u_weatherCloudVariance1[i];
 
-            if (density <= CLOUD_DENSITY_EPSILON)
-            continue;
+                float heightNorm;
+                float density = sampleEntryDensity(
+                    bounds, shape, noiseParams, colorScale, variance0, variance1,
+                    intensity, samplePos, chunkOffsetBlocks, windDirNorm, windSpeed, heightNorm)
+                * fadeAlpha * rangeFade * farFade;
 
-            float fullness  = materialParams.y;
-            float vertShape = 1.0 - abs(heightNorm - 0.5) * 2.0;
-            vertShape = pow(clamp(vertShape, 0.0, 1.0), mix(2.4, 0.6, fullness));
+                if (density <= CLOUD_DENSITY_EPSILON)
+                continue;
 
-            if (vertShape <= 0.0)
-            continue;
+                float fullness  = materialParams.y;
+                float vertShape = 1.0 - abs(heightNorm - 0.5) * 2.0;
+                vertShape = pow(clamp(vertShape, 0.0, 1.0), mix(2.4, 0.6, fullness));
 
-            float stepAbsorption = clamp(
-                density * vertShape * shape.z * stepLength * CLOUD_DENSITY_ABSORPTION, 0.0, 1.0);
+                if (vertShape <= 0.0)
+                continue;
 
-            float luminance    = dot(colorScale.rgb, vec3(0.299, 0.587, 0.114));
-            vec3  tintedAlbedo = mix(vec3(luminance), colorScale.rgb, materialParams.x);
-            tintedAlbedo = mix(tintedAlbedo, tintedAlbedo * u_skyCloudColor, 0.35);
+                float stepAbsorption = clamp(
+                    density * vertShape * shape.z * stepLength * CLOUD_DENSITY_ABSORPTION, 0.0, 1.0);
 
-            float ambient  = mix(0.10, 0.22, heightNorm);
-            vec3  litColor = tintedAlbedo * (directLight * mix(0.4, 1.0, heightNorm) + ambient);
+                float luminance    = dot(colorScale.rgb, vec3(0.299, 0.587, 0.114));
+                vec3  tintedAlbedo = mix(vec3(luminance), colorScale.rgb, materialParams.x);
+                tintedAlbedo = mix(tintedAlbedo, tintedAlbedo * u_skyCloudColor, 0.35);
 
-            accumulatedColor += litColor * stepAbsorption * transmittance;
-            transmittance    *= (1.0 - stepAbsorption);
+                float ambient  = mix(0.10, 0.22, heightNorm);
+                vec3  litColor = tintedAlbedo * (directLight * mix(0.4, 1.0, heightNorm) + ambient);
+
+                accumulatedColor += litColor * stepAbsorption * transmittance;
+                transmittance    *= (1.0 - stepAbsorption);
+            }
         }
 
         samplePos += stepVec;
+        traveled  += stepLength;
     }
 
     float coverage = 1.0 - transmittance;

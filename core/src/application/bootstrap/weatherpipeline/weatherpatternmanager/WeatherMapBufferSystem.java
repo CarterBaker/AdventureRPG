@@ -24,10 +24,14 @@ class WeatherMapBufferSystem extends SystemPackage {
     /*
      * Flattens the shared active weather-instance pool into each active
      * grid's own WeatherMapData UBO every frame, culled to that grid's own
-     * near range and sorted nearest-first. Also derives the tight
-     * world-space Y band actually occupied by this frame's entries so the
-     * fullscreen cloud pass can bound its raymarch to where cloud volume
-     * can physically exist instead of the full atmosphere column.
+     * near range and sorted nearest-first. Culling and the range fade are
+     * both keyed off each pattern's footprint edge rather than its center,
+     * so a pattern only drops out once its whole visible footprint has
+     * actually left near range instead of popping the moment its center
+     * crosses the line. Also derives the tight world-space Y band actually
+     * occupied by this frame's entries so the fullscreen cloud pass can
+     * bound its raymarch to where cloud volume can physically exist instead
+     * of the full atmosphere column.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
@@ -112,8 +116,9 @@ class WeatherMapBufferSystem extends SystemPackage {
             double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
             double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
             float distanceChunks = (float) Math.sqrt(dx * dx + dz * dz);
+            float edgeDistanceChunks = distanceChunks - pattern.getFootprintRadiusChunks();
 
-            if (distanceChunks > nearRangeChunks)
+            if (edgeDistanceChunks > nearRangeChunks)
                 continue;
 
             int distanceBits = Float.floatToRawIntBits(distanceChunks);
@@ -138,9 +143,10 @@ class WeatherMapBufferSystem extends SystemPackage {
             double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
             float centerXBlocks = (float) (dx * chunkSizeBlocks);
             float centerZBlocks = (float) (dz * chunkSizeBlocks);
-            float radiusBlocks = pattern.getFootprintRadiusChunks() * chunkSizeBlocks;
+            float footprintRadiusChunks = pattern.getFootprintRadiusChunks();
+            float radiusBlocks = footprintRadiusChunks * chunkSizeBlocks;
             float distanceBlocks = distanceChunks * chunkSizeBlocks;
-            float rangeFade = computeRangeFade(distanceChunks, nearRangeChunks);
+            float rangeFade = computeRangeFade(distanceChunks - footprintRadiusChunks, nearRangeChunks);
 
             WeatherHandle weatherHandle = pattern.getWeatherHandle();
             int cloudCount = weatherHandle.getCloudCount();

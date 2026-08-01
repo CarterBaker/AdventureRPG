@@ -49,7 +49,7 @@ class WeatherBuilder extends BuilderPackage {
         FloatArrayList cloudChances = new FloatArrayList();
         FloatArrayList cloudAltitudeOverrides = new FloatArrayList();
         FloatArrayList cloudDensityMultipliers = new FloatArrayList();
-        parseClouds(json, cloudHandles, cloudChances, cloudAltitudeOverrides, cloudDensityMultipliers);
+        parseClouds(json, weatherName, cloudHandles, cloudChances, cloudAltitudeOverrides, cloudDensityMultipliers);
 
         ObjectArrayList<String> nextWeatherNames = new ObjectArrayList<>();
         FloatArrayList nextWeatherChances = new FloatArrayList();
@@ -95,6 +95,7 @@ class WeatherBuilder extends BuilderPackage {
 
     private void parseClouds(
             JsonObject json,
+            String weatherName,
             ObjectArrayList<CloudHandle> outHandles,
             FloatArrayList outChances,
             FloatArrayList outAltitudeOverrides,
@@ -104,6 +105,11 @@ class WeatherBuilder extends BuilderPackage {
             return;
 
         JsonArray cloudsArray = json.getAsJsonArray("clouds");
+
+        if (cloudsArray.size() > EngineSetting.MAX_CLOUDS_PER_WEATHER)
+            throwException("Weather \"" + weatherName + "\" defines " + cloudsArray.size()
+                    + " clouds — exceeds the maximum of " + EngineSetting.MAX_CLOUDS_PER_WEATHER
+                    + " clouds per weather that the weather map UBO budgets for");
 
         for (JsonElement element : cloudsArray)
             parseCloudEntry(
