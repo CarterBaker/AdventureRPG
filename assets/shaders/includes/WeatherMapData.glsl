@@ -1,3 +1,4 @@
+// WeatherMapData.glsl
 #ifndef WEATHER_MAP_DATA_GLSL
 #define WEATHER_MAP_DATA_GLSL
 
@@ -19,6 +20,11 @@
 //                  w = elongationMin
 // cloudVariance1:  x = elongationMax, y = cloudTypeIndex, z = patternSeed,
 //                  w = unused
+// weatherCloudLayerMinY/MaxY: this frame's actual min/max cloud altitude
+//                  band across all written entries, plus a small margin —
+//                  lets the fullscreen pass bound its raymarch to where
+//                  cloud volume can physically exist instead of the whole
+//                  atmosphere column.
 layout(std140) uniform WeatherMapData {
     vec4 u_weatherBounds[WEATHER_MAP_MAX_ENTRIES];
     vec4 u_weatherPatternState[WEATHER_MAP_MAX_ENTRIES];
@@ -29,6 +35,8 @@ layout(std140) uniform WeatherMapData {
     vec4 u_weatherCloudVariance0[WEATHER_MAP_MAX_ENTRIES];
     vec4 u_weatherCloudVariance1[WEATHER_MAP_MAX_ENTRIES];
     int u_weatherEntryCount;
+    float u_weatherCloudLayerMinY;
+    float u_weatherCloudLayerMaxY;
 };
 
 #endif

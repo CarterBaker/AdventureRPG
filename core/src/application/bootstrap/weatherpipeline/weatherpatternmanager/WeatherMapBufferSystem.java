@@ -1,3 +1,4 @@
+// WeatherMapBufferSystem.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import java.util.Arrays;
@@ -23,13 +24,15 @@ class WeatherMapBufferSystem extends SystemPackage {
     /*
      * Flattens the shared active weather-instance pool into each active
      * grid's own WeatherMapData UBO every frame, culled to that grid's own
-     * near range and sorted nearest-first. Patterns approaching the near
-     * range edge fade smoothly via patternState.w rather than being cut
-     * off the instant their center crosses the threshold.
+     * near range and sorted nearest-first. Also derives the tight
+     * world-space Y band actually occupied by this frame's entries so the
+     * fullscreen cloud pass can bound its raymarch to where cloud volume
+     * can physically exist instead of the full atmosphere column.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
     private static final float RANGE_FADE_CHUNKS = 24f;
+    private static final float LAYER_BOUND_MARGIN_BLOCKS = 16f;
 
     private WeatherPatternManager weatherPatternManager;
     private UBOManager uboManager;
@@ -160,6 +163,30 @@ class WeatherMapBufferSystem extends SystemPackage {
         weatherMapUBO.updateUniform("u_weatherCloudVariance0", cloudVariance0);
         weatherMapUBO.updateUniform("u_weatherCloudVariance1", cloudVariance1);
         weatherMapUBO.updateUniform("u_weatherEntryCount", entryCount);
+
+        float layerMinY = 0f;
+        float layerMaxY = 0f;
+
+        if (entryCount > 0) {
+
+            layerMinY = Float.MAX_VALUE;
+            layerMaxY = -Float.MAX_VALUE;
+
+            for (int i = 0; i < entryCount; i++) {
+
+                float altitude = cloudShape[i].y;
+                float halfThickness = cloudShape[i].x * 0.5f;
+
+                layerMinY = Math.min(layerMinY, altitude - halfThickness);
+                layerMaxY = Math.max(layerMaxY, altitude + halfThickness);
+            }
+
+            layerMinY -= LAYER_BOUND_MARGIN_BLOCKS;
+            layerMaxY += LAYER_BOUND_MARGIN_BLOCKS;
+        }
+
+        weatherMapUBO.updateUniform("u_weatherCloudLayerMinY", layerMinY);
+        weatherMapUBO.updateUniform("u_weatherCloudLayerMaxY", layerMaxY);
 
         uboManager.push(weatherMapUBO);
     }

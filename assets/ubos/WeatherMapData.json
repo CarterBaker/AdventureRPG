@@ -9,6 +9,8 @@
         { "name": "u_weatherCloudNoise",       "type": "VECTOR4", "count": 32 },
         { "name": "u_weatherCloudVariance0",   "type": "VECTOR4", "count": 32 },
         { "name": "u_weatherCloudVariance1",   "type": "VECTOR4", "count": 32 },
-        { "name": "u_weatherEntryCount",       "type": "INT" }
+        { "name": "u_weatherEntryCount",       "type": "INT" },
+        { "name": "u_weatherCloudLayerMinY",   "type": "FLOAT" },
+        { "name": "u_weatherCloudLayerMaxY",   "type": "FLOAT" }
     ]
 }
