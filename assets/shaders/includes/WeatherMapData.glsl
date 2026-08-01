@@ -3,10 +3,12 @@
 
 #define WEATHER_MAP_MAX_ENTRIES 32
 
-// bounds:          xy = footprint center in blocks, already relative to this
-//                  grid's own reference chunk and already wrap-corrected.
-//                  z = footprint radius in blocks. w = unused.
-// patternState:    x = intensity (cloud coverage), y = fadeAlpha, zw = reserved
+// bounds:          xy = footprint min corner in blocks, zw = footprint max
+//                  corner in blocks — both already relative to this grid's
+//                  own reference chunk and already wrap-corrected.
+// patternState:    x = intensity (cloud coverage), y = fadeAlpha,
+//                  z = distance from reference chunk in blocks,
+//                  w = near-range edge fade (1 = fully visible, 0 = culled)
 // cloudColorScale: xyz = cloud color, w = scale (width)
 // cloudMaterial:   x = saturation, y = fullness, z/w = reserved
 // cloudShape:      x = verticalThickness, y = altitude, z = density,

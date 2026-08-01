@@ -23,13 +23,13 @@ class WeatherMapBufferSystem extends SystemPackage {
     /*
      * Flattens the shared active weather-instance pool into each active
      * grid's own WeatherMapData UBO every frame, culled to that grid's own
-     * near range and sorted nearest-first — every entry written is one the
-     * fullscreen weather pass can draw outright, no further range check
-     * needed in the shader. Every position written here is already
-     * wrap-corrected and already relative to that same reference chunk.
+     * near range and sorted nearest-first. Patterns approaching the near
+     * range edge fade smoothly via patternState.w rather than being cut
+     * off the instant their center crosses the threshold.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
+    private static final float RANGE_FADE_CHUNKS = 24f;
 
     private WeatherPatternManager weatherPatternManager;
     private UBOManager uboManager;
@@ -127,6 +127,7 @@ class WeatherMapBufferSystem extends SystemPackage {
 
             long packed = sortScratch[i];
             int slot = (int) (packed & 0xFFFFFFFFL);
+            float distanceChunks = Float.intBitsToFloat((int) (packed >>> 32));
 
             WeatherInstance pattern = pool[slot];
 
@@ -135,12 +136,15 @@ class WeatherMapBufferSystem extends SystemPackage {
             float centerXBlocks = (float) (dx * chunkSizeBlocks);
             float centerZBlocks = (float) (dz * chunkSizeBlocks);
             float radiusBlocks = pattern.getFootprintRadiusChunks() * chunkSizeBlocks;
+            float distanceBlocks = distanceChunks * chunkSizeBlocks;
+            float rangeFade = computeRangeFade(distanceChunks, nearRangeChunks);
 
             WeatherHandle weatherHandle = pattern.getWeatherHandle();
             int cloudCount = weatherHandle.getCloudCount();
 
             for (int c = 0; c < cloudCount && entryCount < capacity; c++) {
-                writeEntry(entryCount, pattern, centerXBlocks, centerZBlocks, radiusBlocks, weatherHandle, c);
+                writeEntry(entryCount, pattern, centerXBlocks, centerZBlocks, radiusBlocks, distanceBlocks,
+                        rangeFade, weatherHandle, c);
                 entryCount++;
             }
         }
@@ -160,22 +164,40 @@ class WeatherMapBufferSystem extends SystemPackage {
         uboManager.push(weatherMapUBO);
     }
 
+    private float computeRangeFade(float distanceChunks, float nearRangeChunks) {
+
+        if (RANGE_FADE_CHUNKS <= 0f)
+            return 1f;
+
+        float fadeStartChunks = Math.max(0f, nearRangeChunks - RANGE_FADE_CHUNKS);
+        float t = 1f - (distanceChunks - fadeStartChunks) / RANGE_FADE_CHUNKS;
+        t = Math.max(0f, Math.min(1f, t));
+
+        return t * t * (3f - 2f * t);
+    }
+
     private void writeEntry(
             int index,
             WeatherInstance pattern,
             float centerXBlocks,
             float centerZBlocks,
             float radiusBlocks,
+            float distanceBlocks,
+            float rangeFade,
             WeatherHandle weatherHandle,
             int cloudIndex) {
 
-        bounds[index].set(centerXBlocks, centerZBlocks, radiusBlocks, 0f);
+        bounds[index].set(
+                centerXBlocks - radiusBlocks,
+                centerZBlocks - radiusBlocks,
+                centerXBlocks + radiusBlocks,
+                centerZBlocks + radiusBlocks);
 
         patternState[index].set(
                 pattern.getIntensity(),
                 pattern.getFadeAlpha(),
-                0f,
-                0f);
+                distanceBlocks,
+                rangeFade);
 
         CloudHandle cloudHandle = weatherHandle.getCloudHandle(cloudIndex);
         var color = cloudHandle.getCloudColor();
