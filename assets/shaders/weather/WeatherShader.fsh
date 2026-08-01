@@ -28,8 +28,13 @@ const int   CLOUD_RAYMARCH_MIN_STEPS          = 40;
 const int   CLOUD_RAYMARCH_MAX_STEPS          = 80;
 const float CLOUD_RAYMARCH_TARGET_STEP_LENGTH = 20.0;
 
-// Fraction of the ray's total travel used to fade the far end out smoothly
-// instead of hard-clipping at u_cloudMaxDistance.
+// Fraction of u_cloudMaxDistance — the true visibility limit — used to fade
+// the far end out smoothly instead of hard-clipping. Anchored to
+// u_cloudMaxDistance itself rather than each ray's own tFar: a steep ray's
+// tFar is just wherever it exits the thin altitude slab, often far short of
+// the real visibility limit, so fading relative to that made clouds fade
+// out at close range the moment the camera pitched away from grazing —
+// clouds appeared to clip out simply from tilting the view.
 const float CLOUD_FAR_FADE_FRACTION = 0.2;
 
 const float CLOUD_DENSITY_ABSORPTION   = 1.35;
@@ -202,7 +207,7 @@ void main() {
 
     vec3  stepVec      = (exitWorld - entryWorld) / float(stepCount);
     float stepLength   = length(stepVec);
-    float farFadeStart = tFar - rayLength * CLOUD_FAR_FADE_FRACTION;
+    float farFadeStart = u_cloudMaxDistance * (1.0 - CLOUD_FAR_FADE_FRACTION);
 
     float sunFacing  = clamp(dot(vec3(0.0, 1.0, 0.0), normalize(u_sunDirection)), 0.0, 1.0);
     float moonFacing = clamp(dot(vec3(0.0, 1.0, 0.0), normalize(u_moonDirection)), 0.0, 1.0);
@@ -219,7 +224,7 @@ void main() {
         if (transmittance < CLOUD_TRANSMITTANCE_CUTOFF)
         break;
 
-        float farFade = 1.0 - smoothstep(farFadeStart, tFar, traveled);
+        float farFade = 1.0 - smoothstep(farFadeStart, u_cloudMaxDistance, traveled);
 
         if (farFade > CLOUD_DENSITY_EPSILON) {
             for (int i = 0; i < entryCount; i++) {

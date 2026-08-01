@@ -5,13 +5,15 @@ out vec2 v_screenPos;
 #include "includes/CameraData.glsl"
 
 void main() {
-    // Full-screen quad in clip space
-    gl_Position = vec4(a_position, 0.9999, 1.0);
-    v_screenPos = a_position;
+    // a_position arrives as the shared unit quad in [0,1] — remap to NDC.
+    vec2 ndc = a_position * 2.0 - 1.0;
+
+    gl_Position = vec4(ndc, 0.9999, 1.0);
+    v_screenPos = ndc;
 
     // Unproject from clip space to view space
     // Use far plane (z = 1.0 in clip space maps to far plane)
-    vec4 viewPos = u_inverseProjection * vec4(a_position, 1.0, 1.0);
+    vec4 viewPos = u_inverseProjection * vec4(ndc, 1.0, 1.0);
     viewPos.xyz /= viewPos.w;
 
     // Transform view direction to world space
