@@ -14,60 +14,46 @@ out vec4 fragColor;
 #include "includes/SettingsData.glsl"
 #include "includes/NoiseUtility.glsl"
 
+/*
+* Fullscreen weather/cloud raymarch. Reconstructs a world-space view ray
+ * per pixel, intersects it against the shared cloud altitude band, and
+ * marches through every in-range weather pattern's cloud entries from
+ * WeatherMapData, accumulating premultiplied color and coverage.
+ */
+
 uniform float u_cloudAltitudeMin;
 uniform float u_cloudAltitudeMax;
 uniform float u_cloudMaxDistance;
 uniform vec2  u_weatherDriftDirection;
 uniform float u_weatherDriftSpeed;
 
-// Step count adapts to how far a ray actually travels through the layer —
-// a steep ray crosses a thin altitude band and sits near the minimum; a
-// grazing, near-horizontal ray can cross thousands of blocks and climbs
-// toward the maximum. A fixed step count starved grazing rays of samples,
-// which is what produced the low-resolution, angle-dependent "clipping".
 const int   CLOUD_RAYMARCH_MIN_STEPS          = 40;
 const int   CLOUD_RAYMARCH_MAX_STEPS          = 80;
 const float CLOUD_RAYMARCH_TARGET_STEP_LENGTH = 20.0;
 
-// Fraction of u_cloudMaxDistance — the true visibility limit — used to fade
-// the far end out smoothly instead of hard-clipping. Anchored to
-// u_cloudMaxDistance itself rather than each ray's own tFar: a steep ray's
-// tFar is just wherever it exits the thin altitude slab, often far short of
-// the real visibility limit, so fading relative to that made clouds fade
-// out at close range the moment the camera pitched away from grazing —
-// clouds appeared to clip out simply from tilting the view.
 const float CLOUD_FAR_FADE_FRACTION = 0.2;
 
 const float CLOUD_DENSITY_ABSORPTION   = 1.35;
 const float CLOUD_TRANSMITTANCE_CUTOFF = 0.01;
 const float CLOUD_DENSITY_EPSILON      = 0.001;
 
-// Internal shape/detail flow, layered on top of the pattern's own rigid
-// translation — always along the same world-rotation drift direction the
-// pattern's silhouette itself moves with, scaled down so it reads as a
-// slow, coherent boil rather than fighting the silhouette's motion.
 const float CLOUD_DRIFT_SCROLL_SCALE = 0.35;
 const float CLOUD_DRIFT_TIME_SCALE   = 0.1;
 const float CLOUD_PUFF_ANGLE_WOBBLE  = 1.2;
-const float CLOUD_EDGE_EROSION_HARD  = 1.2;
-const float CLOUD_EDGE_EROSION_SOFT  = 0.4;
+const float CLOUD_EDGE_SOFTBAND_MIN  = 0.08;
+const float CLOUD_EDGE_SOFTBAND_MAX  = 0.6;
 const float CLOUD_MIN_EDGE_BAND      = 0.16;
 const float CLOUD_OUTER_FADE_START   = 0.85;
 const float CLOUD_OUTER_FADE_END     = 1.35;
 
-// heightNorm is written out for the caller's vertical falloff/ambient use.
-// chunkOffsetBlocks reconstructs a world coordinate that stays continuous
-// across a reference-chunk requantization for the noise sample only —
-// worldPos itself resets by a full chunk width whenever that happens, and
-// the bounds/edge test tolerates that (both sides shift together), but raw
-// noise coordinates do not.
-//
-// The silhouette is a rotated, anisotropic "puff" region derived from
-// bounds rather than the box itself, aligned to the drift direction and
-// randomized per pattern instance. Coverage erodes toward the edge of
-// that region through the noise field, so the boundary reads as ragged and
-// organic instead of a hard rectangle; a generous soft multiply past the
-// nominal radius is only a final backstop.
+/*
+* Coverage comes from the noise field and this entry's own coverage/
+ * intensity alone, evaluated identically everywhere inside the footprint
+ * — never eroded by distance from the home point — so puffs scatter
+ * across the whole area a weather's coverage describes instead of
+ * clumping around a single anchor. The anisotropic envelope and
+ * outerFade still bound and blend out the footprint's true edge.
+ */
 float sampleEntryDensity(
     vec4 bounds,
     vec4 shape,
@@ -137,18 +123,12 @@ float sampleEntryDensity(
     vec3 warp = cloudWarp3D(noisePos * 0.35) * noiseParams.y;
     float shapeNoise = perlinWorley3D(noisePos + warp, 1.4);
 
-    float softness        = clamp(noiseParams.w, 0.0, 1.0);
-    float erosionStrength = mix(CLOUD_EDGE_EROSION_HARD, CLOUD_EDGE_EROSION_SOFT, softness);
-    float archetypeBias   = (noiseParams.z - 0.6) * 0.5;
-    float baseBias        = clamp(intensity + archetypeBias, 0.02, 0.95);
-    float effectiveBias   = clamp(baseBias - radialDist * erosionStrength, 0.0, 0.98);
+    float archetypeBias = (noiseParams.z - 0.6) * 0.5;
+    float baseBias       = clamp(intensity + archetypeBias, 0.02, 0.95);
+    float softness       = clamp(noiseParams.w, 0.0, 1.0);
 
-    // Coverage amount is still governed by effectiveBias (how far into the
-    // noise range counts as "inside"), but the width of the ramp from clear
-    // to opaque is decoupled and floored — a thin, low-coverage weather no
-    // longer gets a razor-sharp threshold, it just gets a smaller soft puff.
-    float insideThreshold = 1.0 - effectiveBias;
-    float softBand        = max(CLOUD_MIN_EDGE_BAND, effectiveBias * 0.5);
+    float insideThreshold = 1.0 - baseBias;
+    float softBand        = max(CLOUD_MIN_EDGE_BAND, mix(CLOUD_EDGE_SOFTBAND_MIN, CLOUD_EDGE_SOFTBAND_MAX, softness) * baseBias);
     float coverage         = remapClamped(shapeNoise, insideThreshold, insideThreshold + softBand, 0.0, 1.0);
 
     return coverage * outerFade;
@@ -212,8 +192,6 @@ void main() {
         CLOUD_RAYMARCH_MIN_STEPS,
         CLOUD_RAYMARCH_MAX_STEPS);
 
-    // Per-pixel dither on the start offset breaks up the banding a fixed
-    // sample grid produces on long, coarsely-stepped grazing-angle rays.
     float dither = hash31(vec3(gl_FragCoord.xy, 0.0)) - 0.5;
 
     vec3 entryWorld = rayOrigin + rayDir * tNear;
@@ -303,14 +281,6 @@ void main() {
     if (coverage <= 0.003)
     discard;
 
-    // accumulatedColor is premultiplied (front-to-back integration already
-    // weights each contribution by remaining transmittance). This target's
-    // render-into blend is GL_ONE/GL_ONE_MINUS_SRC_ALPHA (see FboData's
-    // premultipliedBlend flag), which stores that premultiplied pair into
-    // WeatherScene unmodified. Un-premultiplying here means the FINAL blit
-    // of WeatherScene onto the screen — which uses the normal straight-alpha
-    // blend shared with every other pass — reconstructs the correct
-    // premultiplied-over composite on its own: color*coverage + dst*(1-coverage).
     vec3 straightColor = accumulatedColor / max(coverage, 0.0001);
 
     fragColor = vec4(straightColor, coverage);
