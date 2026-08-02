@@ -46,6 +46,13 @@ const float CLOUD_MIN_EDGE_BAND      = 0.16;
 const float CLOUD_OUTER_FADE_START   = 0.85;
 const float CLOUD_OUTER_FADE_END     = 1.35;
 
+// Saturation-driven shading — applied ahead of sky tint and lighting so
+// low-saturation archetypes (storm clouds) read as denser and darker
+// before either of those ever get a say.
+const float CLOUD_STORM_ABSORPTION_BOOST = 1.35;
+const float CLOUD_STORM_DARKEN_MIN       = 0.45;
+const float CLOUD_SKY_TINT_STRENGTH      = 0.35;
+
 /*
 * Coverage comes from the noise field and this entry's own coverage/
  * intensity alone, evaluated identically everywhere inside the footprint
@@ -250,22 +257,32 @@ void main() {
                 if (density <= CLOUD_DENSITY_EPSILON)
                 continue;
 
-                float fullness  = materialParams.y;
+                float saturation = materialParams.x;
+                float fullness   = materialParams.y;
+
                 float vertShape = 1.0 - abs(heightNorm - 0.5) * 2.0;
                 vertShape = pow(clamp(vertShape, 0.0, 1.0), mix(2.4, 0.6, fullness));
 
                 if (vertShape <= 0.0)
                 continue;
 
+                // Saturation drives shading before anything else — low-
+                // saturation archetypes (storm clouds) read denser and
+                // darker ahead of sky tint or direct/ambient lighting.
+                float stormDarkness  = 1.0 - saturation;
+                float absorptionBias = mix(1.0, CLOUD_STORM_ABSORPTION_BOOST, stormDarkness);
+
                 float stepAbsorption = clamp(
-                    density * vertShape * shape.z * stepLength * CLOUD_DENSITY_ABSORPTION, 0.0, 1.0);
+                    density * vertShape * shape.z * stepLength * CLOUD_DENSITY_ABSORPTION * absorptionBias,
+                    0.0, 1.0);
 
                 float luminance    = dot(colorScale.rgb, vec3(0.299, 0.587, 0.114));
-                vec3  tintedAlbedo = mix(vec3(luminance), colorScale.rgb, materialParams.x);
-                tintedAlbedo = mix(tintedAlbedo, tintedAlbedo * u_skyCloudColor, 0.35);
+                vec3  tintedAlbedo = mix(vec3(luminance), colorScale.rgb, saturation);
+                tintedAlbedo = mix(tintedAlbedo, tintedAlbedo * u_skyCloudColor, CLOUD_SKY_TINT_STRENGTH);
 
                 float ambient  = mix(0.10, 0.22, heightNorm);
                 vec3  litColor = tintedAlbedo * (directLight * mix(0.4, 1.0, heightNorm) + ambient);
+                litColor *= mix(CLOUD_STORM_DARKEN_MIN, 1.0, saturation);
 
                 accumulatedColor += litColor * stepAbsorption * transmittance;
                 transmittance    *= (1.0 - stepAbsorption);
