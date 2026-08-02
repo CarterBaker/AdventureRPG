@@ -31,20 +31,17 @@ class RegionSampleSystem extends SystemPackage {
     }
 
     /*
-     * Fixed, terrain-independent ranges — the sky/weather map is resolved
+     * Fixed, terrain-independent range — the sky/weather map is resolved
      * from UBO data and a ray/plane intersection, never from loaded chunk
      * geometry, so it must never be clamped against the terrain streaming
-     * radius (settings.maxRenderDistance). These are the sole authority for
+     * radius (settings.maxRenderDistance). This is the sole authority for
      * how far the CPU weather simulation and the skybox's distant cloud
-     * sampling reach.
+     * sampling reach — the same single range is used to stream patterns in,
+     * cull the weather map, and retire patterns that drift out of it.
      */
 
-    float getEffectiveOuterRangeChunks() {
-        return EngineSetting.WEATHER_OUTER_RANGE_CHUNKS;
-    }
-
-    float getEffectiveNearRangeChunks() {
-        return Math.min(getEffectiveOuterRangeChunks(), (float) EngineSetting.WEATHER_NEAR_RANGE_CHUNKS);
+    float getEffectiveRangeChunks() {
+        return EngineSetting.WEATHER_RANGE_CHUNKS;
     }
 
     private float combinedNoiseAt(int chunkX, int chunkZ) {
@@ -76,10 +73,10 @@ class RegionSampleSystem extends SystemPackage {
         double dz = WorldWrapUtility.wrappedDeltaZ(activeWorld, homeChunkZ, referenceChunkZ);
         double distanceChunks = Math.sqrt(dx * dx + dz * dz);
 
-        double effectiveOuterRangeChunks = getEffectiveOuterRangeChunks();
-        double clampedDistance = Math.min(distanceChunks, effectiveOuterRangeChunks);
-        float distanceT = effectiveOuterRangeChunks > 0.0
-                ? (float) (clampedDistance / effectiveOuterRangeChunks)
+        double effectiveRangeChunks = getEffectiveRangeChunks();
+        double clampedDistance = Math.min(distanceChunks, effectiveRangeChunks);
+        float distanceT = effectiveRangeChunks > 0.0
+                ? (float) (clampedDistance / effectiveRangeChunks)
                 : 1f;
 
         float nearNoise = combinedNoiseAt(homeChunkX, homeChunkZ);

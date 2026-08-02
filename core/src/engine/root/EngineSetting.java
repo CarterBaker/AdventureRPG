@@ -352,7 +352,7 @@ public class EngineSetting {
 
         // Weather \\
 
-        public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
+        public static final float WEATHER_NOISE_CELL_SIZE = 512.0f;
         public static final float WEATHER_LOCAL_EVOLUTION_PERIOD = 2520.0f;
         public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
         public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
@@ -365,10 +365,9 @@ public class EngineSetting {
         public static final float WEATHER_BASE_DRIFT_SPEED_KPH = 25.0f;
         public static final float KPH_TO_METERS_PER_SECOND = 1000f / 3600f;
 
-        // Weather Sampling Ranges \\
+        // Weather Sampling Range \\
 
-        public static final int WEATHER_OUTER_RANGE_CHUNKS = 192;
-        public static final int WEATHER_NEAR_RANGE_CHUNKS = 96;
+        public static final int WEATHER_RANGE_CHUNKS = 512;
         public static final int WEATHER_FAR_RANGE_CHUNKS = 384;
 
         // Global Weather Noise \\
@@ -390,9 +389,9 @@ public class EngineSetting {
 
         // Overhead — Weather Patterns \\
 
-        public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 48;
-        public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 56;
-        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 72.0f;
+        public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
+        public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 300;
+        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 300.0f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
         public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4;
 

@@ -24,18 +24,18 @@ class WeatherMapBufferSystem extends SystemPackage {
     /*
      * Flattens the shared active weather-instance pool into each active
      * grid's own WeatherMapData UBO every frame, culled to that grid's own
-     * near range and sorted nearest-first. Culling and the range fade are
-     * both keyed off each pattern's footprint edge rather than its center,
-     * so a pattern only drops out once its whole visible footprint has
-     * actually left near range instead of popping the moment its center
-     * crosses the line. Also derives the tight world-space Y band actually
-     * occupied by this frame's entries so the fullscreen cloud pass can
-     * bound its raymarch to where cloud volume can physically exist instead
-     * of the full atmosphere column.
+     * range and sorted nearest-first. Culling and the range fade are both
+     * keyed off each pattern's footprint edge rather than its center, so a
+     * pattern only drops out once its whole visible footprint has actually
+     * left range instead of popping the moment its center crosses the
+     * line. Also derives the tight world-space Y band actually occupied by
+     * this frame's entries so the fullscreen cloud pass can bound its
+     * raymarch to where cloud volume can physically exist instead of the
+     * full atmosphere column.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
-    private static final float RANGE_FADE_CHUNKS = 24f;
+    private static final float RANGE_FADE_CHUNKS = 64f;
     private static final float LAYER_BOUND_MARGIN_BLOCKS = 16f;
 
     private WeatherPatternManager weatherPatternManager;
@@ -100,7 +100,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
-        float nearRangeChunks = weatherPatternManager.getNearRangeChunks();
+        float rangeChunks = weatherPatternManager.getRangeChunks();
         float chunkSizeBlocks = EngineSetting.CHUNK_SIZE;
 
         WeatherInstance[] pool = weatherPatternManager.getPatternPool();
@@ -118,7 +118,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             float distanceChunks = (float) Math.sqrt(dx * dx + dz * dz);
             float edgeDistanceChunks = distanceChunks - pattern.getFootprintRadiusChunks();
 
-            if (edgeDistanceChunks > nearRangeChunks)
+            if (edgeDistanceChunks > rangeChunks)
                 continue;
 
             int distanceBits = Float.floatToRawIntBits(distanceChunks);
@@ -146,7 +146,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             float footprintRadiusChunks = pattern.getFootprintRadiusChunks();
             float radiusBlocks = footprintRadiusChunks * chunkSizeBlocks;
             float distanceBlocks = distanceChunks * chunkSizeBlocks;
-            float rangeFade = computeRangeFade(distanceChunks - footprintRadiusChunks, nearRangeChunks);
+            float rangeFade = computeRangeFade(distanceChunks - footprintRadiusChunks, rangeChunks);
 
             WeatherHandle weatherHandle = pattern.getWeatherHandle();
             int cloudCount = weatherHandle.getCloudCount();
@@ -197,12 +197,12 @@ class WeatherMapBufferSystem extends SystemPackage {
         uboManager.push(weatherMapUBO);
     }
 
-    private float computeRangeFade(float distanceChunks, float nearRangeChunks) {
+    private float computeRangeFade(float distanceChunks, float rangeChunks) {
 
         if (RANGE_FADE_CHUNKS <= 0f)
             return 1f;
 
-        float fadeStartChunks = Math.max(0f, nearRangeChunks - RANGE_FADE_CHUNKS);
+        float fadeStartChunks = Math.max(0f, rangeChunks - RANGE_FADE_CHUNKS);
         float t = 1f - (distanceChunks - fadeStartChunks) / RANGE_FADE_CHUNKS;
         t = Math.max(0f, Math.min(1f, t));
 

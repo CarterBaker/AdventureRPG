@@ -39,8 +39,7 @@ public class WeatherPatternManager extends ManagerPackage {
     private TemperatureSystem temperatureSystem;
 
     private int patternCellSizeChunks;
-    private float outerRangeChunks;
-    private float nearRangeChunks;
+    private float rangeChunks;
     private int maxPatternsStreamedPerFrame;
     private int maxActivePatternCount;
     private float reevaluationNoiseFraction;
@@ -120,8 +119,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        this.outerRangeChunks = weatherManager.getEffectiveOuterRangeChunks();
-        this.nearRangeChunks = weatherManager.getEffectiveNearRangeChunks();
+        this.rangeChunks = weatherManager.getEffectiveRangeChunks();
         this.candidateOffsets = buildCandidateOffsets();
     }
 
@@ -156,7 +154,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
         float maxJitterMagnitudeChunks = (jitterRangeChunks * 0.5f) * (float) Math.sqrt(2.0);
-        float candidateRadiusChunks = outerRangeChunks + maxJitterMagnitudeChunks;
+        float candidateRadiusChunks = rangeChunks + maxJitterMagnitudeChunks;
         int radiusCells = Math.max(1, (int) Math.ceil(candidateRadiusChunks / (float) patternCellSizeChunks));
 
         ObjectArrayList<int[]> offsets = new ObjectArrayList<>();
@@ -243,7 +241,7 @@ public class WeatherPatternManager extends ManagerPackage {
             double dz = WorldWrapUtility.wrappedDelta(homeChunkZ, playerChunkZ, worldHeightChunks);
             double trueDistanceChunks = Math.sqrt(dx * dx + dz * dz);
 
-            if (trueDistanceChunks > outerRangeChunks)
+            if (trueDistanceChunks > rangeChunks)
                 continue;
 
             long wrappedHome = wrapChunkCoordinate(homeChunkX, homeChunkZ);
@@ -317,12 +315,20 @@ public class WeatherPatternManager extends ManagerPackage {
     /*
      * Derives this pattern's persisted world-drift velocity from the same
      * world-rotation KPH that drives the noise field, scaled by its own
-     * driftSpeedScale. Assigned exactly once, at stream-in — from that
-     * point on advanceWorldDrift() integrates position from this value
-     * alone, and weather reevaluation never touches it.
+     * driftSpeedScale — but negated. The regional noise field embeds
+     * world rotation as a phase added at the pattern's own current chunk
+     * coordinate (see RegionSampleSystem/WeatherNoiseUtility), so a
+     * pattern advecting at the raw drift speed would have that speed
+     * compound with the phase instead of cancel it, sampling the field at
+     * roughly twice the intended rate. Moving at the negated speed keeps
+     * a pattern's sampled noise — and therefore its assigned weather —
+     * stable for as long as it rides along with the drift, rather than
+     * flickering between categories. Assigned exactly once, at stream-in
+     * — from that point on advanceWorldDrift() integrates position from
+     * this value alone, and weather reevaluation never touches it.
      */
     private void assignVelocity(WeatherInstance pattern) {
-        double baseVelocityXChunksPerSecond = weatherManager.getWorldDriftChunksPerSecondX();
+        double baseVelocityXChunksPerSecond = -weatherManager.getWorldDriftChunksPerSecondX();
         pattern.setVelocity(baseVelocityXChunksPerSecond * pattern.getDriftSpeedScale(), 0.0);
     }
 
@@ -551,7 +557,7 @@ public class WeatherPatternManager extends ManagerPackage {
             pattern.setDistanceFromReferenceChunks((float) minDistChunks);
             pattern.updateBounds();
 
-            if (minDistChunks > outerRangeChunks && !pattern.isRetiring())
+            if (minDistChunks > rangeChunks && !pattern.isRetiring())
                 pattern.setRetiring(true);
 
             float alpha = pattern.getFadeAlpha();
@@ -633,12 +639,8 @@ public class WeatherPatternManager extends ManagerPackage {
         return activePatterns.size();
     }
 
-    public float getOuterRangeChunks() {
-        return outerRangeChunks;
-    }
-
-    public float getNearRangeChunks() {
-        return nearRangeChunks;
+    public float getRangeChunks() {
+        return rangeChunks;
     }
 
     // Grid Factory \\

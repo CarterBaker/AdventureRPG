@@ -21,7 +21,7 @@ public class WeatherSystem extends SystemPackage {
     /*
      * Renders all weather/cloud visuals in a single fullscreen raymarched
      * pass — a full-screen quad reconstructing the camera's world-space
-     * view ray, raymarched against every near-range weather pattern's own
+     * view ray, raymarched against every in-range weather pattern's own
      * cloud entries straight from WeatherMapData. Composites into the
      * scene at LAYER_WEATHER, beneath world geometry. Cloud internal
      * motion and silhouette orientation are driven by the same
@@ -75,12 +75,12 @@ public class WeatherSystem extends SystemPackage {
 
     /*
      * Sized once and never touched again — comfortably contains every
-     * near-range weather pattern's footprint, the same radius the old
+     * in-range weather pattern's footprint, the same radius the old
      * overhead box used.
      */
     private void assignRaymarchBounds(MaterialInstance material) {
 
-        float maxDistanceBlocks = (weatherManager.getEffectiveNearRangeChunks()
+        float maxDistanceBlocks = (weatherManager.getEffectiveRangeChunks()
                 + EngineSetting.WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS) * EngineSetting.CHUNK_SIZE;
 
         material.setUniform("u_cloudAltitudeMin", EngineSetting.WEATHER_CLOUD_ALTITUDE_MIN);
@@ -91,17 +91,19 @@ public class WeatherSystem extends SystemPackage {
     // Drift Uniforms \\
 
     /*
-     * The world-rotation drift is the single source of truth for how
-     * weather patterns move — same direction and speed
-     * WeatherPatternManager integrates pattern position with. Constant
-     * for the session, so this is set once here instead of re-pushed
-     * every frame.
+     * WeatherPatternManager advects every pattern at the negated world-
+     * rotation drift (see its assignVelocity()) so a pattern's own motion
+     * cancels the noise field's rotation phase instead of doubling it.
+     * The direction here matches that same negated axis so the cloud
+     * puffs' internal scroll reads as moving with the pattern instead of
+     * against it. Constant for the session, so this is set once here
+     * instead of re-pushed every frame.
      */
     private void assignDriftUniforms(MaterialInstance material) {
 
         float driftSpeedBlocksPerSecond = weatherManager.getWorldDriftChunksPerSecondX() * EngineSetting.CHUNK_SIZE;
 
-        material.setUniform("u_weatherDriftDirection", new Vector2(1f, 0f));
+        material.setUniform("u_weatherDriftDirection", new Vector2(-1f, 0f));
         material.setUniform("u_weatherDriftSpeed", driftSpeedBlocksPerSecond);
     }
 

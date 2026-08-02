@@ -231,12 +231,8 @@ public class WeatherManager extends ManagerPackage {
         return weatherPoolResolved;
     }
 
-    public float getEffectiveOuterRangeChunks() {
-        return regionSampleSystem.getEffectiveOuterRangeChunks();
-    }
-
-    public float getEffectiveNearRangeChunks() {
-        return regionSampleSystem.getEffectiveNearRangeChunks();
+    public float getEffectiveRangeChunks() {
+        return regionSampleSystem.getEffectiveRangeChunks();
     }
 
     public float getWorldDriftChunksPerSecondX() {
