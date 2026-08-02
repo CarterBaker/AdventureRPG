@@ -353,7 +353,7 @@ public class EngineSetting {
         // Weather \\
 
         public static final float WEATHER_NOISE_CELL_SIZE = 256.0f;
-        public static final float WEATHER_LOCAL_EVOLUTION_PERIOD = 420.0f;
+        public static final float WEATHER_LOCAL_EVOLUTION_PERIOD = 2520.0f;
         public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
         public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
         public static final float DEFAULT_WEATHER_HUMIDITY = 0.5f;
@@ -377,7 +377,7 @@ public class EngineSetting {
         public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f;
         public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f;
         public static final int GLOBAL_WEATHER_MEANDER_WAVE_NUMBER = 1;
-        public static final float GLOBAL_WEATHER_MEANDER_INFLUENCE = 0.08f;
+        public static final float GLOBAL_WEATHER_MEANDER_INFLUENCE = 0.025f;
 
         // Season Blend \\
 

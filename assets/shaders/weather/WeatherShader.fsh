@@ -6,7 +6,6 @@ out vec4 fragColor;
 
 #include "includes/CameraData.glsl"
 #include "includes/TimeData.glsl"
-#include "includes/WindData.glsl"
 #include "includes/SunLightData.glsl"
 #include "includes/MoonLightData.glsl"
 #include "includes/SkyColorData.glsl"
@@ -18,6 +17,8 @@ out vec4 fragColor;
 uniform float u_cloudAltitudeMin;
 uniform float u_cloudAltitudeMax;
 uniform float u_cloudMaxDistance;
+uniform vec2  u_weatherDriftDirection;
+uniform float u_weatherDriftSpeed;
 
 // Step count adapts to how far a ray actually travels through the layer —
 // a steep ray crosses a thin altitude band and sits near the minimum; a
@@ -41,14 +42,18 @@ const float CLOUD_DENSITY_ABSORPTION   = 1.35;
 const float CLOUD_TRANSMITTANCE_CUTOFF = 0.01;
 const float CLOUD_DENSITY_EPSILON      = 0.001;
 
-const float CLOUD_WIND_SCROLL_SCALE = 1.2;
-const float CLOUD_DRIFT_TIME_SCALE  = 0.1;
-const float CLOUD_PUFF_ANGLE_WOBBLE = 1.2;
-const float CLOUD_EDGE_EROSION_HARD = 1.2;
-const float CLOUD_EDGE_EROSION_SOFT = 0.4;
-const float CLOUD_MIN_EDGE_BAND     = 0.16;
-const float CLOUD_OUTER_FADE_START  = 0.85;
-const float CLOUD_OUTER_FADE_END    = 1.35;
+// Internal shape/detail flow, layered on top of the pattern's own rigid
+// translation — always along the same world-rotation drift direction the
+// pattern's silhouette itself moves with, scaled down so it reads as a
+// slow, coherent boil rather than fighting the silhouette's motion.
+const float CLOUD_DRIFT_SCROLL_SCALE = 0.35;
+const float CLOUD_DRIFT_TIME_SCALE   = 0.1;
+const float CLOUD_PUFF_ANGLE_WOBBLE  = 1.2;
+const float CLOUD_EDGE_EROSION_HARD  = 1.2;
+const float CLOUD_EDGE_EROSION_SOFT  = 0.4;
+const float CLOUD_MIN_EDGE_BAND      = 0.16;
+const float CLOUD_OUTER_FADE_START   = 0.85;
+const float CLOUD_OUTER_FADE_END     = 1.35;
 
 // heightNorm is written out for the caller's vertical falloff/ambient use.
 // chunkOffsetBlocks reconstructs a world coordinate that stays continuous
@@ -58,8 +63,8 @@ const float CLOUD_OUTER_FADE_END    = 1.35;
 // noise coordinates do not.
 //
 // The silhouette is a rotated, anisotropic "puff" region derived from
-// bounds rather than the box itself, aligned to the local wind direction
-// and randomized per pattern instance. Coverage erodes toward the edge of
+// bounds rather than the box itself, aligned to the drift direction and
+// randomized per pattern instance. Coverage erodes toward the edge of
 // that region through the noise field, so the boundary reads as ragged and
 // organic instead of a hard rectangle; a generous soft multiply past the
 // nominal radius is only a final backstop.
@@ -73,8 +78,8 @@ float sampleEntryDensity(
     float intensity,
     vec3 worldPos,
     vec2 chunkOffsetBlocks,
-    vec2 windDirNorm,
-    float windSpeed,
+    vec2 driftDirNorm,
+    float driftSpeed,
     out float heightNorm) {
     float halfThickness = max(shape.x * 0.5, 0.01);
     float rawHeightT = (worldPos.y - shape.y) / halfThickness;
@@ -98,8 +103,8 @@ float sampleEntryDensity(
             cloudTypeIndex * 78.233 + patternSeed,
             patternSeed - cloudTypeIndex * 0.577));
 
-    float windAngle = atan(windDirNorm.y, windDirNorm.x);
-    float puffAngle = windAngle + (instanceHash - 0.5) * CLOUD_PUFF_ANGLE_WOBBLE;
+    float driftAngle = atan(driftDirNorm.y, driftDirNorm.x);
+    float puffAngle = driftAngle + (instanceHash - 0.5) * CLOUD_PUFF_ANGLE_WOBBLE;
     float cosA = cos(puffAngle);
     float sinA = sin(puffAngle);
 
@@ -122,9 +127,9 @@ float sampleEntryDensity(
     float sizeVariance  = clamp(mix(variance0.y, variance0.z, fract(instanceHash * 5.63)), 0.3, 3.0);
     float instanceScale = max(colorScale.w, 1.0) * sizeVariance;
 
-    vec2 windScroll = windDirNorm * windSpeed * u_time * CLOUD_WIND_SCROLL_SCALE * shape.w;
+    vec2 driftScroll = driftDirNorm * driftSpeed * u_time * CLOUD_DRIFT_SCROLL_SCALE * shape.w;
     vec3 stableWorldPos = vec3(worldPos.x + chunkOffsetBlocks.x, worldPos.y, worldPos.z + chunkOffsetBlocks.y);
-    vec3 evolvePos = stableWorldPos + vec3(windScroll.x, u_time * CLOUD_DRIFT_TIME_SCALE, windScroll.y);
+    vec3 evolvePos = stableWorldPos + vec3(driftScroll.x, u_time * CLOUD_DRIFT_TIME_SCALE, driftScroll.y);
 
     vec3 instanceOffset = vec3(patternSeed, fract(instanceHash * 7.0), fract(instanceHash * 13.0)) * 128.0;
     vec3 noisePos = evolvePos / instanceScale * max(noiseParams.x, 0.01) + instanceOffset;
@@ -193,11 +198,13 @@ void main() {
     if (tFar <= tNear)
     discard;
 
-    vec2 windDirNorm = vec2(1.0, 0.0);
-    float windXZLen = length(u_windDirection.xz);
-    if (windXZLen > 0.0001)
-    windDirNorm = u_windDirection.xz / windXZLen;
-    float windSpeed = u_windSpeed;
+    vec2 driftDirNorm = u_weatherDriftDirection;
+    float driftDirLen = length(driftDirNorm);
+    if (driftDirLen > 0.0001)
+    driftDirNorm /= driftDirLen;
+    else
+    driftDirNorm = vec2(1.0, 0.0);
+    float driftSpeed = u_weatherDriftSpeed;
 
     float rayLength = tFar - tNear;
     int stepCount = clamp(
@@ -259,7 +266,7 @@ void main() {
                 float heightNorm;
                 float density = sampleEntryDensity(
                     bounds, shape, noiseParams, colorScale, variance0, variance1,
-                    intensity, samplePos, chunkOffsetBlocks, windDirNorm, windSpeed, heightNorm)
+                    intensity, samplePos, chunkOffsetBlocks, driftDirNorm, driftSpeed, heightNorm)
                 * fadeAlpha * rangeFade * farFade;
 
                 if (density <= CLOUD_DENSITY_EPSILON)

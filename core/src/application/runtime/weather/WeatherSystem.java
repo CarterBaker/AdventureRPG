@@ -14,6 +14,7 @@ import application.runtime.RuntimeSetting;
 import application.runtime.world.WorldSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector2;
 
 public class WeatherSystem extends SystemPackage {
 
@@ -21,11 +22,12 @@ public class WeatherSystem extends SystemPackage {
      * Renders all weather/cloud visuals in a single fullscreen raymarched
      * pass — a full-screen quad reconstructing the camera's world-space
      * view ray, raymarched against every near-range weather pattern's own
-     * cloud entries straight from WeatherMapData. Replaces the old split
-     * skybox-ring + overhead-box systems entirely; the sky pass now only
-     * ever draws atmosphere color. Composites into the scene at
-     * LAYER_WEATHER, beneath world geometry, exactly like the box system
-     * did before it.
+     * cloud entries straight from WeatherMapData. Composites into the
+     * scene at LAYER_WEATHER, beneath world geometry. Cloud internal
+     * motion and silhouette orientation are driven by the same
+     * world-rotation drift that moves weather patterns themselves — never
+     * the independent local wind system, which stays reserved for future
+     * systems (grass, trees, water).
      */
 
     // Internal
@@ -66,6 +68,7 @@ public class WeatherSystem extends SystemPackage {
         weatherModel.constructor(meshData, material);
 
         assignRaymarchBounds(material);
+        assignDriftUniforms(material);
     }
 
     // Raymarch Bounds \\
@@ -83,6 +86,23 @@ public class WeatherSystem extends SystemPackage {
         material.setUniform("u_cloudAltitudeMin", EngineSetting.WEATHER_CLOUD_ALTITUDE_MIN);
         material.setUniform("u_cloudAltitudeMax", EngineSetting.WEATHER_CLOUD_ALTITUDE_MAX);
         material.setUniform("u_cloudMaxDistance", maxDistanceBlocks);
+    }
+
+    // Drift Uniforms \\
+
+    /*
+     * The world-rotation drift is the single source of truth for how
+     * weather patterns move — same direction and speed
+     * WeatherPatternManager integrates pattern position with. Constant
+     * for the session, so this is set once here instead of re-pushed
+     * every frame.
+     */
+    private void assignDriftUniforms(MaterialInstance material) {
+
+        float driftSpeedBlocksPerSecond = weatherManager.getWorldDriftChunksPerSecondX() * EngineSetting.CHUNK_SIZE;
+
+        material.setUniform("u_weatherDriftDirection", new Vector2(1f, 0f));
+        material.setUniform("u_weatherDriftSpeed", driftSpeedBlocksPerSecond);
     }
 
     @Override
@@ -110,7 +130,6 @@ public class WeatherSystem extends SystemPackage {
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());
         mat.setUBO(grid.getWeatherMapUBO());
-        mat.setUBO(grid.getWindDataUBO());
     }
 
     // Accessible \\
