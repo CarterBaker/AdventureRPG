@@ -1,0 +1,19 @@
+{
+    "color": { "r": 1.0, "g": 1.0, "b": 1.0 },
+    "saturation": 0.95,
+    "scale": 70.0,
+    "density": 0.7,
+    "verticalThickness": 14.0,
+    "fullness": 0.65,
+    "densityNoiseScale": 1.2,
+    "noiseWarpStrength": 0.55,
+    "coverageBias": 0.5,
+    "silhouetteSoftness": 0.12,
+    "baseAltitude": 190.0,
+    "driftSpeedScale": 1.1,
+    "spread": 0.8,
+    "sizeVarianceMin": 0.6,
+    "sizeVarianceMax": 1.4,
+    "elongationMin": 1.1,
+    "elongationMax": 1.9
+}

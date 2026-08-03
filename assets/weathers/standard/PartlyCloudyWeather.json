@@ -1,0 +1,22 @@
+{
+    "clouds": [
+        { "name": "standard/Cumulus", "chance": 65 },
+        { "name": "standard/Altocumulus", "chance": 35 }
+    ],
+    "nextWeatherChances": [
+        { "name": "standard/SunnyWeather", "chance": 35 },
+        { "name": "standard/CloudyWeather", "chance": 30 },
+        { "name": "standard/ClearWeather", "chance": 20 },
+        { "name": "standard/StormyWeather", "chance": 10 }
+    ],
+    "cloudCoverage": 0.4,
+    "cloudDensityMultiplier": 0.9,
+    "precipitationIntensity": 0.0,
+    "windSpeedScale": 1.0,
+    "windTurbulenceScale": 0.5,
+    "fogDensityScale": 0.9,
+    "humidity": 0.4,
+    "visibility": 1.0,
+    "visualScale": 1.05,
+    "temperatureModifier": 0.5
+}

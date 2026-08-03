@@ -64,10 +64,10 @@ const float CLOUD_SKY_TINT_STRENGTH      = 0.35;
 // CLOUD_DOME_HORIZON_DIP_BLOCKS lets the bend undershoot eye level at full
 // range instead of asymptoting exactly to it, so the dome visibly curls
 // below the horizon rather than flattening onto it.
-const float CLOUD_DOME_RADIUS_SCALE        = 0.5;
-const float CLOUD_DOME_CURVE_POWER         = 1.0;
-const float CLOUD_DOME_HORIZON_DIP_BLOCKS  = 64.0;
-const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 128.0;
+const float CLOUD_DOME_RADIUS_SCALE        = 1.0;
+const float CLOUD_DOME_CURVE_POWER         =1.0;
+const float CLOUD_DOME_HORIZON_DIP_BLOCKS  = 0.0;
+const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 0.0;
 
 float sampleEntryDensity(
     vec4 bounds,
