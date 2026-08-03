@@ -393,7 +393,6 @@ public class EngineSetting {
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 300;
         public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 300.0f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
-        public static final int OVERHEAD_MAX_STREAM_PER_FRAME = 4;
 
         // Weather Rendering \\
 

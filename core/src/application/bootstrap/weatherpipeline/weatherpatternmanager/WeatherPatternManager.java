@@ -20,26 +20,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
-     * Streams jittered spatial cells around every active grid into one
-     * shared, pool-recycled WeatherInstance set keyed by world cell, so any
-     * two grids sharing a cell see the exact same weather. Each grid also
-     * owns its own WeatherInstance for that grid's own local wind and
-     * temperature — always centered exactly on the player's own reference
-     * chunk, unlike the cell-jittered pool patterns, and written into the
-     * weather map ahead of the pool so overhead cloud coverage always
-     * reflects the weather actually resolved right where the player
-     * stands. Every pattern holds exactly one active weather at a
-     * time — noise picks a single categorical weather outright, with no
-     * spatial blending between candidates; the cross-fade between an old
-     * and new pick lives entirely in WeatherInstance's blended accessors.
-     *
-     * Weather-type reevaluation runs on one shared global tick derived
-     * from the same KPH drift speed that moves every pattern, so every
-     * active pattern and every grid's local weather reassess together
-     * instead of drifting in and out of sync on independent timers.
-     * Position, cross-fade progress, and fade in/out all continue to
-     * advance every frame regardless of the tick, so motion stays smooth
-     * between ticks.
+     * Streams pool-recycled spatial weather cells around every active grid,
+     * plus one always-present local instance per grid centered exactly on
+     * that grid's own reference chunk. Position, fades, and weather-type
+     * crossfades all advance every frame from the same KPH-derived drift
+     * speed; range membership (streaming in and retiring) is only
+     * reassessed on the shared tick so a pattern sitting near the range
+     * boundary can't flicker in and out — it either stays fully present or
+     * commits to a full fade-out, and can resume normal presence if it's
+     * back in range by the next tick.
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
@@ -52,7 +41,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     private int patternCellSizeChunks;
     private float rangeChunks;
-    private int maxPatternsStreamedPerFrame;
     private int maxActivePatternCount;
     private float tickIntervalSeconds;
     private double nextTickTime;
@@ -67,7 +55,6 @@ public class WeatherPatternManager extends ManagerPackage {
     private IntArrayList pendingFreeSlots;
 
     private ObjectArrayList<int[]> candidateOffsets;
-    private int scanCursor;
 
     private double elapsedSimTime;
 
@@ -81,7 +68,6 @@ public class WeatherPatternManager extends ManagerPackage {
     protected void create() {
 
         this.patternCellSizeChunks = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS;
-        this.maxPatternsStreamedPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.maxActivePatternCount = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
         this.fadeInRate = EngineSetting.WEATHER_PATTERN_FADE_IN_RATE;
         this.fadeOutRate = EngineSetting.WEATHER_PATTERN_FADE_OUT_RATE;
@@ -99,8 +85,6 @@ public class WeatherPatternManager extends ManagerPackage {
             pattern.assignSlot(i);
             patternPool[i] = pattern;
         }
-
-        this.scanCursor = 0;
 
         this.elapsedSimTime = 0.0;
 
@@ -124,7 +108,7 @@ public class WeatherPatternManager extends ManagerPackage {
         this.rangeChunks = weatherManager.getEffectiveRangeChunks();
         this.candidateOffsets = buildCandidateOffsets();
         this.tickIntervalSeconds = computeTickIntervalSeconds();
-        this.nextTickTime = tickIntervalSeconds;
+        this.nextTickTime = 0.0;
     }
 
     @Override
@@ -150,11 +134,15 @@ public class WeatherPatternManager extends ManagerPackage {
         advanceWorldDrift();
         advancePoolPatterns(tickFired, grids);
         advanceLocalWeather(grids, tickFired);
-        advanceFadesAndRetire(grids);
-        streamInBudgeted(grids);
+        updatePatternSpatialState(grids);
 
-        if (tickFired)
+        if (tickFired) {
+            reassessRangeMembership();
+            streamInAll(grids);
             nextTickTime = elapsedSimTime + tickIntervalSeconds;
+        }
+
+        advanceFades();
     }
 
     // Candidate Offsets \\
@@ -187,31 +175,27 @@ public class WeatherPatternManager extends ManagerPackage {
         return offsets;
     }
 
-    // Streaming \\
+    // Streaming — tick-only \\
 
-    private void streamInBudgeted(ObjectArrayList<GridInstance> grids) {
+    private void streamInAll(ObjectArrayList<GridInstance> grids) {
 
         if (activePatterns.size() >= maxActivePatternCount)
             return;
 
         Object[] elements = grids.elements();
         int gridCount = grids.size();
-        int streamedTotal = 0;
 
-        for (int g = 0; g < gridCount
-                && streamedTotal < maxPatternsStreamedPerFrame
-                && activePatterns.size() < maxActivePatternCount; g++) {
+        for (int g = 0; g < gridCount && activePatterns.size() < maxActivePatternCount; g++) {
 
             long referenceCoordinate = ((GridInstance) elements[g]).getActiveChunkCoordinate();
             int playerChunkX = Coordinate2Long.unpackX(referenceCoordinate);
             int playerChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
 
-            streamedTotal += streamInForReference(
-                    playerChunkX, playerChunkZ, maxPatternsStreamedPerFrame - streamedTotal);
+            streamInForReference(playerChunkX, playerChunkZ);
         }
     }
 
-    private int streamInForReference(int playerChunkX, int playerChunkZ, int budget) {
+    private void streamInForReference(int playerChunkX, int playerChunkZ) {
 
         int playerCellX = Math.floorDiv(playerChunkX, patternCellSizeChunks);
         int playerCellZ = Math.floorDiv(playerChunkZ, patternCellSizeChunks);
@@ -220,18 +204,11 @@ public class WeatherPatternManager extends ManagerPackage {
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
-        int streamed = 0;
-        int attempts = 0;
-        int maxAttempts = candidateOffsets.size();
+        int candidateCount = candidateOffsets.size();
 
-        while (streamed < budget
-                && activePatterns.size() < maxActivePatternCount
-                && attempts < maxAttempts) {
+        for (int c = 0; c < candidateCount && activePatterns.size() < maxActivePatternCount; c++) {
 
-            int[] offset = candidateOffsets.get(scanCursor);
-            scanCursor = (scanCursor + 1) % candidateOffsets.size();
-            attempts++;
-
+            int[] offset = candidateOffsets.get(c);
             int cellX = playerCellX + offset[0];
             int cellZ = playerCellZ + offset[1];
             long patternKey = Coordinate2Long.pack(cellX, cellZ);
@@ -257,12 +234,9 @@ public class WeatherPatternManager extends ManagerPackage {
             int wrappedHomeChunkX = Coordinate2Long.unpackX(wrappedHome);
             int wrappedHomeChunkZ = Coordinate2Long.unpackY(wrappedHome);
 
-            if (streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ, trueDistanceChunks,
-                    playerChunkX, playerChunkZ))
-                streamed++;
+            streamInPattern(patternKey, wrappedHomeChunkX, wrappedHomeChunkZ, trueDistanceChunks,
+                    playerChunkX, playerChunkZ);
         }
-
-        return streamed;
     }
 
     private void computeHomeJitter(long patternKey) {
@@ -278,12 +252,12 @@ public class WeatherPatternManager extends ManagerPackage {
         homeJitterScratch[1] = Math.round((jitterTZ - 0.5f) * jitterRangeChunks);
     }
 
-    private boolean streamInPattern(
+    private void streamInPattern(
             long patternKey, int homeChunkX, int homeChunkZ, double distanceChunks,
             int referenceChunkX, int referenceChunkZ) {
 
         if (freeSlots.isEmpty())
-            return false;
+            return;
 
         long chunkCoordinate = Coordinate2Long.pack(homeChunkX, homeChunkZ);
         long referenceCoordinate = Coordinate2Long.pack(referenceChunkX, referenceChunkZ);
@@ -301,8 +275,6 @@ public class WeatherPatternManager extends ManagerPackage {
         activePatterns.put(patternKey, pattern);
         slotActive[slot] = true;
         streamedInThisFrame.add(pattern);
-
-        return true;
     }
 
     private long wrapChunkCoordinate(int chunkX, int chunkZ) {
@@ -373,16 +345,8 @@ public class WeatherPatternManager extends ManagerPackage {
         return nearest;
     }
 
-    // Global Tick \\
+    // Global Tick — weather-type reassessment \\
 
-    /*
-     * Weather-type reevaluation for every pool pattern that isn't already
-     * retiring, gated on the shared global tick so the whole visible sky
-     * reassesses in one deliberate pass instead of each pattern flipping
-     * on its own schedule. Cross-fade progress advances every frame
-     * regardless, so a change triggered by the tick still animates in
-     * smoothly rather than cutting.
-     */
     private void advancePoolPatterns(boolean tickFired, ObjectArrayList<GridInstance> grids) {
 
         float deltaTime = internal.getDeltaTime();
@@ -462,8 +426,6 @@ public class WeatherPatternManager extends ManagerPackage {
                         initial,
                         DEFAULT_DRIFT_SPEED_SCALE);
 
-                // Always fully present — this instance represents the weather
-                // exactly at the player, so it never needs a stream-in fade.
                 pattern.setFadeAlpha(1f);
 
             } else {
@@ -486,10 +448,9 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
-    private void advanceFadesAndRetire(ObjectArrayList<GridInstance> grids) {
+    // Spatial State — continuous \\
 
-        float deltaTime = internal.getDeltaTime();
-        LongArrayList toRemove = null;
+    private void updatePatternSpatialState(ObjectArrayList<GridInstance> grids) {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
         int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
@@ -504,7 +465,6 @@ public class WeatherPatternManager extends ManagerPackage {
                 continue;
 
             WeatherInstance pattern = patternPool[i];
-
             double minDistChunks = 0.0;
 
             if (gridCount > 0) {
@@ -528,10 +488,38 @@ public class WeatherPatternManager extends ManagerPackage {
 
             pattern.setDistanceFromReferenceChunks((float) minDistChunks);
             pattern.updateBounds();
+        }
+    }
 
-            if (minDistChunks > rangeChunks && !pattern.isRetiring())
-                pattern.setRetiring(true);
+    // Range Membership — tick-only \\
 
+    private void reassessRangeMembership() {
+
+        for (int i = 0; i < patternPool.length; i++) {
+
+            if (!slotActive[i])
+                continue;
+
+            WeatherInstance pattern = patternPool[i];
+            boolean inRange = pattern.getDistanceFromReferenceChunks() <= rangeChunks;
+
+            pattern.setRetiring(!inRange);
+        }
+    }
+
+    // Fades — continuous \\
+
+    private void advanceFades() {
+
+        float deltaTime = internal.getDeltaTime();
+        LongArrayList toRemove = null;
+
+        for (int i = 0; i < patternPool.length; i++) {
+
+            if (!slotActive[i])
+                continue;
+
+            WeatherInstance pattern = patternPool[i];
             float alpha = pattern.getFadeAlpha();
 
             if (pattern.isRetiring()) {
