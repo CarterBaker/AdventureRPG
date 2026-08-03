@@ -12,6 +12,7 @@ public class RuntimeSetting {
     public static final String PASS_SKY = "Sky";
     public static final String PASS_SSAO = "SSAO";
     public static final String PASS_LIGHTING = "Lighting";
+    public static final String PASS_WEATHER = "Weather";
 
     // FBO Targets
     public static final String FBO_SKY = "SkyScene";

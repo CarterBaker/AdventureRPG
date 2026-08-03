@@ -1,13 +1,12 @@
 package application.runtime.weather;
 
-import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
-import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.shaderpipeline.pass.PassHandle;
+import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
@@ -20,19 +19,24 @@ public class WeatherSystem extends SystemPackage {
 
     /*
      * Renders all weather/cloud visuals in a single fullscreen raymarched
-     * pass — a full-screen quad reconstructing the camera's world-space
-     * view ray, raymarched against every in-range weather pattern's own
-     * cloud entries straight from WeatherMapData. Composites into the
-     * scene at LAYER_WEATHER, beneath world geometry. Cloud internal
-     * motion and silhouette orientation are driven by the same
-     * world-rotation drift that moves weather patterns themselves — never
-     * the independent local wind system, which stays reserved for future
-     * systems (grass, trees, water).
+     * pass, driven by the shared processing-pass pipeline (see PassManager)
+     * — the same pattern SkySystem/SSAOSystem/LightingSystem use — instead
+     * of constructing its own mesh/material/model at runtime. The pass's
+     * own descriptor (processingpasses/Weather.json) owns the mesh and
+     * material/shader wiring; this system only clones the per-window FBO
+     * target and pushes the handful of uniforms that can't be known until
+     * runtime (raymarch bounds and drift direction/speed, both derived
+     * from world/weather data resolved after bootstrap).
+     *
+     * Composites into the scene at LAYER_WEATHER, beneath world geometry.
+     * Cloud internal motion and silhouette orientation are driven by the
+     * same world-rotation drift that moves weather patterns themselves —
+     * never the independent local wind system, which stays reserved for
+     * future systems (grass, trees, water).
      */
 
     // Internal
-    private MeshManager meshManager;
-    private MaterialManager materialManager;
+    private PassManager passManager;
     private RenderManager renderManager;
     private FboManager fboManager;
     private FboRenderSystem fboRenderSystem;
@@ -40,15 +44,14 @@ public class WeatherSystem extends SystemPackage {
     private WeatherManager weatherManager;
 
     // Render Target
+    private PassHandle weatherPass;
     private FboInstance weatherFbo;
-    private ModelInstance weatherModel;
 
     // Internal \\
 
     @Override
     protected void get() {
-        this.meshManager = get(MeshManager.class);
-        this.materialManager = get(MaterialManager.class);
+        this.passManager = get(PassManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FboManager.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
@@ -59,13 +62,10 @@ public class WeatherSystem extends SystemPackage {
     @Override
     protected void awake() {
 
+        this.weatherPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_WEATHER);
         this.weatherFbo = fboManager.cloneFbo(RuntimeSetting.FBO_WEATHER, context.getWindow());
 
-        var meshData = meshManager.getMeshHandleFromMeshName(EngineSetting.DEFAULT_BLIT_MESH).getMeshData();
-        MaterialInstance material = materialManager.cloneMaterial(EngineSetting.WEATHER_DEFAULT_MATERIAL);
-
-        this.weatherModel = create(ModelInstance.class);
-        weatherModel.constructor(meshData, material);
+        MaterialInstance material = weatherPass.getModelInstance().getMaterial();
 
         assignRaymarchBounds(material);
         assignDriftUniforms(material);
@@ -114,7 +114,7 @@ public class WeatherSystem extends SystemPackage {
 
         bindGridLightingData(grid);
 
-        renderManager.pushRenderCall(weatherModel, weatherFbo, 0, context.getWindow());
+        renderManager.pushRenderCall(weatherPass.getModelInstance(), weatherFbo, 0, context.getWindow());
         fboRenderSystem.pushFbo(weatherFbo, RuntimeSetting.LAYER_WEATHER, context.getWindow());
     }
 
@@ -125,7 +125,7 @@ public class WeatherSystem extends SystemPackage {
         if (grid == null)
             return;
 
-        MaterialInstance mat = weatherModel.getMaterial();
+        MaterialInstance mat = weatherPass.getModelInstance().getMaterial();
 
         mat.setUBO(grid.getTimeDataUBO());
         mat.setUBO(grid.getSkyColorUBO());

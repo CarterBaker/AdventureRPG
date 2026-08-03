@@ -1,0 +1,4 @@
+{
+    "material": "weather/WeatherMaterial",
+    "mesh": "util/BlitMesh"
+}
