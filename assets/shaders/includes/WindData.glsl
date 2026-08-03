@@ -13,10 +13,19 @@
 // sky/util/Clouds.glsl) so its drift genuinely matches the same wind
 // blowing the physical overhead cloud layer instead of a fixed synthetic
 // scroll.
+//
+// u_temperature is this grid's own current ambient temperature — resolved
+// every frame from the grid's local weather and season by TemperatureSystem
+// (see TemperatureInstance) and pushed here alongside wind, since both are
+// "weather + season" derived, per-location atmospheric values with nowhere
+// else to live yet. Not consumed by any shader yet — held here so future
+// systems (breath fog, frost overlays, heat shimmer) can read it without
+// plumbing a new UBO.
 layout(std140) uniform WindData {
     vec3  u_windDirection;
     float u_windSpeed;
     vec2  u_windDriftOffset;
+    float u_temperature;
 };
 
 #endif

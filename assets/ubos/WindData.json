@@ -3,6 +3,7 @@
     "uniforms": [
         { "name": "u_windDirection",   "type": "VECTOR3" },
         { "name": "u_windSpeed",       "type": "FLOAT"   },
-        { "name": "u_windDriftOffset", "type": "VECTOR2" }
+        { "name": "u_windDriftOffset", "type": "VECTOR2" },
+        { "name": "u_temperature",     "type": "FLOAT"   }
     ]
 }

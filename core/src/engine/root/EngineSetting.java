@@ -433,6 +433,7 @@ public class EngineSetting {
         public static final String UNIFORM_WIND_DIRECTION = "u_windDirection";
         public static final String UNIFORM_WIND_SPEED = "u_windSpeed";
         public static final String UNIFORM_WIND_DRIFT_OFFSET = "u_windDriftOffset";
+        public static final String UNIFORM_TEMPERATURE = "u_temperature";
         public static final float SKY_WIND_DRIFT_SCALE = 0.02f;
         public static final float SKY_WIND_DRIFT_WRAP = 100000.0f;
 

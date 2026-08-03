@@ -21,6 +21,15 @@ public class WindManager extends ManagerPackage {
      * season and active weather, and lives on that grid's own WindInstance
      * — never a single shared value — so every window's location tracks
      * its own wind and sky-dome drift independently.
+     *
+     * Also pushes that same grid's current ambient temperature (see
+     * TemperatureInstance, computed by WeatherPatternManager's own
+     * TemperatureSystem) into the same per-grid WindData UBO — wind and
+     * temperature are both "weather + season, resolved per location"
+     * values with nowhere else to live yet, so they share one buffer
+     * rather than each getting a single-field UBO of their own. Relies on
+     * WeatherPipeline registering WeatherPatternManager before WindManager
+     * so both values are current for this frame, not one frame stale.
      */
 
     private UBOManager uboManager;
@@ -87,6 +96,8 @@ public class WindManager extends ManagerPackage {
 
         windDriftOffsetScratch.set((float) windInstance.getSkyDriftX(), (float) windInstance.getSkyDriftZ());
         windData.updateUniform(EngineSetting.UNIFORM_WIND_DRIFT_OFFSET, windDriftOffsetScratch);
+
+        windData.updateUniform(EngineSetting.UNIFORM_TEMPERATURE, grid.getTemperatureInstance().getTemperature());
 
         uboManager.push(windData);
     }
