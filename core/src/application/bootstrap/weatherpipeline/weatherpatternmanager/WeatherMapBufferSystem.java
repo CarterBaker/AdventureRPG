@@ -32,11 +32,13 @@ class WeatherMapBufferSystem extends SystemPackage {
      * after that, culled to range. Every cloud slot cross-fades between a
      * pattern's previous and current WeatherHandle across that pattern's
      * own eased transitionT.
+     *
+     * All tuning values (range fade distance, layer bound margin, the
+     * render-seed hash mix) come from EngineSetting — see
+     * WEATHER_MAP_RANGE_FADE_CHUNKS / WEATHER_MAP_LAYER_BOUND_MARGIN_BLOCKS /
+     * WEATHER_MAP_RENDER_SEED_MIX. Nothing is authored as a bare literal
+     * or shadowed by a local copy here.
      */
-
-    private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
-    private static final float RANGE_FADE_CHUNKS = 64f;
-    private static final float LAYER_BOUND_MARGIN_BLOCKS = 16f;
 
     private WeatherPatternManager weatherPatternManager;
     private UBOManager uboManager;
@@ -190,8 +192,8 @@ class WeatherMapBufferSystem extends SystemPackage {
                 layerMaxY = Math.max(layerMaxY, altitude + halfThickness);
             }
 
-            layerMinY -= LAYER_BOUND_MARGIN_BLOCKS;
-            layerMaxY += LAYER_BOUND_MARGIN_BLOCKS;
+            layerMinY -= EngineSetting.WEATHER_MAP_LAYER_BOUND_MARGIN_BLOCKS;
+            layerMaxY += EngineSetting.WEATHER_MAP_LAYER_BOUND_MARGIN_BLOCKS;
         }
 
         weatherMapUBO.updateUniform("u_weatherCloudLayerMinY", layerMinY);
@@ -230,11 +232,11 @@ class WeatherMapBufferSystem extends SystemPackage {
 
     private float computeRangeFade(float distanceChunks, float rangeChunks) {
 
-        if (RANGE_FADE_CHUNKS <= 0f)
+        if (EngineSetting.WEATHER_MAP_RANGE_FADE_CHUNKS <= 0f)
             return 1f;
 
-        float fadeStartChunks = Math.max(0f, rangeChunks - RANGE_FADE_CHUNKS);
-        float t = 1f - (distanceChunks - fadeStartChunks) / RANGE_FADE_CHUNKS;
+        float fadeStartChunks = Math.max(0f, rangeChunks - EngineSetting.WEATHER_MAP_RANGE_FADE_CHUNKS);
+        float t = 1f - (distanceChunks - fadeStartChunks) / EngineSetting.WEATHER_MAP_RANGE_FADE_CHUNKS;
         t = Math.max(0f, Math.min(1f, t));
 
         return t * t * (3f - 2f * t);
@@ -348,7 +350,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         cloudVariance1[index].set(
                 elongationMax,
                 (float) cloudIndex,
-                WeatherPatternManager.hash01(pattern.getPatternKey() ^ RENDER_SEED_MIX),
+                WeatherPatternManager.hash01(pattern.getPatternKey() ^ EngineSetting.WEATHER_MAP_RENDER_SEED_MIX),
                 0f);
     }
 

@@ -29,10 +29,12 @@ public class WeatherPatternManager extends ManagerPackage {
      * boundary can't flicker in and out — it either stays fully present or
      * commits to a full fade-out, and can resume normal presence if it's
      * back in range by the next tick.
+     *
+     * Every tunable and every seed/salt used below comes from EngineSetting
+     * — WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE, WEATHER_PATTERN_LOCAL_KEY_SEED,
+     * WEATHER_HASH_SALT_PRIMARY/SECONDARY, HASH_FINALIZER_MULTIPLIER_1/2 —
+     * nothing here is a locally authored duplicate.
      */
-
-    private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
-    private static final long LOCAL_PATTERN_KEY_SEED = Long.MIN_VALUE;
 
     private WeatherManager weatherManager;
     private WorldManager worldManager;
@@ -241,10 +243,10 @@ public class WeatherPatternManager extends ManagerPackage {
 
     private void computeHomeJitter(long patternKey) {
 
-        long jitterSeed = patternKey ^ 0x2545F4914F6CDD1DL;
+        long jitterSeed = patternKey ^ EngineSetting.WEATHER_HASH_SALT_PRIMARY;
 
         float jitterTX = hash01(jitterSeed);
-        float jitterTZ = hash01(jitterSeed ^ 0x9E3779B97F4A7C15L);
+        float jitterTZ = hash01(jitterSeed ^ EngineSetting.WEATHER_HASH_SALT_SECONDARY);
 
         float jitterRangeChunks = patternCellSizeChunks * EngineSetting.WEATHER_PATTERN_HOME_JITTER_RATIO;
 
@@ -267,7 +269,8 @@ public class WeatherPatternManager extends ManagerPackage {
         int slot = freeSlots.removeInt(freeSlots.size() - 1);
         WeatherInstance pattern = patternPool[slot];
 
-        pattern.constructor(patternKey, homeChunkX, homeChunkZ, weatherHandle, DEFAULT_DRIFT_SPEED_SCALE);
+        pattern.constructor(patternKey, homeChunkX, homeChunkZ, weatherHandle,
+                EngineSetting.WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE);
         assignVelocity(pattern);
         pattern.setDistanceFromReferenceChunks((float) distanceChunks);
         pattern.updateBounds();
@@ -416,15 +419,15 @@ public class WeatherPatternManager extends ManagerPackage {
                 WeatherHandle initial = weatherManager.resolveWeatherTowardHorizon(
                         referenceCoordinate, referenceCoordinate);
 
-                long localPatternKey = LOCAL_PATTERN_KEY_SEED
-                        ^ (((long) System.identityHashCode(grid)) * 0x9E3779B97F4A7C15L);
+                long localPatternKey = EngineSetting.WEATHER_PATTERN_LOCAL_KEY_SEED
+                        ^ (((long) System.identityHashCode(grid)) * EngineSetting.WEATHER_HASH_SALT_SECONDARY);
 
                 pattern.constructor(
                         localPatternKey,
                         Coordinate2Long.unpackX(referenceCoordinate),
                         Coordinate2Long.unpackY(referenceCoordinate),
                         initial,
-                        DEFAULT_DRIFT_SPEED_SCALE);
+                        EngineSetting.WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE);
 
                 pattern.setFadeAlpha(1f);
 
@@ -559,9 +562,9 @@ public class WeatherPatternManager extends ManagerPackage {
 
         long h = seed;
         h ^= (h >>> 33);
-        h *= 0xff51afd7ed558ccdL;
+        h *= EngineSetting.HASH_FINALIZER_MULTIPLIER_1;
         h ^= (h >>> 33);
-        h *= 0xc4ceb9fe1a85ec53L;
+        h *= EngineSetting.HASH_FINALIZER_MULTIPLIER_2;
         h ^= (h >>> 33);
 
         return (float) ((h >>> 11) / (double) (1L << 53));

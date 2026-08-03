@@ -1,9 +1,9 @@
 {
     "color": { "r": 0.82, "g": 0.83, "b": 0.87 },
     "saturation": 0.65,
-    "scale": 300.0,
+    "scale": 2000.0,
     "density": 0.75,
-    "verticalThickness": 12.0,
+    "verticalThickness": 18.0,
     "fullness": 0.2,
     "densityNoiseScale": 0.9,
     "noiseWarpStrength": 0.25,

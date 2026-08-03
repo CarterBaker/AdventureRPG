@@ -107,6 +107,8 @@ public class EngineSetting {
         public static final int FNV_OFFSET_BASIS = 0x811c9dc5;
         public static final int FNV_PRIME = 0x01000193;
         public static final short REGISTRY_RESERVED_ID = 0;
+        public static final long HASH_FINALIZER_MULTIPLIER_1 = 0xff51afd7ed558ccdL;
+        public static final long HASH_FINALIZER_MULTIPLIER_2 = 0xc4ceb9fe1a85ec53L;
 
         // Sentinel Values \\
 
@@ -342,12 +344,10 @@ public class EngineSetting {
         // Sky \\
 
         public static final String SKY_COLOR_UBO = "SkyColorData";
-        public static final float SKY_FOG_BLEND_START = 0.4f;
-        public static final float SKY_ALTITUDE_POWER = 1.2f;
 
         // Cloud \\
 
-        public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 48.0f;
+        public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 900.0f;
         public static final int MAX_CLOUD_TYPES = 8;
 
         // Weather \\
@@ -501,11 +501,6 @@ public class EngineSetting {
         public static final float TEMPERATURE_DIURNAL_PEAK_TIME = 0.65f;
         public static final float TEMPERATURE_DRIFT_FREQUENCY = 0.02f;
         public static final float TEMPERATURE_PRECIPITATION_COOLING = 4.0f;
-
-        // Sky Noise \\
-
-        public static final float SKY_NOISE_ALTITUDE_BLEND = 0.35f;
-        public static final float SKY_NOISE_TEXTURE_STRENGTH = 0.02f;
 
         // Sky Seasonal \\
 

@@ -53,21 +53,24 @@ const float CLOUD_SKY_TINT_STRENGTH      = 0.35;
 // horizontal distance from the camera grows, so the cloud layer reads as
 // low near the horizon and true-height overhead instead of a flat plane.
 // The radius this bend plays out over is u_weatherRangeBlocks (the CPU-side
-// weather sampling range, from WeatherMapData) scaled by
-// CLOUD_DOME_RADIUS_SCALE — deliberately NOT the terrain render distance,
-// since the weather system samples far beyond what terrain streams in and
-// tying the bend to render distance collapses the horizon in far too close.
-// CLOUD_DOME_CURVE_POWER reshapes how quickly the bend sets in across that
-// radius — 1.0 keeps the natural quadratic falloff of the squared-distance
-// term below; below 1.0 pulls the bend earlier and rounder; above 1.0 holds
-// the authored altitude longer before dropping sharply near the outer edge.
+// weather sampling range) scaled by CLOUD_DOME_RADIUS_SCALE — kept below
+// 1.0 so the bend finishes just inside the range-fade band instead of
+// exactly at it, so a pattern is already flush with the horizon before
+// WeatherMapData's own rangeFade starts hiding it.
+// CLOUD_DOME_CURVE_POWER biases where the bend sets in (below 1.0 pulls it
+// earlier/rounder); the result is then run through smoothstep so the blend
+// always lands with zero slope at both ends — no seam where the curve used
+// to hit its hard clamp, which was the visible "arch" artifact on the
+// horizon.
 // CLOUD_DOME_HORIZON_DIP_BLOCKS lets the bend undershoot eye level at full
-// range instead of asymptoting exactly to it, so the dome visibly curls
-// below the horizon rather than flattening onto it.
-const float CLOUD_DOME_RADIUS_SCALE        = 1.0;
-const float CLOUD_DOME_CURVE_POWER         =1.0;
-const float CLOUD_DOME_HORIZON_DIP_BLOCKS  = 0.0;
-const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 0.0;
+// range so the dome visibly curls below the horizon rather than flattening
+// onto it; CLOUD_DOME_FLOOR_MARGIN_BLOCKS keeps the raymarch slab in main()
+// tall enough to still contain that undershoot plus the tallest archetype's
+// half-thickness (Cumulonimbus, 70 blocks).
+const float CLOUD_DOME_RADIUS_SCALE        = 0.85;
+const float CLOUD_DOME_CURVE_POWER         = 0.65;
+const float CLOUD_DOME_HORIZON_DIP_BLOCKS  = 60.0;
+const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 100.0;
 
 float sampleEntryDensity(
     vec4 bounds,
@@ -84,8 +87,9 @@ float sampleEntryDensity(
     float domeRadiusBlocks,
     out float heightNorm) {
     vec2  fromCameraXZ = worldPos.xz - u_cameraPosition.xz;
-    float domeT             = clamp(dot(fromCameraXZ, fromCameraXZ) / (domeRadiusBlocks * domeRadiusBlocks), 0.0, 1.0);
-    domeT                   = pow(domeT, CLOUD_DOME_CURVE_POWER);
+    float domeRadiusSq  = domeRadiusBlocks * domeRadiusBlocks;
+    float domeBiasedT   = pow(clamp(dot(fromCameraXZ, fromCameraXZ) / domeRadiusSq, 0.0, 1.0), CLOUD_DOME_CURVE_POWER);
+    float domeT             = smoothstep(0.0, 1.0, domeBiasedT);
     float domeFloorAltitude = u_cameraPosition.y - CLOUD_DOME_HORIZON_DIP_BLOCKS;
     float domeAltitude      = mix(shape.y, domeFloorAltitude, domeT);
 
