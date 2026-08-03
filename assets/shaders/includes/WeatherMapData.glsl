@@ -25,6 +25,13 @@
 //                  lets the fullscreen pass bound its raymarch to where
 //                  cloud volume can physically exist instead of the whole
 //                  atmosphere column.
+// weatherRangeBlocks: the CPU-side weather pattern sampling range (see
+//                  WeatherPatternManager.getRangeChunks()), converted to
+//                  blocks — terrain-independent on purpose. Drives the
+//                  fullscreen pass's horizon dome bend so clouds curve
+//                  toward eye level across the same distance the weather
+//                  simulation actually spans, instead of the much smaller
+//                  terrain streaming radius.
 layout(std140) uniform WeatherMapData {
     vec4 u_weatherBounds[WEATHER_MAP_MAX_ENTRIES];
     vec4 u_weatherPatternState[WEATHER_MAP_MAX_ENTRIES];
@@ -37,6 +44,7 @@ layout(std140) uniform WeatherMapData {
     int u_weatherEntryCount;
     float u_weatherCloudLayerMinY;
     float u_weatherCloudLayerMaxY;
+    float u_weatherRangeBlocks;
 };
 
 #endif

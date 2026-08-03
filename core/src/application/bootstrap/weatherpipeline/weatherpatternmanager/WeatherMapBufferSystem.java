@@ -196,6 +196,7 @@ class WeatherMapBufferSystem extends SystemPackage {
 
         weatherMapUBO.updateUniform("u_weatherCloudLayerMinY", layerMinY);
         weatherMapUBO.updateUniform("u_weatherCloudLayerMaxY", layerMaxY);
+        weatherMapUBO.updateUniform("u_weatherRangeBlocks", rangeChunks * chunkSizeBlocks);
 
         uboManager.push(weatherMapUBO);
     }

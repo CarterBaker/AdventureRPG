@@ -52,6 +52,11 @@ const float CLOUD_SKY_TINT_STRENGTH      = 0.35;
 // Dome bend — bows each entry's tested altitude down toward eye level as
 // horizontal distance from the camera grows, so the cloud layer reads as
 // low near the horizon and true-height overhead instead of a flat plane.
+// The radius this bend plays out over is u_weatherRangeBlocks (the CPU-side
+// weather sampling range, from WeatherMapData) scaled by
+// CLOUD_DOME_RADIUS_SCALE — deliberately NOT the terrain render distance,
+// since the weather system samples far beyond what terrain streams in and
+// tying the bend to render distance collapses the horizon in far too close.
 const float CLOUD_DOME_RADIUS_SCALE        = 0.5;
 const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 48.0;
 
@@ -199,7 +204,7 @@ void main() {
     driftDirNorm = vec2(1.0, 0.0);
     float driftSpeed = u_weatherDriftSpeed;
 
-    float domeRadiusBlocks = max((u_renderDistance * CLOUD_DOME_RADIUS_SCALE) * u_chunkSize, 1.0);
+    float domeRadiusBlocks = max(u_weatherRangeBlocks * CLOUD_DOME_RADIUS_SCALE, 1.0);
 
     float rayLength = tFar - tNear;
     int stepCount = clamp(
