@@ -9,22 +9,12 @@ public class WeatherInstance extends InstancePackage {
     /*
      * One weather occurrence — either a pool-recycled spatial cell streamed
      * into the shared weather map, or the single instance a grid holds for
-     * its own location's wind, temperature, and humidity. Pool slots are
-     * assigned once via assignSlot(); constructor() (re)arms an instance for
-     * a new occurrence every time one is handed out. Exactly one weather is
-     * ever active at a time — previousWeatherHandle/transitionT exist only
-     * to cross-fade from the old weather to the new one over time when the
-     * active weather actually changes, never to blend two weathers at once.
-     *
-     * Position is the single source of truth for this pattern's world
-     * location and is only ever changed by advancePosition() — a continuous
-     * integration of the persisted velocity set via setVelocity(). Weather
-     * reevaluation (see WeatherPatternManager) only ever swaps which
-     * WeatherHandle — and therefore which Cloud Settings — this pattern
-     * renders; it never touches position or velocity.
+     * its own location's wind, temperature, and humidity. Every visual and
+     * atmospheric value blends between previousWeatherHandle and
+     * weatherHandle across transitionT, so a weather change cross-fades
+     * instead of cutting. Position only ever changes via advancePosition(),
+     * independent of weather reevaluation.
      */
-
-    private static final float TRANSITION_DIP_STRENGTH = 0.6f;
 
     // Identity
     private int slot;
@@ -51,9 +41,6 @@ public class WeatherInstance extends InstancePackage {
 
     private float fadeAlpha;
     private boolean retiring;
-
-    private float intensity;
-    private float targetIntensity;
 
     private double nextReevaluationTime;
 
@@ -90,8 +77,7 @@ public class WeatherInstance extends InstancePackage {
             int homeChunkX,
             int homeChunkZ,
             WeatherHandle weatherHandle,
-            float driftSpeedScale,
-            float intensity) {
+            float driftSpeedScale) {
 
         this.patternKey = patternKey;
         this.weatherHandle = weatherHandle;
@@ -106,8 +92,6 @@ public class WeatherInstance extends InstancePackage {
         this.velocityZChunksPerSecond = 0.0;
         this.fadeAlpha = 0f;
         this.retiring = false;
-        this.intensity = intensity;
-        this.targetIntensity = intensity;
         this.distanceFromReferenceChunks = 0f;
         this.configured = true;
     }
@@ -137,13 +121,6 @@ public class WeatherInstance extends InstancePackage {
 
     // Position \\
 
-    /*
-     * The only place this pattern's world position ever changes after
-     * stream-in. Called exactly once per frame for every active pattern —
-     * see WeatherPatternManager.advanceWorldDrift() — entirely independent
-     * of weather reevaluation, so the rendered location never has a
-     * discrete jump no matter how often the weather itself is reassessed.
-     */
     public void advancePosition(double deltaTime) {
         positionX += velocityXChunksPerSecond * deltaTime;
         positionZ += velocityZChunksPerSecond * deltaTime;
@@ -163,7 +140,6 @@ public class WeatherInstance extends InstancePackage {
         this.previousWeatherHandle = this.weatherHandle;
         this.weatherHandle = newWeatherHandle;
         this.transitionT = 0f;
-        this.targetIntensity = newWeatherHandle.getCloudCoverage();
     }
 
     public void advanceWeatherTransition(float deltaTime) {
@@ -176,18 +152,19 @@ public class WeatherInstance extends InstancePackage {
         return transitionT;
     }
 
+    public float getEasedTransitionT() {
+        if (transitionT >= 1f)
+            return 1f;
+        float t = Math.max(0f, transitionT);
+        return t * t * (3f - 2f * t);
+    }
+
     public WeatherHandle getPreviousWeatherHandle() {
         return previousWeatherHandle;
     }
 
     public WeatherHandle getWeatherHandle() {
         return weatherHandle;
-    }
-
-    private float transitionDampingMultiplier() {
-        if (transitionT >= 1f)
-            return 1f;
-        return 1f - (float) Math.sin(transitionT * Math.PI) * TRANSITION_DIP_STRENGTH;
     }
 
     // Lifecycle \\
@@ -206,20 +183,6 @@ public class WeatherInstance extends InstancePackage {
 
     public float getFadeAlpha() {
         return fadeAlpha;
-    }
-
-    // Intensity \\
-
-    public void setTargetIntensity(float targetIntensity) {
-        this.targetIntensity = targetIntensity;
-    }
-
-    public void advanceIntensitySmoothing(float alpha) {
-        this.intensity += (targetIntensity - this.intensity) * alpha;
-    }
-
-    public float getIntensity() {
-        return intensity * transitionDampingMultiplier();
     }
 
     // Reevaluation \\
@@ -248,33 +211,44 @@ public class WeatherInstance extends InstancePackage {
 
     public float getBlendedTemperatureModifier() {
         return lerp(previousWeatherHandle.getTemperatureModifier(), weatherHandle.getTemperatureModifier(),
-                transitionT);
+                getEasedTransitionT());
     }
 
     public float getBlendedPrecipitationIntensity() {
         return lerp(previousWeatherHandle.getPrecipitationIntensity(), weatherHandle.getPrecipitationIntensity(),
-                transitionT);
+                getEasedTransitionT());
     }
 
     public float getBlendedWindSpeedScale() {
-        return lerp(previousWeatherHandle.getWindSpeedScale(), weatherHandle.getWindSpeedScale(), transitionT);
+        return lerp(previousWeatherHandle.getWindSpeedScale(), weatherHandle.getWindSpeedScale(),
+                getEasedTransitionT());
     }
 
     public float getBlendedWindTurbulenceScale() {
         return lerp(previousWeatherHandle.getWindTurbulenceScale(), weatherHandle.getWindTurbulenceScale(),
-                transitionT);
+                getEasedTransitionT());
     }
 
     public float getBlendedHumidity() {
-        return lerp(previousWeatherHandle.getHumidity(), weatherHandle.getHumidity(), transitionT);
+        return lerp(previousWeatherHandle.getHumidity(), weatherHandle.getHumidity(), getEasedTransitionT());
     }
 
     public float getBlendedVisibility() {
-        return lerp(previousWeatherHandle.getVisibility(), weatherHandle.getVisibility(), transitionT);
+        return lerp(previousWeatherHandle.getVisibility(), weatherHandle.getVisibility(), getEasedTransitionT());
     }
 
     public float getBlendedFogDensityScale() {
-        return lerp(previousWeatherHandle.getFogDensityScale(), weatherHandle.getFogDensityScale(), transitionT);
+        return lerp(previousWeatherHandle.getFogDensityScale(), weatherHandle.getFogDensityScale(),
+                getEasedTransitionT());
+    }
+
+    public float getBlendedCloudCoverage() {
+        return lerp(previousWeatherHandle.getCloudCoverage(), weatherHandle.getCloudCoverage(), getEasedTransitionT());
+    }
+
+    public float getBlendedCloudDensityMultiplier() {
+        return lerp(previousWeatherHandle.getCloudDensityMultiplier(), weatherHandle.getCloudDensityMultiplier(),
+                getEasedTransitionT());
     }
 
     private static float lerp(float a, float b, float t) {
@@ -309,6 +283,8 @@ public class WeatherInstance extends InstancePackage {
     }
 
     public float getFootprintRadiusChunks() {
-        return (EngineSetting.WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS * 0.5f) * weatherHandle.getVisualScale();
+        float blendedVisualScale = lerp(
+                previousWeatherHandle.getVisualScale(), weatherHandle.getVisualScale(), getEasedTransitionT());
+        return (EngineSetting.WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS * 0.5f) * blendedVisualScale;
     }
 }

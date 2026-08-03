@@ -408,7 +408,6 @@ public class EngineSetting {
         public static final float WEATHER_PATTERN_REEVALUATION_JITTER_MAX = 1.5f;
         public static final float WEATHER_PATTERN_REEVALUATION_MIN_SECONDS = 20.0f;
         public static final float WEATHER_PATTERN_REEVALUATION_MAX_SECONDS = 180.0f;
-        public static final float WEATHER_PATTERN_INTENSITY_SMOOTHING_TIME_SECONDS = 3.0f;
         public static final float WEATHER_PATTERN_TRANSITION_DURATION_SECONDS = 10.0f;
         public static final float WEATHER_PATTERN_FADE_IN_RATE = 0.12f;
         public static final float WEATHER_PATTERN_FADE_OUT_RATE = 0.12f;

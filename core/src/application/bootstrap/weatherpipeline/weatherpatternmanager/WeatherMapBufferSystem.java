@@ -22,16 +22,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class WeatherMapBufferSystem extends SystemPackage {
 
     /*
-     * Flattens the shared active weather-instance pool into each active
-     * grid's own WeatherMapData UBO every frame, culled to that grid's own
-     * range and sorted nearest-first. Culling and the range fade are both
-     * keyed off each pattern's footprint edge rather than its center, so a
-     * pattern only drops out once its whole visible footprint has actually
-     * left range instead of popping the moment its center crosses the
-     * line. Also derives the tight world-space Y band actually occupied by
-     * this frame's entries so the fullscreen cloud pass can bound its
-     * raymarch to where cloud volume can physically exist instead of the
-     * full atmosphere column.
+     * Flattens each grid's own local weather instance, plus the shared
+     * active weather-instance pool, into that grid's own WeatherMapData
+     * UBO every frame. The local instance is written first, always
+     * centered exactly on the reference chunk — guaranteeing whatever
+     * weather is currently resolved right where the player stands
+     * actually renders overhead, rather than leaving overhead coverage
+     * entirely dependent on whichever streamed pool patterns happen to
+     * have drifted close by. Pool entries are appended nearest-first
+     * after that, culled to range. Every cloud slot cross-fades between a
+     * pattern's previous and current WeatherHandle across that pattern's
+     * own eased transitionT.
      */
 
     private static final long RENDER_SEED_MIX = 0x94D049BB133111EBL;
@@ -131,6 +132,14 @@ class WeatherMapBufferSystem extends SystemPackage {
         int capacity = EngineSetting.WEATHER_MAP_UBO_MAX_ENTRIES;
         int entryCount = 0;
 
+        WeatherInstance localPattern = grid.getWeatherInstance();
+
+        if (localPattern.isConfigured()) {
+            float localRadiusBlocks = localPattern.getFootprintRadiusChunks() * chunkSizeBlocks;
+            entryCount = writePatternEntries(
+                    entryCount, capacity, localPattern, 0f, 0f, localRadiusBlocks, 0f, 1f);
+        }
+
         for (int i = 0; i < patternCount && entryCount < capacity; i++) {
 
             long packed = sortScratch[i];
@@ -148,14 +157,9 @@ class WeatherMapBufferSystem extends SystemPackage {
             float distanceBlocks = distanceChunks * chunkSizeBlocks;
             float rangeFade = computeRangeFade(distanceChunks - footprintRadiusChunks, rangeChunks);
 
-            WeatherHandle weatherHandle = pattern.getWeatherHandle();
-            int cloudCount = weatherHandle.getCloudCount();
-
-            for (int c = 0; c < cloudCount && entryCount < capacity; c++) {
-                writeEntry(entryCount, pattern, centerXBlocks, centerZBlocks, radiusBlocks, distanceBlocks,
-                        rangeFade, weatherHandle, c);
-                entryCount++;
-            }
+            entryCount = writePatternEntries(
+                    entryCount, capacity, pattern, centerXBlocks, centerZBlocks, radiusBlocks, distanceBlocks,
+                    rangeFade);
         }
 
         UBOInstance weatherMapUBO = grid.getWeatherMapUBO();
@@ -197,6 +201,33 @@ class WeatherMapBufferSystem extends SystemPackage {
         uboManager.push(weatherMapUBO);
     }
 
+    private int writePatternEntries(
+            int entryCount,
+            int capacity,
+            WeatherInstance pattern,
+            float centerXBlocks,
+            float centerZBlocks,
+            float radiusBlocks,
+            float distanceBlocks,
+            float rangeFade) {
+
+        WeatherHandle previousWeatherHandle = pattern.getPreviousWeatherHandle();
+        WeatherHandle currentWeatherHandle = pattern.getWeatherHandle();
+        float transitionT = pattern.getEasedTransitionT();
+
+        int blendedCloudCount = transitionT >= 1f
+                ? currentWeatherHandle.getCloudCount()
+                : Math.max(currentWeatherHandle.getCloudCount(), previousWeatherHandle.getCloudCount());
+
+        for (int c = 0; c < blendedCloudCount && entryCount < capacity; c++) {
+            writeEntry(entryCount, pattern, centerXBlocks, centerZBlocks, radiusBlocks, distanceBlocks,
+                    rangeFade, previousWeatherHandle, currentWeatherHandle, transitionT, c);
+            entryCount++;
+        }
+
+        return entryCount;
+    }
+
     private float computeRangeFade(float distanceChunks, float rangeChunks) {
 
         if (RANGE_FADE_CHUNKS <= 0f)
@@ -217,7 +248,9 @@ class WeatherMapBufferSystem extends SystemPackage {
             float radiusBlocks,
             float distanceBlocks,
             float rangeFade,
-            WeatherHandle weatherHandle,
+            WeatherHandle previousWeatherHandle,
+            WeatherHandle currentWeatherHandle,
+            float transitionT,
             int cloudIndex) {
 
         bounds[index].set(
@@ -227,45 +260,95 @@ class WeatherMapBufferSystem extends SystemPackage {
                 centerZBlocks + radiusBlocks);
 
         patternState[index].set(
-                pattern.getIntensity(),
+                pattern.getBlendedCloudCoverage(),
                 pattern.getFadeAlpha(),
                 distanceBlocks,
                 rangeFade);
 
-        CloudHandle cloudHandle = weatherHandle.getCloudHandle(cloudIndex);
-        var color = cloudHandle.getCloudColor();
+        boolean hasPrevious = cloudIndex < previousWeatherHandle.getCloudCount();
+        boolean hasCurrent = cloudIndex < currentWeatherHandle.getCloudCount();
 
-        cloudColorScale[index].set(color.x, color.y, color.z, cloudHandle.getScale());
+        float presenceWeight = 1f;
+        if (!hasPrevious)
+            presenceWeight = transitionT;
+        else if (!hasCurrent)
+            presenceWeight = 1f - transitionT;
 
-        cloudMaterial[index].set(cloudHandle.getSaturation(), cloudHandle.getFullness(), 0f, 0f);
+        CloudHandle fromCloud = hasPrevious
+                ? previousWeatherHandle.getCloudHandle(cloudIndex)
+                : currentWeatherHandle.getCloudHandle(cloudIndex);
+        CloudHandle toCloud = hasCurrent
+                ? currentWeatherHandle.getCloudHandle(cloudIndex)
+                : previousWeatherHandle.getCloudHandle(cloudIndex);
 
-        float resolvedDensity = cloudHandle.getDensity()
-                * weatherHandle.getCloudDensityMultiplier()
-                * weatherHandle.getCloudDensityMultiplier(cloudIndex);
+        float fromDensityMultiplier = hasPrevious
+                ? previousWeatherHandle.getCloudDensityMultiplier(cloudIndex)
+                : currentWeatherHandle.getCloudDensityMultiplier(cloudIndex);
+        float toDensityMultiplier = hasCurrent
+                ? currentWeatherHandle.getCloudDensityMultiplier(cloudIndex)
+                : previousWeatherHandle.getCloudDensityMultiplier(cloudIndex);
+
+        float fromAltitude = hasPrevious
+                ? previousWeatherHandle.getCloudEffectiveAltitude(cloudIndex)
+                : currentWeatherHandle.getCloudEffectiveAltitude(cloudIndex);
+        float toAltitude = hasCurrent
+                ? currentWeatherHandle.getCloudEffectiveAltitude(cloudIndex)
+                : previousWeatherHandle.getCloudEffectiveAltitude(cloudIndex);
+
+        var fromColor = fromCloud.getCloudColor();
+        var toColor = toCloud.getCloudColor();
+
+        float colorR = lerp(fromColor.x, toColor.x, transitionT);
+        float colorG = lerp(fromColor.y, toColor.y, transitionT);
+        float colorB = lerp(fromColor.z, toColor.z, transitionT);
+        float scale = lerp(fromCloud.getScale(), toCloud.getScale(), transitionT);
+        float saturation = lerp(fromCloud.getSaturation(), toCloud.getSaturation(), transitionT);
+        float fullness = lerp(fromCloud.getFullness(), toCloud.getFullness(), transitionT);
+        float verticalThickness = lerp(fromCloud.getVerticalThickness(), toCloud.getVerticalThickness(), transitionT);
+        float density = lerp(fromCloud.getDensity(), toCloud.getDensity(), transitionT);
+        float densityNoiseScale = lerp(fromCloud.getDensityNoiseScale(), toCloud.getDensityNoiseScale(), transitionT);
+        float noiseWarpStrength = lerp(fromCloud.getNoiseWarpStrength(), toCloud.getNoiseWarpStrength(), transitionT);
+        float coverageBias = lerp(fromCloud.getCoverageBias(), toCloud.getCoverageBias(), transitionT);
+        float silhouetteSoftness = lerp(
+                fromCloud.getSilhouetteSoftness(), toCloud.getSilhouetteSoftness(), transitionT);
+        float cloudDriftSpeedScale = lerp(fromCloud.getDriftSpeedScale(), toCloud.getDriftSpeedScale(), transitionT);
+        float spreadRatio = lerp(fromCloud.getSpreadRatio(), toCloud.getSpreadRatio(), transitionT);
+        float sizeVarianceMin = lerp(fromCloud.getSizeVarianceMin(), toCloud.getSizeVarianceMin(), transitionT);
+        float sizeVarianceMax = lerp(fromCloud.getSizeVarianceMax(), toCloud.getSizeVarianceMax(), transitionT);
+        float elongationMin = lerp(fromCloud.getElongationMin(), toCloud.getElongationMin(), transitionT);
+        float elongationMax = lerp(fromCloud.getElongationMax(), toCloud.getElongationMax(), transitionT);
+        float cloudTypeIndex = lerp(
+                (float) fromCloud.getCloudTypeIndex(), (float) toCloud.getCloudTypeIndex(), transitionT);
+        float altitude = lerp(fromAltitude, toAltitude, transitionT);
+        float perCloudDensityMultiplier = lerp(fromDensityMultiplier, toDensityMultiplier, transitionT);
+
+        float resolvedDensity = density
+                * pattern.getBlendedCloudDensityMultiplier()
+                * perCloudDensityMultiplier
+                * presenceWeight;
+
+        cloudColorScale[index].set(colorR, colorG, colorB, scale);
+        cloudMaterial[index].set(saturation, fullness, 0f, 0f);
 
         cloudShape[index].set(
-                cloudHandle.getVerticalThickness(),
-                weatherHandle.getCloudEffectiveAltitude(cloudIndex),
+                verticalThickness,
+                altitude,
                 resolvedDensity,
-                pattern.getDriftSpeedScale() * cloudHandle.getDriftSpeedScale());
+                pattern.getDriftSpeedScale() * cloudDriftSpeedScale);
 
-        cloudNoise[index].set(
-                cloudHandle.getDensityNoiseScale(),
-                cloudHandle.getNoiseWarpStrength(),
-                cloudHandle.getCoverageBias(),
-                cloudHandle.getSilhouetteSoftness());
+        cloudNoise[index].set(densityNoiseScale, noiseWarpStrength, coverageBias, silhouetteSoftness);
 
-        cloudVariance0[index].set(
-                cloudHandle.getSpreadRatio(),
-                cloudHandle.getSizeVarianceMin(),
-                cloudHandle.getSizeVarianceMax(),
-                cloudHandle.getElongationMin());
+        cloudVariance0[index].set(spreadRatio, sizeVarianceMin, sizeVarianceMax, elongationMin);
 
         cloudVariance1[index].set(
-                cloudHandle.getElongationMax(),
-                (float) cloudHandle.getCloudTypeIndex(),
+                elongationMax,
+                cloudTypeIndex,
                 WeatherPatternManager.hash01(pattern.getPatternKey() ^ RENDER_SEED_MIX),
                 0f);
+    }
+
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
     }
 
     private static Vector4[] allocate(int size) {

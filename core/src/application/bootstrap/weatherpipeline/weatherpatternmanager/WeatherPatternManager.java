@@ -23,11 +23,15 @@ public class WeatherPatternManager extends ManagerPackage {
      * Streams jittered spatial cells around every active grid into one
      * shared, pool-recycled WeatherInstance set keyed by world cell, so any
      * two grids sharing a cell see the exact same weather. Each grid also
-     * owns its own WeatherInstance (held directly on GridInstance) resolved
-     * against that grid's own reference coordinate, driving that grid's own
-     * TemperatureInstance and local wind. Every pattern holds exactly one
-     * active weather at a time — noise picks a single categorical weather
-     * outright, with no spatial blending between candidates.
+     * owns its own WeatherInstance for that grid's own local wind and
+     * temperature — always centered exactly on the player's own reference
+     * chunk, unlike the cell-jittered pool patterns, and written into the
+     * weather map ahead of the pool so overhead cloud coverage always
+     * reflects the weather actually resolved right where the player
+     * stands. Every pattern holds exactly one active weather at a
+     * time — noise picks a single categorical weather outright, with no
+     * spatial blending between candidates; the cross-fade between an old
+     * and new pick lives entirely in WeatherInstance's blended accessors.
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
@@ -47,7 +51,6 @@ public class WeatherPatternManager extends ManagerPackage {
     private float reevaluationJitterMax;
     private float reevaluationMinSeconds;
     private float reevaluationMaxSeconds;
-    private float intensitySmoothingTimeSeconds;
     private float fadeInRate;
     private float fadeOutRate;
 
@@ -80,7 +83,6 @@ public class WeatherPatternManager extends ManagerPackage {
         this.reevaluationJitterMax = EngineSetting.WEATHER_PATTERN_REEVALUATION_JITTER_MAX;
         this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_MIN_SECONDS;
         this.reevaluationMaxSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_MAX_SECONDS;
-        this.intensitySmoothingTimeSeconds = EngineSetting.WEATHER_PATTERN_INTENSITY_SMOOTHING_TIME_SECONDS;
         this.fadeInRate = EngineSetting.WEATHER_PATTERN_FADE_IN_RATE;
         this.fadeOutRate = EngineSetting.WEATHER_PATTERN_FADE_OUT_RATE;
 
@@ -143,7 +145,6 @@ public class WeatherPatternManager extends ManagerPackage {
         advanceWorldDrift();
         advanceWeatherReevaluation(grids);
         advanceLocalWeather(grids);
-        advanceIntensitySmoothing();
         advanceFadesAndRetire(grids);
         streamInBudgeted(grids);
     }
@@ -284,8 +285,7 @@ public class WeatherPatternManager extends ManagerPackage {
         int slot = freeSlots.removeInt(freeSlots.size() - 1);
         WeatherInstance pattern = patternPool[slot];
 
-        pattern.constructor(patternKey, homeChunkX, homeChunkZ, weatherHandle, DEFAULT_DRIFT_SPEED_SCALE,
-                weatherHandle.getCloudCoverage());
+        pattern.constructor(patternKey, homeChunkX, homeChunkZ, weatherHandle, DEFAULT_DRIFT_SPEED_SCALE);
         assignVelocity(pattern);
         pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
         pattern.setDistanceFromReferenceChunks((float) distanceChunks);
@@ -312,21 +312,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Velocity \\
 
-    /*
-     * Derives this pattern's persisted world-drift velocity from the same
-     * world-rotation KPH that drives the noise field, scaled by its own
-     * driftSpeedScale — but negated. The regional noise field embeds
-     * world rotation as a phase added at the pattern's own current chunk
-     * coordinate (see RegionSampleSystem/WeatherNoiseUtility), so a
-     * pattern advecting at the raw drift speed would have that speed
-     * compound with the phase instead of cancel it, sampling the field at
-     * roughly twice the intended rate. Moving at the negated speed keeps
-     * a pattern's sampled noise — and therefore its assigned weather —
-     * stable for as long as it rides along with the drift, rather than
-     * flickering between categories. Assigned exactly once, at stream-in
-     * — from that point on advanceWorldDrift() integrates position from
-     * this value alone, and weather reevaluation never touches it.
-     */
     private void assignVelocity(WeatherInstance pattern) {
         double baseVelocityXChunksPerSecond = -weatherManager.getWorldDriftChunksPerSecondX();
         pattern.setVelocity(baseVelocityXChunksPerSecond * pattern.getDriftSpeedScale(), 0.0);
@@ -401,11 +386,6 @@ public class WeatherPatternManager extends ManagerPackage {
             if (elapsedSimTime < pattern.getNextReevaluationTime())
                 continue;
 
-            // Sampled from the pattern's current drift-integrated position, not its
-            // frozen home anchor — the noise field's rotation embedding only stays
-            // stable when the sampled chunk coordinate advances in step with the
-            // rotation phase, which the drift accumulator (never the home anchor)
-            // actually does.
             int currentChunkX = (int) Math.round(pattern.getCurrentChunkX());
             int currentChunkZ = (int) Math.round(pattern.getCurrentChunkZ());
 
@@ -456,8 +436,11 @@ public class WeatherPatternManager extends ManagerPackage {
                         Coordinate2Long.unpackX(referenceCoordinate),
                         Coordinate2Long.unpackY(referenceCoordinate),
                         initial,
-                        DEFAULT_DRIFT_SPEED_SCALE,
-                        initial.getCloudCoverage());
+                        DEFAULT_DRIFT_SPEED_SCALE);
+
+                // Always fully present — this instance represents the weather
+                // exactly at the player, so it never needs a stream-in fade.
+                pattern.setFadeAlpha(1f);
 
                 pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(localPatternKey));
 
@@ -480,20 +463,6 @@ public class WeatherPatternManager extends ManagerPackage {
             double visualTimeOfDay = grid.getClockInstance().getVisualTimeOfDay();
             float temperature = temperatureSystem.computeTemperature(pattern, visualTimeOfDay);
             grid.getTemperatureInstance().setTemperature(temperature);
-        }
-    }
-
-    private void advanceIntensitySmoothing() {
-
-        float deltaTime = internal.getDeltaTime();
-        float alpha = 1f - (float) Math.exp(-deltaTime / intensitySmoothingTimeSeconds);
-
-        for (int i = 0; i < patternPool.length; i++) {
-
-            if (!slotActive[i])
-                continue;
-
-            patternPool[i].advanceIntensitySmoothing(alpha);
         }
     }
 
