@@ -57,7 +57,16 @@ const float CLOUD_SKY_TINT_STRENGTH      = 0.35;
 // CLOUD_DOME_RADIUS_SCALE — deliberately NOT the terrain render distance,
 // since the weather system samples far beyond what terrain streams in and
 // tying the bend to render distance collapses the horizon in far too close.
+// CLOUD_DOME_CURVE_POWER reshapes how quickly the bend sets in across that
+// radius — 1.0 keeps the natural quadratic falloff of the squared-distance
+// term below; below 1.0 pulls the bend earlier and rounder; above 1.0 holds
+// the authored altitude longer before dropping sharply near the outer edge.
+// CLOUD_DOME_HORIZON_DIP_BLOCKS lets the bend undershoot eye level at full
+// range instead of asymptoting exactly to it, so the dome visibly curls
+// below the horizon rather than flattening onto it.
 const float CLOUD_DOME_RADIUS_SCALE        = 0.5;
+const float CLOUD_DOME_CURVE_POWER         = 1.0;
+const float CLOUD_DOME_HORIZON_DIP_BLOCKS  = 64.0;
 const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 48.0;
 
 float sampleEntryDensity(
@@ -75,8 +84,10 @@ float sampleEntryDensity(
     float domeRadiusBlocks,
     out float heightNorm) {
     vec2  fromCameraXZ = worldPos.xz - u_cameraPosition.xz;
-    float domeT        = clamp(dot(fromCameraXZ, fromCameraXZ) / (domeRadiusBlocks * domeRadiusBlocks), 0.0, 1.0);
-    float domeAltitude  = mix(shape.y, u_cameraPosition.y, domeT);
+    float domeT             = clamp(dot(fromCameraXZ, fromCameraXZ) / (domeRadiusBlocks * domeRadiusBlocks), 0.0, 1.0);
+    domeT                   = pow(domeT, CLOUD_DOME_CURVE_POWER);
+    float domeFloorAltitude = u_cameraPosition.y - CLOUD_DOME_HORIZON_DIP_BLOCKS;
+    float domeAltitude      = mix(shape.y, domeFloorAltitude, domeT);
 
     float halfThickness = max(shape.x * 0.5, 0.01);
     float rawHeightT = (worldPos.y - domeAltitude) / halfThickness;
@@ -175,9 +186,10 @@ void main() {
     float layerMaxY = min(u_weatherCloudLayerMaxY, u_cloudAltitudeMax);
 
     // The dome bend in sampleEntryDensity() can pull a cloud's tested altitude
-    // down toward the camera's own height near the horizon, so the slab has to
-    // reach at least that low or those bent samples never get raymarched.
-    layerMinY = min(layerMinY, u_cameraPosition.y - CLOUD_DOME_FLOOR_MARGIN_BLOCKS);
+    // down to (camera height - CLOUD_DOME_HORIZON_DIP_BLOCKS) near the
+    // horizon, so the slab has to reach at least that low or those bent
+    // samples never get raymarched.
+    layerMinY = min(layerMinY, u_cameraPosition.y - CLOUD_DOME_HORIZON_DIP_BLOCKS - CLOUD_DOME_FLOOR_MARGIN_BLOCKS);
 
     if (layerMaxY <= layerMinY)
     discard;
