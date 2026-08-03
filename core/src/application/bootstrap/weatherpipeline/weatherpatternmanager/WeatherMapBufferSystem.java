@@ -1,4 +1,3 @@
-// WeatherMapBufferSystem.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import java.util.Arrays;
@@ -317,8 +316,6 @@ class WeatherMapBufferSystem extends SystemPackage {
         float sizeVarianceMax = lerp(fromCloud.getSizeVarianceMax(), toCloud.getSizeVarianceMax(), transitionT);
         float elongationMin = lerp(fromCloud.getElongationMin(), toCloud.getElongationMin(), transitionT);
         float elongationMax = lerp(fromCloud.getElongationMax(), toCloud.getElongationMax(), transitionT);
-        float cloudTypeIndex = lerp(
-                (float) fromCloud.getCloudTypeIndex(), (float) toCloud.getCloudTypeIndex(), transitionT);
         float altitude = lerp(fromAltitude, toAltitude, transitionT);
         float perCloudDensityMultiplier = lerp(fromDensityMultiplier, toDensityMultiplier, transitionT);
 
@@ -340,9 +337,16 @@ class WeatherMapBufferSystem extends SystemPackage {
 
         cloudVariance0[index].set(spreadRatio, sizeVarianceMin, sizeVarianceMax, elongationMin);
 
+        // variance1.y is a per-slot identity (0/1/2), never an interpolated
+        // archetype index — the shader hashes it together with patternSeed to
+        // pick each puff's orientation/size-within-range. That identity has to
+        // stay fixed for the entire lifetime of this cloud slot, including
+        // across a weather-type cross-fade, or the hash reshuffles every time
+        // its input crosses a fract() seam mid-transition, which reads as the
+        // cloud briefly reorienting/resizing itself for no reason.
         cloudVariance1[index].set(
                 elongationMax,
-                cloudTypeIndex,
+                (float) cloudIndex,
                 WeatherPatternManager.hash01(pattern.getPatternKey() ^ RENDER_SEED_MIX),
                 0f);
     }

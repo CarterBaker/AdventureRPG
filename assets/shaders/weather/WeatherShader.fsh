@@ -89,12 +89,18 @@ float sampleEntryDensity(
     if (abs(fromCenter.x) > cullExtent.x || abs(fromCenter.y) > cullExtent.y)
     return 0.0;
 
+    // patternSeed identifies the pattern; cloudSlotIndex identifies which of
+    // that pattern's up-to-3 cloud slots this entry is (0/1/2). Both are
+    // stable for the entire time this slot exists, including through a
+    // weather-type cross-fade — the archetype occupying the slot may change,
+    // but the slot's own instance identity (and therefore its orientation and
+    // where it lands in its size/elongation range) must not.
     float patternSeed    = variance1.z;
-    float cloudTypeIndex = variance1.y;
+    float cloudSlotIndex  = variance1.y;
     float instanceHash   = hash31(vec3(
             patternSeed * 12.9898,
-            cloudTypeIndex * 78.233 + patternSeed,
-            patternSeed - cloudTypeIndex * 0.577));
+            cloudSlotIndex * 78.233 + patternSeed,
+            patternSeed - cloudSlotIndex * 0.577));
 
     float driftAngle = atan(driftDirNorm.y, driftDirNorm.x);
     float puffAngle = driftAngle + (instanceHash - 0.5) * CLOUD_PUFF_ANGLE_WOBBLE;

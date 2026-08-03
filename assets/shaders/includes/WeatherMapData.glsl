@@ -18,7 +18,7 @@
 //                  z = coverageBias, w = silhouetteSoftness
 // cloudVariance0:  x = spreadRatio, y = sizeVarianceMin, z = sizeVarianceMax,
 //                  w = elongationMin
-// cloudVariance1:  x = elongationMax, y = cloudTypeIndex, z = patternSeed,
+// cloudVariance1:  x = elongationMax, y = cloudSlotIndex, z = patternSeed,
 //                  w = unused
 // weatherCloudLayerMinY/MaxY: this frame's actual min/max cloud altitude
 //                  band across all written entries, plus a small margin —
