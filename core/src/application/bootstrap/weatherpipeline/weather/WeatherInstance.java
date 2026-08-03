@@ -42,8 +42,6 @@ public class WeatherInstance extends InstancePackage {
     private float fadeAlpha;
     private boolean retiring;
 
-    private double nextReevaluationTime;
-
     private float distanceFromReferenceChunks;
     private Vector4 bounds;
 
@@ -185,15 +183,7 @@ public class WeatherInstance extends InstancePackage {
         return fadeAlpha;
     }
 
-    // Reevaluation \\
-
-    public double getNextReevaluationTime() {
-        return nextReevaluationTime;
-    }
-
-    public void setNextReevaluationTime(double nextReevaluationTime) {
-        this.nextReevaluationTime = nextReevaluationTime;
-    }
+    // Streaming Identity \\
 
     public long getPatternKey() {
         return patternKey;

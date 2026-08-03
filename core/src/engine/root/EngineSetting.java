@@ -403,11 +403,9 @@ public class EngineSetting {
 
         // Weather Pattern Lifecycle \\
 
-        public static final float WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION = 0.12f;
-        public static final float WEATHER_PATTERN_REEVALUATION_JITTER_MIN = 0.5f;
-        public static final float WEATHER_PATTERN_REEVALUATION_JITTER_MAX = 1.5f;
-        public static final float WEATHER_PATTERN_REEVALUATION_MIN_SECONDS = 20.0f;
-        public static final float WEATHER_PATTERN_REEVALUATION_MAX_SECONDS = 180.0f;
+        public static final float WEATHER_TICK_NOISE_FRACTION = 0.12f;
+        public static final float WEATHER_TICK_MIN_SECONDS = 20.0f;
+        public static final float WEATHER_TICK_MAX_SECONDS = 180.0f;
         public static final float WEATHER_PATTERN_TRANSITION_DURATION_SECONDS = 10.0f;
         public static final float WEATHER_PATTERN_FADE_IN_RATE = 0.12f;
         public static final float WEATHER_PATTERN_FADE_OUT_RATE = 0.12f;

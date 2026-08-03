@@ -32,6 +32,14 @@ public class WeatherPatternManager extends ManagerPackage {
      * time — noise picks a single categorical weather outright, with no
      * spatial blending between candidates; the cross-fade between an old
      * and new pick lives entirely in WeatherInstance's blended accessors.
+     *
+     * Weather-type reevaluation runs on one shared global tick derived
+     * from the same KPH drift speed that moves every pattern, so every
+     * active pattern and every grid's local weather reassess together
+     * instead of drifting in and out of sync on independent timers.
+     * Position, cross-fade progress, and fade in/out all continue to
+     * advance every frame regardless of the tick, so motion stays smooth
+     * between ticks.
      */
 
     private static final float DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
@@ -46,11 +54,8 @@ public class WeatherPatternManager extends ManagerPackage {
     private float rangeChunks;
     private int maxPatternsStreamedPerFrame;
     private int maxActivePatternCount;
-    private float reevaluationNoiseFraction;
-    private float reevaluationJitterMin;
-    private float reevaluationJitterMax;
-    private float reevaluationMinSeconds;
-    private float reevaluationMaxSeconds;
+    private float tickIntervalSeconds;
+    private double nextTickTime;
     private float fadeInRate;
     private float fadeOutRate;
 
@@ -78,11 +83,6 @@ public class WeatherPatternManager extends ManagerPackage {
         this.patternCellSizeChunks = EngineSetting.WEATHER_PATTERN_CELL_SIZE_CHUNKS;
         this.maxPatternsStreamedPerFrame = EngineSetting.OVERHEAD_MAX_STREAM_PER_FRAME;
         this.maxActivePatternCount = EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT;
-        this.reevaluationNoiseFraction = EngineSetting.WEATHER_PATTERN_REEVALUATION_NOISE_FRACTION;
-        this.reevaluationJitterMin = EngineSetting.WEATHER_PATTERN_REEVALUATION_JITTER_MIN;
-        this.reevaluationJitterMax = EngineSetting.WEATHER_PATTERN_REEVALUATION_JITTER_MAX;
-        this.reevaluationMinSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_MIN_SECONDS;
-        this.reevaluationMaxSeconds = EngineSetting.WEATHER_PATTERN_REEVALUATION_MAX_SECONDS;
         this.fadeInRate = EngineSetting.WEATHER_PATTERN_FADE_IN_RATE;
         this.fadeOutRate = EngineSetting.WEATHER_PATTERN_FADE_OUT_RATE;
 
@@ -123,6 +123,8 @@ public class WeatherPatternManager extends ManagerPackage {
     protected void awake() {
         this.rangeChunks = weatherManager.getEffectiveRangeChunks();
         this.candidateOffsets = buildCandidateOffsets();
+        this.tickIntervalSeconds = computeTickIntervalSeconds();
+        this.nextTickTime = tickIntervalSeconds;
     }
 
     @Override
@@ -142,11 +144,17 @@ public class WeatherPatternManager extends ManagerPackage {
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
 
+        elapsedSimTime += internal.getDeltaTime();
+        boolean tickFired = elapsedSimTime >= nextTickTime;
+
         advanceWorldDrift();
-        advanceWeatherReevaluation(grids);
-        advanceLocalWeather(grids);
+        advancePoolPatterns(tickFired, grids);
+        advanceLocalWeather(grids, tickFired);
         advanceFadesAndRetire(grids);
         streamInBudgeted(grids);
+
+        if (tickFired)
+            nextTickTime = elapsedSimTime + tickIntervalSeconds;
     }
 
     // Candidate Offsets \\
@@ -287,7 +295,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
         pattern.constructor(patternKey, homeChunkX, homeChunkZ, weatherHandle, DEFAULT_DRIFT_SPEED_SCALE);
         assignVelocity(pattern);
-        pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(patternKey));
         pattern.setDistanceFromReferenceChunks((float) distanceChunks);
         pattern.updateBounds();
 
@@ -366,10 +373,19 @@ public class WeatherPatternManager extends ManagerPackage {
         return nearest;
     }
 
-    private void advanceWeatherReevaluation(ObjectArrayList<GridInstance> grids) {
+    // Global Tick \\
+
+    /*
+     * Weather-type reevaluation for every pool pattern that isn't already
+     * retiring, gated on the shared global tick so the whole visible sky
+     * reassesses in one deliberate pass instead of each pattern flipping
+     * on its own schedule. Cross-fade progress advances every frame
+     * regardless, so a change triggered by the tick still animates in
+     * smoothly rather than cutting.
+     */
+    private void advancePoolPatterns(boolean tickFired, ObjectArrayList<GridInstance> grids) {
 
         float deltaTime = internal.getDeltaTime();
-        elapsedSimTime += deltaTime;
 
         for (int i = 0; i < patternPool.length; i++) {
 
@@ -380,10 +396,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
             pattern.advanceWeatherTransition(deltaTime);
 
-            if (pattern.isRetiring())
-                continue;
-
-            if (elapsedSimTime < pattern.getNextReevaluationTime())
+            if (!tickFired || pattern.isRetiring())
                 continue;
 
             int currentChunkX = (int) Math.round(pattern.getCurrentChunkX());
@@ -397,8 +410,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
             if (resolved != pattern.getWeatherHandle())
                 tryRefreshWeather(pattern, resolved);
-
-            pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(pattern.getPatternKey()));
         }
     }
 
@@ -407,9 +418,22 @@ public class WeatherPatternManager extends ManagerPackage {
         refreshedThisFrame.add(pattern);
     }
 
+    private float computeTickIntervalSeconds() {
+
+        float driftChunksPerSecond = Math.abs(weatherManager.getWorldDriftChunksPerSecondX());
+        float wavelengthChunks = EngineSetting.WEATHER_NOISE_CELL_SIZE;
+
+        float baseSeconds = driftChunksPerSecond > 0.0001f
+                ? (wavelengthChunks * EngineSetting.WEATHER_TICK_NOISE_FRACTION) / driftChunksPerSecond
+                : EngineSetting.WEATHER_TICK_MAX_SECONDS;
+
+        return Math.max(EngineSetting.WEATHER_TICK_MIN_SECONDS,
+                Math.min(EngineSetting.WEATHER_TICK_MAX_SECONDS, baseSeconds));
+    }
+
     // Local Weather \\
 
-    private void advanceLocalWeather(ObjectArrayList<GridInstance> grids) {
+    private void advanceLocalWeather(ObjectArrayList<GridInstance> grids, boolean tickFired) {
 
         float deltaTime = internal.getDeltaTime();
         temperatureSystem.advanceClock();
@@ -442,21 +466,17 @@ public class WeatherPatternManager extends ManagerPackage {
                 // exactly at the player, so it never needs a stream-in fade.
                 pattern.setFadeAlpha(1f);
 
-                pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(localPatternKey));
-
             } else {
 
                 pattern.advanceWeatherTransition(deltaTime);
 
-                if (elapsedSimTime >= pattern.getNextReevaluationTime()) {
+                if (tickFired) {
 
                     WeatherHandle resolved = weatherManager.resolveWeatherTowardHorizonBiased(
                             referenceCoordinate, referenceCoordinate, pattern.getWeatherHandle());
 
                     if (resolved != pattern.getWeatherHandle())
                         pattern.beginWeatherTransition(resolved);
-
-                    pattern.setNextReevaluationTime(elapsedSimTime + reevaluationIntervalFor(pattern.getPatternKey()));
                 }
             }
 
@@ -464,23 +484,6 @@ public class WeatherPatternManager extends ManagerPackage {
             float temperature = temperatureSystem.computeTemperature(pattern, visualTimeOfDay);
             grid.getTemperatureInstance().setTemperature(temperature);
         }
-    }
-
-    private float reevaluationIntervalFor(long patternKey) {
-
-        float driftChunksPerSecond = Math.abs(weatherManager.getWorldDriftChunksPerSecondX());
-        float wavelengthChunks = EngineSetting.WEATHER_NOISE_CELL_SIZE;
-
-        float baseSeconds = driftChunksPerSecond > 0.0001f
-                ? (wavelengthChunks * reevaluationNoiseFraction) / driftChunksPerSecond
-                : reevaluationMaxSeconds;
-
-        float clampedSeconds = Math.max(reevaluationMinSeconds, Math.min(reevaluationMaxSeconds, baseSeconds));
-
-        float jitterT = hash01(patternKey ^ 0xD1B54A32D192ED03L);
-        float jitterScale = lerp(reevaluationJitterMin, reevaluationJitterMax, jitterT);
-
-        return clampedSeconds * jitterScale;
     }
 
     private void advanceFadesAndRetire(ObjectArrayList<GridInstance> grids) {
@@ -574,10 +577,6 @@ public class WeatherPatternManager extends ManagerPackage {
         h ^= (h >>> 33);
 
         return (float) ((h >>> 11) / (double) (1L << 53));
-    }
-
-    private static float lerp(float a, float b, float t) {
-        return a + (b - a) * t;
     }
 
     public Long2ObjectOpenHashMap<WeatherInstance> getActivePatterns() {
