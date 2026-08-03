@@ -14,12 +14,10 @@ out vec4 fragColor;
 #include "includes/SettingsData.glsl"
 #include "includes/NoiseUtility.glsl"
 
-/*
-* Fullscreen weather/cloud raymarch. Reconstructs a world-space view ray
- * per pixel, intersects it against the shared cloud altitude band, and
- * marches through every in-range weather pattern's cloud entries from
- * WeatherMapData, accumulating premultiplied color and coverage.
- */
+// Fullscreen weather/cloud raymarch. Reconstructs a world-space view ray
+// per pixel, intersects it against the shared cloud altitude band, and
+// marches through every in-range weather pattern's cloud entries from
+// WeatherMapData, accumulating premultiplied color and coverage.
 
 uniform float u_cloudAltitudeMin;
 uniform float u_cloudAltitudeMax;
@@ -46,21 +44,17 @@ const float CLOUD_MIN_EDGE_BAND      = 0.16;
 const float CLOUD_OUTER_FADE_START   = 0.85;
 const float CLOUD_OUTER_FADE_END     = 1.35;
 
-// Saturation-driven shading — applied ahead of sky tint and lighting so
-// low-saturation archetypes (storm clouds) read as denser and darker
-// before either of those ever get a say.
+// Saturation drives shading before sky tint/lighting — storm clouds read denser/darker.
 const float CLOUD_STORM_ABSORPTION_BOOST = 1.35;
 const float CLOUD_STORM_DARKEN_MIN       = 0.45;
 const float CLOUD_SKY_TINT_STRENGTH      = 0.35;
 
-/*
-* Coverage comes from the noise field and this entry's own coverage/
- * intensity alone, evaluated identically everywhere inside the footprint
- * — never eroded by distance from the home point — so puffs scatter
- * across the whole area a weather's coverage describes instead of
- * clumping around a single anchor. The anisotropic envelope and
- * outerFade still bound and blend out the footprint's true edge.
- */
+// Dome bend — bows each entry's tested altitude down toward eye level as
+// horizontal distance from the camera grows, so the cloud layer reads as
+// low near the horizon and true-height overhead instead of a flat plane.
+const float CLOUD_DOME_RADIUS_SCALE        = 0.5;
+const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 48.0;
+
 float sampleEntryDensity(
     vec4 bounds,
     vec4 shape,
@@ -73,9 +67,14 @@ float sampleEntryDensity(
     vec2 chunkOffsetBlocks,
     vec2 driftDirNorm,
     float driftSpeed,
+    float domeRadiusBlocks,
     out float heightNorm) {
+    vec2  fromCameraXZ = worldPos.xz - u_cameraPosition.xz;
+    float domeT        = clamp(dot(fromCameraXZ, fromCameraXZ) / (domeRadiusBlocks * domeRadiusBlocks), 0.0, 1.0);
+    float domeAltitude  = mix(shape.y, u_cameraPosition.y, domeT);
+
     float halfThickness = max(shape.x * 0.5, 0.01);
-    float rawHeightT = (worldPos.y - shape.y) / halfThickness;
+    float rawHeightT = (worldPos.y - domeAltitude) / halfThickness;
     heightNorm = clamp(rawHeightT * 0.5 + 0.5, 0.0, 1.0);
 
     if (abs(rawHeightT) > 1.0)
@@ -89,12 +88,8 @@ float sampleEntryDensity(
     if (abs(fromCenter.x) > cullExtent.x || abs(fromCenter.y) > cullExtent.y)
     return 0.0;
 
-    // patternSeed identifies the pattern; cloudSlotIndex identifies which of
-    // that pattern's up-to-3 cloud slots this entry is (0/1/2). Both are
-    // stable for the entire time this slot exists, including through a
-    // weather-type cross-fade — the archetype occupying the slot may change,
-    // but the slot's own instance identity (and therefore its orientation and
-    // where it lands in its size/elongation range) must not.
+    // patternSeed + cloudSlotIndex form this slot's stable instance identity —
+    // fixed across a weather cross-fade even as the archetype occupying it changes.
     float patternSeed    = variance1.z;
     float cloudSlotIndex  = variance1.y;
     float instanceHash   = hash31(vec3(
@@ -174,6 +169,11 @@ void main() {
     float layerMinY = max(u_weatherCloudLayerMinY, u_cloudAltitudeMin);
     float layerMaxY = min(u_weatherCloudLayerMaxY, u_cloudAltitudeMax);
 
+    // The dome bend in sampleEntryDensity() can pull a cloud's tested altitude
+    // down toward the camera's own height near the horizon, so the slab has to
+    // reach at least that low or those bent samples never get raymarched.
+    layerMinY = min(layerMinY, u_cameraPosition.y - CLOUD_DOME_FLOOR_MARGIN_BLOCKS);
+
     if (layerMaxY <= layerMinY)
     discard;
 
@@ -198,6 +198,8 @@ void main() {
     else
     driftDirNorm = vec2(1.0, 0.0);
     float driftSpeed = u_weatherDriftSpeed;
+
+    float domeRadiusBlocks = max((u_renderDistance * CLOUD_DOME_RADIUS_SCALE) * u_chunkSize, 1.0);
 
     float rayLength = tFar - tNear;
     int stepCount = clamp(
@@ -257,7 +259,8 @@ void main() {
                 float heightNorm;
                 float density = sampleEntryDensity(
                     bounds, shape, noiseParams, colorScale, variance0, variance1,
-                    intensity, samplePos, chunkOffsetBlocks, driftDirNorm, driftSpeed, heightNorm)
+                    intensity, samplePos, chunkOffsetBlocks, driftDirNorm, driftSpeed,
+                    domeRadiusBlocks, heightNorm)
                 * fadeAlpha * rangeFade * farFade;
 
                 if (density <= CLOUD_DENSITY_EPSILON)
@@ -272,9 +275,6 @@ void main() {
                 if (vertShape <= 0.0)
                 continue;
 
-                // Saturation drives shading before anything else — low-
-                // saturation archetypes (storm clouds) read denser and
-                // darker ahead of sky tint or direct/ambient lighting.
                 float stormDarkness  = 1.0 - saturation;
                 float absorptionBias = mix(1.0, CLOUD_STORM_ABSORPTION_BOOST, stormDarkness);
 
