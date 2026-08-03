@@ -19,8 +19,6 @@ class GlobalNoiseSystem extends SystemPackage {
      * does: X rides the rotation circle, Y cross-fades across its seam.
      */
 
-    private static final long GLOBAL_INTENSITY_SEED = 0xB16B00B5DEADC0DEL;
-
     private WorldManager worldManager;
     private ClockManager clockManager;
 
@@ -111,9 +109,10 @@ class GlobalNoiseSystem extends SystemPackage {
         double zWavelength = EngineSetting.GLOBAL_WEATHER_NOISE_CELL_SIZE;
         double z = wrapIntoRange(chunkZ, worldHeightChunks);
 
-        float direct = NoiseUtility.noise3_ImproveXY(GLOBAL_INTENSITY_SEED, ex, ey, z / zWavelength);
+        float direct = NoiseUtility.noise3_ImproveXY(
+                EngineSetting.GLOBAL_WEATHER_INTENSITY_SEED, ex, ey, z / zWavelength);
         float oneWorldBack = NoiseUtility.noise3_ImproveXY(
-                GLOBAL_INTENSITY_SEED, ex, ey, (z - worldHeightChunks) / zWavelength);
+                EngineSetting.GLOBAL_WEATHER_INTENSITY_SEED, ex, ey, (z - worldHeightChunks) / zWavelength);
 
         float t = (float) (z / worldHeightChunks);
         float raw = direct * (1f - t) + oneWorldBack * t;

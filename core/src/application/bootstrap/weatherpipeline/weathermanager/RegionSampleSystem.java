@@ -19,8 +19,6 @@ class RegionSampleSystem extends SystemPackage {
      * top of whatever this returns.
      */
 
-    private static final long NOISE_SEED = 0x51A5F00DCAFEBEEFL;
-
     private GlobalNoiseSystem globalNoiseSystem;
     private WorldManager worldManager;
 
@@ -159,7 +157,7 @@ class RegionSampleSystem extends SystemPackage {
         double meanderAmplitudeChunks = EngineSetting.GLOBAL_WEATHER_MEANDER_INFLUENCE * wavelengthChunks;
 
         return WeatherNoiseUtility.sample(
-                NOISE_SEED,
+                EngineSetting.WEATHER_NOISE_SEED,
                 chunkX, chunkZ,
                 worldWidthChunks,
                 worldHeightChunks,

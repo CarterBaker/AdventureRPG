@@ -1,6 +1,7 @@
 package application.bootstrap.weatherpipeline.weather;
 
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
+import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -60,7 +61,9 @@ public class WeatherHandle extends HandlePackage {
 
     public float getCloudEffectiveAltitude(int index) {
         float override = weatherData.getCloudAltitudeOverrides().getFloat(index);
-        return override >= 0f ? override : getCloudHandle(index).getBaseAltitude();
+        return override != EngineSetting.WEATHER_CLOUD_NO_ALTITUDE_OVERRIDE
+                ? override
+                : getCloudHandle(index).getBaseAltitude();
     }
 
     public int getPrimaryCloudIndex() {

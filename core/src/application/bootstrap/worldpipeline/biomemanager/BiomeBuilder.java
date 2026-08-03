@@ -10,6 +10,7 @@ import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
 import engine.util.registry.RegistryUtility;
@@ -27,12 +28,11 @@ class BiomeBuilder extends BuilderPackage {
      * from whatever keys appear in the "weathers" object — there's no
      * fixed set to validate against, since the active calendar is free to
      * define any named seasons it likes. Each season's array accepts
-     * either a bare weather name string (given a default relative chance)
-     * or an object with explicit "name" and "chance" fields — both forms
-     * may be mixed freely within one array.
+     * either a bare weather name string (given a default relative chance,
+     * see EngineSetting.DEFAULT_BIOME_WEATHER_CHANCE) or an object with
+     * explicit "name" and "chance" fields — both forms may be mixed
+     * freely within one array.
      */
-
-    private static final float DEFAULT_WEATHER_CHANCE = 1.0f;
 
     // Build \\
 
@@ -91,7 +91,7 @@ class BiomeBuilder extends BuilderPackage {
 
         if (element.isJsonPrimitive()) {
             names.add(element.getAsString());
-            chances.add(DEFAULT_WEATHER_CHANCE);
+            chances.add(EngineSetting.DEFAULT_BIOME_WEATHER_CHANCE);
             return;
         }
 
@@ -99,7 +99,7 @@ class BiomeBuilder extends BuilderPackage {
         String weatherName = JsonUtility.validateString(entryObject, "name");
         float chance = entryObject.has("chance")
                 ? entryObject.get("chance").getAsFloat()
-                : DEFAULT_WEATHER_CHANCE;
+                : EngineSetting.DEFAULT_BIOME_WEATHER_CHANCE;
 
         names.add(weatherName);
         chances.add(chance);

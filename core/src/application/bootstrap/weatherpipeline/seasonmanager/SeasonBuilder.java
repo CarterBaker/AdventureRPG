@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 import application.bootstrap.weatherpipeline.season.SeasonData;
 import application.bootstrap.weatherpipeline.season.SeasonHandle;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector3;
@@ -18,7 +19,9 @@ class SeasonBuilder extends BuilderPackage {
      * Parses season JSON into a SeasonData and wraps it in a SeasonHandle.
      * The season's name is taken directly from the file name — whatever
      * named seasons the active calendar defines is whatever files should
-     * exist here. Bootstrap-only and on-demand.
+     * exist here. Every fallback below when a JSON field is omitted comes
+     * from EngineSetting — nothing is authored as a bare literal here.
+     * Bootstrap-only and on-demand.
      */
 
     SeasonHandle build(File file, File root) {
@@ -27,14 +30,24 @@ class SeasonBuilder extends BuilderPackage {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
 
-        float baseWindSpeed = parseFloat(json, "baseWindSpeed", 3.0f);
-        float windVariance = parseFloat(json, "windVariance", 1.0f);
-        float prevailingWindDirectionDegrees = parseFloat(json, "prevailingWindDirectionDegrees", 0.0f);
-        float baseTemperature = parseFloat(json, "baseTemperature", 15.0f);
-        float temperatureVariance = parseFloat(json, "temperatureVariance", 5.0f);
-        float precipitationChanceScale = parseFloat(json, "precipitationChanceScale", 1.0f);
-        Vector3 tintColor = parseColor(json, "tintColor", new Vector3(1.0f, 1.0f, 1.0f));
-        Vector3 sunriseColor = parseColor(json, "sunriseColor", new Vector3(0.90f, 0.53f, 0.39f));
+        float baseWindSpeed = parseFloat(json, "baseWindSpeed", EngineSetting.DEFAULT_SEASON_BASE_WIND_SPEED);
+        float windVariance = parseFloat(json, "windVariance", EngineSetting.DEFAULT_SEASON_WIND_VARIANCE);
+        float prevailingWindDirectionDegrees = parseFloat(
+                json, "prevailingWindDirectionDegrees",
+                EngineSetting.DEFAULT_SEASON_PREVAILING_WIND_DIRECTION_DEGREES);
+        float baseTemperature = parseFloat(json, "baseTemperature", EngineSetting.DEFAULT_BASE_TEMPERATURE);
+        float temperatureVariance = parseFloat(
+                json, "temperatureVariance", EngineSetting.DEFAULT_SEASON_TEMPERATURE_VARIANCE);
+        float precipitationChanceScale = parseFloat(
+                json, "precipitationChanceScale", EngineSetting.DEFAULT_SEASON_PRECIPITATION_CHANCE_SCALE);
+        Vector3 tintColor = parseColor(json, "tintColor", new Vector3(
+                EngineSetting.DEFAULT_SEASON_TINT_R,
+                EngineSetting.DEFAULT_SEASON_TINT_G,
+                EngineSetting.DEFAULT_SEASON_TINT_B));
+        Vector3 sunriseColor = parseColor(json, "sunriseColor", new Vector3(
+                EngineSetting.DEFAULT_SEASON_SUNRISE_R,
+                EngineSetting.DEFAULT_SEASON_SUNRISE_G,
+                EngineSetting.DEFAULT_SEASON_SUNRISE_B));
 
         SeasonData seasonData = new SeasonData(
                 seasonName,

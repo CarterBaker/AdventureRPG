@@ -17,10 +17,13 @@ public class WeatherData extends DataPackage {
      * scales how thick/opaque those clouds read, independent of how much
      * area they cover. visualScale controls how large this weather reads
      * in the sky.
+     *
+     * The "no altitude override" sentinel and the default per-cloud-entry
+     * density multiplier both live on EngineSetting now (WEATHER_CLOUD_
+     * NO_ALTITUDE_OVERRIDE / DEFAULT_CLOUD_ENTRY_DENSITY_MULTIPLIER) —
+     * they're authoring/parsing constants, not data this class owns, so
+     * they don't belong here.
      */
-
-    public static final float NO_ALTITUDE_OVERRIDE = -1f;
-    public static final float DEFAULT_CLOUD_DENSITY_MULTIPLIER = 1.0f;
 
     private final String weatherName;
     private final short weatherID;

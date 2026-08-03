@@ -26,8 +26,6 @@ public class WeatherManager extends ManagerPackage {
      * allocates.
      */
 
-    private static final float NEXT_WEATHER_SUGGESTION_INFLUENCE = 1.5f;
-
     private ClockManager clockManager;
     private BiomeManager biomeManager;
     private SeasonManager seasonManager;
@@ -189,7 +187,7 @@ public class WeatherManager extends ManagerPackage {
             WeatherHandle handle = activeWeatherHandles.get(i);
             float suggestionChance = currentWeather.getNextWeatherChanceFor(handle);
             float biasedChance = activeWeatherChances.getFloat(i)
-                    + suggestionChance * NEXT_WEATHER_SUGGESTION_INFLUENCE;
+                    + suggestionChance * EngineSetting.WEATHER_NEXT_SUGGESTION_INFLUENCE;
 
             biasedWeatherHandles.add(handle);
             biasedWeatherChances.add(biasedChance);

@@ -29,6 +29,9 @@ class WeatherBuilder extends BuilderPackage {
      * suggest each other deadlock the bootstrap loader, so resolution
      * happens by name comparison instead, lazily, whenever WeatherManager
      * consults them. Bootstrap-only and on-demand.
+     *
+     * Every fallback used below when a JSON field is omitted comes from
+     * EngineSetting — no field default is authored inline here anymore.
      */
 
     private CloudManager cloudManager;
@@ -55,17 +58,20 @@ class WeatherBuilder extends BuilderPackage {
         FloatArrayList nextWeatherChances = new FloatArrayList();
         parseNextWeatherChances(json, nextWeatherNames, nextWeatherChances);
 
-        float cloudCoverage = parseFloat(json, "cloudCoverage", 0f);
-        float cloudDensityMultiplier = parseFloat(json, "cloudDensityMultiplier", 1f);
-        float precipitationIntensity = parseFloat(json, "precipitationIntensity", 0f);
-        float windSpeedScale = parseFloat(json, "windSpeedScale", 1f);
+        float cloudCoverage = parseFloat(json, "cloudCoverage", EngineSetting.DEFAULT_WEATHER_CLOUD_COVERAGE);
+        float cloudDensityMultiplier = parseFloat(
+                json, "cloudDensityMultiplier", EngineSetting.DEFAULT_WEATHER_CLOUD_DENSITY_MULTIPLIER);
+        float precipitationIntensity = parseFloat(
+                json, "precipitationIntensity", EngineSetting.DEFAULT_WEATHER_PRECIPITATION_INTENSITY);
+        float windSpeedScale = parseFloat(json, "windSpeedScale", EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE);
         float windTurbulenceScale = parseFloat(json, "windTurbulenceScale",
                 EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE);
-        float fogDensityScale = parseFloat(json, "fogDensityScale", 1f);
-        float humidity = parseFloat(json, "humidity", 0.5f);
-        float visibility = parseFloat(json, "visibility", 1f);
-        float visualScale = parseFloat(json, "visualScale", 1f);
-        float temperatureModifier = parseFloat(json, "temperatureModifier", 0f);
+        float fogDensityScale = parseFloat(json, "fogDensityScale", EngineSetting.DEFAULT_WEATHER_FOG_DENSITY_SCALE);
+        float humidity = parseFloat(json, "humidity", EngineSetting.DEFAULT_WEATHER_HUMIDITY);
+        float visibility = parseFloat(json, "visibility", EngineSetting.DEFAULT_WEATHER_VISIBILITY);
+        float visualScale = parseFloat(json, "visualScale", EngineSetting.DEFAULT_WEATHER_VISUAL_SCALE);
+        float temperatureModifier = parseFloat(
+                json, "temperatureModifier", EngineSetting.DEFAULT_WEATHER_TEMPERATURE_MODIFIER);
 
         WeatherData weatherData = new WeatherData(
                 weatherName,
@@ -128,15 +134,15 @@ class WeatherBuilder extends BuilderPackage {
 
         float chance = entryObject.has("chance")
                 ? entryObject.get("chance").getAsFloat()
-                : 1.0f;
+                : EngineSetting.DEFAULT_CLOUD_ENTRY_CHANCE;
 
         float altitudeOverride = entryObject.has("altitudeOverride")
                 ? entryObject.get("altitudeOverride").getAsFloat()
-                : WeatherData.NO_ALTITUDE_OVERRIDE;
+                : EngineSetting.WEATHER_CLOUD_NO_ALTITUDE_OVERRIDE;
 
         float densityMultiplier = entryObject.has("densityMultiplier")
                 ? entryObject.get("densityMultiplier").getAsFloat()
-                : WeatherData.DEFAULT_CLOUD_DENSITY_MULTIPLIER;
+                : EngineSetting.DEFAULT_CLOUD_ENTRY_DENSITY_MULTIPLIER;
 
         if (densityMultiplier < 0f)
             throwException("Cloud entry \"" + cloudName + "\" has a negative densityMultiplier: " + densityMultiplier);
@@ -163,7 +169,7 @@ class WeatherBuilder extends BuilderPackage {
             String weatherName = JsonUtility.validateString(entryObject, "name");
             float chance = entryObject.has("chance")
                     ? entryObject.get("chance").getAsFloat()
-                    : 1.0f;
+                    : EngineSetting.DEFAULT_NEXT_WEATHER_CHANCE;
 
             outNames.add(weatherName);
             outChances.add(chance);

@@ -360,6 +360,25 @@ public class EngineSetting {
         public static final float DEFAULT_WEATHER_VISIBILITY = 1.0f;
         public static final float DEFAULT_WEATHER_FOG_DENSITY_SCALE = 1.0f;
 
+        // Weather Authoring Defaults \\
+        //
+        // Fallback values used by WeatherBuilder/BiomeBuilder when a JSON
+        // field is omitted. Centralized here rather than as bare literals
+        // or private constants on the builders themselves, so retuning a
+        // default only ever means touching one line.
+
+        public static final float DEFAULT_WEATHER_CLOUD_COVERAGE = 0.0f;
+        public static final float DEFAULT_WEATHER_CLOUD_DENSITY_MULTIPLIER = 1.0f;
+        public static final float DEFAULT_WEATHER_PRECIPITATION_INTENSITY = 0.0f;
+        public static final float DEFAULT_WEATHER_VISUAL_SCALE = 1.0f;
+        public static final float DEFAULT_WEATHER_TEMPERATURE_MODIFIER = 0.0f;
+        public static final float WEATHER_CLOUD_NO_ALTITUDE_OVERRIDE = -1.0f;
+        public static final float DEFAULT_CLOUD_ENTRY_DENSITY_MULTIPLIER = 1.0f;
+        public static final float DEFAULT_CLOUD_ENTRY_CHANCE = 1.0f;
+        public static final float DEFAULT_NEXT_WEATHER_CHANCE = 1.0f;
+        public static final float DEFAULT_BIOME_WEATHER_CHANCE = 1.0f;
+        public static final float WEATHER_NEXT_SUGGESTION_INFLUENCE = 1.5f;
+
         // Weather Drift \\
 
         public static final float WEATHER_BASE_DRIFT_SPEED_KPH = 25.0f;
@@ -377,10 +396,44 @@ public class EngineSetting {
         public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f;
         public static final int GLOBAL_WEATHER_MEANDER_WAVE_NUMBER = 1;
         public static final float GLOBAL_WEATHER_MEANDER_INFLUENCE = 0.025f;
+        public static final long GLOBAL_WEATHER_INTENSITY_SEED = 0xB16B00B5DEADC0DEL;
+
+        // Weather Region Noise \\
+
+        public static final long WEATHER_NOISE_SEED = 0x51A5F00DCAFEBEEFL;
+        public static final double WEATHER_NOISE_MIN_CYCLES_AROUND_WORLD = 4.0;
+        public static final double WEATHER_NOISE_CROSS_STREAM_COMPRESSION = 3.2;
+        public static final double WEATHER_NOISE_MACRO_FREQUENCY = 0.36;
+        public static final float WEATHER_NOISE_MACRO_WEIGHT = 0.55f;
+        public static final double WEATHER_NOISE_DETAIL_FREQUENCY = 3.2;
+        public static final float WEATHER_NOISE_DETAIL_WEIGHT = 0.26f;
+
+        // Shared hash-mixing salts — reused across the weather pipeline
+        // (noise-layer decorrelation in WeatherNoiseUtility, per-cell home
+        // jitter in WeatherPatternManager) to pull independent hash streams
+        // out of the same underlying seed/key. Arbitrary, well-distributed
+        // 64-bit constants — not tied to one specific algorithm, so they
+        // live here once instead of being hand-copied per call site.
+        public static final long WEATHER_HASH_SALT_PRIMARY = 0x2545F4914F6CDD1DL;
+        public static final long WEATHER_HASH_SALT_SECONDARY = 0x9E3779B97F4A7C15L;
 
         // Season Blend \\
 
         public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
+
+        // Season Authoring Defaults \\
+
+        public static final float DEFAULT_SEASON_BASE_WIND_SPEED = 3.0f;
+        public static final float DEFAULT_SEASON_WIND_VARIANCE = 1.0f;
+        public static final float DEFAULT_SEASON_PREVAILING_WIND_DIRECTION_DEGREES = 0.0f;
+        public static final float DEFAULT_SEASON_TEMPERATURE_VARIANCE = 5.0f;
+        public static final float DEFAULT_SEASON_PRECIPITATION_CHANCE_SCALE = 1.0f;
+        public static final float DEFAULT_SEASON_TINT_R = 1.0f;
+        public static final float DEFAULT_SEASON_TINT_G = 1.0f;
+        public static final float DEFAULT_SEASON_TINT_B = 1.0f;
+        public static final float DEFAULT_SEASON_SUNRISE_R = 0.90f;
+        public static final float DEFAULT_SEASON_SUNRISE_G = 0.53f;
+        public static final float DEFAULT_SEASON_SUNRISE_B = 0.39f;
 
         // Latitude Day Length \\
 
@@ -393,6 +446,8 @@ public class EngineSetting {
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 300;
         public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 300.0f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
+        public static final float WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
+        public static final long WEATHER_PATTERN_LOCAL_KEY_SEED = Long.MIN_VALUE;
 
         // Weather Rendering \\
 
@@ -414,6 +469,9 @@ public class EngineSetting {
         public static final String WEATHER_MAP_UBO = "WeatherMapData";
         public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 32;
         public static final int MAX_CLOUDS_PER_WEATHER = 3;
+        public static final float WEATHER_MAP_RANGE_FADE_CHUNKS = 64.0f;
+        public static final float WEATHER_MAP_LAYER_BOUND_MARGIN_BLOCKS = 16.0f;
+        public static final long WEATHER_MAP_RENDER_SEED_MIX = 0x94D049BB133111EBL;
 
         // Wind \\
 
