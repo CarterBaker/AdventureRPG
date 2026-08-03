@@ -67,7 +67,7 @@ const float CLOUD_SKY_TINT_STRENGTH      = 0.35;
 const float CLOUD_DOME_RADIUS_SCALE        = 0.5;
 const float CLOUD_DOME_CURVE_POWER         = 1.0;
 const float CLOUD_DOME_HORIZON_DIP_BLOCKS  = 64.0;
-const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 48.0;
+const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 128.0;
 
 float sampleEntryDensity(
     vec4 bounds,
