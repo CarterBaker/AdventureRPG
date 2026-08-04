@@ -64,13 +64,20 @@ const float CLOUD_SKY_TINT_STRENGTH      = 0.35;
 // horizon.
 // CLOUD_DOME_HORIZON_DIP_BLOCKS lets the bend undershoot eye level at full
 // range so the dome visibly curls below the horizon rather than flattening
-// onto it; CLOUD_DOME_FLOOR_MARGIN_BLOCKS keeps the raymarch slab in main()
-// tall enough to still contain that undershoot plus the tallest archetype's
-// half-thickness (Cumulonimbus, 70 blocks).
-const float CLOUD_DOME_RADIUS_SCALE        = 0.85;
-const float CLOUD_DOME_CURVE_POWER         = 0.65;
-const float CLOUD_DOME_HORIZON_DIP_BLOCKS  = 60.0;
-const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS = 100.0;
+// onto it. CLOUD_DOME_HORIZON_THICKNESS_BOOST_BLOCKS counteracts the same
+// bend from the other side: squeezing every archetype's tested altitude
+// toward one shared eye-level band would otherwise collapse thin layers
+// (Sirrus, Stratus, Altostratus...) to a sliver far narrower than the dip
+// itself, so it widens each entry's half-thickness as domeT rises, opening
+// the band back up right where the bend is narrowing it.
+// CLOUD_DOME_FLOOR_MARGIN_BLOCKS keeps the raymarch slab in main() tall
+// enough to still contain that undershoot plus the tallest archetype's
+// half-thickness (Cumulonimbus, 70 blocks) plus the full horizon boost.
+const float CLOUD_DOME_RADIUS_SCALE                   = 0.85;
+const float CLOUD_DOME_CURVE_POWER                    = 0.65;
+const float CLOUD_DOME_HORIZON_DIP_BLOCKS             = 60.0;
+const float CLOUD_DOME_HORIZON_THICKNESS_BOOST_BLOCKS = 90.0;
+const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS            = 180.0;
 
 float sampleEntryDensity(
     vec4 bounds,
@@ -94,7 +101,15 @@ float sampleEntryDensity(
     float domeAltitude      = mix(shape.y, domeFloorAltitude, domeT);
 
     float halfThickness = max(shape.x * 0.5, 0.01);
-    float rawHeightT = (worldPos.y - domeAltitude) / halfThickness;
+
+    // Widen the tested band as the dome bend progresses — see the comment
+    // block above CLOUD_DOME_HORIZON_THICKNESS_BOOST_BLOCKS. domeT is 0
+    // directly overhead (untouched authored thickness) and rises to 1 at
+    // the horizon, so this only ever adds thickness where the bend is
+    // taking it away.
+    float horizonHalfThickness = halfThickness + CLOUD_DOME_HORIZON_THICKNESS_BOOST_BLOCKS * domeT;
+
+    float rawHeightT = (worldPos.y - domeAltitude) / horizonHalfThickness;
     heightNorm = clamp(rawHeightT * 0.5 + 0.5, 0.0, 1.0);
 
     if (abs(rawHeightT) > 1.0)
