@@ -326,6 +326,12 @@ public class EngineSetting {
         public static final int MEGA_POOL_MAX_OVERFLOW = 8;
         public static final String STARTING_WORLD = "TerraArcana";
 
+        // World Tick \\
+
+        public static final int WORLD_TICK_INTERVAL_FRAMES = 15;
+        public static final int WORLD_TICK_BRANCH_COUNT = 4;
+        public static final int WORLD_TICK_CYCLE_FRAMES = WORLD_TICK_INTERVAL_FRAMES * WORLD_TICK_BRANCH_COUNT;
+
         // World Defaults \\
 
         public static final String DEFAULT_CALENDAR_NAME = "standard/Default";
@@ -361,11 +367,6 @@ public class EngineSetting {
         public static final float DEFAULT_WEATHER_FOG_DENSITY_SCALE = 1.0f;
 
         // Weather Authoring Defaults \\
-        //
-        // Fallback values used by WeatherBuilder/BiomeBuilder when a JSON
-        // field is omitted. Centralized here rather than as bare literals
-        // or private constants on the builders themselves, so retuning a
-        // default only ever means touching one line.
 
         public static final float DEFAULT_WEATHER_CLOUD_COVERAGE = 0.0f;
         public static final float DEFAULT_WEATHER_CLOUD_DENSITY_MULTIPLIER = 1.0f;
@@ -407,13 +408,6 @@ public class EngineSetting {
         public static final float WEATHER_NOISE_MACRO_WEIGHT = 0.55f;
         public static final double WEATHER_NOISE_DETAIL_FREQUENCY = 3.2;
         public static final float WEATHER_NOISE_DETAIL_WEIGHT = 0.26f;
-
-        // Shared hash-mixing salts — reused across the weather pipeline
-        // (noise-layer decorrelation in WeatherNoiseUtility, per-cell home
-        // jitter in WeatherPatternManager) to pull independent hash streams
-        // out of the same underlying seed/key. Arbitrary, well-distributed
-        // 64-bit constants — not tied to one specific algorithm, so they
-        // live here once instead of being hand-copied per call site.
         public static final long WEATHER_HASH_SALT_PRIMARY = 0x2545F4914F6CDD1DL;
         public static final long WEATHER_HASH_SALT_SECONDARY = 0x9E3779B97F4A7C15L;
 

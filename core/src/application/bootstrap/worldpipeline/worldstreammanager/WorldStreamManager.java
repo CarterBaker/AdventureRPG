@@ -19,8 +19,12 @@ public class WorldStreamManager extends ManagerPackage {
      * and drives grid lifecycle — create, remove, rebuild. Each grid is tied to
      * a WindowInstance so frustum culling and rendering operate per-window
      * independently. update() drives coordinate tracking across all grids —
-     * each grid owns its own render queue rebuild on boundary crossing.
-     * ChunkStreamManager and MegaStreamManager are internal.
+     * each grid owns its own render queue rebuild on boundary crossing, and
+     * that rebuild is where a grid's slots get re-wrapped around the player's
+     * new position, so this manager also raises wrappingPlayer for that one
+     * frame — WorldTickManager reads it to hold its tick cycle rather than
+     * compete with the rebuild for the same frame. ChunkStreamManager and
+     * MegaStreamManager are internal.
      */
 
     // Internal
@@ -30,6 +34,9 @@ public class WorldStreamManager extends ManagerPackage {
 
     // Grids
     private ObjectArrayList<GridInstance> grids;
+
+    // Tick Coordination
+    private boolean wrappingPlayer;
 
     // Internal \\
 
@@ -51,14 +58,19 @@ public class WorldStreamManager extends ManagerPackage {
 
         Object[] elements = grids.elements();
         int size = grids.size();
+        boolean rebuilt = false;
 
         for (int i = 0; i < size; i++)
-            ((GridInstance) elements[i]).updateActiveChunkCoordinate();
+            if (((GridInstance) elements[i]).updateActiveChunkCoordinate())
+                rebuilt = true;
+
+        this.wrappingPlayer = rebuilt;
     }
 
     // Grid Lifecycle \\
 
-    public GridInstance createGrid(EntityInstance focalEntity, WindowInstance windowInstance, FboInstance renderTargetFbo) {
+    public GridInstance createGrid(EntityInstance focalEntity, WindowInstance windowInstance,
+            FboInstance renderTargetFbo) {
         GridInstance grid = gridManager.buildGrid(focalEntity, windowInstance, renderTargetFbo);
         grids.add(grid);
         return grid;
@@ -121,5 +133,11 @@ public class WorldStreamManager extends ManagerPackage {
             return null;
 
         return grids.get(0).getWorldHandle();
+    }
+
+    // Tick Coordination \\
+
+    public boolean isWrappingPlayer() {
+        return wrappingPlayer;
     }
 }
