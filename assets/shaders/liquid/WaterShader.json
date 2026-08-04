@@ -1,0 +1,4 @@
+{
+    "vert": "liquid/WaterShader.vsh",
+    "frag": "liquid/WaterShader.fsh"
+}

@@ -1,5 +1,6 @@
 package application.runtime;
 
+import application.runtime.debug.DebugWaterPlacementSystem;
 import application.runtime.input.InputSystem;
 import application.runtime.lighting.SkySystem;
 import application.runtime.menu.MenuSystem;
@@ -32,6 +33,7 @@ public class RuntimeContext extends ContextPackage {
     private PostProcessingManager postProcessingManager;
     private PlayerRenderSystem playerRenderSystem;
     private WeatherSystem weatherSystem;
+    private DebugWaterPlacementSystem debugWaterPlacementSystem;
 
     // Internal \\
 
@@ -48,5 +50,6 @@ public class RuntimeContext extends ContextPackage {
         this.postProcessingManager = create(PostProcessingManager.class);
         this.playerRenderSystem = create(PlayerRenderSystem.class);
         this.weatherSystem = create(WeatherSystem.class);
+        this.debugWaterPlacementSystem = create(DebugWaterPlacementSystem.class);
     }
 }

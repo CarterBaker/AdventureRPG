@@ -8,15 +8,13 @@
             "name": "Water",
             "type": "LIQUID",
             "break_tier": -1,
-            "material": "surface/StandardSurfaceMaterial",
-            "texture": "surface/standard/Water"
+            "material": "liquid/WaterMaterial"
         },
         {
             "name": "Lava",
             "type": "LIQUID",
             "break_tier": -1,
-            "material": "surface/StandardSurfaceMaterial",
-            "texture": "surface/standard/Lava"
+            "material": "surface/StandardSurfaceMaterial"
         },
         {
             "name": "Grass Block",
