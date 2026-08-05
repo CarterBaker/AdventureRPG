@@ -199,6 +199,43 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.liquidStable = liquidStable;
     }
 
+    // Block Writes \\
+
+    /*
+     * Every write to this subchunk's block or liquid-level palette must pass
+     * through here instead of touching BlockPaletteHandle directly, so
+     * liquidStable is always invalidated the instant something actually
+     * changes — no external system, debug tooling included, is ever
+     * responsible for remembering to clear it itself. invalidateLiquid() is
+     * also called directly by systems that alter a NEIGHBORING subchunk in a
+     * way that could open or close this subchunk's own flow paths (see
+     * BlockBranch.rebuildSubChunk()).
+     */
+
+    public void invalidateLiquid() {
+        liquidStable = false;
+    }
+
+    public void setBlock(int x, int y, int z, short blockID) {
+        blockPaletteHandle.setBlock(x, y, z, blockID);
+        invalidateLiquid();
+    }
+
+    public void setBlock(int packedXYZ, short blockID) {
+        blockPaletteHandle.setBlock(packedXYZ, blockID);
+        invalidateLiquid();
+    }
+
+    public void setLiquidLevel(int x, int y, int z, short level) {
+        liquidLevelPaletteHandle.setBlock(x, y, z, level);
+        invalidateLiquid();
+    }
+
+    public void setLiquidLevel(int packedXYZ, short level) {
+        liquidLevelPaletteHandle.setBlock(packedXYZ, level);
+        invalidateLiquid();
+    }
+
     // Accessible \\
 
     public BlockPaletteHandle getBiomePaletteHandle() {

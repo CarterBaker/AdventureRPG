@@ -179,8 +179,10 @@ public class LiquidTickBranch extends BranchPackage {
      * A flow step can write into a subchunk other than the one just ticked —
      * the column below it falling, or a neighbor chunk it spread into — and
      * that subchunk will not otherwise be merged this frame, so each one gets
-     * its own full rebuild-merge-register-invalidate cycle here, and has its
-     * settle flag cleared since it just received fresh liquid.
+     * its own full rebuild-merge-register-invalidate cycle here. Its stable
+     * flag is already false from the write itself (SubChunkInstance.setBlock/
+     * setLiquidLevel invalidate automatically) — this only handles the
+     * geometry side.
      */
     private void rebuildTouchedNeighbors() {
 
@@ -193,7 +195,6 @@ public class LiquidTickBranch extends BranchPackage {
             int subChunkY = touchedSubChunkY.getInt(i);
             SubChunkInstance touchedSubChunk = touchedChunk.getSubChunk(subChunkY);
 
-            touchedSubChunk.setLiquidStable(false);
             touchedSubChunk.getDynamicPacketInstance().clear();
             dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, touchedChunk, subChunkY);
 

@@ -193,8 +193,17 @@ class BlockBranch extends BranchPackage {
             rebuildNeighbour(chunkX, chunkZ + 1, subChunkY);
     }
 
+    /*
+     * Rebuilds geometry for a subchunk touched by this break, either directly
+     * or across a chunk/Y boundary. Also invalidates its liquid stability —
+     * any of these subchunks may have had a supporting or blocking neighbor
+     * removed, so any liquid resting there needs to re-check whether it can
+     * still stay put.
+     */
     private void rebuildSubChunk(ChunkInstance chunk, int subChunkY) {
-        chunk.getSubChunk(subChunkY).getDynamicPacketInstance().clear();
+        SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
+        subChunk.getDynamicPacketInstance().clear();
+        subChunk.invalidateLiquid();
         dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
     }
 
@@ -229,6 +238,6 @@ class BlockBranch extends BranchPackage {
         if (subChunk == null)
             return;
 
-        subChunk.getBlockPaletteHandle().setBlock(blockX, blockY, blockZ, blockID);
+        subChunk.setBlock(blockX, blockY, blockZ, blockID);
     }
 }

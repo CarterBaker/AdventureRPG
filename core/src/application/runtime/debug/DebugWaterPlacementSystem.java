@@ -189,9 +189,8 @@ public class DebugWaterPlacementSystem extends SystemPackage {
         if (subChunk == null)
             return;
 
-        subChunk.getBlockPaletteHandle().setBlock(placeX, placeY, placeZ, waterBlockID);
-        subChunk.getLiquidLevelPaletteHandle().setBlock(placeX, placeY, placeZ, EngineSetting.LIQUID_LEVEL_MAX);
-        subChunk.setLiquidStable(false);
+        subChunk.setBlock(placeX, placeY, placeZ, waterBlockID);
+        subChunk.setLiquidLevel(placeX, placeY, placeZ, EngineSetting.LIQUID_LEVEL_MAX);
 
         rebuildAffected(placeChunk, placeChunkCoord, placeX, placeY, placeZ, placeSubChunkY);
     }
@@ -231,7 +230,9 @@ public class DebugWaterPlacementSystem extends SystemPackage {
     }
 
     private void rebuildSubChunk(ChunkInstance chunk, int subChunkY) {
-        chunk.getSubChunk(subChunkY).getDynamicPacketInstance().clear();
+        SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
+        subChunk.getDynamicPacketInstance().clear();
+        subChunk.invalidateLiquid();
         dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
     }
 

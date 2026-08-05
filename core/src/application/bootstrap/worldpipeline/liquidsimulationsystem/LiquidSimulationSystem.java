@@ -29,7 +29,10 @@ public class LiquidSimulationSystem extends SystemPackage {
      * one cell upward instead. Every cell is visited at most once per call as
      * a source, so a column advances exactly one step per flow tick. Chunks
      * and subchunks touched beyond the one passed to flow() are collected for
-     * the caller to rebuild and re-register with the renderer.
+     * the caller to rebuild and re-register with the renderer. Every write
+     * below goes through SubChunkInstance.setBlock()/setLiquidLevel() rather
+     * than the palette handles directly, so liquidStable is invalidated
+     * automatically wherever this system touches it.
      */
 
     private static final Direction3Vector[] CARDINAL_DIRECTIONS = {
@@ -155,10 +158,10 @@ public class LiquidSimulationSystem extends SystemPackage {
             changed = true;
 
             if (remaining <= 0) {
-                blocks.setBlock(packed, airBlockId);
-                levels.setBlock(packed, EngineSetting.LIQUID_LEVEL_EMPTY);
+                subChunkInstance.setBlock(packed, airBlockId);
+                subChunkInstance.setLiquidLevel(packed, EngineSetting.LIQUID_LEVEL_EMPTY);
             } else {
-                levels.setBlock(packed, (short) remaining);
+                subChunkInstance.setLiquidLevel(packed, (short) remaining);
             }
         }
 
@@ -195,8 +198,8 @@ public class LiquidSimulationSystem extends SystemPackage {
         if (existingLevel <= 0 && transfer < EngineSetting.LIQUID_LEVEL_MIN_PERSIST)
             return resolveBasinOutcome(belowSubChunk, belowChunk, belowPacked, blockID, amount);
 
-        belowSubChunk.getBlockPaletteHandle().setBlock(belowPacked, blockID);
-        belowSubChunk.getLiquidLevelPaletteHandle().setBlock(belowPacked, (short) (existingLevel + transfer));
+        belowSubChunk.setBlock(belowPacked, blockID);
+        belowSubChunk.setLiquidLevel(belowPacked, (short) (existingLevel + transfer));
 
         if (belowSubChunk == subChunkInstance)
             processed[ChunkCoordinate3Int.getIndex(belowPacked)] = true;
@@ -309,8 +312,8 @@ public class LiquidSimulationSystem extends SystemPackage {
             if (transfer <= 0)
                 continue;
 
-            targetSubChunk.getBlockPaletteHandle().setBlock(targetPacked, blockID);
-            targetSubChunk.getLiquidLevelPaletteHandle().setBlock(targetPacked, (short) (existingLevel + transfer));
+            targetSubChunk.setBlock(targetPacked, blockID);
+            targetSubChunk.setLiquidLevel(targetPacked, (short) (existingLevel + transfer));
 
             remaining -= transfer;
 
@@ -362,8 +365,8 @@ public class LiquidSimulationSystem extends SystemPackage {
                 continue;
             }
 
-            targetSubChunk.getBlockPaletteHandle().setBlock(targetPacked, blockID);
-            targetSubChunk.getLiquidLevelPaletteHandle().setBlock(targetPacked, (short) (existingLevel + transfer));
+            targetSubChunk.setBlock(targetPacked, blockID);
+            targetSubChunk.setLiquidLevel(targetPacked, (short) (existingLevel + transfer));
 
             remaining -= transfer;
 
@@ -542,8 +545,8 @@ public class LiquidSimulationSystem extends SystemPackage {
 
             int transfer = Math.min(remaining, capacity);
 
-            subChunk.getBlockPaletteHandle().setBlock(cellPacked, blockID);
-            subChunk.getLiquidLevelPaletteHandle().setBlock(cellPacked, (short) (existingLevel + transfer));
+            subChunk.setBlock(cellPacked, blockID);
+            subChunk.setLiquidLevel(cellPacked, (short) (existingLevel + transfer));
 
             if (subChunk == currentSubChunk)
                 processed[ChunkCoordinate3Int.getIndex(cellPacked)] = true;
