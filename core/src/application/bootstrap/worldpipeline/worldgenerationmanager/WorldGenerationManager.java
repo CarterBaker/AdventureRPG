@@ -62,6 +62,12 @@ public class WorldGenerationManager extends ManagerPackage {
 
     // Generator \\
 
+    /*
+     * Terrain is written straight through the block palette rather than
+     * SubChunkInstance.setBlock() — a freshly generated subchunk holds no
+     * liquid yet, so world generation has no reason to pay per-block liquid-
+     * stability invalidation on every placed voxel.
+     */
     public boolean generateSubChunk(long chunkCoordinate, SubChunkInstance subChunkInstance) {
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
@@ -72,6 +78,7 @@ public class WorldGenerationManager extends ManagerPackage {
         long offsetY = (long) subChunkInstance.getCoordinate() * CHUNK_SIZE;
 
         BlockPaletteHandle biomes = subChunkInstance.getBiomePaletteHandle();
+        BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
 
         double scale = 0.05;
         double amplitude = 4.0;
@@ -98,7 +105,7 @@ public class WorldGenerationManager extends ManagerPackage {
                     long worldY = localY + offsetY;
                     if (worldY > groundHeight)
                         continue;
-                    subChunkInstance.setBlock(localX, localY, localZ, GRASS_BLOCK_ID);
+                    blocks.setBlock(localX, localY, localZ, GRASS_BLOCK_ID);
                 }
             }
         }
