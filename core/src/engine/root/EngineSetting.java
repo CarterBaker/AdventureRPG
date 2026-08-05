@@ -329,17 +329,17 @@ public class EngineSetting {
 
         // World Tick \\
 
-        public static final int WORLD_TICK_INTERVAL_FRAMES = 15;
-        public static final int WORLD_TICK_BRANCH_COUNT = 4;
-        public static final int WORLD_TICK_CYCLE_FRAMES = WORLD_TICK_INTERVAL_FRAMES * WORLD_TICK_BRANCH_COUNT;
+        public static final int FULL_TICK_INTERVAL_FRAMES = 60;
+        public static final int FULL_TICK_PHASE_FRAMES = 0;
+        public static final int PARTIAL_TICK_INTERVAL_FRAMES = 60;
+        public static final int PARTIAL_TICK_PHASE_FRAMES = 15;
+        public static final int COMPLEX_TICK_INTERVAL_FRAMES = 60;
+        public static final int COMPLEX_TICK_PHASE_FRAMES = 30;
+        public static final int LIQUID_TICK_INTERVAL_FRAMES = 6;
+        public static final int LIQUID_TICK_PHASE_FRAMES = 3;
 
         // Liquid Physics \\
 
-        // Real-seconds-per-Pa·s scale applied to a liquid block's own
-        // viscosity to derive how often its geometry is allowed to redraw —
-        // see LiquidPhysicsUtility. Water's ~0.001 Pa·s collapses to the
-        // floor below (redraws essentially every liquid tick); Lava's
-        // 50 Pa·s stretches out toward the ceiling, redrawing far less often.
         public static final float LIQUID_VISCOSITY_TO_FLOW_SECONDS = 2.0f;
         public static final float LIQUID_FLOW_INTERVAL_MIN_SECONDS = 0.1f;
         public static final float LIQUID_FLOW_INTERVAL_MAX_SECONDS = 20.0f;
