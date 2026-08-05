@@ -84,9 +84,13 @@ public class DumpBranch extends BranchPackage {
     }
 
     private void dumpGenerationData(ChunkInstance chunkInstance) {
+
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
-        for (SubChunkInstance subChunk : subChunks)
+
+        for (SubChunkInstance subChunk : subChunks) {
             subChunk.getBlockPaletteHandle().dumpInteriorBlocks(airBlockId);
+            subChunk.getLiquidLevelPaletteHandle().dumpInteriorBlocks(EngineSetting.LIQUID_LEVEL_EMPTY);
+        }
     }
 
     private void dumpBuildData(ChunkInstance chunkInstance) {

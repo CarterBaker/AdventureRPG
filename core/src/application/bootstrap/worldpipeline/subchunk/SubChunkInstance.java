@@ -19,23 +19,28 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     /*
      * One vertical slice of a chunk covering CHUNK_SIZE^3 blocks. Owns block,
-     * biome, and rotation palettes plus a world item palette. Permanently owned
-     * by its parent ChunkInstance — never pooled or transferred independently.
-     * Dirty-region geometry rebuilds operate at this granularity. Also tracks
-     * containedBlockTypes — the set of DynamicGeometryTypes this subchunk's
-     * most recently built geometry actually contains blocks of, tallied by
-     * GeometryBuildManager during the same walk that already visits every
-     * block to build the mesh — so systems that only care about one geometry
-     * type (liquid tides, liquid flow ticking) can skip subchunks that never
-     * contain it without a separate scan. Tally writes only ever happen while
-     * the owning chunk's ChunkDataSyncContainer is held (see BuildBranch);
-     * readers off the build thread must acquire that same lock first.
+     * biome, rotation, and liquid-level palettes plus a world item palette.
+     * Permanently owned by its parent ChunkInstance — never pooled or
+     * transferred independently. Dirty-region geometry rebuilds operate at
+     * this granularity. Also tracks containedBlockTypes — the set of
+     * DynamicGeometryTypes this subchunk's most recently built geometry
+     * actually contains blocks of, tallied by GeometryBuildManager during the
+     * same walk that already visits every block to build the mesh — so
+     * systems that only care about one geometry type (liquid tides, liquid
+     * flow ticking) can skip subchunks that never contain it without a
+     * separate scan. Tally writes only ever happen while the owning chunk's
+     * ChunkDataSyncContainer is held (see BuildBranch); readers off the
+     * build thread must acquire that same lock first. liquidLevelPaletteHandle
+     * mirrors blockPaletteHandle's resolution one-for-one and holds each
+     * liquid cell's fill level (0..EngineSetting.LIQUID_LEVEL_MAX) — see
+     * LiquidFlowBranch, the sole writer of partial fill state.
      */
 
     // Internal
     private BlockPaletteHandle biomePaletteHandle;
     private BlockPaletteHandle blockPaletteHandle;
     private BlockPaletteHandle blockRotationPaletteHandle;
+    private BlockPaletteHandle liquidLevelPaletteHandle;
     private WorldItemPaletteHandle worldItemPaletteHandle;
 
     // Block Type Composition — tallied during geometry build
@@ -60,6 +65,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.biomePaletteHandle = create(BlockPaletteHandle.class);
         this.blockPaletteHandle = create(BlockPaletteHandle.class);
         this.blockRotationPaletteHandle = create(BlockPaletteHandle.class);
+        this.liquidLevelPaletteHandle = create(BlockPaletteHandle.class);
         this.worldItemPaletteHandle = create(WorldItemPaletteHandle.class);
         this.worldItemPaletteHandle.constructor();
 
@@ -103,6 +109,11 @@ public class SubChunkInstance extends WorldRenderInstance {
                 EngineSetting.CHUNK_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD,
                 EngineSetting.DEFAULT_BLOCK_ORIENTATION);
+
+        this.liquidLevelPaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE,
+                EngineSetting.BLOCK_PALETTE_THRESHOLD,
+                EngineSetting.LIQUID_LEVEL_EMPTY);
     }
 
     // Reset \\
@@ -111,6 +122,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         biomePaletteHandle.clear();
         blockPaletteHandle.clear();
         blockRotationPaletteHandle.clear();
+        liquidLevelPaletteHandle.clear();
         worldItemPaletteHandle.clear();
         getDynamicPacket().clear();
         containedBlockTypes.clear();
@@ -184,6 +196,10 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public BlockPaletteHandle getBlockRotationPaletteHandle() {
         return blockRotationPaletteHandle;
+    }
+
+    public BlockPaletteHandle getLiquidLevelPaletteHandle() {
+        return liquidLevelPaletteHandle;
     }
 
     public WorldItemPaletteHandle getWorldItemPaletteHandle() {

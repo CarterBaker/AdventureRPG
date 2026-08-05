@@ -191,6 +191,7 @@ public class DebugWaterPlacementSystem extends SystemPackage {
             return;
 
         subChunk.getBlockPaletteHandle().setBlock(placeX, placeY, placeZ, waterBlockID);
+        subChunk.getLiquidLevelPaletteHandle().setBlock(placeX, placeY, placeZ, EngineSetting.LIQUID_LEVEL_MAX);
 
         rebuildAffected(placeChunk, placeChunkCoord, placeX, placeY, placeZ, placeSubChunkY);
     }

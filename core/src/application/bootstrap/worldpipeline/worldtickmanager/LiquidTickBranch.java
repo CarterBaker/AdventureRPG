@@ -7,12 +7,14 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.liquidsimulationsystem.LiquidSimulationSystem;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.TickQuadrant;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortIterator;
@@ -28,10 +30,13 @@ public class LiquidTickBranch extends BranchPackage {
      * scans every liquid chunk at once. Real elapsed seconds since that same
      * quadrant was last visited drive each contained subchunk's flow
      * accumulator; once it reaches the flow interval of the subchunk's
-     * fastest liquid — derived from that liquid's own viscosity — its
-     * geometry rebuilds and re-registers for rendering. Level redistribution
-     * between neighboring liquid blocks is a later stage; this branch only
-     * owns redraw timing.
+     * fastest liquid — derived from that liquid's own viscosity —
+     * LiquidFlowBranch redistributes its levels by one step and, only if
+     * anything actually moved, its geometry rebuilds and re-registers for
+     * rendering. Any neighboring subchunk the flow step touched (a fall
+     * across a subchunk boundary, a spread across a chunk boundary) is
+     * rebuilt and re-registered the same way, since it will not otherwise
+     * come up for a merge this frame.
      */
 
     // Internal
@@ -40,6 +45,9 @@ public class LiquidTickBranch extends BranchPackage {
     private DynamicGeometryManager dynamicGeometryManager;
     private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
     private WorldRenderManager worldRenderManager;
+
+    // Branches
+    private LiquidSimulationSystem liquidSimulationSystem;
 
     // Settings
     private int intervalFrames;
@@ -72,6 +80,7 @@ public class LiquidTickBranch extends BranchPackage {
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
         this.worldRenderManager = get(WorldRenderManager.class);
+        this.liquidSimulationSystem = get(LiquidSimulationSystem.class);
     }
 
     // Schedule \\
@@ -156,10 +165,42 @@ public class LiquidTickBranch extends BranchPackage {
 
         subChunk.resetLiquidFlowAccumulator();
 
+        if (!liquidSimulationSystem.flow(chunk, subChunk))
+            return false;
+
         subChunk.getDynamicPacketInstance().clear();
         dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, (int) subChunk.getCoordinate());
 
+        rebuildTouchedNeighbors();
+
         return true;
+    }
+
+    /*
+     * A flow step can write into a subchunk other than the one just ticked
+     * — the column below it falling, or a neighbor chunk it spread into —
+     * and that subchunk will not otherwise be merged this frame, so each one
+     * gets its own full rebuild-merge-register-invalidate cycle here.
+     */
+    private void rebuildTouchedNeighbors() {
+
+        ObjectArrayList<ChunkInstance> touchedChunks = liquidSimulationSystem.getTouchedChunks();
+        IntArrayList touchedSubChunkY = liquidSimulationSystem.getTouchedSubChunkY();
+
+        for (int i = 0; i < touchedChunks.size(); i++) {
+
+            ChunkInstance touchedChunk = touchedChunks.get(i);
+            int subChunkY = touchedSubChunkY.getInt(i);
+            SubChunkInstance touchedSubChunk = touchedChunk.getSubChunk(subChunkY);
+
+            touchedSubChunk.getDynamicPacketInstance().clear();
+            dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, touchedChunk, subChunkY);
+
+            touchedChunk.merge();
+            worldRenderManager.addChunkInstance(touchedChunk);
+            worldStreamManager.invalidateMegaForChunk(touchedChunk.getCoordinate());
+            worldStreamManager.invalidateChunkBatch(touchedChunk.getCoordinate());
+        }
     }
 
     /*
@@ -167,8 +208,8 @@ public class LiquidTickBranch extends BranchPackage {
      * real-seconds interval its geometry is allowed to redraw at, clamped
      * between LIQUID_FLOW_INTERVAL_MIN_SECONDS and _MAX_SECONDS. Returns the
      * fastest interval among every liquid this subchunk contains, since any
-     * one of them redrawing is reason enough for the whole subchunk to
-     * rebuild.
+     * one of them flowing is reason enough for the whole subchunk to
+     * re-evaluate.
      */
     private float resolveFlowInterval(SubChunkInstance subChunk) {
 

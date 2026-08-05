@@ -344,6 +344,12 @@ public class EngineSetting {
         public static final float LIQUID_FLOW_INTERVAL_MIN_SECONDS = 0.1f;
         public static final float LIQUID_FLOW_INTERVAL_MAX_SECONDS = 20.0f;
 
+        // Liquid Simulation \\
+
+        public static final short LIQUID_LEVEL_EMPTY = 0;
+        public static final short LIQUID_LEVEL_MAX = 8;
+        public static final short LIQUID_LEVEL_MIN_PERSIST = 2;
+
         // World Defaults \\
 
         public static final String DEFAULT_CALENDAR_NAME = "standard/Default";
