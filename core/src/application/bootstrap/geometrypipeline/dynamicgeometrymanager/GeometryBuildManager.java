@@ -100,6 +100,9 @@ class GeometryBuildManager extends ManagerPackage {
 
             subChunkInstance.tallyBlockType(blockGeometry);
 
+            if (blockGeometry == DynamicGeometryType.LIQUID)
+                subChunkInstance.tallyLiquidBlock(blockID);
+
             for (int direction = 0; direction < Direction3Vector.LENGTH; direction++) {
 
                 batchReturn.clear();

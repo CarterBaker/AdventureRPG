@@ -13,6 +13,7 @@ import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate3Int;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
+import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 
 public class SubChunkInstance extends WorldRenderInstance {
 
@@ -41,6 +42,13 @@ public class SubChunkInstance extends WorldRenderInstance {
     private ReferenceOpenHashSet<DynamicGeometryType> containedBlockTypes;
     private int[] blockTypeCounts;
 
+    // Liquid Flow — the exact liquid block IDs tallied into this subchunk on
+    // its last geometry build (a subset of containedBlockTypes' LIQUID case),
+    // and how many real seconds have accumulated since its liquid geometry
+    // last redrew. Both are read by LiquidTickBranch every world tick.
+    private ShortOpenHashSet containedLiquidBlockIDs;
+    private float liquidFlowAccumulator;
+
     // Internal \\
 
     @Override
@@ -58,6 +66,10 @@ public class SubChunkInstance extends WorldRenderInstance {
         // Block Type Composition
         this.containedBlockTypes = new ReferenceOpenHashSet<>(DynamicGeometryType.LENGTH);
         this.blockTypeCounts = new int[DynamicGeometryType.LENGTH];
+
+        // Liquid Flow
+        this.containedLiquidBlockIDs = new ShortOpenHashSet();
+        this.liquidFlowAccumulator = 0f;
     }
 
     // Constructor \\
@@ -103,16 +115,23 @@ public class SubChunkInstance extends WorldRenderInstance {
         getDynamicPacket().clear();
         containedBlockTypes.clear();
         Arrays.fill(blockTypeCounts, 0);
+        containedLiquidBlockIDs.clear();
+        liquidFlowAccumulator = 0f;
     }
 
     // Block Type Composition \\
 
     public void beginBlockTypeTally() {
         Arrays.fill(blockTypeCounts, 0);
+        containedLiquidBlockIDs.clear();
     }
 
     public void tallyBlockType(DynamicGeometryType type) {
         blockTypeCounts[type.ordinal()]++;
+    }
+
+    public void tallyLiquidBlock(short blockID) {
+        containedLiquidBlockIDs.add(blockID);
     }
 
     /*
@@ -133,6 +152,24 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public ReferenceOpenHashSet<DynamicGeometryType> getContainedBlockTypes() {
         return containedBlockTypes;
+    }
+
+    public ShortOpenHashSet getContainedLiquidBlockIDs() {
+        return containedLiquidBlockIDs;
+    }
+
+    // Liquid Flow \\
+
+    public void addLiquidFlowTime(float delta) {
+        liquidFlowAccumulator += delta;
+    }
+
+    public float getLiquidFlowAccumulator() {
+        return liquidFlowAccumulator;
+    }
+
+    public void resetLiquidFlowAccumulator() {
+        liquidFlowAccumulator = 0f;
     }
 
     // Accessible \\
