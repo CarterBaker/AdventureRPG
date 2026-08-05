@@ -11,7 +11,6 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
-import application.kernel.inputpipeline.input.RawInputHandle;
 import application.runtime.input.InputSystem;
 import engine.assets.camera.CameraInstance;
 import engine.root.EngineSetting;
@@ -192,6 +191,7 @@ public class DebugWaterPlacementSystem extends SystemPackage {
 
         subChunk.getBlockPaletteHandle().setBlock(placeX, placeY, placeZ, waterBlockID);
         subChunk.getLiquidLevelPaletteHandle().setBlock(placeX, placeY, placeZ, EngineSetting.LIQUID_LEVEL_MAX);
+        subChunk.setLiquidStable(false);
 
         rebuildAffected(placeChunk, placeChunkCoord, placeX, placeY, placeZ, placeSubChunkY);
     }

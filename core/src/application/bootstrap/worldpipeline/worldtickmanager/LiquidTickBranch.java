@@ -23,20 +23,17 @@ import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 public class LiquidTickBranch extends BranchPackage {
 
     /*
-     * Dedicated execution path LIQUID-geometry blocks tick through. Owns its
-     * own frame interval, counter, and quadrant cursor — each firing
-     * advances to the next of four world quadrants (split by chunk X/Z sign)
-     * and walks only that quadrant's active chunks, so a single firing never
-     * scans every liquid chunk at once. Real elapsed seconds since that same
-     * quadrant was last visited drive each contained subchunk's flow
-     * accumulator; once it reaches the flow interval of the subchunk's
-     * fastest liquid — derived from that liquid's own viscosity —
-     * LiquidFlowBranch redistributes its levels by one step and, only if
-     * anything actually moved, its geometry rebuilds and re-registers for
-     * rendering. Any neighboring subchunk the flow step touched (a fall
-     * across a subchunk boundary, a spread across a chunk boundary) is
-     * rebuilt and re-registered the same way, since it will not otherwise
-     * come up for a merge this frame.
+     * Dedicated execution path LIQUID-geometry blocks tick through. Each
+     * firing advances to the next of four world quadrants and walks only that
+     * quadrant's active chunks. A subchunk with no liquid, or whose liquid has
+     * already settled (SubChunkInstance.isLiquidStable()), is skipped outright
+     * — no palette scan. Otherwise, once its flow accumulator crosses its
+     * fastest contained liquid's flow interval, LiquidSimulationSystem
+     * redistributes its levels by one step; if nothing moved, the subchunk is
+     * marked stable so future visits skip it until something touches it again.
+     * Any neighboring subchunk the step touched is rebuilt, re-registered, and
+     * un-stabilized the same way, since it will not otherwise come up for a
+     * merge this frame.
      */
 
     // Internal
@@ -153,7 +150,7 @@ public class LiquidTickBranch extends BranchPackage {
 
     private boolean tickSubChunk(ChunkInstance chunk, SubChunkInstance subChunk, float delta) {
 
-        if (!subChunk.hasBlockType(DynamicGeometryType.LIQUID))
+        if (!subChunk.hasBlockType(DynamicGeometryType.LIQUID) || subChunk.isLiquidStable())
             return false;
 
         subChunk.addLiquidFlowTime(delta);
@@ -165,8 +162,10 @@ public class LiquidTickBranch extends BranchPackage {
 
         subChunk.resetLiquidFlowAccumulator();
 
-        if (!liquidSimulationSystem.flow(chunk, subChunk))
+        if (!liquidSimulationSystem.flow(chunk, subChunk)) {
+            subChunk.setLiquidStable(true);
             return false;
+        }
 
         subChunk.getDynamicPacketInstance().clear();
         dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, (int) subChunk.getCoordinate());
@@ -177,10 +176,11 @@ public class LiquidTickBranch extends BranchPackage {
     }
 
     /*
-     * A flow step can write into a subchunk other than the one just ticked
-     * — the column below it falling, or a neighbor chunk it spread into —
-     * and that subchunk will not otherwise be merged this frame, so each one
-     * gets its own full rebuild-merge-register-invalidate cycle here.
+     * A flow step can write into a subchunk other than the one just ticked —
+     * the column below it falling, or a neighbor chunk it spread into — and
+     * that subchunk will not otherwise be merged this frame, so each one gets
+     * its own full rebuild-merge-register-invalidate cycle here, and has its
+     * settle flag cleared since it just received fresh liquid.
      */
     private void rebuildTouchedNeighbors() {
 
@@ -193,6 +193,7 @@ public class LiquidTickBranch extends BranchPackage {
             int subChunkY = touchedSubChunkY.getInt(i);
             SubChunkInstance touchedSubChunk = touchedChunk.getSubChunk(subChunkY);
 
+            touchedSubChunk.setLiquidStable(false);
             touchedSubChunk.getDynamicPacketInstance().clear();
             dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, touchedChunk, subChunkY);
 
@@ -207,9 +208,7 @@ public class LiquidTickBranch extends BranchPackage {
      * Converts each contained liquid's own viscosity (Pa·s) into the
      * real-seconds interval its geometry is allowed to redraw at, clamped
      * between LIQUID_FLOW_INTERVAL_MIN_SECONDS and _MAX_SECONDS. Returns the
-     * fastest interval among every liquid this subchunk contains, since any
-     * one of them flowing is reason enough for the whole subchunk to
-     * re-evaluate.
+     * fastest interval among every liquid this subchunk contains.
      */
     private float resolveFlowInterval(SubChunkInstance subChunk) {
 

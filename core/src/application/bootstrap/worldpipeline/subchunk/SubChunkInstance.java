@@ -33,7 +33,11 @@ public class SubChunkInstance extends WorldRenderInstance {
      * build thread must acquire that same lock first. liquidLevelPaletteHandle
      * mirrors blockPaletteHandle's resolution one-for-one and holds each
      * liquid cell's fill level (0..EngineSetting.LIQUID_LEVEL_MAX) — see
-     * LiquidFlowBranch, the sole writer of partial fill state.
+     * LiquidSimulationSystem, the sole writer of partial fill state.
+     * liquidStable marks a subchunk whose liquid produced no movement on its
+     * last flow step — LiquidTickBranch skips the palette scan entirely while
+     * it's set, and clears it the instant anything writes new liquid state
+     * into this subchunk from outside.
      */
 
     // Internal
@@ -49,10 +53,11 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     // Liquid Flow — the exact liquid block IDs tallied into this subchunk on
     // its last geometry build (a subset of containedBlockTypes' LIQUID case),
-    // and how many real seconds have accumulated since its liquid geometry
-    // last redrew. Both are read by LiquidTickBranch every world tick.
+    // how many real seconds have accumulated since its liquid geometry last
+    // redrew, and whether the last flow step moved anything at all.
     private ShortOpenHashSet containedLiquidBlockIDs;
     private float liquidFlowAccumulator;
+    private boolean liquidStable;
 
     // Internal \\
 
@@ -76,6 +81,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         // Liquid Flow
         this.containedLiquidBlockIDs = new ShortOpenHashSet();
         this.liquidFlowAccumulator = 0f;
+        this.liquidStable = false;
     }
 
     // Constructor \\
@@ -129,6 +135,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         Arrays.fill(blockTypeCounts, 0);
         containedLiquidBlockIDs.clear();
         liquidFlowAccumulator = 0f;
+        liquidStable = false;
     }
 
     // Block Type Composition \\
@@ -182,6 +189,14 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public void resetLiquidFlowAccumulator() {
         liquidFlowAccumulator = 0f;
+    }
+
+    public boolean isLiquidStable() {
+        return liquidStable;
+    }
+
+    public void setLiquidStable(boolean liquidStable) {
+        this.liquidStable = liquidStable;
     }
 
     // Accessible \\

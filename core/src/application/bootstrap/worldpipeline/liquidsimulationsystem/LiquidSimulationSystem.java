@@ -19,28 +19,16 @@ public class LiquidSimulationSystem extends SystemPackage {
 
     /*
      * Redistributes one subchunk's liquid by a single flow step — gravity
-     * first, then horizontal spread with whatever a source cell could not
-     * send downward. Falling never loses volume; spreading sideways always
-     * dissipates a fraction of what moves, so a puddle thins out and
-     * vanishes after crossing a handful of flat blocks instead of
-     * persisting at a fixed size forever. Spread recipients are capped so
-     * a step never divides itself down to a zero share and freezes in
-     * place. A fall that would only be able to seed a brand-new
-     * destination cell below EngineSetting.LIQUID_LEVEL_MIN_PERSIST
-     * instead probes the connected pocket that cell sits in: a pocket
-     * bounded within EngineSetting.LIQUID_BASIN_SCAN_LIMIT cells that can
-     * hold the whole amount gets filled outright, and anything too large
-     * to bound cheaply, or too small to hold the water at all, dissolves
-     * the water entirely rather than leaving an under-threshold trace
-     * behind. A same-liquid neighbor already at LIQUID_LEVEL_MAX is
-     * treated as solid, redirecting that share one cell upward instead,
-     * mirroring water overflowing a full container. Every cell is visited
-     * at most once per call as a source, so a column falls exactly one
-     * step per flow tick rather than cascading the whole way down in one
-     * pass. Mutations are applied directly against the live palettes —
-     * this runs on the main thread only, the same as block placement and
-     * breaking, so no additional synchronization is required. Chunks and
-     * subchunks touched beyond the one passed to flow() are collected for
+     * first, then lateral movement with whatever a source cell could not send
+     * downward. Falling never costs cohesion, and neither does a lateral step
+     * that still leads toward an open drop (a "cascade" candidate — the water
+     * is still descending, just routed around a block corner). Only a lateral
+     * step that resolves into genuine pooling, where every candidate is itself
+     * resting on solid ground, pays the fixed per-move dissipation. A same-
+     * liquid neighbor already full is treated as solid, redirecting that share
+     * one cell upward instead. Every cell is visited at most once per call as
+     * a source, so a column advances exactly one step per flow tick. Chunks
+     * and subchunks touched beyond the one passed to flow() are collected for
      * the caller to rebuild and re-register with the renderer.
      */
 
@@ -67,6 +55,7 @@ public class LiquidSimulationSystem extends SystemPackage {
     private int[] candidatePacked;
     private ChunkInstance[] candidateChunk;
     private SubChunkInstance[] candidateSubChunk;
+    private boolean[] candidateCascade;
 
     // Scratch — neighbor/target resolution output
     private ChunkInstance scratchNeighborChunk;
@@ -74,10 +63,9 @@ public class LiquidSimulationSystem extends SystemPackage {
     private ChunkInstance scratchTargetChunk;
     private SubChunkInstance scratchTargetSubChunk;
 
-    // Scratch — bounded basin flood-fill probe, reused by every
-    // attemptFall() call that needs one. Sized to
-    // EngineSetting.LIQUID_BASIN_SCAN_LIMIT — the probe bails the instant
-    // it would need to grow past that, so it never needs to be larger.
+    // Scratch — bounded basin flood-fill probe, reused by every attemptFall()
+    // call that needs one. Sized to EngineSetting.LIQUID_BASIN_SCAN_LIMIT — the
+    // probe bails the instant it would need to grow past that.
     private int[] basinQueue;
     private int[] basinCells;
     private boolean[] basinVisited;
@@ -95,18 +83,16 @@ public class LiquidSimulationSystem extends SystemPackage {
     @Override
     protected void create() {
 
-        // Settings
         this.worldHeight = EngineSetting.WORLD_HEIGHT;
 
-        // Scratch
         this.processed = new boolean[ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT];
         this.touchedChunks = new ObjectArrayList<>();
         this.touchedSubChunkY = new IntArrayList();
         this.candidatePacked = new int[CARDINAL_DIRECTIONS.length];
         this.candidateChunk = new ChunkInstance[CARDINAL_DIRECTIONS.length];
         this.candidateSubChunk = new SubChunkInstance[CARDINAL_DIRECTIONS.length];
+        this.candidateCascade = new boolean[CARDINAL_DIRECTIONS.length];
 
-        // Basin Probe
         this.basinQueue = new int[EngineSetting.LIQUID_BASIN_SCAN_LIMIT];
         this.basinCells = new int[EngineSetting.LIQUID_BASIN_SCAN_LIMIT];
         this.basinVisited = new boolean[ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT];
@@ -220,8 +206,17 @@ public class LiquidSimulationSystem extends SystemPackage {
         return amount - transfer;
     }
 
-    // Spread \\
+    // Lateral Movement \\
 
+    /*
+     * A candidate is a "cascade" when the cell beyond it still has open air
+     * underneath — reaching it is a detour around an obstacle on the way
+     * further down, not a genuine rest. Whenever at least one cascade
+     * candidate exists, the full amount is routed only through cascade
+     * candidates and no cohesion is spent. Only when every candidate is
+     * itself resting on solid ground does the fixed per-move dissipation
+     * apply.
+     */
     private int attemptSpread(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance, int packed, short blockID,
             int amount) {
 
@@ -229,6 +224,7 @@ public class LiquidSimulationSystem extends SystemPackage {
             return amount;
 
         int candidateCount = 0;
+        boolean hasCascade = false;
 
         for (int d = 0; d < CARDINAL_DIRECTIONS.length; d++) {
 
@@ -241,28 +237,104 @@ public class LiquidSimulationSystem extends SystemPackage {
             candidatePacked[candidateCount] = targetPacked;
             candidateChunk[candidateCount] = scratchTargetChunk;
             candidateSubChunk[candidateCount] = scratchTargetSubChunk;
+
+            boolean cascade = isCascadeTarget(scratchTargetChunk, scratchTargetSubChunk, targetPacked);
+            candidateCascade[candidateCount] = cascade;
+            hasCascade |= cascade;
+
             candidateCount++;
         }
 
         if (candidateCount == 0)
             return amount;
 
-        // Sideways movement always dissipates a fraction of what's moving —
-        // unlike a fall, which stays fully intact. This is what lets a
-        // puddle thin out and disappear after a handful of flat hops
-        // instead of persisting at a fixed volume forever.
-        int dissipated = amount - (int) (amount * EngineSetting.LIQUID_SPREAD_RETENTION_RATIO);
+        if (hasCascade)
+            return distributeCascade(subChunkInstance, blockID, amount, candidateCount);
+
+        return distributePool(subChunkInstance, blockID, amount, candidateCount);
+    }
+
+    private boolean isCascadeTarget(ChunkInstance chunk, SubChunkInstance subChunk, int packed) {
+
+        int belowPacked = resolveNeighbor(chunk, subChunk, packed, Direction3Vector.DOWN);
+
+        if (scratchNeighborSubChunk == null)
+            return false;
+
+        return scratchNeighborSubChunk.getBlockPaletteHandle().getBlock(belowPacked) == airBlockId;
+    }
+
+    // Cascade candidates carry the whole amount forward at no cost — this is
+    // still descending motion, just routed around whatever blocked a straight
+    // fall. Non-cascade candidates found in the same pass are ignored here;
+    // they simply have nothing offered to them this step.
+    private int distributeCascade(SubChunkInstance subChunkInstance, short blockID, int amount, int candidateCount) {
+
+        int cascadeCount = 0;
+
+        for (int i = 0; i < candidateCount; i++) {
+
+            if (!candidateCascade[i])
+                continue;
+
+            if (cascadeCount != i) {
+                candidatePacked[cascadeCount] = candidatePacked[i];
+                candidateChunk[cascadeCount] = candidateChunk[i];
+                candidateSubChunk[cascadeCount] = candidateSubChunk[i];
+            }
+
+            cascadeCount++;
+        }
+
+        int maxRecipients = Math.max(1, amount / EngineSetting.LIQUID_LEVEL_MIN_PERSIST);
+        int usedCandidates = Math.min(cascadeCount, maxRecipients);
+
+        int share = amount / usedCandidates;
+        int shareRemainder = amount % usedCandidates;
+
+        int remaining = amount;
+
+        for (int i = 0; i < usedCandidates; i++) {
+
+            int targetPacked = candidatePacked[i];
+            SubChunkInstance targetSubChunk = candidateSubChunk[i];
+            ChunkInstance targetChunk = candidateChunk[i];
+
+            int offer = share + (i < shareRemainder ? 1 : 0);
+
+            short existingLevel = targetSubChunk.getLiquidLevelPaletteHandle().getBlock(targetPacked);
+            int capacity = EngineSetting.LIQUID_LEVEL_MAX - existingLevel;
+            int transfer = Math.min(offer, capacity);
+
+            if (transfer <= 0)
+                continue;
+
+            targetSubChunk.getBlockPaletteHandle().setBlock(targetPacked, blockID);
+            targetSubChunk.getLiquidLevelPaletteHandle().setBlock(targetPacked, (short) (existingLevel + transfer));
+
+            remaining -= transfer;
+
+            if (targetSubChunk == subChunkInstance)
+                processed[ChunkCoordinate3Int.getIndex(targetPacked)] = true;
+
+            markTouched(targetChunk, targetSubChunk);
+        }
+
+        return Math.max(remaining, 0);
+    }
+
+    // Pool candidates are all resting on solid ground — genuine sideways
+    // spreading, so the fixed per-move dissipation applies, and an offer too
+    // small to seed a fresh cell is discarded rather than placed.
+    private int distributePool(SubChunkInstance subChunkInstance, short blockID, int amount, int candidateCount) {
+
+        int dissipated = Math.min(EngineSetting.LIQUID_SPREAD_DISSIPATION_AMOUNT, amount);
         int spreadable = amount - dissipated;
 
-        if (spreadable < EngineSetting.LIQUID_LEVEL_MIN_PERSIST)
+        if (spreadable <= 0)
             return 0;
 
-        // Never offer more recipients than the spreadable amount can give
-        // EngineSetting.LIQUID_LEVEL_MIN_PERSIST each — an even split
-        // across every open neighbor would otherwise floor to zero long
-        // before the source runs dry, freezing the puddle in place
-        // permanently. This is the fix for the stall.
-        int maxRecipients = spreadable / EngineSetting.LIQUID_LEVEL_MIN_PERSIST;
+        int maxRecipients = Math.max(1, spreadable / EngineSetting.LIQUID_LEVEL_MIN_PERSIST);
         int usedCandidates = Math.min(candidateCount, maxRecipients);
 
         int share = spreadable / usedCandidates;
@@ -308,9 +380,9 @@ public class LiquidSimulationSystem extends SystemPackage {
 
     /*
      * Resolves where one cardinal direction's share should land. A same-
-     * liquid neighbor already at LIQUID_LEVEL_MAX is treated as solid and
-     * the cell directly above it is tried instead — plain air only, no
-     * further stacking. Returns -1 when the direction is fully blocked.
+     * liquid neighbor already at LIQUID_LEVEL_MAX is treated as solid and the
+     * cell directly above it is tried instead — plain air only, no further
+     * stacking. Returns -1 when the direction is fully blocked.
      */
     private int resolveSpreadTarget(ChunkInstance chunk, SubChunkInstance subChunk, int packed, short blockID,
             Direction3Vector direction) {
@@ -355,16 +427,12 @@ public class LiquidSimulationSystem extends SystemPackage {
     // Basin Probe \\
 
     /*
-     * Called only when a single destination cell can't accept a valid
-     * fall transfer on its own — the offered amount would seed a
-     * brand-new puddle below EngineSetting.LIQUID_LEVEL_MIN_PERSIST.
-     * Rather than always discarding that amount, this walks the
-     * connected pocket the destination sits in (see probeBasin()) and
-     * either distributes the whole amount across that pocket when it can
-     * genuinely hold it, or dissolves the amount entirely when the
-     * pocket can't. The source always ends up spent either way — a
-     * container is either capable or the water is gone, never left
-     * half-committed.
+     * Called only when a single destination cell can't accept a valid fall
+     * transfer on its own — the offered amount would seed a brand-new puddle
+     * below EngineSetting.LIQUID_LEVEL_MIN_PERSIST. Rather than always
+     * discarding that amount, this walks the connected pocket the destination
+     * sits in and either distributes the whole amount across that pocket when
+     * it can genuinely hold it, or dissolves the amount entirely when it can't.
      */
     private int resolveBasinOutcome(
             SubChunkInstance belowSubChunk,
@@ -384,16 +452,11 @@ public class LiquidSimulationSystem extends SystemPackage {
     }
 
     /*
-     * Bounded flood fill of the air/open-same-liquid pocket that
-     * startPacked sits in, walking the four cardinal directions plus
-     * down — never up, since a pocket's capacity is what it can hold
-     * under and beside it, not the open air above it. Stays entirely
-     * within subChunk's own local coordinate space: touching that
-     * subchunk's edge, or needing more than
-     * EngineSetting.LIQUID_BASIN_SCAN_LIMIT cells to fully enclose, both
-     * mean the pocket can't be bounded cheaply, and the probe reports
-     * failure. On success, basinCells/basinCellCount/basinTotalCapacity
-     * describe exactly what was found for fillBasin() to use.
+     * Bounded flood fill of the air/open-same-liquid pocket that startPacked
+     * sits in, walking the four cardinal directions plus down — never up.
+     * Touching the subchunk's edge, or needing more than
+     * EngineSetting.LIQUID_BASIN_SCAN_LIMIT cells, both mean the pocket can't
+     * be bounded cheaply and the probe reports failure.
      */
     private boolean probeBasin(SubChunkInstance subChunk, int startPacked, short blockID) {
 
@@ -455,11 +518,10 @@ public class LiquidSimulationSystem extends SystemPackage {
     }
 
     /*
-     * Distributes amount across every cell probeBasin() just found, in
-     * the order they were discovered, filling each to its own capacity
-     * before moving to the next. Only ever called once basinTotalCapacity
-     * has already been confirmed sufficient, so this always fully spends
-     * amount.
+     * Distributes amount across every cell probeBasin() just found, filling
+     * each to its own capacity before moving to the next. Only ever called
+     * once basinTotalCapacity has already been confirmed sufficient, so this
+     * always fully spends amount.
      */
     private void fillBasin(SubChunkInstance subChunk, short blockID, int amount) {
 
