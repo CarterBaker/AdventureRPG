@@ -8,13 +8,15 @@
             "name": "Water",
             "type": "LIQUID",
             "break_tier": -1,
-            "material": "liquid/WaterMaterial"
+            "material": "liquid/WaterMaterial",
+            "viscosity": 0.0010016
         },
         {
             "name": "Lava",
             "type": "LIQUID",
             "break_tier": -1,
-            "material": "surface/StandardSurfaceMaterial"
+            "material": "surface/StandardSurfaceMaterial",
+            "viscosity": 50.0
         },
         {
             "name": "Grass Block",

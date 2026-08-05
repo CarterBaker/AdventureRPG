@@ -22,8 +22,10 @@ class GeometryBuildManager extends ManagerPackage {
 
     /*
      * Routes per-block geometry assembly to the correct branch based on block
-     * geometry type. Drives the full subchunk build loop and delegates font
-     * glyph assembly to FontGeometryBranch.
+     * geometry type. Drives the full subchunk build loop, tallies which
+     * DynamicGeometryTypes the subchunk actually contains (see
+     * SubChunkInstance), and delegates font glyph assembly to
+     * FontGeometryBranch.
      */
 
     // Internal
@@ -74,6 +76,7 @@ class GeometryBuildManager extends ManagerPackage {
 
         dynamicPacketInstance.clear();
         dynamicGeometryAsyncContainer.reset();
+        subChunkInstance.beginBlockTypeTally();
 
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
@@ -94,6 +97,8 @@ class GeometryBuildManager extends ManagerPackage {
 
             if (blockGeometry == DynamicGeometryType.NONE)
                 continue;
+
+            subChunkInstance.tallyBlockType(blockGeometry);
 
             for (int direction = 0; direction < Direction3Vector.LENGTH; direction++) {
 
@@ -122,6 +127,8 @@ class GeometryBuildManager extends ManagerPackage {
                     continue;
             }
         }
+
+        subChunkInstance.finalizeBlockTypeTally();
 
         boolean success = true;
 

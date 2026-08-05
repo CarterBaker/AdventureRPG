@@ -130,6 +130,19 @@ class BlockBuilder extends BuilderPackage {
             requiredToolTypeID = toolTypeManager.getToolTypeIDFromToolTypeName(toolPath);
         }
 
+        // Physics — viscosity (Pa·s) is required for LIQUID blocks, since the
+        // physics pipeline has no sane fallback for how fast an undefined
+        // liquid should flow. Optional and stored as-is for anything else.
+        float viscosity = EngineSetting.BLOCK_VISCOSITY_UNDEFINED;
+
+        if (blockType == DynamicGeometryType.LIQUID) {
+            if (!blockJson.has("viscosity"))
+                throwException("Liquid block \"" + blockName + "\" is missing required \"viscosity\" (Pa\u00b7s).");
+            viscosity = blockJson.get("viscosity").getAsFloat();
+        } else if (blockJson.has("viscosity")) {
+            viscosity = blockJson.get("viscosity").getAsFloat();
+        }
+
         // Construct
         BlockData blockData = new BlockData(
                 blockName, blockID,
@@ -141,7 +154,8 @@ class BlockBuilder extends BuilderPackage {
                 textures[Direction3Vector.WEST.ordinal()],
                 textures[Direction3Vector.UP.ordinal()],
                 textures[Direction3Vector.DOWN.ordinal()],
-                breakTier, requiredToolTypeID, durability);
+                breakTier, requiredToolTypeID, durability,
+                viscosity);
 
         BlockHandle blockHandle = create(BlockHandle.class);
         blockHandle.constructor(blockData);

@@ -65,4 +65,12 @@ public class BlockHandle extends HandlePackage {
     public boolean isUnbreakable() {
         return blockData.isUnbreakable();
     }
+
+    public float getViscosity() {
+        return blockData.getViscosity();
+    }
+
+    public boolean hasViscosity() {
+        return blockData.hasViscosity();
+    }
 }

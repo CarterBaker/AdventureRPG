@@ -11,5 +11,8 @@ public enum DynamicGeometryType {
     FULL,
     PARTIAL,
     COMPLEX,
-    LIQUID
+    LIQUID;
+
+    public static final DynamicGeometryType[] VALUES = values();
+    public static final int LENGTH = VALUES.length;
 }

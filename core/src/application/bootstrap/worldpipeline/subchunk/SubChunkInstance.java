@@ -1,5 +1,8 @@
 package application.bootstrap.worldpipeline.subchunk;
 
+import java.util.Arrays;
+
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -9,6 +12,7 @@ import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstanc
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate3Int;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 
 public class SubChunkInstance extends WorldRenderInstance {
 
@@ -16,7 +20,15 @@ public class SubChunkInstance extends WorldRenderInstance {
      * One vertical slice of a chunk covering CHUNK_SIZE^3 blocks. Owns block,
      * biome, and rotation palettes plus a world item palette. Permanently owned
      * by its parent ChunkInstance — never pooled or transferred independently.
-     * Dirty-region geometry rebuilds operate at this granularity.
+     * Dirty-region geometry rebuilds operate at this granularity. Also tracks
+     * containedBlockTypes — the set of DynamicGeometryTypes this subchunk's
+     * most recently built geometry actually contains blocks of, tallied by
+     * GeometryBuildManager during the same walk that already visits every
+     * block to build the mesh — so systems that only care about one geometry
+     * type (liquid tides, liquid flow ticking) can skip subchunks that never
+     * contain it without a separate scan. Tally writes only ever happen while
+     * the owning chunk's ChunkDataSyncContainer is held (see BuildBranch);
+     * readers off the build thread must acquire that same lock first.
      */
 
     // Internal
@@ -24,6 +36,10 @@ public class SubChunkInstance extends WorldRenderInstance {
     private BlockPaletteHandle blockPaletteHandle;
     private BlockPaletteHandle blockRotationPaletteHandle;
     private WorldItemPaletteHandle worldItemPaletteHandle;
+
+    // Block Type Composition — tallied during geometry build
+    private ReferenceOpenHashSet<DynamicGeometryType> containedBlockTypes;
+    private int[] blockTypeCounts;
 
     // Internal \\
 
@@ -38,6 +54,10 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.blockRotationPaletteHandle = create(BlockPaletteHandle.class);
         this.worldItemPaletteHandle = create(WorldItemPaletteHandle.class);
         this.worldItemPaletteHandle.constructor();
+
+        // Block Type Composition
+        this.containedBlockTypes = new ReferenceOpenHashSet<>(DynamicGeometryType.LENGTH);
+        this.blockTypeCounts = new int[DynamicGeometryType.LENGTH];
     }
 
     // Constructor \\
@@ -81,6 +101,38 @@ public class SubChunkInstance extends WorldRenderInstance {
         blockRotationPaletteHandle.clear();
         worldItemPaletteHandle.clear();
         getDynamicPacket().clear();
+        containedBlockTypes.clear();
+        Arrays.fill(blockTypeCounts, 0);
+    }
+
+    // Block Type Composition \\
+
+    public void beginBlockTypeTally() {
+        Arrays.fill(blockTypeCounts, 0);
+    }
+
+    public void tallyBlockType(DynamicGeometryType type) {
+        blockTypeCounts[type.ordinal()]++;
+    }
+
+    /*
+     * Folds the tally into the exposed set. The set instance is never
+     * reallocated — only cleared and repopulated — so repeated rebuilds
+     * create no garbage.
+     */
+    public void finalizeBlockTypeTally() {
+        containedBlockTypes.clear();
+        for (DynamicGeometryType type : DynamicGeometryType.VALUES)
+            if (blockTypeCounts[type.ordinal()] > 0)
+                containedBlockTypes.add(type);
+    }
+
+    public boolean hasBlockType(DynamicGeometryType type) {
+        return blockTypeCounts[type.ordinal()] > 0;
+    }
+
+    public ReferenceOpenHashSet<DynamicGeometryType> getContainedBlockTypes() {
+        return containedBlockTypes;
     }
 
     // Accessible \\

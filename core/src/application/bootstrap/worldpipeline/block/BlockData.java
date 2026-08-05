@@ -2,14 +2,17 @@ package application.bootstrap.worldpipeline.block;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import engine.root.DataPackage;
+import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Direction3Vector;
 
 public class BlockData extends DataPackage {
 
     /*
      * Persistent block definition record. All fields are immutable after
-     * construction — block definitions never change at runtime.
-     * Owned by BlockHandle for the full engine session.
+     * construction — block definitions never change at runtime. Owned by
+     * BlockHandle for the full engine session. viscosity is required (Pa·s)
+     * for any LIQUID-geometry block — see BlockBuilder — and unused/optional
+     * for every other geometry type.
      */
 
     // Identity
@@ -27,6 +30,9 @@ public class BlockData extends DataPackage {
     private final short requiredToolTypeID;
     private final int durability;
 
+    // Physics
+    private final float viscosity;
+
     // Constructor \\
 
     public BlockData(
@@ -39,7 +45,8 @@ public class BlockData extends DataPackage {
             int westTexture, int upTexture, int downTexture,
             int breakTier,
             short requiredToolTypeID,
-            int durability) {
+            int durability,
+            float viscosity) {
 
         this.blockName = blockName;
         this.blockID = blockID;
@@ -58,6 +65,8 @@ public class BlockData extends DataPackage {
         this.breakTier = breakTier;
         this.requiredToolTypeID = requiredToolTypeID;
         this.durability = durability;
+
+        this.viscosity = viscosity;
     }
 
     // Accessible \\
@@ -100,5 +109,13 @@ public class BlockData extends DataPackage {
 
     public boolean isUnbreakable() {
         return breakTier < 0;
+    }
+
+    public float getViscosity() {
+        return viscosity;
+    }
+
+    public boolean hasViscosity() {
+        return viscosity != EngineSetting.BLOCK_VISCOSITY_UNDEFINED;
     }
 }

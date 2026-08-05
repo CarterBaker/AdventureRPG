@@ -312,6 +312,7 @@ public class EngineSetting {
         public static final String AIR_BLOCK_NAME = "TerraArcanaBlocks/Air";
         public static final short DEFAULT_BLOCK_ORIENTATION = (short) (DEFAULT_BLOCK_DIRECTION * 4);
         public static final int ENCODED_FACE_NATURAL_FULL_OFFSET = 24;
+        public static final float BLOCK_VISCOSITY_UNDEFINED = -1.0f;
 
         // World \\
 
