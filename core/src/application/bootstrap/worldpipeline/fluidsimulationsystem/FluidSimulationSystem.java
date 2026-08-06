@@ -18,23 +18,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class FluidSimulationSystem extends SystemPackage {
 
     /*
-     * Advances one subchunk's liquid by a single simulation step. Each liquid
-     * cell prefers to fall straight down, then diagonally downward, and only
-     * then spreads laterally to open neighbors; lateral movement equalizes
-     * with neighbors rather than handing over its full amount and loses
-     * EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS per move, while
-     * falling and diagonal falling retain full consistency. Whatever a cell
-     * cannot fall or spread away is validated against
-     * EngineSetting.LIQUID_BASIN_FILL_THRESHOLD before being left in place —
-     * a fully enclosed pocket is discovered structurally, never bounded by
-     * how much the arriving trickle alone carries, combines every liquid
-     * cell already inside it, and either fills evenly or dissolves as a
-     * whole against that threshold; an open cell with nothing left to give
-     * away is judged the same way. Dissolving always removes
-     * EngineSetting.LIQUID_DISSOLVE_AMOUNT_PER_TICK worth of consistency per
-     * step rather than vanishing outright, so a doomed pocket drains out
-     * over several ticks instead of popping. Chunks and subchunks touched
-     * beyond the one passed to flow() are collected for the caller to
+     * Advances one subchunk's liquid by a single simulation step: falling,
+     * then diagonal falling, then either lateral equalization or a full
+     * basin fill. Basin enclosure is discovered by a breadth-first walk
+     * that crosses subchunk and chunk boundaries through the same neighbor
+     * resolution used for fall and spread — running off an unloaded chunk,
+     * past the top or bottom of the world, or past the scan limit all
+     * count as open, never enclosed — with downward hops jumping the queue
+     * so lower cells claim water first. Chunks and subchunks touched
+     * outside the one passed to flow() are collected for the caller to
      * rebuild and re-register with the renderer.
      */
 
@@ -71,15 +63,23 @@ public class FluidSimulationSystem extends SystemPackage {
     private final int[] spreadTargetCapacity = new int[LATERAL_DIRECTIONS.length];
     private final int[] spreadTargetExistingLevel = new int[LATERAL_DIRECTIONS.length];
 
-    // Scratch — double-ended BFS enclosed-pocket discovery; downward hops are
-    // pushed to the front so they are visited before same-tier lateral hops,
-    // giving lower cells first claim on any remainder when a basin fills
+    // Scratch — double-ended BFS enclosed-pocket discovery. Every queued
+    // and collected cell carries its owning chunk/subchunk alongside its
+    // packed local position so the walk can cross subchunk and chunk
+    // boundaries.
     private int[] basinDequePacked;
+    private ChunkInstance[] basinDequeChunk;
+    private SubChunkInstance[] basinDequeSubChunk;
     private int basinDequeMid;
-    private int[] basinCells;
-    private boolean[] basinVisited;
-    private int[] basinVisitedTouched;
+
+    private int[] basinCellPacked;
+    private ChunkInstance[] basinCellChunk;
+    private SubChunkInstance[] basinCellSubChunk;
+
+    private SubChunkInstance[] basinVisitedSubChunk;
+    private int[] basinVisitedPacked;
     private int basinVisitedCount;
+
     private boolean lastFloodEnclosed;
 
     // Current tick context
@@ -97,12 +97,20 @@ public class FluidSimulationSystem extends SystemPackage {
         this.touchedChunks = new ObjectArrayList<>();
         this.touchedSubChunkY = new IntArrayList();
 
-        this.basinDequeMid = EngineSetting.LIQUID_BASIN_SCAN_LIMIT;
-        this.basinDequePacked = new int[EngineSetting.LIQUID_BASIN_SCAN_LIMIT * 2];
-        this.basinCells = new int[EngineSetting.LIQUID_BASIN_SCAN_LIMIT];
+        int scanLimit = EngineSetting.LIQUID_BASIN_SCAN_LIMIT;
 
-        this.basinVisited = new boolean[ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT];
-        this.basinVisitedTouched = new int[ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT];
+        this.basinDequeMid = scanLimit;
+        this.basinDequePacked = new int[scanLimit * 2];
+        this.basinDequeChunk = new ChunkInstance[scanLimit * 2];
+        this.basinDequeSubChunk = new SubChunkInstance[scanLimit * 2];
+
+        this.basinCellPacked = new int[scanLimit];
+        this.basinCellChunk = new ChunkInstance[scanLimit];
+        this.basinCellSubChunk = new SubChunkInstance[scanLimit];
+
+        int maxVisited = scanLimit * (BASIN_FLOOD_DIRECTIONS.length + 1);
+        this.basinVisitedSubChunk = new SubChunkInstance[maxVisited];
+        this.basinVisitedPacked = new int[maxVisited];
     }
 
     @Override
@@ -422,25 +430,28 @@ public class FluidSimulationSystem extends SystemPackage {
     // Enclosed Pocket \\
 
     private boolean settleEnclosedPocket(
-            SubChunkInstance subChunkInstance,
+            SubChunkInstance sourceSubChunk,
             int sourcePacked,
             short blockID,
             int incomingAmount,
             int cellCount) {
 
-        BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
-        BlockPaletteHandle levels = subChunkInstance.getLiquidLevelPaletteHandle();
-
         int total = incomingAmount;
 
         for (int i = 0; i < cellCount; i++) {
-            int cellPacked = basinCells[i];
-            if (cellPacked != sourcePacked && blocks.getBlock(cellPacked) == blockID)
-                total += levels.getBlock(cellPacked);
+
+            SubChunkInstance cellSubChunk = basinCellSubChunk[i];
+            int cellPacked = basinCellPacked[i];
+
+            if (cellSubChunk == sourceSubChunk && cellPacked == sourcePacked)
+                continue;
+
+            if (cellSubChunk.getBlockPaletteHandle().getBlock(cellPacked) == blockID)
+                total += cellSubChunk.getLiquidLevelPaletteHandle().getBlock(cellPacked);
         }
 
         if (total < EngineSetting.LIQUID_BASIN_FILL_THRESHOLD * cellCount)
-            return dissolvePocket(subChunkInstance, sourcePacked, blockID, incomingAmount, cellCount);
+            return dissolvePocket(sourceSubChunk, sourcePacked, blockID, incomingAmount, cellCount);
 
         int share = total / cellCount;
         int remainder = total % cellCount;
@@ -448,62 +459,62 @@ public class FluidSimulationSystem extends SystemPackage {
 
         for (int i = 0; i < cellCount; i++) {
 
-            int cellPacked = basinCells[i];
-            boolean isSource = cellPacked == sourcePacked;
+            ChunkInstance cellChunk = basinCellChunk[i];
+            SubChunkInstance cellSubChunk = basinCellSubChunk[i];
+            int cellPacked = basinCellPacked[i];
+            boolean isSource = cellSubChunk == sourceSubChunk && cellPacked == sourcePacked;
 
-            if (!isSource)
+            if (!isSource && cellSubChunk == currentSubChunk)
                 processed[ChunkCoordinate3Int.getIndex(cellPacked)] = true;
 
-            boolean isMatchingLiquid = blocks.getBlock(cellPacked) == blockID;
-            int oldLevel = isSource ? incomingAmount : (isMatchingLiquid ? levels.getBlock(cellPacked) : 0);
+            boolean isMatchingLiquid = cellSubChunk.getBlockPaletteHandle().getBlock(cellPacked) == blockID;
+            int oldLevel = isSource
+                    ? incomingAmount
+                    : (isMatchingLiquid ? cellSubChunk.getLiquidLevelPaletteHandle().getBlock(cellPacked) : 0);
             int newLevel = share + (i < remainder ? 1 : 0);
 
             if (newLevel == oldLevel)
                 continue;
 
-            subChunkInstance.setBlock(cellPacked, blockID);
-            subChunkInstance.setLiquidLevel(cellPacked, (short) newLevel);
+            cellSubChunk.setBlock(cellPacked, blockID);
+            cellSubChunk.setLiquidLevel(cellPacked, (short) newLevel);
+            markTouched(cellChunk, cellSubChunk);
             changed = true;
         }
 
         return changed;
     }
 
-    /*
-     * A pocket whose combined water — every matching cell already inside it,
-     * plus whatever is currently arriving — falls short of
-     * EngineSetting.LIQUID_BASIN_FILL_THRESHOLD times its own cell count
-     * does not vanish in one step. Each matching cell, source included,
-     * loses EngineSetting.LIQUID_DISSOLVE_AMOUNT_PER_TICK worth of
-     * consistency this tick and is re-evaluated on the next one, so the
-     * pocket visibly drains away instead of popping.
-     */
     private boolean dissolvePocket(
-            SubChunkInstance subChunkInstance,
+            SubChunkInstance sourceSubChunk,
             int sourcePacked,
             short blockID,
             int incomingAmount,
             int cellCount) {
 
-        BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
-        BlockPaletteHandle levels = subChunkInstance.getLiquidLevelPaletteHandle();
         boolean changed = false;
 
         for (int i = 0; i < cellCount; i++) {
 
-            int cellPacked = basinCells[i];
-            boolean isSource = cellPacked == sourcePacked;
+            ChunkInstance cellChunk = basinCellChunk[i];
+            SubChunkInstance cellSubChunk = basinCellSubChunk[i];
+            int cellPacked = basinCellPacked[i];
+            boolean isSource = cellSubChunk == sourceSubChunk && cellPacked == sourcePacked;
 
-            if (!isSource)
+            if (!isSource && cellSubChunk == currentSubChunk)
                 processed[ChunkCoordinate3Int.getIndex(cellPacked)] = true;
 
-            if (!isSource && blocks.getBlock(cellPacked) != blockID)
+            if (!isSource && cellSubChunk.getBlockPaletteHandle().getBlock(cellPacked) != blockID)
                 continue;
 
-            int currentLevel = isSource ? incomingAmount : levels.getBlock(cellPacked);
+            int currentLevel = isSource
+                    ? incomingAmount
+                    : cellSubChunk.getLiquidLevelPaletteHandle().getBlock(cellPacked);
 
-            if (decayCell(subChunkInstance, cellPacked, blockID, currentLevel))
+            if (decayCell(cellSubChunk, cellPacked, blockID, currentLevel)) {
+                markTouched(cellChunk, cellSubChunk);
                 changed = true;
+            }
         }
 
         return changed;
@@ -531,19 +542,7 @@ public class FluidSimulationSystem extends SystemPackage {
         return true;
     }
 
-    /*
-     * Discovers the full connected air/matching-liquid region reachable from
-     * sourcePacked, up to EngineSetting.LIQUID_BASIN_SCAN_LIMIT cells,
-     * walking downward hops before lateral ones so lower cells are recorded
-     * first. The region is "enclosed" only if the scan completes without
-     * running off the edge of the space or past the scan limit — enclosure
-     * is a structural property of the space itself, never a function of how
-     * much liquid happens to be arriving right now, so a large but genuinely
-     * walled basin is still recognized and its contents combined as one body.
-     */
     private int floodFillBasin(int sourcePacked, short blockID) {
-
-        BlockPaletteHandle blocks = currentSubChunk.getBlockPaletteHandle();
 
         int front = basinDequeMid;
         int back = basinDequeMid;
@@ -552,15 +551,22 @@ public class FluidSimulationSystem extends SystemPackage {
         boolean enclosed = true;
 
         basinDequePacked[back] = sourcePacked;
+        basinDequeChunk[back] = currentChunk;
+        basinDequeSubChunk[back] = currentSubChunk;
         back++;
-        markBasinVisited(sourcePacked);
+        markBasinVisited(currentSubChunk, sourcePacked);
 
         outer: while (front < back) {
 
-            int currentPacked = basinDequePacked[front];
+            int cellPacked = basinDequePacked[front];
+            ChunkInstance cellChunk = basinDequeChunk[front];
+            SubChunkInstance cellSubChunk = basinDequeSubChunk[front];
             front++;
 
-            basinCells[cellCount++] = currentPacked;
+            basinCellPacked[cellCount] = cellPacked;
+            basinCellChunk[cellCount] = cellChunk;
+            basinCellSubChunk[cellCount] = cellSubChunk;
+            cellCount++;
 
             for (int d = 0; d < BASIN_FLOOD_DIRECTIONS.length; d++) {
 
@@ -570,31 +576,38 @@ public class FluidSimulationSystem extends SystemPackage {
                 }
 
                 Direction3Vector direction = BASIN_FLOOD_DIRECTIONS[d];
-                int neighborPacked = ChunkCoordinate3Int.getNeighbor(currentPacked, direction);
+                int neighborPacked = resolveNeighbor(cellChunk, cellSubChunk, cellPacked, direction);
 
-                if (neighborPacked == -1) {
+                if (scratchNeighborSubChunk == null) {
                     enclosed = false;
                     break outer;
                 }
 
-                if (isBasinVisited(neighborPacked))
+                ChunkInstance neighborChunk = scratchNeighborChunk;
+                SubChunkInstance neighborSubChunk = scratchNeighborSubChunk;
+
+                if (isBasinVisited(neighborSubChunk, neighborPacked))
                     continue;
 
-                short neighborBlockID = blocks.getBlock(neighborPacked);
+                short neighborBlockID = neighborSubChunk.getBlockPaletteHandle().getBlock(neighborPacked);
 
                 if (neighborBlockID != airBlockId && neighborBlockID != blockID) {
-                    markBasinVisited(neighborPacked);
+                    markBasinVisited(neighborSubChunk, neighborPacked);
                     continue;
                 }
 
-                markBasinVisited(neighborPacked);
+                markBasinVisited(neighborSubChunk, neighborPacked);
                 enqueued++;
 
                 if (direction == Direction3Vector.DOWN) {
                     front--;
                     basinDequePacked[front] = neighborPacked;
+                    basinDequeChunk[front] = neighborChunk;
+                    basinDequeSubChunk[front] = neighborSubChunk;
                 } else {
                     basinDequePacked[back] = neighborPacked;
+                    basinDequeChunk[back] = neighborChunk;
+                    basinDequeSubChunk[back] = neighborSubChunk;
                     back++;
                 }
             }
@@ -605,19 +618,20 @@ public class FluidSimulationSystem extends SystemPackage {
         return cellCount;
     }
 
-    private void markBasinVisited(int packed) {
-        int index = ChunkCoordinate3Int.getIndex(packed);
-        basinVisited[index] = true;
-        basinVisitedTouched[basinVisitedCount++] = index;
+    private void markBasinVisited(SubChunkInstance subChunk, int packed) {
+        basinVisitedSubChunk[basinVisitedCount] = subChunk;
+        basinVisitedPacked[basinVisitedCount] = packed;
+        basinVisitedCount++;
     }
 
-    private boolean isBasinVisited(int packed) {
-        return basinVisited[ChunkCoordinate3Int.getIndex(packed)];
+    private boolean isBasinVisited(SubChunkInstance subChunk, int packed) {
+        for (int i = 0; i < basinVisitedCount; i++)
+            if (basinVisitedSubChunk[i] == subChunk && basinVisitedPacked[i] == packed)
+                return true;
+        return false;
     }
 
     private void clearBasinVisited() {
-        for (int i = 0; i < basinVisitedCount; i++)
-            basinVisited[basinVisitedTouched[i]] = false;
         basinVisitedCount = 0;
     }
 
