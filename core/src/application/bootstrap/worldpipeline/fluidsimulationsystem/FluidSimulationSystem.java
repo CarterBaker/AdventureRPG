@@ -19,17 +19,18 @@ public class FluidSimulationSystem extends SystemPackage {
 
     /*
      * Advances one subchunk's liquid by a single simulation step. Each liquid
-     * cell first tries to fall straight down, then to spread diagonally
-     * downward, and only then spreads laterally to open neighbors. Lateral
-     * spread equalizes with each neighbor rather than handing over its full
-     * amount, so two adjacent cells settle toward a shared level instead of
-     * swapping their contents back and forth every tick. Sideways movement
-     * loses EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS once per
-     * move; falling and diagonal falling retain full consistency. A fully
-     * enclosed pocket fills evenly or dissolves outright based on
-     * EngineSetting.LIQUID_BASIN_FILL_THRESHOLD. Chunks and subchunks touched
-     * beyond the one passed to flow() are collected for the caller to rebuild
-     * and re-register with the renderer.
+     * cell prefers to fall straight down, then diagonally downward, and only
+     * then spreads laterally to open neighbors; lateral movement equalizes
+     * with neighbors rather than handing over its full amount and loses
+     * EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS per move, while
+     * falling and diagonal falling retain full consistency. Whatever a cell
+     * cannot fall or spread away is always validated against
+     * EngineSetting.LIQUID_BASIN_FILL_THRESHOLD before being left in place —
+     * a fully enclosed pocket fills evenly or dissolves as a whole against
+     * that threshold, and an open cell with nothing left to give away
+     * dissolves on its own once its remainder falls under it. Chunks and
+     * subchunks touched beyond the one passed to flow() are collected for the
+     * caller to rebuild and re-register with the renderer.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -247,22 +248,21 @@ public class FluidSimulationSystem extends SystemPackage {
             return settleEnclosedPocket(subChunkInstance, packed, blockID, amount, cellCount);
 
         int targetCount = collectSpreadTargets(chunkInstance, subChunkInstance, packed, blockID);
+        boolean moved = targetCount > 0
+                && equalizeLaterally(subChunkInstance, packed, blockID, amount, targetCount);
 
-        if (targetCount == 0)
-            return false;
+        int remaining = moved
+                ? subChunkInstance.getLiquidLevelPaletteHandle().getBlock(packed)
+                : amount;
 
-        return equalizeLaterally(subChunkInstance, packed, blockID, amount, targetCount);
+        if (remaining >= EngineSetting.LIQUID_BASIN_FILL_THRESHOLD)
+            return moved;
+
+        subChunkInstance.setBlock(packed, airBlockId);
+        subChunkInstance.setLiquidLevel(packed, EngineSetting.LIQUID_LEVEL_EMPTY);
+        return true;
     }
 
-    /*
-     * Levels the source against its open lateral neighbors instead of
-     * handing them its full amount — source and targets alike settle toward
-     * a shared average built from the source's amount plus each target's
-     * current level, so a cell only ever gives up what it holds above that
-     * average. This is what stops two neighbors from swapping their entire
-     * contents back and forth every tick. The flat movement loss is spent
-     * once against the total that leaves the source, not once per recipient.
-     */
     private boolean equalizeLaterally(
             SubChunkInstance sourceSubChunk,
             int sourcePacked,
@@ -367,12 +367,6 @@ public class FluidSimulationSystem extends SystemPackage {
         return targetCount;
     }
 
-    /*
-     * Splits `amount` across the first `targetCount` scratch targets with no
-     * loss — used by fall and diagonal fall, which retain full consistency.
-     * Any share a target can't hold due to capacity returns to the source,
-     * since it never actually moved.
-     */
     private int distributeAcrossTargets(
             SubChunkInstance sourceSubChunk,
             int sourcePacked,
@@ -639,11 +633,6 @@ public class FluidSimulationSystem extends SystemPackage {
         return ChunkCoordinate3Int.getNeighborAndWrap(packed, direction);
     }
 
-    /*
-     * Lateral-only resolution that never crosses into a neighboring chunk —
-     * that chunk's data isn't guarded by any lock this tick holds. Cross-
-     * chunk lateral flow is a later-stage concern.
-     */
     private int resolveLateralInChunk(
             ChunkInstance chunk,
             SubChunkInstance subChunk,
