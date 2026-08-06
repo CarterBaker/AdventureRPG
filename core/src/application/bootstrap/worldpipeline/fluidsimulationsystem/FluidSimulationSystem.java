@@ -1,4 +1,4 @@
-package application.bootstrap.worldpipeline.liquidsimulationsystem;
+package application.bootstrap.worldpipeline.fluidsimulationsystem;
 
 import java.util.Arrays;
 
@@ -15,19 +15,21 @@ import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class LiquidSimulationSystem extends SystemPackage {
+public class FluidSimulationSystem extends SystemPackage {
 
     /*
      * Advances one subchunk's liquid by a single simulation step. Each liquid
      * cell first tries to fall straight down, then to spread diagonally
-     * downward, and only then spreads laterally to open neighbors, losing
-     * EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS per lateral hop —
-     * unless it lands in a fully enclosed pocket, which fills evenly or
-     * dissolves outright based on EngineSetting.LIQUID_BASIN_FILL_THRESHOLD.
-     * Every call moves liquid by one hop only; continuous flow comes from
-     * repeated ticks rather than a single equilibrium solve. Chunks and
-     * subchunks touched beyond the one passed to flow() are collected for
-     * the caller to rebuild and re-register with the renderer.
+     * downward, and only then spreads laterally to open neighbors. Lateral
+     * spread equalizes with each neighbor rather than handing over its full
+     * amount, so two adjacent cells settle toward a shared level instead of
+     * swapping their contents back and forth every tick. Sideways movement
+     * loses EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS once per
+     * move; falling and diagonal falling retain full consistency. A fully
+     * enclosed pocket fills evenly or dissolves outright based on
+     * EngineSetting.LIQUID_BASIN_FILL_THRESHOLD. Chunks and subchunks touched
+     * beyond the one passed to flow() are collected for the caller to rebuild
+     * and re-register with the renderer.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -56,7 +58,7 @@ public class LiquidSimulationSystem extends SystemPackage {
     private SubChunkInstance scratchNeighborSubChunk;
 
     // Scratch — up to one target per lateral direction, shared by the
-    // diagonal-fall step and the open-ground lateral step
+    // diagonal-fall step and the lateral equalization step
     private final int[] spreadTargetPacked = new int[LATERAL_DIRECTIONS.length];
     private final ChunkInstance[] spreadTargetChunk = new ChunkInstance[LATERAL_DIRECTIONS.length];
     private final SubChunkInstance[] spreadTargetSubChunk = new SubChunkInstance[LATERAL_DIRECTIONS.length];
@@ -202,7 +204,7 @@ public class LiquidSimulationSystem extends SystemPackage {
         spreadTargetCapacity[0] = capacity;
         spreadTargetExistingLevel[0] = existingLevel;
 
-        return distributeAcrossTargets(subChunkInstance, packed, blockID, amount, 1, 0);
+        return distributeAcrossTargets(subChunkInstance, packed, blockID, amount, 1);
     }
 
     // Diagonal Fall \\
@@ -227,7 +229,7 @@ public class LiquidSimulationSystem extends SystemPackage {
         if (targetCount == 0)
             return amount;
 
-        return distributeAcrossTargets(subChunkInstance, packed, blockID, amount, targetCount, 0);
+        return distributeAcrossTargets(subChunkInstance, packed, blockID, amount, targetCount);
     }
 
     // Lateral Spread \\
@@ -249,9 +251,78 @@ public class LiquidSimulationSystem extends SystemPackage {
         if (targetCount == 0)
             return false;
 
-        return distributeAcrossTargets(
-                subChunkInstance, packed, blockID, amount, targetCount,
-                EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS) != amount;
+        return equalizeLaterally(subChunkInstance, packed, blockID, amount, targetCount);
+    }
+
+    /*
+     * Levels the source against its open lateral neighbors instead of
+     * handing them its full amount — source and targets alike settle toward
+     * a shared average built from the source's amount plus each target's
+     * current level, so a cell only ever gives up what it holds above that
+     * average. This is what stops two neighbors from swapping their entire
+     * contents back and forth every tick. The flat movement loss is spent
+     * once against the total that leaves the source, not once per recipient.
+     */
+    private boolean equalizeLaterally(
+            SubChunkInstance sourceSubChunk,
+            int sourcePacked,
+            short blockID,
+            int amount,
+            int targetCount) {
+
+        int pool = amount;
+        for (int i = 0; i < targetCount; i++)
+            pool += spreadTargetExistingLevel[i];
+
+        int poolSize = targetCount + 1;
+        int fairShare = pool / poolSize;
+        int remainder = pool % poolSize;
+
+        int outgoing = amount - fairShare;
+
+        if (outgoing <= 0)
+            return false;
+
+        int budget = outgoing - EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS;
+
+        if (budget <= 0)
+            return false;
+
+        int delivered = 0;
+
+        for (int i = 0; i < targetCount && budget > 0; i++) {
+
+            int targetFairShare = fairShare + (i < remainder ? 1 : 0);
+            int need = targetFairShare - spreadTargetExistingLevel[i];
+
+            if (need <= 0)
+                continue;
+
+            int transferable = Math.min(need, Math.min(budget, spreadTargetCapacity[i]));
+
+            if (transferable <= 0)
+                continue;
+
+            SubChunkInstance targetSubChunk = spreadTargetSubChunk[i];
+            int targetPacked = spreadTargetPacked[i];
+
+            targetSubChunk.setBlock(targetPacked, blockID);
+            targetSubChunk.setLiquidLevel(targetPacked, (short) (spreadTargetExistingLevel[i] + transferable));
+
+            if (targetSubChunk == sourceSubChunk)
+                processed[ChunkCoordinate3Int.getIndex(targetPacked)] = true;
+
+            markTouched(spreadTargetChunk[i], targetSubChunk);
+
+            budget -= transferable;
+            delivered += transferable;
+        }
+
+        if (delivered == 0)
+            return false;
+
+        sourceSubChunk.setLiquidLevel(sourcePacked, (short) (amount - delivered));
+        return true;
     }
 
     // Spread Targets \\
@@ -297,18 +368,17 @@ public class LiquidSimulationSystem extends SystemPackage {
     }
 
     /*
-     * Splits `amount` evenly across the first `targetCount` scratch targets.
-     * perTargetLoss is subtracted from each delivered share and is lost for
-     * good; any share a target can't hold due to capacity returns to the
-     * source instead, since it never actually moved.
+     * Splits `amount` across the first `targetCount` scratch targets with no
+     * loss — used by fall and diagonal fall, which retain full consistency.
+     * Any share a target can't hold due to capacity returns to the source,
+     * since it never actually moved.
      */
     private int distributeAcrossTargets(
             SubChunkInstance sourceSubChunk,
             int sourcePacked,
             short blockID,
             int amount,
-            int targetCount,
-            int perTargetLoss) {
+            int targetCount) {
 
         int share = amount / targetCount;
         int remainder = amount % targetCount;
@@ -323,18 +393,17 @@ public class LiquidSimulationSystem extends SystemPackage {
 
             int capacity = spreadTargetCapacity[i];
             int transferable = Math.min(desired, capacity);
-            int delivered = transferable - perTargetLoss;
 
             leftover += desired - transferable;
 
-            if (delivered <= 0)
+            if (transferable <= 0)
                 continue;
 
             SubChunkInstance targetSubChunk = spreadTargetSubChunk[i];
             int targetPacked = spreadTargetPacked[i];
 
             targetSubChunk.setBlock(targetPacked, blockID);
-            targetSubChunk.setLiquidLevel(targetPacked, (short) (spreadTargetExistingLevel[i] + delivered));
+            targetSubChunk.setLiquidLevel(targetPacked, (short) (spreadTargetExistingLevel[i] + transferable));
 
             if (targetSubChunk == sourceSubChunk)
                 processed[ChunkCoordinate3Int.getIndex(targetPacked)] = true;

@@ -6,8 +6,8 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.Dynami
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.fluidsimulationsystem.FluidSimulationSystem;
 import application.bootstrap.worldpipeline.grid.GridInstance;
-import application.bootstrap.worldpipeline.liquidsimulationsystem.LiquidSimulationSystem;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.TickQuadrant;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
@@ -44,7 +44,7 @@ public class LiquidTickBranch extends BranchPackage {
     private WorldRenderManager worldRenderManager;
 
     // Branches
-    private LiquidSimulationSystem liquidSimulationSystem;
+    private FluidSimulationSystem fluidSimulationSystem;
 
     // Settings
     private int intervalFrames;
@@ -77,7 +77,7 @@ public class LiquidTickBranch extends BranchPackage {
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
         this.worldRenderManager = get(WorldRenderManager.class);
-        this.liquidSimulationSystem = get(LiquidSimulationSystem.class);
+        this.fluidSimulationSystem = get(FluidSimulationSystem.class);
     }
 
     // Schedule \\
@@ -162,7 +162,7 @@ public class LiquidTickBranch extends BranchPackage {
 
         subChunk.resetLiquidFlowAccumulator();
 
-        if (!liquidSimulationSystem.flow(chunk, subChunk)) {
+        if (!fluidSimulationSystem.flow(chunk, subChunk)) {
             subChunk.setLiquidStable(true);
             return false;
         }
@@ -186,8 +186,8 @@ public class LiquidTickBranch extends BranchPackage {
      */
     private void rebuildTouchedNeighbors() {
 
-        ObjectArrayList<ChunkInstance> touchedChunks = liquidSimulationSystem.getTouchedChunks();
-        IntArrayList touchedSubChunkY = liquidSimulationSystem.getTouchedSubChunkY();
+        ObjectArrayList<ChunkInstance> touchedChunks = fluidSimulationSystem.getTouchedChunks();
+        IntArrayList touchedSubChunkY = fluidSimulationSystem.getTouchedSubChunkY();
 
         for (int i = 0; i < touchedChunks.size(); i++) {
 
