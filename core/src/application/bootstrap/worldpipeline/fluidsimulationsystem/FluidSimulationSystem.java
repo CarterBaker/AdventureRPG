@@ -20,23 +20,19 @@ public class FluidSimulationSystem extends SystemPackage {
     /*
      * Advances one subchunk's liquid by a single simulation step: falling,
      * then diagonal falling, then either lateral equalization or a full
-     * basin fill. Basin enclosure is discovered by a breadth-first walk
-     * that crosses subchunk and chunk boundaries through the same neighbor
-     * resolution used for fall and spread — running off an unloaded chunk,
-     * past the top or bottom of the world, or past the scan limit all
-     * count as open, never enclosed — with downward hops jumping the queue
-     * so lower cells claim water first. Chunks and subchunks touched
+     * basin fill. A basin is discovered by flooding outward through open,
+     * supported floor cells only — air or matching liquid whose own down
+     * neighbor is solid or liquid — using the same neighbor resolution fall
+     * and spread use, so it crosses subchunk and chunk boundaries freely.
+     * Any lateral cell with nothing beneath it, or any neighbor that can't
+     * be resolved at all, breaks the seal immediately and the location is
+     * treated as open rather than a basin. Chunks and subchunks touched
      * outside the one passed to flow() are collected for the caller to
      * rebuild and re-register with the renderer.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
             Direction3Vector.NORTH, Direction3Vector.EAST, Direction3Vector.SOUTH, Direction3Vector.WEST
-    };
-
-    private static final Direction3Vector[] BASIN_FLOOD_DIRECTIONS = {
-            Direction3Vector.NORTH, Direction3Vector.EAST, Direction3Vector.SOUTH, Direction3Vector.WEST,
-            Direction3Vector.DOWN
     };
 
     // Internal
@@ -63,14 +59,13 @@ public class FluidSimulationSystem extends SystemPackage {
     private final int[] spreadTargetCapacity = new int[LATERAL_DIRECTIONS.length];
     private final int[] spreadTargetExistingLevel = new int[LATERAL_DIRECTIONS.length];
 
-    // Scratch — double-ended BFS enclosed-pocket discovery. Every queued
-    // and collected cell carries its owning chunk/subchunk alongside its
-    // packed local position so the walk can cross subchunk and chunk
-    // boundaries.
+    // Scratch — basin floor flood-fill. Every queued and collected cell
+    // carries its owning chunk/subchunk alongside its packed local position
+    // so the walk can cross subchunk and chunk boundaries the same way
+    // fall and spread do.
     private int[] basinDequePacked;
     private ChunkInstance[] basinDequeChunk;
     private SubChunkInstance[] basinDequeSubChunk;
-    private int basinDequeMid;
 
     private int[] basinCellPacked;
     private ChunkInstance[] basinCellChunk;
@@ -99,16 +94,15 @@ public class FluidSimulationSystem extends SystemPackage {
 
         int scanLimit = EngineSetting.LIQUID_BASIN_SCAN_LIMIT;
 
-        this.basinDequeMid = scanLimit;
-        this.basinDequePacked = new int[scanLimit * 2];
-        this.basinDequeChunk = new ChunkInstance[scanLimit * 2];
-        this.basinDequeSubChunk = new SubChunkInstance[scanLimit * 2];
+        this.basinDequePacked = new int[scanLimit];
+        this.basinDequeChunk = new ChunkInstance[scanLimit];
+        this.basinDequeSubChunk = new SubChunkInstance[scanLimit];
 
         this.basinCellPacked = new int[scanLimit];
         this.basinCellChunk = new ChunkInstance[scanLimit];
         this.basinCellSubChunk = new SubChunkInstance[scanLimit];
 
-        int maxVisited = scanLimit * (BASIN_FLOOD_DIRECTIONS.length + 1);
+        int maxVisited = scanLimit * (LATERAL_DIRECTIONS.length + 1);
         this.basinVisitedSubChunk = new SubChunkInstance[maxVisited];
         this.basinVisitedPacked = new int[maxVisited];
     }
@@ -346,7 +340,7 @@ public class FluidSimulationSystem extends SystemPackage {
 
         for (int d = 0; d < LATERAL_DIRECTIONS.length; d++) {
 
-            int targetPacked = resolveLateralInChunk(fromChunk, fromSubChunk, fromPacked, LATERAL_DIRECTIONS[d]);
+            int targetPacked = resolveNeighbor(fromChunk, fromSubChunk, fromPacked, LATERAL_DIRECTIONS[d]);
 
             if (scratchNeighborSubChunk == null)
                 continue;
@@ -542,11 +536,19 @@ public class FluidSimulationSystem extends SystemPackage {
         return true;
     }
 
+    /*
+     * Floods outward from the source through same-level floor cells only —
+     * air or matching liquid whose own down neighbor is solid or matching
+     * liquid. A lateral neighbor with nothing beneath it means water can
+     * spill out that way, which immediately breaks the seal; so does a
+     * neighbor that can't be resolved at all (world edge, unloaded chunk).
+     * Hitting the scan limit while still sealed treats the pocket as too
+     * large to bother simulating as a basin.
+     */
     private int floodFillBasin(int sourcePacked, short blockID) {
 
-        int front = basinDequeMid;
-        int back = basinDequeMid;
-        int enqueued = 1;
+        int front = 0;
+        int back = 0;
         int cellCount = 0;
         boolean enclosed = true;
 
@@ -554,6 +556,12 @@ public class FluidSimulationSystem extends SystemPackage {
         basinDequeChunk[back] = currentChunk;
         basinDequeSubChunk[back] = currentSubChunk;
         back++;
+
+        basinCellPacked[cellCount] = sourcePacked;
+        basinCellChunk[cellCount] = currentChunk;
+        basinCellSubChunk[cellCount] = currentSubChunk;
+        cellCount++;
+
         markBasinVisited(currentSubChunk, sourcePacked);
 
         outer: while (front < back) {
@@ -563,19 +571,9 @@ public class FluidSimulationSystem extends SystemPackage {
             SubChunkInstance cellSubChunk = basinDequeSubChunk[front];
             front++;
 
-            basinCellPacked[cellCount] = cellPacked;
-            basinCellChunk[cellCount] = cellChunk;
-            basinCellSubChunk[cellCount] = cellSubChunk;
-            cellCount++;
+            for (int d = 0; d < LATERAL_DIRECTIONS.length; d++) {
 
-            for (int d = 0; d < BASIN_FLOOD_DIRECTIONS.length; d++) {
-
-                if (enqueued >= EngineSetting.LIQUID_BASIN_SCAN_LIMIT) {
-                    enclosed = false;
-                    break outer;
-                }
-
-                Direction3Vector direction = BASIN_FLOOD_DIRECTIONS[d];
+                Direction3Vector direction = LATERAL_DIRECTIONS[d];
                 int neighborPacked = resolveNeighbor(cellChunk, cellSubChunk, cellPacked, direction);
 
                 if (scratchNeighborSubChunk == null) {
@@ -596,26 +594,44 @@ public class FluidSimulationSystem extends SystemPackage {
                     continue;
                 }
 
-                markBasinVisited(neighborSubChunk, neighborPacked);
-                enqueued++;
-
-                if (direction == Direction3Vector.DOWN) {
-                    front--;
-                    basinDequePacked[front] = neighborPacked;
-                    basinDequeChunk[front] = neighborChunk;
-                    basinDequeSubChunk[front] = neighborSubChunk;
-                } else {
-                    basinDequePacked[back] = neighborPacked;
-                    basinDequeChunk[back] = neighborChunk;
-                    basinDequeSubChunk[back] = neighborSubChunk;
-                    back++;
+                if (neighborBlockID == airBlockId
+                        && !hasSupportBelow(neighborChunk, neighborSubChunk, neighborPacked)) {
+                    enclosed = false;
+                    break outer;
                 }
+
+                markBasinVisited(neighborSubChunk, neighborPacked);
+
+                if (cellCount >= EngineSetting.LIQUID_BASIN_SCAN_LIMIT) {
+                    enclosed = false;
+                    break outer;
+                }
+
+                basinCellPacked[cellCount] = neighborPacked;
+                basinCellChunk[cellCount] = neighborChunk;
+                basinCellSubChunk[cellCount] = neighborSubChunk;
+                cellCount++;
+
+                basinDequePacked[back] = neighborPacked;
+                basinDequeChunk[back] = neighborChunk;
+                basinDequeSubChunk[back] = neighborSubChunk;
+                back++;
             }
         }
 
         lastFloodEnclosed = enclosed;
         clearBasinVisited();
         return cellCount;
+    }
+
+    private boolean hasSupportBelow(ChunkInstance chunk, SubChunkInstance subChunk, int packed) {
+
+        int belowPacked = resolveNeighbor(chunk, subChunk, packed, Direction3Vector.DOWN);
+
+        if (scratchNeighborSubChunk == null)
+            return false;
+
+        return scratchNeighborSubChunk.getBlockPaletteHandle().getBlock(belowPacked) != airBlockId;
     }
 
     private void markBasinVisited(SubChunkInstance subChunk, int packed) {
@@ -674,23 +690,6 @@ public class FluidSimulationSystem extends SystemPackage {
 
         scratchNeighborChunk = neighborChunk;
         scratchNeighborSubChunk = neighborChunk.getSubChunk((int) subChunk.getCoordinate());
-        return ChunkCoordinate3Int.getNeighborAndWrap(packed, direction);
-    }
-
-    private int resolveLateralInChunk(
-            ChunkInstance chunk,
-            SubChunkInstance subChunk,
-            int packed,
-            Direction3Vector direction) {
-
-        if (ChunkCoordinate3Int.isAtEdge(packed, direction)) {
-            scratchNeighborChunk = null;
-            scratchNeighborSubChunk = null;
-            return -1;
-        }
-
-        scratchNeighborChunk = chunk;
-        scratchNeighborSubChunk = subChunk;
         return ChunkCoordinate3Int.getNeighborAndWrap(packed, direction);
     }
 
