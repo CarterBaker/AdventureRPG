@@ -348,9 +348,8 @@ public class EngineSetting {
 
         public static final short LIQUID_LEVEL_EMPTY = 0;
         public static final short LIQUID_LEVEL_MAX = 8;
-        public static final short LIQUID_LEVEL_MIN_PERSIST = 2;
-        public static final short LIQUID_SPREAD_DISSIPATION_AMOUNT = 1;
         public static final int LIQUID_BASIN_SCAN_LIMIT = 64;
+        public static final int LIQUID_BASIN_FILL_THRESHOLD = 2;
 
         // World Defaults \\
 
