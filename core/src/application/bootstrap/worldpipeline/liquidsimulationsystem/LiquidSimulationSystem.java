@@ -18,17 +18,24 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class LiquidSimulationSystem extends SystemPackage {
 
     /*
-     * Advances one subchunk's liquid by a single step: every source cell first
-     * tries to fall straight down, then — if it still holds any amount —
-     * resolves against its local basin, a bounded flood fill (air or same
-     * liquid only, never upward) of the pocket it sits in. The basin's total
-     * consistency, including everything already inside it, is split evenly
-     * across every cell in that pocket once the average clears
-     * EngineSetting.LIQUID_BASIN_FILL_THRESHOLD; otherwise the whole pocket
-     * dissolves. Falling never costs consistency — settling into or
-     * redistributing across a basin is the only place levels change other
-     * than by moving downward. Chunks and subchunks touched beyond the one
-     * passed to flow() are collected for the caller to rebuild and
+     * Advances one subchunk's liquid by a single simulation step. Every
+     * liquid cell first tries to fall straight down — free, and the source
+     * cell is fully reconciled the instant any of it transfers below, so a
+     * fall can never duplicate water. Whatever cannot fall resolves against
+     * the local basin it rests in: a cost-bounded 0-1 BFS flood (through air
+     * or the same liquid, never upward) capped at
+     * EngineSetting.LIQUID_BASIN_SCAN_LIMIT cells. A horizontal hop is free
+     * whenever it steps onto a cell that itself continues falling — water
+     * spilling over a ledge costs nothing — and otherwise costs
+     * EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS, since that is
+     * genuine sideways spread across level ground. A cell the water cannot
+     * afford to reach is excluded from the basin outright and never expanded
+     * from. The basin's total consistency — the settling amount plus every
+     * same-liquid cell already inside the reached pocket — is split evenly
+     * across every reached cell once the average clears
+     * EngineSetting.LIQUID_BASIN_FILL_THRESHOLD; otherwise the whole
+     * reachable pocket dissolves. Chunks and subchunks touched beyond the
+     * one passed to flow() are collected for the caller to rebuild and
      * re-register with the renderer.
      */
 
@@ -53,9 +60,11 @@ public class LiquidSimulationSystem extends SystemPackage {
     private ChunkInstance scratchNeighborChunk;
     private SubChunkInstance scratchNeighborSubChunk;
 
-    // Scratch — bounded basin flood fill, sized to
-    // EngineSetting.LIQUID_BASIN_SCAN_LIMIT
-    private int[] basinQueue;
+    // Scratch — cost-bounded 0-1 BFS basin discovery, double ended so free
+    // hops drain before costlier ones queued at the same distance
+    private int[] basinDequePacked;
+    private int[] basinDequeCost;
+    private int basinDequeMid;
     private int[] basinCells;
     private boolean[] basinVisited;
     private int[] basinVisitedTouched;
@@ -76,10 +85,16 @@ public class LiquidSimulationSystem extends SystemPackage {
         this.touchedChunks = new ObjectArrayList<>();
         this.touchedSubChunkY = new IntArrayList();
 
-        this.basinQueue = new int[EngineSetting.LIQUID_BASIN_SCAN_LIMIT];
+        this.basinDequeMid = EngineSetting.LIQUID_BASIN_SCAN_LIMIT;
+        this.basinDequePacked = new int[EngineSetting.LIQUID_BASIN_SCAN_LIMIT * 2];
+        this.basinDequeCost = new int[EngineSetting.LIQUID_BASIN_SCAN_LIMIT * 2];
         this.basinCells = new int[EngineSetting.LIQUID_BASIN_SCAN_LIMIT];
+
+        // Sized to the subchunk's full cell count rather than
+        // scanLimit*directions — every visit is unique, so that is the only
+        // bound that is actually guaranteed never to overflow.
         this.basinVisited = new boolean[ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT];
-        this.basinVisitedTouched = new int[EngineSetting.LIQUID_BASIN_SCAN_LIMIT];
+        this.basinVisitedTouched = new int[ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT];
     }
 
     @Override
@@ -172,6 +187,7 @@ public class LiquidSimulationSystem extends SystemPackage {
             return amount;
 
         int transfer = Math.min(amount, capacity);
+        int remaining = amount - transfer;
 
         belowSubChunk.setBlock(belowPacked, blockID);
         belowSubChunk.setLiquidLevel(belowPacked, (short) (existingLevel + transfer));
@@ -179,23 +195,23 @@ public class LiquidSimulationSystem extends SystemPackage {
         if (belowSubChunk == subChunkInstance)
             processed[ChunkCoordinate3Int.getIndex(belowPacked)] = true;
 
+        if (remaining <= 0) {
+            subChunkInstance.setBlock(packed, airBlockId);
+            subChunkInstance.setLiquidLevel(packed, EngineSetting.LIQUID_LEVEL_EMPTY);
+        } else {
+            subChunkInstance.setLiquidLevel(packed, (short) remaining);
+        }
+
         markTouched(belowChunk, belowSubChunk);
 
-        return amount - transfer;
+        return remaining;
     }
 
     // Basin Resolution \\
 
-    /*
-     * Floods the pocket sourcePacked sits in, sums its total consistency
-     * (incomingAmount plus every same-liquid cell already inside the pocket),
-     * and either writes an even split across every cell in the pocket or
-     * clears the whole pocket to air, depending on whether the per-cell
-     * average clears EngineSetting.LIQUID_BASIN_FILL_THRESHOLD.
-     */
     private boolean resolveBasin(int sourcePacked, short blockID, int incomingAmount) {
 
-        int cellCount = floodFillBasin(sourcePacked, blockID);
+        int cellCount = floodFillBasin(sourcePacked, blockID, incomingAmount);
 
         BlockPaletteHandle blocks = currentSubChunk.getBlockPaletteHandle();
         BlockPaletteHandle levels = currentSubChunk.getLiquidLevelPaletteHandle();
@@ -242,33 +258,57 @@ public class LiquidSimulationSystem extends SystemPackage {
     }
 
     /*
-     * Bounded BFS through air/same-liquid cells only, never upward, capped at
-     * EngineSetting.LIQUID_BASIN_SCAN_LIMIT cells and never leaving the
-     * current subchunk — a chunk-local edge simply blocks that direction
-     * rather than aborting the scan.
+     * Cost-bounded 0-1 BFS through air/same-liquid cells only, never upward,
+     * capped at EngineSetting.LIQUID_BASIN_SCAN_LIMIT cells and never leaving
+     * the current subchunk. A horizontal hop is free when it opens onto a
+     * cell that itself continues falling (see opensDownward) — a genuine
+     * spill over a ledge — and otherwise costs
+     * EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS. A cell whose
+     * cumulative cost would meet or exceed incomingAmount is outside this
+     * pour's reach and is excluded, and never expanded from.
      */
-    private int floodFillBasin(int sourcePacked, short blockID) {
+    private int floodFillBasin(int sourcePacked, short blockID, int incomingAmount) {
 
         BlockPaletteHandle blocks = currentSubChunk.getBlockPaletteHandle();
 
-        int head = 0;
-        int tail = 0;
+        int front = basinDequeMid;
+        int back = basinDequeMid;
+        int enqueued = 1;
         int cellCount = 0;
 
-        basinQueue[tail++] = sourcePacked;
+        basinDequePacked[back] = sourcePacked;
+        basinDequeCost[back] = 0;
+        back++;
         markBasinVisited(sourcePacked);
 
-        while (head < tail) {
+        while (front < back) {
 
-            int currentPacked = basinQueue[head++];
+            int currentPacked = basinDequePacked[front];
+            int currentCost = basinDequeCost[front];
+            front++;
+
             basinCells[cellCount++] = currentPacked;
 
-            for (int d = 0; d < BASIN_FLOOD_DIRECTIONS.length && tail < EngineSetting.LIQUID_BASIN_SCAN_LIMIT; d++) {
+            for (int d = 0; d < BASIN_FLOOD_DIRECTIONS.length
+                    && enqueued < EngineSetting.LIQUID_BASIN_SCAN_LIMIT; d++) {
 
-                int neighborPacked = ChunkCoordinate3Int.getNeighbor(currentPacked, BASIN_FLOOD_DIRECTIONS[d]);
+                Direction3Vector direction = BASIN_FLOOD_DIRECTIONS[d];
+                int neighborPacked = ChunkCoordinate3Int.getNeighbor(currentPacked, direction);
 
                 if (neighborPacked == -1 || isBasinVisited(neighborPacked))
                     continue;
+
+                boolean free = direction == Direction3Vector.DOWN
+                        || opensDownward(neighborPacked, blockID, blocks);
+
+                int neighborCost = free
+                        ? currentCost
+                        : currentCost + EngineSetting.LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS;
+
+                if (incomingAmount - neighborCost <= 0) {
+                    markBasinVisited(neighborPacked);
+                    continue;
+                }
 
                 short neighborBlockID = blocks.getBlock(neighborPacked);
 
@@ -276,12 +316,37 @@ public class LiquidSimulationSystem extends SystemPackage {
                     continue;
 
                 markBasinVisited(neighborPacked);
-                basinQueue[tail++] = neighborPacked;
+                enqueued++;
+
+                if (free) {
+                    front--;
+                    basinDequePacked[front] = neighborPacked;
+                    basinDequeCost[front] = neighborCost;
+                } else {
+                    basinDequePacked[back] = neighborPacked;
+                    basinDequeCost[back] = neighborCost;
+                    back++;
+                }
             }
         }
 
         clearBasinVisited();
         return cellCount;
+    }
+
+    // True when packed's own downward neighbor is open (air or the same
+    // liquid) within this subchunk — the lateral hop landing here is a
+    // spill over a ledge rather than sideways spread, so it costs nothing.
+    private boolean opensDownward(int packed, short blockID, BlockPaletteHandle blocks) {
+
+        int belowPacked = ChunkCoordinate3Int.getNeighbor(packed, Direction3Vector.DOWN);
+
+        if (belowPacked == -1)
+            return false;
+
+        short belowBlockID = blocks.getBlock(belowPacked);
+
+        return belowBlockID == airBlockId || belowBlockID == blockID;
     }
 
     private void markBasinVisited(int packed) {
