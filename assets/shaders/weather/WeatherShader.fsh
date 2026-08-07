@@ -14,10 +14,13 @@ out vec4 fragColor;
 #include "includes/SettingsData.glsl"
 #include "includes/NoiseUtility.glsl"
 
-// Fullscreen weather/cloud raymarch. Reconstructs a world-space view ray
-// per pixel, intersects it against the shared cloud altitude band, and
-// marches through every in-range weather pattern's cloud entries from
-// WeatherMapData, accumulating premultiplied color and coverage.
+// Cheap stand-in for the old volumetric cloud raymarch. Each weather-map
+// entry is resolved to a single point on its own dome-bent altitude plane
+// (two ray/plane intersections, no stepping), shaded as a soft rim-lit
+// puff using a 2D layered noise field and an analytically derived fake
+// normal (no extra noise taps). Entries arrive from WeatherMapBufferSystem
+// already sorted nearest-first, so a simple front-to-back "over" composite
+// gives a convincing layered sky without any per-pixel depth sort.
 
 uniform float u_cloudAltitudeMin;
 uniform float u_cloudAltitudeMax;
@@ -25,95 +28,88 @@ uniform float u_cloudMaxDistance;
 uniform vec2  u_weatherDriftDirection;
 uniform float u_weatherDriftSpeed;
 
-const int   CLOUD_RAYMARCH_MIN_STEPS          = 40;
-const int   CLOUD_RAYMARCH_MAX_STEPS          = 80;
-const float CLOUD_RAYMARCH_TARGET_STEP_LENGTH = 20.0;
+const float CLOUD_DENSITY_EPSILON         = 0.001;
+const float CLOUD_ALPHA_SATURATION_CUTOFF = 0.985;
+
+const float CLOUD_OUTER_FADE_START  = 0.85;
+const float CLOUD_OUTER_FADE_END    = 1.35;
+const float CLOUD_MIN_EDGE_BAND     = 0.16;
+const float CLOUD_EDGE_SOFTBAND_MIN = 0.08;
+const float CLOUD_EDGE_SOFTBAND_MAX = 0.6;
+
+const float CLOUD_PUFF_ANGLE_WOBBLE  = 1.2;
+const float CLOUD_DRIFT_SCROLL_SCALE = 0.35;
+const float CLOUD_MORPH_TIME_SCALE   = 0.015;
+
+const float CLOUD_DOME_RADIUS_SCALE       = 0.85;
+const float CLOUD_DOME_CURVE_POWER        = 0.65;
+const float CLOUD_DOME_HORIZON_DIP_BLOCKS = 60.0;
 
 const float CLOUD_FAR_FADE_FRACTION = 0.2;
 
-const float CLOUD_DENSITY_ABSORPTION   = 1.35;
-const float CLOUD_TRANSMITTANCE_CUTOFF = 0.01;
-const float CLOUD_DENSITY_EPSILON      = 0.001;
+const float CLOUD_RIM_POWER                  = 3.0;
+const float CLOUD_RIM_STRENGTH               = 0.5;
+const float CLOUD_AMBIENT_SHADOW             = 0.15;
+const float CLOUD_AMBIENT_LIT                = 0.6;
+const float CLOUD_SKY_TINT_STRENGTH          = 0.45;
+const float CLOUD_STORM_DARKEN_MIN           = 0.45;
+const float CLOUD_DENSITY_OPACITY_SCALE      = 1.5;
+const float CLOUD_REFERENCE_THICKNESS_BLOCKS = 140.0;
 
-const float CLOUD_DRIFT_SCROLL_SCALE = 0.35;
-const float CLOUD_DRIFT_TIME_SCALE   = 0.1;
-const float CLOUD_PUFF_ANGLE_WOBBLE  = 1.2;
-const float CLOUD_EDGE_SOFTBAND_MIN  = 0.08;
-const float CLOUD_EDGE_SOFTBAND_MAX  = 0.6;
-const float CLOUD_MIN_EDGE_BAND      = 0.16;
-const float CLOUD_OUTER_FADE_START   = 0.85;
-const float CLOUD_OUTER_FADE_END     = 1.35;
+bool intersectPlaneY(vec3 origin, vec3 dir, float planeY, out float t) {
+    if (abs(dir.y) < 0.0001)
+    return false;
+    t = (planeY - origin.y) / dir.y;
+    return t > 0.0;
+}
 
-// Saturation drives shading before sky tint/lighting — storm clouds read denser/darker.
-const float CLOUD_STORM_ABSORPTION_BOOST = 1.35;
-const float CLOUD_STORM_DARKEN_MIN       = 0.45;
-const float CLOUD_SKY_TINT_STRENGTH      = 0.35;
-
-// Dome bend — bows each entry's tested altitude down toward eye level as
-// horizontal distance from the camera grows, so the cloud layer reads as
-// low near the horizon and true-height overhead instead of a flat plane.
-// The radius this bend plays out over is u_weatherRangeBlocks (the CPU-side
-// weather sampling range) scaled by CLOUD_DOME_RADIUS_SCALE — kept below
-// 1.0 so the bend finishes just inside the range-fade band instead of
-// exactly at it, so a pattern is already flush with the horizon before
-// WeatherMapData's own rangeFade starts hiding it.
-// CLOUD_DOME_CURVE_POWER biases where the bend sets in (below 1.0 pulls it
-// earlier/rounder); the result is then run through smoothstep so the blend
-// always lands with zero slope at both ends — no seam where the curve used
-// to hit its hard clamp, which was the visible "arch" artifact on the
-// horizon.
-// CLOUD_DOME_HORIZON_DIP_BLOCKS lets the bend undershoot eye level at full
-// range so the dome visibly curls below the horizon rather than flattening
-// onto it. CLOUD_DOME_HORIZON_THICKNESS_BOOST_BLOCKS counteracts the same
-// bend from the other side: squeezing every archetype's tested altitude
-// toward one shared eye-level band would otherwise collapse thin layers
-// (Sirrus, Stratus, Altostratus...) to a sliver far narrower than the dip
-// itself, so it widens each entry's half-thickness as domeT rises, opening
-// the band back up right where the bend is narrowing it.
-// CLOUD_DOME_FLOOR_MARGIN_BLOCKS keeps the raymarch slab in main() tall
-// enough to still contain that undershoot plus the tallest archetype's
-// half-thickness (Cumulonimbus, 70 blocks) plus the full horizon boost.
-const float CLOUD_DOME_RADIUS_SCALE                   = 0.85;
-const float CLOUD_DOME_CURVE_POWER                    = 0.65;
-const float CLOUD_DOME_HORIZON_DIP_BLOCKS             = 60.0;
-const float CLOUD_DOME_HORIZON_THICKNESS_BOOST_BLOCKS = 90.0;
-const float CLOUD_DOME_FLOOR_MARGIN_BLOCKS            = 180.0;
-
-float sampleEntryDensity(
-    vec4 bounds,
-    vec4 shape,
-    vec4 noiseParams,
-    vec4 colorScale,
-    vec4 variance0,
-    vec4 variance1,
-    float intensity,
-    vec3 worldPos,
-    vec2 chunkOffsetBlocks,
-    vec2 driftDirNorm,
-    float driftSpeed,
-    float domeRadiusBlocks,
-    out float heightNorm) {
-    vec2  fromCameraXZ = worldPos.xz - u_cameraPosition.xz;
+float computeDomeT(vec2 worldXZ, float domeRadiusBlocks) {
+    vec2  fromCameraXZ = worldXZ - u_cameraPosition.xz;
     float domeRadiusSq  = domeRadiusBlocks * domeRadiusBlocks;
     float domeBiasedT   = pow(clamp(dot(fromCameraXZ, fromCameraXZ) / domeRadiusSq, 0.0, 1.0), CLOUD_DOME_CURVE_POWER);
-    float domeT             = smoothstep(0.0, 1.0, domeBiasedT);
+    return smoothstep(0.0, 1.0, domeBiasedT);
+}
+
+// Two-pass dome-bent plane solve: first pass finds roughly where the ray
+// would hit the entry's authored altitude, which gives enough horizontal
+// distance to evaluate the dome bend; second pass re-intersects at the
+// bent altitude. Replaces the old per-step slab march with two divisions.
+bool resolveCloudPlane(float authoredAltitude, vec3 rayDir, float domeRadiusBlocks,
+    out vec3 worldPos, out float travelDistance) {
+    float clampedAltitude = clamp(authoredAltitude, u_cloudAltitudeMin, u_cloudAltitudeMax);
+
+    float t0;
+    if (!intersectPlaneY(u_cameraPosition, rayDir, clampedAltitude, t0))
+    return false;
+
+    vec2  approxXZ         = u_cameraPosition.xz + rayDir.xz * t0;
+    float domeT             = computeDomeT(approxXZ, domeRadiusBlocks);
     float domeFloorAltitude = u_cameraPosition.y - CLOUD_DOME_HORIZON_DIP_BLOCKS;
-    float domeAltitude      = mix(shape.y, domeFloorAltitude, domeT);
+    float domeAltitude      = mix(clampedAltitude, domeFloorAltitude, domeT);
 
-    float halfThickness = max(shape.x * 0.5, 0.01);
+    float t1;
+    if (!intersectPlaneY(u_cameraPosition, rayDir, domeAltitude, t1))
+    return false;
 
-    // Widen the tested band as the dome bend progresses — see the comment
-    // block above CLOUD_DOME_HORIZON_THICKNESS_BOOST_BLOCKS. domeT is 0
-    // directly overhead (untouched authored thickness) and rises to 1 at
-    // the horizon, so this only ever adds thickness where the bend is
-    // taking it away.
-    float horizonHalfThickness = halfThickness + CLOUD_DOME_HORIZON_THICKNESS_BOOST_BLOCKS * domeT;
+    if (t1 >= u_cloudMaxDistance)
+    return false;
 
-    float rawHeightT = (worldPos.y - domeAltitude) / horizonHalfThickness;
-    heightNorm = clamp(rawHeightT * 0.5 + 0.5, 0.0, 1.0);
+    worldPos       = u_cameraPosition + rayDir * t1;
+    travelDistance = t1;
+    return true;
+}
 
-    if (abs(rawHeightT) > 1.0)
-    return 0.0;
+// Coverage plus a fake hemisphere normal, derived analytically from the
+// puff's radial falloff rather than from extra noise samples — the
+// "approximated 2D simulating 3D" puff bulge used for rim/ambient shading.
+float sampleCloudEntry(
+    vec4 bounds, vec4 shape, vec4 noiseParams, vec4 colorScale, vec4 materialParams,
+    vec4 variance0, vec4 variance1,
+    float intensity, vec3 worldPos, vec2 chunkOffsetBlocks,
+    vec2 driftDirNorm, float driftAngle, float driftSpeed,
+    out vec3 fakeNormal, out float puffHeight) {
+    fakeNormal = vec3(0.0, 1.0, 0.0);
+    puffHeight = 0.0;
 
     vec2 boxCenter     = (bounds.xy + bounds.zw) * 0.5;
     vec2 boxHalfExtent = max((bounds.zw - bounds.xy) * 0.5, vec2(1.0));
@@ -123,30 +119,25 @@ float sampleEntryDensity(
     if (abs(fromCenter.x) > cullExtent.x || abs(fromCenter.y) > cullExtent.y)
     return 0.0;
 
-    // patternSeed + cloudSlotIndex form this slot's stable instance identity —
-    // fixed across a weather cross-fade even as the archetype occupying it changes.
-    float patternSeed    = variance1.z;
-    float cloudSlotIndex  = variance1.y;
-    float instanceHash   = hash31(vec3(
+    float patternSeed   = variance1.z;
+    float cloudSlotIndex = variance1.y;
+    float instanceHash  = hash31(vec3(
             patternSeed * 12.9898,
             cloudSlotIndex * 78.233 + patternSeed,
             patternSeed - cloudSlotIndex * 0.577));
 
-    float driftAngle = atan(driftDirNorm.y, driftDirNorm.x);
     float puffAngle = driftAngle + (instanceHash - 0.5) * CLOUD_PUFF_ANGLE_WOBBLE;
     float cosA = cos(puffAngle);
     float sinA = sin(puffAngle);
-
-    vec2 rotated = vec2(
+    vec2  rotated = vec2(
         fromCenter.x * cosA + fromCenter.y * sinA,
         fromCenter.y * cosA - fromCenter.x * sinA);
 
     float elongation  = clamp(mix(variance0.w, variance1.x, fract(instanceHash * 3.17)), 1.0, 6.0);
     float spreadRatio = clamp(variance0.x, 0.1, 2.0);
-
-    vec2 anisotropicExtent = boxHalfExtent * spreadRatio * vec2(1.0, 1.0 / elongation);
-    vec2 spreadNorm  = rotated / max(anisotropicExtent, vec2(1.0));
-    float radialDist = length(spreadNorm);
+    vec2  anisotropicExtent = boxHalfExtent * spreadRatio * vec2(1.0, 1.0 / elongation);
+    vec2  spreadNorm  = rotated / max(anisotropicExtent, vec2(1.0));
+    float radialDist  = length(spreadNorm);
 
     if (radialDist > CLOUD_OUTER_FADE_END)
     return 0.0;
@@ -156,43 +147,68 @@ float sampleEntryDensity(
     float sizeVariance  = clamp(mix(variance0.y, variance0.z, fract(instanceHash * 5.63)), 0.3, 3.0);
     float instanceScale = max(colorScale.w, 1.0) * sizeVariance;
 
-    vec2 driftScroll = driftDirNorm * driftSpeed * u_time * CLOUD_DRIFT_SCROLL_SCALE * shape.w;
-    vec3 stableWorldPos = vec3(worldPos.x + chunkOffsetBlocks.x, worldPos.y, worldPos.z + chunkOffsetBlocks.y);
-    vec3 evolvePos = stableWorldPos + vec3(driftScroll.x, u_time * CLOUD_DRIFT_TIME_SCALE, driftScroll.y);
-
+    vec2 driftScroll   = driftDirNorm * driftSpeed * u_time * CLOUD_DRIFT_SCROLL_SCALE * shape.w;
+    vec2 stableWorldXZ = worldPos.xz + chunkOffsetBlocks;
     vec3 instanceOffset = vec3(patternSeed, fract(instanceHash * 7.0), fract(instanceHash * 13.0)) * 128.0;
-    vec3 noisePos = evolvePos / instanceScale * max(noiseParams.x, 0.01) + instanceOffset;
 
-    vec3 warp = cloudWarp3D(noisePos * 0.35) * noiseParams.y;
-    float shapeNoise = perlinWorley3D(noisePos + warp, 1.4);
+    vec2 noisePos = (stableWorldXZ + driftScroll) / instanceScale * max(noiseParams.x, 0.01) + instanceOffset.xy;
+    noisePos += vec2(u_time * CLOUD_MORPH_TIME_SCALE * 0.3, u_time * CLOUD_MORPH_TIME_SCALE);
+
+    float warp       = gradientNoise2D(noisePos * 0.5 + instanceOffset.zy) * noiseParams.y;
+    float shapeNoise = fbmGradient2D(noisePos + vec2(warp), 3, 2.05, 0.5);
 
     float archetypeBias = (noiseParams.z - 0.6) * 0.5;
     float baseBias       = clamp(intensity + archetypeBias, 0.02, 0.95);
     float softness       = clamp(noiseParams.w, 0.0, 1.0);
-
     float insideThreshold = 1.0 - baseBias;
     float softBand        = max(CLOUD_MIN_EDGE_BAND, mix(CLOUD_EDGE_SOFTBAND_MIN, CLOUD_EDGE_SOFTBAND_MAX, softness) * baseBias);
-    float coverage         = remapClamped(shapeNoise, insideThreshold, insideThreshold + softBand, 0.0, 1.0);
 
-    return coverage * outerFade;
+    float coverage = remapClamped(shapeNoise, insideThreshold, insideThreshold + softBand, 0.0, 1.0) * outerFade;
+
+    if (coverage <= CLOUD_DENSITY_EPSILON)
+    return 0.0;
+
+    float fullness    = materialParams.y;
+    float roundPow     = mix(2.2, 0.7, fullness);
+    float smoothHeight = pow(clamp(1.0 - radialDist, 0.0, 1.0), roundPow);
+    puffHeight = clamp(smoothHeight * mix(0.8, 1.2, shapeNoise), 0.0, 1.0);
+
+    float horizMag = 1.0 - puffHeight;
+    vec2  normalXZ = radialDist > 0.0001 ? normalize(fromCenter) * horizMag : vec2(0.0);
+    fakeNormal = normalize(vec3(normalXZ.x, puffHeight + 0.05, normalXZ.y));
+
+    return coverage;
 }
 
-bool intersectAltitudeSlab(vec3 origin, vec3 dir, float minY, float maxY, out float tNear, out float tFar) {
-    if (abs(dir.y) < 0.0001) {
-        if (origin.y < minY || origin.y > maxY)
-        return false;
-        tNear = 0.0;
-        tFar  = 1000000.0;
-        return true;
-    }
+vec3 shadeCloudEntry(vec3 worldPos, vec3 fakeNormal, float puffHeight, float thicknessNorm,
+    vec4 colorScale, vec4 materialParams) {
+    vec3 sunDir  = normalize(u_sunDirection);
+    vec3 moonDir = normalize(u_moonDirection);
 
-    float t0 = (minY - origin.y) / dir.y;
-    float t1 = (maxY - origin.y) / dir.y;
+    float saturation = materialParams.x;
 
-    tNear = max(min(t0, t1), 0.0);
-    tFar  = max(t0, t1);
+    float sunLight  = clamp(dot(fakeNormal, sunDir), 0.0, 1.0);
+    float moonLight = clamp(dot(fakeNormal, moonDir), 0.0, 1.0) * min(u_moonIntensity, 0.18);
 
-    return tFar > tNear;
+    vec3 moonTint    = vec3(0.58, 0.74, 1.00);
+    vec3 directLight = u_sunColor * u_sunIntensity * sunLight + u_moonColor * moonTint * moonLight;
+
+    float luminance    = dot(colorScale.rgb, vec3(0.299, 0.587, 0.114));
+    vec3  tintedAlbedo = mix(vec3(luminance), colorScale.rgb, saturation);
+    tintedAlbedo = mix(tintedAlbedo, tintedAlbedo * u_skyCloudColor, CLOUD_SKY_TINT_STRENGTH);
+
+    float ambientFloor = mix(CLOUD_AMBIENT_SHADOW, CLOUD_AMBIENT_SHADOW * 0.5, thicknessNorm);
+    float ambient       = mix(ambientFloor, CLOUD_AMBIENT_LIT, puffHeight);
+
+    vec3 shaded = tintedAlbedo * (ambient + directLight);
+    shaded *= mix(CLOUD_STORM_DARKEN_MIN, 1.0, saturation);
+
+    vec3  viewDir = normalize(u_cameraPosition - worldPos);
+    float rim      = pow(1.0 - clamp(dot(fakeNormal, viewDir), 0.0, 1.0), CLOUD_RIM_POWER);
+    vec3  rimTint  = mix(u_sunColor, vec3(1.0), 0.5);
+    shaded += rimTint * rim * CLOUD_RIM_STRENGTH * mix(0.35, 1.0, sunLight);
+
+    return shaded;
 }
 
 void main() {
@@ -201,146 +217,83 @@ void main() {
     if (entryCount == 0)
     discard;
 
-    float layerMinY = max(u_weatherCloudLayerMinY, u_cloudAltitudeMin);
-    float layerMaxY = min(u_weatherCloudLayerMaxY, u_cloudAltitudeMax);
-
-    // The dome bend in sampleEntryDensity() can pull a cloud's tested altitude
-    // down to (camera height - CLOUD_DOME_HORIZON_DIP_BLOCKS) near the
-    // horizon, so the slab has to reach at least that low or those bent
-    // samples never get raymarched.
-    layerMinY = min(layerMinY, u_cameraPosition.y - CLOUD_DOME_HORIZON_DIP_BLOCKS - CLOUD_DOME_FLOOR_MARGIN_BLOCKS);
-
-    if (layerMaxY <= layerMinY)
-    discard;
-
-    vec3 rayDir    = normalize(v_dir);
-    vec3 rayOrigin = u_cameraPosition;
+    vec3 rayDir = normalize(v_dir);
 
     vec2 chunkOffsetBlocks = vec2(float(u_playerChunkX), float(u_playerChunkZ)) * u_chunkSize;
 
-    float tNear, tFar;
-    if (!intersectAltitudeSlab(rayOrigin, rayDir, layerMinY, layerMaxY, tNear, tFar))
-    discard;
-
-    tFar = min(tFar, u_cloudMaxDistance);
-
-    if (tFar <= tNear)
-    discard;
-
-    vec2 driftDirNorm = u_weatherDriftDirection;
-    float driftDirLen = length(driftDirNorm);
-    if (driftDirLen > 0.0001)
-    driftDirNorm /= driftDirLen;
-    else
-    driftDirNorm = vec2(1.0, 0.0);
+    vec2  driftDirNorm = u_weatherDriftDirection;
+    float driftDirLen  = length(driftDirNorm);
+    driftDirNorm = driftDirLen > 0.0001 ? driftDirNorm / driftDirLen : vec2(1.0, 0.0);
+    float driftAngle = atan(driftDirNorm.y, driftDirNorm.x);
     float driftSpeed = u_weatherDriftSpeed;
 
     float domeRadiusBlocks = max(u_weatherRangeBlocks * CLOUD_DOME_RADIUS_SCALE, 1.0);
 
-    float rayLength = tFar - tNear;
-    int stepCount = clamp(
-        int(rayLength / CLOUD_RAYMARCH_TARGET_STEP_LENGTH),
-        CLOUD_RAYMARCH_MIN_STEPS,
-        CLOUD_RAYMARCH_MAX_STEPS);
-
-    float dither = hash31(vec3(gl_FragCoord.xy, 0.0)) - 0.5;
-
-    vec3 entryWorld = rayOrigin + rayDir * tNear;
-    vec3 exitWorld  = rayOrigin + rayDir * tFar;
-
-    vec3  stepVec      = (exitWorld - entryWorld) / float(stepCount);
-    float stepLength   = length(stepVec);
-    float farFadeStart = u_cloudMaxDistance * (1.0 - CLOUD_FAR_FADE_FRACTION);
-
-    float sunFacing  = clamp(dot(vec3(0.0, 1.0, 0.0), normalize(u_sunDirection)), 0.0, 1.0);
-    float moonFacing = clamp(dot(vec3(0.0, 1.0, 0.0), normalize(u_moonDirection)), 0.0, 1.0);
-    vec3  moonTint   = vec3(0.58, 0.74, 1.00);
-    vec3  directLight = u_sunColor * u_sunIntensity * mix(0.6, 1.0, sunFacing)
-    + u_moonColor * moonTint * min(u_moonIntensity, 0.18) * mix(0.6, 1.0, moonFacing);
-
-    float transmittance    = 1.0;
     vec3  accumulatedColor = vec3(0.0);
-    float traveled         = tNear + stepLength * (0.5 + dither);
-    vec3  samplePos        = entryWorld + stepVec * (0.5 + dither);
+    float accumulatedAlpha = 0.0;
 
-    for (int s = 0; s < stepCount; s++) {
-        if (transmittance < CLOUD_TRANSMITTANCE_CUTOFF)
+    for (int i = 0; i < entryCount; i++) {
+        if (accumulatedAlpha > CLOUD_ALPHA_SATURATION_CUTOFF)
         break;
 
-        float farFade = 1.0 - smoothstep(farFadeStart, u_cloudMaxDistance, traveled);
+        vec4  patternState = u_weatherPatternState[i];
+        float intensity     = patternState.x;
+        float fadeAlpha     = patternState.y;
+        float rangeFade     = patternState.w;
 
-        if (farFade > CLOUD_DENSITY_EPSILON) {
-            for (int i = 0; i < entryCount; i++) {
-                vec4 patternState = u_weatherPatternState[i];
-                float intensity  = patternState.x;
-                float fadeAlpha  = patternState.y;
-                float rangeFade  = patternState.w;
+        if (intensity <= CLOUD_DENSITY_EPSILON || fadeAlpha <= CLOUD_DENSITY_EPSILON || rangeFade <= CLOUD_DENSITY_EPSILON)
+        continue;
 
-                if (intensity <= CLOUD_DENSITY_EPSILON || fadeAlpha <= CLOUD_DENSITY_EPSILON
-                    || rangeFade <= CLOUD_DENSITY_EPSILON)
-                continue;
+        vec4 shape = u_weatherCloudShape[i];
 
-                vec4 shape = u_weatherCloudShape[i];
+        if (shape.z <= CLOUD_DENSITY_EPSILON)
+        continue;
 
-                if (shape.z <= CLOUD_DENSITY_EPSILON)
-                continue;
+        vec3  worldPos;
+        float travelDistance;
+        if (!resolveCloudPlane(shape.y, rayDir, domeRadiusBlocks, worldPos, travelDistance))
+        continue;
 
-                vec4 bounds      = u_weatherBounds[i];
-                vec4 noiseParams = u_weatherCloudNoise[i];
-                vec4 colorScale  = u_weatherCloudColorScale[i];
-                vec4 materialParams = u_weatherCloudMaterial[i];
-                vec4 variance0   = u_weatherCloudVariance0[i];
-                vec4 variance1   = u_weatherCloudVariance1[i];
+        float farFadeStart = u_cloudMaxDistance * (1.0 - CLOUD_FAR_FADE_FRACTION);
+        float farFade       = 1.0 - smoothstep(farFadeStart, u_cloudMaxDistance, travelDistance);
 
-                float heightNorm;
-                float density = sampleEntryDensity(
-                    bounds, shape, noiseParams, colorScale, variance0, variance1,
-                    intensity, samplePos, chunkOffsetBlocks, driftDirNorm, driftSpeed,
-                    domeRadiusBlocks, heightNorm)
-                * fadeAlpha * rangeFade * farFade;
+        if (farFade <= CLOUD_DENSITY_EPSILON)
+        continue;
 
-                if (density <= CLOUD_DENSITY_EPSILON)
-                continue;
+        vec4 bounds        = u_weatherBounds[i];
+        vec4 noiseParams    = u_weatherCloudNoise[i];
+        vec4 colorScale     = u_weatherCloudColorScale[i];
+        vec4 materialParams = u_weatherCloudMaterial[i];
+        vec4 variance0      = u_weatherCloudVariance0[i];
+        vec4 variance1      = u_weatherCloudVariance1[i];
 
-                float saturation = materialParams.x;
-                float fullness   = materialParams.y;
+        vec3  fakeNormal;
+        float puffHeight;
+        float coverage = sampleCloudEntry(
+            bounds, shape, noiseParams, colorScale, materialParams, variance0, variance1,
+            intensity, worldPos, chunkOffsetBlocks, driftDirNorm, driftAngle, driftSpeed,
+            fakeNormal, puffHeight);
 
-                float vertShape = 1.0 - abs(heightNorm - 0.5) * 2.0;
-                vertShape = pow(clamp(vertShape, 0.0, 1.0), mix(2.4, 0.6, fullness));
+        if (coverage <= CLOUD_DENSITY_EPSILON)
+        continue;
 
-                if (vertShape <= 0.0)
-                continue;
+        float thicknessNorm  = clamp(shape.x / CLOUD_REFERENCE_THICKNESS_BLOCKS, 0.0, 1.0);
+        float densityOpacity = clamp(shape.z * CLOUD_DENSITY_OPACITY_SCALE, 0.0, 1.0);
+        float entryAlpha      = clamp(coverage * densityOpacity * fadeAlpha * rangeFade * farFade, 0.0, 1.0);
 
-                float stormDarkness  = 1.0 - saturation;
-                float absorptionBias = mix(1.0, CLOUD_STORM_ABSORPTION_BOOST, stormDarkness);
+        if (entryAlpha <= CLOUD_DENSITY_EPSILON)
+        continue;
 
-                float stepAbsorption = clamp(
-                    density * vertShape * shape.z * stepLength * CLOUD_DENSITY_ABSORPTION * absorptionBias,
-                    0.0, 1.0);
+        vec3 entryColor = shadeCloudEntry(worldPos, fakeNormal, puffHeight, thicknessNorm, colorScale, materialParams);
 
-                float luminance    = dot(colorScale.rgb, vec3(0.299, 0.587, 0.114));
-                vec3  tintedAlbedo = mix(vec3(luminance), colorScale.rgb, saturation);
-                tintedAlbedo = mix(tintedAlbedo, tintedAlbedo * u_skyCloudColor, CLOUD_SKY_TINT_STRENGTH);
-
-                float ambient  = mix(0.10, 0.22, heightNorm);
-                vec3  litColor = tintedAlbedo * (directLight * mix(0.4, 1.0, heightNorm) + ambient);
-                litColor *= mix(CLOUD_STORM_DARKEN_MIN, 1.0, saturation);
-
-                accumulatedColor += litColor * stepAbsorption * transmittance;
-                transmittance    *= (1.0 - stepAbsorption);
-            }
-        }
-
-        samplePos += stepVec;
-        traveled  += stepLength;
+        float remaining = 1.0 - accumulatedAlpha;
+        accumulatedColor += entryColor * entryAlpha * remaining;
+        accumulatedAlpha += entryAlpha * remaining;
     }
 
-    float coverage = 1.0 - transmittance;
-
-    if (coverage <= 0.003)
+    if (accumulatedAlpha <= 0.003)
     discard;
 
-    vec3 straightColor = accumulatedColor / max(coverage, 0.0001);
-
-    fragColor = vec4(straightColor, coverage);
+    vec3 straightColor = accumulatedColor / max(accumulatedAlpha, 0.0001);
+    fragColor = vec4(straightColor, accumulatedAlpha);
 }
