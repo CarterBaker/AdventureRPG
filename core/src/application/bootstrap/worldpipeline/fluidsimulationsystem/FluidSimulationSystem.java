@@ -260,7 +260,7 @@ public class FluidSimulationSystem extends SystemPackage {
                 ? subChunkInstance.getLiquidLevelPaletteHandle().getBlock(packed)
                 : amount;
 
-        if (remaining >= EngineSetting.LIQUID_BASIN_FILL_THRESHOLD)
+        if (remaining <= 0)
             return moved;
 
         return decayCell(subChunkInstance, packed, blockID, remaining) || moved;
@@ -324,7 +324,15 @@ public class FluidSimulationSystem extends SystemPackage {
         if (delivered == 0)
             return false;
 
-        sourceSubChunk.setLiquidLevel(sourcePacked, (short) (amount - delivered));
+        int sourceRemaining = amount - delivered;
+
+        if (sourceRemaining <= 0) {
+            sourceSubChunk.setBlock(sourcePacked, airBlockId);
+            sourceSubChunk.setLiquidLevel(sourcePacked, EngineSetting.LIQUID_LEVEL_EMPTY);
+        } else {
+            sourceSubChunk.setLiquidLevel(sourcePacked, (short) sourceRemaining);
+        }
+
         return true;
     }
 
@@ -470,8 +478,14 @@ public class FluidSimulationSystem extends SystemPackage {
             if (newLevel == oldLevel)
                 continue;
 
-            cellSubChunk.setBlock(cellPacked, blockID);
-            cellSubChunk.setLiquidLevel(cellPacked, (short) newLevel);
+            if (newLevel <= 0) {
+                cellSubChunk.setBlock(cellPacked, airBlockId);
+                cellSubChunk.setLiquidLevel(cellPacked, EngineSetting.LIQUID_LEVEL_EMPTY);
+            } else {
+                cellSubChunk.setBlock(cellPacked, blockID);
+                cellSubChunk.setLiquidLevel(cellPacked, (short) newLevel);
+            }
+
             markTouched(cellChunk, cellSubChunk);
             changed = true;
         }
@@ -564,6 +578,12 @@ public class FluidSimulationSystem extends SystemPackage {
 
         markBasinVisited(currentSubChunk, sourcePacked);
 
+        if (!hasSealedFloor(currentChunk, currentSubChunk, sourcePacked, blockID)) {
+            lastFloodEnclosed = false;
+            clearBasinVisited();
+            return cellCount;
+        }
+
         outer: while (front < back) {
 
             int cellPacked = basinDequePacked[front];
@@ -594,18 +614,17 @@ public class FluidSimulationSystem extends SystemPackage {
                     continue;
                 }
 
-                if (neighborBlockID == airBlockId
-                        && !hasSupportBelow(neighborChunk, neighborSubChunk, neighborPacked)) {
+                if (cellCount >= EngineSetting.LIQUID_BASIN_SCAN_LIMIT) {
+                    enclosed = false;
+                    break outer;
+                }
+
+                if (!hasSealedFloor(neighborChunk, neighborSubChunk, neighborPacked, blockID)) {
                     enclosed = false;
                     break outer;
                 }
 
                 markBasinVisited(neighborSubChunk, neighborPacked);
-
-                if (cellCount >= EngineSetting.LIQUID_BASIN_SCAN_LIMIT) {
-                    enclosed = false;
-                    break outer;
-                }
 
                 basinCellPacked[cellCount] = neighborPacked;
                 basinCellChunk[cellCount] = neighborChunk;
@@ -624,14 +643,23 @@ public class FluidSimulationSystem extends SystemPackage {
         return cellCount;
     }
 
-    private boolean hasSupportBelow(ChunkInstance chunk, SubChunkInstance subChunk, int packed) {
+    private boolean hasSealedFloor(ChunkInstance chunk, SubChunkInstance subChunk, int packed, short blockID) {
 
         int belowPacked = resolveNeighbor(chunk, subChunk, packed, Direction3Vector.DOWN);
 
         if (scratchNeighborSubChunk == null)
+            return true;
+
+        SubChunkInstance belowSubChunk = scratchNeighborSubChunk;
+        short belowBlockID = belowSubChunk.getBlockPaletteHandle().getBlock(belowPacked);
+
+        if (belowBlockID == airBlockId)
             return false;
 
-        return scratchNeighborSubChunk.getBlockPaletteHandle().getBlock(belowPacked) != airBlockId;
+        if (belowBlockID == blockID)
+            return belowSubChunk.getLiquidLevelPaletteHandle().getBlock(belowPacked) >= EngineSetting.LIQUID_LEVEL_MAX;
+
+        return true;
     }
 
     private void markBasinVisited(SubChunkInstance subChunk, int packed) {
