@@ -15,6 +15,7 @@ public class StatisticsHandle extends HandlePackage {
     private float walkSpeed;
     private float movementSpeed;
     private float sprintSpeed;
+    private float swimSpeed;
 
     // Physics
     private float jumpHeight;
@@ -31,6 +32,7 @@ public class StatisticsHandle extends HandlePackage {
         this.walkSpeed = EngineSetting.DEFAULT_WALK_SPEED;
         this.movementSpeed = EngineSetting.DEFAULT_MOVEMENT_SPEED;
         this.sprintSpeed = EngineSetting.DEFAULT_SPRINT_SPEED;
+        this.swimSpeed = EngineSetting.DEFAULT_SWIM_SPEED;
 
         // Physics
         this.jumpHeight = EngineSetting.DEFAULT_JUMP_HEIGHT;
@@ -71,6 +73,14 @@ public class StatisticsHandle extends HandlePackage {
 
     public void setJumpHeight(float jumpHeight) {
         this.jumpHeight = jumpHeight;
+    }
+
+    public float getSwimSpeed() {
+        return swimSpeed;
+    }
+
+    public void setSwimSpeed(float swimSpeed) {
+        this.swimSpeed = swimSpeed;
     }
 
     public float getReach() {

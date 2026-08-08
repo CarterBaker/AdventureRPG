@@ -87,7 +87,7 @@ public class GenerationBranch extends BranchPackage {
 
         for (int i = 0; i < EngineSetting.WORLD_HEIGHT; i++) {
             SubChunkInstance subChunk = subChunks[i];
-            if (worldGenerationManager.generateSubChunk(chunkCoordinate, subChunk))
+            if (worldGenerationManager.generateSubChunk(chunkInstance.getWorldHandle(), chunkCoordinate, subChunk))
                 continue;
             success = false;
             break;

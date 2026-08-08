@@ -75,4 +75,8 @@ public class WorldHandle extends HandlePackage {
     public float getPlanetaryOffset() {
         return data.getPlanetaryOffset();
     }
+
+    public long getSeed() {
+        return data.getSeed();
+    }
 }

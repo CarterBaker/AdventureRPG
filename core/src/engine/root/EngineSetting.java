@@ -352,6 +352,28 @@ public class EngineSetting {
         public static final int LIQUID_BASIN_FILL_THRESHOLD = 2;
         public static final int LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS = 1;
 
+        // Swimming \\
+
+        public static final float SWIM_FULL_SUBMERGE_FRACTION = 1.0f;
+        public static final float SWIM_DEEP_THRESHOLD = 0.1f;
+        public static final float SWIM_HEAD_CLEARANCE = 0.12f;
+        public static final float SWIM_UP_SPEED = 2.4f;
+        public static final float SWIM_SINK_SPEED = 0.5f;
+        public static final float SWIM_TREAD_SPEED = 2.0f;
+        public static final float SWIM_TREAD_RESPONSIVENESS = 6.0f;
+        public static final float SWIM_VISCOSITY_REFERENCE = 1.0f;
+        public static final float SWIM_VISCOSITY_DRAG_SCALE = 0.12f;
+        public static final float SWIM_MIN_SPEED_MULTIPLIER = 0.15f;
+
+        // Wading \\
+
+        public static final float WADE_JUMP_HEIGHT_MULTIPLIER = 0.5f;
+
+        // Swim Climb-Out \\
+
+        public static final float SWIM_CLIMB_OUT_MAX_VISCOSITY = 1.0f;
+        public static final int SWIM_CLIMB_OUT_SCAN_DEPTH = 4;
+
         // World Defaults \\
 
         public static final String DEFAULT_CALENDAR_NAME = "standard/Default";
@@ -632,6 +654,7 @@ public class EngineSetting {
         public static final float DEFAULT_MOVEMENT_SPEED = 3.3f;
         public static final float DEFAULT_REACH = 1f;
         public static final float DEFAULT_SPRINT_SPEED = 7f;
+        public static final float DEFAULT_SWIM_SPEED = 2.4f;
         public static final float DEFAULT_WALK_SPEED = 1.4f;
 
         // Rig \\

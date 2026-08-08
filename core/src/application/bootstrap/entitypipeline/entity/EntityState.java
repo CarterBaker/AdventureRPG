@@ -12,5 +12,7 @@ public enum EntityState {
     MOVING,
     RUNNING,
     JUMPING,
-    FALLING
+    FALLING,
+    SWIMMING,
+    WADING
 }

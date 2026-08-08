@@ -14,8 +14,12 @@ public class MovementBranch extends BranchPackage {
 
     /*
      * Computes horizontal movement displacement each frame from the entity's
-     * EntityInputHandle . Smoothly accelerates toward target velocity via lerp.
-     * Y axis is not touched — owned entirely by GravityBranch.
+     * EntityInputHandle. Smoothly accelerates toward target velocity via lerp.
+     * Y axis is not touched — owned by GravityBranch on land/air and by
+     * SwimBranch once genuinely submerged (see MovementManager). dragMultiplier
+     * scales the *target* speed rather than the resulting displacement, so
+     * accel/decel still ramps smoothly, just toward a lower terminal speed —
+     * see SwimBranch for how that multiplier is derived from viscosity.
      */
 
     // Settings
@@ -42,7 +46,7 @@ public class MovementBranch extends BranchPackage {
 
     // Movement \\
 
-    void calculate(Vector3 movement, EntityInstance entity) {
+    void calculate(Vector3 movement, EntityInstance entity, float dragMultiplier, boolean swimming) {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         StatisticsHandle stats = entity.getStatisticsHandle();
@@ -77,8 +81,8 @@ public class MovementBranch extends BranchPackage {
             targetZ /= len;
         }
 
-        // Real-world speed scaled by movementScale for game feel
-        float speed = selectSpeed(state.getMovementState(), stats) * movementScale;
+        // Real-world speed scaled by movementScale and, in liquid, drag
+        float speed = selectSpeed(swimming, state.getMovementState(), stats) * movementScale * dragMultiplier;
         targetX *= speed;
         targetZ *= speed;
 
@@ -94,7 +98,11 @@ public class MovementBranch extends BranchPackage {
 
     // Speed \\
 
-    private float selectSpeed(EntityState state, StatisticsHandle stats) {
+    private float selectSpeed(boolean swimming, EntityState state, StatisticsHandle stats) {
+
+        if (swimming)
+            return stats.getSwimSpeed();
+
         return switch (state) {
             case WALKING -> stats.getWalkSpeed();
             case MOVING -> stats.getMovementSpeed();

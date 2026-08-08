@@ -64,6 +64,7 @@ public class EntityStateHandle extends HandlePackage {
 
     public boolean isGrounded() {
         return movementState != EntityState.JUMPING
-                && movementState != EntityState.FALLING;
+                && movementState != EntityState.FALLING
+                && movementState != EntityState.SWIMMING;
     }
 }

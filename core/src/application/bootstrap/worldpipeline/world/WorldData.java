@@ -9,12 +9,13 @@ public class WorldData extends DataPackage {
 
     /*
      * Immutable world definition loaded from a PNG map and optional companion
-     * JSON. Holds identity, pixel map, scale, gravity, rotation, tilt, and the
+     * JSON. Holds identity, pixel map, scale, gravity, rotation, tilt, the
      * planetary offset used to phase the day/night gradient across the
-     * world's Y axis. calendarName points to the per-world calendar
-     * definition, which owns daysPerDay and every other day/year shape
-     * setting. worldEpochStart is the one mutable field — written from the
-     * save file at runtime, never from the world definition itself.
+     * world's Y axis, and the generation seed. calendarName points to the
+     * per-world calendar definition, which owns daysPerDay and every other
+     * day/year shape setting. worldEpochStart is the one mutable field —
+     * written from the save file at runtime, never from the world
+     * definition itself.
      */
 
     // Identity
@@ -45,6 +46,11 @@ public class WorldData extends DataPackage {
     // noon. See WorldWrapUtility.wrappedPlanetaryOffset.
     private final float planetaryOffset;
 
+    // Generation — locked in from the companion JSON at first load. Every
+    // terrain, biome, and feature decision for this world must derive from
+    // this value plus a deterministic position, never from mutable state.
+    private final long seed;
+
     // Constructor \\
 
     public WorldData(
@@ -57,7 +63,8 @@ public class WorldData extends DataPackage {
             String calendarName,
             float rotationSpeed,
             float axialTilt,
-            float planetaryOffset) {
+            float planetaryOffset,
+            long seed) {
 
         // Identity
         this.worldName = worldName;
@@ -81,6 +88,9 @@ public class WorldData extends DataPackage {
 
         // Planetary Offset
         this.planetaryOffset = planetaryOffset;
+
+        // Generation
+        this.seed = seed;
     }
 
     // Accessible \\
@@ -131,5 +141,9 @@ public class WorldData extends DataPackage {
 
     public float getPlanetaryOffset() {
         return planetaryOffset;
+    }
+
+    public long getSeed() {
+        return seed;
     }
 }

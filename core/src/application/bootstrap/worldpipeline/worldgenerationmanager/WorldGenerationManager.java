@@ -4,6 +4,7 @@ import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -11,15 +12,19 @@ import engine.util.mathematics.extras.NoiseUtility;
 
 public class WorldGenerationManager extends ManagerPackage {
 
+    /*
+     * Drives per-subchunk terrain generation. Takes no seed or world state of
+     * its own — every call is handed the WorldHandle it's generating for, so
+     * generation is always keyed off that world's own locked-in seed and PNG
+     * map rather than any shared or mutable global state.
+     */
+
     // Internal
     private BlockManager blockManager;
     private BiomeManager biomeManager;
 
     private int BIOME_SIZE;
     private int CHUNK_SIZE;
-
-    // Data
-    private long seed;
 
     // Blocks
     private short AIR_BLOCK_ID;
@@ -34,7 +39,6 @@ public class WorldGenerationManager extends ManagerPackage {
     protected void create() {
         this.BIOME_SIZE = EngineSetting.BIOME_SIZE;
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
-        this.seed = 12345L;
     }
 
     @Override
@@ -50,16 +54,6 @@ public class WorldGenerationManager extends ManagerPackage {
         this.DEFAULT_BIOME_ID = biomeManager.getBiomeIDFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
     }
 
-    // Data \\
-
-    public void setSeed(long seed) {
-        this.seed = seed;
-    }
-
-    public long getSeed() {
-        return seed;
-    }
-
     // Generator \\
 
     /*
@@ -68,7 +62,9 @@ public class WorldGenerationManager extends ManagerPackage {
      * liquid yet, so world generation has no reason to pay per-block liquid-
      * stability invalidation on every placed voxel.
      */
-    public boolean generateSubChunk(long chunkCoordinate, SubChunkInstance subChunkInstance) {
+    public boolean generateSubChunk(WorldHandle worldHandle, long chunkCoordinate, SubChunkInstance subChunkInstance) {
+
+        long seed = worldHandle.getSeed();
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);

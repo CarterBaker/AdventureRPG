@@ -131,7 +131,9 @@ public class BlockCollisionBranch extends BranchPackage {
             float axisSize,
             float axisMovement) {
 
-        if (block == null || block.getGeometry() == DynamicGeometryType.NONE)
+        if (block == null
+                || block.getGeometry() == DynamicGeometryType.NONE
+                || block.getGeometry() == DynamicGeometryType.LIQUID)
             return false;
 
         float fractional = axisPosition - (int) axisPosition;

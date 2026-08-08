@@ -1,7 +1,12 @@
 package application.bootstrap.worldpipeline.worldmanager;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -21,8 +26,14 @@ class WorldBuilder extends BuilderPackage {
     /*
      * Parses a world PNG map and optional companion JSON into a WorldHandle.
      * All fields are resolved before WorldData construction — the handle is
-     * never mutated after constructor() is called. Bootstrap-only.
+     * never mutated after constructor() is called. Bootstrap-only. The
+     * companion JSON is also the durable home for the world's generation
+     * seed: once assigned, it is written back to disk immediately so every
+     * future load of this world, on any machine, reproduces the same seed
+     * and therefore the same terrain.
      */
+
+    private static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().create();
 
     // Build \\
 
@@ -43,9 +54,10 @@ class WorldBuilder extends BuilderPackage {
         float planetaryOffset = EngineSetting.DEFAULT_PLANETARY_OFFSET;
 
         File jsonFile = resolveCompanionJson(file);
+        boolean jsonExisted = jsonFile.exists();
+        JsonObject json = jsonExisted ? JsonUtility.loadJsonObject(jsonFile) : new JsonObject();
 
-        if (jsonFile.exists()) {
-            JsonObject json = JsonUtility.loadJsonObject(jsonFile);
+        if (jsonExisted) {
 
             if (json.has("gravity_multiplier"))
                 gravityMultiplier = json.get("gravity_multiplier").getAsFloat();
@@ -71,6 +83,8 @@ class WorldBuilder extends BuilderPackage {
                 planetaryOffset = wrapUnitFraction(json.get("planetary_offset").getAsFloat());
         }
 
+        long seed = resolveWorldSeed(json, jsonFile, worldName);
+
         WorldData data = new WorldData(
                 worldName,
                 worldID,
@@ -81,12 +95,42 @@ class WorldBuilder extends BuilderPackage {
                 calendarName,
                 rotationSpeed,
                 axialTilt,
-                planetaryOffset);
+                planetaryOffset,
+                seed);
 
         WorldHandle handle = create(WorldHandle.class);
         handle.constructor(data);
 
         return handle;
+    }
+
+    // Seed \\
+
+    /*
+     * Reads "seed" from the companion JSON if present. If it's missing —
+     * either the field or the whole file — a new seed is rolled once and
+     * persisted immediately, so this is the only moment a world's seed is
+     * ever chosen. Every subsequent load reads the same value back.
+     */
+    private long resolveWorldSeed(JsonObject json, File jsonFile, String worldName) {
+
+        if (json.has("seed"))
+            return json.get("seed").getAsLong();
+
+        long seed = ThreadLocalRandom.current().nextLong();
+        json.addProperty("seed", seed);
+        persistCompanionJson(json, jsonFile, worldName);
+
+        return seed;
+    }
+
+    private void persistCompanionJson(JsonObject json, File jsonFile, String worldName) {
+
+        try (FileWriter writer = new FileWriter(jsonFile)) {
+            PRETTY_GSON.toJson(json, writer);
+        } catch (IOException e) {
+            throwException("Failed to persist generated seed for world: \"" + worldName + "\"", e);
+        }
     }
 
     // Helpers \\
