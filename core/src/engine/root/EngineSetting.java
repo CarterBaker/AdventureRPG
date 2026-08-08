@@ -317,7 +317,6 @@ public class EngineSetting {
         // World \\
 
         public static final String CHUNK_VAO = "util/vao/ChunkVAO";
-        public static final String DEFAULT_BIOME_NAME = "TestBiome";
         public static final int CHUNK_POOL_MAX_OVERFLOW = 32;
         public static final int GRID_SLOTS_SCAN_PER_FRAME = 32;
         public static final int MAX_CHUNK_STREAM_PER_BATCH = 32;
@@ -384,6 +383,14 @@ public class EngineSetting {
         public static final float DEFAULT_WORLD_ROTATION_SPEED = 1.0f;
         public static final float DEFAULT_AXIAL_TILT_DEGREES = 23.5f;
         public static final float DEFAULT_PLANETARY_OFFSET = 0.0f;
+
+        // Biome Map Resolution \\
+
+        public static final float BIOME_BORDER_WARP_FREQUENCY = 0.5f;
+        public static final float BIOME_BORDER_WARP_STRENGTH_PIXELS = 0.4f;
+        public static final long BIOME_BORDER_WARP_SEED = 0x8B3C9F1E2A47D5B1L;
+        public static final float BIOME_VARIANCE_NOISE_FREQUENCY = 0.02f;
+        public static final long BIOME_VARIANCE_SEED = 0x4F1D2C6E9A7B31F5L;
 
         // Rotation \\
 

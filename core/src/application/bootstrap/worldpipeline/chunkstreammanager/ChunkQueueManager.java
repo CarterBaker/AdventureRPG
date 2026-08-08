@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.ArrayDeque;
 
-import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
@@ -33,7 +32,6 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Internal
     private BlockManager blockManager;
-    private BiomeManager biomeManager;
     private WorldStreamManager worldStreamManager;
     private ChunkStreamManager chunkStreamManager;
     private WorldRenderManager worldRenderManager;
@@ -51,7 +49,6 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Block IDs
     private short airBlockId;
-    private short defaultBiomeId;
 
     // Queue
     private QueueInstance chunkQueue;
@@ -96,7 +93,6 @@ class ChunkQueueManager extends ManagerPackage {
 
         // Internal
         this.blockManager = get(BlockManager.class);
-        this.biomeManager = get(BiomeManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.worldRenderManager = get(WorldRenderManager.class);
@@ -105,7 +101,6 @@ class ChunkQueueManager extends ManagerPackage {
     @Override
     protected void awake() {
         this.airBlockId = (short) blockManager.getBlockIDFromBlockName(EngineSetting.AIR_BLOCK_NAME);
-        this.defaultBiomeId = biomeManager.getBiomeIDFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
     }
 
     @Override
@@ -199,7 +194,6 @@ class ChunkQueueManager extends ManagerPackage {
                 chunkCoordinate,
                 chunkStreamManager.getChunkVAO(),
                 airBlockId,
-                defaultBiomeId,
                 activeChunks);
 
         activeChunks.put(chunkCoordinate, chunkInstance);

@@ -2,6 +2,7 @@ package engine.assets.image;
 
 import javax.imageio.ImageIO;
 
+import engine.graphics.color.Color;
 import engine.root.EngineUtility;
 
 import java.awt.image.BufferedImage;
@@ -78,6 +79,26 @@ public class Pixmap {
     }
 
     // Accessible \\
+
+    // Read \\
+
+    public int getPixel(int x, int y) {
+        int idx = (y * width + x) * 4;
+        int r = pixels.get(idx) & 0xFF;
+        int g = pixels.get(idx + 1) & 0xFF;
+        int b = pixels.get(idx + 2) & 0xFF;
+        int a = pixels.get(idx + 3) & 0xFF;
+        return (r << 24) | (g << 16) | (b << 8) | a;
+    }
+
+    public Color getPixelColor(int x, int y) {
+        int rgba = getPixel(x, y);
+        float r = ((rgba >> 24) & 0xFF) / 255.0f;
+        float g = ((rgba >> 16) & 0xFF) / 255.0f;
+        float b = ((rgba >> 8) & 0xFF) / 255.0f;
+        float a = (rgba & 0xFF) / 255.0f;
+        return new Color(r, g, b, a);
+    }
 
     public int getWidth() {
         return width;

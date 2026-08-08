@@ -16,7 +16,9 @@ public class WorldGenerationManager extends ManagerPackage {
      * Drives per-subchunk terrain generation. Takes no seed or world state of
      * its own — every call is handed the WorldHandle it's generating for, so
      * generation is always keyed off that world's own locked-in seed and PNG
-     * map rather than any shared or mutable global state.
+     * map rather than any shared or mutable global state. Biome is resolved
+     * once per chunk column through BiomeManager's world-map lookup and used
+     * to fill that column's entire biome palette.
      */
 
     // Internal
@@ -29,9 +31,6 @@ public class WorldGenerationManager extends ManagerPackage {
     // Blocks
     private short AIR_BLOCK_ID;
     private short GRASS_BLOCK_ID;
-
-    // Biomes
-    private short DEFAULT_BIOME_ID;
 
     // Base \\
 
@@ -51,7 +50,6 @@ public class WorldGenerationManager extends ManagerPackage {
     protected void awake() {
         this.AIR_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName(EngineSetting.AIR_BLOCK_NAME);
         this.GRASS_BLOCK_ID = (short) blockManager.getBlockIDFromBlockName("TerraArcanaBlocks/Grass Block");
-        this.DEFAULT_BIOME_ID = biomeManager.getBiomeIDFromBiomeName(EngineSetting.DEFAULT_BIOME_NAME);
     }
 
     // Generator \\
@@ -73,6 +71,8 @@ public class WorldGenerationManager extends ManagerPackage {
         long offsetZ = (long) chunkZ * CHUNK_SIZE;
         long offsetY = (long) subChunkInstance.getCoordinate() * CHUNK_SIZE;
 
+        short biomeID = biomeManager.getBiomeIDFromChunkCoordinate(worldHandle, chunkCoordinate);
+
         BlockPaletteHandle biomes = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
 
@@ -80,12 +80,12 @@ public class WorldGenerationManager extends ManagerPackage {
         double amplitude = 4.0;
         double baseHeight = 12.0;
 
-        // Assign biome to every biome cell in this subchunk
+        // Assign the resolved biome to every biome cell in this subchunk
         int biomeAxisSize = CHUNK_SIZE / BIOME_SIZE;
         for (int bx = 0; bx < biomeAxisSize; bx++)
             for (int bz = 0; bz < biomeAxisSize; bz++)
                 for (int by = 0; by < biomeAxisSize; by++)
-                    biomes.setBlock(bx, by, bz, DEFAULT_BIOME_ID);
+                    biomes.setBlock(bx, by, bz, biomeID);
 
         // Generate terrain
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {

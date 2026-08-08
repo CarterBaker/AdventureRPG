@@ -64,7 +64,6 @@ public class ChunkInstance extends WorldRenderInstance {
             long coordinate,
             VAOHandle vaoHandle,
             short airBlockId,
-            short defaultBiomeId,
             Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
 
         super.constructor(
@@ -80,8 +79,7 @@ public class ChunkInstance extends WorldRenderInstance {
                     worldHandle,
                     subChunkCoordinate,
                     vaoHandle,
-                    airBlockId,
-                    defaultBiomeId);
+                    airBlockId);
 
         this.chunkNeighbors = new ChunkNeighborStruct(
                 coordinate,

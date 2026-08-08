@@ -91,8 +91,7 @@ public class SubChunkInstance extends WorldRenderInstance {
             WorldHandle worldHandle,
             long coordinate,
             VAOHandle vaoHandle,
-            short airBlockId,
-            short defaultBiomeId) {
+            short airBlockId) {
 
         super.constructor(
                 worldRenderManager,
@@ -104,7 +103,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.biomePaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE / EngineSetting.BIOME_SIZE,
                 EngineSetting.BLOCK_PALETTE_THRESHOLD / EngineSetting.BIOME_SIZE,
-                defaultBiomeId);
+                EngineSetting.REGISTRY_RESERVED_ID);
 
         this.blockPaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE,
