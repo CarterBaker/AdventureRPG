@@ -21,17 +21,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class BiomeBuilder extends BuilderPackage {
 
     /*
-     * Parses biome JSON into a BiomeData and wraps it in a BiomeHandle.
-     * Reads the optional "weathers" block into a per-season pool of
-     * parallel name/chance fastutil lists that WeatherManager resolves
-     * into live WeatherHandles on demand. Season names are read directly
-     * from whatever keys appear in the "weathers" object — there's no
-     * fixed set to validate against, since the active calendar is free to
-     * define any named seasons it likes. Each season's array accepts
-     * either a bare weather name string (given a default relative chance,
-     * see EngineSetting.DEFAULT_BIOME_WEATHER_CHANCE) or an object with
-     * explicit "name" and "chance" fields — both forms may be mixed
-     * freely within one array.
+     * Parses biome JSON into a BiomeData and wraps it in a BiomeHandle. Reads
+     * the optional "weathers" block into a per-season pool of parallel
+     * name/chance fastutil lists that WeatherManager resolves into live
+     * WeatherHandles on demand. Season names are read directly from whatever
+     * keys appear in the "weathers" object. Also reads the optional
+     * "map_color" hex RGB value this biome matches against the world PNG,
+     * and the optional "probable_biomes" list of alternate biomes that may
+     * replace this one during generation — both validated fully at load
+     * time so a malformed biome file fails at boot rather than mid-game.
      */
 
     // Build \\
@@ -49,8 +47,17 @@ class BiomeBuilder extends BuilderPackage {
 
         parseWeathers(json, seasonNames, seasonWeatherNames, seasonWeatherChances);
 
+        int mapColor = parseMapColor(json, biomeName);
+
+        ObjectArrayList<String> probableBiomeNames = new ObjectArrayList<>();
+        FloatArrayList probableBiomeChances = new FloatArrayList();
+
+        parseProbableBiomes(json, biomeName, probableBiomeNames, probableBiomeChances);
+
         BiomeData biomeData = new BiomeData(
-                biomeName, biomeID, Color.WHITE, seasonWeatherNames, seasonWeatherChances, seasonNames);
+                biomeName, biomeID, Color.WHITE,
+                seasonWeatherNames, seasonWeatherChances, seasonNames,
+                mapColor, probableBiomeNames, probableBiomeChances);
 
         BiomeHandle biomeHandle = create(BiomeHandle.class);
         biomeHandle.constructor(biomeData);
@@ -58,7 +65,7 @@ class BiomeBuilder extends BuilderPackage {
         return biomeHandle;
     }
 
-    // Parsing \\
+    // Weather Parsing \\
 
     private void parseWeathers(
             JsonObject json,
@@ -103,5 +110,67 @@ class BiomeBuilder extends BuilderPackage {
 
         names.add(weatherName);
         chances.add(chance);
+    }
+
+    // Map Color Parsing \\
+
+    private int parseMapColor(JsonObject json, String biomeName) {
+
+        if (!json.has("map_color"))
+            return BiomeData.MAP_COLOR_UNDEFINED;
+
+        String raw = json.get("map_color").getAsString();
+        String hex = raw.startsWith("#") ? raw.substring(1) : raw;
+
+        if (hex.length() != 6)
+            throwException("Biome \"" + biomeName + "\" has invalid map_color \"" + raw
+                    + "\" — expected a 6-digit hex RGB value, e.g. \"#5B8C3A\".");
+
+        try {
+            return Integer.parseInt(hex, 16);
+        } catch (NumberFormatException e) {
+            throwException("Biome \"" + biomeName + "\" has invalid map_color \"" + raw + "\" — not valid hex.", e);
+            return BiomeData.MAP_COLOR_UNDEFINED;
+        }
+    }
+
+    // Probable Biome Parsing \\
+
+    private void parseProbableBiomes(
+            JsonObject json,
+            String biomeName,
+            ObjectArrayList<String> outNames,
+            FloatArrayList outChances) {
+
+        if (!json.has("probable_biomes"))
+            return;
+
+        JsonArray array = json.getAsJsonArray("probable_biomes");
+        float runningTotal = 0f;
+
+        for (JsonElement element : array) {
+
+            JsonObject entryObject = element.getAsJsonObject();
+            String variantName = JsonUtility.validateString(entryObject, "name");
+
+            if (!entryObject.has("chance"))
+                throwException("Biome \"" + biomeName + "\" probable_biomes entry \"" + variantName
+                        + "\" is missing required \"chance\" field.");
+
+            float chance = entryObject.get("chance").getAsFloat();
+
+            if (chance <= 0f || chance > 1f)
+                throwException("Biome \"" + biomeName + "\" probable_biomes entry \"" + variantName
+                        + "\" has chance " + chance + " — chance must be greater than 0 and no more than 1.");
+
+            runningTotal += chance;
+
+            if (runningTotal > 1f)
+                throwException("Biome \"" + biomeName + "\" probable_biomes chances sum to " + runningTotal
+                        + ", which exceeds 1.0 — reduce the chances so the base biome retains some probability.");
+
+            outNames.add(variantName);
+            outChances.add(chance);
+        }
     }
 }

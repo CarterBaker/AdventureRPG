@@ -68,4 +68,20 @@ public class BiomeHandle extends HandlePackage {
     public boolean hasAnyWeathers() {
         return !biomeData.getSeasonNames().isEmpty();
     }
+
+    public int getMapColor() {
+        return biomeData.getMapColor();
+    }
+
+    public boolean hasMapColor() {
+        return biomeData.hasMapColor();
+    }
+
+    public ObjectArrayList<String> getProbableBiomeNames() {
+        return biomeData.getProbableBiomeNames();
+    }
+
+    public FloatArrayList getProbableBiomeChances() {
+        return biomeData.getProbableBiomeChances();
+    }
 }

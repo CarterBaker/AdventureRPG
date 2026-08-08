@@ -1,4 +1,5 @@
 {
+    "map_color": "#FFFFFF",
     "weathers": {
         "Spring": [
             { "name": "standard/ClearWeather",  "chance": 20 },
