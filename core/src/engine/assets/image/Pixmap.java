@@ -91,6 +91,17 @@ public class Pixmap {
         return (r << 24) | (g << 16) | (b << 8) | a;
     }
 
+    /*
+     * This pixel repacked as 0xRRGGBB with alpha discarded — the exact
+     * layout every "map_color" hex value in biome JSON parses into.
+     * Anything matching a sampled pixel against an authored map color
+     * must go through this rather than getPixel(), whose RGBA8888 layout
+     * puts red 8 bits higher and would silently corrupt every comparison.
+     */
+    public int getPixelRGB(int x, int y) {
+        return getPixel(x, y) >>> 8;
+    }
+
     public Color getPixelColor(int x, int y) {
         int rgba = getPixel(x, y);
         float r = ((rgba >> 24) & 0xFF) / 255.0f;

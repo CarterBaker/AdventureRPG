@@ -37,6 +37,7 @@ public class CloudManager extends ManagerPackage {
 
         // Palette
         this.cloudName2CloudID = new Object2ShortOpenHashMap<>();
+        this.cloudName2CloudID.defaultReturnValue((short) -1);
         this.cloudID2CloudHandle = new Short2ObjectOpenHashMap<>();
 
         // Cloud Type Registry
@@ -87,6 +88,11 @@ public class CloudManager extends ManagerPackage {
 
         if (!cloudName2CloudID.containsKey(cloudName))
             request(cloudName);
+
+        if (!cloudName2CloudID.containsKey(cloudName))
+            throwException("Cloud \"" + cloudName + "\" was not registered after its on-demand load completed — "
+                    + "the loaded file must declare a different cloud name than the one requested. "
+                    + "Check for a resource-name/path mismatch between the cloud directory and its declared name.");
 
         return cloudName2CloudID.getShort(cloudName);
     }

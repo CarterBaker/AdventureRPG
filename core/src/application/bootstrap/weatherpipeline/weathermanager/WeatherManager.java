@@ -57,6 +57,8 @@ public class WeatherManager extends ManagerPackage {
     protected void create() {
 
         this.weatherName2WeatherID = new Object2ShortOpenHashMap<>();
+        this.weatherName2WeatherID.defaultReturnValue((short) -1);
+
         this.weatherID2WeatherHandle = new Short2ObjectOpenHashMap<>();
 
         this.globalNoiseSystem = create(GlobalNoiseSystem.class);
@@ -220,6 +222,11 @@ public class WeatherManager extends ManagerPackage {
 
         if (!weatherName2WeatherID.containsKey(weatherName))
             request(weatherName);
+
+        if (!weatherName2WeatherID.containsKey(weatherName))
+            throwException("Weather \"" + weatherName + "\" was not registered after its on-demand load completed — "
+                    + "the loaded file must declare a different weather name than the one requested. "
+                    + "Check for a resource-name/path mismatch between the weather directory and its declared name.");
 
         return weatherName2WeatherID.getShort(weatherName);
     }

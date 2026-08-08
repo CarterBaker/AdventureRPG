@@ -21,6 +21,8 @@ public class BlockManager extends ManagerPackage {
     protected void create() {
 
         this.blockName2BlockID = new Object2IntOpenHashMap<>();
+        this.blockName2BlockID.defaultReturnValue(-1);
+
         this.blockID2BlockHandle = new Int2ObjectOpenHashMap<>();
 
         this.internalBufferSystem = create(BlockBufferSystem.class);
@@ -62,6 +64,11 @@ public class BlockManager extends ManagerPackage {
 
         if (!blockName2BlockID.containsKey(blockName))
             request(blockName);
+
+        if (!blockName2BlockID.containsKey(blockName))
+            throwException("Block \"" + blockName + "\" was not registered after its on-demand load completed — "
+                    + "the loaded file must declare a different block name than the one requested. "
+                    + "Check for a resource-name/path mismatch between the block directory and its declared name.");
 
         return blockName2BlockID.getInt(blockName);
     }

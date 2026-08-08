@@ -38,6 +38,8 @@ public class BiomeManager extends ManagerPackage {
     protected void create() {
 
         this.biomeName2BiomeID = new Object2ShortOpenHashMap<>();
+        this.biomeName2BiomeID.defaultReturnValue((short) -1);
+
         this.biomeID2BiomeHandle = new Short2ObjectOpenHashMap<>();
 
         create(BiomeLoader.class);
@@ -46,6 +48,12 @@ public class BiomeManager extends ManagerPackage {
     // Management \\
 
     synchronized void addBiome(BiomeHandle biomeHandle) {
+
+        if (biomeHandle.getBiomeID() == EngineSetting.REGISTRY_RESERVED_ID)
+            throwException("Biome \"" + biomeHandle.getBiomeName()
+                    + "\" hashed to the reserved registry ID (" + EngineSetting.REGISTRY_RESERVED_ID
+                    + "), which the biome palette uses as its \"not yet generated\" sentinel — "
+                    + "rename this biome so its hashed ID no longer collides with the sentinel.");
 
         if (biomeID2BiomeHandle.containsKey(biomeHandle.getBiomeID())) {
             BiomeHandle existing = biomeID2BiomeHandle.get(biomeHandle.getBiomeID());
@@ -105,7 +113,7 @@ public class BiomeManager extends ManagerPackage {
         int sampleZ = wrapPixelIndex(
                 (int) Math.floor(pixelZ + warpZ * EngineSetting.BIOME_BORDER_WARP_STRENGTH_PIXELS), map.getHeight());
 
-        int color = map.getPixel(sampleX, sampleZ);
+        int color = map.getPixelRGB(sampleX, sampleZ);
 
         return ((BiomeLoader) internalLoader).getNearestBiomeNameForColor(color);
     }
@@ -154,6 +162,11 @@ public class BiomeManager extends ManagerPackage {
 
         if (!biomeName2BiomeID.containsKey(biomeName))
             request(biomeName);
+
+        if (!biomeName2BiomeID.containsKey(biomeName))
+            throwException("Biome \"" + biomeName + "\" was not registered after its on-demand load completed — "
+                    + "the loaded file must declare a different biome name than the one requested. "
+                    + "Check for a resource-name/path mismatch between the biome directory and its declared name.");
 
         return biomeName2BiomeID.getShort(biomeName);
     }
