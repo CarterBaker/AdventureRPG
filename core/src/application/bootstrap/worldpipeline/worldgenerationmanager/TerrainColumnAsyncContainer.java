@@ -1,9 +1,9 @@
-package application.bootstrap.worldpipeline.util;
+package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
 
-public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
+class TerrainColumnAsyncContainer extends AsyncContainerPackage {
 
     /*
      * Thread-local scratch buffer holding one fully-resolved chunk column —
@@ -14,17 +14,17 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
      * from it instead of re-running the terrain noise stack.
      */
 
-    public static final int COLUMN_COUNT = EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
+    static final int COLUMN_COUNT = EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
 
-    public boolean hasComputedColumn;
-    public long computedChunkCoordinate;
+    boolean hasComputedColumn;
+    long computedChunkCoordinate;
 
-    public int[] groundHeightBlocks;
+    int[] groundHeightBlocks;
 
-    public short biomeID;
-    public short surfaceBlockID;
-    public short subsurfaceBlockID;
-    public short underwaterBlockID;
+    short biomeID;
+    short surfaceBlockID;
+    short subsurfaceBlockID;
+    short underwaterBlockID;
 
     @Override
     protected void create() {
