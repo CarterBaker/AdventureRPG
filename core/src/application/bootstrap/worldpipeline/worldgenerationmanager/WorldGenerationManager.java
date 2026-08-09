@@ -17,23 +17,20 @@ public class WorldGenerationManager extends ManagerPackage {
 
     /*
      * Drives per-chunk-column terrain generation. computeColumn() resolves the
-     * one biome that governs an entire chunk column plus a ground-height value
-     * for every one of its 256 block-columns, all cached in a per-thread
-     * scratch buffer; generateSubChunk() is then called once per subchunk
-     * purely to carve blocks out of that already-resolved shape. Ground height
-     * itself comes from TerrainShapeUtility: the macro shape (continentalness/
-     * erosion/peaks-valleys) is sampled on a coarse world-aligned grid and
-     * bilinearly interpolated per column, while the detail layer is sampled at
-     * full per-block resolution, since only detail's wavelength is close
-     * enough to chunk scale to need it — see TerrainShapeUtility for why the
-     * coarse macro grid is numerically safe. Height is fully independent of
-     * biome — biome only ever chooses which blocks dress that shape, so
-     * painting a new biome onto the world PNG can never open a seam in the
-     * terrain shape itself. Chunks generate concurrently on separate worker
-     * threads, so the surface-block cache below is a ConcurrentHashMap rather
-     * than a locked map: a biome resolves to the same three block IDs for the
-     * rest of the session, so every lookup after the first is a lock-free
-     * cache hit.
+     * one biome that governs an entire chunk column, a ground-height value for
+     * every one of its 256 block-columns, and that column's min/max ground
+     * height, all cached in a per-thread scratch buffer. generateSubChunk()
+     * then classifies each subchunk against that data before touching any
+     * block palette: entirely above every column's terrain is left as the
+     * default air (no write at all), entirely below every column's surface-
+     * dressing layer is bulk-filled as solid stone in O(1), entirely below sea
+     * level and above every column's ground is bulk-filled as water in O(1),
+     * and only a subchunk that actually straddles a surface, coastline, or
+     * cliff runs the precise per-block loop. Ground height itself comes from
+     * TerrainShapeUtility and is fully independent of biome — biome only ever
+     * chooses which blocks dress that shape. Chunks generate concurrently on
+     * separate worker threads, so the surface-block cache below is a
+     * ConcurrentHashMap rather than a locked map.
      */
 
     // Internal
@@ -109,6 +106,9 @@ public class WorldGenerationManager extends ManagerPackage {
             }
         }
 
+        int maxGroundHeight = Integer.MIN_VALUE;
+        int minGroundHeight = Integer.MAX_VALUE;
+
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {
             for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
 
@@ -119,10 +119,19 @@ public class WorldGenerationManager extends ManagerPackage {
                 float detail = TerrainShapeUtility.computeDetailBlocks(
                         seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks);
 
-                column.groundHeightBlocks[localZ * CHUNK_SIZE + localX] = TerrainShapeUtility
-                        .finalizeGroundHeightBlocks(macroShape, detail);
+                int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(macroShape, detail);
+                column.groundHeightBlocks[localZ * CHUNK_SIZE + localX] = groundHeight;
+
+                if (groundHeight > maxGroundHeight)
+                    maxGroundHeight = groundHeight;
+                if (groundHeight < minGroundHeight)
+                    minGroundHeight = groundHeight;
             }
         }
+
+        column.columnMaxGroundHeightBlocks = maxGroundHeight;
+        column.columnMinGroundHeightBlocks = minGroundHeight;
+        column.columnTopBlocks = Math.max(maxGroundHeight, EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
 
         column.computedChunkCoordinate = chunkCoordinate;
         column.hasComputedColumn = true;
@@ -167,28 +176,46 @@ public class WorldGenerationManager extends ManagerPackage {
             throwException("generateSubChunk() called for a chunk whose column data was never computed on this "
                     + "thread — computeColumn() must run once for this exact chunk coordinate first.");
 
+        BlockPaletteHandle biomes = subChunkInstance.getBiomePaletteHandle();
+        biomes.fill(column.biomeID);
+
         int offsetY = (int) subChunkInstance.getCoordinate() * CHUNK_SIZE;
 
-        BlockPaletteHandle biomes = subChunkInstance.getBiomePaletteHandle();
+        if (offsetY > column.columnTopBlocks)
+            return true;
+
+        int surfaceDepth = EngineSetting.TERRAIN_SURFACE_DEPTH_BLOCKS;
+        int seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+        int subChunkTopY = offsetY + CHUNK_SIZE - 1;
+
         BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
         BlockPaletteHandle liquidLevels = subChunkInstance.getLiquidLevelPaletteHandle();
 
-        biomes.fill(column.biomeID);
+        if (subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
+            blocks.fill(stoneBlockId);
+            return true;
+        }
 
-        int seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+        if (offsetY > column.columnMaxGroundHeightBlocks && subChunkTopY <= seaLevel) {
+            blocks.fill(waterBlockId);
+            liquidLevels.fill(EngineSetting.LIQUID_LEVEL_MAX);
+            return true;
+        }
+
         int beachRange = EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
-        int surfaceDepth = EngineSetting.TERRAIN_SURFACE_DEPTH_BLOCKS;
 
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {
             for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
 
                 int groundHeight = column.groundHeightBlocks[localZ * CHUNK_SIZE + localX];
+                int columnTop = Math.max(groundHeight, seaLevel);
+
+                if (offsetY > columnTop)
+                    continue;
 
                 boolean useUnderwaterBlocks = groundHeight <= seaLevel + beachRange;
                 short topBlockID = useUnderwaterBlocks ? column.underwaterBlockID : column.surfaceBlockID;
                 short fillBlockID = useUnderwaterBlocks ? column.underwaterBlockID : column.subsurfaceBlockID;
-
-                int columnTop = Math.max(groundHeight, seaLevel);
 
                 for (int localY = 0; localY < CHUNK_SIZE; localY++) {
 

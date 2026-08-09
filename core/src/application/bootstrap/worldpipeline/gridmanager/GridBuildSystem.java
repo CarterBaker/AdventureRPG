@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.gridmanager;
 
+import java.util.Arrays;
+
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
@@ -16,7 +18,6 @@ import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector2;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -135,36 +136,45 @@ class GridBuildSystem extends SystemPackage {
 
     // Load Order \\
 
+    /*
+     * Builds every grid coordinate within radius, sorted nearest-first, using
+     * a single packed long[] (distance in the high bits, coordinate index in
+     * the low bits) instead of a boxed Integer[] with a comparator — avoids
+     * one allocation per slot and a virtual-dispatch sort on what can be a
+     * five-figure slot count at high render distances.
+     */
     private long[] assignLoadOrder(float radius) {
 
         int maxRenderDistance = settings.maxRenderDistance;
+        int half = maxRenderDistance / 2;
         float radiusSquared = radius * radius;
 
         LongArrayList coordinates = new LongArrayList();
-        FloatArrayList distances = new FloatArrayList();
+        long[] sortScratch = new long[maxRenderDistance * maxRenderDistance];
+        int count = 0;
 
-        for (int x = -(maxRenderDistance / 2); x < maxRenderDistance / 2; x++) {
-            for (int y = -(maxRenderDistance / 2); y < maxRenderDistance / 2; y++) {
+        for (int x = -half; x < half; x++) {
+            for (int y = -half; y < half; y++) {
 
-                float d = (x * x) + (y * y);
+                int distanceSq = x * x + y * y;
 
-                if (d <= radiusSquared) {
-                    coordinates.add(Coordinate2Long.pack(x, y));
-                    distances.add(d);
-                }
+                if (distanceSq > radiusSquared)
+                    continue;
+
+                coordinates.add(Coordinate2Long.pack(x, y));
+                sortScratch[count] = ((long) distanceSq << 32) | (count & 0xFFFFFFFFL);
+                count++;
             }
         }
 
-        Integer[] indices = new Integer[coordinates.size()];
-        for (int i = 0; i < indices.length; i++)
-            indices[i] = i;
+        Arrays.sort(sortScratch, 0, count);
 
-        java.util.Arrays.sort(indices,
-                (a, b) -> Float.compare(distances.getFloat(a), distances.getFloat(b)));
+        long[] sorted = new long[count];
 
-        long[] sorted = new long[indices.length];
-        for (int i = 0; i < indices.length; i++)
-            sorted[i] = coordinates.getLong(indices[i]);
+        for (int i = 0; i < count; i++) {
+            int coordIndex = (int) (sortScratch[i] & 0xFFFFFFFFL);
+            sorted[i] = coordinates.getLong(coordIndex);
+        }
 
         return sorted;
     }
