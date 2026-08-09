@@ -8,6 +8,7 @@ import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.NoiseUtility;
+import engine.util.mathematics.extras.SeamlessAxisNoiseUtility;
 
 class GlobalNoiseSystem extends SystemPackage {
 
@@ -15,8 +16,9 @@ class GlobalNoiseSystem extends SystemPackage {
      * Drives the planet-scale motion behind the regional weather noise
      * field — rotation, meander, and seasonal drift — and exposes a
      * coarser second noise layer for global storm intensity. Wraps
-     * seamlessly on both world axes the same way WeatherNoiseUtility
-     * does: X rides the rotation circle, Y cross-fades across its seam.
+     * seamlessly on both world axes the same way WeatherNoiseUtility does:
+     * X rides the rotation circle, Z wraps through the shared
+     * SeamlessAxisNoiseUtility.
      */
 
     private WorldManager worldManager;
@@ -107,24 +109,12 @@ class GlobalNoiseSystem extends SystemPackage {
         double ey = Math.sin(spatialAngle) * embeddingRadius;
 
         double zWavelength = EngineSetting.GLOBAL_WEATHER_NOISE_CELL_SIZE;
-        double z = wrapIntoRange(chunkZ, worldHeightChunks);
 
-        float direct = NoiseUtility.noise3_ImproveXY(
-                EngineSetting.GLOBAL_WEATHER_INTENSITY_SEED, ex, ey, z / zWavelength);
-        float oneWorldBack = NoiseUtility.noise3_ImproveXY(
-                EngineSetting.GLOBAL_WEATHER_INTENSITY_SEED, ex, ey, (z - worldHeightChunks) / zWavelength);
-
-        float t = (float) (z / worldHeightChunks);
-        float raw = direct * (1f - t) + oneWorldBack * t;
+        float raw = SeamlessAxisNoiseUtility.sample(
+                chunkZ, zWavelength, worldHeightChunks, EngineSetting.NOISE_SEAM_BLEND_WAVELENGTHS,
+                ez -> NoiseUtility.noise3_ImproveXY(EngineSetting.GLOBAL_WEATHER_INTENSITY_SEED, ex, ey, ez));
 
         return clamp01(raw * 0.5f + 0.5f);
-    }
-
-    private static double wrapIntoRange(double value, double range) {
-        double wrapped = value % range;
-        if (wrapped < 0)
-            wrapped += range;
-        return wrapped;
     }
 
     private static float clamp01(float value) {

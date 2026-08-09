@@ -63,9 +63,19 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     public void clear() {
+        fill(defaultBlockId);
+    }
+
+    /*
+     * Resets every cell in this palette to a single value in O(1) — used
+     * instead of looping setBlock() calls when an entire palette region is
+     * known to share one value up front, such as a subchunk's biome
+     * palette, which is always uniform across a single chunk column.
+     */
+    public void fill(short blockId) {
 
         palette.clear();
-        palette.add(defaultBlockId);
+        palette.add(blockId);
         bitsPerEntry = 1;
 
         int longsNeeded = (totalCells + 63) >>> 6;

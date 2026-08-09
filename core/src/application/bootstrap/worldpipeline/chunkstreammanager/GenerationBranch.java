@@ -4,6 +4,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BranchPackage;
@@ -13,9 +14,12 @@ public class GenerationBranch extends BranchPackage {
 
     /*
      * Async — attempts to load the chunk from disk/cache first, then falls back
-     * to procedural generation. Sets LOAD_DATA, ESSENTIAL_DATA, and
-     * GENERATION_DATA on the sync container once the chunk is fully populated.
-     * Runs on the WorldStreaming thread.
+     * to procedural generation. computeColumn() resolves this chunk's biome and
+     * every one of its ground heights exactly once before the WORLD_HEIGHT
+     * subchunk generation calls that follow, so the expensive terrain noise
+     * stack is never repeated 64 times for the same column. Sets LOAD_DATA,
+     * ESSENTIAL_DATA, and GENERATION_DATA on the sync container once the chunk
+     * is fully populated. Runs on the WorldStreaming thread.
      */
 
     // Internal
@@ -83,11 +87,14 @@ public class GenerationBranch extends BranchPackage {
 
         boolean success = true;
         long chunkCoordinate = chunkInstance.getCoordinate();
+        WorldHandle worldHandle = chunkInstance.getWorldHandle();
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
+
+        worldGenerationManager.computeColumn(worldHandle, chunkCoordinate);
 
         for (int i = 0; i < EngineSetting.WORLD_HEIGHT; i++) {
             SubChunkInstance subChunk = subChunks[i];
-            if (worldGenerationManager.generateSubChunk(chunkInstance.getWorldHandle(), chunkCoordinate, subChunk))
+            if (worldGenerationManager.generateSubChunk(worldHandle, chunkCoordinate, subChunk))
                 continue;
             success = false;
             break;

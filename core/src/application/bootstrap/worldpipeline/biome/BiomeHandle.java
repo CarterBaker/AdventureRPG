@@ -84,4 +84,16 @@ public class BiomeHandle extends HandlePackage {
     public FloatArrayList getProbableBiomeChances() {
         return biomeData.getProbableBiomeChances();
     }
+
+    public String getSurfaceBlockName() {
+        return biomeData.getSurfaceBlockName();
+    }
+
+    public String getSubsurfaceBlockName() {
+        return biomeData.getSubsurfaceBlockName();
+    }
+
+    public String getUnderwaterBlockName() {
+        return biomeData.getUnderwaterBlockName();
+    }
 }

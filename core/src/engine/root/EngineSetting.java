@@ -116,6 +116,10 @@ public class EngineSetting {
         public static final int GL_INVALID_INDEX = 0xFFFFFFFF;
         public static final int INDEX_NOT_FOUND = -1;
 
+        // Noise — Seamless Axis Wrap \\
+
+        public static final double NOISE_SEAM_BLEND_WAVELENGTHS = 3.0;
+
         // File Extensions \\
 
         public static final ObjectArraySet<String> FONT_FILE_EXTENSIONS = new ObjectArraySet<>(
@@ -391,6 +395,67 @@ public class EngineSetting {
         public static final long BIOME_BORDER_WARP_SEED = 0x8B3C9F1E2A47D5B1L;
         public static final float BIOME_VARIANCE_NOISE_FREQUENCY = 0.02f;
         public static final long BIOME_VARIANCE_SEED = 0x4F1D2C6E9A7B31F5L;
+
+        // Terrain Generation — Defaults \\
+
+        public static final String DEFAULT_SURFACE_BLOCK_NAME = "TerraArcanaBlocks/Grass Block";
+        public static final String DEFAULT_SUBSURFACE_BLOCK_NAME = "TerraArcanaBlocks/Dirt Block";
+        public static final String DEFAULT_UNDERWATER_BLOCK_NAME = "TerraArcanaBlocks/Sand";
+        public static final String DEFAULT_STONE_BLOCK_NAME = "TerraArcanaBlocks/Stone Block";
+        public static final String DEFAULT_WATER_BLOCK_NAME = "TerraArcanaBlocks/Water";
+
+        // Terrain Generation — World Shape \\
+
+        public static final int TERRAIN_SEA_LEVEL_BLOCKS = 160;
+        public static final int TERRAIN_SURFACE_DEPTH_BLOCKS = 4;
+        public static final int TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS = 3;
+        public static final int TERRAIN_MIN_HEIGHT_BLOCKS = 24;
+        public static final int TERRAIN_MAX_HEIGHT_BLOCKS = 900;
+
+        // Terrain Generation — Noise Salts \\
+
+        public static final long TERRAIN_CONTINENTALNESS_SEED_SALT = 0x6C4F3A2E9D1B8F73L;
+        public static final long TERRAIN_EROSION_SEED_SALT = 0x2F8E4C7A19D3B650L;
+        public static final long TERRAIN_PV_SEED_SALT = 0xA37D1E9C5B2F8064L;
+        public static final long TERRAIN_DETAIL_SEED_SALT = 0x4B9F2D6E8C1A3075L;
+        public static final long TERRAIN_OCTAVE_HASH_SALT = 0x9E3779B97F4A7C15L;
+
+        // Terrain Generation — Continentalness \\
+
+        public static final double TERRAIN_CONTINENTALNESS_WAVELENGTH_BLOCKS = 2400.0;
+        public static final int TERRAIN_CONTINENTALNESS_OCTAVES = 4;
+        public static final float TERRAIN_CONTINENTALNESS_PERSISTENCE = 0.5f;
+        public static final float TERRAIN_CONTINENTALNESS_LACUNARITY = 2.0f;
+        public static final float[] TERRAIN_CONTINENTALNESS_SPLINE_X = { -1.0f, -0.55f, -0.25f, -0.05f, 0.0f, 0.10f,
+                        0.30f, 0.60f, 1.0f };
+        public static final float[] TERRAIN_CONTINENTALNESS_SPLINE_HEIGHT_BLOCKS = { 40f, 60f, 100f, 145f, 160f, 168f,
+                        190f, 230f, 290f };
+
+        // Terrain Generation — Erosion \\
+
+        public static final double TERRAIN_EROSION_WAVELENGTH_BLOCKS = 1100.0;
+        public static final int TERRAIN_EROSION_OCTAVES = 3;
+        public static final float TERRAIN_EROSION_PERSISTENCE = 0.5f;
+        public static final float TERRAIN_EROSION_LACUNARITY = 2.0f;
+        public static final float[] TERRAIN_EROSION_SPLINE_X = { -1.0f, -0.6f, -0.2f, 0.2f, 0.6f, 1.0f };
+        public static final float[] TERRAIN_EROSION_SPLINE_AMPLITUDE_BLOCKS = { 220f, 150f, 70f, 30f, 10f, 4f };
+
+        // Terrain Generation — Peaks & Valleys \\
+
+        public static final double TERRAIN_PV_WAVELENGTH_BLOCKS = 380.0;
+        public static final int TERRAIN_PV_OCTAVES = 4;
+        public static final float TERRAIN_PV_PERSISTENCE = 0.5f;
+        public static final float TERRAIN_PV_LACUNARITY = 2.0f;
+        public static final float[] TERRAIN_PV_SPLINE_X = { 0.0f, 0.5f, 0.75f, 0.9f, 1.0f };
+        public static final float[] TERRAIN_PV_SPLINE_CONTRIBUTION = { -1.0f, -0.1f, 0.3f, 0.7f, 1.0f };
+
+        // Terrain Generation — Surface Detail \\
+
+        public static final double TERRAIN_DETAIL_WAVELENGTH_BLOCKS = 40.0;
+        public static final int TERRAIN_DETAIL_OCTAVES = 3;
+        public static final float TERRAIN_DETAIL_PERSISTENCE = 0.5f;
+        public static final float TERRAIN_DETAIL_LACUNARITY = 2.0f;
+        public static final float TERRAIN_DETAIL_AMPLITUDE_BLOCKS = 3.0f;
 
         // Rotation \\
 

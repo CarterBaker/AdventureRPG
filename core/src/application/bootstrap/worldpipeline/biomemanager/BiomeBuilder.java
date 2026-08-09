@@ -27,9 +27,12 @@ class BiomeBuilder extends BuilderPackage {
      * WeatherHandles on demand. Season names are read directly from whatever
      * keys appear in the "weathers" object. Also reads the optional
      * "map_color" hex RGB value this biome matches against the world PNG,
-     * and the optional "probable_biomes" list of alternate biomes that may
-     * replace this one during generation — both validated fully at load
-     * time so a malformed biome file fails at boot rather than mid-game.
+     * the optional "probable_biomes" list of alternate biomes that may
+     * replace this one during generation, and the optional "surface_block" /
+     * "subsurface_block" / "underwater_block" names WorldGenerationManager
+     * dresses this biome's terrain with, each falling back to a sensible
+     * EngineSetting default when omitted — all validated fully at load time
+     * so a malformed biome file fails at boot rather than mid-game.
      */
 
     // Build \\
@@ -54,10 +57,17 @@ class BiomeBuilder extends BuilderPackage {
 
         parseProbableBiomes(json, biomeName, probableBiomeNames, probableBiomeChances);
 
+        String surfaceBlockName = parseBlockName(json, "surface_block", EngineSetting.DEFAULT_SURFACE_BLOCK_NAME);
+        String subsurfaceBlockName = parseBlockName(
+                json, "subsurface_block", EngineSetting.DEFAULT_SUBSURFACE_BLOCK_NAME);
+        String underwaterBlockName = parseBlockName(
+                json, "underwater_block", EngineSetting.DEFAULT_UNDERWATER_BLOCK_NAME);
+
         BiomeData biomeData = new BiomeData(
                 biomeName, biomeID, Color.WHITE,
                 seasonWeatherNames, seasonWeatherChances, seasonNames,
-                mapColor, probableBiomeNames, probableBiomeChances);
+                mapColor, probableBiomeNames, probableBiomeChances,
+                surfaceBlockName, subsurfaceBlockName, underwaterBlockName);
 
         BiomeHandle biomeHandle = create(BiomeHandle.class);
         biomeHandle.constructor(biomeData);
@@ -172,5 +182,11 @@ class BiomeBuilder extends BuilderPackage {
             outNames.add(variantName);
             outChances.add(chance);
         }
+    }
+
+    // Terrain Block Parsing \\
+
+    private String parseBlockName(JsonObject json, String field, String fallback) {
+        return json.has(field) ? json.get(field).getAsString() : fallback;
     }
 }

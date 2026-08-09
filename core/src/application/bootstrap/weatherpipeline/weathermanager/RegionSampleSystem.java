@@ -1,5 +1,6 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
+import application.bootstrap.weatherpipeline.util.WeatherNoiseUtility;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;

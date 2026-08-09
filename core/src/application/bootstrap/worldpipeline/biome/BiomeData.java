@@ -11,15 +11,19 @@ public class BiomeData extends DataPackage {
     /*
      * Persistent biome record. Holds identity, biome color, the named-season
      * weather pools WeatherManager resolves into live handles on demand, the
-     * map color this biome matches against the world PNG, and the probable
+     * map color this biome matches against the world PNG, the probable
      * biome variants that may replace this biome during generation for
-     * hand-authored variety. mapColor is optional — MAP_COLOR_UNDEFINED means
-     * this biome is never chosen directly from the PNG and can only appear as
-     * another biome's variant. probableBiomeNames/Chances are raw, unresolved
-     * references — BiomeManager resolves them to live handles on demand.
-     * seasonNames preserves JSON declaration order for the same keys —
-     * WeatherManager falls back through this order when the calendar's
-     * actual current season isn't one this biome defined.
+     * hand-authored variety, and the surface/subsurface/underwater block
+     * names WorldGenerationManager dresses its terrain shape with — terrain
+     * height itself never reads any of these, only which blocks appear on
+     * top of whatever shape the noise already produced. mapColor is
+     * optional — MAP_COLOR_UNDEFINED means this biome is never chosen
+     * directly from the PNG and can only appear as another biome's variant.
+     * probableBiomeNames/Chances are raw, unresolved references —
+     * BiomeManager resolves them to live handles on demand. seasonNames
+     * preserves JSON declaration order for the same keys — WeatherManager
+     * falls back through this order when the calendar's actual current
+     * season isn't one this biome defined.
      */
 
     public static final int MAP_COLOR_UNDEFINED = -1;
@@ -37,6 +41,10 @@ public class BiomeData extends DataPackage {
     private final ObjectArrayList<String> probableBiomeNames;
     private final FloatArrayList probableBiomeChances;
 
+    private final String surfaceBlockName;
+    private final String subsurfaceBlockName;
+    private final String underwaterBlockName;
+
     public BiomeData(
             String biomeName,
             short biomeID,
@@ -46,7 +54,10 @@ public class BiomeData extends DataPackage {
             ObjectArrayList<String> seasonNames,
             int mapColor,
             ObjectArrayList<String> probableBiomeNames,
-            FloatArrayList probableBiomeChances) {
+            FloatArrayList probableBiomeChances,
+            String surfaceBlockName,
+            String subsurfaceBlockName,
+            String underwaterBlockName) {
 
         this.biomeName = biomeName;
         this.biomeID = biomeID;
@@ -60,6 +71,10 @@ public class BiomeData extends DataPackage {
         this.mapColor = mapColor;
         this.probableBiomeNames = probableBiomeNames;
         this.probableBiomeChances = probableBiomeChances;
+
+        this.surfaceBlockName = surfaceBlockName;
+        this.subsurfaceBlockName = subsurfaceBlockName;
+        this.underwaterBlockName = underwaterBlockName;
     }
 
     public String getBiomeName() {
@@ -100,5 +115,17 @@ public class BiomeData extends DataPackage {
 
     public FloatArrayList getProbableBiomeChances() {
         return probableBiomeChances;
+    }
+
+    public String getSurfaceBlockName() {
+        return surfaceBlockName;
+    }
+
+    public String getSubsurfaceBlockName() {
+        return subsurfaceBlockName;
+    }
+
+    public String getUnderwaterBlockName() {
+        return underwaterBlockName;
     }
 }
