@@ -1,21 +1,21 @@
 package application.bootstrap.worldpipeline.block;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 import engine.util.mathematics.extras.Coordinate3Int;
+import it.unimi.dsi.fastutil.shorts.Short2IntOpenHashMap;
+import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 public final class BlockPaletteHandle extends HandlePackage {
 
     /*
      * Compressed block palette for a single sub-chunk region. Stores block IDs
-     * using a bit-packed indirect palette that expands automatically as new block
-     * types are introduced. Converts to a flat direct array once the palette
-     * exceeds the configured threshold. Rename to BlockPaletteInstance pending
-     * — this is mutable per-subchunk state, not a shared manager-registered record.
+     * using a bit-packed indirect palette that expands automatically as new
+     * block types are introduced, backed by an O(1) reverse index so neither
+     * writing a new value nor rebuilding the palette during a dump ever
+     * degrades into a linear scan. Converts to a flat direct array once the
+     * palette exceeds the configured threshold.
      */
 
     // Palette Config
@@ -28,7 +28,8 @@ public final class BlockPaletteHandle extends HandlePackage {
     private short defaultBlockId;
 
     // Storage — packed palette mode
-    private List<Short> palette;
+    private ShortArrayList palette;
+    private Short2IntOpenHashMap paletteIndexLookup;
     private long[] packedData;
     private int bitsPerEntry;
 
@@ -55,8 +56,10 @@ public final class BlockPaletteHandle extends HandlePackage {
         this.maxPaletteSize = paletteThreshold;
         this.defaultBlockId = defaultBlockId;
 
-        this.palette = new ArrayList<>();
-        this.palette.add(defaultBlockId);
+        this.palette = new ShortArrayList();
+        this.paletteIndexLookup = new Short2IntOpenHashMap();
+        this.paletteIndexLookup.defaultReturnValue(-1);
+        addToPalette(defaultBlockId);
         this.bitsPerEntry = 1;
 
         allocatePackedArray();
@@ -75,7 +78,8 @@ public final class BlockPaletteHandle extends HandlePackage {
     public void fill(short blockId) {
 
         palette.clear();
-        palette.add(blockId);
+        paletteIndexLookup.clear();
+        addToPalette(blockId);
         bitsPerEntry = 1;
 
         int longsNeeded = (totalCells + 63) >>> 6;
@@ -88,6 +92,13 @@ public final class BlockPaletteHandle extends HandlePackage {
     }
 
     // Internal \\
+
+    private int addToPalette(short blockId) {
+        int index = palette.size();
+        palette.add(blockId);
+        paletteIndexLookup.put(blockId, index);
+        return index;
+    }
 
     private void allocatePackedArray() {
         int longsNeeded = (totalCells * bitsPerEntry + 63) >>> 6;
@@ -181,19 +192,19 @@ public final class BlockPaletteHandle extends HandlePackage {
         directData = new short[totalCells];
 
         for (int i = 0; i < totalCells; i++)
-            directData[i] = palette.get(readPackedValue(i));
+            directData[i] = palette.getShort(readPackedValue(i));
 
         palette = null;
+        paletteIndexLookup = null;
         packedData = null;
     }
 
     private void setBlockByIndex(int index, short blockId) {
 
-        int paletteIndex = palette.indexOf(blockId);
+        int paletteIndex = paletteIndexLookup.get(blockId);
 
         if (paletteIndex == -1) {
-            palette.add(blockId);
-            paletteIndex = palette.size() - 1;
+            paletteIndex = addToPalette(blockId);
             int neededBits = calculateBitsNeeded(palette.size());
             if (neededBits > bitsPerEntry)
                 expandBits(neededBits);
@@ -204,13 +215,15 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     private void collapse() {
 
-        List<Short> oldPalette = directData != null ? null : palette;
+        ShortArrayList oldPalette = directData != null ? null : palette;
         long[] oldData = directData != null ? null : packedData;
         int oldBits = bitsPerEntry;
         short[] oldDirect = directData;
 
-        palette = new ArrayList<>();
-        palette.add(defaultBlockId);
+        palette = new ShortArrayList();
+        paletteIndexLookup = new Short2IntOpenHashMap();
+        paletteIndexLookup.defaultReturnValue(-1);
+        addToPalette(defaultBlockId);
         bitsPerEntry = 1;
         allocatePackedArray();
         directData = null;
@@ -218,7 +231,7 @@ public final class BlockPaletteHandle extends HandlePackage {
         for (int i = 0; i < totalCells; i++) {
             short block = oldDirect != null
                     ? oldDirect[i]
-                    : oldPalette.get(readPackedValueFrom(oldData, oldBits, i));
+                    : oldPalette.getShort(readPackedValueFrom(oldData, oldBits, i));
             setBlockByIndex(i, block);
         }
     }
@@ -233,11 +246,12 @@ public final class BlockPaletteHandle extends HandlePackage {
             for (int packedXYZ : interiorCoordinates)
                 directData[getCellIndex(packedXYZ)] = airBlockId;
         } else {
-            int airPaletteIndex = palette.indexOf(airBlockId);
-            if (airPaletteIndex == -1) {
-                palette.add(airBlockId);
-                airPaletteIndex = palette.size() - 1;
-            }
+
+            int airPaletteIndex = paletteIndexLookup.get(airBlockId);
+
+            if (airPaletteIndex == -1)
+                airPaletteIndex = addToPalette(airBlockId);
+
             for (int packedXYZ : interiorCoordinates)
                 writePackedValue(getCellIndex(packedXYZ), airPaletteIndex);
         }
@@ -249,7 +263,7 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     public short getBlock(int packedXYZ) {
         int index = getCellIndex(packedXYZ);
-        return directData != null ? directData[index] : palette.get(readPackedValue(index));
+        return directData != null ? directData[index] : palette.getShort(readPackedValue(index));
     }
 
     public void setBlock(int packedXYZ, short blockId) {
@@ -261,7 +275,7 @@ public final class BlockPaletteHandle extends HandlePackage {
             return;
         }
 
-        int paletteIndex = palette.indexOf(blockId);
+        int paletteIndex = paletteIndexLookup.get(blockId);
 
         if (paletteIndex == -1) {
 
@@ -271,8 +285,7 @@ public final class BlockPaletteHandle extends HandlePackage {
                 return;
             }
 
-            palette.add(blockId);
-            paletteIndex = palette.size() - 1;
+            paletteIndex = addToPalette(blockId);
 
             int neededBits = calculateBitsNeeded(palette.size());
             if (neededBits > bitsPerEntry)

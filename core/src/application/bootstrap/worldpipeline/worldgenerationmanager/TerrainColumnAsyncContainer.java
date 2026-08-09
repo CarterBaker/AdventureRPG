@@ -3,7 +3,7 @@ package application.bootstrap.worldpipeline.worldgenerationmanager;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
 
-class TerrainColumnAsyncContainer extends AsyncContainerPackage {
+public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
 
     /*
      * Thread-local scratch buffer holding one fully-resolved chunk column —

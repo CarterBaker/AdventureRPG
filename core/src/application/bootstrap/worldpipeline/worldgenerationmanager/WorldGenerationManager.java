@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
@@ -10,7 +12,6 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class WorldGenerationManager extends ManagerPackage {
 
@@ -25,8 +26,12 @@ public class WorldGenerationManager extends ManagerPackage {
      * once per chunk rather than once per subchunk. Height itself comes from
      * TerrainShapeUtility's continentalness/erosion/peaks-valleys noise stack,
      * fully independent of biome — biome only ever chooses which blocks dress
-     * that shape (surface, subsurface, and underwater/beach), so painting a
-     * new biome onto the world PNG can never introduce a height seam.
+     * that shape, so painting a new biome onto the world PNG can never open a
+     * seam in the terrain shape itself. Chunks generate concurrently on
+     * separate worker threads, so the surface-block cache below is a
+     * ConcurrentHashMap rather than a locked map: a biome resolves to the
+     * same three block IDs for the rest of the session, so every lookup
+     * after the first is a lock-free cache hit.
      */
 
     // Internal
@@ -34,7 +39,7 @@ public class WorldGenerationManager extends ManagerPackage {
     private BiomeManager biomeManager;
 
     private TerrainColumnAsyncContainer terrainColumnContainer;
-    private final Short2ObjectOpenHashMap<TerrainSurfaceProfile> surfaceProfileCache = new Short2ObjectOpenHashMap<>();
+    private final ConcurrentHashMap<Short, TerrainSurfaceProfile> surfaceProfileCache = new ConcurrentHashMap<>();
 
     private int CHUNK_SIZE;
 
@@ -66,12 +71,6 @@ public class WorldGenerationManager extends ManagerPackage {
 
     // Column — once per chunk \\
 
-    /*
-     * Resolves this chunk column's biome and every one of its 256 ground
-     * heights into the calling thread's scratch buffer. Must be called
-     * exactly once, before the first generateSubChunk() call for this same
-     * chunk coordinate.
-     */
     public void computeColumn(WorldHandle worldHandle, long chunkCoordinate) {
 
         TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();
@@ -109,37 +108,15 @@ public class WorldGenerationManager extends ManagerPackage {
         column.hasComputedColumn = true;
     }
 
-    private synchronized TerrainSurfaceProfile resolveSurfaceProfile(BiomeHandle biomeHandle) {
-
-        short biomeID = biomeHandle.getBiomeID();
-        TerrainSurfaceProfile cached = surfaceProfileCache.get(biomeID);
-
-        if (cached != null)
-            return cached;
-
-        TerrainSurfaceProfile profile = new TerrainSurfaceProfile(
+    private TerrainSurfaceProfile resolveSurfaceProfile(BiomeHandle biomeHandle) {
+        return surfaceProfileCache.computeIfAbsent(biomeHandle.getBiomeID(), id -> new TerrainSurfaceProfile(
                 (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSurfaceBlockName()),
                 (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSubsurfaceBlockName()),
-                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getUnderwaterBlockName()));
-
-        surfaceProfileCache.put(biomeID, profile);
-        return profile;
+                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getUnderwaterBlockName())));
     }
 
     // Generator — once per subchunk \\
 
-    /*
-     * Carves a single subchunk's blocks from the column data computeColumn()
-     * already resolved for this chunk this frame. Terrain is written straight
-     * through the block palette rather than SubChunkInstance.setBlock() — a
-     * freshly generated subchunk holds no liquid yet, so world generation has
-     * no reason to pay per-block liquid-stability invalidation on every
-     * placed voxel — but ocean columns still write full liquid levels
-     * directly into the liquid-level palette so FluidSimulationSystem finds
-     * settled water rather than a phantom partial fill on first tick. The
-     * biome palette is uniform for the whole column, so it is written with a
-     * single fill() rather than looping every biome cell individually.
-     */
     public boolean generateSubChunk(WorldHandle worldHandle, long chunkCoordinate, SubChunkInstance subChunkInstance) {
 
         TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();

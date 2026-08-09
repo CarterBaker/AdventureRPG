@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.fluidsimulationsystem.FluidSimulationSystem;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -33,7 +34,12 @@ public class LiquidTickBranch extends BranchPackage {
      * marked stable so future visits skip it until something touches it again.
      * Any neighboring subchunk the step touched is rebuilt, re-registered, and
      * un-stabilized the same way, since it will not otherwise come up for a
-     * merge this frame.
+     * merge this frame. Every chunk this branch mutates or registers with the
+     * renderer is guarded by that chunk's own ChunkDataSyncContainer via
+     * tryAcquire(), the same convention the async chunk pipeline uses, since
+     * that pipeline can be rebuilding the exact same chunk's geometry on the
+     * WorldStreaming thread at any moment — a chunk that's busy is simply
+     * skipped this pass and picked up again once its liquid flag invalidates.
      */
 
     // Internal
@@ -130,20 +136,41 @@ public class LiquidTickBranch extends BranchPackage {
         }
     }
 
+    /*
+     * Holds the chunk's own sync lock across every subchunk tick plus the
+     * final merge/register, mirroring MergeBranch and RenderBranch. Skips
+     * the whole chunk for this pass if the async pipeline currently owns it.
+     * invalidateMegaForChunk/invalidateChunkBatch both attempt their own
+     * tryAcquire on this same chunk, so they fire only after release.
+     */
     private void tickChunk(ChunkInstance chunk, float delta) {
 
-        SubChunkInstance[] subChunks = chunk.getSubChunks();
-        boolean chunkChanged = false;
+        ChunkDataSyncContainer syncContainer = chunk.getChunkDataSyncContainer();
 
-        for (int i = 0; i < subChunks.length; i++)
-            if (tickSubChunk(chunk, subChunks[i], delta))
-                chunkChanged = true;
+        if (!syncContainer.tryAcquire())
+            return;
+
+        boolean chunkChanged;
+
+        try {
+            SubChunkInstance[] subChunks = chunk.getSubChunks();
+            chunkChanged = false;
+
+            for (int i = 0; i < subChunks.length; i++)
+                if (tickSubChunk(chunk, subChunks[i], delta))
+                    chunkChanged = true;
+
+            if (chunkChanged) {
+                chunk.merge();
+                worldRenderManager.addChunkInstance(chunk);
+            }
+        } finally {
+            syncContainer.release();
+        }
 
         if (!chunkChanged)
             return;
 
-        chunk.merge();
-        worldRenderManager.addChunkInstance(chunk);
         worldStreamManager.invalidateMegaForChunk(chunk.getCoordinate());
         worldStreamManager.invalidateChunkBatch(chunk.getCoordinate());
     }
@@ -170,7 +197,7 @@ public class LiquidTickBranch extends BranchPackage {
         subChunk.getDynamicPacketInstance().clear();
         dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, (int) subChunk.getCoordinate());
 
-        rebuildTouchedNeighbors();
+        rebuildTouchedNeighbors(chunk);
 
         return true;
     }
@@ -182,9 +209,11 @@ public class LiquidTickBranch extends BranchPackage {
      * its own full rebuild-merge-register-invalidate cycle here. Its stable
      * flag is already false from the write itself (SubChunkInstance.setBlock/
      * setLiquidLevel invalidate automatically) — this only handles the
-     * geometry side.
+     * geometry side. lockedChunk is the chunk tickChunk() already holds the
+     * lock for — a touched entry equal to it is rebuilt directly rather than
+     * re-attempting a non-reentrant tryAcquire against a lock we already own.
      */
-    private void rebuildTouchedNeighbors() {
+    private void rebuildTouchedNeighbors(ChunkInstance lockedChunk) {
 
         ObjectArrayList<ChunkInstance> touchedChunks = fluidSimulationSystem.getTouchedChunks();
         IntArrayList touchedSubChunkY = fluidSimulationSystem.getTouchedSubChunkY();
@@ -193,16 +222,37 @@ public class LiquidTickBranch extends BranchPackage {
 
             ChunkInstance touchedChunk = touchedChunks.get(i);
             int subChunkY = touchedSubChunkY.getInt(i);
-            SubChunkInstance touchedSubChunk = touchedChunk.getSubChunk(subChunkY);
 
-            touchedSubChunk.getDynamicPacketInstance().clear();
-            dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, touchedChunk, subChunkY);
+            if (touchedChunk == lockedChunk) {
+                rebuildChunkGeometry(touchedChunk, subChunkY);
+                continue;
+            }
 
-            touchedChunk.merge();
-            worldRenderManager.addChunkInstance(touchedChunk);
+            ChunkDataSyncContainer touchedSync = touchedChunk.getChunkDataSyncContainer();
+
+            if (!touchedSync.tryAcquire())
+                continue;
+
+            try {
+                rebuildChunkGeometry(touchedChunk, subChunkY);
+            } finally {
+                touchedSync.release();
+            }
+
             worldStreamManager.invalidateMegaForChunk(touchedChunk.getCoordinate());
             worldStreamManager.invalidateChunkBatch(touchedChunk.getCoordinate());
         }
+    }
+
+    private void rebuildChunkGeometry(ChunkInstance targetChunk, int subChunkY) {
+
+        SubChunkInstance touchedSubChunk = targetChunk.getSubChunk(subChunkY);
+
+        touchedSubChunk.getDynamicPacketInstance().clear();
+        dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, targetChunk, subChunkY);
+
+        targetChunk.merge();
+        worldRenderManager.addChunkInstance(targetChunk);
     }
 
     /*
