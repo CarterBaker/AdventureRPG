@@ -27,7 +27,11 @@ class ChunkQueueManager extends ManagerPackage {
      * Drives the per-frame chunk queue across all active grids. Each grid owns
      * its own active chunks, load requests, and unload requests. The chunk pool
      * is shared across all grids for efficiency. All branch dispatch is
-     * per-grid — branches own the implementation.
+     * per-grid — branches own the implementation. Both loadQueue() and
+     * assessActiveChunks() advance up to maxChunkStreamPerBatch chunks per
+     * call rather than one — the same bounded-batch pattern MegaQueueManager
+     * already uses for megas — so a full render distance worth of chunks can
+     * actually stream in at a playable rate instead of one chunk per pass.
      */
 
     // Internal
@@ -58,6 +62,9 @@ class ChunkQueueManager extends ManagerPackage {
     private ArrayDeque<ChunkInstance> chunkPool;
     private int chunkPoolMaxOverflow;
 
+    // Streaming
+    private int maxChunkStreamPerBatch;
+
     // Internal \\
 
     @Override
@@ -86,6 +93,9 @@ class ChunkQueueManager extends ManagerPackage {
         // Pool
         this.chunkPool = new ArrayDeque<>();
         this.chunkPoolMaxOverflow = EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
+
+        // Streaming
+        this.maxChunkStreamPerBatch = EngineSetting.MAX_CHUNK_STREAM_PER_BATCH;
     }
 
     @Override
@@ -177,26 +187,28 @@ class ChunkQueueManager extends ManagerPackage {
         Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
 
         var iterator = loadRequests.iterator();
+        int loaded = 0;
 
-        if (!iterator.hasNext())
-            return;
+        while (iterator.hasNext() && loaded < maxChunkStreamPerBatch) {
 
-        long chunkCoordinate = iterator.nextLong();
-        iterator.remove();
+            long chunkCoordinate = iterator.nextLong();
+            iterator.remove();
 
-        ChunkInstance chunkInstance = chunkPool.isEmpty()
-                ? create(ChunkInstance.class)
-                : chunkPool.poll();
+            ChunkInstance chunkInstance = chunkPool.isEmpty()
+                    ? create(ChunkInstance.class)
+                    : chunkPool.poll();
 
-        chunkInstance.constructor(
-                worldRenderManager,
-                grid.getWorldHandle(),
-                chunkCoordinate,
-                chunkStreamManager.getChunkVAO(),
-                airBlockId,
-                activeChunks);
+            chunkInstance.constructor(
+                    worldRenderManager,
+                    grid.getWorldHandle(),
+                    chunkCoordinate,
+                    chunkStreamManager.getChunkVAO(),
+                    airBlockId,
+                    activeChunks);
 
-        activeChunks.put(chunkCoordinate, chunkInstance);
+            activeChunks.put(chunkCoordinate, chunkInstance);
+            loaded++;
+        }
     }
 
     // Assessment \\
@@ -210,65 +222,70 @@ class ChunkQueueManager extends ManagerPackage {
             return;
 
         var iterator = activeChunks.long2ObjectEntrySet().iterator();
+        int assessed = 0;
 
-        if (!iterator.hasNext())
-            return;
+        while (iterator.hasNext() && assessed < maxChunkStreamPerBatch) {
 
-        var entry = iterator.next();
-        long chunkCoordinate = entry.getLongKey();
-        ChunkInstance chunkInstance = entry.getValue();
-        iterator.remove();
+            var entry = iterator.next();
+            long chunkCoordinate = entry.getLongKey();
+            ChunkInstance chunkInstance = entry.getValue();
+            iterator.remove();
 
-        if (unloadRequests.contains(chunkCoordinate)) {
+            if (unloadRequests.contains(chunkCoordinate)) {
 
-            ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
+                ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
 
-            if (!syncContainer.tryAcquire()) {
+                if (!syncContainer.tryAcquire()) {
+                    activeChunks.put(chunkCoordinate, chunkInstance);
+                    assessed++;
+                    continue;
+                }
+
+                try {
+                    unloadRequests.remove(chunkCoordinate);
+                    worldRenderManager.removeChunkInstance(chunkCoordinate);
+                    chunkInstance.reset();
+                } finally {
+                    syncContainer.release();
+                }
+
+                if (chunkPool.size() < grid.getTotalSlots() + chunkPoolMaxOverflow)
+                    chunkPool.push(chunkInstance);
+                else
+                    chunkInstance.dispose();
+
+                assessed++;
+                continue;
+            }
+
+            GridSlotHandle gridSlotHandle = grid.getGridSlotForChunk(chunkCoordinate);
+
+            if (gridSlotHandle == null) {
+                unloadRequests.add(chunkCoordinate);
                 activeChunks.put(chunkCoordinate, chunkInstance);
-                return;
+                assessed++;
+                continue;
             }
 
-            try {
-                unloadRequests.remove(chunkCoordinate);
-                worldRenderManager.removeChunkInstance(chunkCoordinate);
-                chunkInstance.reset();
-            } finally {
-                syncContainer.release();
+            QueueOperation operation = determineQueueOperation(chunkInstance, gridSlotHandle);
+
+            switch (operation) {
+                case LOAD -> generationBranch.getNewChunk(chunkInstance);
+                case ASSESSMENT -> assessmentBranch.assessChunk(chunkInstance);
+                case BUILD -> buildBranch.buildChunk(chunkInstance);
+                case MERGE -> mergeBranch.mergeChunk(chunkInstance);
+                case ITEM_LOAD -> itemLoadBranch.loadItems(chunkInstance);
+                case ITEM_RENDER -> itemRenderBranch.renderItems(chunkInstance);
+                case BATCH -> batchBranch.batchChunk(chunkInstance, grid);
+                case RENDER -> renderBranch.renderChunk(chunkInstance);
+                case DUMP -> dumpBranch.dumpChunkData(chunkInstance, gridSlotHandle);
+                case SKIP -> {
+                }
             }
 
-            if (chunkPool.size() < grid.getTotalSlots() + chunkPoolMaxOverflow)
-                chunkPool.push(chunkInstance);
-            else
-                chunkInstance.dispose();
-
-            return;
-        }
-
-        GridSlotHandle gridSlotHandle = grid.getGridSlotForChunk(chunkCoordinate);
-
-        if (gridSlotHandle == null) {
-            unloadRequests.add(chunkCoordinate);
             activeChunks.put(chunkCoordinate, chunkInstance);
-            return;
+            assessed++;
         }
-
-        QueueOperation operation = determineQueueOperation(chunkInstance, gridSlotHandle);
-
-        switch (operation) {
-            case LOAD -> generationBranch.getNewChunk(chunkInstance);
-            case ASSESSMENT -> assessmentBranch.assessChunk(chunkInstance);
-            case BUILD -> buildBranch.buildChunk(chunkInstance);
-            case MERGE -> mergeBranch.mergeChunk(chunkInstance);
-            case ITEM_LOAD -> itemLoadBranch.loadItems(chunkInstance);
-            case ITEM_RENDER -> itemRenderBranch.renderItems(chunkInstance);
-            case BATCH -> batchBranch.batchChunk(chunkInstance, grid);
-            case RENDER -> renderBranch.renderChunk(chunkInstance);
-            case DUMP -> dumpBranch.dumpChunkData(chunkInstance, gridSlotHandle);
-            case SKIP -> {
-            }
-        }
-
-        activeChunks.put(chunkCoordinate, chunkInstance);
     }
 
     // Flush \\

@@ -8,22 +8,27 @@ public final class TerrainShapeUtility extends EngineUtility {
 
         /*
          * Combines three independent, seamlessly-wrapped fractal noise fields —
-         * continentalness, erosion, and peaks-valleys — into a single ground
-         * height per world column, the same layered approach modern Minecraft
-         * uses for realistic macro terrain. Continentalness alone decides the
-         * base height (so it alone draws the shoreline, at the point its spline
-         * crosses sea level); erosion decides how much amplitude peaks-valleys
-         * is allowed to contribute (mountainous where erosion is low, flat where
-         * it's high); peaks-valleys — a ridged transform of its own raw noise —
-         * spends that amplitude budget shaping actual ridgelines and valleys. A
-         * final high-frequency detail layer adds small-scale surface roughness
-         * on top so nothing reads as artificially smooth. None of this reads
-         * biome at all, by design — biome only ever dresses the surface blocks
-         * afterward, so painting a new biome onto the world PNG can never open a
-         * seam in the terrain shape itself. The world-wrap circle position
-         * (cos/sin of this column's angle around the world's X axis) is the
-         * same for every one of the four fractal layers below, so it is
-         * computed once here rather than once per layer per octave.
+         * continentalness, erosion, and peaks-valleys — into a macro ground-
+         * height contribution per world column, the same layered approach
+         * modern Minecraft uses for realistic macro terrain. Continentalness
+         * alone decides the base height (so it alone draws the shoreline, at
+         * the point its spline crosses sea level); erosion decides how much
+         * amplitude peaks-valleys is allowed to contribute (mountainous where
+         * erosion is low, flat where it's high); peaks-valleys — a ridged
+         * transform of its own raw noise — spends that amplitude budget shaping
+         * ridgelines and valleys. A separate high-frequency detail layer adds
+         * small-scale surface roughness on top. None of this reads biome at
+         * all, by design — biome only ever dresses the surface blocks
+         * afterward, so painting a new biome onto the world PNG can never open
+         * a seam in the terrain shape itself. Macro shape and detail are split
+         * into separate entry points on purpose: every macro wavelength is
+         * hundreds of blocks wide, so WorldGenerationManager samples
+         * computeMacroShapeBlocks() on a coarse world-aligned grid and
+         * bilinearly interpolates between samples instead of evaluating it at
+         * full per-block resolution — see EngineSetting.
+         * TERRAIN_MACRO_SAMPLE_STRIDE_BLOCKS for the error-margin reasoning.
+         * The detail layer's finest octave is only a few blocks wide, so it
+         * stays at full per-block resolution via computeDetailBlocks().
          */
 
         private static final LinearSpline CONTINENTALNESS_HEIGHT_SPLINE = new LinearSpline(
@@ -42,7 +47,7 @@ public final class TerrainShapeUtility extends EngineUtility {
                 throw new AssertionError("Utility class cannot be instantiated");
         }
 
-        public static int computeGroundHeightBlocks(
+        public static float computeMacroShapeBlocks(
                         long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks) {
 
                 double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
@@ -73,6 +78,22 @@ public final class TerrainShapeUtility extends EngineUtility {
                                 EngineSetting.TERRAIN_PV_PERSISTENCE,
                                 EngineSetting.TERRAIN_PV_LACUNARITY);
 
+                float ridge = 1f - Math.abs(peaksValleysRaw);
+
+                float baseHeight = CONTINENTALNESS_HEIGHT_SPLINE.evaluate(continentalness);
+                float erosionAmplitude = EROSION_AMPLITUDE_SPLINE.evaluate(erosion);
+                float peaksValleysContribution = PEAKS_VALLEYS_SPLINE.evaluate(ridge) * erosionAmplitude;
+
+                return baseHeight + peaksValleysContribution;
+        }
+
+        public static float computeDetailBlocks(
+                        long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks) {
+
+                double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
+                double cosAngle = Math.cos(spatialAngle);
+                double sinAngle = Math.sin(spatialAngle);
+
                 float detail = TerrainWrapNoiseUtility.sampleFractal(
                                 seed ^ EngineSetting.TERRAIN_DETAIL_SEED_SALT,
                                 cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
@@ -81,14 +102,12 @@ public final class TerrainShapeUtility extends EngineUtility {
                                 EngineSetting.TERRAIN_DETAIL_PERSISTENCE,
                                 EngineSetting.TERRAIN_DETAIL_LACUNARITY);
 
-                float ridge = 1f - Math.abs(peaksValleysRaw);
+                return detail * EngineSetting.TERRAIN_DETAIL_AMPLITUDE_BLOCKS;
+        }
 
-                float baseHeight = CONTINENTALNESS_HEIGHT_SPLINE.evaluate(continentalness);
-                float erosionAmplitude = EROSION_AMPLITUDE_SPLINE.evaluate(erosion);
-                float peaksValleysContribution = PEAKS_VALLEYS_SPLINE.evaluate(ridge) * erosionAmplitude;
-                float detailContribution = detail * EngineSetting.TERRAIN_DETAIL_AMPLITUDE_BLOCKS;
+        public static int finalizeGroundHeightBlocks(float macroShapeBlocks, float detailBlocks) {
 
-                float finalHeight = baseHeight + peaksValleysContribution + detailContribution;
+                float finalHeight = macroShapeBlocks + detailBlocks;
 
                 return Math.round(Math.max(
                                 EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS,
