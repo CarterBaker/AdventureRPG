@@ -9,38 +9,46 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.NoiseUtility;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class BiomeManager extends ManagerPackage {
 
     /*
-     * Owns the biome palette for the engine lifetime and resolves which
-     * biome applies at any chunk coordinate for a given world. Resolution
-     * samples that world's map PNG through BiomeLoader's pre-registered
-     * map-color table (so it never waits on a specific biome's full JSON
-     * load), warps the sample position with low-frequency noise so borders
-     * read as organic coastlines rather than the PNG's raw pixel grid, then
-     * rolls the matched biome's own "probable_biomes" pool so hand-authored
-     * variety can appear within or instead of the PNG's base pick. Reachable
-     * from the world-generation thread as well as the main thread, so every
-     * entry point that can trigger or observe a biome load is synchronized.
+     * Owns the biome palette and every runtime-queryable index derived from
+     * it: name/handle and ID/handle registries, plus the map-color index
+     * used to resolve a world PNG pixel to a biome. The color index is
+     * handed to this manager by BiomeLoader right after get() wires the
+     * loader to it — the color data itself is peeked from disk during
+     * scan(), before any biome is fully parsed, so a coordinate can be
+     * matched to a biome name and trigger that one biome's on-demand load
+     * without requiring every biome on disk to already be loaded. Both
+     * world generation and weather resolve through getBiome(world,
+     * coordinate); there is no ID hop in that path — an ID is only ever
+     * read back off an already-resolved handle, for the compact per-voxel
+     * biome palette.
      */
 
     // Palette
-    private Object2ShortOpenHashMap<String> biomeName2BiomeID;
+    private Object2ObjectOpenHashMap<String, BiomeHandle> biomeName2BiomeHandle;
     private Short2ObjectOpenHashMap<BiomeHandle> biomeID2BiomeHandle;
+
+    // Map Color Index — populated by BiomeLoader once it can reach this manager
+    private IntArrayList registeredMapColors;
+    private ObjectArrayList<String> registeredMapColorNames;
 
     // Base \\
 
     @Override
     protected void create() {
 
-        this.biomeName2BiomeID = new Object2ShortOpenHashMap<>();
-        this.biomeName2BiomeID.defaultReturnValue((short) -1);
-
+        this.biomeName2BiomeHandle = new Object2ObjectOpenHashMap<>();
         this.biomeID2BiomeHandle = new Short2ObjectOpenHashMap<>();
+
+        this.registeredMapColors = new IntArrayList();
+        this.registeredMapColorNames = new ObjectArrayList<>();
 
         create(BiomeLoader.class);
     }
@@ -65,8 +73,13 @@ public class BiomeManager extends ManagerPackage {
                         + ") — rename one biome to resolve");
         }
 
-        biomeName2BiomeID.put(biomeHandle.getBiomeName(), biomeHandle.getBiomeID());
+        biomeName2BiomeHandle.put(biomeHandle.getBiomeName(), biomeHandle);
         biomeID2BiomeHandle.put(biomeHandle.getBiomeID(), biomeHandle);
+    }
+
+    synchronized void registerMapColor(String biomeName, int mapColor) {
+        registeredMapColors.add(mapColor);
+        registeredMapColorNames.add(biomeName);
     }
 
     // On-Demand \\
@@ -77,7 +90,7 @@ public class BiomeManager extends ManagerPackage {
 
     // World Map Resolution \\
 
-    public synchronized BiomeHandle getBiomeHandleFromChunkCoordinate(WorldHandle worldHandle, long chunkCoordinate) {
+    public synchronized BiomeHandle getBiome(WorldHandle worldHandle, long chunkCoordinate) {
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
@@ -88,7 +101,7 @@ public class BiomeManager extends ManagerPackage {
     }
 
     public synchronized short getBiomeIDFromChunkCoordinate(WorldHandle worldHandle, long chunkCoordinate) {
-        return getBiomeHandleFromChunkCoordinate(worldHandle, chunkCoordinate).getBiomeID();
+        return getBiome(worldHandle, chunkCoordinate).getBiomeID();
     }
 
     private String sampleMapBiomeName(WorldHandle worldHandle, int chunkX, int chunkZ) {
@@ -115,7 +128,37 @@ public class BiomeManager extends ManagerPackage {
 
         int color = map.getPixelRGB(sampleX, sampleZ);
 
-        return ((BiomeLoader) internalLoader).getNearestBiomeNameForColor(color);
+        return getNearestBiomeNameForColor(color);
+    }
+
+    private String getNearestBiomeNameForColor(int color) {
+
+        if (registeredMapColors.isEmpty())
+            throwException(
+                    "No biomes define a \"map_color\" — world generation cannot resolve a biome from the world map.");
+
+        int targetR = (color >> 16) & 0xFF;
+        int targetG = (color >> 8) & 0xFF;
+        int targetB = color & 0xFF;
+
+        String nearestName = null;
+        int nearestDistanceSq = Integer.MAX_VALUE;
+
+        for (int i = 0; i < registeredMapColors.size(); i++) {
+
+            int candidate = registeredMapColors.getInt(i);
+            int dr = ((candidate >> 16) & 0xFF) - targetR;
+            int dg = ((candidate >> 8) & 0xFF) - targetG;
+            int db = (candidate & 0xFF) - targetB;
+            int distanceSq = dr * dr + dg * dg + db * db;
+
+            if (distanceSq < nearestDistanceSq) {
+                nearestDistanceSq = distanceSq;
+                nearestName = registeredMapColorNames.get(i);
+            }
+        }
+
+        return nearestName;
     }
 
     private BiomeHandle applyProbableVariance(WorldHandle worldHandle, BiomeHandle baseBiome, int chunkX, int chunkZ) {
@@ -155,23 +198,34 @@ public class BiomeManager extends ManagerPackage {
     // Accessible \\
 
     public synchronized boolean hasBiome(String biomeName) {
-        return biomeName2BiomeID.containsKey(biomeName);
+        return biomeName2BiomeHandle.containsKey(biomeName);
     }
 
-    public synchronized short getBiomeIDFromBiomeName(String biomeName) {
+    public synchronized BiomeHandle getBiomeHandleFromBiomeName(String biomeName) {
 
-        if (!biomeName2BiomeID.containsKey(biomeName))
+        if (!biomeName2BiomeHandle.containsKey(biomeName))
             request(biomeName);
 
-        if (!biomeName2BiomeID.containsKey(biomeName))
+        BiomeHandle handle = biomeName2BiomeHandle.get(biomeName);
+
+        if (handle == null)
             throwException("Biome \"" + biomeName + "\" was not registered after its on-demand load completed — "
                     + "the loaded file must declare a different biome name than the one requested. "
                     + "Check for a resource-name/path mismatch between the biome directory and its declared name.");
 
-        return biomeName2BiomeID.getShort(biomeName);
+        return handle;
+    }
+
+    public synchronized short getBiomeIDFromBiomeName(String biomeName) {
+        return getBiomeHandleFromBiomeName(biomeName).getBiomeID();
     }
 
     public synchronized BiomeHandle getBiomeHandleFromBiomeID(short biomeID) {
+
+        if (biomeID == EngineSetting.REGISTRY_RESERVED_ID)
+            throwException("Biome ID 0 was queried — this is the reserved \"not yet generated\" sentinel a "
+                    + "subchunk's biome palette holds until world generation actually runs on it. The caller "
+                    + "read biome data before ChunkData.GENERATION_DATA was set for this chunk.");
 
         BiomeHandle handle = biomeID2BiomeHandle.get(biomeID);
 
@@ -179,9 +233,5 @@ public class BiomeManager extends ManagerPackage {
             throwException("No handle registered for biome ID: " + biomeID);
 
         return handle;
-    }
-
-    public synchronized BiomeHandle getBiomeHandleFromBiomeName(String biomeName) {
-        return getBiomeHandleFromBiomeID(getBiomeIDFromBiomeName(biomeName));
     }
 }

@@ -115,7 +115,7 @@ public class WeatherManager extends ManagerPackage {
 
     private void resolvePoolForChunkCoordinate(long chunkCoordinate) {
 
-        BiomeHandle biomeHandle = biomeManager.getBiomeHandleFromChunkCoordinate(
+        BiomeHandle biomeHandle = biomeManager.getBiome(
                 worldManager.getActiveWorld(), chunkCoordinate);
 
         short biomeID = biomeHandle.getBiomeID();

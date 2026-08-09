@@ -80,12 +80,16 @@ public class WorldGenerationManager extends ManagerPackage {
         double amplitude = 4.0;
         double baseHeight = 12.0;
 
-        // Assign the resolved biome to every biome cell in this subchunk
+        // Assign the resolved biome to every biome cell in this subchunk. The
+        // biome palette is addressed at full block-space resolution just like
+        // the block palette — it internally downsamples by BIOME_SIZE — so
+        // each cell must be written via its representative block-space corner
+        // rather than its own compressed cell coordinate.
         int biomeAxisSize = CHUNK_SIZE / BIOME_SIZE;
         for (int bx = 0; bx < biomeAxisSize; bx++)
             for (int bz = 0; bz < biomeAxisSize; bz++)
                 for (int by = 0; by < biomeAxisSize; by++)
-                    biomes.setBlock(bx, by, bz, biomeID);
+                    biomes.setBlock(bx * BIOME_SIZE, by * BIOME_SIZE, bz * BIOME_SIZE, biomeID);
 
         // Generate terrain
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {

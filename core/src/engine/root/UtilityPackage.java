@@ -68,8 +68,11 @@ public abstract class UtilityPackage {
     }
 
     protected final <T> T throwException(String message, Throwable cause) {
-        logFatal(message, cause);
-        throw new InternalException("[" + systemName + "] " + message, cause);
+        InternalException exception = new InternalException("[" + systemName + "] " + message, cause);
+        logFatal(message, exception);
+        Runtime.getRuntime().halt(1); // Fatal by design — halts immediately so a failure can never retry-loop or
+                                      // log-spam.
+        throw exception;
     }
 
     protected final <T> T throwException(Object input) {
@@ -99,7 +102,7 @@ public abstract class UtilityPackage {
         }
     }
 
-    private void logFatal(String message, Throwable cause) {
+    private void logFatal(String message, InternalException exception) {
 
         log("========Internal Engine Failure========");
 
@@ -112,10 +115,8 @@ public abstract class UtilityPackage {
 
         log("");
 
-        if (cause != null) {
-            log("Cause:");
-            cause.printStackTrace(System.err);
-        }
+        log("Stack Trace:");
+        exception.printStackTrace(System.err);
 
         log("=======================================");
     }
