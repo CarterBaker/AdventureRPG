@@ -20,7 +20,10 @@ public final class TerrainShapeUtility extends EngineUtility {
          * on top so nothing reads as artificially smooth. None of this reads
          * biome at all, by design — biome only ever dresses the surface blocks
          * afterward, so painting a new biome onto the world PNG can never open a
-         * seam in the terrain shape itself.
+         * seam in the terrain shape itself. The world-wrap circle position
+         * (cos/sin of this column's angle around the world's X axis) is the
+         * same for every one of the four fractal layers below, so it is
+         * computed once here rather than once per layer per octave.
          */
 
         private static final LinearSpline CONTINENTALNESS_HEIGHT_SPLINE = new LinearSpline(
@@ -42,9 +45,13 @@ public final class TerrainShapeUtility extends EngineUtility {
         public static int computeGroundHeightBlocks(
                         long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks) {
 
+                double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
+                double cosAngle = Math.cos(spatialAngle);
+                double sinAngle = Math.sin(spatialAngle);
+
                 float continentalness = TerrainWrapNoiseUtility.sampleFractal(
                                 seed ^ EngineSetting.TERRAIN_CONTINENTALNESS_SEED_SALT,
-                                worldX, worldZ, worldWidthBlocks, worldHeightBlocks,
+                                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
                                 EngineSetting.TERRAIN_CONTINENTALNESS_WAVELENGTH_BLOCKS,
                                 EngineSetting.TERRAIN_CONTINENTALNESS_OCTAVES,
                                 EngineSetting.TERRAIN_CONTINENTALNESS_PERSISTENCE,
@@ -52,7 +59,7 @@ public final class TerrainShapeUtility extends EngineUtility {
 
                 float erosion = TerrainWrapNoiseUtility.sampleFractal(
                                 seed ^ EngineSetting.TERRAIN_EROSION_SEED_SALT,
-                                worldX, worldZ, worldWidthBlocks, worldHeightBlocks,
+                                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
                                 EngineSetting.TERRAIN_EROSION_WAVELENGTH_BLOCKS,
                                 EngineSetting.TERRAIN_EROSION_OCTAVES,
                                 EngineSetting.TERRAIN_EROSION_PERSISTENCE,
@@ -60,7 +67,7 @@ public final class TerrainShapeUtility extends EngineUtility {
 
                 float peaksValleysRaw = TerrainWrapNoiseUtility.sampleFractal(
                                 seed ^ EngineSetting.TERRAIN_PV_SEED_SALT,
-                                worldX, worldZ, worldWidthBlocks, worldHeightBlocks,
+                                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
                                 EngineSetting.TERRAIN_PV_WAVELENGTH_BLOCKS,
                                 EngineSetting.TERRAIN_PV_OCTAVES,
                                 EngineSetting.TERRAIN_PV_PERSISTENCE,
@@ -68,7 +75,7 @@ public final class TerrainShapeUtility extends EngineUtility {
 
                 float detail = TerrainWrapNoiseUtility.sampleFractal(
                                 seed ^ EngineSetting.TERRAIN_DETAIL_SEED_SALT,
-                                worldX, worldZ, worldWidthBlocks, worldHeightBlocks,
+                                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
                                 EngineSetting.TERRAIN_DETAIL_WAVELENGTH_BLOCKS,
                                 EngineSetting.TERRAIN_DETAIL_OCTAVES,
                                 EngineSetting.TERRAIN_DETAIL_PERSISTENCE,

@@ -14,10 +14,13 @@ public final class TerrainWrapNoiseUtility extends EngineUtility {
      * back on the same value, and world Z wraps through the shared
      * SeamlessAxisNoiseUtility, which blends only within a thin margin of
      * the true seam rather than across the entire world, so every octave
-     * away from that seam costs exactly one noise sample. Terrain never
-     * drifts or rotates over time — every input here is a fixed world
-     * position, so the result is fully deterministic from seed and
-     * coordinate alone.
+     * away from that seam costs exactly one noise sample. The circle position
+     * for world X depends only on worldX and worldWidthBlocks — never on
+     * wavelength — so the caller computes cos/sin exactly once per column and
+     * passes it in here, instead of every octave of every fractal layer
+     * repeating the same trig. Terrain never drifts or rotates over time —
+     * every input here is a fixed world position, so the result is fully
+     * deterministic from seed and coordinate alone.
      */
 
     private TerrainWrapNoiseUtility() {
@@ -26,7 +29,7 @@ public final class TerrainWrapNoiseUtility extends EngineUtility {
 
     static float sampleFractal(
             long seed,
-            double worldX, double worldZ,
+            double cosAngle, double sinAngle, double worldZ,
             double worldWidthBlocks, double worldHeightBlocks,
             double baseWavelengthBlocks,
             int octaves, float persistence, float lacunarity) {
@@ -40,7 +43,7 @@ public final class TerrainWrapNoiseUtility extends EngineUtility {
 
             long octaveSeed = seed ^ (EngineSetting.TERRAIN_OCTAVE_HASH_SALT * (octave * 2L + 1L));
 
-            sum += sampleSingle(octaveSeed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, wavelength)
+            sum += sampleSingle(octaveSeed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks, wavelength)
                     * amplitude;
             amplitudeSum += amplitude;
 
@@ -52,16 +55,14 @@ public final class TerrainWrapNoiseUtility extends EngineUtility {
     }
 
     private static float sampleSingle(
-            long seed, double worldX, double worldZ,
+            long seed, double cosAngle, double sinAngle, double worldZ,
             double worldWidthBlocks, double worldHeightBlocks, double wavelengthBlocks) {
 
         double effectiveWavelength = Math.max(wavelengthBlocks, 0.001);
-
-        double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
         double embeddingRadius = worldWidthBlocks / (Math.PI * 2.0 * effectiveWavelength);
 
-        double ex = Math.cos(spatialAngle) * embeddingRadius;
-        double ey = Math.sin(spatialAngle) * embeddingRadius;
+        double ex = cosAngle * embeddingRadius;
+        double ey = sinAngle * embeddingRadius;
 
         return SeamlessAxisNoiseUtility.sample(
                 worldZ, effectiveWavelength, worldHeightBlocks, EngineSetting.NOISE_SEAM_BLEND_WAVELENGTHS,
