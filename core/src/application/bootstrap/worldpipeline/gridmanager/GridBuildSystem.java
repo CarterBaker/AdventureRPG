@@ -27,11 +27,8 @@ class GridBuildSystem extends SystemPackage {
 
     /*
      * Constructs a GridInstance and all GridSlotHandles for a given focal
-     * entity and window. Each grid gets its own ClockInstance, its own
-     * WeatherInstance/TemperatureInstance for local weather and temperature,
-     * its own WindInstance and WindData UBO instance, and its own
-     * Time/Sun/Moon/Sky/Weather-Map UBO instances cloned from the shared
-     * base handles, so every window tracks its own location independently.
+     * entity and window, including each window's own cloned clock, weather,
+     * wind, and lighting UBO instances.
      */
 
     // Internal
@@ -104,12 +101,15 @@ class GridBuildSystem extends SystemPackage {
 
         populateCoveredSlots(gridSlots);
 
+        int immediateSlotCount = countImmediateSlots(loadOrder, gridSlots);
+
         gridInstance.constructor(
                 focalEntity,
                 windowInstance,
                 renderTargetFbo,
                 totalSlots,
                 loadOrder,
+                immediateSlotCount,
                 gridCoordinates,
                 gridSlots,
                 radiusSquared,
@@ -282,5 +282,24 @@ class GridBuildSystem extends SystemPackage {
                 }
             }
         }
+    }
+
+    // Immediate Range \\
+
+    /*
+     * loadOrder is sorted nearest-first and detail level only ever increases
+     * with distance, so the IMMEDIATE-tier slots are always exactly the
+     * leading prefix of loadOrder. Physics-adjacent systems use this count to
+     * walk a fixed-size range instead of the entire grid.
+     */
+    private int countImmediateSlots(long[] loadOrder, Long2ObjectOpenHashMap<GridSlotHandle> gridSlots) {
+
+        int count = 0;
+
+        while (count < loadOrder.length
+                && gridSlots.get(loadOrder[count]).getDetailLevel() == GridSlotDetailLevel.IMMEDIATE)
+            count++;
+
+        return count;
     }
 }

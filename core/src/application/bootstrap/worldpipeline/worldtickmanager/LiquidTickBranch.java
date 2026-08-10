@@ -24,24 +24,20 @@ import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 public class LiquidTickBranch extends BranchPackage {
 
     /*
-     * Dedicated execution path LIQUID-geometry blocks tick through. Each
-     * firing advances to the next of four world quadrants and walks only that
-     * quadrant's active chunks. A subchunk with no liquid, whose liquid has
-     * already settled, or whose liquid is still a uniform fill that has never
-     * needed real storage (and so is, by construction, already a flat body at
-     * rest) is skipped outright — no palette scan, no storage realized.
-     * Otherwise, once its flow accumulator crosses its fastest contained
-     * liquid's flow interval, LiquidSimulationSystem redistributes its levels
-     * by one step; if nothing moved, the subchunk is marked stable so future
-     * visits skip it until something touches it again. Any neighboring
-     * subchunk the step touched is rebuilt, re-registered, and un-stabilized
-     * the same way, since it will not otherwise come up for a merge this
-     * frame. Every chunk this branch mutates or registers with the renderer
-     * is guarded by that chunk's own ChunkDataSyncContainer via tryAcquire(),
-     * the same convention the async chunk pipeline uses, since that pipeline
-     * can be rebuilding the exact same chunk's geometry on the WorldStreaming
-     * thread at any moment — a chunk that's busy is simply skipped this pass
-     * and picked up again once its liquid flag invalidates.
+     * Drives per-block liquid flow. Scoped to each grid's IMMEDIATE range
+     * only (GridInstance.getImmediateSlotCount(), a fixed-size prefix of the
+     * nearest-first load order) — liquid physics is a "close to the player"
+     * concern, not a whole-render-distance one, so cost stays constant
+     * regardless of view distance instead of scaling with total loaded
+     * chunks. Each firing advances through one of four quadrants (by chunk
+     * coordinate parity) within that range, so a full sweep of the immediate
+     * area happens every four firings rather than all at once. A subchunk
+     * with no liquid, already-settled liquid, or liquid that's still an
+     * untouched uniform fill is skipped without any palette access. Any
+     * neighboring chunk a flow step touches outside the locked chunk is
+     * rebuilt and re-registered the same way, guarded by its own
+     * ChunkDataSyncContainer since the async chunk pipeline can be rebuilding
+     * it at the same moment.
      */
 
     // Internal
@@ -127,14 +123,21 @@ public class LiquidTickBranch extends BranchPackage {
 
     private void tickGrid(GridInstance grid, float delta, TickQuadrant quadrant) {
 
+        long[] loadOrder = grid.getLoadOrder();
+        int immediateSlotCount = grid.getImmediateSlotCount();
         Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
 
-        for (ChunkInstance chunk : activeChunks.values()) {
+        for (int i = 0; i < immediateSlotCount; i++) {
 
-            if (TickQuadrant.fromChunkCoordinate(chunk.getCoordinate()) != quadrant)
+            long chunkCoordinate = grid.getChunkCoordinateForSlot(loadOrder[i]);
+
+            if (TickQuadrant.fromChunkCoordinate(chunkCoordinate) != quadrant)
                 continue;
 
-            tickChunk(chunk, delta);
+            ChunkInstance chunk = activeChunks.get(chunkCoordinate);
+
+            if (chunk != null)
+                tickChunk(chunk, delta);
         }
     }
 
@@ -142,8 +145,6 @@ public class LiquidTickBranch extends BranchPackage {
      * Holds the chunk's own sync lock across every subchunk tick plus the
      * final merge/register, mirroring MergeBranch and RenderBranch. Skips
      * the whole chunk for this pass if the async pipeline currently owns it.
-     * invalidateMegaForChunk/invalidateChunkBatch both attempt their own
-     * tryAcquire on this same chunk, so they fire only after release.
      */
     private void tickChunk(ChunkInstance chunk, float delta) {
 
@@ -213,12 +214,8 @@ public class LiquidTickBranch extends BranchPackage {
      * A flow step can write into a subchunk other than the one just ticked —
      * the column below it falling, or a neighbor chunk it spread into — and
      * that subchunk will not otherwise be merged this frame, so each one gets
-     * its own full rebuild-merge-register-invalidate cycle here. Its stable
-     * flag is already false from the write itself (SubChunkInstance.setBlock/
-     * setLiquidLevel invalidate automatically) — this only handles the
-     * geometry side. lockedChunk is the chunk tickChunk() already holds the
-     * lock for — a touched entry equal to it is rebuilt directly rather than
-     * re-attempting a non-reentrant tryAcquire against a lock we already own.
+     * its own full rebuild-merge-register-invalidate cycle here. lockedChunk
+     * is the chunk tickChunk() already holds the lock for.
      */
     private void rebuildTouchedNeighbors(ChunkInstance lockedChunk) {
 

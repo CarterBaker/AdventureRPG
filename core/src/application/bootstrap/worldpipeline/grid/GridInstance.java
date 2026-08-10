@@ -27,14 +27,10 @@ public class GridInstance extends InstancePackage {
 
     /*
      * The active spatial grid for a single focal entity — one per window.
-     * Owns the load order, slot handles, active chunks, active mega chunks,
-     * pending load/unload requests, and the render queues for this grid.
-     * clockInstance, weatherInstance, temperatureInstance, windInstance, and
-     * the Time/Sun/Moon/Sky/Weather-Map/Wind UBO instances are all handed to
-     * this grid by GridBuildSystem — cloned or created fresh from their
-     * owning manager — so every window tracks its own location's time,
-     * weather, temperature, wind, sun, moon, sky, and weather map
-     * independently.
+     * Owns the load order, slot handles, active chunks/megas, pending
+     * load/unload requests, this grid's render queues, and this window's own
+     * cloned location state (clock, weather, wind, and the Time/Sun/Moon/
+     * Sky/Weather-Map/Wind UBO instances) handed to it by GridBuildSystem.
      */
 
     // Focal
@@ -47,6 +43,7 @@ public class GridInstance extends InstancePackage {
     // Grid
     private int totalSlots;
     private long[] loadOrder;
+    private int immediateSlotCount;
     private LongOpenHashSet gridCoordinates;
     private Long2ObjectOpenHashMap<GridSlotHandle> gridSlots;
     private float radiusSquared;
@@ -98,6 +95,7 @@ public class GridInstance extends InstancePackage {
             FboInstance renderTargetFbo,
             int totalSlots,
             long[] loadOrder,
+            int immediateSlotCount,
             LongOpenHashSet gridCoordinates,
             Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
             float radiusSquared,
@@ -123,6 +121,7 @@ public class GridInstance extends InstancePackage {
         // Grid
         this.totalSlots = totalSlots;
         this.loadOrder = loadOrder;
+        this.immediateSlotCount = immediateSlotCount;
         this.gridCoordinates = gridCoordinates;
         this.gridSlots = gridSlots;
         this.radiusSquared = radiusSquared;
@@ -289,6 +288,18 @@ public class GridInstance extends InstancePackage {
 
     public long[] getLoadOrder() {
         return loadOrder;
+    }
+
+    /*
+     * Count of leading loadOrder entries whose slot resolves to
+     * GridSlotDetailLevel.IMMEDIATE. Valid because loadOrder is sorted
+     * nearest-first and detail level is monotonically non-decreasing with
+     * distance — the immediate slots are always exactly this prefix. Lets
+     * physics-adjacent systems (liquid simulation, future rigid-body work)
+     * walk a fixed-size range instead of the full grid.
+     */
+    public int getImmediateSlotCount() {
+        return immediateSlotCount;
     }
 
     public long getGridCoordinate(int i) {
