@@ -85,7 +85,7 @@ public class LiquidColumnUtility extends EngineUtility {
             if (blockID != liquidBlockID)
                 return scanY;
 
-            int level = subChunk.getLiquidLevelPaletteHandle().getBlock(blockX, localY, blockZ);
+            int level = subChunk.getLiquidLevel(blockX, localY, blockZ);
 
             if (level < EngineSetting.LIQUID_LEVEL_MAX)
                 return scanY + ((float) level / EngineSetting.LIQUID_LEVEL_MAX);

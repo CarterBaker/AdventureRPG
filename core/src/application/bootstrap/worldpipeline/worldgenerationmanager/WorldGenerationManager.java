@@ -23,22 +23,13 @@ public class WorldGenerationManager extends ManagerPackage {
      * height, all cached in a per-thread scratch buffer. Both the macro shape
      * and fine detail noise layers are sampled on a coarse world-aligned grid
      * and bilinearly interpolated per block rather than evaluated at full
-     * per-block resolution — each layer's stride is sized well below its
-     * finest octave's wavelength, so interpolation error stays far under one
-     * block and the terrain reads identically while paying for a fraction of
-     * the noise evaluations. generateSubChunk() then classifies each
-     * subchunk against that data before touching any block palette: entirely
-     * above every column's terrain is left as the default air (no write at
-     * all) and flagged knownEmpty so the geometry pipeline can skip it
-     * outright, entirely below every column's surface-dressing layer is
-     * bulk-filled as solid stone in O(1), entirely below sea level and above
-     * every column's ground is bulk-filled as water in O(1), and only a
-     * subchunk that actually straddles a surface, coastline, or cliff runs
-     * the precise per-block loop. Both O(1) bulk fills also mark the
-     * subchunk uniformFill so GeometryBuildManager can later prove it's
-     * fully enclosed by identical neighbors and skip its mesh scan too —
-     * this is what keeps a tall mountain's buried interior from costing
-     * anything at build time. Ground height itself comes from
+     * per-block resolution. generateSubChunk() then classifies each subchunk
+     * against that data before any storage is realized: entirely above every
+     * column's terrain is left knownEmpty, entirely below the surface-dressing
+     * layer or entirely below sea level and above ground is left uniformFill —
+     * neither ever allocates a palette — and only a subchunk that actually
+     * straddles a surface, coastline, or cliff realizes real per-block storage
+     * and runs the precise loop. Ground height itself comes from
      * TerrainShapeUtility and is fully independent of biome — biome only ever
      * chooses which blocks dress that shape. Chunks generate concurrently on
      * separate worker threads, so the surface-block cache below is a
@@ -208,11 +199,7 @@ public class WorldGenerationManager extends ManagerPackage {
             throwException("generateSubChunk() called for a chunk whose column data was never computed on this "
                     + "thread — computeColumn() must run once for this exact chunk coordinate first.");
 
-        subChunkInstance.clearKnownEmpty();
-        subChunkInstance.clearUniformFill();
-
-        BlockPaletteHandle biomes = subChunkInstance.getBiomePaletteHandle();
-        biomes.fill(column.biomeID);
+        subChunkInstance.beginGeneration(column.biomeID);
 
         int offsetY = (int) subChunkInstance.getCoordinate() * CHUNK_SIZE;
 
@@ -225,21 +212,18 @@ public class WorldGenerationManager extends ManagerPackage {
         int seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
         int subChunkTopY = offsetY + CHUNK_SIZE - 1;
 
-        BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
-        BlockPaletteHandle liquidLevels = subChunkInstance.getLiquidLevelPaletteHandle();
-
         if (subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
-            blocks.fill(stoneBlockId);
             subChunkInstance.markUniformFill(DynamicGeometryType.FULL, stoneBlockId);
             return true;
         }
 
         if (offsetY > column.columnMaxGroundHeightBlocks && subChunkTopY <= seaLevel) {
-            blocks.fill(waterBlockId);
-            liquidLevels.fill(EngineSetting.LIQUID_LEVEL_MAX);
             subChunkInstance.markUniformFill(DynamicGeometryType.LIQUID, waterBlockId);
             return true;
         }
+
+        BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
+        BlockPaletteHandle liquidLevels = subChunkInstance.getLiquidLevelPaletteHandle();
 
         int beachRange = EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
 

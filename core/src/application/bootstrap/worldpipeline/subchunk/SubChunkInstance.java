@@ -18,34 +18,23 @@ import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 public class SubChunkInstance extends WorldRenderInstance {
 
     /*
-     * One vertical slice of a chunk covering CHUNK_SIZE^3 blocks. Owns block,
-     * biome, rotation, and liquid-level palettes plus a world item palette.
-     * Permanently owned by its parent ChunkInstance — never pooled or
-     * transferred independently. Dirty-region geometry rebuilds operate at
-     * this granularity. Also tracks containedBlockTypes — the set of
-     * DynamicGeometryTypes this subchunk's most recently built geometry
-     * actually contains blocks of, tallied by GeometryBuildManager during the
-     * same walk that already visits every block to build the mesh — so
-     * systems that only care about one geometry type (liquid tides, liquid
-     * flow ticking) can skip subchunks that never contain it without a
-     * separate scan. Tally writes only ever happen while the owning chunk's
-     * ChunkDataSyncContainer is held (see BuildBranch); readers off the
-     * build thread must acquire that same lock first. liquidLevelPaletteHandle
-     * mirrors blockPaletteHandle's resolution one-for-one and holds each
-     * liquid cell's fill level (0..EngineSetting.LIQUID_LEVEL_MAX) — see
-     * LiquidSimulationSystem, the sole writer of partial fill state.
-     * liquidStable marks a subchunk whose liquid produced no movement on its
-     * last flow step — LiquidTickBranch skips the palette scan entirely while
-     * it's set, and clears it the instant anything writes new liquid state
-     * into this subchunk from outside. knownEmpty flags a subchunk
-     * WorldGenerationManager proved holds no blocks at all — GeometryBuildManager
-     * skips the per-block mesh scan entirely for it, since air can never
-     * contribute a face. Any block write clears it immediately, so a later
-     * edit into previously-empty space always re-scans correctly.
-     * uniformFill flags a subchunk WorldGenerationManager bulk-filled with a
-     * single geometry type and block ID (deep stone, deep water) — see
-     * GeometryBuildManager, which combines this with each neighbor's own
-     * flag to prove a subchunk is fully enclosed and skip its mesh scan too.
+     * One vertical slice of a chunk covering CHUNK_SIZE^3 blocks. A subchunk
+     * carries real per-block palette storage (biome, block, rotation, liquid
+     * level) only once something genuinely needs cell-by-cell data — pure air
+     * (knownEmpty) and single-block-type regions (uniformFill) are tracked as
+     * scalars and never allocate a palette at all. Storage is realized on
+     * first real need: a block edit, or a geometry build that finds the
+     * subchunk not fully enclosed by identical neighbors and so must walk it
+     * cell by cell. Since most subchunks in a tall world are either open sky
+     * or buried deep underground, this keeps memory and generation cost
+     * proportional to the terrain surface rather than to total world volume,
+     * and releases storage back to virtual on reset() so a pooled chunk
+     * reused at a new location starts free again. containedBlockTypes is the
+     * set of DynamicGeometryTypes this subchunk's most recent geometry build
+     * (or uniform-fill classification) actually contains, tallied so systems
+     * like liquid ticking can skip subchunks that never need them. Tally
+     * writes only ever happen while the owning chunk's ChunkDataSyncContainer
+     * is held; readers off the build thread must acquire that lock first.
      */
 
     // Internal
@@ -55,14 +44,16 @@ public class SubChunkInstance extends WorldRenderInstance {
     private BlockPaletteHandle liquidLevelPaletteHandle;
     private WorldItemPaletteHandle worldItemPaletteHandle;
 
+    // Storage — lazily realized
+    private boolean populated;
+    private short airBlockId;
+    private short columnBiomeID;
+
     // Block Type Composition — tallied during geometry build
     private ReferenceOpenHashSet<DynamicGeometryType> containedBlockTypes;
     private int[] blockTypeCounts;
 
-    // Liquid Flow — the exact liquid block IDs tallied into this subchunk on
-    // its last geometry build (a subset of containedBlockTypes' LIQUID case),
-    // how many real seconds have accumulated since its liquid geometry last
-    // redrew, and whether the last flow step moved anything at all.
+    // Liquid Flow
     private ShortOpenHashSet containedLiquidBlockIDs;
     private float liquidFlowAccumulator;
     private boolean liquidStable;
@@ -72,9 +63,7 @@ public class SubChunkInstance extends WorldRenderInstance {
     private boolean knownEmpty;
 
     // Uniform Fill Fast Path — set only by WorldGenerationManager when a
-    // subchunk's entire block palette was bulk-filled with one geometry type
-    // and block ID. Cleared on any edit or interior-data dump so
-    // GeometryBuildManager never trusts it against data that has changed.
+    // subchunk's entire volume is a single geometry type and block ID
     private boolean uniformFill;
     private DynamicGeometryType uniformGeometryType;
     private short uniformBlockID;
@@ -86,7 +75,6 @@ public class SubChunkInstance extends WorldRenderInstance {
 
         super.create();
 
-        // Internal
         this.biomePaletteHandle = create(BlockPaletteHandle.class);
         this.blockPaletteHandle = create(BlockPaletteHandle.class);
         this.blockRotationPaletteHandle = create(BlockPaletteHandle.class);
@@ -94,19 +82,16 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.worldItemPaletteHandle = create(WorldItemPaletteHandle.class);
         this.worldItemPaletteHandle.constructor();
 
-        // Block Type Composition
+        this.populated = false;
+
         this.containedBlockTypes = new ReferenceOpenHashSet<>(DynamicGeometryType.LENGTH);
         this.blockTypeCounts = new int[DynamicGeometryType.LENGTH];
 
-        // Liquid Flow
         this.containedLiquidBlockIDs = new ShortOpenHashSet();
         this.liquidFlowAccumulator = 0f;
         this.liquidStable = false;
 
-        // Empty Fast Path
         this.knownEmpty = false;
-
-        // Uniform Fill Fast Path
         this.uniformFill = false;
     }
 
@@ -126,34 +111,19 @@ public class SubChunkInstance extends WorldRenderInstance {
                 coordinate,
                 vaoHandle);
 
-        this.biomePaletteHandle.constructor(
-                EngineSetting.CHUNK_SIZE / EngineSetting.BIOME_SIZE,
-                EngineSetting.BLOCK_PALETTE_THRESHOLD / EngineSetting.BIOME_SIZE,
-                EngineSetting.REGISTRY_RESERVED_ID);
-
-        this.blockPaletteHandle.constructor(
-                EngineSetting.CHUNK_SIZE,
-                EngineSetting.BLOCK_PALETTE_THRESHOLD,
-                airBlockId);
-
-        this.blockRotationPaletteHandle.constructor(
-                EngineSetting.CHUNK_SIZE,
-                EngineSetting.BLOCK_PALETTE_THRESHOLD,
-                EngineSetting.DEFAULT_BLOCK_ORIENTATION);
-
-        this.liquidLevelPaletteHandle.constructor(
-                EngineSetting.CHUNK_SIZE,
-                EngineSetting.BLOCK_PALETTE_THRESHOLD,
-                EngineSetting.LIQUID_LEVEL_EMPTY);
+        this.airBlockId = airBlockId;
+        this.columnBiomeID = EngineSetting.REGISTRY_RESERVED_ID;
+        this.populated = false;
+        this.knownEmpty = false;
+        this.uniformFill = false;
     }
 
     // Reset \\
 
     public void reset() {
-        biomePaletteHandle.clear();
-        blockPaletteHandle.clear();
-        blockRotationPaletteHandle.clear();
-        liquidLevelPaletteHandle.clear();
+
+        releaseStorageIfPopulated();
+
         worldItemPaletteHandle.clear();
         getDynamicPacket().clear();
         containedBlockTypes.clear();
@@ -163,6 +133,90 @@ public class SubChunkInstance extends WorldRenderInstance {
         liquidStable = false;
         knownEmpty = false;
         uniformFill = false;
+    }
+
+    // Lazy Storage \\
+
+    /*
+     * Realizes real per-block storage on first genuine need, backfilling it
+     * to whatever this subchunk currently virtually represents (air, or a
+     * single uniform block) so the caller that triggered this doesn't see a
+     * spurious reset. Idempotent.
+     */
+    private void ensurePopulated() {
+
+        if (populated)
+            return;
+
+        biomePaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE / EngineSetting.BIOME_SIZE,
+                EngineSetting.BLOCK_PALETTE_THRESHOLD / EngineSetting.BIOME_SIZE,
+                EngineSetting.REGISTRY_RESERVED_ID);
+        biomePaletteHandle.fill(columnBiomeID);
+
+        blockPaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD, airBlockId);
+        blockRotationPaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD,
+                EngineSetting.DEFAULT_BLOCK_ORIENTATION);
+        liquidLevelPaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD, EngineSetting.LIQUID_LEVEL_EMPTY);
+
+        if (uniformFill) {
+            blockPaletteHandle.fill(uniformBlockID);
+            if (uniformGeometryType == DynamicGeometryType.LIQUID)
+                liquidLevelPaletteHandle.fill(EngineSetting.LIQUID_LEVEL_MAX);
+        }
+
+        populated = true;
+    }
+
+    private void releaseStorageIfPopulated() {
+
+        if (!populated)
+            return;
+
+        biomePaletteHandle.releaseStorage();
+        blockPaletteHandle.releaseStorage();
+        blockRotationPaletteHandle.releaseStorage();
+        liquidLevelPaletteHandle.releaseStorage();
+
+        populated = false;
+    }
+
+    public boolean isPopulated() {
+        return populated;
+    }
+
+    // Generation \\
+
+    /*
+     * Called once by WorldGenerationManager before each generation pass.
+     * Drops any previously realized storage — this instance may be pooled
+     * and reused for a different location — and records the column's biome
+     * as a scalar; a palette is only ever built once something needs one.
+     */
+    public void beginGeneration(short columnBiomeID) {
+        releaseStorageIfPopulated();
+        this.columnBiomeID = columnBiomeID;
+        this.knownEmpty = false;
+        this.uniformFill = false;
+    }
+
+    /*
+     * Hollows the interior of a subchunk that has real storage, dropping it
+     * toward a shell. A subchunk that never realized storage is already
+     * maximally compact — nothing to hollow — so its uniformFill
+     * classification is left intact and it stays free.
+     */
+    public void dumpInteriorToAir() {
+
+        if (!populated)
+            return;
+
+        blockPaletteHandle.dumpInteriorBlocks(airBlockId);
+        liquidLevelPaletteHandle.dumpInteriorBlocks(EngineSetting.LIQUID_LEVEL_EMPTY);
+        clearUniformFill();
     }
 
     // Block Type Composition \\
@@ -184,11 +238,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         containedLiquidBlockIDs.add(blockID);
     }
 
-    /*
-     * Folds the tally into the exposed set. The set instance is never
-     * reallocated — only cleared and repopulated — so repeated rebuilds
-     * create no garbage.
-     */
     public void finalizeBlockTypeTally() {
         containedBlockTypes.clear();
         for (DynamicGeometryType type : DynamicGeometryType.VALUES)
@@ -236,10 +285,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         knownEmpty = true;
     }
 
-    public void clearKnownEmpty() {
-        knownEmpty = false;
-    }
-
     public boolean isKnownEmpty() {
         return knownEmpty;
     }
@@ -271,14 +316,11 @@ public class SubChunkInstance extends WorldRenderInstance {
     // Block Writes \\
 
     /*
-     * Every write to this subchunk's block or liquid-level palette must pass
-     * through here instead of touching BlockPaletteHandle directly, so
-     * liquidStable is always invalidated the instant something actually
-     * changes — no external system, debug tooling included, is ever
-     * responsible for remembering to clear it itself. invalidateLiquid() is
-     * also called directly by systems that alter a NEIGHBORING subchunk in a
-     * way that could open or close this subchunk's own flow paths (see
-     * BlockBranch.rebuildSubChunk()).
+     * Every write realizes storage first, so an edit to a single cell of a
+     * uniform or empty subchunk correctly backfills the other 4095 cells to
+     * their prior value before applying. invalidateLiquid() is also called
+     * directly by systems that alter a NEIGHBORING subchunk in a way that
+     * could open or close this subchunk's own flow paths.
      */
 
     public void invalidateLiquid() {
@@ -286,6 +328,7 @@ public class SubChunkInstance extends WorldRenderInstance {
     }
 
     public void setBlock(int x, int y, int z, short blockID) {
+        ensurePopulated();
         blockPaletteHandle.setBlock(x, y, z, blockID);
         knownEmpty = false;
         uniformFill = false;
@@ -293,6 +336,7 @@ public class SubChunkInstance extends WorldRenderInstance {
     }
 
     public void setBlock(int packedXYZ, short blockID) {
+        ensurePopulated();
         blockPaletteHandle.setBlock(packedXYZ, blockID);
         knownEmpty = false;
         uniformFill = false;
@@ -300,11 +344,13 @@ public class SubChunkInstance extends WorldRenderInstance {
     }
 
     public void setLiquidLevel(int x, int y, int z, short level) {
+        ensurePopulated();
         liquidLevelPaletteHandle.setBlock(x, y, z, level);
         invalidateLiquid();
     }
 
     public void setLiquidLevel(int packedXYZ, short level) {
+        ensurePopulated();
         liquidLevelPaletteHandle.setBlock(packedXYZ, level);
         invalidateLiquid();
     }
@@ -312,18 +358,22 @@ public class SubChunkInstance extends WorldRenderInstance {
     // Accessible \\
 
     public BlockPaletteHandle getBiomePaletteHandle() {
+        ensurePopulated();
         return biomePaletteHandle;
     }
 
     public BlockPaletteHandle getBlockPaletteHandle() {
+        ensurePopulated();
         return blockPaletteHandle;
     }
 
     public BlockPaletteHandle getBlockRotationPaletteHandle() {
+        ensurePopulated();
         return blockRotationPaletteHandle;
     }
 
     public BlockPaletteHandle getLiquidLevelPaletteHandle() {
+        ensurePopulated();
         return liquidLevelPaletteHandle;
     }
 
@@ -331,7 +381,22 @@ public class SubChunkInstance extends WorldRenderInstance {
         return worldItemPaletteHandle;
     }
 
+    /*
+     * Value-only reads never realize storage — a virtual subchunk answers
+     * directly from its scalar state, exactly as if a real palette had been
+     * filled uniformly.
+     */
     public short getBlock(int x, int y, int z) {
+        if (!populated)
+            return uniformFill ? uniformBlockID : airBlockId;
         return blockPaletteHandle.getBlock(Coordinate3Int.pack(x, y, z));
+    }
+
+    public short getLiquidLevel(int x, int y, int z) {
+        if (!populated)
+            return uniformFill && uniformGeometryType == DynamicGeometryType.LIQUID
+                    ? EngineSetting.LIQUID_LEVEL_MAX
+                    : EngineSetting.LIQUID_LEVEL_EMPTY;
+        return liquidLevelPaletteHandle.getBlock(Coordinate3Int.pack(x, y, z));
     }
 }

@@ -1,6 +1,5 @@
 package application.bootstrap.worldpipeline.chunkstreammanager;
 
-import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkDataUtility;
@@ -10,7 +9,6 @@ import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import engine.root.BranchPackage;
-import engine.root.EngineSetting;
 
 public class DumpBranch extends BranchPackage {
 
@@ -23,12 +21,8 @@ public class DumpBranch extends BranchPackage {
      */
 
     // Internal
-    private BlockManager blockManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
     private WorldRenderManager worldRenderManager;
-
-    // State
-    private short airBlockId;
 
     // Internal \\
 
@@ -36,14 +30,8 @@ public class DumpBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.blockManager = get(BlockManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.worldRenderManager = get(WorldRenderManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        this.airBlockId = (short) blockManager.getBlockIDFromBlockName(EngineSetting.AIR_BLOCK_NAME);
     }
 
     // Dump \\
@@ -84,20 +72,17 @@ public class DumpBranch extends BranchPackage {
     }
 
     /*
-     * Hollowing interior blocks to air invalidates any subchunk previously
-     * proven uniformFill — a pure-stone subchunk with its interior stripped
-     * out is no longer pure stone — so the flag is cleared here alongside
-     * the palette dump rather than left to go stale.
+     * Hollows the interior of any subchunk that has real per-block storage.
+     * A subchunk still in its virtual (empty or uniform) representation has
+     * nothing to hollow and is left alone — it's already as compact as it
+     * can be.
      */
     private void dumpGenerationData(ChunkInstance chunkInstance) {
 
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
 
-        for (SubChunkInstance subChunk : subChunks) {
-            subChunk.getBlockPaletteHandle().dumpInteriorBlocks(airBlockId);
-            subChunk.getLiquidLevelPaletteHandle().dumpInteriorBlocks(EngineSetting.LIQUID_LEVEL_EMPTY);
-            subChunk.clearUniformFill();
-        }
+        for (SubChunkInstance subChunk : subChunks)
+            subChunk.dumpInteriorToAir();
     }
 
     private void dumpBuildData(ChunkInstance chunkInstance) {

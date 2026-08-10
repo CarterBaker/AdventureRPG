@@ -26,20 +26,22 @@ public class LiquidTickBranch extends BranchPackage {
     /*
      * Dedicated execution path LIQUID-geometry blocks tick through. Each
      * firing advances to the next of four world quadrants and walks only that
-     * quadrant's active chunks. A subchunk with no liquid, or whose liquid has
-     * already settled (SubChunkInstance.isLiquidStable()), is skipped outright
-     * — no palette scan. Otherwise, once its flow accumulator crosses its
-     * fastest contained liquid's flow interval, LiquidSimulationSystem
-     * redistributes its levels by one step; if nothing moved, the subchunk is
-     * marked stable so future visits skip it until something touches it again.
-     * Any neighboring subchunk the step touched is rebuilt, re-registered, and
-     * un-stabilized the same way, since it will not otherwise come up for a
-     * merge this frame. Every chunk this branch mutates or registers with the
-     * renderer is guarded by that chunk's own ChunkDataSyncContainer via
-     * tryAcquire(), the same convention the async chunk pipeline uses, since
-     * that pipeline can be rebuilding the exact same chunk's geometry on the
-     * WorldStreaming thread at any moment — a chunk that's busy is simply
-     * skipped this pass and picked up again once its liquid flag invalidates.
+     * quadrant's active chunks. A subchunk with no liquid, whose liquid has
+     * already settled, or whose liquid is still a uniform fill that has never
+     * needed real storage (and so is, by construction, already a flat body at
+     * rest) is skipped outright — no palette scan, no storage realized.
+     * Otherwise, once its flow accumulator crosses its fastest contained
+     * liquid's flow interval, LiquidSimulationSystem redistributes its levels
+     * by one step; if nothing moved, the subchunk is marked stable so future
+     * visits skip it until something touches it again. Any neighboring
+     * subchunk the step touched is rebuilt, re-registered, and un-stabilized
+     * the same way, since it will not otherwise come up for a merge this
+     * frame. Every chunk this branch mutates or registers with the renderer
+     * is guarded by that chunk's own ChunkDataSyncContainer via tryAcquire(),
+     * the same convention the async chunk pipeline uses, since that pipeline
+     * can be rebuilding the exact same chunk's geometry on the WorldStreaming
+     * thread at any moment — a chunk that's busy is simply skipped this pass
+     * and picked up again once its liquid flag invalidates.
      */
 
     // Internal
@@ -179,6 +181,11 @@ public class LiquidTickBranch extends BranchPackage {
 
         if (!subChunk.hasBlockType(DynamicGeometryType.LIQUID) || subChunk.isLiquidStable())
             return false;
+
+        if (subChunk.isUniformFill() && !subChunk.isPopulated()) {
+            subChunk.setLiquidStable(true);
+            return false;
+        }
 
         subChunk.addLiquidFlowTime(delta);
 

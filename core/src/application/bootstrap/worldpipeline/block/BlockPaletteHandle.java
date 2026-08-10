@@ -15,7 +15,10 @@ public final class BlockPaletteHandle extends HandlePackage {
      * block types are introduced, backed by an O(1) reverse index so neither
      * writing a new value nor rebuilding the palette during a dump ever
      * degrades into a linear scan. Converts to a flat direct array once the
-     * palette exceeds the configured threshold.
+     * palette exceeds the configured threshold. releaseStorage() drops all
+     * backing storage without forgetting the handle's own config, so a caller
+     * that only needs this palette some of the time (see SubChunkInstance)
+     * can construct it, release it, and construct it again cheaply.
      */
 
     // Palette Config
@@ -88,6 +91,18 @@ public final class BlockPaletteHandle extends HandlePackage {
         else
             packedData = new long[longsNeeded];
 
+        directData = null;
+    }
+
+    /*
+     * Drops all backing storage, leaving the handle's config (axis size,
+     * threshold, default value) intact so constructor() can be called again
+     * later to bring it back at full cost only when actually needed.
+     */
+    public void releaseStorage() {
+        palette = null;
+        paletteIndexLookup = null;
+        packedData = null;
         directData = null;
     }
 
