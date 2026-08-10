@@ -3,6 +3,8 @@ package application.bootstrap.worldpipeline.worldrendermanager;
 import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
+import application.bootstrap.geometrypipeline.mesh.MeshInstance;
+import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
@@ -17,6 +19,8 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -24,22 +28,36 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldRenderManager extends ManagerPackage {
 
+    /*
+     * Owns the GPU-resident render representation of every rendered chunk and
+     * mega chunk. A geometry rebuild (block edit, liquid flow, streaming) no
+     * longer tears down and recreates GL buffers — updateEntries() reconciles
+     * the new packet against the previous one bucket-by-bucket, reuploading
+     * data into the SAME VBO/IBO handles wherever a bucket already exists and
+     * only allocating or freeing GL objects when the bucket count for a
+     * material actually grows or shrinks. This keeps per-window VAO clones
+     * (see VAOManager) valid across updates, since they reference these same
+     * handles, and eliminates the GL object churn that made frequent updates
+     * — liquid ticks especially — extremely expensive.
+     */
+
     private MaterialManager materialManager;
     private ModelManager modelManager;
+    private MeshManager meshManager;
     private RenderManager renderManager;
     private WorldStreamManager worldStreamManager;
     private FrustumCullingSystem frustumCullingSystem;
 
-    private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> chunkModels;
-    private Long2ObjectOpenHashMap<ObjectArrayList<ModelInstance>> megaModels;
+    private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> chunkEntries;
+    private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> megaEntries;
 
     private int batchedChunks;
 
     @Override
     protected void create() {
         this.frustumCullingSystem = create(FrustumCullingSystem.class);
-        this.chunkModels = new Long2ObjectOpenHashMap<>();
-        this.megaModels = new Long2ObjectOpenHashMap<>();
+        this.chunkEntries = new Long2ObjectOpenHashMap<>();
+        this.megaEntries = new Long2ObjectOpenHashMap<>();
         this.batchedChunks = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
     }
 
@@ -47,6 +65,7 @@ public class WorldRenderManager extends ManagerPackage {
     protected void get() {
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
+        this.meshManager = get(MeshManager.class);
         this.renderManager = get(RenderManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
     }
@@ -95,18 +114,12 @@ public class WorldRenderManager extends ManagerPackage {
             if (!frustumCullingSystem.isMegaVisible(slot))
                 continue;
 
-            ObjectArrayList<ModelInstance> models = megaModels.get(coordinate);
+            Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = megaEntries.get(coordinate);
 
-            if (models == null)
+            if (materialEntries == null)
                 continue;
 
-            UBOInstance slotUBO = slot.getSlotUBO();
-
-            for (int i = 0; i < models.size(); i++) {
-                ModelInstance model = models.get(i);
-                model.getMaterial().setUBO(slotUBO);
-                renderManager.pushRenderCall(model, worldFbo, 0, window);
-            }
+            pushEntries(materialEntries, slot.getSlotUBO(), worldFbo, window);
         }
     }
 
@@ -127,56 +140,125 @@ public class WorldRenderManager extends ManagerPackage {
             if (!frustumCullingSystem.isChunkVisible(slot))
                 continue;
 
-            ObjectArrayList<ModelInstance> models = chunkModels.get(coordinate);
+            Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = chunkEntries.get(coordinate);
 
-            if (models == null)
+            if (materialEntries == null)
                 continue;
 
-            UBOInstance slotUBO = slot.getSlotUBO();
+            pushEntries(materialEntries, slot.getSlotUBO(), worldFbo, window);
+        }
+    }
 
-            for (int i = 0; i < models.size(); i++) {
-                ModelInstance model = models.get(i);
+    private void pushEntries(
+            Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries,
+            UBOInstance slotUBO,
+            FboInstance worldFbo,
+            WindowInstance window) {
+
+        for (ObjectArrayList<RenderEntry> bucketList : materialEntries.values()) {
+            for (int i = 0; i < bucketList.size(); i++) {
+                ModelInstance model = bucketList.get(i).modelInstance;
                 model.getMaterial().setUBO(slotUBO);
                 renderManager.pushRenderCall(model, worldFbo, 0, window);
             }
         }
     }
 
+    // Update \\
+
     public boolean addChunkInstance(WorldRenderInstance worldRenderInstance) {
-
-        long coordinate = worldRenderInstance.getCoordinate();
-
-        if (!hasGridSlotForChunk(coordinate))
-            return false;
-
-        if (chunkModels.containsKey(coordinate))
-            removeChunkInstance(coordinate);
-
-        ObjectArrayList<ModelInstance> modelList = buildModelList(worldRenderInstance);
-
-        if (modelList == null)
-            return false;
-
-        chunkModels.put(coordinate, modelList);
-        return true;
+        return updateEntries(worldRenderInstance, chunkEntries);
     }
 
     public boolean addMegaInstance(WorldRenderInstance worldRenderInstance) {
+        return updateEntries(worldRenderInstance, megaEntries);
+    }
+
+    private boolean updateEntries(
+            WorldRenderInstance worldRenderInstance,
+            Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> entries) {
 
         long coordinate = worldRenderInstance.getCoordinate();
 
-        if (!hasGridSlotForChunk(coordinate))
+        if (!hasGridSlotForChunk(coordinate)) {
+            removeEntries(coordinate, entries);
+            return false;
+        }
+
+        DynamicPacketInstance dynamicPacket = worldRenderInstance.getDynamicPacketInstance();
+
+        if (dynamicPacket.getState() != DynamicPacketState.READY)
             return false;
 
-        if (megaModels.containsKey(coordinate))
-            removeMegaInstance(coordinate);
+        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = entries.get(coordinate);
 
-        ObjectArrayList<ModelInstance> modelList = buildModelList(worldRenderInstance);
+        if (materialEntries == null) {
+            materialEntries = new Int2ObjectOpenHashMap<>();
+            entries.put(coordinate, materialEntries);
+        }
 
-        if (modelList == null)
+        IntOpenHashSet seenMaterials = new IntOpenHashSet();
+
+        for (Int2ObjectMap.Entry<ObjectArrayList<DynamicModelHandle>> entry : dynamicPacket
+                .getMaterialID2ModelCollection().int2ObjectEntrySet()) {
+
+            int materialID = entry.getIntKey();
+            ObjectArrayList<DynamicModelHandle> sourceBuckets = entry.getValue();
+            ObjectArrayList<RenderEntry> renderBuckets = materialEntries.get(materialID);
+
+            if (renderBuckets == null) {
+                renderBuckets = new ObjectArrayList<>();
+                materialEntries.put(materialID, renderBuckets);
+            }
+
+            int liveCount = 0;
+
+            for (int i = 0; i < sourceBuckets.size(); i++) {
+
+                DynamicModelHandle bucket = sourceBuckets.get(i);
+
+                if (bucket.isEmpty())
+                    continue;
+
+                if (liveCount < renderBuckets.size()) {
+                    RenderEntry existing = renderBuckets.get(liveCount);
+                    meshManager.updateMesh(existing.meshInstance, bucket.getVertices(), bucket.getIndices());
+                    existing.modelInstance.updateMeshData(existing.meshInstance.getMeshData());
+                } else {
+                    MeshInstance meshInstance = meshManager.createMesh(
+                            bucket.getVAOHandle(), bucket.getVertices(), bucket.getIndices());
+                    MaterialInstance clonedMaterial = materialManager.cloneMaterial(materialID);
+                    ModelInstance modelInstance = modelManager.createModel(meshInstance, clonedMaterial);
+                    renderBuckets.add(new RenderEntry(meshInstance, modelInstance));
+                }
+
+                liveCount++;
+            }
+
+            while (renderBuckets.size() > liveCount)
+                disposeEntry(renderBuckets.remove(renderBuckets.size() - 1));
+
+            if (renderBuckets.isEmpty())
+                materialEntries.remove(materialID);
+            else
+                seenMaterials.add(materialID);
+        }
+
+        var iterator = materialEntries.int2ObjectEntrySet().iterator();
+
+        while (iterator.hasNext()) {
+            var e = iterator.next();
+            if (!seenMaterials.contains(e.getIntKey())) {
+                disposeEntries(e.getValue());
+                iterator.remove();
+            }
+        }
+
+        if (materialEntries.isEmpty()) {
+            entries.remove(coordinate);
             return false;
+        }
 
-        megaModels.put(coordinate, modelList);
         return true;
     }
 
@@ -194,66 +276,49 @@ public class WorldRenderManager extends ManagerPackage {
         return false;
     }
 
-    private ObjectArrayList<ModelInstance> buildModelList(WorldRenderInstance worldRenderInstance) {
-
-        DynamicPacketInstance dynamicPacket = worldRenderInstance.getDynamicPacketInstance();
-
-        if (dynamicPacket.getState() != DynamicPacketState.READY)
-            return null;
-
-        ObjectArrayList<ModelInstance> modelList = new ObjectArrayList<>();
-
-        for (Int2ObjectMap.Entry<ObjectArrayList<DynamicModelHandle>> entry : dynamicPacket
-                .getMaterialID2ModelCollection().int2ObjectEntrySet()) {
-
-            int materialID = entry.getIntKey();
-            ObjectArrayList<DynamicModelHandle> dynamicModels = entry.getValue();
-
-            for (int i = 0; i < dynamicModels.size(); i++) {
-
-                DynamicModelHandle dynamicModel = dynamicModels.get(i);
-
-                if (dynamicModel.isEmpty())
-                    continue;
-
-                MaterialInstance clonedMaterial = materialManager.cloneMaterial(materialID);
-
-                modelList.add(modelManager.createModel(
-                        dynamicModel.getVAOHandle(),
-                        dynamicModel.getVertices(),
-                        dynamicModel.getIndices(),
-                        clonedMaterial));
-            }
-        }
-
-        return modelList.isEmpty() ? null : modelList;
-    }
+    // Removal \\
 
     public void removeChunkInstance(long coordinate) {
-
-        ObjectArrayList<ModelInstance> modelList = chunkModels.get(coordinate);
-
-        if (modelList == null)
-            return;
-
-        for (int i = 0; i < modelList.size(); i++)
-            modelManager.removeMesh(modelList.get(i));
-
-        modelList.clear();
-        chunkModels.remove(coordinate);
+        removeEntries(coordinate, chunkEntries);
     }
 
     public void removeMegaInstance(long coordinate) {
+        removeEntries(coordinate, megaEntries);
+    }
 
-        ObjectArrayList<ModelInstance> modelList = megaModels.get(coordinate);
+    private void removeEntries(
+            long coordinate,
+            Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> entries) {
 
-        if (modelList == null)
+        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = entries.remove(coordinate);
+
+        if (materialEntries == null)
             return;
 
-        for (int i = 0; i < modelList.size(); i++)
-            modelManager.removeMesh(modelList.get(i));
+        for (ObjectArrayList<RenderEntry> list : materialEntries.values())
+            disposeEntries(list);
+    }
 
-        modelList.clear();
-        megaModels.remove(coordinate);
+    private void disposeEntry(RenderEntry entry) {
+        modelManager.removeMesh(entry.modelInstance);
+    }
+
+    private void disposeEntries(ObjectArrayList<RenderEntry> list) {
+        for (int i = 0; i < list.size(); i++)
+            disposeEntry(list.get(i));
+        list.clear();
+    }
+
+    // Render Entry \\
+
+    private static final class RenderEntry {
+
+        final MeshInstance meshInstance;
+        final ModelInstance modelInstance;
+
+        RenderEntry(MeshInstance meshInstance, ModelInstance modelInstance) {
+            this.meshInstance = meshInstance;
+            this.modelInstance = modelInstance;
+        }
     }
 }

@@ -16,7 +16,10 @@ import engine.root.EngineSetting;
 class IBOGLSLUtility {
 
         /*
-         * GL upload and deletion operations for IBOManager.
+         * GL upload, in-place update, and deletion operations for IBOManager.
+         * updateIndexData respecifies an EXISTING index buffer's data store via
+         * the same GL handle rather than allocating a new one, so any VAO that
+         * already references this handle stays valid with no extra work.
          * Package-private — only IBOManager may call these.
          */
 
@@ -63,6 +66,36 @@ class IBOGLSLUtility {
 
                 gl20.glBufferData(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, size, buffer, EngineSetting.GL_STATIC_DRAW);
                 gl30.glBindVertexArray(0);
+
+                return new IBOData(ibo, indices.length);
+        }
+
+        // Update \\
+
+        static IBOInstance updateIndexData(IBOInstance iboInstance, short[] indices) {
+
+                IBOData oldData = iboInstance.getIBOData();
+                IBOData newData = reupload(oldData.getIndexHandle(), indices);
+                iboInstance.constructor(newData);
+
+                return iboInstance;
+        }
+
+        private static IBOData reupload(int ibo, short[] indices) {
+
+                GL20 gl20 = EngineContext.gl20;
+                int size = indices.length * Short.BYTES;
+
+                gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, ibo);
+
+                ShortBuffer buffer = ByteBuffer
+                                .allocateDirect(size)
+                                .order(ByteOrder.nativeOrder())
+                                .asShortBuffer();
+                buffer.put(indices).flip();
+
+                gl20.glBufferData(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, size, buffer, EngineSetting.GL_DYNAMIC_DRAW);
+                gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, 0);
 
                 return new IBOData(ibo, indices.length);
         }

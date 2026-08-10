@@ -25,6 +25,14 @@ public class ModelInstance extends InstancePackage {
         this.material = material;
     }
 
+    /*
+     * Swaps in a freshly rebuilt MeshData after the backing mesh's GPU
+     * buffers were updated in place — same handles, new vertex/index counts.
+     */
+    public void updateMeshData(MeshData meshData) {
+        this.meshData = meshData;
+    }
+
     // Accessible \\
 
     public MeshData getMeshData() {

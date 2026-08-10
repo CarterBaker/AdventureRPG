@@ -17,8 +17,12 @@ import engine.root.EngineSetting;
 class VBOGLSLUtility {
 
         /*
-         * GL upload and deletion operations for VBOManager.
-         * Package-private — only VBOManager may call these.
+         * GL upload, in-place update, and deletion operations for VBOManager.
+         * updateVertexData respecifies an EXISTING vertex buffer's data store via
+         * the same GL handle rather than allocating a new one, so any VAO that
+         * already references this handle — including per-window clones held by
+         * VAOManager — stays valid with no extra work. Package-private — only
+         * VBOManager may call these.
          */
 
         // Upload \\
@@ -80,6 +84,37 @@ class VBOGLSLUtility {
                 gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
                 return new VBOData(vbo, vertices.length / vaoData.getVertStride());
+        }
+
+        // Update \\
+
+        static VBOInstance updateVertexData(VAOInstance vaoInstance, VBOInstance vboInstance, float[] vertices) {
+
+                VBOData oldData = vboInstance.getVBOData();
+                int vertStride = vaoInstance.getVAOData().getVertStride();
+                VBOData newData = reupload(oldData.getVertexHandle(), vertices, vertStride);
+                vboInstance.constructor(newData);
+
+                return vboInstance;
+        }
+
+        private static VBOData reupload(int vbo, float[] vertices, int vertStride) {
+
+                GL20 gl20 = EngineContext.gl20;
+                int size = vertices.length * Float.BYTES;
+
+                gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
+
+                FloatBuffer buffer = ByteBuffer
+                                .allocateDirect(size)
+                                .order(ByteOrder.nativeOrder())
+                                .asFloatBuffer();
+                buffer.put(vertices).flip();
+
+                gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, buffer, EngineSetting.GL_DYNAMIC_DRAW);
+                gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
+
+                return new VBOData(vbo, vertices.length / vertStride);
         }
 
         // Removal \\

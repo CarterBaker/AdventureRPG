@@ -29,7 +29,13 @@ public class WorldGenerationManager extends ManagerPackage {
      * layer or entirely below sea level and above ground is left uniformFill —
      * neither ever allocates a palette — and only a subchunk that actually
      * straddles a surface, coastline, or cliff realizes real per-block storage
-     * and runs the precise loop. Ground height itself comes from
+     * and runs the precise loop. That loop tracks whether every cell it wrote
+     * (or left at default air) turned out to share one block ID regardless —
+     * the common case a few subchunks below any slope steep enough to defeat
+     * the column-wide min/max bounds above — and collapses straight back to
+     * the same scalar fast path when it does, so no subchunk pays for full
+     * per-block-per-face geometry building just because its own footprint's
+     * bounds were locally ambiguous. Ground height itself comes from
      * TerrainShapeUtility and is fully independent of biome — biome only ever
      * chooses which blocks dress that shape. Chunks generate concurrently on
      * separate worker threads, so the surface-block cache below is a
@@ -227,14 +233,32 @@ public class WorldGenerationManager extends ManagerPackage {
 
         int beachRange = EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
 
+        // This subchunk's own bounds couldn't be proven air or uniform fill
+        // above, but its actual contents still might be — tracked alongside
+        // the real per-block loop below so that outcome can be collapsed
+        // back to the scalar fast path afterward instead of paying full
+        // geometry-build cost forever for a result that never renders.
+        short uniformBlockID = airBlockId;
+        boolean uniformKnown = false;
+        boolean isUniform = true;
+
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {
             for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
 
                 int groundHeight = column.groundHeightBlocks[localZ * CHUNK_SIZE + localX];
                 int columnTop = Math.max(groundHeight, seaLevel);
 
-                if (offsetY > columnTop)
+                if (offsetY > columnTop) {
+                    if (isUniform) {
+                        if (!uniformKnown) {
+                            uniformBlockID = airBlockId;
+                            uniformKnown = true;
+                        } else if (uniformBlockID != airBlockId) {
+                            isUniform = false;
+                        }
+                    }
                     continue;
+                }
 
                 boolean useUnderwaterBlocks = groundHeight <= seaLevel + beachRange;
                 short topBlockID = useUnderwaterBlocks ? column.underwaterBlockID : column.surfaceBlockID;
@@ -243,24 +267,42 @@ public class WorldGenerationManager extends ManagerPackage {
                 for (int localY = 0; localY < CHUNK_SIZE; localY++) {
 
                     int worldY = localY + offsetY;
+                    short resultBlockID;
 
-                    if (worldY > columnTop)
-                        continue;
-
-                    if (worldY > groundHeight) {
+                    if (worldY > columnTop) {
+                        resultBlockID = airBlockId;
+                    } else if (worldY > groundHeight) {
+                        resultBlockID = waterBlockId;
                         blocks.setBlock(localX, localY, localZ, waterBlockId);
                         liquidLevels.setBlock(localX, localY, localZ, EngineSetting.LIQUID_LEVEL_MAX);
-                        continue;
+                    } else if (worldY == groundHeight) {
+                        resultBlockID = topBlockID;
+                        blocks.setBlock(localX, localY, localZ, topBlockID);
+                    } else if (worldY > groundHeight - surfaceDepth) {
+                        resultBlockID = fillBlockID;
+                        blocks.setBlock(localX, localY, localZ, fillBlockID);
+                    } else {
+                        resultBlockID = stoneBlockId;
+                        blocks.setBlock(localX, localY, localZ, stoneBlockId);
                     }
 
-                    if (worldY == groundHeight)
-                        blocks.setBlock(localX, localY, localZ, topBlockID);
-                    else if (worldY > groundHeight - surfaceDepth)
-                        blocks.setBlock(localX, localY, localZ, fillBlockID);
-                    else
-                        blocks.setBlock(localX, localY, localZ, stoneBlockId);
+                    if (isUniform) {
+                        if (!uniformKnown) {
+                            uniformBlockID = resultBlockID;
+                            uniformKnown = true;
+                        } else if (uniformBlockID != resultBlockID) {
+                            isUniform = false;
+                        }
+                    }
                 }
             }
+        }
+
+        if (isUniform) {
+            DynamicGeometryType uniformGeometry = uniformBlockID == airBlockId
+                    ? DynamicGeometryType.NONE
+                    : blockManager.getBlockHandleFromBlockID(uniformBlockID).getGeometry();
+            subChunkInstance.collapseGeneratedUniform(uniformBlockID, uniformGeometry);
         }
 
         return true;

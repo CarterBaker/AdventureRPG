@@ -15,8 +15,9 @@ public class VBOManager extends ManagerPackage {
 
     /*
      * Owns the VBO palette for the engine lifetime. Handles bootstrap
-     * registration via InternalBuilder, runtime VBOInstance creation, and
-     * deletion. Auto-triggers a mesh load on miss for external callers.
+     * registration via InternalBuilder, runtime VBOInstance creation, in-place
+     * updates, and deletion. Auto-triggers a mesh load on miss for external
+     * callers.
      */
 
     // Internal
@@ -109,6 +110,15 @@ public class VBOManager extends ManagerPackage {
                 vaoInstance,
                 create(VBOInstance.class),
                 vertices.toFloatArray());
+    }
+
+    /*
+     * Reuploads vertex data into an EXISTING VBOInstance's GL buffer, keeping
+     * the same handle. Any VAO already referencing this handle — including
+     * per-window clones — sees the new data with no further action needed.
+     */
+    public VBOInstance updateVBOInstance(VAOInstance vaoInstance, VBOInstance vboInstance, FloatArrayList vertices) {
+        return VBOGLSLUtility.updateVertexData(vaoInstance, vboInstance, vertices.toFloatArray());
     }
 
     // Removal \\

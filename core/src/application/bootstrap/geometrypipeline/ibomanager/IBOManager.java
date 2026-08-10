@@ -15,8 +15,9 @@ public class IBOManager extends ManagerPackage {
 
     /*
      * Owns the IBO palette for the engine lifetime. Handles bootstrap
-     * registration via InternalBuilder, runtime IBOInstance creation, and
-     * deletion. Auto-triggers a mesh load on miss for external callers.
+     * registration via InternalBuilder, runtime IBOInstance creation, in-place
+     * updates, and deletion. Auto-triggers a mesh load on miss for external
+     * callers.
      */
 
     // Internal
@@ -109,6 +110,15 @@ public class IBOManager extends ManagerPackage {
                 vaoInstance,
                 create(IBOInstance.class),
                 indices.toShortArray());
+    }
+
+    /*
+     * Reuploads index data into an EXISTING IBOInstance's GL buffer, keeping
+     * the same handle. Any VAO already referencing this handle — including
+     * per-window clones — sees the new data with no further action needed.
+     */
+    public IBOInstance updateIBOInstance(IBOInstance iboInstance, ShortArrayList indices) {
+        return IBOGLSLUtility.updateIndexData(iboInstance, indices.toShortArray());
     }
 
     // Removal \\

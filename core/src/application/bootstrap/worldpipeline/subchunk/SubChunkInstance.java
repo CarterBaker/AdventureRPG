@@ -313,6 +313,26 @@ public class SubChunkInstance extends WorldRenderInstance {
         return uniformBlockID;
     }
 
+    /*
+     * Called by world generation immediately after the real per-block loop
+     * finishes, only when every cell it just wrote (or left at default air)
+     * turned out to share one block ID — the common outcome for a subchunk
+     * whose whole-chunk-footprint bounds were too rough to prove it air or
+     * uniform fill in advance, but which is still buried entirely under one
+     * material once actually resolved. Drops straight back to whichever
+     * scalar fast path matches and frees the palette storage that was only
+     * ever needed to discover this, so the subchunk gets identical treatment
+     * — skipped by geometry building, no lingering memory — to one that was
+     * classified uniform before a single block was ever written.
+     */
+    public void collapseGeneratedUniform(short resultBlockID, DynamicGeometryType resultGeometryType) {
+        if (resultBlockID == airBlockId)
+            markKnownEmpty();
+        else
+            markUniformFill(resultGeometryType, resultBlockID);
+        releaseStorageIfPopulated();
+    }
+
     // Block Writes \\
 
     /*
