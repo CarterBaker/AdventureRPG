@@ -324,6 +324,8 @@ public class EngineSetting {
         public static final int CHUNK_POOL_MAX_OVERFLOW = 32;
         public static final int GRID_SLOTS_SCAN_PER_FRAME = 32;
         public static final int MAX_CHUNK_STREAM_PER_BATCH = 32;
+        public static final int MAX_CHUNK_GPU_UPLOADS_PER_FRAME = 4;
+        public static final int MAX_MEGA_GPU_UPLOADS_PER_FRAME = 2;
         public static final int MAX_CHUNK_STREAM_PER_FRAME = 128;
         public static final int MAX_CHUNK_STREAM_PER_QUEUE = 1024;
         public static final int MEGA_ASSESS_PER_FRAME = GRID_SLOTS_SCAN_PER_FRAME / MEGA_CHUNK_SIZE;

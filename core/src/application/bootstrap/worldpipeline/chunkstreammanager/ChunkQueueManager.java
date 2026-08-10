@@ -29,9 +29,15 @@ class ChunkQueueManager extends ManagerPackage {
      * is shared across all grids for efficiency. All branch dispatch is
      * per-grid — branches own the implementation. Both loadQueue() and
      * assessActiveChunks() advance up to maxChunkStreamPerBatch chunks per
-     * call rather than one — the same bounded-batch pattern MegaQueueManager
-     * already uses for megas — so a full render distance worth of chunks can
+     * call rather than one, so a full render distance worth of chunks can
      * actually stream in at a playable rate instead of one chunk per pass.
+     * RENDER dispatch inside assessActiveChunks() is bounded separately by
+     * chunkGpuUploadBudget — glBufferData/VAO creation is a synchronous
+     * driver call, so letting maxChunkStreamPerBatch alone govern it (as
+     * before) let two dozen uploads land in a single frame during heavy
+     * streaming, which is what actually produced the visible stutter.
+     * Chunks that miss the upload budget simply retry next frame — nothing
+     * downstream depends on RENDER_DATA landing this frame specifically.
      */
 
     // Internal
@@ -65,6 +71,10 @@ class ChunkQueueManager extends ManagerPackage {
     // Streaming
     private int maxChunkStreamPerBatch;
 
+    // GPU Upload Throttle
+    private int chunkGpuUploadBudget;
+    private int gpuUploadsThisFrame;
+
     // Internal \\
 
     @Override
@@ -96,6 +106,9 @@ class ChunkQueueManager extends ManagerPackage {
 
         // Streaming
         this.maxChunkStreamPerBatch = EngineSetting.MAX_CHUNK_STREAM_PER_BATCH;
+
+        // GPU Upload Throttle
+        this.chunkGpuUploadBudget = EngineSetting.MAX_CHUNK_GPU_UPLOADS_PER_FRAME;
     }
 
     @Override
@@ -115,6 +128,7 @@ class ChunkQueueManager extends ManagerPackage {
 
     @Override
     protected void update() {
+        this.gpuUploadsThisFrame = 0;
         executeQueue();
     }
 
@@ -277,7 +291,12 @@ class ChunkQueueManager extends ManagerPackage {
                 case ITEM_LOAD -> itemLoadBranch.loadItems(chunkInstance);
                 case ITEM_RENDER -> itemRenderBranch.renderItems(chunkInstance);
                 case BATCH -> batchBranch.batchChunk(chunkInstance, grid);
-                case RENDER -> renderBranch.renderChunk(chunkInstance);
+                case RENDER -> {
+                    if (gpuUploadsThisFrame < chunkGpuUploadBudget) {
+                        renderBranch.renderChunk(chunkInstance);
+                        gpuUploadsThisFrame++;
+                    }
+                }
                 case DUMP -> dumpBranch.dumpChunkData(chunkInstance, gridSlotHandle);
                 case SKIP -> {
                 }

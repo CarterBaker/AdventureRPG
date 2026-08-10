@@ -26,7 +26,11 @@ class MegaQueueManager extends ManagerPackage {
     /*
      * Drives the per-frame mega chunk pipeline across all active grids. Each
      * grid owns its own activeMegaChunks map. The mega pool is shared across
-     * all grids for efficiency.
+     * all grids for efficiency. RENDER dispatch is bounded by its own
+     * megaGpuUploadBudget, separate from megaAssessPerFrame — a single mega
+     * upload can carry up to megaScale chunks' worth of merged geometry in
+     * one glBufferData call, so it is throttled even harder than a single
+     * chunk upload to keep any one frame's GPU-upload cost predictable.
      */
 
     // Internal
@@ -49,6 +53,10 @@ class MegaQueueManager extends ManagerPackage {
     private int megaScale;
     private int megaAssessPerFrame;
 
+    // GPU Upload Throttle
+    private int megaGpuUploadBudget;
+    private int gpuUploadsThisFrame;
+
     // Internal \\
 
     @Override
@@ -68,6 +76,9 @@ class MegaQueueManager extends ManagerPackage {
         this.megaChunkSize = EngineSetting.MEGA_CHUNK_SIZE;
         this.megaScale = megaChunkSize * megaChunkSize;
         this.megaAssessPerFrame = EngineSetting.MEGA_ASSESS_PER_FRAME;
+
+        // GPU Upload Throttle
+        this.megaGpuUploadBudget = EngineSetting.MAX_MEGA_GPU_UPLOADS_PER_FRAME;
     }
 
     @Override
@@ -81,6 +92,8 @@ class MegaQueueManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
+        this.gpuUploadsThisFrame = 0;
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
         Object[] elements = grids.elements();
@@ -226,7 +239,12 @@ class MegaQueueManager extends ManagerPackage {
 
             switch (op) {
                 case ASSESS -> assessBranch.assessMega(mega);
-                case RENDER -> renderBranch.renderMega(mega, sync);
+                case RENDER -> {
+                    if (gpuUploadsThisFrame < megaGpuUploadBudget) {
+                        renderBranch.renderMega(mega, sync);
+                        gpuUploadsThisFrame++;
+                    }
+                }
                 case DUMP -> dumpBranch.dumpMega(mega, sync, megaCoord);
                 case SKIP -> {
                 }
