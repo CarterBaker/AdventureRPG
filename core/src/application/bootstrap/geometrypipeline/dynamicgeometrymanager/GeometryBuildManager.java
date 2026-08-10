@@ -10,9 +10,11 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import engine.graphics.color.Color;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -25,8 +27,19 @@ class GeometryBuildManager extends ManagerPackage {
      * geometry type. Drives the full subchunk build loop, tallies which
      * DynamicGeometryTypes the subchunk actually contains (see
      * SubChunkInstance), and delegates font glyph assembly to
-     * FontGeometryBranch.
+     * FontGeometryBranch. A subchunk proven empty by WorldGenerationManager
+     * skips the block walk entirely, since air never contributes a face —
+     * in a tall world this is the majority of subchunks in any column. A
+     * subchunk proven uniformly filled (deep stone, deep water) additionally
+     * skips the walk whenever every one of its 6 neighbors is provably the
+     * same geometry, since two identical-geometry neighbors never expose a
+     * face between them — this is what keeps a mountain's buried interior
+     * from paying the per-block cost.
      */
+
+    private static final Direction3Vector[] LATERAL_DIRECTIONS = {
+            Direction3Vector.NORTH, Direction3Vector.EAST, Direction3Vector.SOUTH, Direction3Vector.WEST
+    };
 
     // Internal
     private FullGeometryBranch fullGeometryBranch;
@@ -38,6 +51,7 @@ class GeometryBuildManager extends ManagerPackage {
 
     // Settings
     private int BLOCK_COORDINATE_COUNT;
+    private int worldHeight;
 
     // Internal \\
 
@@ -52,6 +66,7 @@ class GeometryBuildManager extends ManagerPackage {
 
         // Settings
         this.BLOCK_COORDINATE_COUNT = ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT;
+        this.worldHeight = EngineSetting.WORLD_HEIGHT;
     }
 
     @Override
@@ -75,8 +90,22 @@ class GeometryBuildManager extends ManagerPackage {
             return false;
 
         dynamicPacketInstance.clear();
-        dynamicGeometryAsyncContainer.reset();
         subChunkInstance.beginBlockTypeTally();
+
+        if (subChunkInstance.isKnownEmpty()) {
+            subChunkInstance.finalizeBlockTypeTally();
+            dynamicPacketInstance.unlock();
+            return true;
+        }
+
+        if (subChunkInstance.isUniformFill() && isFullyEnclosed(chunkInstance, subChunkInstance)) {
+            tallyUniformFill(subChunkInstance);
+            subChunkInstance.finalizeBlockTypeTally();
+            dynamicPacketInstance.unlock();
+            return true;
+        }
+
+        dynamicGeometryAsyncContainer.reset();
 
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
@@ -228,5 +257,69 @@ class GeometryBuildManager extends ManagerPackage {
                     vertColors);
             case NONE -> true;
         };
+    }
+
+    // Uniform Enclosure Fast Path \\
+
+    /*
+     * A uniform-filled subchunk contributes no geometry of its own once
+     * every side touching it is the same uniform fill — two adjacent FULL
+     * blocks never expose a face regardless of their exact block ID, and two
+     * adjacent LIQUID blocks only stay hidden when they're the exact same
+     * liquid, matching FullGeometryBranch's and LiquidGeometryBranch's own
+     * exposure rules exactly. World floor and ceiling subchunks are excluded
+     * since their outward face always renders. Called only from BuildBranch
+     * or LiquidTickBranch's rebuild path, both of which already guarantee
+     * every lateral neighbor chunk referenced here is loaded and stable for
+     * the duration of the call.
+     */
+    private boolean isFullyEnclosed(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance) {
+
+        int subY = (int) subChunkInstance.getCoordinate();
+
+        if (subY == 0 || subY == worldHeight - 1)
+            return false;
+
+        DynamicGeometryType type = subChunkInstance.getUniformGeometryType();
+        short blockID = subChunkInstance.getUniformBlockID();
+
+        if (!matchesUniform(chunkInstance.getSubChunk(subY - 1), type, blockID))
+            return false;
+
+        if (!matchesUniform(chunkInstance.getSubChunk(subY + 1), type, blockID))
+            return false;
+
+        ChunkNeighborStruct neighbors = chunkInstance.getChunkNeighbors();
+
+        for (Direction3Vector direction : LATERAL_DIRECTIONS) {
+
+            ChunkInstance neighborChunk = neighbors.getNeighborChunk(direction.to2D().index);
+
+            if (neighborChunk == null)
+                return false;
+
+            if (!matchesUniform(neighborChunk.getSubChunk(subY), type, blockID))
+                return false;
+        }
+
+        return true;
+    }
+
+    private boolean matchesUniform(SubChunkInstance other, DynamicGeometryType type, short blockID) {
+
+        if (!other.isUniformFill() || other.getUniformGeometryType() != type)
+            return false;
+
+        return type != DynamicGeometryType.LIQUID || other.getUniformBlockID() == blockID;
+    }
+
+    private void tallyUniformFill(SubChunkInstance subChunkInstance) {
+
+        DynamicGeometryType type = subChunkInstance.getUniformGeometryType();
+
+        subChunkInstance.tallyBlockType(type, BLOCK_COORDINATE_COUNT);
+
+        if (type == DynamicGeometryType.LIQUID)
+            subChunkInstance.tallyLiquidBlock(subChunkInstance.getUniformBlockID());
     }
 }

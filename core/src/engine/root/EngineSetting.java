@@ -411,7 +411,8 @@ public class EngineSetting {
         public static final int TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS = 3;
         public static final int TERRAIN_MIN_HEIGHT_BLOCKS = 24;
         public static final int TERRAIN_MAX_HEIGHT_BLOCKS = 900;
-        public static final int TERRAIN_MACRO_SAMPLE_STRIDE_BLOCKS = 4;
+        public static final int TERRAIN_MACRO_SAMPLE_STRIDE_BLOCKS = 8;
+        public static final int TERRAIN_DETAIL_SAMPLE_STRIDE_BLOCKS = 4;
 
         // Terrain Generation — Noise Salts \\
 

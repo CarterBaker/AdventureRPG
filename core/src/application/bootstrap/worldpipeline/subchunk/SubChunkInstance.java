@@ -37,7 +37,15 @@ public class SubChunkInstance extends WorldRenderInstance {
      * liquidStable marks a subchunk whose liquid produced no movement on its
      * last flow step — LiquidTickBranch skips the palette scan entirely while
      * it's set, and clears it the instant anything writes new liquid state
-     * into this subchunk from outside.
+     * into this subchunk from outside. knownEmpty flags a subchunk
+     * WorldGenerationManager proved holds no blocks at all — GeometryBuildManager
+     * skips the per-block mesh scan entirely for it, since air can never
+     * contribute a face. Any block write clears it immediately, so a later
+     * edit into previously-empty space always re-scans correctly.
+     * uniformFill flags a subchunk WorldGenerationManager bulk-filled with a
+     * single geometry type and block ID (deep stone, deep water) — see
+     * GeometryBuildManager, which combines this with each neighbor's own
+     * flag to prove a subchunk is fully enclosed and skip its mesh scan too.
      */
 
     // Internal
@@ -58,6 +66,18 @@ public class SubChunkInstance extends WorldRenderInstance {
     private ShortOpenHashSet containedLiquidBlockIDs;
     private float liquidFlowAccumulator;
     private boolean liquidStable;
+
+    // Empty Fast Path — set only by WorldGenerationManager when a subchunk
+    // is proven to hold no blocks at all
+    private boolean knownEmpty;
+
+    // Uniform Fill Fast Path — set only by WorldGenerationManager when a
+    // subchunk's entire block palette was bulk-filled with one geometry type
+    // and block ID. Cleared on any edit or interior-data dump so
+    // GeometryBuildManager never trusts it against data that has changed.
+    private boolean uniformFill;
+    private DynamicGeometryType uniformGeometryType;
+    private short uniformBlockID;
 
     // Internal \\
 
@@ -82,6 +102,12 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.containedLiquidBlockIDs = new ShortOpenHashSet();
         this.liquidFlowAccumulator = 0f;
         this.liquidStable = false;
+
+        // Empty Fast Path
+        this.knownEmpty = false;
+
+        // Uniform Fill Fast Path
+        this.uniformFill = false;
     }
 
     // Constructor \\
@@ -135,6 +161,8 @@ public class SubChunkInstance extends WorldRenderInstance {
         containedLiquidBlockIDs.clear();
         liquidFlowAccumulator = 0f;
         liquidStable = false;
+        knownEmpty = false;
+        uniformFill = false;
     }
 
     // Block Type Composition \\
@@ -146,6 +174,10 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public void tallyBlockType(DynamicGeometryType type) {
         blockTypeCounts[type.ordinal()]++;
+    }
+
+    public void tallyBlockType(DynamicGeometryType type, int count) {
+        blockTypeCounts[type.ordinal()] += count;
     }
 
     public void tallyLiquidBlock(short blockID) {
@@ -198,6 +230,44 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.liquidStable = liquidStable;
     }
 
+    // Empty Fast Path \\
+
+    public void markKnownEmpty() {
+        knownEmpty = true;
+    }
+
+    public void clearKnownEmpty() {
+        knownEmpty = false;
+    }
+
+    public boolean isKnownEmpty() {
+        return knownEmpty;
+    }
+
+    // Uniform Fill Fast Path \\
+
+    public void markUniformFill(DynamicGeometryType geometryType, short blockID) {
+        this.uniformFill = true;
+        this.uniformGeometryType = geometryType;
+        this.uniformBlockID = blockID;
+    }
+
+    public void clearUniformFill() {
+        this.uniformFill = false;
+    }
+
+    public boolean isUniformFill() {
+        return uniformFill;
+    }
+
+    public DynamicGeometryType getUniformGeometryType() {
+        return uniformGeometryType;
+    }
+
+    public short getUniformBlockID() {
+        return uniformBlockID;
+    }
+
     // Block Writes \\
 
     /*
@@ -217,11 +287,15 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public void setBlock(int x, int y, int z, short blockID) {
         blockPaletteHandle.setBlock(x, y, z, blockID);
+        knownEmpty = false;
+        uniformFill = false;
         invalidateLiquid();
     }
 
     public void setBlock(int packedXYZ, short blockID) {
         blockPaletteHandle.setBlock(packedXYZ, blockID);
+        knownEmpty = false;
+        uniformFill = false;
         invalidateLiquid();
     }
 

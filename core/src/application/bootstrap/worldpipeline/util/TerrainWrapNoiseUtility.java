@@ -2,7 +2,6 @@ package application.bootstrap.worldpipeline.util;
 
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.util.mathematics.extras.NoiseUtility;
 import engine.util.mathematics.extras.SeamlessAxisNoiseUtility;
 
 public final class TerrainWrapNoiseUtility extends EngineUtility {
@@ -20,7 +19,9 @@ public final class TerrainWrapNoiseUtility extends EngineUtility {
      * passes it in here, instead of every octave of every fractal layer
      * repeating the same trig. Terrain never drifts or rotates over time —
      * every input here is a fixed world position, so the result is fully
-     * deterministic from seed and coordinate alone.
+     * deterministic from seed and coordinate alone. sampleSingle() calls
+     * SeamlessAxisNoiseUtility.sample3D() directly rather than through a
+     * closure, avoiding a per-octave allocation on this hot path.
      */
 
     private TerrainWrapNoiseUtility() {
@@ -64,8 +65,8 @@ public final class TerrainWrapNoiseUtility extends EngineUtility {
         double ex = cosAngle * embeddingRadius;
         double ey = sinAngle * embeddingRadius;
 
-        return SeamlessAxisNoiseUtility.sample(
+        return SeamlessAxisNoiseUtility.sample3D(
                 worldZ, effectiveWavelength, worldHeightBlocks, EngineSetting.NOISE_SEAM_BLEND_WAVELENGTHS,
-                ez -> NoiseUtility.noise3_ImproveXY(seed, ex, ey, ez));
+                seed, ex, ey);
     }
 }

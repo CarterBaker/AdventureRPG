@@ -21,14 +21,14 @@ public final class TerrainShapeUtility extends EngineUtility {
          * all, by design — biome only ever dresses the surface blocks
          * afterward, so painting a new biome onto the world PNG can never open
          * a seam in the terrain shape itself. Macro shape and detail are split
-         * into separate entry points on purpose: every macro wavelength is
-         * hundreds of blocks wide, so WorldGenerationManager samples
-         * computeMacroShapeBlocks() on a coarse world-aligned grid and
-         * bilinearly interpolates between samples instead of evaluating it at
-         * full per-block resolution — see EngineSetting.
-         * TERRAIN_MACRO_SAMPLE_STRIDE_BLOCKS for the error-margin reasoning.
-         * The detail layer's finest octave is only a few blocks wide, so it
-         * stays at full per-block resolution via computeDetailBlocks().
+         * into separate entry points since they're tuned independently, but
+         * WorldGenerationManager samples both computeMacroShapeBlocks() and
+         * computeDetailBlocks() on their own coarse world-aligned grid and
+         * bilinearly interpolates between samples rather than evaluating
+         * either at full per-block resolution — see
+         * EngineSetting.TERRAIN_MACRO_SAMPLE_STRIDE_BLOCKS and
+         * TERRAIN_DETAIL_SAMPLE_STRIDE_BLOCKS for the stride each layer uses
+         * and the error-margin reasoning behind it.
          */
 
         private static final LinearSpline CONTINENTALNESS_HEIGHT_SPLINE = new LinearSpline(

@@ -16,7 +16,9 @@ public final class SeamlessAxisNoiseUtility extends EngineUtility {
      * true wrap point, sized in multiples of the sampled wavelength so the
      * transition itself reads as more noise rather than a visible seam.
      * Everywhere else, a single direct sample is used at full speed with no
-     * quality tradeoff versus a plain non-wrapping sample.
+     * quality tradeoff versus a plain non-wrapping sample. sample3D() inlines
+     * that same blend for the noise3_ImproveXY case without an AxisSampler
+     * closure, since terrain rides this path thousands of times per column.
      */
 
     private SeamlessAxisNoiseUtility() {
@@ -47,6 +49,34 @@ public final class SeamlessAxisNoiseUtility extends EngineUtility {
 
         float direct = sampler.sample(axis / axisWavelength);
         float wrapped = sampler.sample((axis - wrapPeriod) / axisWavelength);
+
+        float t = (float) (1.0 - distanceFromSeam / margin);
+        float eased = t * t * (3f - 2f * t);
+
+        return direct * (1f - eased) + wrapped * eased;
+    }
+
+    public static float sample3D(
+            double rawAxis,
+            double axisWavelength,
+            double wrapPeriod,
+            double marginWavelengths,
+            long seed,
+            double ex,
+            double ey) {
+
+        if (wrapPeriod <= 0.0)
+            return NoiseUtility.noise3_ImproveXY(seed, ex, ey, rawAxis / axisWavelength);
+
+        double axis = wrapIntoRange(rawAxis, wrapPeriod);
+        double margin = Math.min(axisWavelength * marginWavelengths, wrapPeriod * 0.5);
+        double distanceFromSeam = wrapPeriod - axis;
+
+        if (margin <= 0.0 || distanceFromSeam >= margin)
+            return NoiseUtility.noise3_ImproveXY(seed, ex, ey, axis / axisWavelength);
+
+        float direct = NoiseUtility.noise3_ImproveXY(seed, ex, ey, axis / axisWavelength);
+        float wrapped = NoiseUtility.noise3_ImproveXY(seed, ex, ey, (axis - wrapPeriod) / axisWavelength);
 
         float t = (float) (1.0 - distanceFromSeam / margin);
         float eased = t * t * (3f - 2f * t);

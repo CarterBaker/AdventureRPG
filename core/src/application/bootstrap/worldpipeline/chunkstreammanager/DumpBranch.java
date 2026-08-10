@@ -83,6 +83,12 @@ public class DumpBranch extends BranchPackage {
         }
     }
 
+    /*
+     * Hollowing interior blocks to air invalidates any subchunk previously
+     * proven uniformFill — a pure-stone subchunk with its interior stripped
+     * out is no longer pure stone — so the flag is cleared here alongside
+     * the palette dump rather than left to go stale.
+     */
     private void dumpGenerationData(ChunkInstance chunkInstance) {
 
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
@@ -90,6 +96,7 @@ public class DumpBranch extends BranchPackage {
         for (SubChunkInstance subChunk : subChunks) {
             subChunk.getBlockPaletteHandle().dumpInteriorBlocks(airBlockId);
             subChunk.getLiquidLevelPaletteHandle().dumpInteriorBlocks(EngineSetting.LIQUID_LEVEL_EMPTY);
+            subChunk.clearUniformFill();
         }
     }
 

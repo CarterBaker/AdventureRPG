@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
@@ -19,19 +20,35 @@ public class WorldGenerationManager extends ManagerPackage {
      * Drives per-chunk-column terrain generation. computeColumn() resolves the
      * one biome that governs an entire chunk column, a ground-height value for
      * every one of its 256 block-columns, and that column's min/max ground
-     * height, all cached in a per-thread scratch buffer. generateSubChunk()
-     * then classifies each subchunk against that data before touching any
-     * block palette: entirely above every column's terrain is left as the
-     * default air (no write at all), entirely below every column's surface-
-     * dressing layer is bulk-filled as solid stone in O(1), entirely below sea
-     * level and above every column's ground is bulk-filled as water in O(1),
-     * and only a subchunk that actually straddles a surface, coastline, or
-     * cliff runs the precise per-block loop. Ground height itself comes from
+     * height, all cached in a per-thread scratch buffer. Both the macro shape
+     * and fine detail noise layers are sampled on a coarse world-aligned grid
+     * and bilinearly interpolated per block rather than evaluated at full
+     * per-block resolution — each layer's stride is sized well below its
+     * finest octave's wavelength, so interpolation error stays far under one
+     * block and the terrain reads identically while paying for a fraction of
+     * the noise evaluations. generateSubChunk() then classifies each
+     * subchunk against that data before touching any block palette: entirely
+     * above every column's terrain is left as the default air (no write at
+     * all) and flagged knownEmpty so the geometry pipeline can skip it
+     * outright, entirely below every column's surface-dressing layer is
+     * bulk-filled as solid stone in O(1), entirely below sea level and above
+     * every column's ground is bulk-filled as water in O(1), and only a
+     * subchunk that actually straddles a surface, coastline, or cliff runs
+     * the precise per-block loop. Both O(1) bulk fills also mark the
+     * subchunk uniformFill so GeometryBuildManager can later prove it's
+     * fully enclosed by identical neighbors and skip its mesh scan too —
+     * this is what keeps a tall mountain's buried interior from costing
+     * anything at build time. Ground height itself comes from
      * TerrainShapeUtility and is fully independent of biome — biome only ever
      * chooses which blocks dress that shape. Chunks generate concurrently on
      * separate worker threads, so the surface-block cache below is a
      * ConcurrentHashMap rather than a locked map.
      */
+
+    @FunctionalInterface
+    private interface TerrainGridSampler {
+        float sample(long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks);
+    }
 
     // Internal
     private BlockManager blockManager;
@@ -92,19 +109,16 @@ public class WorldGenerationManager extends ManagerPackage {
         column.subsurfaceBlockID = profile.subsurfaceBlockID;
         column.underwaterBlockID = profile.underwaterBlockID;
 
-        int stride = TerrainColumnAsyncContainer.MACRO_SAMPLE_STRIDE;
-        int samplesPerAxis = TerrainColumnAsyncContainer.MACRO_SAMPLES_PER_AXIS;
+        int macroStride = TerrainColumnAsyncContainer.MACRO_SAMPLE_STRIDE;
+        int macroSamplesPerAxis = TerrainColumnAsyncContainer.MACRO_SAMPLES_PER_AXIS;
+        int detailStride = TerrainColumnAsyncContainer.DETAIL_SAMPLE_STRIDE;
+        int detailSamplesPerAxis = TerrainColumnAsyncContainer.DETAIL_SAMPLES_PER_AXIS;
 
-        for (int gz = 0; gz < samplesPerAxis; gz++) {
-            for (int gx = 0; gx < samplesPerAxis; gx++) {
+        sampleGrid(column.macroShapeGridBlocks, TerrainShapeUtility::computeMacroShapeBlocks, seed,
+                worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks, macroStride, macroSamplesPerAxis);
 
-                double sampleWorldX = worldOffsetX + gx * stride;
-                double sampleWorldZ = worldOffsetZ + gz * stride;
-
-                column.macroShapeGridBlocks[gz * samplesPerAxis + gx] = TerrainShapeUtility.computeMacroShapeBlocks(
-                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks);
-            }
-        }
+        sampleGrid(column.detailGridBlocks, TerrainShapeUtility::computeDetailBlocks, seed,
+                worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks, detailStride, detailSamplesPerAxis);
 
         int maxGroundHeight = Integer.MIN_VALUE;
         int minGroundHeight = Integer.MAX_VALUE;
@@ -112,12 +126,10 @@ public class WorldGenerationManager extends ManagerPackage {
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {
             for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
 
-                double worldX = worldOffsetX + localX;
-                double worldZ = worldOffsetZ + localZ;
-
-                float macroShape = sampleMacroGridBilinear(column, localX, localZ, stride, samplesPerAxis);
-                float detail = TerrainShapeUtility.computeDetailBlocks(
-                        seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks);
+                float macroShape = sampleGridBilinear(
+                        column.macroShapeGridBlocks, localX, localZ, macroStride, macroSamplesPerAxis);
+                float detail = sampleGridBilinear(
+                        column.detailGridBlocks, localX, localZ, detailStride, detailSamplesPerAxis);
 
                 int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(macroShape, detail);
                 column.groundHeightBlocks[localZ * CHUNK_SIZE + localX] = groundHeight;
@@ -137,16 +149,36 @@ public class WorldGenerationManager extends ManagerPackage {
         column.hasComputedColumn = true;
     }
 
-    private float sampleMacroGridBilinear(
-            TerrainColumnAsyncContainer column, int localX, int localZ, int stride, int samplesPerAxis) {
+    private void sampleGrid(
+            float[] grid,
+            TerrainGridSampler sampler,
+            long seed,
+            long worldOffsetX,
+            long worldOffsetZ,
+            double worldWidthBlocks,
+            double worldHeightBlocks,
+            int stride,
+            int samplesPerAxis) {
+
+        for (int gz = 0; gz < samplesPerAxis; gz++) {
+            for (int gx = 0; gx < samplesPerAxis; gx++) {
+
+                double sampleWorldX = worldOffsetX + gx * stride;
+                double sampleWorldZ = worldOffsetZ + gz * stride;
+
+                grid[gz * samplesPerAxis + gx] = sampler.sample(
+                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks);
+            }
+        }
+    }
+
+    private float sampleGridBilinear(float[] grid, int localX, int localZ, int stride, int samplesPerAxis) {
 
         int cellX = localX / stride;
         int cellZ = localZ / stride;
 
         float tx = (localX % stride) / (float) stride;
         float tz = (localZ % stride) / (float) stride;
-
-        float[] grid = column.macroShapeGridBlocks;
 
         float v00 = grid[cellZ * samplesPerAxis + cellX];
         float v10 = grid[cellZ * samplesPerAxis + (cellX + 1)];
@@ -176,13 +208,18 @@ public class WorldGenerationManager extends ManagerPackage {
             throwException("generateSubChunk() called for a chunk whose column data was never computed on this "
                     + "thread — computeColumn() must run once for this exact chunk coordinate first.");
 
+        subChunkInstance.clearKnownEmpty();
+        subChunkInstance.clearUniformFill();
+
         BlockPaletteHandle biomes = subChunkInstance.getBiomePaletteHandle();
         biomes.fill(column.biomeID);
 
         int offsetY = (int) subChunkInstance.getCoordinate() * CHUNK_SIZE;
 
-        if (offsetY > column.columnTopBlocks)
+        if (offsetY > column.columnTopBlocks) {
+            subChunkInstance.markKnownEmpty();
             return true;
+        }
 
         int surfaceDepth = EngineSetting.TERRAIN_SURFACE_DEPTH_BLOCKS;
         int seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
@@ -193,12 +230,14 @@ public class WorldGenerationManager extends ManagerPackage {
 
         if (subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
             blocks.fill(stoneBlockId);
+            subChunkInstance.markUniformFill(DynamicGeometryType.FULL, stoneBlockId);
             return true;
         }
 
         if (offsetY > column.columnMaxGroundHeightBlocks && subChunkTopY <= seaLevel) {
             blocks.fill(waterBlockId);
             liquidLevels.fill(EngineSetting.LIQUID_LEVEL_MAX);
+            subChunkInstance.markUniformFill(DynamicGeometryType.LIQUID, waterBlockId);
             return true;
         }
 
