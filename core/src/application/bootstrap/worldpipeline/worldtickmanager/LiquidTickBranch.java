@@ -5,13 +5,14 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
+import application.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.fluidsimulationsystem.FluidSimulationSystem;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.TickQuadrant;
-import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -24,20 +25,19 @@ import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 public class LiquidTickBranch extends BranchPackage {
 
     /*
-     * Drives per-block liquid flow. Scoped to each grid's IMMEDIATE range
-     * only (GridInstance.getImmediateSlotCount(), a fixed-size prefix of the
-     * nearest-first load order) — liquid physics is a "close to the player"
-     * concern, not a whole-render-distance one, so cost stays constant
-     * regardless of view distance instead of scaling with total loaded
-     * chunks. Each firing advances through one of four quadrants (by chunk
-     * coordinate parity) within that range, so a full sweep of the immediate
-     * area happens every four firings rather than all at once. A subchunk
-     * with no liquid, already-settled liquid, or liquid that's still an
-     * untouched uniform fill is skipped without any palette access. Any
-     * neighboring chunk a flow step touches outside the locked chunk is
-     * rebuilt and re-registered the same way, guarded by its own
-     * ChunkDataSyncContainer since the async chunk pipeline can be rebuilding
-     * it at the same moment.
+     * Drives per-block liquid flow, scoped to each grid's IMMEDIATE range only
+     * (GridInstance.getImmediateSlotCount()) and quadrant-cycled so a full
+     * sweep happens every four firings rather than all at once. Before ever
+     * running real flow simulation on an unstable subchunk, a bounded
+     * connectivity scan (FluidSimulationSystem.isConnectedBodyPermanent)
+     * checks whether it belongs to a body large enough to be marked
+     * permanent — once marked, that body is skipped entirely until a direct
+     * edit invalidates it, regardless of how much longer it might otherwise
+     * have kept ticking. Any real change rebuilds only the affected
+     * subchunk's own geometry inline, then cascade-clears the owning
+     * chunk's MERGE_DATA so the existing async, GPU-upload-budgeted
+     * ChunkQueueManager pipeline handles the re-merge and re-upload on its
+     * own schedule instead of that work ever running synchronously here.
      */
 
     // Internal
@@ -45,7 +45,6 @@ public class LiquidTickBranch extends BranchPackage {
     private BlockManager blockManager;
     private DynamicGeometryManager dynamicGeometryManager;
     private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
-    private WorldRenderManager worldRenderManager;
 
     // Branches
     private FluidSimulationSystem fluidSimulationSystem;
@@ -80,7 +79,6 @@ public class LiquidTickBranch extends BranchPackage {
         this.blockManager = get(BlockManager.class);
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
-        this.worldRenderManager = get(WorldRenderManager.class);
         this.fluidSimulationSystem = get(FluidSimulationSystem.class);
     }
 
@@ -142,9 +140,11 @@ public class LiquidTickBranch extends BranchPackage {
     }
 
     /*
-     * Holds the chunk's own sync lock across every subchunk tick plus the
-     * final merge/register, mirroring MergeBranch and RenderBranch. Skips
-     * the whole chunk for this pass if the async pipeline currently owns it.
+     * Holds the chunk's own sync lock across every subchunk tick. On any
+     * change, cascade-clears MERGE_DATA so the streaming pipeline re-merges
+     * and re-uploads this chunk on its own async/budgeted schedule instead
+     * of that work happening here. Skips the whole chunk for this pass if
+     * the async pipeline currently owns it.
      */
     private void tickChunk(ChunkInstance chunk, float delta) {
 
@@ -163,10 +163,8 @@ public class LiquidTickBranch extends BranchPackage {
                 if (tickSubChunk(chunk, subChunks[i], delta))
                     chunkChanged = true;
 
-            if (chunkChanged) {
-                chunk.merge();
-                worldRenderManager.addChunkInstance(chunk);
-            }
+            if (chunkChanged)
+                ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, syncContainer.getData());
         } finally {
             syncContainer.release();
         }
@@ -175,18 +173,12 @@ public class LiquidTickBranch extends BranchPackage {
             return;
 
         worldStreamManager.invalidateMegaForChunk(chunk.getCoordinate());
-        worldStreamManager.invalidateChunkBatch(chunk.getCoordinate());
     }
 
     private boolean tickSubChunk(ChunkInstance chunk, SubChunkInstance subChunk, float delta) {
 
         if (!subChunk.hasBlockType(DynamicGeometryType.LIQUID) || subChunk.isLiquidStable())
             return false;
-
-        if (subChunk.isUniformFill() && !subChunk.isPopulated()) {
-            subChunk.setLiquidStable(true);
-            return false;
-        }
 
         subChunk.addLiquidFlowTime(delta);
 
@@ -197,25 +189,60 @@ public class LiquidTickBranch extends BranchPackage {
 
         subChunk.resetLiquidFlowAccumulator();
 
+        if (assessPermanence(chunk, subChunk))
+            return false;
+
         if (!fluidSimulationSystem.flow(chunk, subChunk)) {
             subChunk.setLiquidStable(true);
             return false;
         }
 
-        subChunk.getDynamicPacketInstance().clear();
-        dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, (int) subChunk.getCoordinate());
-
+        rebuildSubChunkGeometry(chunk, (int) subChunk.getCoordinate());
         rebuildTouchedNeighbors(chunk);
 
         return true;
     }
 
     /*
+     * Runs the bounded connectivity scan for every distinct liquid type this
+     * subchunk contains (almost always exactly one). If any of them turns
+     * out to be part of a body meeting LIQUID_PERMANENCE_THRESHOLD, the
+     * subchunk is marked permanent and stable immediately, skipping the real
+     * flow simulation entirely for this and every future tick until a
+     * direct edit invalidates it.
+     */
+    private boolean assessPermanence(ChunkInstance chunk, SubChunkInstance subChunk) {
+
+        ShortOpenHashSet liquidBlockIDs = subChunk.getContainedLiquidBlockIDs();
+        ShortIterator iterator = liquidBlockIDs.iterator();
+
+        while (iterator.hasNext()) {
+
+            short liquidBlockID = iterator.nextShort();
+            int seedPacked = subChunk.findLiquidCell(liquidBlockID);
+
+            if (seedPacked == -1)
+                throwException("Subchunk's tallied liquid block ID has no matching cell in its own palette — "
+                        + "geometry tally is out of sync with block storage.");
+
+            if (fluidSimulationSystem.isConnectedBodyPermanent(chunk, subChunk, seedPacked)) {
+                subChunk.setLiquidPermanent(true);
+                subChunk.setLiquidStable(true);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /*
      * A flow step can write into a subchunk other than the one just ticked —
      * the column below it falling, or a neighbor chunk it spread into — and
-     * that subchunk will not otherwise be merged this frame, so each one gets
-     * its own full rebuild-merge-register-invalidate cycle here. lockedChunk
-     * is the chunk tickChunk() already holds the lock for.
+     * that subchunk's geometry needs to reflect it. lockedChunk is the chunk
+     * tickChunk() already holds the lock for, so its own touched subchunks
+     * are rebuilt inline without a second lock cycle; every other touched
+     * chunk gets its own tryAcquire and, on success, has its MERGE_DATA
+     * cascade-cleared the same way the locked chunk's is.
      */
     private void rebuildTouchedNeighbors(ChunkInstance lockedChunk) {
 
@@ -228,7 +255,7 @@ public class LiquidTickBranch extends BranchPackage {
             int subChunkY = touchedSubChunkY.getInt(i);
 
             if (touchedChunk == lockedChunk) {
-                rebuildChunkGeometry(touchedChunk, subChunkY);
+                rebuildSubChunkGeometry(touchedChunk, subChunkY);
                 continue;
             }
 
@@ -238,25 +265,22 @@ public class LiquidTickBranch extends BranchPackage {
                 continue;
 
             try {
-                rebuildChunkGeometry(touchedChunk, subChunkY);
+                rebuildSubChunkGeometry(touchedChunk, subChunkY);
+                ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, touchedSync.getData());
             } finally {
                 touchedSync.release();
             }
 
             worldStreamManager.invalidateMegaForChunk(touchedChunk.getCoordinate());
-            worldStreamManager.invalidateChunkBatch(touchedChunk.getCoordinate());
         }
     }
 
-    private void rebuildChunkGeometry(ChunkInstance targetChunk, int subChunkY) {
+    private void rebuildSubChunkGeometry(ChunkInstance targetChunk, int subChunkY) {
 
         SubChunkInstance touchedSubChunk = targetChunk.getSubChunk(subChunkY);
 
         touchedSubChunk.getDynamicPacketInstance().clear();
         dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, targetChunk, subChunkY);
-
-        targetChunk.merge();
-        worldRenderManager.addChunkInstance(targetChunk);
     }
 
     /*

@@ -27,15 +27,25 @@ public class WorldGenerationManager extends ManagerPackage {
      * against that data before any storage is realized: entirely above every
      * column's terrain is left knownEmpty, entirely below the surface-dressing
      * layer or entirely below sea level and above ground is left uniformFill —
-     * neither ever allocates a palette — and only a subchunk that actually
-     * straddles a surface, coastline, or cliff realizes real per-block storage
-     * and runs the precise loop. That loop tracks whether every cell it wrote
-     * (or left at default air) turned out to share one block ID regardless —
-     * the common case a few subchunks below any slope steep enough to defeat
-     * the column-wide min/max bounds above — and collapses straight back to
-     * the same scalar fast path when it does, so no subchunk pays for full
-     * per-block-per-face geometry building just because its own footprint's
-     * bounds were locally ambiguous. Ground height itself comes from
+     * neither ever allocates a palette, and a uniform LIQUID result is marked
+     * stable and permanent immediately by SubChunkInstance.markUniformFill()
+     * itself, since a subchunk uniformly filled with liquid is by definition
+     * one contiguous body spanning its entire volume — and only a subchunk
+     * that actually straddles a surface, coastline, or cliff realizes real
+     * per-block storage and runs the precise loop. That loop tracks whether
+     * every cell it wrote (or left at default air) turned out to share one
+     * block ID regardless — the common case a few subchunks below any slope
+     * steep enough to defeat the column-wide min/max bounds above — and
+     * collapses straight back to the same scalar fast path when it does, so
+     * no subchunk pays for full per-block-per-face geometry building just
+     * because its own footprint's bounds were locally ambiguous. Its liquid
+     * is explicitly settled at the end regardless — generation output is
+     * always the subchunk's final resting shape, never something that should
+     * be handed to LiquidTickBranch as "just placed" — but never marked
+     * permanent here, since proving that safely would require neighbor
+     * columns that may not exist yet at generation time; such a subchunk
+     * discovers real permanence lazily, cheaply, the first time it's ever
+     * actually invalidated and re-ticked. Ground height itself comes from
      * TerrainShapeUtility and is fully independent of biome — biome only ever
      * chooses which blocks dress that shape. Chunks generate concurrently on
      * separate worker threads, so the surface-block cache below is a
@@ -304,6 +314,16 @@ public class WorldGenerationManager extends ManagerPackage {
                     : blockManager.getBlockHandleFromBlockID(uniformBlockID).getGeometry();
             subChunkInstance.collapseGeneratedUniform(uniformBlockID, uniformGeometry);
         }
+
+        // Every water block written above went through setBlock/setLiquidLevel,
+        // which both call invalidateLiquid() — correct for a runtime edit, but
+        // generation is not an edit. This is the subchunk's final,
+        // authoritative shape, so it is settled here, once, unconditionally.
+        // Not marked permanent — a coastline subchunk can't safely prove it's
+        // part of a larger body without neighbor columns that may not exist
+        // yet during generation — but it will discover that correctly and
+        // cheaply the first time it's ever actually invalidated.
+        subChunkInstance.setLiquidStable(true);
 
         return true;
     }

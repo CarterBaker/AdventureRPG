@@ -26,9 +26,13 @@ public class FluidSimulationSystem extends SystemPackage {
      * and spread use, so it crosses subchunk and chunk boundaries freely.
      * Any lateral cell with nothing beneath it, or any neighbor that can't
      * be resolved at all, breaks the seal immediately and the location is
-     * treated as open rather than a basin. Chunks and subchunks touched
-     * outside the one passed to flow() are collected for the caller to
-     * rebuild and re-register with the renderer.
+     * treated as open rather than a basin. isConnectedBodyPermanent() is a
+     * second, independent capability — a bounded 6-directional connectivity
+     * count used by LiquidTickBranch to decide whether a body is large
+     * enough to skip simulation entirely, gated separately from flow().
+     * Chunks and subchunks touched outside the one passed to flow() are
+     * collected for the caller to rebuild and re-register with the
+     * renderer.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -41,6 +45,7 @@ public class FluidSimulationSystem extends SystemPackage {
     // Settings
     private int worldHeight;
     private short airBlockId;
+    private int permanenceThreshold;
 
     // Scratch — reused every flow() call, never reallocated
     private boolean[] processed;
@@ -77,6 +82,16 @@ public class FluidSimulationSystem extends SystemPackage {
 
     private boolean lastFloodEnclosed;
 
+    // Scratch — permanence connectivity scan. Unlike the basin/spread
+    // scratch above, this walks all 6 directions rather than lateral-only,
+    // since a body's permanence depends on its full 3D extent.
+    private int[] permanenceDequePacked;
+    private ChunkInstance[] permanenceDequeChunk;
+    private SubChunkInstance[] permanenceDequeSubChunk;
+    private SubChunkInstance[] permanenceVisitedSubChunk;
+    private int[] permanenceVisitedPacked;
+    private int permanenceVisitedCount;
+
     // Current tick context
     private ChunkInstance currentChunk;
     private SubChunkInstance currentSubChunk;
@@ -105,6 +120,16 @@ public class FluidSimulationSystem extends SystemPackage {
         int maxVisited = scanLimit * (LATERAL_DIRECTIONS.length + 1);
         this.basinVisitedSubChunk = new SubChunkInstance[maxVisited];
         this.basinVisitedPacked = new int[maxVisited];
+
+        this.permanenceThreshold = EngineSetting.LIQUID_PERMANENCE_THRESHOLD;
+
+        this.permanenceDequePacked = new int[permanenceThreshold];
+        this.permanenceDequeChunk = new ChunkInstance[permanenceThreshold];
+        this.permanenceDequeSubChunk = new SubChunkInstance[permanenceThreshold];
+
+        int maxPermanenceVisited = permanenceThreshold * (Direction3Vector.LENGTH + 1);
+        this.permanenceVisitedSubChunk = new SubChunkInstance[maxPermanenceVisited];
+        this.permanenceVisitedPacked = new int[maxPermanenceVisited];
     }
 
     @Override
@@ -174,6 +199,96 @@ public class FluidSimulationSystem extends SystemPackage {
         }
 
         return changed;
+    }
+
+    // Permanence \\
+
+    /*
+     * Bounded 6-directional connectivity scan seeded from a single known
+     * liquid cell. Stops the instant the discovered count reaches
+     * LIQUID_PERMANENCE_THRESHOLD and reports permanent — the exact size of
+     * a body once it's already known to be large enough never matters, so
+     * nothing past the threshold is ever walked. A body smaller than the
+     * threshold costs exactly its own size to rule out, capped at the
+     * threshold either way. Crosses subchunk and chunk boundaries the same
+     * way flow() does, via resolveNeighbor().
+     */
+    public boolean isConnectedBodyPermanent(ChunkInstance startChunk, SubChunkInstance startSubChunk, int startPacked) {
+
+        short liquidBlockID = startSubChunk.getBlockPaletteHandle().getBlock(startPacked);
+
+        int front = 0;
+        int back = 0;
+        int discovered = 1;
+
+        permanenceDequePacked[back] = startPacked;
+        permanenceDequeChunk[back] = startChunk;
+        permanenceDequeSubChunk[back] = startSubChunk;
+        back++;
+
+        markPermanenceVisited(startSubChunk, startPacked);
+
+        if (discovered >= permanenceThreshold) {
+            permanenceVisitedCount = 0;
+            return true;
+        }
+
+        while (front < back) {
+
+            int cellPacked = permanenceDequePacked[front];
+            ChunkInstance cellChunk = permanenceDequeChunk[front];
+            SubChunkInstance cellSubChunk = permanenceDequeSubChunk[front];
+            front++;
+
+            for (int d = 0; d < Direction3Vector.LENGTH; d++) {
+
+                int neighborPacked = resolveNeighbor(cellChunk, cellSubChunk, cellPacked, Direction3Vector.VALUES[d]);
+
+                if (scratchNeighborSubChunk == null)
+                    continue;
+
+                ChunkInstance neighborChunk = scratchNeighborChunk;
+                SubChunkInstance neighborSubChunk = scratchNeighborSubChunk;
+
+                if (isPermanenceVisited(neighborSubChunk, neighborPacked))
+                    continue;
+
+                markPermanenceVisited(neighborSubChunk, neighborPacked);
+
+                if (neighborSubChunk.getBlockPaletteHandle().getBlock(neighborPacked) != liquidBlockID)
+                    continue;
+
+                discovered++;
+
+                if (discovered >= permanenceThreshold) {
+                    permanenceVisitedCount = 0;
+                    return true;
+                }
+
+                if (back < permanenceThreshold) {
+                    permanenceDequePacked[back] = neighborPacked;
+                    permanenceDequeChunk[back] = neighborChunk;
+                    permanenceDequeSubChunk[back] = neighborSubChunk;
+                    back++;
+                }
+            }
+        }
+
+        permanenceVisitedCount = 0;
+        return false;
+    }
+
+    private void markPermanenceVisited(SubChunkInstance subChunk, int packed) {
+        permanenceVisitedSubChunk[permanenceVisitedCount] = subChunk;
+        permanenceVisitedPacked[permanenceVisitedCount] = packed;
+        permanenceVisitedCount++;
+    }
+
+    private boolean isPermanenceVisited(SubChunkInstance subChunk, int packed) {
+        for (int i = 0; i < permanenceVisitedCount; i++)
+            if (permanenceVisitedSubChunk[i] == subChunk && permanenceVisitedPacked[i] == packed)
+                return true;
+        return false;
     }
 
     // Gravity \\

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
+import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemPaletteHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
@@ -35,6 +36,10 @@ public class SubChunkInstance extends WorldRenderInstance {
      * like liquid ticking can skip subchunks that never need them. Tally
      * writes only ever happen while the owning chunk's ChunkDataSyncContainer
      * is held; readers off the build thread must acquire that lock first.
+     * liquidStable/liquidPermanent gate LiquidTickBranch: stable means "no
+     * need to simulate right now," permanent means "this body is large
+     * enough it should never be re-simulated just because something changed
+     * nearby" — see markUniformFill() and notifyNeighborBlockChanged().
      */
 
     // Internal
@@ -57,6 +62,7 @@ public class SubChunkInstance extends WorldRenderInstance {
     private ShortOpenHashSet containedLiquidBlockIDs;
     private float liquidFlowAccumulator;
     private boolean liquidStable;
+    private boolean liquidPermanent;
 
     // Empty Fast Path — set only by WorldGenerationManager when a subchunk
     // is proven to hold no blocks at all
@@ -90,6 +96,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.containedLiquidBlockIDs = new ShortOpenHashSet();
         this.liquidFlowAccumulator = 0f;
         this.liquidStable = false;
+        this.liquidPermanent = false;
 
         this.knownEmpty = false;
         this.uniformFill = false;
@@ -131,6 +138,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         containedLiquidBlockIDs.clear();
         liquidFlowAccumulator = 0f;
         liquidStable = false;
+        liquidPermanent = false;
         knownEmpty = false;
         uniformFill = false;
     }
@@ -195,12 +203,17 @@ public class SubChunkInstance extends WorldRenderInstance {
      * Drops any previously realized storage — this instance may be pooled
      * and reused for a different location — and records the column's biome
      * as a scalar; a palette is only ever built once something needs one.
+     * Liquid stability/permanence are reset here unconditionally so every
+     * fresh generation attempt starts from a known state regardless of
+     * whatever a prior occupant of this pooled instance left behind.
      */
     public void beginGeneration(short columnBiomeID) {
         releaseStorageIfPopulated();
         this.columnBiomeID = columnBiomeID;
         this.knownEmpty = false;
         this.uniformFill = false;
+        this.liquidStable = false;
+        this.liquidPermanent = false;
     }
 
     /*
@@ -279,6 +292,33 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.liquidStable = liquidStable;
     }
 
+    public boolean isLiquidPermanent() {
+        return liquidPermanent;
+    }
+
+    public void setLiquidPermanent(boolean liquidPermanent) {
+        this.liquidPermanent = liquidPermanent;
+    }
+
+    /*
+     * Linear scan for a single cell in this subchunk holding the given
+     * liquid block ID — seeds FluidSimulationSystem.isConnectedBodyPermanent
+     * without that scan needing any knowledge of this subchunk's storage
+     * layout. Exits on the first match. Only ever called for a populated
+     * subchunk whose tally already claims this ID is present.
+     */
+    public int findLiquidCell(short liquidBlockID) {
+
+        BlockPaletteHandle palette = getBlockPaletteHandle();
+        int[] coordinates = ChunkCoordinate3Int.getBlockCoordinates();
+
+        for (int i = 0; i < coordinates.length; i++)
+            if (palette.getBlock(coordinates[i]) == liquidBlockID)
+                return coordinates[i];
+
+        return -1;
+    }
+
     // Empty Fast Path \\
 
     public void markKnownEmpty() {
@@ -291,10 +331,27 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     // Uniform Fill Fast Path \\
 
+    /*
+     * A subchunk uniformly filled with one liquid is, by construction, a
+     * single contiguous body spanning its entire CHUNK_SIZE^3 volume —
+     * unconditionally far larger than any sane permanence threshold, so
+     * there is nothing to gain from ever running the connectivity scan
+     * against it. Marking it stable and permanent here, at the one place
+     * every uniform-fill classification (generation's fast paths and the
+     * generation loop's own post-hoc collapse) funnels through, means deep
+     * open water — including but not limited to oceans — never costs a
+     * single tick of simulation for its entire lifetime unless a direct
+     * edit actually breaks its uniformity.
+     */
     public void markUniformFill(DynamicGeometryType geometryType, short blockID) {
         this.uniformFill = true;
         this.uniformGeometryType = geometryType;
         this.uniformBlockID = blockID;
+
+        if (geometryType == DynamicGeometryType.LIQUID) {
+            this.liquidStable = true;
+            this.liquidPermanent = true;
+        }
     }
 
     public void clearUniformFill() {
@@ -345,6 +402,23 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public void invalidateLiquid() {
         liquidStable = false;
+        liquidPermanent = false;
+    }
+
+    /*
+     * Called when a block adjacent to (or below) this subchunk's own
+     * footprint changes in a NEIGHBORING subchunk — never for edits to this
+     * subchunk's own blocks, which always go through invalidateLiquid()
+     * directly via setBlock()/setLiquidLevel() below regardless of
+     * permanence. A body already confirmed permanent ignores this: a large,
+     * established body of water should not pay for reassessment every time
+     * something changes nearby. Anything smaller is cheap to re-settle and
+     * should respond immediately, so gameplay like draining a pond or
+     * opening a new channel behaves correctly.
+     */
+    public void notifyNeighborBlockChanged() {
+        if (!liquidPermanent)
+            invalidateLiquid();
     }
 
     public void setBlock(int x, int y, int z, short blockID) {
