@@ -1,7 +1,7 @@
 {
   "threads": [
     {"name": "General", "size": 2},
-    {"name": "WorldStreaming", "size": 16},
+    {"name": "WorldStreaming", "size": "auto", "maxInFlight": 48},
     {"name": "AI", "size": 4}
   ]
 }

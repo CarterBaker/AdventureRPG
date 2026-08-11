@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.chunk;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worldgenerationmanager.GenerationCacheStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstancePaletteHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
@@ -24,7 +25,7 @@ public class ChunkInstance extends WorldRenderInstance {
     private SubChunkInstance[] subChunks;
     private ChunkNeighborStruct chunkNeighbors;
     private WorldItemInstancePaletteHandle worldItemInstancePaletteHandle;
-    private ChunkCacheStruct terrainCache;
+    private GenerationCacheStruct terrainCache;
 
     // Scratch — pre-allocated, reused per merge call
     private int[] vertPositionArray;
@@ -42,7 +43,7 @@ public class ChunkInstance extends WorldRenderInstance {
         this.chunkDataSyncContainer = create(ChunkDataSyncContainer.class);
         this.worldItemInstancePaletteHandle = create(WorldItemInstancePaletteHandle.class);
         this.worldItemInstancePaletteHandle.constructor();
-        this.terrainCache = new ChunkCacheStruct();
+        this.terrainCache = new GenerationCacheStruct();
 
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
@@ -147,7 +148,7 @@ public class ChunkInstance extends WorldRenderInstance {
         return worldItemInstancePaletteHandle;
     }
 
-    public ChunkCacheStruct getTerrainCache() {
+    public GenerationCacheStruct getTerrainCache() {
         return terrainCache;
     }
 }

@@ -68,8 +68,22 @@ public class ThreadManager extends ManagerPackage {
         return handle;
     }
 
+    /*
+     * Single true dispatch point — every other executeAsync overload below
+     * delegates here, so in-flight tracking only needs to live in one place
+     * to cover every caller in the engine. beginTask()/endTask() bracket the
+     * ACTUAL execution, not the submission, so hasCapacity() reflects real
+     * pool saturation (queued + running), not just queue depth.
+     */
     public Future<?> executeAsync(ThreadHandle handle, Runnable task) {
-        return handle.getExecutor().submit(task);
+        handle.beginTask();
+        return handle.getExecutor().submit(() -> {
+            try {
+                task.run();
+            } finally {
+                handle.endTask();
+            }
+        });
     }
 
     public <T extends AsyncContainerPackage> Future<?> executeAsync(

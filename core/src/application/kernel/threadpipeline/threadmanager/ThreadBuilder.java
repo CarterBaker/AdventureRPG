@@ -10,12 +10,13 @@ class ThreadBuilder extends BuilderPackage {
 
     // Build \\
 
-    ThreadHandle build(String threadName, int threadSize) {
+    ThreadHandle build(String threadName, int threadSize, int inFlightCapacity) {
         ExecutorService executor = Executors.newFixedThreadPool(
                 threadSize,
                 new NamedThreadFactory(threadName + "-"));
         ThreadHandle threadHandle = create(ThreadHandle.class);
         threadHandle.constructor(threadName, threadSize, executor);
+        threadHandle.configureBackpressure(inFlightCapacity);
         return threadHandle;
     }
 }

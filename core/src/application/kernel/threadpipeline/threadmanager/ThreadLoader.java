@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import application.kernel.threadpipeline.thread.ThreadHandle;
@@ -16,6 +17,22 @@ import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class ThreadLoader extends LoaderPackage {
+
+    /*
+     * Loads named thread pool definitions from JSON. "size" may be a fixed
+     * integer or the literal string "auto", which resolves against
+     * Runtime.getRuntime().availableProcessors() at load time — see
+     * resolveThreadSize(). A copy-pasted fixed integer is either wasteful on
+     * a big machine or actively harmful on a small one: for CPU-bound work
+     * like chunk geometry building, threads past the core count add nothing
+     * but context-switch overhead, and — combined with this engine's
+     * tryAcquire-based chunk locking — a sharp rise in lock-contention
+     * retries as concurrency increases. An optional "maxInFlight" caps how
+     * many tasks may be queued-or-running on the pool at once; if omitted,
+     * it defaults to a small multiple of the resolved thread count so the
+     * pipeline can overlap without letting the executor's internal queue
+     * grow without bound — see ThreadHandle.hasCapacity().
+     */
 
     // Internal
     private File root;
@@ -65,12 +82,6 @@ class ThreadLoader extends LoaderPackage {
 
     // Pre-Registration \\
 
-    /*
-     * Peeks the JSON during scan to extract thread names and build the reverse
-     * lookup before any load() fires. This is what allows on-demand requests
-     * to resolve correctly — the name → file mapping must be complete before
-     * the batch phase begins.
-     */
     private void preRegisterThreadNames(File file, String resourceName) {
         try {
             JsonObject json = JsonUtility.loadJsonObject(file);
@@ -103,15 +114,63 @@ class ThreadLoader extends LoaderPackage {
         for (int i = 0; i < threads.size(); i++) {
             JsonObject threadDef = threads.get(i).getAsJsonObject();
             String threadName = JsonUtility.validateString(threadDef, "name");
-            int threadSize = JsonUtility.validateInt(threadDef, "size");
-            if (threadSize <= 0)
-                throwException("Thread '" + threadName + "' has invalid size: " + threadSize);
-            ThreadHandle handle = internalBuilder.build(threadName, threadSize);
+            int threadSize = resolveThreadSize(threadDef, threadName);
+            int inFlightCapacity = resolveInFlightCapacity(threadDef, threadSize);
+            ThreadHandle handle = internalBuilder.build(threadName, threadSize, inFlightCapacity);
             internalThreadManager.addThreadHandle(threadName, handle);
         }
     }
 
-    // On-Demand Loading \\
+    // Sizing \\
+
+    private int resolveThreadSize(JsonObject threadDef, String threadName) {
+
+        if (!threadDef.has("size"))
+            throwException("Thread '" + threadName + "' is missing required \"size\" field.");
+
+        JsonElement sizeEl = threadDef.get("size");
+        int resolved;
+
+        if (sizeEl.isJsonPrimitive() && sizeEl.getAsJsonPrimitive().isString()) {
+
+            String mode = sizeEl.getAsString();
+
+            if (!mode.equalsIgnoreCase("auto"))
+                throwException("Thread '" + threadName + "' has unrecognized size mode \"" + mode
+                        + "\" — only \"auto\" or a positive integer are valid.");
+
+            int available = Runtime.getRuntime().availableProcessors();
+            resolved = Math.max(
+                    EngineSetting.MIN_AUTO_THREAD_POOL_SIZE,
+                    available - EngineSetting.AUTO_THREAD_POOL_RESERVED_CORES);
+        } else {
+
+            resolved = sizeEl.getAsInt();
+
+            if (resolved <= 0)
+                throwException("Thread '" + threadName + "' has invalid size: " + resolved);
+        }
+
+        if (resolved > EngineSetting.MAX_THREAD_POOL_SIZE) {
+            errorLog("[ThreadManager] Thread '" + threadName + "' requested " + resolved
+                    + " threads, exceeding MAX_THREAD_POOL_SIZE (" + EngineSetting.MAX_THREAD_POOL_SIZE
+                    + "). More OS threads than the CPU can run concurrently adds no throughput for "
+                    + "compute-bound work — only context-switch and lock-contention overhead. Clamping.");
+            resolved = EngineSetting.MAX_THREAD_POOL_SIZE;
+        }
+
+        return resolved;
+    }
+
+    private int resolveInFlightCapacity(JsonObject threadDef, int threadSize) {
+
+        if (threadDef.has("maxInFlight"))
+            return threadDef.get("maxInFlight").getAsInt();
+
+        return threadSize * EngineSetting.DEFAULT_IN_FLIGHT_MULTIPLIER;
+    }
+
+    // On-Demand \\
 
     void request(String threadName) {
         String resourceName = threadName2ResourceName.get(threadName);

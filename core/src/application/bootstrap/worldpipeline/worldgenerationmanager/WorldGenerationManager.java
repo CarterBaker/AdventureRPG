@@ -7,7 +7,6 @@ import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
-import application.bootstrap.worldpipeline.chunk.ChunkCacheStruct;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -79,7 +78,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
     // Column — once per chunk \\
 
-    public void computeColumn(WorldHandle worldHandle, long chunkCoordinate, ChunkCacheStruct terrainCache) {
+    public void computeColumn(WorldHandle worldHandle, long chunkCoordinate, GenerationCacheStruct terrainCache) {
 
         TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();
 
@@ -155,7 +154,7 @@ public class WorldGenerationManager extends ManagerPackage {
     private void applyCachedColumn(
             TerrainColumnAsyncContainer column,
             long chunkCoordinate,
-            ChunkCacheStruct terrainCache) {
+            GenerationCacheStruct terrainCache) {
 
         column.biomeID = terrainCache.getBiomeID();
         column.surfaceBlockID = terrainCache.getSurfaceBlockID();

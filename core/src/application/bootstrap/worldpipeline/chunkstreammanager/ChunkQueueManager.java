@@ -16,6 +16,7 @@ import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
+import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.queue.QueueInstance;
@@ -38,6 +39,12 @@ class ChunkQueueManager extends ManagerPackage {
      * streaming, which is what actually produced the visible stutter.
      * Chunks that miss the upload budget simply retry next frame — nothing
      * downstream depends on RENDER_DATA landing this frame specifically.
+     * LOAD/BUILD/MERGE/ITEM_LOAD dispatch is additionally gated on the
+     * WorldStreaming pool's own in-flight capacity (see
+     * ThreadHandle.hasCapacity()) — this is what keeps the executor's
+     * internal task queue from growing without bound under sustained load;
+     * a chunk that misses this gate is simply reassessed next frame, same
+     * as one that misses the GPU upload budget.
      */
 
     // Internal
@@ -45,6 +52,7 @@ class ChunkQueueManager extends ManagerPackage {
     private WorldStreamManager worldStreamManager;
     private ChunkStreamManager chunkStreamManager;
     private WorldRenderManager worldRenderManager;
+    private ThreadHandle worldStreamingThreadHandle;
 
     // Branches
     private GenerationBranch generationBranch;
@@ -119,6 +127,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.worldRenderManager = get(WorldRenderManager.class);
+        this.worldStreamingThreadHandle = getThreadHandleFromThreadName("WorldStreaming");
     }
 
     @Override
@@ -367,7 +376,16 @@ class ChunkQueueManager extends ManagerPackage {
             ChunkData toLoad = ChunkDataUtility.nextToLoad(syncContainer.getData(), slotLevel);
 
             if (toLoad != null) {
+
                 QueueOperation operation = toOperation(toLoad);
+
+                // Pool-wide backpressure. Checked before reserving this chunk's
+                // per-stage work flag so a saturated pool never marks a stage
+                // in-progress with nothing actually dispatched to run it — the
+                // chunk just gets reassessed next frame, same as a RENDER that
+                // misses the GPU upload budget above.
+                if (isAsyncOperation(operation) && !worldStreamingThreadHandle.hasCapacity())
+                    return QueueOperation.SKIP;
 
                 if (!reserveAsyncWork(syncContainer, operation))
                     return QueueOperation.SKIP;
@@ -379,6 +397,13 @@ class ChunkQueueManager extends ManagerPackage {
         } finally {
             syncContainer.release();
         }
+    }
+
+    private boolean isAsyncOperation(QueueOperation operation) {
+        return operation == QueueOperation.LOAD
+                || operation == QueueOperation.BUILD
+                || operation == QueueOperation.MERGE
+                || operation == QueueOperation.ITEM_LOAD;
     }
 
     private QueueOperation toOperation(ChunkData stage) {

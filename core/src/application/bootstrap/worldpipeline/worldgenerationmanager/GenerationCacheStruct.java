@@ -1,9 +1,9 @@
-package application.bootstrap.worldpipeline.chunk;
+package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
-public class ChunkCacheStruct extends StructPackage {
+public class GenerationCacheStruct extends StructPackage {
 
     /*
      * Persists the deterministic per-column terrain output — ground heights,

@@ -167,6 +167,13 @@ public class EngineSetting {
         public static final String CLOUD_JSON_PATH = "clouds";
         public static final String SEASON_JSON_PATH = "seasons";
 
+        // Thread Pools \\
+
+        public static final int MIN_AUTO_THREAD_POOL_SIZE = 2;
+        public static final int AUTO_THREAD_POOL_RESERVED_CORES = 2;
+        public static final int MAX_THREAD_POOL_SIZE = 32;
+        public static final int DEFAULT_IN_FLIGHT_MULTIPLIER = 3;
+
         // FBO \\
 
         public static final String SCENE_FBO_NAME = "MainScene";
