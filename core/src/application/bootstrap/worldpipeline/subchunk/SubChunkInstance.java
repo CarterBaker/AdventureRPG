@@ -74,6 +74,18 @@ public class SubChunkInstance extends WorldRenderInstance {
     private DynamicGeometryType uniformGeometryType;
     private short uniformBlockID;
 
+    // Opaque Interior Fast Path — set only by WorldGenerationManager when a
+    // subchunk's entire volume resolved to solid FULL-geometry blocks with
+    // zero air or liquid, even though the exact block IDs are not uniform
+    // (e.g. a stone subchunk shot through with ore, or a buried dirt/stone
+    // transition band that never breaks the surface anywhere in its
+    // footprint). Two adjacent FULL blocks never expose a face regardless of
+    // their exact IDs, so GeometryBuildManager treats this exactly like
+    // isUniformFill() when deciding whether a fully-enclosed subchunk can
+    // skip geometry entirely — without releasing the real per-block storage
+    // those varying IDs still require for mining and other block queries.
+    private boolean opaqueInterior;
+
     // Internal \\
 
     @Override
@@ -141,6 +153,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         liquidPermanent = false;
         knownEmpty = false;
         uniformFill = false;
+        opaqueInterior = false;
     }
 
     // Lazy Storage \\
@@ -212,6 +225,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.columnBiomeID = columnBiomeID;
         this.knownEmpty = false;
         this.uniformFill = false;
+        this.opaqueInterior = false;
         this.liquidStable = false;
         this.liquidPermanent = false;
     }
@@ -230,6 +244,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         blockPaletteHandle.dumpInteriorBlocks(airBlockId);
         liquidLevelPaletteHandle.dumpInteriorBlocks(EngineSetting.LIQUID_LEVEL_EMPTY);
         clearUniformFill();
+        opaqueInterior = false;
     }
 
     // Block Type Composition \\
@@ -390,6 +405,16 @@ public class SubChunkInstance extends WorldRenderInstance {
         releaseStorageIfPopulated();
     }
 
+    // Opaque Interior Fast Path \\
+
+    public void markOpaqueInterior() {
+        this.opaqueInterior = true;
+    }
+
+    public boolean isOpaqueInterior() {
+        return opaqueInterior;
+    }
+
     // Block Writes \\
 
     /*
@@ -426,6 +451,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         blockPaletteHandle.setBlock(x, y, z, blockID);
         knownEmpty = false;
         uniformFill = false;
+        opaqueInterior = false;
         invalidateLiquid();
     }
 
@@ -434,6 +460,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         blockPaletteHandle.setBlock(packedXYZ, blockID);
         knownEmpty = false;
         uniformFill = false;
+        opaqueInterior = false;
         invalidateLiquid();
     }
 

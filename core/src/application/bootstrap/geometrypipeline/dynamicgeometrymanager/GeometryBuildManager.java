@@ -34,7 +34,13 @@ class GeometryBuildManager extends ManagerPackage {
      * skips the walk whenever every one of its 6 neighbors is provably the
      * same geometry, since two identical-geometry neighbors never expose a
      * face between them — this is what keeps a mountain's buried interior
-     * from paying the per-block cost.
+     * from paying the per-block cost. A subchunk proven opaque interior —
+     * every cell FULL geometry, zero air or liquid, but not necessarily one
+     * block ID — gets the same skip whenever its neighbors are equally
+     * solid, since a stone/ore mix or a buried dirt/stone transition band
+     * never exposes a face either; this is what keeps buried, non-uniform
+     * terrain (the common case under any real surface) from paying the
+     * per-block cost just because it isn't a single block ID.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -100,6 +106,13 @@ class GeometryBuildManager extends ManagerPackage {
 
         if (subChunkInstance.isUniformFill() && isFullyEnclosed(chunkInstance, subChunkInstance)) {
             tallyUniformFill(subChunkInstance);
+            subChunkInstance.finalizeBlockTypeTally();
+            dynamicPacketInstance.unlock();
+            return true;
+        }
+
+        if (subChunkInstance.isOpaqueInterior() && isFullyEnclosedOpaque(chunkInstance, subChunkInstance)) {
+            tallyOpaqueInterior(subChunkInstance);
             subChunkInstance.finalizeBlockTypeTally();
             dynamicPacketInstance.unlock();
             return true;
@@ -321,5 +334,58 @@ class GeometryBuildManager extends ManagerPackage {
 
         if (type == DynamicGeometryType.LIQUID)
             subChunkInstance.tallyLiquidBlock(subChunkInstance.getUniformBlockID());
+    }
+
+    // Opaque Interior Fast Path \\
+
+    /*
+     * Generalizes the uniform-enclosure check above to subchunks whose
+     * blocks are not all the same ID but are still, every one of them,
+     * FULL-geometry — a buried ore vein shot through solid stone, or a
+     * dirt/stone transition band that never breaks the surface anywhere in
+     * its footprint. Two adjacent FULL blocks never expose a face to each
+     * other regardless of their exact ID, so the same "every neighbor is
+     * equally solid" enclosure rule applies; a neighbor satisfies it whether
+     * it got there via uniform fill or via this same classification.
+     */
+    private boolean isFullyEnclosedOpaque(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance) {
+
+        int subY = (int) subChunkInstance.getCoordinate();
+
+        if (subY == 0 || subY == worldHeight - 1)
+            return false;
+
+        if (!isNeighborFullySolid(chunkInstance.getSubChunk(subY - 1)))
+            return false;
+
+        if (!isNeighborFullySolid(chunkInstance.getSubChunk(subY + 1)))
+            return false;
+
+        ChunkNeighborStruct neighbors = chunkInstance.getChunkNeighbors();
+
+        for (Direction3Vector direction : LATERAL_DIRECTIONS) {
+
+            ChunkInstance neighborChunk = neighbors.getNeighborChunk(direction.to2D().index);
+
+            if (neighborChunk == null)
+                return false;
+
+            if (!isNeighborFullySolid(neighborChunk.getSubChunk(subY)))
+                return false;
+        }
+
+        return true;
+    }
+
+    private boolean isNeighborFullySolid(SubChunkInstance other) {
+
+        if (other.isOpaqueInterior())
+            return true;
+
+        return other.isUniformFill() && other.getUniformGeometryType() == DynamicGeometryType.FULL;
+    }
+
+    private void tallyOpaqueInterior(SubChunkInstance subChunkInstance) {
+        subChunkInstance.tallyBlockType(DynamicGeometryType.FULL, BLOCK_COORDINATE_COUNT);
     }
 }

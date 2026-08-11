@@ -30,10 +30,18 @@ public class WorldGenerationManager extends ManagerPackage {
      * entirely below the surface-dressing layer or entirely below sea level
      * and above ground is left uniformFill — neither ever allocates a palette
      * — and only a subchunk that actually straddles a surface, coastline, or
-     * cliff realizes real per-block storage and runs the precise loop. Ground
-     * height itself comes from TerrainShapeUtility and is fully independent of
-     * biome. Chunks generate concurrently on separate worker threads, so the
-     * surface-block cache below is a ConcurrentHashMap rather than a locked map.
+     * cliff realizes real per-block storage and runs the precise loop. A
+     * subchunk that runs that loop but never actually placed air or liquid
+     * anywhere in its volume — a buried ore vein through stone, a dirt/stone
+     * transition band that never breaks the surface — is marked opaque
+     * interior instead: still real, still mixed-ID storage for mining, but
+     * flagged so geometry building can skip it exactly like a uniform-fill
+     * subchunk once its neighbors are equally solid, since two adjacent
+     * FULL-geometry blocks never expose a face to each other regardless of
+     * their exact ID. Ground height itself comes from TerrainShapeUtility and
+     * is fully independent of biome. Chunks generate concurrently on separate
+     * worker threads, so the surface-block cache below is a ConcurrentHashMap
+     * rather than a locked map.
      */
 
     @FunctionalInterface
@@ -264,6 +272,7 @@ public class WorldGenerationManager extends ManagerPackage {
         short uniformBlockID = airBlockId;
         boolean uniformKnown = false;
         boolean isUniform = true;
+        boolean hasAirOrWater = false;
 
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {
             for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
@@ -272,6 +281,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 int columnTop = Math.max(groundHeight, seaLevel);
 
                 if (offsetY > columnTop) {
+                    hasAirOrWater = true;
                     if (isUniform) {
                         if (!uniformKnown) {
                             uniformBlockID = airBlockId;
@@ -294,8 +304,10 @@ public class WorldGenerationManager extends ManagerPackage {
 
                     if (worldY > columnTop) {
                         resultBlockID = airBlockId;
+                        hasAirOrWater = true;
                     } else if (worldY > groundHeight) {
                         resultBlockID = waterBlockId;
+                        hasAirOrWater = true;
                         blocks.setBlock(localX, localY, localZ, waterBlockId);
                         liquidLevels.setBlock(localX, localY, localZ, EngineSetting.LIQUID_LEVEL_MAX);
                     } else if (worldY == groundHeight) {
@@ -326,11 +338,31 @@ public class WorldGenerationManager extends ManagerPackage {
                     ? DynamicGeometryType.NONE
                     : blockManager.getBlockHandleFromBlockID(uniformBlockID).getGeometry();
             subChunkInstance.collapseGeneratedUniform(uniformBlockID, uniformGeometry);
+        } else if (!hasAirOrWater && solidFillBlocksAreFullGeometry(column)) {
+            subChunkInstance.markOpaqueInterior();
         }
 
         subChunkInstance.setLiquidStable(true);
 
         return true;
+    }
+
+    /*
+     * Confirms every solid fill block this column can possibly have written
+     * — surface, subsurface, underwater, and stone — is FULL geometry before
+     * a subchunk with no air or liquid is allowed to skip geometry building
+     * as opaque interior. Almost always true; only a biome authored with a
+     * non-FULL surface block (a decorative slab-shaped ground cover, say)
+     * would fail it, in which case the subchunk simply falls back to the
+     * general per-block walk like it always has.
+     */
+    private boolean solidFillBlocksAreFullGeometry(TerrainColumnAsyncContainer column) {
+        return blockManager.getBlockHandleFromBlockID(column.surfaceBlockID).getGeometry() == DynamicGeometryType.FULL
+                && blockManager.getBlockHandleFromBlockID(column.subsurfaceBlockID)
+                        .getGeometry() == DynamicGeometryType.FULL
+                && blockManager.getBlockHandleFromBlockID(column.underwaterBlockID)
+                        .getGeometry() == DynamicGeometryType.FULL
+                && blockManager.getBlockHandleFromBlockID(stoneBlockId).getGeometry() == DynamicGeometryType.FULL;
     }
 
     // Surface Profile \\
