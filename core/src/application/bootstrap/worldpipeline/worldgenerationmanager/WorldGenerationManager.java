@@ -169,10 +169,7 @@ public class WorldGenerationManager extends ManagerPackage {
         column.subsurfaceBlockID = terrainCache.getSubsurfaceBlockID();
         column.underwaterBlockID = terrainCache.getUnderwaterBlockID();
 
-        System.arraycopy(
-                terrainCache.getGroundHeightBlocks(), 0,
-                column.groundHeightBlocks, 0,
-                TerrainColumnAsyncContainer.COLUMN_COUNT);
+        terrainCache.copyGroundHeightsInto(column.groundHeightBlocks);
 
         column.columnMinGroundHeightBlocks = terrainCache.getColumnMinGroundHeightBlocks();
         column.columnMaxGroundHeightBlocks = terrainCache.getColumnMaxGroundHeightBlocks();

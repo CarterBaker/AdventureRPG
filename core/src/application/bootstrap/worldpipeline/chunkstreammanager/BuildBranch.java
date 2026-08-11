@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.chunkstreammanager;
 
+import java.util.Arrays;
+
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
@@ -14,20 +16,20 @@ public class BuildBranch extends BranchPackage {
 
     /*
      * Async — builds per-subchunk geometry via DynamicGeometryManager on the
-     * WorldStreaming thread. Geometry assembly reads across chunk borders into
-     * each neighbor's block/biome palette, so every neighbor's own
-     * ChunkDataSyncContainer lock is held for the full duration of the build —
-     * the same convention every other branch already uses to protect that
-     * data. NEIGHBOR_DATA on this chunk is only a point-in-time confirmation
-     * made earlier by AssessmentBranch; without locking here, a neighbor could
-     * be evicted, reset, and pooled for an unrelated location in the gap
-     * between that confirmation and this build actually running, which reads
-     * its biome palette back at the reserved "not generated" sentinel and
-     * crashes. A neighbor lock that can't be acquired, or one that's acquired
-     * but whose GENERATION_DATA turns out to already be false, both abort the
-     * build for this pass and clear NEIGHBOR_DATA so assessment re-runs and
-     * this chunk retries cleanly once every neighbor is actually ready. Sets
-     * BUILD_DATA on the chunk sync container only if the full build succeeds.
+     * WorldStreaming thread. A build reads across chunk borders into each
+     * neighbor's block/biome palette, so this chunk's lock and all 8
+     * neighbors' locks are held for the full duration. Every lock in that
+     * set is resolved to its owning chunk's coordinate on the calling
+     * (main) thread, sorted ascending, and then acquired strictly in that
+     * order with non-blocking tryAcquire — every concurrent build anywhere
+     * in the world uses the same global order, so two adjacent builds can
+     * never each be holding a lock the other one needs. The moment any
+     * single lock in the set is unavailable, every lock already taken this
+     * attempt is released immediately and the whole thing is abandoned for
+     * this pass rather than left half-held. NEIGHBOR_DATA is only cleared
+     * when a neighbor is genuinely missing or ungenerated — never for a
+     * plain lock race — so ordinary contention just retries next pass
+     * instead of forcing a full 8-neighbor reassessment.
      */
 
     // Internal
@@ -58,101 +60,135 @@ public class BuildBranch extends BranchPackage {
 
     public void buildChunk(ChunkInstance chunkInstance) {
 
-        ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
-        ChunkDataSyncContainer[] neighborLocks = new ChunkDataSyncContainer[Direction2Vector.LENGTH];
+        ChunkDataSyncContainer ownSync = chunkInstance.getChunkDataSyncContainer();
+        long[] lockOrder = resolveLockOrder(chunkInstance);
 
-        executeAsync(
-                threadHandle,
-                () -> {
-                    DynamicGeometryAsyncContainer geo = dynamicGeometryAsyncContainer.getInstance();
-                    try {
-                        syncContainer.acquire();
+        if (lockOrder == null) {
+            ownSync.setData(ChunkData.NEIGHBOR_DATA, false);
+            ownSync.endWork(ChunkDataSyncContainer.WORK_BUILD);
+            return;
+        }
 
-                        if (!lockGeneratedNeighbors(chunkInstance, neighborLocks)) {
-                            syncContainer.getData()[neighborDataIndex] = false;
-                            return;
-                        }
+        ChunkInstance[] resolved = resolveChunksInOrder(chunkInstance, lockOrder);
+        ChunkDataSyncContainer[] locks = new ChunkDataSyncContainer[resolved.length];
+        int ownIndex = -1;
 
-                        if (dynamicGeometryManager.build(geo, chunkInstance))
-                            syncContainer.getData()[ChunkData.BUILD_DATA.index] = true;
+        for (int i = 0; i < resolved.length; i++) {
+            locks[i] = resolved[i].getChunkDataSyncContainer();
+            if (resolved[i] == chunkInstance)
+                ownIndex = i;
+        }
 
-                    } finally {
-                        releaseNeighbors(neighborLocks);
-                        syncContainer.release();
-                        syncContainer.endWork(ChunkDataSyncContainer.WORK_BUILD);
-                        geo.reset();
-                    }
-                });
+        int finalOwnIndex = ownIndex;
+
+        executeAsync(threadHandle, () -> runLockedBuild(chunkInstance, locks, finalOwnIndex));
     }
 
-    /*
-     * Attempts to lock every one of the eight neighbors and confirms each one
-     * still has GENERATION_DATA at the moment its lock is taken. Bails and
-     * leaves whatever is already locked for the caller's finally block to
-     * release the instant a neighbor is missing, busy, or not actually
-     * generated. A neighbor that resolves back to this same chunk (possible
-     * only on a very small wrapped world) is checked directly against the
-     * data the caller already holds, rather than attempting a second
-     * self-acquire that would always fail. Two directions that happen to
-     * resolve to the same neighbor instance — also only possible on a very
-     * small world — share a single lock instead of double-acquiring it.
-     */
-    private boolean lockGeneratedNeighbors(ChunkInstance chunkInstance, ChunkDataSyncContainer[] neighborLocks) {
+    // Lock Ordering \\
+
+    private long[] resolveLockOrder(ChunkInstance chunkInstance) {
 
         ChunkNeighborStruct neighbors = chunkInstance.getChunkNeighbors();
-        ChunkDataSyncContainer ownSync = chunkInstance.getChunkDataSyncContainer();
+        long[] coordinates = new long[Direction2Vector.LENGTH + 1];
+        int count = 0;
+
+        coordinates[count++] = chunkInstance.getCoordinate();
 
         for (int i = 0; i < Direction2Vector.LENGTH; i++) {
 
             ChunkInstance neighborChunk = neighbors.getNeighborChunk(i);
 
             if (neighborChunk == null)
-                return false;
+                return null;
 
-            ChunkDataSyncContainer neighborSync = neighborChunk.getChunkDataSyncContainer();
+            long coordinate = neighborChunk.getCoordinate();
+            boolean duplicate = false;
 
-            if (neighborSync == ownSync) {
-                if (!ownSync.getData()[generationDataIndex])
-                    return false;
-                continue;
+            for (int j = 0; j < count; j++) {
+                if (coordinates[j] == coordinate) {
+                    duplicate = true;
+                    break;
+                }
             }
 
-            if (isAlreadyLocked(neighborLocks, i, neighborSync)) {
-                if (!neighborSync.getData()[generationDataIndex])
-                    return false;
-                continue;
-            }
-
-            if (!neighborSync.tryAcquire())
-                return false;
-
-            neighborLocks[i] = neighborSync;
-
-            if (!neighborSync.getData()[generationDataIndex])
-                return false;
+            if (!duplicate)
+                coordinates[count++] = coordinate;
         }
 
-        return true;
+        long[] trimmed = count == coordinates.length ? coordinates : Arrays.copyOf(coordinates, count);
+        Arrays.sort(trimmed);
+        return trimmed;
     }
 
-    private boolean isAlreadyLocked(ChunkDataSyncContainer[] neighborLocks, int upTo, ChunkDataSyncContainer target) {
+    private ChunkInstance[] resolveChunksInOrder(ChunkInstance chunkInstance, long[] lockOrder) {
 
-        for (int i = 0; i < upTo; i++)
-            if (neighborLocks[i] == target)
-                return true;
+        ChunkNeighborStruct neighbors = chunkInstance.getChunkNeighbors();
+        ChunkInstance[] resolved = new ChunkInstance[lockOrder.length];
+        long ownCoordinate = chunkInstance.getCoordinate();
 
-        return false;
-    }
+        for (int i = 0; i < lockOrder.length; i++) {
 
-    private void releaseNeighbors(ChunkDataSyncContainer[] neighborLocks) {
-
-        for (int i = 0; i < neighborLocks.length; i++) {
-
-            if (neighborLocks[i] == null)
+            if (lockOrder[i] == ownCoordinate) {
+                resolved[i] = chunkInstance;
                 continue;
+            }
 
-            neighborLocks[i].release();
-            neighborLocks[i] = null;
+            for (int d = 0; d < Direction2Vector.LENGTH; d++) {
+                ChunkInstance candidate = neighbors.getNeighborChunk(d);
+                if (candidate != null && candidate.getCoordinate() == lockOrder[i]) {
+                    resolved[i] = candidate;
+                    break;
+                }
+            }
+        }
+
+        return resolved;
+    }
+
+    // Locked Build \\
+
+    private void runLockedBuild(ChunkInstance chunkInstance, ChunkDataSyncContainer[] locks, int ownIndex) {
+
+        DynamicGeometryAsyncContainer geo = dynamicGeometryAsyncContainer.getInstance();
+        ChunkDataSyncContainer ownSync = locks[ownIndex];
+
+        int heldCount = 0;
+        boolean missingPrecondition = false;
+        boolean gotAllLocks = true;
+
+        try {
+            for (int i = 0; i < locks.length; i++) {
+
+                if (!locks[i].tryAcquire()) {
+                    gotAllLocks = false;
+                    break;
+                }
+
+                heldCount = i + 1;
+
+                if (!locks[i].getData()[generationDataIndex]) {
+                    missingPrecondition = true;
+                    gotAllLocks = false;
+                    break;
+                }
+            }
+
+            if (!gotAllLocks)
+                return;
+
+            if (dynamicGeometryManager.build(geo, chunkInstance))
+                ownSync.getData()[ChunkData.BUILD_DATA.index] = true;
+
+        } finally {
+
+            if (missingPrecondition)
+                ownSync.getData()[neighborDataIndex] = false;
+
+            for (int i = 0; i < heldCount; i++)
+                locks[i].release();
+
+            ownSync.endWork(ChunkDataSyncContainer.WORK_BUILD);
+            geo.reset();
         }
     }
 }

@@ -3,19 +3,23 @@ package application.bootstrap.worldpipeline.worldgenerationmanager;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
+/**
+ * Per-chunk-column memo of WorldGenerationManager.computeColumn()'s output —
+ * biome, dressing
+ * block IDs, and the 256 ground heights for a chunk column. computeColumn() is
+ * a pure function
+ * of (seed, coordinate), so a cache hit and a fresh recompute always produce
+ * identical results;
+ * this exists purely to skip the noise/biome work on a GENERATION_DATA reload,
+ * never to
+ * preserve player-edited state — it never observes a block write, so it carries
+ * none. Heights
+ * are stored as short rather than int: TERRAIN_MIN/MAX_HEIGHT_BLOCKS bound
+ * every value to
+ * [24, 900], comfortably inside a short, halving this struct's footprint for
+ * free.
+ */
 public class GenerationCacheStruct extends StructPackage {
-
-    /*
-     * Persists the deterministic per-column terrain output — ground heights,
-     * biome, and dressing block IDs — that WorldGenerationManager.computeColumn
-     * already derived for this chunk, so a later GENERATION_DATA reload (fired
-     * every time this chunk cycles back from DISTANT into NEAR range) can skip
-     * the macro/detail noise stack and biome PNG resolution entirely and go
-     * straight to palette reconstruction. Cheap to keep resident — one int per
-     * block column — relative to the noise and biome work it replaces. Owned
-     * by ChunkInstance and invalidated whenever that instance is reset for
-     * reuse at a different coordinate.
-     */
 
     private static final int COLUMN_COUNT = EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
 
@@ -27,10 +31,10 @@ public class GenerationCacheStruct extends StructPackage {
     private short subsurfaceBlockID;
     private short underwaterBlockID;
 
-    private final int[] groundHeightBlocks = new int[COLUMN_COUNT];
-    private int columnMinGroundHeightBlocks;
-    private int columnMaxGroundHeightBlocks;
-    private int columnTopBlocks;
+    private final short[] groundHeightBlocks = new short[COLUMN_COUNT];
+    private short columnMinGroundHeightBlocks;
+    private short columnMaxGroundHeightBlocks;
+    private short columnTopBlocks;
 
     // Store \\
 
@@ -50,10 +54,13 @@ public class GenerationCacheStruct extends StructPackage {
         this.surfaceBlockID = surfaceBlockID;
         this.subsurfaceBlockID = subsurfaceBlockID;
         this.underwaterBlockID = underwaterBlockID;
-        System.arraycopy(groundHeightBlocks, 0, this.groundHeightBlocks, 0, COLUMN_COUNT);
-        this.columnMinGroundHeightBlocks = columnMinGroundHeightBlocks;
-        this.columnMaxGroundHeightBlocks = columnMaxGroundHeightBlocks;
-        this.columnTopBlocks = columnTopBlocks;
+
+        for (int i = 0; i < COLUMN_COUNT; i++)
+            this.groundHeightBlocks[i] = (short) groundHeightBlocks[i];
+
+        this.columnMinGroundHeightBlocks = (short) columnMinGroundHeightBlocks;
+        this.columnMaxGroundHeightBlocks = (short) columnMaxGroundHeightBlocks;
+        this.columnTopBlocks = (short) columnTopBlocks;
         this.valid = true;
     }
 
@@ -83,8 +90,16 @@ public class GenerationCacheStruct extends StructPackage {
         return underwaterBlockID;
     }
 
-    public int[] getGroundHeightBlocks() {
-        return groundHeightBlocks;
+    /*
+     * Widens the cached shorts directly into the caller's own int[] scratch buffer
+     * — no
+     * intermediate array is ever materialized here, so this costs nothing beyond
+     * the copy
+     * WorldGenerationManager already needed to do.
+     */
+    public void copyGroundHeightsInto(int[] destination) {
+        for (int i = 0; i < COLUMN_COUNT; i++)
+            destination[i] = groundHeightBlocks[i];
     }
 
     public int getColumnMinGroundHeightBlocks() {
