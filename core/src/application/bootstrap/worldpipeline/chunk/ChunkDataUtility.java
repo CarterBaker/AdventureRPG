@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.chunk;
 
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
+import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import engine.root.EngineUtility;
 
 public final class ChunkDataUtility extends EngineUtility {
@@ -8,8 +9,11 @@ public final class ChunkDataUtility extends EngineUtility {
     /*
      * Stateless graph walker for ChunkData stage transitions. Determines which
      * stage to load or dump next based on the requires/leadsTo dependency graph
-     * and the slot's current detail level. No stage ordering logic lives in
-     * callers.
+     * and the slot's current detail level. BATCH_DATA is gated on the slot's
+     * renderMode rather than a numeric level threshold, since it marks
+     * participation in mega-chunk batching specifically — IMMEDIATE slots
+     * render individually and must never be pulled into that pipeline, while
+     * NEAR and DISTANT slots render exclusively through it.
      */
 
     // Load \\
@@ -54,10 +58,19 @@ public final class ChunkDataUtility extends EngineUtility {
         return false;
     }
 
+    /*
+     * A stage with a numeric minimumLevel is required from IMMEDIATE out
+     * through that level, inclusive. BATCH_DATA has no single numeric
+     * threshold that expresses "NEAR and DISTANT, but never IMMEDIATE" — that
+     * exclusion matches GridSlotDetailLevel's own renderMode exactly, so it is
+     * checked directly. A stage with neither is never directly required — it
+     * can still be pulled in transitively by whatever downstream stage
+     * actually depends on it, via the scan in isNeeded().
+     */
     private static boolean isDirectlyRequired(ChunkData stage, GridSlotDetailLevel slotLevel) {
 
-        if (!stage.dumpable)
-            return true;
+        if (stage == ChunkData.BATCH_DATA)
+            return slotLevel.renderMode == RenderType.BATCHED;
 
         if (stage.minimumLevel == null)
             return false;

@@ -7,6 +7,7 @@ import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.chunk.ChunkCacheStruct;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -20,36 +21,20 @@ public class WorldGenerationManager extends ManagerPackage {
      * Drives per-chunk-column terrain generation. computeColumn() resolves the
      * one biome that governs an entire chunk column, a ground-height value for
      * every one of its 256 block-columns, and that column's min/max ground
-     * height, all cached in a per-thread scratch buffer. Both the macro shape
-     * and fine detail noise layers are sampled on a coarse world-aligned grid
-     * and bilinearly interpolated per block rather than evaluated at full
-     * per-block resolution. generateSubChunk() then classifies each subchunk
-     * against that data before any storage is realized: entirely above every
-     * column's terrain is left knownEmpty, entirely below the surface-dressing
-     * layer or entirely below sea level and above ground is left uniformFill —
-     * neither ever allocates a palette, and a uniform LIQUID result is marked
-     * stable and permanent immediately by SubChunkInstance.markUniformFill()
-     * itself, since a subchunk uniformly filled with liquid is by definition
-     * one contiguous body spanning its entire volume — and only a subchunk
-     * that actually straddles a surface, coastline, or cliff realizes real
-     * per-block storage and runs the precise loop. That loop tracks whether
-     * every cell it wrote (or left at default air) turned out to share one
-     * block ID regardless — the common case a few subchunks below any slope
-     * steep enough to defeat the column-wide min/max bounds above — and
-     * collapses straight back to the same scalar fast path when it does, so
-     * no subchunk pays for full per-block-per-face geometry building just
-     * because its own footprint's bounds were locally ambiguous. Its liquid
-     * is explicitly settled at the end regardless — generation output is
-     * always the subchunk's final resting shape, never something that should
-     * be handed to LiquidTickBranch as "just placed" — but never marked
-     * permanent here, since proving that safely would require neighbor
-     * columns that may not exist yet at generation time; such a subchunk
-     * discovers real permanence lazily, cheaply, the first time it's ever
-     * actually invalidated and re-ticked. Ground height itself comes from
-     * TerrainShapeUtility and is fully independent of biome — biome only ever
-     * chooses which blocks dress that shape. Chunks generate concurrently on
-     * separate worker threads, so the surface-block cache below is a
-     * ConcurrentHashMap rather than a locked map.
+     * height, all cached in a per-thread scratch buffer — and, when the
+     * caller's ChunkTerrainCache already holds a valid result for this exact
+     * coordinate, skipped entirely in favor of copying that cached result back
+     * in, since every output here is a pure function of (seed, coordinate) and
+     * never needs to be rederived for the same chunk twice. generateSubChunk()
+     * then classifies each subchunk against that data before any storage is
+     * realized: entirely above every column's terrain is left knownEmpty,
+     * entirely below the surface-dressing layer or entirely below sea level
+     * and above ground is left uniformFill — neither ever allocates a palette
+     * — and only a subchunk that actually straddles a surface, coastline, or
+     * cliff realizes real per-block storage and runs the precise loop. Ground
+     * height itself comes from TerrainShapeUtility and is fully independent of
+     * biome. Chunks generate concurrently on separate worker threads, so the
+     * surface-block cache below is a ConcurrentHashMap rather than a locked map.
      */
 
     @FunctionalInterface
@@ -94,9 +79,14 @@ public class WorldGenerationManager extends ManagerPackage {
 
     // Column — once per chunk \\
 
-    public void computeColumn(WorldHandle worldHandle, long chunkCoordinate) {
+    public void computeColumn(WorldHandle worldHandle, long chunkCoordinate, ChunkCacheStruct terrainCache) {
 
         TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();
+
+        if (terrainCache.isValidFor(chunkCoordinate)) {
+            applyCachedColumn(column, chunkCoordinate, terrainCache);
+            return;
+        }
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
@@ -151,6 +141,35 @@ public class WorldGenerationManager extends ManagerPackage {
         column.columnMaxGroundHeightBlocks = maxGroundHeight;
         column.columnMinGroundHeightBlocks = minGroundHeight;
         column.columnTopBlocks = Math.max(maxGroundHeight, EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
+
+        column.computedChunkCoordinate = chunkCoordinate;
+        column.hasComputedColumn = true;
+
+        terrainCache.store(
+                chunkCoordinate,
+                column.biomeID, column.surfaceBlockID, column.subsurfaceBlockID, column.underwaterBlockID,
+                column.groundHeightBlocks,
+                column.columnMinGroundHeightBlocks, column.columnMaxGroundHeightBlocks, column.columnTopBlocks);
+    }
+
+    private void applyCachedColumn(
+            TerrainColumnAsyncContainer column,
+            long chunkCoordinate,
+            ChunkCacheStruct terrainCache) {
+
+        column.biomeID = terrainCache.getBiomeID();
+        column.surfaceBlockID = terrainCache.getSurfaceBlockID();
+        column.subsurfaceBlockID = terrainCache.getSubsurfaceBlockID();
+        column.underwaterBlockID = terrainCache.getUnderwaterBlockID();
+
+        System.arraycopy(
+                terrainCache.getGroundHeightBlocks(), 0,
+                column.groundHeightBlocks, 0,
+                TerrainColumnAsyncContainer.COLUMN_COUNT);
+
+        column.columnMinGroundHeightBlocks = terrainCache.getColumnMinGroundHeightBlocks();
+        column.columnMaxGroundHeightBlocks = terrainCache.getColumnMaxGroundHeightBlocks();
+        column.columnTopBlocks = terrainCache.getColumnTopBlocks();
 
         column.computedChunkCoordinate = chunkCoordinate;
         column.hasComputedColumn = true;
@@ -243,11 +262,6 @@ public class WorldGenerationManager extends ManagerPackage {
 
         int beachRange = EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
 
-        // This subchunk's own bounds couldn't be proven air or uniform fill
-        // above, but its actual contents still might be — tracked alongside
-        // the real per-block loop below so that outcome can be collapsed
-        // back to the scalar fast path afterward instead of paying full
-        // geometry-build cost forever for a result that never renders.
         short uniformBlockID = airBlockId;
         boolean uniformKnown = false;
         boolean isUniform = true;
@@ -315,14 +329,6 @@ public class WorldGenerationManager extends ManagerPackage {
             subChunkInstance.collapseGeneratedUniform(uniformBlockID, uniformGeometry);
         }
 
-        // Every water block written above went through setBlock/setLiquidLevel,
-        // which both call invalidateLiquid() — correct for a runtime edit, but
-        // generation is not an edit. This is the subchunk's final,
-        // authoritative shape, so it is settled here, once, unconditionally.
-        // Not marked permanent — a coastline subchunk can't safely prove it's
-        // part of a larger body without neighbor columns that may not exist
-        // yet during generation — but it will discover that correctly and
-        // cheaply the first time it's ever actually invalidated.
         subChunkInstance.setLiquidStable(true);
 
         return true;

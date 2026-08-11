@@ -16,10 +16,13 @@ public class GenerationBranch extends BranchPackage {
      * Async — attempts to load the chunk from disk/cache first, then falls back
      * to procedural generation. computeColumn() resolves this chunk's biome and
      * every one of its ground heights exactly once before the WORLD_HEIGHT
-     * subchunk generation calls that follow, so the expensive terrain noise
-     * stack is never repeated 64 times for the same column. Sets LOAD_DATA,
-     * ESSENTIAL_DATA, and GENERATION_DATA on the sync container once the chunk
-     * is fully populated. Runs on the WorldStreaming thread.
+     * subchunk generation calls that follow, reusing the chunk's own
+     * ChunkTerrainCache instead of rederiving them whenever that cache is
+     * already valid for this exact coordinate — the expensive noise/biome work
+     * only ever needs to happen once per chunk for the life of the world, not
+     * once per GENERATION_DATA reload. Sets LOAD_DATA, ESSENTIAL_DATA, and
+     * GENERATION_DATA on the sync container once the chunk is fully populated.
+     * Runs on the WorldStreaming thread.
      */
 
     // Internal
@@ -90,7 +93,7 @@ public class GenerationBranch extends BranchPackage {
         WorldHandle worldHandle = chunkInstance.getWorldHandle();
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
 
-        worldGenerationManager.computeColumn(worldHandle, chunkCoordinate);
+        worldGenerationManager.computeColumn(worldHandle, chunkCoordinate, chunkInstance.getTerrainCache());
 
         for (int i = 0; i < EngineSetting.WORLD_HEIGHT; i++) {
             SubChunkInstance subChunk = subChunks[i];

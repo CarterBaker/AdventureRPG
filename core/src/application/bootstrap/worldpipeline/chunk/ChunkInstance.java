@@ -24,6 +24,7 @@ public class ChunkInstance extends WorldRenderInstance {
     private SubChunkInstance[] subChunks;
     private ChunkNeighborStruct chunkNeighbors;
     private WorldItemInstancePaletteHandle worldItemInstancePaletteHandle;
+    private ChunkCacheStruct terrainCache;
 
     // Scratch — pre-allocated, reused per merge call
     private int[] vertPositionArray;
@@ -41,6 +42,7 @@ public class ChunkInstance extends WorldRenderInstance {
         this.chunkDataSyncContainer = create(ChunkDataSyncContainer.class);
         this.worldItemInstancePaletteHandle = create(WorldItemInstancePaletteHandle.class);
         this.worldItemInstancePaletteHandle.constructor();
+        this.terrainCache = new ChunkCacheStruct();
 
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
@@ -93,6 +95,7 @@ public class ChunkInstance extends WorldRenderInstance {
         chunkDataSyncContainer.resetData();
         getDynamicPacket().clear();
         worldItemInstancePaletteHandle.clear();
+        terrainCache.invalidate();
 
         for (SubChunkInstance subChunk : subChunks)
             subChunk.reset();
@@ -142,5 +145,9 @@ public class ChunkInstance extends WorldRenderInstance {
 
     public WorldItemInstancePaletteHandle getWorldItemInstancePaletteHandle() {
         return worldItemInstancePaletteHandle;
+    }
+
+    public ChunkCacheStruct getTerrainCache() {
+        return terrainCache;
     }
 }
