@@ -21,9 +21,34 @@ class VBOGLSLUtility {
          * updateVertexData respecifies an EXISTING vertex buffer's data store via
          * the same GL handle rather than allocating a new one, so any VAO that
          * already references this handle — including per-window clones held by
-         * VAOManager — stays valid with no extra work. Package-private — only
-         * VBOManager may call these.
+         * VAOManager — stays valid with no extra work. Every upload and reupload
+         * funnels its data through one reusable, growable direct buffer instead
+         * of allocating a fresh native ByteBuffer per call — direct buffers are
+         * off-heap and only freed once the GC gets around to running their
+         * Cleaner, and a chunk-streaming workload allocates them far faster than
+         * that can keep up, which is what was stalling the engine a few seconds
+         * into any real session. All GL work here runs on whichever thread
+         * currently holds the GL context, never concurrently, so a static
+         * scratch buffer is safe. Package-private — only VBOManager may call these.
          */
+
+        // Scratch — reused across every upload/reupload call, grown by doubling
+        private static FloatBuffer floatScratch;
+        private static int floatScratchCapacity;
+
+        private static FloatBuffer acquireFloatScratch(int floatCount) {
+
+                if (floatScratch == null || floatScratchCapacity < floatCount) {
+                        floatScratchCapacity = Math.max(floatCount, floatScratchCapacity * 2);
+                        floatScratch = ByteBuffer
+                                        .allocateDirect(floatScratchCapacity * Float.BYTES)
+                                        .order(ByteOrder.nativeOrder())
+                                        .asFloatBuffer();
+                }
+
+                floatScratch.clear();
+                return floatScratch;
+        }
 
         // Upload \\
 
@@ -61,10 +86,7 @@ class VBOGLSLUtility {
                 int vbo = gl20.glGenBuffer();
                 gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
 
-                FloatBuffer buffer = ByteBuffer
-                                .allocateDirect(size)
-                                .order(ByteOrder.nativeOrder())
-                                .asFloatBuffer();
+                FloatBuffer buffer = acquireFloatScratch(vertices.length);
                 buffer.put(vertices).flip();
 
                 gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, buffer, EngineSetting.GL_STATIC_DRAW);
@@ -105,10 +127,7 @@ class VBOGLSLUtility {
 
                 gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
 
-                FloatBuffer buffer = ByteBuffer
-                                .allocateDirect(size)
-                                .order(ByteOrder.nativeOrder())
-                                .asFloatBuffer();
+                FloatBuffer buffer = acquireFloatScratch(vertices.length);
                 buffer.put(vertices).flip();
 
                 gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, buffer, EngineSetting.GL_DYNAMIC_DRAW);

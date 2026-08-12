@@ -19,9 +19,30 @@ class IBOGLSLUtility {
          * GL upload, in-place update, and deletion operations for IBOManager.
          * updateIndexData respecifies an EXISTING index buffer's data store via
          * the same GL handle rather than allocating a new one, so any VAO that
-         * already references this handle stays valid with no extra work.
-         * Package-private — only IBOManager may call these.
+         * already references this handle stays valid with no extra work. Every
+         * upload and reupload funnels its data through one reusable, growable
+         * direct buffer instead of allocating a fresh native ByteBuffer per
+         * call, for the same reason documented in VBOGLSLUtility. Package-private
+         * — only IBOManager may call these.
          */
+
+        // Scratch — reused across every upload/reupload call, grown by doubling
+        private static ShortBuffer shortScratch;
+        private static int shortScratchCapacity;
+
+        private static ShortBuffer acquireShortScratch(int shortCount) {
+
+                if (shortScratch == null || shortScratchCapacity < shortCount) {
+                        shortScratchCapacity = Math.max(shortCount, shortScratchCapacity * 2);
+                        shortScratch = ByteBuffer
+                                        .allocateDirect(shortScratchCapacity * Short.BYTES)
+                                        .order(ByteOrder.nativeOrder())
+                                        .asShortBuffer();
+                }
+
+                shortScratch.clear();
+                return shortScratch;
+        }
 
         // Upload \\
 
@@ -58,10 +79,7 @@ class IBOGLSLUtility {
                 int ibo = gl20.glGenBuffer();
                 gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, ibo);
 
-                ShortBuffer buffer = ByteBuffer
-                                .allocateDirect(size)
-                                .order(ByteOrder.nativeOrder())
-                                .asShortBuffer();
+                ShortBuffer buffer = acquireShortScratch(indices.length);
                 buffer.put(indices).flip();
 
                 gl20.glBufferData(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, size, buffer, EngineSetting.GL_STATIC_DRAW);
@@ -88,10 +106,7 @@ class IBOGLSLUtility {
 
                 gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, ibo);
 
-                ShortBuffer buffer = ByteBuffer
-                                .allocateDirect(size)
-                                .order(ByteOrder.nativeOrder())
-                                .asShortBuffer();
+                ShortBuffer buffer = acquireShortScratch(indices.length);
                 buffer.put(indices).flip();
 
                 gl20.glBufferData(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, size, buffer, EngineSetting.GL_DYNAMIC_DRAW);
