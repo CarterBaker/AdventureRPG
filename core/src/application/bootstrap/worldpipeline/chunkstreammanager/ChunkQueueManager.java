@@ -344,7 +344,7 @@ class ChunkQueueManager extends ManagerPackage {
                 continue;
             }
 
-            QueueOperation operation = determineQueueOperation(chunkInstance, gridSlotHandle);
+            QueueOperation operation = determineQueueOperation(grid, chunkInstance, gridSlotHandle);
 
             switch (operation) {
                 case LOAD -> generationBranch.getNewChunk(chunkInstance);
@@ -360,7 +360,7 @@ class ChunkQueueManager extends ManagerPackage {
                         gpuUploadsThisFrame++;
                     }
                 }
-                case DUMP -> dumpBranch.dumpChunkData(chunkInstance, gridSlotHandle);
+                case DUMP -> dumpBranch.dumpChunkData(grid, chunkInstance, gridSlotHandle);
                 case SKIP -> {
                 }
             }
@@ -411,6 +411,7 @@ class ChunkQueueManager extends ManagerPackage {
     // Operation \\
 
     private QueueOperation determineQueueOperation(
+            GridInstance grid,
             ChunkInstance chunkInstance,
             GridSlotHandle gridSlotHandle) {
 
@@ -422,12 +423,20 @@ class ChunkQueueManager extends ManagerPackage {
         try {
             GridSlotDetailLevel slotLevel = gridSlotHandle.getDetailLevel();
 
-            ChunkData toDump = ChunkDataUtility.nextToDump(syncContainer.getData(), slotLevel);
+            // Live, not level-derived: a NEAR/DISTANT chunk only needs its own
+            // individual GPU upload if the grid's own render queue is actually
+            // going to draw it that way — i.e. its mega can never fully
+            // assemble (render-distance boundary). Every other NEAR/DISTANT
+            // chunk is drawn exclusively through its mega and should never
+            // touch RENDER_DATA at all. See ChunkDataUtility.
+            boolean needsIndividualRender = grid.getChunkRenderQueue().containsKey(chunkInstance.getCoordinate());
+
+            ChunkData toDump = ChunkDataUtility.nextToDump(syncContainer.getData(), slotLevel, needsIndividualRender);
 
             if (toDump != null)
                 return QueueOperation.DUMP;
 
-            ChunkData toLoad = ChunkDataUtility.nextToLoad(syncContainer.getData(), slotLevel);
+            ChunkData toLoad = ChunkDataUtility.nextToLoad(syncContainer.getData(), slotLevel, needsIndividualRender);
 
             if (toLoad != null) {
 

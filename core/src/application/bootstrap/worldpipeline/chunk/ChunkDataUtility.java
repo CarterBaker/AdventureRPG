@@ -9,16 +9,18 @@ public final class ChunkDataUtility extends EngineUtility {
     /*
      * Stateless graph walker for ChunkData stage transitions. Determines which
      * stage to load or dump next based on the requires/leadsTo dependency graph
-     * and the slot's current detail level. BATCH_DATA is gated on the slot's
-     * renderMode rather than a numeric level threshold, since it marks
-     * participation in mega-chunk batching specifically — IMMEDIATE slots
-     * render individually and must never be pulled into that pipeline, while
-     * NEAR and DISTANT slots render exclusively through it.
+     * and two live signals: the slot's current detail level, and — for
+     * RENDER_DATA specifically — whether this exact chunk is currently expected
+     * to render individually at all, per needsIndividualRender (see
+     * ChunkQueueManager.determineQueueOperation). BATCH_DATA is gated on the
+     * slot's renderMode rather than a numeric level threshold, since NEAR and
+     * DISTANT slots render exclusively through mega batching while IMMEDIATE
+     * slots never do.
      */
 
     // Load \\
 
-    public static ChunkData nextToLoad(boolean[] flags, GridSlotDetailLevel slotLevel) {
+    public static ChunkData nextToLoad(boolean[] flags, GridSlotDetailLevel slotLevel, boolean needsIndividualRender) {
 
         for (ChunkData stage : ChunkData.VALUES) {
 
@@ -28,7 +30,7 @@ public final class ChunkDataUtility extends EngineUtility {
             if (!requiresMet(stage, flags))
                 continue;
 
-            if (!isNeeded(stage, flags, slotLevel))
+            if (!isNeeded(stage, flags, slotLevel, needsIndividualRender))
                 continue;
 
             return stage;
@@ -37,9 +39,10 @@ public final class ChunkDataUtility extends EngineUtility {
         return null;
     }
 
-    private static boolean isNeeded(ChunkData stage, boolean[] flags, GridSlotDetailLevel slotLevel) {
+    private static boolean isNeeded(
+            ChunkData stage, boolean[] flags, GridSlotDetailLevel slotLevel, boolean needsIndividualRender) {
 
-        if (isDirectlyRequired(stage, slotLevel))
+        if (isDirectlyRequired(stage, slotLevel, needsIndividualRender))
             return true;
 
         for (ChunkData other : ChunkData.VALUES) {
@@ -47,7 +50,7 @@ public final class ChunkDataUtility extends EngineUtility {
             if (flags[other.index])
                 continue;
 
-            if (!isDirectlyRequired(other, slotLevel))
+            if (!isDirectlyRequired(other, slotLevel, needsIndividualRender))
                 continue;
 
             for (ChunkData req : other.requires)
@@ -60,17 +63,23 @@ public final class ChunkDataUtility extends EngineUtility {
 
     /*
      * A stage with a numeric minimumLevel is required from IMMEDIATE out
-     * through that level, inclusive. BATCH_DATA has no single numeric
-     * threshold that expresses "NEAR and DISTANT, but never IMMEDIATE" — that
-     * exclusion matches GridSlotDetailLevel's own renderMode exactly, so it is
-     * checked directly. A stage with neither is never directly required — it
-     * can still be pulled in transitively by whatever downstream stage
-     * actually depends on it, via the scan in isNeeded().
+     * through that level, inclusive. BATCH_DATA and RENDER_DATA have no
+     * numeric threshold — BATCH_DATA matches GridSlotDetailLevel's own
+     * renderMode exactly, and whether THIS chunk needs an individual GPU
+     * upload is a live property of the grid's own render queue rather than a
+     * function of slot level, so both are checked directly. A stage with
+     * neither is never directly required — it can still be pulled in
+     * transitively by whatever downstream stage actually depends on it, via
+     * the scan in isNeeded().
      */
-    private static boolean isDirectlyRequired(ChunkData stage, GridSlotDetailLevel slotLevel) {
+    private static boolean isDirectlyRequired(
+            ChunkData stage, GridSlotDetailLevel slotLevel, boolean needsIndividualRender) {
 
         if (stage == ChunkData.BATCH_DATA)
             return slotLevel.renderMode == RenderType.BATCHED;
+
+        if (stage == ChunkData.RENDER_DATA)
+            return needsIndividualRender;
 
         if (stage.minimumLevel == null)
             return false;
@@ -89,7 +98,7 @@ public final class ChunkDataUtility extends EngineUtility {
 
     // Dump \\
 
-    public static ChunkData nextToDump(boolean[] flags, GridSlotDetailLevel slotLevel) {
+    public static ChunkData nextToDump(boolean[] flags, GridSlotDetailLevel slotLevel, boolean needsIndividualRender) {
 
         for (int i = ChunkData.LENGTH - 1; i >= 0; i--) {
 
@@ -101,11 +110,15 @@ public final class ChunkDataUtility extends EngineUtility {
             if (!stage.dumpable)
                 continue;
 
-            if (stage.minimumLevel == null)
-                continue;
-
-            if (slotLevel.level <= stage.minimumLevel.level)
-                continue;
+            if (stage == ChunkData.RENDER_DATA) {
+                if (needsIndividualRender)
+                    continue;
+            } else {
+                if (stage.minimumLevel == null)
+                    continue;
+                if (slotLevel.level <= stage.minimumLevel.level)
+                    continue;
+            }
 
             if (leadsToSafe(stage, flags))
                 return stage;

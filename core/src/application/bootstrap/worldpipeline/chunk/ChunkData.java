@@ -29,15 +29,22 @@ public enum ChunkData {
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA",
                                         "BUILD_DATA" },
                         new String[] { "RENDER_DATA" }),
+        // RENDER_DATA is no longer a prerequisite of BATCH_DATA — a mega merges
+        // straight from a chunk's own MERGE_DATA output and never reads anything
+        // RENDER_DATA would produce, so requiring it forced every mega-bound
+        // chunk through a wasted individual GPU upload and teardown. RENDER_DATA
+        // now loads only when a live check shows this specific chunk will
+        // actually be drawn individually — see ChunkDataUtility.isDirectlyRequired
+        // and ChunkQueueManager.determineQueueOperation.
         RENDER_DATA(
-                        true, GridSlotDetailLevel.IMMEDIATE,
+                        true, null,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA", "BUILD_DATA",
                                         "MERGE_DATA" },
                         new String[] { "BATCH_DATA" }),
         BATCH_DATA(
                         false, null,
                         new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA", "BUILD_DATA",
-                                        "MERGE_DATA", "RENDER_DATA" },
+                                        "MERGE_DATA" },
                         new String[] {}),
         ITEM_DATA(
                         true, GridSlotDetailLevel.NEAR,

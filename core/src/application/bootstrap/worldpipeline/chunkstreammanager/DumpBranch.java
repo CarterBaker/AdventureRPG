@@ -4,6 +4,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
@@ -14,10 +15,12 @@ public class DumpBranch extends BranchPackage {
 
     /*
      * Executes a single dump step per call. ChunkDataUtility determines which
-     * stage to shed based on the leadsTo/requires graph and the slot detail level.
-     * cascadeClear runs before side-effecting work so concurrent dispatches see
-     * the stage as already gone. Item structs survive a GENERATION dump so
-     * ITEM_DATA can rebuild without a full re-generation.
+     * stage to shed based on the leadsTo/requires graph, the slot detail level,
+     * and — for RENDER_DATA — a live check of whether this chunk is actually
+     * being drawn individually right now. cascadeClear runs before
+     * side-effecting work so concurrent dispatches see the stage as already
+     * gone. Item structs survive a GENERATION dump so ITEM_DATA can rebuild
+     * without a full re-generation.
      */
 
     // Internal
@@ -36,7 +39,7 @@ public class DumpBranch extends BranchPackage {
 
     // Dump \\
 
-    public void dumpChunkData(ChunkInstance chunkInstance, GridSlotHandle gridSlotHandle) {
+    public void dumpChunkData(GridInstance grid, ChunkInstance chunkInstance, GridSlotHandle gridSlotHandle) {
 
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
 
@@ -44,9 +47,12 @@ public class DumpBranch extends BranchPackage {
             return;
 
         try {
+            boolean needsIndividualRender = grid.getChunkRenderQueue().containsKey(chunkInstance.getCoordinate());
+
             ChunkData toDump = ChunkDataUtility.nextToDump(
                     syncContainer.getData(),
-                    gridSlotHandle.getDetailLevel());
+                    gridSlotHandle.getDetailLevel(),
+                    needsIndividualRender);
 
             if (toDump == null)
                 return;
