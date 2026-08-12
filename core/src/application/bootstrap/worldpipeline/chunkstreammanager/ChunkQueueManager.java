@@ -29,22 +29,41 @@ class ChunkQueueManager extends ManagerPackage {
      * its own active chunks, load requests, and unload requests. The chunk pool
      * is shared across all grids for efficiency. All branch dispatch is
      * per-grid — branches own the implementation. Both loadQueue() and
-     * assessActiveChunks() advance up to maxChunkStreamPerBatch chunks per
-     * call rather than one, so a full render distance worth of chunks can
-     * actually stream in at a playable rate instead of one chunk per pass.
-     * RENDER dispatch inside assessActiveChunks() is bounded separately by
-     * chunkGpuUploadBudget — glBufferData/VAO creation is a synchronous
-     * driver call, so letting maxChunkStreamPerBatch alone govern it (as
-     * before) let two dozen uploads land in a single frame during heavy
-     * streaming, which is what actually produced the visible stutter.
-     * Chunks that miss the upload budget simply retry next frame — nothing
-     * downstream depends on RENDER_DATA landing this frame specifically.
-     * LOAD/BUILD/MERGE/ITEM_LOAD dispatch is additionally gated on the
-     * WorldStreaming pool's own in-flight capacity (see
-     * ThreadHandle.hasCapacity()) — this is what keeps the executor's
-     * internal task queue from growing without bound under sustained load;
-     * a chunk that misses this gate is simply reassessed next frame, same
-     * as one that misses the GPU upload budget.
+     * assessActiveChunks() advance up to their own per-frame budget rather than
+     * one, so a full render distance worth of chunks can actually stream in at
+     * a playable rate instead of one chunk per pass. RENDER dispatch inside
+     * assessActiveChunks() is bounded separately by chunkGpuUploadBudget —
+     * glBufferData/VAO creation is a synchronous driver call, so letting
+     * maxChunkStreamPerBatch alone govern it let two dozen uploads land in a
+     * single frame during heavy streaming, which is what actually produced the
+     * visible stutter. Chunks that miss the upload budget simply retry next
+     * frame — nothing downstream depends on RENDER_DATA landing this frame
+     * specifically. LOAD/BUILD/MERGE/ITEM_LOAD dispatch is additionally gated
+     * on the WorldStreaming pool's own in-flight capacity (see
+     * ThreadHandle.hasCapacity()) — this is what keeps the executor's internal
+     * task queue from growing without bound under sustained load; a chunk that
+     * misses this gate is simply reassessed next frame, same as one that
+     * misses the GPU upload budget.
+     *
+     * Admission is gated by the exact same signal as dispatch. scanGridSlots()
+     * stops discovering new load candidates once loadRequests already holds
+     * maxQueuedLoadRequests pending coordinates, and loadQueue() refuses to
+     * pull new coordinates out of that set at all while the WorldStreaming
+     * pool reports itself saturated — previously scanning and loading ran
+     * unconditionally every frame regardless of how far behind the async
+     * pipeline already was, which meant a fresh session (empty chunk pool, so
+     * every admission is a brand-new ChunkInstance — 64 SubChunkInstances plus
+     * their handles) could allocate its entire render distance's worth of
+     * chunk object graphs within the first few seconds, long before dispatch
+     * could ever start processing more than 48 of them at once. That spike is
+     * pure waste — it grows the heap and working set far past what the
+     * pipeline can use, and the JVM does not give that memory back — which is
+     * why performance degraded a few seconds in and then stayed degraded.
+     * Neither maxChunkAdmissionsPerFrame nor maxQueuedLoadRequests caps the
+     * eventual size of activeChunks itself — that would permanently starve
+     * distant chunks once total slot count exceeds the cap. They only pace
+     * how fast new chunk graphs get allocated, tied to how fast the pipeline
+     * can actually retire the ones already admitted.
      */
 
     // Internal
@@ -78,6 +97,11 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Streaming
     private int maxChunkStreamPerBatch;
+
+    // Admission Backpressure — paces scanning/loading against the pipeline's
+    // actual throughput instead of letting either race ahead of it
+    private int maxChunkAdmissionsPerFrame;
+    private int maxQueuedLoadRequests;
 
     // GPU Upload Throttle
     private int chunkGpuUploadBudget;
@@ -114,6 +138,10 @@ class ChunkQueueManager extends ManagerPackage {
 
         // Streaming
         this.maxChunkStreamPerBatch = EngineSetting.MAX_CHUNK_STREAM_PER_BATCH;
+
+        // Admission Backpressure
+        this.maxChunkAdmissionsPerFrame = EngineSetting.MAX_CHUNK_STREAM_PER_FRAME;
+        this.maxQueuedLoadRequests = EngineSetting.MAX_CHUNK_STREAM_PER_QUEUE;
 
         // GPU Upload Throttle
         this.chunkGpuUploadBudget = EngineSetting.MAX_CHUNK_GPU_UPLOADS_PER_FRAME;
@@ -189,10 +217,22 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Grid Scan \\
 
+    /*
+     * Stops discovering new load candidates once loadRequests already holds
+     * maxQueuedLoadRequests pending coordinates. Without this, the scan
+     * cursor sweeps the entire grid in totalSlots / GRID_SLOTS_SCAN_PER_FRAME
+     * frames regardless of whether anything downstream could ever act on the
+     * result, front-loading a huge, useless backlog. The cursor simply
+     * pauses here and resumes exactly where it left off once loadQueue()
+     * drains enough of the backlog to make room again.
+     */
     private void scanGridSlots(GridInstance grid) {
 
         Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
         LongLinkedOpenHashSet loadRequests = grid.getLoadRequests();
+
+        if (loadRequests.size() >= maxQueuedLoadRequests)
+            return;
 
         for (int i = 0; i < EngineSetting.GRID_SLOTS_SCAN_PER_FRAME; i++) {
             GridSlotHandle slot = grid.getNextScanSlot();
@@ -204,7 +244,21 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Load \\
 
+    /*
+     * Admits pending load requests into activeChunks, allocating or pooling
+     * a ChunkInstance for each. Gated on the WorldStreaming pool's own
+     * hasCapacity() — the same signal reserveAsyncWork already trusts for
+     * dispatch — so admission can never outpace what the pipeline can
+     * actually process. When the pool is saturated this is a no-op for the
+     * frame; the requests stay queued and are picked up the moment capacity
+     * frees up. maxChunkAdmissionsPerFrame caps the burst size once capacity
+     * is available, distinct from the heavier per-frame dispatch budget used
+     * in assessActiveChunks().
+     */
     private void loadQueue(GridInstance grid) {
+
+        if (!worldStreamingThreadHandle.hasCapacity())
+            return;
 
         LongLinkedOpenHashSet loadRequests = grid.getLoadRequests();
         Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
@@ -212,7 +266,7 @@ class ChunkQueueManager extends ManagerPackage {
         var iterator = loadRequests.iterator();
         int loaded = 0;
 
-        while (iterator.hasNext() && loaded < maxChunkStreamPerBatch) {
+        while (iterator.hasNext() && loaded < maxChunkAdmissionsPerFrame) {
 
             long chunkCoordinate = iterator.nextLong();
             iterator.remove();
