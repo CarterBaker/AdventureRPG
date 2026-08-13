@@ -45,6 +45,11 @@ const float MASK_BLEND         = 0.15;
 // ── Height-displacement tunables ───────────────────────────────────────────
 const float HEIGHT_DISPLACE_SCALE = 0.12; // block units, peak bump height
 const float HEIGHT_FD_EPSILON     = 0.02; // finite-difference step, tess-coord space
+// Height must return to exactly 0 by the time a genuine (exposed) edge is
+// reached, or the two faces meeting there no longer share a vertex position
+// and a crack opens. Deliberately >= BEVEL_RADIUS so height has fully faded
+// out before the bevel geometry starts curving — the two never compound.
+const float HEIGHT_EDGE_FADE_RADIUS = 0.75; // block units
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── Tier gating ─────────────────────────────────────────────────────────
@@ -127,6 +132,43 @@ float maskBitSmooth(float mask, float pos, int lastIndex) {
 
     float t = smoothstep(-MASK_BLEND * 0.5, MASK_BLEND * 0.5, dist);
     return mix(belowBit, aboveBit, t);
+}
+
+// Shared cross-edge falloff for both the bevel push and the height-map
+// fade below — identical exposure masks, independent radius per caller.
+// Returns (weight along the A axis, weight along the B axis): 0 at quad
+// center, rising to 1 exactly at a genuine exposed edge. A flush (non-
+// exposed) edge stays 0 regardless of distance, so crossing into a
+// same-plane neighbor never dips or bumps at the seam.
+vec2 computeEdgeExposure(
+    float posA, float posB,
+    float sizeA, float sizeB,
+    int iLastA, int iLastB,
+    float maskA0, float maskA1, float maskB0, float maskB1,
+    float radius) {
+
+    float rawA0 = 1.0 - smoothstep(0.0, radius, posA);
+    float rawA1 = 1.0 - smoothstep(0.0, radius, sizeA - posA);
+    float rawB0 = 1.0 - smoothstep(0.0, radius, posB);
+    float rawB1 = 1.0 - smoothstep(0.0, radius, sizeB - posB);
+
+    float edgeA0 = rawA0 * maskBitSmooth(maskA0, posB, iLastB)
+        * mix(smoothstep(0.0, radius, posB),         1.0, maskBit(maskB0, 0))
+        * mix(smoothstep(0.0, radius, sizeB - posB), 1.0, maskBit(maskB1, 0));
+
+    float edgeA1 = rawA1 * maskBitSmooth(maskA1, posB, iLastB)
+        * mix(smoothstep(0.0, radius, posB),         1.0, maskBit(maskB0, iLastA))
+        * mix(smoothstep(0.0, radius, sizeB - posB), 1.0, maskBit(maskB1, iLastA));
+
+    float edgeB0 = rawB0 * maskBitSmooth(maskB0, posA, iLastA)
+        * mix(smoothstep(0.0, radius, posA),         1.0, maskBit(maskA0, 0))
+        * mix(smoothstep(0.0, radius, sizeA - posA), 1.0, maskBit(maskA1, 0));
+
+    float edgeB1 = rawB1 * maskBitSmooth(maskB1, posA, iLastA)
+        * mix(smoothstep(0.0, radius, posA),         1.0, maskBit(maskA0, iLastB))
+        * mix(smoothstep(0.0, radius, sizeA - posA), 1.0, maskBit(maskA1, iLastB));
+
+    return vec2(max(edgeA0, edgeA1), max(edgeB0, edgeB1));
 }
 
 vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
@@ -225,7 +267,7 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     }
     // ──────────────────────────────────────────────────────────────────────
 
-    // ── Block-face bevel — Tier0 only, see TIER0_MAX_SQ_DIST comment above ──
+    // ── Block-face bevel + height-map edge fade — Tier0 only ────────────────
     if (nearStrength > 0.001) {
         int   quadPack = int(teQuadSize[0]);
         float sizeA    = float(quadPack & 0xFF);
@@ -236,41 +278,22 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
         float maskB0 = teBevelMaskB0[0];
         float maskB1 = teBevelMaskB1[0];
 
-        vec3 quadTangentA = normalize(teWorldPos[1] - teWorldPos[0]);
-        vec3 quadTangentB = normalize(teWorldPos[3] - teWorldPos[0]);
-
         float posA = u * sizeA;
         float posB = v * sizeB;
 
         int iLastA = int(sizeA) - 1;
         int iLastB = int(sizeB) - 1;
 
-        float rawBevelA0 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, posA);
-        float rawBevelA1 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, sizeA - posA);
-        float rawBevelB0 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, posB);
-        float rawBevelB1 = 1.0 - smoothstep(0.0, BEVEL_RADIUS, sizeB - posB);
-
-        float bevelA0 = rawBevelA0 * maskBitSmooth(maskA0, posB, iLastB)
-            * mix(smoothstep(0.0, BEVEL_RADIUS, posB),         1.0, maskBit(maskB0, 0))
-            * mix(smoothstep(0.0, BEVEL_RADIUS, sizeB - posB), 1.0, maskBit(maskB1, 0));
-
-        float bevelA1 = rawBevelA1 * maskBitSmooth(maskA1, posB, iLastB)
-            * mix(smoothstep(0.0, BEVEL_RADIUS, posB),         1.0, maskBit(maskB0, iLastA))
-            * mix(smoothstep(0.0, BEVEL_RADIUS, sizeB - posB), 1.0, maskBit(maskB1, iLastA));
-
-        float bevelB0 = rawBevelB0 * maskBitSmooth(maskB0, posA, iLastA)
-            * mix(smoothstep(0.0, BEVEL_RADIUS, posA),         1.0, maskBit(maskA0, 0))
-            * mix(smoothstep(0.0, BEVEL_RADIUS, sizeA - posA), 1.0, maskBit(maskA1, 0));
-
-        float bevelB1 = rawBevelB1 * maskBitSmooth(maskB1, posA, iLastA)
-            * mix(smoothstep(0.0, BEVEL_RADIUS, posA),         1.0, maskBit(maskA0, iLastB))
-            * mix(smoothstep(0.0, BEVEL_RADIUS, sizeA - posA), 1.0, maskBit(maskA1, iLastB));
-
-        float bevelA   = max(bevelA0, bevelA1);
-        float bevelB   = max(bevelB0, bevelB1);
-        float bevelMax = max(bevelA, bevelB);
+        vec2  bevelAxes = computeEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
+                                               maskA0, maskA1, maskB0, maskB1, BEVEL_RADIUS);
+        float bevelA    = bevelAxes.x;
+        float bevelB    = bevelAxes.y;
+        float bevelMax  = max(bevelA, bevelB);
 
         if (bevelMax > 0.001) {
+
+            vec3 quadTangentA = normalize(teWorldPos[1] - teWorldPos[0]);
+            vec3 quadTangentB = normalize(teWorldPos[3] - teWorldPos[0]);
 
             vec3 towardCenterA = quadTangentA * sign(0.5 - u);
             vec3 towardCenterB = quadTangentB * sign(0.5 - v);
@@ -287,15 +310,19 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
                                        bevelMax * BEVEL_NORMAL_BLEND));
             }
         }
-    }
-    // ──────────────────────────────────────────────────────────────────────
 
-    // ── Height-map displacement — Tier0 only ────────────────────────────────
-    if (nearStrength > 0.001) {
+        // Own (wider) radius, same masks — by a genuine edge this has
+        // already reached 0, so the two faces meeting there still share
+        // the exact same undisplaced vertex position.
+        vec2  heightAxes   = computeEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
+                                                  maskA0, maskA1, maskB0, maskB1, HEIGHT_EDGE_FADE_RADIUS);
+        float heightWeight = 1.0 - max(heightAxes.x, heightAxes.y);
+
         vec2  tiledUV = tileUV(uvLocalPos, teUVOrigin[0], normal, teOrient[0]);
         float h       = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
-        worldPos += normal * (h - 0.5) * HEIGHT_DISPLACE_SCALE * nearStrength;
+        worldPos += normal * (h - 0.5) * HEIGHT_DISPLACE_SCALE * heightWeight * nearStrength;
     }
+    // ──────────────────────────────────────────────────────────────────────
 
     outNormal = normal;
     return worldPos;
