@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.chunk;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -18,6 +20,11 @@ public class ChunkInstance extends WorldRenderInstance {
      * Owns its subchunks permanently — they are never pooled separately.
      * Pooled and reused by ChunkQueueManager. Must be reset via reset() before
      * reuse. Geometry is assembled by merging all subchunk packets into one packet.
+     * mergeVersion is a globally unique, monotonically increasing sequence number
+     * bumped every time merge() actually rebuilds this chunk's CPU geometry — it
+     * never resets, even across pooling reuse, so a mega's per-chunk merge
+     * bookkeeping (see MegaBatchStruct) can never collide with a stale entry left
+     * by a previous occupant of the same chunk coordinate.
      */
 
     // Internal
@@ -33,6 +40,10 @@ public class ChunkInstance extends WorldRenderInstance {
 
     // Settings
     private int chunkSize;
+
+    // Merge Version
+    private static final AtomicLong MERGE_VERSION_SEQUENCE = new AtomicLong();
+    private volatile long mergeVersion;
 
     // Internal \\
 
@@ -123,6 +134,8 @@ public class ChunkInstance extends WorldRenderInstance {
         else if (!getDynamicPacket().hasModels())
             getDynamicPacket().unlock();
 
+        mergeVersion = MERGE_VERSION_SEQUENCE.incrementAndGet();
+
         return success;
     }
 
@@ -150,5 +163,9 @@ public class ChunkInstance extends WorldRenderInstance {
 
     public GenerationCacheStruct getTerrainCache() {
         return terrainCache;
+    }
+
+    public long getMergeVersion() {
+        return mergeVersion;
     }
 }

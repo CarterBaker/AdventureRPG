@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.megachunk;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import engine.root.StructPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
+import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -10,13 +11,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MegaBatchStruct extends StructPackage {
 
     /*
-     * Tracks which chunks have been registered and which have been successfully
-     * merged into the mega's geometry. mergedCoordinates drives readiness —
-     * when its size reaches megaScale all contributions are present and the
-     * mega is ready for GPU upload. On re-merge, mergedCoordinates is cleared
-     * and rebuilt so the count stays accurate after a full geometry rebuild.
-     * batchedChunkList mirrors batchedChunks for zero-allocation hot-path
-     * iteration — both are always kept in sync.
+     * Tracks which chunks are registered, which have been merged into the
+     * mega's geometry, and — via mergedChunkVersions — the exact content
+     * version of each chunk's contribution currently reflected in that
+     * geometry. The version map is what lets needsMerge() tell a genuine
+     * content change apart from a chunk being redispatched for reasons
+     * unrelated to its own geometry (its mega still waiting on GPU upload,
+     * for instance), so the expensive full mega remerge only ever runs when
+     * something actually changed. mergedCoordinates still drives readiness —
+     * when its size reaches megaScale all contributions are present — and is
+     * cleared and rebuilt alongside the version map on any full re-merge so
+     * both stay in lockstep.
      */
 
     // Internal
@@ -25,6 +30,7 @@ public class MegaBatchStruct extends StructPackage {
     private final Long2ObjectOpenHashMap<ChunkInstance> batchedChunks;
     private final ObjectArrayList<ChunkInstance> batchedChunkList;
     private final LongOpenHashSet mergedCoordinates;
+    private final Long2LongOpenHashMap mergedChunkVersions;
 
     // Constructor \\
 
@@ -32,6 +38,8 @@ public class MegaBatchStruct extends StructPackage {
         this.batchedChunks = new Long2ObjectOpenHashMap<>();
         this.batchedChunkList = new ObjectArrayList<>();
         this.mergedCoordinates = new LongOpenHashSet();
+        this.mergedChunkVersions = new Long2LongOpenHashMap();
+        this.mergedChunkVersions.defaultReturnValue(-1L);
     }
 
     public void constructor(long megaChunkCoordinate, int megaScale) {
@@ -40,6 +48,7 @@ public class MegaBatchStruct extends StructPackage {
         this.batchedChunks.clear();
         this.batchedChunkList.clear();
         this.mergedCoordinates.clear();
+        this.mergedChunkVersions.clear();
     }
 
     // Reset \\
@@ -48,6 +57,7 @@ public class MegaBatchStruct extends StructPackage {
         batchedChunks.clear();
         batchedChunkList.clear();
         mergedCoordinates.clear();
+        mergedChunkVersions.clear();
     }
 
     // Management \\
@@ -79,6 +89,16 @@ public class MegaBatchStruct extends StructPackage {
 
     public void clearMerged() {
         mergedCoordinates.clear();
+    }
+
+    // Version Tracking \\
+
+    public boolean needsMerge(long coordinate, long contentVersion) {
+        return !batchedChunks.containsKey(coordinate) || mergedChunkVersions.get(coordinate) != contentVersion;
+    }
+
+    public void recordMergedVersion(long coordinate, long contentVersion) {
+        mergedChunkVersions.put(coordinate, contentVersion);
     }
 
     // Accessible \\

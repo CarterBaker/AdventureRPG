@@ -38,8 +38,8 @@ class ChunkQueueManager extends ManagerPackage {
      * single frame during heavy streaming, which is what actually produced the
      * visible stutter. Chunks that miss the upload budget simply retry next
      * frame — nothing downstream depends on RENDER_DATA landing this frame
-     * specifically. LOAD/BUILD/MERGE/ITEM_LOAD dispatch is additionally gated
-     * on the WorldStreaming pool's own in-flight capacity (see
+     * specifically. LOAD/BUILD/MERGE/ITEM_LOAD/BATCH dispatch is additionally
+     * gated on the WorldStreaming pool's own in-flight capacity (see
      * ThreadHandle.hasCapacity()) — this is what keeps the executor's internal
      * task queue from growing without bound under sustained load; a chunk that
      * misses this gate is simply reassessed next frame, same as one that
@@ -466,7 +466,8 @@ class ChunkQueueManager extends ManagerPackage {
         return operation == QueueOperation.LOAD
                 || operation == QueueOperation.BUILD
                 || operation == QueueOperation.MERGE
-                || operation == QueueOperation.ITEM_LOAD;
+                || operation == QueueOperation.ITEM_LOAD
+                || operation == QueueOperation.BATCH;
     }
 
     private QueueOperation toOperation(ChunkData stage) {
@@ -493,6 +494,7 @@ class ChunkQueueManager extends ManagerPackage {
             case BUILD -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_BUILD);
             case MERGE -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_MERGE);
             case ITEM_LOAD -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_ITEM_LOAD);
+            case BATCH -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_BATCH);
             default -> true;
         };
     }

@@ -31,6 +31,12 @@ class MegaQueueManager extends ManagerPackage {
      * upload can carry up to megaScale chunks' worth of merged geometry in
      * one glBufferData call, so it is throttled even harder than a single
      * chunk upload to keep any one frame's GPU-upload cost predictable.
+     * resolveMegaForChunk/createMega/computeMegaMax touch activeMegaChunks and
+     * the shared pool, neither of which is thread-safe, so they must only ever
+     * be called from the main thread — BatchBranch resolves the mega
+     * synchronously before handing the actual CPU merge off to a worker thread
+     * via mergeIntoMega, which is safe from any thread since the target mega's
+     * own lock guards it.
      */
 
     // Internal
@@ -158,7 +164,12 @@ class MegaQueueManager extends ManagerPackage {
 
     // Batching \\
 
-    void batchChunk(ChunkInstance chunkInstance, GridInstance grid) {
+    /*
+     * Resolves (or creates) the mega a chunk belongs to. Touches the grid's
+     * shared, non-thread-safe mega registry and pool — must only ever be
+     * called from the main thread.
+     */
+    MegaChunkInstance resolveMegaForChunk(ChunkInstance chunkInstance, GridInstance grid) {
 
         Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks = grid.getActiveMegaChunks();
         int megaMax = computeMegaMax(grid);
@@ -166,13 +177,24 @@ class MegaQueueManager extends ManagerPackage {
         long megaCoord = Coordinate2Long.toMegaChunkCoordinate(chunkInstance.getCoordinate());
         MegaChunkInstance mega = activeMegaChunks.get(megaCoord);
 
-        if (mega == null) {
-            mega = createMega(megaCoord, grid, megaMax, activeMegaChunks);
-            if (mega == null)
-                return;
-            activeMegaChunks.put(megaCoord, mega);
-        }
+        if (mega != null)
+            return mega;
 
+        mega = createMega(megaCoord, grid, megaMax, activeMegaChunks);
+
+        if (mega == null)
+            return null;
+
+        activeMegaChunks.put(megaCoord, mega);
+        return mega;
+    }
+
+    /*
+     * Performs the actual CPU-side vertex merge against an already-resolved
+     * mega. Safe to call from any thread — the target mega's own lock guards
+     * all of its internal state.
+     */
+    void mergeIntoMega(ChunkInstance chunkInstance, MegaChunkInstance mega) {
         mergeBranch.mergeChunkIntoMega(chunkInstance, mega);
     }
 

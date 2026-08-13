@@ -15,10 +15,11 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
     /*
      * A merged geometry batch composed of MEGA_CHUNK_SIZE^2 adjacent
-     * ChunkInstances.
-     * Geometry is accumulated incrementally via batchAndMerge() as each chunk
-     * contributes. Re-contribution triggers a full re-merge of all registered
-     * chunks.
+     * ChunkInstances. Geometry is accumulated incrementally via batchAndMerge()
+     * as each chunk contributes; callers must check needsMerge() first, since
+     * batchAndMerge() always performs real work when called. Re-contribution
+     * triggers a full re-merge of all registered chunks, since a chunk's prior
+     * contribution cannot be surgically removed from the shared vertex buffer.
      * Once all chunks are present, finalizeGeometry() marks the packet ready for
      * GPU upload. Threading is governed by MegaDataSyncContainer.
      */
@@ -93,13 +94,25 @@ public class MegaChunkInstance extends WorldRenderInstance {
     // Geometry \\
 
     /*
+     * Whether this chunk's current geometry version is not yet reflected in
+     * this mega — false when the chunk was already merged and hasn't changed
+     * since, which is the common case while a chunk sits waiting on its
+     * mega's GPU upload budget.
+     */
+    public boolean needsMerge(ChunkInstance chunkInstance) {
+        return megaBatchStruct.needsMerge(chunkInstance.getCoordinate(), chunkInstance.getMergeVersion());
+    }
+
+    /*
      * Fresh contribution: merge the chunk's geometry into the packet and register
      * it. Re-contribution: clear the packet and re-merge all registered chunks in
      * full using the updated geometry. Returns false if any merge step fails.
+     * Always performs real work — callers check needsMerge() first.
      */
     public boolean batchAndMerge(ChunkInstance chunkInstance) {
 
         long chunkCoord = chunkInstance.getCoordinate();
+        long contentVersion = chunkInstance.getMergeVersion();
         boolean isRemerge = megaBatchStruct.getBatchedChunks().containsKey(chunkCoord);
 
         if (isRemerge) {
@@ -116,6 +129,7 @@ public class MegaChunkInstance extends WorldRenderInstance {
                 if (!mergeChunk(batched))
                     return false;
                 megaBatchStruct.recordMerged(batched.getCoordinate());
+                megaBatchStruct.recordMergedVersion(batched.getCoordinate(), batched.getMergeVersion());
             }
 
             return true;
@@ -128,6 +142,7 @@ public class MegaChunkInstance extends WorldRenderInstance {
             return false;
 
         megaBatchStruct.recordMerged(chunkCoord);
+        megaBatchStruct.recordMergedVersion(chunkCoord, contentVersion);
         return true;
     }
 

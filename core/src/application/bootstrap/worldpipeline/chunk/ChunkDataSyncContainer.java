@@ -22,13 +22,14 @@ public class ChunkDataSyncContainer extends SyncContainerPackage {
     public static final int WORK_BUILD = 1;
     public static final int WORK_MERGE = 2;
     public static final int WORK_ITEM_LOAD = 3;
+    public static final int WORK_BATCH = 4;
 
     // Internal \\
 
     @Override
     public void create() {
         this.data = new boolean[ChunkData.LENGTH];
-        this.workInProgress = new boolean[4];
+        this.workInProgress = new boolean[5];
     }
 
     // Reset \\
