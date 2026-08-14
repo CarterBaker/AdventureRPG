@@ -64,6 +64,7 @@ public class SettingsSystem extends SystemPackage {
 
         // Source: application Settings — runtime, user-configurable
         renderSettingsData.updateUniform("u_renderDistance", (float) settings.maxRenderDistance);
+        renderSettingsData.updateUniform("u_nearTessellationRadius", (float) settings.nearTessellationChunkRadius);
         uboManager.push(renderSettingsData);
     }
 

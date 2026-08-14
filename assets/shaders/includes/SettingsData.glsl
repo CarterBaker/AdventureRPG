@@ -6,5 +6,10 @@ layout(std140) uniform SettingsData {
 
     // Source: EngineSetting.CHUNK_SIZE — compile-time constant, uploaded once on awake
     float u_chunkSize;
+
+    // Source: application Settings — runtime, user-configurable. Chebyshev
+    // chunk radius of the near tessellation ring (bevel + heightmap). See
+    // surface/includes/SurfaceTessellationTier.glsl.
+    float u_nearTessellationRadius;
 };
 #endif

@@ -23,6 +23,7 @@ public class Settings {
 
     // Render
     public int maxRenderDistance = 64;
+    public int nearTessellationChunkRadius = 3;
 
     // Input
     public float mouseSensitivity = 0.15f;

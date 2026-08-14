@@ -56,6 +56,9 @@ public class SettingsUtility {
 
         if (settings.windowHeight < EngineSetting.MIN_WINDOW_DIMENSION)
             settings.windowHeight = EngineSetting.MIN_WINDOW_DIMENSION;
+
+        if (settings.nearTessellationChunkRadius < 1)
+            settings.nearTessellationChunkRadius = 1;
     }
 
     // KeyBindings \\

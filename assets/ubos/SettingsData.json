@@ -2,6 +2,7 @@
     "blockName": "SettingsData",
     "uniforms": [
         { "name": "u_renderDistance", "type": "FLOAT" },
-        { "name": "u_chunkSize", "type": "FLOAT" }
+        { "name": "u_chunkSize", "type": "FLOAT" },
+        { "name": "u_nearTessellationRadius", "type": "FLOAT" }
     ]
 }

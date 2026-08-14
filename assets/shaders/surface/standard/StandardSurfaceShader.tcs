@@ -28,17 +28,17 @@ out float teBevelMaskB1[];
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
+#include "surface/includes/SurfaceTessellationTier.glsl"
 
 // ── Tier gating ─────────────────────────────────────────────────────────
-// Must match TIER0_MAX_SQ_DIST in StandardSurface.fsh/.tes — same 3x3 ring
-// (center + 8 neighbors). u_distanceFromCenter comes from this chunk's
-// grid-slot UBO, pushed once per slot in GridBuildSystem — the world
-// scrolls under a fixed-bounds player, not the other way around, so there
-// is no camera-relative continuous LOD to fall back on here the way a
-// normal engine would use. Outside this ring: NO tessellation, full stop —
-// both outer and inner levels pinned to 1, single flat quad, no interior
-// vertices for evalDisplacedSurface's bevel/noise/height code to run on.
-const float TIER0_MAX_SQ_DIST = 2.5;
+// u_distanceFromCenter comes from this chunk's grid-slot UBO, pushed once
+// per slot in GridBuildSystem — the world scrolls under a fixed-bounds
+// player, not the other way around, so there is no camera-relative
+// continuous LOD to fall back on here the way a normal engine would use.
+// Outside the near ring (surface/includes/SurfaceTessellationTier.glsl):
+// NO tessellation, full stop — both outer and inner levels pinned to 1,
+// single flat quad, no interior vertices for evalDisplacedSurface's
+// bevel/noise/height code to run on.
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── Far ring — block-exact tessellation for the distant terrain rise ────
@@ -48,17 +48,16 @@ const float TIER0_MAX_SQ_DIST = 2.5;
 // just moving 4 corners.
 //
 // Level = this quad's OWN block count per axis (from aQuadSize, same
-// unpack Tier0 uses below) — one tessellation segment per block, no
-// density multiplier. This used to be a single fixed FAR_TESS_LEVEL
-// constant shared by every far-ring quad regardless of size, which looked
-// "uniform" but wasn't actually crack-free: OpenGL only guarantees a
-// sealed shared edge when both patches touching it use the IDENTICAL
-// outer tess level for that edge, and a fixed level gives a huge merged
-// quad and a tiny neighboring one the same segment COUNT but wildly
-// different segment LENGTHS — their corners matched, nothing between them
-// did, so the (correctly-computed, post-last-fix) noise displacement
-// bulged away from a straight line on the finer side. Real cracks, not a
-// height-math problem.
+// unpack the near-ring branch uses below) — one tessellation segment per
+// block, no density multiplier. This used to be a single fixed
+// FAR_TESS_LEVEL constant shared by every far-ring quad regardless of
+// size, which looked "uniform" but wasn't actually crack-free: OpenGL
+// only guarantees a sealed shared edge when both patches touching it use
+// the IDENTICAL outer tess level for that edge, and a fixed level gives a
+// huge merged quad and a tiny neighboring one the same segment COUNT but
+// wildly different segment LENGTHS — their corners matched, nothing
+// between them did, so the noise displacement bulged away from a straight
+// line on the finer side. Real cracks, not a height-math problem.
 //
 // One-segment-per-own-block-count fixes this without requiring any quad
 // to know how its neighbor is subdivided: every quad, whatever its size,
@@ -68,15 +67,13 @@ const float TIER0_MAX_SQ_DIST = 2.5;
 // touch — same-size neighbors, or a T-junction where one big quad meets
 // several smaller ones — every quad involved still drops a vertex on
 // every block boundary along the shared line. That shared set of points
-// is what actually seals the seam; last turn's world-space distance fix
-// (StandardSurface.tes) made sure those shared points agree on HEIGHT,
-// this makes sure they exist in the first place on both sides.
+// is what actually seals the seam; StandardSurface.tes's world-space
+// distance math makes sure those shared points also agree on HEIGHT.
 //
-// Deliberately separate from the Tier0 branch above and does not touch
-// it: Tier0 (dist <= 2.5) and Tier1/Mid (2.5 < dist <= 8.5) both still
-// only ever reach the levelA = levelB = 1.0 fallback below exactly as
-// before this change. Only patches beyond the Mid ring take this branch.
-const float TIER1_MAX_SQ_DIST = 8.5;
+// Deliberately separate from the near-ring branch above and does not
+// touch it: the near ring and Mid ring both still only ever reach the
+// levelA = levelB = 1.0 fallback below. Only patches beyond the Mid ring
+// take this branch.
 // ──────────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -97,7 +94,9 @@ void main() {
         float levelA;
         float levelB;
 
-        if (u_distanceFromCenter <= TIER0_MAX_SQ_DIST) {
+        float tier0MaxSqDist = getTier0MaxSqDist();
+
+        if (u_distanceFromCenter <= tier0MaxSqDist) {
 
             int   quadPack = int(tcQuadSize[0]);
             float sizeA    = float(quadPack & 0xFF);
@@ -114,8 +113,8 @@ void main() {
             // and use their spread as a roughness proxy: bumpy patches get extra
             // subdivision stacked ON TOP of the density above; flat patches
             // (flat content, or a height map filled with the neutral default
-            // colour) get none. Only reachable inside Tier0 — Mid/Flat tiers
-            // never sample height at all, so there's nothing to boost for.
+            // colour) get none. Only reachable inside the near ring — Mid/Flat
+            // tiers never sample height at all, so there's nothing to boost for.
             const float HEIGHT_TESS_BOOST = 24.0;
             const float HEIGHT_LOD        = 2.0;
 
@@ -163,8 +162,8 @@ void main() {
             // Mid ring — flat level-1 tessellation, unchanged. World
             // curvature (includes/WorldCurvature.glsl, applied in
             // StandardSurface.tes) now runs here too, unlike the
-            // noise/bevel/height effects that stay gated to Tier0/Far —
-            // but it doesn't need density to go with it: curvature's
+            // noise/bevel/height effects that stay gated to the near/Far
+            // rings — but it doesn't need density to go with it: curvature's
             // second derivative is the same constant everywhere, so a
             // merged quad's worst-case sag is fixed by ITS OWN span, not
             // by distance from center. A 64-block quad sags ~0.08 blocks

@@ -18,6 +18,7 @@ in float      vColor;
 #include "surface/includes/AO.glsl"
 #include "surface/includes/Specular.glsl"
 #include "surface/includes/AtmosphericFog.glsl"
+#include "surface/includes/SurfaceTessellationTier.glsl"
 #include "surface/includes/SurfaceTierFull.glsl"
 #include "surface/includes/SurfaceTierMid.glsl"
 #include "surface/includes/SurfaceTierFlat.glsl"
@@ -33,22 +34,14 @@ layout(location = 2) out vec4 gMaterial;
 // grid of side u_renderDistance), and normalizes u_distanceFromCenter
 // against it. That only holds if u_distanceFromCenter is itself raw
 // squared chunk distance, not a pre-normalized fraction. Tier selection
-// compares directly against it — exact integer-grid math.
-//
-// For an integer chunk offset (dx, dy) from center, squared distance is
-// dx*dx + dy*dy:
-//   3x3 ring   (max(|dx|,|dy|) <= 1): values {0, 1, 2}  -> center + 8 neighbors
-//   next ring  (max(|dx|,|dy|) == 2): values {4, 5, 8}  -> starts at 4
-// This stays exact through ring 2 (5x5). It is NOT exact for larger rings —
-// squared-distance circles and chebyshev squares diverge past r=2 — so if
-// you widen TIER1_MAX_SQ_DIST to cover a 7x7+ area, switch to real
-// chebyshev math using grid-slot integer coordinates instead.
-const float TIER0_MAX_SQ_DIST = 2.5;  // 3x3 ring (center + 8 neighbors)
-const float TIER1_MAX_SQ_DIST = 8.5;  // adds the next ring out (5x5)
-// Beyond TIER1_MAX_SQ_DIST = Far tier.
+// compares directly against it — exact integer-grid math. Thresholds live
+// in surface/includes/SurfaceTessellationTier.glsl, shared with the TCS
+// and TES so all three stages always agree on the same tier boundaries.
 
 void main() {
     vec2 tiledUV = tileUV(vUVLocalPos, vUVOrigin, vNormal, vOrient);
+
+    float tier0MaxSqDist = getTier0MaxSqDist();
 
     vec3  albedo;
     vec3  normalView;
@@ -57,7 +50,7 @@ void main() {
     float fogT = 0.0; // only the Far tier branch below overrides this
     bool  visible;
 
-    if (u_distanceFromCenter <= TIER0_MAX_SQ_DIST) {
+    if (u_distanceFromCenter <= tier0MaxSqDist) {
         visible = shadeSurfaceFull(tiledUV, vNormal, u_view, albedo, normalView, specular, ao);
     }
     else if (u_distanceFromCenter <= TIER1_MAX_SQ_DIST) {

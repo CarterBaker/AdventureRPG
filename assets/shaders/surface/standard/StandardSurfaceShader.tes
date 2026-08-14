@@ -26,6 +26,7 @@ out float vColor;
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
+#include "surface/includes/SurfaceTessellationTier.glsl"
 
 const float NOISE_SEED_SCALE = 0.5;
 // NOISE_PERIOD used to be derived from a local CHUNK_SIZE_F = 16.0 const
@@ -53,19 +54,18 @@ const float HEIGHT_EDGE_FADE_RADIUS = 0.75; // block units
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── Tier gating ─────────────────────────────────────────────────────────
-// Must match TIER0_MAX_SQ_DIST in StandardSurface.fsh/.tcs — same 3x3 ring.
-// Bevel and height displacement are both per-vertex geometry, gated
-// identically to the tessellation density in the TCS: with tess level
-// pinned to 1 outside this ring, the TES still runs at the patch's 4
-// corners even with zero subdivision, so this block-level flag is what
-// actually stops bevel/noise/height from ever touching those corners —
-// the TCS's tess-level-1 alone only stops subdivision, not evaluation.
-const float TIER0_MAX_SQ_DIST = 2.5;
-// Must match TIER1_MAX_SQ_DIST in StandardSurface.tcs/.fsh — same 5x5 ring.
-// Used below only to keep the Distant terrain rise block from ever
+// TIER1_MAX_SQ_DIST and getTier0MaxSqDist() come from
+// surface/includes/SurfaceTessellationTier.glsl, shared with the TCS and
+// FSH so every stage agrees on the same ring boundaries. Bevel and height
+// displacement are both per-vertex geometry, gated identically to the
+// tessellation density in the TCS: with tess level pinned to 1 outside the
+// near ring, the TES still runs at the patch's 4 corners even with zero
+// subdivision, so the near-ring check below is what actually stops
+// bevel/noise/height from ever touching those corners — the TCS's
+// tess-level-1 alone only stops subdivision, not evaluation. TIER1_MAX_SQ_DIST
+// is used below only to keep the Distant terrain rise block from ever
 // reaching into the Mid ring, no matter how far the start margin or curve
 // below is tuned.
-const float TIER1_MAX_SQ_DIST = 8.5;
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── Distant terrain rise tunables ──────────────────────────────────────
@@ -186,16 +186,17 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     // Unlike those blocks, this one is NOT tier-gated. They're all
     // high-frequency (noise has no smoothness bound) so they need real
     // tessellation density to avoid faceting — that's the whole reason
-    // Tier0 goes up to 64 subdivisions and the Far ring goes block-exact
-    // (see StandardSurface.tcs). Curvature is a plain quadratic — its
-    // second derivative is the constant 2*WORLD_CURVATURE_STRENGTH
-    // everywhere, so the worst-case sag across an untessellated
-    // level-1 Mid-ring quad is sag ≈ WORLD_CURVATURE_STRENGTH *
-    // (span/2)^2, a function of that quad's OWN size, not of how far out
-    // it is. At the current strength a 64-block quad sags ~0.08 blocks —
-    // invisible, and already inside the greedy-merge cap the Far-ring
-    // tess-level clamp assumes (see StandardSurface.tcs). No Mid-ring
-    // tessellation change needed to support this.
+    // the near ring goes up to 64 subdivisions and the Far ring goes
+    // block-exact (see StandardSurface.tcs). Curvature is a plain
+    // quadratic — its second derivative is the constant
+    // 2*WORLD_CURVATURE_STRENGTH everywhere, so the worst-case sag across
+    // an untessellated level-1 Mid-ring quad is sag ≈
+    // WORLD_CURVATURE_STRENGTH * (span/2)^2, a function of that quad's
+    // OWN size, not of how far out it is. At the current strength a
+    // 64-block quad sags ~0.08 blocks — invisible, and already inside the
+    // greedy-merge cap the Far-ring tess-level clamp assumes (see
+    // StandardSurface.tcs). No Mid-ring tessellation change needed to
+    // support this.
     worldPos = applyWorldCurvature(worldPos);
 
     vec3 normal = normalize(
@@ -226,9 +227,10 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     // which draw call touched which quad.
     float radialDist = sqrt(dot(worldPos.xz, worldPos.xz));
 
-    // Binary, tied to the same grid-slot UBO value the TCS gates on —
+    // Binary, tied to the same near-ring threshold the TCS gates on —
     // not a fraction of render distance.
-    float nearStrength = u_distanceFromCenter <= TIER0_MAX_SQ_DIST ? 1.0 : 0.0;
+    float tier0MaxSqDist = getTier0MaxSqDist();
+    float nearStrength = u_distanceFromCenter <= tier0MaxSqDist ? 1.0 : 0.0;
 
     vec2 seed = worldPos.xz;
 
@@ -267,7 +269,7 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
     }
     // ──────────────────────────────────────────────────────────────────────
 
-    // ── Block-face bevel + height-map edge fade — Tier0 only ────────────────
+    // ── Block-face bevel + height-map edge fade — near ring only ────────────
     if (nearStrength > 0.001) {
         int   quadPack = int(teQuadSize[0]);
         float sizeA    = float(quadPack & 0xFF);
@@ -336,11 +338,11 @@ void main() {
     vec3 normal;
     vec3 worldPos = evalDisplacedSurface(u, v, normal);
 
-    // Same gates as evalDisplacedSurface (Tier0 for near, Far ring for the
-    // distant rise) — only recompute the finite-difference normal where
-    // geometry actually ran. Mid ring (Tier0 < dist <= Tier1) still gets
-    // neither, exactly as before this change.
-    float nearStrength0  = u_distanceFromCenter <= TIER0_MAX_SQ_DIST ? 1.0 : 0.0;
+    // Same gates as evalDisplacedSurface (near ring, Far ring) — only
+    // recompute the finite-difference normal where geometry actually ran.
+    // Mid ring still gets neither, exactly as before this change.
+    float tier0MaxSqDist = getTier0MaxSqDist();
+    float nearStrength0  = u_distanceFromCenter <= tier0MaxSqDist ? 1.0 : 0.0;
     float farRingActive0 = u_distanceFromCenter > TIER1_MAX_SQ_DIST  ? 1.0 : 0.0;
     float geometryBlend  = max(nearStrength0, farRingActive0);
 
