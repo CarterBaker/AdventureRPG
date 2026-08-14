@@ -25,9 +25,6 @@ out float teBevelMaskB1[];
 
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
-#include "surface/includes/SurfaceStandard.glsl"
-#include "includes/BlockOrientationMapData.glsl"
-#include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
 // ── Tier gating ─────────────────────────────────────────────────────────
@@ -39,6 +36,26 @@ out float teBevelMaskB1[];
 // NO tessellation, full stop — both outer and inner levels pinned to 1,
 // single flat quad, no interior vertices for evalDisplacedSurface's
 // bevel/noise/height code to run on.
+// ──────────────────────────────────────────────────────────────────────────
+
+// ── Crack-free level selection ──────────────────────────────────────────
+// levelA/levelB are ALWAYS this quad's own block count times a fixed
+// constant — never boosted by anything sampled from this quad's own
+// content (height variance, curvature, etc). Two independently
+// tessellated patches only place vertices at the same absolute positions
+// along a shared edge if both compute their level as size * the SAME
+// constant: equal_spacing then puts vertex k at exactly k/constant blocks
+// from that patch's own corner, and since block corners are themselves on
+// an absolute world grid, that lands on the same 1/constant-block grid
+// regardless of which quad — or how large it is — did the placing. A
+// per-quad adaptive term breaks that outright: two neighbors with
+// different sampled content pick different levels for the same physical
+// edge, and the tessellator is free to place their vertices anywhere
+// along it. This used to sample this quad's own 4 corner heights and add
+// an extra, per-quad-varying boost on top of the size-based level — that
+// boost is what was opening cracks at both true corner edges and flat
+// coplanar seams alike, since neither case is exempt from the alignment
+// requirement above.
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── Far ring — block-exact tessellation for the distant terrain rise ────
@@ -69,11 +86,6 @@ out float teBevelMaskB1[];
 // every block boundary along the shared line. That shared set of points
 // is what actually seals the seam; StandardSurface.tes's world-space
 // distance math makes sure those shared points also agree on HEIGHT.
-//
-// Deliberately separate from the near-ring branch above and does not
-// touch it: the near ring and Mid ring both still only ever reach the
-// levelA = levelB = 1.0 fallback below. Only patches beyond the Mid ring
-// take this branch.
 // ──────────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -96,51 +108,24 @@ void main() {
 
         float tier0MaxSqDist = getTier0MaxSqDist();
 
-        if (u_distanceFromCenter <= tier0MaxSqDist) {
+        int   quadPack = int(tcQuadSize[0]);
+        float sizeA    = float(quadPack & 0xFF);
+        float sizeB    = float((quadPack >> 8) & 0xFF);
 
-            int   quadPack = int(tcQuadSize[0]);
-            float sizeA    = float(quadPack & 0xFF);
-            float sizeB    = float((quadPack >> 8) & 0xFF);
+        if (u_distanceFromCenter <= tier0MaxSqDist) {
 
             const float NEAR_DENSITY = 4.0;
 
+            // Capped at the driver's guaranteed tessellation ceiling. The
+            // largest possible merged quad is EngineSetting.CHUNK_SIZE
+            // blocks (the greedy mesher never merges further — see
+            // FullGeometryBranch.tryExpand), so 16 * 4 = 64 lands exactly
+            // on that ceiling rather than being clamped down and losing
+            // block-boundary alignment.
             levelA = clamp(sizeA * NEAR_DENSITY, 1.0, 64.0);
             levelB = clamp(sizeB * NEAR_DENSITY, 1.0, 64.0);
 
-            // ── Height-map adaptive tessellation boost ──────────────────────
-            // TCS has no screen-space derivatives, so LOD must be explicit
-            // (textureLod, not texture()). Sample height at all 4 patch corners
-            // and use their spread as a roughness proxy: bumpy patches get extra
-            // subdivision stacked ON TOP of the density above; flat patches
-            // (flat content, or a height map filled with the neutral default
-            // colour) get none. Only reachable inside the near ring — Mid/Flat
-            // tiers never sample height at all, so there's nothing to boost for.
-            const float HEIGHT_TESS_BOOST = 24.0;
-            const float HEIGHT_LOD        = 2.0;
-
-            vec2 uv0 = tileUV(tcWorldPos[0], tcUVOrigin[0], tcNormal[0], tcOrient[0]);
-            vec2 uv1 = tileUV(tcWorldPos[1], tcUVOrigin[0], tcNormal[0], tcOrient[0]);
-            vec2 uv2 = tileUV(tcWorldPos[2], tcUVOrigin[0], tcNormal[0], tcOrient[0]);
-            vec2 uv3 = tileUV(tcWorldPos[3], tcUVOrigin[0], tcNormal[0], tcOrient[0]);
-
-            float h0 = textureLod(u_textureArray, vec3(uv0, float(u_layer_height)), HEIGHT_LOD).r;
-            float h1 = textureLod(u_textureArray, vec3(uv1, float(u_layer_height)), HEIGHT_LOD).r;
-            float h2 = textureLod(u_textureArray, vec3(uv2, float(u_layer_height)), HEIGHT_LOD).r;
-            float h3 = textureLod(u_textureArray, vec3(uv3, float(u_layer_height)), HEIGHT_LOD).r;
-
-            float heightRange = max(max(h0, h1), max(h2, h3))
-                               - min(min(h0, h1), min(h2, h3));
-
-            float heightBoost = heightRange * HEIGHT_TESS_BOOST;
-
-            levelA = clamp(levelA + heightBoost, 1.0, 64.0);
-            levelB = clamp(levelB + heightBoost, 1.0, 64.0);
-
         } else if (u_distanceFromCenter > TIER1_MAX_SQ_DIST) {
-
-            int   quadPack = int(tcQuadSize[0]);
-            float sizeA    = float(quadPack & 0xFF);
-            float sizeB    = float((quadPack >> 8) & 0xFF);
 
             // GL_MAX_TESS_GEN_LEVEL is only spec-guaranteed >= 64 (and 64 is
             // the actual hardware ceiling on most GPUs). A merged quad wider

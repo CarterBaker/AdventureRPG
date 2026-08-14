@@ -8,6 +8,7 @@ out vec4 fragColor;
 #include "includes/MoonLightData.glsl"
 #include "includes/SkyColorData.glsl"
 #include "postprocessing/includes/ViewPosReconstruct.glsl"
+#include "surface/includes/CloudShadow.glsl"
 
 // fogT (material.r) arrives pre-computed from StandardSurface.fsh via
 // computeFogAmount() in surface/includes/AtmosphericFog.glsl — that's the
@@ -48,7 +49,8 @@ void main() {
 
     vec3 specColor = vec3(0.04);
 
-    vec3 fragPosView = reconstructViewPos(v_texCoord);
+    vec3 fragPosView  = reconstructViewPos(v_texCoord);
+    vec3 fragPosWorld = (u_inverseView * vec4(fragPosView, 1.0)).xyz;
     vec3 viewDir      = normalize(-fragPosView);
 
     float skyFacing  = dot(normal, vec3(0.0, 1.0, 0.0));
@@ -57,14 +59,17 @@ void main() {
     float dayFactor  = clamp(u_sunIntensity, 0.0, 1.0);
     float skyAmbient = skyMax * mix(0.05, 1.0, dayFactor) * ao;
 
-    vec3  sunDirView = normalize(mat3(u_view) * u_sunDirection);
+    vec3  sunDirWorld = normalize(u_sunDirection);
+    float cloudShadow = sampleCloudShadow(fragPosWorld, sunDirWorld);
+
+    vec3  sunDirView = normalize(mat3(u_view) * sunDirWorld);
     float sunDiff    = max(dot(normalView, sunDirView), 0.0);
     vec3  sunHalf    = normalize(viewDir + sunDirView);
     float specPower  = mix(4.0, 256.0, specular);
     float sunSpec    = pow(max(dot(normalView, sunHalf), 0.0), specPower) * specular;
 
     vec3 sunContrib = u_sunColor * u_sunIntensity
-    * (albedo * sunDiff + specColor * sunSpec);
+    * (albedo * sunDiff + specColor * sunSpec) * (1.0 - cloudShadow);
 
     vec3  moonDirView = normalize(mat3(u_view) * u_moonDirection);
     float moonDiff    = max(dot(normalView, moonDirView), 0.0);

@@ -39,17 +39,19 @@ const float NOISE_SEED_SCALE = 0.5;
 // ── Bevel tunables ─────────────────────────────────────────────────────────
 const float BEVEL_RADIUS       = 0.30;
 const float BEVEL_SIZE         = 0.09;
-const float BEVEL_NORMAL_BLEND = 0.60;
 const float MASK_BLEND         = 0.15;
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── Height-displacement tunables ───────────────────────────────────────────
 const float HEIGHT_DISPLACE_SCALE = 0.12; // block units, peak bump height
 const float HEIGHT_FD_EPSILON     = 0.02; // finite-difference step, tess-coord space
-// Height must return to exactly 0 by the time a genuine (exposed) edge is
-// reached, or the two faces meeting there no longer share a vertex position
-// and a crack opens. Deliberately >= BEVEL_RADIUS so height has fully faded
-// out before the bevel geometry starts curving — the two never compound.
+// Height must return to exactly 0 before ANY quad boundary is reached, or
+// the two independently-tessellated patches meeting there no longer share
+// a vertex position and a crack opens — this applies just as much to a
+// flat seam between two differently-textured coplanar quads as it does to
+// a genuine corner, since either way the two sides sample different height
+// data. Deliberately >= BEVEL_RADIUS so height has fully faded out before
+// the bevel geometry starts curving — the two never compound.
 const float HEIGHT_EDGE_FADE_RADIUS = 0.75; // block units
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -134,12 +136,11 @@ float maskBitSmooth(float mask, float pos, int lastIndex) {
     return mix(belowBit, aboveBit, t);
 }
 
-// Shared cross-edge falloff for both the bevel push and the height-map
-// fade below — identical exposure masks, independent radius per caller.
-// Returns (weight along the A axis, weight along the B axis): 0 at quad
-// center, rising to 1 exactly at a genuine exposed edge. A flush (non-
-// exposed) edge stays 0 regardless of distance, so crossing into a
-// same-plane neighbor never dips or bumps at the seam.
+// Shared cross-edge falloff for the bevel push — identical exposure masks,
+// bevel-specific radius. Returns (weight along the A axis, weight along
+// the B axis): 0 at quad center, rising to 1 exactly at a genuine exposed
+// edge. A flush (non-exposed) edge stays 0 regardless of distance, so
+// crossing into a same-plane neighbor never dips or bumps at the seam.
 vec2 computeEdgeExposure(
     float posA, float posB,
     float sizeA, float sizeB,
@@ -169,6 +170,21 @@ vec2 computeEdgeExposure(
         * mix(smoothstep(0.0, radius, sizeA - posA), 1.0, maskBit(maskA1, iLastB));
 
     return vec2(max(edgeA0, edgeA1), max(edgeB0, edgeB1));
+}
+
+// Pure distance-to-boundary falloff, independent of the convex/exposed
+// masks above. A quad boundary — angle edge or flat seam alike — is where
+// this patch's own independently-tessellated geometry stops; two
+// neighboring patches sample different texture data (or land on different
+// noise) at that shared line, so height displacement has to reach zero
+// before it on EVERY side, not just the ones marked bevel-worthy. Returns
+// 1 at the boundary, 0 once further than radius from every edge.
+float computeBoundaryFade(float posA, float posB, float sizeA, float sizeB, float radius) {
+    float fadeA0 = 1.0 - smoothstep(0.0, radius, posA);
+    float fadeA1 = 1.0 - smoothstep(0.0, radius, sizeA - posA);
+    float fadeB0 = 1.0 - smoothstep(0.0, radius, posB);
+    float fadeB1 = 1.0 - smoothstep(0.0, radius, sizeB - posB);
+    return max(max(fadeA0, fadeA1), max(fadeB0, fadeB1));
 }
 
 vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
@@ -304,21 +320,29 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
             worldPos += towardCenterB * BEVEL_SIZE * bevelB;
             worldPos -= normal * BEVEL_SIZE * bevelMax;
 
+            // Full blend to the edge bisector, proportional to bevelMax —
+            // this is only ever the FINAL normal when the finite-difference
+            // pass below hits a degenerate tangent and falls back to it, so
+            // it has to already be geometrically correct on its own rather
+            // than a partial blend toward the flat face normal, or that
+            // fallback reads as a lighting seam against the FD-normal
+            // fragments right next to it.
             vec3  edgeDir = -towardCenterA * bevelA - towardCenterB * bevelB;
             float edgeLen = length(edgeDir);
             if (edgeLen > 0.001) {
-                normal = normalize(mix(normal,
-                                       edgeDir / edgeLen,
-                                       bevelMax * BEVEL_NORMAL_BLEND));
+                normal = normalize(mix(normal, edgeDir / edgeLen, bevelMax));
             }
         }
 
-        // Own (wider) radius, same masks — by a genuine edge this has
-        // already reached 0, so the two faces meeting there still share
-        // the exact same undisplaced vertex position.
-        vec2  heightAxes   = computeEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
-                                                  maskA0, maskA1, maskB0, maskB1, HEIGHT_EDGE_FADE_RADIUS);
-        float heightWeight = 1.0 - max(heightAxes.x, heightAxes.y);
+        // Height-map edge fade — every quad boundary, not just the ones
+        // marked convex for bevel. Two adjacent patches only share their
+        // UNDISPLACED vertex positions; each one samples its own texture
+        // for h, and two different textures (or even the same texture at a
+        // different quad-local UV origin) don't agree on that sample at
+        // the shared boundary. Fading to zero there — on every side,
+        // angle edge or flat seam alike — is what keeps the displaced
+        // surfaces meeting regardless of what's on the other side.
+        float heightWeight = 1.0 - computeBoundaryFade(posA, posB, sizeA, sizeB, HEIGHT_EDGE_FADE_RADIUS);
 
         vec2  tiledUV = tileUV(uvLocalPos, teUVOrigin[0], normal, teOrient[0]);
         float h       = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
