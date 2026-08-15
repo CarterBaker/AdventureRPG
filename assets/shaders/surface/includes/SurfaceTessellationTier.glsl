@@ -4,30 +4,46 @@
 #include "includes/SettingsData.glsl"
 
 /*
-* Shared tier-distance thresholds for StandardSurfaceShader's tcs/tes/fsh.
- * TIER1_MAX_SQ_DIST bounds the Mid ring and marks exactly where the Far
- * ring's distant terrain rise begins — fixed by design, never affected by
- * settings, so the world-bend and distant-rise tessellation stay exactly
- * as tuned. getTier0MaxSqDist() bounds the near ring — bevel and heightmap
- * tessellation — derived from u_nearTessellationRadius (SettingsData UBO,
- * user-configurable), replacing what used to be three separately-tuned
- * `const float TIER0_MAX_SQ_DIST = 2.5;` copies in the tcs/tes/fsh, which
- * only stayed correct as long as all three were hand-edited together.
+* Shared tier-distance thresholds for StandardSurfaceShader's tcs/tes/fsh,
+ * both expressed in u_distanceFromCenter's own units — squared chunk-grid
+ * distance from the center grid slot (see GridCoordinateData.glsl).
  *
- * For an integer chunk offset (dx, dy) at Chebyshev radius r,
- * max(dx² + dy²) = 2r², and the next real ring begins strictly above that,
- * so 2r² + 0.5 lands exactly between them — the same identity
- * TIER1_MAX_SQ_DIST already relies on for r = 2. That identity only holds
- * through r = 2, so the result is clamped to TIER1_MAX_SQ_DIST: the near
- * ring can never grow past the Mid ring the Far ring's fixed boundary
- * depends on.
+ * getTier0MaxSqDist() bounds the near ring (bevel, heightmap, near-terrain
+ * noise) and is driven entirely by u_nearTessellationRadius, the
+ * user-facing detail setting: radius r gives every chunk within Chebyshev
+ * distance r full tessellation detail, the same way a grass-draw-distance
+ * slider works. A chunk offset (dx, dz) at Chebyshev radius r has
+ * dx² + dz² up to 2r² (corner case), so 2r² + 0.5 is the smallest
+ * threshold that includes every chunk through radius r.
+ *
+ * getTier1MaxSqDist() bounds the Mid ring and marks where the Far ring's
+ * block-exact tessellation and distant terrain rise begin (see
+ * StandardSurface.tes). Driven entirely by u_renderDistance and
+ * u_chunkSize — never by u_nearTessellationRadius — with
+ * DISTANT_RISE_START_MARGIN_BLOCKS held back from the render-distance
+ * edge. That margin is the same one StandardSurface.tes subtracts before
+ * fading the rise in, worked back into chunk-grid units, so the Far
+ * ring's dense geometry is always established before the rise can ever
+ * be nonzero, at any render distance, and never shifts in response to
+ * the near-tessellation-radius setting.
+ *
+ * getTier0MaxSqDist() is clamped to getTier1MaxSqDist() so the near ring
+ * can never be dialed past the Far ring it feeds into.
  */
 
-const float TIER1_MAX_SQ_DIST = 8.5;
+// Must match DISTORT_START_MARGIN in StandardSurface.tes.
+const float DISTANT_RISE_START_MARGIN_BLOCKS = 512.0;
+
+float getTier1MaxSqDist() {
+    float halfD        = u_renderDistance * 0.5 - 0.5;
+    float marginChunks = DISTANT_RISE_START_MARGIN_BLOCKS / (u_chunkSize * sqrt(2.0));
+    float farHalfD      = max(halfD - marginChunks, 1.0);
+    return farHalfD * farHalfD * 2.0;
+}
 
 float getTier0MaxSqDist() {
     float r = max(u_nearTessellationRadius, 1.0);
-    return min(2.0 * r * r + 0.5, TIER1_MAX_SQ_DIST);
+    return min(2.0 * r * r + 0.5, getTier1MaxSqDist());
 }
 
 #endif

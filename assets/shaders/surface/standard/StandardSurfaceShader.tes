@@ -29,72 +29,24 @@ out float vColor;
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
 const float NOISE_SEED_SCALE = 0.5;
-// NOISE_PERIOD used to be derived from a local CHUNK_SIZE_F = 16.0 const
-// instead of the actual u_chunkSize setting (SettingsData UBO) — silently
-// correct only as long as nobody ever changed the chunk size setting.
-// u_chunkSize is a uniform, not a compile-time constant, so this can't be
-// a global 'const' anymore; it's computed once per evalDisplacedSurface()
-// call instead (one multiply, negligible).
 
-// ── Bevel tunables ─────────────────────────────────────────────────────────
-const float BEVEL_RADIUS       = 0.30;
-const float BEVEL_SIZE         = 0.09;
-const float MASK_BLEND         = 0.15;
-// ──────────────────────────────────────────────────────────────────────────
+// ── Bevel tunables ─────────────────────────────────────────────────────
+const float BEVEL_RADIUS = 0.30;
+const float BEVEL_SIZE   = 0.09;
+const float MASK_BLEND   = 0.15;
 
-// ── Height-displacement tunables ───────────────────────────────────────────
-const float HEIGHT_DISPLACE_SCALE = 0.12; // block units, peak bump height
-const float HEIGHT_FD_EPSILON     = 0.02; // finite-difference step, tess-coord space
-// Height must return to exactly 0 before ANY quad boundary is reached, or
-// the two independently-tessellated patches meeting there no longer share
-// a vertex position and a crack opens — this applies just as much to a
-// flat seam between two differently-textured coplanar quads as it does to
-// a genuine corner, since either way the two sides sample different height
-// data. Deliberately >= BEVEL_RADIUS so height has fully faded out before
-// the bevel geometry starts curving — the two never compound.
-const float HEIGHT_EDGE_FADE_RADIUS = 0.75; // block units
-// ──────────────────────────────────────────────────────────────────────────
+// ── Height-displacement tunables ─────────────────────────────────────────
+const float HEIGHT_DISPLACE_SCALE   = 0.12; // block units, peak bump height
+const float HEIGHT_FD_EPSILON       = 0.02; // finite-difference step, tess-coord space
+const float HEIGHT_EDGE_FADE_RADIUS = 0.75; // block units — must stay >= BEVEL_RADIUS so height fades out before bevel geometry starts curving
 
-// ── Tier gating ─────────────────────────────────────────────────────────
-// TIER1_MAX_SQ_DIST and getTier0MaxSqDist() come from
-// surface/includes/SurfaceTessellationTier.glsl, shared with the TCS and
-// FSH so every stage agrees on the same ring boundaries. Bevel and height
-// displacement are both per-vertex geometry, gated identically to the
-// tessellation density in the TCS: with tess level pinned to 1 outside the
-// near ring, the TES still runs at the patch's 4 corners even with zero
-// subdivision, so the near-ring check below is what actually stops
-// bevel/noise/height from ever touching those corners — the TCS's
-// tess-level-1 alone only stops subdivision, not evaluation. TIER1_MAX_SQ_DIST
-// is used below only to keep the Distant terrain rise block from ever
-// reaching into the Mid ring, no matter how far the start margin or curve
-// below is tuned.
-// ──────────────────────────────────────────────────────────────────────────
-
-// ── Distant terrain rise tunables ──────────────────────────────────────
-// TIER1_MAX_SQ_DIST above must match StandardSurface.tcs/.fsh — that's what
-// gives this ring the interior vertices to work with. StandardSurface.tcs
-// tessellates the WHOLE far ring at one flat level (see the comment there).
-//
-// Max distance is NEVER a fixed constant — see maxDistanceWorld in
-// evalDisplacedSurface(), computed fresh every call straight from
-// u_renderDistance (SettingsData UBO). Change render distance in settings
-// and both the start point and the reach of the rise move with it
-// automatically; nothing below needs retuning when that setting changes.
-const float DISTORT_MAX_HEIGHT   = 64.0; // block units — height reached exactly AT max distance
-const float DISTORT_START_MARGIN = 512.0;  // block units subtracted from max distance — rise starts fading in at (max distance - this), NOT 32 blocks from center
-// Curve shape, 0.0–1.0. Maps to an exponent via 16^(DISTORT_CURVE^2) — chosen
-// so that C=0.5 lands on EXACTLY exponent 2.0 (the value already in use,
-// bit-identical, so nothing about the current look changes), while spreading
-// the bend evenly across the whole slider instead of cramming it all into
-// the last 10% like the old 1/(1-C) hyperbola did:
-//   0.0  -> exponent 1     (perfectly linear ramp start->max)
-//   0.25 -> exponent 1.19  (barely bent)
-//   0.5  -> exponent 2     (current production value — unchanged)
-//   0.75 -> exponent 4.76  (noticeable ease-in)
-//   0.9  -> exponent 9.45  (strong ease-in)
-//   1.0  -> exponent 16    (wall — flat until ~90% in, then rockets up)
-const float DISTORT_CURVE        = 0.35;
-// ──────────────────────────────────────────────────────────────────────────
+// ── Distant terrain rise tunables ────────────────────────────────────────
+// DISTANT_RISE_START_MARGIN_BLOCKS in SurfaceTessellationTier.glsl must be
+// kept equal to DISTORT_START_MARGIN below — one derives the far ring's
+// tessellation boundary from the other's fade-in point.
+const float DISTORT_MAX_HEIGHT   = 64.0;  // block units — height reached exactly AT max distance
+const float DISTORT_START_MARGIN = 512.0; // block units subtracted from max distance
+const float DISTORT_CURVE        = 0.35;  // 0..1, maps to exponent via 16^(DISTORT_CURVE^2); 0.5 = exponent 2 (current tuning, unchanged)
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -136,11 +88,6 @@ float maskBitSmooth(float mask, float pos, int lastIndex) {
     return mix(belowBit, aboveBit, t);
 }
 
-// Shared cross-edge falloff for the bevel push — identical exposure masks,
-// bevel-specific radius. Returns (weight along the A axis, weight along
-// the B axis): 0 at quad center, rising to 1 exactly at a genuine exposed
-// edge. A flush (non-exposed) edge stays 0 regardless of distance, so
-// crossing into a same-plane neighbor never dips or bumps at the seam.
 vec2 computeEdgeExposure(
     float posA, float posB,
     float sizeA, float sizeB,
@@ -172,13 +119,6 @@ vec2 computeEdgeExposure(
     return vec2(max(edgeA0, edgeA1), max(edgeB0, edgeB1));
 }
 
-// Pure distance-to-boundary falloff, independent of the convex/exposed
-// masks above. A quad boundary — angle edge or flat seam alike — is where
-// this patch's own independently-tessellated geometry stops; two
-// neighboring patches sample different texture data (or land on different
-// noise) at that shared line, so height displacement has to reach zero
-// before it on EVERY side, not just the ones marked bevel-worthy. Returns
-// 1 at the boundary, 0 once further than radius from every edge.
 float computeBoundaryFade(float posA, float posB, float sizeA, float sizeB, float radius) {
     float fadeA0 = 1.0 - smoothstep(0.0, radius, posA);
     float fadeA1 = 1.0 - smoothstep(0.0, radius, sizeA - posA);
@@ -187,32 +127,12 @@ float computeBoundaryFade(float posA, float posB, float sizeA, float sizeB, floa
     return max(max(fadeA0, fadeA1), max(fadeB0, fadeB1));
 }
 
-vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
+vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1MaxSqDist, out vec3 outNormal) {
 
     vec3 worldPos   = mix(mix(teWorldPos[0], teWorldPos[1], u),
                           mix(teWorldPos[3], teWorldPos[2], u), v);
     vec3 uvLocalPos = worldPos;
 
-    // ── World curvature — ALL tiers, see includes/WorldCurvature.glsl ──
-    // Applied to worldPos only, never to uvLocalPos above — same
-    // UV-decoupling rule the noise/rise/bevel/height blocks below already
-    // follow, so distant walls don't get their textures dragged
-    // vertically as the ground curves out from under them.
-    //
-    // Unlike those blocks, this one is NOT tier-gated. They're all
-    // high-frequency (noise has no smoothness bound) so they need real
-    // tessellation density to avoid faceting — that's the whole reason
-    // the near ring goes up to 64 subdivisions and the Far ring goes
-    // block-exact (see StandardSurface.tcs). Curvature is a plain
-    // quadratic — its second derivative is the constant
-    // 2*WORLD_CURVATURE_STRENGTH everywhere, so the worst-case sag across
-    // an untessellated level-1 Mid-ring quad is sag ≈
-    // WORLD_CURVATURE_STRENGTH * (span/2)^2, a function of that quad's
-    // OWN size, not of how far out it is. At the current strength a
-    // 64-block quad sags ~0.08 blocks — invisible, and already inside the
-    // greedy-merge cap the Far-ring tess-level clamp assumes (see
-    // StandardSurface.tcs). No Mid-ring tessellation change needed to
-    // support this.
     worldPos = applyWorldCurvature(worldPos);
 
     vec3 normal = normalize(
@@ -221,31 +141,11 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
 
     float noisePeriod = u_chunkSize * NOISE_SEED_SCALE;
 
-    // True world-space edge of the render volume, derived entirely from
-    // u_renderDistance and u_chunkSize (SettingsData UBO) — never a fixed
-    // constant. Same diagonal convention documented in the tier-selection
-    // comments in StandardSurface.fsh: half-width along one axis, in
-    // blocks, times sqrt(2) for the diagonal/corner case.
     float halfDWorld       = (u_renderDistance * 0.5 - 0.5) * u_chunkSize;
     float maxDistanceWorld = halfDWorld * sqrt(2.0);
 
-    // This vertex's own radial distance from center, in the same
-    // world-space block units as maxDistanceWorld — NOT normalized, and
-    // NOT the per-chunk-quantized u_distanceFromCenter. worldPos above is
-    // already this vertex's true world position (teWorldPos is aPos +
-    // this chunk's u_gridPosition offset, set in StandardSurface.vsh,
-    // itself relative to the center grid slot).
-    //
-    // Two neighboring quads sharing a world-space edge — top/top, top/wall,
-    // or wall/wall — share the exact same worldPos.xz along it, so this
-    // gives them the exact same farDistortStrength (below) at every shared
-    // vertex: same input, same math, bit-identical result, regardless of
-    // which draw call touched which quad.
     float radialDist = sqrt(dot(worldPos.xz, worldPos.xz));
 
-    // Binary, tied to the same near-ring threshold the TCS gates on —
-    // not a fraction of render distance.
-    float tier0MaxSqDist = getTier0MaxSqDist();
     float nearStrength = u_distanceFromCenter <= tier0MaxSqDist ? 1.0 : 0.0;
 
     vec2 seed = worldPos.xz;
@@ -260,32 +160,17 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
         worldPos.y += nY * 0.08 * nearStrength;
     }
 
-    // ── Distant terrain rise — Far ring only ────────────────────────────
-    // Applies to EVERY vertex in the far ring, not just top-facing quads
-    // (that top-only gate used to cause a "ladder" look — see the fix
-    // notes from the previous change; the short version: a wall quad's
-    // vertices share worldPos.xz with the top quad's edge but differ in Y,
-    // and this rise never depends on Y, so a wall rises by the exact same
-    // amount as the top it's attached to and stays welded to it, height
-    // preserved).
-    //
-    // Start point is (max distance - DISTORT_START_MARGIN), in real block
-    // units, not a fraction — so the fade-in band is always exactly
-    // DISTORT_START_MARGIN blocks wide, however render distance is set.
-    if (u_distanceFromCenter > TIER1_MAX_SQ_DIST) {
+    if (u_distanceFromCenter > tier1MaxSqDist) {
         float startDistanceWorld = max(maxDistanceWorld - DISTORT_START_MARGIN, 0.0);
         float fadeRange          = max(maxDistanceWorld - startDistanceWorld, 0.0001);
         float farDistortT        = clamp((radialDist - startDistanceWorld) / fadeRange, 0.0, 1.0);
 
-        // See DISTORT_CURVE comment above for the exponent mapping.
         float curveExponent      = pow(16.0, clamp(DISTORT_CURVE, 0.0, 1.0) * clamp(DISTORT_CURVE, 0.0, 1.0));
         float farDistortStrength = pow(farDistortT, curveExponent);
 
         worldPos.y += DISTORT_MAX_HEIGHT * farDistortStrength;
     }
-    // ──────────────────────────────────────────────────────────────────────
 
-    // ── Block-face bevel + height-map edge fade — near ring only ────────────
     if (nearStrength > 0.001) {
         int   quadPack = int(teQuadSize[0]);
         float sizeA    = float(quadPack & 0xFF);
@@ -320,13 +205,6 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
             worldPos += towardCenterB * BEVEL_SIZE * bevelB;
             worldPos -= normal * BEVEL_SIZE * bevelMax;
 
-            // Full blend to the edge bisector, proportional to bevelMax —
-            // this is only ever the FINAL normal when the finite-difference
-            // pass below hits a degenerate tangent and falls back to it, so
-            // it has to already be geometrically correct on its own rather
-            // than a partial blend toward the flat face normal, or that
-            // fallback reads as a lighting seam against the FD-normal
-            // fragments right next to it.
             vec3  edgeDir = -towardCenterA * bevelA - towardCenterB * bevelB;
             float edgeLen = length(edgeDir);
             if (edgeLen > 0.001) {
@@ -334,21 +212,12 @@ vec3 evalDisplacedSurface(float u, float v, out vec3 outNormal) {
             }
         }
 
-        // Height-map edge fade — every quad boundary, not just the ones
-        // marked convex for bevel. Two adjacent patches only share their
-        // UNDISPLACED vertex positions; each one samples its own texture
-        // for h, and two different textures (or even the same texture at a
-        // different quad-local UV origin) don't agree on that sample at
-        // the shared boundary. Fading to zero there — on every side,
-        // angle edge or flat seam alike — is what keeps the displaced
-        // surfaces meeting regardless of what's on the other side.
         float heightWeight = 1.0 - computeBoundaryFade(posA, posB, sizeA, sizeB, HEIGHT_EDGE_FADE_RADIUS);
 
         vec2  tiledUV = tileUV(uvLocalPos, teUVOrigin[0], normal, teOrient[0]);
         float h       = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
         worldPos += normal * (h - 0.5) * HEIGHT_DISPLACE_SCALE * heightWeight * nearStrength;
     }
-    // ──────────────────────────────────────────────────────────────────────
 
     outNormal = normal;
     return worldPos;
@@ -359,15 +228,14 @@ void main() {
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
-    vec3 normal;
-    vec3 worldPos = evalDisplacedSurface(u, v, normal);
-
-    // Same gates as evalDisplacedSurface (near ring, Far ring) — only
-    // recompute the finite-difference normal where geometry actually ran.
-    // Mid ring still gets neither, exactly as before this change.
     float tier0MaxSqDist = getTier0MaxSqDist();
+    float tier1MaxSqDist = getTier1MaxSqDist();
+
+    vec3 normal;
+    vec3 worldPos = evalDisplacedSurface(u, v, tier0MaxSqDist, tier1MaxSqDist, normal);
+
     float nearStrength0  = u_distanceFromCenter <= tier0MaxSqDist ? 1.0 : 0.0;
-    float farRingActive0 = u_distanceFromCenter > TIER1_MAX_SQ_DIST  ? 1.0 : 0.0;
+    float farRingActive0 = u_distanceFromCenter > tier1MaxSqDist  ? 1.0 : 0.0;
     float geometryBlend  = max(nearStrength0, farRingActive0);
 
     if (geometryBlend > 0.001) {
@@ -375,8 +243,8 @@ void main() {
         float vStep = (v + HEIGHT_FD_EPSILON <= 1.0) ?  HEIGHT_FD_EPSILON : -HEIGHT_FD_EPSILON;
 
         vec3 dummyNormal;
-        vec3 posU = evalDisplacedSurface(u + uStep, v, dummyNormal);
-        vec3 posV = evalDisplacedSurface(u, v + vStep, dummyNormal);
+        vec3 posU = evalDisplacedSurface(u + uStep, v, tier0MaxSqDist, tier1MaxSqDist, dummyNormal);
+        vec3 posV = evalDisplacedSurface(u, v + vStep, tier0MaxSqDist, tier1MaxSqDist, dummyNormal);
 
         vec3 tangentU = (posU - worldPos) / uStep;
         vec3 tangentV = (posV - worldPos) / vStep;

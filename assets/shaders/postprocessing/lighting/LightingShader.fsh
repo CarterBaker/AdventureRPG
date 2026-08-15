@@ -1,3 +1,4 @@
+// LightingShader.fsh
 #version 330 core
 in  vec2 v_texCoord;
 out vec4 fragColor;
@@ -9,21 +10,11 @@ out vec4 fragColor;
 #include "includes/SkyColorData.glsl"
 #include "postprocessing/includes/ViewPosReconstruct.glsl"
 #include "surface/includes/CloudShadow.glsl"
+#include "postprocessing/lighting/includes/AtmosphericFog.glsl"
 
-// fogT (material.r) arrives pre-computed from StandardSurface.fsh via
-// computeFogAmount() in surface/includes/AtmosphericFog.glsl — that's the
-// single source of truth for the distance curve. It can't be recomputed
-// here: u_distanceFromCenter is only valid during a chunk's own draw call,
-// and this is a single deferred fullscreen pass that runs after every
-// chunk has already drawn, so that UBO would just hold stale leftover data.
-//
-// Fog COLOR (u_skyFogColor) is likewise pre-computed once per frame by the
-// weather pipeline's SkyColorBranch and read directly from SkyColorData —
-// never re-derived here.
-//
-// FOG_SHADOW_SCALE / FOG_LIT_SCALE re-weight the incoming fogT by how
-// directly lit the fragment is, since fog should read stronger on sunlit
-// distant terrain and weaker in shadow — not the reverse.
+// FOG_SHADOW_SCALE / FOG_LIT_SCALE re-weight computeFogAmount()'s result by
+// how directly lit the fragment is, since fog should read stronger on
+// sunlit distant terrain and weaker in shadow — not the reverse.
 const float FOG_SHADOW_SCALE = 0.35;
 const float FOG_LIT_SCALE    = 1.6;
 
@@ -40,7 +31,6 @@ void main() {
     vec3 normal     = normalize(mat3(u_inverseView) * normalView);
 
     vec4  material = texture(u_gMaterial, v_texCoord);
-    float fogT     = material.r;
     float specular = material.g;
     float vertAO   = material.b;
 
@@ -84,6 +74,7 @@ void main() {
     vec3 lit = albedo * skyAmbient + sunContrib + moonContrib;
 
     float litAmount = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
+    float fogT      = computeFogAmount(fragPosWorld);
     float fogBlend  = clamp(fogT * mix(FOG_SHADOW_SCALE, FOG_LIT_SCALE, litAmount), 0.0, 1.0);
 
     lit = mix(lit, u_skyFogColor, fogBlend);

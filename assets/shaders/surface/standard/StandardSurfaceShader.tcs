@@ -27,66 +27,38 @@ out float teBevelMaskB1[];
 #include "includes/SettingsData.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
-// ── Tier gating ─────────────────────────────────────────────────────────
-// u_distanceFromCenter comes from this chunk's grid-slot UBO, pushed once
-// per slot in GridBuildSystem — the world scrolls under a fixed-bounds
-// player, not the other way around, so there is no camera-relative
-// continuous LOD to fall back on here the way a normal engine would use.
-// Outside the near ring (surface/includes/SurfaceTessellationTier.glsl):
-// NO tessellation, full stop — both outer and inner levels pinned to 1,
-// single flat quad, no interior vertices for evalDisplacedSurface's
-// bevel/noise/height code to run on.
-// ──────────────────────────────────────────────────────────────────────────
-
-// ── Crack-free level selection ──────────────────────────────────────────
-// levelA/levelB are ALWAYS this quad's own block count times a fixed
-// constant — never boosted by anything sampled from this quad's own
-// content (height variance, curvature, etc). Two independently
-// tessellated patches only place vertices at the same absolute positions
-// along a shared edge if both compute their level as size * the SAME
-// constant: equal_spacing then puts vertex k at exactly k/constant blocks
-// from that patch's own corner, and since block corners are themselves on
-// an absolute world grid, that lands on the same 1/constant-block grid
-// regardless of which quad — or how large it is — did the placing. A
-// per-quad adaptive term breaks that outright: two neighbors with
-// different sampled content pick different levels for the same physical
-// edge, and the tessellator is free to place their vertices anywhere
-// along it. This used to sample this quad's own 4 corner heights and add
-// an extra, per-quad-varying boost on top of the size-based level — that
-// boost is what was opening cracks at both true corner edges and flat
-// coplanar seams alike, since neither case is exempt from the alignment
-// requirement above.
-// ──────────────────────────────────────────────────────────────────────────
-
-// ── Far ring — block-exact tessellation for the distant terrain rise ────
-// Must match TIER1_MAX_SQ_DIST in StandardSurface.tes — same ring boundary
-// the noise-based rise there uses; this branch exists purely to give that
-// ring enough interior vertices to actually follow the noise instead of
-// just moving 4 corners.
-//
-// Level = this quad's OWN block count per axis (from aQuadSize, same
-// unpack the near-ring branch uses below) — one tessellation segment per
-// block, no density multiplier. This used to be a single fixed
-// FAR_TESS_LEVEL constant shared by every far-ring quad regardless of
-// size, which looked "uniform" but wasn't actually crack-free: OpenGL
-// only guarantees a sealed shared edge when both patches touching it use
-// the IDENTICAL outer tess level for that edge, and a fixed level gives a
-// huge merged quad and a tiny neighboring one the same segment COUNT but
-// wildly different segment LENGTHS — their corners matched, nothing
-// between them did, so the noise displacement bulged away from a straight
-// line on the finer side. Real cracks, not a height-math problem.
-//
-// One-segment-per-own-block-count fixes this without requiring any quad
-// to know how its neighbor is subdivided: every quad, whatever its size,
-// places a vertex at EVERY block boundary within its own footprint (it
-// never skips one, since level == block count). Block boundaries are an
-// absolute, shared world-space grid, so wherever two quads' footprints
-// touch — same-size neighbors, or a T-junction where one big quad meets
-// several smaller ones — every quad involved still drops a vertex on
-// every block boundary along the shared line. That shared set of points
-// is what actually seals the seam; StandardSurface.tes's world-space
-// distance math makes sure those shared points also agree on HEIGHT.
-// ──────────────────────────────────────────────────────────────────────────
+/*
+ * Ring gating compares this chunk's u_distanceFromCenter against
+ * getTier0MaxSqDist()/getTier1MaxSqDist() (SurfaceTessellationTier.glsl),
+ * shared with the TES and FSH so all three stages agree on the same
+ * boundaries. Outside the near ring, both tess levels are pinned to 1 —
+ * no interior vertices for the TES's bevel/noise/height code to run on.
+ *
+ * levelA/levelB are always this quad's own block count along that axis
+ * times a fixed density, never boosted by anything sampled from the
+ * quad's own content. equal_spacing then places vertex k at exactly
+ * k/density blocks from the patch's own corner, and since block corners
+ * sit on an absolute world grid, two neighboring patches only agree on
+ * every shared-edge vertex position if both derive their level from size
+ * alone — a per-quad adaptive term would break that for any two
+ * neighbors whose sampled content differs, at a true corner or a flat
+ * coplanar seam alike.
+ *
+ * Near ring: level = size * NEAR_DENSITY, capped at 64 (the driver's
+ * guaranteed ceiling, and exactly the max merged quad size of 16 — see
+ * FullGeometryBranch.tryExpand — times 4).
+ *
+ * Far ring: level = size, one segment per block. GL_MAX_TESS_GEN_LEVEL is
+ * only guaranteed >= 64, so a merged quad wider than that loses the
+ * one-vertex-per-block guarantee for itself only; if that becomes
+ * visible in practice the real fix is capping merged quad size during
+ * greedy meshing, not raising this clamp.
+ *
+ * Mid ring: flat level 1. World curvature still runs here (applied in
+ * StandardSurface.tes) but needs no density — its second derivative is a
+ * constant everywhere, so a merged quad's worst-case sag depends only on
+ * its own span, not on distance from center.
+ */
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -107,6 +79,7 @@ void main() {
         float levelB;
 
         float tier0MaxSqDist = getTier0MaxSqDist();
+        float tier1MaxSqDist = getTier1MaxSqDist();
 
         int   quadPack = int(tcQuadSize[0]);
         float sizeA    = float(quadPack & 0xFF);
@@ -116,45 +89,15 @@ void main() {
 
             const float NEAR_DENSITY = 4.0;
 
-            // Capped at the driver's guaranteed tessellation ceiling. The
-            // largest possible merged quad is EngineSetting.CHUNK_SIZE
-            // blocks (the greedy mesher never merges further — see
-            // FullGeometryBranch.tryExpand), so 16 * 4 = 64 lands exactly
-            // on that ceiling rather than being clamped down and losing
-            // block-boundary alignment.
             levelA = clamp(sizeA * NEAR_DENSITY, 1.0, 64.0);
             levelB = clamp(sizeB * NEAR_DENSITY, 1.0, 64.0);
 
-        } else if (u_distanceFromCenter > TIER1_MAX_SQ_DIST) {
+        } else if (u_distanceFromCenter > tier1MaxSqDist) {
 
-            // GL_MAX_TESS_GEN_LEVEL is only spec-guaranteed >= 64 (and 64 is
-            // the actual hardware ceiling on most GPUs). A merged quad wider
-            // than that (aQuadSize allows up to 255) gets clamped below its
-            // true block count, which breaks the one-vertex-per-block
-            // guarantee explained above FOR THAT QUAD ONLY — its segments
-            // stop landing on integer block positions. A same-size-or-smaller
-            // neighboring quad is unaffected and still places one vertex per
-            // block as normal, so an oversized quad is the one remaining
-            // place a seam can reappear. If that shows up in practice, the
-            // real fix is capping merged quad size at <=64 in the far ring
-            // during greedy meshing (outside these shader files) — clamping
-            // the level here only avoids a GL error, it doesn't reproduce
-            // the guarantee for that quad.
             levelA = clamp(sizeA, 1.0, 64.0);
             levelB = clamp(sizeB, 1.0, 64.0);
 
         } else {
-            // Mid ring — flat level-1 tessellation, unchanged. World
-            // curvature (includes/WorldCurvature.glsl, applied in
-            // StandardSurface.tes) now runs here too, unlike the
-            // noise/bevel/height effects that stay gated to the near/Far
-            // rings — but it doesn't need density to go with it: curvature's
-            // second derivative is the same constant everywhere, so a
-            // merged quad's worst-case sag is fixed by ITS OWN span, not
-            // by distance from center. A 64-block quad sags ~0.08 blocks
-            // at the current WORLD_CURVATURE_STRENGTH — invisible, and
-            // already inside the merge-size cap the Far-ring clamp above
-            // assumes. No changes needed here.
             levelA = 1.0;
             levelB = 1.0;
         }
