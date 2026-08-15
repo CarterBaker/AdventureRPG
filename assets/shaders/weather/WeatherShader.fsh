@@ -13,6 +13,7 @@ out vec4 fragColor;
 #include "includes/PlayerPositionData.glsl"
 #include "includes/SettingsData.glsl"
 #include "includes/NoiseUtility.glsl"
+#include "includes/CloudDome.glsl"
 
 // Cheap stand-in for the old volumetric cloud raymarch. Each weather-map
 // entry is resolved to a single point on its own dome-bent altitude plane
@@ -41,10 +42,6 @@ const float CLOUD_PUFF_ANGLE_WOBBLE  = 1.2;
 const float CLOUD_DRIFT_SCROLL_SCALE = 0.35;
 const float CLOUD_MORPH_TIME_SCALE   = 0.015;
 
-const float CLOUD_DOME_RADIUS_SCALE       = 0.85;
-const float CLOUD_DOME_CURVE_POWER        = 0.65;
-const float CLOUD_DOME_HORIZON_DIP_BLOCKS = 60.0;
-
 const float CLOUD_FAR_FADE_FRACTION = 0.2;
 
 const float CLOUD_RIM_POWER                  = 3.0;
@@ -56,39 +53,24 @@ const float CLOUD_STORM_DARKEN_MIN           = 0.45;
 const float CLOUD_DENSITY_OPACITY_SCALE      = 1.5;
 const float CLOUD_REFERENCE_THICKNESS_BLOCKS = 140.0;
 
-bool intersectPlaneY(vec3 origin, vec3 dir, float planeY, out float t) {
-    if (abs(dir.y) < 0.0001)
-    return false;
-    t = (planeY - origin.y) / dir.y;
-    return t > 0.0;
-}
-
-float computeDomeT(vec2 worldXZ, float domeRadiusBlocks) {
-    vec2  fromCameraXZ = worldXZ - u_cameraPosition.xz;
-    float domeRadiusSq  = domeRadiusBlocks * domeRadiusBlocks;
-    float domeBiasedT   = pow(clamp(dot(fromCameraXZ, fromCameraXZ) / domeRadiusSq, 0.0, 1.0), CLOUD_DOME_CURVE_POWER);
-    return smoothstep(0.0, 1.0, domeBiasedT);
-}
-
 // Two-pass dome-bent plane solve: first pass finds roughly where the ray
 // would hit the entry's authored altitude, which gives enough horizontal
-// distance to evaluate the dome bend; second pass re-intersects at the
-// bent altitude. Replaces the old per-step slab march with two divisions.
+// distance to evaluate the dome bend via the shared CloudDome.glsl
+// resolver; second pass re-intersects at the bent altitude. Replaces the
+// old per-step slab march with two divisions.
 bool resolveCloudPlane(float authoredAltitude, vec3 rayDir, float domeRadiusBlocks,
     out vec3 worldPos, out float travelDistance) {
     float clampedAltitude = clamp(authoredAltitude, u_cloudAltitudeMin, u_cloudAltitudeMax);
 
     float t0;
-    if (!intersectPlaneY(u_cameraPosition, rayDir, clampedAltitude, t0))
+    if (!intersectCloudDomePlane(u_cameraPosition, rayDir, clampedAltitude, t0))
     return false;
 
-    vec2  approxXZ         = u_cameraPosition.xz + rayDir.xz * t0;
-    float domeT             = computeDomeT(approxXZ, domeRadiusBlocks);
-    float domeFloorAltitude = u_cameraPosition.y - CLOUD_DOME_HORIZON_DIP_BLOCKS;
-    float domeAltitude      = mix(clampedAltitude, domeFloorAltitude, domeT);
+    vec2  approxXZ    = u_cameraPosition.xz + rayDir.xz * t0;
+    float domeAltitude = resolveCloudDomeAltitude(approxXZ, clampedAltitude, domeRadiusBlocks);
 
     float t1;
-    if (!intersectPlaneY(u_cameraPosition, rayDir, domeAltitude, t1))
+    if (!intersectCloudDomePlane(u_cameraPosition, rayDir, domeAltitude, t1))
     return false;
 
     if (t1 >= u_cloudMaxDistance)
@@ -227,7 +209,7 @@ void main() {
     float driftAngle = atan(driftDirNorm.y, driftDirNorm.x);
     float driftSpeed = u_weatherDriftSpeed;
 
-    float domeRadiusBlocks = max(u_weatherRangeBlocks * CLOUD_DOME_RADIUS_SCALE, 1.0);
+    float domeRadiusBlocks = resolveCloudDomeRadius();
 
     vec3  accumulatedColor = vec3(0.0);
     float accumulatedAlpha = 0.0;
