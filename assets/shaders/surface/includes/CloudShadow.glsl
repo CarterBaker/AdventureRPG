@@ -6,13 +6,12 @@
 
 /*
 * Cheap terrain shadow cast by the physical cloud layer, for the deferred
- * lighting pass. Reuses each weather entry's own footprint bounds and
- * coverage intensity instead of raymarching — one flat-plane intersection
- * per entry along the light direction, then a single soft radial+noise
- * coverage sample, composited front-to-back exactly like WeatherShader.fsh's
- * visual pass but without any puff shape, fake normal, or rim/ambient
- * shading work, since a shadow only needs an occlusion fraction, not an
- * image.
+ * lighting pass. Traces a single ray from the shaded world position toward
+ * the light, intersects each weather entry's own authored altitude plane,
+ * then reuses that entry's footprint bounds and coverage intensity for a
+ * soft radial+noise occlusion sample, composited front-to-back exactly like
+ * WeatherShader.fsh's visual pass but without any puff shape, fake normal,
+ * or rim/ambient shading — a shadow only needs an occlusion fraction.
  */
 
 const float CLOUD_SHADOW_DENSITY_EPSILON  = 0.001;
@@ -35,9 +34,9 @@ float sampleCloudShadow(vec3 worldPos, vec3 lightDir) {
         break;
 
         vec4  patternState = u_weatherPatternState[i];
-        float intensity     = patternState.x;
-        float fadeAlpha     = patternState.y;
-        float rangeFade     = patternState.w;
+        float intensity    = patternState.x;
+        float fadeAlpha    = patternState.y;
+        float rangeFade    = patternState.w;
 
         if (intensity <= CLOUD_SHADOW_DENSITY_EPSILON ||
             fadeAlpha <= CLOUD_SHADOW_DENSITY_EPSILON ||
@@ -49,8 +48,13 @@ float sampleCloudShadow(vec3 worldPos, vec3 lightDir) {
         if (shape.z <= CLOUD_SHADOW_DENSITY_EPSILON)
         continue;
 
-        float planeY = clamp(shape.y, u_weatherCloudLayerMinY, u_weatherCloudLayerMaxY);
-        float t      = (planeY - worldPos.y) / lightDir.y;
+        // shape.y is this entry's own authored altitude — the same value
+        // WeatherShader.fsh intersects against for the visible puff. The
+        // UBO's u_weatherCloudLayerMinY/MaxY only bound an unrelated
+        // fullscreen-raymarch optimization that nothing here performs, and
+        // have no guaranteed per-frame writer, so they must never gate a
+        // real entry's plane.
+        float t = (shape.y - worldPos.y) / lightDir.y;
 
         if (t <= 0.0)
         continue;
