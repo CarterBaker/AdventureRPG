@@ -149,7 +149,20 @@ public class ChunkInstance extends WorldRenderInstance {
         return subChunks;
     }
 
+    /*
+     * Bounds-checked on purpose: an out-of-range index here is always a
+     * corrupt caller-side coordinate (never something this class can
+     * recover from), so it fails loudly with the offending value and the
+     * valid range rather than surfacing as a bare ArrayIndexOutOfBounds
+     * with no context about which chunk or which caller was responsible.
+     */
     public SubChunkInstance getSubChunk(int subChunkCoordinate) {
+
+        if (subChunkCoordinate < 0 || subChunkCoordinate >= subChunks.length)
+            throwException("Sub-chunk index " + subChunkCoordinate + " is outside valid range [0, "
+                    + subChunks.length + ") for chunk at " + getCoordinate()
+                    + " — caller passed a corrupt vertical coordinate.");
+
         return subChunks[subChunkCoordinate];
     }
 
