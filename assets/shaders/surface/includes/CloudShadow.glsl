@@ -5,14 +5,17 @@
 #include "includes/NoiseUtility.glsl"
 
 /*
-* Cheap terrain darkening beneath in-range weather patterns for the
- * deferred lighting pass. No raymarch toward the sun and no altitude
- * projection — the weather map already keeps every player in sync on the
- * same pattern at the same world position by design, so this only needs
- * to read each in-range entry's own footprint from WeatherMapData and
- * darken any terrain fragment whose world XZ falls inside it, using the
- * same footprint/coverage math WeatherShader.fsh uses for the visible
- * puffs so the shadow sits directly under the cloud a player sees.
+* Cheap terrain shadow cast by in-range weather patterns, sampled directly
+ * by the surface shader against the same WeatherMapData the visible puffs
+ * in WeatherShader.fsh read. No raymarch and no true occlusion test — each
+ * entry's own footprint is tested against the fragment's world XZ, offset
+ * opposite the sun by that entry's own altitude so the shadow falls where
+ * the cloud the player sees would actually cast it rather than sitting
+ * directly beneath the puff regardless of sun angle. sunHorizonOffset is
+ * the per-block-of-altitude horizontal drift toward the shadow — callers
+ * precompute it once per fragment as -sunDirection.xz / max(sunDirection.y,
+ * minimum elevation), so a low sun casts a longer shadow than a high one
+ * at no extra per-entry cost.
  */
 
 const float CLOUD_SHADOW_DENSITY_EPSILON  = 0.001;
@@ -22,7 +25,7 @@ const float CLOUD_SHADOW_NOISE_SCALE      = 0.01;
 const float CLOUD_SHADOW_STRENGTH         = 0.6;
 const float CLOUD_SHADOW_SATURATION       = 0.95;
 
-float sampleCloudShadow(vec3 worldPos) {
+float sampleCloudShadow(vec3 worldPos, vec2 sunHorizonOffset) {
     int entryCount = min(u_weatherEntryCount, WEATHER_MAP_MAX_ENTRIES);
 
     if (entryCount == 0)
@@ -52,7 +55,8 @@ float sampleCloudShadow(vec3 worldPos) {
         vec4 bounds        = u_weatherBounds[i];
         vec2 boxCenter     = (bounds.xy + bounds.zw) * 0.5;
         vec2 boxHalfExtent = max((bounds.zw - bounds.xy) * 0.5, vec2(1.0));
-        vec2 fromCenter    = worldPos.xz - boxCenter;
+        vec2 shadowPos     = worldPos.xz + sunHorizonOffset * shape.y;
+        vec2 fromCenter    = shadowPos - boxCenter;
         vec2 spreadNorm    = fromCenter / boxHalfExtent;
         float radialDist   = length(spreadNorm);
 
@@ -67,7 +71,7 @@ float sampleCloudShadow(vec3 worldPos) {
         vec4  variance1   = u_weatherCloudVariance1[i];
         float patternSeed = variance1.z;
         float noiseSample = gradientNoise2D(
-            worldPos.xz * CLOUD_SHADOW_NOISE_SCALE + vec2(patternSeed * 12.9898, patternSeed * 78.233));
+            shadowPos * CLOUD_SHADOW_NOISE_SCALE + vec2(patternSeed * 12.9898, patternSeed * 78.233));
 
         float coverage       = clamp(intensity + (noiseSample - 0.5) * 0.6, 0.0, 1.0) * outerFade;
         float densityOpacity = clamp(shape.z * 1.5, 0.0, 1.0);
