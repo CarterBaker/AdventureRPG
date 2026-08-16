@@ -17,8 +17,11 @@ public class LightingSystem extends SystemPackage {
     /*
      * Deferred lighting pass. Reads the full G-buffer and SSAO result,
      * computes final lit color, and writes into LitScene. Binds this
-     * window's own grid's Sun/Moon UBO instances onto the lighting pass
-     * material each frame so lighting reflects the correct location.
+     * window's own grid's Sun/Moon/WeatherMap UBO instances onto the
+     * lighting pass material each frame so lighting and cloud-shadow
+     * darkening both reflect the correct location — without an explicit
+     * WeatherMapUBO bind here, that binding point stays pointed at the
+     * zeroed bootstrap UBO handle instead of this grid's live weather data.
      */
 
     // Internal
@@ -82,5 +85,6 @@ public class LightingSystem extends SystemPackage {
         MaterialInstance mat = lightingPass.getModelInstance().getMaterial();
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());
+        mat.setUBO(grid.getWeatherMapUBO());
     }
 }
