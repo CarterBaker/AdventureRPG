@@ -105,7 +105,7 @@ class VBOGLSLUtility {
                 gl30.glBindVertexArray(0);
                 gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
-                return new VBOData(vbo, vertices.length / vaoData.getVertStride());
+                return new VBOData(vbo, vertices, vaoData.getVertStride());
         }
 
         // Update \\
@@ -133,7 +133,7 @@ class VBOGLSLUtility {
                 gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, buffer, EngineSetting.GL_DYNAMIC_DRAW);
                 gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
-                return new VBOData(vbo, vertices.length / vertStride);
+                return new VBOData(vbo, vertices, vertStride);
         }
 
         // Removal \\

@@ -5,6 +5,7 @@ import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.entitypipeline.util.EntityInputHandle;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.physicspipeline.util.BlockCompositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -45,6 +46,11 @@ public class EntityInstance extends InstancePackage {
     private Vector3 size;
     private float weight;
 
+    // Model — per-axis scale that stretches entityData's character mesh from
+    // its authored model-space dimensions to this entity's actual size.
+    // Recomputed only when size changes, never per frame.
+    private Vector3 modelScale;
+
     // Internal \\
 
     @Override
@@ -62,6 +68,9 @@ public class EntityInstance extends InstancePackage {
         this.worldPositionStruct = new WorldPositionStruct();
         this.blockComposition = new Vector3Int();
         this.blockCompositionStruct = new BlockCompositionStruct();
+
+        // Model
+        this.modelScale = new Vector3();
     }
 
     // Constructor \\
@@ -107,6 +116,7 @@ public class EntityInstance extends InstancePackage {
         this.size = size;
 
         updateBlockComposition();
+        updateModelScale();
     }
 
     public void updateBlockComposition() {
@@ -114,6 +124,24 @@ public class EntityInstance extends InstancePackage {
                 blockComposition,
                 worldPositionStruct.getPosition(),
                 worldPositionStruct.getChunkCoordinate());
+    }
+
+    private void updateModelScale() {
+
+        if (!entityData.hasCharacterModel())
+            return;
+
+        MeshHandle characterMesh = entityData.getCharacterMesh();
+
+        if (characterMesh.getModelWidth() <= 0f
+                || characterMesh.getModelHeight() <= 0f
+                || characterMesh.getModelLength() <= 0f)
+            throwException("Character mesh has a zero or negative model dimension — cannot derive a scale.");
+
+        modelScale.set(
+                size.x / characterMesh.getModelWidth(),
+                size.y / characterMesh.getModelHeight(),
+                size.z / characterMesh.getModelLength());
     }
 
     // Accessible \\
@@ -184,5 +212,9 @@ public class EntityInstance extends InstancePackage {
 
     public float getEyeHeight() {
         return size.y * entityData.getEyeLevel();
+    }
+
+    public Vector3 getModelScale() {
+        return modelScale;
     }
 }

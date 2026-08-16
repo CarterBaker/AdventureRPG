@@ -9,8 +9,9 @@ public class MeshData extends DataPackage {
 
     /*
      * Flat aggregation of VAO, VBO, and IBO data for one GPU-resident mesh.
-     * Provides direct convenience accessors for all render-critical handles
-     * and counts without requiring callers to reach through each sub-data object.
+     * Provides direct convenience accessors for all render-critical handles,
+     * counts, and the mesh's model-space bounding box, without requiring
+     * callers to reach through each sub-data object.
      */
 
     // Internal
@@ -64,5 +65,41 @@ public class MeshData extends DataPackage {
 
     public int getIndexCount() {
         return iboData.getIndexCount();
+    }
+
+    public float getModelMinX() {
+        return vboData.getMinX();
+    }
+
+    public float getModelMinY() {
+        return vboData.getMinY();
+    }
+
+    public float getModelMinZ() {
+        return vboData.getMinZ();
+    }
+
+    public float getModelMaxX() {
+        return vboData.getMaxX();
+    }
+
+    public float getModelMaxY() {
+        return vboData.getMaxY();
+    }
+
+    public float getModelMaxZ() {
+        return vboData.getMaxZ();
+    }
+
+    public float getModelWidth() {
+        return vboData.getWidth();
+    }
+
+    public float getModelHeight() {
+        return vboData.getHeight();
+    }
+
+    public float getModelLength() {
+        return vboData.getLength();
     }
 }
