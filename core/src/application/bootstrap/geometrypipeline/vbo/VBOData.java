@@ -8,13 +8,14 @@ public class VBOData extends DataPackage {
      * Immutable GPU vertex buffer payload. Holds the raw OpenGL buffer handle,
      * vertex count, and the model-space bounding box of the uploaded vertex
      * data. Bounds are computed against up to the first 3 floats of each
-     * vertex — whichever position axes the layout actually declares. A
-     * layout narrower than 3 floats (flat screen-space UI/font quads with
-     * no Z, or a bare 2D position) simply leaves the missing axis at zero
-     * rather than failing — width/height/length are only ever consumed by
-     * callers scaling a full 3D mesh (see EntityInstance.updateModelScale()),
-     * and every mesh that path touches always carries a full 3-float
-     * position. Owned by VBOHandle or VBOInstance for its lifetime.
+     * vertex — whichever position axes the layout actually declares — so a
+     * flat screen-space layout (fonts, UI, sprites) with only 1 or 2 floats
+     * of position simply leaves the missing axis at zero instead of failing.
+     * width/height/length are only ever consumed by callers stretching a
+     * full 3D mesh onto an entity's actual size (see
+     * EntityInstance.updateModelScale()) — every mesh that path touches
+     * always carries a full 3-float position. Owned by VBOHandle or
+     * VBOInstance for its lifetime.
      */
 
     // Internal
