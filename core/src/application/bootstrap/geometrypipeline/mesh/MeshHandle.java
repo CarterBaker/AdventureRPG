@@ -85,6 +85,42 @@ public class MeshHandle extends HandlePackage {
         return meshData.getIndexCount();
     }
 
+    public float getModelMinX() {
+        return meshData.getModelMinX();
+    }
+
+    public float getModelMinY() {
+        return meshData.getModelMinY();
+    }
+
+    public float getModelMinZ() {
+        return meshData.getModelMinZ();
+    }
+
+    public float getModelMaxX() {
+        return meshData.getModelMaxX();
+    }
+
+    public float getModelMaxY() {
+        return meshData.getModelMaxY();
+    }
+
+    public float getModelMaxZ() {
+        return meshData.getModelMaxZ();
+    }
+
+    public float getModelWidth() {
+        return meshData.getModelWidth();
+    }
+
+    public float getModelHeight() {
+        return meshData.getModelHeight();
+    }
+
+    public float getModelLength() {
+        return meshData.getModelLength();
+    }
+
     public RigHandle getRigHandle() {
         return rigHandle;
     }
