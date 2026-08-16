@@ -17,11 +17,9 @@ class CloudBuilder extends BuilderPackage {
 
     /*
      * Parses cloud JSON into a CloudData and wraps it in a CloudHandle. Every
-     * field falls back to one of EngineSetting's DEFAULT_CLOUD_* constants
-     * when omitted — no fallback value is authored inline here. "scale" is
-     * the cloud's full XZ width in blocks; CloudVolumeMesh is a literal
-     * 1x1x1 unit cube multiplied directly by it, with no other implicit
-     * base size.
+     * field falls back to a sensible default when omitted. "scale" is the
+     * cloud's full XZ width in blocks; CloudVolumeMesh is a literal 1x1x1
+     * unit cube multiplied directly by it, with no other implicit base size.
      */
 
     CloudHandle build(File file, File root) {
@@ -31,30 +29,23 @@ class CloudBuilder extends BuilderPackage {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
 
-        Vector3 cloudColor = parseColor(json, "color", new Vector3(
-                EngineSetting.DEFAULT_CLOUD_COLOR_R,
-                EngineSetting.DEFAULT_CLOUD_COLOR_G,
-                EngineSetting.DEFAULT_CLOUD_COLOR_B));
-        float saturation = parseUnitFloat(json, cloudName, "saturation", EngineSetting.DEFAULT_CLOUD_SATURATION);
+        Vector3 cloudColor = parseColor(json, "color", new Vector3(1f, 1f, 1f));
+        float saturation = parseUnitFloat(json, cloudName, "saturation", 1.0f);
         float scale = parseFloat(json, "scale", EngineSetting.CLOUD_DEFAULT_DIAMETER_BLOCKS);
-        float density = parseFloat(json, "density", EngineSetting.DEFAULT_CLOUD_DENSITY);
-        float verticalThickness = parseFloat(
-                json, "verticalThickness", EngineSetting.DEFAULT_CLOUD_VERTICAL_THICKNESS_BLOCKS);
-        float fullness = parseUnitFloat(json, cloudName, "fullness", EngineSetting.DEFAULT_CLOUD_FULLNESS);
-        float densityNoiseScale = parseFloat(
-                json, "densityNoiseScale", EngineSetting.DEFAULT_CLOUD_DENSITY_NOISE_SCALE);
-        float noiseWarpStrength = parseFloat(
-                json, "noiseWarpStrength", EngineSetting.DEFAULT_CLOUD_NOISE_WARP_STRENGTH);
-        float coverageBias = parseFloat(json, "coverageBias", EngineSetting.DEFAULT_CLOUD_COVERAGE_BIAS);
-        float silhouetteSoftness = parseFloat(
-                json, "silhouetteSoftness", EngineSetting.DEFAULT_CLOUD_SILHOUETTE_SOFTNESS);
-        float baseAltitude = parseFloat(json, "baseAltitude", EngineSetting.DEFAULT_CLOUD_BASE_ALTITUDE_BLOCKS);
-        float driftSpeedScale = parseFloat(json, "driftSpeedScale", EngineSetting.DEFAULT_CLOUD_DRIFT_SPEED_SCALE);
-        float spreadRatio = parseFloat(json, "spread", EngineSetting.DEFAULT_CLOUD_SPREAD_RATIO);
-        float sizeVarianceMin = parseFloat(json, "sizeVarianceMin", EngineSetting.DEFAULT_CLOUD_SIZE_VARIANCE_MIN);
-        float sizeVarianceMax = parseFloat(json, "sizeVarianceMax", EngineSetting.DEFAULT_CLOUD_SIZE_VARIANCE_MAX);
-        float elongationMin = parseFloat(json, "elongationMin", EngineSetting.DEFAULT_CLOUD_ELONGATION_MIN);
-        float elongationMax = parseFloat(json, "elongationMax", EngineSetting.DEFAULT_CLOUD_ELONGATION_MAX);
+        float density = parseFloat(json, "density", 0.8f);
+        float verticalThickness = parseFloat(json, "verticalThickness", 8.0f);
+        float fullness = parseUnitFloat(json, cloudName, "fullness", 0.7f);
+        float densityNoiseScale = parseFloat(json, "densityNoiseScale", 1.0f);
+        float noiseWarpStrength = parseFloat(json, "noiseWarpStrength", 0.6f);
+        float coverageBias = parseFloat(json, "coverageBias", 0.5f);
+        float silhouetteSoftness = parseFloat(json, "silhouetteSoftness", 0.08f);
+        float baseAltitude = parseFloat(json, "baseAltitude", 128.0f);
+        float driftSpeedScale = parseFloat(json, "driftSpeedScale", 1.0f);
+        float spreadRatio = parseFloat(json, "spread", 0.85f);
+        float sizeVarianceMin = parseFloat(json, "sizeVarianceMin", 0.65f);
+        float sizeVarianceMax = parseFloat(json, "sizeVarianceMax", 1.6f);
+        float elongationMin = parseFloat(json, "elongationMin", 1.0f);
+        float elongationMax = parseFloat(json, "elongationMax", 2.4f);
 
         CloudData cloudData = new CloudData(
                 cloudName,
