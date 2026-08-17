@@ -33,13 +33,13 @@ class CloudBuilder extends BuilderPackage {
         float saturation = parseUnitFloat(json, cloudName, "saturation", 1.0f);
         float scale = parseFloat(json, "scale", EngineSetting.CLOUD_DEFAULT_DIAMETER_BLOCKS);
         float density = parseFloat(json, "density", 0.8f);
-        float verticalThickness = parseFloat(json, "verticalThickness", 8.0f);
+        float verticalThickness = parseFloat(json, "verticalThickness", 24.0f);
         float fullness = parseUnitFloat(json, cloudName, "fullness", 0.7f);
         float densityNoiseScale = parseFloat(json, "densityNoiseScale", 1.0f);
         float noiseWarpStrength = parseFloat(json, "noiseWarpStrength", 0.6f);
         float coverageBias = parseFloat(json, "coverageBias", 0.5f);
         float silhouetteSoftness = parseFloat(json, "silhouetteSoftness", 0.08f);
-        float baseAltitude = parseFloat(json, "baseAltitude", 128.0f);
+        float baseAltitude = parseFloat(json, "baseAltitude", 600.0f);
         float driftSpeedScale = parseFloat(json, "driftSpeedScale", 1.0f);
         float spreadRatio = parseFloat(json, "spread", 0.85f);
         float sizeVarianceMin = parseFloat(json, "sizeVarianceMin", 0.65f);

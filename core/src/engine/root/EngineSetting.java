@@ -572,8 +572,8 @@ public class EngineSetting {
         // Weather Rendering \\
 
         public static final String WEATHER_DEFAULT_MATERIAL = "weather/WeatherMaterial";
-        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 0.0f;
-        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 320.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 500.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 1000.0f;
 
         // Weather Pattern Lifecycle \\
 
