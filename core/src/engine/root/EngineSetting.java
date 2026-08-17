@@ -564,7 +564,7 @@ public class EngineSetting {
 
         public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 300;
-        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 300.0f;
+        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 160.0f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
         public static final float WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
         public static final long WEATHER_PATTERN_LOCAL_KEY_SEED = Long.MIN_VALUE;
@@ -572,8 +572,8 @@ public class EngineSetting {
         // Weather Rendering \\
 
         public static final String WEATHER_DEFAULT_MATERIAL = "weather/WeatherMaterial";
-        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 500.0f;
-        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 1000.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 620.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 980.0f;
 
         // Weather Pattern Lifecycle \\
 
@@ -592,6 +592,13 @@ public class EngineSetting {
         public static final float WEATHER_MAP_RANGE_FADE_CHUNKS = 64.0f;
         public static final float WEATHER_MAP_LAYER_BOUND_MARGIN_BLOCKS = 16.0f;
         public static final long WEATHER_MAP_RENDER_SEED_MIX = 0x94D049BB133111EBL;
+
+        // Weather Cloud Placement \\
+
+        public static final float WEATHER_CLOUD_SUBREGION_RADIUS_RATIO = 0.62f;
+        public static final float WEATHER_CLOUD_SUBREGION_OFFSET_RATIO = 0.5f;
+        public static final float WEATHER_CLOUD_ALTITUDE_JITTER_BLOCKS = 40.0f;
+        public static final long WEATHER_CLOUD_SUBREGION_SEED_SALT = 0x7F4A7C15D2B89E33L;
 
         // Wind \\
 

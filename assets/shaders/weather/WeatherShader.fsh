@@ -17,24 +17,24 @@ out vec4 fragColor;
 
 /*
 * Cheap fake-volumetric cloud pass. Each weather-map entry is a real
- * horizontal slab now — an authored altitude plus the vertical thickness
- * already carried in cloudShape — instead of the single infinitely-thin
- * plane the old version intersected, so a view ray genuinely enters and
- * exits cloud material rather than sampling one point. Opacity comes from
- * the ray's own path length through that slab via a one-line
- * Beer-Lambert extinction, which for free produces thin wispy layers when
- * clipped edge-on, solid overcast when the whole slab is crossed, and
- * genuine fog the instant the camera's own position falls inside a slab
- * — no special casing, the same formula covers all three. Dome-bend sag
- * (CloudDome.glsl) is a pure function of horizontal distance from the
- * camera, never camera height, so each cloud type keeps its own altitude
- * band at every range and climbing a mountain only changes which slabs
- * the camera sits inside, never how the slabs are laid out. A slow
- * per-pattern noise also nudges each slab's local altitude up and down
- * across its footprint so a layer reads as gently undulating rather than
- * a flat sheet. Entries arrive from WeatherMapBufferSystem already
- * sorted nearest-first, so a simple front-to-back "over" composite still
- * gives a convincing layered sky with no per-pixel depth sort.
+ * horizontal slab — an authored altitude plus a vertical thickness — that
+ * a view ray genuinely enters and exits, with opacity from the ray's own
+ * path length through the slab via Beer-Lambert extinction. The dome
+ * bend (see CloudDome.glsl) sags a slab's altitude toward the camera's
+ * own eye level purely as a function of the ray's elevation angle, never
+ * a horizontal world-space distance, so distant cloud edges hug the
+ * horizon and arc up to their true authored altitude overhead with no
+ * plane-intersection precondition and therefore no seam at any view
+ * angle, including straight up. A cheap ray-vs-circle test against each
+ * entry's own footprint skips its slab resolve and noise sampling
+ * entirely when the view ray could never reach it, and a whole-ray reject
+ * against this frame's overall cloud altitude band skips the loop
+ * entirely when nothing is in range — both meaningful savings given up
+ * to 32 entries are evaluated per pixel. Entries arrive from
+ * WeatherMapBufferSystem already sorted nearest-first and already placed
+ * into their own sub-region of their weather pattern's footprint, so a
+ * simple front-to-back "over" composite still gives a convincing, patchy,
+ * layered sky with no per-pixel depth sort.
  */
 
 uniform float u_cloudAltitudeMin;
@@ -45,6 +45,7 @@ uniform float u_weatherDriftSpeed;
 
 const float CLOUD_DENSITY_EPSILON         = 0.001;
 const float CLOUD_ALPHA_SATURATION_CUTOFF = 0.985;
+const float CLOUD_CULL_SAFETY_MARGIN      = 2.2;
 
 const float CLOUD_OUTER_FADE_START  = 0.85;
 const float CLOUD_OUTER_FADE_END    = 1.35;
@@ -65,10 +66,10 @@ const float CLOUD_AMBIENT_LIT       = 0.6;
 const float CLOUD_SKY_TINT_STRENGTH = 0.45;
 const float CLOUD_STORM_DARKEN_MIN  = 0.45;
 
-// Opacity now comes from path length through the slab rather than a flat
-// per-entry constant — see resolveCloudSlab/main. CLOUD_DENSITY_OPACITY_SCALE
-// is tuned so a straight-through pass at a cloud's own authored thickness
-// reads roughly as opaque as the old flat formula did at density = 1.
+// Opacity comes from path length through the slab rather than a flat
+// per-entry constant. CLOUD_DENSITY_OPACITY_SCALE is tuned so a
+// straight-through pass at a cloud's own authored thickness reads
+// roughly as opaque as a flat per-entry formula would at density = 1.
 const float CLOUD_DENSITY_OPACITY_SCALE             = 2.0;
 const float CLOUD_AMBIENT_THICKNESS_REFERENCE_BLOCKS = 160.0;
 const float CLOUD_MIN_SLAB_THICKNESS_BLOCKS          = 4.0;
@@ -77,36 +78,51 @@ const float CLOUD_HEIGHT_UNDULATION_FREQUENCY = 0.0012;
 const float CLOUD_HEIGHT_UNDULATION_STRENGTH  = 0.35;
 const float CLOUD_SAMPLE_LOOKAHEAD_BLOCKS     = 96.0;
 
-// Two-pass like the old single-plane resolver: a first pass finds roughly
-// where the ray crosses the slab's own unbent center altitude, purely to
-// get a horizontal position to bend and undulate against; a second pass
-// re-derives the true top and bottom planes at that bent, undulated
-// altitude and slabs the ray against both. Both planes share one bend/
-// undulation sample — the vertical gap between them is small next to the
-// horizontal distances the bend operates over, so bending them
-// independently would spend two more plane intersections on a difference
-// too small to ever see.
+// Cheap ray-vs-footprint-circle test used to skip an entry's slab resolve
+// and noise sampling entirely when the view ray could never pass near its
+// footprint. The circle is the entry's own bounding box's circumscribed
+// radius inflated by CLOUD_CULL_SAFETY_MARGIN, which comfortably covers
+// the extra reach elongation and the outer fade band can add beyond the
+// raw box — a false accept only costs one skipped entry's worth of
+// wasted work, but a false reject would visibly clip a cloud, so this
+// stays generous on purpose. The straight-up/straight-down case (no
+// horizontal ray travel at all) falls back to "is the camera itself
+// inside the footprint" instead of dividing by a near-zero length.
+bool footprintMayBeVisible(vec2 rayOriginXZ, vec2 rayDirXZ, vec2 circleCenter, float circleRadius, float maxDist) {
+    float rayDirLenXZ = length(rayDirXZ);
+
+    if (rayDirLenXZ < 0.0001)
+    return distance(rayOriginXZ, circleCenter) <= circleRadius;
+
+    vec2  dirNorm   = rayDirXZ / rayDirLenXZ;
+    vec2  toCenter  = circleCenter - rayOriginXZ;
+    float tClosest  = clamp(dot(toCenter, dirNorm), 0.0, maxDist);
+    vec2  closestXZ = rayOriginXZ + dirNorm * tClosest;
+
+    return distance(closestXZ, circleCenter) <= circleRadius;
+}
+
+// Resolves the vertical slab a ray crosses for one weather entry. The
+// dome-bent altitude is now a direct function of the ray's own elevation
+// angle (see CloudDome.glsl) — no plane-intersection pass is needed to
+// find it. A single cheap division still estimates a horizontal sample
+// position purely to drive the undulation noise below; that estimate
+// only ever refines the slab's shape, never whether it bends at all, so
+// it introduces no discontinuity.
 bool resolveCloudSlab(
-    vec4 shape, vec3 rayDir, float domeRadiusBlocks, float patternSeed, vec2 chunkOffsetBlocks,
+    vec4 shape, vec3 rayDir, vec2 chunkOffsetBlocks, float patternSeed,
     out vec3 worldPosMid, out float tNear, out float pathLength,
     out float slabBottomY, out float slabTopY) {
-    float authoredAltitude = shape.y;
-    float thickness        = max(shape.x, CLOUD_MIN_SLAB_THICKNESS_BLOCKS);
-    float halfThickness    = thickness * 0.5;
+    float clampedAltitude = clamp(shape.y, u_cloudAltitudeMin, u_cloudAltitudeMax);
+    float thickness       = max(shape.x, CLOUD_MIN_SLAB_THICKNESS_BLOCKS);
+    float halfThickness   = thickness * 0.5;
 
-    float clampedAltitude = clamp(authoredAltitude, u_cloudAltitudeMin, u_cloudAltitudeMax);
+    float bentAltitude = resolveCloudDomeAltitude(clampedAltitude, u_cameraPosition.y, rayDir.y);
 
-    vec2  approxXZ = u_cameraPosition.xz;
-    float t0;
-    if (intersectCloudDomePlane(u_cameraPosition, rayDir, clampedAltitude, t0))
-    approxXZ = u_cameraPosition.xz + rayDir.xz * t0;
+    float guardedDirY = rayDir.y >= 0.0 ? max(rayDir.y, 0.05) : min(rayDir.y, -0.05);
+    float tEstimate    = max((bentAltitude - u_cameraPosition.y) / guardedDirY, 0.0);
+    vec2  approxXZ      = u_cameraPosition.xz + rayDir.xz * tEstimate;
 
-    float bentAltitude = resolveCloudDomeAltitude(approxXZ, clampedAltitude, domeRadiusBlocks);
-
-    // Undulation is sampled at a world-stable coordinate (offset back by
-    // chunkOffsetBlocks) so it doesn't pop when the floating origin
-    // re-centers, matching the same convention sampleCloudEntry uses for
-    // its own noise field.
     float undulation = gradientNoise2D(
         (approxXZ + chunkOffsetBlocks) * CLOUD_HEIGHT_UNDULATION_FREQUENCY
         + vec2(patternSeed * 31.7, patternSeed * 57.1));
@@ -137,11 +153,6 @@ bool resolveCloudSlab(
 
     pathLength = tFar - tNear;
 
-    // The representative sample is biased toward the near edge of the
-    // slab rather than its true midpoint — important when the camera is
-    // inside a slab and pathLength runs long, so the coverage/shading
-    // read reflects what's actually nearby instead of a point deep in
-    // the distance.
     float sampleAhead = min(pathLength, CLOUD_SAMPLE_LOOKAHEAD_BLOCKS);
     float tSample = tNear + sampleAhead * 0.5;
     worldPosMid = u_cameraPosition + rayDir * tSample;
@@ -150,13 +161,11 @@ bool resolveCloudSlab(
 }
 
 // Coverage (silhouette) plus a fake hemisphere normal for cheap shading.
-// Horizontal shaping (radial falloff from the pattern's own footprint,
-// elongation, per-pattern rotation) is unchanged from the flat-sheet
-// version; what's new is verticalT, the sample's normalized height
-// within the slab (0 = its floor, 1 = its ceiling), which now drives
-// puffHeight and the fake normal alongside the horizontal term — a puff
-// genuinely reads brighter near its own top and darker near its own base
-// instead of shading purely by lateral distance from the pattern center.
+// Horizontal shaping (radial falloff from the pattern's own sub-region,
+// elongation, per-pattern rotation) is unchanged; verticalT is the
+// sample's normalized height within the slab (0 = its floor, 1 = its
+// ceiling), driving puffHeight and the fake normal alongside the
+// horizontal term.
 float sampleCloudEntry(
     vec4 bounds, vec4 shape, vec4 noiseParams, vec4 colorScale, vec4 materialParams,
     vec4 variance0, vec4 variance1,
@@ -210,7 +219,7 @@ float sampleCloudEntry(
     noisePos += vec2(u_time * CLOUD_MORPH_TIME_SCALE * 0.3, u_time * CLOUD_MORPH_TIME_SCALE);
 
     float warp       = gradientNoise2D(noisePos * 0.5 + instanceOffset.zy) * noiseParams.y;
-    float shapeNoise = fbmGradient2D(noisePos + vec2(warp), 3, 2.05, 0.5);
+    float shapeNoise = fbmGradient2D(noisePos + vec2(warp), 2, 2.05, 0.5);
 
     float archetypeBias  = (noiseParams.z - 0.6) * 0.5;
     float baseBias         = clamp(intensity + archetypeBias, 0.02, 0.95);
@@ -276,6 +285,17 @@ void main() {
 
     vec3 rayDir = normalize(v_dir);
 
+    // Cheap whole-ray reject: every entry written this frame lives inside
+    // [u_weatherCloudLayerMinY, u_weatherCloudLayerMaxY] (see
+    // WeatherMapBufferSystem), so a ray that can never climb or descend
+    // into that band has nothing to raymarch at all.
+    if (u_weatherCloudLayerMaxY > u_weatherCloudLayerMinY) {
+        bool belowBand = u_cameraPosition.y < u_weatherCloudLayerMinY && rayDir.y <= 0.0;
+        bool aboveBand = u_cameraPosition.y > u_weatherCloudLayerMaxY && rayDir.y >= 0.0;
+        if (belowBand || aboveBand)
+        discard;
+    }
+
     vec2 chunkOffsetBlocks = vec2(float(u_playerChunkX), float(u_playerChunkZ)) * u_chunkSize;
 
     vec2  driftDirNorm = u_weatherDriftDirection;
@@ -283,8 +303,6 @@ void main() {
     driftDirNorm = driftDirLen > 0.0001 ? driftDirNorm / driftDirLen : vec2(1.0, 0.0);
     float driftAngle = atan(driftDirNorm.y, driftDirNorm.x);
     float driftSpeed = u_weatherDriftSpeed;
-
-    float domeRadiusBlocks = resolveCloudDomeRadius();
 
     vec3  accumulatedColor = vec3(0.0);
     float accumulatedAlpha = 0.0;
@@ -306,6 +324,13 @@ void main() {
         if (shape.z <= CLOUD_DENSITY_EPSILON)
         continue;
 
+        vec4  bounds         = u_weatherBounds[i];
+        vec2  boxCenter       = (bounds.xy + bounds.zw) * 0.5;
+        float boxHalfDiagonal = length(bounds.zw - bounds.xy) * 0.5;
+
+        if (!footprintMayBeVisible(u_cameraPosition.xz, rayDir.xz, boxCenter, boxHalfDiagonal * CLOUD_CULL_SAFETY_MARGIN, u_cloudMaxDistance))
+        continue;
+
         vec4 variance1 = u_weatherCloudVariance1[i];
 
         vec3  worldPosMid;
@@ -313,7 +338,7 @@ void main() {
         float pathLength;
         float slabBottomY, slabTopY;
 
-        if (!resolveCloudSlab(shape, rayDir, domeRadiusBlocks, variance1.z, chunkOffsetBlocks,
+        if (!resolveCloudSlab(shape, rayDir, chunkOffsetBlocks, variance1.z,
                 worldPosMid, tNear, pathLength, slabBottomY, slabTopY))
         continue;
 
@@ -323,7 +348,6 @@ void main() {
         if (farFade <= CLOUD_DENSITY_EPSILON)
         continue;
 
-        vec4 bounds        = u_weatherBounds[i];
         vec4 noiseParams    = u_weatherCloudNoise[i];
         vec4 colorScale     = u_weatherCloudColorScale[i];
         vec4 materialParams = u_weatherCloudMaterial[i];

@@ -22,22 +22,17 @@ class WeatherMapBufferSystem extends SystemPackage {
 
     /*
      * Flattens each grid's own local weather instance, plus the shared
-     * active weather-instance pool, into that grid's own WeatherMapData
-     * UBO every frame. The local instance is written first, always
-     * centered exactly on the reference chunk — guaranteeing whatever
-     * weather is currently resolved right where the player stands
-     * actually renders overhead, rather than leaving overhead coverage
-     * entirely dependent on whichever streamed pool patterns happen to
-     * have drifted close by. Pool entries are appended nearest-first
-     * after that, culled to range. Every cloud slot cross-fades between a
-     * pattern's previous and current WeatherHandle across that pattern's
-     * own eased transitionT.
-     *
-     * All tuning values (range fade distance, layer bound margin, the
-     * render-seed hash mix) come from EngineSetting — see
-     * WEATHER_MAP_RANGE_FADE_CHUNKS / WEATHER_MAP_LAYER_BOUND_MARGIN_BLOCKS /
-     * WEATHER_MAP_RENDER_SEED_MIX. Nothing is authored as a bare literal
-     * or shadowed by a local copy here.
+     * active weather-instance pool, into that grid's own WeatherMapData UBO
+     * every frame. The local instance is always written first, centered
+     * exactly on the reference chunk; pool entries follow nearest-first,
+     * culled to range. Each cloud slot within a pattern is placed into its
+     * own deterministically hashed sub-region and altitude jitter (see
+     * writeEntry) so a multi-cloud weather reads as a genuine patchwork of
+     * distinct cloud types rather than one uniform layer, and every slot
+     * cross-fades between a pattern's previous and current WeatherHandle
+     * across that pattern's own eased transitionT. All tuning values and
+     * seeds come from EngineSetting — nothing here is a locally authored
+     * duplicate.
      */
 
     private WeatherPatternManager weatherPatternManager;
@@ -255,11 +250,34 @@ class WeatherMapBufferSystem extends SystemPackage {
             float transitionT,
             int cloudIndex) {
 
+        // Sub-region placement — every cloud slot in a multi-cloud weather
+        // (see WeatherBuilder's "clouds" list, capped at
+        // EngineSetting.MAX_CLOUDS_PER_WEATHER) gets its own patch of sky
+        // offset within the pattern's overall footprint instead of painting
+        // across the same full footprint as every other slot, plus its own
+        // altitude jitter off the archetype's authored baseAltitude — both
+        // hashed from this pattern's own key and the slot index, so the
+        // same pattern always lays its clouds out identically for every
+        // player while different patterns and different slots never match.
+        long placementSeed = pattern.getPatternKey()
+                ^ (EngineSetting.WEATHER_CLOUD_SUBREGION_SEED_SALT * (cloudIndex + 1));
+        float placementAngle = WeatherPatternManager.hash01(placementSeed) * ((float) Math.PI * 2f);
+        float placementDistanceT = WeatherPatternManager
+                .hash01(placementSeed ^ EngineSetting.WEATHER_HASH_SALT_SECONDARY);
+        float altitudeJitterT = WeatherPatternManager.hash01(placementSeed ^ EngineSetting.WEATHER_HASH_SALT_PRIMARY);
+
+        float altitudeJitterBlocks = (altitudeJitterT - 0.5f) * 2f * EngineSetting.WEATHER_CLOUD_ALTITUDE_JITTER_BLOCKS;
+
+        float subRadiusBlocks = radiusBlocks * EngineSetting.WEATHER_CLOUD_SUBREGION_RADIUS_RATIO;
+        float subOffsetBlocks = radiusBlocks * EngineSetting.WEATHER_CLOUD_SUBREGION_OFFSET_RATIO * placementDistanceT;
+        float subCenterX = centerXBlocks + (float) Math.cos(placementAngle) * subOffsetBlocks;
+        float subCenterZ = centerZBlocks + (float) Math.sin(placementAngle) * subOffsetBlocks;
+
         bounds[index].set(
-                centerXBlocks - radiusBlocks,
-                centerZBlocks - radiusBlocks,
-                centerXBlocks + radiusBlocks,
-                centerZBlocks + radiusBlocks);
+                subCenterX - subRadiusBlocks,
+                subCenterZ - subRadiusBlocks,
+                subCenterX + subRadiusBlocks,
+                subCenterZ + subRadiusBlocks);
 
         patternState[index].set(
                 pattern.getBlendedCloudCoverage(),
@@ -319,7 +337,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         float sizeVarianceMax = lerp(fromCloud.getSizeVarianceMax(), toCloud.getSizeVarianceMax(), transitionT);
         float elongationMin = lerp(fromCloud.getElongationMin(), toCloud.getElongationMin(), transitionT);
         float elongationMax = lerp(fromCloud.getElongationMax(), toCloud.getElongationMax(), transitionT);
-        float altitude = lerp(fromAltitude, toAltitude, transitionT);
+        float altitude = lerp(fromAltitude, toAltitude, transitionT) + altitudeJitterBlocks;
         float perCloudDensityMultiplier = lerp(fromDensityMultiplier, toDensityMultiplier, transitionT);
 
         float resolvedDensity = density

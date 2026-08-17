@@ -9,7 +9,7 @@
     "noiseWarpStrength": 0.85,
     "coverageBias": 0.75,
     "silhouetteSoftness": 0.05,
-    "baseAltitude": 580.0,
+    "baseAltitude": 700.0,
     "driftSpeedScale": 1.3,
     "spread": 0.5,
     "sizeVarianceMin": 0.9,
