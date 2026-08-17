@@ -22,14 +22,10 @@ class EntityBuilder extends BuilderPackage {
     /*
      * Parses entity template JSON into an EntityData and wraps it in an
      * EntityHandle. All size, weight, and eye level fields fall back to
-     * engine defaults if not specified. size_min/size_max are validated
-     * here — finite, strictly positive, and size_max >= size_min on every
-     * axis — since a bad template value would otherwise silently corrupt
-     * blockComposition and only surface as an unrelated crash deep inside
-     * the physics pipeline the first time the entity moves. The optional
-     * "model" block resolves a character mesh, a single shared material
-     * clone, and a rig, plus a clip handle per EntityState this template
-     * declares animations for. Bootstrap-only.
+     * engine defaults if not specified. The optional "model" block resolves
+     * a character mesh, a single shared material clone, and a rig, plus a
+     * clip handle per EntityState this template declares animations for.
+     * Bootstrap-only.
      */
 
     // Internal
@@ -56,8 +52,6 @@ class EntityBuilder extends BuilderPackage {
 
         Vector3 sizeMin = parseSizeMin(json);
         Vector3 sizeMax = parseSizeMax(json);
-        validateSizeRange(sizeMin, sizeMax, file);
-
         float weightMin = parseWeightMin(json);
         float weightMax = parseWeightMax(json);
         float eyeLevel = parseEyeLevel(json);
@@ -150,22 +144,6 @@ class EntityBuilder extends BuilderPackage {
                 o.has("x") ? o.get("x").getAsFloat() : EngineSetting.DEFAULT_ENTITY_SIZE,
                 o.has("y") ? o.get("y").getAsFloat() : EngineSetting.DEFAULT_ENTITY_SIZE,
                 o.has("z") ? o.get("z").getAsFloat() : EngineSetting.DEFAULT_ENTITY_SIZE);
-    }
-
-    private void validateSizeRange(Vector3 sizeMin, Vector3 sizeMax, File file) {
-
-        if (!Float.isFinite(sizeMin.x) || !Float.isFinite(sizeMin.y) || !Float.isFinite(sizeMin.z)
-                || !Float.isFinite(sizeMax.x) || !Float.isFinite(sizeMax.y) || !Float.isFinite(sizeMax.z))
-            throwException("Entity \"size_min\"/\"size_max\" must be finite on every axis. File: "
-                    + file.getName());
-
-        if (sizeMin.x <= 0f || sizeMin.y <= 0f || sizeMin.z <= 0f)
-            throwException("Entity \"size_min\" must be strictly positive on every axis. File: "
-                    + file.getName());
-
-        if (sizeMax.x < sizeMin.x || sizeMax.y < sizeMin.y || sizeMax.z < sizeMin.z)
-            throwException("Entity \"size_max\" must be greater than or equal to \"size_min\" on every axis. "
-                    + "File: " + file.getName());
     }
 
     private float parseWeightMin(JsonObject json) {

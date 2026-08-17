@@ -108,16 +108,7 @@ public class EntityInstance extends InstancePackage {
 
     // Utility \\
 
-    /*
-     * Validates size before it ever touches blockComposition — a bad size
-     * here (non-finite, zero, or negative) would otherwise silently corrupt
-     * the entity's collision footprint and only surface as an unrelated
-     * crash several systems downstream, inside the physics pipeline, the
-     * first time this entity moves.
-     */
     private void setEntitySize(Vector3 size) {
-
-        validateSize(size);
 
         this.blockComposition.x = (int) Math.ceil(size.x);
         this.blockComposition.y = (int) Math.ceil(size.y);
@@ -126,17 +117,6 @@ public class EntityInstance extends InstancePackage {
 
         updateBlockComposition();
         updateModelScale();
-    }
-
-    private void validateSize(Vector3 size) {
-
-        if (!Float.isFinite(size.x) || !Float.isFinite(size.y) || !Float.isFinite(size.z))
-            throwException("Entity size must be finite on every axis. Got: ("
-                    + size.x + ", " + size.y + ", " + size.z + ")");
-
-        if (size.x <= 0f || size.y <= 0f || size.z <= 0f)
-            throwException("Entity size must be strictly positive on every axis. Got: ("
-                    + size.x + ", " + size.y + ", " + size.z + ")");
     }
 
     public void updateBlockComposition() {
