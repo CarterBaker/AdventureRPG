@@ -4,12 +4,15 @@ import application.bootstrap.geometrypipeline.ibo.IBOInstance;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.bootstrap.geometrypipeline.vbo.VBOInstance;
 import engine.root.InstancePackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class MeshInstance extends InstancePackage {
 
     /*
      * A fully GPU-resident mesh created at runtime. Owns its VAO, VBO, and IBO
      * instances. Freed via MeshManager.removeMesh() by whoever created it.
+     * Runtime meshes are never scaled to an entity's size, so their MeshData
+     * always carries zero bounds — nothing here ever reads them.
      */
 
     // Internal
@@ -32,7 +35,9 @@ public class MeshInstance extends InstancePackage {
         this.meshData = new MeshData(
                 vaoInstance.getVAOData(),
                 vboInstance.getVBOData(),
-                iboInstance.getIBOData());
+                iboInstance.getIBOData(),
+                new Vector3(),
+                new Vector3());
     }
 
     // Accessible \\

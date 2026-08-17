@@ -2,6 +2,7 @@ package application.bootstrap.renderpipeline.entityrendersystem;
 
 import application.bootstrap.entitypipeline.animation.AnimationStateHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
@@ -28,10 +29,12 @@ public class EntityRenderSystem extends SystemPackage {
      *
      * 2. pushCharacter() — builds the model matrix from the entity's own
      * world position, facing direction, and size, then forwards the draw
-     * to RenderManager.pushSkinnedCall(). Scale always comes from
-     * entity.getSize() — every character, player or NPC, is scaled by
-     * whatever size its own EntityData assigned it, never drawn at a fixed
-     * 1:1 mesh scale. Position is centered on the entity's own footprint
+     * to RenderManager.pushSkinnedCall(). Scale is never entity.getSize()
+     * directly — the mesh is authored at its own raw width/height/length
+     * (see MeshHandle/MeshData), so the per-axis scale is the entity's
+     * actual size divided by that raw extent, stretching whatever the mesh
+     * was modeled at onto the entity's real bounding box with no
+     * distortion. Position is centered on the entity's own footprint
      * (worldPosition + size.x/2, size.z/2 on the horizontal plane) — the
      * exact same centering PlayerManager already uses to place the
      * camera's eye position — so the rendered body and the point the
@@ -48,6 +51,7 @@ public class EntityRenderSystem extends SystemPackage {
     // Scratch — reused every pushCharacter() call, never reallocated
     private Vector3 positionScratch;
     private Vector3 rotationScratch;
+    private Vector3 scaleScratch;
     private Matrix4 modelMatrixScratch;
     private Matrix4 matrixScratchA;
     private Matrix4 matrixScratchB;
@@ -60,6 +64,7 @@ public class EntityRenderSystem extends SystemPackage {
         // Scratch
         this.positionScratch = new Vector3();
         this.rotationScratch = new Vector3();
+        this.scaleScratch = new Vector3();
         this.modelMatrixScratch = new Matrix4();
         this.matrixScratchA = new Matrix4();
         this.matrixScratchB = new Matrix4();
@@ -114,6 +119,7 @@ public class EntityRenderSystem extends SystemPackage {
         AnimationStateHandle animationState = entity.getAnimationStateHandle();
         Vector3 position = entity.getWorldPositionStruct().getPosition();
         Vector3 size = entity.getSize();
+        MeshHandle characterMesh = entity.getEntityData().getCharacterMesh();
 
         float yawRadians = (float) Math.atan2(viewDirection.x, viewDirection.z);
 
@@ -126,15 +132,24 @@ public class EntityRenderSystem extends SystemPackage {
                 position.z + size.z * 0.5f);
         rotationScratch.set(0f, (float) Math.toDegrees(yawRadians), 0f);
 
+        // The mesh's own raw model-space extent is never assumed to be 1:1 —
+        // dividing the entity's actual size by it gives the per-axis ratio
+        // that stretches the authored mesh onto this entity's real bounding
+        // box with no distortion.
+        scaleScratch.set(
+                size.x / characterMesh.getWidth(),
+                size.y / characterMesh.getHeight(),
+                size.z / characterMesh.getLength());
+
         RigMathUtility.composeLocal(
-                positionScratch, rotationScratch, size,
+                positionScratch, rotationScratch, scaleScratch,
                 modelMatrixScratch, matrixScratchA, matrixScratchB);
 
         MaterialInstance material = entity.getEntityData().getCharacterMaterial();
         applyHiddenBone(entity, material, hiddenBoneName);
 
         renderManager.pushSkinnedCall(
-                entity.getEntityData().getCharacterMesh(),
+                characterMesh,
                 material,
                 modelMatrixScratch,
                 animationState.getSkinningMatrices(),

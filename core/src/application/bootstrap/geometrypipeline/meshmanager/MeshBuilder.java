@@ -19,6 +19,7 @@ import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
+import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
@@ -32,8 +33,15 @@ class MeshBuilder extends BuilderPackage {
      * "bones" list — one to MAX_BONE_INFLUENCES {bone, weight} entries whose
      * weights sum to 1.0 — resolved against that rig and baked into the
      * trailing boneIndex/boneWeight vertex attributes appended by the VAO
-     * builder, uniformly across all 4 corners of the quad. Bootstrap-only.
-     * Receives the shared VAOInstance from InternalLoader.
+     * builder, uniformly across all 4 corners of the quad. Quad expansion is
+     * also where this mesh's own raw vertex position bounds are read
+     * directly off the assembled position floats, before they are handed to
+     * VBOManager and discarded — a rigged mesh needs those bounds to derive
+     * the ratio that stretches it onto an entity's actual size later, and
+     * since bone weighting already requires quad entries, this is the one
+     * place that data is ever available. A rigged mesh declared without
+     * quad entries has no way to supply either and is rejected outright.
+     * Bootstrap-only. Receives the shared VAOInstance from InternalLoader.
      */
 
     // Internal
@@ -62,24 +70,43 @@ class MeshBuilder extends BuilderPackage {
         JsonObject json = JsonUtility.loadJsonObject(file);
         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
         RigHandle rigHandle = resolveRig(json);
+        boolean hasQuads = hasQuadEntries(json);
+
+        if (rigHandle != null && !hasQuads)
+            throwException("Rigged mesh \"" + resourceName + "\" must declare its vertex data through quad "
+                    + "entries — bone weighting and entity-scale bounds can only be resolved from quad-expanded "
+                    + "vertex data. File: " + file.getName());
 
         VBOHandle vboHandle;
         IBOHandle iboHandle;
+        Vector3 boundsMin;
+        Vector3 boundsMax;
 
-        if (hasQuadEntries(json)) {
+        if (hasQuads) {
+
             QuadExpansionStruct expansion = expandVBO(json, vaoInstance, rigHandle, file);
             vboHandle = vboManager.addVBOFromData(resourceName, expansion.vertices, vaoInstance);
             iboHandle = iboManager.addIBOFromData(resourceName, expansion.indices, vaoInstance);
+            boundsMin = expansion.boundsMin;
+            boundsMax = expansion.boundsMax;
+
+            if (rigHandle != null
+                    && (boundsMax.x <= boundsMin.x || boundsMax.y <= boundsMin.y || boundsMax.z <= boundsMin.z))
+                throwException("Rigged mesh \"" + resourceName + "\" has zero extent on at least one axis — "
+                        + "cannot derive an entity-scale ratio from a mesh with no size. File: " + file.getName());
+
         } else {
             vboHandle = vboManager.getVBOHandleDirect(resourceName);
             iboHandle = iboManager.getIBOHandleDirect(resourceName);
+            boundsMin = new Vector3();
+            boundsMax = new Vector3();
         }
 
         if (vboHandle == null || iboHandle == null)
             return null;
 
         MeshHandle meshHandle = create(MeshHandle.class);
-        meshHandle.constructor(vaoInstance, vboHandle, iboHandle, rigHandle);
+        meshHandle.constructor(vaoInstance, vboHandle, iboHandle, rigHandle, boundsMin, boundsMax);
 
         return meshHandle;
     }
@@ -177,7 +204,56 @@ class MeshBuilder extends BuilderPackage {
             throwException("No index data produced for file: " + file.getName()
                     + ". Provide an explicit 'ibo' for raw verts and/or include quad entries.");
 
-        return new QuadExpansionStruct(vertices.toFloatArray(), allIndices.toShortArray());
+        Vector3 boundsMin = new Vector3();
+        Vector3 boundsMax = new Vector3();
+        computeBounds(vertices, vertStride, boundsMin, boundsMax);
+
+        return new QuadExpansionStruct(vertices.toFloatArray(), allIndices.toShortArray(), boundsMin, boundsMax);
+    }
+
+    // Bounds \\
+
+    /*
+     * Min/max vertex position across every assembled vertex in this pass.
+     * Position is always the first three floats of a vertex regardless of
+     * what follows it in the layout — normal, color, UV, bone data — so this
+     * never needs to know the full attribute list, only the stride.
+     */
+    private void computeBounds(FloatArrayList vertices, int vertStride, Vector3 outMin, Vector3 outMax) {
+
+        int vertexCount = vertices.size() / vertStride;
+
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float minZ = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        float maxZ = -Float.MAX_VALUE;
+
+        for (int i = 0; i < vertexCount; i++) {
+
+            int base = i * vertStride;
+
+            float x = vertices.getFloat(base);
+            float y = vertices.getFloat(base + 1);
+            float z = vertices.getFloat(base + 2);
+
+            if (x < minX)
+                minX = x;
+            if (y < minY)
+                minY = y;
+            if (z < minZ)
+                minZ = z;
+            if (x > maxX)
+                maxX = x;
+            if (y > maxY)
+                maxY = y;
+            if (z > maxZ)
+                maxZ = z;
+        }
+
+        outMin.set(minX, minY, minZ);
+        outMax.set(maxX, maxY, maxZ);
     }
 
     private static final float[][] DEFAULT_CORNER_LOCAL_UVS = {
