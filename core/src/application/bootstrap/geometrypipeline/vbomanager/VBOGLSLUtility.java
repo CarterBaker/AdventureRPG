@@ -27,12 +27,9 @@ class VBOGLSLUtility {
          * off-heap and only freed once the GC gets around to running their
          * Cleaner, and a chunk-streaming workload allocates them far faster than
          * that can keep up, which is what was stalling the engine a few seconds
-         * into any real session. Both upload() and reupload() pass the raw
-         * vertices array and stride into VBOData so its bounds stay accurate
-         * against whatever the buffer currently holds, even after an in-place
-         * respecify. All GL work here runs on whichever thread currently holds
-         * the GL context, never concurrently, so a static scratch buffer is
-         * safe. Package-private — only VBOManager may call these.
+         * into any real session. All GL work here runs on whichever thread
+         * currently holds the GL context, never concurrently, so a static
+         * scratch buffer is safe. Package-private — only VBOManager may call these.
          */
 
         // Scratch — reused across every upload/reupload call, grown by doubling
