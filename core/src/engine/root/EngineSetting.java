@@ -416,7 +416,7 @@ public class EngineSetting {
 
         // Terrain Generation — World Shape \\
 
-        public static final int TERRAIN_SEA_LEVEL_BLOCKS = 512;
+        public static final int TERRAIN_SEA_LEVEL_BLOCKS = 160;
         public static final int TERRAIN_SURFACE_DEPTH_BLOCKS = 4;
         public static final int TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS = 3;
         public static final int TERRAIN_MIN_HEIGHT_BLOCKS = 24;
@@ -481,27 +481,6 @@ public class EngineSetting {
 
         public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 900.0f;
         public static final int MAX_CLOUD_TYPES = 8;
-
-        // Cloud Authoring Defaults \\
-
-        public static final float DEFAULT_CLOUD_COLOR_R = 1.0f;
-        public static final float DEFAULT_CLOUD_COLOR_G = 1.0f;
-        public static final float DEFAULT_CLOUD_COLOR_B = 1.0f;
-        public static final float DEFAULT_CLOUD_SATURATION = 1.0f;
-        public static final float DEFAULT_CLOUD_DENSITY = 0.8f;
-        public static final float DEFAULT_CLOUD_VERTICAL_THICKNESS_BLOCKS = 80.0f;
-        public static final float DEFAULT_CLOUD_FULLNESS = 0.7f;
-        public static final float DEFAULT_CLOUD_DENSITY_NOISE_SCALE = 1.0f;
-        public static final float DEFAULT_CLOUD_NOISE_WARP_STRENGTH = 0.6f;
-        public static final float DEFAULT_CLOUD_COVERAGE_BIAS = 0.5f;
-        public static final float DEFAULT_CLOUD_SILHOUETTE_SOFTNESS = 0.08f;
-        public static final float DEFAULT_CLOUD_BASE_ALTITUDE_BLOCKS = 650.0f;
-        public static final float DEFAULT_CLOUD_DRIFT_SPEED_SCALE = 1.0f;
-        public static final float DEFAULT_CLOUD_SPREAD_RATIO = 0.85f;
-        public static final float DEFAULT_CLOUD_SIZE_VARIANCE_MIN = 0.65f;
-        public static final float DEFAULT_CLOUD_SIZE_VARIANCE_MAX = 1.6f;
-        public static final float DEFAULT_CLOUD_ELONGATION_MIN = 1.0f;
-        public static final float DEFAULT_CLOUD_ELONGATION_MAX = 2.4f;
 
         // Weather \\
 
@@ -593,10 +572,8 @@ public class EngineSetting {
         // Weather Rendering \\
 
         public static final String WEATHER_DEFAULT_MATERIAL = "weather/WeatherMaterial";
-        public static final float WEATHER_CLOUD_ALTITUDE_MIN = TERRAIN_SEA_LEVEL_BLOCKS + 3.0f;
-        public static final float WEATHER_CLOUD_ALTITUDE_MAX = WORLD_HEIGHT * CHUNK_SIZE;
-        public static final float WEATHER_CLOUD_ALTITUDE_JITTER_RATIO = 0.12f;
-        public static final float WEATHER_CLOUD_ALTITUDE_JITTER_MAX_BLOCKS = 40.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 0.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 320.0f;
 
         // Weather Pattern Lifecycle \\
 
