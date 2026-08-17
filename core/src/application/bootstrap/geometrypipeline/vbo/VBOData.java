@@ -7,14 +7,11 @@ public class VBOData extends DataPackage {
     /*
      * Immutable GPU vertex buffer payload. Holds the raw OpenGL buffer handle,
      * vertex count, and the model-space bounding box of the uploaded vertex
-     * data. Bounds are computed against up to the first 3 floats of each
-     * vertex — whichever position axes the layout actually declares. A
-     * layout narrower than 3 floats (flat screen-space UI/font quads with
-     * no Z, or a bare 2D position) simply leaves the missing axis at zero
-     * rather than failing — width/height/length are only ever consumed by
-     * callers scaling a full 3D mesh (see EntityInstance.updateModelScale()),
-     * and every mesh that path touches always carries a full 3-float
-     * position. Owned by VBOHandle or VBOInstance for its lifetime.
+     * data. Position is assumed to occupy the first 3 floats of every vertex,
+     * matching engine convention across every geometry branch and builder.
+     * width/height/length are derived once here so any caller needing to
+     * scale this mesh against a target size never has to re-walk the vertex
+     * data. Owned by VBOHandle or VBOInstance for its lifetime.
      */
 
     // Internal
@@ -39,50 +36,39 @@ public class VBOData extends DataPackage {
         if (vertices.length == 0)
             throwException("Cannot compute model bounds from empty vertex data.");
 
-        if (vertStride < 1)
-            throwException("Vertex stride must be at least 1 — got " + vertStride);
+        if (vertStride < 3)
+            throwException("Vertex stride must be at least 3 to hold a position — got " + vertStride);
 
         // Internal
         this.vertexHandle = vertexHandle;
         this.vertexCount = vertices.length / vertStride;
 
-        int positionAxes = Math.min(vertStride, 3);
-
         float boundsMinX = Float.MAX_VALUE;
-        float boundsMinY = positionAxes >= 2 ? Float.MAX_VALUE : 0f;
-        float boundsMinZ = positionAxes >= 3 ? Float.MAX_VALUE : 0f;
+        float boundsMinY = Float.MAX_VALUE;
+        float boundsMinZ = Float.MAX_VALUE;
         float boundsMaxX = -Float.MAX_VALUE;
-        float boundsMaxY = positionAxes >= 2 ? -Float.MAX_VALUE : 0f;
-        float boundsMaxZ = positionAxes >= 3 ? -Float.MAX_VALUE : 0f;
+        float boundsMaxY = -Float.MAX_VALUE;
+        float boundsMaxZ = -Float.MAX_VALUE;
 
         for (int i = 0; i < vertices.length; i += vertStride) {
 
             float x = vertices[i];
+            float y = vertices[i + 1];
+            float z = vertices[i + 2];
 
             if (x < boundsMinX)
                 boundsMinX = x;
+            if (y < boundsMinY)
+                boundsMinY = y;
+            if (z < boundsMinZ)
+                boundsMinZ = z;
+
             if (x > boundsMaxX)
                 boundsMaxX = x;
-
-            if (positionAxes >= 2) {
-
-                float y = vertices[i + 1];
-
-                if (y < boundsMinY)
-                    boundsMinY = y;
-                if (y > boundsMaxY)
-                    boundsMaxY = y;
-            }
-
-            if (positionAxes >= 3) {
-
-                float z = vertices[i + 2];
-
-                if (z < boundsMinZ)
-                    boundsMinZ = z;
-                if (z > boundsMaxZ)
-                    boundsMaxZ = z;
-            }
+            if (y > boundsMaxY)
+                boundsMaxY = y;
+            if (z > boundsMaxZ)
+                boundsMaxZ = z;
         }
 
         // Model Bounds
