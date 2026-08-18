@@ -1,12 +1,14 @@
 {
     "clouds": [
-        { "name": "standard/Nimbus", "chance": 80 },
-        { "name": "standard/Stratus", "chance": 20 }
+        { "name": "standard/Cumulonimbus", "chance": 45 },
+        { "name": "standard/Nimbus", "chance": 40 },
+        { "name": "standard/Stratus", "chance": 15 }
     ],
     "nextWeatherChances": [
-        { "name": "standard/CloudyWeather", "chance": 55 },
-        { "name": "standard/StormyWeather", "chance": 25 },
-        { "name": "standard/SunnyWeather", "chance": 20 }
+        { "name": "standard/OvercastWeather", "chance": 35 },
+        { "name": "standard/CloudyWeather", "chance": 30 },
+        { "name": "standard/StormyWeather", "chance": 20 },
+        { "name": "standard/SunnyWeather", "chance": 15 }
     ],
     "cloudCoverage": 0.9,
     "cloudDensityMultiplier": 1.3,

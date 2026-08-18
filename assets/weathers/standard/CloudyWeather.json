@@ -4,10 +4,12 @@
         { "name": "standard/Cumulus", "chance": 40 }
     ],
     "nextWeatherChances": [
-        { "name": "standard/CloudyWeather", "chance": 35 },
-        { "name": "standard/SunnyWeather", "chance": 25 },
-        { "name": "standard/StormyWeather", "chance": 20 },
-        { "name": "standard/ClearWeather", "chance": 20 }
+        { "name": "standard/CloudyWeather", "chance": 25 },
+        { "name": "standard/OvercastWeather", "chance": 25 },
+        { "name": "standard/SunnyWeather", "chance": 15 },
+        { "name": "standard/StormyWeather", "chance": 15 },
+        { "name": "standard/PartlyCloudyWeather", "chance": 12 },
+        { "name": "standard/ClearWeather", "chance": 8 }
     ],
     "cloudCoverage": 0.6,
     "cloudDensityMultiplier": 1.0,

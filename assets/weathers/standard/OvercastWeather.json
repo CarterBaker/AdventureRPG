@@ -4,10 +4,11 @@
         { "name": "standard/Altostratus", "chance": 40 }
     ],
     "nextWeatherChances": [
-        { "name": "standard/CloudyWeather", "chance": 30 },
         { "name": "standard/StormyWeather", "chance": 30 },
-        { "name": "standard/SunnyWeather", "chance": 20 },
-        { "name": "standard/ClearWeather", "chance": 20 }
+        { "name": "standard/CloudyWeather", "chance": 30 },
+        { "name": "standard/SunnyWeather", "chance": 15 },
+        { "name": "standard/ClearWeather", "chance": 15 },
+        { "name": "standard/HighCirrusWeather", "chance": 10 }
     ],
     "cloudCoverage": 0.85,
     "cloudDensityMultiplier": 1.1,

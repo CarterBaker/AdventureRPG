@@ -3,9 +3,10 @@
         { "name": "standard/Sirrus", "chance": 100 }
     ],
     "nextWeatherChances": [
-        { "name": "standard/SunnyWeather", "chance": 40 },
-        { "name": "standard/ClearWeather", "chance": 30 },
-        { "name": "standard/CloudyWeather", "chance": 30 }
+        { "name": "standard/SunnyWeather", "chance": 35 },
+        { "name": "standard/ClearWeather", "chance": 25 },
+        { "name": "standard/PartlyCloudyWeather", "chance": 25 },
+        { "name": "standard/CloudyWeather", "chance": 15 }
     ],
     "cloudCoverage": 0.25,
     "cloudDensityMultiplier": 0.8,
