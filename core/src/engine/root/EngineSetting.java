@@ -479,7 +479,7 @@ public class EngineSetting {
 
         // Cloud \\
 
-        public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 900.0f;
+        public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 120.0f;
         public static final int MAX_CLOUD_TYPES = 8;
 
         // Weather \\
@@ -572,8 +572,14 @@ public class EngineSetting {
         // Weather Rendering \\
 
         public static final String WEATHER_DEFAULT_MATERIAL = "weather/WeatherMaterial";
-        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 600.0f;
-        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 980.0f;
+
+        // Reference sea level for the weather/cloud system's own altitude
+        // scale (this world is approximated at 1:20 real-world scale) —
+        // anchors both the cloud archetype altitudes below and CloudDome's
+        // horizon-bend target, independent of TERRAIN_SEA_LEVEL_BLOCKS.
+        public static final float WEATHER_SEA_LEVEL_BLOCKS = 512.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 515.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 1050.0f;
 
         // Weather Pattern Lifecycle \\
 
@@ -597,7 +603,7 @@ public class EngineSetting {
 
         public static final float WEATHER_CLOUD_SUBREGION_RADIUS_RATIO = 0.62f;
         public static final float WEATHER_CLOUD_SUBREGION_OFFSET_RATIO = 0.5f;
-        public static final float WEATHER_CLOUD_ALTITUDE_JITTER_BLOCKS = 40.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_JITTER_BLOCKS = 25.0f;
         public static final long WEATHER_CLOUD_SUBREGION_SEED_SALT = 0x7F4A7C15D2B89E33L;
 
         // Wind \\

@@ -20,20 +20,26 @@ out vec4 fragColor;
  * horizontal slab — an authored altitude plus a vertical thickness — that
  * a view ray genuinely enters and exits, with opacity from the ray's own
  * path length through the slab via Beer-Lambert extinction. The dome
- * bend (see CloudDome.glsl) sags a slab's altitude toward the camera's
- * own eye level purely as a function of the ray's elevation angle, never
- * a horizontal world-space distance, so distant cloud edges hug the
- * horizon and arc up to their true authored altitude overhead with no
- * plane-intersection precondition and therefore no seam at any view
- * angle, including straight up. A cheap ray-vs-circle test against each
- * entry's own footprint skips its slab resolve and noise sampling
- * entirely when the view ray could never reach it, and a whole-ray reject
- * against this frame's overall cloud altitude band skips the loop
- * entirely when nothing is in range — both meaningful savings given up
- * to 32 entries are evaluated per pixel. Entries arrive from
- * WeatherMapBufferSystem already sorted nearest-first and already placed
- * into their own sub-region of their weather pattern's footprint, so a
- * simple front-to-back "over" composite still gives a convincing, patchy,
+ * bend (see CloudDome.glsl) sags a slab's altitude toward the world's
+ * fixed sea level purely as a function of the ray's elevation angle, so
+ * distant cloud edges always hug the same horizon and arc up to their
+ * true authored altitude overhead regardless of the camera's own height,
+ * with no seam at any view angle. Within a slab, coverage comes from a
+ * deterministic jittered-cell puff field (see samplePuffField) keyed off
+ * the entry's own carried position and seed rather than raw threshold
+ * noise, so a pattern reads as genuine little clouds with real gaps
+ * between them — sparse or dense depending on this weather's own
+ * authored coverage — instead of a uniformly noisy sheet, and the same
+ * puffs read identically for every player looking at the same pattern.
+ * A cheap ray-vs-circle test against each entry's own footprint skips
+ * its slab resolve and puff-field evaluation entirely when the view ray
+ * could never reach it, and a whole-ray reject against this frame's
+ * overall cloud altitude band skips the loop entirely when nothing is
+ * in range — both meaningful savings given up to 32 entries are
+ * evaluated per pixel. Entries arrive from WeatherMapBufferSystem
+ * already sorted nearest-first and already placed into their own
+ * sub-region of their weather pattern's footprint, so a simple
+ * front-to-back "over" composite still gives a convincing, patchy,
  * layered sky with no per-pixel depth sort.
  */
 
@@ -49,9 +55,6 @@ const float CLOUD_CULL_SAFETY_MARGIN      = 2.2;
 
 const float CLOUD_OUTER_FADE_START  = 0.85;
 const float CLOUD_OUTER_FADE_END    = 1.35;
-const float CLOUD_MIN_EDGE_BAND     = 0.16;
-const float CLOUD_EDGE_SOFTBAND_MIN = 0.08;
-const float CLOUD_EDGE_SOFTBAND_MAX = 0.6;
 
 const float CLOUD_PUFF_ANGLE_WOBBLE  = 1.2;
 const float CLOUD_DRIFT_SCROLL_SCALE = 0.35;
@@ -78,16 +81,33 @@ const float CLOUD_HEIGHT_UNDULATION_FREQUENCY = 0.0012;
 const float CLOUD_HEIGHT_UNDULATION_STRENGTH  = 0.35;
 const float CLOUD_SAMPLE_LOOKAHEAD_BLOCKS     = 96.0;
 
+// Puff-field shaping. Presence is gated per-cell by a coarse shared
+// cluster field (PUFF_CLUSTER_FREQUENCY) so puffs clump into real
+// patches with real gaps; PUFF_PRESENCE_SOFTBAND feathers that gate so
+// patches don't pop in/out with a hard edge. PUFF_VERTICAL_* shape each
+// individual puff's own vertical band within the slab, asymmetric
+// (sharper below its center, softer above) for the flat-base/round-top
+// read a real convective cloud has. PUFF_DETAIL_* is a purely cosmetic
+// edge ripple layered on top — it never changes whether a puff exists.
+const float PUFF_CLUSTER_FREQUENCY   = 0.12;
+const float PUFF_PRESENCE_SOFTBAND   = 0.22;
+const float PUFF_VERTICAL_CENTER_MIN = 0.18;
+const float PUFF_VERTICAL_CENTER_MAX = 0.82;
+const float PUFF_VERTICAL_SPAN_MIN   = 0.30;
+const float PUFF_VERTICAL_SPAN_MAX   = 0.70;
+const float PUFF_DETAIL_FREQUENCY    = 0.05;
+const float PUFF_DETAIL_STRENGTH     = 0.28;
+
 // Cheap ray-vs-footprint-circle test used to skip an entry's slab resolve
-// and noise sampling entirely when the view ray could never pass near its
-// footprint. The circle is the entry's own bounding box's circumscribed
-// radius inflated by CLOUD_CULL_SAFETY_MARGIN, which comfortably covers
-// the extra reach elongation and the outer fade band can add beyond the
-// raw box — a false accept only costs one skipped entry's worth of
-// wasted work, but a false reject would visibly clip a cloud, so this
-// stays generous on purpose. The straight-up/straight-down case (no
-// horizontal ray travel at all) falls back to "is the camera itself
-// inside the footprint" instead of dividing by a near-zero length.
+// and puff-field evaluation entirely when the view ray could never pass
+// near its footprint. The circle is the entry's own bounding box's
+// circumscribed radius inflated by CLOUD_CULL_SAFETY_MARGIN, which
+// comfortably covers the extra reach elongation and the outer fade band
+// can add beyond the raw box — a false accept only costs one skipped
+// entry's worth of wasted work, but a false reject would visibly clip a
+// cloud, so this stays generous on purpose. The straight-up/straight-down
+// case (no horizontal ray travel at all) falls back to "is the camera
+// itself inside the footprint" instead of dividing by a near-zero length.
 bool footprintMayBeVisible(vec2 rayOriginXZ, vec2 rayDirXZ, vec2 circleCenter, float circleRadius, float maxDist) {
     float rayDirLenXZ = length(rayDirXZ);
 
@@ -103,7 +123,7 @@ bool footprintMayBeVisible(vec2 rayOriginXZ, vec2 rayDirXZ, vec2 circleCenter, f
 }
 
 // Resolves the vertical slab a ray crosses for one weather entry. The
-// dome-bent altitude is now a direct function of the ray's own elevation
+// dome-bent altitude is a direct function of the ray's own elevation
 // angle (see CloudDome.glsl) — no plane-intersection pass is needed to
 // find it. A single cheap division still estimates a horizontal sample
 // position purely to drive the undulation noise below; that estimate
@@ -117,7 +137,7 @@ bool resolveCloudSlab(
     float thickness       = max(shape.x, CLOUD_MIN_SLAB_THICKNESS_BLOCKS);
     float halfThickness   = thickness * 0.5;
 
-    float bentAltitude = resolveCloudDomeAltitude(clampedAltitude, u_cameraPosition.y, rayDir.y);
+    float bentAltitude = resolveCloudDomeAltitude(clampedAltitude, rayDir.y);
 
     float guardedDirY = rayDir.y >= 0.0 ? max(rayDir.y, 0.05) : min(rayDir.y, -0.05);
     float tEstimate    = max((bentAltitude - u_cameraPosition.y) / guardedDirY, 0.0);
@@ -160,16 +180,92 @@ bool resolveCloudSlab(
     return true;
 }
 
+// One archetype's own puff field, evaluated at `localPos` — the
+// fragment's sample position expressed relative to the weather pattern's
+// own carried center and already rotated into its elongation frame
+// (blocks). `elongation` compresses the cell grid along the cross-wind
+// axis before gridding, so individual puffs read as stretched, wispy
+// strands for high-elongation archetypes (Sirrus) and stay near-round
+// for low-elongation ones (Cumulus), reusing the same wind-aligned frame
+// the macro footprint is already shaped in. cellSizeBlocks is that
+// archetype's own real puff diameter (CloudData's "scale"). Presence is
+// gated per-cell by a coarse cluster field shared across the whole
+// entry, so puffs clump into genuine patches with real gaps between them
+// rather than tiling uniformly forever; the fragment's own cell plus its
+// 3x3 neighborhood are tested (jittered-cell/Worley technique) so a
+// puff straddling a cell boundary is never clipped by it. Returns
+// horizontal coverage in [0,1] and the winning puff's own stable
+// per-cell hash, so the caller can derive that same puff's own vertical
+// band and shading variance consistently every frame and for every
+// player looking at the same pattern.
+float samplePuffField(
+    vec2 localPos, float elongation, float cellSizeBlocks, float presenceThreshold, float edgeSoftness,
+    float patternSeed, float archetypeSalt,
+    out vec2 outOffsetNorm, out vec3 outWinningPuffHash) {
+    vec2 anisoLocal   = vec2(localPos.x, localPos.y * elongation);
+    vec2 cellSpacePos = anisoLocal / max(cellSizeBlocks, 1.0);
+    vec2 cellBase     = floor(cellSpacePos);
+
+    float bestCoverage   = 0.0;
+    vec2  bestOffsetNorm = vec2(0.0);
+    vec3  bestHash       = vec3(0.0);
+
+    for (int oy = -1; oy <= 1; oy++) {
+        for (int ox = -1; ox <= 1; ox++) {
+            vec2 cell     = cellBase + vec2(float(ox), float(oy));
+            vec2 cellSeed = cell + vec2(patternSeed * 17.3 + archetypeSalt, patternSeed * 29.9 - archetypeSalt);
+
+            float clusterNoise = gradientNoise2D(
+                cell * PUFF_CLUSTER_FREQUENCY + vec2(patternSeed * 4.7, patternSeed * 8.3));
+            float presence = clusterNoise * 0.5 + 0.5;
+
+            float presenceFade = smoothstep(
+                presenceThreshold - PUFF_PRESENCE_SOFTBAND,
+                presenceThreshold + PUFF_PRESENCE_SOFTBAND,
+                presence);
+
+            if (presenceFade <= CLOUD_DENSITY_EPSILON)
+            continue;
+
+            vec3 puffHash       = hash33(vec3(cellSeed, patternSeed * 3.71 + archetypeSalt));
+            vec2 jitter         = puffHash.xy * 0.5 + 0.5;
+            vec2 puffCenterCell = cell + jitter;
+
+            float sizeT           = puffHash.z * 0.5 + 0.5;
+            float puffRadiusCells = mix(0.35, 0.62, sizeT);
+
+            vec2  toPuff     = cellSpacePos - puffCenterCell;
+            vec2  offsetNorm = toPuff / max(puffRadiusCells, 0.001);
+            float distNorm   = length(offsetNorm);
+
+            float edge0    = max(0.0001, 1.0 - edgeSoftness);
+            float coverage = (1.0 - smoothstep(edge0, 1.0, distNorm)) * presenceFade;
+
+            if (coverage > bestCoverage) {
+                bestCoverage   = coverage;
+                bestOffsetNorm = offsetNorm;
+                bestHash       = puffHash;
+            }
+        }
+    }
+
+    outOffsetNorm      = bestOffsetNorm;
+    outWinningPuffHash = bestHash;
+    return bestCoverage;
+}
+
 // Coverage (silhouette) plus a fake hemisphere normal for cheap shading.
-// Horizontal shaping (radial falloff from the pattern's own sub-region,
-// elongation, per-pattern rotation) is unchanged; verticalT is the
+// Horizontal shaping (the puff field above, elongation, per-pattern
+// rotation) locates and sizes each little cloud; verticalT is the
 // sample's normalized height within the slab (0 = its floor, 1 = its
-// ceiling), driving puffHeight and the fake normal alongside the
-// horizontal term.
+// ceiling), used both to band each puff to its own stable vertical slice
+// of the slab and to drive puffHeight/the fake normal alongside the
+// horizontal term, so the same shape reads correctly from any angle —
+// flat and dark from underneath, round and lit from the side or above.
 float sampleCloudEntry(
     vec4 bounds, vec4 shape, vec4 noiseParams, vec4 colorScale, vec4 materialParams,
     vec4 variance0, vec4 variance1,
-    float intensity, vec3 worldPos, float slabBottomY, float slabTopY, vec2 chunkOffsetBlocks,
+    float intensity, vec3 worldPos, float slabBottomY, float slabTopY,
     vec2 driftDirNorm, float driftAngle, float driftSpeed,
     out vec3 fakeNormal, out float puffHeight) {
     fakeNormal = vec3(0.0, 1.0, 0.0);
@@ -185,19 +281,28 @@ float sampleCloudEntry(
 
     float patternSeed    = variance1.z;
     float cloudSlotIndex = variance1.y;
-    float instanceHash   = hash31(vec3(
+    float archetypeSalt  = cloudSlotIndex * 41.9;
+
+    // fromCenter is already the fragment's true offset from this
+    // pattern's own carried position — both share the same per-grid
+    // relative origin, so the offset itself is frame-independent and
+    // needs no chunk-offset correction. Rotating it into the pattern's
+    // own elongation frame gives the stable local space every puff cell
+    // below is placed in, so puffs translate for free as the CPU moves
+    // the pattern's own bounds and read identically for every player.
+    float orientationHash = hash31(vec3(
             patternSeed * 12.9898,
             cloudSlotIndex * 78.233 + patternSeed,
             patternSeed - cloudSlotIndex * 0.577));
 
-    float puffAngle = driftAngle + (instanceHash - 0.5) * CLOUD_PUFF_ANGLE_WOBBLE;
+    float puffAngle = driftAngle + (orientationHash - 0.5) * CLOUD_PUFF_ANGLE_WOBBLE;
     float cosA = cos(puffAngle);
     float sinA = sin(puffAngle);
     vec2  rotated = vec2(
         fromCenter.x * cosA + fromCenter.y * sinA,
         fromCenter.y * cosA - fromCenter.x * sinA);
 
-    float elongation  = clamp(mix(variance0.w, variance1.x, fract(instanceHash * 3.17)), 1.0, 6.0);
+    float elongation  = clamp(mix(variance0.w, variance1.x, fract(orientationHash * 3.17)), 1.0, 6.0);
     float spreadRatio = clamp(variance0.x, 0.1, 2.0);
     vec2  anisotropicExtent = boxHalfExtent * spreadRatio * vec2(1.0, 1.0 / elongation);
     vec2  spreadNorm  = rotated / max(anisotropicExtent, vec2(1.0));
@@ -208,40 +313,93 @@ float sampleCloudEntry(
 
     float outerFade = 1.0 - smoothstep(CLOUD_OUTER_FADE_START, CLOUD_OUTER_FADE_END, radialDist);
 
-    float sizeVariance  = clamp(mix(variance0.y, variance0.z, fract(instanceHash * 5.63)), 0.3, 3.0);
-    float instanceScale = max(colorScale.w, 1.0) * sizeVariance;
+    if (outerFade <= CLOUD_DENSITY_EPSILON)
+    return 0.0;
 
-    vec2 driftScroll    = driftDirNorm * driftSpeed * u_time * CLOUD_DRIFT_SCROLL_SCALE * shape.w;
-    vec2 stableWorldXZ  = worldPos.xz + chunkOffsetBlocks;
-    vec3 instanceOffset = vec3(patternSeed, fract(instanceHash * 7.0), fract(instanceHash * 13.0)) * 128.0;
+    float sizeVariance   = clamp(mix(variance0.y, variance0.z, fract(orientationHash * 5.63)), 0.3, 3.0);
+    float cellSizeBlocks = max(colorScale.w, 4.0) * sizeVariance;
 
-    vec2 noisePos = (stableWorldXZ + driftScroll) / instanceScale * max(noiseParams.x, 0.01) + instanceOffset.xy;
-    noisePos += vec2(u_time * CLOUD_MORPH_TIME_SCALE * 0.3, u_time * CLOUD_MORPH_TIME_SCALE);
+    float coverageBias      = noiseParams.z;
+    float presenceThreshold = clamp(1.0 - (intensity * 0.65 + coverageBias * 0.35), 0.02, 0.97);
+    float edgeSoftness      = clamp(noiseParams.w, 0.05, 1.0);
 
-    float warp       = gradientNoise2D(noisePos * 0.5 + instanceOffset.zy) * noiseParams.y;
-    float shapeNoise = fbmGradient2D(noisePos + vec2(warp), 2, 2.05, 0.5);
+    vec2 outOffsetNorm;
+    vec3 winningPuffHash;
+    float coverage = samplePuffField(
+        rotated, elongation, cellSizeBlocks, presenceThreshold, edgeSoftness,
+        patternSeed, archetypeSalt, outOffsetNorm, winningPuffHash);
 
-    float archetypeBias  = (noiseParams.z - 0.6) * 0.5;
-    float baseBias         = clamp(intensity + archetypeBias, 0.02, 0.95);
-    float softness         = clamp(noiseParams.w, 0.0, 1.0);
-    float insideThreshold   = 1.0 - baseBias;
-    float softBand          = max(CLOUD_MIN_EDGE_BAND, mix(CLOUD_EDGE_SOFTBAND_MIN, CLOUD_EDGE_SOFTBAND_MAX, softness) * baseBias);
-
-    float coverage = remapClamped(shapeNoise, insideThreshold, insideThreshold + softBand, 0.0, 1.0) * outerFade;
+    coverage *= outerFade;
 
     if (coverage <= CLOUD_DENSITY_EPSILON)
     return 0.0;
 
+    // Fine detail erosion — a slow-scrolling, low-cost noise tap that
+    // ripples each puff's clean edge so the silhouette reads as living
+    // vapor rather than a stamped decal. Scaled by this archetype's own
+    // authored densityNoiseScale/noiseWarpStrength so a turbulent cloud
+    // (Cumulonimbus, Nimbus) reads visibly rougher than a smooth one
+    // (Stratus). Purely cosmetic: it only ever nibbles at the outer edge
+    // (1.0 - coverage), never moves a puff's center or decides whether
+    // it exists, so the defined-area structure above stays fully stable.
+    vec2 driftScroll = driftDirNorm * driftSpeed * u_time * CLOUD_DRIFT_SCROLL_SCALE * shape.w;
+    vec2 detailPos   = (rotated + driftScroll) * (PUFF_DETAIL_FREQUENCY * max(noiseParams.x, 0.1));
+    detailPos += vec2(u_time * CLOUD_MORPH_TIME_SCALE * 0.3, u_time * CLOUD_MORPH_TIME_SCALE)
+    + vec2(patternSeed * 19.1, cloudSlotIndex * 53.7);
+    float detail         = fbmGradient2D(detailPos, 2, 2.1, 0.5) - 0.5;
+    float detailStrength = PUFF_DETAIL_STRENGTH * clamp(noiseParams.y, 0.0, 1.5);
+    coverage = clamp(coverage + detail * detailStrength * (1.0 - coverage), 0.0, 1.0);
+
+    if (coverage <= CLOUD_DENSITY_EPSILON)
+    return 0.0;
+
+    // Vertical banding — this specific puff's own stable center and
+    // half-span within the slab, derived from its winning cell's hash so
+    // every puff in a pattern settles at a slightly different height and
+    // the whole layer reads as staggered rather than a flat sheet. The
+    // band is asymmetric — narrower below its center, broader above —
+    // so the puff cuts off sharply at its condensation-level base and
+    // fades gradually into a rounded, thermal-plume top; fullness (this
+    // archetype's own material setting) sharpens that asymmetry further
+    // for the towering, stormy cloud types.
     float verticalT = clamp((worldPos.y - slabBottomY) / max(slabTopY - slabBottomY, 0.0001), 0.0, 1.0);
+    float fullness   = materialParams.y;
 
-    float fullness      = materialParams.y;
-    float roundPow        = mix(2.2, 0.7, fullness);
-    float horizontalPuff  = pow(clamp(1.0 - radialDist, 0.0, 1.0), roundPow);
-    puffHeight = clamp(mix(horizontalPuff, verticalT, 0.55), 0.0, 1.0);
+    float puffCenterT = mix(PUFF_VERTICAL_CENTER_MIN, PUFF_VERTICAL_CENTER_MAX, winningPuffHash.x * 0.5 + 0.5);
+    float puffSpanT   = mix(PUFF_VERTICAL_SPAN_MIN, PUFF_VERTICAL_SPAN_MAX, winningPuffHash.y * 0.5 + 0.5);
 
-    vec2  normalXZ     = radialDist > 0.0001 ? normalize(fromCenter) * (1.0 - puffHeight) : vec2(0.0);
-    float verticalLift  = mix(-0.4, 0.6, verticalT);
-    fakeNormal = normalize(vec3(normalXZ.x, max(puffHeight + verticalLift, 0.05), normalXZ.y));
+    float belowSpan = puffSpanT * mix(0.45, 0.85, fullness);
+    float aboveSpan = puffSpanT * mix(1.35, 1.05, fullness);
+
+    float verticalOffset = verticalT - puffCenterT;
+    float verticalNorm   = verticalOffset < 0.0
+    ? -verticalOffset / max(belowSpan, 0.001)
+    : verticalOffset / max(aboveSpan, 0.001);
+
+    float verticalFalloff = 1.0 - smoothstep(0.6, 1.0, verticalNorm);
+    coverage *= verticalFalloff;
+
+    if (coverage <= CLOUD_DENSITY_EPSILON)
+    return 0.0;
+
+    // Fake shading normal — horizontal roundness (distance from this
+    // puff's own 2D center, unstretched back out of the elongation
+    // frame) blended with the same asymmetric vertical position, so the
+    // puff shades with a flat, shadowed underside and a rounded, lit
+    // crown from any viewing angle, including from directly beneath it.
+    float horizontalPuff = pow(clamp(1.0 - length(outOffsetNorm), 0.0, 1.0), mix(2.2, 0.8, fullness));
+    float verticalShape  = 1.0 - clamp(abs(verticalNorm), 0.0, 1.0);
+    puffHeight = clamp(mix(horizontalPuff, verticalShape, 0.5), 0.0, 1.0);
+
+    vec2 approxLocalOffset = vec2(outOffsetNorm.x, outOffsetNorm.y / max(elongation, 1.0));
+    vec2 worldOffsetNorm = vec2(
+        approxLocalOffset.x * cosA - approxLocalOffset.y * sinA,
+        approxLocalOffset.x * sinA + approxLocalOffset.y * cosA);
+    float lift = verticalOffset < 0.0 ? mix(-0.6, -0.15, fullness) : mix(0.3, 0.75, fullness);
+    fakeNormal = normalize(vec3(
+            worldOffsetNorm.x * (1.0 - puffHeight),
+            max(puffHeight + lift, 0.05),
+            worldOffsetNorm.y * (1.0 - puffHeight)));
 
     return coverage;
 }
@@ -357,7 +515,7 @@ void main() {
         float puffHeight;
         float coverage = sampleCloudEntry(
             bounds, shape, noiseParams, colorScale, materialParams, variance0, variance1,
-            intensity, worldPosMid, slabBottomY, slabTopY, chunkOffsetBlocks,
+            intensity, worldPosMid, slabBottomY, slabTopY,
             driftDirNorm, driftAngle, driftSpeed,
             fakeNormal, puffHeight);
 

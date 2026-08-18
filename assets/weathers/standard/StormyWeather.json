@@ -1,7 +1,7 @@
 {
     "clouds": [
-        { "name": "standard/Cumulonimbus", "chance": 80 },
-        { "name": "standard/Stratus", "chance": 20, "altitudeOverride": 620.0 }
+        { "name": "standard/Nimbus", "chance": 80 },
+        { "name": "standard/Stratus", "chance": 20 }
     ],
     "nextWeatherChances": [
         { "name": "standard/CloudyWeather", "chance": 55 },
