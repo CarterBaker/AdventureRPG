@@ -21,15 +21,17 @@ out vec4 fragColor;
  * a view ray genuinely enters and exits, with opacity from the ray's own
  * path length through the slab via Beer-Lambert extinction. The dome
  * bend (see CloudDome.glsl) sags a slab's altitude toward the world's
- * fixed sea level purely as a function of the entry's own real distance
- * from the reference chunk, so a pattern's true distance — never the
- * angle it's viewed at — decides how low it sits, keeping genuinely
- * nearby weather at true altitude and genuinely distant weather hugging
- * the horizon no matter which angle either is glimpsed from. Within a
- * slab, coverage comes from a deterministic jittered-cell puff field (see
- * samplePuffField) keyed off the entry's own carried position and seed
- * rather than raw threshold noise, so a pattern reads as genuine little
- * clouds with real gaps between them — sparse or dense depending on this
+ * fixed sea level as a function of each fragment's own true horizontal
+ * distance from the camera — resolved per pixel in resolveCloudSlab, not
+ * once per CPU-side entry — so a single weather pattern arcs smoothly
+ * from its real elevation near the camera down to the horizon across its
+ * own footprint, instead of the whole pattern sitting at one flat bent
+ * height. Within a slab, coverage comes from a deterministic jittered-
+ * cell puff field (see samplePuffField), angularly lobed per puff so the
+ * silhouette reads as a cauliflower cloud rather than a union of round
+ * bubbles, and keyed off the entry's own carried position and seed rather
+ * than raw threshold noise, so a pattern reads as genuine little clouds
+ * with real gaps between them — sparse or dense depending on this
  * weather's own authored coverage — instead of a uniformly noisy sheet,
  * and the same puffs read identically for every player looking at the
  * same pattern. A cheap ray-vs-circle test against each entry's own
@@ -70,12 +72,17 @@ const float PATTERN_BOUNDARY_WARP_FREQUENCY = 2.5;
 
 const float CLOUD_FAR_FADE_FRACTION = 0.2;
 
-const float CLOUD_RIM_POWER         = 3.0;
-const float CLOUD_RIM_STRENGTH      = 0.5;
-const float CLOUD_AMBIENT_SHADOW    = 0.15;
-const float CLOUD_AMBIENT_LIT       = 0.6;
-const float CLOUD_SKY_TINT_STRENGTH = 0.45;
-const float CLOUD_STORM_DARKEN_MIN  = 0.45;
+// Silver lining — a soft, narrow brightening that only shows up on a
+// cloud's own thin edges when the camera is looking roughly toward the
+// sun through them (forward scattering). This replaces a Fresnel-style
+// rim that used to glow around every puff from every angle, which is
+// what made puffs read as shaded spheres/bubbles instead of clouds.
+const float CLOUD_SILVER_LINING_POWER    = 10.0;
+const float CLOUD_SILVER_LINING_STRENGTH = 0.9;
+const float CLOUD_AMBIENT_SHADOW         = 0.15;
+const float CLOUD_AMBIENT_LIT            = 0.6;
+const float CLOUD_SKY_TINT_STRENGTH      = 0.45;
+const float CLOUD_STORM_DARKEN_MIN       = 0.45;
 
 // Opacity comes from path length through the slab rather than a flat
 // per-entry constant. CLOUD_DENSITY_OPACITY_SCALE is tuned so a
@@ -101,7 +108,11 @@ const float CLOUD_SAMPLE_LOOKAHEAD_BLOCKS     = 96.0;
 // vertical band within the slab, asymmetric (sharper below its center,
 // softer above) for the flat-base/round-top read a real convective
 // cloud has. PUFF_DETAIL_* is a purely cosmetic edge ripple layered on
-// top — it never changes whether a puff exists.
+// top — it never changes whether a puff exists. PUFF_LOBE_* angularly
+// warps each puff's own radius so its silhouette reads as an irregular
+// cauliflower lobe instead of a smooth disc — this, not the union
+// blending below, is what actually stops a puff field from looking like
+// a cluster of round bubbles.
 const float PUFF_CLUSTER_FREQUENCY   = 0.12;
 const float PUFF_PRESENCE_SOFTBAND   = 0.22;
 const float PUFF_RADIUS_CELLS_MIN    = 0.50;
@@ -114,6 +125,8 @@ const float PUFF_VERTICAL_SPAN_MIN   = 0.30;
 const float PUFF_VERTICAL_SPAN_MAX   = 0.70;
 const float PUFF_DETAIL_FREQUENCY    = 0.05;
 const float PUFF_DETAIL_STRENGTH     = 0.28;
+const float PUFF_LOBE_FREQUENCY      = 2.5;
+const float PUFF_LOBE_STRENGTH       = 0.45;
 
 // Shape/blend tuning for the puff field itself. Domain-warping the grid
 // before it's sampled, and summing overlapping puffs as soft radial
@@ -150,26 +163,34 @@ bool footprintMayBeVisible(vec2 rayOriginXZ, vec2 rayDirXZ, vec2 circleCenter, f
 }
 
 // Resolves the vertical slab a ray crosses for one weather entry. The
-// dome-bent altitude is a direct function of the entry's own real
-// distance from the reference chunk (see CloudDome.glsl) — no
-// plane-intersection pass is needed to find it. A single cheap division
-// still estimates a horizontal sample position purely to drive the
-// undulation noise below; that estimate only ever refines the slab's
-// shape, never whether it bends at all, so it introduces no
-// discontinuity.
+// dome bend is now resolved per fragment rather than once per CPU-side
+// entry: a first ray/plane intersection at the cloud's own authored
+// altitude gives a ground-position guess, that guess's true distance
+// from the camera bends the altitude toward sea level (see
+// CloudDome.glsl), and a second intersection at the bent altitude gives
+// the final slab used both for the undulation noise and the raymarch
+// below. This is what makes a single weather pattern's clouds arc
+// smoothly from their real elevation near the camera down to the
+// horizon, instead of the whole pattern sitting at one flat bent height.
 bool resolveCloudSlab(
-    vec4 shape, vec3 rayDir, vec2 chunkOffsetBlocks, float patternSeed, float distanceBlocks,
+    vec4 shape, vec3 rayDir, vec2 chunkOffsetBlocks, float patternSeed,
     out vec3 worldPosMid, out float tNear, out float pathLength,
     out float slabBottomY, out float slabTopY) {
     float clampedAltitude = clamp(shape.y, u_cloudAltitudeMin, u_cloudAltitudeMax);
     float thickness       = max(shape.x, CLOUD_MIN_SLAB_THICKNESS_BLOCKS);
     float halfThickness   = thickness * 0.5;
 
-    float bentAltitude = resolveCloudDomeAltitude(clampedAltitude, distanceBlocks);
-
     float guardedDirY = rayDir.y >= 0.0 ? max(rayDir.y, 0.05) : min(rayDir.y, -0.05);
-    float tEstimate    = max((bentAltitude - u_cameraPosition.y) / guardedDirY, 0.0);
-    vec2  approxXZ      = u_cameraPosition.xz + rayDir.xz * tEstimate;
+
+    float tGuess       = max((clampedAltitude - u_cameraPosition.y) / guardedDirY, 0.0);
+    vec2  guessXZ       = u_cameraPosition.xz + rayDir.xz * tGuess;
+    float guessDistance = length(guessXZ - u_cameraPosition.xz);
+    float bentAltitude  = resolveCloudDomeAltitude(clampedAltitude, guessDistance);
+
+    float tEstimate      = max((bentAltitude - u_cameraPosition.y) / guardedDirY, 0.0);
+    vec2  approxXZ        = u_cameraPosition.xz + rayDir.xz * tEstimate;
+    float distanceBlocks = length(approxXZ - u_cameraPosition.xz);
+    bentAltitude          = resolveCloudDomeAltitude(clampedAltitude, distanceBlocks);
 
     float undulation = gradientNoise2D(
         (approxXZ + chunkOffsetBlocks) * CLOUD_HEIGHT_UNDULATION_FREQUENCY
@@ -221,8 +242,11 @@ bool resolveCloudSlab(
 // entry, so puffs clump into genuine patches with real gaps between them
 // rather than tiling uniformly forever; the fragment's own cell plus its
 // 3x3 neighborhood are tested (jittered-cell/Worley technique) so a
-// puff straddling a cell boundary is never clipped by it. The sample
-// position is domain-warped before it's ever gridded, and every
+// puff straddling a cell boundary is never clipped by it. Each
+// candidate puff's own radial distance is warped by angle (see
+// PUFF_LOBE_*) before it's ever thresholded, so a puff reads as an
+// irregular lobe rather than a smooth disc — with that in place, the
+// sample position is domain-warped before it's gridded, and every
 // candidate puff contributes a soft radial field summed across the
 // whole neighborhood (a cheap metaball union), topped up by a
 // continuous macro sample of the same cluster field so a clump's
@@ -300,6 +324,16 @@ float samplePuffField(
             vec2  puffLocal   = vec2(toPuff.x * wca + toPuff.y * wsa, -toPuff.x * wsa + toPuff.y * wca);
             vec2  shapeOffset = vec2(puffLocal.x, puffLocal.y * wobbleAspect) / max(puffRadiusCells, 0.001);
             float distNorm    = length(shapeOffset);
+
+            // Warp the radius by angle so each puff's own silhouette
+            // reads as an irregular cauliflower lobe instead of a smooth
+            // ellipse — without this, the metaball union below still
+            // looks like a cluster of round bubbles no matter how much
+            // neighboring puffs overlap.
+            float lobeAngle = atan(shapeOffset.y, shapeOffset.x);
+            float lobeNoise = gradientNoise2D(
+                vec2(cos(lobeAngle), sin(lobeAngle)) * PUFF_LOBE_FREQUENCY + cellSeed * 0.37);
+            distNorm *= 1.0 + lobeNoise * PUFF_LOBE_STRENGTH;
 
             // Soft, longer-reaching falloff than a hard-edged disc — lets
             // neighboring puffs' fields overlap and blend into one blob
@@ -441,7 +475,7 @@ float sampleCloudEntry(
     vec2 detailPos   = (rotated + driftScroll) * (PUFF_DETAIL_FREQUENCY * max(noiseParams.x, 0.1));
     detailPos += vec2(u_time * CLOUD_MORPH_TIME_SCALE * 0.3, u_time * CLOUD_MORPH_TIME_SCALE)
     + vec2(patternSeed * 19.1, cloudSlotIndex * 53.7);
-    float detail         = fbmGradient2D(detailPos, 2, 2.1, 0.5) - 0.5;
+    float detail         = fbmGradient2D(detailPos, 3, 2.1, 0.5) - 0.5;
     float detailStrength = PUFF_DETAIL_STRENGTH * clamp(noiseParams.y, 0.0, 1.5);
     coverage = clamp(coverage + detail * detailStrength * (1.0 - coverage), 0.0, 1.0);
 
@@ -499,7 +533,13 @@ float sampleCloudEntry(
     return coverage;
 }
 
-vec3 shadeCloudEntry(vec3 worldPos, vec3 fakeNormal, float puffHeight, float thicknessNorm,
+// Shades one entry's resolved fragment. Lighting is a soft top-lit/
+// bottom-dark gradient from the fake normal plus a silver lining that
+// only brightens the cloud's own thin edges when the camera is looking
+// roughly toward the sun through them (forward scattering) — never a
+// Fresnel rim visible from every angle, which is what previously read as
+// a shaded sphere/bubble instead of a cloud.
+vec3 shadeCloudEntry(vec3 rayDir, vec3 fakeNormal, float puffHeight, float thicknessNorm,
     vec4 colorScale, vec4 materialParams) {
     vec3 sunDir  = normalize(u_sunDirection);
     vec3 moonDir = normalize(u_moonDirection);
@@ -522,10 +562,10 @@ vec3 shadeCloudEntry(vec3 worldPos, vec3 fakeNormal, float puffHeight, float thi
     vec3 shaded = tintedAlbedo * (ambient + directLight);
     shaded *= mix(CLOUD_STORM_DARKEN_MIN, 1.0, saturation);
 
-    vec3  viewDir = normalize(u_cameraPosition - worldPos);
-    float rim      = pow(1.0 - clamp(dot(fakeNormal, viewDir), 0.0, 1.0), CLOUD_RIM_POWER);
-    vec3  rimTint  = mix(u_sunColor, vec3(1.0), 0.5);
-    shaded += rimTint * rim * CLOUD_RIM_STRENGTH * mix(0.35, 1.0, sunLight);
+    float sunAlignment = clamp(dot(rayDir, sunDir), 0.0, 1.0);
+    float edgeThinness  = 1.0 - puffHeight;
+    float silverLining  = pow(sunAlignment, CLOUD_SILVER_LINING_POWER) * edgeThinness;
+    shaded += u_sunColor * u_sunIntensity * silverLining * CLOUD_SILVER_LINING_STRENGTH;
 
     return shaded;
 }
@@ -565,10 +605,9 @@ void main() {
         break;
 
         vec4  patternState = u_weatherPatternState[i];
-        float intensity           = patternState.x;
-        float fadeAlpha           = patternState.y;
-        float entryDistanceBlocks = patternState.z;
-        float rangeFade           = patternState.w;
+        float intensity  = patternState.x;
+        float fadeAlpha  = patternState.y;
+        float rangeFade  = patternState.w;
 
         if (intensity <= CLOUD_DENSITY_EPSILON || fadeAlpha <= CLOUD_DENSITY_EPSILON || rangeFade <= CLOUD_DENSITY_EPSILON)
         continue;
@@ -592,7 +631,7 @@ void main() {
         float pathLength;
         float slabBottomY, slabTopY;
 
-        if (!resolveCloudSlab(shape, rayDir, chunkOffsetBlocks, variance1.z, entryDistanceBlocks,
+        if (!resolveCloudSlab(shape, rayDir, chunkOffsetBlocks, variance1.z,
                 worldPosMid, tNear, pathLength, slabBottomY, slabTopY))
         continue;
 
@@ -627,7 +666,7 @@ void main() {
         if (entryAlpha <= CLOUD_DENSITY_EPSILON)
         continue;
 
-        vec3 entryColor = shadeCloudEntry(worldPosMid, fakeNormal, puffHeight, thicknessNorm, colorScale, materialParams);
+        vec3 entryColor = shadeCloudEntry(rayDir, fakeNormal, puffHeight, thicknessNorm, colorScale, materialParams);
 
         float remaining = 1.0 - accumulatedAlpha;
         accumulatedColor += entryColor * entryAlpha * remaining;

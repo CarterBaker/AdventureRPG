@@ -3,18 +3,18 @@
 
 #include "includes/WeatherMapData.glsl"
 
-// Bends a cloud entry's authored altitude down toward the world's fixed
-// sea level as ITS OWN real distance from the reference chunk grows —
-// never the angle it happens to be viewed at. A pattern sitting genuinely
-// close to the player keeps its true altitude no matter which part of its
-// own footprint a ray happens to graze; a pattern that has actually
-// drifted far away sinks toward sea level even glanced at nearly
-// overhead, matching how a real distant cloud reads low against the
-// horizon regardless of the exact angle it's glimpsed from. Distance is
-// normalized against u_weatherRangeBlocks (see WeatherMapData.glsl) — the
-// same terrain-independent range the CPU streams patterns across — so the
-// dome always spans exactly as far as weather itself is simulated,
-// independent of the much smaller terrain streaming radius.
+// Bends an authored cloud altitude down toward the world's fixed sea
+// level as the true horizontal distance passed in grows — the caller
+// resolves that distance per fragment (see WeatherShader.fsh's
+// resolveCloudSlab), never from a single CPU-side value for the whole
+// weather pattern, so the same pattern's clouds sit at their real
+// elevation near the camera and sink toward sea level at the horizon
+// continuously across their own footprint instead of as one flat bent
+// slab. Distance is normalized against u_weatherRangeBlocks (see
+// WeatherMapData.glsl) — the same terrain-independent range the CPU
+// streams patterns across — so the dome always spans exactly as far as
+// weather itself is simulated, independent of the much smaller terrain
+// streaming radius.
 
 // Must mirror EngineSetting.WEATHER_SEA_LEVEL_BLOCKS — GLSL has no
 // visibility into the Java constant, the same convention WaterShader.vsh
