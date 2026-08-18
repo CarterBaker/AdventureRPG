@@ -23,10 +23,11 @@ class WeatherMapBufferSystem extends SystemPackage {
     /*
      * Flattens each grid's own local weather instance, plus the shared
      * active weather-instance pool, into that grid's own WeatherMapData UBO
-     * every frame. The local instance is always written first, centered
-     * exactly on the reference chunk; pool entries follow nearest-first,
-     * culled to range. Each cloud slot within a pattern is placed into its
-     * own deterministically hashed sub-region and altitude jitter (see
+     * every frame. The local instance is always written first, placed with
+     * the same reference-relative math as pooled patterns since it now
+     * drifts just like they do; pool entries follow nearest-first, culled
+     * to range. Each cloud slot within a pattern is placed into its own
+     * deterministically hashed sub-region and altitude jitter (see
      * writeEntry) so a multi-cloud weather reads as a genuine patchwork of
      * distinct cloud types rather than one uniform layer, and every slot
      * cross-fades between a pattern's previous and current WeatherHandle
@@ -140,12 +141,25 @@ class WeatherMapBufferSystem extends SystemPackage {
         int capacity = EngineSetting.WEATHER_MAP_UBO_MAX_ENTRIES;
         int entryCount = 0;
 
+        // The local instance now drifts exactly like a pooled pattern (see
+        // WeatherPatternManager.advanceLocalWeather), so its bounds are
+        // computed the same way — relative to this grid's own reference
+        // chunk — instead of the old hardcoded (0,0), which pinned its
+        // clouds dead-center every frame regardless of its actual motion.
         WeatherInstance localPattern = grid.getWeatherInstance();
 
         if (localPattern.isConfigured()) {
+
+            double localDx = WorldWrapUtility.wrappedDelta(localPattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
+            double localDz = WorldWrapUtility.wrappedDelta(localPattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
+            float localCenterXBlocks = (float) (localDx * chunkSizeBlocks);
+            float localCenterZBlocks = (float) (localDz * chunkSizeBlocks);
+            float localDistanceBlocks = (float) (Math.sqrt(localDx * localDx + localDz * localDz) * chunkSizeBlocks);
             float localRadiusBlocks = localPattern.getFootprintRadiusChunks() * chunkSizeBlocks;
+
             entryCount = writePatternEntries(
-                    entryCount, capacity, localPattern, 0f, 0f, localRadiusBlocks, 0f, 1f);
+                    entryCount, capacity, localPattern, localCenterXBlocks, localCenterZBlocks, localRadiusBlocks,
+                    localDistanceBlocks, 1f);
         }
 
         for (int i = 0; i < patternCount && entryCount < capacity; i++) {

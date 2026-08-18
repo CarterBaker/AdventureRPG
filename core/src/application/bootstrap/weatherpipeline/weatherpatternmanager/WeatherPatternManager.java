@@ -21,8 +21,9 @@ public class WeatherPatternManager extends ManagerPackage {
 
     /*
      * Streams pool-recycled spatial weather cells around every active grid,
-     * plus one always-present local instance per grid centered exactly on
-     * that grid's own reference chunk. Position, fades, and weather-type
+     * plus one always-present local instance per grid that spawns at that
+     * grid's own reference chunk and then drifts with the same world
+     * rotation every other pattern does. Position, fades, and weather-type
      * crossfades all advance every frame from the same KPH-derived drift
      * speed; range membership (streaming in and retiring) is only
      * reassessed on the shared tick so a pattern sitting near the range
@@ -400,6 +401,20 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Local Weather \\
 
+    /*
+     * The per-grid local instance previously never moved — zero velocity,
+     * position fixed at construction, always drawn dead-centered by
+     * WeatherMapBufferSystem — so its clouds were frozen every frame
+     * regardless of anything else in the pipeline. It now gets the exact
+     * same KPH-derived velocity every pooled pattern gets and advances its
+     * position every frame identically, so WeatherMapBufferSystem can
+     * place it with the same reference-relative math as pooled patterns
+     * instead of a hardcoded (0,0). Its weather TYPE still re-resolves
+     * against the grid's own current reference coordinate every tick, so
+     * the atmosphere values (wind/temperature) it feeds always reflect
+     * where the player actually is, independent of its own drifted
+     * render position.
+     */
     private void advanceLocalWeather(ObjectArrayList<GridInstance> grids, boolean tickFired) {
 
         float deltaTime = internal.getDeltaTime();
@@ -430,9 +445,11 @@ public class WeatherPatternManager extends ManagerPackage {
                         EngineSetting.WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE);
 
                 pattern.setFadeAlpha(1f);
+                assignVelocity(pattern);
 
             } else {
 
+                pattern.advancePosition(deltaTime);
                 pattern.advanceWeatherTransition(deltaTime);
 
                 if (tickFired) {
@@ -496,6 +513,15 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Range Membership — tick-only \\
 
+    /*
+     * A pattern only starts retiring once its own visible EDGE — home
+     * distance minus its own footprint radius — has left range, exactly
+     * matching the edge-distance cull WeatherMapBufferSystem already uses
+     * to decide whether to draw it. Comparing raw home distance alone let
+     * a wide pattern start fading while its edge was still fully rendered
+     * and visible near the player — weather visibly popping/disappearing
+     * instead of drifting off into the distance the way it should.
+     */
     private void reassessRangeMembership() {
 
         for (int i = 0; i < patternPool.length; i++) {
@@ -504,7 +530,8 @@ public class WeatherPatternManager extends ManagerPackage {
                 continue;
 
             WeatherInstance pattern = patternPool[i];
-            boolean inRange = pattern.getDistanceFromReferenceChunks() <= rangeChunks;
+            float edgeDistanceChunks = pattern.getDistanceFromReferenceChunks() - pattern.getFootprintRadiusChunks();
+            boolean inRange = edgeDistanceChunks <= rangeChunks;
 
             pattern.setRetiring(!inRange);
         }

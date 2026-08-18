@@ -564,7 +564,19 @@ public class EngineSetting {
 
         public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
         public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 300;
-        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 160.0f;
+
+        // Diameter (at visualScale 1.0) of a pattern's own visible footprint.
+        // Must comfortably exceed WEATHER_PATTERN_CELL_SIZE_CHUNKS so
+        // neighboring streamed cells' footprints overlap instead of leaving
+        // dead sky between them — a radius needs to clear roughly half the
+        // cell's diagonal (~212 chunks at a 300-chunk cell) for real
+        // coverage, and needs enough spread besides that for the puff-field
+        // noise inside each cloud slot to complete more than a fraction of
+        // one cycle. 480 (radius 240, up to 384 at the highest authored
+        // visualScale) leaves overlap margin even after home-position
+        // jitter and gives every cloud archetype room for real internal
+        // shape.
+        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 480.0f;
         public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
         public static final float WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
         public static final long WEATHER_PATTERN_LOCAL_KEY_SEED = Long.MIN_VALUE;

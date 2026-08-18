@@ -97,16 +97,34 @@ class GlobalNoiseSystem extends SystemPackage {
                 * EngineSetting.WEATHER_NOISE_CELL_SIZE;
     }
 
+    /*
+     * Embeds chunkX on the same rotating circle the local/regional noise
+     * uses (see WeatherNoiseUtility.sample) — without the rotation phase
+     * added here too, this layer sampled a DIFFERENT effective angle than
+     * the local layer for the exact same drifting pattern, since the local
+     * layer's angle is already stable (position drift and rotation phase
+     * cancel by design — see WeatherPatternManager.assignVelocity). That
+     * mismatch let global storm intensity drift out from under an
+     * otherwise-stable pattern, occasionally flipping its resolved weather
+     * type mid-transit for no reason the CPU-side motion would explain.
+     * Both layers now rotate identically, so a pattern's combined noise —
+     * and therefore its weather type — stays exactly as stable while it
+     * drifts as the design intends.
+     */
     float sampleGlobalIntensity(long chunkCoordinate) {
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
 
         double spatialAngle = (chunkX / worldWidthChunks) * (Math.PI * 2.0);
+        double rotationPhaseRadians = (rotationAngleDegrees / EngineSetting.DEGREES_PER_FULL_ROTATION)
+                * (Math.PI * 2.0);
+        double angle = spatialAngle + rotationPhaseRadians;
+
         double embeddingRadius = worldWidthChunks / (Math.PI * 2.0 * EngineSetting.GLOBAL_WEATHER_NOISE_CELL_SIZE);
 
-        double ex = Math.cos(spatialAngle) * embeddingRadius;
-        double ey = Math.sin(spatialAngle) * embeddingRadius;
+        double ex = Math.cos(angle) * embeddingRadius;
+        double ey = Math.sin(angle) * embeddingRadius;
 
         double zWavelength = EngineSetting.GLOBAL_WEATHER_NOISE_CELL_SIZE;
 
