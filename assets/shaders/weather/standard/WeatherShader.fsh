@@ -60,6 +60,13 @@ const float CLOUD_PUFF_ANGLE_WOBBLE  = 1.2;
 const float CLOUD_DRIFT_SCROLL_SCALE = 0.35;
 const float CLOUD_MORPH_TIME_SCALE   = 0.015;
 
+// Bends a weather pattern's own outer silhouette by angle so the whole
+// system doesn't read as one perfect ellipse. Stable per pattern (keyed
+// off patternSeed/cloudSlotIndex, no time term), so it never shifts
+// frame to frame or differs between players looking at the same pattern.
+const float PATTERN_BOUNDARY_WARP_STRENGTH  = 0.22;
+const float PATTERN_BOUNDARY_WARP_FREQUENCY = 2.5;
+
 const float CLOUD_FAR_FADE_FRACTION = 0.2;
 
 const float CLOUD_RIM_POWER         = 3.0;
@@ -97,6 +104,16 @@ const float PUFF_VERTICAL_SPAN_MIN   = 0.30;
 const float PUFF_VERTICAL_SPAN_MAX   = 0.70;
 const float PUFF_DETAIL_FREQUENCY    = 0.05;
 const float PUFF_DETAIL_STRENGTH     = 0.28;
+
+// Shape/blend tuning for the puff field itself. Domain-warping the grid
+// before it's sampled, and summing overlapping puffs as soft radial
+// fields (a cheap metaball union) instead of picking one winning disc,
+// is what turns "a circle full of little circles" into a handful of
+// merged, organic-looking cloud blobs.
+const float PUFF_DOMAIN_WARP_FREQUENCY = 0.35;
+const float PUFF_DOMAIN_WARP_STRENGTH  = 0.5;
+const float PUFF_UNION_THRESHOLD       = 0.55;
+const float PUFF_UNION_SOFTNESS        = 0.35;
 
 // Cheap ray-vs-footprint-circle test used to skip an entry's slab resolve
 // and puff-field evaluation entirely when the view ray could never pass
@@ -193,20 +210,35 @@ bool resolveCloudSlab(
 // entry, so puffs clump into genuine patches with real gaps between them
 // rather than tiling uniformly forever; the fragment's own cell plus its
 // 3x3 neighborhood are tested (jittered-cell/Worley technique) so a
-// puff straddling a cell boundary is never clipped by it. Returns
-// horizontal coverage in [0,1] and the winning puff's own stable
-// per-cell hash, so the caller can derive that same puff's own vertical
-// band and shading variance consistently every frame and for every
-// player looking at the same pattern.
+// puff straddling a cell boundary is never clipped by it. The sample
+// position is domain-warped before it's ever gridded, and every
+// candidate puff contributes a soft radial field summed across the
+// whole neighborhood (a cheap metaball union) rather than the fragment
+// simply adopting whichever single puff is closest — that union is what
+// actually merges overlapping puffs into one blob instead of leaving
+// each one's hard circular edge visible. Returns the winning single
+// puff's own stable per-cell hash for the caller's shading math, since
+// vertical banding and the fake normal only need a representative puff,
+// not the full blended field.
 float samplePuffField(
     vec2 localPos, float elongation, float cellSizeBlocks, float presenceThreshold, float edgeSoftness,
     float patternSeed, float archetypeSalt,
     out vec2 outOffsetNorm, out vec3 outWinningPuffHash) {
-    vec2 anisoLocal   = vec2(localPos.x, localPos.y * elongation);
-    vec2 cellSpacePos = anisoLocal / max(cellSizeBlocks, 1.0);
+    vec2 anisoLocal = vec2(localPos.x, localPos.y * elongation);
+
+    // Domain-warp the sample position before it is ever gridded, so the
+    // cell lattice itself never lines up with a straight edge.
+    vec2 warpFreq = vec2(PUFF_DOMAIN_WARP_FREQUENCY / max(cellSizeBlocks, 1.0));
+    vec2 warp = vec2(
+        gradientNoise2D(anisoLocal * warpFreq + vec2(patternSeed * 11.3, archetypeSalt)),
+        gradientNoise2D(anisoLocal * warpFreq + vec2(archetypeSalt, patternSeed * 7.9)));
+    vec2 warpedLocal = anisoLocal + warp * cellSizeBlocks * PUFF_DOMAIN_WARP_STRENGTH;
+
+    vec2 cellSpacePos = warpedLocal / max(cellSizeBlocks, 1.0);
     vec2 cellBase     = floor(cellSpacePos);
 
-    float bestCoverage   = 0.0;
+    float fieldSum       = 0.0;
+    float bestSinglePuff = 0.0;
     vec2  bestOffsetNorm = vec2(0.0);
     vec3  bestHash       = vec3(0.0);
 
@@ -232,18 +264,33 @@ float samplePuffField(
             vec2 puffCenterCell = cell + jitter;
 
             float sizeT           = puffHash.z * 0.5 + 0.5;
-            float puffRadiusCells = mix(0.35, 0.62, sizeT);
+            float puffRadiusCells = mix(0.42, 0.78, sizeT);
 
-            vec2  toPuff     = cellSpacePos - puffCenterCell;
-            vec2  offsetNorm = toPuff / max(puffRadiusCells, 0.001);
-            float distNorm   = length(offsetNorm);
+            vec2 toPuff = cellSpacePos - puffCenterCell;
 
-            float edge0    = max(0.0001, 1.0 - edgeSoftness);
-            float coverage = (1.0 - smoothstep(edge0, 1.0, distNorm)) * presenceFade;
+            // Random per-puff squash + rotation, seeded from this puff's
+            // own stable hash (no extra noise taps needed), so the field
+            // is built from lopsided blobs instead of identical discs.
+            float wobbleAngle  = fract(puffHash.x * 43.27 + puffHash.y * 17.61) * 6.28318;
+            float wobbleAspect = mix(0.7, 1.35, fract(puffHash.z * 29.13 + puffHash.x * 11.7));
+            float wca = cos(wobbleAngle);
+            float wsa = sin(wobbleAngle);
+            vec2  puffLocal   = vec2(toPuff.x * wca + toPuff.y * wsa, -toPuff.x * wsa + toPuff.y * wca);
+            vec2  shapeOffset = vec2(puffLocal.x, puffLocal.y * wobbleAspect) / max(puffRadiusCells, 0.001);
+            float distNorm    = length(shapeOffset);
 
-            if (coverage > bestCoverage) {
-                bestCoverage   = coverage;
-                bestOffsetNorm = offsetNorm;
+            // Soft radial field (metaball), not a hard disc — squared so
+            // influence concentrates near each puff's own center and
+            // tapers out well before its nominal edge.
+            float field = clamp(1.0 - distNorm, 0.0, 1.0);
+            field = field * field * presenceFade;
+            fieldSum += field;
+
+            float singleCoverage = (1.0 - smoothstep(max(0.0001, 1.0 - edgeSoftness), 1.0, distNorm)) * presenceFade;
+
+            if (singleCoverage > bestSinglePuff) {
+                bestSinglePuff = singleCoverage;
+                bestOffsetNorm = toPuff / max(puffRadiusCells, 0.001);
                 bestHash       = puffHash;
             }
         }
@@ -251,7 +298,12 @@ float samplePuffField(
 
     outOffsetNorm      = bestOffsetNorm;
     outWinningPuffHash = bestHash;
-    return bestCoverage;
+
+    // Wispier archetypes (higher edgeSoftness, e.g. Sirrus) get a wider
+    // union band so they fringe out gently; dense archetypes keep a
+    // firmer, more sculpted edge.
+    float band = mix(PUFF_UNION_SOFTNESS * 0.5, PUFF_UNION_SOFTNESS * 1.5, edgeSoftness);
+    return smoothstep(PUFF_UNION_THRESHOLD - band, PUFF_UNION_THRESHOLD + band, fieldSum);
 }
 
 // Coverage (silhouette) plus a fake hemisphere normal for cheap shading.
@@ -306,7 +358,18 @@ float sampleCloudEntry(
     float spreadRatio = clamp(variance0.x, 0.1, 2.0);
     vec2  anisotropicExtent = boxHalfExtent * spreadRatio * vec2(1.0, 1.0 / elongation);
     vec2  spreadNorm  = rotated / max(anisotropicExtent, vec2(1.0));
-    float radialDist  = length(spreadNorm);
+    float rawRadialDist = length(spreadNorm);
+
+    // Cheap reject using an inflated bound before paying for the boundary
+    // warp below, which can only ever push the true edge further out.
+    if (rawRadialDist > CLOUD_OUTER_FADE_END * (1.0 + PATTERN_BOUNDARY_WARP_STRENGTH))
+    return 0.0;
+
+    float boundaryAngle  = atan(spreadNorm.y, spreadNorm.x);
+    float boundaryWobble = 1.0 + PATTERN_BOUNDARY_WARP_STRENGTH * gradientNoise2D(
+        vec2(cos(boundaryAngle), sin(boundaryAngle)) * PATTERN_BOUNDARY_WARP_FREQUENCY
+        + vec2(patternSeed * 5.1, cloudSlotIndex * 13.7));
+    float radialDist = rawRadialDist / max(boundaryWobble, 0.35);
 
     if (radialDist > CLOUD_OUTER_FADE_END)
     return 0.0;

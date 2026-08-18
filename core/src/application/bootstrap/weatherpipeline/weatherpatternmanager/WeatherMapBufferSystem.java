@@ -76,8 +76,20 @@ class WeatherMapBufferSystem extends SystemPackage {
         this.worldManager = get(WorldManager.class);
     }
 
+    // Runs in LATE_UPDATE, deliberately after both UPDATE and FIXED_UPDATE
+    // have finished for this frame. Player movement is physics-driven and
+    // resolved in FIXED_UPDATE, so a grid's own reference chunk coordinate
+    // isn't final for the frame until then. Writing these entries any
+    // earlier (i.e. from UPDATE, which runs before FIXED_UPDATE) reads a
+    // stale reference chunk on exactly the frame the player's position
+    // wraps across a chunk boundary — every pattern's centerXBlocks/Z is
+    // computed relative to that reference chunk, so a one-frame-stale read
+    // shows up as every cloud pattern popping sideways by one full chunk
+    // width for that single frame. Nothing else this system depends on
+    // (pattern positions, transitions) needs to be any fresher than
+    // UPDATE, so only this write moves.
     @Override
-    protected void update() {
+    protected void lateUpdate() {
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
         Object[] elements = grids.elements();
