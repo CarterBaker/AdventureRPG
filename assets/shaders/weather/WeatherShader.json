@@ -1,4 +1,0 @@
-{
-    "vert": "util/PlanarPassShader.vsh",
-    "frag": "weather/WeatherShader.fsh"
-}

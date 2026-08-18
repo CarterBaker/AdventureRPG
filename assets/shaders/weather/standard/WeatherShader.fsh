@@ -13,7 +13,7 @@ out vec4 fragColor;
 #include "includes/PlayerPositionData.glsl"
 #include "includes/SettingsData.glsl"
 #include "includes/NoiseUtility.glsl"
-#include "includes/CloudDome.glsl"
+#include "weather/includes/CloudDome.glsl"
 
 /*
 * Cheap fake-volumetric cloud pass. Each weather-map entry is a real
