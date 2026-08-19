@@ -578,7 +578,7 @@ public class EngineSetting {
 
         // Cloud Dome Bend \\
 
-        public static final float CLOUD_DOME_FADE_ALTITUDE_BLOCKS = 512;
+        public static final float CLOUD_DOME_FADE_ALTITUDE_BLOCKS = 0;
         public static final float CLOUD_DOME_BEND_CURVE = 0.5f;
 
         // Weather Pattern Lifecycle \\

@@ -4,32 +4,36 @@
 #include "includes/WeatherMapData.glsl"
 
 /*
-* Bends an authored cloud altitude down toward a tunable fade altitude as
- * the fragment's own true horizontal distance grows, so a pattern's clouds
- * sit at their real elevation near the camera and sink toward the fade
- * altitude at the horizon continuously across their own footprint instead
- * of as one flat bent slab. Distance is normalized against
- * u_weatherRangeBlocks — the same terrain-independent range the CPU streams
- * patterns across — so the dome always spans exactly as far as weather is
- * simulated. u_cloudDomeFadeAltitude and u_cloudDomeBendCurve are pushed
- * once at awake() by WeatherSystem (see EngineSetting.CLOUD_DOME_FADE_
- * ALTITUDE_BLOCKS / CLOUD_DOME_BEND_CURVE): the fade altitude defaults to
- * sea level, and the bend curve is a 0..1 knob mapped to a pow() exponent
- * via 1/knob — 1.0 is a linear bend, 0.5 (default) is a parabola, and
- * values near 0.0 hold the true elevation almost the whole way out and only
- * bend down right at the horizon edge.
+* Bends an authored cloud altitude down toward u_cloudDomeFadeAltitude as a
+ * weather entry's true horizontal distance from world center grows, so a
+ * pattern sits at its real elevation near the camera and sinks to the fade
+ * altitude at the horizon — giving the sky a spherical "dome" silhouette
+ * instead of a flat blanket. Distance is normalized against
+ * u_weatherRangeBlocks, the same terrain-independent range the CPU streams
+ * patterns across, so the dome always spans exactly as far as weather is
+ * simulated: distanceT = 0.0 is world center (authored altitude) and
+ * distanceT = 1.0 is the edge of simulated range (fade altitude).
+ * u_cloudDomeBendCurve reshapes that 0..1 falloff through a pow() exponent
+ * of 1/curve — curve = 1.0 is a linear bend (a literal cone from apex to
+ * base), curve = 0.5 (default) is a parabola, and curve approaching 0.0
+ * holds the true elevation almost the entire way out and only snaps down
+ * to the fade altitude right at the horizon edge. Both uniforms are pushed
+ * once at awake() by WeatherSystem from EngineSetting.CLOUD_DOME_FADE_
+ * ALTITUDE_BLOCKS / CLOUD_DOME_BEND_CURVE.
  */
 
 uniform float u_cloudDomeFadeAltitude;
 uniform float u_cloudDomeBendCurve;
 
 const float CLOUD_DOME_BEND_CURVE_MIN = 0.02;
+const float CLOUD_DOME_BEND_CURVE_MAX = 1.0;
 
 float resolveCloudDomeAltitude(float authoredAltitude, float distanceBlocks) {
     float distanceT  = clamp(distanceBlocks / max(u_weatherRangeBlocks, 1.0), 0.0, 1.0);
-    float curvePower = 1.0 / max(u_cloudDomeBendCurve, CLOUD_DOME_BEND_CURVE_MIN);
-    float bend        = pow(distanceT, curvePower);
-    return mix(authoredAltitude, u_cloudDomeFadeAltitude, bend);
+    float curve      = clamp(u_cloudDomeBendCurve, CLOUD_DOME_BEND_CURVE_MIN, CLOUD_DOME_BEND_CURVE_MAX);
+    float curvePower = 1.0 / curve;
+    float bendT      = pow(distanceT, curvePower);
+    return mix(authoredAltitude, u_cloudDomeFadeAltitude, bendT);
 }
 
 #endif

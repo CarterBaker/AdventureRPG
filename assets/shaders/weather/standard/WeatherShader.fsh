@@ -18,21 +18,16 @@ out vec4 fragColor;
 
 /*
 * Fullscreen volumetric cloud pass. Each weather-map entry is a horizontal
- * slab — an authored altitude plus a vertical thickness, bent toward the
- * horizon per-fragment by CloudDome.glsl — that the view ray is raymarched
- * through in a handful of steps rather than sampled once, giving clouds
- * real front-to-back volume instead of a flat card. Every part of a
- * cloud's actual "look" — horizontal silhouette, vertical puff profile,
- * and lit shading — lives in weather/includes/CloudVisual.glsl, driven
- * entirely by that entry's own UBO values; this file only owns the
- * raymarch itself: which slab a ray crosses, how many steps to take
- * through it, and how to composite one entry's result over the next.
- * Entries arrive from WeatherMapBufferSystem already sorted nearest-first
- * and placed into their own sub-region of their pattern's footprint, so
- * front-to-back compositing across entries (outer loop) nested around
- * front-to-back compositing through one entry's own thickness (inner
- * loop) gives a convincing layered sky with no true depth sort or
- * per-pixel light-ray march.
+ * slab — a dome-bent altitude (see CloudDome.glsl, driven by that entry's
+ * own CPU-tracked distance-from-center in patternState.z, never guessed
+ * from the screen ray) plus a vertical thickness — that the view ray is
+ * raymarched through in a handful of steps for real front-to-back volume.
+ * Horizontal silhouette, vertical puff profile, and lit shading all live in
+ * weather/includes/CloudVisual.glsl, driven entirely by that entry's own
+ * UBO values; this file owns only the raymarch itself — which slab a ray
+ * crosses, how many steps to take through it, and how to composite one
+ * entry's result over the next, given entries arrive nearest-first from
+ * WeatherMapBufferSystem.
  */
 
 uniform float u_cloudAltitudeMin;
@@ -82,36 +77,27 @@ bool footprintMayBeVisible(vec2 rayOriginXZ, vec2 rayDirXZ, vec2 circleCenter, f
 }
 
 // Resolves the vertical slab (tNear/tFar plus bottom/top altitude) one view
-// ray crosses for one weather entry. The dome bend is resolved per fragment
-// with a single ray/plane intersection against the entry's own AUTHORED
-// altitude — that intersection distance drives CloudDome.glsl's bend curve,
-// which gives the final, already-bent altitude the slab is actually built
-// from. A second re-intersection against that bent altitude was tried
-// previously to "refine" the distance, but for any ray pointing up or level
-// whose bent altitude sinks below the camera, that second intersection has
-// no forward solution — it collapses to t = 0, reports a distance of zero,
-// and CloudDome.glsl bends the altitude straight back to unbent. That
-// feedback loop was silently cancelling the entire dome effect every
-// frame. One pass is stable and is all the bend curve needs, since it
-// only has to place the slab in roughly the right spot, not solve for an
-// exact self-consistent intersection.
+// ray crosses for one weather entry. The dome-bent center altitude comes
+// from boxCenterDistanceBlocks — that entry's own horizontal distance from
+// world center, tracked every frame CPU-side in WeatherMapBufferSystem and
+// carried in patternState.z — never guessed from the ray itself, since a
+// ray-based guess made the bend depend on view angle and made each entry's
+// height-undulation noise swim as the camera turned. boxCenterBlocks
+// anchors that same undulation to the entry's own fixed footprint center
+// instead of wherever the ray happened to be pointed.
 bool resolveCloudSlab(
-    vec4 shape, vec3 rayDir, vec2 chunkOffsetBlocks, float patternSeed,
+    vec4 shape, vec3 rayDir, vec2 boxCenterBlocks, vec2 chunkOffsetBlocks,
+    float boxCenterDistanceBlocks, float patternSeed,
     out vec3 worldPosMid, out float tNear, out float pathLength,
     out float slabBottomY, out float slabTopY) {
     float clampedAltitude = clamp(shape.y, u_cloudAltitudeMin, u_cloudAltitudeMax);
     float thickness       = max(shape.x, CLOUD_MIN_SLAB_THICKNESS_BLOCKS);
     float halfThickness   = thickness * 0.5;
 
-    float guardedDirY = rayDir.y >= 0.0 ? max(rayDir.y, 0.05) : min(rayDir.y, -0.05);
-
-    float tGuess = min(max((clampedAltitude - u_cameraPosition.y) / guardedDirY, 0.0), u_cloudMaxDistance);
-    vec2  guessXZ        = u_cameraPosition.xz + rayDir.xz * tGuess;
-    float distanceBlocks = length(guessXZ - u_cameraPosition.xz);
-    float bentAltitude   = resolveCloudDomeAltitude(clampedAltitude, distanceBlocks);
+    float bentAltitude = resolveCloudDomeAltitude(clampedAltitude, boxCenterDistanceBlocks);
 
     float undulation = gradientNoise2D(
-        (guessXZ + chunkOffsetBlocks) * CLOUD_HEIGHT_UNDULATION_FREQUENCY
+        (boxCenterBlocks + chunkOffsetBlocks) * CLOUD_HEIGHT_UNDULATION_FREQUENCY
         + vec2(patternSeed * 31.7, patternSeed * 57.1));
     bentAltitude += undulation * thickness * CLOUD_HEIGHT_UNDULATION_STRENGTH;
 
@@ -178,9 +164,10 @@ void main() {
         break;
 
         vec4  patternState = u_weatherPatternState[i];
-        float intensity  = patternState.x;
-        float fadeAlpha  = patternState.y;
-        float rangeFade  = patternState.w;
+        float intensity          = patternState.x;
+        float fadeAlpha          = patternState.y;
+        float distanceFromCenter = patternState.z;
+        float rangeFade          = patternState.w;
 
         if (intensity <= CLOUD_DENSITY_EPSILON || fadeAlpha <= CLOUD_DENSITY_EPSILON || rangeFade <= CLOUD_DENSITY_EPSILON)
         continue;
@@ -204,7 +191,7 @@ void main() {
         float pathLength;
         float slabBottomY, slabTopY;
 
-        if (!resolveCloudSlab(shape, rayDir, chunkOffsetBlocks, variance1.z,
+        if (!resolveCloudSlab(shape, rayDir, boxCenter, chunkOffsetBlocks, distanceFromCenter, variance1.z,
                 worldPosMid, tNear, pathLength, slabBottomY, slabTopY))
         continue;
 
