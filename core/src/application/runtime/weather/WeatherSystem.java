@@ -19,20 +19,11 @@ public class WeatherSystem extends SystemPackage {
 
     /*
      * Renders all weather/cloud visuals in a single fullscreen raymarched
-     * pass, driven by the shared processing-pass pipeline (see PassManager)
-     * — the same pattern SkySystem/SSAOSystem/LightingSystem use — instead
-     * of constructing its own mesh/material/model at runtime. The pass's
-     * own descriptor (processingpasses/Weather.json) owns the mesh and
-     * material/shader wiring; this system only clones the per-window FBO
-     * target and pushes the handful of uniforms that can't be known until
-     * runtime (raymarch bounds and drift direction/speed, both derived
-     * from world/weather data resolved after bootstrap).
-     *
-     * Composites into the scene at LAYER_WEATHER, beneath world geometry.
-     * Cloud internal motion and silhouette orientation are driven by the
-     * same world-rotation drift that moves weather patterns themselves —
-     * never the independent local wind system, which stays reserved for
-     * future systems (grass, trees, water).
+     * pass, driven by the shared processing-pass pipeline. This system only
+     * clones the per-window FBO target and pushes the handful of uniforms
+     * that can't be known until runtime — raymarch bounds, drift direction/
+     * speed, and CloudDome's horizon-bend tuning knobs — all constant for
+     * the session, so all pushed once here rather than every frame.
      */
 
     // Internal
@@ -69,15 +60,11 @@ public class WeatherSystem extends SystemPackage {
 
         assignRaymarchBounds(material);
         assignDriftUniforms(material);
+        assignDomeBendUniforms(material);
     }
 
     // Raymarch Bounds \\
 
-    /*
-     * Sized once and never touched again — comfortably contains every
-     * in-range weather pattern's footprint, the same radius the old
-     * overhead box used.
-     */
     private void assignRaymarchBounds(MaterialInstance material) {
 
         float maxDistanceBlocks = (weatherManager.getEffectiveRangeChunks()
@@ -90,21 +77,24 @@ public class WeatherSystem extends SystemPackage {
 
     // Drift Uniforms \\
 
-    /*
-     * WeatherPatternManager advects every pattern at the negated world-
-     * rotation drift (see its assignVelocity()) so a pattern's own motion
-     * cancels the noise field's rotation phase instead of doubling it.
-     * The direction here matches that same negated axis so the cloud
-     * puffs' internal scroll reads as moving with the pattern instead of
-     * against it. Constant for the session, so this is set once here
-     * instead of re-pushed every frame.
-     */
     private void assignDriftUniforms(MaterialInstance material) {
 
         float driftSpeedBlocksPerSecond = weatherManager.getWorldDriftChunksPerSecondX() * EngineSetting.CHUNK_SIZE;
 
         material.setUniform("u_weatherDriftDirection", new Vector2(-1f, 0f));
         material.setUniform("u_weatherDriftSpeed", driftSpeedBlocksPerSecond);
+    }
+
+    // Dome Bend Uniforms \\
+
+    /*
+     * CloudDome.glsl's tunable horizon-bend knobs — see
+     * EngineSetting.CLOUD_DOME_FADE_ALTITUDE_BLOCKS / CLOUD_DOME_BEND_CURVE
+     * for what each one controls.
+     */
+    private void assignDomeBendUniforms(MaterialInstance material) {
+        material.setUniform("u_cloudDomeFadeAltitude", EngineSetting.CLOUD_DOME_FADE_ALTITUDE_BLOCKS);
+        material.setUniform("u_cloudDomeBendCurve", EngineSetting.CLOUD_DOME_BEND_CURVE);
     }
 
     @Override
