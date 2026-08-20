@@ -514,7 +514,6 @@ public class EngineSetting {
         // Weather Sampling Range \\
 
         public static final int WEATHER_RANGE_CHUNKS = 512;
-        public static final int WEATHER_FAR_RANGE_CHUNKS = 384;
 
         // Global Weather Noise \\
 

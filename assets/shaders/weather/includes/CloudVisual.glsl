@@ -181,13 +181,16 @@ float resolveCloudCoverage(
 }
 
 // One cloud slab's vertical density at an arbitrary world height, sampled
-// once per raymarch step. The profile is asymmetric (sharper below its own
-// center, softer above) for the flat-base, round-top read a real
+// once per raymarch step. The profile is asymmetric (sharper below its
+// own center, softer above) for the flat-base, round-top read a real
 // convective cloud has; fullness controls how pronounced that asymmetry
 // is. shadingBias nudges the center within a modest band so different
 // clumps don't all peak at the same height, and a cheap per-step 2D wisp
 // breaks density up along the ray so a thick slab never reads as a
-// uniform grey wall.
+// uniform grey wall. fullness also tapers the horizontal coverage passed
+// in by the caller toward the top and bottom of the slab, so a puffy
+// archetype narrows into a round, convective cross-section from the side
+// while a flat archetype stays a uniform sheet at every height.
 float resolveCloudVerticalDensity(
     vec3 stepWorldPos, float slabBottomY, float slabTopY,
     float fullness, float shadingBias, float patternSeed,
@@ -209,11 +212,13 @@ float resolveCloudVerticalDensity(
     if (profile <= CLOUD_VISUAL_EPSILON)
     return 0.0;
 
+    float lateralTaper = clamp(mix(1.0, 1.0 - verticalNorm * verticalNorm, fullness), 0.0, 1.0);
+
     float wispNoise = gradientNoise2D(
         stepWorldPos.xz * CLOUD_VISUAL_WISP_FREQUENCY + vec2(patternSeed * 13.1, stepWorldPos.y * 0.05));
     float wisp = mix(1.0 - CLOUD_VISUAL_WISP_STRENGTH, 1.0, wispNoise * 0.5 + 0.5);
 
-    return profile * wisp;
+    return profile * wisp * lateralTaper;
 }
 
 // Shades one raymarch step's resolved sample: a soft top-lit/bottom-dark

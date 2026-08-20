@@ -43,15 +43,17 @@ const float CLOUD_MIN_SLAB_THICKNESS_BLOCKS          = 4.0;
 const float CLOUD_HEIGHT_UNDULATION_FREQUENCY = 0.0012;
 const float CLOUD_HEIGHT_UNDULATION_STRENGTH  = 0.35;
 
-// Dome-crossing search tuning. SEARCH_SEGMENTS brackets a sign change of
-// the ray-height-vs-dome-altitude difference; BISECTION_STEPS collapses a
-// found bracket to a precise crossing. GRAZE_REFINE_STEPS does the
-// equivalent for rays that never cross (see resolveCloudSlab) so both
-// cases converge on the same continuous result instead of one snapping to
-// the coarse search grid. SLOPE_PROBE_BLOCKS sets the finite-difference
-// spacing used to measure the crossing's local penetration rate, which is
-// what lets the slab's real thickness be projected onto the ray.
-// MIN_PENETRATION_RATE guards that projection for near-tangential rays.
+// Dome-crossing search tuning. The curved search only needs to cover
+// [0, u_weatherRangeBlocks] — resolveCloudDomeAltitude is a fixed
+// y = u_cloudDomeFadeAltitude plane past that, solved exactly instead of
+// searched. SEARCH_SEGMENTS brackets a sign change within the curved
+// region; BISECTION_STEPS collapses a found bracket to a precise crossing.
+// GRAZE_REFINE_STEPS does the equivalent for rays that graze the curved
+// region without crossing it. SLOPE_PROBE_BLOCKS sets the finite-
+// difference spacing used to measure the crossing's local penetration
+// rate, which is what lets the slab's real thickness be projected onto
+// the ray. MIN_PENETRATION_RATE guards that projection for near-tangential
+// rays.
 const int   CLOUD_DOME_SEARCH_SEGMENTS      = 20;
 const float CLOUD_DOME_SEARCH_MARGIN_RATIO  = 0.2;
 const int   CLOUD_DOME_BISECTION_STEPS      = 6;
@@ -101,21 +103,25 @@ float sampleDomeHeightDelta(vec3 rayDir, float t, float clampedAltitude, float h
 }
 
 // Locates where a ray crosses this entry's own continuously-bending slab.
-// A coarse scan brackets a genuine sign change for bisection. When the ray
-// only grazes the band without ever crossing it — the normal case near
-// the horizon, since that's exactly where the dome bends the surface
-// toward tangency with the view — the closest coarse sample is refined
-// with a short ternary search minimizing |F(t)| instead of being used as
-// raw coarse-grid output. Without that refinement the grazing case
-// snapped to whichever whole coarse segment was closest, which is what
-// read as a seam rippling across the dome as rays swept toward the
-// horizon. Once tCenter is resolved, the slab's known thickness is
-// projected onto the ray using the crossing's own local penetration rate.
+// The curved region [0, u_weatherRangeBlocks] is scanned coarsely for a
+// genuine sign change, refined by bisection. Rays that only graze the
+// curved band without crossing it — the normal case near the horizon,
+// since that's exactly where the dome bends toward tangency with the view
+// — are refined with a short ternary search around the closest coarse
+// sample instead of accepting the coarse sample's grid position directly.
+// If neither finds a crossing, the flat region beyond u_weatherRangeBlocks
+// (a fixed y = u_cloudDomeFadeAltitude plane) is solved analytically, so
+// the configured fade altitude is always reachable at the horizon instead
+// of depending on where a coarse sample happened to fall. Once tCenter is
+// resolved, the slab's known thickness is projected onto the ray using
+// the crossing's own local penetration rate.
 bool resolveCloudSlab(
     vec3 rayDir, float clampedAltitude, float thickness, float heightUndulation,
     out vec3 worldPosMid, out float tNear, out float pathLength) {
     float halfThickness = thickness * 0.5;
-    float segmentLength = u_cloudMaxDistance / float(CLOUD_DOME_SEARCH_SEGMENTS);
+
+    float curvedSearchDistance = min(u_cloudMaxDistance, u_weatherRangeBlocks);
+    float segmentLength = max(curvedSearchDistance / float(CLOUD_DOME_SEARCH_SEGMENTS), 0.0001);
 
     float prevT = 0.0;
     float prevF = sampleDomeHeightDelta(rayDir, 0.0, clampedAltitude, heightUndulation);
@@ -126,7 +132,7 @@ bool resolveCloudSlab(
     float bestT     = 0.0;
 
     for (int s = 1; s <= CLOUD_DOME_SEARCH_SEGMENTS; s++) {
-        float t = float(s) * segmentLength;
+        float t = min(float(s) * segmentLength, curvedSearchDistance);
         float f = sampleDomeHeightDelta(rayDir, t, clampedAltitude, heightUndulation);
 
         if (abs(f) < bestAbsF) {
@@ -144,7 +150,8 @@ bool resolveCloudSlab(
         prevF = f;
     }
 
-    float tCenter;
+    float tCenter = 0.0;
+    bool foundCrossing = false;
 
     if (bracketLo >= 0.0) {
         float lo  = bracketLo;
@@ -164,13 +171,10 @@ bool resolveCloudSlab(
         }
 
         tCenter = (lo + hi) * 0.5;
+        foundCrossing = true;
     } else if (bestAbsF <= halfThickness + segmentLength * CLOUD_DOME_SEARCH_MARGIN_RATIO) {
-        // Ternary-search a window around the closest coarse sample to
-        // converge onto the true local minimum of |F(t)| — the same root
-        // the bisection branch above would resolve if it had found a
-        // sign change — rather than accepting the coarse sample directly.
         float lo = max(bestT - segmentLength, 0.0);
-        float hi = min(bestT + segmentLength, u_cloudMaxDistance);
+        float hi = min(bestT + segmentLength, curvedSearchDistance);
 
         for (int i = 0; i < CLOUD_DOME_GRAZE_REFINE_STEPS; i++) {
             float m1 = mix(lo, hi, 1.0 / 3.0);
@@ -185,9 +189,25 @@ bool resolveCloudSlab(
         }
 
         tCenter = (lo + hi) * 0.5;
-    } else {
-        return false;
+        foundCrossing = true;
     }
+
+    // Flat-plane solve for the region beyond the curved search — the
+    // dome is exactly y = u_cloudDomeFadeAltitude + heightUndulation out
+    // there, so this is a direct ray/plane intersection rather than a
+    // search, and always finds the crossing when one exists.
+    if (!foundCrossing && curvedSearchDistance < u_cloudMaxDistance && abs(rayDir.y) > 0.0001) {
+        float flatPlaneY = u_cloudDomeFadeAltitude + heightUndulation;
+        float tPlane = (flatPlaneY - u_cameraPosition.y) / rayDir.y;
+
+        if (tPlane >= curvedSearchDistance && tPlane <= u_cloudMaxDistance) {
+            tCenter = tPlane;
+            foundCrossing = true;
+        }
+    }
+
+    if (!foundCrossing)
+    return false;
 
     float tBack = max(tCenter - CLOUD_DOME_SLOPE_PROBE_BLOCKS, 0.0);
     float tFwd  = min(tCenter + CLOUD_DOME_SLOPE_PROBE_BLOCKS, u_cloudMaxDistance);

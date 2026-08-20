@@ -36,7 +36,8 @@ class RegionSampleSystem extends SystemPackage {
      * radius (settings.maxRenderDistance). This is the sole authority for
      * how far the CPU weather simulation and the skybox's distant cloud
      * sampling reach — the same single range is used to stream patterns in,
-     * cull the weather map, and retire patterns that drift out of it.
+     * cull the weather map, retire patterns that drift out of it, and to
+     * place the horizon-ward reference point used for noise blending below.
      */
 
     float getEffectiveRangeChunks() {
@@ -86,11 +87,14 @@ class RegionSampleSystem extends SystemPackage {
         int farChunkX = homeChunkX;
         int farChunkZ = homeChunkZ;
 
+        // The far sample sits at the edge of the same range everything
+        // else in the weather system is bound by, rather than a second,
+        // independently tuned distance — one range, used consistently.
         if (distanceChunks > 0.0001) {
             double dirX = dx / distanceChunks;
             double dirZ = dz / distanceChunks;
-            farChunkX = referenceChunkX + (int) Math.round(dirX * EngineSetting.WEATHER_FAR_RANGE_CHUNKS);
-            farChunkZ = referenceChunkZ + (int) Math.round(dirZ * EngineSetting.WEATHER_FAR_RANGE_CHUNKS);
+            farChunkX = referenceChunkX + (int) Math.round(dirX * effectiveRangeChunks);
+            farChunkZ = referenceChunkZ + (int) Math.round(dirZ * effectiveRangeChunks);
         }
 
         float farNoise = combinedNoiseAt(farChunkX, farChunkZ);
