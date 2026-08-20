@@ -162,21 +162,24 @@ float resolveCloudCoverage(
 /*
 * One cloud slab's vertical density at an arbitrary world height, sampled
  * once per raymarch step so a ray crossing at any angle integrates real
- * thickness instead of a single flat number. The profile is asymmetric —
- * sharper below its own center, softer above — for the flat-base,
- * round-top read a real convective cloud has; fullness controls how
- * pronounced that asymmetry is. shadingBias (see resolveCloudCoverage)
- * nudges the center within a modest band so different clumps in the same
- * pattern don't all peak at the same height, and a cheap per-step 2D wisp
- * breaks the density up along the ray so a thick slab never reads as a
- * uniform grey wall.
+ * thickness instead of a single flat number. verticalT is left
+ * unclamped: letting it run negative or past 1.0 outside the slab is what
+ * lets the smoothstep falloff below correctly recognize "far outside"
+ * and fall all the way to zero, instead of every out-of-range sample
+ * reporting the same saturated value regardless of how far away it truly
+ * is. The profile is asymmetric — sharper below its own center, softer
+ * above — for the flat-base, round-top read a real convective cloud has;
+ * fullness controls how pronounced that asymmetry is. shadingBias (see
+ * resolveCloudCoverage) nudges the center within a modest band so
+ * different clumps in the same pattern don't all peak at the same
+ * height, and a cheap per-step 2D wisp breaks the density up along the
+ * ray so a thick slab never reads as a uniform grey wall.
  */
 float resolveCloudVerticalDensity(
     vec3 stepWorldPos, float slabBottomY, float slabTopY,
     float fullness, float shadingBias, float patternSeed,
     out float verticalNorm, out float verticalSign) {
-    float verticalT = clamp(
-        (stepWorldPos.y - slabBottomY) / max(slabTopY - slabBottomY, 0.0001), 0.0, 1.0);
+    float verticalT = (stepWorldPos.y - slabBottomY) / max(slabTopY - slabBottomY, 0.0001);
 
     float centerT   = mix(0.40, 0.60, shadingBias);
     float belowSpan = mix(0.40, 0.80, fullness);

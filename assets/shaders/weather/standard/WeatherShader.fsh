@@ -56,12 +56,21 @@ const float CLOUD_MIN_SLAB_THICKNESS_BLOCKS          = 4.0;
 const float CLOUD_HEIGHT_UNDULATION_FREQUENCY = 0.0012;
 const float CLOUD_HEIGHT_UNDULATION_STRENGTH  = 0.35;
 
-// How finely the ray is pre-walked to locate the entry's own bent slab
-// before the fine volumetric march runs, and how much slack (as a
-// fraction of one segment) each segment's bracket gets so a crossing
-// isn't missed between two probe points. See resolveCloudSlab().
-const int   CLOUD_DOME_SEARCH_SEGMENTS     = 16;
-const float CLOUD_DOME_SEARCH_MARGIN_RATIO = 0.2;
+// Dome-crossing search tuning. SEARCH_SEGMENTS is only used to bracket a
+// sign change of the ray-height-vs-dome-altitude difference — it does not
+// itself define the resolved slab bounds, so it can stay coarse.
+// BISECTION_STEPS then collapses that bracket down to a precise crossing
+// regardless of how wide a segment was, which is what keeps the result
+// free of fixed-distance seams. SLOPE_PROBE_BLOCKS sets the finite-
+// difference spacing used to measure the crossing's local penetration
+// rate, which is what lets the slab's real thickness be projected onto
+// the ray instead of guessed from segment size. MIN_PENETRATION_RATE
+// guards that projection against blowing up for near-tangential rays.
+const int   CLOUD_DOME_SEARCH_SEGMENTS      = 20;
+const float CLOUD_DOME_SEARCH_MARGIN_RATIO  = 0.2;
+const int   CLOUD_DOME_BISECTION_STEPS      = 6;
+const float CLOUD_DOME_SLOPE_PROBE_BLOCKS   = 4.0;
+const float CLOUD_DOME_MIN_PENETRATION_RATE = 0.02;
 
 const float CLOUD_VOLUME_STEP_LENGTH_BLOCKS   = 40.0;
 const int   CLOUD_VOLUME_STEP_COUNT_MIN       = 2;
@@ -89,61 +98,102 @@ bool footprintMayBeVisible(vec2 rayOriginXZ, vec2 rayDirXZ, vec2 circleCenter, f
     return distance(closestXZ, circleCenter) <= circleRadius;
 }
 
-// Locates where a ray can cross this entry's own continuously-bending slab
-// before the fine volumetric march runs. A flat bracket spanning straight
-// from the authored altitude to the fade altitude is only tight for
-// entries that already sit near the fade altitude — for anything that
-// bends by hundreds of blocks (which is the whole point of the dome), that
-// flat bracket is thousands of blocks long for most view angles, and a
-// fixed handful of fine steps spread across it almost never lands inside
-// the true, thin slab. This instead walks the ray in fixed segments,
-// re-resolving the true bent altitude at each segment's own two endpoints,
-// and keeps only the segment(s) where the ray's own height could reach
-// that segment's own much tighter local band — so the fine march below
-// only ever spends its step budget on the narrow stretch of the ray that
-// can actually touch the slab, at any distance from the player.
+// Signed vertical distance between the view ray's own height at distance t
+// and this entry's continuously-bent dome altitude at that same t. Positive
+// when the ray sits above the domed surface, negative when below — a root
+// of this function along t is exactly where the ray crosses the slab's own
+// center altitude.
+float sampleDomeHeightDelta(vec3 rayDir, float t, float clampedAltitude, float heightUndulation) {
+    vec3 pos = u_cameraPosition + rayDir * t;
+    float domeY = resolveCloudDomeAltitude(clampedAltitude, length(pos.xz)) + heightUndulation;
+    return pos.y - domeY;
+}
+
+// Locates where a ray crosses this entry's own continuously-bending slab.
+// A coarse scan brackets the point where the ray's height crosses the
+// slab's bent center altitude (falling back to the closest approach found
+// if the ray only grazes the band without ever crossing it), a short
+// bisection refines that crossing to sub-segment precision, and the slab's
+// known vertical thickness is then projected onto the ray using the
+// crossing's own local penetration rate — the same thickness/cos(angle) a
+// ray-vs-plane intersection gives, so a grazing ray naturally gets a
+// longer path through the slab and a head-on ray a shorter one, at any
+// distance from the player.
 bool resolveCloudSlab(
     vec3 rayDir, float clampedAltitude, float thickness, float heightUndulation,
     out vec3 worldPosMid, out float tNear, out float pathLength) {
     float halfThickness = thickness * 0.5;
     float segmentLength = u_cloudMaxDistance / float(CLOUD_DOME_SEARCH_SEGMENTS);
-    float margin = segmentLength * CLOUD_DOME_SEARCH_MARGIN_RATIO;
 
-    float prevT     = 0.0;
-    float prevRayY  = u_cameraPosition.y;
-    float prevBentY = resolveCloudDomeAltitude(clampedAltitude, length(u_cameraPosition.xz)) + heightUndulation;
+    float prevT = 0.0;
+    float prevF = sampleDomeHeightDelta(rayDir, 0.0, clampedAltitude, heightUndulation);
 
-    bool  found     = false;
-    float foundNear = 0.0;
-    float foundFar  = 0.0;
+    float bracketLo = -1.0;
+    float bracketHi = -1.0;
+    float bestAbsF  = abs(prevF);
+    float bestT     = 0.0;
 
     for (int s = 1; s <= CLOUD_DOME_SEARCH_SEGMENTS; s++) {
-        float t     = float(s) * segmentLength;
-        vec3  pos   = u_cameraPosition + rayDir * t;
-        float bentY = resolveCloudDomeAltitude(clampedAltitude, length(pos.xz)) + heightUndulation;
+        float t = float(s) * segmentLength;
+        float f = sampleDomeHeightDelta(rayDir, t, clampedAltitude, heightUndulation);
 
-        float bandLow  = min(prevBentY, bentY) - halfThickness - margin;
-        float bandHigh = max(prevBentY, bentY) + halfThickness + margin;
-        float rayLow   = min(prevRayY, pos.y);
-        float rayHigh  = max(prevRayY, pos.y);
-
-        if (rayHigh >= bandLow && rayLow <= bandHigh) {
-            if (!found)
-            foundNear = prevT;
-            foundFar = t;
-            found = true;
+        if (abs(f) < bestAbsF) {
+            bestAbsF = abs(f);
+            bestT = t;
         }
 
-        prevT     = t;
-        prevRayY  = pos.y;
-        prevBentY = bentY;
+        if (prevF * f < 0.0) {
+            bracketLo = prevT;
+            bracketHi = t;
+            break;
+        }
+
+        prevT = t;
+        prevF = f;
     }
 
-    if (!found)
-    return false;
+    float tCenter;
 
-    tNear = max(foundNear, 0.0);
-    float tFar = min(foundFar, u_cloudMaxDistance);
+    if (bracketLo >= 0.0) {
+        float lo  = bracketLo;
+        float hi  = bracketHi;
+        float fLo = sampleDomeHeightDelta(rayDir, lo, clampedAltitude, heightUndulation);
+
+        for (int i = 0; i < CLOUD_DOME_BISECTION_STEPS; i++) {
+            float mid  = (lo + hi) * 0.5;
+            float fMid = sampleDomeHeightDelta(rayDir, mid, clampedAltitude, heightUndulation);
+
+            if (fLo * fMid <= 0.0) {
+                hi = mid;
+            } else {
+                lo = mid;
+                fLo = fMid;
+            }
+        }
+
+        tCenter = (lo + hi) * 0.5;
+    } else if (bestAbsF <= halfThickness + segmentLength * CLOUD_DOME_SEARCH_MARGIN_RATIO) {
+        // No sign change anywhere along the ray — a near-tangential ray
+        // grazing the slab without ever crossing its exact center. The
+        // closest coarse sample is still a usable anchor.
+        tCenter = bestT;
+    } else {
+        return false;
+    }
+
+    float tBack = max(tCenter - CLOUD_DOME_SLOPE_PROBE_BLOCKS, 0.0);
+    float tFwd  = min(tCenter + CLOUD_DOME_SLOPE_PROBE_BLOCKS, u_cloudMaxDistance);
+    float fBack = sampleDomeHeightDelta(rayDir, tBack, clampedAltitude, heightUndulation);
+    float fFwd  = sampleDomeHeightDelta(rayDir, tFwd, clampedAltitude, heightUndulation);
+
+    float penetrationRate = max(
+        abs(fFwd - fBack) / max(tFwd - tBack, 0.0001),
+        CLOUD_DOME_MIN_PENETRATION_RATE);
+
+    float halfPathLength = min(halfThickness / penetrationRate, u_cloudMaxDistance * 0.5);
+
+    tNear = clamp(tCenter - halfPathLength, 0.0, u_cloudMaxDistance);
+    float tFar = clamp(tCenter + halfPathLength, 0.0, u_cloudMaxDistance);
 
     if (tNear >= tFar)
     return false;
