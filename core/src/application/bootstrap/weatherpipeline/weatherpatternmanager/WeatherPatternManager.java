@@ -1,3 +1,4 @@
+// WeatherPatternManager.java
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.weatherpipeline.temperature.TemperatureInstance;
@@ -20,21 +21,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
-     * Streams pool-recycled spatial weather cells around every active grid,
-     * plus one always-present local instance per grid that spawns at that
-     * grid's own reference chunk and then drifts with the same world
-     * rotation every other pattern does. Position, fades, and weather-type
-     * crossfades all advance every frame from the same KPH-derived drift
-     * speed; range membership (streaming in and retiring) is only
-     * reassessed on the shared tick so a pattern sitting near the range
-     * boundary can't flicker in and out — it either stays fully present or
-     * commits to a full fade-out, and can resume normal presence if it's
-     * back in range by the next tick.
-     *
-     * Every tunable and every seed/salt used below comes from EngineSetting
-     * — WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE, WEATHER_PATTERN_LOCAL_KEY_SEED,
-     * WEATHER_HASH_SALT_PRIMARY/SECONDARY, HASH_FINALIZER_MULTIPLIER_1/2 —
-     * nothing here is a locally authored duplicate.
+     * Streams pool-recycled spatial weather cells across the world — each
+     * cell's position is a deterministic function of world chunk
+     * coordinate alone, never the player, so the map exists independent of
+     * anyone standing in it and two players converge on the same weather.
+     * Position, fades, and weather-type crossfades advance every frame
+     * from the same KPH-derived drift speed; range membership (streaming
+     * in and retiring) is only reassessed on the shared tick so a pattern
+     * near the boundary can't flicker. Each grid also holds one local
+     * WeatherInstance purely for wind/temperature/humidity at the player's
+     * own position (see advanceLocalWeather()) — it never contributes to
+     * the rendered weather map. Every tunable and seed/salt below comes
+     * from EngineSetting.
      */
 
     private WeatherManager weatherManager;
@@ -402,18 +400,14 @@ public class WeatherPatternManager extends ManagerPackage {
     // Local Weather \\
 
     /*
-     * The per-grid local instance previously never moved — zero velocity,
-     * position fixed at construction, always drawn dead-centered by
-     * WeatherMapBufferSystem — so its clouds were frozen every frame
-     * regardless of anything else in the pipeline. It now gets the exact
-     * same KPH-derived velocity every pooled pattern gets and advances its
-     * position every frame identically, so WeatherMapBufferSystem can
-     * place it with the same reference-relative math as pooled patterns
-     * instead of a hardcoded (0,0). Its weather TYPE still re-resolves
-     * against the grid's own current reference coordinate every tick, so
-     * the atmosphere values (wind/temperature) it feeds always reflect
-     * where the player actually is, independent of its own drifted
-     * render position.
+     * Resolves each grid's own local weather TYPE against its current
+     * reference coordinate every tick — never a position to render. This
+     * instance never enters the visual weather map; it exists purely so
+     * WindManager and TemperatureSystem always have a wind/temperature/
+     * humidity blend for wherever the player actually is. Every visible
+     * cloud comes from the streamed pattern pool instead, which is what
+     * actually moves the player through a world-anchored map rather than
+     * a dome that follows them.
      */
     private void advanceLocalWeather(ObjectArrayList<GridInstance> grids, boolean tickFired) {
 
@@ -434,22 +428,15 @@ public class WeatherPatternManager extends ManagerPackage {
                 WeatherHandle initial = weatherManager.resolveWeatherTowardHorizon(
                         referenceCoordinate, referenceCoordinate);
 
-                long localPatternKey = EngineSetting.WEATHER_PATTERN_LOCAL_KEY_SEED
-                        ^ (((long) System.identityHashCode(grid)) * EngineSetting.WEATHER_HASH_SALT_SECONDARY);
-
                 pattern.constructor(
-                        localPatternKey,
+                        EngineSetting.WEATHER_PATTERN_LOCAL_KEY_SEED,
                         Coordinate2Long.unpackX(referenceCoordinate),
                         Coordinate2Long.unpackY(referenceCoordinate),
                         initial,
                         EngineSetting.WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE);
 
-                pattern.setFadeAlpha(1f);
-                assignVelocity(pattern);
-
             } else {
 
-                pattern.advancePosition(deltaTime);
                 pattern.advanceWeatherTransition(deltaTime);
 
                 if (tickFired) {
