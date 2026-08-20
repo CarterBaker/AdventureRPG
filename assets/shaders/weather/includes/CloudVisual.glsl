@@ -7,21 +7,11 @@
 #include "includes/MoonLightData.glsl"
 #include "includes/SkyColorData.glsl"
 
-/*
-* Shared cloud "look" for the weather fullscreen pass — horizontal
- * silhouette, vertical density profile, and lit shading for a single
- * weather-map entry, all driven entirely by that entry's own UBO values
- * (shape, noise, color/material, and per-slot variance) so every
- * archetype — wispy Cirrus, dense towering Cumulonimbus, flat Stratus,
- * puffy Cumulus — is drawn by the exact same code and differs only
- * because its authored numbers differ. The silhouette comes from one
- * domain-warped multi-octave fbm field: fbm gives the soft, rounded,
- * billowy mass real clouds have, and the domain warp keeps that mass
- * from reading as an axis-aligned noise grid. Everything here is
- * evaluated in cheap 2D — the raymarch in WeatherShader.fsh supplies the
- * actual vertical thickness by resampling the vertical profile at each
- * step through a slab this file has no knowledge of.
- */
+// Shared cloud "look" for the weather fullscreen pass: horizontal
+// silhouette, vertical density profile, and lit shading for a single
+// weather-map entry, driven entirely by that entry's own UBO values so
+// every archetype is drawn by the same code and differs only because its
+// authored numbers differ.
 
 const float CLOUD_VISUAL_EPSILON = 0.001;
 
@@ -31,6 +21,21 @@ const float CLOUD_VISUAL_OUTER_FADE_END          = 1.35;
 const float CLOUD_VISUAL_BOUNDARY_WARP_STRENGTH  = 0.22;
 const float CLOUD_VISUAL_BOUNDARY_WARP_FREQUENCY = 2.5;
 const float CLOUD_VISUAL_ANGLE_WOBBLE            = 1.2;
+
+// Clump gating — a coarse field deciding WHERE within the footprint the
+// fine detail below is even allowed to appear. Without it, the fine fbm
+// threshold alone fills nearly the whole footprint for any archetype with
+// moderate coverage/density, since most of an fbm field sits near its own
+// mid-range and any reasonably permissive threshold catches most of it —
+// which is what read as "every weather pattern is just a filled disk".
+// Sampled in the same rotated, extent-normalized footprint space as the
+// outer silhouette so it holds still relative to the pattern instead of
+// scrolling with the fine detail's wind drift.
+const float CLOUD_VISUAL_CLUMP_FREQUENCY               = 1.8;
+const float CLOUD_VISUAL_CLUMP_THRESHOLD_SPARSE        = 0.82;
+const float CLOUD_VISUAL_CLUMP_THRESHOLD_DENSE         = 0.12;
+const float CLOUD_VISUAL_CLUMP_COVERAGE_BIAS_INFLUENCE = 0.25;
+const float CLOUD_VISUAL_CLUMP_SOFTNESS                = 0.16;
 
 // Shape field
 const float CLOUD_VISUAL_WARP_FREQUENCY       = 0.9;
@@ -53,16 +58,14 @@ const float CLOUD_VISUAL_AMBIENT_LIT            = 0.6;
 const float CLOUD_VISUAL_SKY_TINT_STRENGTH      = 0.45;
 const float CLOUD_VISUAL_STORM_DARKEN_MIN       = 0.45;
 
-/*
-* Horizontal cloud silhouette for one weather-map entry, evaluated once
- * per pixel at the ray's representative crossing point through its slab.
- * Returns 0 outside the pattern's own wobbled footprint boundary or
- * wherever the shape field falls under its coverage threshold.
- * outGradient is a cheap directional "lean" re-used by the caller to fake
- * a lit normal. outShadingBias is a coarse, smoothly varying 0..1 field
- * the vertical profile re-uses so different clumps within the same
- * pattern settle at slightly different heights instead of one flat sheet.
- */
+// Horizontal cloud silhouette for one weather-map entry, evaluated once per
+// pixel at the ray's representative crossing point through its slab.
+// Returns 0 outside the pattern's own wobbled footprint boundary, outside
+// its own clump gate, or wherever the shape field falls under its coverage
+// threshold. outGradient is a cheap directional "lean" the caller reuses to
+// fake a lit normal. outShadingBias is a coarse, smoothly varying 0..1
+// field the vertical profile reuses so different clumps settle at slightly
+// different heights instead of one flat sheet.
 float resolveCloudCoverage(
     vec4 bounds, vec4 shape, vec4 noiseParams, vec4 colorScale,
     vec4 variance0, vec4 variance1,
@@ -114,6 +117,25 @@ float resolveCloudCoverage(
     if (outerFade <= CLOUD_VISUAL_EPSILON)
     return 0.0;
 
+    float coverageBias = noiseParams.z;
+
+    // Clump gate — decides whether this point sits inside one of this
+    // pattern's few defined cloud regions at all, before any fine detail
+    // is ever sampled.
+    vec2  clumpSamplePos = spreadNorm * CLOUD_VISUAL_CLUMP_FREQUENCY
+    + vec2(patternSeed * 41.3, cloudSlotIndex * 23.7 - patternSeed * 7.1);
+    float clumpNoise = fbmGradient2D(clumpSamplePos, 3, 2.0, 0.55);
+
+    float clumpThreshold = clamp(
+        mix(CLOUD_VISUAL_CLUMP_THRESHOLD_SPARSE, CLOUD_VISUAL_CLUMP_THRESHOLD_DENSE, intensity)
+        - coverageBias * CLOUD_VISUAL_CLUMP_COVERAGE_BIAS_INFLUENCE,
+        0.05, 0.9);
+    float clumpMask = smoothstep(
+        clumpThreshold - CLOUD_VISUAL_CLUMP_SOFTNESS, clumpThreshold + CLOUD_VISUAL_CLUMP_SOFTNESS, clumpNoise);
+
+    if (clumpMask <= CLOUD_VISUAL_EPSILON)
+    return 0.0;
+
     float sizeVariance      = clamp(mix(variance0.y, variance0.z, fract(orientationHash * 5.63)), 0.3, 3.0);
     float featureSizeBlocks = max(colorScale.w, 4.0) * sizeVariance;
 
@@ -134,9 +156,8 @@ float resolveCloudCoverage(
     float coarseNoise = fbmGradient2D(shapeSamplePos * 0.35 + vec2(19.3, -7.7), 2, 2.0, 0.5);
     outShadingBias = coarseNoise;
 
-    float coverageBias = noiseParams.z;
-    float threshold     = clamp(1.0 - (intensity * 0.6 + coverageBias * 0.4), 0.03, 0.95);
-    float softness      = clamp(noiseParams.w, 0.04, 0.6);
+    float threshold = clamp(1.0 - (intensity * 0.6 + coverageBias * 0.4), 0.03, 0.95);
+    float softness  = clamp(noiseParams.w, 0.04, 0.6);
 
     float coverage = smoothstep(threshold - softness, threshold + softness, shapeNoise);
 
@@ -144,7 +165,7 @@ float resolveCloudCoverage(
     float detail    = fbmGradient2D(detailPos, 2, 2.2, 0.5) - 0.5;
     coverage = clamp(coverage + detail * CLOUD_VISUAL_DETAIL_STRENGTH * (1.0 - coverage), 0.0, 1.0);
 
-    coverage *= outerFade;
+    coverage *= outerFade * clumpMask;
 
     if (coverage <= CLOUD_VISUAL_EPSILON)
     return 0.0;
@@ -159,22 +180,14 @@ float resolveCloudCoverage(
     return coverage;
 }
 
-/*
-* One cloud slab's vertical density at an arbitrary world height, sampled
- * once per raymarch step so a ray crossing at any angle integrates real
- * thickness instead of a single flat number. verticalT is left
- * unclamped: letting it run negative or past 1.0 outside the slab is what
- * lets the smoothstep falloff below correctly recognize "far outside"
- * and fall all the way to zero, instead of every out-of-range sample
- * reporting the same saturated value regardless of how far away it truly
- * is. The profile is asymmetric — sharper below its own center, softer
- * above — for the flat-base, round-top read a real convective cloud has;
- * fullness controls how pronounced that asymmetry is. shadingBias (see
- * resolveCloudCoverage) nudges the center within a modest band so
- * different clumps in the same pattern don't all peak at the same
- * height, and a cheap per-step 2D wisp breaks the density up along the
- * ray so a thick slab never reads as a uniform grey wall.
- */
+// One cloud slab's vertical density at an arbitrary world height, sampled
+// once per raymarch step. The profile is asymmetric (sharper below its own
+// center, softer above) for the flat-base, round-top read a real
+// convective cloud has; fullness controls how pronounced that asymmetry
+// is. shadingBias nudges the center within a modest band so different
+// clumps don't all peak at the same height, and a cheap per-step 2D wisp
+// breaks density up along the ray so a thick slab never reads as a
+// uniform grey wall.
 float resolveCloudVerticalDensity(
     vec3 stepWorldPos, float slabBottomY, float slabTopY,
     float fullness, float shadingBias, float patternSeed,
@@ -203,15 +216,12 @@ float resolveCloudVerticalDensity(
     return profile * wisp;
 }
 
-/*
-* Shades one raymarch step's resolved sample — a soft top-lit/bottom-dark
- * gradient from the fake normal, plus a silver lining that only brightens
- * the cloud's own thin edges when looking roughly toward the sun through
- * them (forward scattering). selfShadow darkens both ambient and direct
- * terms the deeper this step sits within its own entry's already-
- * traversed volume, approximating multiple-scattering falloff without an
- * actual light-ray march.
- */
+// Shades one raymarch step's resolved sample: a soft top-lit/bottom-dark
+// gradient from the fake normal, plus a silver lining on thin edges facing
+// the sun (forward scattering). selfShadow darkens both ambient and direct
+// terms the deeper this step sits within its own entry's already-traversed
+// volume, approximating multiple-scattering falloff without an actual
+// light-ray march.
 vec3 shadeCloudStep(
     vec3 rayDir, vec3 fakeNormal, float puffHeight, float selfShadow, float thicknessNorm,
     vec4 colorScale, vec4 materialParams) {
