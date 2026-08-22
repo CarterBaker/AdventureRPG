@@ -12,13 +12,20 @@ import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 public class BlockCompositionStruct extends StructPackage {
 
     /*
-     * Tracks the set of blocks occupied by an entity and all adjacent blocks
-     * per face direction. Rebuilt only when the entity moves to a new block.
-     * Used by BlockCollisionBranch for per-axis collision queries.
+     * Tracks the set of blocks an entity's AABB currently occupies and every
+     * block adjacent to it per face direction, re-deriving the occupied span
+     * per axis from the entity's real size and fractional position on every
+     * call rather than caching a fixed ceil(size) — an AABB offset from a
+     * cell boundary can touch one more cell than its raw size implies, and a
+     * footprint that misses that silently drops the neighboring block a
+     * collision check needed to see. Rebuilt only when the floor cell or the
+     * resulting span changes on any axis. Used by BlockCollisionBranch for
+     * per-axis collision queries.
      */
 
     // Internal
     private Vector3Int currentBlock;
+    private Vector3Int currentSpan;
     private Int2LongOpenHashMap blockCompositionMap;
     private Int2LongOpenHashMap[] blockCoordinate2ChunkCoordinate;
 
@@ -26,6 +33,7 @@ public class BlockCompositionStruct extends StructPackage {
     private int directionCount;
     private int chunkSize;
     private int worldHeight;
+    private float straddleEpsilon;
 
     // Constructor \\
 
@@ -35,9 +43,11 @@ public class BlockCompositionStruct extends StructPackage {
         this.directionCount = Direction3Vector.LENGTH;
         this.chunkSize = EngineSetting.CHUNK_SIZE;
         this.worldHeight = EngineSetting.WORLD_HEIGHT * chunkSize;
+        this.straddleEpsilon = EngineSetting.BLOCK_STRADDLE_EPSILON;
 
         // Internal
         this.currentBlock = new Vector3Int();
+        this.currentSpan = new Vector3Int();
         this.blockCompositionMap = new Int2LongOpenHashMap();
         this.blockCoordinate2ChunkCoordinate = new Int2LongOpenHashMap[directionCount];
 
@@ -48,34 +58,49 @@ public class BlockCompositionStruct extends StructPackage {
     // Utility \\
 
     public void updateBlockComposition(
-            Vector3Int blockComposition,
+            Vector3 entitySize,
             Vector3 currentPosition,
             long chunkCoordinate) {
 
-        int x = (int) currentPosition.x;
-        int y = (int) currentPosition.y;
-        int z = (int) currentPosition.z;
+        int minX = (int) Math.floor(currentPosition.x);
+        int minY = (int) Math.floor(currentPosition.y);
+        int minZ = (int) Math.floor(currentPosition.z);
 
-        if (x == currentBlock.x && y == currentBlock.y && z == currentBlock.z)
+        int spanX = computeSpan(currentPosition.x, entitySize.x);
+        int spanY = computeSpan(currentPosition.y, entitySize.y);
+        int spanZ = computeSpan(currentPosition.z, entitySize.z);
+
+        if (minX == currentBlock.x && minY == currentBlock.y && minZ == currentBlock.z
+                && spanX == currentSpan.x && spanY == currentSpan.y && spanZ == currentSpan.z)
             return;
 
-        currentBlock.x = x;
-        currentBlock.y = y;
-        currentBlock.z = z;
+        currentBlock.x = minX;
+        currentBlock.y = minY;
+        currentBlock.z = minZ;
 
-        buildBlockComposition(blockComposition, chunkCoordinate);
-        buildAdjacentBlocks(blockComposition, chunkCoordinate);
+        currentSpan.x = spanX;
+        currentSpan.y = spanY;
+        currentSpan.z = spanZ;
+
+        buildBlockComposition(chunkCoordinate);
+        buildAdjacentBlocks(chunkCoordinate);
     }
 
-    private void buildBlockComposition(
-            Vector3Int blockComposition,
-            long chunkCoordinate) {
+    private int computeSpan(float position, float size) {
+
+        int minCell = (int) Math.floor(position);
+        int maxCell = (int) Math.floor(position + size - straddleEpsilon);
+
+        return Math.max(1, maxCell - minCell + 1);
+    }
+
+    private void buildBlockComposition(long chunkCoordinate) {
 
         blockCompositionMap.clear();
 
-        for (int blockX = 0; blockX < blockComposition.x; blockX++)
-            for (int blockY = 0; blockY < blockComposition.y; blockY++)
-                for (int blockZ = 0; blockZ < blockComposition.z; blockZ++)
+        for (int blockX = 0; blockX < currentSpan.x; blockX++)
+            for (int blockY = 0; blockY < currentSpan.y; blockY++)
+                for (int blockZ = 0; blockZ < currentSpan.z; blockZ++)
                     addBlockToMap(
                             currentBlock.x + blockX,
                             currentBlock.y + blockY,
@@ -84,9 +109,7 @@ public class BlockCompositionStruct extends StructPackage {
                             blockCompositionMap);
     }
 
-    private void buildAdjacentBlocks(
-            Vector3Int blockComposition,
-            long chunkCoordinate) {
+    private void buildAdjacentBlocks(long chunkCoordinate) {
 
         for (int i = 0; i < directionCount; i++) {
 
@@ -98,14 +121,14 @@ public class BlockCompositionStruct extends StructPackage {
             Direction3Vector tangentA = tangents[0];
             Direction3Vector tangentB = tangents[1];
 
-            int faceX = currentBlock.x + (direction.x > 0 ? blockComposition.x : direction.x);
-            int faceY = currentBlock.y + (direction.y > 0 ? blockComposition.y : direction.y);
-            int faceZ = currentBlock.z + (direction.z > 0 ? blockComposition.z : direction.z);
+            int faceX = currentBlock.x + (direction.x > 0 ? currentSpan.x : direction.x);
+            int faceY = currentBlock.y + (direction.y > 0 ? currentSpan.y : direction.y);
+            int faceZ = currentBlock.z + (direction.z > 0 ? currentSpan.z : direction.z);
 
-            int sizeA = (tangentA.x != 0) ? blockComposition.x
-                    : (tangentA.y != 0) ? blockComposition.y : blockComposition.z;
-            int sizeB = (tangentB.x != 0) ? blockComposition.x
-                    : (tangentB.y != 0) ? blockComposition.y : blockComposition.z;
+            int sizeA = (tangentA.x != 0) ? currentSpan.x
+                    : (tangentA.y != 0) ? currentSpan.y : currentSpan.z;
+            int sizeB = (tangentB.x != 0) ? currentSpan.x
+                    : (tangentB.y != 0) ? currentSpan.y : currentSpan.z;
 
             for (int a = 0; a < sizeA; a++) {
                 for (int b = 0; b < sizeB; b++) {
@@ -167,5 +190,9 @@ public class BlockCompositionStruct extends StructPackage {
 
     public Int2LongOpenHashMap getAllBlocksForSide(Direction3Vector direction) {
         return blockCoordinate2ChunkCoordinate[direction.index];
+    }
+
+    public Vector3Int getCurrentSpan() {
+        return currentSpan;
     }
 }

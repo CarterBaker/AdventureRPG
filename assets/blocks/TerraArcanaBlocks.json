@@ -21,7 +21,7 @@
         {
             "name": "Grass Block",
             "type": "FULL",
-            "rotation": "NATURAL_FULL",
+            "natural": true,
             "break_tier": 0,
             "required_tool": "Standard/Shovel",
             "durability": 3,

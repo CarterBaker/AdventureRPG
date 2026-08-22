@@ -398,6 +398,14 @@ public class EngineSetting {
         public static final float DEFAULT_AXIAL_TILT_DEGREES = 23.5f;
         public static final float DEFAULT_PLANETARY_OFFSET = 0.0f;
 
+        // World Distortion
+        public static final String WORLD_DISTORTION_UBO = "WorldDistortionData";
+        public static final float WORLD_DISTORTION_STRENGTH_XZ = 0.4f;
+        public static final float WORLD_DISTORTION_STRENGTH_Y = 0.08f;
+        public static final long WORLD_DISTORTION_SEED_SALT_X = 0x9E3779B97F4A7C15L;
+        public static final long WORLD_DISTORTION_SEED_SALT_Y = 0xC2B2AE3D27D4EB4FL;
+        public static final long WORLD_DISTORTION_SEED_SALT_Z = 0xFF51AFD7ED558CCDL;
+
         // Biome Map Resolution \\
 
         public static final float BIOME_BORDER_WARP_FREQUENCY = 0.5f;
@@ -725,6 +733,7 @@ public class EngineSetting {
 
         // Physics \\
 
+        public static final float BLOCK_STRADDLE_EPSILON = 0.0001f;
         public static final float FIXED_TIME_STEP = 0.02f;
         public static final float GRAVITY_FORCE = 9.8f;
         public static final float JUMP_HOLD_FRACTION = 0.4f;

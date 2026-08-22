@@ -7,7 +7,9 @@ public enum BlockRotationType {
      * and texture resolution. Stored per-block in the rotation palette alongside
      * the block and biome palettes in each SubChunkInstance. Read by
      * FullGeometryBranch and other geometry branches to determine face mapping
-     * and encoded face index during mesh assembly.
+     * and encoded face index during mesh assembly. NATURAL_FULL is never set
+     * directly in JSON — BlockBuilder derives it automatically from a block's
+     * "natural": true flag, the same flag that gates world-warp distortion.
      */
 
     NONE, // Rotation palette ignored entirely

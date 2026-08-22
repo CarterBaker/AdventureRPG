@@ -3,6 +3,7 @@ package application.bootstrap.physicspipeline.movementmanager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.physicspipeline.util.BlockCompositionStruct;
+import application.bootstrap.physicspipeline.worlddistortionsystem.WorldDistortionSystem;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -22,11 +23,16 @@ public class BlockCollisionBranch extends BranchPackage {
      * Tests the entity's block composition against adjacent blocks each frame and
      * zeros out any movement axis where a solid block collision is detected.
      * Each axis is tested independently so sliding along walls works correctly.
+     * A natural block's collision volume is offset by the exact same
+     * WorldDistortionManager lattice cell its geometry is rendered displaced
+     * by, so a player never floats above or clips into the visual wobble
+     * applied to organic terrain.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
+    private WorldDistortionSystem worldDistortionSystem;
 
     // Settings
     private int chunkSize;
@@ -46,6 +52,7 @@ public class BlockCollisionBranch extends BranchPackage {
         // Internal
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
+        this.worldDistortionSystem = get(WorldDistortionSystem.class);
     }
 
     // Collision \\
@@ -117,11 +124,37 @@ public class BlockCollisionBranch extends BranchPackage {
             short blockID = subChunk.getBlockPaletteHandle().getBlock(localCoordinate);
             BlockHandle block = blockManager.getBlockHandleFromBlockID(blockID);
 
-            if (isColliding(block, direction, axisPosition, axisSize, axisMovement))
+            float distortion = resolveNaturalDistortion(block, direction, localX, localZ);
+
+            if (isColliding(block, direction, axisPosition, axisSize, axisMovement, distortion))
                 return true;
         }
 
         return false;
+    }
+
+    // Distortion \\
+
+    /*
+     * Zero for any non-natural block — those never render displaced, so
+     * they never collide displaced either. For a natural block, resolves to
+     * whichever single axis component this direction actually tests, since
+     * calculate() only ever tests one axis at a time.
+     */
+    private float resolveNaturalDistortion(BlockHandle block, Direction3Vector direction, int localX, int localZ) {
+
+        if (block == null || !block.isNatural())
+            return 0f;
+
+        Vector3 offset = worldDistortionSystem.getDistortionOffset(localX, localZ);
+
+        if (direction.x != 0)
+            return offset.x;
+
+        if (direction.y != 0)
+            return offset.y;
+
+        return offset.z;
     }
 
     private boolean isColliding(
@@ -129,7 +162,8 @@ public class BlockCollisionBranch extends BranchPackage {
             Direction3Vector direction,
             float axisPosition,
             float axisSize,
-            float axisMovement) {
+            float axisMovement,
+            float distortion) {
 
         if (block == null
                 || block.getGeometry() == DynamicGeometryType.NONE
@@ -139,8 +173,8 @@ public class BlockCollisionBranch extends BranchPackage {
         float fractional = axisPosition - (int) axisPosition;
 
         if (direction.negative)
-            return fractional + axisMovement <= 0f;
+            return fractional + axisMovement <= distortion;
 
-        return fractional + axisSize + axisMovement >= 1f;
+        return fractional + axisSize + axisMovement >= 1f + distortion;
     }
 }

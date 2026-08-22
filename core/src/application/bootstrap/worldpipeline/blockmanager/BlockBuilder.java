@@ -68,16 +68,12 @@ class BlockBuilder extends BuilderPackage {
         String typeStr = JsonUtility.getString(blockJson, "type", "FULL");
         DynamicGeometryType blockType = parseBlockType(typeStr);
 
-        // Rotation
-        BlockRotationType rotationType = BlockRotationType.NONE;
-        if (blockJson.has("rotation")) {
-            try {
-                rotationType = BlockRotationType.valueOf(
-                        blockJson.get("rotation").getAsString().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throwException("Invalid rotation type in block: " + blockName);
-            }
-        }
+        // Rotation — "natural": true implies NATURAL_FULL rotation and marks
+        // this block for world-warp distortion (see WorldDistortionManager,
+        // BlockCollisionBranch); it may not be combined with an explicit
+        // "rotation" field.
+        boolean natural = blockJson.has("natural") && blockJson.get("natural").getAsBoolean();
+        BlockRotationType rotationType = resolveRotationType(blockJson, blockName, natural);
 
         // Material
         int materialID = -1;
@@ -146,7 +142,7 @@ class BlockBuilder extends BuilderPackage {
         // Construct
         BlockData blockData = new BlockData(
                 blockName, blockID,
-                blockType, rotationType,
+                blockType, rotationType, natural,
                 materialID,
                 textures[Direction3Vector.NORTH.ordinal()],
                 textures[Direction3Vector.EAST.ordinal()],
@@ -161,6 +157,34 @@ class BlockBuilder extends BuilderPackage {
         blockHandle.constructor(blockData);
 
         return blockHandle;
+    }
+
+    // Rotation \\
+
+    private BlockRotationType resolveRotationType(JsonObject blockJson, String blockName, boolean natural) {
+
+        if (natural) {
+            if (blockJson.has("rotation"))
+                throwException("Block \"" + blockName + "\" sets \"natural\": true — rotation is implied as "
+                        + "NATURAL_FULL and must not also declare a \"rotation\" field.");
+            return BlockRotationType.NATURAL_FULL;
+        }
+
+        if (!blockJson.has("rotation"))
+            return BlockRotationType.NONE;
+
+        String rotationName = blockJson.get("rotation").getAsString().toUpperCase();
+
+        if (rotationName.equals("NATURAL_FULL"))
+            throwException("Block \"" + blockName + "\" declares \"rotation\": \"NATURAL_FULL\" directly — "
+                    + "set \"natural\": true instead, which implies this rotation automatically.");
+
+        try {
+            return BlockRotationType.valueOf(rotationName);
+        } catch (IllegalArgumentException e) {
+            throwException("Invalid rotation type in block: " + blockName);
+            return BlockRotationType.NONE;
+        }
     }
 
     // Utility \\

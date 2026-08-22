@@ -23,18 +23,17 @@ out float vColor;
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
 #include "includes/WorldCurvature.glsl"
+#include "surface/includes/WorldDistortion.glsl"
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
 // Tessellation evaluation shader for terrain. Builds the flat per-vertex
-// world position for the current tier (near-ring bevel/height/jitter or
+// world position for the current tier (near-ring bevel/height/warp or
 // far-ring distant rise), then bends the fully displaced result through
 // world curvature exactly once at the end, so every vertex — beveled or
 // not — curves by the amount its own true final position calls for.
-
-const float NOISE_SEED_SCALE = 0.5;
 
 const float BEVEL_RADIUS = 0.30;
 const float BEVEL_SIZE   = 0.09;
@@ -48,23 +47,6 @@ const float HEIGHT_EDGE_FADE_RADIUS = 0.75;
 const float DISTORT_MAX_HEIGHT   = 64.0;
 const float DISTORT_START_MARGIN = 512.0;
 const float DISTORT_CURVE        = 0.35;
-
-float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
-
-float periodicValueNoise(vec2 p, float period) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    vec2 i00 = mod(i,                  period);
-    vec2 i10 = mod(i + vec2(1.0, 0.0), period);
-    vec2 i01 = mod(i + vec2(0.0, 1.0), period);
-    vec2 i11 = mod(i + vec2(1.0, 1.0), period);
-    return mix(
-        mix(hash(i00), hash(i10), f.x),
-        mix(hash(i01), hash(i11), f.x), f.y);
-}
 
 float maskBit(float mask, int bit) {
     return float((int(mask) >> bit) & 1);
@@ -138,8 +120,6 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
                   mix(mix(teNormal[0], teNormal[1], u),
                       mix(teNormal[3], teNormal[2], u), v));
 
-    float noisePeriod = u_chunkSize * NOISE_SEED_SCALE;
-
     float halfDWorld       = (u_renderDistance * 0.5 - 0.5) * u_chunkSize;
     float maxDistanceWorld = halfDWorld * sqrt(2.0);
 
@@ -147,16 +127,16 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
 
     float nearStrength = u_distanceFromCenter <= tier0MaxSqDist ? 1.0 : 0.0;
 
-    vec2 seed = worldPos.xz;
-
+    // World-warp — precomputed once by WorldDistortionManager and read here
+    // as a single UBO lookup instead of hashing noise per vertex. The same
+    // lattice cell is read by BlockCollisionBranch at whole-block granularity,
+    // so a natural block's collision volume always agrees with however far
+    // this displaces its rendered geometry.
     if (nearStrength > 0.001) {
-        vec2  nSeed = seed * NOISE_SEED_SCALE;
-        float nX    = periodicValueNoise(nSeed + vec2(17.3,  0.0), noisePeriod) - 0.5;
-        float nZ    = periodicValueNoise(nSeed + vec2( 0.0, 31.7), noisePeriod) - 0.5;
-        float nY    = periodicValueNoise(nSeed + vec2(53.1, 83.2), noisePeriod) - 0.5;
-        worldPos.x += nX * 0.4  * nearStrength;
-        worldPos.z += nZ * 0.4  * nearStrength;
-        worldPos.y += nY * 0.08 * nearStrength;
+        vec3 distortion = sampleWorldDistortion(worldPos);
+        worldPos.x += distortion.x * nearStrength;
+        worldPos.y += distortion.y * nearStrength;
+        worldPos.z += distortion.z * nearStrength;
     }
 
     if (u_distanceFromCenter > tier1MaxSqDist) {

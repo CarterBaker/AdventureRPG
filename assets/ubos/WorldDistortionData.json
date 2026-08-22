@@ -1,0 +1,6 @@
+{
+    "blockName": "WorldDistortionData",
+    "uniforms": [
+        { "name": "u_worldDistortion", "type": "VECTOR4", "count": 256 }
+    ]
+}
