@@ -27,17 +27,21 @@ public class LiquidTickBranch extends BranchPackage {
     /*
      * Drives per-block liquid flow, scoped to each grid's IMMEDIATE range only
      * (GridInstance.getImmediateSlotCount()) and quadrant-cycled so a full
-     * sweep happens every four firings rather than all at once. Before ever
-     * running real flow simulation on an unstable subchunk, a bounded
-     * connectivity scan (FluidSimulationSystem.isConnectedBodyPermanent)
-     * checks whether it belongs to a body large enough to be marked
-     * permanent — once marked, that body is skipped entirely until a direct
-     * edit invalidates it, regardless of how much longer it might otherwise
-     * have kept ticking. Any real change rebuilds only the affected
-     * subchunk's own geometry inline, then cascade-clears the owning
-     * chunk's MERGE_DATA so the existing async, GPU-upload-budgeted
-     * ChunkQueueManager pipeline handles the re-merge and re-upload on its
-     * own schedule instead of that work ever running synchronously here.
+     * sweep happens every four firings rather than all at once. A bounded
+     * connectivity scan (FluidSimulationSystem.isConnectedBodyPermanent) runs
+     * once per unstable subchunk to check whether it belongs to a body large
+     * enough to be marked permanent, so that scan is never repeated for the
+     * same body — permanent only skips that scan, it does not skip flow.
+     * Flow still runs every interval regardless of permanence, and the
+     * subchunk only goes stable (skipped entirely) once a pass produces no
+     * change, exactly like a small body — the difference is that a permanent
+     * body never dissolves for lack of room (see FluidSimulationSystem), so a
+     * touched ocean settles back to stable water instead of eroding away. Any
+     * real change rebuilds only the affected subchunk's own geometry inline,
+     * then cascade-clears the owning chunk's MERGE_DATA so the existing
+     * async, GPU-upload-budgeted ChunkQueueManager pipeline handles the
+     * re-merge and re-upload on its own schedule instead of that work ever
+     * running synchronously here.
      */
 
     // Internal
@@ -189,8 +193,8 @@ public class LiquidTickBranch extends BranchPackage {
 
         subChunk.resetLiquidFlowAccumulator();
 
-        if (assessPermanence(chunk, subChunk))
-            return false;
+        if (!subChunk.isLiquidPermanent())
+            assessPermanence(chunk, subChunk);
 
         if (!fluidSimulationSystem.flow(chunk, subChunk)) {
             subChunk.setLiquidStable(true);
@@ -205,13 +209,14 @@ public class LiquidTickBranch extends BranchPackage {
 
     /*
      * Runs the bounded connectivity scan for every distinct liquid type this
-     * subchunk contains (almost always exactly one). If any of them turns
-     * out to be part of a body meeting LIQUID_PERMANENCE_THRESHOLD, the
-     * subchunk is marked permanent and stable immediately, skipping the real
-     * flow simulation entirely for this and every future tick until a
-     * direct edit invalidates it.
+     * subchunk contains (almost always exactly one), only ever called once
+     * per unstable subchunk since the caller skips this entirely once
+     * isLiquidPermanent() is already true. Marks the subchunk permanent the
+     * moment any one of them turns out to be part of a body meeting
+     * LIQUID_PERMANENCE_THRESHOLD — this does not by itself stop flow() from
+     * running this tick or any future one.
      */
-    private boolean assessPermanence(ChunkInstance chunk, SubChunkInstance subChunk) {
+    private void assessPermanence(ChunkInstance chunk, SubChunkInstance subChunk) {
 
         ShortOpenHashSet liquidBlockIDs = subChunk.getContainedLiquidBlockIDs();
         ShortIterator iterator = liquidBlockIDs.iterator();
@@ -227,12 +232,9 @@ public class LiquidTickBranch extends BranchPackage {
 
             if (fluidSimulationSystem.isConnectedBodyPermanent(chunk, subChunk, seedPacked)) {
                 subChunk.setLiquidPermanent(true);
-                subChunk.setLiquidStable(true);
-                return true;
+                return;
             }
         }
-
-        return false;
     }
 
     /*

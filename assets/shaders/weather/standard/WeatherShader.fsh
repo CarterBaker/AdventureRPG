@@ -19,10 +19,15 @@ out vec4 fragColor;
 // Fullscreen volumetric cloud pass. Each weather-map entry is a horizontal
 // slab — a dome-bent altitude (see CloudDome.glsl) plus a vertical
 // thickness — raymarched through in a handful of steps for real
-// front-to-back volume. Horizontal silhouette, vertical puff profile, and
-// lit shading live in CloudVisual.glsl, driven by that entry's own UBO
-// values; this file owns the raymarch itself and the dome-bend crossing
-// search, given entries arrive nearest-first from WeatherMapBufferSystem.
+// front-to-back volume. The silhouette (CloudVisual.glsl's
+// resolveCloudCoverage) is re-sampled at every individual raymarch step's
+// own world position rather than once for the whole entry, so a cloud's
+// actual 2D shape reads correctly no matter which angle it's viewed from
+// instead of every angle showing the same flat extrusion; vertical puff
+// profile and lit shading also live in CloudVisual.glsl, driven by that
+// entry's own UBO values. This file owns the raymarch itself and the
+// dome-bend crossing search, given entries arrive nearest-first from
+// WeatherMapBufferSystem.
 
 uniform float u_cloudAltitudeMin;
 uniform float u_cloudAltitudeMax;
@@ -240,6 +245,13 @@ void main() {
 
     vec3 rayDir = normalize(v_dir);
 
+    // How much this ray grazes sideways across the cloud layer versus
+    // cutting straight through it — 0 looking dead up/down, 1 fully
+    // horizontal. Used below to weight whether a step's shading leans on
+    // the silhouette stamp or the height profile, so a grazing view at
+    // the horizon actually shows a cloud's own puffy-top/flat-base read.
+    float viewGrazing = 1.0 - abs(rayDir.y);
+
     if (u_weatherCloudLayerMaxY > u_weatherCloudLayerMinY) {
         bool belowBand = u_cameraPosition.y < u_weatherCloudLayerMinY && rayDir.y <= 0.0;
         bool aboveBand = u_cameraPosition.y > u_weatherCloudLayerMaxY && rayDir.y >= 0.0;
@@ -313,19 +325,22 @@ void main() {
         vec4 materialParams = u_weatherCloudMaterial[i];
         vec4 variance0      = u_weatherCloudVariance0[i];
 
-        vec2  gradient;
-        float shadingBias;
-        float horizontalCoverage = resolveCloudCoverage(
+        // Cheap reject only — if this entry carries no coverage anywhere
+        // near where the ray crosses its slab, skip the whole step loop
+        // below. Actual shading never reuses this single value; see the
+        // per-step read further down for why.
+        vec2  midGradient;
+        float midShadingBias;
+        float midCoverage = resolveCloudCoverage(
             bounds, shape, noiseParams, colorScale, variance0, variance1,
             intensity, worldPosMid, driftDirNorm, driftAngle, driftSpeed,
-            gradient, shadingBias);
+            midGradient, midShadingBias);
 
-        if (horizontalCoverage <= CLOUD_DENSITY_EPSILON)
+        if (midCoverage <= CLOUD_DENSITY_EPSILON)
         continue;
 
-        float fullness           = materialParams.y;
-        float horizontalPuffTerm = pow(horizontalCoverage, mix(2.2, 0.8, fullness));
-        float thicknessNorm      = clamp(shape.x / CLOUD_AMBIENT_THICKNESS_REFERENCE_BLOCKS, 0.0, 1.0);
+        float fullness      = materialParams.y;
+        float thicknessNorm = clamp(shape.x / CLOUD_AMBIENT_THICKNESS_REFERENCE_BLOCKS, 0.0, 1.0);
 
         int   stepCount       = clamp(int(pathLength / CLOUD_VOLUME_STEP_LENGTH_BLOCKS) + 1,
             CLOUD_VOLUME_STEP_COUNT_MIN, CLOUD_VOLUME_STEP_COUNT_MAX);
@@ -347,13 +362,24 @@ void main() {
             float tStep         = clamp(tNear + sampleOffset * stepLength, tNear, tNear + pathLength);
             vec3  stepWorldPos  = u_cameraPosition + rayDir * tStep;
 
-            // The dome bend itself, re-resolved at THIS sample's own
-            // horizontal distance from world center so the slab curves
-            // continuously along the ray. localHeightJitter is sampled at
-            // this same step's own world position (unlike heightUndulation
-            // above, which is one fixed value for the whole entry) so
-            // different clumps within this entry's silhouette read as
-            // separately floating rather than perfectly flat.
+            // The silhouette is re-read fresh at THIS step's own world
+            // position rather than reusing the entry's single midpoint
+            // value — a fixed coverage for the whole ray is what made
+            // every cloud read identically flat regardless of which side
+            // it was viewed from. Sampling per step lets the ray reveal
+            // the pattern's actual 2D shape as it travels laterally
+            // through it, which is most of what a grazing, near-horizon
+            // view does.
+            vec2  stepGradient;
+            float stepShadingBias;
+            float stepCoverage = resolveCloudCoverage(
+                bounds, shape, noiseParams, colorScale, variance0, variance1,
+                intensity, stepWorldPos, driftDirNorm, driftAngle, driftSpeed,
+                stepGradient, stepShadingBias);
+
+            if (stepCoverage <= CLOUD_DENSITY_EPSILON)
+            continue;
+
             float stepDistanceFromCenter = length(stepWorldPos.xz);
 
             float localHeightJitter = gradientNoise2D(
@@ -367,13 +393,13 @@ void main() {
 
             float verticalNorm, verticalSign;
             float verticalDensity = resolveCloudVerticalDensity(
-                stepWorldPos, stepSlabBottomY, stepSlabTopY, fullness, shadingBias, patternSeed,
+                stepWorldPos, stepSlabBottomY, stepSlabTopY, fullness, stepShadingBias, patternSeed,
                 verticalNorm, verticalSign);
 
             if (verticalDensity <= CLOUD_DENSITY_EPSILON)
             continue;
 
-            float localDensity = horizontalCoverage * verticalDensity;
+            float localDensity = stepCoverage * verticalDensity;
             float opticalDepth = localDensity * shape.z * CLOUD_DENSITY_OPACITY_SCALE * travelStepRatio;
             float stepTransmittance = exp(-opticalDepth);
             float stepAlpha         = 1.0 - stepTransmittance;
@@ -381,14 +407,22 @@ void main() {
             if (stepAlpha <= CLOUD_DENSITY_EPSILON)
             continue;
 
-            float verticalShape = 1.0 - clamp(verticalNorm, 0.0, 1.0);
-            float puffHeight    = clamp(mix(horizontalPuffTerm, verticalShape, 0.5), 0.0, 1.0);
-            float lift           = verticalSign < 0.0 ? mix(-0.6, -0.15, fullness) : mix(0.3, 0.75, fullness);
+            // Blends the coverage stamp's own "how filled in" read against
+            // the height-based bottom/top profile, weighted by viewGrazing
+            // — a grazing, near-horizontal ray leans on the height profile
+            // (flat base, round top actually become visible), while a
+            // steep ray looking straight up through the base or down onto
+            // the top leans on the coverage stamp instead, since there is
+            // no "side" silhouette to read from directly above or below.
+            float horizontalPuffTerm = pow(stepCoverage, mix(2.2, 0.8, fullness));
+            float verticalShape      = 1.0 - clamp(verticalNorm, 0.0, 1.0);
+            float puffHeight         = clamp(mix(horizontalPuffTerm, verticalShape, mix(0.15, 0.85, viewGrazing)), 0.0, 1.0);
+            float lift                = verticalSign < 0.0 ? mix(-0.6, -0.15, fullness) : mix(0.3, 0.75, fullness);
 
             vec3 fakeNormal = normalize(vec3(
-                    gradient.x * (1.0 - puffHeight),
+                    stepGradient.x * (1.0 - puffHeight),
                     max(puffHeight + lift, 0.05),
-                    gradient.y * (1.0 - puffHeight)));
+                    stepGradient.y * (1.0 - puffHeight)));
 
             float selfShadow = mix(1.0, entryRemaining, CLOUD_VOLUME_SELF_SHADOW_STRENGTH);
             vec3  stepColor   = shadeCloudStep(rayDir, fakeNormal, puffHeight, selfShadow, thicknessNorm, colorScale, materialParams);

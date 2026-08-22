@@ -18,26 +18,22 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class FluidSimulationSystem extends SystemPackage {
 
     /*
-     * Advances one subchunk's liquid by a single simulation step: falling,
-     * then diagonal falling, then either lateral equalization or a full
-     * basin fill. A basin is discovered by flooding outward through open,
-     * supported floor cells only — air or matching liquid whose own down
-     * neighbor is solid or liquid — using the same neighbor resolution fall
-     * and spread use, so it crosses subchunk and chunk boundaries freely.
-     * Any lateral cell with nothing beneath it, or any neighbor that can't
-     * be resolved at all, breaks the seal immediately and the location is
-     * treated as open rather than a basin. isConnectedBodyPermanent() is a
-     * second, independent capability — a bounded 6-directional connectivity
-     * count used by LiquidTickBranch to decide whether a body is large
-     * enough to skip simulation entirely, gated separately from flow().
-     * Chunks and subchunks touched outside the one passed to flow() are
-     * collected for the caller to rebuild and re-register with the
-     * renderer.
+     * Advances one subchunk's liquid by a single simulation step — fall,
+     * diagonal fall, then lateral basin-settle-or-decay — and separately
+     * exposes isConnectedBodyPermanent(), the bounded connectivity probe
+     * LiquidTickBranch uses once per unstable subchunk to flag a body large
+     * enough it never needs that probe repeated. Every neighbor check here
+     * shares one rule: a liquid cell already at LIQUID_LEVEL_MAX is opaque
+     * to this liquid, exactly like any solid block, so a large settled body
+     * is never explored as fillable basin space and any excess water
+     * resting against it is free to settle or dissipate on its own terms.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
             Direction3Vector.NORTH, Direction3Vector.EAST, Direction3Vector.SOUTH, Direction3Vector.WEST
     };
+
+    private static final Direction3Vector[] DOWN_DIRECTIONS = { Direction3Vector.DOWN };
 
     // Internal
     private BlockManager blockManager;
@@ -56,18 +52,15 @@ public class FluidSimulationSystem extends SystemPackage {
     private ChunkInstance scratchNeighborChunk;
     private SubChunkInstance scratchNeighborSubChunk;
 
-    // Scratch — up to one target per lateral direction, shared by the
-    // diagonal-fall step and the lateral equalization step
+    // Scratch — up to one target per lateral direction, shared by fall,
+    // diagonal fall, and lateral equalization
     private final int[] spreadTargetPacked = new int[LATERAL_DIRECTIONS.length];
     private final ChunkInstance[] spreadTargetChunk = new ChunkInstance[LATERAL_DIRECTIONS.length];
     private final SubChunkInstance[] spreadTargetSubChunk = new SubChunkInstance[LATERAL_DIRECTIONS.length];
     private final int[] spreadTargetCapacity = new int[LATERAL_DIRECTIONS.length];
     private final int[] spreadTargetExistingLevel = new int[LATERAL_DIRECTIONS.length];
 
-    // Scratch — basin floor flood-fill. Every queued and collected cell
-    // carries its owning chunk/subchunk alongside its packed local position
-    // so the walk can cross subchunk and chunk boundaries the same way
-    // fall and spread do.
+    // Scratch — basin floor flood-fill
     private int[] basinDequePacked;
     private ChunkInstance[] basinDequeChunk;
     private SubChunkInstance[] basinDequeSubChunk;
@@ -82,9 +75,8 @@ public class FluidSimulationSystem extends SystemPackage {
 
     private boolean lastFloodEnclosed;
 
-    // Scratch — permanence connectivity scan. Unlike the basin/spread
-    // scratch above, this walks all 6 directions rather than lateral-only,
-    // since a body's permanence depends on its full 3D extent.
+    // Scratch — permanence connectivity scan, all 6 directions rather than
+    // lateral-only since a body's permanence depends on its full 3D extent
     private int[] permanenceDequePacked;
     private ChunkInstance[] permanenceDequeChunk;
     private SubChunkInstance[] permanenceDequeSubChunk;
@@ -203,16 +195,6 @@ public class FluidSimulationSystem extends SystemPackage {
 
     // Permanence \\
 
-    /*
-     * Bounded 6-directional connectivity scan seeded from a single known
-     * liquid cell. Stops the instant the discovered count reaches
-     * LIQUID_PERMANENCE_THRESHOLD and reports permanent — the exact size of
-     * a body once it's already known to be large enough never matters, so
-     * nothing past the threshold is ever walked. A body smaller than the
-     * threshold costs exactly its own size to rule out, capped at the
-     * threshold either way. Crosses subchunk and chunk boundaries the same
-     * way flow() does, via resolveNeighbor().
-     */
     public boolean isConnectedBodyPermanent(ChunkInstance startChunk, SubChunkInstance startSubChunk, int startPacked) {
 
         short liquidBlockID = startSubChunk.getBlockPaletteHandle().getBlock(startPacked);
@@ -300,32 +282,12 @@ public class FluidSimulationSystem extends SystemPackage {
             short blockID,
             int amount) {
 
-        int belowPacked = resolveNeighbor(chunkInstance, subChunkInstance, packed, Direction3Vector.DOWN);
+        int targetCount = collectSpreadTargets(chunkInstance, subChunkInstance, packed, blockID, DOWN_DIRECTIONS);
 
-        if (scratchNeighborSubChunk == null)
+        if (targetCount == 0)
             return amount;
 
-        SubChunkInstance belowSubChunk = scratchNeighborSubChunk;
-        short belowBlockID = belowSubChunk.getBlockPaletteHandle().getBlock(belowPacked);
-
-        if (belowBlockID != airBlockId && belowBlockID != blockID)
-            return amount;
-
-        int existingLevel = belowBlockID == blockID
-                ? belowSubChunk.getLiquidLevelPaletteHandle().getBlock(belowPacked)
-                : 0;
-        int capacity = EngineSetting.LIQUID_LEVEL_MAX - existingLevel;
-
-        if (capacity <= 0)
-            return amount;
-
-        spreadTargetPacked[0] = belowPacked;
-        spreadTargetChunk[0] = scratchNeighborChunk;
-        spreadTargetSubChunk[0] = belowSubChunk;
-        spreadTargetCapacity[0] = capacity;
-        spreadTargetExistingLevel[0] = existingLevel;
-
-        return distributeAcrossTargets(subChunkInstance, packed, blockID, amount, 1);
+        return distributeAcrossTargets(subChunkInstance, packed, blockID, amount, targetCount);
     }
 
     // Diagonal Fall \\
@@ -345,7 +307,7 @@ public class FluidSimulationSystem extends SystemPackage {
         ChunkInstance belowChunk = scratchNeighborChunk;
         SubChunkInstance belowSubChunk = scratchNeighborSubChunk;
 
-        int targetCount = collectSpreadTargets(belowChunk, belowSubChunk, belowPacked, blockID);
+        int targetCount = collectSpreadTargets(belowChunk, belowSubChunk, belowPacked, blockID, LATERAL_DIRECTIONS);
 
         if (targetCount == 0)
             return amount;
@@ -367,7 +329,7 @@ public class FluidSimulationSystem extends SystemPackage {
         if (lastFloodEnclosed)
             return settleEnclosedPocket(subChunkInstance, packed, blockID, amount, cellCount);
 
-        int targetCount = collectSpreadTargets(chunkInstance, subChunkInstance, packed, blockID);
+        int targetCount = collectSpreadTargets(chunkInstance, subChunkInstance, packed, blockID, LATERAL_DIRECTIONS);
         boolean moved = targetCount > 0
                 && equalizeLaterally(subChunkInstance, packed, blockID, amount, targetCount);
 
@@ -457,13 +419,14 @@ public class FluidSimulationSystem extends SystemPackage {
             ChunkInstance fromChunk,
             SubChunkInstance fromSubChunk,
             int fromPacked,
-            short blockID) {
+            short blockID,
+            Direction3Vector[] directions) {
 
         int targetCount = 0;
 
-        for (int d = 0; d < LATERAL_DIRECTIONS.length; d++) {
+        for (int d = 0; d < directions.length; d++) {
 
-            int targetPacked = resolveNeighbor(fromChunk, fromSubChunk, fromPacked, LATERAL_DIRECTIONS[d]);
+            int targetPacked = resolveNeighbor(fromChunk, fromSubChunk, fromPacked, directions[d]);
 
             if (scratchNeighborSubChunk == null)
                 continue;
@@ -665,15 +628,6 @@ public class FluidSimulationSystem extends SystemPackage {
         return true;
     }
 
-    /*
-     * Floods outward from the source through same-level floor cells only —
-     * air or matching liquid whose own down neighbor is solid or matching
-     * liquid. A lateral neighbor with nothing beneath it means water can
-     * spill out that way, which immediately breaks the seal; so does a
-     * neighbor that can't be resolved at all (world edge, unloaded chunk).
-     * Hitting the scan limit while still sealed treats the pocket as too
-     * large to bother simulating as a basin.
-     */
     private int floodFillBasin(int sourcePacked, short blockID) {
 
         int front = 0;
@@ -724,7 +678,7 @@ public class FluidSimulationSystem extends SystemPackage {
 
                 short neighborBlockID = neighborSubChunk.getBlockPaletteHandle().getBlock(neighborPacked);
 
-                if (neighborBlockID != airBlockId && neighborBlockID != blockID) {
+                if (isSolidToLiquid(neighborSubChunk, neighborPacked, neighborBlockID, blockID)) {
                     markBasinVisited(neighborSubChunk, neighborPacked);
                     continue;
                 }
@@ -768,13 +722,7 @@ public class FluidSimulationSystem extends SystemPackage {
         SubChunkInstance belowSubChunk = scratchNeighborSubChunk;
         short belowBlockID = belowSubChunk.getBlockPaletteHandle().getBlock(belowPacked);
 
-        if (belowBlockID == airBlockId)
-            return false;
-
-        if (belowBlockID == blockID)
-            return belowSubChunk.getLiquidLevelPaletteHandle().getBlock(belowPacked) >= EngineSetting.LIQUID_LEVEL_MAX;
-
-        return true;
+        return isSolidToLiquid(belowSubChunk, belowPacked, belowBlockID, blockID);
     }
 
     private void markBasinVisited(SubChunkInstance subChunk, int packed) {
@@ -792,6 +740,19 @@ public class FluidSimulationSystem extends SystemPackage {
 
     private void clearBasinVisited() {
         basinVisitedCount = 0;
+    }
+
+    // Openness \\
+
+    private boolean isSolidToLiquid(SubChunkInstance subChunk, int packed, short candidateBlockID, short blockID) {
+
+        if (candidateBlockID == airBlockId)
+            return false;
+
+        if (candidateBlockID != blockID)
+            return true;
+
+        return subChunk.getLiquidLevelPaletteHandle().getBlock(packed) >= EngineSetting.LIQUID_LEVEL_MAX;
     }
 
     // Neighbor Resolution \\

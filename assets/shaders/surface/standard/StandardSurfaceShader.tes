@@ -28,25 +28,26 @@ out float vColor;
 #include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
+// Tessellation evaluation shader for terrain. Builds the flat per-vertex
+// world position for the current tier (near-ring bevel/height/jitter or
+// far-ring distant rise), then bends the fully displaced result through
+// world curvature exactly once at the end, so every vertex — beveled or
+// not — curves by the amount its own true final position calls for.
+
 const float NOISE_SEED_SCALE = 0.5;
 
-// ── Bevel tunables ─────────────────────────────────────────────────────
 const float BEVEL_RADIUS = 0.30;
 const float BEVEL_SIZE   = 0.09;
 const float MASK_BLEND   = 0.15;
 
-// ── Height-displacement tunables ─────────────────────────────────────────
-const float HEIGHT_DISPLACE_SCALE   = 0.12; // block units, peak bump height
-const float HEIGHT_FD_EPSILON       = 0.02; // finite-difference step, tess-coord space
-const float HEIGHT_EDGE_FADE_RADIUS = 0.75; // block units — must stay >= BEVEL_RADIUS so height fades out before bevel geometry starts curving
+const float HEIGHT_DISPLACE_SCALE   = 0.12;
+const float HEIGHT_FD_EPSILON       = 0.02;
+const float HEIGHT_EDGE_FADE_RADIUS = 0.75;
 
-// ── Distant terrain rise tunables ────────────────────────────────────────
-// DISTANT_RISE_START_MARGIN_BLOCKS in SurfaceTessellationTier.glsl must be
-// kept equal to DISTORT_START_MARGIN below — one derives the far ring's
-// tessellation boundary from the other's fade-in point.
-const float DISTORT_MAX_HEIGHT   = 64.0;  // block units — height reached exactly AT max distance
-const float DISTORT_START_MARGIN = 512.0; // block units subtracted from max distance
-const float DISTORT_CURVE        = 0.35;  // 0..1, maps to exponent via 16^(DISTORT_CURVE^2); 0.5 = exponent 2 (current tuning, unchanged)
+// Must match DISTANT_RISE_START_MARGIN_BLOCKS in SurfaceTessellationTier.glsl.
+const float DISTORT_MAX_HEIGHT   = 64.0;
+const float DISTORT_START_MARGIN = 512.0;
+const float DISTORT_CURVE        = 0.35;
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -133,8 +134,6 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
                           mix(teWorldPos[3], teWorldPos[2], u), v);
     vec3 uvLocalPos = worldPos;
 
-    worldPos = applyWorldCurvature(worldPos);
-
     vec3 normal = normalize(
                   mix(mix(teNormal[0], teNormal[1], u),
                       mix(teNormal[3], teNormal[2], u), v));
@@ -218,6 +217,8 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
         float h       = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
         worldPos += normal * (h - 0.5) * HEIGHT_DISPLACE_SCALE * heightWeight * nearStrength;
     }
+
+    worldPos = applyWorldCurvature(worldPos);
 
     outNormal = normal;
     return worldPos;

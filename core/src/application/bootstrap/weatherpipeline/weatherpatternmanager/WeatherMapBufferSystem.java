@@ -180,8 +180,18 @@ class WeatherMapBufferSystem extends SystemPackage {
 
         if (entryCount > 0) {
 
-            layerMinY = Float.MAX_VALUE;
-            layerMaxY = -Float.MAX_VALUE;
+            // The dome bend (CloudDome.glsl) lets any entry sink all the way
+            // down to CLOUD_DOME_FADE_ALTITUDE_BLOCKS as it approaches the
+            // edge of weather range, regardless of its own authored
+            // altitude. The cheap Y-band the shader early-rejects rays
+            // against has to span down to that fade altitude too, seeded
+            // here before folding in each entry's authored band — otherwise
+            // a ray levelled at the horizon gets discarded before the
+            // raymarch ever gets a chance to find the bent crossing, and
+            // horizon clouds never render at the altitude they're meant to
+            // fade to.
+            layerMinY = EngineSetting.CLOUD_DOME_FADE_ALTITUDE_BLOCKS;
+            layerMaxY = EngineSetting.CLOUD_DOME_FADE_ALTITUDE_BLOCKS;
 
             for (int i = 0; i < entryCount; i++) {
 
