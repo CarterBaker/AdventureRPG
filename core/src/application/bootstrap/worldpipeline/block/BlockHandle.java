@@ -42,10 +42,6 @@ public class BlockHandle extends HandlePackage {
         return blockData.getRotationType();
     }
 
-    public boolean isNatural() {
-        return blockData.isNatural();
-    }
-
     public int getMaterialID() {
         return blockData.getMaterialID();
     }

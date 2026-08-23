@@ -1,7 +1,6 @@
 package application.bootstrap.physicspipeline;
 
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
-import application.bootstrap.physicspipeline.physicsmanager.PhysicsManager;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import engine.root.PipelinePackage;
 
@@ -13,7 +12,6 @@ public class PhysicsPipeline extends PipelinePackage {
 
     @Override
     protected void create() {
-        create(PhysicsManager.class);
         create(MovementManager.class);
         create(RaycastManager.class);
     }

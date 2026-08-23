@@ -111,7 +111,7 @@ public class EntityInstance extends InstancePackage {
 
     public void updateBlockComposition() {
         this.blockCompositionStruct.updateBlockComposition(
-                size,
+                blockComposition,
                 worldPositionStruct.getPosition(),
                 worldPositionStruct.getChunkCoordinate());
     }
