@@ -22,6 +22,7 @@
             "name": "Grass Block",
             "type": "FULL",
             "rotation": "NATURAL_FULL",
+            "natural": true,
             "break_tier": 0,
             "required_tool": "Standard/Shovel",
             "durability": 3,
@@ -33,6 +34,7 @@
         {
             "name": "Dirt Block",
             "type": "FULL",
+            "natural": true,
             "break_tier": 0,
             "required_tool": "Standard/Shovel",
             "durability": 2,
@@ -42,6 +44,7 @@
         {
             "name": "Stone Block",
             "type": "FULL",
+            "natural": true,
             "break_tier": 1,
             "required_tool": "Standard/Pickaxe",
             "durability": 6,
@@ -51,6 +54,7 @@
         {
             "name": "Copper Ore",
             "type": "FULL",
+            "natural": true,
             "break_tier": 1,
             "required_tool": "Standard/Pickaxe",
             "durability": 8,
@@ -60,6 +64,7 @@
         {
             "name": "Iron Ore",
             "type": "FULL",
+            "natural": true,
             "break_tier": 2,
             "required_tool": "Standard/Pickaxe",
             "durability": 10,
@@ -69,6 +74,7 @@
         {
             "name": "Gold Ore",
             "type": "FULL",
+            "natural": true,
             "break_tier": 2,
             "required_tool": "Standard/Pickaxe",
             "durability": 10,
@@ -78,6 +84,7 @@
         {
             "name": "Coal Ore",
             "type": "FULL",
+            "natural": true,
             "break_tier": 1,
             "required_tool": "Standard/Pickaxe",
             "durability": 5,
@@ -87,6 +94,7 @@
         {
             "name": "Sand",
             "type": "FULL",
+            "natural": true,
             "break_tier": 0,
             "required_tool": "Standard/Shovel",
             "durability": 2,

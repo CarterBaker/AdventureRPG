@@ -32,7 +32,11 @@ class FullGeometryBranch extends BranchPackage {
      * expansion along both tangent axes per face, samples ambient occlusion
      * vertex colors from neighboring biomes, and resolves texture and face
      * encoding for rotation-aware blocks before finalizing quads into the
-     * per-material vertex buffers.
+     * per-material vertex buffers. Bevel corner exposure — the mask bits
+     * StandardSurfaceShader.tes rounds naturally-formed edges from — is only
+     * ever computed for BlockHandle.isNatural() blocks, so an artificial
+     * block's exposed corners always stay sharp and any face it shares with
+     * a natural neighbor stays flat, regardless of that neighbor's own bevel.
      */
 
     // Internal
@@ -507,7 +511,11 @@ class FullGeometryBranch extends BranchPackage {
     /*
      * Returns true only when the edge at sideDirection from cellXYZ is both
      * convex (the tangent neighbor is open / different geometry) and exposed
-     * (no flush coplanar face from that neighbor in faceDirection).
+     * (no flush coplanar face from that neighbor in faceDirection), and only
+     * for a block marked natural — an artificial block's own corners never
+     * bevel, and since a flush FULL-FULL boundary already returns false
+     * below regardless of either side's flag, a natural block never bevels
+     * into an artificial neighbor it's flush against either.
      *
      * Concave edges — where the tangent neighbor is the same solid geometry
      * continuing alongside — are explicitly excluded. Beveling an interior
@@ -522,6 +530,9 @@ class FullGeometryBranch extends BranchPackage {
             Direction3Vector faceDirection,
             Direction3Vector sideDirection,
             BlockHandle blockHandle) {
+
+        if (!blockHandle.isNatural())
+            return false;
 
         SubChunkInstance sideSubChunk = getComparativeSubChunkInstance(
                 chunkInstance, subChunkInstance, cellXYZ, sideDirection);

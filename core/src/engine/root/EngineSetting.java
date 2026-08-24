@@ -239,6 +239,14 @@ public class EngineSetting {
         public static final float NATURAL_NOISE_DISTANT_RISE_MARGIN_BLOCKS = 512.0f;
         public static final String NATURAL_NOISE_UBO = "NaturalNoiseData";
 
+        // Natural Noise — Collision. probe/scale/clamp for the tangential
+        // deflection BlockCollisionBranch derives from the same jitter field,
+        // sampled a second time gradientProbe blocks away along the tangent
+        // axis to approximate the local slope of a natural block's own bump.
+        public static final float NATURAL_NOISE_COLLISION_GRADIENT_PROBE_BLOCKS = 0.05f;
+        public static final float NATURAL_NOISE_COLLISION_DEFLECTION_SCALE = 2.0f;
+        public static final float NATURAL_NOISE_COLLISION_MAX_DEFLECTION_BLOCKS = 0.5f;
+
         // Rendering \\
 
         public static final int MAX_RENDER_CALLS_PER_FRAME = 16384;

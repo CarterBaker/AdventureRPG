@@ -12,7 +12,11 @@ public class BlockData extends DataPackage {
      * construction — block definitions never change at runtime. Owned by
      * BlockHandle for the full engine session. viscosity is required (Pa·s)
      * for any LIQUID-geometry block — see BlockBuilder — and unused/optional
-     * for every other geometry type.
+     * for every other geometry type. natural marks a block as eligible for
+     * the edge bevel and vertex jitter FullGeometryBranch/StandardSurfaceShader
+     * apply to soften and distort naturally-formed terrain — an artificial
+     * block never bevels or jitters and always meets a natural neighbor at a
+     * flat, seamless shared face.
      */
 
     // Identity
@@ -20,6 +24,7 @@ public class BlockData extends DataPackage {
     private final short blockID;
     private final DynamicGeometryType geometry;
     private final BlockRotationType rotationType;
+    private final boolean natural;
 
     // Rendering
     private final int materialID;
@@ -40,6 +45,7 @@ public class BlockData extends DataPackage {
             short blockID,
             DynamicGeometryType geometry,
             BlockRotationType rotationType,
+            boolean natural,
             int materialID,
             int northTexture, int eastTexture, int southTexture,
             int westTexture, int upTexture, int downTexture,
@@ -52,6 +58,7 @@ public class BlockData extends DataPackage {
         this.blockID = blockID;
         this.geometry = geometry;
         this.rotationType = rotationType;
+        this.natural = natural;
         this.materialID = materialID;
 
         this.faceTextures = new int[Direction3Vector.LENGTH];
@@ -85,6 +92,10 @@ public class BlockData extends DataPackage {
 
     public BlockRotationType getRotationType() {
         return rotationType;
+    }
+
+    public boolean isNatural() {
+        return natural;
     }
 
     public int getMaterialID() {

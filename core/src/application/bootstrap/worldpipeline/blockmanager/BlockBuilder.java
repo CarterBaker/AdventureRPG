@@ -79,6 +79,9 @@ class BlockBuilder extends BuilderPackage {
             }
         }
 
+        // Natural
+        boolean natural = JsonUtility.getBoolean(blockJson, "natural", false);
+
         // Material
         int materialID = -1;
         if (blockJson.has("material")) {
@@ -146,7 +149,7 @@ class BlockBuilder extends BuilderPackage {
         // Construct
         BlockData blockData = new BlockData(
                 blockName, blockID,
-                blockType, rotationType,
+                blockType, rotationType, natural,
                 materialID,
                 textures[Direction3Vector.NORTH.ordinal()],
                 textures[Direction3Vector.EAST.ordinal()],
