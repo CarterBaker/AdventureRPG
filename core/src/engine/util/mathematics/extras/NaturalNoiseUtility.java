@@ -8,13 +8,15 @@ public final class NaturalNoiseUtility extends EngineUtility {
 
     /*
      * CPU mirror of the near-terrain surface jitter StandardSurfaceShader.tes
-     * bevels natural-looking terrain with. bakeLattice() reproduces the exact
-     * hash formula the shader used to call directly, once, so both the GPU
-     * (via NaturalNoiseData) and sampleJitter() below read the very same
-     * table instead of ever risking sin() disagreeing between platforms.
-     * getTier0MaxSqDistChunks()/getTier1MaxSqDistChunks() mirror
+     * bevels natural-looking terrain with, reproducing the exact hash formula
+     * the shader evaluates so the GPU (via NaturalNoiseData) and every method
+     * below always read the same values. sampleAxisJitter() and
+     * sampleAxisJitterGradient() are the primitives BlockCollisionBranch
+     * builds a natural block's collision wobble and wall-hug deflection from,
+     * so a wall's visual bulge and its collision boundary can never drift
+     * apart. getTier0MaxSqDistChunks()/getTier1MaxSqDistChunks() mirror
      * surface/includes/SurfaceTessellationTier.glsl so a caller can tell
-     * whether a chunk offset falls inside the ring that jitter is scoped to.
+     * whether a chunk offset falls inside the ring jitter is scoped to.
      */
 
     private NaturalNoiseUtility() {
@@ -76,25 +78,54 @@ public final class NaturalNoiseUtility extends EngineUtility {
 
     // Jitter \\
 
-    public static void sampleJitter(double worldX, double worldZ, float[] lattice, Vector3 out) {
+    public static float sampleAxisJitter(double worldX, double worldZ, float[] lattice, int axis) {
 
         float seedX = (float) worldX * EngineSetting.NATURAL_NOISE_SEED_SCALE;
         float seedZ = (float) worldZ * EngineSetting.NATURAL_NOISE_SEED_SCALE;
 
-        float nX = sampleSmooth(
-                seedX + EngineSetting.NATURAL_NOISE_OFFSET_X_X,
-                seedZ + EngineSetting.NATURAL_NOISE_OFFSET_X_Z, lattice) - 0.5f;
-        float nZ = sampleSmooth(
-                seedX + EngineSetting.NATURAL_NOISE_OFFSET_Z_X,
-                seedZ + EngineSetting.NATURAL_NOISE_OFFSET_Z_Z, lattice) - 0.5f;
-        float nY = sampleSmooth(
-                seedX + EngineSetting.NATURAL_NOISE_OFFSET_Y_X,
-                seedZ + EngineSetting.NATURAL_NOISE_OFFSET_Y_Z, lattice) - 0.5f;
+        if (axis == EngineSetting.AXIS_X)
+            return (sampleSmooth(
+                    seedX + EngineSetting.NATURAL_NOISE_OFFSET_X_X,
+                    seedZ + EngineSetting.NATURAL_NOISE_OFFSET_X_Z, lattice) - 0.5f)
+                    * EngineSetting.NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS;
 
+        if (axis == EngineSetting.AXIS_Y)
+            return (sampleSmooth(
+                    seedX + EngineSetting.NATURAL_NOISE_OFFSET_Y_X,
+                    seedZ + EngineSetting.NATURAL_NOISE_OFFSET_Y_Z, lattice) - 0.5f)
+                    * EngineSetting.NATURAL_NOISE_JITTER_VERTICAL_BLOCKS;
+
+        if (axis == EngineSetting.AXIS_Z)
+            return (sampleSmooth(
+                    seedX + EngineSetting.NATURAL_NOISE_OFFSET_Z_X,
+                    seedZ + EngineSetting.NATURAL_NOISE_OFFSET_Z_Z, lattice) - 0.5f)
+                    * EngineSetting.NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS;
+
+        throw new IllegalArgumentException("axis must be AXIS_X, AXIS_Y, or AXIS_Z: " + axis);
+    }
+
+    public static void sampleJitter(double worldX, double worldZ, float[] lattice, Vector3 out) {
         out.set(
-                nX * EngineSetting.NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS,
-                nY * EngineSetting.NATURAL_NOISE_JITTER_VERTICAL_BLOCKS,
-                nZ * EngineSetting.NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS);
+                sampleAxisJitter(worldX, worldZ, lattice, EngineSetting.AXIS_X),
+                sampleAxisJitter(worldX, worldZ, lattice, EngineSetting.AXIS_Y),
+                sampleAxisJitter(worldX, worldZ, lattice, EngineSetting.AXIS_Z));
+    }
+
+    public static float sampleAxisJitterGradient(
+            double worldX, double worldZ, float[] lattice, int axis, int tangentAxis) {
+
+        float probe = EngineSetting.NATURAL_NOISE_COLLISION_GRADIENT_PROBE_BLOCKS;
+
+        double probeX = tangentAxis == EngineSetting.AXIS_X ? probe : 0.0;
+        double probeZ = tangentAxis == EngineSetting.AXIS_Z ? probe : 0.0;
+
+        if (probeX == 0.0 && probeZ == 0.0)
+            throw new IllegalArgumentException("tangentAxis must be AXIS_X or AXIS_Z: " + tangentAxis);
+
+        float back = sampleAxisJitter(worldX - probeX, worldZ - probeZ, lattice, axis);
+        float forward = sampleAxisJitter(worldX + probeX, worldZ + probeZ, lattice, axis);
+
+        return (forward - back) / (2f * probe);
     }
 
     // Tessellation Tier \\

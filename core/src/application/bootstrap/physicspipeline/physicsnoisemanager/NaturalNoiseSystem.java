@@ -15,11 +15,13 @@ class NaturalNoiseSystem extends SystemPackage {
 
     /*
      * Bakes the near-terrain surface jitter lattice once at bootstrap using
-     * the exact hash formula StandardSurfaceShader.tes used to evaluate live,
-     * then pushes it into NaturalNoiseData so the vertex/tessellation stages
-     * read that same table instead of calling sin() themselves — see
-     * NaturalNoiseUtility for the shared math both the shader and
-     * sampleJitter()/isWithinNearTessellationRing() run against it.
+     * the exact hash formula StandardSurfaceShader.tes evaluates live, then
+     * pushes it into NaturalNoiseData so the vertex/tessellation stages read
+     * that same table instead of calling sin() themselves. Also exposes the
+     * table to BlockCollisionBranch via PhysicsNoiseManager, both as a full
+     * per-axis jitter sample and as a tangential slope probe, so a natural
+     * block's collision boundary and wall-hug deflection can never disagree
+     * with what the shader actually draws.
      */
 
     // Internal
@@ -64,6 +66,14 @@ class NaturalNoiseSystem extends SystemPackage {
 
     void sampleJitter(double worldX, double worldZ, Vector3 out) {
         NaturalNoiseUtility.sampleJitter(worldX, worldZ, lattice, out);
+    }
+
+    float sampleAxisJitter(double worldX, double worldZ, int axis) {
+        return NaturalNoiseUtility.sampleAxisJitter(worldX, worldZ, lattice, axis);
+    }
+
+    float sampleAxisJitterGradient(double worldX, double worldZ, int axis, int tangentAxis) {
+        return NaturalNoiseUtility.sampleAxisJitterGradient(worldX, worldZ, lattice, axis, tangentAxis);
     }
 
     boolean isWithinNearTessellationRing(WorldHandle worldHandle, long entityChunkCoordinate,

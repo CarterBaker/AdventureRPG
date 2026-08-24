@@ -116,6 +116,12 @@ public class EngineSetting {
         public static final int GL_INVALID_INDEX = 0xFFFFFFFF;
         public static final int INDEX_NOT_FOUND = -1;
 
+        // Axis Indices \\
+
+        public static final int AXIS_X = 0;
+        public static final int AXIS_Y = 1;
+        public static final int AXIS_Z = 2;
+
         // Noise — Seamless Axis Wrap \\
 
         public static final double NOISE_SEAM_BLEND_WAVELENGTHS = 3.0;
@@ -216,10 +222,6 @@ public class EngineSetting {
 
         // Natural Noise \\
 
-        // Mirrors the hash()/periodicValueNoise() formula StandardSurfaceShader.tes
-        // used to call directly with sin() — NaturalNoiseUtility now bakes this once
-        // on the CPU and both physics and NaturalNoiseData (the GLSL mirror of these
-        // same values) read the baked table instead, so the two can never disagree.
         public static final float NATURAL_NOISE_HASH_DOT_X = 127.1f;
         public static final float NATURAL_NOISE_HASH_DOT_Z = 311.7f;
         public static final float NATURAL_NOISE_HASH_SCALE = 43758.5453f;
@@ -238,14 +240,13 @@ public class EngineSetting {
         public static final float NATURAL_NOISE_JITTER_VERTICAL_BLOCKS = 0.08f;
         public static final float NATURAL_NOISE_DISTANT_RISE_MARGIN_BLOCKS = 512.0f;
         public static final String NATURAL_NOISE_UBO = "NaturalNoiseData";
-
-        // Natural Noise — Collision. probe/scale/clamp for the tangential
-        // deflection BlockCollisionBranch derives from the same jitter field,
-        // sampled a second time gradientProbe blocks away along the tangent
-        // axis to approximate the local slope of a natural block's own bump.
         public static final float NATURAL_NOISE_COLLISION_GRADIENT_PROBE_BLOCKS = 0.05f;
         public static final float NATURAL_NOISE_COLLISION_DEFLECTION_SCALE = 2.0f;
         public static final float NATURAL_NOISE_COLLISION_MAX_DEFLECTION_BLOCKS = 0.5f;
+
+        // Natural Ground Offset \\
+
+        public static final float NATURAL_GROUND_OFFSET_SMOOTHING = 10.0f;
 
         // Rendering \\
 

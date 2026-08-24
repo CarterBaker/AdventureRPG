@@ -25,9 +25,12 @@ public class MovementManager extends ManagerPackage {
      * state is EntityState.WADING. Deep enough to submerge means swimming:
      * SwimBranch owns the Y axis instead, and attemptClimbOut() gets a chance
      * right after collision to pull the entity out onto any bank at or below
-     * the water's own surface height — without it, an entity that can't touch
-     * bottom has no way back onto dry land, however shallow the water looks
-     * from the bank.
+     * the water's own surface height.
+     *
+     * NaturalGroundOffsetBranch runs last, strictly after position and chunk
+     * wrap are final. It never writes back into position — it only maintains
+     * a smoothed cosmetic value that camera/eye code reads separately — so it
+     * can never affect collision, gravity, or block composition.
      */
 
     // Internal
@@ -35,6 +38,7 @@ public class MovementManager extends ManagerPackage {
     private GravityBranch gravityBranch;
     private BlockCollisionBranch blockCollisionBranch;
     private SwimBranch swimBranch;
+    private NaturalGroundOffsetBranch naturalGroundOffsetBranch;
 
     // Cached Vectors
     private Vector3 movement;
@@ -53,6 +57,7 @@ public class MovementManager extends ManagerPackage {
         this.gravityBranch = create(GravityBranch.class);
         this.blockCollisionBranch = create(BlockCollisionBranch.class);
         this.swimBranch = create(SwimBranch.class);
+        this.naturalGroundOffsetBranch = create(NaturalGroundOffsetBranch.class);
 
         // Cached Vectors
         this.movement = new Vector3();
@@ -74,22 +79,16 @@ public class MovementManager extends ManagerPackage {
 
         movement.set(0, 0, 0);
 
-        // 1. Water contact — decides for the whole frame whether the entity is
-        // wading (feet on the bottom, gravity still owns the Y axis) or fully
-        // swimming (SwimBranch owns the Y axis), and how much drag the touched
-        // liquid applies either way.
+        // 1. Water contact
         boolean touchingLiquid = swimBranch.refresh(entity);
         boolean swimming = touchingLiquid && swimBranch.isSwimming(entity);
         boolean wading = touchingLiquid && !swimming;
         float dragMultiplier = touchingLiquid ? swimBranch.getSpeedMultiplier() : 1f;
 
-        // 2. Horizontal — x, z only
+        // 2. Horizontal
         movementBranch.calculate(movement, entity, dragMultiplier, swimming);
 
-        // 3. Vertical — swimming owns this axis once genuinely submerged;
-        // gravity owns it otherwise, wading or not. A wading entity just rides
-        // gravity/collision down onto whatever floor sits beneath it, same as
-        // dry ground, only with a diminished jump.
+        // 3. Vertical
         if (swimming)
             swimBranch.calculate(movement, entity);
         else
@@ -98,13 +97,10 @@ public class MovementManager extends ManagerPackage {
         // 4. Snapshot before collision
         preCollisionSnapshot.set(movement.x, movement.y, movement.z);
 
-        // 5. Collision
+        // 5. Collision — flat, jitter-free, the only authority on solid/air
         blockCollisionBranch.calculate(position, movement, entity);
 
-        // 6. Post-collision — only relevant to whichever branch drove the
-        // Y axis this frame. While swimming, a blocked horizontal move is
-        // instead handed to attemptClimbOut() in case it was blocked by a
-        // bank low enough to pull the entity out onto.
+        // 6. Post-collision
         if (swimming)
             swimBranch.attemptClimbOut(preCollisionSnapshot, movement, entity);
         else
@@ -124,6 +120,9 @@ public class MovementManager extends ManagerPackage {
 
         worldPosition.setPosition(position);
         worldPosition.setChunkCoordinate(chunkCoordinate);
+
+        // 10. Cosmetic ground offset — reads the now-final flat position only
+        naturalGroundOffsetBranch.update(entity);
     }
 
     // Chunk \\

@@ -8,8 +8,10 @@ public class EntityStateHandle extends HandlePackage {
 
     /*
      * Per-entity runtime movement state. Holds current movement state, gravity
-     * and horizontal velocity accumulators, and jump start time. No manager
-     * owns this — it lives directly on EntityInstance.
+     * and horizontal velocity accumulators, jump start time, and the smoothed
+     * cosmetic vertical ground offset NaturalGroundOffsetBranch derives from
+     * whichever natural block currently sits beneath this entity's feet. No
+     * manager owns this — it lives directly on EntityInstance.
      */
 
     // State
@@ -19,6 +21,9 @@ public class EntityStateHandle extends HandlePackage {
     private Vector3 gravityVelocity;
     private Vector2 horizontalVelocity;
     private long jumpStartTime;
+
+    // Ground Offset — cosmetic only, never fed back into physics position
+    private float groundOffset;
 
     // Internal \\
 
@@ -32,6 +37,9 @@ public class EntityStateHandle extends HandlePackage {
         this.gravityVelocity = new Vector3();
         this.horizontalVelocity = new Vector2();
         this.jumpStartTime = 0L;
+
+        // Ground Offset
+        this.groundOffset = 0f;
     }
 
     // Accessible \\
@@ -58,6 +66,14 @@ public class EntityStateHandle extends HandlePackage {
 
     public void setJumpStartTime(long jumpStartTime) {
         this.jumpStartTime = jumpStartTime;
+    }
+
+    public float getGroundOffset() {
+        return groundOffset;
+    }
+
+    public void setGroundOffset(float groundOffset) {
+        this.groundOffset = groundOffset;
     }
 
     // Utility \\
