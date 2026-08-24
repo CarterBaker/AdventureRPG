@@ -214,6 +214,31 @@ public class EngineSetting {
         public static final int BLOCK_PALETTE_THRESHOLD = 512;
         public static final int SUB_VOXEL_RESOLUTION = 16;
 
+        // Natural Noise \\
+
+        // Mirrors the hash()/periodicValueNoise() formula StandardSurfaceShader.tes
+        // used to call directly with sin() — NaturalNoiseUtility now bakes this once
+        // on the CPU and both physics and NaturalNoiseData (the GLSL mirror of these
+        // same values) read the baked table instead, so the two can never disagree.
+        public static final float NATURAL_NOISE_HASH_DOT_X = 127.1f;
+        public static final float NATURAL_NOISE_HASH_DOT_Z = 311.7f;
+        public static final float NATURAL_NOISE_HASH_SCALE = 43758.5453f;
+        public static final float NATURAL_NOISE_SEED_SCALE = 0.5f;
+        public static final int NATURAL_NOISE_LATTICE_PERIOD = (int) (CHUNK_SIZE * NATURAL_NOISE_SEED_SCALE);
+        public static final int NATURAL_NOISE_LATTICE_SIZE = NATURAL_NOISE_LATTICE_PERIOD
+                        * NATURAL_NOISE_LATTICE_PERIOD;
+        public static final int NATURAL_NOISE_LATTICE_VEC4_COUNT = (NATURAL_NOISE_LATTICE_SIZE + 3) / 4;
+        public static final float NATURAL_NOISE_OFFSET_X_X = 17.3f;
+        public static final float NATURAL_NOISE_OFFSET_X_Z = 0.0f;
+        public static final float NATURAL_NOISE_OFFSET_Z_X = 0.0f;
+        public static final float NATURAL_NOISE_OFFSET_Z_Z = 31.7f;
+        public static final float NATURAL_NOISE_OFFSET_Y_X = 53.1f;
+        public static final float NATURAL_NOISE_OFFSET_Y_Z = 83.2f;
+        public static final float NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS = 0.4f;
+        public static final float NATURAL_NOISE_JITTER_VERTICAL_BLOCKS = 0.08f;
+        public static final float NATURAL_NOISE_DISTANT_RISE_MARGIN_BLOCKS = 512.0f;
+        public static final String NATURAL_NOISE_UBO = "NaturalNoiseData";
+
         // Rendering \\
 
         public static final int MAX_RENDER_CALLS_PER_FRAME = 16384;

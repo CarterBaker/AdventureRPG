@@ -1,0 +1,6 @@
+{
+    "blockName": "NaturalNoiseData",
+    "uniforms": [
+        { "name": "u_naturalNoiseLattice", "type": "VECTOR4", "count": 16 }
+    ]
+}
