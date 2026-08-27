@@ -207,6 +207,10 @@ public class GridInstance extends InstancePackage {
         if (coveredSlots.size() != batchedChunks)
             return;
 
+        for (int i = 0; i < coveredSlots.size(); i++)
+            if (coveredSlots.get(i).getDetailLevel().renderMode != RenderType.BATCHED)
+                return;
+
         megaRenderQueue.put(megaCoordinate, slot);
 
         for (int i = 0; i < coveredSlots.size(); i++) {
@@ -260,7 +264,12 @@ public class GridInstance extends InstancePackage {
     }
 
     public GridSlotHandle getGridSlotForChunk(long chunkCoordinate) {
-        long gridCoordinate = Coordinate2Long.subtract(chunkCoordinate, activeChunkCoordinate);
+
+        long gridCoordinate = WorldWrapUtility.unwrapToGridCoordinate(
+                getWorldHandle(),
+                activeChunkCoordinate,
+                chunkCoordinate);
+
         return gridSlots.get(gridCoordinate);
     }
 

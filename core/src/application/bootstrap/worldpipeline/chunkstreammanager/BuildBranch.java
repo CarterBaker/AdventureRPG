@@ -30,6 +30,18 @@ public class BuildBranch extends BranchPackage {
      * when a neighbor is genuinely missing or ungenerated — never for a
      * plain lock race — so ordinary contention just retries next pass
      * instead of forcing a full 8-neighbor reassessment.
+     *
+     * Chunk instances are pooled and can be handed out to a brand new
+     * coordinate the moment they unload, so the ChunkInstance references
+     * resolved here on the main thread can, in principle, be reassigned to
+     * a completely different coordinate before this async task reaches the
+     * front of the WorldStreaming queue. Acquiring a lock only proves the
+     * object is currently safe to read — it says nothing about whether it
+     * is still the neighbor this task was actually dispatched for. Every
+     * lock is therefore re-validated against the coordinate it was resolved
+     * against the instant it is acquired; a mismatch is treated exactly
+     * like a missing neighbor rather than silently merging whatever chunk
+     * now occupies that object.
      */
 
     // Internal
@@ -70,18 +82,15 @@ public class BuildBranch extends BranchPackage {
         }
 
         ChunkInstance[] resolved = resolveChunksInOrder(chunkInstance, lockOrder);
-        ChunkDataSyncContainer[] locks = new ChunkDataSyncContainer[resolved.length];
         int ownIndex = -1;
 
-        for (int i = 0; i < resolved.length; i++) {
-            locks[i] = resolved[i].getChunkDataSyncContainer();
+        for (int i = 0; i < resolved.length; i++)
             if (resolved[i] == chunkInstance)
                 ownIndex = i;
-        }
 
         int finalOwnIndex = ownIndex;
 
-        executeAsync(threadHandle, () -> runLockedBuild(chunkInstance, locks, finalOwnIndex));
+        executeAsync(threadHandle, () -> runLockedBuild(chunkInstance, resolved, lockOrder, finalOwnIndex));
     }
 
     // Lock Ordering \\
@@ -147,10 +156,18 @@ public class BuildBranch extends BranchPackage {
 
     // Locked Build \\
 
-    private void runLockedBuild(ChunkInstance chunkInstance, ChunkDataSyncContainer[] locks, int ownIndex) {
+    private void runLockedBuild(
+            ChunkInstance chunkInstance,
+            ChunkInstance[] resolved,
+            long[] lockOrder,
+            int ownIndex) {
 
         DynamicGeometryAsyncContainer geo = dynamicGeometryAsyncContainer.getInstance();
-        ChunkDataSyncContainer ownSync = locks[ownIndex];
+        ChunkDataSyncContainer ownSync = chunkInstance.getChunkDataSyncContainer();
+
+        ChunkDataSyncContainer[] locks = new ChunkDataSyncContainer[resolved.length];
+        for (int i = 0; i < resolved.length; i++)
+            locks[i] = resolved[i].getChunkDataSyncContainer();
 
         int heldCount = 0;
         boolean missingPrecondition = false;
@@ -165,6 +182,12 @@ public class BuildBranch extends BranchPackage {
                 }
 
                 heldCount = i + 1;
+
+                if (resolved[i].getCoordinate() != lockOrder[i]) {
+                    missingPrecondition = true;
+                    gotAllLocks = false;
+                    break;
+                }
 
                 if (!locks[i].getData()[generationDataIndex]) {
                     missingPrecondition = true;

@@ -42,8 +42,8 @@ public class MegaStreamManager extends ManagerPackage {
         return megaQueueManager.resolveMegaForChunk(chunkInstance, grid);
     }
 
-    public void mergeIntoMega(ChunkInstance chunkInstance, MegaChunkInstance mega) {
-        megaQueueManager.mergeIntoMega(chunkInstance, mega);
+    public void mergeIntoMega(ChunkInstance chunkInstance, MegaChunkInstance mega, long expectedMegaCoordinate) {
+        megaQueueManager.mergeIntoMega(chunkInstance, mega, expectedMegaCoordinate);
     }
 
     public void invalidateMegaForChunk(long chunkCoordinate) {

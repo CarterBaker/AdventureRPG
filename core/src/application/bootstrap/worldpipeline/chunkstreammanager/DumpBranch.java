@@ -5,22 +5,29 @@ import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import engine.root.BranchPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 
 public class DumpBranch extends BranchPackage {
 
     /*
      * Executes a single dump step per call. ChunkDataUtility determines which
-     * stage to shed based on the leadsTo/requires graph, the slot detail level,
-     * and — for RENDER_DATA — a live check of whether this chunk is actually
-     * being drawn individually right now. cascadeClear runs before
-     * side-effecting work so concurrent dispatches see the stage as already
-     * gone. Item structs survive a GENERATION dump so ITEM_DATA can rebuild
-     * without a full re-generation.
+     * stage to shed based on the requires graph, the slot detail level, and
+     * the same two live signals ChunkQueueManager uses to decide whether to
+     * dump in the first place — needsIndividualRender and partOfMegaBlock —
+     * recomputed here identically so this branch can never dump RENDER_DATA
+     * out from under a chunk that is only rendering because its mega hasn't
+     * confirmed on GPU yet. The selected stage's flag is cleared directly;
+     * nothing downstream needs a forced cascade, since nextToDump already
+     * only ever selects a stage nothing still-pending depends on. Item
+     * structs survive a GENERATION dump so ITEM_DATA can rebuild without a
+     * full re-generation.
      */
 
     // Internal
@@ -47,17 +54,21 @@ public class DumpBranch extends BranchPackage {
             return;
 
         try {
-            boolean needsIndividualRender = grid.getChunkRenderQueue().containsKey(chunkInstance.getCoordinate());
+            long chunkCoordinate = chunkInstance.getCoordinate();
+            GridSlotDetailLevel slotLevel = gridSlotHandle.getDetailLevel();
+
+            boolean coveredByMega = !grid.getChunkRenderQueue().containsKey(chunkCoordinate);
+            boolean needsIndividualRender = !coveredByMega
+                    || !worldRenderManager.isMegaRendered(Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate));
+            boolean partOfMegaBlock = coveredByMega && slotLevel.renderMode == RenderType.BATCHED;
 
             ChunkData toDump = ChunkDataUtility.nextToDump(
-                    syncContainer.getData(),
-                    gridSlotHandle.getDetailLevel(),
-                    needsIndividualRender);
+                    syncContainer.getData(), slotLevel, needsIndividualRender, partOfMegaBlock);
 
             if (toDump == null)
                 return;
 
-            ChunkDataUtility.cascadeClear(toDump, syncContainer.getData());
+            syncContainer.getData()[toDump.index] = false;
             executeDump(chunkInstance, toDump);
         } finally {
             syncContainer.release();

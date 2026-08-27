@@ -7,6 +7,7 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.Dynami
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
@@ -30,6 +31,13 @@ public class DebugWaterPlacementSystem extends SystemPackage {
      * the runtime layer — no bootstrap class had to change to add it. Flip
      * ENABLED to false, or remove the create() call in RuntimeContext, to
      * take this out entirely; that is the whole undo path.
+     *
+     * Every chunk this touches is rebuilt and re-merged under that chunk's
+     * own ChunkDataSyncContainer lock. This runs on the main thread, but the
+     * WorldStreaming pool can be concurrently building or merging the exact
+     * same chunk through the ordinary streaming pipeline — without the lock,
+     * this tool's direct merge()/addChunkInstance() calls would race that
+     * async work on the same DynamicPacketInstance.
      */
 
     private static final boolean ENABLED = true;
@@ -203,15 +211,25 @@ public class DebugWaterPlacementSystem extends SystemPackage {
             int blockX, int blockY, int blockZ,
             int subChunkY) {
 
-        rebuildSubChunk(chunk, subChunkY);
+        ChunkDataSyncContainer ownSync = chunk.getChunkDataSyncContainer();
+        ownSync.acquire();
+        try {
+            rebuildSubChunk(chunk, subChunkY);
 
-        if (blockY == 0 && subChunkY > 0)
-            rebuildSubChunk(chunk, subChunkY - 1);
+            if (blockY == 0 && subChunkY > 0)
+                rebuildSubChunk(chunk, subChunkY - 1);
 
-        if (blockY == chunkSize - 1 && subChunkY < worldHeight - 1)
-            rebuildSubChunk(chunk, subChunkY + 1);
+            if (blockY == chunkSize - 1 && subChunkY < worldHeight - 1)
+                rebuildSubChunk(chunk, subChunkY + 1);
 
-        mergeAndRender(chunk, chunkCoordinate);
+            chunk.merge();
+            worldRenderManager.addChunkInstance(chunk);
+        } finally {
+            ownSync.release();
+        }
+
+        worldStreamManager.invalidateMegaForChunk(chunkCoordinate);
+        worldStreamManager.invalidateChunkBatch(chunkCoordinate);
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
@@ -244,14 +262,17 @@ public class DebugWaterPlacementSystem extends SystemPackage {
         if (neighbour == null)
             return;
 
-        rebuildSubChunk(neighbour, subChunkY);
-        mergeAndRender(neighbour, coord);
-    }
+        ChunkDataSyncContainer neighbourSync = neighbour.getChunkDataSyncContainer();
+        neighbourSync.acquire();
+        try {
+            rebuildSubChunk(neighbour, subChunkY);
+            neighbour.merge();
+            worldRenderManager.addChunkInstance(neighbour);
+        } finally {
+            neighbourSync.release();
+        }
 
-    private void mergeAndRender(ChunkInstance chunk, long chunkCoordinate) {
-        chunk.merge();
-        worldRenderManager.addChunkInstance(chunk);
-        worldStreamManager.invalidateMegaForChunk(chunkCoordinate);
-        worldStreamManager.invalidateChunkBatch(chunkCoordinate);
+        worldStreamManager.invalidateMegaForChunk(coord);
+        worldStreamManager.invalidateChunkBatch(coord);
     }
 }

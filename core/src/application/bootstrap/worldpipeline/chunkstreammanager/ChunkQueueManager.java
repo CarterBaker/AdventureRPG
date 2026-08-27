@@ -14,11 +14,13 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
+import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.queue.QueueInstance;
 import engine.util.queue.QueueItemHandle;
 
@@ -64,6 +66,23 @@ class ChunkQueueManager extends ManagerPackage {
      * distant chunks once total slot count exceeds the cap. They only pace
      * how fast new chunk graphs get allocated, tied to how fast the pipeline
      * can actually retire the ones already admitted.
+     *
+     * Reusing a pooled ChunkInstance for a new coordinate reassigns its
+     * fields via constructor() — this must happen under that instance's own
+     * ChunkDataSyncContainer lock. A build or merge task dispatched against
+     * this exact object as someone else's neighbor may still be sitting
+     * queued on the WorldStreaming pool at the moment it gets pooled and
+     * reused; without the lock here, that task's later tryAcquire() would
+     * race this reassignment on the very same fields. A failed acquire means
+     * such a task currently holds it — every remaining coordinate this frame
+     * is left queued rather than reused unlocked, and admission simply
+     * retries next frame.
+     *
+     * Unloading a chunk also invalidates whatever mega it may have contributed
+     * to (invalidateMegaForChunk is a no-op if it wasn't part of one) — a
+     * pooled ChunkInstance is handed back out for a completely different
+     * coordinate later, and a mega still holding a stale reference to it would
+     * merge the wrong location's geometry on its next re-merge.
      */
 
     // Internal
@@ -254,6 +273,11 @@ class ChunkQueueManager extends ManagerPackage {
      * frees up. maxChunkAdmissionsPerFrame caps the burst size once capacity
      * is available, distinct from the heavier per-frame dispatch budget used
      * in assessActiveChunks().
+     *
+     * A brand-new instance (create()) has never been handed out to any
+     * coordinate before, so nothing can hold a stale reference to it and it
+     * is safe to construct unlocked. A pooled instance is reused under its
+     * own lock — see the class-level note on why this matters.
      */
     private void loadQueue(GridInstance grid) {
 
@@ -269,21 +293,47 @@ class ChunkQueueManager extends ManagerPackage {
         while (iterator.hasNext() && loaded < maxChunkAdmissionsPerFrame) {
 
             long chunkCoordinate = iterator.nextLong();
-            iterator.remove();
 
-            ChunkInstance chunkInstance = chunkPool.isEmpty()
-                    ? create(ChunkInstance.class)
-                    : chunkPool.poll();
+            if (chunkPool.isEmpty()) {
 
-            chunkInstance.constructor(
-                    worldRenderManager,
-                    grid.getWorldHandle(),
-                    chunkCoordinate,
-                    chunkStreamManager.getChunkVAO(),
-                    airBlockId,
-                    activeChunks);
+                iterator.remove();
 
-            activeChunks.put(chunkCoordinate, chunkInstance);
+                ChunkInstance freshInstance = create(ChunkInstance.class);
+                freshInstance.constructor(
+                        worldRenderManager,
+                        grid.getWorldHandle(),
+                        chunkCoordinate,
+                        chunkStreamManager.getChunkVAO(),
+                        airBlockId,
+                        activeChunks);
+
+                activeChunks.put(chunkCoordinate, freshInstance);
+                loaded++;
+                continue;
+            }
+
+            ChunkInstance pooledInstance = chunkPool.peek();
+            ChunkDataSyncContainer syncContainer = pooledInstance.getChunkDataSyncContainer();
+
+            if (!syncContainer.tryAcquire())
+                break;
+
+            try {
+                chunkPool.poll();
+                iterator.remove();
+
+                pooledInstance.constructor(
+                        worldRenderManager,
+                        grid.getWorldHandle(),
+                        chunkCoordinate,
+                        chunkStreamManager.getChunkVAO(),
+                        airBlockId,
+                        activeChunks);
+            } finally {
+                syncContainer.release();
+            }
+
+            activeChunks.put(chunkCoordinate, pooledInstance);
             loaded++;
         }
     }
@@ -325,6 +375,8 @@ class ChunkQueueManager extends ManagerPackage {
                 } finally {
                     syncContainer.release();
                 }
+
+                worldStreamManager.invalidateMegaForChunk(chunkCoordinate);
 
                 if (chunkPool.size() < grid.getTotalSlots() + chunkPoolMaxOverflow)
                     chunkPool.push(chunkInstance);
@@ -401,6 +453,8 @@ class ChunkQueueManager extends ManagerPackage {
                 sync.release();
             }
 
+            worldStreamManager.invalidateMegaForChunk(chunkCoordinate);
+
             if (chunkPool.size() < grid.getTotalSlots() + chunkPoolMaxOverflow)
                 chunkPool.push(chunkInstance);
             else
@@ -423,20 +477,35 @@ class ChunkQueueManager extends ManagerPackage {
         try {
             GridSlotDetailLevel slotLevel = gridSlotHandle.getDetailLevel();
 
-            // Live, not level-derived: a NEAR/DISTANT chunk only needs its own
-            // individual GPU upload if the grid's own render queue is actually
-            // going to draw it that way — i.e. its mega can never fully
-            // assemble (render-distance boundary). Every other NEAR/DISTANT
-            // chunk is drawn exclusively through its mega and should never
-            // touch RENDER_DATA at all. See ChunkDataUtility.
-            boolean needsIndividualRender = grid.getChunkRenderQueue().containsKey(chunkInstance.getCoordinate());
+            // coveredByMega: this exact chunk was swept out of the grid's
+            // individual-render queue because it belongs to a mega block
+            // whose covered slots are all NEAR/DISTANT — see
+            // GridInstance.queueMega. needsIndividualRender additionally
+            // stays true until that mega has actually finished merging every
+            // covered chunk and landed on the GPU, so a chunk freshly swept
+            // into coverage never goes dark waiting for the mega to catch
+            // up — see WorldRenderManager.isMegaRendered and
+            // WorldRenderManager.renderGridMegas' per-chunk fallback.
+            long chunkCoordinate = chunkInstance.getCoordinate();
+            boolean coveredByMega = !grid.getChunkRenderQueue().containsKey(chunkCoordinate);
+            boolean needsIndividualRender = !coveredByMega
+                    || !worldRenderManager.isMegaRendered(Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate));
 
-            ChunkData toDump = ChunkDataUtility.nextToDump(syncContainer.getData(), slotLevel, needsIndividualRender);
+            // partOfMegaBlock: whether this chunk should keep contributing
+            // its geometry to its mega. Deliberately independent of whether
+            // that mega has rendered yet — BATCH_DATA is what PRODUCES the
+            // mega's render-ready state, so gating it on the mega already
+            // being rendered would make that merge impossible to dispatch.
+            boolean partOfMegaBlock = coveredByMega && slotLevel.renderMode == RenderType.BATCHED;
+
+            ChunkData toDump = ChunkDataUtility.nextToDump(
+                    syncContainer.getData(), slotLevel, needsIndividualRender, partOfMegaBlock);
 
             if (toDump != null)
                 return QueueOperation.DUMP;
 
-            ChunkData toLoad = ChunkDataUtility.nextToLoad(syncContainer.getData(), slotLevel, needsIndividualRender);
+            ChunkData toLoad = ChunkDataUtility.nextToLoad(
+                    syncContainer.getData(), slotLevel, needsIndividualRender, partOfMegaBlock);
 
             if (toLoad != null) {
 

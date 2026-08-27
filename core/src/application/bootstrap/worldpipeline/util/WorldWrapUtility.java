@@ -28,11 +28,21 @@ public class WorldWrapUtility extends EngineUtility {
         return input;
     }
 
+    /*
+     * Wraps an absolute chunk coordinate around the world's chunk-space
+     * bounds. worldScale is stored in blocks, so it must be divided down to
+     * chunk units before use as the modulus here — every other chunk-space
+     * wrap in this class already does this (see wrappedDeltaX/Z); this was
+     * the one holdout still wrapping against the raw block-scale figure,
+     * which made the modulus CHUNK_SIZE times too large and sent any chunk
+     * near a real wrap seam — including the world's own origin — to a
+     * coordinate nowhere near the seam it was supposed to land on.
+     */
     public static long wrapAroundWorld(WorldHandle worldHandle, long input) {
 
         Vector2Int worldScale = worldHandle.getWorldScale();
-        int maxX = worldScale.x;
-        int maxY = worldScale.y;
+        int maxX = worldScale.x / EngineSetting.CHUNK_SIZE;
+        int maxY = worldScale.y / EngineSetting.CHUNK_SIZE;
 
         int inputX = Coordinate2Long.unpackX(input);
         int inputY = Coordinate2Long.unpackY(input);
@@ -46,6 +56,54 @@ public class WorldWrapUtility extends EngineUtility {
             y += maxY;
 
         return Coordinate2Long.pack(x, y);
+    }
+
+    /*
+     * Inverse of wrapAroundWorld/getChunkCoordinateForSlot: recovers the
+     * signed grid-relative offset for an absolute (already-wrapped) chunk
+     * coordinate against a grid's current active chunk coordinate. A naive
+     * subtraction only works when the two coordinates never crossed a wrap
+     * seam; whenever activeChunkCoordinate sits within render distance of a
+     * seam, the raw difference lands far outside the small
+     * -radius..+radius range gridSlots is keyed by, and every lookup keyed
+     * off it silently misses. This walks each axis back to the shortest
+     * signed delta on the world's circular chunk-space domain instead,
+     * which always reproduces the exact grid coordinate the slot was
+     * created under, seam or no seam.
+     */
+    public static long unwrapToGridCoordinate(
+            WorldHandle worldHandle,
+            long activeChunkCoordinate,
+            long chunkCoordinate) {
+
+        Vector2Int worldScale = worldHandle.getWorldScale();
+        int worldWidthChunks = worldScale.x / EngineSetting.CHUNK_SIZE;
+        int worldHeightChunks = worldScale.y / EngineSetting.CHUNK_SIZE;
+
+        int deltaX = unwrapAxisDelta(
+                Coordinate2Long.unpackX(chunkCoordinate),
+                Coordinate2Long.unpackX(activeChunkCoordinate),
+                worldWidthChunks);
+
+        int deltaY = unwrapAxisDelta(
+                Coordinate2Long.unpackY(chunkCoordinate),
+                Coordinate2Long.unpackY(activeChunkCoordinate),
+                worldHeightChunks);
+
+        return Coordinate2Long.pack(deltaX, deltaY);
+    }
+
+    private static int unwrapAxisDelta(int coordinate, int activeCoordinate, int worldSizeChunks) {
+
+        if (worldSizeChunks <= 0)
+            return coordinate - activeCoordinate;
+
+        int delta = ((coordinate - activeCoordinate) % worldSizeChunks + worldSizeChunks) % worldSizeChunks;
+
+        if (delta > worldSizeChunks / 2)
+            delta -= worldSizeChunks;
+
+        return delta;
     }
 
     // Wrapped Delta \\
@@ -73,12 +131,6 @@ public class WorldWrapUtility extends EngineUtility {
 
     // Y-Axis Fraction \\
 
-    /*
-     * Shared basis for every location-based day/night calculation below.
-     * Wraps a chunk's position along the world's Y span into a 0-1 fraction
-     * so the planetary phase offset and the latitude bend are always
-     * derived from the exact same value and can never drift out of sync.
-     */
     private static double wrappedYFraction(WorldHandle worldHandle, long chunkCoordinate) {
 
         int worldHeightChunks = worldHandle.getWorldScale().y / EngineSetting.CHUNK_SIZE;
@@ -94,14 +146,6 @@ public class WorldWrapUtility extends EngineUtility {
 
     // Planetary Phase \\
 
-    /*
-     * Fractional phase offset (0-1) to add to the global raw time of day for
-     * a location at the given chunk coordinate. Derived from that chunk's
-     * position along the world's Y span relative to the world's own
-     * planetaryOffset. Wraps cleanly at the world edges — a full traversal
-     * of world height adds exactly 1.0, which is a no-op against a value
-     * that's already cyclic mod 1, so there is no seam.
-     */
     public static double wrappedPlanetaryOffset(WorldHandle worldHandle, long chunkCoordinate) {
 
         double yFraction = wrappedYFraction(worldHandle, chunkCoordinate);
@@ -112,19 +156,6 @@ public class WorldWrapUtility extends EngineUtility {
 
     // Latitude Bend \\
 
-    /*
-     * Signed latitude factor (-1 to 1) for a location at the given chunk
-     * coordinate, used to bend seasonal day length toward the poles and
-     * flatten it toward the equator. The world's Y span is treated as one
-     * full lap of a meridian great circle rather than a bounded strip —
-     * sin(yFraction * 2π) crosses zero twice (two equators) and peaks twice
-     * (two poles) per lap, which wraps with no seam at the world edges and
-     * needs no special-casing at either end of the Y axis. The sign carries
-     * the hemisphere: CurrentTrackerBranch multiplies it straight into the
-     * day length delta, so the two poles bend in opposite directions
-     * relative to the calendar's authored season, exactly like real winter
-     * and summer on opposite hemispheres.
-     */
     public static double wrappedLatitudeFactor(WorldHandle worldHandle, long chunkCoordinate) {
 
         double yFraction = wrappedYFraction(worldHandle, chunkCoordinate);

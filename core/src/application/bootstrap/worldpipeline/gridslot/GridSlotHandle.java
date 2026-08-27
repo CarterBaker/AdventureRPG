@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.gridslot;
 
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import engine.root.HandlePackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -57,8 +58,15 @@ public class GridSlotHandle extends HandlePackage {
 
     // Computed Coordinate Lookups \\
 
+    /*
+     * Wrapped exactly like GridInstance.getChunkCoordinateForSlot() — a slot
+     * near a world seam must resolve to the same absolute chunk coordinate
+     * both here and in the render queue, or a lookup keyed by one and probed
+     * by the other silently misses and the chunk never finds its own entry.
+     */
     public long getChunkCoordinate() {
-        return Coordinate2Long.add(gridInstance.getActiveChunkCoordinate(), gridCoordinate);
+        long raw = Coordinate2Long.add(gridInstance.getActiveChunkCoordinate(), gridCoordinate);
+        return WorldWrapUtility.wrapAroundWorld(gridInstance.getWorldHandle(), raw);
     }
 
     public long getMegaCoordinate() {

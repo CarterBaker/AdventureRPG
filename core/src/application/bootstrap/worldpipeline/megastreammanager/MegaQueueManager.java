@@ -37,6 +37,14 @@ class MegaQueueManager extends ManagerPackage {
      * synchronously before handing the actual CPU merge off to a worker thread
      * via mergeIntoMega, which is safe from any thread since the target mega's
      * own lock guards it.
+     *
+     * Reusing a pooled MegaChunkInstance reassigns its fields via
+     * constructor() — exactly like pooled ChunkInstance reuse, this must
+     * happen under that mega's own MegaDataSyncContainer lock, since an
+     * async merge dispatched against this exact object may still be queued
+     * on the WorldStreaming pool at the moment it gets pooled and reused. A
+     * failed acquire leaves the mega in the pool untouched; the caller
+     * simply resolves no mega for this pass and retries next time.
      */
 
     // Internal
@@ -192,10 +200,12 @@ class MegaQueueManager extends ManagerPackage {
     /*
      * Performs the actual CPU-side vertex merge against an already-resolved
      * mega. Safe to call from any thread — the target mega's own lock guards
-     * all of its internal state.
+     * all of its internal state. expectedMegaCoordinate is the coordinate
+     * this mega represented at resolution time; if the object has since been
+     * pooled out to a different coordinate the merge is skipped entirely.
      */
-    void mergeIntoMega(ChunkInstance chunkInstance, MegaChunkInstance mega) {
-        mergeBranch.mergeChunkIntoMega(chunkInstance, mega);
+    void mergeIntoMega(ChunkInstance chunkInstance, MegaChunkInstance mega, long expectedMegaCoordinate) {
+        mergeBranch.mergeChunkIntoMega(chunkInstance, mega, expectedMegaCoordinate);
     }
 
     private MegaChunkInstance createMega(
@@ -204,8 +214,21 @@ class MegaQueueManager extends ManagerPackage {
             int megaMax,
             Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks) {
 
-        if (!megaPool.isEmpty())
-            return configureMega(megaPool.poll(), megaCoord, grid);
+        if (!megaPool.isEmpty()) {
+
+            MegaChunkInstance pooled = megaPool.peek();
+            MegaDataSyncContainer sync = pooled.getMegaDataSyncContainer();
+
+            if (!sync.tryAcquire())
+                return null;
+
+            try {
+                megaPool.poll();
+                return configureMega(pooled, megaCoord, grid);
+            } finally {
+                sync.release();
+            }
+        }
 
         if (activeMegaChunks.size() >= megaMax)
             return null;

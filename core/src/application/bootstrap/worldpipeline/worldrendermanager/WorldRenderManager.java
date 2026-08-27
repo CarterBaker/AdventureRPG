@@ -116,10 +116,44 @@ public class WorldRenderManager extends ManagerPackage {
 
             Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = megaEntries.get(coordinate);
 
+            if (materialEntries == null) {
+                renderCoveredChunksIndividually(slot, window, worldFbo);
+                continue;
+            }
+
+            pushEntries(materialEntries, slot.getSlotUBO(), worldFbo, window);
+        }
+    }
+
+    /*
+     * A mega's coverage is assigned the moment its 4x4 block is geometrically
+     * complete, which says nothing about whether it has actually finished
+     * merging all sixteen chunks and landed on the GPU — that's asynchronous
+     * and budget-throttled, and can take many frames or fail to ever finish
+     * at a render-distance boundary. This draws whichever covered chunks
+     * already have their own ready geometry so the block is never simply
+     * dark while the batch catches up; it's superseded automatically the
+     * instant the mega itself produces entries, since this only runs when it
+     * hasn't.
+     */
+    private void renderCoveredChunksIndividually(GridSlotHandle megaSlot, WindowInstance window, FboInstance worldFbo) {
+
+        ObjectArrayList<GridSlotHandle> coveredSlots = megaSlot.getCoveredSlots();
+
+        for (int i = 0; i < coveredSlots.size(); i++) {
+
+            GridSlotHandle coveredSlot = coveredSlots.get(i);
+
+            if (!frustumCullingSystem.isChunkVisible(coveredSlot))
+                continue;
+
+            Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = chunkEntries
+                    .get(coveredSlot.getChunkCoordinate());
+
             if (materialEntries == null)
                 continue;
 
-            pushEntries(materialEntries, slot.getSlotUBO(), worldFbo, window);
+            pushEntries(materialEntries, coveredSlot.getSlotUBO(), worldFbo, window);
         }
     }
 
@@ -172,6 +206,19 @@ public class WorldRenderManager extends ManagerPackage {
 
     public boolean addMegaInstance(WorldRenderInstance worldRenderInstance) {
         return updateEntries(worldRenderInstance, megaEntries);
+    }
+
+    // Mega Readiness \\
+
+    /*
+     * True once this mega coordinate has produced GPU-ready render entries —
+     * every one of its sixteen covered chunks has merged in at least once
+     * and the result has been uploaded. Used by the chunk streaming pipeline
+     * (see ChunkQueueManager) to keep a covered chunk's own individual
+     * render data alive for exactly as long as its mega isn't ready yet.
+     */
+    public boolean isMegaRendered(long megaCoordinate) {
+        return megaEntries.containsKey(megaCoordinate);
     }
 
     private boolean updateEntries(

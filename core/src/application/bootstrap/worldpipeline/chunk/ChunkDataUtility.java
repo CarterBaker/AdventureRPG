@@ -1,26 +1,34 @@
 package application.bootstrap.worldpipeline.chunk;
 
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
-import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import engine.root.EngineUtility;
 
 public final class ChunkDataUtility extends EngineUtility {
 
     /*
      * Stateless graph walker for ChunkData stage transitions. Determines which
-     * stage to load or dump next based on the requires/leadsTo dependency graph
-     * and two live signals: the slot's current detail level, and — for
-     * RENDER_DATA specifically — whether this exact chunk is currently expected
-     * to render individually at all, per needsIndividualRender (see
-     * ChunkQueueManager.determineQueueOperation). BATCH_DATA is gated on the
-     * slot's renderMode rather than a numeric level threshold, since NEAR and
-     * DISTANT slots render exclusively through mega batching while IMMEDIATE
-     * slots never do.
+     * stage to load or dump next based on the requires dependency graph and
+     * three live signals: the slot's detail level, needsIndividualRender, and
+     * partOfMegaBlock. A stage is needed when its own direct condition
+     * currently holds, or when some other stage whose direct condition
+     * currently holds requires it — evaluated purely against current
+     * conditions, never against whether that other stage has already
+     * finished loading, since a completed dependent can still represent a
+     * live, ongoing dependency: a mega member's BATCH_DATA never stops
+     * needing that chunk's own generated/built/merged geometry for as long
+     * as the chunk remains a mega member, because any future edit anywhere
+     * in the mega forces a full re-merge from every member's own CPU-side
+     * geometry. Dump eligibility mirrors load eligibility through this same
+     * check, so dump and load can never drift out of sync with each other.
      */
 
     // Load \\
 
-    public static ChunkData nextToLoad(boolean[] flags, GridSlotDetailLevel slotLevel, boolean needsIndividualRender) {
+    public static ChunkData nextToLoad(
+            boolean[] flags,
+            GridSlotDetailLevel slotLevel,
+            boolean needsIndividualRender,
+            boolean partOfMegaBlock) {
 
         for (ChunkData stage : ChunkData.VALUES) {
 
@@ -30,7 +38,7 @@ public final class ChunkDataUtility extends EngineUtility {
             if (!requiresMet(stage, flags))
                 continue;
 
-            if (!isNeeded(stage, flags, slotLevel, needsIndividualRender))
+            if (!isNeeded(stage, slotLevel, needsIndividualRender, partOfMegaBlock))
                 continue;
 
             return stage;
@@ -40,17 +48,17 @@ public final class ChunkDataUtility extends EngineUtility {
     }
 
     private static boolean isNeeded(
-            ChunkData stage, boolean[] flags, GridSlotDetailLevel slotLevel, boolean needsIndividualRender) {
+            ChunkData stage,
+            GridSlotDetailLevel slotLevel,
+            boolean needsIndividualRender,
+            boolean partOfMegaBlock) {
 
-        if (isDirectlyRequired(stage, slotLevel, needsIndividualRender))
+        if (isDirectlyRequired(stage, slotLevel, needsIndividualRender, partOfMegaBlock))
             return true;
 
         for (ChunkData other : ChunkData.VALUES) {
 
-            if (flags[other.index])
-                continue;
-
-            if (!isDirectlyRequired(other, slotLevel, needsIndividualRender))
+            if (!isDirectlyRequired(other, slotLevel, needsIndividualRender, partOfMegaBlock))
                 continue;
 
             for (ChunkData req : other.requires)
@@ -61,22 +69,14 @@ public final class ChunkDataUtility extends EngineUtility {
         return false;
     }
 
-    /*
-     * A stage with a numeric minimumLevel is required from IMMEDIATE out
-     * through that level, inclusive. BATCH_DATA and RENDER_DATA have no
-     * numeric threshold — BATCH_DATA matches GridSlotDetailLevel's own
-     * renderMode exactly, and whether THIS chunk needs an individual GPU
-     * upload is a live property of the grid's own render queue rather than a
-     * function of slot level, so both are checked directly. A stage with
-     * neither is never directly required — it can still be pulled in
-     * transitively by whatever downstream stage actually depends on it, via
-     * the scan in isNeeded().
-     */
     private static boolean isDirectlyRequired(
-            ChunkData stage, GridSlotDetailLevel slotLevel, boolean needsIndividualRender) {
+            ChunkData stage,
+            GridSlotDetailLevel slotLevel,
+            boolean needsIndividualRender,
+            boolean partOfMegaBlock) {
 
         if (stage == ChunkData.BATCH_DATA)
-            return slotLevel.renderMode == RenderType.BATCHED;
+            return partOfMegaBlock;
 
         if (stage == ChunkData.RENDER_DATA)
             return needsIndividualRender;
@@ -98,7 +98,11 @@ public final class ChunkDataUtility extends EngineUtility {
 
     // Dump \\
 
-    public static ChunkData nextToDump(boolean[] flags, GridSlotDetailLevel slotLevel, boolean needsIndividualRender) {
+    public static ChunkData nextToDump(
+            boolean[] flags,
+            GridSlotDetailLevel slotLevel,
+            boolean needsIndividualRender,
+            boolean partOfMegaBlock) {
 
         for (int i = ChunkData.LENGTH - 1; i >= 0; i--) {
 
@@ -110,43 +114,16 @@ public final class ChunkDataUtility extends EngineUtility {
             if (!stage.dumpable)
                 continue;
 
-            if (stage == ChunkData.RENDER_DATA) {
-                if (needsIndividualRender)
-                    continue;
-            } else {
-                if (stage.minimumLevel == null)
-                    continue;
-                if (slotLevel.level <= stage.minimumLevel.level)
-                    continue;
-            }
+            if (isNeeded(stage, slotLevel, needsIndividualRender, partOfMegaBlock))
+                continue;
 
-            if (leadsToSafe(stage, flags))
-                return stage;
+            return stage;
         }
 
         return null;
     }
 
-    /*
-     * A stage is only safe to dump when every stage in its entire leadsTo
-     * chain is present and complete. If anything downstream is missing,
-     * this stage must stay — it is still needed to produce that outcome.
-     */
-    private static boolean leadsToSafe(ChunkData stage, boolean[] flags) {
-
-        for (ChunkData next : stage.leadsTo) {
-
-            if (!flags[next.index])
-                return false;
-
-            if (!leadsToSafe(next, flags))
-                return false;
-        }
-
-        return true;
-    }
-
-    // Cascade Clear \\
+    // Forced Invalidation \\
 
     public static void cascadeClear(ChunkData stage, boolean[] flags) {
 

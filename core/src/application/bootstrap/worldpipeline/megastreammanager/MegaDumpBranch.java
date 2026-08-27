@@ -4,7 +4,6 @@ import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
-import application.bootstrap.worldpipeline.megachunk.MegaData;
 import application.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import engine.root.BranchPackage;
@@ -13,19 +12,25 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MegaDumpBranch extends BranchPackage {
 
     /*
-     * Fires when a mega's slot transitions to IMMEDIATE — chunks are close enough
-     * to render individually. Removes the mega from the GPU, clears chunk
-     * BATCH_DATA
-     * flags so they re-contribute when the slot returns to NEAR, and clears
-     * RENDER_DATA. BATCH_DATA on the mega is not dumpable — the chunk registry is
-     * kept so re-contribution can happen without a full re-registration cycle.
+     * Fires when a mega's slot transitions to IMMEDIATE — chunks are close
+     * enough to render individually. Removes the mega from the GPU and calls
+     * mega.reset() to fully clear its batch registry (mergedCoordinates,
+     * batchedChunks, mergedChunkVersions) and its own BATCH_DATA/RENDER_DATA
+     * flags, exactly like invalidateMegaForChunk/unloadMega already do.
+     * Previously this only cleared RENDER_DATA and the mega's packet while
+     * leaving BATCH_DATA true and the registry intact — isReadyToRender()
+     * stayed true from the old registry, so BATCH_DATA was never re-requested,
+     * and every covered chunk's later re-contribution saw needsMerge() return
+     * false (its own content never changed), leaving the wiped packet
+     * permanently unrebuilt. Chunk BATCH_DATA flags are cleared here too so
+     * every covered chunk is forced to re-register from scratch when the slot
+     * returns to NEAR.
      */
 
     // Internal
     private WorldRenderManager worldRenderSystem;
 
     // Settings
-    private int renderDataIndex;
     private int chunkBatchDataIndex;
 
     // Internal \\
@@ -37,7 +42,6 @@ public class MegaDumpBranch extends BranchPackage {
         this.worldRenderSystem = get(WorldRenderManager.class);
 
         // Settings
-        this.renderDataIndex = MegaData.RENDER_DATA.index;
         this.chunkBatchDataIndex = ChunkData.BATCH_DATA.index;
     }
 
@@ -51,8 +55,7 @@ public class MegaDumpBranch extends BranchPackage {
         try {
             worldRenderSystem.removeMegaInstance(megaCoord);
             clearChunkBatchFlags(mega);
-            mega.getDynamicPacketInstance().clear();
-            sync.getData()[renderDataIndex] = false;
+            mega.reset();
         } finally {
             sync.release();
         }

@@ -9,15 +9,20 @@ import engine.root.BranchPackage;
 public class MegaMergeBranch extends BranchPackage {
 
     /*
-     * Merges a chunk's geometry into its parent mega. Acquires the mega sync and,
-     * under that same lock, skips entirely when the mega already reflects this
-     * exact chunk content version — the common case while a chunk sits waiting on
-     * its mega's GPU upload budget, and the fix for what used to be a full mega
-     * remerge on every redundant frame. RENDER_DATA is cleared only when a merge
-     * actually changes the mega's geometry, so the mega re-uploads exactly when
-     * it needs to. Chunk BATCH_DATA is never set here — that happens in
-     * MegaRenderBranch after confirmed GPU upload so individual render is never
-     * removed before the mega is live on GPU.
+     * Merges a chunk's geometry into its parent mega. Acquires the mega sync
+     * and, under that same lock, first confirms the mega still represents the
+     * coordinate it was resolved against on the main thread — pooled megas
+     * can be reassigned to a different coordinate between resolution and this
+     * task actually running, and merging into a mismatched mega would silently
+     * fold one location's geometry into another's. Once identity is confirmed,
+     * skips entirely when the mega already reflects this exact chunk content
+     * version — the common case while a chunk sits waiting on its mega's GPU
+     * upload budget, and the fix for what used to be a full mega remerge on
+     * every redundant frame. RENDER_DATA is cleared only when a merge actually
+     * changes the mega's geometry, so the mega re-uploads exactly when it
+     * needs to. Chunk BATCH_DATA is never set here — that happens in
+     * MegaRenderBranch after confirmed GPU upload so individual render is
+     * never removed before the mega is live on GPU.
      */
 
     // Settings
@@ -34,7 +39,7 @@ public class MegaMergeBranch extends BranchPackage {
 
     // Merge \\
 
-    public void mergeChunkIntoMega(ChunkInstance chunkInstance, MegaChunkInstance mega) {
+    public void mergeChunkIntoMega(ChunkInstance chunkInstance, MegaChunkInstance mega, long expectedMegaCoordinate) {
 
         MegaDataSyncContainer megaSync = mega.getMegaDataSyncContainer();
 
@@ -42,6 +47,9 @@ public class MegaMergeBranch extends BranchPackage {
             return;
 
         try {
+            if (mega.getCoordinate() != expectedMegaCoordinate)
+                return;
+
             if (!mega.needsMerge(chunkInstance))
                 return;
 

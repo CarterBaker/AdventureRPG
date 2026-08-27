@@ -24,6 +24,12 @@ public class BatchBranch extends BranchPackage {
      * every single frame while that upload is pending, and MegaMergeBranch's
      * own version check is what stops that redispatch from ever doing real
      * work again until this chunk's geometry actually changes.
+     *
+     * The mega itself is resolved once, here, on the main thread — but it is
+     * a pooled object that can be reassigned to a different coordinate before
+     * the async merge below actually runs. Its coordinate at resolution time
+     * is captured and carried through so the merge can refuse to run against
+     * a mega that no longer represents it.
      */
 
     // Internal
@@ -54,11 +60,13 @@ public class BatchBranch extends BranchPackage {
             return;
         }
 
+        long expectedMegaCoordinate = mega.getCoordinate();
+
         executeAsync(threadHandle, () -> {
             try {
                 syncContainer.acquire();
                 try {
-                    megaStreamManager.mergeIntoMega(chunkInstance, mega);
+                    megaStreamManager.mergeIntoMega(chunkInstance, mega, expectedMegaCoordinate);
                 } finally {
                     syncContainer.release();
                 }

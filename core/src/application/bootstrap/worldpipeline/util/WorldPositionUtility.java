@@ -19,8 +19,8 @@ public class WorldPositionUtility extends EngineUtility {
 
         Vector2Int scale = worldHandle.getWorldScale();
 
-        int maxX = scale.x;
-        int maxY = scale.y;
+        int maxX = scale.x / EngineSetting.CHUNK_SIZE;
+        int maxY = scale.y / EngineSetting.CHUNK_SIZE;
 
         int x = ThreadLocalRandom.current().nextInt(0, maxX);
         int y = ThreadLocalRandom.current().nextInt(0, maxY);
