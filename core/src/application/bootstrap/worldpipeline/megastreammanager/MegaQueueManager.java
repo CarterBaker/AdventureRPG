@@ -27,24 +27,17 @@ class MegaQueueManager extends ManagerPackage {
      * Drives the per-frame mega chunk pipeline across all active grids. Each
      * grid owns its own activeMegaChunks map. The mega pool is shared across
      * all grids for efficiency. RENDER dispatch is bounded by its own
-     * megaGpuUploadBudget, separate from megaAssessPerFrame — a single mega
-     * upload can carry up to megaScale chunks' worth of merged geometry in
-     * one glBufferData call, so it is throttled even harder than a single
-     * chunk upload to keep any one frame's GPU-upload cost predictable.
-     * resolveMegaForChunk/createMega/computeMegaMax touch activeMegaChunks and
-     * the shared pool, neither of which is thread-safe, so they must only ever
-     * be called from the main thread — BatchBranch resolves the mega
-     * synchronously before handing the actual CPU merge off to a worker thread
-     * via mergeIntoMega, which is safe from any thread since the target mega's
-     * own lock guards it.
-     *
-     * Reusing a pooled MegaChunkInstance reassigns its fields via
-     * constructor() — exactly like pooled ChunkInstance reuse, this must
-     * happen under that mega's own MegaDataSyncContainer lock, since an
-     * async merge dispatched against this exact object may still be queued
-     * on the WorldStreaming pool at the moment it gets pooled and reused. A
-     * failed acquire leaves the mega in the pool untouched; the caller
-     * simply resolves no mega for this pass and retries next time.
+     * megaGpuUploadBudget, separate from megaAssessPerFrame. resolveMegaForChunk/
+     * createMega/computeMegaMax touch activeMegaChunks and the shared pool,
+     * neither of which is thread-safe, so they must only ever be called from
+     * the main thread — BatchBranch resolves the mega synchronously before
+     * handing the actual CPU merge off to a worker thread via mergeIntoMega,
+     * which is safe from any thread since the target mega's own lock guards
+     * it. invalidateMegaForChunk runs on the main thread right before a
+     * chunk is returned to the pool for reuse under a different coordinate,
+     * so it blocks on the mega's own lock rather than skipping it on
+     * contention — a stale reference left behind here would have this
+     * mega's next re-merge read a completely unrelated chunk's geometry.
      */
 
     // Internal
@@ -172,11 +165,6 @@ class MegaQueueManager extends ManagerPackage {
 
     // Batching \\
 
-    /*
-     * Resolves (or creates) the mega a chunk belongs to. Touches the grid's
-     * shared, non-thread-safe mega registry and pool — must only ever be
-     * called from the main thread.
-     */
     MegaChunkInstance resolveMegaForChunk(ChunkInstance chunkInstance, GridInstance grid) {
 
         Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks = grid.getActiveMegaChunks();
@@ -197,13 +185,6 @@ class MegaQueueManager extends ManagerPackage {
         return mega;
     }
 
-    /*
-     * Performs the actual CPU-side vertex merge against an already-resolved
-     * mega. Safe to call from any thread — the target mega's own lock guards
-     * all of its internal state. expectedMegaCoordinate is the coordinate
-     * this mega represented at resolution time; if the object has since been
-     * pooled out to a different coordinate the merge is skipped entirely.
-     */
     void mergeIntoMega(ChunkInstance chunkInstance, MegaChunkInstance mega, long expectedMegaCoordinate) {
         mergeBranch.mergeChunkIntoMega(chunkInstance, mega, expectedMegaCoordinate);
     }
@@ -375,9 +356,7 @@ class MegaQueueManager extends ManagerPackage {
                 continue;
 
             MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
-
-            if (!sync.tryAcquire())
-                continue;
+            sync.acquire();
 
             try {
                 worldRenderManager.removeMegaInstance(megaCoord);
@@ -386,8 +365,6 @@ class MegaQueueManager extends ManagerPackage {
             } finally {
                 sync.release();
             }
-
-            return;
         }
     }
 
@@ -402,9 +379,7 @@ class MegaQueueManager extends ManagerPackage {
             ChunkInstance chunk = (ChunkInstance) elements[i];
             ChunkDataSyncContainer chunkSync = chunk.getChunkDataSyncContainer();
 
-            if (!chunkSync.tryAcquire())
-                continue;
-
+            chunkSync.acquire();
             try {
                 chunkSync.getData()[ChunkData.BATCH_DATA.index] = false;
             } finally {

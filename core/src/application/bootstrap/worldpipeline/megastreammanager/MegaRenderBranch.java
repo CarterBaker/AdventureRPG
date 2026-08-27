@@ -13,12 +13,16 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MegaRenderBranch extends BranchPackage {
 
     /*
-     * Uploads merged mega geometry to the GPU then clears the CPU-side buffer.
-     * Sets BATCH_DATA on all batched chunks only after confirmed GPU upload —
-     * this is the signal that individual chunk RENDER_DATA is safe to dump.
-     * Setting BATCH_DATA here rather than at merge time closes the gap between
-     * merge and GPU upload where neither individual nor mega render would be
-     * active.
+     * Uploads merged mega geometry to the GPU then clears the CPU-side
+     * buffer. Sets BATCH_DATA on every batched chunk only after confirmed
+     * GPU upload — the signal that individual chunk RENDER_DATA is safe to
+     * dump — and does so from inside the same mega lock that guards the
+     * batch registry, blocking on each chunk's own lock in turn rather than
+     * skipping it on contention: a chunk this loop failed to reach would
+     * otherwise keep BATCH_DATA clear forever, since nothing else ever sets
+     * it, and would re-enter the batch pipeline on every future assessment
+     * for no reason. The batched-chunk list itself is only ever read here
+     * while the mega lock is held, matching every writer of that same list.
      */
 
     // Internal
@@ -54,11 +58,15 @@ public class MegaRenderBranch extends BranchPackage {
 
             mega.getDynamicPacketInstance().clear();
             sync.getData()[renderDataIndex] = true;
+
+            markBatchedChunksRendered(mega);
         } finally {
             sync.release();
         }
+    }
 
-        // Mega confirmed on GPU — now safe to remove individual chunk renders
+    private void markBatchedChunksRendered(MegaChunkInstance mega) {
+
         ObjectArrayList<ChunkInstance> list = mega.getBatchedChunkList();
         Object[] elements = list.elements();
         int size = list.size();
@@ -68,9 +76,7 @@ public class MegaRenderBranch extends BranchPackage {
             ChunkInstance chunk = (ChunkInstance) elements[i];
             ChunkDataSyncContainer chunkSync = chunk.getChunkDataSyncContainer();
 
-            if (!chunkSync.tryAcquire())
-                continue;
-
+            chunkSync.acquire();
             try {
                 chunkSync.getData()[chunkBatchDataIndex] = true;
             } finally {

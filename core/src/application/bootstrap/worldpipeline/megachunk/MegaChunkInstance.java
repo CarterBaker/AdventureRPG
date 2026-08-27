@@ -15,13 +15,18 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
     /*
      * A merged geometry batch composed of MEGA_CHUNK_SIZE^2 adjacent
-     * ChunkInstances. Geometry is accumulated incrementally via batchAndMerge()
-     * as each chunk contributes; callers must check needsMerge() first, since
-     * batchAndMerge() always performs real work when called. Re-contribution
-     * triggers a full re-merge of all registered chunks, since a chunk's prior
-     * contribution cannot be surgically removed from the shared vertex buffer.
-     * Once all chunks are present, finalizeGeometry() marks the packet ready for
-     * GPU upload. Threading is governed by MegaDataSyncContainer.
+     * ChunkInstances. batchAndMergeSingle() appends one chunk's own geometry
+     * to the packet the first time that chunk joins the mega — safe with
+     * only that chunk's own lock held, since no other member is touched.
+     * batchAndMergeAll() instead rebuilds the whole packet from every
+     * registered chunk's current geometry, since a chunk's prior
+     * contribution can't be surgically removed from the shared vertex
+     * buffer; this is only ever called by MegaMergeBranch once it holds
+     * every registered chunk's own ChunkDataSyncContainer lock, since each
+     * one's DynamicPacketInstance is otherwise mutated independently by its
+     * own streaming and liquid-tick pipelines. Once all chunks are present,
+     * finalizeGeometry() marks the packet ready for GPU upload. Threading
+     * for the mega's own bookkeeping is governed by MegaDataSyncContainer.
      */
 
     // Internal
@@ -93,47 +98,15 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
     // Geometry \\
 
-    /*
-     * Whether this chunk's current geometry version is not yet reflected in
-     * this mega — false when the chunk was already merged and hasn't changed
-     * since, which is the common case while a chunk sits waiting on its
-     * mega's GPU upload budget.
-     */
     public boolean needsMerge(ChunkInstance chunkInstance) {
         return megaBatchStruct.needsMerge(chunkInstance.getCoordinate(), chunkInstance.getMergeVersion());
     }
 
-    /*
-     * Fresh contribution: merge the chunk's geometry into the packet and register
-     * it. Re-contribution: clear the packet and re-merge all registered chunks in
-     * full using the updated geometry. Returns false if any merge step fails.
-     * Always performs real work — callers check needsMerge() first.
-     */
-    public boolean batchAndMerge(ChunkInstance chunkInstance) {
+    public boolean isRegistered(long chunkCoordinate) {
+        return megaBatchStruct.getBatchedChunks().containsKey(chunkCoordinate);
+    }
 
-        long chunkCoord = chunkInstance.getCoordinate();
-        long contentVersion = chunkInstance.getMergeVersion();
-        boolean isRemerge = megaBatchStruct.getBatchedChunks().containsKey(chunkCoord);
-
-        if (isRemerge) {
-            megaBatchStruct.updateChunk(chunkCoord, chunkInstance);
-            megaBatchStruct.clearMerged();
-            getDynamicPacket().clear();
-
-            ObjectArrayList<ChunkInstance> list = megaBatchStruct.getBatchedChunkList();
-            Object[] elements = list.elements();
-            int size = list.size();
-
-            for (int i = 0; i < size; i++) {
-                ChunkInstance batched = (ChunkInstance) elements[i];
-                if (!mergeChunk(batched))
-                    return false;
-                megaBatchStruct.recordMerged(batched.getCoordinate());
-                megaBatchStruct.recordMergedVersion(batched.getCoordinate(), batched.getMergeVersion());
-            }
-
-            return true;
-        }
+    public boolean batchAndMergeSingle(ChunkInstance chunkInstance) {
 
         if (!megaBatchStruct.registerChunk(chunkInstance))
             return false;
@@ -141,8 +114,29 @@ public class MegaChunkInstance extends WorldRenderInstance {
         if (!mergeChunk(chunkInstance))
             return false;
 
-        megaBatchStruct.recordMerged(chunkCoord);
-        megaBatchStruct.recordMergedVersion(chunkCoord, contentVersion);
+        megaBatchStruct.recordMerged(chunkInstance.getCoordinate());
+        megaBatchStruct.recordMergedVersion(chunkInstance.getCoordinate(), chunkInstance.getMergeVersion());
+        return true;
+    }
+
+    public boolean batchAndMergeAll(ChunkInstance chunkInstance) {
+
+        megaBatchStruct.updateChunk(chunkInstance.getCoordinate(), chunkInstance);
+        megaBatchStruct.clearMerged();
+        getDynamicPacket().clear();
+
+        ObjectArrayList<ChunkInstance> list = megaBatchStruct.getBatchedChunkList();
+        Object[] elements = list.elements();
+        int size = list.size();
+
+        for (int i = 0; i < size; i++) {
+            ChunkInstance batched = (ChunkInstance) elements[i];
+            if (!mergeChunk(batched))
+                return false;
+            megaBatchStruct.recordMerged(batched.getCoordinate());
+            megaBatchStruct.recordMergedVersion(batched.getCoordinate(), batched.getMergeVersion());
+        }
+
         return true;
     }
 
@@ -161,10 +155,6 @@ public class MegaChunkInstance extends WorldRenderInstance {
                 mergeOffsetValues);
     }
 
-    /*
-     * Marks the packet ready for GPU upload once all chunks have contributed.
-     * If the mega is empty after a full re-merge the packet is unlocked instead.
-     */
     public void finalizeGeometry() {
         if (getDynamicPacket().hasModels())
             getDynamicPacket().setReady();

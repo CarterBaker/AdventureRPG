@@ -14,17 +14,13 @@ public class MegaDumpBranch extends BranchPackage {
     /*
      * Fires when a mega's slot transitions to IMMEDIATE — chunks are close
      * enough to render individually. Removes the mega from the GPU and calls
-     * mega.reset() to fully clear its batch registry (mergedCoordinates,
-     * batchedChunks, mergedChunkVersions) and its own BATCH_DATA/RENDER_DATA
-     * flags, exactly like invalidateMegaForChunk/unloadMega already do.
-     * Previously this only cleared RENDER_DATA and the mega's packet while
-     * leaving BATCH_DATA true and the registry intact — isReadyToRender()
-     * stayed true from the old registry, so BATCH_DATA was never re-requested,
-     * and every covered chunk's later re-contribution saw needsMerge() return
-     * false (its own content never changed), leaving the wiped packet
-     * permanently unrebuilt. Chunk BATCH_DATA flags are cleared here too so
-     * every covered chunk is forced to re-register from scratch when the slot
-     * returns to NEAR.
+     * mega.reset() to fully clear its batch registry and its own
+     * BATCH_DATA/RENDER_DATA flags. Every covered chunk's own BATCH_DATA is
+     * cleared here too, reliably — nothing else in the engine ever sets that
+     * flag except MegaRenderBranch after a confirmed upload, so a chunk this
+     * loop failed to reach would keep reporting itself as already batched
+     * into a mega that no longer has any record of it, and would never be
+     * re-queued to rejoin it once the slot returns to NEAR.
      */
 
     // Internal
@@ -72,9 +68,7 @@ public class MegaDumpBranch extends BranchPackage {
             ChunkInstance chunk = (ChunkInstance) elements[i];
             ChunkDataSyncContainer chunkSync = chunk.getChunkDataSyncContainer();
 
-            if (!chunkSync.tryAcquire())
-                continue;
-
+            chunkSync.acquire();
             try {
                 chunkSync.getData()[chunkBatchDataIndex] = false;
             } finally {
