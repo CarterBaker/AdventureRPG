@@ -26,7 +26,7 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
     // Internal
     private MegaDataSyncContainer megaDataSyncContainer;
-    private MegaBatchStruct megaBatchStruct;
+    private MegaBatchHandle megaBatchStruct;
 
     // Scratch — pre-allocated, reused per merge call
     private int[] vertPositionArray;
@@ -47,7 +47,7 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
         // Internal
         this.megaDataSyncContainer = create(MegaDataSyncContainer.class);
-        this.megaBatchStruct = new MegaBatchStruct();
+        this.megaBatchStruct = create(MegaBatchHandle.class);
 
         // Scratch
         this.vertPositionArray = new int[] { 0, 2 };

@@ -12,10 +12,22 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class DynamicPacketInstance extends InstancePackage {
 
     /*
-     * Thread-safe geometry packet for one sub-chunk. Accumulates dynamic quad
-     * geometry into per-material DynamicModelHandle buckets during a build pass.
-     * State transitions are atomic — EMPTY → GENERATING → READY — to prevent
-     * concurrent writes from the build thread and reads from the render thread.
+     * Thread-safe geometry packet for one sub-chunk, chunk, or mega chunk.
+     * Accumulates dynamic quad geometry into per-material DynamicModelHandle
+     * buckets during a build pass. State transitions are atomic — EMPTY →
+     * GENERATING → READY — to prevent concurrent writes from the build
+     * thread and reads from the render thread. The state reference and the
+     * material bucket map are allocated once in create() and reused for the
+     * pooled object's whole lifetime. clear() never discards a material's
+     * DynamicModelHandle buckets, even once they hold zero vertices — every
+     * bucket already carries a FloatArrayList/ShortArrayList grown to
+     * whatever size a previous build needed, and the game's block materials
+     * are a small, fixed palette reused across every location a pooled
+     * chunk is ever handed out to, so buckets built for one location are
+     * just as likely to be needed again after that chunk is reassigned
+     * somewhere else. WorldRenderManager.updateEntries() already skips
+     * empty buckets and trims/disposes their GPU-side entries on its own,
+     * so retaining empty buckets here costs nothing downstream.
      */
 
     // Internal
@@ -25,16 +37,23 @@ public class DynamicPacketInstance extends InstancePackage {
     // Model Management
     private Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> materialID2ModelCollection;
 
+    // Internal \\
+
+    @Override
+    protected void create() {
+        this.state = new AtomicReference<>(DynamicPacketState.EMPTY);
+        this.materialID2ModelCollection = new Int2ObjectOpenHashMap<>();
+    }
+
     // Constructor \\
 
     public void constructor(VAOHandle vaoHandle) {
 
         // Internal
-        this.state = new AtomicReference<>(DynamicPacketState.EMPTY);
         this.vaoHandle = vaoHandle;
 
-        // Model Management
-        this.materialID2ModelCollection = new Int2ObjectOpenHashMap<>();
+        // Model Management — reset in place rather than reallocate
+        clear();
     }
 
     // State Management \\
@@ -69,10 +88,13 @@ public class DynamicPacketInstance extends InstancePackage {
         while (processed < total) {
 
             DynamicModelHandle target = null;
+            Object[] existing = modelList.elements();
+            int existingCount = modelList.size();
 
-            for (DynamicModelHandle model : modelList) {
-                if (!model.isFull()) {
-                    target = model;
+            for (int i = 0; i < existingCount; i++) {
+                DynamicModelHandle candidate = (DynamicModelHandle) existing[i];
+                if (!candidate.isFull()) {
+                    target = candidate;
                     break;
                 }
             }
@@ -166,12 +188,12 @@ public class DynamicPacketInstance extends InstancePackage {
     public void clear() {
 
         for (ObjectArrayList<DynamicModelHandle> modelList : materialID2ModelCollection.values()) {
-            for (DynamicModelHandle model : modelList)
-                model.clear();
-            modelList.clear();
+            Object[] elements = modelList.elements();
+            int count = modelList.size();
+            for (int i = 0; i < count; i++)
+                ((DynamicModelHandle) elements[i]).clear();
         }
 
-        materialID2ModelCollection.clear();
         unlock();
     }
 
@@ -182,9 +204,15 @@ public class DynamicPacketInstance extends InstancePackage {
     }
 
     public boolean hasModels() {
-        for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values())
-            if (models.size() > 0)
-                return true;
+
+        for (ObjectArrayList<DynamicModelHandle> models : materialID2ModelCollection.values()) {
+            Object[] elements = models.elements();
+            int count = models.size();
+            for (int i = 0; i < count; i++)
+                if (!((DynamicModelHandle) elements[i]).isEmpty())
+                    return true;
+        }
+
         return false;
     }
 

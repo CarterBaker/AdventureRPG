@@ -2,7 +2,7 @@ package application.bootstrap.worldpipeline.chunkstreammanager;
 
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
+import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
 import engine.root.BranchPackage;
 import engine.util.mathematics.extras.Direction2Vector;
 
@@ -11,7 +11,7 @@ public class AssessmentBranch extends BranchPackage {
     /*
      * Checks whether every one of a chunk's eight neighbors (the four
      * cardinal directions plus the four diagonals, matching
-     * ChunkNeighborStruct) has completed GENERATION_DATA before setting
+     * ChunkNeighborHandle) has completed GENERATION_DATA before setting
      * NEIGHBOR_DATA on the chunk. GENERATION_DATA is the correct gate here
      * — it's the stage that actually populates a subchunk's block and
      * biome palettes, and full geometry assembly reads straight into those
@@ -30,7 +30,7 @@ public class AssessmentBranch extends BranchPackage {
         if (!chunkInstance.getChunkDataSyncContainer().setData(ChunkData.NEIGHBOR_DATA, false))
             return;
 
-        ChunkNeighborStruct neighbors = chunkInstance.getChunkNeighbors();
+        ChunkNeighborHandle neighbors = chunkInstance.getChunkNeighbors();
 
         for (int i = 0; i < Direction2Vector.LENGTH; i++) {
             ChunkInstance neighborChunk = neighbors.getNeighborChunk(i);

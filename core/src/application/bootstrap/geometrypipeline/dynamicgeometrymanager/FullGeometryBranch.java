@@ -13,7 +13,7 @@ import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
+import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import engine.graphics.color.Color;
@@ -162,8 +162,8 @@ class FullGeometryBranch extends BranchPackage {
         }
 
         Direction2Vector direction2Vector = direction3Vector.to2D();
-        ChunkNeighborStruct chunkNeighborStruct = chunkInstance.getChunkNeighbors();
-        ChunkInstance neighborChunkInstance = chunkNeighborStruct.getNeighborChunk(direction2Vector.index);
+        ChunkNeighborHandle chunkNeighborHandle = chunkInstance.getChunkNeighbors();
+        ChunkInstance neighborChunkInstance = chunkNeighborHandle.getNeighborChunk(direction2Vector.index);
         SubChunkInstance comparativeSubChunkInstance = neighborChunkInstance.getSubChunk(subChunkCoordinate);
 
         if (comparativeSubChunkInstance == null)
@@ -641,8 +641,8 @@ class FullGeometryBranch extends BranchPackage {
             return chunkInstance.getSubChunk(subChunkCoordinate);
 
         Direction2Vector direction2Vector = vertBlockNeighbor3Vector.to2D();
-        ChunkNeighborStruct chunkNeighborStruct = chunkInstance.getChunkNeighbors();
-        ChunkInstance neighborChunkInstance = chunkNeighborStruct.getNeighborChunk(direction2Vector.index);
+        ChunkNeighborHandle chunkNeighborHandle = chunkInstance.getChunkNeighbors();
+        ChunkInstance neighborChunkInstance = chunkNeighborHandle.getNeighborChunk(direction2Vector.index);
 
         if (neighborChunkInstance == null)
             return ERROR;

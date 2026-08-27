@@ -23,14 +23,17 @@ public class ChunkInstance extends WorldRenderInstance {
      * mergeVersion is a globally unique, monotonically increasing sequence number
      * bumped every time merge() actually rebuilds this chunk's CPU geometry — it
      * never resets, even across pooling reuse, so a mega's per-chunk merge
-     * bookkeeping (see MegaBatchStruct) can never collide with a stale entry left
-     * by a previous occupant of the same chunk coordinate.
+     * bookkeeping (see MegaBatchHandle) can never collide with a stale entry left
+     * by a previous occupant of the same chunk coordinate. chunkNeighbors is
+     * allocated once in create() and reconfigured in place on every reuse rather
+     * than reallocated, since a chunk streams in and out of view far too often
+     * to pay for a fresh allocation and wrap computation each time.
      */
 
     // Internal
     private ChunkDataSyncContainer chunkDataSyncContainer;
     private SubChunkInstance[] subChunks;
-    private ChunkNeighborStruct chunkNeighbors;
+    private ChunkNeighborHandle chunkNeighbors;
     private WorldItemInstancePaletteHandle worldItemInstancePaletteHandle;
     private GenerationCacheStruct terrainCache;
 
@@ -55,6 +58,7 @@ public class ChunkInstance extends WorldRenderInstance {
         this.worldItemInstancePaletteHandle = create(WorldItemInstancePaletteHandle.class);
         this.worldItemInstancePaletteHandle.constructor();
         this.terrainCache = new GenerationCacheStruct();
+        this.chunkNeighbors = create(ChunkNeighborHandle.class);
 
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
@@ -95,10 +99,7 @@ public class ChunkInstance extends WorldRenderInstance {
                     vaoHandle,
                     airBlockId);
 
-        this.chunkNeighbors = new ChunkNeighborStruct(
-                coordinate,
-                this,
-                activeChunks);
+        this.chunkNeighbors.reconfigure(coordinate, this, activeChunks);
     }
 
     // Reset \\
@@ -115,6 +116,14 @@ public class ChunkInstance extends WorldRenderInstance {
 
     // Geometry \\
 
+    /*
+     * Merges every subchunk's packet into this chunk's single packet. Geometry
+     * state is always resolved from the final hasModels() check regardless of
+     * whether every subchunk merged cleanly — a partial merge failure must
+     * still surface whatever geometry DID make it in rather than silently
+     * leaving the packet EMPTY (and therefore permanently unrenderable) while
+     * `success` independently reports whether a retry is warranted.
+     */
     public boolean merge() {
 
         boolean success = true;
@@ -129,9 +138,9 @@ public class ChunkInstance extends WorldRenderInstance {
                 success = false;
         }
 
-        if (success && getDynamicPacket().hasModels())
+        if (getDynamicPacket().hasModels())
             getDynamicPacket().setReady();
-        else if (!getDynamicPacket().hasModels())
+        else
             getDynamicPacket().unlock();
 
         mergeVersion = MERGE_VERSION_SEQUENCE.incrementAndGet();
@@ -153,7 +162,7 @@ public class ChunkInstance extends WorldRenderInstance {
         return subChunks[subChunkCoordinate];
     }
 
-    public ChunkNeighborStruct getChunkNeighbors() {
+    public ChunkNeighborHandle getChunkNeighbors() {
         return chunkNeighbors;
     }
 

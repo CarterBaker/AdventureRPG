@@ -1,14 +1,14 @@
 package application.bootstrap.worldpipeline.megachunk;
 
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import engine.root.StructPackage;
+import engine.root.HandlePackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class MegaBatchStruct extends StructPackage {
+public class MegaBatchHandle extends HandlePackage {
 
     /*
      * Tracks which chunks are registered, which have been merged into the
@@ -21,20 +21,22 @@ public class MegaBatchStruct extends StructPackage {
      * something actually changed. mergedCoordinates still drives readiness —
      * when its size reaches megaScale all contributions are present — and is
      * cleared and rebuilt alongside the version map on any full re-merge so
-     * both stay in lockstep.
+     * both stay in lockstep. Owned by its MegaChunkInstance for the pooled
+     * object's whole lifetime — constructor() only resets it on reuse.
      */
 
     // Internal
     private long megaChunkCoordinate;
     private int megaScale;
-    private final Long2ObjectOpenHashMap<ChunkInstance> batchedChunks;
-    private final ObjectArrayList<ChunkInstance> batchedChunkList;
-    private final LongOpenHashSet mergedCoordinates;
-    private final Long2LongOpenHashMap mergedChunkVersions;
+    private Long2ObjectOpenHashMap<ChunkInstance> batchedChunks;
+    private ObjectArrayList<ChunkInstance> batchedChunkList;
+    private LongOpenHashSet mergedCoordinates;
+    private Long2LongOpenHashMap mergedChunkVersions;
 
-    // Constructor \\
+    // Internal \\
 
-    public MegaBatchStruct() {
+    @Override
+    protected void create() {
         this.batchedChunks = new Long2ObjectOpenHashMap<>();
         this.batchedChunkList = new ObjectArrayList<>();
         this.mergedCoordinates = new LongOpenHashSet();

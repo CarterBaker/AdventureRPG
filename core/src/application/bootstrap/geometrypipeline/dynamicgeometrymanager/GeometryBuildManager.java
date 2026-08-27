@@ -10,7 +10,7 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.chunk.ChunkNeighborStruct;
+import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import engine.graphics.color.Color;
@@ -274,18 +274,6 @@ class GeometryBuildManager extends ManagerPackage {
 
     // Uniform Enclosure Fast Path \\
 
-    /*
-     * A uniform-filled subchunk contributes no geometry of its own once
-     * every side touching it is the same uniform fill — two adjacent FULL
-     * blocks never expose a face regardless of their exact block ID, and two
-     * adjacent LIQUID blocks only stay hidden when they're the exact same
-     * liquid, matching FullGeometryBranch's and LiquidGeometryBranch's own
-     * exposure rules exactly. World floor and ceiling subchunks are excluded
-     * since their outward face always renders. Called only from BuildBranch
-     * or LiquidTickBranch's rebuild path, both of which already guarantee
-     * every lateral neighbor chunk referenced here is loaded and stable for
-     * the duration of the call.
-     */
     private boolean isFullyEnclosed(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance) {
 
         int subY = (int) subChunkInstance.getCoordinate();
@@ -302,7 +290,7 @@ class GeometryBuildManager extends ManagerPackage {
         if (!matchesUniform(chunkInstance.getSubChunk(subY + 1), type, blockID))
             return false;
 
-        ChunkNeighborStruct neighbors = chunkInstance.getChunkNeighbors();
+        ChunkNeighborHandle neighbors = chunkInstance.getChunkNeighbors();
 
         for (Direction3Vector direction : LATERAL_DIRECTIONS) {
 
@@ -338,16 +326,6 @@ class GeometryBuildManager extends ManagerPackage {
 
     // Opaque Interior Fast Path \\
 
-    /*
-     * Generalizes the uniform-enclosure check above to subchunks whose
-     * blocks are not all the same ID but are still, every one of them,
-     * FULL-geometry — a buried ore vein shot through solid stone, or a
-     * dirt/stone transition band that never breaks the surface anywhere in
-     * its footprint. Two adjacent FULL blocks never expose a face to each
-     * other regardless of their exact ID, so the same "every neighbor is
-     * equally solid" enclosure rule applies; a neighbor satisfies it whether
-     * it got there via uniform fill or via this same classification.
-     */
     private boolean isFullyEnclosedOpaque(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance) {
 
         int subY = (int) subChunkInstance.getCoordinate();
@@ -361,7 +339,7 @@ class GeometryBuildManager extends ManagerPackage {
         if (!isNeighborFullySolid(chunkInstance.getSubChunk(subY + 1)))
             return false;
 
-        ChunkNeighborStruct neighbors = chunkInstance.getChunkNeighbors();
+        ChunkNeighborHandle neighbors = chunkInstance.getChunkNeighbors();
 
         for (Direction3Vector direction : LATERAL_DIRECTIONS) {
 
