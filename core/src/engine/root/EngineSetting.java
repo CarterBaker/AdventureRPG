@@ -851,7 +851,7 @@ public class EngineSetting {
 
         // Screen Capture \\
 
-        public static final String CAPTURE_ROOT_DIRECTORY = "Screenshots";
+        public static final String CAPTURE_ROOT_DIRECTORY = "Capture";
         public static final String SCREENSHOT_OUTPUT_DIRECTORY = "Images";
         public static final String RECORDING_OUTPUT_DIRECTORY = "Videos";
         public static final String SCREENSHOT_FILE_PREFIX = "Screenshot_";
@@ -861,7 +861,6 @@ public class EngineSetting {
         public static final String SCREENSHOT_LOSSLESS_EXTENSION = "tga";
         public static final String RECORDING_STANDARD_EXTENSION = "mp4";
         public static final String RECORDING_LOSSLESS_EXTENSION = "avi";
-        public static final String RECORDING_ENCODER_EXECUTABLE = "ffmpeg";
         public static final String SCREEN_CAPTURE_THREAD_NAME = "ScreenCapture";
         public static final int RECORDING_FRAME_RATE = 60;
         public static final int BYTES_PER_PIXEL_BGRA = 4;

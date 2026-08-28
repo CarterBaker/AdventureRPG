@@ -41,17 +41,8 @@ class ScreenshotSystem extends SystemPackage {
 
     @Override
     protected void create() {
-        this.screenshotDirectory = resolveDirectory(EngineSetting.SCREENSHOT_OUTPUT_DIRECTORY);
-    }
-
-    private File resolveDirectory(String subdirectoryName) {
-
-        File directory = new File(EngineSetting.CAPTURE_ROOT_DIRECTORY, subdirectoryName);
-
-        if (!directory.exists() && !directory.mkdirs())
-            throwException("Failed to create capture output directory: " + directory.getAbsolutePath());
-
-        return directory;
+        this.screenshotDirectory = ScreenCaptureIOUtility.resolveCaptureDirectory(
+                internal.path, EngineSetting.SCREENSHOT_OUTPUT_DIRECTORY);
     }
 
     // Capture \\
@@ -67,7 +58,12 @@ class ScreenshotSystem extends SystemPackage {
         pixelBuffer.clear();
         ScreenCaptureGLUtility.readFrontBuffer(width, height, pixelBuffer);
         internal.windowPlatform.restoreMainContext();
-        pixelBuffer.flip();
+
+        // glReadPixels writes into the buffer's backing memory directly and
+        // never advances its position. clear() already leaves position at 0
+        // and limit at capacity — exactly the full frame — so the buffer is
+        // immediately ready to read from. Flipping here would incorrectly
+        // collapse limit back down to the untouched position of 0.
 
         String timestamp = TIMESTAMP_FORMAT.format(LocalDateTime.now());
         String baseName = EngineSetting.SCREENSHOT_FILE_PREFIX + timestamp;

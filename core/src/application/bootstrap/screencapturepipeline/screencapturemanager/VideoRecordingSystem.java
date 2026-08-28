@@ -1,17 +1,18 @@
 package application.bootstrap.screencapturepipeline.screencapturemanager;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+
+import org.jcodec.api.awt.AWTSequenceEncoder;
 
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -26,13 +27,14 @@ class VideoRecordingSystem extends SystemPackage {
      * Owns a single recording session at a time, toggled on and off by
      * ScreenCaptureManager. Every engine frame while active, render() reads
      * the recording window's front buffer into one of two recycled BGRA
-     * buffers and hands it to the ScreenCapture thread, which appends the
-     * raw frame to an uncompressed AVI — the lossless, professional track —
-     * and streams it into an ffmpeg process encoding the standard MP4 in
-     * parallel. Alternating buffers lets the readback for frame N+1 proceed
-     * while frame N is still being written to disk, relying on the
-     * ScreenCapture thread being single-threaded so frames are never
-     * reordered on either output.
+     * buffers and hands it to the single-threaded ScreenCapture pool, which
+     * appends the raw frame to an uncompressed AVI — the lossless track —
+     * and encodes the same frame into the standard MP4 with JCodec's
+     * pure-Java H.264 encoder, so no platform-specific encoder binary is
+     * ever located, bundled, or shipped. Alternating buffers lets the
+     * readback for frame N+1 proceed while frame N is still being written
+     * to disk, relying on the ScreenCapture thread being single-threaded so
+     * frames are never reordered on either output.
      */
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter
@@ -66,26 +68,17 @@ class VideoRecordingSystem extends SystemPackage {
     private final LongArrayList frameOffsets = new LongArrayList();
     private final IntArrayList frameSizes = new IntArrayList();
 
-    private Process encoderProcess;
-    private OutputStream encoderStandardInput;
-    private WritableByteChannel encoderChannel;
+    private BufferedImage mp4FrameImage;
+    private int[] mp4FramePixels;
+    private AWTSequenceEncoder mp4Encoder;
 
     // Internal \\
 
     @Override
     protected void create() {
-        this.recordingDirectory = resolveDirectory(EngineSetting.RECORDING_OUTPUT_DIRECTORY);
+        this.recordingDirectory = ScreenCaptureIOUtility.resolveCaptureDirectory(
+                internal.path, EngineSetting.RECORDING_OUTPUT_DIRECTORY);
         this.encodingThread = getThreadHandleFromThreadName(EngineSetting.SCREEN_CAPTURE_THREAD_NAME);
-    }
-
-    private File resolveDirectory(String subdirectoryName) {
-
-        File directory = new File(EngineSetting.CAPTURE_ROOT_DIRECTORY, subdirectoryName);
-
-        if (!directory.exists() && !directory.mkdirs())
-            throwException("Failed to create capture output directory: " + directory.getAbsolutePath());
-
-        return directory;
     }
 
     // Render \\
@@ -126,7 +119,7 @@ class VideoRecordingSystem extends SystemPackage {
         String baseName = EngineSetting.RECORDING_FILE_PREFIX + timestamp;
 
         openAviFile(new File(recordingDirectory, baseName + "." + EngineSetting.RECORDING_LOSSLESS_EXTENSION));
-        openEncoderProcess(new File(recordingDirectory, baseName + "." + EngineSetting.RECORDING_STANDARD_EXTENSION));
+        openMp4Encoder(new File(recordingDirectory, baseName + "." + EngineSetting.RECORDING_STANDARD_EXTENSION));
 
         this.recording = true;
     }
@@ -139,7 +132,7 @@ class VideoRecordingSystem extends SystemPackage {
         waitForPendingWrite(1);
 
         closeAviFile();
-        closeEncoderProcess();
+        closeMp4Encoder();
 
         this.activeWindow = null;
     }
@@ -157,7 +150,11 @@ class VideoRecordingSystem extends SystemPackage {
         ScreenCaptureGLUtility.readFrontBuffer(width, height, buffer);
         internal.windowPlatform.restoreMainContext();
 
-        buffer.flip();
+        // glReadPixels writes into the buffer's backing memory directly and
+        // never advances its position. clear() already leaves position at 0
+        // and limit at capacity — exactly one full frame — so the buffer is
+        // immediately ready to hand off. Flipping here would incorrectly
+        // collapse limit back down to the untouched position of 0.
 
         int bufferIndex = activeBufferIndex;
         pendingWrites[bufferIndex] = executeAsync(encodingThread, () -> writeFrame(buffer));
@@ -169,7 +166,7 @@ class VideoRecordingSystem extends SystemPackage {
     private void writeFrame(ByteBuffer buffer) {
         writeAviFrame(buffer);
         buffer.rewind();
-        writeEncoderFrame(buffer);
+        writeMp4Frame(buffer);
     }
 
     private void waitForPendingWrite(int index) {
@@ -197,6 +194,9 @@ class VideoRecordingSystem extends SystemPackage {
 
         frameBuffers[0] = ByteBuffer.allocateDirect(requiredCapacity);
         frameBuffers[1] = ByteBuffer.allocateDirect(requiredCapacity);
+
+        this.mp4FrameImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        this.mp4FramePixels = ((DataBufferInt) mp4FrameImage.getRaster().getDataBuffer()).getData();
     }
 
     // AVI Container \\
@@ -400,59 +400,52 @@ class VideoRecordingSystem extends SystemPackage {
         aviFile.write(aviScratch, 0, Short.BYTES);
     }
 
-    // Encoder Process \\
+    // MP4 Encoder \\
 
-    private void openEncoderProcess(File outputFile) {
-
+    private void openMp4Encoder(File outputFile) {
         try {
-
-            ProcessBuilder builder = new ProcessBuilder(
-                    EngineSetting.RECORDING_ENCODER_EXECUTABLE,
-                    "-y",
-                    "-f", "rawvideo",
-                    "-pix_fmt", "bgra",
-                    "-s", width + "x" + height,
-                    "-r", String.valueOf(EngineSetting.RECORDING_FRAME_RATE),
-                    "-i", "-",
-                    "-vf", "vflip",
-                    "-c:v", "libx264",
-                    "-pix_fmt", "yuv420p",
-                    outputFile.getAbsolutePath());
-
-            builder.redirectErrorStream(true);
-            builder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-
-            this.encoderProcess = builder.start();
-            this.encoderStandardInput = encoderProcess.getOutputStream();
-            this.encoderChannel = Channels.newChannel(encoderStandardInput);
-
+            this.mp4Encoder = AWTSequenceEncoder.createSequenceEncoder(
+                    outputFile, EngineSetting.RECORDING_FRAME_RATE);
         } catch (IOException e) {
-            throwException("Failed to launch video encoder process", e);
+            throwException("Failed to open standard recording encoder: " + outputFile.getAbsolutePath(), e);
         }
     }
 
-    private void writeEncoderFrame(ByteBuffer buffer) {
+    private void writeMp4Frame(ByteBuffer buffer) {
+
+        int stride = width * EngineSetting.BYTES_PER_PIXEL_BGRA;
+
+        for (int row = 0; row < height; row++) {
+
+            int rowStart = row * stride;
+            int destinationRow = (height - 1 - row) * width;
+
+            for (int col = 0; col < width; col++) {
+
+                int index = rowStart + col * EngineSetting.BYTES_PER_PIXEL_BGRA;
+
+                int b = buffer.get(index) & 0xFF;
+                int g = buffer.get(index + 1) & 0xFF;
+                int r = buffer.get(index + 2) & 0xFF;
+
+                mp4FramePixels[destinationRow + col] = (r << 16) | (g << 8) | b;
+            }
+        }
 
         try {
-            encoderChannel.write(buffer);
+            mp4Encoder.encodeImage(mp4FrameImage);
         } catch (IOException e) {
-            throwException("Failed to stream frame to video encoder", e);
+            throwException("Failed to encode standard recording frame", e);
         }
     }
 
-    private void closeEncoderProcess() {
-
+    private void closeMp4Encoder() {
         try {
-
-            encoderChannel.close();
-            encoderProcess.waitFor();
-
-        } catch (IOException | InterruptedException e) {
-            throwException("Failed to finalize video encoder process", e);
+            mp4Encoder.finish();
+        } catch (IOException e) {
+            throwException("Failed to finalize standard recording file", e);
         } finally {
-            this.encoderProcess = null;
-            this.encoderChannel = null;
-            this.encoderStandardInput = null;
+            this.mp4Encoder = null;
         }
     }
 }
