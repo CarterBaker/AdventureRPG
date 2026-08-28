@@ -40,7 +40,11 @@ class GeometryBuildManager extends ManagerPackage {
      * solid, since a stone/ore mix or a buried dirt/stone transition band
      * never exposes a face either; this is what keeps buried, non-uniform
      * terrain (the common case under any real surface) from paying the
-     * per-block cost just because it isn't a single block ID.
+     * per-block cost just because it isn't a single block ID. build() is
+     * only ever called by a caller already holding the owning chunk's own
+     * sync lock (BuildBranch, LiquidTickBranch, DebugWaterPlacementSystem),
+     * so the packet's GENERATING/READY status is never used as an entry
+     * gate here — it's set purely so anything downstream can observe it.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -92,10 +96,8 @@ class GeometryBuildManager extends ManagerPackage {
 
         DynamicPacketInstance dynamicPacketInstance = subChunkInstance.getDynamicPacketInstance();
 
-        if (!dynamicPacketInstance.tryLock())
-            return false;
-
-        dynamicPacketInstance.clear();
+        dynamicPacketInstance.beginGenerating();
+        dynamicPacketInstance.clearModels();
         subChunkInstance.beginBlockTypeTally();
 
         if (subChunkInstance.isKnownEmpty()) {

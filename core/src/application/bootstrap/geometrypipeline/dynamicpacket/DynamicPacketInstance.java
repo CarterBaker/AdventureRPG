@@ -14,20 +14,20 @@ public class DynamicPacketInstance extends InstancePackage {
     /*
      * Thread-safe geometry packet for one sub-chunk, chunk, or mega chunk.
      * Accumulates dynamic quad geometry into per-material DynamicModelHandle
-     * buckets during a build pass. State transitions are atomic — EMPTY →
-     * GENERATING → READY — to prevent concurrent writes from the build
-     * thread and reads from the render thread. The state reference and the
-     * material bucket map are allocated once in create() and reused for the
-     * pooled object's whole lifetime. clear() never discards a material's
-     * DynamicModelHandle buckets, even once they hold zero vertices — every
-     * bucket already carries a FloatArrayList/ShortArrayList grown to
-     * whatever size a previous build needed, and the game's block materials
-     * are a small, fixed palette reused across every location a pooled
-     * chunk is ever handed out to, so buckets built for one location are
-     * just as likely to be needed again after that chunk is reassigned
-     * somewhere else. WorldRenderManager.updateEntries() already skips
-     * empty buckets and trims/disposes their GPU-side entries on its own,
-     * so retaining empty buckets here costs nothing downstream.
+     * buckets during a build pass. Every builder of a packet already runs
+     * under its owning chunk or mega's own sync lock, so EMPTY/GENERATING/
+     * READY is pure status, never an entry gate — beginGenerating() marks a
+     * pass starting, clearModels() lets that pass discard stale geometry
+     * from its previous run without ever leaving GENERATING, and
+     * setReady()/unlock() mark how it finished. clear() is the full reset
+     * used by pooling, dumping, and forced external rebuilds, which need
+     * the state forced back to EMPTY regardless of what it currently holds.
+     * The state reference and the material bucket map are allocated once in
+     * create() and reused for the pooled object's whole lifetime — buckets
+     * are never discarded even at zero vertices, since the same small
+     * material palette is reused everywhere a pooled chunk gets reassigned,
+     * and WorldRenderManager.updateEntries() already trims empty buckets
+     * downstream.
      */
 
     // Internal
@@ -52,14 +52,13 @@ public class DynamicPacketInstance extends InstancePackage {
         // Internal
         this.vaoHandle = vaoHandle;
 
-        // Model Management — reset in place rather than reallocate
         clear();
     }
 
     // State Management \\
 
-    public boolean tryLock() {
-        return state.compareAndSet(DynamicPacketState.EMPTY, DynamicPacketState.GENERATING);
+    public void beginGenerating() {
+        state.set(DynamicPacketState.GENERATING);
     }
 
     public void setReady() {
@@ -185,7 +184,7 @@ public class DynamicPacketInstance extends InstancePackage {
         return result;
     }
 
-    public void clear() {
+    public void clearModels() {
 
         for (ObjectArrayList<DynamicModelHandle> modelList : materialID2ModelCollection.values()) {
             Object[] elements = modelList.elements();
@@ -193,7 +192,10 @@ public class DynamicPacketInstance extends InstancePackage {
             for (int i = 0; i < count; i++)
                 ((DynamicModelHandle) elements[i]).clear();
         }
+    }
 
+    public void clear() {
+        clearModels();
         unlock();
     }
 
