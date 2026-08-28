@@ -428,6 +428,26 @@ class Lwjgl3GL implements GL40 {
         GL31C.glDrawElementsInstanced(mode, count, type, indices, instancecount);
     }
 
+    // Read Buffer \\
+
+    public void glReadBuffer(int mode) {
+        GL11.glReadBuffer(mode);
+    }
+
+    public void glReadPixels(int x, int y, int width, int height, int format, int type, Buffer pixels) {
+
+        if (pixels instanceof ByteBuffer bb)
+            GL11.glReadPixels(x, y, width, height, format, type, bb);
+        else if (pixels instanceof ShortBuffer sb)
+            GL11.glReadPixels(x, y, width, height, format, type, sb);
+        else if (pixels instanceof IntBuffer ib)
+            GL11.glReadPixels(x, y, width, height, format, type, ib);
+        else if (pixels instanceof FloatBuffer fb)
+            GL11.glReadPixels(x, y, width, height, format, type, fb);
+        else
+            EngineUtility.throwException("Unsupported pixel buffer type: " + pixels.getClass().getSimpleName());
+    }
+
     // Tessellation \\
 
     public void glPatchParameteri(int pname, int value) {

@@ -30,6 +30,10 @@ public final class KeyBindings {
     public static Binding SECONDARY = new Binding(InputCode.mouse(Buttons.RIGHT));
     public static Binding LOOK = new Binding(InputCode.mouse(Buttons.RIGHT));
 
+    // Screen Capture
+    public static Binding SCREENSHOT = new Binding(InputCode.key(Keys.F12));
+    public static Binding RECORD_VIDEO = new Binding(InputCode.key(Keys.F9));
+
     // Editor — Single
     public static Binding TOGGLE_INSPECTOR = new Binding(InputCode.key(Keys.I));
     public static Binding FOCUS_SELECTED = new Binding(InputCode.key(Keys.F));

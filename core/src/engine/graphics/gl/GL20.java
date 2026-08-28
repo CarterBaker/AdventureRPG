@@ -109,6 +109,12 @@ public interface GL20 {
 
         void glDrawArrays(int mode, int first, int count);
 
+        // Read Buffer \\
+
+        void glReadBuffer(int mode);
+
+        void glReadPixels(int x, int y, int width, int height, int format, int type, Buffer pixels);
+
         // Uniforms — Scalar \\
 
         void glUniform1i(int loc, int v0);

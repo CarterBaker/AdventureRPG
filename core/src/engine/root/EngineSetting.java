@@ -83,6 +83,11 @@ public class EngineSetting {
         public static final int GL_DEPTH_ATTACHMENT = 0x8D00;
         public static final int GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
 
+        // GL — Read Buffer \\
+
+        public static final int GL_FRONT = 0x0404;
+        public static final int GL_BGRA = 0x80E1;
+
         // GL — Tessellation \\
 
         public static final int GL_PATCH_VERTICES = 0x8E72;
@@ -843,4 +848,34 @@ public class EngineSetting {
         public static final int TAB_DRAG_PREVIEW_H = 144;
         public static final float TAB_DRAG_EDGE_FRACTION = 0.25f;
         public static final String TAB_ZONE_GHOST_WINDOW_TITLE = "TabZoneGhost";
+
+        // Screen Capture \\
+
+        public static final String CAPTURE_ROOT_DIRECTORY = "Screenshots";
+        public static final String SCREENSHOT_OUTPUT_DIRECTORY = "Images";
+        public static final String RECORDING_OUTPUT_DIRECTORY = "Videos";
+        public static final String SCREENSHOT_FILE_PREFIX = "Screenshot_";
+        public static final String RECORDING_FILE_PREFIX = "Recording_";
+        public static final String CAPTURE_TIMESTAMP_PATTERN = "yyyy-MM-dd_HH-mm-ss";
+        public static final String SCREENSHOT_STANDARD_FORMAT = "png";
+        public static final String SCREENSHOT_LOSSLESS_EXTENSION = "tga";
+        public static final String RECORDING_STANDARD_EXTENSION = "mp4";
+        public static final String RECORDING_LOSSLESS_EXTENSION = "avi";
+        public static final String RECORDING_ENCODER_EXECUTABLE = "ffmpeg";
+        public static final String SCREEN_CAPTURE_THREAD_NAME = "ScreenCapture";
+        public static final int RECORDING_FRAME_RATE = 60;
+        public static final int BYTES_PER_PIXEL_BGRA = 4;
+
+        // Screenshot — TGA Format \\
+
+        public static final int TGA_HEADER_LENGTH_BYTES = 18;
+        public static final int TGA_IMAGE_TYPE_UNCOMPRESSED_TRUECOLOR = 2;
+        public static final int TGA_PIXEL_DEPTH_BITS = 32;
+        public static final int TGA_IMAGE_DESCRIPTOR_BOTTOM_LEFT_ALPHA = 0x08;
+
+        // Recording — AVI Container \\
+
+        public static final String AVI_UNCOMPRESSED_FOURCC = "DIB ";
+        public static final int AVI_FLAG_HAS_INDEX = 0x00000010;
+        public static final int AVI_INDEX_FLAG_KEYFRAME = 0x00000010;
 }

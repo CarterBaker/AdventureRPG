@@ -2,6 +2,7 @@
   "threads": [
     {"name": "General", "size": 2},
     {"name": "WorldStreaming", "size": "auto", "maxInFlight": 48},
-    {"name": "AI", "size": 4}
+    {"name": "AI", "size": 4},
+    {"name": "ScreenCapture", "size": 1}
   ]
 }
