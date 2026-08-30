@@ -119,6 +119,7 @@ public class EngineSetting {
         public static final long NANOS_PER_SECOND = 1_000_000_000L;
         public static final long NANOS_PER_MILLI = 1_000_000L;
         public static final long FRAME_PACING_SLEEP_THRESHOLD_NANOS = 2_000_000L;
+        public static final long FRAME_PACING_SLEEP_CHUNK_NANOS = 1_000_000L;
 
         // Registry \\
 
@@ -875,11 +876,17 @@ public class EngineSetting {
         public static final String RECORDING_STANDARD_EXTENSION = "mp4";
         public static final String RECORDING_LOSSLESS_EXTENSION = "avi";
         public static final String SCREEN_CAPTURE_THREAD_NAME = "ScreenCapture";
+        public static final String VIDEO_ENCODE_THREAD_NAME = "VideoEncode";
+        public static final String VIDEO_WRITE_THREAD_NAME = "VideoWrite";
         public static final int RECORDING_FRAME_RATE = 60;
         public static final int RECORDING_MAX_CATCHUP_FRAMES = 5;
-        public static final int RECORDING_MAX_OWED_FRAMES = 30;
-        public static final int RECORDING_FRAME_BUFFER_COUNT = 4;
+        public static final int RECORDING_MAX_OWED_FRAMES = RECORDING_FRAME_RATE * 2;
+        public static final int RECORDING_FRAME_BUFFER_COUNT = 8;
         public static final int BYTES_PER_PIXEL_BGRA = 4;
+
+        // PBO Readback \\
+
+        public static final int PBO_ASYNC_READBACK_DEPTH = 3;
 
         // Screenshot — TGA Format \\
 

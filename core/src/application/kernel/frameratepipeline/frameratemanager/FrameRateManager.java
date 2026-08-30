@@ -9,12 +9,12 @@ public class FrameRateManager extends ManagerPackage {
     /*
      * Owns frame pacing and FPS measurement for the whole engine loop.
      * EnginePackage brackets its UPDATE cycle with beginFrame() and
-     * capFrameRate() — any time left under the target interval is mostly
-     * slept off and precisely spun out for the last couple of milliseconds,
-     * giving every downstream system a stable, predictable cadence
-     * regardless of vsync state or display refresh rate. Measured FPS is a
-     * plain one-second rolling count, cheap enough to update
-     * unconditionally every frame with no allocation.
+     * capFrameRate() — time left under the target interval is slept off in
+     * bounded chunks, re-measured after each one so the OS scheduler's
+     * coarser sleep granularity can never overshoot the deadline unnoticed,
+     * then the last stretch is spun out precisely. Measured FPS is a plain
+     * one-second rolling count, cheap enough to update unconditionally every
+     * frame with no allocation.
      */
 
     // Pacing
@@ -47,8 +47,11 @@ public class FrameRateManager extends ManagerPackage {
         long deadline = frameStartNanos + targetIntervalNanos;
         long remaining = deadline - System.nanoTime();
 
-        if (remaining > EngineSetting.FRAME_PACING_SLEEP_THRESHOLD_NANOS)
-            sleepNanos(remaining - EngineSetting.FRAME_PACING_SLEEP_THRESHOLD_NANOS);
+        while (remaining > EngineSetting.FRAME_PACING_SLEEP_THRESHOLD_NANOS) {
+            sleepNanos(Math.min(remaining - EngineSetting.FRAME_PACING_SLEEP_THRESHOLD_NANOS,
+                    EngineSetting.FRAME_PACING_SLEEP_CHUNK_NANOS));
+            remaining = deadline - System.nanoTime();
+        }
 
         while (System.nanoTime() < deadline)
             Thread.onSpinWait();

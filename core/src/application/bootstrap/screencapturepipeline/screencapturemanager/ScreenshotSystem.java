@@ -6,8 +6,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
@@ -35,7 +37,9 @@ class ScreenshotSystem extends SystemPackage {
      * TGA and PNG writes to the single-threaded ScreenCapture pool — every
      * step is a non-blocking poll, so a slow disk can never stall a frame.
      * The pixel buffer and PNG image are allocated once and only
-     * reallocated if the target window resizes.
+     * reallocated if the target window resizes. dispose() awaits any
+     * write still in flight so the engine shutting down can never leave a
+     * half-written screenshot file on disk.
      */
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter
@@ -148,6 +152,23 @@ class ScreenshotSystem extends SystemPackage {
         writePng(pngFile, width, height);
     }
 
+    // Shutdown \\
+
+    @Override
+    protected void dispose() {
+
+        if (pendingWrite == null)
+            return;
+
+        try {
+            pendingWrite.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            throwException("Screenshot write failed during shutdown", e.getCause());
+        }
+    }
+
     // Buffers \\
 
     private void ensureBuffers(int width, int height) {
@@ -164,6 +185,11 @@ class ScreenshotSystem extends SystemPackage {
 
     // TGA \\
 
+    /*
+     * FileChannel.write(ByteBuffer) is not guaranteed to drain a large
+     * buffer in a single call, so the write is looped until the pixel
+     * buffer is fully consumed rather than trusting one call to finish it.
+     */
     private void writeTga(File file, int width, int height) {
 
         try (FileOutputStream stream = new FileOutputStream(file)) {
@@ -180,7 +206,9 @@ class ScreenshotSystem extends SystemPackage {
             stream.write(header);
 
             pixelBuffer.rewind();
-            stream.getChannel().write(pixelBuffer);
+            FileChannel channel = stream.getChannel();
+            while (pixelBuffer.hasRemaining())
+                channel.write(pixelBuffer);
 
         } catch (IOException e) {
             throwException("Failed to write screenshot TGA file: " + file.getAbsolutePath(), e);

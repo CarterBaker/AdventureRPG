@@ -26,28 +26,19 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 class VideoRecordingSystem extends SystemPackage {
 
     /*
-     * Owns a single recording session at a time, toggled on and off by
-     * ScreenCaptureManager. update() only advances a nanosecond accumulator
-     * against RECORDING_FRAME_RATE, entirely independent of the engine's
-     * own frame rate, and banks how many frames are owed once the
-     * accumulator clears a full interval, capped per call by
-     * RECORDING_MAX_CATCHUP_FRAMES — pure bookkeeping, it never touches GL.
-     * flush(), called exactly once per frame by ScreenCaptureManager from
-     * the engine's own draw() authority, is the only place a frame is ever
-     * pulled off the GPU. If the single-threaded ScreenCapture pool is
-     * still busy encoding the buffer slot flush() needs, the capture is
-     * skipped rather than blocked — the owed count carries forward, capped
-     * by RECORDING_MAX_OWED_FRAMES, and is folded into the next successful
-     * capture's repeat count so the written video still matches real
-     * elapsed time without ever stalling the engine. Captures rotate
-     * through a fixed pool of RECORDING_FRAME_BUFFER_COUNT pre-allocated
-     * buffers rather than a single pair, giving the background encoder
-     * several frames of slack before flush() would ever need to skip one.
-     * Captured frames are handed to the ScreenCapture thread, which
-     * appends them to an uncompressed AVI — the lossless track — and
-     * encodes them into the standard MP4 with JCodec's pure-Java H.264
-     * encoder, both driven off the same duplicated frame count so the two
-     * outputs always agree in length.
+     * Owns a single toggled recording session: frames are captured off the
+     * GPU through a PboInstance and handed to two independent
+     * single-threaded pools — one writing a lossless AVI incrementally, one
+     * encoding a standard MP4 — so a slow MP4 pass can never throttle AVI
+     * capture or vice versa. Every dispatch is paced by recomputing, from
+     * the wall clock, how many nominal frames are due versus how many have
+     * already been written, clamped per dispatch so a stall can never
+     * balloon into one enormous blocking batch and so no elapsed time is
+     * ever silently discarded. A frame buffer is only reused once both
+     * writers have finished reading it. Stopping a recording queues a
+     * finalization task on each writer's own pool; dispose() awaits both
+     * synchronously so a shutdown mid-recording can never leave a corrupt
+     * file.
      */
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter
@@ -60,7 +51,8 @@ class VideoRecordingSystem extends SystemPackage {
     private static final int RIFF_CHUNK_HEADER_LENGTH = 8;
 
     private File recordingDirectory;
-    private ThreadHandle encodingThread;
+    private ThreadHandle aviWriteThread;
+    private ThreadHandle videoEncodeThread;
     private PboManager pboManager;
     private PboInstance pboInstance;
 
@@ -71,20 +63,19 @@ class VideoRecordingSystem extends SystemPackage {
     private long frameCount;
 
     private final ByteBuffer[] frameBuffers = new ByteBuffer[EngineSetting.RECORDING_FRAME_BUFFER_COUNT];
-    private final Future<?>[] pendingWrites = new Future<?>[EngineSetting.RECORDING_FRAME_BUFFER_COUNT];
+    private final Future<?>[] pendingAviWrites = new Future<?>[EngineSetting.RECORDING_FRAME_BUFFER_COUNT];
+    private final Future<?>[] pendingMp4Writes = new Future<?>[EngineSetting.RECORDING_FRAME_BUFFER_COUNT];
     private int activeBufferIndex;
 
-    // Pacing — decouples capture cadence from actual render cadence
-    private long lastFrameNanos;
-    private long accumulatedNanos;
+    // Pacing
+    private long recordingStartNanos;
     private long captureIntervalNanos;
-    private int pendingCaptureFrames;
-    private int owedFrames;
+    private boolean fallingBehind;
 
     private final byte[] aviScratch = new byte[Integer.BYTES];
     private RandomAccessFile aviFile;
     private long moviListSizeOffset;
-    private long moviDataStartOffset;
+    private long moviIndexBaseOffset;
     private long totalFramesFieldOffset;
     private long streamLengthFieldOffset;
     private final LongArrayList frameOffsets = new LongArrayList();
@@ -94,13 +85,17 @@ class VideoRecordingSystem extends SystemPackage {
     private int[] mp4FramePixels;
     private AWTSequenceEncoder mp4Encoder;
 
+    private Future<?> pendingAviFinalize;
+    private Future<?> pendingMp4Finalize;
+
     // Internal \\
 
     @Override
     protected void create() {
         this.recordingDirectory = ScreenCaptureIOUtility.resolveCaptureDirectory(
                 internal.path, EngineSetting.RECORDING_OUTPUT_DIRECTORY);
-        this.encodingThread = getThreadHandleFromThreadName(EngineSetting.SCREEN_CAPTURE_THREAD_NAME);
+        this.aviWriteThread = getThreadHandleFromThreadName(EngineSetting.VIDEO_WRITE_THREAD_NAME);
+        this.videoEncodeThread = getThreadHandleFromThreadName(EngineSetting.VIDEO_ENCODE_THREAD_NAME);
         this.captureIntervalNanos = EngineSetting.NANOS_PER_SECOND / EngineSetting.RECORDING_FRAME_RATE;
     }
 
@@ -109,44 +104,14 @@ class VideoRecordingSystem extends SystemPackage {
         this.pboManager = get(PboManager.class);
     }
 
-    // Pacing \\
-
-    @Override
-    protected void update() {
-
-        if (!recording)
-            return;
-
-        advanceCaptureClock();
-    }
-
-    private void advanceCaptureClock() {
-
-        long now = System.nanoTime();
-        accumulatedNanos += now - lastFrameNanos;
-        lastFrameNanos = now;
-
-        int framesDue = 0;
-
-        while (accumulatedNanos >= captureIntervalNanos && framesDue < EngineSetting.RECORDING_MAX_CATCHUP_FRAMES) {
-            accumulatedNanos -= captureIntervalNanos;
-            framesDue++;
-        }
-
-        pendingCaptureFrames += framesDue;
-    }
-
     // Draw Authority \\
 
     void flush() {
 
-        if (!recording || pendingCaptureFrames <= 0)
+        if (!recording)
             return;
 
-        int framesToCapture = pendingCaptureFrames;
-        pendingCaptureFrames = 0;
-
-        captureFrame(framesToCapture);
+        captureFrame();
     }
 
     // Toggle \\
@@ -162,17 +127,18 @@ class VideoRecordingSystem extends SystemPackage {
 
     private void startRecording(WindowInstance window) {
 
+        if (isFinalizing())
+            throwException("Cannot start a new recording while the previous recording is still finalizing.");
+
         this.activeWindow = window;
         this.width = window.getWidth();
         this.height = window.getHeight();
         this.frameCount = 0;
         this.activeBufferIndex = 0;
-        this.pendingCaptureFrames = 0;
-        this.owedFrames = 0;
+        this.recordingStartNanos = System.nanoTime();
+        this.fallingBehind = false;
         this.frameOffsets.clear();
         this.frameSizes.clear();
-        this.lastFrameNanos = System.nanoTime();
-        this.accumulatedNanos = 0L;
 
         ensureFrameBuffers();
 
@@ -194,29 +160,67 @@ class VideoRecordingSystem extends SystemPackage {
 
         drainPendingCapture();
 
-        for (int i = 0; i < pendingWrites.length; i++)
-            waitForPendingWrite(i);
-
-        closeAviFile();
-        closeMp4Encoder();
+        this.pendingAviFinalize = executeAsync(aviWriteThread, this::finalizeAvi);
+        this.pendingMp4Finalize = executeAsync(videoEncodeThread, this::finalizeMp4);
 
         this.activeWindow = null;
-        this.accumulatedNanos = 0L;
-        this.pendingCaptureFrames = 0;
-        this.owedFrames = 0;
+    }
+
+    private void finalizeAvi() {
+        closeAviFile();
+    }
+
+    private void finalizeMp4() {
+        closeMp4Encoder();
+    }
+
+    private boolean isFinalizing() {
+        return (pendingAviFinalize != null && !pendingAviFinalize.isDone())
+                || (pendingMp4Finalize != null && !pendingMp4Finalize.isDone());
+    }
+
+    // Shutdown \\
+
+    @Override
+    protected void dispose() {
+
+        if (recording)
+            stopRecording();
+
+        awaitFinalize(pendingAviFinalize);
+        awaitFinalize(pendingMp4Finalize);
+    }
+
+    private void awaitFinalize(Future<?> future) {
+
+        if (future == null)
+            return;
+
+        try {
+            future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            throwException("Recording finalization failed during shutdown", e.getCause());
+        }
     }
 
     // Capture \\
 
-    private void captureFrame(int repeatCount) {
+    private void captureFrame() {
 
-        if (isWritePending(activeBufferIndex)) {
-            owedFrames = Math.min(owedFrames + repeatCount, EngineSetting.RECORDING_MAX_OWED_FRAMES);
+        if (isBufferBusy(activeBufferIndex))
             return;
-        }
 
-        int totalRepeat = repeatCount + owedFrames;
-        owedFrames = 0;
+        long expectedFrameCount = (System.nanoTime() - recordingStartNanos) / captureIntervalNanos;
+        long due = expectedFrameCount - frameCount;
+
+        if (due <= 0)
+            return;
+
+        updateBacklogState(due);
+
+        int repeatCount = (int) Math.min(due, EngineSetting.RECORDING_MAX_CATCHUP_FRAMES);
 
         ByteBuffer buffer = frameBuffers[activeBufferIndex];
 
@@ -224,24 +228,30 @@ class VideoRecordingSystem extends SystemPackage {
         boolean hasFrame = pboInstance.capture(activeWindow, width, height, buffer);
         internal.windowPlatform.restoreMainContext();
 
-        if (!hasFrame) {
-            owedFrames = Math.min(totalRepeat, EngineSetting.RECORDING_MAX_OWED_FRAMES);
+        if (!hasFrame)
             return;
-        }
 
-        int bufferIndex = activeBufferIndex;
-        pendingWrites[bufferIndex] = executeAsync(encodingThread, () -> writeFrameRepeated(buffer, totalRepeat));
+        dispatchWrites(activeBufferIndex, buffer, repeatCount);
 
-        frameCount += totalRepeat;
+        frameCount += repeatCount;
         activeBufferIndex = (activeBufferIndex + 1) % frameBuffers.length;
+    }
+
+    private void updateBacklogState(long due) {
+        boolean behind = due > EngineSetting.RECORDING_MAX_CATCHUP_FRAMES;
+        if (behind && !fallingBehind)
+            debug("Video recording cannot sustain the target frame rate — frames are being dropped to stay in sync with real time.");
+        fallingBehind = behind;
     }
 
     private void drainPendingCapture() {
 
-        waitForPendingWrite(activeBufferIndex);
+        if (isBufferBusy(activeBufferIndex))
+            return;
 
-        int totalRepeat = 1 + owedFrames;
-        owedFrames = 0;
+        long expectedFrameCount = (System.nanoTime() - recordingStartNanos) / captureIntervalNanos;
+        long due = Math.max(1L, expectedFrameCount - frameCount);
+        int repeatCount = (int) Math.min(due, EngineSetting.RECORDING_MAX_CATCHUP_FRAMES);
 
         ByteBuffer buffer = frameBuffers[activeBufferIndex];
 
@@ -252,41 +262,32 @@ class VideoRecordingSystem extends SystemPackage {
         if (!hasFrame)
             return;
 
-        int bufferIndex = activeBufferIndex;
-        pendingWrites[bufferIndex] = executeAsync(encodingThread, () -> writeFrameRepeated(buffer, totalRepeat));
-        frameCount += totalRepeat;
+        dispatchWrites(activeBufferIndex, buffer, repeatCount);
+        frameCount += repeatCount;
     }
 
-    private void writeFrameRepeated(ByteBuffer buffer, int repeatCount) {
+    private void dispatchWrites(int bufferIndex, ByteBuffer buffer, int repeatCount) {
+        pendingAviWrites[bufferIndex] = executeAsync(aviWriteThread, () -> writeAviFrames(buffer, repeatCount));
+        pendingMp4Writes[bufferIndex] = executeAsync(videoEncodeThread, () -> writeMp4Frames(buffer, repeatCount));
+    }
 
-        convertToMp4Pixels(buffer);
+    private boolean isBufferBusy(int index) {
+        Future<?> avi = pendingAviWrites[index];
+        Future<?> mp4 = pendingMp4Writes[index];
+        return (avi != null && !avi.isDone()) || (mp4 != null && !mp4.isDone());
+    }
 
+    private void writeAviFrames(ByteBuffer buffer, int repeatCount) {
         for (int i = 0; i < repeatCount; i++) {
             buffer.rewind();
             writeAviFrame(buffer);
+        }
+    }
+
+    private void writeMp4Frames(ByteBuffer buffer, int repeatCount) {
+        convertToMp4Pixels(buffer);
+        for (int i = 0; i < repeatCount; i++)
             encodeMp4Frame();
-        }
-    }
-
-    private boolean isWritePending(int index) {
-        Future<?> pending = pendingWrites[index];
-        return pending != null && !pending.isDone();
-    }
-
-    private void waitForPendingWrite(int index) {
-
-        Future<?> pending = pendingWrites[index];
-
-        if (pending == null)
-            return;
-
-        try {
-            pending.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throwException("Video frame encode failed", e);
-        }
-
-        pendingWrites[index] = null;
     }
 
     private void ensureFrameBuffers() {
@@ -344,8 +345,8 @@ class VideoRecordingSystem extends SystemPackage {
             writeFourCC("LIST");
             this.moviListSizeOffset = aviFile.getFilePointer();
             writeIntLE(0);
+            this.moviIndexBaseOffset = aviFile.getFilePointer();
             writeFourCC("movi");
-            this.moviDataStartOffset = aviFile.getFilePointer();
 
         } catch (IOException e) {
             throwException("Failed to open lossless recording file: " + file.getAbsolutePath(), e);
@@ -434,7 +435,7 @@ class VideoRecordingSystem extends SystemPackage {
             if ((frameBytes & 1) != 0)
                 aviFile.write(0);
 
-            frameOffsets.add(chunkStart - moviDataStartOffset);
+            frameOffsets.add(chunkStart - moviIndexBaseOffset);
             frameSizes.add(frameBytes);
 
         } catch (IOException e) {
