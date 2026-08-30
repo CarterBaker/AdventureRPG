@@ -350,6 +350,18 @@ class Lwjgl3GL implements GL40 {
             GL15.glBufferSubData(target, offset, bb);
     }
 
+    public void glReadPixels(int x, int y, int width, int height, int format, int type, long offset) {
+        GL11.glReadPixels(x, y, width, height, format, type, offset);
+    }
+
+    public ByteBuffer glMapBufferRange(int target, long offset, long length, int access) {
+        return GL30C.glMapBufferRange(target, offset, length, access);
+    }
+
+    public boolean glUnmapBuffer(int target) {
+        return GL15C.glUnmapBuffer(target);
+    }
+
     // Vertex Arrays \\
 
     public void glGenVertexArrays(int n, IntBuffer arrays) {

@@ -1,6 +1,7 @@
 package engine.graphics.gl;
 
 import java.nio.Buffer;
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
@@ -96,6 +97,15 @@ public interface GL20 {
         void glBufferSubData(int target, int offset, int size, Buffer data);
 
         void glDeleteBuffer(int buffer);
+
+        // Buffer readback into a bound buffer object (offset-based, not client memory)
+        void glReadPixels(int x, int y, int width, int height, int format, int type, long offset);
+
+        // Buffer Mapping \\
+
+        ByteBuffer glMapBufferRange(int target, long offset, long length, int access);
+
+        boolean glUnmapBuffer(int target);
 
         // Vertex Attributes \\
 

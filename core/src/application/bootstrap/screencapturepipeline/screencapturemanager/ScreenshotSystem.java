@@ -8,9 +8,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
 
+import application.bootstrap.renderpipeline.pbo.PboInstance;
+import application.bootstrap.renderpipeline.pbomanager.PboManager;
+import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -18,18 +23,27 @@ import engine.root.SystemPackage;
 class ScreenshotSystem extends SystemPackage {
 
     /*
-     * Captures a single still frame from a window's front buffer on demand,
-     * writing both a lossless TGA — a direct byte-for-byte dump of the raw
-     * BGRA readback, since TGA's bottom-left origin matches OpenGL's
-     * bottom-up row order with no conversion — and a standard PNG built
-     * into a recycled ARGB BufferedImage. The pixel buffer and PNG image
-     * are allocated once and only reallocated if the target window resizes.
+     * Captures a single still frame from a window's front buffer on
+     * demand. capture() only queues the GPU readback through a
+     * PboInstance, created once and reused for every future screenshot,
+     * and returns immediately — it never blocks the caller waiting on
+     * the GPU. render() polls the instance each frame until the queued
+     * read is ready (by construction, at least one frame later), then
+     * dispatches the TGA and PNG writes to the single-threaded
+     * ScreenCapture pool. A second capture() call while one is still in
+     * flight is ignored rather than queued, matching a physical shutter
+     * — one press, one photo. The pixel buffer and PNG image are
+     * allocated once and only reallocated if the target window resizes.
      */
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter
             .ofPattern(EngineSetting.CAPTURE_TIMESTAMP_PATTERN);
 
     private File screenshotDirectory;
+    private ThreadHandle encodingThread;
+    private PboManager pboManager;
+    private PboInstance pboInstance;
+    private Future<?> pendingWrite;
 
     private ByteBuffer pixelBuffer;
     private BufferedImage pngImage;
@@ -37,41 +51,95 @@ class ScreenshotSystem extends SystemPackage {
     private int bufferedWidth;
     private int bufferedHeight;
 
+    private boolean captureRequested;
+    private WindowInstance requestedWindow;
+    private int requestedWidth;
+    private int requestedHeight;
+
     // Internal \\
 
     @Override
     protected void create() {
         this.screenshotDirectory = ScreenCaptureIOUtility.resolveCaptureDirectory(
                 internal.path, EngineSetting.SCREENSHOT_OUTPUT_DIRECTORY);
+        this.encodingThread = getThreadHandleFromThreadName(EngineSetting.SCREEN_CAPTURE_THREAD_NAME);
+    }
+
+    @Override
+    protected void get() {
+        this.pboManager = get(PboManager.class);
     }
 
     // Capture \\
 
     void capture(WindowInstance window) {
 
-        int width = window.getWidth();
-        int height = window.getHeight();
+        if (captureRequested)
+            return;
 
-        ensureBuffers(width, height);
+        this.requestedWindow = window;
+        this.requestedWidth = window.getWidth();
+        this.requestedHeight = window.getHeight();
+
+        ensureBuffers(requestedWidth, requestedHeight);
+
+        if (pboInstance == null)
+            pboInstance = pboManager.createPbo(window, requestedWidth, requestedHeight);
 
         internal.windowPlatform.makeContextCurrent(window.getGLWindow());
-        pixelBuffer.clear();
-        ScreenCaptureGLUtility.readFrontBuffer(width, height, pixelBuffer);
+        pboInstance.queue(window, requestedWidth, requestedHeight);
         internal.windowPlatform.restoreMainContext();
 
-        // glReadPixels writes into the buffer's backing memory directly and
-        // never advances its position. clear() already leaves position at 0
-        // and limit at capacity — exactly the full frame — so the buffer is
-        // immediately ready to read from. Flipping here would incorrectly
-        // collapse limit back down to the untouched position of 0.
+        this.captureRequested = true;
+    }
+
+    @Override
+    protected void render() {
+
+        if (!captureRequested)
+            return;
+
+        waitForPendingWrite();
+
+        internal.windowPlatform.makeContextCurrent(requestedWindow.getGLWindow());
+        boolean hasFrame = pboInstance.tryRetrieve(pixelBuffer);
+        internal.windowPlatform.restoreMainContext();
+
+        if (!hasFrame)
+            return;
+
+        this.captureRequested = false;
+        dispatchWrite(requestedWidth, requestedHeight);
+    }
+
+    private void dispatchWrite(int width, int height) {
 
         String timestamp = TIMESTAMP_FORMAT.format(LocalDateTime.now());
         String baseName = EngineSetting.SCREENSHOT_FILE_PREFIX + timestamp;
 
-        writeTga(new File(screenshotDirectory, baseName + "." + EngineSetting.SCREENSHOT_LOSSLESS_EXTENSION),
-                width, height);
-        writePng(new File(screenshotDirectory, baseName + "." + EngineSetting.SCREENSHOT_STANDARD_FORMAT),
-                width, height);
+        File tgaFile = new File(screenshotDirectory, baseName + "." + EngineSetting.SCREENSHOT_LOSSLESS_EXTENSION);
+        File pngFile = new File(screenshotDirectory, baseName + "." + EngineSetting.SCREENSHOT_STANDARD_FORMAT);
+
+        pendingWrite = executeAsync(encodingThread, () -> writeCapturedFrame(tgaFile, pngFile, width, height));
+    }
+
+    private void writeCapturedFrame(File tgaFile, File pngFile, int width, int height) {
+        writeTga(tgaFile, width, height);
+        writePng(pngFile, width, height);
+    }
+
+    private void waitForPendingWrite() {
+
+        if (pendingWrite == null)
+            return;
+
+        try {
+            pendingWrite.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throwException("Screenshot encode failed", e);
+        }
+
+        pendingWrite = null;
     }
 
     // Buffers \\

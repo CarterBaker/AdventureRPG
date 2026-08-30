@@ -12,6 +12,12 @@ public class EngineSetting {
         public static final int GL_UNIFORM_BUFFER = 0x8A11;
         public static final int GL_DYNAMIC_DRAW = 0x88E8;
         public static final int GL_STATIC_DRAW = 0x88E4;
+        public static final int GL_PIXEL_PACK_BUFFER = 0x88EB;
+        public static final int GL_STREAM_READ = 0x88E1;
+
+        // GL — Buffer Mapping \\
+
+        public static final int GL_MAP_READ_BIT = 0x0001;
 
         // GL — Primitives \\
 
@@ -106,6 +112,13 @@ public class EngineSetting {
 
         public static final String VERSION = "0.0.0.1a";
         public static final int LOADER_BATCH_SIZE = 32;
+
+        // Frame Rate \\
+
+        public static final int TARGET_FRAME_RATE = 60;
+        public static final long NANOS_PER_SECOND = 1_000_000_000L;
+        public static final long NANOS_PER_MILLI = 1_000_000L;
+        public static final long FRAME_PACING_SLEEP_THRESHOLD_NANOS = 2_000_000L;
 
         // Registry \\
 
@@ -863,6 +876,7 @@ public class EngineSetting {
         public static final String RECORDING_LOSSLESS_EXTENSION = "avi";
         public static final String SCREEN_CAPTURE_THREAD_NAME = "ScreenCapture";
         public static final int RECORDING_FRAME_RATE = 60;
+        public static final int RECORDING_MAX_CATCHUP_FRAMES = 5;
         public static final int BYTES_PER_PIXEL_BGRA = 4;
 
         // Screenshot — TGA Format \\

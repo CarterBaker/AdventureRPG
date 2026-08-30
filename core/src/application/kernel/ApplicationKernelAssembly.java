@@ -1,5 +1,6 @@
 package application.kernel;
 
+import application.kernel.frameratepipeline.FrameRatePipeline;
 import application.kernel.inputpipeline.InputPipeline;
 import application.kernel.threadpipeline.ThreadPipeline;
 import application.kernel.windowpipeline.WindowPipeline;
@@ -16,5 +17,6 @@ public class ApplicationKernelAssembly extends AssemblyPackage {
         create(ThreadPipeline.class);
         create(WindowPipeline.class);
         create(InputPipeline.class);
+        create(FrameRatePipeline.class);
     }
 }

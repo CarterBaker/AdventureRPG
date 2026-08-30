@@ -2,6 +2,7 @@ package engine.root;
 
 import java.util.concurrent.Future;
 
+import application.kernel.frameratepipeline.frameratemanager.FrameRateManager;
 import application.kernel.inputpipeline.InputPipeline;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
@@ -36,6 +37,7 @@ public abstract class EngineUtility {
     static InputManager inputManager;
     static ThreadManager threadManager;
     static WindowManager windowManager;
+    static FrameRateManager frameRateManager;
 
     public static void assignInputManager(InputManager input) {
 
@@ -59,6 +61,14 @@ public abstract class EngineUtility {
             throwException("Illegal reassignment of window manager attempted during runtime");
 
         windowManager = input;
+    }
+
+    public static void assignFrameRateManager(FrameRateManager input) {
+
+        if (frameRateManager != null)
+            throwException("Illegal reassignment of frame rate manager attempted during runtime");
+
+        frameRateManager = input;
     }
 
     // Thread \\

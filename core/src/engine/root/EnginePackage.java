@@ -457,12 +457,14 @@ public class EnginePackage extends ManagerPackage {
     }
 
     private final void updateCycle() {
+        EngineUtility.frameRateManager.beginFrame();
         this.flushPendingContexts();
         this.internalUpdate();
         this.internalFixedUpdate();
         this.internalLateUpdate();
         this.internalRender();
         this.internalDraw();
+        EngineUtility.frameRateManager.capFrameRate();
     }
 
     private final void exitCycle() {
@@ -720,6 +722,10 @@ public class EnginePackage extends ManagerPackage {
 
     public final float getDeltaTime() {
         return this.deltaTime;
+    }
+
+    public final int getMeasuredFPS() {
+        return EngineUtility.frameRateManager.getMeasuredFPS();
     }
 
     public final long getTime() {
