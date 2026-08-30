@@ -27,25 +27,27 @@ class VideoRecordingSystem extends SystemPackage {
 
     /*
      * Owns a single recording session at a time, toggled on and off by
-     * ScreenCaptureManager. render() advances a nanosecond accumulator
-     * against RECORDING_FRAME_RATE, entirely independent of however fast
-     * the engine itself is actually rendering, and captures a frame only
-     * once the accumulator has banked a full interval — duplicating the
-     * captured frame to catch up if the engine fell behind (clamped by
-     * RECORDING_MAX_CATCHUP_FRAMES) and capturing nothing at all if the
-     * engine is outrunning the target rate. Each capture is driven
-     * through a single PboInstance, created once and reused across every
-     * recording session, so the front-buffer readback never stalls the
-     * render thread waiting on the GPU — the frame handed to the encoder
-     * each call is the one queued roughly one capture interval earlier,
-     * a fixed and imperceptible latency. Captured frames are handed to
-     * the single-threaded ScreenCapture pool, which appends them to an
-     * uncompressed AVI — the lossless track — and encodes them into the
-     * standard MP4 with JCodec's pure-Java H.264 encoder. Alternating
-     * buffers let the readback for frame N+1 proceed while frame N is
-     * still being written to disk, relying on the ScreenCapture thread
-     * being single-threaded so frames are never reordered on either
-     * output.
+     * ScreenCaptureManager. update() only advances a nanosecond accumulator
+     * against RECORDING_FRAME_RATE, entirely independent of the engine's
+     * own frame rate, and banks how many frames are owed once the
+     * accumulator clears a full interval, capped per call by
+     * RECORDING_MAX_CATCHUP_FRAMES — pure bookkeeping, it never touches GL.
+     * flush(), called exactly once per frame by ScreenCaptureManager from
+     * the engine's own draw() authority, is the only place a frame is ever
+     * pulled off the GPU. If the single-threaded ScreenCapture pool is
+     * still busy encoding the buffer slot flush() needs, the capture is
+     * skipped rather than blocked — the owed count carries forward, capped
+     * by RECORDING_MAX_OWED_FRAMES, and is folded into the next successful
+     * capture's repeat count so the written video still matches real
+     * elapsed time without ever stalling the engine. Captures rotate
+     * through a fixed pool of RECORDING_FRAME_BUFFER_COUNT pre-allocated
+     * buffers rather than a single pair, giving the background encoder
+     * several frames of slack before flush() would ever need to skip one.
+     * Captured frames are handed to the ScreenCapture thread, which
+     * appends them to an uncompressed AVI — the lossless track — and
+     * encodes them into the standard MP4 with JCodec's pure-Java H.264
+     * encoder, both driven off the same duplicated frame count so the two
+     * outputs always agree in length.
      */
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter
@@ -68,14 +70,16 @@ class VideoRecordingSystem extends SystemPackage {
     private int height;
     private long frameCount;
 
-    private final ByteBuffer[] frameBuffers = new ByteBuffer[2];
-    private final Future<?>[] pendingWrites = new Future<?>[2];
+    private final ByteBuffer[] frameBuffers = new ByteBuffer[EngineSetting.RECORDING_FRAME_BUFFER_COUNT];
+    private final Future<?>[] pendingWrites = new Future<?>[EngineSetting.RECORDING_FRAME_BUFFER_COUNT];
     private int activeBufferIndex;
 
     // Pacing — decouples capture cadence from actual render cadence
     private long lastFrameNanos;
     private long accumulatedNanos;
     private long captureIntervalNanos;
+    private int pendingCaptureFrames;
+    private int owedFrames;
 
     private final byte[] aviScratch = new byte[Integer.BYTES];
     private RandomAccessFile aviFile;
@@ -105,15 +109,44 @@ class VideoRecordingSystem extends SystemPackage {
         this.pboManager = get(PboManager.class);
     }
 
-    // Render \\
+    // Pacing \\
 
     @Override
-    protected void render() {
+    protected void update() {
 
         if (!recording)
             return;
 
         advanceCaptureClock();
+    }
+
+    private void advanceCaptureClock() {
+
+        long now = System.nanoTime();
+        accumulatedNanos += now - lastFrameNanos;
+        lastFrameNanos = now;
+
+        int framesDue = 0;
+
+        while (accumulatedNanos >= captureIntervalNanos && framesDue < EngineSetting.RECORDING_MAX_CATCHUP_FRAMES) {
+            accumulatedNanos -= captureIntervalNanos;
+            framesDue++;
+        }
+
+        pendingCaptureFrames += framesDue;
+    }
+
+    // Draw Authority \\
+
+    void flush() {
+
+        if (!recording || pendingCaptureFrames <= 0)
+            return;
+
+        int framesToCapture = pendingCaptureFrames;
+        pendingCaptureFrames = 0;
+
+        captureFrame(framesToCapture);
     }
 
     // Toggle \\
@@ -134,6 +167,8 @@ class VideoRecordingSystem extends SystemPackage {
         this.height = window.getHeight();
         this.frameCount = 0;
         this.activeBufferIndex = 0;
+        this.pendingCaptureFrames = 0;
+        this.owedFrames = 0;
         this.frameOffsets.clear();
         this.frameSizes.clear();
         this.lastFrameNanos = System.nanoTime();
@@ -159,41 +194,29 @@ class VideoRecordingSystem extends SystemPackage {
 
         drainPendingCapture();
 
-        waitForPendingWrite(0);
-        waitForPendingWrite(1);
+        for (int i = 0; i < pendingWrites.length; i++)
+            waitForPendingWrite(i);
 
         closeAviFile();
         closeMp4Encoder();
 
         this.activeWindow = null;
         this.accumulatedNanos = 0L;
+        this.pendingCaptureFrames = 0;
+        this.owedFrames = 0;
     }
 
     // Capture \\
 
-    private void advanceCaptureClock() {
-
-        long now = System.nanoTime();
-        accumulatedNanos += now - lastFrameNanos;
-        lastFrameNanos = now;
-
-        int framesDue = 0;
-
-        while (accumulatedNanos >= captureIntervalNanos && framesDue < EngineSetting.RECORDING_MAX_CATCHUP_FRAMES) {
-            accumulatedNanos -= captureIntervalNanos;
-            framesDue++;
-        }
-
-        if (accumulatedNanos >= captureIntervalNanos)
-            accumulatedNanos = 0L;
-
-        if (framesDue > 0)
-            captureFrame(framesDue);
-    }
-
     private void captureFrame(int repeatCount) {
 
-        waitForPendingWrite(activeBufferIndex);
+        if (isWritePending(activeBufferIndex)) {
+            owedFrames = Math.min(owedFrames + repeatCount, EngineSetting.RECORDING_MAX_OWED_FRAMES);
+            return;
+        }
+
+        int totalRepeat = repeatCount + owedFrames;
+        owedFrames = 0;
 
         ByteBuffer buffer = frameBuffers[activeBufferIndex];
 
@@ -201,19 +224,24 @@ class VideoRecordingSystem extends SystemPackage {
         boolean hasFrame = pboInstance.capture(activeWindow, width, height, buffer);
         internal.windowPlatform.restoreMainContext();
 
-        if (!hasFrame)
+        if (!hasFrame) {
+            owedFrames = Math.min(totalRepeat, EngineSetting.RECORDING_MAX_OWED_FRAMES);
             return;
+        }
 
         int bufferIndex = activeBufferIndex;
-        pendingWrites[bufferIndex] = executeAsync(encodingThread, () -> writeFrameRepeated(buffer, repeatCount));
+        pendingWrites[bufferIndex] = executeAsync(encodingThread, () -> writeFrameRepeated(buffer, totalRepeat));
 
-        frameCount += repeatCount;
-        activeBufferIndex = 1 - activeBufferIndex;
+        frameCount += totalRepeat;
+        activeBufferIndex = (activeBufferIndex + 1) % frameBuffers.length;
     }
 
     private void drainPendingCapture() {
 
         waitForPendingWrite(activeBufferIndex);
+
+        int totalRepeat = 1 + owedFrames;
+        owedFrames = 0;
 
         ByteBuffer buffer = frameBuffers[activeBufferIndex];
 
@@ -225,8 +253,8 @@ class VideoRecordingSystem extends SystemPackage {
             return;
 
         int bufferIndex = activeBufferIndex;
-        pendingWrites[bufferIndex] = executeAsync(encodingThread, () -> writeFrameRepeated(buffer, 1));
-        frameCount += 1;
+        pendingWrites[bufferIndex] = executeAsync(encodingThread, () -> writeFrameRepeated(buffer, totalRepeat));
+        frameCount += totalRepeat;
     }
 
     private void writeFrameRepeated(ByteBuffer buffer, int repeatCount) {
@@ -238,6 +266,11 @@ class VideoRecordingSystem extends SystemPackage {
             writeAviFrame(buffer);
             encodeMp4Frame();
         }
+    }
+
+    private boolean isWritePending(int index) {
+        Future<?> pending = pendingWrites[index];
+        return pending != null && !pending.isDone();
     }
 
     private void waitForPendingWrite(int index) {
@@ -263,8 +296,8 @@ class VideoRecordingSystem extends SystemPackage {
         if (frameBuffers[0] != null && frameBuffers[0].capacity() == requiredCapacity)
             return;
 
-        frameBuffers[0] = ByteBuffer.allocateDirect(requiredCapacity);
-        frameBuffers[1] = ByteBuffer.allocateDirect(requiredCapacity);
+        for (int i = 0; i < frameBuffers.length; i++)
+            frameBuffers[i] = ByteBuffer.allocateDirect(requiredCapacity);
 
         this.mp4FrameImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         this.mp4FramePixels = ((DataBufferInt) mp4FrameImage.getRaster().getDataBuffer()).getData();

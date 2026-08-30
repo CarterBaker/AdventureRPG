@@ -877,6 +877,8 @@ public class EngineSetting {
         public static final String SCREEN_CAPTURE_THREAD_NAME = "ScreenCapture";
         public static final int RECORDING_FRAME_RATE = 60;
         public static final int RECORDING_MAX_CATCHUP_FRAMES = 5;
+        public static final int RECORDING_MAX_OWED_FRAMES = 30;
+        public static final int RECORDING_FRAME_BUFFER_COUNT = 4;
         public static final int BYTES_PER_PIXEL_BGRA = 4;
 
         // Screenshot — TGA Format \\

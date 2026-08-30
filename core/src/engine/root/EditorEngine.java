@@ -1,6 +1,7 @@
 package engine.root;
 
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
+import application.bootstrap.screencapturepipeline.screencapturemanager.ScreenCaptureManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.editor.EditorWindowMain;
 
@@ -13,7 +14,11 @@ public class EditorEngine extends EnginePackage {
      * BootstrapAssemblies, then creates the editor context paired with the
      * main window in awake(). draw() flushes the main window only — detached
      * windows flush themselves in their own ApplicationListener.render()
-     * callback after the engine's full push phase is complete.
+     * callback after the engine's full push phase is complete — and is also
+     * the engine's sole authority over end-of-frame GPU work: it is the only
+     * place ScreenCaptureManager.flush() is ever called, after the frame's
+     * own render pass has fully drawn and presented, so screen capture never
+     * touches the GPU from anywhere else in the frame.
      */
 
     // Kernel
@@ -30,6 +35,7 @@ public class EditorEngine extends EnginePackage {
     // Render
     private WindowManager windowManager;
     private RenderManager renderManager;
+    private ScreenCaptureManager screenCaptureManager;
 
     // Kernel \\
 
@@ -57,6 +63,7 @@ public class EditorEngine extends EnginePackage {
         // Render
         this.windowManager = get(WindowManager.class);
         this.renderManager = get(RenderManager.class);
+        this.screenCaptureManager = get(ScreenCaptureManager.class);
     }
 
     // Awake \\
@@ -71,5 +78,6 @@ public class EditorEngine extends EnginePackage {
     @Override
     protected void draw() {
         renderManager.draw();
+        screenCaptureManager.flush();
     }
 }

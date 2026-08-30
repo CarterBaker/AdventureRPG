@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
@@ -23,17 +22,20 @@ import engine.root.SystemPackage;
 class ScreenshotSystem extends SystemPackage {
 
     /*
-     * Captures a single still frame from a window's front buffer on
-     * demand. capture() only queues the GPU readback through a
-     * PboInstance, created once and reused for every future screenshot,
-     * and returns immediately — it never blocks the caller waiting on
-     * the GPU. render() polls the instance each frame until the queued
-     * read is ready (by construction, at least one frame later), then
-     * dispatches the TGA and PNG writes to the single-threaded
-     * ScreenCapture pool. A second capture() call while one is still in
-     * flight is ignored rather than queued, matching a physical shutter
-     * — one press, one photo. The pixel buffer and PNG image are
-     * allocated once and only reallocated if the target window resizes.
+     * Captures a single still frame from a window's front buffer on demand.
+     * capture() only records intent — it never touches GL, so it is safe to
+     * call from any phase of any frame — and is ignored while a capture is
+     * already in flight or its previous write hasn't finished, matching a
+     * physical shutter: one press, one photo. All GPU work happens inside
+     * flush(), called exactly once per frame by ScreenCaptureManager from
+     * the engine's own draw() authority: one call queues the GPU readback
+     * through a PboInstance, created once and reused for every future
+     * screenshot, and a later call polls it once the queued read is ready
+     * (by construction, at least one frame later) before dispatching the
+     * TGA and PNG writes to the single-threaded ScreenCapture pool — every
+     * step is a non-blocking poll, so a slow disk can never stall a frame.
+     * The pixel buffer and PNG image are allocated once and only
+     * reallocated if the target window resizes.
      */
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter
@@ -52,6 +54,7 @@ class ScreenshotSystem extends SystemPackage {
     private int bufferedHeight;
 
     private boolean captureRequested;
+    private boolean awaitingReadback;
     private WindowInstance requestedWindow;
     private int requestedWidth;
     private int requestedHeight;
@@ -70,36 +73,53 @@ class ScreenshotSystem extends SystemPackage {
         this.pboManager = get(PboManager.class);
     }
 
-    // Capture \\
+    // Capture Request \\
 
     void capture(WindowInstance window) {
 
-        if (captureRequested)
+        if (captureRequested || awaitingReadback)
+            return;
+
+        if (pendingWrite != null && !pendingWrite.isDone())
             return;
 
         this.requestedWindow = window;
-        this.requestedWidth = window.getWidth();
-        this.requestedHeight = window.getHeight();
+        this.captureRequested = true;
+    }
+
+    // Draw Authority \\
+
+    void flush() {
+
+        if (awaitingReadback) {
+            retrieveReadback();
+            return;
+        }
+
+        if (captureRequested)
+            queueReadback();
+    }
+
+    private void queueReadback() {
+
+        captureRequested = false;
+
+        this.requestedWidth = requestedWindow.getWidth();
+        this.requestedHeight = requestedWindow.getHeight();
 
         ensureBuffers(requestedWidth, requestedHeight);
 
         if (pboInstance == null)
-            pboInstance = pboManager.createPbo(window, requestedWidth, requestedHeight);
+            pboInstance = pboManager.createPbo(requestedWindow, requestedWidth, requestedHeight);
 
-        internal.windowPlatform.makeContextCurrent(window.getGLWindow());
-        pboInstance.queue(window, requestedWidth, requestedHeight);
+        internal.windowPlatform.makeContextCurrent(requestedWindow.getGLWindow());
+        pboInstance.queue(requestedWindow, requestedWidth, requestedHeight);
         internal.windowPlatform.restoreMainContext();
 
-        this.captureRequested = true;
+        this.awaitingReadback = true;
     }
 
-    @Override
-    protected void render() {
-
-        if (!captureRequested)
-            return;
-
-        waitForPendingWrite();
+    private void retrieveReadback() {
 
         internal.windowPlatform.makeContextCurrent(requestedWindow.getGLWindow());
         boolean hasFrame = pboInstance.tryRetrieve(pixelBuffer);
@@ -108,7 +128,7 @@ class ScreenshotSystem extends SystemPackage {
         if (!hasFrame)
             return;
 
-        this.captureRequested = false;
+        this.awaitingReadback = false;
         dispatchWrite(requestedWidth, requestedHeight);
     }
 
@@ -126,20 +146,6 @@ class ScreenshotSystem extends SystemPackage {
     private void writeCapturedFrame(File tgaFile, File pngFile, int width, int height) {
         writeTga(tgaFile, width, height);
         writePng(pngFile, width, height);
-    }
-
-    private void waitForPendingWrite() {
-
-        if (pendingWrite == null)
-            return;
-
-        try {
-            pendingWrite.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throwException("Screenshot encode failed", e);
-        }
-
-        pendingWrite = null;
     }
 
     // Buffers \\
