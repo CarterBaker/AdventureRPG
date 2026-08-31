@@ -1,5 +1,6 @@
 {
     "map_color": "#FFFFFF",
+    "terrain_height_scale": 0,
     "weathers": {
         "Spring": [
             { "name": "standard/SunnyWeather", "chance": 25 },

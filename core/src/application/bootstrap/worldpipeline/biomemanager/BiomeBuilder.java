@@ -28,11 +28,15 @@ class BiomeBuilder extends BuilderPackage {
      * keys appear in the "weathers" object. Also reads the optional
      * "map_color" hex RGB value this biome matches against the world PNG,
      * the optional "probable_biomes" list of alternate biomes that may
-     * replace this one during generation, and the optional "surface_block" /
+     * replace this one during generation, the optional "surface_block" /
      * "subsurface_block" / "underwater_block" names WorldGenerationManager
-     * dresses this biome's terrain with, each falling back to a sensible
-     * EngineSetting default when omitted — all validated fully at load time
-     * so a malformed biome file fails at boot rather than mid-game.
+     * dresses this biome's terrain with, and the optional
+     * "terrain_height_scale" multiplier WorldGenerationManager applies to
+     * that biome's macro and detail terrain height — each falling back to a
+     * sensible EngineSetting default when omitted, so an unmodified biome
+     * file generates exactly the terrain it always has — all validated
+     * fully at load time so a malformed biome file fails at boot rather
+     * than mid-game.
      */
 
     // Build \\
@@ -63,11 +67,16 @@ class BiomeBuilder extends BuilderPackage {
         String underwaterBlockName = parseBlockName(
                 json, "underwater_block", EngineSetting.DEFAULT_UNDERWATER_BLOCK_NAME);
 
+        float terrainHeightScale = json.has("terrain_height_scale")
+                ? json.get("terrain_height_scale").getAsFloat()
+                : EngineSetting.DEFAULT_BIOME_TERRAIN_HEIGHT_SCALE;
+
         BiomeData biomeData = new BiomeData(
                 biomeName, biomeID, Color.WHITE,
                 seasonWeatherNames, seasonWeatherChances, seasonNames,
                 mapColor, probableBiomeNames, probableBiomeChances,
-                surfaceBlockName, subsurfaceBlockName, underwaterBlockName);
+                surfaceBlockName, subsurfaceBlockName, underwaterBlockName,
+                terrainHeightScale);
 
         BiomeHandle biomeHandle = create(BiomeHandle.class);
         biomeHandle.constructor(biomeData);

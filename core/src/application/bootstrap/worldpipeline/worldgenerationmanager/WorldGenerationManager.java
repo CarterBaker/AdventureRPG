@@ -39,14 +39,18 @@ public class WorldGenerationManager extends ManagerPackage {
      * subchunk once its neighbors are equally solid, since two adjacent
      * FULL-geometry blocks never expose a face to each other regardless of
      * their exact ID. Ground height itself comes from TerrainShapeUtility and
-     * is fully independent of biome. Chunks generate concurrently on separate
-     * worker threads, so the surface-block cache below is a ConcurrentHashMap
-     * rather than a locked map.
+     * is scaled by the resolved biome's terrainHeightScale — the only biome
+     * input this manager feeds into that otherwise biome-blind shape math.
+     * Chunks generate concurrently on separate worker threads, so the
+     * surface-block cache below is a ConcurrentHashMap rather than a locked
+     * map.
      */
 
     @FunctionalInterface
     private interface TerrainGridSampler {
-        float sample(long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks);
+        float sample(
+                long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+                float terrainHeightScale);
     }
 
     // Internal
@@ -107,6 +111,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
         BiomeHandle biomeHandle = biomeManager.getBiome(worldHandle, chunkCoordinate);
         TerrainSurfaceProfile profile = resolveSurfaceProfile(biomeHandle);
+        float terrainHeightScale = biomeHandle.getTerrainHeightScale();
 
         column.biomeID = biomeHandle.getBiomeID();
         column.surfaceBlockID = profile.surfaceBlockID;
@@ -119,10 +124,12 @@ public class WorldGenerationManager extends ManagerPackage {
         int detailSamplesPerAxis = TerrainColumnAsyncContainer.DETAIL_SAMPLES_PER_AXIS;
 
         sampleGrid(column.macroShapeGridBlocks, TerrainShapeUtility::computeMacroShapeBlocks, seed,
-                worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks, macroStride, macroSamplesPerAxis);
+                worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks, macroStride, macroSamplesPerAxis,
+                terrainHeightScale);
 
         sampleGrid(column.detailGridBlocks, TerrainShapeUtility::computeDetailBlocks, seed,
-                worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks, detailStride, detailSamplesPerAxis);
+                worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks, detailStride, detailSamplesPerAxis,
+                terrainHeightScale);
 
         int maxGroundHeight = Integer.MIN_VALUE;
         int minGroundHeight = Integer.MAX_VALUE;
@@ -188,7 +195,8 @@ public class WorldGenerationManager extends ManagerPackage {
             double worldWidthBlocks,
             double worldHeightBlocks,
             int stride,
-            int samplesPerAxis) {
+            int samplesPerAxis,
+            float terrainHeightScale) {
 
         for (int gz = 0; gz < samplesPerAxis; gz++) {
             for (int gx = 0; gx < samplesPerAxis; gx++) {
@@ -197,7 +205,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 double sampleWorldZ = worldOffsetZ + gz * stride;
 
                 grid[gz * samplesPerAxis + gx] = sampler.sample(
-                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks);
+                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks, terrainHeightScale);
             }
         }
     }

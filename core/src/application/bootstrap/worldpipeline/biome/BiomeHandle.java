@@ -96,4 +96,8 @@ public class BiomeHandle extends HandlePackage {
     public String getUnderwaterBlockName() {
         return biomeData.getUnderwaterBlockName();
     }
+
+    public float getTerrainHeightScale() {
+        return biomeData.getTerrainHeightScale();
+    }
 }

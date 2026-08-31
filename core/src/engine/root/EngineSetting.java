@@ -516,6 +516,7 @@ public class EngineSetting {
 
         // Terrain Generation — Surface Detail \\
 
+        public static final float DEFAULT_BIOME_TERRAIN_HEIGHT_SCALE = 1.0f;
         public static final double TERRAIN_DETAIL_WAVELENGTH_BLOCKS = 40.0;
         public static final int TERRAIN_DETAIL_OCTAVES = 3;
         public static final float TERRAIN_DETAIL_PERSISTENCE = 0.5f;

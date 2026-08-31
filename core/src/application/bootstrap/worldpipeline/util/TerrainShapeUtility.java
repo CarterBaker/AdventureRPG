@@ -28,7 +28,14 @@ public final class TerrainShapeUtility extends EngineUtility {
          * either at full per-block resolution — see
          * EngineSetting.TERRAIN_MACRO_SAMPLE_STRIDE_BLOCKS and
          * TERRAIN_DETAIL_SAMPLE_STRIDE_BLOCKS for the stride each layer uses
-         * and the error-margin reasoning behind it.
+         * and the error-margin reasoning behind it. terrainHeightScale is the
+         * one biome-supplied knob into this otherwise biome-blind pipeline —
+         * it scales the macro shape's deviation from sea level and the
+         * detail layer's full amplitude alike, so a biome carrying 1.0
+         * reproduces the exact height this class has always produced, and a
+         * biome carrying 0.0 collapses to sea level everywhere with zero
+         * variance, with no branch anywhere in this class aware that's what
+         * happened.
          */
 
         private static final LinearSpline CONTINENTALNESS_HEIGHT_SPLINE = new LinearSpline(
@@ -48,7 +55,8 @@ public final class TerrainShapeUtility extends EngineUtility {
         }
 
         public static float computeMacroShapeBlocks(
-                        long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks) {
+                        long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+                        float terrainHeightScale) {
 
                 double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
                 double cosAngle = Math.cos(spatialAngle);
@@ -84,11 +92,15 @@ public final class TerrainShapeUtility extends EngineUtility {
                 float erosionAmplitude = EROSION_AMPLITUDE_SPLINE.evaluate(erosion);
                 float peaksValleysContribution = PEAKS_VALLEYS_SPLINE.evaluate(ridge) * erosionAmplitude;
 
-                return baseHeight + peaksValleysContribution;
+                float heightAboveSeaLevel = (baseHeight - EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS)
+                                + peaksValleysContribution;
+
+                return EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + heightAboveSeaLevel * terrainHeightScale;
         }
 
         public static float computeDetailBlocks(
-                        long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks) {
+                        long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+                        float terrainHeightScale) {
 
                 double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
                 double cosAngle = Math.cos(spatialAngle);
@@ -102,7 +114,7 @@ public final class TerrainShapeUtility extends EngineUtility {
                                 EngineSetting.TERRAIN_DETAIL_PERSISTENCE,
                                 EngineSetting.TERRAIN_DETAIL_LACUNARITY);
 
-                return detail * EngineSetting.TERRAIN_DETAIL_AMPLITUDE_BLOCKS;
+                return detail * EngineSetting.TERRAIN_DETAIL_AMPLITUDE_BLOCKS * terrainHeightScale;
         }
 
         public static int finalizeGroundHeightBlocks(float macroShapeBlocks, float detailBlocks) {
