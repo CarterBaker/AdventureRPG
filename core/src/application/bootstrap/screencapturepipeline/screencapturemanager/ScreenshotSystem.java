@@ -89,6 +89,8 @@ class ScreenshotSystem extends SystemPackage {
 
         this.requestedWindow = window;
         this.captureRequested = true;
+
+        timeStampLog("Screenshot requested for window: " + window.getWindowID());
     }
 
     // Draw Authority \\
@@ -121,6 +123,8 @@ class ScreenshotSystem extends SystemPackage {
         internal.windowPlatform.restoreMainContext();
 
         this.awaitingReadback = true;
+
+        timeStampLog("Screenshot GPU readback queued (" + requestedWidth + "x" + requestedHeight + ")");
     }
 
     private void retrieveReadback() {
@@ -133,6 +137,9 @@ class ScreenshotSystem extends SystemPackage {
             return;
 
         this.awaitingReadback = false;
+
+        timeStampLog("Screenshot GPU readback complete — dispatching encode");
+
         dispatchWrite(requestedWidth, requestedHeight);
     }
 
@@ -145,11 +152,14 @@ class ScreenshotSystem extends SystemPackage {
         File pngFile = new File(screenshotDirectory, baseName + "." + EngineSetting.SCREENSHOT_STANDARD_FORMAT);
 
         pendingWrite = executeAsync(encodingThread, () -> writeCapturedFrame(tgaFile, pngFile, width, height));
+
+        log("Dispatched screenshot encode: " + baseName);
     }
 
     private void writeCapturedFrame(File tgaFile, File pngFile, int width, int height) {
         writeTga(tgaFile, width, height);
         writePng(pngFile, width, height);
+        timeStampLog("Screenshot saved: " + pngFile.getName());
     }
 
     // Shutdown \\
@@ -159,6 +169,8 @@ class ScreenshotSystem extends SystemPackage {
 
         if (pendingWrite == null)
             return;
+
+        log("Waiting for pending screenshot write to finish before shutdown...");
 
         try {
             pendingWrite.get();

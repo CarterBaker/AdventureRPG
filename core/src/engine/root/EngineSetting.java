@@ -875,13 +875,18 @@ public class EngineSetting {
         public static final String SCREENSHOT_LOSSLESS_EXTENSION = "tga";
         public static final String RECORDING_STANDARD_EXTENSION = "mp4";
         public static final String RECORDING_LOSSLESS_EXTENSION = "avi";
+        public static final String RECORDING_CONVERSION_TEMP_SUFFIX = ".converting";
         public static final String SCREEN_CAPTURE_THREAD_NAME = "ScreenCapture";
         public static final String VIDEO_ENCODE_THREAD_NAME = "VideoEncode";
         public static final String VIDEO_WRITE_THREAD_NAME = "VideoWrite";
-        public static final int RECORDING_FRAME_RATE = 60;
-        public static final int RECORDING_MAX_CATCHUP_FRAMES = 5;
-        public static final int RECORDING_MAX_OWED_FRAMES = RECORDING_FRAME_RATE * 2;
-        public static final int RECORDING_FRAME_BUFFER_COUNT = 8;
+        public static final int RECORDING_LOSSLESS_FRAME_RATE = 60;
+        public static final int RECORDING_STANDARD_FRAME_RATE = 30;
+        public static final int RECORDING_STANDARD_FRAME_SAMPLE_STRIDE = RECORDING_LOSSLESS_FRAME_RATE
+                        / RECORDING_STANDARD_FRAME_RATE;
+        public static final int RECORDING_STANDARD_MAX_WIDTH = 1280;
+        public static final int RECORDING_CAPTURE_MAX_OWED_FRAMES = RECORDING_LOSSLESS_FRAME_RATE * 2;
+        public static final int RECORDING_LOSSLESS_MAX_OWED_FRAMES = RECORDING_LOSSLESS_FRAME_RATE * 2;
+        public static final int RECORDING_LOSSLESS_BUFFER_COUNT = 4;
         public static final int BYTES_PER_PIXEL_BGRA = 4;
 
         // PBO Readback \\
@@ -900,4 +905,10 @@ public class EngineSetting {
         public static final String AVI_UNCOMPRESSED_FOURCC = "DIB ";
         public static final int AVI_FLAG_HAS_INDEX = 0x00000010;
         public static final int AVI_INDEX_FLAG_KEYFRAME = 0x00000010;
+        public static final int AVI_MAIN_HEADER_LENGTH_BYTES = 56;
+        public static final int AVI_STREAM_HEADER_LENGTH_BYTES = 56;
+        public static final int AVI_STREAM_FORMAT_LENGTH_BYTES = 40;
+        public static final int AVI_INDEX_ENTRY_LENGTH_BYTES = 16;
+        public static final int AVI_FRAME_CHUNK_HEADER_LENGTH_BYTES = 8;
+        public static final int RIFF_CHUNK_HEADER_LENGTH_BYTES = 8;
 }
