@@ -30,20 +30,20 @@ out float vColor;
 #include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
-// Tessellation evaluation shader for terrain: builds the flat per-vertex world
-// position for the current ring (near bevel/height/jitter, or far distant
-// rise), then bends the fully displaced result through the player-relative
-// world curvature exactly once at the end. Near-terrain jitter samples the
-// shared NaturalNoiseData lattice baked once on the CPU, so physics reading
-// that same table can never land on a different surface than what renders.
-// Ring gating is resolved per actual vertex position via
-// computeDistanceFromCenterSq() (SurfaceTessellationTier.glsl) rather than
-// the old shared-per-slot u_distanceFromCenter, so the two vertices on a
-// shared edge between an individually rendered chunk and a mega always
-// agree on their own true distance from the player — bevel, height,
-// jitter, and distant rise can no longer disagree across that seam the
-// way they could when every chunk folded into a mega inherited the mega
-// origin's single distance value instead of its own.
+/*
+ * Tessellation evaluation shader for terrain. Builds the flat per-vertex world
+ * position for the current ring (near bevel/height/jitter, or far distant
+ * rise), then bends the fully displaced result through the player-relative
+ * world curvature once at the end. Ring gating, the bevel push, and the
+ * height-map taper are all resolved per actual vertex position via
+ * computeDistanceFromCenterSq() and the same per-cell convex-exposed masks
+ * baked by FullGeometryBranch — a mask bit is set only where two faces of
+ * genuinely different geometry meet, so a flush join between two coplanar
+ * quads (a greedy-mesh size split, a biome/texture split, a chunk seam)
+ * reads as flush on both sides and neither bevels nor tapers height, while
+ * a true edge gets both effects, everywhere the same physical location is
+ * ever drawn from.
+ */
 
 const float BEVEL_RADIUS = 0.30;
 const float BEVEL_SIZE   = 0.09;
@@ -105,14 +105,6 @@ vec2 computeEdgeExposure(
         * mix(smoothstep(0.0, radius, sizeA - posA), 1.0, maskBit(maskA1, iLastB));
 
     return vec2(max(edgeA0, edgeA1), max(edgeB0, edgeB1));
-}
-
-float computeBoundaryFade(float posA, float posB, float sizeA, float sizeB, float radius) {
-    float fadeA0 = 1.0 - smoothstep(0.0, radius, posA);
-    float fadeA1 = 1.0 - smoothstep(0.0, radius, sizeA - posA);
-    float fadeB0 = 1.0 - smoothstep(0.0, radius, posB);
-    float fadeB1 = 1.0 - smoothstep(0.0, radius, sizeB - posB);
-    return max(max(fadeA0, fadeA1), max(fadeB0, fadeB1));
 }
 
 vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1MaxSqDist, out vec3 outNormal) {
@@ -184,7 +176,9 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
             }
         }
 
-        float heightWeight = 1.0 - computeBoundaryFade(posA, posB, sizeA, sizeB, HEIGHT_EDGE_FADE_RADIUS);
+        vec2  heightEdgeAxes = computeEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
+                                                    maskA0, maskA1, maskB0, maskB1, HEIGHT_EDGE_FADE_RADIUS);
+        float heightWeight = 1.0 - max(heightEdgeAxes.x, heightEdgeAxes.y);
 
         vec2  tiledUV = tileUV(uvLocalPos, teUVOrigin[0], normal, teOrient[0]);
         float h       = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
