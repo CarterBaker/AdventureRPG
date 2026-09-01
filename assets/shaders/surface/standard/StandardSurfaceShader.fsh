@@ -1,4 +1,3 @@
-// StandardSurfaceShader.fsh
 #version 400 core
 
 in vec3       vLocalPos;
@@ -9,7 +8,6 @@ flat in float vOrient;
 in float      vColor;
 
 #include "includes/CameraData.glsl"
-#include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
 #include "includes/SunLightData.glsl"
 #include "surface/includes/SurfaceStandard.glsl"
@@ -30,9 +28,12 @@ layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
 
 /*
-* Tier selection mirrors the TCS/TES exactly, via the shared thresholds in
- * SurfaceTessellationTier.glsl, so all three stages always agree on the
- * same ring boundaries. This selection governs geometric material-sampling
+* Tier selection mirrors the TCS/TES exactly, via computeDistanceFromCenterSq()
+ * (SurfaceTessellationTier.glsl) evaluated against this fragment's own
+ * vLocalPos rather than the old shared-per-slot u_distanceFromCenter, so a
+ * fragment always picks the same material tier its own geometry was built
+ * with, regardless of whether it came from an individually rendered chunk
+ * or a mega batch. This selection governs geometric material-sampling
  * detail only — it has no bearing on fog. Atmospheric fog is computed
  * entirely in the deferred Lighting.fsh pass from the fragment's
  * reconstructed world position, so it stays perfectly continuous across
@@ -60,6 +61,7 @@ void main() {
 
     float tier0MaxSqDist = getTier0MaxSqDist();
     float tier1MaxSqDist = getTier1MaxSqDist();
+    float fragDistSq     = computeDistanceFromCenterSq(vLocalPos);
 
     vec3  albedo;
     vec3  normalView;
@@ -67,10 +69,10 @@ void main() {
     float ao;
     bool  visible;
 
-    if (u_distanceFromCenter <= tier0MaxSqDist) {
+    if (fragDistSq <= tier0MaxSqDist) {
         visible = shadeSurfaceFull(tiledUV, vNormal, u_view, albedo, normalView, specular, ao);
     }
-    else if (u_distanceFromCenter <= tier1MaxSqDist) {
+    else if (fragDistSq <= tier1MaxSqDist) {
         visible = shadeSurfaceMid(tiledUV, vNormal, u_view, albedo, normalView, specular, ao);
     }
     else {

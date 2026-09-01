@@ -8,6 +8,8 @@ layout(location = 4) in vec2  aInstance1; // localY, orientation
 #include "includes/CameraData.glsl"
 #include "includes/PlayerPositionData.glsl"
 #include "includes/ItemRotationData.glsl"
+#include "includes/SettingsData.glsl"
+#include "includes/WorldCurvature.glsl"
 
 const vec3 NORMALS[6] = vec3[](
     vec3(0, 0, 1), vec3(1, 0, 0), vec3(0, 0,-1),
@@ -27,10 +29,14 @@ void main() {
     float relChunkX = float(chunkX - u_playerChunkX);
     float relChunkZ = float(chunkZ - u_playerChunkZ);
 
+    // u_chunkSize replaces a hardcoded 16.0 — chunk size is an EngineSetting,
+    // and this is the one place in the shader that had drifted from it.
     vec3 worldPos = vec3(
-        relChunkX * 16.0 + aInstance0.z + rotPos.x,
-        aInstance1.x     + rotPos.y,
-        relChunkZ * 16.0 + aInstance0.w + rotPos.z);
+        relChunkX * u_chunkSize + aInstance0.z + rotPos.x,
+        aInstance1.x            + rotPos.y,
+        relChunkZ * u_chunkSize + aInstance0.w + rotPos.z);
+
+    worldPos = applyWorldCurvature(worldPos);
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

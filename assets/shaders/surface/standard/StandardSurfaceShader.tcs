@@ -23,16 +23,25 @@ out float teBevelMaskA1[];
 out float teBevelMaskB0[];
 out float teBevelMaskB1[];
 
-#include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
 /*
- * Ring gating compares this chunk's u_distanceFromCenter against
- * getTier0MaxSqDist()/getTier1MaxSqDist() (SurfaceTessellationTier.glsl),
- * shared with the TES and FSH so all three stages agree on the same
- * boundaries. Outside the near ring, both tess levels are pinned to 1 —
- * no interior vertices for the TES's bevel/noise/height code to run on.
+ * Ring gating compares this patch's own world-space center against
+ * getTier0MaxSqDist()/getTier1MaxSqDist() (SurfaceTessellationTier.glsl)
+ * via computeDistanceFromCenterSq() — the same per-position formula the
+ * TES and FSH use — so all three stages agree on the same boundaries no
+ * matter whether this patch is being drawn as part of an individually
+ * rendered chunk or merged into a mega batch. The old approach compared
+ * against a single u_distanceFromCenter value baked once per grid slot,
+ * which every chunk folded into the same mega shared regardless of its
+ * own true position — that's what let a mega and its individually
+ * rendered neighbor pick different tiers for what should be the same
+ * ring boundary. tcWorldPos is a TCS input, already valid for every
+ * control point before this invocation runs, so reading all four corners
+ * from inside the gl_InvocationID == 0 block is safe. Outside the near
+ * ring, both tess levels are pinned to 1 — no interior vertices for the
+ * TES's bevel/noise/height code to run on.
  *
  * levelA/levelB are always this quad's own block count along that axis
  * times a fixed density, never boosted by anything sampled from the
@@ -81,18 +90,21 @@ void main() {
         float tier0MaxSqDist = getTier0MaxSqDist();
         float tier1MaxSqDist = getTier1MaxSqDist();
 
+        vec3  patchCenter = (tcWorldPos[0] + tcWorldPos[1] + tcWorldPos[2] + tcWorldPos[3]) * 0.25;
+        float patchDistSq = computeDistanceFromCenterSq(patchCenter);
+
         int   quadPack = int(tcQuadSize[0]);
         float sizeA    = float(quadPack & 0xFF);
         float sizeB    = float((quadPack >> 8) & 0xFF);
 
-        if (u_distanceFromCenter <= tier0MaxSqDist) {
+        if (patchDistSq <= tier0MaxSqDist) {
 
             const float NEAR_DENSITY = 4.0;
 
             levelA = clamp(sizeA * NEAR_DENSITY, 1.0, 64.0);
             levelB = clamp(sizeB * NEAR_DENSITY, 1.0, 64.0);
 
-        } else if (u_distanceFromCenter > tier1MaxSqDist) {
+        } else if (patchDistSq > tier1MaxSqDist) {
 
             levelA = clamp(sizeA, 1.0, 64.0);
             levelB = clamp(sizeB, 1.0, 64.0);

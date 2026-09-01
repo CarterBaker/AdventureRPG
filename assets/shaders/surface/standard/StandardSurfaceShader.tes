@@ -1,9 +1,9 @@
 #version 400 core
 layout(quads, equal_spacing, ccw) in;
 
-in vec3 teWorldPos[];
-in vec3 teNormal[];
-in vec2 teUVOrigin[];
+in vec3  teWorldPos[];
+in vec3  teNormal[];
+in vec2  teUVOrigin[];
 in float teOrient[];
 in float teColor[];
 in float teQuadSize[];
@@ -20,24 +20,30 @@ flat out float vOrient;
 out float vColor;
 
 #include "includes/CameraData.glsl"
-#include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
+#include "includes/PlayerPositionData.glsl"
 #include "includes/WorldCurvature.glsl"
+#include "includes/WorldDistantRise.glsl"
 #include "includes/NaturalNoiseData.glsl"
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
-// Tessellation evaluation shader for terrain. Builds the flat per-vertex
-// world position for the current tier (near-ring bevel/height/jitter or
-// far-ring distant rise), then bends the fully displaced result through
-// world curvature exactly once at the end, so every vertex — beveled or
-// not — curves by the amount its own true final position calls for. The
-// near-terrain jitter itself is no longer computed here — it is baked once
-// on the CPU into NaturalNoiseData (see NaturalNoiseUtility) and this stage
-// just samples that shared table, so physics collision reading the same
-// table can never land on a different surface than what gets rendered.
+// Tessellation evaluation shader for terrain: builds the flat per-vertex world
+// position for the current ring (near bevel/height/jitter, or far distant
+// rise), then bends the fully displaced result through the player-relative
+// world curvature exactly once at the end. Near-terrain jitter samples the
+// shared NaturalNoiseData lattice baked once on the CPU, so physics reading
+// that same table can never land on a different surface than what renders.
+// Ring gating is resolved per actual vertex position via
+// computeDistanceFromCenterSq() (SurfaceTessellationTier.glsl) rather than
+// the old shared-per-slot u_distanceFromCenter, so the two vertices on a
+// shared edge between an individually rendered chunk and a mega always
+// agree on their own true distance from the player — bevel, height,
+// jitter, and distant rise can no longer disagree across that seam the
+// way they could when every chunk folded into a mega inherited the mega
+// origin's single distance value instead of its own.
 
 const float BEVEL_RADIUS = 0.30;
 const float BEVEL_SIZE   = 0.09;
@@ -46,11 +52,6 @@ const float MASK_BLEND   = 0.15;
 const float HEIGHT_DISPLACE_SCALE   = 0.12;
 const float HEIGHT_FD_EPSILON       = 0.02;
 const float HEIGHT_EDGE_FADE_RADIUS = 0.75;
-
-// Must match DISTANT_RISE_START_MARGIN_BLOCKS in SurfaceTessellationTier.glsl.
-const float DISTORT_MAX_HEIGHT   = 64.0;
-const float DISTORT_START_MARGIN = 512.0;
-const float DISTORT_CURVE        = 0.35;
 
 float maskBit(float mask, int bit) {
     return float((int(mask) >> bit) & 1);
@@ -124,12 +125,8 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
                   mix(mix(teNormal[0], teNormal[1], u),
                       mix(teNormal[3], teNormal[2], u), v));
 
-    float halfDWorld       = (u_renderDistance * 0.5 - 0.5) * u_chunkSize;
-    float maxDistanceWorld = halfDWorld * sqrt(2.0);
-
-    float radialDist = sqrt(dot(worldPos.xz, worldPos.xz));
-
-    float nearStrength = u_distanceFromCenter <= tier0MaxSqDist ? 1.0 : 0.0;
+    float vertexDistSq = computeDistanceFromCenterSq(worldPos);
+    float nearStrength  = vertexDistSq <= tier0MaxSqDist ? 1.0 : 0.0;
 
     vec2 seed = worldPos.xz;
 
@@ -143,16 +140,8 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
         worldPos.y += nY * 0.08 * nearStrength;
     }
 
-    if (u_distanceFromCenter > tier1MaxSqDist) {
-        float startDistanceWorld = max(maxDistanceWorld - DISTORT_START_MARGIN, 0.0);
-        float fadeRange          = max(maxDistanceWorld - startDistanceWorld, 0.0001);
-        float farDistortT        = clamp((radialDist - startDistanceWorld) / fadeRange, 0.0, 1.0);
-
-        float curveExponent      = pow(16.0, clamp(DISTORT_CURVE, 0.0, 1.0) * clamp(DISTORT_CURVE, 0.0, 1.0));
-        float farDistortStrength = pow(farDistortT, curveExponent);
-
-        worldPos.y += DISTORT_MAX_HEIGHT * farDistortStrength;
-    }
+    if (vertexDistSq > tier1MaxSqDist)
+        worldPos = applyDistantRise(worldPos);
 
     if (nearStrength > 0.001) {
         int   quadPack = int(teQuadSize[0]);
@@ -219,9 +208,10 @@ void main() {
     vec3 normal;
     vec3 worldPos = evalDisplacedSurface(u, v, tier0MaxSqDist, tier1MaxSqDist, normal);
 
-    float nearStrength0  = u_distanceFromCenter <= tier0MaxSqDist ? 1.0 : 0.0;
-    float farRingActive0 = u_distanceFromCenter > tier1MaxSqDist  ? 1.0 : 0.0;
-    float geometryBlend  = max(nearStrength0, farRingActive0);
+    float distSq          = computeDistanceFromCenterSq(worldPos);
+    float nearStrength0   = distSq <= tier0MaxSqDist ? 1.0 : 0.0;
+    float farRingActive0  = distSq > tier1MaxSqDist  ? 1.0 : 0.0;
+    float geometryBlend   = max(nearStrength0, farRingActive0);
 
     if (geometryBlend > 0.001) {
         float uStep = (u + HEIGHT_FD_EPSILON <= 1.0) ?  HEIGHT_FD_EPSILON : -HEIGHT_FD_EPSILON;

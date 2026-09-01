@@ -13,6 +13,10 @@ layout (location = 9) in float aBevelMaskB1; // unused for liquid
 
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
+#include "includes/PlayerPositionData.glsl"
+#include "includes/WorldCurvature.glsl"
+#include "includes/WorldDistantRise.glsl"
+#include "surface/includes/SurfaceTessellationTier.glsl"
 
 const vec3 NORMALS[6] = vec3[](
     vec3(0, 0, 1),
@@ -38,6 +42,19 @@ void main() {
     worldPos.y -= (1.0 - clamp(aFluidLevel / LIQUID_LEVEL_MAX, 0.0, 1.0));
 
     vWorldNormal = NORMALS[int(aNorIndex)];
+
+    // Water previously skipped both world bends entirely, so a shoreline
+    // visibly split away from the land it borders at any real distance.
+    // Applying the exact same shared functions the terrain uses keeps a
+    // water surface glued to its bank at every range. Gating is resolved
+    // from this vertex's own world position via computeDistanceFromCenterSq()
+    // rather than the shared-per-slot u_distanceFromCenter, so a shoreline
+    // never shows a step between an individually rendered chunk and a mega
+    // — see SurfaceTessellationTier.glsl.
+    if (computeDistanceFromCenterSq(worldPos) > getTier1MaxSqDist())
+    worldPos = applyDistantRise(worldPos);
+
+    worldPos = applyWorldCurvature(worldPos);
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }
