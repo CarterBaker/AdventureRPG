@@ -459,6 +459,9 @@ public class EngineSetting {
         public static final float BIOME_VARIANCE_NOISE_FREQUENCY = 0.02f;
         public static final long BIOME_VARIANCE_SEED = 0x4F1D2C6E9A7B31F5L;
 
+        // Biome Terrain Blending \\
+        public static final int BIOME_BLEND_RADIUS_CHUNKS = 6;
+
         // Terrain Generation — Defaults \\
 
         public static final String DEFAULT_SURFACE_BLOCK_NAME = "TerraArcanaBlocks/Grass Block";
@@ -517,7 +520,7 @@ public class EngineSetting {
         // Terrain Generation — Surface Detail \\
 
         public static final float DEFAULT_BIOME_TERRAIN_HEIGHT_SCALE = 1.0f;
-        public static final double TERRAIN_DETAIL_WAVELENGTH_BLOCKS = 40.0;
+        public static final float TERRAIN_DETAIL_WAVELENGTH_BLOCKS = 40.0f;
         public static final int TERRAIN_DETAIL_OCTAVES = 3;
         public static final float TERRAIN_DETAIL_PERSISTENCE = 0.5f;
         public static final float TERRAIN_DETAIL_LACUNARITY = 2.0f;

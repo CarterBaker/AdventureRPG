@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.biome;
 
 import engine.graphics.color.Color;
 import engine.root.DataPackage;
+import engine.util.mathematics.extras.LinearSpline;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -9,24 +10,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class BiomeData extends DataPackage {
 
     /*
-     * Persistent biome record. Holds identity, biome color, the named-season
-     * weather pools WeatherManager resolves into live handles on demand, the
-     * map color this biome matches against the world PNG, the probable
-     * biome variants that may replace this biome during generation for
-     * hand-authored variety, the surface/subsurface/underwater block names
-     * WorldGenerationManager dresses its terrain shape with, and
-     * terrainHeightScale — the multiplier WorldGenerationManager applies to
-     * TerrainShapeUtility's macro and detail height contributions for this
-     * biome's columns. terrain height itself never reads any of these,
-     * only which blocks appear on top of whatever shape the noise already
-     * produced and how strongly that shape is allowed to deviate from sea
-     * level. mapColor is optional — MAP_COLOR_UNDEFINED means this biome is
-     * never chosen directly from the PNG and can only appear as another
-     * biome's variant. probableBiomeNames/Chances are raw, unresolved
-     * references — BiomeManager resolves them to live handles on demand.
-     * seasonNames preserves JSON declaration order for the same keys —
-     * WeatherManager falls back through this order when the calendar's
-     * actual current season isn't one this biome defined.
+     * Persistent biome record, including every response curve
+     * WorldGenerationManager needs to shape this biome's own terrain — a
+     * continentalness-to-height spline, an erosion-to-amplitude spline, a
+     * peaks-valleys ridge-contribution spline, a small-scale detail
+     * amplitude/wavelength pair, an overall height-scale multiplier, and
+     * oceanWater — whether this biome is permitted to flood its
+     * below-sea-level terrain with water at all. Each resolved once at load
+     * time in BiomeBuilder and defaulting to TerrainShapeUtility's global
+     * curves (or false, for oceanWater) when a biome's JSON omits them.
      */
 
     public static final int MAP_COLOR_UNDEFINED = -1;
@@ -48,7 +40,14 @@ public class BiomeData extends DataPackage {
     private final String subsurfaceBlockName;
     private final String underwaterBlockName;
 
+    private final LinearSpline continentalnessSpline;
+    private final LinearSpline erosionSpline;
+    private final LinearSpline peaksValleysSpline;
+    private final float detailAmplitudeBlocks;
+    private final float detailWavelengthBlocks;
     private final float terrainHeightScale;
+
+    private final boolean oceanWater;
 
     public BiomeData(
             String biomeName,
@@ -63,7 +62,13 @@ public class BiomeData extends DataPackage {
             String surfaceBlockName,
             String subsurfaceBlockName,
             String underwaterBlockName,
-            float terrainHeightScale) {
+            LinearSpline continentalnessSpline,
+            LinearSpline erosionSpline,
+            LinearSpline peaksValleysSpline,
+            float detailAmplitudeBlocks,
+            float detailWavelengthBlocks,
+            float terrainHeightScale,
+            boolean oceanWater) {
 
         this.biomeName = biomeName;
         this.biomeID = biomeID;
@@ -82,7 +87,14 @@ public class BiomeData extends DataPackage {
         this.subsurfaceBlockName = subsurfaceBlockName;
         this.underwaterBlockName = underwaterBlockName;
 
+        this.continentalnessSpline = continentalnessSpline;
+        this.erosionSpline = erosionSpline;
+        this.peaksValleysSpline = peaksValleysSpline;
+        this.detailAmplitudeBlocks = detailAmplitudeBlocks;
+        this.detailWavelengthBlocks = detailWavelengthBlocks;
         this.terrainHeightScale = terrainHeightScale;
+
+        this.oceanWater = oceanWater;
     }
 
     public String getBiomeName() {
@@ -137,7 +149,31 @@ public class BiomeData extends DataPackage {
         return underwaterBlockName;
     }
 
+    public LinearSpline getContinentalnessSpline() {
+        return continentalnessSpline;
+    }
+
+    public LinearSpline getErosionSpline() {
+        return erosionSpline;
+    }
+
+    public LinearSpline getPeaksValleysSpline() {
+        return peaksValleysSpline;
+    }
+
+    public float getDetailAmplitudeBlocks() {
+        return detailAmplitudeBlocks;
+    }
+
+    public float getDetailWavelengthBlocks() {
+        return detailWavelengthBlocks;
+    }
+
     public float getTerrainHeightScale() {
         return terrainHeightScale;
+    }
+
+    public boolean hasOceanWater() {
+        return oceanWater;
     }
 }

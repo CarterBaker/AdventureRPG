@@ -18,39 +18,36 @@ public class WorldGenerationManager extends ManagerPackage {
 
     /*
      * Drives per-chunk-column terrain generation. computeColumn() resolves the
-     * one biome that governs an entire chunk column, a ground-height value for
-     * every one of its 256 block-columns, and that column's min/max ground
-     * height, all cached in a per-thread scratch buffer — and, when the
-     * caller's ChunkTerrainCache already holds a valid result for this exact
-     * coordinate, skipped entirely in favor of copying that cached result back
-     * in, since every output here is a pure function of (seed, coordinate) and
-     * never needs to be rederived for the same chunk twice. generateSubChunk()
+     * blended biome kernel governing this column (see BiomeManager.
+     * getBiomeBlendWeights), a ground-height value for each of its 256
+     * block-columns, and that column's min/max ground height — cached per-thread
+     * and skipped entirely when the caller's GenerationCacheStruct already
+     * holds a valid result for this exact coordinate, since every output here is
+     * a pure function of (seed, coordinate, biome kernel). generateSubChunk()
      * then classifies each subchunk against that data before any storage is
-     * realized: entirely above every column's terrain is left knownEmpty,
-     * entirely below the surface-dressing layer or entirely below sea level
-     * and above ground is left uniformFill — neither ever allocates a palette
-     * — and only a subchunk that actually straddles a surface, coastline, or
-     * cliff realizes real per-block storage and runs the precise loop. A
-     * subchunk that runs that loop but never actually placed air or liquid
-     * anywhere in its volume — a buried ore vein through stone, a dirt/stone
-     * transition band that never breaks the surface — is marked opaque
-     * interior instead: still real, still mixed-ID storage for mining, but
-     * flagged so geometry building can skip it exactly like a uniform-fill
-     * subchunk once its neighbors are equally solid, since two adjacent
-     * FULL-geometry blocks never expose a face to each other regardless of
-     * their exact ID. Ground height itself comes from TerrainShapeUtility and
-     * is scaled by the resolved biome's terrainHeightScale — the only biome
-     * input this manager feeds into that otherwise biome-blind shape math.
-     * Chunks generate concurrently on separate worker threads, so the
-     * surface-block cache below is a ConcurrentHashMap rather than a locked
-     * map.
+     * realized, so a subchunk entirely above every column's terrain stays
+     * knownEmpty and one entirely below the surface layer stays uniformFill —
+     * neither ever allocates a palette — and only a subchunk actually straddling
+     * a surface, coastline, or cliff realizes real per-block storage. Ground
+     * height itself comes from TerrainShapeUtility, evaluated against the
+     * resolved biome kernel's own response curves, blended so height never
+     * snaps the instant the map crosses from one biome to another. Whether a
+     * column is ever flooded below sea level at all is likewise a resolved
+     * biome input — oceanWater, taken from the column's own primary (unblended)
+     * biome — so a biome not tagged "ocean_water" simply keeps its dry terrain
+     * down to its own ground height even when that height dips below sea level,
+     * which is what makes below-sea-level valleys possible; only a biome
+     * explicitly authored as ocean (or a hand-tagged coastal/bay variant) ever
+     * fills that gap with water. Chunks generate concurrently on separate
+     * worker threads, so the surface-block cache below is a ConcurrentHashMap
+     * rather than a locked map.
      */
 
     @FunctionalInterface
     private interface TerrainGridSampler {
         float sample(
                 long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
-                float terrainHeightScale);
+                BiomeHandle[] blendBiomes, float[] blendWeights);
     }
 
     // Internal
@@ -109,14 +106,15 @@ public class WorldGenerationManager extends ManagerPackage {
         double worldWidthBlocks = worldHandle.getWorldScale().x;
         double worldHeightBlocks = worldHandle.getWorldScale().y;
 
-        BiomeHandle biomeHandle = biomeManager.getBiome(worldHandle, chunkCoordinate);
+        biomeManager.getBiomeBlendWeights(worldHandle, chunkCoordinate, column.blendBiomes, column.blendWeights);
+        BiomeHandle biomeHandle = column.blendBiomes[BiomeManager.BLEND_CENTER_INDEX];
         TerrainSurfaceProfile profile = resolveSurfaceProfile(biomeHandle);
-        float terrainHeightScale = biomeHandle.getTerrainHeightScale();
 
         column.biomeID = biomeHandle.getBiomeID();
         column.surfaceBlockID = profile.surfaceBlockID;
         column.subsurfaceBlockID = profile.subsurfaceBlockID;
         column.underwaterBlockID = profile.underwaterBlockID;
+        column.oceanWater = profile.oceanWater;
 
         int macroStride = TerrainColumnAsyncContainer.MACRO_SAMPLE_STRIDE;
         int macroSamplesPerAxis = TerrainColumnAsyncContainer.MACRO_SAMPLES_PER_AXIS;
@@ -125,11 +123,11 @@ public class WorldGenerationManager extends ManagerPackage {
 
         sampleGrid(column.macroShapeGridBlocks, TerrainShapeUtility::computeMacroShapeBlocks, seed,
                 worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks, macroStride, macroSamplesPerAxis,
-                terrainHeightScale);
+                column.blendBiomes, column.blendWeights);
 
         sampleGrid(column.detailGridBlocks, TerrainShapeUtility::computeDetailBlocks, seed,
                 worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks, detailStride, detailSamplesPerAxis,
-                terrainHeightScale);
+                column.blendBiomes, column.blendWeights);
 
         int maxGroundHeight = Integer.MIN_VALUE;
         int minGroundHeight = Integer.MAX_VALUE;
@@ -154,7 +152,9 @@ public class WorldGenerationManager extends ManagerPackage {
 
         column.columnMaxGroundHeightBlocks = maxGroundHeight;
         column.columnMinGroundHeightBlocks = minGroundHeight;
-        column.columnTopBlocks = Math.max(maxGroundHeight, EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
+        column.columnTopBlocks = column.oceanWater
+                ? Math.max(maxGroundHeight, EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS)
+                : maxGroundHeight;
 
         column.computedChunkCoordinate = chunkCoordinate;
         column.hasComputedColumn = true;
@@ -162,6 +162,7 @@ public class WorldGenerationManager extends ManagerPackage {
         terrainCache.store(
                 chunkCoordinate,
                 column.biomeID, column.surfaceBlockID, column.subsurfaceBlockID, column.underwaterBlockID,
+                column.oceanWater,
                 column.groundHeightBlocks,
                 column.columnMinGroundHeightBlocks, column.columnMaxGroundHeightBlocks, column.columnTopBlocks);
     }
@@ -175,6 +176,7 @@ public class WorldGenerationManager extends ManagerPackage {
         column.surfaceBlockID = terrainCache.getSurfaceBlockID();
         column.subsurfaceBlockID = terrainCache.getSubsurfaceBlockID();
         column.underwaterBlockID = terrainCache.getUnderwaterBlockID();
+        column.oceanWater = terrainCache.hasOceanWater();
 
         terrainCache.copyGroundHeightsInto(column.groundHeightBlocks);
 
@@ -196,7 +198,8 @@ public class WorldGenerationManager extends ManagerPackage {
             double worldHeightBlocks,
             int stride,
             int samplesPerAxis,
-            float terrainHeightScale) {
+            BiomeHandle[] blendBiomes,
+            float[] blendWeights) {
 
         for (int gz = 0; gz < samplesPerAxis; gz++) {
             for (int gx = 0; gx < samplesPerAxis; gx++) {
@@ -205,7 +208,8 @@ public class WorldGenerationManager extends ManagerPackage {
                 double sampleWorldZ = worldOffsetZ + gz * stride;
 
                 grid[gz * samplesPerAxis + gx] = sampler.sample(
-                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks, terrainHeightScale);
+                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks,
+                        blendBiomes, blendWeights);
             }
         }
     }
@@ -233,7 +237,8 @@ public class WorldGenerationManager extends ManagerPackage {
         return surfaceProfileCache.computeIfAbsent(biomeHandle.getBiomeID(), id -> new TerrainSurfaceProfile(
                 (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSurfaceBlockName()),
                 (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSubsurfaceBlockName()),
-                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getUnderwaterBlockName())));
+                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getUnderwaterBlockName()),
+                biomeHandle.hasOceanWater()));
     }
 
     // Generator — once per subchunk \\
@@ -257,6 +262,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
         int surfaceDepth = EngineSetting.TERRAIN_SURFACE_DEPTH_BLOCKS;
         int seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+        boolean oceanWater = column.oceanWater;
         int subChunkTopY = offsetY + CHUNK_SIZE - 1;
 
         if (subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
@@ -264,7 +270,7 @@ public class WorldGenerationManager extends ManagerPackage {
             return true;
         }
 
-        if (offsetY > column.columnMaxGroundHeightBlocks && subChunkTopY <= seaLevel) {
+        if (oceanWater && offsetY > column.columnMaxGroundHeightBlocks && subChunkTopY <= seaLevel) {
             subChunkInstance.markUniformFill(DynamicGeometryType.LIQUID, waterBlockId);
             return true;
         }
@@ -283,7 +289,7 @@ public class WorldGenerationManager extends ManagerPackage {
             for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
 
                 int groundHeight = column.groundHeightBlocks[localZ * CHUNK_SIZE + localX];
-                int columnTop = Math.max(groundHeight, seaLevel);
+                int columnTop = oceanWater ? Math.max(groundHeight, seaLevel) : groundHeight;
 
                 if (offsetY > columnTop) {
                     hasAirOrWater = true;
@@ -298,7 +304,7 @@ public class WorldGenerationManager extends ManagerPackage {
                     continue;
                 }
 
-                boolean useUnderwaterBlocks = groundHeight <= seaLevel + beachRange;
+                boolean useUnderwaterBlocks = oceanWater && groundHeight <= seaLevel + beachRange;
                 short topBlockID = useUnderwaterBlocks ? column.underwaterBlockID : column.surfaceBlockID;
                 short fillBlockID = useUnderwaterBlocks ? column.underwaterBlockID : column.subsurfaceBlockID;
 
@@ -377,11 +383,17 @@ public class WorldGenerationManager extends ManagerPackage {
         final short surfaceBlockID;
         final short subsurfaceBlockID;
         final short underwaterBlockID;
+        final boolean oceanWater;
 
-        TerrainSurfaceProfile(short surfaceBlockID, short subsurfaceBlockID, short underwaterBlockID) {
+        TerrainSurfaceProfile(
+                short surfaceBlockID,
+                short subsurfaceBlockID,
+                short underwaterBlockID,
+                boolean oceanWater) {
             this.surfaceBlockID = surfaceBlockID;
             this.subsurfaceBlockID = subsurfaceBlockID;
             this.underwaterBlockID = underwaterBlockID;
+            this.oceanWater = oceanWater;
         }
     }
 }

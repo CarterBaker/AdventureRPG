@@ -6,8 +6,8 @@ import engine.root.StructPackage;
 /**
  * Per-chunk-column memo of WorldGenerationManager.computeColumn()'s output —
  * biome, dressing
- * block IDs, and the 256 ground heights for a chunk column. computeColumn() is
- * a pure function
+ * block IDs, whether that biome floods below sea level at all, and the 256
+ * ground heights for a chunk column. computeColumn() is a pure function
  * of (seed, coordinate), so a cache hit and a fresh recompute always produce
  * identical results;
  * this exists purely to skip the noise/biome work on a GENERATION_DATA reload,
@@ -30,6 +30,7 @@ public class GenerationCacheStruct extends StructPackage {
     private short surfaceBlockID;
     private short subsurfaceBlockID;
     private short underwaterBlockID;
+    private boolean oceanWater;
 
     private final short[] groundHeightBlocks = new short[COLUMN_COUNT];
     private short columnMinGroundHeightBlocks;
@@ -44,6 +45,7 @@ public class GenerationCacheStruct extends StructPackage {
             short surfaceBlockID,
             short subsurfaceBlockID,
             short underwaterBlockID,
+            boolean oceanWater,
             int[] groundHeightBlocks,
             int columnMinGroundHeightBlocks,
             int columnMaxGroundHeightBlocks,
@@ -54,6 +56,7 @@ public class GenerationCacheStruct extends StructPackage {
         this.surfaceBlockID = surfaceBlockID;
         this.subsurfaceBlockID = subsurfaceBlockID;
         this.underwaterBlockID = underwaterBlockID;
+        this.oceanWater = oceanWater;
 
         for (int i = 0; i < COLUMN_COUNT; i++)
             this.groundHeightBlocks[i] = (short) groundHeightBlocks[i];
@@ -88,6 +91,10 @@ public class GenerationCacheStruct extends StructPackage {
 
     public short getUnderwaterBlockID() {
         return underwaterBlockID;
+    }
+
+    public boolean hasOceanWater() {
+        return oceanWater;
     }
 
     /*

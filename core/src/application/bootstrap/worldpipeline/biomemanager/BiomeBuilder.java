@@ -8,11 +8,13 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
+import engine.util.mathematics.extras.LinearSpline;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -21,21 +23,21 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class BiomeBuilder extends BuilderPackage {
 
     /*
-     * Parses biome JSON into a BiomeData and wraps it in a BiomeHandle. Reads
-     * the optional "weathers" block into a per-season pool of parallel
-     * name/chance fastutil lists that WeatherManager resolves into live
-     * WeatherHandles on demand. Season names are read directly from whatever
-     * keys appear in the "weathers" object. Also reads the optional
-     * "map_color" hex RGB value this biome matches against the world PNG,
-     * the optional "probable_biomes" list of alternate biomes that may
-     * replace this one during generation, the optional "surface_block" /
-     * "subsurface_block" / "underwater_block" names WorldGenerationManager
-     * dresses this biome's terrain with, and the optional
-     * "terrain_height_scale" multiplier WorldGenerationManager applies to
-     * that biome's macro and detail terrain height — each falling back to a
-     * sensible EngineSetting default when omitted, so an unmodified biome
-     * file generates exactly the terrain it always has — all validated
-     * fully at load time so a malformed biome file fails at boot rather
+     * Parses biome JSON into a BiomeData and wraps it in a BiomeHandle. Reads the
+     * optional "weathers"
+     * block, "map_color", "probable_biomes", surface/subsurface/underwater block
+     * names, the boolean "ocean_water" flag that gates whether this biome's
+     * below-sea-level terrain is flooded at all (see WorldGenerationManager),
+     * and the terrain
+     * shape controls — "continentalness_spline", "erosion_spline",
+     * "peaks_valleys_spline",
+     * "detail_amplitude_blocks", "detail_wavelength_blocks", and
+     * "terrain_height_scale" — each falling
+     * back to TerrainShapeUtility's global default when omitted, so an unmodified
+     * biome file generates
+     * exactly the terrain it always has while a fully-authored one can sculpt its
+     * own distinct shape,
+     * all validated at load time so a malformed biome file fails at boot rather
      * than mid-game.
      */
 
@@ -67,6 +69,31 @@ class BiomeBuilder extends BuilderPackage {
         String underwaterBlockName = parseBlockName(
                 json, "underwater_block", EngineSetting.DEFAULT_UNDERWATER_BLOCK_NAME);
 
+        boolean oceanWater = JsonUtility.getBoolean(json, "ocean_water", false);
+
+        LinearSpline continentalnessSpline = parseSpline(
+                json, "continentalness_spline", "x", "height_blocks",
+                TerrainShapeUtility.DEFAULT_CONTINENTALNESS_SPLINE, biomeName);
+
+        LinearSpline erosionSpline = parseSpline(
+                json, "erosion_spline", "x", "amplitude_blocks",
+                TerrainShapeUtility.DEFAULT_EROSION_SPLINE, biomeName);
+
+        LinearSpline peaksValleysSpline = parseSpline(
+                json, "peaks_valleys_spline", "x", "contribution",
+                TerrainShapeUtility.DEFAULT_PEAKS_VALLEYS_SPLINE, biomeName);
+
+        float detailAmplitudeBlocks = json.has("detail_amplitude_blocks")
+                ? json.get("detail_amplitude_blocks").getAsFloat()
+                : EngineSetting.TERRAIN_DETAIL_AMPLITUDE_BLOCKS;
+
+        float detailWavelengthBlocks = json.has("detail_wavelength_blocks")
+                ? json.get("detail_wavelength_blocks").getAsFloat()
+                : EngineSetting.TERRAIN_DETAIL_WAVELENGTH_BLOCKS;
+
+        if (detailWavelengthBlocks <= 0f)
+            throwException("Biome \"" + biomeName + "\" \"detail_wavelength_blocks\" must be greater than 0.");
+
         float terrainHeightScale = json.has("terrain_height_scale")
                 ? json.get("terrain_height_scale").getAsFloat()
                 : EngineSetting.DEFAULT_BIOME_TERRAIN_HEIGHT_SCALE;
@@ -76,7 +103,9 @@ class BiomeBuilder extends BuilderPackage {
                 seasonWeatherNames, seasonWeatherChances, seasonNames,
                 mapColor, probableBiomeNames, probableBiomeChances,
                 surfaceBlockName, subsurfaceBlockName, underwaterBlockName,
-                terrainHeightScale);
+                continentalnessSpline, erosionSpline, peaksValleysSpline,
+                detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale,
+                oceanWater);
 
         BiomeHandle biomeHandle = create(BiomeHandle.class);
         biomeHandle.constructor(biomeData);
@@ -191,6 +220,50 @@ class BiomeBuilder extends BuilderPackage {
             outNames.add(variantName);
             outChances.add(chance);
         }
+    }
+
+    // Terrain Shape Parsing \\
+
+    private LinearSpline parseSpline(
+            JsonObject json,
+            String field,
+            String xKey,
+            String yKey,
+            LinearSpline defaultSpline,
+            String biomeName) {
+
+        if (!json.has(field) || json.get(field).isJsonNull())
+            return defaultSpline;
+
+        JsonObject splineJson = json.getAsJsonObject(field);
+
+        if (!splineJson.has(xKey) || !splineJson.has(yKey))
+            throwException("Biome \"" + biomeName + "\" \"" + field + "\" must declare both \""
+                    + xKey + "\" and \"" + yKey + "\".");
+
+        float[] x = parseFloatArray(splineJson.getAsJsonArray(xKey));
+        float[] y = parseFloatArray(splineJson.getAsJsonArray(yKey));
+
+        if (x.length != y.length)
+            throwException("Biome \"" + biomeName + "\" \"" + field + "\" has " + x.length + " \"" + xKey
+                    + "\" entries but " + y.length + " \"" + yKey + "\" entries — they must match.");
+
+        if (x.length < 2)
+            throwException("Biome \"" + biomeName + "\" \"" + field + "\" needs at least 2 control points.");
+
+        for (int i = 1; i < x.length; i++)
+            if (x[i] <= x[i - 1])
+                throwException("Biome \"" + biomeName + "\" \"" + field + "\" \"" + xKey
+                        + "\" values must be strictly increasing.");
+
+        return new LinearSpline(x, y);
+    }
+
+    private float[] parseFloatArray(JsonArray array) {
+        float[] result = new float[array.size()];
+        for (int i = 0; i < array.size(); i++)
+            result[i] = array.get(i).getAsFloat();
+        return result;
     }
 
     // Terrain Block Parsing \\

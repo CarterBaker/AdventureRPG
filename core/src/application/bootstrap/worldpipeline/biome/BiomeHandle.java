@@ -2,14 +2,18 @@ package application.bootstrap.worldpipeline.biome;
 
 import engine.graphics.color.Color;
 import engine.root.HandlePackage;
+import engine.util.mathematics.extras.LinearSpline;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class BiomeHandle extends HandlePackage {
 
     /*
-     * Persistent biome record. Wraps BiomeData and delegates all access
-     * through it. Registered in BiomeManager from bootstrap to shutdown.
+     * Persistent biome record. Wraps BiomeData and delegates all access through it,
+     * including the
+     * per-biome terrain response curves and detail parameters TerrainShapeUtility
+     * evaluates during
+     * generation.
      */
 
     private static final ObjectArrayList<String> EMPTY_NAMES = new ObjectArrayList<>();
@@ -97,7 +101,31 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getUnderwaterBlockName();
     }
 
+    public LinearSpline getContinentalnessSpline() {
+        return biomeData.getContinentalnessSpline();
+    }
+
+    public LinearSpline getErosionSpline() {
+        return biomeData.getErosionSpline();
+    }
+
+    public LinearSpline getPeaksValleysSpline() {
+        return biomeData.getPeaksValleysSpline();
+    }
+
+    public float getDetailAmplitudeBlocks() {
+        return biomeData.getDetailAmplitudeBlocks();
+    }
+
+    public float getDetailWavelengthBlocks() {
+        return biomeData.getDetailWavelengthBlocks();
+    }
+
     public float getTerrainHeightScale() {
         return biomeData.getTerrainHeightScale();
+    }
+
+    public boolean hasOceanWater() {
+        return biomeData.hasOceanWater();
     }
 }

@@ -38,6 +38,17 @@ public class DebugWaterPlacementSystem extends SystemPackage {
      * same chunk through the ordinary streaming pipeline — without the lock,
      * this tool's direct merge()/addChunkInstance() calls would race that
      * async work on the same DynamicPacketInstance.
+     *
+     * Only the subchunk whose own blocks were actually written invalidates
+     * its liquid state unconditionally (rebuildOwnSubChunk). Every other
+     * subchunk touched here — the vertical Y-neighbor pulled in when the
+     * edit sits on a subchunk boundary, and the horizontal chunk-neighbor
+     * pulled in when it sits on a chunk boundary — never had its own blocks
+     * change; only its exposed-face geometry might have. Those go through
+     * notifyNeighborBlockChanged() (rebuildNeighborSubChunk), which leaves a
+     * confirmed-permanent body alone exactly as documented on
+     * SubChunkInstance, instead of resetting it to unstable on every
+     * incidental neighbor touch.
      */
 
     private static final boolean ENABLED = true;
@@ -214,13 +225,13 @@ public class DebugWaterPlacementSystem extends SystemPackage {
         ChunkDataSyncContainer ownSync = chunk.getChunkDataSyncContainer();
         ownSync.acquire();
         try {
-            rebuildSubChunk(chunk, subChunkY);
+            rebuildOwnSubChunk(chunk, subChunkY);
 
             if (blockY == 0 && subChunkY > 0)
-                rebuildSubChunk(chunk, subChunkY - 1);
+                rebuildNeighborSubChunk(chunk, subChunkY - 1);
 
             if (blockY == chunkSize - 1 && subChunkY < worldHeight - 1)
-                rebuildSubChunk(chunk, subChunkY + 1);
+                rebuildNeighborSubChunk(chunk, subChunkY + 1);
 
             chunk.merge();
             worldRenderManager.addChunkInstance(chunk);
@@ -247,10 +258,17 @@ public class DebugWaterPlacementSystem extends SystemPackage {
             rebuildNeighbour(chunkX, chunkZ + 1, subChunkY);
     }
 
-    private void rebuildSubChunk(ChunkInstance chunk, int subChunkY) {
+    private void rebuildOwnSubChunk(ChunkInstance chunk, int subChunkY) {
         SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
         subChunk.getDynamicPacketInstance().clear();
         subChunk.invalidateLiquid();
+        dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
+    }
+
+    private void rebuildNeighborSubChunk(ChunkInstance chunk, int subChunkY) {
+        SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
+        subChunk.getDynamicPacketInstance().clear();
+        subChunk.notifyNeighborBlockChanged();
         dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
     }
 
@@ -265,7 +283,7 @@ public class DebugWaterPlacementSystem extends SystemPackage {
         ChunkDataSyncContainer neighbourSync = neighbour.getChunkDataSyncContainer();
         neighbourSync.acquire();
         try {
-            rebuildSubChunk(neighbour, subChunkY);
+            rebuildNeighborSubChunk(neighbour, subChunkY);
             neighbour.merge();
             worldRenderManager.addChunkInstance(neighbour);
         } finally {

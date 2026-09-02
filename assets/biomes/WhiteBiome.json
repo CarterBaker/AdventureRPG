@@ -1,6 +1,23 @@
 {
     "map_color": "#FFFFFF",
-    "terrain_height_scale": 0,
+    "ocean_water": false,
+    "continentalness_spline": {
+        "x": [-1.0, -0.3, 0.0, 0.3, 1.0],
+        "height_blocks": [155, 165, 170, 180, 200]
+    },
+    "erosion_spline": {
+        "x": [-1.0, 0.0, 1.0],
+        "amplitude_blocks": [15, 8, 4]
+    },
+    "peaks_valleys_spline": {
+        "x": [0.0, 0.5, 1.0],
+        "contribution": [-0.3, 0.1, 0.4]
+    },
+    "detail_amplitude_blocks": 2.5,
+    "detail_wavelength_blocks": 32,
+    "surface_block": "TerraArcanaBlocks/Grass Block",
+    "subsurface_block": "TerraArcanaBlocks/Dirt Block",
+    "underwater_block": "TerraArcanaBlocks/Sand",
     "weathers": {
         "Spring": [
             { "name": "standard/SunnyWeather", "chance": 25 },

@@ -201,6 +201,88 @@ public class BiomeManager extends ManagerPackage {
         return baseBiome;
     }
 
+    // Terrain Blending \\
+
+    /*
+     * A chunk's terrain height is never shaped by one hard-selected biome —
+     * that produces a visible cliff in the height curve exactly where the map
+     * crosses from one biome to another, independent of whatever variance the
+     * border-warp above adds to WHICH chunk gets which biome. Height shaping
+     * instead blends a small kernel of biome samples spaced
+     * BIOME_BLEND_RADIUS_CHUNKS apart around the target chunk, weighted by
+     * inverse-square distance and normalized to sum to 1.0. Setting the
+     * radius to 0 collapses every kernel sample onto the same chunk,
+     * reproducing the old hard-edged behavior exactly, so blending can be
+     * dialed out without touching any calling code. The kernel geometry and
+     * its weights depend only on the radius, never on runtime state, so both
+     * are precomputed once in a static initializer.
+     */
+
+    public static final int BLEND_SAMPLE_COUNT = 9;
+    public static final int BLEND_CENTER_INDEX = 4;
+
+    private static final int[] BLEND_OFFSET_X = new int[BLEND_SAMPLE_COUNT];
+    private static final int[] BLEND_OFFSET_Z = new int[BLEND_SAMPLE_COUNT];
+    private static final float[] BLEND_WEIGHT = new float[BLEND_SAMPLE_COUNT];
+
+    static {
+
+        int radius = EngineSetting.BIOME_BLEND_RADIUS_CHUNKS;
+        int index = 0;
+        float weightSum = 0f;
+
+        for (int dz = -1; dz <= 1; dz++) {
+            for (int dx = -1; dx <= 1; dx++) {
+
+                int offsetX = dx * radius;
+                int offsetZ = dz * radius;
+
+                BLEND_OFFSET_X[index] = offsetX;
+                BLEND_OFFSET_Z[index] = offsetZ;
+
+                float distanceSq = offsetX * offsetX + offsetZ * offsetZ;
+                float weight = 1f / (1f + distanceSq);
+
+                BLEND_WEIGHT[index] = weight;
+                weightSum += weight;
+                index++;
+            }
+        }
+
+        for (int i = 0; i < BLEND_SAMPLE_COUNT; i++)
+            BLEND_WEIGHT[i] /= weightSum;
+    }
+
+    /*
+     * Fills outBiomes/outWeights with the blend kernel resolved against this
+     * world, in kernel order — index BLEND_CENTER_INDEX is always this
+     * chunk's own directly-resolved biome, exactly what getBiome() would have
+     * returned. Callers own outBiomes/outWeights (sized BLEND_SAMPLE_COUNT)
+     * so this never allocates — see TerrainColumnAsyncContainer's per-thread
+     * scratch copies.
+     */
+    public void getBiomeBlendWeights(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            BiomeHandle[] outBiomes,
+            float[] outWeights) {
+
+        int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
+        int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
+
+        for (int i = 0; i < BLEND_SAMPLE_COUNT; i++) {
+
+            int sampleChunkX = chunkX + BLEND_OFFSET_X[i];
+            int sampleChunkZ = chunkZ + BLEND_OFFSET_Z[i];
+
+            BiomeHandle baseBiome = getBiomeHandleFromBiomeName(
+                    sampleMapBiomeName(worldHandle, sampleChunkX, sampleChunkZ));
+
+            outBiomes[i] = applyProbableVariance(worldHandle, baseBiome, sampleChunkX, sampleChunkZ);
+            outWeights[i] = BLEND_WEIGHT[i];
+        }
+    }
+
     private static int wrapPixelIndex(int value, int range) {
         int wrapped = value % range;
         if (wrapped < 0)
