@@ -28,15 +28,17 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 class FullGeometryBranch extends BranchPackage {
 
     /*
-     * Geometry branch for standard full-cube blocks. Performs greedy mesh
-     * expansion along both tangent axes per face, samples ambient occlusion
-     * vertex colors from neighboring biomes, and resolves texture and face
-     * encoding for rotation-aware blocks before finalizing quads into the
-     * per-material vertex buffers. Bevel corner exposure — the mask bits
-     * StandardSurfaceShader.tes rounds naturally-formed edges from — is only
-     * ever computed for BlockHandle.isNatural() blocks, so an artificial
-     * block's exposed corners always stay sharp and any face it shares with
-     * a natural neighbor stays flat, regardless of that neighbor's own bevel.
+     * Geometry branch for full-cube blocks. Greedily expands each face along
+     * both tangent axes, samples ambient-occlusion vertex colors from
+     * neighboring biomes, resolves rotation-aware texture/face encoding, and
+     * packs each edge's exposure into the vertex bevel-mask attributes for
+     * StandardSurface.tes to bevel. A natural block's mask encodes an inward
+     * BEVEL and is written positive; an artificial block's mask instead
+     * encodes an outward STRETCH — closing the gap a beveling natural
+     * neighbor opens up at a shared corner — and is written negative. Both
+     * are computed only where an edge is genuinely convex: a tangential
+     * neighbor of matching geometry means the two faces continue the same
+     * flat wall, never a corner, regardless of either side's natural flag.
      */
 
     // Internal
@@ -402,12 +404,12 @@ class FullGeometryBranch extends BranchPackage {
         int maskB0 = 0;
         int maskB1 = 0;
 
-        // maskA0 — walk B=0..sizeB-1 cells at A=0, check convex+exposed in -A direction
+        // maskA0 — walk B=0..sizeB-1 cells at A=0, check exposure in -A direction
         for (int j = 0; j < iSizeB; j++) {
 
             int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, j);
 
-            if (cellXYZ != -1 && isConvexExposedOnSide(
+            if (cellXYZ != -1 && isEdgeCellExposed(
                     chunkInstance, subChunkInstance,
                     cellXYZ, direction3Vector,
                     oppA, blockHandle))
@@ -415,8 +417,7 @@ class FullGeometryBranch extends BranchPackage {
                 maskA0 |= (1 << j);
         }
 
-        // maskA1 — walk B=0..sizeB-1 cells at A=sizeA-1, check convex+exposed in +A
-        // direction
+        // maskA1 — walk B=0..sizeB-1 cells at A=sizeA-1, check exposure in +A direction
         int baseA1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, iSizeA - 1);
         for (int j = 0; j < iSizeB; j++) {
 
@@ -424,7 +425,7 @@ class FullGeometryBranch extends BranchPackage {
                     ? ChunkCoordinate3Int.getNeighborWithOffset(baseA1, tangentDirectionB, j)
                     : -1;
 
-            if (cellXYZ != -1 && isConvexExposedOnSide(
+            if (cellXYZ != -1 && isEdgeCellExposed(
                     chunkInstance, subChunkInstance,
                     cellXYZ, direction3Vector,
                     tangentDirectionA, blockHandle))
@@ -432,12 +433,12 @@ class FullGeometryBranch extends BranchPackage {
                 maskA1 |= (1 << j);
         }
 
-        // maskB0 — walk A=0..sizeA-1 cells at B=0, check convex+exposed in -B direction
+        // maskB0 — walk A=0..sizeA-1 cells at B=0, check exposure in -B direction
         for (int i = 0; i < iSizeA; i++) {
 
             int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, i);
 
-            if (cellXYZ != -1 && isConvexExposedOnSide(
+            if (cellXYZ != -1 && isEdgeCellExposed(
                     chunkInstance, subChunkInstance,
                     cellXYZ, direction3Vector,
                     oppB, blockHandle))
@@ -445,8 +446,7 @@ class FullGeometryBranch extends BranchPackage {
                 maskB0 |= (1 << i);
         }
 
-        // maskB1 — walk A=0..sizeA-1 cells at B=sizeB-1, check convex+exposed in +B
-        // direction
+        // maskB1 — walk A=0..sizeA-1 cells at B=sizeB-1, check exposure in +B direction
         int baseB1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, iSizeB - 1);
         for (int i = 0; i < iSizeA; i++) {
 
@@ -454,12 +454,22 @@ class FullGeometryBranch extends BranchPackage {
                     ? ChunkCoordinate3Int.getNeighborWithOffset(baseB1, tangentDirectionA, i)
                     : -1;
 
-            if (cellXYZ != -1 && isConvexExposedOnSide(
+            if (cellXYZ != -1 && isEdgeCellExposed(
                     chunkInstance, subChunkInstance,
                     cellXYZ, direction3Vector,
                     tangentDirectionB, blockHandle))
 
                 maskB1 |= (1 << i);
+        }
+
+        // An artificial block never bevels its own edges — its masks instead
+        // encode STRETCH, written negative so StandardSurface.tes can tell
+        // the two apart while still reading the same bit-packed attributes.
+        if (!blockHandle.isNatural()) {
+            maskA0 = -maskA0;
+            maskA1 = -maskA1;
+            maskB0 = -maskB0;
+            maskB1 = -maskB1;
         }
 
         return finalizeFace(
@@ -508,20 +518,37 @@ class FullGeometryBranch extends BranchPackage {
         return Direction3Vector.getEncodedFace(orientation, worldFace);
     }
 
+    // Edge Exposure \\
+
     /*
-     * Returns true only when the edge at sideDirection from cellXYZ is both
-     * convex (the tangent neighbor is open / different geometry) and exposed
-     * (no flush coplanar face from that neighbor in faceDirection), and only
-     * for a block marked natural — an artificial block's own corners never
-     * bevel, and since a flush FULL-FULL boundary already returns false
-     * below regardless of either side's flag, a natural block never bevels
-     * into an artificial neighbor it's flush against either.
-     *
-     * Concave edges — where the tangent neighbor is the same solid geometry
-     * continuing alongside — are explicitly excluded. Beveling an interior
-     * corner requires pushing the vertex in the opposite direction to a
-     * convex bevel, which breaks the invariant that adjacent beveled faces
-     * converge at the same corner point. Leave concave corners sharp.
+     * Dispatches one edge cell to the natural bevel test or the artificial
+     * stretch test based on the current block's own natural flag.
+     */
+    private boolean isEdgeCellExposed(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int cellXYZ,
+            Direction3Vector faceDirection,
+            Direction3Vector sideDirection,
+            BlockHandle blockHandle) {
+
+        return blockHandle.isNatural()
+                ? isConvexExposedOnSide(chunkInstance, subChunkInstance, cellXYZ, faceDirection, sideDirection,
+                        blockHandle)
+                : isStretchExposedOnSide(chunkInstance, subChunkInstance, cellXYZ, faceDirection, sideDirection,
+                        blockHandle);
+    }
+
+    /*
+     * True when the edge at sideDirection from cellXYZ is convex (the
+     * tangent neighbor is open or different geometry) and exposed (that
+     * neighbor doesn't itself carry a flush, coplanar face in faceDirection)
+     * for a natural block — never for a concave edge, where the tangent
+     * neighbor is the same solid geometry continuing the same flat wall, and
+     * cross-referencing that unrelated edge would zero out real corners and
+     * bleed bevel onto seams it shouldn't touch. The symmetric partner check
+     * mirrors this same flush test from the perpendicular face's side, so
+     * two adjoining faces of one genuine 3D corner always agree on it.
      */
     private boolean isConvexExposedOnSide(
             ChunkInstance chunkInstance,
@@ -530,9 +557,6 @@ class FullGeometryBranch extends BranchPackage {
             Direction3Vector faceDirection,
             Direction3Vector sideDirection,
             BlockHandle blockHandle) {
-
-        if (!blockHandle.isNatural())
-            return false;
 
         SubChunkInstance sideSubChunk = getComparativeSubChunkInstance(
                 chunkInstance, subChunkInstance, cellXYZ, sideDirection);
@@ -551,13 +575,6 @@ class FullGeometryBranch extends BranchPackage {
         if (blockHasFace(chunkInstance, sideSubChunk, sideXYZ, faceDirection, null, sideBlock))
             return false;
 
-        // Symmetric partner check: the neighbor in faceDirection (e.g. U for TOP's
-        // call,
-        // N for NORTH's call) might itself have an exposed face in sideDirection. This
-        // is
-        // exactly the *other* adjacent face's flush test for this same corner. Without
-        // this, TOP and NORTH can independently disagree about the same physical edge —
-        // one bevels, one doesn't, and the surfaces no longer meet.
         SubChunkInstance faceSubChunk = getComparativeSubChunkInstance(
                 chunkInstance, subChunkInstance, cellXYZ, faceDirection);
 
@@ -572,6 +589,53 @@ class FullGeometryBranch extends BranchPackage {
         }
 
         return true;
+    }
+
+    /*
+     * Mirror of isConvexExposedOnSide() for an artificial block's own edge:
+     * true where this block's own corner sits open to different geometry
+     * (the same convex test above) AND a natural block of matching geometry
+     * sits diagonally across that opening — exactly the neighbor
+     * isConvexExposedOnSide() would bevel inward and downward, away from
+     * this shared corner. StandardSurface.tes reads a positive mask as an
+     * inward bevel and a negative one as this outward stretch, so an
+     * artificial block only ever reaches toward a natural neighbor that is
+     * actually pulling away from it, never anywhere else.
+     */
+    private boolean isStretchExposedOnSide(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int cellXYZ,
+            Direction3Vector faceDirection,
+            Direction3Vector sideDirection,
+            BlockHandle blockHandle) {
+
+        SubChunkInstance sideSubChunk = getComparativeSubChunkInstance(
+                chunkInstance, subChunkInstance, cellXYZ, sideDirection);
+
+        if (sideSubChunk == null || sideSubChunk == ERROR)
+            return false;
+
+        int sideXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
+        BlockPaletteHandle sidePalette = sideSubChunk.getBlockPaletteHandle();
+        short sideBlockID = sidePalette.getBlock(sideXYZ);
+        BlockHandle sideBlock = blockManager.getBlockHandleFromBlockID(sideBlockID);
+
+        if (sideBlock.getGeometry() == blockHandle.getGeometry())
+            return false;
+
+        SubChunkInstance diagonalSubChunk = getComparativeSubChunkInstance(
+                chunkInstance, sideSubChunk, sideXYZ, faceDirection);
+
+        if (diagonalSubChunk == null || diagonalSubChunk == ERROR)
+            return false;
+
+        int diagonalXYZ = ChunkCoordinate3Int.getNeighborAndWrap(sideXYZ, faceDirection);
+        BlockPaletteHandle diagonalPalette = diagonalSubChunk.getBlockPaletteHandle();
+        short diagonalBlockID = diagonalPalette.getBlock(diagonalXYZ);
+        BlockHandle diagonalBlock = blockManager.getBlockHandleFromBlockID(diagonalBlockID);
+
+        return diagonalBlock.isNatural() && diagonalBlock.getGeometry() == blockHandle.getGeometry();
     }
 
     // Vert Color \\
