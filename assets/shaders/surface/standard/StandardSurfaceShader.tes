@@ -35,10 +35,14 @@ out float vColor;
  * height/noise, bevels a natural block's exposed convex edges inward, and
  * stretches an artificial block's edge outward wherever a natural neighbor
  * bevels away from it, before applying the shared distant-rise and world
- * curvature bends. Bevel/height edge strength is driven entirely by each
- * edge's own per-cell exposure mask (FullGeometryBranch.isConvexExposedOnSide
- * / isStretchExposedOnSide), so the same physical edge always resolves the
- * same way regardless of which quad or chunk batch is evaluating it.
+ * curvature bends. Edge strength is driven entirely by each edge's own
+ * per-cell exposure mask (FullGeometryBranch.isConvexExposedOnSide /
+ * isStretchExposedOnSide), so the same physical edge always resolves the
+ * same way regardless of which quad or chunk batch is evaluating it. Every
+ * axis a vertex is exposed on is pushed by its own full, uncapped amount —
+ * this is what lets every face sharing a true 3-way corner converge on the
+ * exact same displaced point, and what lets a stretch quad fully mirror a
+ * natural neighbor's bevel instead of only half of it.
  */
 
 const float BEVEL_RADIUS = 0.30;
@@ -72,12 +76,9 @@ float maskBitSmooth(float mask, float pos, int lastIndex) {
     return mix(belowBit, aboveBit, t);
 }
 
-// Edge strength comes only from a mask's own distance falloff, never from
-// the perpendicular edge's mask — cross-referencing it forced strength to
-// zero at internal seams and multi-face corners. A true convex corner still
-// rounds correctly with no extra casing: both adjoining edges independently
-// reach full strength approaching the corner, and the caller combines their
-// pushes into one capped diagonal displacement (see evalDisplacedSurface).
+// Per-axis edge strength: distance falloff from that axis's own boundary,
+// weighted by whether this exact row/column along the perpendicular axis
+// is actually marked exposed.
 vec2 computeEdgeExposure(
     float posA, float posB,
     float sizeA, float sizeB,
@@ -132,12 +133,9 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
         float sizeB    = float((quadPack >> 8) & 0xFF);
 
         // A negative mask marks an artificial quad's outward STRETCH data
-        // rather than a natural quad's inward BEVEL data (see
-        // FullGeometryBranch.isStretchExposedOnSide) — every mask on one
-        // quad shares a single sign, since a quad belongs to one block that
-        // is either natural or not. Bit extraction always reads the
-        // unsigned magnitude; GLSL's arithmetic right shift would otherwise
-        // recover the wrong bits from a two's-complement negative value.
+        // rather than a natural quad's inward BEVEL data — every mask on
+        // one quad shares a single sign, since a quad belongs to one block
+        // that is either natural or not.
         float maskA0 = teBevelMaskA0[0];
         float maskA1 = teBevelMaskA1[0];
         float maskB0 = teBevelMaskB0[0];
@@ -171,27 +169,25 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
             vec3 towardCenterA = quadTangentA * sign(0.5 - u);
             vec3 towardCenterB = quadTangentB * sign(0.5 - v);
 
-            // bevelA and bevelB independently reach 1.0 right at a true
-            // corner, so pushing the full amount along both axes at once
-            // reached BEVEL_SIZE*sqrt(2) there — deeper than any single
-            // edge, deep enough to cut into (or, for a stretch quad,
-            // overshoot past) whatever neighboring geometry the corner is
-            // supposed to meet. Capping the combined push to length <= 1
-            // before scaling reproduces the exact single-axis push along a
-            // straight edge and rounds smoothly into a same-depth corner.
-            vec2  pushAxes   = vec2(bevelA, bevelB);
-            float pushLen    = length(pushAxes);
-            vec2  pushVector = pushLen > 0.0001 ? (pushAxes / pushLen) * min(pushLen, 1.0) : vec2(0.0);
+            // Each exposed axis pushes by its own full amount rather than a
+            // length-capped combination — a true 3-way cube corner is shared
+            // by up to three mutually perpendicular faces, each of which only
+            // ever sees two of those axes as its own tangents plus its own
+            // normal as the third, so applying every exposed axis
+            // independently is what lets every face land on the exact same
+            // displaced corner regardless of which one is computing it.
+            // pushSign flips every term, tangent and normal alike, so a
+            // stretch quad reaches fully outward and upward to meet a
+            // natural neighbor's bevel instead of only mirroring it
+            // tangentially.
+            worldPos += towardCenterA * (BEVEL_SIZE * pushSign) * bevelA;
+            worldPos += towardCenterB * (BEVEL_SIZE * pushSign) * bevelB;
+            worldPos -= normal * BEVEL_SIZE * bevelMax * pushSign;
 
-            worldPos += towardCenterA * (BEVEL_SIZE * pushSign) * pushVector.x;
-            worldPos += towardCenterB * (BEVEL_SIZE * pushSign) * pushVector.y;
-            worldPos -= normal * BEVEL_SIZE * bevelMax;
-
-            vec3  edgeDir = -towardCenterA * pushVector.x - towardCenterB * pushVector.y;
+            vec3  edgeDir = (-towardCenterA * bevelA - towardCenterB * bevelB) * pushSign;
             float edgeLen = length(edgeDir);
-            if (edgeLen > 0.001) {
+            if (edgeLen > 0.001)
                 normal = normalize(mix(normal, edgeDir / edgeLen, bevelMax));
-            }
         }
 
         vec2  heightEdgeAxes = computeEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
