@@ -30,20 +30,14 @@ out float vColor;
 #include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
-/*
- * Terrain tessellation evaluation. Displaces the near ring with per-vertex
- * height/noise, bevels a natural block's exposed convex edges inward, and
- * stretches an artificial block's edge outward wherever a natural neighbor
- * bevels away from it, before applying the shared distant-rise and world
- * curvature bends. Edge strength is driven entirely by each edge's own
- * per-cell exposure mask (FullGeometryBranch.isConvexExposedOnSide /
- * isStretchExposedOnSide), so the same physical edge always resolves the
- * same way regardless of which quad or chunk batch is evaluating it. Every
- * axis a vertex is exposed on is pushed by its own full, uncapped amount —
- * this is what lets every face sharing a true 3-way corner converge on the
- * exact same displaced point, and what lets a stretch quad fully mirror a
- * natural neighbor's bevel instead of only half of it.
- */
+// Terrain tessellation evaluation. Displaces the near ring with per-vertex
+// height/noise, bevels a natural block's convex edges inward and its
+// concave interior edges outward into a smooth ramp, and stretches an
+// artificial block's exposed edges outward to meet a beveling natural
+// neighbor, before applying the shared distant-rise and world curvature
+// bends. Every mask bit is driven by FullGeometryBranch's own per-cell
+// exposure classification, so the same physical edge always resolves the
+// same way regardless of which quad or chunk batch evaluates it.
 
 const float BEVEL_RADIUS = 0.30;
 const float BEVEL_SIZE   = 0.09;
@@ -76,9 +70,9 @@ float maskBitSmooth(float mask, float pos, int lastIndex) {
     return mix(belowBit, aboveBit, t);
 }
 
-// Per-axis edge strength: distance falloff from that axis's own boundary,
-// weighted by whether this exact row/column along the perpendicular axis
-// is actually marked exposed.
+// Unsigned edge exposure — used only for the height-displacement fade,
+// which just needs to know how close a vertex sits to any treated edge,
+// never which direction that edge pushes.
 vec2 computeEdgeExposure(
     float posA, float posB,
     float sizeA, float sizeB,
@@ -97,6 +91,36 @@ vec2 computeEdgeExposure(
     float edgeB1 = rawB1 * maskBitSmooth(maskB1, posA, iLastA);
 
     return vec2(max(edgeA0, edgeA1), max(edgeB0, edgeB1));
+}
+
+// Signed edge exposure — same falloff and per-cell bits as above, but each
+// of the four raw masks keeps its own sign (see FullGeometryBranch):
+// positive is a convex corner that bevels inward, negative is either an
+// artificial block's own stretch or one edge of a natural block that
+// resolved to a concave interior corner, both of which fill outward. Per
+// axis, whichever of the two opposing edges (A0/A1, or B0/B1) is actually
+// closer at this vertex supplies both the magnitude and the sign used.
+vec4 computeSignedEdgeExposure(
+    float posA, float posB,
+    float sizeA, float sizeB,
+    int iLastA, int iLastB,
+    float maskA0, float maskA1, float maskB0, float maskB1,
+    float radius) {
+
+    float rawA0 = 1.0 - smoothstep(0.0, radius, posA);
+    float rawA1 = 1.0 - smoothstep(0.0, radius, sizeA - posA);
+    float rawB0 = 1.0 - smoothstep(0.0, radius, posB);
+    float rawB1 = 1.0 - smoothstep(0.0, radius, sizeB - posB);
+
+    float edgeA0 = rawA0 * maskBitSmooth(abs(maskA0), posB, iLastB) * sign(maskA0);
+    float edgeA1 = rawA1 * maskBitSmooth(abs(maskA1), posB, iLastB) * sign(maskA1);
+    float edgeB0 = rawB0 * maskBitSmooth(abs(maskB0), posA, iLastA) * sign(maskB0);
+    float edgeB1 = rawB1 * maskBitSmooth(abs(maskB1), posA, iLastA) * sign(maskB1);
+
+    float dominantA = abs(edgeA0) >= abs(edgeA1) ? edgeA0 : edgeA1;
+    float dominantB = abs(edgeB0) >= abs(edgeB1) ? edgeB0 : edgeB1;
+
+    return vec4(abs(dominantA), sign(dominantA), abs(dominantB), sign(dominantB));
 }
 
 vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1MaxSqDist, out vec3 outNormal) {
@@ -132,17 +156,10 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
         float sizeA    = float(quadPack & 0xFF);
         float sizeB    = float((quadPack >> 8) & 0xFF);
 
-        // A negative mask marks an artificial quad's outward STRETCH data
-        // rather than a natural quad's inward BEVEL data — every mask on
-        // one quad shares a single sign, since a quad belongs to one block
-        // that is either natural or not.
         float maskA0 = teBevelMaskA0[0];
         float maskA1 = teBevelMaskA1[0];
         float maskB0 = teBevelMaskB0[0];
         float maskB1 = teBevelMaskB1[0];
-
-        bool  isStretch = maskA0 < 0.0 || maskA1 < 0.0 || maskB0 < 0.0 || maskB1 < 0.0;
-        float pushSign  = isStretch ? -1.0 : 1.0;
 
         float absMaskA0 = abs(maskA0);
         float absMaskA1 = abs(maskA1);
@@ -155,11 +172,13 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
         int iLastA = int(sizeA) - 1;
         int iLastB = int(sizeB) - 1;
 
-        vec2  bevelAxes = computeEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
-                                               absMaskA0, absMaskA1, absMaskB0, absMaskB1, BEVEL_RADIUS);
-        float bevelA    = bevelAxes.x;
-        float bevelB    = bevelAxes.y;
-        float bevelMax  = max(bevelA, bevelB);
+        vec4  signedAxes  = computeSignedEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
+                                                       maskA0, maskA1, maskB0, maskB1, BEVEL_RADIUS);
+        float bevelA      = signedAxes.x;
+        float bevelASign  = signedAxes.y;
+        float bevelB      = signedAxes.z;
+        float bevelBSign  = signedAxes.w;
+        float bevelMax    = max(bevelA, bevelB);
 
         if (bevelMax > 0.001) {
 
@@ -169,22 +188,24 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
             vec3 towardCenterA = quadTangentA * sign(0.5 - u);
             vec3 towardCenterB = quadTangentB * sign(0.5 - v);
 
-            // Each exposed axis pushes by its own full amount rather than a
-            // length-capped combination — a true 3-way cube corner is shared
-            // by up to three mutually perpendicular faces, each of which only
-            // ever sees two of those axes as its own tangents plus its own
-            // normal as the third, so applying every exposed axis
-            // independently is what lets every face land on the exact same
-            // displaced corner regardless of which one is computing it.
-            // pushSign flips every term, tangent and normal alike, so a
-            // stretch quad reaches fully outward and upward to meet a
-            // natural neighbor's bevel instead of only mirroring it
-            // tangentially.
-            worldPos += towardCenterA * (BEVEL_SIZE * pushSign) * bevelA;
-            worldPos += towardCenterB * (BEVEL_SIZE * pushSign) * bevelB;
-            worldPos -= normal * BEVEL_SIZE * bevelMax * pushSign;
+            float normalPushSign = bevelA >= bevelB ? bevelASign : bevelBSign;
 
-            vec3  edgeDir = (-towardCenterA * bevelA - towardCenterB * bevelB) * pushSign;
+            // Each axis pushes by its own full amount and its own sign — a
+            // true 3-way cube corner is shared by up to three mutually
+            // perpendicular faces, each of which only ever sees two of
+            // those axes as its own tangents plus its own normal as the
+            // third, so applying every exposed axis independently is what
+            // lets every face land on the exact same displaced corner
+            // regardless of which one is computing it. A negative sign
+            // reaches fully outward and upward instead of inward and down,
+            // whether that came from an artificial quad's own stretch or
+            // from one edge of a natural quad turning out to be a concave
+            // interior corner.
+            worldPos += towardCenterA * (BEVEL_SIZE * bevelASign) * bevelA;
+            worldPos += towardCenterB * (BEVEL_SIZE * bevelBSign) * bevelB;
+            worldPos -= normal * BEVEL_SIZE * bevelMax * normalPushSign;
+
+            vec3  edgeDir = -towardCenterA * bevelA * bevelASign - towardCenterB * bevelB * bevelBSign;
             float edgeLen = length(edgeDir);
             if (edgeLen > 0.001)
                 normal = normalize(mix(normal, edgeDir / edgeLen, bevelMax));
