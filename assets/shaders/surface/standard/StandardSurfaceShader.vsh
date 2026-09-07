@@ -5,10 +5,14 @@ layout (location = 2) in float aColor;
 layout (location = 3) in vec2  aUVOrigin;
 layout (location = 4) in float aOrient;
 layout (location = 5) in float aQuadSize;
-layout (location = 6) in float aBevelMaskA0;  // A=0 edge,     bit j = cell j along B. Sign: + bevel (natural), - stretch (artificial)
-layout (location = 7) in float aBevelMaskA1;  // A=sizeA edge, bit j = cell j along B. Sign: + bevel (natural), - stretch (artificial)
-layout (location = 8) in float aBevelMaskB0;  // B=0 edge,     bit i = cell i along A. Sign: + bevel (natural), - stretch (artificial)
-layout (location = 9) in float aBevelMaskB1;  // B=sizeB edge, bit i = cell i along A. Sign: + bevel (natural), - stretch (artificial)
+layout (location = 6) in float aBevelMaskA0;     // A=0 edge,     bit j = cell j along B is bevel-exposed
+layout (location = 7) in float aBevelMaskA1;     // A=sizeA edge, bit j = cell j along B is bevel-exposed
+layout (location = 8) in float aBevelMaskB0;     // B=0 edge,     bit i = cell i along A is bevel-exposed
+layout (location = 9) in float aBevelMaskB1;     // B=sizeB edge, bit i = cell i along A is bevel-exposed
+layout (location = 10) in float aBevelNegMaskA0; // A=0 edge,     subset of aBevelMaskA0 that pushes with a negative (outward) sign — concave interior corner or artificial-block stretch
+layout (location = 11) in float aBevelNegMaskA1; // A=sizeA edge, same as above
+layout (location = 12) in float aBevelNegMaskB0; // B=0 edge,     same as above
+layout (location = 13) in float aBevelNegMaskB1; // B=sizeB edge, same as above
 
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
@@ -31,6 +35,10 @@ out float tcBevelMaskA0;
 out float tcBevelMaskA1;
 out float tcBevelMaskB0;
 out float tcBevelMaskB1;
+out float tcBevelNegMaskA0;
+out float tcBevelNegMaskA1;
+out float tcBevelNegMaskB0;
+out float tcBevelNegMaskB1;
 
 // Places raw block-face geometry in world space and hands it downstream
 // untouched — tessellation only ever sees the 4 real corners of a merged
@@ -45,15 +53,19 @@ void main() {
 
     vec3 normal = NORMALS[int(aNorIndex)];
 
-    gl_Position    = vec4(worldPos, 1.0);
-    tcWorldPos     = worldPos;
-    tcNormal       = normal;
-    tcUVOrigin     = aUVOrigin;
-    tcOrient       = aOrient;
-    tcColor        = aColor;
-    tcQuadSize     = aQuadSize;
-    tcBevelMaskA0  = aBevelMaskA0;
-    tcBevelMaskA1  = aBevelMaskA1;
-    tcBevelMaskB0  = aBevelMaskB0;
-    tcBevelMaskB1  = aBevelMaskB1;
+    gl_Position       = vec4(worldPos, 1.0);
+    tcWorldPos        = worldPos;
+    tcNormal          = normal;
+    tcUVOrigin        = aUVOrigin;
+    tcOrient          = aOrient;
+    tcColor           = aColor;
+    tcQuadSize        = aQuadSize;
+    tcBevelMaskA0     = aBevelMaskA0;
+    tcBevelMaskA1     = aBevelMaskA1;
+    tcBevelMaskB0     = aBevelMaskB0;
+    tcBevelMaskB1     = aBevelMaskB1;
+    tcBevelNegMaskA0  = aBevelNegMaskA0;
+    tcBevelNegMaskA1  = aBevelNegMaskA1;
+    tcBevelNegMaskB0  = aBevelNegMaskB0;
+    tcBevelNegMaskB1  = aBevelNegMaskB1;
 }

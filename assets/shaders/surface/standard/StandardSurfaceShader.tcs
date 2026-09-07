@@ -11,6 +11,10 @@ in  float tcBevelMaskA0[];
 in  float tcBevelMaskA1[];
 in  float tcBevelMaskB0[];
 in  float tcBevelMaskB1[];
+in  float tcBevelNegMaskA0[];
+in  float tcBevelNegMaskA1[];
+in  float tcBevelNegMaskB0[];
+in  float tcBevelNegMaskB1[];
 
 out vec3  teWorldPos[];
 out vec3  teNormal[];
@@ -22,6 +26,10 @@ out float teBevelMaskA0[];
 out float teBevelMaskA1[];
 out float teBevelMaskB0[];
 out float teBevelMaskB1[];
+out float teBevelNegMaskA0[];
+out float teBevelNegMaskA1[];
+out float teBevelNegMaskB0[];
+out float teBevelNegMaskB1[];
 
 #include "includes/SettingsData.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
@@ -71,16 +79,20 @@ out float teBevelMaskB1[];
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
-    teWorldPos   [gl_InvocationID] = tcWorldPos   [gl_InvocationID];
-    teNormal     [gl_InvocationID] = tcNormal     [gl_InvocationID];
-    teUVOrigin   [gl_InvocationID] = tcUVOrigin   [gl_InvocationID];
-    teOrient     [gl_InvocationID] = tcOrient     [gl_InvocationID];
-    teColor      [gl_InvocationID] = tcColor      [gl_InvocationID];
-    teQuadSize   [gl_InvocationID] = tcQuadSize   [gl_InvocationID];
-    teBevelMaskA0[gl_InvocationID] = tcBevelMaskA0[gl_InvocationID];
-    teBevelMaskA1[gl_InvocationID] = tcBevelMaskA1[gl_InvocationID];
-    teBevelMaskB0[gl_InvocationID] = tcBevelMaskB0[gl_InvocationID];
-    teBevelMaskB1[gl_InvocationID] = tcBevelMaskB1[gl_InvocationID];
+    teWorldPos      [gl_InvocationID] = tcWorldPos      [gl_InvocationID];
+    teNormal        [gl_InvocationID] = tcNormal        [gl_InvocationID];
+    teUVOrigin      [gl_InvocationID] = tcUVOrigin      [gl_InvocationID];
+    teOrient        [gl_InvocationID] = tcOrient        [gl_InvocationID];
+    teColor         [gl_InvocationID] = tcColor         [gl_InvocationID];
+    teQuadSize      [gl_InvocationID] = tcQuadSize      [gl_InvocationID];
+    teBevelMaskA0   [gl_InvocationID] = tcBevelMaskA0   [gl_InvocationID];
+    teBevelMaskA1   [gl_InvocationID] = tcBevelMaskA1   [gl_InvocationID];
+    teBevelMaskB0   [gl_InvocationID] = tcBevelMaskB0   [gl_InvocationID];
+    teBevelMaskB1   [gl_InvocationID] = tcBevelMaskB1   [gl_InvocationID];
+    teBevelNegMaskA0[gl_InvocationID] = tcBevelNegMaskA0[gl_InvocationID];
+    teBevelNegMaskA1[gl_InvocationID] = tcBevelNegMaskA1[gl_InvocationID];
+    teBevelNegMaskB0[gl_InvocationID] = tcBevelNegMaskB0[gl_InvocationID];
+    teBevelNegMaskB1[gl_InvocationID] = tcBevelNegMaskB1[gl_InvocationID];
 
     if (gl_InvocationID == 0) {
 

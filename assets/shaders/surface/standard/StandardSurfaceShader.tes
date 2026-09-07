@@ -11,6 +11,10 @@ in float teBevelMaskA0[];
 in float teBevelMaskA1[];
 in float teBevelMaskB0[];
 in float teBevelMaskB1[];
+in float teBevelNegMaskA0[];
+in float teBevelNegMaskA1[];
+in float teBevelNegMaskB0[];
+in float teBevelNegMaskB1[];
 
 out vec3 vLocalPos;
 out vec3 vUVLocalPos;
@@ -93,18 +97,24 @@ vec2 computeEdgeExposure(
     return vec2(max(edgeA0, edgeA1), max(edgeB0, edgeB1));
 }
 
-// Signed edge exposure — same falloff and per-cell bits as above, but each
-// of the four raw masks keeps its own sign (see FullGeometryBranch):
-// positive is a convex corner that bevels inward, negative is either an
-// artificial block's own stretch or one edge of a natural block that
-// resolved to a concave interior corner, both of which fill outward. Per
-// axis, whichever of the two opposing edges (A0/A1, or B0/B1) is actually
-// closer at this vertex supplies both the magnitude and the sign used.
+// Signed edge exposure. maskA0/A1/B0/B1 are unsigned presence bits (any
+// exposure — convex, concave, or stretch); negMaskA0/A1/B0/B1 are the
+// subset of those same bits that should push with a negative (outward)
+// sign, resolved per cell by FullGeometryBranch. A single merged quad's
+// edge can mix convex cells with concave cells along its own length — a
+// stray interior corner sitting in an otherwise open edge is ordinary
+// terrain — so the sign has to be blended per cell through the same
+// maskBitSmooth curve as the magnitude, fading the push to zero exactly
+// where a convex run meets a concave run rather than holding full
+// magnitude while the sign flips underneath it. Per axis, whichever of
+// the two opposing edges (A0/A1, or B0/B1) is actually closer at this
+// vertex supplies both the magnitude and the sign used.
 vec4 computeSignedEdgeExposure(
     float posA, float posB,
     float sizeA, float sizeB,
     int iLastA, int iLastB,
     float maskA0, float maskA1, float maskB0, float maskB1,
+    float negMaskA0, float negMaskA1, float negMaskB0, float negMaskB1,
     float radius) {
 
     float rawA0 = 1.0 - smoothstep(0.0, radius, posA);
@@ -112,15 +122,25 @@ vec4 computeSignedEdgeExposure(
     float rawB0 = 1.0 - smoothstep(0.0, radius, posB);
     float rawB1 = 1.0 - smoothstep(0.0, radius, sizeB - posB);
 
-    float edgeA0 = rawA0 * maskBitSmooth(abs(maskA0), posB, iLastB) * sign(maskA0);
-    float edgeA1 = rawA1 * maskBitSmooth(abs(maskA1), posB, iLastB) * sign(maskA1);
-    float edgeB0 = rawB0 * maskBitSmooth(abs(maskB0), posA, iLastA) * sign(maskB0);
-    float edgeB1 = rawB1 * maskBitSmooth(abs(maskB1), posA, iLastA) * sign(maskB1);
+    float magA0 = rawA0 * maskBitSmooth(maskA0, posB, iLastB);
+    float magA1 = rawA1 * maskBitSmooth(maskA1, posB, iLastB);
+    float magB0 = rawB0 * maskBitSmooth(maskB0, posA, iLastA);
+    float magB1 = rawB1 * maskBitSmooth(maskB1, posA, iLastA);
 
-    float dominantA = abs(edgeA0) >= abs(edgeA1) ? edgeA0 : edgeA1;
-    float dominantB = abs(edgeB0) >= abs(edgeB1) ? edgeB0 : edgeB1;
+    float polarityA0 = maskBitSmooth(negMaskA0, posB, iLastB);
+    float polarityA1 = maskBitSmooth(negMaskA1, posB, iLastB);
+    float polarityB0 = maskBitSmooth(negMaskB0, posA, iLastA);
+    float polarityB1 = maskBitSmooth(negMaskB1, posA, iLastA);
 
-    return vec4(abs(dominantA), sign(dominantA), abs(dominantB), sign(dominantB));
+    float signedA0 = magA0 * (1.0 - 2.0 * polarityA0);
+    float signedA1 = magA1 * (1.0 - 2.0 * polarityA1);
+    float signedB0 = magB0 * (1.0 - 2.0 * polarityB0);
+    float signedB1 = magB1 * (1.0 - 2.0 * polarityB1);
+
+    float signedA = magA0 >= magA1 ? signedA0 : signedA1;
+    float signedB = magB0 >= magB1 ? signedB0 : signedB1;
+
+    return vec4(abs(signedA), sign(signedA), abs(signedB), sign(signedB));
 }
 
 vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1MaxSqDist, out vec3 outNormal) {
@@ -161,10 +181,10 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
         float maskB0 = teBevelMaskB0[0];
         float maskB1 = teBevelMaskB1[0];
 
-        float absMaskA0 = abs(maskA0);
-        float absMaskA1 = abs(maskA1);
-        float absMaskB0 = abs(maskB0);
-        float absMaskB1 = abs(maskB1);
+        float negMaskA0 = teBevelNegMaskA0[0];
+        float negMaskA1 = teBevelNegMaskA1[0];
+        float negMaskB0 = teBevelNegMaskB0[0];
+        float negMaskB1 = teBevelNegMaskB1[0];
 
         float posA = u * sizeA;
         float posB = v * sizeB;
@@ -173,7 +193,9 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
         int iLastB = int(sizeB) - 1;
 
         vec4  signedAxes  = computeSignedEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
-                                                       maskA0, maskA1, maskB0, maskB1, BEVEL_RADIUS);
+                                                       maskA0, maskA1, maskB0, maskB1,
+                                                       negMaskA0, negMaskA1, negMaskB0, negMaskB1,
+                                                       BEVEL_RADIUS);
         float bevelA      = signedAxes.x;
         float bevelASign  = signedAxes.y;
         float bevelB      = signedAxes.z;
@@ -212,7 +234,7 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
         }
 
         vec2  heightEdgeAxes = computeEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
-                                                    absMaskA0, absMaskA1, absMaskB0, absMaskB1, HEIGHT_EDGE_FADE_RADIUS);
+                                                    maskA0, maskA1, maskB0, maskB1, HEIGHT_EDGE_FADE_RADIUS);
         float heightWeight = 1.0 - max(heightEdgeAxes.x, heightEdgeAxes.y);
 
         vec2  tiledUV = tileUV(uvLocalPos, teUVOrigin[0], normal, teOrient[0]);

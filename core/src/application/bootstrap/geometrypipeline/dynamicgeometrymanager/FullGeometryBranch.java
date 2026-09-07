@@ -396,18 +396,29 @@ class FullGeometryBranch extends BranchPackage {
         Direction3Vector oppA = Direction3Vector.getOpposite(tangentDirectionA);
         Direction3Vector oppB = Direction3Vector.getOpposite(tangentDirectionB);
 
-        int maskA0 = 0;
-        int maskA1 = 0;
-        int maskB0 = 0;
-        int maskB1 = 0;
+        int maskA0 = 0, maskA1 = 0, maskB0 = 0, maskB1 = 0;
+        int negMaskA0 = 0, negMaskA1 = 0, negMaskB0 = 0, negMaskB1 = 0;
 
-        boolean convexA0 = false, concaveA0 = false;
-        boolean convexA1 = false, concaveA1 = false;
-        boolean convexB0 = false, concaveB0 = false;
-        boolean convexB1 = false, concaveB1 = false;
+        // A concave interior corner is classified independently by both faces
+        // that share it, and the two faces only converge on the same displaced
+        // edge position (see StandardSurface.tes) when they push with OPPOSITE
+        // signs — matching signs is what a convex corner needs instead. The
+        // other face sharing a given edge always looks back along the exact
+        // direction that edge borders, so comparing this face's own direction
+        // index against that neighbor direction is a tie-break both sides can
+        // compute independently and will always disagree on. That comparison
+        // depends only on direction3Vector and the fixed axis directions, so
+        // it's the same for every cell along one edge — but a single merged
+        // quad's edge can still freely mix convex cells (open corners) with
+        // concave cells (interior corners) along its length, so the sign this
+        // decides has to be recorded and applied per cell below, not once for
+        // the whole edge.
+        boolean negativeConcaveA0 = direction3Vector.index > tangentDirectionA.index;
+        boolean negativeConcaveA1 = direction3Vector.index > oppA.index;
+        boolean negativeConcaveB0 = direction3Vector.index > tangentDirectionB.index;
+        boolean negativeConcaveB1 = direction3Vector.index > oppB.index;
 
-        // maskA0 — B=0..sizeB-1 cells at A=0; the face bordering this edge is
-        // tangentDirectionA
+        // maskA0 — B=0..sizeB-1 cells at A=0; the neighbor this edge borders is oppA
         for (int j = 0; j < iSizeB; j++) {
 
             int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, j);
@@ -422,14 +433,12 @@ class FullGeometryBranch extends BranchPackage {
                 continue;
 
             maskA0 |= (1 << j);
-            if (exposure == EXPOSURE_CONVEX)
-                convexA0 = true;
-            else if (exposure == EXPOSURE_CONCAVE)
-                concaveA0 = true;
+            if (exposure == EXPOSURE_STRETCH || (exposure == EXPOSURE_CONCAVE && negativeConcaveA0))
+                negMaskA0 |= (1 << j);
         }
 
-        // maskA1 — B=0..sizeB-1 cells at A=sizeA-1; the face bordering this edge is
-        // oppA
+        // maskA1 — B=0..sizeB-1 cells at A=sizeA-1; the neighbor this edge borders is
+        // tangentDirectionA
         int baseA1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, iSizeA - 1);
         for (int j = 0; j < iSizeB; j++) {
 
@@ -447,14 +456,11 @@ class FullGeometryBranch extends BranchPackage {
                 continue;
 
             maskA1 |= (1 << j);
-            if (exposure == EXPOSURE_CONVEX)
-                convexA1 = true;
-            else if (exposure == EXPOSURE_CONCAVE)
-                concaveA1 = true;
+            if (exposure == EXPOSURE_STRETCH || (exposure == EXPOSURE_CONCAVE && negativeConcaveA1))
+                negMaskA1 |= (1 << j);
         }
 
-        // maskB0 — A=0..sizeA-1 cells at B=0; the face bordering this edge is
-        // tangentDirectionB
+        // maskB0 — A=0..sizeA-1 cells at B=0; the neighbor this edge borders is oppB
         for (int i = 0; i < iSizeA; i++) {
 
             int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, i);
@@ -469,14 +475,12 @@ class FullGeometryBranch extends BranchPackage {
                 continue;
 
             maskB0 |= (1 << i);
-            if (exposure == EXPOSURE_CONVEX)
-                convexB0 = true;
-            else if (exposure == EXPOSURE_CONCAVE)
-                concaveB0 = true;
+            if (exposure == EXPOSURE_STRETCH || (exposure == EXPOSURE_CONCAVE && negativeConcaveB0))
+                negMaskB0 |= (1 << i);
         }
 
-        // maskB1 — A=0..sizeA-1 cells at B=sizeB-1; the face bordering this edge is
-        // oppB
+        // maskB1 — A=0..sizeA-1 cells at B=sizeB-1; the neighbor this edge borders is
+        // tangentDirectionB
         int baseB1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, iSizeB - 1);
         for (int i = 0; i < iSizeA; i++) {
 
@@ -494,41 +498,8 @@ class FullGeometryBranch extends BranchPackage {
                 continue;
 
             maskB1 |= (1 << i);
-            if (exposure == EXPOSURE_CONVEX)
-                convexB1 = true;
-            else if (exposure == EXPOSURE_CONCAVE)
-                concaveB1 = true;
-        }
-
-        if (!blockHandle.isNatural()) {
-            maskA0 = -maskA0;
-            maskA1 = -maskA1;
-            maskB0 = -maskB0;
-            maskB1 = -maskB1;
-        } else {
-            // A concave interior corner is classified as concave independently by both
-            // faces
-            // that share it, and the TES bevel only converges to one shared edge position
-            // when
-            // the two faces push with OPPOSITE signs — matching signs is what a convex
-            // corner
-            // needs. Negating unconditionally, the way this used to work, gave both sides
-            // the
-            // same sign and pushed them apart instead of together, opening a gap along
-            // every
-            // interior edge. Comparing this face's own direction index against the specific
-            // neighbor direction each edge actually borders is a tie-break both sides can
-            // compute alone and will always disagree on, so any concave pair ends up with
-            // one
-            // '+' and one '-' no matter which face gets processed first.
-            if (concaveA0 && !convexA0 && direction3Vector.index > tangentDirectionA.index)
-                maskA0 = -maskA0;
-            if (concaveA1 && !convexA1 && direction3Vector.index > oppA.index)
-                maskA1 = -maskA1;
-            if (concaveB0 && !convexB0 && direction3Vector.index > tangentDirectionB.index)
-                maskB0 = -maskB0;
-            if (concaveB1 && !convexB1 && direction3Vector.index > oppB.index)
-                maskB1 = -maskB1;
+            if (exposure == EXPOSURE_STRETCH || (exposure == EXPOSURE_CONCAVE && negativeConcaveB1))
+                negMaskB1 |= (1 << i);
         }
 
         return finalizeFace(
@@ -540,7 +511,8 @@ class FullGeometryBranch extends BranchPackage {
                 vert0Color, vert1Color, vert2Color, vert3Color,
                 encodedFace,
                 sizeA, sizeB,
-                maskA0, maskA1, maskB0, maskB1);
+                maskA0, maskA1, maskB0, maskB1,
+                negMaskA0, negMaskA1, negMaskB0, negMaskB1);
     }
 
     private int resolveOrientation(BlockPaletteHandle rotationPaletteHandle, int xyz) {
@@ -854,7 +826,8 @@ class FullGeometryBranch extends BranchPackage {
             float vert0Color, float vert1Color, float vert2Color, float vert3Color,
             int encodedFace,
             int sizeA, int sizeB,
-            int maskA0, int maskA1, int maskB0, int maskB1) {
+            int maskA0, int maskA1, int maskB0, int maskB1,
+            int negMaskA0, int negMaskA1, int negMaskB0, int negMaskB1) {
 
         FloatArrayList buffer = verts.computeIfAbsent(materialId, k -> new FloatArrayList());
 
@@ -867,6 +840,10 @@ class FullGeometryBranch extends BranchPackage {
         float fMaskA1 = (float) maskA1;
         float fMaskB0 = (float) maskB0;
         float fMaskB1 = (float) maskB1;
+        float fNegMaskA0 = (float) negMaskA0;
+        float fNegMaskA1 = (float) negMaskA1;
+        float fNegMaskB0 = (float) negMaskB0;
+        float fNegMaskB1 = (float) negMaskB1;
 
         // vert 0
         buffer.add((float) Coordinate3Int.unpackX(vert0XYZ));
@@ -882,6 +859,10 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(fMaskA1);
         buffer.add(fMaskB0);
         buffer.add(fMaskB1);
+        buffer.add(fNegMaskA0);
+        buffer.add(fNegMaskA1);
+        buffer.add(fNegMaskB0);
+        buffer.add(fNegMaskB1);
 
         // vert 1
         buffer.add((float) Coordinate3Int.unpackX(vert1XYZ));
@@ -897,6 +878,10 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(fMaskA1);
         buffer.add(fMaskB0);
         buffer.add(fMaskB1);
+        buffer.add(fNegMaskA0);
+        buffer.add(fNegMaskA1);
+        buffer.add(fNegMaskB0);
+        buffer.add(fNegMaskB1);
 
         // vert 2
         buffer.add((float) Coordinate3Int.unpackX(vert2XYZ));
@@ -912,6 +897,10 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(fMaskA1);
         buffer.add(fMaskB0);
         buffer.add(fMaskB1);
+        buffer.add(fNegMaskA0);
+        buffer.add(fNegMaskA1);
+        buffer.add(fNegMaskB0);
+        buffer.add(fNegMaskB1);
 
         // vert 3
         buffer.add((float) Coordinate3Int.unpackX(vert3XYZ));
@@ -927,6 +916,10 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(fMaskA1);
         buffer.add(fMaskB0);
         buffer.add(fMaskB1);
+        buffer.add(fNegMaskA0);
+        buffer.add(fNegMaskA1);
+        buffer.add(fNegMaskB0);
+        buffer.add(fNegMaskB1);
 
         return true;
     }
