@@ -28,163 +28,50 @@ out float vColor;
 #include "includes/PlayerPositionData.glsl"
 #include "includes/WorldCurvature.glsl"
 #include "includes/WorldDistantRise.glsl"
-#include "includes/NaturalNoiseData.glsl"
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
+#include "surface/includes/NearTerrainNoise.glsl"
+#include "surface/includes/Bevel.glsl"
+#include "surface/includes/HeightDisplacement.glsl"
 
-// Terrain tessellation evaluation. Displaces the near ring with per-vertex
-// height/noise, bevels a natural block's convex edges inward and its
-// concave interior edges outward into a smooth ramp, and stretches an
-// artificial block's exposed edges outward to meet a beveling natural
-// neighbor, before applying the shared distant-rise and world curvature
-// bends. Every mask bit is driven by FullGeometryBranch's own per-cell
-// exposure classification, so the same physical edge always resolves the
-// same way regardless of which quad or chunk batch evaluates it.
+// Terrain tessellation evaluation. All tier/nearStrength decisions are made from the
+// bilinearly interpolated base position — before jitter, bevel, height, or curvature —
+// so two patches from different chunks sharing a boundary edge always evaluate those
+// decisions from the same world-space point and produce identical displacement magnitudes
+// at that edge. towardCenterA/B use a safe sign that never returns 0, because a zero
+// direction vector would suppress bevel on the centre row of vertices and break the
+// tangential-push invariant that keeps edges watertight.
 
-const float BEVEL_RADIUS = 0.30;
-const float BEVEL_SIZE   = 0.09;
-const float MASK_BLEND   = 0.15;
+const float HEIGHT_FD_EPSILON = 0.02;
 
-const float HEIGHT_DISPLACE_SCALE   = 0.12;
-const float HEIGHT_FD_EPSILON       = 0.02;
-const float HEIGHT_EDGE_FADE_RADIUS = 0.75;
-
-float maskBit(float mask, int bit) {
-    return float((int(mask) >> bit) & 1);
+float safeSign(float t) {
+    return t >= 0.5 ? -1.0 : 1.0;
 }
 
-float maskBitSmooth(float mask, float pos, int lastIndex) {
-    int idx = clamp(int(floor(pos)), 0, lastIndex);
-    float thisBit = maskBit(mask, idx);
+vec3 evalDisplacedSurface(
+    float u, float v,
+    float tier0MaxSqDist, float tier1MaxSqDist,
+    vec3 baseWorldPos, float nearStrength,
+    out vec3 outNormal) {
 
-    float nearestBoundary = floor(pos + 0.5);
-    int   boundaryIdx      = int(nearestBoundary);
-
-    if (boundaryIdx <= 0 || boundaryIdx > lastIndex)
-        return thisBit;
-
-    float dist = pos - nearestBoundary;
-
-    float belowBit = maskBit(mask, boundaryIdx - 1);
-    float aboveBit = maskBit(mask, boundaryIdx);
-
-    float t = smoothstep(-MASK_BLEND * 0.5, MASK_BLEND * 0.5, dist);
-    return mix(belowBit, aboveBit, t);
-}
-
-// Unsigned edge exposure — used only for the height-displacement fade,
-// which just needs to know how close a vertex sits to any treated edge,
-// never which direction that edge pushes.
-vec2 computeEdgeExposure(
-    float posA, float posB,
-    float sizeA, float sizeB,
-    int iLastA, int iLastB,
-    float maskA0, float maskA1, float maskB0, float maskB1,
-    float radius) {
-
-    float rawA0 = 1.0 - smoothstep(0.0, radius, posA);
-    float rawA1 = 1.0 - smoothstep(0.0, radius, sizeA - posA);
-    float rawB0 = 1.0 - smoothstep(0.0, radius, posB);
-    float rawB1 = 1.0 - smoothstep(0.0, radius, sizeB - posB);
-
-    float edgeA0 = rawA0 * maskBitSmooth(maskA0, posB, iLastB);
-    float edgeA1 = rawA1 * maskBitSmooth(maskA1, posB, iLastB);
-    float edgeB0 = rawB0 * maskBitSmooth(maskB0, posA, iLastA);
-    float edgeB1 = rawB1 * maskBitSmooth(maskB1, posA, iLastA);
-
-    return vec2(max(edgeA0, edgeA1), max(edgeB0, edgeB1));
-}
-
-// Signed edge exposure. maskA0/A1/B0/B1 are unsigned presence bits (any
-// exposure — convex, concave, or stretch); negMaskA0/A1/B0/B1 are the
-// subset of those same bits that should push with a negative (outward)
-// sign, resolved per cell by FullGeometryBranch. A single merged quad's
-// edge can mix convex cells with concave cells along its own length — a
-// stray interior corner sitting in an otherwise open edge is ordinary
-// terrain — so the sign has to be blended per cell through the same
-// maskBitSmooth curve as the magnitude, fading the push to zero exactly
-// where a convex run meets a concave run rather than holding full
-// magnitude while the sign flips underneath it. Per axis, whichever of
-// the two opposing edges (A0/A1, or B0/B1) is actually closer at this
-// vertex supplies both the magnitude and the sign used.
-vec4 computeSignedEdgeExposure(
-    float posA, float posB,
-    float sizeA, float sizeB,
-    int iLastA, int iLastB,
-    float maskA0, float maskA1, float maskB0, float maskB1,
-    float negMaskA0, float negMaskA1, float negMaskB0, float negMaskB1,
-    float radius) {
-
-    float rawA0 = 1.0 - smoothstep(0.0, radius, posA);
-    float rawA1 = 1.0 - smoothstep(0.0, radius, sizeA - posA);
-    float rawB0 = 1.0 - smoothstep(0.0, radius, posB);
-    float rawB1 = 1.0 - smoothstep(0.0, radius, sizeB - posB);
-
-    float magA0 = rawA0 * maskBitSmooth(maskA0, posB, iLastB);
-    float magA1 = rawA1 * maskBitSmooth(maskA1, posB, iLastB);
-    float magB0 = rawB0 * maskBitSmooth(maskB0, posA, iLastA);
-    float magB1 = rawB1 * maskBitSmooth(maskB1, posA, iLastA);
-
-    float polarityA0 = maskBitSmooth(negMaskA0, posB, iLastB);
-    float polarityA1 = maskBitSmooth(negMaskA1, posB, iLastB);
-    float polarityB0 = maskBitSmooth(negMaskB0, posA, iLastA);
-    float polarityB1 = maskBitSmooth(negMaskB1, posA, iLastA);
-
-    float signedA0 = magA0 * (1.0 - 2.0 * polarityA0);
-    float signedA1 = magA1 * (1.0 - 2.0 * polarityA1);
-    float signedB0 = magB0 * (1.0 - 2.0 * polarityB0);
-    float signedB1 = magB1 * (1.0 - 2.0 * polarityB1);
-
-    float signedA = magA0 >= magA1 ? signedA0 : signedA1;
-    float signedB = magB0 >= magB1 ? signedB0 : signedB1;
-
-    return vec4(abs(signedA), sign(signedA), abs(signedB), sign(signedB));
-}
-
-vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1MaxSqDist, out vec3 outNormal) {
-
-    vec3 worldPos   = mix(mix(teWorldPos[0], teWorldPos[1], u),
-                          mix(teWorldPos[3], teWorldPos[2], u), v);
-    vec3 uvLocalPos = worldPos;
+    vec3 worldPos = baseWorldPos;
 
     vec3 normal = normalize(
-                  mix(mix(teNormal[0], teNormal[1], u),
-                      mix(teNormal[3], teNormal[2], u), v));
+        mix(mix(teNormal[0], teNormal[1], u),
+            mix(teNormal[3], teNormal[2], u), v));
 
-    float vertexDistSq = computeDistanceFromCenterSq(worldPos);
-    float nearStrength  = vertexDistSq <= tier0MaxSqDist ? 1.0 : 0.0;
+    worldPos = applyNearTerrainJitter(worldPos, nearStrength);
 
-    vec2 seed = worldPos.xz;
-
-    if (nearStrength > 0.001) {
-        vec2  nSeed = seed * NATURAL_NOISE_SEED_SCALE;
-        float nX    = sampleNaturalNoiseSmooth(nSeed + vec2(17.3,  0.0)) - 0.5;
-        float nZ    = sampleNaturalNoiseSmooth(nSeed + vec2( 0.0, 31.7)) - 0.5;
-        float nY    = sampleNaturalNoiseSmooth(nSeed + vec2(53.1, 83.2)) - 0.5;
-        worldPos.x += nX * 0.4  * nearStrength;
-        worldPos.z += nZ * 0.4  * nearStrength;
-        worldPos.y += nY * 0.08 * nearStrength;
-    }
-
-    if (vertexDistSq > tier1MaxSqDist)
+    if (computeDistanceFromCenterSq(baseWorldPos) > tier1MaxSqDist)
         worldPos = applyDistantRise(worldPos);
 
     if (nearStrength > 0.001) {
+
         int   quadPack = int(teQuadSize[0]);
         float sizeA    = float(quadPack & 0xFF);
         float sizeB    = float((quadPack >> 8) & 0xFF);
-
-        float maskA0 = teBevelMaskA0[0];
-        float maskA1 = teBevelMaskA1[0];
-        float maskB0 = teBevelMaskB0[0];
-        float maskB1 = teBevelMaskB1[0];
-
-        float negMaskA0 = teBevelNegMaskA0[0];
-        float negMaskA1 = teBevelNegMaskA1[0];
-        float negMaskB0 = teBevelNegMaskB0[0];
-        float negMaskB1 = teBevelNegMaskB1[0];
 
         float posA = u * sizeA;
         float posB = v * sizeB;
@@ -192,54 +79,24 @@ vec3 evalDisplacedSurface(float u, float v, float tier0MaxSqDist, float tier1Max
         int iLastA = int(sizeA) - 1;
         int iLastB = int(sizeB) - 1;
 
-        vec4  signedAxes  = computeSignedEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
-                                                       maskA0, maskA1, maskB0, maskB1,
-                                                       negMaskA0, negMaskA1, negMaskB0, negMaskB1,
-                                                       BEVEL_RADIUS);
-        float bevelA      = signedAxes.x;
-        float bevelASign  = signedAxes.y;
-        float bevelB      = signedAxes.z;
-        float bevelBSign  = signedAxes.w;
-        float bevelMax    = max(bevelA, bevelB);
+        vec3 quadTangentA  = normalize(teWorldPos[1] - teWorldPos[0]);
+        vec3 quadTangentB  = normalize(teWorldPos[3] - teWorldPos[0]);
+        vec3 towardCenterA = quadTangentA * safeSign(u);
+        vec3 towardCenterB = quadTangentB * safeSign(v);
 
-        if (bevelMax > 0.001) {
+        applyBevel(
+            worldPos, normal,
+            towardCenterA, towardCenterB,
+            posA, posB, sizeA, sizeB, iLastA, iLastB,
+            teBevelMaskA0[0], teBevelMaskA1[0], teBevelMaskB0[0], teBevelMaskB1[0],
+            teBevelNegMaskA0[0], teBevelNegMaskA1[0], teBevelNegMaskB0[0], teBevelNegMaskB1[0]);
 
-            vec3 quadTangentA = normalize(teWorldPos[1] - teWorldPos[0]);
-            vec3 quadTangentB = normalize(teWorldPos[3] - teWorldPos[0]);
-
-            vec3 towardCenterA = quadTangentA * sign(0.5 - u);
-            vec3 towardCenterB = quadTangentB * sign(0.5 - v);
-
-            float normalPushSign = bevelA >= bevelB ? bevelASign : bevelBSign;
-
-            // Each axis pushes by its own full amount and its own sign — a
-            // true 3-way cube corner is shared by up to three mutually
-            // perpendicular faces, each of which only ever sees two of
-            // those axes as its own tangents plus its own normal as the
-            // third, so applying every exposed axis independently is what
-            // lets every face land on the exact same displaced corner
-            // regardless of which one is computing it. A negative sign
-            // reaches fully outward and upward instead of inward and down,
-            // whether that came from an artificial quad's own stretch or
-            // from one edge of a natural quad turning out to be a concave
-            // interior corner.
-            worldPos += towardCenterA * (BEVEL_SIZE * bevelASign) * bevelA;
-            worldPos += towardCenterB * (BEVEL_SIZE * bevelBSign) * bevelB;
-            worldPos -= normal * BEVEL_SIZE * bevelMax * normalPushSign;
-
-            vec3  edgeDir = -towardCenterA * bevelA * bevelASign - towardCenterB * bevelB * bevelBSign;
-            float edgeLen = length(edgeDir);
-            if (edgeLen > 0.001)
-                normal = normalize(mix(normal, edgeDir / edgeLen, bevelMax));
-        }
-
-        vec2  heightEdgeAxes = computeEdgeExposure(posA, posB, sizeA, sizeB, iLastA, iLastB,
-                                                    maskA0, maskA1, maskB0, maskB1, HEIGHT_EDGE_FADE_RADIUS);
-        float heightWeight = 1.0 - max(heightEdgeAxes.x, heightEdgeAxes.y);
-
-        vec2  tiledUV = tileUV(uvLocalPos, teUVOrigin[0], normal, teOrient[0]);
-        float h       = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
-        worldPos += normal * (h - 0.5) * HEIGHT_DISPLACE_SCALE * heightWeight * nearStrength;
+        vec2 tiledUV = tileUV(baseWorldPos, teUVOrigin[0], normal, teOrient[0]);
+        worldPos = applyHeightDisplacement(
+            worldPos, normal, tiledUV,
+            posA, posB, sizeA, sizeB, iLastA, iLastB,
+            teBevelMaskA0[0], teBevelMaskA1[0], teBevelMaskB0[0], teBevelMaskB1[0],
+            nearStrength);
     }
 
     worldPos = applyWorldCurvature(worldPos);
@@ -256,21 +113,41 @@ void main() {
     float tier0MaxSqDist = getTier0MaxSqDist();
     float tier1MaxSqDist = getTier1MaxSqDist();
 
-    vec3 normal;
-    vec3 worldPos = evalDisplacedSurface(u, v, tier0MaxSqDist, tier1MaxSqDist, normal);
+    // Base position: bilinear interpolation of the four control points with no
+    // displacement applied. All tier and nearStrength decisions derive exclusively
+    // from this value so boundary vertices shared between adjacent patches always
+    // evaluate the same pre-displacement world position and therefore the same
+    // displacement magnitude.
+    vec3 baseWorldPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
+                            mix(teWorldPos[3], teWorldPos[2], u), v);
 
-    float distSq          = computeDistanceFromCenterSq(worldPos);
-    float nearStrength0   = distSq <= tier0MaxSqDist ? 1.0 : 0.0;
-    float farRingActive0  = distSq > tier1MaxSqDist  ? 1.0 : 0.0;
-    float geometryBlend   = max(nearStrength0, farRingActive0);
+    float baseDistSq   = computeDistanceFromCenterSq(baseWorldPos);
+    float nearStrength = getNearStrength(baseDistSq, tier0MaxSqDist);
+
+    vec3 normal;
+    vec3 worldPos = evalDisplacedSurface(
+        u, v, tier0MaxSqDist, tier1MaxSqDist, baseWorldPos, nearStrength, normal);
+
+    // FD normal refinement. Uses baseDistSq so the blend weight is consistent with
+    // the nearStrength already used for displacement above.
+    float farRingActive = baseDistSq > tier1MaxSqDist ? 1.0 : 0.0;
+    float geometryBlend = max(nearStrength, farRingActive);
 
     if (geometryBlend > 0.001) {
         float uStep = (u + HEIGHT_FD_EPSILON <= 1.0) ?  HEIGHT_FD_EPSILON : -HEIGHT_FD_EPSILON;
         float vStep = (v + HEIGHT_FD_EPSILON <= 1.0) ?  HEIGHT_FD_EPSILON : -HEIGHT_FD_EPSILON;
 
+        vec3 baseU = mix(mix(teWorldPos[0], teWorldPos[1], u + uStep),
+                         mix(teWorldPos[3], teWorldPos[2], u + uStep), v);
+        vec3 baseV = mix(mix(teWorldPos[0], teWorldPos[1], u),
+                         mix(teWorldPos[3], teWorldPos[2], u), v + vStep);
+
+        float nsU = getNearStrength(computeDistanceFromCenterSq(baseU), tier0MaxSqDist);
+        float nsV = getNearStrength(computeDistanceFromCenterSq(baseV), tier0MaxSqDist);
+
         vec3 dummyNormal;
-        vec3 posU = evalDisplacedSurface(u + uStep, v, tier0MaxSqDist, tier1MaxSqDist, dummyNormal);
-        vec3 posV = evalDisplacedSurface(u, v + vStep, tier0MaxSqDist, tier1MaxSqDist, dummyNormal);
+        vec3 posU = evalDisplacedSurface(u + uStep, v, tier0MaxSqDist, tier1MaxSqDist, baseU, nsU, dummyNormal);
+        vec3 posV = evalDisplacedSurface(u, v + vStep, tier0MaxSqDist, tier1MaxSqDist, baseV, nsV, dummyNormal);
 
         vec3 tangentU = (posU - worldPos) / uStep;
         vec3 tangentV = (posV - worldPos) / vStep;
@@ -283,11 +160,8 @@ void main() {
         }
     }
 
-    vec3 uvLocalPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
-                          mix(teWorldPos[3], teWorldPos[2], u), v);
-
     vLocalPos   = worldPos;
-    vUVLocalPos = uvLocalPos;
+    vUVLocalPos = baseWorldPos;
     vNormal     = normal;
     vUVOrigin   = teUVOrigin[0];
     vOrient     = teOrient[0];

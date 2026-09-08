@@ -406,17 +406,21 @@ class FullGeometryBranch extends BranchPackage {
         // other face sharing a given edge always looks back along the exact
         // direction that edge borders, so comparing this face's own direction
         // index against that neighbor direction is a tie-break both sides can
-        // compute independently and will always disagree on. That comparison
-        // depends only on direction3Vector and the fixed axis directions, so
-        // it's the same for every cell along one edge — but a single merged
-        // quad's edge can still freely mix convex cells (open corners) with
-        // concave cells (interior corners) along its length, so the sign this
-        // decides has to be recorded and applied per cell below, not once for
-        // the whole edge.
-        boolean negativeConcaveA0 = direction3Vector.index > tangentDirectionA.index;
-        boolean negativeConcaveA1 = direction3Vector.index > oppA.index;
-        boolean negativeConcaveB0 = direction3Vector.index > tangentDirectionB.index;
-        boolean negativeConcaveB1 = direction3Vector.index > oppB.index;
+        // compute independently and will always disagree on — which is why
+        // each of these four must compare against the SAME sideDirection its
+        // own mask loop below actually queries (oppA for the A0 edge, whose
+        // neighbor lies across oppA; tangentDirectionA for the A1 edge, whose
+        // neighbor lies across tangentDirectionA; and mirrored for B). That
+        // comparison depends only on direction3Vector and the fixed axis
+        // directions, so it's the same for every cell along one edge — but a
+        // single merged quad's edge can still freely mix convex cells (open
+        // corners) with concave cells (interior corners) along its length, so
+        // the sign this decides has to be recorded and applied per cell below,
+        // not once for the whole edge.
+        boolean negativeConcaveA0 = direction3Vector.index > oppA.index;
+        boolean negativeConcaveA1 = direction3Vector.index > tangentDirectionA.index;
+        boolean negativeConcaveB0 = direction3Vector.index > oppB.index;
+        boolean negativeConcaveB1 = direction3Vector.index > tangentDirectionB.index;
 
         // maskA0 — B=0..sizeB-1 cells at A=0; the neighbor this edge borders is oppA
         for (int j = 0; j < iSizeB; j++) {

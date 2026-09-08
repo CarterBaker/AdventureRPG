@@ -34,48 +34,15 @@ out float teBevelNegMaskB1[];
 #include "includes/SettingsData.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
-/*
- * Ring gating compares this patch's own world-space center against
- * getTier0MaxSqDist()/getTier1MaxSqDist() (SurfaceTessellationTier.glsl)
- * via computeDistanceFromCenterSq() — the same per-position formula the
- * TES and FSH use — so all three stages agree on the same boundaries no
- * matter whether this patch is being drawn as part of an individually
- * rendered chunk or merged into a mega batch. The old approach compared
- * against a single u_distanceFromCenter value baked once per grid slot,
- * which every chunk folded into the same mega shared regardless of its
- * own true position — that's what let a mega and its individually
- * rendered neighbor pick different tiers for what should be the same
- * ring boundary. tcWorldPos is a TCS input, already valid for every
- * control point before this invocation runs, so reading all four corners
- * from inside the gl_InvocationID == 0 block is safe. Outside the near
- * ring, both tess levels are pinned to 1 — no interior vertices for the
- * TES's bevel/noise/height code to run on.
- *
- * levelA/levelB are always this quad's own block count along that axis
- * times a fixed density, never boosted by anything sampled from the
- * quad's own content. equal_spacing then places vertex k at exactly
- * k/density blocks from the patch's own corner, and since block corners
- * sit on an absolute world grid, two neighboring patches only agree on
- * every shared-edge vertex position if both derive their level from size
- * alone — a per-quad adaptive term would break that for any two
- * neighbors whose sampled content differs, at a true corner or a flat
- * coplanar seam alike.
- *
- * Near ring: level = size * NEAR_DENSITY, capped at 64 (the driver's
- * guaranteed ceiling, and exactly the max merged quad size of 16 — see
- * FullGeometryBranch.tryExpand — times 4).
- *
- * Far ring: level = size, one segment per block. GL_MAX_TESS_GEN_LEVEL is
- * only guaranteed >= 64, so a merged quad wider than that loses the
- * one-vertex-per-block guarantee for itself only; if that becomes
- * visible in practice the real fix is capping merged quad size during
- * greedy meshing, not raising this clamp.
- *
- * Mid ring: flat level 1. World curvature still runs here (applied in
- * StandardSurface.tes) but needs no density — its second derivative is a
- * constant everywhere, so a merged quad's worst-case sag depends only on
- * its own span, not on distance from center.
- */
+// Tessellation-level control point. Each of the quad's four edges gets its
+// own outer level, decided from that edge's own world-space midpoint rather
+// than the patch's center — two patches sharing a physical edge always share
+// that edge's two corners, so they always compute the same midpoint and
+// therefore always agree on that edge's tier and density, whatever their own
+// opposite edge, interior, or size may be. This is what stops a patch that
+// straddles a tier boundary from tearing away from its neighbor, and stops
+// two differently-sized merged quads meeting at a chunk border from ever
+// picking mismatched densities for the border they share.
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -96,41 +63,28 @@ void main() {
 
     if (gl_InvocationID == 0) {
 
-        float levelA;
-        float levelB;
-
         float tier0MaxSqDist = getTier0MaxSqDist();
         float tier1MaxSqDist = getTier1MaxSqDist();
-
-        vec3  patchCenter = (tcWorldPos[0] + tcWorldPos[1] + tcWorldPos[2] + tcWorldPos[3]) * 0.25;
-        float patchDistSq = computeDistanceFromCenterSq(patchCenter);
 
         int   quadPack = int(tcQuadSize[0]);
         float sizeA    = float(quadPack & 0xFF);
         float sizeB    = float((quadPack >> 8) & 0xFF);
 
-        if (patchDistSq <= tier0MaxSqDist) {
+        vec3 midEdgeV0 = (tcWorldPos[0] + tcWorldPos[1]) * 0.5;
+        vec3 midEdgeU1 = (tcWorldPos[1] + tcWorldPos[2]) * 0.5;
+        vec3 midEdgeV1 = (tcWorldPos[2] + tcWorldPos[3]) * 0.5;
+        vec3 midEdgeU0 = (tcWorldPos[3] + tcWorldPos[0]) * 0.5;
 
-            const float NEAR_DENSITY = 4.0;
+        float levelV0 = getEdgeTessLevel(computeDistanceFromCenterSq(midEdgeV0), sizeA, tier0MaxSqDist, tier1MaxSqDist);
+        float levelU1 = getEdgeTessLevel(computeDistanceFromCenterSq(midEdgeU1), sizeB, tier0MaxSqDist, tier1MaxSqDist);
+        float levelV1 = getEdgeTessLevel(computeDistanceFromCenterSq(midEdgeV1), sizeA, tier0MaxSqDist, tier1MaxSqDist);
+        float levelU0 = getEdgeTessLevel(computeDistanceFromCenterSq(midEdgeU0), sizeB, tier0MaxSqDist, tier1MaxSqDist);
 
-            levelA = clamp(sizeA * NEAR_DENSITY, 1.0, 64.0);
-            levelB = clamp(sizeB * NEAR_DENSITY, 1.0, 64.0);
-
-        } else if (patchDistSq > tier1MaxSqDist) {
-
-            levelA = clamp(sizeA, 1.0, 64.0);
-            levelB = clamp(sizeB, 1.0, 64.0);
-
-        } else {
-            levelA = 1.0;
-            levelB = 1.0;
-        }
-
-        gl_TessLevelOuter[0] = levelB;
-        gl_TessLevelOuter[1] = levelA;
-        gl_TessLevelOuter[2] = levelB;
-        gl_TessLevelOuter[3] = levelA;
-        gl_TessLevelInner[0] = levelA;
-        gl_TessLevelInner[1] = levelB;
+        gl_TessLevelOuter[0] = levelU0;
+        gl_TessLevelOuter[1] = levelV0;
+        gl_TessLevelOuter[2] = levelU1;
+        gl_TessLevelOuter[3] = levelV1;
+        gl_TessLevelInner[0] = max(levelV0, levelV1);
+        gl_TessLevelInner[1] = max(levelU0, levelU1);
     }
 }
