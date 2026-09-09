@@ -1,17 +1,11 @@
 #ifndef BEVEL_GLSL
 #define BEVEL_GLSL
 
-// Corner/edge rounding for tessellated block faces. All beveled vertices slide tangentially
-// toward their quad center; convex edges additionally displace along -normal to chamfer a
-// protruding corner, concave edges displace along +normal to fillet a reentrant corner.
-// negMask marks concave and stretch cells so only the normal sign flips while the tangential
-// direction stays the same, causing any two faces at a shared interior corner to converge on
-// the same outward-displaced seam point. Where polarity disagrees across both bevel axes the
-// normal blend attenuates by |normalSign| rather than committing to a diagonal that matches
-// neither adjoining face.
+// Corner/edge rounding for tessellated block faces. Convex edges chamfer inward and down; concave (interior) edges mirror every step exactly — tangential motion reverses away from center and normal motion reverses outward — so the fillet a concave corner needs is the same math as a convex chamfer viewed from the far side. The resulting offset is snapped to a small fixed grid so two faces of different quad sizes meeting at a shared vertex always resolve to the identical displaced point.
 
-const float BEVEL_RADIUS = 0.30;
-const float BEVEL_SIZE   = 0.09;
+const float BEVEL_RADIUS     = 0.30;
+const float BEVEL_SIZE       = 0.09;
+const float BEVEL_SNAP_GRID  = 1.0 / 1024.0;
 
 float maskBit(float mask, int bit) {
     return float((int(mask) >> bit) & 1);
@@ -20,6 +14,10 @@ float maskBit(float mask, int bit) {
 float maskBitAt(float mask, float pos, int lastIndex) {
     int idx = clamp(int(floor(pos)), 0, lastIndex);
     return maskBit(mask, idx);
+}
+
+vec3 snapToGrid(vec3 p, float grid) {
+    return round(p / grid) * grid;
 }
 
 vec2 computeEdgeExposure(
@@ -96,15 +94,19 @@ void applyBevel(
     if (bevelMax <= 0.001)
         return;
 
+    float signedBevelA  = bevelA * bevelASign;
+    float signedBevelB  = bevelB * bevelBSign;
     float signWeight    = max(bevelA + bevelB, 0.0001);
     float normalSign    = (bevelA * bevelASign + bevelB * bevelBSign) / signWeight;
     float signAgreement = (bevelASign * bevelBSign >= 0.0) ? 1.0 : abs(normalSign);
 
-    worldPos += towardCenterA * BEVEL_SIZE * bevelA;
-    worldPos += towardCenterB * BEVEL_SIZE * bevelB;
-    worldPos -= normal * BEVEL_SIZE * bevelMax * normalSign;
+    vec3 tangentialOffset = towardCenterA * BEVEL_SIZE * signedBevelA
+                           + towardCenterB * BEVEL_SIZE * signedBevelB;
+    vec3 normalOffset     = -normal * BEVEL_SIZE * bevelMax * normalSign;
 
-    vec3  edgeDir = -towardCenterA * bevelA * bevelASign - towardCenterB * bevelB * bevelBSign;
+    worldPos += snapToGrid(tangentialOffset + normalOffset, BEVEL_SNAP_GRID);
+
+    vec3  edgeDir = -towardCenterA * signedBevelA - towardCenterB * signedBevelB;
     float edgeLen = length(edgeDir);
     if (edgeLen > 0.001)
         normal = normalize(mix(normal, edgeDir / edgeLen, bevelMax * signAgreement));
