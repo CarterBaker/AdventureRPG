@@ -34,15 +34,7 @@ out float teBevelNegMaskB1[];
 #include "includes/SettingsData.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
-// Tessellation-level control point. Each of the quad's four edges gets its
-// own outer level, decided from that edge's own world-space midpoint rather
-// than the patch's center — two patches sharing a physical edge always share
-// that edge's two corners, so they always compute the same midpoint and
-// therefore always agree on that edge's tier and density, whatever their own
-// opposite edge, interior, or size may be. This is what stops a patch that
-// straddles a tier boundary from tearing away from its neighbor, and stops
-// two differently-sized merged quads meeting at a chunk border from ever
-// picking mismatched densities for the border they share.
+// Tessellation-level control point: each edge's outer level is decided from that edge's own world-space midpoint rather than the patch's center, so any two patches sharing a physical edge always agree on that edge's tier and density regardless of their own opposite edge, interior, or size.
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;

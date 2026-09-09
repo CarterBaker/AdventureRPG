@@ -5,14 +5,14 @@ layout (location = 2) in float aColor;
 layout (location = 3) in vec2  aUVOrigin;
 layout (location = 4) in float aOrient;
 layout (location = 5) in float aQuadSize;
-layout (location = 6) in float aBevelMaskA0;     // A=0 edge,     bit j = cell j along B is bevel-exposed
-layout (location = 7) in float aBevelMaskA1;     // A=sizeA edge, bit j = cell j along B is bevel-exposed
-layout (location = 8) in float aBevelMaskB0;     // B=0 edge,     bit i = cell i along A is bevel-exposed
-layout (location = 9) in float aBevelMaskB1;     // B=sizeB edge, bit i = cell i along A is bevel-exposed
-layout (location = 10) in float aBevelNegMaskA0; // A=0 edge,     subset of aBevelMaskA0 that pushes with a negative (outward) sign — concave interior corner or artificial-block stretch
-layout (location = 11) in float aBevelNegMaskA1; // A=sizeA edge, same as above
-layout (location = 12) in float aBevelNegMaskB0; // B=0 edge,     same as above
-layout (location = 13) in float aBevelNegMaskB1; // B=sizeB edge, same as above
+layout (location = 6) in float aBevelMaskA0;
+layout (location = 7) in float aBevelMaskA1;
+layout (location = 8) in float aBevelMaskB0;
+layout (location = 9) in float aBevelMaskB1;
+layout (location = 10) in float aBevelNegMaskA0;
+layout (location = 11) in float aBevelNegMaskA1;
+layout (location = 12) in float aBevelNegMaskB0;
+layout (location = 13) in float aBevelNegMaskB1;
 
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
@@ -40,11 +40,7 @@ out float tcBevelNegMaskA1;
 out float tcBevelNegMaskB0;
 out float tcBevelNegMaskB1;
 
-// Places raw block-face geometry in world space and hands it downstream
-// untouched — tessellation only ever sees the 4 real corners of a merged
-// quad, so any per-vertex displacement (height, bevel/stretch, distant rise)
-// has to happen after tessellation actually adds geometry, in
-// StandardSurface.tes.
+// Places raw block-face geometry in world space and passes vertex-encoded quad/bevel data through untouched; per-vertex displacement happens after tessellation in StandardSurfaceShader.tes, since tessellation only ever sees a merged quad's four real corners.
 
 void main() {
     vec3 worldPos  = aPos;

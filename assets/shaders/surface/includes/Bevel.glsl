@@ -1,29 +1,14 @@
 #ifndef BEVEL_GLSL
 #define BEVEL_GLSL
 
-// Corner/edge rounding for tessellated block faces. Every mask bit comes
-// from FullGeometryBranch's own per-cell exposure classification, so the
-// same physical edge always resolves the same way regardless of which face
-// sharing it is evaluating. The tangential push on each axis is applied at
-// that axis' own full magnitude and sign independently, so up to three
-// mutually perpendicular faces sharing a true corner converge on the same
-// point; the normal push blends the two axes' signs by their own relative
-// magnitude instead of switching discretely between them, so a vertex
-// sliding through a corner — or along an edge where a convex run meets a
-// concave run — never creases at the point where one axis overtakes the
-// other.
-//
-// Mask lookups are deliberately hard, per-cell reads (no blending across
-// cell boundaries): floor(pos) always maps to the true world-block cell
-// regardless of how big the merged quad happens to be, so two quads of
-// different sizes that both touch the same physical cell always agree on
-// its exposure bit. Blending that value toward a neighboring cell would
-// only be safe if that neighbor stayed inside the same patch — at a
-// T-junction (a large merged quad sharing an edge with several smaller
-// ones, which happens routinely at chunk borders and wherever
-// differently-merged faces meet) the small quads see that same boundary as
-// their own hard edge with nothing to blend toward, so a blended value on
-// one side and a raw value on the other would crack the seam.
+// Corner/edge rounding for tessellated block faces. All beveled vertices slide tangentially
+// toward their quad center; convex edges additionally displace along -normal to chamfer a
+// protruding corner, concave edges displace along +normal to fillet a reentrant corner.
+// negMask marks concave and stretch cells so only the normal sign flips while the tangential
+// direction stays the same, causing any two faces at a shared interior corner to converge on
+// the same outward-displaced seam point. Where polarity disagrees across both bevel axes the
+// normal blend attenuates by |normalSign| rather than committing to a diagonal that matches
+// neither adjoining face.
 
 const float BEVEL_RADIUS = 0.30;
 const float BEVEL_SIZE   = 0.09;
@@ -111,17 +96,18 @@ void applyBevel(
     if (bevelMax <= 0.001)
         return;
 
-    float signWeight = max(bevelA + bevelB, 0.0001);
-    float normalSign = (bevelA * bevelASign + bevelB * bevelBSign) / signWeight;
+    float signWeight    = max(bevelA + bevelB, 0.0001);
+    float normalSign    = (bevelA * bevelASign + bevelB * bevelBSign) / signWeight;
+    float signAgreement = (bevelASign * bevelBSign >= 0.0) ? 1.0 : abs(normalSign);
 
-    worldPos += towardCenterA * (BEVEL_SIZE * bevelASign) * bevelA;
-    worldPos += towardCenterB * (BEVEL_SIZE * bevelBSign) * bevelB;
+    worldPos += towardCenterA * BEVEL_SIZE * bevelA;
+    worldPos += towardCenterB * BEVEL_SIZE * bevelB;
     worldPos -= normal * BEVEL_SIZE * bevelMax * normalSign;
 
     vec3  edgeDir = -towardCenterA * bevelA * bevelASign - towardCenterB * bevelB * bevelBSign;
     float edgeLen = length(edgeDir);
     if (edgeLen > 0.001)
-        normal = normalize(mix(normal, edgeDir / edgeLen, bevelMax));
+        normal = normalize(mix(normal, edgeDir / edgeLen, bevelMax * signAgreement));
 }
 
 #endif

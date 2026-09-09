@@ -25,31 +25,22 @@ import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-// Geometry branch for full-cube blocks: greedily expands each face, samples AO vertex colors,
-// resolves rotation-aware texture/face encoding, and classifies every edge cell of the merged
-// quad as convex, concave, or stretch so StandardSurfaceShader.tes can bevel a natural block's
-// convex corners inward, its concave interior corners outward into a smooth ramp, and an
-// artificial block's exposed corners outward to meet a beveling natural neighbor.
+// Geometry branch for full-cube blocks. Greedily merges faces into quads, samples AO vertex colors, resolves rotation-aware texture and face encoding, and classifies every edge cell as convex, concave, or stretch so the tessellation shader can bevel convex corners inward and fillet concave corners outward. negMask is set for every concave or stretch cell so both faces at any interior corner receive the same outward normal treatment and converge at the same displaced point.
 class FullGeometryBranch extends BranchPackage {
 
-    // Internal
     private TextureManager textureManager;
     private BiomeManager biomeManager;
     private BlockManager blockManager;
 
-    // Data
     private SubChunkInstance ERROR;
 
     private static final int CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
     private static final int WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
 
-    // Edge cell classification
     private static final int EXPOSURE_NONE = 0;
     private static final int EXPOSURE_CONVEX = 1;
     private static final int EXPOSURE_CONCAVE = 2;
     private static final int EXPOSURE_STRETCH = 3;
-
-    // Internal \\
 
     @Override
     protected void create() {
@@ -62,8 +53,6 @@ class FullGeometryBranch extends BranchPackage {
         this.biomeManager = get(BiomeManager.class);
         this.blockManager = get(BlockManager.class);
     }
-
-    // Face Verification \\
 
     boolean assembleQuads(
             ChunkInstance chunkInstance,
@@ -174,8 +163,6 @@ class FullGeometryBranch extends BranchPackage {
     private boolean compareNeighbor(BlockHandle blockHandleA, BlockHandle blockHandleB) {
         return blockHandleA.getGeometry() != blockHandleB.getGeometry();
     }
-
-    // Greedy Expansion \\
 
     private boolean assembleQuad(
             ChunkInstance chunkInstance,
@@ -354,8 +341,6 @@ class FullGeometryBranch extends BranchPackage {
         return orientationA == orientationB;
     }
 
-    // Face Preparation \\
-
     private boolean prepareFace(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
@@ -399,110 +384,61 @@ class FullGeometryBranch extends BranchPackage {
         int maskA0 = 0, maskA1 = 0, maskB0 = 0, maskB1 = 0;
         int negMaskA0 = 0, negMaskA1 = 0, negMaskB0 = 0, negMaskB1 = 0;
 
-        // A concave interior corner is classified independently by both faces
-        // that share it, and the two faces only converge on the same displaced
-        // edge position (see StandardSurface.tes) when they push with OPPOSITE
-        // signs — matching signs is what a convex corner needs instead. The
-        // other face sharing a given edge always looks back along the exact
-        // direction that edge borders, so comparing this face's own direction
-        // index against that neighbor direction is a tie-break both sides can
-        // compute independently and will always disagree on — which is why
-        // each of these four must compare against the SAME sideDirection its
-        // own mask loop below actually queries (oppA for the A0 edge, whose
-        // neighbor lies across oppA; tangentDirectionA for the A1 edge, whose
-        // neighbor lies across tangentDirectionA; and mirrored for B). That
-        // comparison depends only on direction3Vector and the fixed axis
-        // directions, so it's the same for every cell along one edge — but a
-        // single merged quad's edge can still freely mix convex cells (open
-        // corners) with concave cells (interior corners) along its length, so
-        // the sign this decides has to be recorded and applied per cell below,
-        // not once for the whole edge.
-        boolean negativeConcaveA0 = direction3Vector.index > oppA.index;
-        boolean negativeConcaveA1 = direction3Vector.index > tangentDirectionA.index;
-        boolean negativeConcaveB0 = direction3Vector.index > oppB.index;
-        boolean negativeConcaveB1 = direction3Vector.index > tangentDirectionB.index;
-
-        // maskA0 — B=0..sizeB-1 cells at A=0; the neighbor this edge borders is oppA
         for (int j = 0; j < iSizeB; j++) {
-
             int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, j);
-
             if (cellXYZ == -1)
                 continue;
-
             int exposure = classifyEdgeCell(
                     chunkInstance, subChunkInstance, cellXYZ, direction3Vector, oppA, blockHandle);
-
             if (exposure == EXPOSURE_NONE)
                 continue;
-
             maskA0 |= (1 << j);
-            if (exposure == EXPOSURE_STRETCH || (exposure == EXPOSURE_CONCAVE && negativeConcaveA0))
+            if (exposure == EXPOSURE_CONCAVE || exposure == EXPOSURE_STRETCH)
                 negMaskA0 |= (1 << j);
         }
 
-        // maskA1 — B=0..sizeB-1 cells at A=sizeA-1; the neighbor this edge borders is
-        // tangentDirectionA
         int baseA1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, iSizeA - 1);
         for (int j = 0; j < iSizeB; j++) {
-
             int cellXYZ = (baseA1 != -1)
                     ? ChunkCoordinate3Int.getNeighborWithOffset(baseA1, tangentDirectionB, j)
                     : -1;
-
             if (cellXYZ == -1)
                 continue;
-
             int exposure = classifyEdgeCell(
                     chunkInstance, subChunkInstance, cellXYZ, direction3Vector, tangentDirectionA, blockHandle);
-
             if (exposure == EXPOSURE_NONE)
                 continue;
-
             maskA1 |= (1 << j);
-            if (exposure == EXPOSURE_STRETCH || (exposure == EXPOSURE_CONCAVE && negativeConcaveA1))
+            if (exposure == EXPOSURE_CONCAVE || exposure == EXPOSURE_STRETCH)
                 negMaskA1 |= (1 << j);
         }
 
-        // maskB0 — A=0..sizeA-1 cells at B=0; the neighbor this edge borders is oppB
         for (int i = 0; i < iSizeA; i++) {
-
             int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, i);
-
             if (cellXYZ == -1)
                 continue;
-
             int exposure = classifyEdgeCell(
                     chunkInstance, subChunkInstance, cellXYZ, direction3Vector, oppB, blockHandle);
-
             if (exposure == EXPOSURE_NONE)
                 continue;
-
             maskB0 |= (1 << i);
-            if (exposure == EXPOSURE_STRETCH || (exposure == EXPOSURE_CONCAVE && negativeConcaveB0))
+            if (exposure == EXPOSURE_CONCAVE || exposure == EXPOSURE_STRETCH)
                 negMaskB0 |= (1 << i);
         }
 
-        // maskB1 — A=0..sizeA-1 cells at B=sizeB-1; the neighbor this edge borders is
-        // tangentDirectionB
         int baseB1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, iSizeB - 1);
         for (int i = 0; i < iSizeA; i++) {
-
             int cellXYZ = (baseB1 != -1)
                     ? ChunkCoordinate3Int.getNeighborWithOffset(baseB1, tangentDirectionA, i)
                     : -1;
-
             if (cellXYZ == -1)
                 continue;
-
             int exposure = classifyEdgeCell(
                     chunkInstance, subChunkInstance, cellXYZ, direction3Vector, tangentDirectionB, blockHandle);
-
             if (exposure == EXPOSURE_NONE)
                 continue;
-
             maskB1 |= (1 << i);
-            if (exposure == EXPOSURE_STRETCH || (exposure == EXPOSURE_CONCAVE && negativeConcaveB1))
+            if (exposure == EXPOSURE_CONCAVE || exposure == EXPOSURE_STRETCH)
                 negMaskB1 |= (1 << i);
         }
 
@@ -553,8 +489,6 @@ class FullGeometryBranch extends BranchPackage {
         return Direction3Vector.getEncodedFace(orientation, worldFace);
     }
 
-    // Edge Exposure \\
-
     private int classifyEdgeCell(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
@@ -578,9 +512,6 @@ class FullGeometryBranch extends BranchPackage {
         return EXPOSURE_NONE;
     }
 
-    // True when the tangent neighbor at sideDirection is open or different
-    // geometry, and that
-    // neighbor doesn't itself carry a flush, coplanar face in faceDirection.
     private boolean isConvexExposedOnSide(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
@@ -622,12 +553,6 @@ class FullGeometryBranch extends BranchPackage {
         return true;
     }
 
-    // True when this edge borders solid matter of the same geometry that continues
-    // past it, but
-    // that neighbor — stepping once more in faceDirection — carries its own exposed
-    // face
-    // pointing back the way we came: an interior corner, like the inside of an
-    // L-shaped step.
     private boolean isConcaveExposedOnSide(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
@@ -669,13 +594,6 @@ class FullGeometryBranch extends BranchPackage {
         return blockHasFace(chunkInstance, diagonalSubChunk, diagonalXYZ, oppositeSide, null, diagonalBlock);
     }
 
-    // Mirror of isConvexExposedOnSide for an artificial block: true where this
-    // block's own
-    // corner sits open to different geometry AND a natural block of matching
-    // geometry sits
-    // diagonally across that opening — exactly the neighbor a convex bevel would
-    // pull inward,
-    // away from this shared corner.
     private boolean isStretchExposedOnSide(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
@@ -711,8 +629,6 @@ class FullGeometryBranch extends BranchPackage {
 
         return diagonalBlock.isNatural() && diagonalBlock.getGeometry() == blockHandle.getGeometry();
     }
-
-    // Vert Color \\
 
     private float getVertColor(
             ChunkInstance chunkInstance,
@@ -819,8 +735,6 @@ class FullGeometryBranch extends BranchPackage {
         return Color.rgba8888(r, g, b, a);
     }
 
-    // Face Finalization \\
-
     private boolean finalizeFace(
             Int2ObjectOpenHashMap<FloatArrayList> verts,
             DynamicPacketInstance dynamicPacketInstance,
@@ -849,7 +763,6 @@ class FullGeometryBranch extends BranchPackage {
         float fNegMaskB0 = (float) negMaskB0;
         float fNegMaskB1 = (float) negMaskB1;
 
-        // vert 0
         buffer.add((float) Coordinate3Int.unpackX(vert0XYZ));
         buffer.add((float) Coordinate3Int.unpackY(vert0XYZ));
         buffer.add((float) Coordinate3Int.unpackZ(vert0XYZ));
@@ -868,7 +781,6 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(fNegMaskB0);
         buffer.add(fNegMaskB1);
 
-        // vert 1
         buffer.add((float) Coordinate3Int.unpackX(vert1XYZ));
         buffer.add((float) Coordinate3Int.unpackY(vert1XYZ));
         buffer.add((float) Coordinate3Int.unpackZ(vert1XYZ));
@@ -887,7 +799,6 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(fNegMaskB0);
         buffer.add(fNegMaskB1);
 
-        // vert 2
         buffer.add((float) Coordinate3Int.unpackX(vert2XYZ));
         buffer.add((float) Coordinate3Int.unpackY(vert2XYZ));
         buffer.add((float) Coordinate3Int.unpackZ(vert2XYZ));
@@ -906,7 +817,6 @@ class FullGeometryBranch extends BranchPackage {
         buffer.add(fNegMaskB0);
         buffer.add(fNegMaskB1);
 
-        // vert 3
         buffer.add((float) Coordinate3Int.unpackX(vert3XYZ));
         buffer.add((float) Coordinate3Int.unpackY(vert3XYZ));
         buffer.add((float) Coordinate3Int.unpackZ(vert3XYZ));

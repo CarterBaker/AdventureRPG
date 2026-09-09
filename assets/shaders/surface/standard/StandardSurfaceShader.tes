@@ -36,13 +36,7 @@ out float vColor;
 #include "surface/includes/Bevel.glsl"
 #include "surface/includes/HeightDisplacement.glsl"
 
-// Terrain tessellation evaluation. All tier/nearStrength decisions are made from the
-// bilinearly interpolated base position — before jitter, bevel, height, or curvature —
-// so two patches from different chunks sharing a boundary edge always evaluate those
-// decisions from the same world-space point and produce identical displacement magnitudes
-// at that edge. towardCenterA/B use a safe sign that never returns 0, because a zero
-// direction vector would suppress bevel on the centre row of vertices and break the
-// tangential-push invariant that keeps edges watertight.
+// Terrain tessellation evaluation. Tier and nearStrength decisions derive from the bilinearly interpolated base position before any displacement, so two patches sharing a boundary edge always agree on the displacement magnitude there; towardCenterA/B use a sign that never returns 0 so bevel never disappears on a quad's center row.
 
 const float HEIGHT_FD_EPSILON = 0.02;
 
@@ -113,11 +107,6 @@ void main() {
     float tier0MaxSqDist = getTier0MaxSqDist();
     float tier1MaxSqDist = getTier1MaxSqDist();
 
-    // Base position: bilinear interpolation of the four control points with no
-    // displacement applied. All tier and nearStrength decisions derive exclusively
-    // from this value so boundary vertices shared between adjacent patches always
-    // evaluate the same pre-displacement world position and therefore the same
-    // displacement magnitude.
     vec3 baseWorldPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
                             mix(teWorldPos[3], teWorldPos[2], u), v);
 
@@ -128,8 +117,6 @@ void main() {
     vec3 worldPos = evalDisplacedSurface(
         u, v, tier0MaxSqDist, tier1MaxSqDist, baseWorldPos, nearStrength, normal);
 
-    // FD normal refinement. Uses baseDistSq so the blend weight is consistent with
-    // the nearStrength already used for displacement above.
     float farRingActive = baseDistSq > tier1MaxSqDist ? 1.0 : 0.0;
     float geometryBlend = max(nearStrength, farRingActive);
 

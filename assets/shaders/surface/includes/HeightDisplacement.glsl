@@ -4,11 +4,7 @@
 #include "surface/includes/SurfaceStandard.glsl"
 #include "surface/includes/Bevel.glsl"
 
-// Height-map displacement for the near ring only, faded to zero over the
-// same exposure masks the bevel uses — well before the bevel radius starts
-// — so a face's own height detail always dies out before its edge starts
-// curving, and any two faces meeting at that edge converge back onto the
-// same flat seam line rather than two independently bumpy surfaces.
+// Height-map displacement for the near ring, faded to zero over the same exposure masks the bevel uses so a face's own height detail dies out before its edge starts curving, letting any two faces meeting at that edge converge back onto the same flat seam line.
 
 const float HEIGHT_DISPLACE_SCALE   = 0.12;
 const float HEIGHT_EDGE_FADE_RADIUS = 0.75;
