@@ -1,11 +1,17 @@
 #ifndef BEVEL_GLSL
 #define BEVEL_GLSL
 
-// Corner/edge rounding for tessellated block faces. Convex edges chamfer inward and down; concave (interior) edges mirror every step exactly — tangential motion reverses away from center and normal motion reverses outward — so the fillet a concave corner needs is the same math as a convex chamfer viewed from the far side. The resulting offset is snapped to a small fixed grid so two faces of different quad sizes meeting at a shared vertex always resolve to the identical displaced point.
+// Corner and edge rounding for tessellated block faces. Convex edges chamfer inward;
+// concave edges mirror the same tangential motion (always toward face center) but
+// push the normal outward instead of inward, so both faces at any shared vertex
+// always displace to the same 3D point. All displacements are snapped to a fixed
+// sub-block grid so two faces of different quad sizes meeting at a shared edge
+// always land on the same quantized position regardless of their respective
+// tessellation densities or face orientations.
 
-const float BEVEL_RADIUS     = 0.30;
-const float BEVEL_SIZE       = 0.09;
-const float BEVEL_SNAP_GRID  = 1.0 / 1024.0;
+const float BEVEL_RADIUS    = 0.30;
+const float BEVEL_SIZE      = 0.09;
+const float BEVEL_SNAP_GRID = 1.0 / 1024.0;
 
 float maskBit(float mask, int bit) {
     return float((int(mask) >> bit) & 1);
@@ -100,12 +106,21 @@ void applyBevel(
     float normalSign    = (bevelA * bevelASign + bevelB * bevelBSign) / signWeight;
     float signAgreement = (bevelASign * bevelBSign >= 0.0) ? 1.0 : abs(normalSign);
 
-    vec3 tangentialOffset = towardCenterA * BEVEL_SIZE * signedBevelA
-                           + towardCenterB * BEVEL_SIZE * signedBevelB;
+    // Tangential movement is always toward the face center — unsigned magnitudes only.
+    // The normal offset carries the convex/concave distinction via normalSign: positive
+    // pushes into the surface (convex), negative pushes outward (concave). Using the
+    // signed values here was the bug: it reversed the tangential direction for concave
+    // edges, displacing both faces at a shared vertex in opposite directions and causing
+    // intersection when viewed through the geometry.
+    vec3 tangentialOffset = towardCenterA * BEVEL_SIZE * bevelA
+                           + towardCenterB * BEVEL_SIZE * bevelB;
     vec3 normalOffset     = -normal * BEVEL_SIZE * bevelMax * normalSign;
 
     worldPos += snapToGrid(tangentialOffset + normalOffset, BEVEL_SNAP_GRID);
 
+    // edgeDir uses the signed values so it points toward the correct fillet bisector:
+    // away from the face center for convex (outward corner normal), toward the face
+    // center for concave (inward corner normal into open space).
     vec3  edgeDir = -towardCenterA * signedBevelA - towardCenterB * signedBevelB;
     float edgeLen = length(edgeDir);
     if (edgeLen > 0.001)
