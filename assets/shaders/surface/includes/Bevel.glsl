@@ -2,18 +2,20 @@
 #define BEVEL_GLSL
 
 // Corner and edge rounding for tessellated block faces. Each axis bordering a
-// fragment contributes its own tangential pull toward the face center and its
-// own signed push along the normal (inward for a convex edge, outward for a
-// concave one); the two axes are summed independently rather than collapsed
-// into one shared sign, so a corner where one adjoining edge is convex and
-// the other concave never has to cancel one direction against the other.
-// Mask lookups interpolate between neighboring unit cells instead of
-// stepping at the cell boundary, so a merged multi-block edge never tears
-// where its exposure classification changes partway along its length. All
-// displacements are snapped to a fixed sub-block grid so two faces of
-// different quad sizes meeting at a shared edge always land on the same
-// quantized position regardless of their respective tessellation densities
-// or face orientations.
+// fragment contributes its own tangential pull toward the face center; the
+// normal push is resolved by whichever axis has the larger exposure
+// magnitude rather than by summing the two signed contributions, since a
+// mixed corner (one adjoining edge convex, the other concave, at similar
+// strength) would otherwise net toward zero normal correction while the
+// tangential pull keeps dragging the vertex inward at full strength —
+// leaving a seam against the neighboring geometry that still gets its full
+// normal correction. Mask lookups interpolate between neighboring unit
+// cells instead of stepping at the cell boundary, so a merged multi-block
+// edge never tears where its exposure classification changes partway along
+// its length. All displacements are snapped to a fixed sub-block grid so
+// two faces of different quad sizes meeting at a shared edge always land on
+// the same quantized position regardless of their respective tessellation
+// densities or face orientations.
 
 const float BEVEL_RADIUS    = 0.30;
 const float BEVEL_SIZE      = 0.09;
@@ -23,10 +25,10 @@ float maskBit(float mask, int bit) {
     return float((int(mask) >> bit) & 1);
 }
 
-// Bits are defined at unit-cell granularity. Sampling a raw bit at a
-// fractional position would step the instant the query crosses into the
-// next cell; treating each bit as a sample at its cell's center and blending
-// linearly between neighboring centers removes that step.
+// Bits live at unit-cell granularity. Sampling a raw bit at a fractional
+// position would step the instant the query crosses into the next cell;
+// treating each bit as a sample at its cell's center and blending linearly
+// between neighboring centers removes that step.
 float maskBitAt(float mask, float pos, int lastIndex) {
     float c    = clamp(pos - 0.5, 0.0, float(lastIndex));
     int   idx0 = int(floor(c));
@@ -108,33 +110,33 @@ void applyBevel(
     float bevelASign = signedAxes.y;
     float bevelB     = signedAxes.z;
     float bevelBSign = signedAxes.w;
+    float bevelMax   = max(bevelA, bevelB);
 
-    if (max(bevelA, bevelB) <= 0.001)
+    if (bevelMax <= 0.001)
         return;
 
-    float signedBevelA = bevelA * bevelASign;
-    float signedBevelB = bevelB * bevelBSign;
+    // The stronger axis decides whether this corner dips inward (convex) or
+    // bulges outward (concave). Summing the two signed contributions instead
+    // would let an equally-strong opposite-signed pair cancel to zero normal
+    // correction while the tangential pull below keeps pulling at full
+    // strength regardless of sign — exactly the seam that produces tearing
+    // at anything past a same-signed basic corner.
+    float dominantSign = bevelA >= bevelB ? bevelASign : bevelBSign;
+    float normalScale   = bevelMax * dominantSign;
 
-    // Tangential motion is always toward the face center regardless of
-    // polarity. The normal offset is where convex and concave diverge, and
-    // each axis contributes its own signed push independently, clamped to
-    // the same single-edge depth ceiling rather than let two axes double up
-    // unbounded — a corner where both axes agree lands at that ceiling
-    // exactly like a straight edge does; a corner where they disagree sums
-    // to their true difference instead of being averaged away to nothing.
-    vec3  tangentialOffset = towardCenterA * BEVEL_SIZE * bevelA
-                            + towardCenterB * BEVEL_SIZE * bevelB;
-    float normalScale       = clamp(signedBevelA + signedBevelB, -1.0, 1.0);
-    vec3  normalOffset      = -normal * BEVEL_SIZE * normalScale;
+    vec3 tangentialOffset = towardCenterA * BEVEL_SIZE * bevelA
+                           + towardCenterB * BEVEL_SIZE * bevelB;
+    vec3 normalOffset     = -normal * BEVEL_SIZE * normalScale;
 
     worldPos += snapToGrid(tangentialOffset + normalOffset, BEVEL_SNAP_GRID);
 
-    vec3  edgeDir     = -towardCenterA * signedBevelA - towardCenterB * signedBevelB;
-    float edgeLen     = length(edgeDir);
-    float blendAmount = clamp(length(vec2(signedBevelA, signedBevelB)), 0.0, 1.0);
+    float signedBevelA = bevelA * bevelASign;
+    float signedBevelB = bevelB * bevelBSign;
+    vec3  edgeDir       = -towardCenterA * signedBevelA - towardCenterB * signedBevelB;
+    float edgeLen       = length(edgeDir);
 
     if (edgeLen > 0.001)
-        normal = normalize(mix(normal, edgeDir / edgeLen, blendAmount));
+        normal = normalize(mix(normal, edgeDir / edgeLen, bevelMax));
 }
 
 #endif
