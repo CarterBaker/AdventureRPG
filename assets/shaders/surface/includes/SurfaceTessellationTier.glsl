@@ -4,24 +4,26 @@
 #include "includes/SettingsData.glsl"
 #include "includes/PlayerPositionData.glsl"
 
-// Shared tier-distance math for StandardSurfaceShader's tcs/tes/fsh and for
-// WaterShader's distant-rise gate. Every boundary is evaluated against the
-// caller's own true world position, and the tessellation level is decided
-// per edge from that edge's own midpoint rather than per patch, so any two
-// patches sharing a physical edge always agree on both its tier and its
-// density regardless of their own size or which ring their own center falls
-// in — the same guarantee computeDistanceFromCenterSq already gave the
-// fragment shader's material tier.
+// Shared tier-distance math for StandardSurfaceShader's tcs/tes/fsh and for WaterShader. Tessellation
+// density is decided from the owning chunk's center rather than from a patch or edge midpoint, because a
+// quad whose edge is only a sub-segment of its neighbor's edge computes a different midpoint and would
+// otherwise pick a different tier and a different vertex spacing along a shared seam. Every tier now
+// scales its level by block size, so vertex spacing is uniform (0.25 blocks near, 1.0 blocks beyond) and
+// two patches of different sizes always place vertices at the same positions along any shared edge —
+// which is what keeps world curvature and distant rise, both nonlinear in position, from splitting a
+// long quad away from a short one. Displacement strength fades to zero a full chunk inside the density
+// boundary, so wherever two chunks disagree on density the surface there is already flat.
 
 const float DISTANT_RISE_START_MARGIN_BLOCKS = 512.0;
 const float NEAR_TESSELLATION_DENSITY        = 4.0;
 const float MAX_TESSELLATION_LEVEL           = 64.0;
+const float NEAR_FADE_END_CHUNKS             = 1.0;
 const float NEAR_FADE_BAND_CHUNKS            = 1.0;
 
 float getTier1MaxSqDist() {
     float halfD        = u_renderDistance * 0.5 - 0.5;
     float marginChunks = DISTANT_RISE_START_MARGIN_BLOCKS / (u_chunkSize * sqrt(2.0));
-    float farHalfD      = max(halfD - marginChunks, 1.0);
+    float farHalfD     = max(halfD - marginChunks, 1.0);
     return farHalfD * farHalfD * 2.0;
 }
 
@@ -35,18 +37,27 @@ float computeDistanceFromCenterSq(vec3 worldPos) {
     return dot(fromPlayerChunks, fromPlayerChunks);
 }
 
-float getEdgeTessLevel(float edgeDistSq, float blockSize, float tier0MaxSqDist, float tier1MaxSqDist) {
-    if (edgeDistSq <= tier0MaxSqDist)
+// Pulled half a block back along the face normal so a face lying exactly on a chunk boundary plane still
+// resolves to the chunk that owns it, and taken from the patch center so every patch in one chunk
+// resolves to the same key regardless of how the chunk was batched for drawing.
+vec3 getPatchChunkCenter(vec3 corner0, vec3 corner2, vec3 normal) {
+    vec3 inside = (corner0 + corner2) * 0.5 - normal * 0.5;
+    vec2 cell   = floor(inside.xz / u_chunkSize);
+    return vec3((cell.x + 0.5) * u_chunkSize, inside.y, (cell.y + 0.5) * u_chunkSize);
+}
+
+float getEdgeTessLevel(float chunkDistSq, float blockSize, float tier0MaxSqDist, float tier1MaxSqDist) {
+    if (chunkDistSq <= tier0MaxSqDist)
     return clamp(blockSize * NEAR_TESSELLATION_DENSITY, 1.0, MAX_TESSELLATION_LEVEL);
-    if (edgeDistSq > tier1MaxSqDist)
     return clamp(blockSize, 1.0, MAX_TESSELLATION_LEVEL);
-    return 1.0;
 }
 
 float getNearStrength(float distSq, float tier0MaxSqDist) {
     float dist      = sqrt(distSq);
     float tier0Dist = sqrt(tier0MaxSqDist);
-    return 1.0 - smoothstep(tier0Dist - NEAR_FADE_BAND_CHUNKS, tier0Dist, dist);
+    float fadeEnd   = max(tier0Dist - NEAR_FADE_END_CHUNKS, 0.0);
+    float fadeStart = max(fadeEnd - NEAR_FADE_BAND_CHUNKS, 0.0);
+    return 1.0 - smoothstep(fadeStart, fadeEnd, dist);
 }
 
 #endif

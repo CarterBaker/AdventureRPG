@@ -25,7 +25,14 @@ import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-// Geometry branch for full-cube blocks. Greedily merges faces into quads, samples AO vertex colors, resolves rotation-aware texture and face encoding, and classifies every edge cell as convex, concave, or stretch so the tessellation shader can bevel convex corners inward and fillet concave corners outward. negMask is set for every concave or stretch cell so both faces at any interior corner receive the same outward normal treatment and converge at the same displaced point.
+// Geometry branch for full-cube blocks. Greedily merges faces into quads (capped at MAX_MERGE_EXTENT so
+// every per-edge state word stays inside a float32 mantissa and every tessellation level stays under the
+// hardware clamp), samples AO vertex colors, resolves rotation-aware texture and face encoding, and
+// classifies every edge cell of the resulting quad into one of four states the tessellation evaluator
+// consumes directly: INTERIOR (the surface continues past this edge, no fade, no bevel), BOUNDARY (the
+// surface ends but nothing bevels), CONVEX, or CONCAVE. Classification is deliberately symmetric — both
+// faces meeting at any physical edge evaluate the same two block lookups in the same order and therefore
+// always agree on that edge's state, which is what lets the shader converge both faces onto one point.
 class FullGeometryBranch extends BranchPackage {
 
     private TextureManager textureManager;
@@ -37,10 +44,12 @@ class FullGeometryBranch extends BranchPackage {
     private static final int CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
     private static final int WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
 
-    private static final int EXPOSURE_NONE = 0;
-    private static final int EXPOSURE_CONVEX = 1;
-    private static final int EXPOSURE_CONCAVE = 2;
-    private static final int EXPOSURE_STRETCH = 3;
+    private static final int MAX_MERGE_EXTENT = 12;
+
+    private static final int EDGE_STATE_INTERIOR = 0;
+    private static final int EDGE_STATE_BOUNDARY = 1;
+    private static final int EDGE_STATE_CONVEX = 2;
+    private static final int EDGE_STATE_CONCAVE = 3;
 
     @Override
     protected void create() {
@@ -152,6 +161,10 @@ class FullGeometryBranch extends BranchPackage {
         Direction2Vector direction2Vector = direction3Vector.to2D();
         ChunkNeighborHandle chunkNeighborHandle = chunkInstance.getChunkNeighbors();
         ChunkInstance neighborChunkInstance = chunkNeighborHandle.getNeighborChunk(direction2Vector.index);
+
+        if (neighborChunkInstance == null)
+            return ERROR;
+
         SubChunkInstance comparativeSubChunkInstance = neighborChunkInstance.getSubChunk(subChunkCoordinate);
 
         if (comparativeSubChunkInstance == null)
@@ -244,8 +257,6 @@ class FullGeometryBranch extends BranchPackage {
         return prepareFace(
                 chunkInstance,
                 subChunkInstance,
-                biomePaletteHandle,
-                blockPaletteHandle,
                 rotationPaletteHandle,
                 dynamicPacketInstance,
                 xyz,
@@ -254,8 +265,8 @@ class FullGeometryBranch extends BranchPackage {
                 direction3Vector,
                 comparativeDirectionA,
                 comparativeDirectionB,
-                biomeHandle,
                 blockHandle,
+                baseOrientation,
                 verts,
                 vertColors);
     }
@@ -278,7 +289,7 @@ class FullGeometryBranch extends BranchPackage {
             BitSet accumulatedBatch,
             BitSet batchReturn) {
 
-        if (currentSize >= CHUNK_SIZE)
+        if (currentSize >= MAX_MERGE_EXTENT || currentSize >= CHUNK_SIZE)
             return false;
 
         int nextXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, expandDirection, currentSize);
@@ -344,8 +355,6 @@ class FullGeometryBranch extends BranchPackage {
     private boolean prepareFace(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
-            BlockPaletteHandle biomePaletteHandle,
-            BlockPaletteHandle blockPaletteHandle,
             BlockPaletteHandle rotationPaletteHandle,
             DynamicPacketInstance dynamicPacketInstance,
             int xyz,
@@ -354,10 +363,13 @@ class FullGeometryBranch extends BranchPackage {
             Direction3Vector direction3Vector,
             Direction3Vector tangentDirectionA,
             Direction3Vector tangentDirectionB,
-            BiomeHandle biomeHandle,
             BlockHandle blockHandle,
+            short baseOrientation,
             Int2ObjectOpenHashMap<FloatArrayList> verts,
             Color[] vertColors) {
+
+        int iSizeA = sizeA & 0xFF;
+        int iSizeB = sizeB & 0xFF;
 
         int vert0XYZ = ChunkCoordinate3Int.convertToVertSpace(xyz, direction3Vector);
         int vert1XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert0XYZ, tangentDirectionA, sizeA);
@@ -375,84 +387,122 @@ class FullGeometryBranch extends BranchPackage {
         TextureHandle textureHandle = textureManager.getTextureHandleFromTileID(textureID);
         int encodedFace = resolveEncodedFace(blockHandle, direction3Vector, orientation);
 
-        int iSizeA = sizeA & 0xFF;
-        int iSizeB = sizeB & 0xFF;
-
         Direction3Vector oppA = Direction3Vector.getOpposite(tangentDirectionA);
         Direction3Vector oppB = Direction3Vector.getOpposite(tangentDirectionB);
 
-        int maskA0 = 0, maskA1 = 0, maskB0 = 0, maskB1 = 0;
-        int negMaskA0 = 0, negMaskA1 = 0, negMaskB0 = 0, negMaskB1 = 0;
-
-        for (int j = 0; j < iSizeB; j++) {
-            int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, j);
-            if (cellXYZ == -1)
-                continue;
-            int exposure = classifyEdgeCell(
-                    chunkInstance, subChunkInstance, cellXYZ, direction3Vector, oppA, blockHandle);
-            if (exposure == EXPOSURE_NONE)
-                continue;
-            maskA0 |= (1 << j);
-            if (exposure == EXPOSURE_CONCAVE || exposure == EXPOSURE_STRETCH)
-                negMaskA0 |= (1 << j);
-        }
-
         int baseA1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, iSizeA - 1);
-        for (int j = 0; j < iSizeB; j++) {
-            int cellXYZ = (baseA1 != -1)
-                    ? ChunkCoordinate3Int.getNeighborWithOffset(baseA1, tangentDirectionB, j)
-                    : -1;
-            if (cellXYZ == -1)
-                continue;
-            int exposure = classifyEdgeCell(
-                    chunkInstance, subChunkInstance, cellXYZ, direction3Vector, tangentDirectionA, blockHandle);
-            if (exposure == EXPOSURE_NONE)
-                continue;
-            maskA1 |= (1 << j);
-            if (exposure == EXPOSURE_CONCAVE || exposure == EXPOSURE_STRETCH)
-                negMaskA1 |= (1 << j);
-        }
-
-        for (int i = 0; i < iSizeA; i++) {
-            int cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, i);
-            if (cellXYZ == -1)
-                continue;
-            int exposure = classifyEdgeCell(
-                    chunkInstance, subChunkInstance, cellXYZ, direction3Vector, oppB, blockHandle);
-            if (exposure == EXPOSURE_NONE)
-                continue;
-            maskB0 |= (1 << i);
-            if (exposure == EXPOSURE_CONCAVE || exposure == EXPOSURE_STRETCH)
-                negMaskB0 |= (1 << i);
-        }
-
         int baseB1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, iSizeB - 1);
-        for (int i = 0; i < iSizeA; i++) {
-            int cellXYZ = (baseB1 != -1)
-                    ? ChunkCoordinate3Int.getNeighborWithOffset(baseB1, tangentDirectionA, i)
-                    : -1;
-            if (cellXYZ == -1)
-                continue;
-            int exposure = classifyEdgeCell(
-                    chunkInstance, subChunkInstance, cellXYZ, direction3Vector, tangentDirectionB, blockHandle);
-            if (exposure == EXPOSURE_NONE)
-                continue;
-            maskB1 |= (1 << i);
-            if (exposure == EXPOSURE_CONCAVE || exposure == EXPOSURE_STRETCH)
-                negMaskB1 |= (1 << i);
-        }
+
+        int edgeA0 = buildEdgeWord(chunkInstance, subChunkInstance, rotationPaletteHandle,
+                xyz, tangentDirectionB, iSizeB, direction3Vector, oppA, blockHandle, baseOrientation);
+
+        int edgeA1 = buildEdgeWord(chunkInstance, subChunkInstance, rotationPaletteHandle,
+                baseA1, tangentDirectionB, iSizeB, direction3Vector, tangentDirectionA, blockHandle,
+                baseOrientation);
+
+        int edgeB0 = buildEdgeWord(chunkInstance, subChunkInstance, rotationPaletteHandle,
+                xyz, tangentDirectionA, iSizeA, direction3Vector, oppB, blockHandle, baseOrientation);
+
+        int edgeB1 = buildEdgeWord(chunkInstance, subChunkInstance, rotationPaletteHandle,
+                baseB1, tangentDirectionA, iSizeA, direction3Vector, tangentDirectionB, blockHandle,
+                baseOrientation);
+
+        int meta = (direction3Vector.index & 0x7)
+                | ((encodedFace & 0x3F) << 3)
+                | (((iSizeA - 1) & 0xF) << 9)
+                | (((iSizeB - 1) & 0xF) << 13)
+                | ((blockHandle.isNatural() ? 1 : 0) << 17);
 
         return finalizeFace(
                 verts,
                 dynamicPacketInstance,
-                direction3Vector,
                 materialID, textureHandle,
                 vert0XYZ, vert1XYZ, vert2XYZ, vert3XYZ,
                 vert0Color, vert1Color, vert2Color, vert3Color,
-                encodedFace,
-                sizeA, sizeB,
-                maskA0, maskA1, maskB0, maskB1,
-                negMaskA0, negMaskA1, negMaskB0, negMaskB1);
+                meta,
+                edgeA0, edgeA1, edgeB0, edgeB1);
+    }
+
+    private int buildEdgeWord(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle rotationPaletteHandle,
+            int originXYZ,
+            Direction3Vector runDirection,
+            int runLength,
+            Direction3Vector faceDirection,
+            Direction3Vector sideDirection,
+            BlockHandle blockHandle,
+            short baseOrientation) {
+
+        int word = 0;
+
+        for (int i = 0; i < runLength; i++) {
+
+            int cellXYZ = (originXYZ == -1)
+                    ? -1
+                    : ChunkCoordinate3Int.getNeighborWithOffset(originXYZ, runDirection, i);
+
+            int state = (cellXYZ == -1)
+                    ? EDGE_STATE_BOUNDARY
+                    : classifyEdgeCell(chunkInstance, subChunkInstance, rotationPaletteHandle,
+                            cellXYZ, faceDirection, sideDirection, blockHandle, baseOrientation);
+
+            word |= state << (i * 2);
+        }
+
+        return word;
+    }
+
+    private int classifyEdgeCell(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle rotationPaletteHandle,
+            int cellXYZ,
+            Direction3Vector faceDirection,
+            Direction3Vector sideDirection,
+            BlockHandle blockHandle,
+            short baseOrientation) {
+
+        SubChunkInstance sideSubChunk = getComparativeSubChunkInstance(
+                chunkInstance, subChunkInstance, cellXYZ, sideDirection);
+
+        if (sideSubChunk == ERROR)
+            return EDGE_STATE_BOUNDARY;
+
+        if (sideSubChunk == null)
+            return blockHandle.isNatural() ? EDGE_STATE_CONVEX : EDGE_STATE_BOUNDARY;
+
+        int sideXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
+        short sideBlockID = sideSubChunk.getBlockPaletteHandle().getBlock(sideXYZ);
+        BlockHandle sideBlock = blockManager.getBlockHandleFromBlockID(sideBlockID);
+
+        if (sideBlock.getGeometry() != blockHandle.getGeometry())
+            return blockHandle.isNatural() ? EDGE_STATE_CONVEX : EDGE_STATE_BOUNDARY;
+
+        SubChunkInstance diagonalSubChunk = getComparativeSubChunkInstance(
+                chunkInstance, sideSubChunk, sideXYZ, faceDirection);
+
+        if (diagonalSubChunk == null || diagonalSubChunk == ERROR)
+            return EDGE_STATE_BOUNDARY;
+
+        int diagonalXYZ = ChunkCoordinate3Int.getNeighborAndWrap(sideXYZ, faceDirection);
+        short diagonalBlockID = diagonalSubChunk.getBlockPaletteHandle().getBlock(diagonalXYZ);
+        BlockHandle diagonalBlock = blockManager.getBlockHandleFromBlockID(diagonalBlockID);
+
+        if (diagonalBlock.getGeometry() == blockHandle.getGeometry())
+            return (blockHandle.isNatural() || diagonalBlock.isNatural())
+                    ? EDGE_STATE_CONCAVE
+                    : EDGE_STATE_BOUNDARY;
+
+        if (sideSubChunk != subChunkInstance || sideBlock != blockHandle)
+            return EDGE_STATE_BOUNDARY;
+
+        if (blockHandle.getRotationType() != BlockRotationType.NONE &&
+                rotationPaletteHandle.getBlock(sideXYZ) != baseOrientation)
+            return EDGE_STATE_BOUNDARY;
+
+        return EDGE_STATE_INTERIOR;
     }
 
     private int resolveOrientation(BlockPaletteHandle rotationPaletteHandle, int xyz) {
@@ -487,147 +537,6 @@ class FullGeometryBranch extends BranchPackage {
         }
 
         return Direction3Vector.getEncodedFace(orientation, worldFace);
-    }
-
-    private int classifyEdgeCell(
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance,
-            int cellXYZ,
-            Direction3Vector faceDirection,
-            Direction3Vector sideDirection,
-            BlockHandle blockHandle) {
-
-        if (!blockHandle.isNatural())
-            return isStretchExposedOnSide(
-                    chunkInstance, subChunkInstance, cellXYZ, faceDirection, sideDirection, blockHandle)
-                            ? EXPOSURE_STRETCH
-                            : EXPOSURE_NONE;
-
-        if (isConvexExposedOnSide(chunkInstance, subChunkInstance, cellXYZ, faceDirection, sideDirection, blockHandle))
-            return EXPOSURE_CONVEX;
-
-        if (isConcaveExposedOnSide(chunkInstance, subChunkInstance, cellXYZ, faceDirection, sideDirection, blockHandle))
-            return EXPOSURE_CONCAVE;
-
-        return EXPOSURE_NONE;
-    }
-
-    private boolean isConvexExposedOnSide(
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance,
-            int cellXYZ,
-            Direction3Vector faceDirection,
-            Direction3Vector sideDirection,
-            BlockHandle blockHandle) {
-
-        SubChunkInstance sideSubChunk = getComparativeSubChunkInstance(
-                chunkInstance, subChunkInstance, cellXYZ, sideDirection);
-
-        if (sideSubChunk == null || sideSubChunk == ERROR)
-            return true;
-
-        int sideXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
-        BlockPaletteHandle sidePalette = sideSubChunk.getBlockPaletteHandle();
-        short sideBlockID = sidePalette.getBlock(sideXYZ);
-        BlockHandle sideBlock = blockManager.getBlockHandleFromBlockID(sideBlockID);
-
-        if (sideBlock.getGeometry() == blockHandle.getGeometry())
-            return false;
-
-        if (blockHasFace(chunkInstance, sideSubChunk, sideXYZ, faceDirection, null, sideBlock))
-            return false;
-
-        SubChunkInstance faceSubChunk = getComparativeSubChunkInstance(
-                chunkInstance, subChunkInstance, cellXYZ, faceDirection);
-
-        if (faceSubChunk != null && faceSubChunk != ERROR) {
-            int faceXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, faceDirection);
-            BlockPaletteHandle facePalette = faceSubChunk.getBlockPaletteHandle();
-            short faceBlockID = facePalette.getBlock(faceXYZ);
-            BlockHandle faceBlock = blockManager.getBlockHandleFromBlockID(faceBlockID);
-
-            if (blockHasFace(chunkInstance, faceSubChunk, faceXYZ, sideDirection, null, faceBlock))
-                return false;
-        }
-
-        return true;
-    }
-
-    private boolean isConcaveExposedOnSide(
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance,
-            int cellXYZ,
-            Direction3Vector faceDirection,
-            Direction3Vector sideDirection,
-            BlockHandle blockHandle) {
-
-        SubChunkInstance sideSubChunk = getComparativeSubChunkInstance(
-                chunkInstance, subChunkInstance, cellXYZ, sideDirection);
-
-        if (sideSubChunk == null || sideSubChunk == ERROR)
-            return false;
-
-        int sideXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
-        BlockPaletteHandle sidePalette = sideSubChunk.getBlockPaletteHandle();
-        short sideBlockID = sidePalette.getBlock(sideXYZ);
-        BlockHandle sideBlock = blockManager.getBlockHandleFromBlockID(sideBlockID);
-
-        if (sideBlock.getGeometry() != blockHandle.getGeometry())
-            return false;
-
-        SubChunkInstance diagonalSubChunk = getComparativeSubChunkInstance(
-                chunkInstance, sideSubChunk, sideXYZ, faceDirection);
-
-        if (diagonalSubChunk == null || diagonalSubChunk == ERROR)
-            return false;
-
-        int diagonalXYZ = ChunkCoordinate3Int.getNeighborAndWrap(sideXYZ, faceDirection);
-        BlockPaletteHandle diagonalPalette = diagonalSubChunk.getBlockPaletteHandle();
-        short diagonalBlockID = diagonalPalette.getBlock(diagonalXYZ);
-        BlockHandle diagonalBlock = blockManager.getBlockHandleFromBlockID(diagonalBlockID);
-
-        if (!diagonalBlock.isNatural() || diagonalBlock.getGeometry() != blockHandle.getGeometry())
-            return false;
-
-        Direction3Vector oppositeSide = Direction3Vector.getOpposite(sideDirection);
-
-        return blockHasFace(chunkInstance, diagonalSubChunk, diagonalXYZ, oppositeSide, null, diagonalBlock);
-    }
-
-    private boolean isStretchExposedOnSide(
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance,
-            int cellXYZ,
-            Direction3Vector faceDirection,
-            Direction3Vector sideDirection,
-            BlockHandle blockHandle) {
-
-        SubChunkInstance sideSubChunk = getComparativeSubChunkInstance(
-                chunkInstance, subChunkInstance, cellXYZ, sideDirection);
-
-        if (sideSubChunk == null || sideSubChunk == ERROR)
-            return false;
-
-        int sideXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
-        BlockPaletteHandle sidePalette = sideSubChunk.getBlockPaletteHandle();
-        short sideBlockID = sidePalette.getBlock(sideXYZ);
-        BlockHandle sideBlock = blockManager.getBlockHandleFromBlockID(sideBlockID);
-
-        if (sideBlock.getGeometry() == blockHandle.getGeometry())
-            return false;
-
-        SubChunkInstance diagonalSubChunk = getComparativeSubChunkInstance(
-                chunkInstance, sideSubChunk, sideXYZ, faceDirection);
-
-        if (diagonalSubChunk == null || diagonalSubChunk == ERROR)
-            return false;
-
-        int diagonalXYZ = ChunkCoordinate3Int.getNeighborAndWrap(sideXYZ, faceDirection);
-        BlockPaletteHandle diagonalPalette = diagonalSubChunk.getBlockPaletteHandle();
-        short diagonalBlockID = diagonalPalette.getBlock(diagonalXYZ);
-        BlockHandle diagonalBlock = blockManager.getBlockHandleFromBlockID(diagonalBlockID);
-
-        return diagonalBlock.isNatural() && diagonalBlock.getGeometry() == blockHandle.getGeometry();
     }
 
     private float getVertColor(
@@ -711,7 +620,7 @@ class FullGeometryBranch extends BranchPackage {
 
     private float blendColors(Color[] vertColors) {
 
-        float r = 0, g = 0, b = 0, a = 0;
+        float r = 0, g = 0, b = 0;
         int count = 0;
 
         for (Color c : vertColors) {
@@ -719,122 +628,64 @@ class FullGeometryBranch extends BranchPackage {
                 r += c.r;
                 g += c.g;
                 b += c.b;
-                a += c.a;
                 count++;
             }
         }
 
         if (count == 0)
-            return Color.rgba8888(Color.WHITE);
+            return (float) 0xFFFFFF;
 
-        r /= count;
-        g /= count;
-        b /= count;
-        a /= count;
+        int ir = Math.round(Math.min(Math.max(r / count, 0f), 1f) * 255f);
+        int ig = Math.round(Math.min(Math.max(g / count, 0f), 1f) * 255f);
+        int ib = Math.round(Math.min(Math.max(b / count, 0f), 1f) * 255f);
 
-        return Color.rgba8888(r, g, b, a);
+        return (float) ((ir << 16) | (ig << 8) | ib);
     }
 
     private boolean finalizeFace(
             Int2ObjectOpenHashMap<FloatArrayList> verts,
             DynamicPacketInstance dynamicPacketInstance,
-            Direction3Vector direction3Vector,
             int materialId, TextureHandle textureHandle,
             int vert0XYZ, int vert1XYZ, int vert2XYZ, int vert3XYZ,
             float vert0Color, float vert1Color, float vert2Color, float vert3Color,
-            int encodedFace,
-            int sizeA, int sizeB,
-            int maskA0, int maskA1, int maskB0, int maskB1,
-            int negMaskA0, int negMaskA1, int negMaskB0, int negMaskB1) {
+            int meta,
+            int edgeA0, int edgeA1, int edgeB0, int edgeB1) {
 
         FloatArrayList buffer = verts.computeIfAbsent(materialId, k -> new FloatArrayList());
 
-        float nor = (float) direction3Vector.index;
-        float fEncFace = (float) encodedFace;
         float u0 = textureHandle.getU0();
         float v0 = textureHandle.getV0();
-        float fQuadSize = (float) ((sizeA & 0xFF) | ((sizeB & 0xFF) << 8));
-        float fMaskA0 = (float) maskA0;
-        float fMaskA1 = (float) maskA1;
-        float fMaskB0 = (float) maskB0;
-        float fMaskB1 = (float) maskB1;
-        float fNegMaskA0 = (float) negMaskA0;
-        float fNegMaskA1 = (float) negMaskA1;
-        float fNegMaskB0 = (float) negMaskB0;
-        float fNegMaskB1 = (float) negMaskB1;
+        float fMeta = (float) meta;
+        float fEdgeA0 = (float) edgeA0;
+        float fEdgeA1 = (float) edgeA1;
+        float fEdgeB0 = (float) edgeB0;
+        float fEdgeB1 = (float) edgeB1;
 
-        buffer.add((float) Coordinate3Int.unpackX(vert0XYZ));
-        buffer.add((float) Coordinate3Int.unpackY(vert0XYZ));
-        buffer.add((float) Coordinate3Int.unpackZ(vert0XYZ));
-        buffer.add(nor);
-        buffer.add(vert0Color);
-        buffer.add(u0);
-        buffer.add(v0);
-        buffer.add(fEncFace);
-        buffer.add(fQuadSize);
-        buffer.add(fMaskA0);
-        buffer.add(fMaskA1);
-        buffer.add(fMaskB0);
-        buffer.add(fMaskB1);
-        buffer.add(fNegMaskA0);
-        buffer.add(fNegMaskA1);
-        buffer.add(fNegMaskB0);
-        buffer.add(fNegMaskB1);
-
-        buffer.add((float) Coordinate3Int.unpackX(vert1XYZ));
-        buffer.add((float) Coordinate3Int.unpackY(vert1XYZ));
-        buffer.add((float) Coordinate3Int.unpackZ(vert1XYZ));
-        buffer.add(nor);
-        buffer.add(vert1Color);
-        buffer.add(u0);
-        buffer.add(v0);
-        buffer.add(fEncFace);
-        buffer.add(fQuadSize);
-        buffer.add(fMaskA0);
-        buffer.add(fMaskA1);
-        buffer.add(fMaskB0);
-        buffer.add(fMaskB1);
-        buffer.add(fNegMaskA0);
-        buffer.add(fNegMaskA1);
-        buffer.add(fNegMaskB0);
-        buffer.add(fNegMaskB1);
-
-        buffer.add((float) Coordinate3Int.unpackX(vert2XYZ));
-        buffer.add((float) Coordinate3Int.unpackY(vert2XYZ));
-        buffer.add((float) Coordinate3Int.unpackZ(vert2XYZ));
-        buffer.add(nor);
-        buffer.add(vert2Color);
-        buffer.add(u0);
-        buffer.add(v0);
-        buffer.add(fEncFace);
-        buffer.add(fQuadSize);
-        buffer.add(fMaskA0);
-        buffer.add(fMaskA1);
-        buffer.add(fMaskB0);
-        buffer.add(fMaskB1);
-        buffer.add(fNegMaskA0);
-        buffer.add(fNegMaskA1);
-        buffer.add(fNegMaskB0);
-        buffer.add(fNegMaskB1);
-
-        buffer.add((float) Coordinate3Int.unpackX(vert3XYZ));
-        buffer.add((float) Coordinate3Int.unpackY(vert3XYZ));
-        buffer.add((float) Coordinate3Int.unpackZ(vert3XYZ));
-        buffer.add(nor);
-        buffer.add(vert3Color);
-        buffer.add(u0);
-        buffer.add(v0);
-        buffer.add(fEncFace);
-        buffer.add(fQuadSize);
-        buffer.add(fMaskA0);
-        buffer.add(fMaskA1);
-        buffer.add(fMaskB0);
-        buffer.add(fMaskB1);
-        buffer.add(fNegMaskA0);
-        buffer.add(fNegMaskA1);
-        buffer.add(fNegMaskB0);
-        buffer.add(fNegMaskB1);
+        pushVert(buffer, vert0XYZ, u0, v0, fMeta, vert0Color, fEdgeA0, fEdgeA1, fEdgeB0, fEdgeB1);
+        pushVert(buffer, vert1XYZ, u0, v0, fMeta, vert1Color, fEdgeA0, fEdgeA1, fEdgeB0, fEdgeB1);
+        pushVert(buffer, vert2XYZ, u0, v0, fMeta, vert2Color, fEdgeA0, fEdgeA1, fEdgeB0, fEdgeB1);
+        pushVert(buffer, vert3XYZ, u0, v0, fMeta, vert3Color, fEdgeA0, fEdgeA1, fEdgeB0, fEdgeB1);
 
         return true;
+    }
+
+    private void pushVert(
+            FloatArrayList buffer,
+            int vertXYZ,
+            float u0, float v0,
+            float meta, float color,
+            float edgeA0, float edgeA1, float edgeB0, float edgeB1) {
+
+        buffer.add((float) Coordinate3Int.unpackX(vertXYZ));
+        buffer.add((float) Coordinate3Int.unpackY(vertXYZ));
+        buffer.add((float) Coordinate3Int.unpackZ(vertXYZ));
+        buffer.add(u0);
+        buffer.add(v0);
+        buffer.add(meta);
+        buffer.add(color);
+        buffer.add(edgeA0);
+        buffer.add(edgeA1);
+        buffer.add(edgeB0);
+        buffer.add(edgeB1);
     }
 }

@@ -5,7 +5,7 @@ in vec3       vUVLocalPos;
 in vec3       vNormal;
 flat in vec2  vUVOrigin;
 flat in float vOrient;
-in float      vColor;
+in vec3 vColor;
 
 #include "includes/CameraData.glsl"
 #include "includes/SettingsData.glsl"

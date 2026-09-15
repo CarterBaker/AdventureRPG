@@ -5,78 +5,64 @@ in  vec3  tcWorldPos[];
 in  vec3  tcNormal[];
 in  vec2  tcUVOrigin[];
 in  float tcOrient[];
-in  float tcColor[];
-in  float tcQuadSize[];
-in  float tcBevelMaskA0[];
-in  float tcBevelMaskA1[];
-in  float tcBevelMaskB0[];
-in  float tcBevelMaskB1[];
-in  float tcBevelNegMaskA0[];
-in  float tcBevelNegMaskA1[];
-in  float tcBevelNegMaskB0[];
-in  float tcBevelNegMaskB1[];
+in  vec3  tcColor[];
+in  float tcSizeA[];
+in  float tcSizeB[];
+in  float tcNatural[];
+in  vec4  tcEdge[];
 
 out vec3  teWorldPos[];
 out vec3  teNormal[];
 out vec2  teUVOrigin[];
 out float teOrient[];
-out float teColor[];
-out float teQuadSize[];
-out float teBevelMaskA0[];
-out float teBevelMaskA1[];
-out float teBevelMaskB0[];
-out float teBevelMaskB1[];
-out float teBevelNegMaskA0[];
-out float teBevelNegMaskA1[];
-out float teBevelNegMaskB0[];
-out float teBevelNegMaskB1[];
+out vec3  teColor[];
+out float teSizeA[];
+out float teSizeB[];
+out float teNatural[];
+out vec4  teEdge[];
 
 #include "includes/SettingsData.glsl"
+#include "includes/PlayerPositionData.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
-// Tessellation-level control point: each edge's outer level is decided from that edge's own world-space midpoint rather than the patch's center, so any two patches sharing a physical edge always agree on that edge's tier and density regardless of their own opposite edge, interior, or size.
+// Tessellation-level control point. The tier is resolved once per patch from the center of the chunk
+// that owns it, so every patch in a chunk agrees, and an edge shared between a long quad and a short one
+// can no longer straddle a ring boundary and get two different densities. Level scales with the edge's
+// block length in every tier, which fixes vertex spacing at 0.25 blocks near and 1.0 blocks beyond;
+// with merges capped at twelve blocks the near level tops out at 48 and never reaches the hardware
+// clamp that used to silently halve density on the widest quads while their neighbors kept full density.
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
-    teWorldPos      [gl_InvocationID] = tcWorldPos      [gl_InvocationID];
-    teNormal        [gl_InvocationID] = tcNormal        [gl_InvocationID];
-    teUVOrigin      [gl_InvocationID] = tcUVOrigin      [gl_InvocationID];
-    teOrient        [gl_InvocationID] = tcOrient        [gl_InvocationID];
-    teColor         [gl_InvocationID] = tcColor         [gl_InvocationID];
-    teQuadSize      [gl_InvocationID] = tcQuadSize      [gl_InvocationID];
-    teBevelMaskA0   [gl_InvocationID] = tcBevelMaskA0   [gl_InvocationID];
-    teBevelMaskA1   [gl_InvocationID] = tcBevelMaskA1   [gl_InvocationID];
-    teBevelMaskB0   [gl_InvocationID] = tcBevelMaskB0   [gl_InvocationID];
-    teBevelMaskB1   [gl_InvocationID] = tcBevelMaskB1   [gl_InvocationID];
-    teBevelNegMaskA0[gl_InvocationID] = tcBevelNegMaskA0[gl_InvocationID];
-    teBevelNegMaskA1[gl_InvocationID] = tcBevelNegMaskA1[gl_InvocationID];
-    teBevelNegMaskB0[gl_InvocationID] = tcBevelNegMaskB0[gl_InvocationID];
-    teBevelNegMaskB1[gl_InvocationID] = tcBevelNegMaskB1[gl_InvocationID];
+    teWorldPos[gl_InvocationID] = tcWorldPos[gl_InvocationID];
+    teNormal  [gl_InvocationID] = tcNormal  [gl_InvocationID];
+    teUVOrigin[gl_InvocationID] = tcUVOrigin[gl_InvocationID];
+    teOrient  [gl_InvocationID] = tcOrient  [gl_InvocationID];
+    teColor   [gl_InvocationID] = tcColor   [gl_InvocationID];
+    teSizeA   [gl_InvocationID] = tcSizeA   [gl_InvocationID];
+    teSizeB   [gl_InvocationID] = tcSizeB   [gl_InvocationID];
+    teNatural [gl_InvocationID] = tcNatural [gl_InvocationID];
+    teEdge    [gl_InvocationID] = tcEdge    [gl_InvocationID];
 
     if (gl_InvocationID == 0) {
 
         float tier0MaxSqDist = getTier0MaxSqDist();
         float tier1MaxSqDist = getTier1MaxSqDist();
 
-        int   quadPack = int(tcQuadSize[0]);
-        float sizeA    = float(quadPack & 0xFF);
-        float sizeB    = float((quadPack >> 8) & 0xFF);
+        vec3  chunkCenter = getPatchChunkCenter(tcWorldPos[0], tcWorldPos[2], tcNormal[0]);
+        float chunkDistSq = computeDistanceFromCenterSq(chunkCenter);
 
-        vec3 midEdgeV0 = (tcWorldPos[0] + tcWorldPos[1]) * 0.5;
-        vec3 midEdgeU1 = (tcWorldPos[1] + tcWorldPos[2]) * 0.5;
-        vec3 midEdgeV1 = (tcWorldPos[2] + tcWorldPos[3]) * 0.5;
-        vec3 midEdgeU0 = (tcWorldPos[3] + tcWorldPos[0]) * 0.5;
+        float sizeA = tcSizeA[0];
+        float sizeB = tcSizeB[0];
 
-        float levelV0 = getEdgeTessLevel(computeDistanceFromCenterSq(midEdgeV0), sizeA, tier0MaxSqDist, tier1MaxSqDist);
-        float levelU1 = getEdgeTessLevel(computeDistanceFromCenterSq(midEdgeU1), sizeB, tier0MaxSqDist, tier1MaxSqDist);
-        float levelV1 = getEdgeTessLevel(computeDistanceFromCenterSq(midEdgeV1), sizeA, tier0MaxSqDist, tier1MaxSqDist);
-        float levelU0 = getEdgeTessLevel(computeDistanceFromCenterSq(midEdgeU0), sizeB, tier0MaxSqDist, tier1MaxSqDist);
+        float levelA = getEdgeTessLevel(chunkDistSq, sizeA, tier0MaxSqDist, tier1MaxSqDist);
+        float levelB = getEdgeTessLevel(chunkDistSq, sizeB, tier0MaxSqDist, tier1MaxSqDist);
 
-        gl_TessLevelOuter[0] = levelU0;
-        gl_TessLevelOuter[1] = levelV0;
-        gl_TessLevelOuter[2] = levelU1;
-        gl_TessLevelOuter[3] = levelV1;
-        gl_TessLevelInner[0] = max(levelV0, levelV1);
-        gl_TessLevelInner[1] = max(levelU0, levelU1);
+        gl_TessLevelOuter[0] = levelB;
+        gl_TessLevelOuter[1] = levelA;
+        gl_TessLevelOuter[2] = levelB;
+        gl_TessLevelOuter[3] = levelA;
+        gl_TessLevelInner[0] = levelA;
+        gl_TessLevelInner[1] = levelB;
     }
 }
