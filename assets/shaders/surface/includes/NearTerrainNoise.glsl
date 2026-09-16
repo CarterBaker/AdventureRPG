@@ -3,28 +3,41 @@
 
 #include "includes/NaturalNoiseData.glsl"
 
-// Near-ring per-vertex jitter, sampled from the baked noise lattice so it can never disagree with
-// physics sampling the same table. The seed is the undisplaced world position, so the lookup itself is
-// seam-free by construction; the weight the caller passes carries the same boundary fade the height map
-// uses, which keeps a natural surface from dragging a non-natural neighbor apart at their shared edge.
+// Near-ring natural surface distortion, sampled from the baked noise lattice so it can never disagree with
+// physics sampling the same table. Three lattice taps on three orthogonal projections of the world position
+// form a vector field that is a pure function of position, which keeps the lookup seam-free by construction;
+// that vector is then split against the face normal so the dominant component rides the normal and is
+// actually visible on a horizontal surface, with a smaller in-plane component warping the silhouette. The
+// old axis-aligned form put its large amplitudes on X and Z, which on a top face are both in-plane and
+// therefore invisible, leaving only a few hundredths of a block of real relief.
 
-const float NEAR_JITTER_HORIZONTAL = 0.4;
-const float NEAR_JITTER_VERTICAL   = 0.08;
+const float NATURAL_NOISE_NORMAL_AMPLITUDE  = 0.22;
+const float NATURAL_NOISE_TANGENT_AMPLITUDE = 0.16;
 
-vec3 applyNearTerrainJitter(vec3 worldPos, vec3 seedPos, float weight) {
+vec3 naturalNoiseVector(vec3 worldPos) {
+    vec2 planeXZ = worldPos.xz * NATURAL_NOISE_SEED_SCALE;
+    vec2 planeZY = worldPos.zy * NATURAL_NOISE_SEED_SCALE;
+    vec2 planeXY = worldPos.xy * NATURAL_NOISE_SEED_SCALE;
+
+    return vec3(
+        sampleNaturalNoiseSmooth(planeXZ + vec2(17.3,  5.1)) +
+        sampleNaturalNoiseSmooth(planeZY + vec2(61.7, 23.9)),
+        sampleNaturalNoiseSmooth(planeXZ + vec2(91.2, 44.6)) +
+        sampleNaturalNoiseSmooth(planeXY + vec2(13.8, 77.4)),
+        sampleNaturalNoiseSmooth(planeZY + vec2(7.5, 68.2)) +
+        sampleNaturalNoiseSmooth(planeXY + vec2(55.1, 31.6))) - 1.0;
+}
+
+vec3 applyNaturalSurfaceNoise(vec3 worldPos, vec3 seedPos, vec3 normal, float weight) {
     if (weight <= 0.001)
     return worldPos;
 
-    vec2  seed = seedPos.xz * NATURAL_NOISE_SEED_SCALE;
-    float nX   = sampleNaturalNoiseSmooth(seed + vec2(17.3,  0.0)) - 0.5;
-    float nZ   = sampleNaturalNoiseSmooth(seed + vec2(0.0, 31.7)) - 0.5;
-    float nY   = sampleNaturalNoiseSmooth(seed + vec2(53.1, 83.2)) - 0.5;
+    vec3  noise      = naturalNoiseVector(seedPos);
+    float along      = dot(noise, normal);
+    vec3  tangential = noise - normal * along;
 
-    worldPos.x += nX * NEAR_JITTER_HORIZONTAL * weight;
-    worldPos.z += nZ * NEAR_JITTER_HORIZONTAL * weight;
-    worldPos.y += nY * NEAR_JITTER_VERTICAL   * weight;
-
-    return worldPos;
+    return worldPos + (normal * (along * NATURAL_NOISE_NORMAL_AMPLITUDE)
+        + tangential * NATURAL_NOISE_TANGENT_AMPLITUDE) * weight;
 }
 
 #endif

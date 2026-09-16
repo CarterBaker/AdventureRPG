@@ -25,12 +25,12 @@ out vec4  teEdge[];
 #include "includes/PlayerPositionData.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
-// Tessellation-level control point. The tier is resolved once per patch from the center of the chunk
-// that owns it, so every patch in a chunk agrees, and an edge shared between a long quad and a short one
-// can no longer straddle a ring boundary and get two different densities. Level scales with the edge's
-// block length in every tier, which fixes vertex spacing at 0.25 blocks near and 1.0 blocks beyond;
-// with merges capped at twelve blocks the near level tops out at 48 and never reaches the hardware
-// clamp that used to silently halve density on the widest quads while their neighbors kept full density.
+// Tessellation-level control point. The tier is resolved once per patch from the chunk that owns the
+// patch's origin block, so every patch of a chunk agrees and the two perpendicular faces of one block can
+// no longer land in different chunks and pick different densities along the edge they share. Level scales
+// with the edge's block length in every tier, which fixes vertex spacing at 0.25 blocks near and 1.0
+// blocks beyond; with merges capped at ten blocks the near level tops out at 40 and never approaches the
+// hardware clamp.
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -49,14 +49,13 @@ void main() {
         float tier0MaxSqDist = getTier0MaxSqDist();
         float tier1MaxSqDist = getTier1MaxSqDist();
 
-        vec3  chunkCenter = getPatchChunkCenter(tcWorldPos[0], tcWorldPos[2], tcNormal[0]);
+        vec3  chunkCenter = getOriginBlockChunkCenter(
+            tcWorldPos[0], tcWorldPos[1], tcWorldPos[3], tcNormal[0]);
+
         float chunkDistSq = computeDistanceFromCenterSq(chunkCenter);
 
-        float sizeA = tcSizeA[0];
-        float sizeB = tcSizeB[0];
-
-        float levelA = getEdgeTessLevel(chunkDistSq, sizeA, tier0MaxSqDist, tier1MaxSqDist);
-        float levelB = getEdgeTessLevel(chunkDistSq, sizeB, tier0MaxSqDist, tier1MaxSqDist);
+        float levelA = getEdgeTessLevel(chunkDistSq, tcSizeA[0], tier0MaxSqDist, tier1MaxSqDist);
+        float levelB = getEdgeTessLevel(chunkDistSq, tcSizeB[0], tier0MaxSqDist, tier1MaxSqDist);
 
         gl_TessLevelOuter[0] = levelB;
         gl_TessLevelOuter[1] = levelA;

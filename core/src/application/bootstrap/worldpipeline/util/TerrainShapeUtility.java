@@ -61,7 +61,7 @@ public final class TerrainShapeUtility extends EngineUtility {
                 double cosAngle = Math.cos(spatialAngle);
                 double sinAngle = Math.sin(spatialAngle);
 
-                float continentalness = TerrainWrapNoiseUtility.sampleFractal(
+                float continentalness = TerrainNoiseUtility.sampleFractal(
                                 seed ^ EngineSetting.TERRAIN_CONTINENTALNESS_SEED_SALT,
                                 cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
                                 EngineSetting.TERRAIN_CONTINENTALNESS_WAVELENGTH_BLOCKS,
@@ -69,7 +69,7 @@ public final class TerrainShapeUtility extends EngineUtility {
                                 EngineSetting.TERRAIN_CONTINENTALNESS_PERSISTENCE,
                                 EngineSetting.TERRAIN_CONTINENTALNESS_LACUNARITY);
 
-                float erosion = TerrainWrapNoiseUtility.sampleFractal(
+                float erosion = TerrainNoiseUtility.sampleFractal(
                                 seed ^ EngineSetting.TERRAIN_EROSION_SEED_SALT,
                                 cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
                                 EngineSetting.TERRAIN_EROSION_WAVELENGTH_BLOCKS,
@@ -77,7 +77,7 @@ public final class TerrainShapeUtility extends EngineUtility {
                                 EngineSetting.TERRAIN_EROSION_PERSISTENCE,
                                 EngineSetting.TERRAIN_EROSION_LACUNARITY);
 
-                float peaksValleysRaw = TerrainWrapNoiseUtility.sampleFractal(
+                float peaksValleysRaw = TerrainNoiseUtility.sampleFractal(
                                 seed ^ EngineSetting.TERRAIN_PV_SEED_SALT,
                                 cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
                                 EngineSetting.TERRAIN_PV_WAVELENGTH_BLOCKS,
@@ -136,7 +136,7 @@ public final class TerrainShapeUtility extends EngineUtility {
                         blendedAmplitude += biome.getDetailAmplitudeBlocks() * biome.getTerrainHeightScale() * weight;
                 }
 
-                float detail = TerrainWrapNoiseUtility.sampleFractal(
+                float detail = TerrainNoiseUtility.sampleFractal(
                                 seed ^ EngineSetting.TERRAIN_DETAIL_SEED_SALT,
                                 cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
                                 blendedWavelength,

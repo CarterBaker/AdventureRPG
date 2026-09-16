@@ -4,7 +4,7 @@ import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.mathematics.extras.SeamlessAxisNoiseUtility;
 
-public final class TerrainWrapNoiseUtility extends EngineUtility {
+public final class TerrainNoiseUtility extends EngineUtility {
 
     /*
      * Fractal (multi-octave) noise sampling for terrain, wrapped seamlessly
@@ -24,7 +24,7 @@ public final class TerrainWrapNoiseUtility extends EngineUtility {
      * closure, avoiding a per-octave allocation on this hot path.
      */
 
-    private TerrainWrapNoiseUtility() {
+    private TerrainNoiseUtility() {
         throw new AssertionError("Utility class cannot be instantiated");
     }
 

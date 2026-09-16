@@ -30,12 +30,11 @@ out float tcNatural;
 out vec4  tcEdge;
 
 // Places raw block-face geometry in world space and unpacks the two integer-packed vertex attributes.
-// Everything that used to occupy thirteen float attributes now fits in six: face index, encoded face
-// orientation, both merged quad extents and the natural-block flag share one 18-bit word, vertex tint
-// is an exact 24-bit RGB triple rather than a truncated rgba8888 int, and the four per-edge state words
-// pack two bits per unit cell across a quad capped at twelve cells. Every packed value stays inside a
-// float32 mantissa, so nothing is lost between here and the evaluation shader. Per-vertex displacement
-// still happens after tessellation, since tessellation only ever sees a merged quad's four real corners.
+// Face index, encoded face orientation, both merged quad extents and the natural-block flag share one
+// 18-bit word, vertex tint is an exact 24-bit RGB triple, and each of the four per-edge state words packs
+// two bits per unit cell across a quad capped at ten cells plus one padding cell at either end, which is
+// twenty-four bits and therefore exact in a float32 mantissa. Per-vertex displacement still happens after
+// tessellation, since tessellation only ever sees a merged quad's four real corners.
 
 void main() {
     vec3 worldPos  = aPos;

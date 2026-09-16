@@ -31,14 +31,16 @@ out vec3 vColor;
 #include "surface/includes/Bevel.glsl"
 #include "surface/includes/HeightDisplacement.glsl"
 
-// Terrain tessellation evaluation. The order here is what makes a seam close: height and jitter are
-// scaled by a weight that reaches exactly zero on any edge cell where the surface ends, so at such an
-// edge the only surviving displacement is the bevel, and the bevel solver is symmetric across the two
-// faces that meet there. Distant rise is now applied unconditionally rather than behind a per-vertex
-// distance test, because that test stepped a 64-block displacement on and off inside a single patch and
-// ripped it in half; the function's own clamp already zeroes it for near terrain. Geometric normals come
-// from finite differences taken in block units rather than parametric units, so a twelve-block quad and
-// a one-block quad shade to the same gradient.
+// Terrain tessellation evaluation. The order is what makes a seam close: natural distortion and height
+// relief are scaled by a weight that reaches exactly zero on any edge cell where the surface ends, so at
+// such an edge the only surviving displacement is the bevel, and the bevel solver is symmetric across the
+// two faces that meet there. Edge state is interpolated between cell centers rather than stepped per cell,
+// which both removes the clamp that made two faces read different cells at a quad's end and lets a
+// non-natural surface follow a natural neighbour's bevel across one cell. Distant rise is applied
+// unconditionally rather than behind a per-vertex distance test, because that test stepped a 64-block
+// displacement on and off inside a single patch; the function's own clamp already zeroes it for near
+// terrain. Geometric normals come from finite differences in block units, taken only where displacement
+// actually runs, so a ten-block quad and a one-block quad shade to the same gradient.
 
 const float HEIGHT_FD_EPSILON_BLOCKS = 0.02;
 
@@ -55,27 +57,27 @@ vec3 evalDisplacedSurface(
         float posA = u * sizeA;
         float posB = v * sizeB;
 
-        int lastA = int(sizeA) - 1;
-        int lastB = int(sizeB) - 1;
-
         float distA, distB;
-        int   stateA, stateB;
+        float signedA, signedB;
+        float fadeFlagA, fadeFlagB;
         vec3  outwardA, outwardB;
 
-        resolveAxis(posA, sizeA, posB, lastB, teEdge[0].x, teEdge[0].y, tangentA, distA, stateA, outwardA);
-        resolveAxis(posB, sizeB, posA, lastA, teEdge[0].z, teEdge[0].w, tangentB, distB, stateB, outwardB);
+        resolveAxis(posA, sizeA, posB, sizeB, teEdge[0].x, teEdge[0].y, tangentA,
+                    distA, signedA, fadeFlagA, outwardA);
+        resolveAxis(posB, sizeB, posA, sizeA, teEdge[0].z, teEdge[0].w, tangentB,
+                    distB, signedB, fadeFlagB, outwardB);
 
-        float boundary    = max(edgeFade(distA, stateA), edgeFade(distB, stateB));
+        float boundary     = max(edgeFade(distA, fadeFlagA), edgeFade(distB, fadeFlagB));
         float detailWeight = natural * (1.0 - boundary) * nearStrength;
 
-        worldPos = applyNearTerrainJitter(worldPos, baseWorldPos, detailWeight);
+        worldPos = applyNaturalSurfaceNoise(worldPos, baseWorldPos, normal, detailWeight);
 
         vec2 tiledUV = tileUV(baseWorldPos, teUVOrigin[0], normal, teOrient[0]);
-        worldPos = applyHeightDisplacement(worldPos, normal, tiledUV, detailWeight);
+        worldPos = applyHeightDisplacement(worldPos, baseWorldPos, normal, tiledUV, detailWeight);
 
         worldPos = applyBevel(worldPos, normal,
-                              outwardA, distA, stateA,
-                              outwardB, distB, stateB,
+                              outwardA, distA, signedA,
+                              outwardB, distB, signedB,
                               nearStrength);
     }
 
@@ -108,31 +110,36 @@ void main() {
     vec3 worldPos = evalDisplacedSurface(
         u, v, baseWorldPos, sizeA, sizeB, natural, tangentA, tangentB, normal, nearStrength);
 
-    float uStep = HEIGHT_FD_EPSILON_BLOCKS / sizeA;
-    float vStep = HEIGHT_FD_EPSILON_BLOCKS / sizeB;
+    if (nearStrength > 0.001) {
 
-    uStep = (u + uStep <= 1.0) ?  uStep : -uStep;
-    vStep = (v + vStep <= 1.0) ?  vStep : -vStep;
+        float uStep = HEIGHT_FD_EPSILON_BLOCKS / sizeA;
+        float vStep = HEIGHT_FD_EPSILON_BLOCKS / sizeB;
 
-    vec3 baseU = mix(mix(teWorldPos[0], teWorldPos[1], u + uStep),
-                     mix(teWorldPos[3], teWorldPos[2], u + uStep), v);
-    vec3 baseV = mix(mix(teWorldPos[0], teWorldPos[1], u),
-                     mix(teWorldPos[3], teWorldPos[2], u), v + vStep);
+        uStep = (u + uStep <= 1.0) ?  uStep : -uStep;
+        vStep = (v + vStep <= 1.0) ?  vStep : -vStep;
 
-    float nsU = getNearStrength(computeDistanceFromCenterSq(baseU), tier0MaxSqDist);
-    float nsV = getNearStrength(computeDistanceFromCenterSq(baseV), tier0MaxSqDist);
+        vec3 baseU = mix(mix(teWorldPos[0], teWorldPos[1], u + uStep),
+                         mix(teWorldPos[3], teWorldPos[2], u + uStep), v);
+        vec3 baseV = mix(mix(teWorldPos[0], teWorldPos[1], u),
+                         mix(teWorldPos[3], teWorldPos[2], u), v + vStep);
 
-    vec3 posU = evalDisplacedSurface(u + uStep, v, baseU, sizeA, sizeB, natural, tangentA, tangentB, normal, nsU);
-    vec3 posV = evalDisplacedSurface(u, v + vStep, baseV, sizeA, sizeB, natural, tangentA, tangentB, normal, nsV);
+        float nsU = getNearStrength(computeDistanceFromCenterSq(baseU), tier0MaxSqDist);
+        float nsV = getNearStrength(computeDistanceFromCenterSq(baseV), tier0MaxSqDist);
 
-    vec3 tangentU = (posU - worldPos) / uStep;
-    vec3 tangentV = (posV - worldPos) / vStep;
+        vec3 posU = evalDisplacedSurface(
+            u + uStep, v, baseU, sizeA, sizeB, natural, tangentA, tangentB, normal, nsU);
+        vec3 posV = evalDisplacedSurface(
+            u, v + vStep, baseV, sizeA, sizeB, natural, tangentA, tangentB, normal, nsV);
 
-    if (length(tangentU) > 1e-6 && length(tangentV) > 1e-6) {
-        vec3 fdNormal = normalize(cross(tangentU, tangentV));
-        if (dot(fdNormal, normal) < 0.0)
-        fdNormal = -fdNormal;
-        normal = fdNormal;
+        vec3 tangentU = (posU - worldPos) / uStep;
+        vec3 tangentV = (posV - worldPos) / vStep;
+
+        if (length(tangentU) > 1e-6 && length(tangentV) > 1e-6) {
+            vec3 fdNormal = normalize(cross(tangentU, tangentV));
+            if (dot(fdNormal, normal) < 0.0)
+            fdNormal = -fdNormal;
+            normal = fdNormal;
+        }
     }
 
     vLocalPos   = worldPos;

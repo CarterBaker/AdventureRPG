@@ -25,14 +25,16 @@ import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-// Geometry branch for full-cube blocks. Greedily merges faces into quads (capped at MAX_MERGE_EXTENT so
-// every per-edge state word stays inside a float32 mantissa and every tessellation level stays under the
-// hardware clamp), samples AO vertex colors, resolves rotation-aware texture and face encoding, and
-// classifies every edge cell of the resulting quad into one of four states the tessellation evaluator
-// consumes directly: INTERIOR (the surface continues past this edge, no fade, no bevel), BOUNDARY (the
-// surface ends but nothing bevels), CONVEX, or CONCAVE. Classification is deliberately symmetric — both
-// faces meeting at any physical edge evaluate the same two block lookups in the same order and therefore
-// always agree on that edge's state, which is what lets the shader converge both faces onto one point.
+// Geometry branch for full-cube blocks. Greedily merges faces into quads, samples biome vertex colors,
+// resolves rotation-aware texture and face encoding, and classifies every edge cell of the resulting quad
+// into INTERIOR, BOUNDARY, CONVEX or CONCAVE for the tessellation evaluator. Each of the four edge words
+// carries two bits per cell for the quad's own run plus one padding cell at each end, so the evaluator can
+// interpolate bevel strength between cell centers without ever clamping to a cell the neighbouring face
+// would not have read; that padding is what lets a non-natural surface inherit and taper a natural
+// neighbour's bevel, and what keeps two faces meeting at a quad's end from resolving different cells.
+// Classification reads the naturalness and geometry of the cell it is given rather than the quad's owning
+// block, and resolves every chunk and subchunk hop explicitly, so both faces meeting at any physical edge
+// evaluate the same lookups in the same order and always agree on that edge's state.
 class FullGeometryBranch extends BranchPackage {
 
     private TextureManager textureManager;
@@ -44,7 +46,8 @@ class FullGeometryBranch extends BranchPackage {
     private static final int CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
     private static final int WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
 
-    private static final int MAX_MERGE_EXTENT = 12;
+    private static final int MAX_MERGE_EXTENT = 10;
+    private static final int VERTEX_FLOAT_COUNT = 11;
 
     private static final int EDGE_STATE_INTERIOR = 0;
     private static final int EDGE_STATE_BOUNDARY = 1;
@@ -84,7 +87,6 @@ class FullGeometryBranch extends BranchPackage {
                 subChunkInstance,
                 xyz,
                 direction3Vector,
-                biomeHandle,
                 blockHandle))
             return false;
 
@@ -105,57 +107,43 @@ class FullGeometryBranch extends BranchPackage {
                 vertColors);
     }
 
-    private boolean blockHasFace(
+    // Traversal \\
+
+    private ChunkInstance stepChunk(
             ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance,
             int xyz,
-            Direction3Vector direction3Vector,
-            BiomeHandle biomeHandle,
-            BlockHandle blockHandle) {
+            Direction3Vector direction3Vector) {
 
-        SubChunkInstance comparativeSubChunkInstance = getComparativeSubChunkInstance(
-                chunkInstance,
-                subChunkInstance,
-                xyz,
-                direction3Vector);
+        if (chunkInstance == null ||
+                direction3Vector.y != 0 ||
+                !ChunkCoordinate3Int.isAtEdge(xyz, direction3Vector))
+            return chunkInstance;
 
-        if (comparativeSubChunkInstance == ERROR)
-            return false;
+        Direction2Vector direction2Vector = direction3Vector.to2D();
+        ChunkNeighborHandle chunkNeighborHandle = chunkInstance.getChunkNeighbors();
 
-        if (comparativeSubChunkInstance == null) {
-            byte subY = (byte) subChunkInstance.getCoordinate();
-            if ((direction3Vector == Direction3Vector.DOWN && subY == 0) ||
-                    (direction3Vector == Direction3Vector.UP && subY == WORLD_HEIGHT - 1))
-                return true;
-            return false;
-        }
-
-        int comparativeXYZ = ChunkCoordinate3Int.getNeighborAndWrap(xyz, direction3Vector);
-        BlockPaletteHandle comparativeBlockPaletteHandle = comparativeSubChunkInstance.getBlockPaletteHandle();
-        short comparativeBlockID = comparativeBlockPaletteHandle.getBlock(comparativeXYZ);
-        BlockHandle comparativeBlockHandle = blockManager.getBlockHandleFromBlockID(comparativeBlockID);
-
-        return compareNeighbor(blockHandle, comparativeBlockHandle);
+        return chunkNeighborHandle.getNeighborChunk(direction2Vector.index);
     }
 
-    private SubChunkInstance getComparativeSubChunkInstance(
+    private SubChunkInstance stepSubChunk(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
             int xyz,
             Direction3Vector direction3Vector) {
 
+        if (chunkInstance == null || subChunkInstance == null)
+            return null;
+
         if (!ChunkCoordinate3Int.isAtEdge(xyz, direction3Vector))
             return subChunkInstance;
 
-        byte subChunkCoordinate = (byte) subChunkInstance.getCoordinate();
+        int subChunkCoordinate = (byte) subChunkInstance.getCoordinate();
 
-        if (direction3Vector == Direction3Vector.UP ||
-                direction3Vector == Direction3Vector.DOWN) {
-            byte comparativeSubChunkCoordinate = (byte) (subChunkCoordinate + direction3Vector.y);
-            if (comparativeSubChunkCoordinate >= 0 && comparativeSubChunkCoordinate < WORLD_HEIGHT)
-                return chunkInstance.getSubChunk(comparativeSubChunkCoordinate);
-            else
+        if (direction3Vector.y != 0) {
+            int comparativeSubChunkCoordinate = subChunkCoordinate + direction3Vector.y;
+            if (comparativeSubChunkCoordinate < 0 || comparativeSubChunkCoordinate >= WORLD_HEIGHT)
                 return null;
+            return chunkInstance.getSubChunk((byte) comparativeSubChunkCoordinate);
         }
 
         Direction2Vector direction2Vector = direction3Vector.to2D();
@@ -163,19 +151,43 @@ class FullGeometryBranch extends BranchPackage {
         ChunkInstance neighborChunkInstance = chunkNeighborHandle.getNeighborChunk(direction2Vector.index);
 
         if (neighborChunkInstance == null)
-            return ERROR;
+            return null;
 
-        SubChunkInstance comparativeSubChunkInstance = neighborChunkInstance.getSubChunk(subChunkCoordinate);
+        return neighborChunkInstance.getSubChunk((byte) subChunkCoordinate);
+    }
+
+    private BlockHandle blockAt(SubChunkInstance subChunkInstance, int xyz) {
+        short blockID = subChunkInstance.getBlockPaletteHandle().getBlock(xyz);
+        return blockManager.getBlockHandleFromBlockID(blockID);
+    }
+
+    // Face presence \\
+
+    private boolean blockHasFace(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int xyz,
+            Direction3Vector direction3Vector,
+            BlockHandle blockHandle) {
+
+        ChunkInstance comparativeChunkInstance = stepChunk(chunkInstance, xyz, direction3Vector);
+
+        if (comparativeChunkInstance == null)
+            return false;
+
+        SubChunkInstance comparativeSubChunkInstance = stepSubChunk(
+                chunkInstance, subChunkInstance, xyz, direction3Vector);
 
         if (comparativeSubChunkInstance == null)
-            return ERROR;
+            return direction3Vector.y != 0;
 
-        return comparativeSubChunkInstance;
+        int comparativeXYZ = ChunkCoordinate3Int.getNeighborAndWrap(xyz, direction3Vector);
+        BlockHandle comparativeBlockHandle = blockAt(comparativeSubChunkInstance, comparativeXYZ);
+
+        return comparativeBlockHandle.getGeometry() != blockHandle.getGeometry();
     }
 
-    private boolean compareNeighbor(BlockHandle blockHandleA, BlockHandle blockHandleB) {
-        return blockHandleA.getGeometry() != blockHandleB.getGeometry();
-    }
+    // Merging \\
 
     private boolean assembleQuad(
             ChunkInstance chunkInstance,
@@ -195,8 +207,8 @@ class FullGeometryBranch extends BranchPackage {
 
         boolean checkA = true;
         boolean checkB = true;
-        byte sizeA = 1;
-        byte sizeB = 1;
+        int sizeA = 1;
+        int sizeB = 1;
 
         Direction3Vector comparativeDirectionA = Direction3Vector.getTangentA(direction3Vector);
         Direction3Vector comparativeDirectionB = Direction3Vector.getTangentB(direction3Vector);
@@ -265,8 +277,8 @@ class FullGeometryBranch extends BranchPackage {
                 direction3Vector,
                 comparativeDirectionA,
                 comparativeDirectionB,
+                biomeHandle,
                 blockHandle,
-                baseOrientation,
                 verts,
                 vertColors);
     }
@@ -289,7 +301,9 @@ class FullGeometryBranch extends BranchPackage {
             BitSet accumulatedBatch,
             BitSet batchReturn) {
 
-        if (currentSize >= MAX_MERGE_EXTENT || currentSize >= CHUNK_SIZE)
+        batchReturn.clear();
+
+        if (currentSize >= MAX_MERGE_EXTENT)
             return false;
 
         int nextXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, expandDirection, currentSize);
@@ -297,34 +311,44 @@ class FullGeometryBranch extends BranchPackage {
         if (nextXYZ == -1)
             return false;
 
+        boolean orientationSensitive = requiresOrientationMatch(blockHandle);
+
         for (int i = 0; i < tangentSize; i++) {
 
             int checkXYZ = ChunkCoordinate3Int.getNeighborWithOffset(nextXYZ, tangentDirection, i);
 
-            if (checkXYZ == -1)
+            if (checkXYZ == -1) {
+                batchReturn.clear();
                 return false;
+            }
+
+            if (accumulatedBatch.get(ChunkCoordinate3Int.getIndex(checkXYZ))) {
+                batchReturn.clear();
+                return false;
+            }
 
             short comparativeBiomeID = biomePaletteHandle.getBlock(checkXYZ);
             BiomeHandle comparativeBiomeHandle = biomeManager.getBiomeHandleFromBiomeID(comparativeBiomeID);
+
+            if (comparativeBiomeHandle != biomeHandle) {
+                batchReturn.clear();
+                return false;
+            }
+
             short comparativeBlockID = blockPaletteHandle.getBlock(checkXYZ);
             BlockHandle comparativeBlockHandle = blockManager.getBlockHandleFromBlockID(comparativeBlockID);
-            short comparativeOrientation = rotationPaletteHandle.getBlock(checkXYZ);
 
-            if (!compareNext(
-                    biomeHandle,
-                    comparativeBiomeHandle,
-                    blockHandle,
-                    comparativeBlockHandle,
-                    baseOrientation,
-                    comparativeOrientation) ||
-                    accumulatedBatch.get(ChunkCoordinate3Int.getIndex(checkXYZ)) ||
-                    !blockHasFace(
-                            chunkInstance,
-                            subChunkInstance,
-                            checkXYZ,
-                            direction3Vector,
-                            comparativeBiomeHandle,
-                            comparativeBlockHandle)) {
+            if (comparativeBlockHandle != blockHandle) {
+                batchReturn.clear();
+                return false;
+            }
+
+            if (orientationSensitive && rotationPaletteHandle.getBlock(checkXYZ) != baseOrientation) {
+                batchReturn.clear();
+                return false;
+            }
+
+            if (!blockHasFace(chunkInstance, subChunkInstance, checkXYZ, direction3Vector, blockHandle)) {
                 batchReturn.clear();
                 return false;
             }
@@ -335,22 +359,133 @@ class FullGeometryBranch extends BranchPackage {
         return true;
     }
 
-    private boolean compareNext(
-            BiomeHandle biomeHandleA,
-            BiomeHandle biomeHandleB,
-            BlockHandle blockHandleA,
-            BlockHandle blockHandleB,
-            short orientationA,
-            short orientationB) {
-
-        if (biomeHandleA != biomeHandleB || blockHandleA != blockHandleB)
-            return false;
-
-        if (blockHandleA.getRotationType() == BlockRotationType.NONE)
-            return true;
-
-        return orientationA == orientationB;
+    private boolean requiresOrientationMatch(BlockHandle blockHandle) {
+        BlockRotationType rotationType = blockHandle.getRotationType();
+        return rotationType != BlockRotationType.NONE && rotationType != BlockRotationType.NATURAL_FULL;
     }
+
+    // Edge classification \\
+
+    private int buildEdgeWord(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle rotationPaletteHandle,
+            int originXYZ,
+            Direction3Vector runDirection,
+            int runLength,
+            Direction3Vector faceDirection,
+            Direction3Vector sideDirection) {
+
+        Direction3Vector backDirection = Direction3Vector.getOpposite(runDirection);
+        int lastXYZ = ChunkCoordinate3Int.getNeighborWithOffset(originXYZ, runDirection, runLength - 1);
+
+        int word = 0;
+
+        for (int i = -1; i <= runLength; i++) {
+
+            ChunkInstance cellChunkInstance;
+            SubChunkInstance cellSubChunkInstance;
+            int cellXYZ;
+
+            if (i < 0) {
+                cellChunkInstance = stepChunk(chunkInstance, originXYZ, backDirection);
+                cellSubChunkInstance = stepSubChunk(chunkInstance, subChunkInstance, originXYZ, backDirection);
+                cellXYZ = ChunkCoordinate3Int.getNeighborAndWrap(originXYZ, backDirection);
+            } else if (i < runLength) {
+                cellChunkInstance = chunkInstance;
+                cellSubChunkInstance = subChunkInstance;
+                cellXYZ = ChunkCoordinate3Int.getNeighborWithOffset(originXYZ, runDirection, i);
+            } else {
+                cellChunkInstance = stepChunk(chunkInstance, lastXYZ, runDirection);
+                cellSubChunkInstance = stepSubChunk(chunkInstance, subChunkInstance, lastXYZ, runDirection);
+                cellXYZ = ChunkCoordinate3Int.getNeighborAndWrap(lastXYZ, runDirection);
+            }
+
+            int state = classifyEdgeCell(
+                    cellChunkInstance,
+                    cellSubChunkInstance,
+                    cellXYZ,
+                    faceDirection,
+                    sideDirection,
+                    subChunkInstance,
+                    rotationPaletteHandle);
+
+            word |= state << ((i + 1) * 2);
+        }
+
+        return word;
+    }
+
+    private int classifyEdgeCell(
+            ChunkInstance cellChunkInstance,
+            SubChunkInstance cellSubChunkInstance,
+            int cellXYZ,
+            Direction3Vector faceDirection,
+            Direction3Vector sideDirection,
+            SubChunkInstance originSubChunkInstance,
+            BlockPaletteHandle rotationPaletteHandle) {
+
+        if (cellChunkInstance == null || cellSubChunkInstance == null)
+            return EDGE_STATE_BOUNDARY;
+
+        BlockHandle cellBlockHandle = blockAt(cellSubChunkInstance, cellXYZ);
+
+        if (!blockHasFace(cellChunkInstance, cellSubChunkInstance, cellXYZ, faceDirection, cellBlockHandle))
+            return EDGE_STATE_BOUNDARY;
+
+        ChunkInstance sideChunkInstance = stepChunk(cellChunkInstance, cellXYZ, sideDirection);
+
+        if (sideChunkInstance == null)
+            return EDGE_STATE_BOUNDARY;
+
+        SubChunkInstance sideSubChunkInstance = stepSubChunk(
+                cellChunkInstance, cellSubChunkInstance, cellXYZ, sideDirection);
+
+        if (sideSubChunkInstance == null)
+            return cellBlockHandle.isNatural() ? EDGE_STATE_CONVEX : EDGE_STATE_BOUNDARY;
+
+        int sideXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
+        BlockHandle sideBlockHandle = blockAt(sideSubChunkInstance, sideXYZ);
+
+        if (sideBlockHandle.getGeometry() != cellBlockHandle.getGeometry())
+            return cellBlockHandle.isNatural() ? EDGE_STATE_CONVEX : EDGE_STATE_BOUNDARY;
+
+        ChunkInstance diagonalChunkInstance = stepChunk(sideChunkInstance, sideXYZ, faceDirection);
+
+        if (diagonalChunkInstance == null)
+            return EDGE_STATE_BOUNDARY;
+
+        SubChunkInstance diagonalSubChunkInstance = stepSubChunk(
+                sideChunkInstance, sideSubChunkInstance, sideXYZ, faceDirection);
+
+        if (diagonalSubChunkInstance != null) {
+
+            int diagonalXYZ = ChunkCoordinate3Int.getNeighborAndWrap(sideXYZ, faceDirection);
+            BlockHandle diagonalBlockHandle = blockAt(diagonalSubChunkInstance, diagonalXYZ);
+
+            if (diagonalBlockHandle.getGeometry() == cellBlockHandle.getGeometry())
+                return (cellBlockHandle.isNatural() || diagonalBlockHandle.isNatural())
+                        ? EDGE_STATE_CONCAVE
+                        : EDGE_STATE_BOUNDARY;
+        }
+
+        if (sideBlockHandle != cellBlockHandle)
+            return EDGE_STATE_BOUNDARY;
+
+        if (requiresOrientationMatch(cellBlockHandle)) {
+
+            if (cellSubChunkInstance != originSubChunkInstance ||
+                    sideSubChunkInstance != originSubChunkInstance)
+                return EDGE_STATE_BOUNDARY;
+
+            if (rotationPaletteHandle.getBlock(sideXYZ) != rotationPaletteHandle.getBlock(cellXYZ))
+                return EDGE_STATE_BOUNDARY;
+        }
+
+        return EDGE_STATE_INTERIOR;
+    }
+
+    // Emission \\
 
     private boolean prepareFace(
             ChunkInstance chunkInstance,
@@ -358,31 +493,28 @@ class FullGeometryBranch extends BranchPackage {
             BlockPaletteHandle rotationPaletteHandle,
             DynamicPacketInstance dynamicPacketInstance,
             int xyz,
-            byte sizeA,
-            byte sizeB,
+            int sizeA,
+            int sizeB,
             Direction3Vector direction3Vector,
             Direction3Vector tangentDirectionA,
             Direction3Vector tangentDirectionB,
+            BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            short baseOrientation,
             Int2ObjectOpenHashMap<FloatArrayList> verts,
             Color[] vertColors) {
 
-        int iSizeA = sizeA & 0xFF;
-        int iSizeB = sizeB & 0xFF;
-
         int vert0XYZ = ChunkCoordinate3Int.convertToVertSpace(xyz, direction3Vector);
-        int vert1XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert0XYZ, tangentDirectionA, sizeA);
-        int vert2XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert1XYZ, tangentDirectionB, sizeB);
-        int vert3XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert0XYZ, tangentDirectionB, sizeB);
+        int vert1XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert0XYZ, tangentDirectionA, (byte) sizeA);
+        int vert2XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert1XYZ, tangentDirectionB, (byte) sizeB);
+        int vert3XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert0XYZ, tangentDirectionB, (byte) sizeB);
 
-        float vert0Color = getVertColor(chunkInstance, subChunkInstance, vert0XYZ, vertColors);
-        float vert1Color = getVertColor(chunkInstance, subChunkInstance, vert1XYZ, vertColors);
-        float vert2Color = getVertColor(chunkInstance, subChunkInstance, vert2XYZ, vertColors);
-        float vert3Color = getVertColor(chunkInstance, subChunkInstance, vert3XYZ, vertColors);
+        float vert0Color = getVertColor(chunkInstance, subChunkInstance, vert0XYZ, biomeHandle, vertColors);
+        float vert1Color = getVertColor(chunkInstance, subChunkInstance, vert1XYZ, biomeHandle, vertColors);
+        float vert2Color = getVertColor(chunkInstance, subChunkInstance, vert2XYZ, biomeHandle, vertColors);
+        float vert3Color = getVertColor(chunkInstance, subChunkInstance, vert3XYZ, biomeHandle, vertColors);
 
         int materialID = blockHandle.getMaterialID();
-        int orientation = resolveOrientation(rotationPaletteHandle, xyz);
+        int orientation = rotationPaletteHandle.getBlock(xyz) & 0xFFFF;
         int textureID = resolveTextureID(blockHandle, direction3Vector, orientation);
         TextureHandle textureHandle = textureManager.getTextureHandleFromTileID(textureID);
         int encodedFace = resolveEncodedFace(blockHandle, direction3Vector, orientation);
@@ -390,27 +522,25 @@ class FullGeometryBranch extends BranchPackage {
         Direction3Vector oppA = Direction3Vector.getOpposite(tangentDirectionA);
         Direction3Vector oppB = Direction3Vector.getOpposite(tangentDirectionB);
 
-        int baseA1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, iSizeA - 1);
-        int baseB1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, iSizeB - 1);
+        int baseA1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionA, sizeA - 1);
+        int baseB1 = ChunkCoordinate3Int.getNeighborWithOffset(xyz, tangentDirectionB, sizeB - 1);
 
         int edgeA0 = buildEdgeWord(chunkInstance, subChunkInstance, rotationPaletteHandle,
-                xyz, tangentDirectionB, iSizeB, direction3Vector, oppA, blockHandle, baseOrientation);
+                xyz, tangentDirectionB, sizeB, direction3Vector, oppA);
 
         int edgeA1 = buildEdgeWord(chunkInstance, subChunkInstance, rotationPaletteHandle,
-                baseA1, tangentDirectionB, iSizeB, direction3Vector, tangentDirectionA, blockHandle,
-                baseOrientation);
+                baseA1, tangentDirectionB, sizeB, direction3Vector, tangentDirectionA);
 
         int edgeB0 = buildEdgeWord(chunkInstance, subChunkInstance, rotationPaletteHandle,
-                xyz, tangentDirectionA, iSizeA, direction3Vector, oppB, blockHandle, baseOrientation);
+                xyz, tangentDirectionA, sizeA, direction3Vector, oppB);
 
         int edgeB1 = buildEdgeWord(chunkInstance, subChunkInstance, rotationPaletteHandle,
-                baseB1, tangentDirectionA, iSizeA, direction3Vector, tangentDirectionB, blockHandle,
-                baseOrientation);
+                baseB1, tangentDirectionA, sizeA, direction3Vector, tangentDirectionB);
 
         int meta = (direction3Vector.index & 0x7)
                 | ((encodedFace & 0x3F) << 3)
-                | (((iSizeA - 1) & 0xF) << 9)
-                | (((iSizeB - 1) & 0xF) << 13)
+                | (((sizeA - 1) & 0xF) << 9)
+                | (((sizeB - 1) & 0xF) << 13)
                 | ((blockHandle.isNatural() ? 1 : 0) << 17);
 
         return finalizeFace(
@@ -421,92 +551,6 @@ class FullGeometryBranch extends BranchPackage {
                 vert0Color, vert1Color, vert2Color, vert3Color,
                 meta,
                 edgeA0, edgeA1, edgeB0, edgeB1);
-    }
-
-    private int buildEdgeWord(
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance,
-            BlockPaletteHandle rotationPaletteHandle,
-            int originXYZ,
-            Direction3Vector runDirection,
-            int runLength,
-            Direction3Vector faceDirection,
-            Direction3Vector sideDirection,
-            BlockHandle blockHandle,
-            short baseOrientation) {
-
-        int word = 0;
-
-        for (int i = 0; i < runLength; i++) {
-
-            int cellXYZ = (originXYZ == -1)
-                    ? -1
-                    : ChunkCoordinate3Int.getNeighborWithOffset(originXYZ, runDirection, i);
-
-            int state = (cellXYZ == -1)
-                    ? EDGE_STATE_BOUNDARY
-                    : classifyEdgeCell(chunkInstance, subChunkInstance, rotationPaletteHandle,
-                            cellXYZ, faceDirection, sideDirection, blockHandle, baseOrientation);
-
-            word |= state << (i * 2);
-        }
-
-        return word;
-    }
-
-    private int classifyEdgeCell(
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance,
-            BlockPaletteHandle rotationPaletteHandle,
-            int cellXYZ,
-            Direction3Vector faceDirection,
-            Direction3Vector sideDirection,
-            BlockHandle blockHandle,
-            short baseOrientation) {
-
-        SubChunkInstance sideSubChunk = getComparativeSubChunkInstance(
-                chunkInstance, subChunkInstance, cellXYZ, sideDirection);
-
-        if (sideSubChunk == ERROR)
-            return EDGE_STATE_BOUNDARY;
-
-        if (sideSubChunk == null)
-            return blockHandle.isNatural() ? EDGE_STATE_CONVEX : EDGE_STATE_BOUNDARY;
-
-        int sideXYZ = ChunkCoordinate3Int.getNeighborAndWrap(cellXYZ, sideDirection);
-        short sideBlockID = sideSubChunk.getBlockPaletteHandle().getBlock(sideXYZ);
-        BlockHandle sideBlock = blockManager.getBlockHandleFromBlockID(sideBlockID);
-
-        if (sideBlock.getGeometry() != blockHandle.getGeometry())
-            return blockHandle.isNatural() ? EDGE_STATE_CONVEX : EDGE_STATE_BOUNDARY;
-
-        SubChunkInstance diagonalSubChunk = getComparativeSubChunkInstance(
-                chunkInstance, sideSubChunk, sideXYZ, faceDirection);
-
-        if (diagonalSubChunk == null || diagonalSubChunk == ERROR)
-            return EDGE_STATE_BOUNDARY;
-
-        int diagonalXYZ = ChunkCoordinate3Int.getNeighborAndWrap(sideXYZ, faceDirection);
-        short diagonalBlockID = diagonalSubChunk.getBlockPaletteHandle().getBlock(diagonalXYZ);
-        BlockHandle diagonalBlock = blockManager.getBlockHandleFromBlockID(diagonalBlockID);
-
-        if (diagonalBlock.getGeometry() == blockHandle.getGeometry())
-            return (blockHandle.isNatural() || diagonalBlock.isNatural())
-                    ? EDGE_STATE_CONCAVE
-                    : EDGE_STATE_BOUNDARY;
-
-        if (sideSubChunk != subChunkInstance || sideBlock != blockHandle)
-            return EDGE_STATE_BOUNDARY;
-
-        if (blockHandle.getRotationType() != BlockRotationType.NONE &&
-                rotationPaletteHandle.getBlock(sideXYZ) != baseOrientation)
-            return EDGE_STATE_BOUNDARY;
-
-        return EDGE_STATE_INTERIOR;
-    }
-
-    private int resolveOrientation(BlockPaletteHandle rotationPaletteHandle, int xyz) {
-        return rotationPaletteHandle.getBlock(xyz) & 0xFFFF;
     }
 
     private int resolveTextureID(BlockHandle blockHandle, Direction3Vector worldFace, int orientation) {
@@ -543,6 +587,7 @@ class FullGeometryBranch extends BranchPackage {
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
             int vertXYZ,
+            BiomeHandle biomeHandle,
             Color[] vertColors) {
 
         for (int i = 0; i < 8; i++) {
@@ -559,7 +604,7 @@ class FullGeometryBranch extends BranchPackage {
 
             if (comparativeSubChunkInstance == null ||
                     comparativeSubChunkInstance == ERROR) {
-                vertColors[i] = Color.WHITE;
+                vertColors[i] = biomeHandle.getBiomeColor();
                 continue;
             }
 
@@ -621,23 +666,17 @@ class FullGeometryBranch extends BranchPackage {
     private float blendColors(Color[] vertColors) {
 
         float r = 0, g = 0, b = 0;
-        int count = 0;
 
-        for (Color c : vertColors) {
-            if (c != null) {
-                r += c.r;
-                g += c.g;
-                b += c.b;
-                count++;
-            }
+        for (int i = 0; i < 8; i++) {
+            Color color = vertColors[i];
+            r += color.r;
+            g += color.g;
+            b += color.b;
         }
 
-        if (count == 0)
-            return (float) 0xFFFFFF;
-
-        int ir = Math.round(Math.min(Math.max(r / count, 0f), 1f) * 255f);
-        int ig = Math.round(Math.min(Math.max(g / count, 0f), 1f) * 255f);
-        int ib = Math.round(Math.min(Math.max(b / count, 0f), 1f) * 255f);
+        int ir = Math.round(Math.min(Math.max(r * 0.125f, 0f), 1f) * 255f);
+        int ig = Math.round(Math.min(Math.max(g * 0.125f, 0f), 1f) * 255f);
+        int ib = Math.round(Math.min(Math.max(b * 0.125f, 0f), 1f) * 255f);
 
         return (float) ((ir << 16) | (ig << 8) | ib);
     }
@@ -652,6 +691,7 @@ class FullGeometryBranch extends BranchPackage {
             int edgeA0, int edgeA1, int edgeB0, int edgeB1) {
 
         FloatArrayList buffer = verts.computeIfAbsent(materialId, k -> new FloatArrayList());
+        buffer.ensureCapacity(buffer.size() + VERTEX_FLOAT_COUNT * 4);
 
         float u0 = textureHandle.getU0();
         float v0 = textureHandle.getV0();
