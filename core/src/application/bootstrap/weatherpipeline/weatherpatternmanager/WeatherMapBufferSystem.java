@@ -50,6 +50,8 @@ class WeatherMapBufferSystem extends SystemPackage {
     private Vector4[] cloudVariance0;
     private Vector4[] cloudVariance1;
 
+    private Vector4 heightVariation;
+
     private long[] sortScratch;
 
     @Override
@@ -65,6 +67,12 @@ class WeatherMapBufferSystem extends SystemPackage {
         this.cloudNoise = allocate(capacity);
         this.cloudVariance0 = allocate(capacity);
         this.cloudVariance1 = allocate(capacity);
+
+        this.heightVariation = new Vector4(
+                EngineSetting.WEATHER_CLOUD_PATTERN_HEIGHT_OFFSET_RATIO,
+                EngineSetting.WEATHER_CLOUD_LOCAL_HEIGHT_JITTER_RATIO,
+                EngineSetting.WEATHER_CLOUD_LOCAL_HEIGHT_JITTER_FREQUENCY,
+                EngineSetting.WEATHER_CLOUD_VERTICAL_WISP_FREQUENCY);
 
         this.sortScratch = new long[EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT];
     }
@@ -173,6 +181,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         weatherMapUBO.updateUniform("u_weatherCloudNoise", cloudNoise);
         weatherMapUBO.updateUniform("u_weatherCloudVariance0", cloudVariance0);
         weatherMapUBO.updateUniform("u_weatherCloudVariance1", cloudVariance1);
+        weatherMapUBO.updateUniform("u_weatherHeightVariation", heightVariation);
         weatherMapUBO.updateUniform("u_weatherEntryCount", entryCount);
 
         float layerMinY = 0f;
@@ -181,25 +190,28 @@ class WeatherMapBufferSystem extends SystemPackage {
         if (entryCount > 0) {
 
             // The dome bend (CloudDome.glsl) lets any entry sink all the way
-            // down to CLOUD_DOME_FADE_ALTITUDE_BLOCKS as it approaches the
-            // edge of weather range, regardless of its own authored
-            // altitude. The cheap Y-band the shader early-rejects rays
-            // against has to span down to that fade altitude too, seeded
-            // here before folding in each entry's authored band — otherwise
-            // a ray levelled at the horizon gets discarded before the
+            // to CLOUD_DOME_FADE_ALTITUDE_BLOCKS as it approaches the edge of
+            // weather range, regardless of its own authored altitude, and the
+            // shader then displaces each entry by up to the full height
+            // variation on top of its own half thickness. The cheap Y-band the
+            // shader early-rejects rays against has to span all of that —
+            // otherwise a thick slab has its rays discarded before the
             // raymarch ever gets a chance to find the bent crossing, and
-            // horizon clouds never render at the altitude they're meant to
-            // fade to.
+            // horizon clouds never render at the altitude they fade to.
             layerMinY = EngineSetting.CLOUD_DOME_FADE_ALTITUDE_BLOCKS;
             layerMaxY = EngineSetting.CLOUD_DOME_FADE_ALTITUDE_BLOCKS;
 
+            float heightVarianceRatio = EngineSetting.WEATHER_CLOUD_PATTERN_HEIGHT_OFFSET_RATIO
+                    + EngineSetting.WEATHER_CLOUD_LOCAL_HEIGHT_JITTER_RATIO;
+
             for (int i = 0; i < entryCount; i++) {
 
+                float thickness = cloudShape[i].x;
                 float altitude = cloudShape[i].y;
-                float halfThickness = cloudShape[i].x * 0.5f;
+                float verticalReach = thickness * (0.5f + heightVarianceRatio);
 
-                layerMinY = Math.min(layerMinY, altitude - halfThickness);
-                layerMaxY = Math.max(layerMaxY, altitude + halfThickness);
+                layerMinY = Math.min(layerMinY, altitude - verticalReach);
+                layerMaxY = Math.max(layerMaxY, altitude + verticalReach);
             }
 
             layerMinY -= EngineSetting.WEATHER_MAP_LAYER_BOUND_MARGIN_BLOCKS;

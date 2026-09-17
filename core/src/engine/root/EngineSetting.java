@@ -460,6 +460,7 @@ public class EngineSetting {
         public static final long BIOME_VARIANCE_SEED = 0x4F1D2C6E9A7B31F5L;
 
         // Biome Terrain Blending \\
+
         public static final int BIOME_BLEND_RADIUS_CHUNKS = 6;
 
         // Terrain Generation — Defaults \\
@@ -625,17 +626,24 @@ public class EngineSetting {
         public static final float WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
         public static final long WEATHER_PATTERN_LOCAL_KEY_SEED = Long.MIN_VALUE;
 
-        // Weather Rendering \\
+        // Weather Render \\
 
         public static final String WEATHER_DEFAULT_MATERIAL = "weather/WeatherMaterial";
         public static final float WEATHER_SEA_LEVEL_BLOCKS = 512.0f;
         public static final float WEATHER_CLOUD_ALTITUDE_MIN = 515.0f;
         public static final float WEATHER_CLOUD_ALTITUDE_MAX = 1050.0f;
 
-        // Cloud Dome Bend \\
+        // Cloud Dome \\
 
-        public static final float CLOUD_DOME_FADE_ALTITUDE_BLOCKS = 0;
+        public static final float CLOUD_DOME_FADE_ALTITUDE_BLOCKS = 512.0f;
         public static final float CLOUD_DOME_BEND_CURVE = 0.5f;
+
+        // Cloud Height Variation \\
+
+        public static final float WEATHER_CLOUD_PATTERN_HEIGHT_OFFSET_RATIO = 0.35f;
+        public static final float WEATHER_CLOUD_LOCAL_HEIGHT_JITTER_RATIO = 0.18f;
+        public static final float WEATHER_CLOUD_LOCAL_HEIGHT_JITTER_FREQUENCY = 0.004f;
+        public static final float WEATHER_CLOUD_VERTICAL_WISP_FREQUENCY = 0.02f;
 
         // Weather Pattern Lifecycle \\
 

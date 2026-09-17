@@ -21,9 +21,12 @@ public class WeatherSystem extends SystemPackage {
      * Renders all weather/cloud visuals in a single fullscreen raymarched
      * pass, driven by the shared processing-pass pipeline. This system only
      * clones the per-window FBO target and pushes the handful of uniforms
-     * that can't be known until runtime — raymarch bounds, drift direction/
-     * speed, and CloudDome's horizon-bend tuning knobs — all constant for
-     * the session, so all pushed once here rather than every frame.
+     * that can't be known until runtime — raymarch bounds, the prevailing
+     * flow direction cloud shapes elongate along, and CloudDome's horizon-
+     * bend tuning knobs — all constant for the session, so all pushed once
+     * here rather than every frame. Cloud motion itself is never a shader
+     * uniform: patterns are moved CPU-side by WeatherPatternManager and the
+     * shader only reads where they currently are.
      */
 
     // Internal
@@ -59,7 +62,7 @@ public class WeatherSystem extends SystemPackage {
         MaterialInstance material = weatherPass.getModelInstance().getMaterial();
 
         assignRaymarchBounds(material);
-        assignDriftUniforms(material);
+        assignFlowUniforms(material);
         assignDomeBendUniforms(material);
     }
 
@@ -75,14 +78,15 @@ public class WeatherSystem extends SystemPackage {
         material.setUniform("u_cloudMaxDistance", maxDistanceBlocks);
     }
 
-    // Drift Uniforms \\
+    // Flow Uniforms \\
 
-    private void assignDriftUniforms(MaterialInstance material) {
-
-        float driftSpeedBlocksPerSecond = weatherManager.getWorldDriftChunksPerSecondX() * EngineSetting.CHUNK_SIZE;
-
+    /*
+     * Prevailing flow axis only. Cloud shapes elongate and orient along it;
+     * nothing in the shader translates clouds with it, because pattern
+     * positions are already streamed per frame from the CPU pool.
+     */
+    private void assignFlowUniforms(MaterialInstance material) {
         material.setUniform("u_weatherDriftDirection", new Vector2(-1f, 0f));
-        material.setUniform("u_weatherDriftSpeed", driftSpeedBlocksPerSecond);
     }
 
     // Dome Bend Uniforms \\
@@ -98,7 +102,7 @@ public class WeatherSystem extends SystemPackage {
     }
 
     @Override
-    protected void update() {
+    protected void lateUpdate() {
 
         GridInstance grid = worldSystem.getGridInstance();
 

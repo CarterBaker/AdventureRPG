@@ -20,18 +20,23 @@
 //                  w = elongationMin
 // cloudVariance1:  x = elongationMax, y = cloudSlotIndex, z = patternSeed,
 //                  w = unused
+// weatherHeightVariation: x = per-pattern height offset ratio of slab
+//                  thickness, y = per-step local jitter ratio of slab
+//                  thickness, z = local jitter frequency (1/blocks),
+//                  w = vertical wisp frequency (1/blocks). Sourced from
+//                  EngineSetting so the CPU's layer-band margin and the
+//                  shader's actual displacement can never disagree.
 // weatherCloudLayerMinY/MaxY: this frame's actual min/max cloud altitude
-//                  band across all written entries, plus a small margin —
-//                  lets the fullscreen pass bound its raymarch to where
-//                  cloud volume can physically exist instead of the whole
-//                  atmosphere column.
+//                  band across all written entries, already widened by the
+//                  full height variation above — lets the fullscreen pass
+//                  bound its raymarch to where cloud volume can physically
+//                  exist instead of the whole atmosphere column.
 // weatherRangeBlocks: the CPU-side weather pattern sampling range (see
 //                  WeatherPatternManager.getRangeChunks()), converted to
 //                  blocks — terrain-independent on purpose. Drives the
 //                  fullscreen pass's horizon dome bend so clouds curve
-//                  toward eye level across the same distance the weather
-//                  simulation actually spans, instead of the much smaller
-//                  terrain streaming radius.
+//                  toward the fade altitude across the same distance the
+//                  weather simulation actually spans.
 layout(std140) uniform WeatherMapData {
     vec4 u_weatherBounds[WEATHER_MAP_MAX_ENTRIES];
     vec4 u_weatherPatternState[WEATHER_MAP_MAX_ENTRIES];
@@ -41,6 +46,7 @@ layout(std140) uniform WeatherMapData {
     vec4 u_weatherCloudNoise[WEATHER_MAP_MAX_ENTRIES];
     vec4 u_weatherCloudVariance0[WEATHER_MAP_MAX_ENTRIES];
     vec4 u_weatherCloudVariance1[WEATHER_MAP_MAX_ENTRIES];
+    vec4 u_weatherHeightVariation;
     int u_weatherEntryCount;
     float u_weatherCloudLayerMinY;
     float u_weatherCloudLayerMaxY;
