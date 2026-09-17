@@ -2,13 +2,14 @@ package application.bootstrap.worldpipeline.biomemanager;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
-import engine.util.mathematics.extras.NoiseUtility;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -16,16 +17,19 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class BiomeManager extends ManagerPackage {
 
     /*
-     * Owns the biome palette and every runtime-queryable index derived from
-     * it: name/handle and ID/handle registries, plus the map-color index used
-     * to resolve a world PNG pixel to a biome. World generation resolves a
-     * biome for every new chunk from whichever worker thread is generating
-     * it, so every read path here — getBiome() and everything it calls — is
-     * lock-free: the two registries are ConcurrentHashMaps, and the map-color
-     * index is an immutable snapshot published through a volatile reference.
-     * Only the rare mutation paths (registering a newly loaded biome or a
-     * newly discovered map color) take a lock, and that lock never blocks a
-     * concurrent reader.
+     * Owns the biome palette, the indexes that resolve a name, ID, or world
+     * PNG pixel color to a biome, and the biome field itself — the
+     * continuous, position-addressed function that answers "how much of each
+     * biome is present here" for any world position. The field is what world
+     * generation shapes terrain against: it treats the PNG as a suggestion
+     * reconstructed through a warped, band-limited kernel rather than as a
+     * per-chunk lookup, so a border between two painted regions resolves as
+     * a gradient of both biomes' authored values instead of a hard switch,
+     * and a biome's probable variants appear as soft-edged patches inside
+     * it. Every read path is lock-free: both registries and the color
+     * resolution memo are ConcurrentHashMaps, and the map-color index is an
+     * immutable snapshot published through a volatile reference. Only the
+     * rare mutation paths take a lock, and that lock never blocks a reader.
      */
 
     // Palette
@@ -35,6 +39,13 @@ public class BiomeManager extends ManagerPackage {
     // Map Color Index — an immutable snapshot swapped in on every
     // registration, so getNearestBiomeNameForColor() never locks against it.
     private volatile ColorIndex colorIndex = ColorIndex.EMPTY;
+
+    // Memo of the nearest-color search, which the field would otherwise
+    // repeat for every map sample of every column of every chunk.
+    private final ConcurrentHashMap<Integer, BiomeHandle> color2BiomeHandle = new ConcurrentHashMap<>();
+
+    // Internal
+    private BiomeFieldAsyncContainer fieldContainer;
 
     private static final class ColorIndex {
 
@@ -54,6 +65,7 @@ public class BiomeManager extends ManagerPackage {
     @Override
     protected void create() {
         create(BiomeLoader.class);
+        this.fieldContainer = create(BiomeFieldAsyncContainer.class);
     }
 
     // Management \\
@@ -91,6 +103,8 @@ public class BiomeManager extends ManagerPackage {
         names[size] = biomeName;
 
         colorIndex = new ColorIndex(colors, names);
+
+        color2BiomeHandle.clear();
     }
 
     // On-Demand \\
@@ -99,47 +113,129 @@ public class BiomeManager extends ManagerPackage {
         ((BiomeLoader) internalLoader).request(biomeName);
     }
 
+    // Biome Field \\
+
+    /*
+     * Resolves the biome influence present at one world position into the
+     * caller's blend, normalized to sum to 1.0. The position is converted to
+     * continuous map-pixel space, domain-warped so painted borders bend and
+     * roughen, reconstructed against the four surrounding pixels with a
+     * smooth band-limited kernel, and — for any contributing biome that
+     * declares probable variants — split across the patch cells reaching
+     * that position. Nothing in the path is aligned to the chunk grid, so
+     * two chunks evaluating a shared position produce identical weights and
+     * terrain crosses a chunk boundary without a seam.
+     */
+    public void sampleBiomeField(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
+
+        outBlend.reset();
+
+        BiomeFieldAsyncContainer scratch = fieldContainer.getInstance();
+
+        Pixmap map = worldHandle.getWorld();
+        long seed = worldHandle.getSeed();
+
+        double blocksPerPixel = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
+        double pixelX = worldX / blocksPerPixel;
+        double pixelZ = worldZ / blocksPerPixel;
+
+        double warpedPixelX = pixelX + BiomeFieldUtility.computeBorderWarpOffset(
+                seed ^ EngineSetting.BIOME_BORDER_WARP_SEED, pixelX, pixelZ);
+
+        double warpedPixelZ = pixelZ + BiomeFieldUtility.computeBorderWarpOffset(
+                seed ^ EngineSetting.BIOME_BORDER_WARP_SEED ^ EngineSetting.HASH_FINALIZER_MULTIPLIER_1,
+                pixelX, pixelZ);
+
+        BiomeFieldUtility.computeMapSamples(
+                warpedPixelX, warpedPixelZ, map.getWidth(), map.getHeight(),
+                scratch.mapPixelX, scratch.mapPixelZ, scratch.mapWeights);
+
+        int patchCount = BiomeFieldUtility.computePatchSamples(
+                seed ^ EngineSetting.BIOME_PATCH_SEED, warpedPixelX, warpedPixelZ,
+                map.getWidth(), map.getHeight(), scratch.patchCellHash, scratch.patchWeights);
+
+        for (int i = 0; i < BiomeFieldUtility.MAP_SAMPLE_COUNT; i++) {
+
+            float mapWeight = scratch.mapWeights[i];
+
+            if (mapWeight <= 0f)
+                continue;
+
+            BiomeHandle mapBiome = getBiomeHandleForColor(
+                    map.getPixelRGB(scratch.mapPixelX[i], scratch.mapPixelZ[i]));
+
+            if (patchCount == 0 || mapBiome.getProbableBiomeNames().isEmpty()) {
+                outBlend.accumulate(mapBiome, mapWeight);
+                continue;
+            }
+
+            for (int patch = 0; patch < patchCount; patch++)
+                outBlend.accumulate(
+                        resolveProbableBiome(mapBiome, scratch.patchCellHash[patch]),
+                        mapWeight * scratch.patchWeights[patch]);
+        }
+
+        outBlend.normalize();
+    }
+
+    /*
+     * Which variant a single patch cell rolled for this base biome. The roll
+     * is hashed against the base biome's own ID as well as the cell, so two
+     * biomes sharing the patch lattice do not place their variants in
+     * lockstep. Chances are validated at load time to sum to no more than
+     * 1.0, and whatever remains is the base biome keeping the cell.
+     */
+    private BiomeHandle resolveProbableBiome(BiomeHandle baseBiome, long cellHash) {
+
+        ObjectArrayList<String> probableNames = baseBiome.getProbableBiomeNames();
+        FloatArrayList probableChances = baseBiome.getProbableBiomeChances();
+
+        float roll = BiomeFieldUtility.hash01(
+                cellHash ^ (baseBiome.getBiomeID() * EngineSetting.HASH_FINALIZER_MULTIPLIER_2));
+
+        float cumulative = 0f;
+
+        for (int i = 0; i < probableNames.size(); i++) {
+
+            cumulative += probableChances.getFloat(i);
+
+            if (roll < cumulative)
+                return getBiomeHandleFromBiomeName(probableNames.get(i));
+        }
+
+        return baseBiome;
+    }
+
     // World Map Resolution \\
 
+    /*
+     * Chunk-granularity biome identity, for consumers that key off one biome
+     * per chunk rather than shaping terrain — weather, primarily. This is the
+     * dominant biome of the field sampled at the chunk's center block, so it
+     * always agrees with the field the terrain under it was built from.
+     */
     public BiomeHandle getBiome(WorldHandle worldHandle, long chunkCoordinate) {
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
 
-        BiomeHandle baseBiome = getBiomeHandleFromBiomeName(sampleMapBiomeName(worldHandle, chunkX, chunkZ));
+        BiomeFieldAsyncContainer scratch = fieldContainer.getInstance();
 
-        return applyProbableVariance(worldHandle, baseBiome, chunkX, chunkZ);
+        double centerWorldX = (double) chunkX * EngineSetting.CHUNK_SIZE + EngineSetting.CHUNK_SIZE * 0.5;
+        double centerWorldZ = (double) chunkZ * EngineSetting.CHUNK_SIZE + EngineSetting.CHUNK_SIZE * 0.5;
+
+        sampleBiomeField(worldHandle, centerWorldX, centerWorldZ, scratch.queryBlend);
+
+        return scratch.queryBlend.getDominantBiome();
     }
 
     public short getBiomeIDFromChunkCoordinate(WorldHandle worldHandle, long chunkCoordinate) {
         return getBiome(worldHandle, chunkCoordinate).getBiomeID();
     }
 
-    private String sampleMapBiomeName(WorldHandle worldHandle, int chunkX, int chunkZ) {
-
-        Pixmap map = worldHandle.getWorld();
-        long seed = worldHandle.getSeed();
-
-        double pixelX = chunkX / (double) EngineSetting.CHUNKS_PER_PIXEL;
-        double pixelZ = chunkZ / (double) EngineSetting.CHUNKS_PER_PIXEL;
-
-        float warpX = NoiseUtility.noise2(
-                seed ^ EngineSetting.BIOME_BORDER_WARP_SEED,
-                pixelX * EngineSetting.BIOME_BORDER_WARP_FREQUENCY,
-                pixelZ * EngineSetting.BIOME_BORDER_WARP_FREQUENCY);
-        float warpZ = NoiseUtility.noise2(
-                seed ^ EngineSetting.BIOME_BORDER_WARP_SEED ^ EngineSetting.HASH_FINALIZER_MULTIPLIER_1,
-                pixelX * EngineSetting.BIOME_BORDER_WARP_FREQUENCY,
-                pixelZ * EngineSetting.BIOME_BORDER_WARP_FREQUENCY);
-
-        int sampleX = wrapPixelIndex(
-                (int) Math.floor(pixelX + warpX * EngineSetting.BIOME_BORDER_WARP_STRENGTH_PIXELS), map.getWidth());
-        int sampleZ = wrapPixelIndex(
-                (int) Math.floor(pixelZ + warpZ * EngineSetting.BIOME_BORDER_WARP_STRENGTH_PIXELS), map.getHeight());
-
-        int color = map.getPixelRGB(sampleX, sampleZ);
-
-        return getNearestBiomeNameForColor(color);
+    private BiomeHandle getBiomeHandleForColor(int color) {
+        return color2BiomeHandle.computeIfAbsent(
+                color, key -> getBiomeHandleFromBiomeName(getNearestBiomeNameForColor(key)));
     }
 
     private String getNearestBiomeNameForColor(int color) {
@@ -172,122 +268,6 @@ public class BiomeManager extends ManagerPackage {
         }
 
         return nearestName;
-    }
-
-    private BiomeHandle applyProbableVariance(WorldHandle worldHandle, BiomeHandle baseBiome, int chunkX, int chunkZ) {
-
-        ObjectArrayList<String> probableNames = baseBiome.getProbableBiomeNames();
-
-        if (probableNames.isEmpty())
-            return baseBiome;
-
-        FloatArrayList probableChances = baseBiome.getProbableBiomeChances();
-
-        float roll = NoiseUtility.noise2(
-                worldHandle.getSeed() ^ EngineSetting.BIOME_VARIANCE_SEED,
-                chunkX * EngineSetting.BIOME_VARIANCE_NOISE_FREQUENCY,
-                chunkZ * EngineSetting.BIOME_VARIANCE_NOISE_FREQUENCY) * 0.5f + 0.5f;
-
-        float cumulative = 0f;
-
-        for (int i = 0; i < probableNames.size(); i++) {
-
-            cumulative += probableChances.getFloat(i);
-
-            if (roll < cumulative)
-                return getBiomeHandleFromBiomeName(probableNames.get(i));
-        }
-
-        return baseBiome;
-    }
-
-    // Terrain Blending \\
-
-    /*
-     * A chunk's terrain height is never shaped by one hard-selected biome —
-     * that produces a visible cliff in the height curve exactly where the map
-     * crosses from one biome to another, independent of whatever variance the
-     * border-warp above adds to WHICH chunk gets which biome. Height shaping
-     * instead blends a small kernel of biome samples spaced
-     * BIOME_BLEND_RADIUS_CHUNKS apart around the target chunk, weighted by
-     * inverse-square distance and normalized to sum to 1.0. Setting the
-     * radius to 0 collapses every kernel sample onto the same chunk,
-     * reproducing the old hard-edged behavior exactly, so blending can be
-     * dialed out without touching any calling code. The kernel geometry and
-     * its weights depend only on the radius, never on runtime state, so both
-     * are precomputed once in a static initializer.
-     */
-
-    public static final int BLEND_SAMPLE_COUNT = 9;
-    public static final int BLEND_CENTER_INDEX = 4;
-
-    private static final int[] BLEND_OFFSET_X = new int[BLEND_SAMPLE_COUNT];
-    private static final int[] BLEND_OFFSET_Z = new int[BLEND_SAMPLE_COUNT];
-    private static final float[] BLEND_WEIGHT = new float[BLEND_SAMPLE_COUNT];
-
-    static {
-
-        int radius = EngineSetting.BIOME_BLEND_RADIUS_CHUNKS;
-        int index = 0;
-        float weightSum = 0f;
-
-        for (int dz = -1; dz <= 1; dz++) {
-            for (int dx = -1; dx <= 1; dx++) {
-
-                int offsetX = dx * radius;
-                int offsetZ = dz * radius;
-
-                BLEND_OFFSET_X[index] = offsetX;
-                BLEND_OFFSET_Z[index] = offsetZ;
-
-                float distanceSq = offsetX * offsetX + offsetZ * offsetZ;
-                float weight = 1f / (1f + distanceSq);
-
-                BLEND_WEIGHT[index] = weight;
-                weightSum += weight;
-                index++;
-            }
-        }
-
-        for (int i = 0; i < BLEND_SAMPLE_COUNT; i++)
-            BLEND_WEIGHT[i] /= weightSum;
-    }
-
-    /*
-     * Fills outBiomes/outWeights with the blend kernel resolved against this
-     * world, in kernel order — index BLEND_CENTER_INDEX is always this
-     * chunk's own directly-resolved biome, exactly what getBiome() would have
-     * returned. Callers own outBiomes/outWeights (sized BLEND_SAMPLE_COUNT)
-     * so this never allocates — see TerrainColumnAsyncContainer's per-thread
-     * scratch copies.
-     */
-    public void getBiomeBlendWeights(
-            WorldHandle worldHandle,
-            long chunkCoordinate,
-            BiomeHandle[] outBiomes,
-            float[] outWeights) {
-
-        int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
-        int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
-
-        for (int i = 0; i < BLEND_SAMPLE_COUNT; i++) {
-
-            int sampleChunkX = chunkX + BLEND_OFFSET_X[i];
-            int sampleChunkZ = chunkZ + BLEND_OFFSET_Z[i];
-
-            BiomeHandle baseBiome = getBiomeHandleFromBiomeName(
-                    sampleMapBiomeName(worldHandle, sampleChunkX, sampleChunkZ));
-
-            outBiomes[i] = applyProbableVariance(worldHandle, baseBiome, sampleChunkX, sampleChunkZ);
-            outWeights[i] = BLEND_WEIGHT[i];
-        }
-    }
-
-    private static int wrapPixelIndex(int value, int range) {
-        int wrapped = value % range;
-        if (wrapped < 0)
-            wrapped += range;
-        return wrapped;
     }
 
     // Accessible \\

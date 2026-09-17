@@ -453,15 +453,26 @@ public class EngineSetting {
 
         // Biome Map Resolution \\
 
+        public static final long BIOME_BORDER_WARP_SEED = 0x8B3C9F1E2A47D5B1L;
         public static final float BIOME_BORDER_WARP_FREQUENCY = 0.5f;
         public static final float BIOME_BORDER_WARP_STRENGTH_PIXELS = 0.4f;
-        public static final long BIOME_BORDER_WARP_SEED = 0x8B3C9F1E2A47D5B1L;
-        public static final float BIOME_VARIANCE_NOISE_FREQUENCY = 0.02f;
-        public static final long BIOME_VARIANCE_SEED = 0x4F1D2C6E9A7B31F5L;
+        public static final float BIOME_BORDER_WARP_DETAIL_FREQUENCY = 2.7f;
+        public static final float BIOME_BORDER_WARP_DETAIL_STRENGTH_PIXELS = 0.11f;
 
-        // Biome Terrain Blending \\
+        // Biome Field Blending \\
 
-        public static final int BIOME_BLEND_RADIUS_CHUNKS = 6;
+        public static final int BIOME_FIELD_MAX_CONTRIBUTORS = 12;
+        public static final float BIOME_BLEND_BAND_PIXELS = 0.55f;
+        public static final float BIOME_OCEAN_FLOOD_THRESHOLD = 0.5f;
+        public static final long BIOME_MATERIAL_DITHER_SEED = 0x7D2B5E0C93A6F418L;
+
+        // Biome Probable Patches \\
+
+        public static final long BIOME_PATCH_SEED = 0x4F1D2C6E9A7B31F5L;
+        public static final int BIOME_PATCH_CELLS_PER_PIXEL = 2;
+        public static final float BIOME_PATCH_CELL_JITTER = 0.4f;
+        public static final float BIOME_PATCH_KERNEL_RADIUS_CELLS = 1.25f;
+        public static final float BIOME_PATCH_FALLOFF_POWER = 2.5f;
 
         // Terrain Generation — Defaults \\
 
