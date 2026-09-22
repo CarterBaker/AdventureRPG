@@ -191,6 +191,7 @@ public class EngineSetting {
         public static final String WEATHER_JSON_PATH = "weathers";
         public static final String CLOUD_JSON_PATH = "clouds";
         public static final String SEASON_JSON_PATH = "seasons";
+        public static final String STRUCTURE_JSON_PATH = "structures";
 
         // Thread Pools \\
 
@@ -537,6 +538,47 @@ public class EngineSetting {
         public static final float TERRAIN_DETAIL_PERSISTENCE = 0.5f;
         public static final float TERRAIN_DETAIL_LACUNARITY = 2.0f;
         public static final float TERRAIN_DETAIL_AMPLITUDE_BLOCKS = 3.0f;
+
+        // Structures — Placement \\
+
+        public static final int STRUCTURE_REGION_SIZE_BLOCKS = 512;
+        public static final int STRUCTURE_REGION_CACHE_LIMIT = 256;
+        public static final int STRUCTURE_PLAN_CACHE_LIMIT = 4096;
+        public static final int STRUCTURE_DEFAULT_SPACING_CHUNKS = 32;
+        public static final float STRUCTURE_DEFAULT_FREQUENCY = 0.25f;
+        public static final int STRUCTURE_DEFAULT_MAX_SLOPE_BLOCKS = 8;
+        public static final int STRUCTURE_DEFAULT_MIN_DEPTH_BLOCKS = 24;
+        public static final int STRUCTURE_DEFAULT_MAX_DEPTH_BLOCKS = 48;
+        public static final int STRUCTURE_OVERLAP_PADDING_BLOCKS = 8;
+        public static final int STRUCTURE_MAX_FOUNDATION_DEPTH_BLOCKS = 24;
+        public static final int STRUCTURE_WORLD_MIN_Y_BLOCKS = 1;
+        public static final long STRUCTURE_PLACEMENT_SEED = 0x3C6EF372FE94F82BL;
+        public static final long STRUCTURE_LAYOUT_SEED = 0xA54FF53A5F1D36F1L;
+
+        // Structures — Roads \\
+
+        public static final int ROAD_DEFAULT_MAX_DISTANCE_BLOCKS = 1024;
+        public static final int ROAD_DEFAULT_MAX_CONNECTIONS = 2;
+        public static final int ROAD_DEFAULT_WIDTH_BLOCKS = 3;
+        public static final int ROAD_DEFAULT_CLEARANCE_BLOCKS = 4;
+        public static final int ROAD_DEFAULT_MAX_FILL_BLOCKS = 4;
+        public static final int ROAD_DEFAULT_TUNNEL_HEIGHT_BLOCKS = 4;
+        public static final int ROAD_DEFAULT_SUPPORT_SPACING_BLOCKS = 8;
+        public static final float ROAD_DEFAULT_MAX_GRADE = 0.2f;
+        public static final int ROAD_DEFAULT_SMOOTHING_RADIUS_BLOCKS = 6;
+        public static final int ROAD_PATH_GRID_BLOCKS = 16;
+        public static final int ROAD_PATH_MIN_CORRIDOR_BLOCKS = 96;
+        public static final float ROAD_PATH_CORRIDOR_FRACTION = 0.35f;
+        public static final int ROAD_PATH_MAX_EXPANDED_NODES = 12000;
+        public static final float ROAD_PATH_GRADE_PENALTY = 6.0f;
+        public static final float ROAD_PATH_STEEP_PENALTY = 60.0f;
+        public static final float ROAD_PATH_WATER_PENALTY = 4.0f;
+        public static final float ROAD_PATH_STRUCTURE_PENALTY = 40.0f;
+        public static final float ROAD_PATH_MEANDER_STRENGTH = 0.8f;
+        public static final float ROAD_PATH_MEANDER_WAVELENGTH_BLOCKS = 128.0f;
+        public static final int ROAD_PATH_CHAIKIN_ITERATIONS = 3;
+        public static final long ROAD_MEANDER_SEED = 0x510E527FADE682D1L;
+        public static final long ROAD_SURFACE_SEED = 0x9B05688C2B3E6C1FL;
 
         // Rotation \\
 

@@ -1,0 +1,60 @@
+{
+    "type": "SETTLEMENT",
+    "elevation": "SURFACE",
+    "spawn": {
+        "biomes": [
+            "WhiteBiome"
+        ],
+        "frequency": 0.5,
+        "spacing_chunks": 96,
+        "max_slope": 24,
+        "min_height": 161
+    },
+    "road_link": {
+        "road": "roads/DirtRoad",
+        "max_distance": 1500,
+        "max_connections": 3
+    },
+    "layout": {
+        "street": "roads/StoneStreet",
+        "radius": 72,
+        "main_street_length": [
+            70,
+            110
+        ],
+        "branches": {
+            "count": [
+                2,
+                4
+            ],
+            "length": [
+                20,
+                40
+            ],
+            "depth": 2
+        },
+        "lot_spacing": 2,
+        "lot_setback": 1,
+        "landmarks": [
+            "buildings/Hall",
+            "buildings/Well"
+        ],
+        "buildings": [
+            {
+                "structure": "buildings/Cottage",
+                "weight": 5
+            },
+            {
+                "structure": "buildings/Longhouse",
+                "weight": 2
+            }
+        ],
+        "fill": [
+            {
+                "structure": "buildings/Garden",
+                "weight": 1
+            }
+        ],
+        "fill_attempts": 24
+    }
+}

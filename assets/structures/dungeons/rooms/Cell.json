@@ -1,0 +1,60 @@
+{
+    "type": "STRUCTURE",
+    "template": {
+        "palette": {
+            "S": "TerraArcanaBlocks/Stone Block",
+            "D": "TerraArcanaBlocks/Dirt Block",
+            "s": "TerraArcanaBlocks/Sand",
+            "g": "TerraArcanaBlocks/Grass Block",
+            "c": "TerraArcanaBlocks/Coal Ore",
+            ".": "air"
+        },
+        "layers": [
+            [
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS"
+            ],
+            [
+                "SS.SS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SS.SS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SSSSS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS"
+            ]
+        ],
+        "anchor": [
+            2,
+            0,
+            2
+        ]
+    }
+}

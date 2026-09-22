@@ -8,6 +8,9 @@ import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.structure.StructureTemplateData;
+import application.bootstrap.worldpipeline.structure.StructureWriteAsyncContainer;
+import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
@@ -38,7 +41,11 @@ public class WorldGenerationManager extends ManagerPackage {
      * real per-block storage. Every output is a pure function of (seed,
      * coordinate), so the whole pass is skipped when the caller's
      * GenerationCacheStruct already holds a result for this exact coordinate.
-     * Chunks generate concurrently on separate worker threads, so the
+     * Once a column's terrain is known, StructureManager resolves the
+     * structures and roads reaching it into a sparse set of block writes;
+     * only the subchunks those writes land in give up their fast paths and
+     * take the per-block walk, with the writes laid over the terrain at the
+     * end. Chunks generate concurrently on separate worker threads, so the
      * surface-profile cache below is a ConcurrentHashMap rather than a locked
      * map.
      */
@@ -46,6 +53,7 @@ public class WorldGenerationManager extends ManagerPackage {
     // Internal
     private BlockManager blockManager;
     private BiomeManager biomeManager;
+    private StructureManager structureManager;
 
     private TerrainColumnAsyncContainer terrainColumnContainer;
     private final ConcurrentHashMap<Short, TerrainSurfaceProfile> surfaceProfileCache = new ConcurrentHashMap<>();
@@ -69,6 +77,7 @@ public class WorldGenerationManager extends ManagerPackage {
     protected void get() {
         this.blockManager = get(BlockManager.class);
         this.biomeManager = get(BiomeManager.class);
+        this.structureManager = get(StructureManager.class);
     }
 
     @Override
@@ -86,6 +95,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
         if (terrainCache.isValidFor(chunkCoordinate)) {
             applyCachedColumn(column, chunkCoordinate, terrainCache);
+            resolveStructures(worldHandle, chunkCoordinate, column);
             return;
         }
 
@@ -122,6 +132,19 @@ public class WorldGenerationManager extends ManagerPackage {
                 column.columnTopBlocks,
                 column.allOceanWater,
                 column.allFillBlocksFullGeometry);
+
+        resolveStructures(worldHandle, chunkCoordinate, column);
+    }
+
+    /*
+     * Structures resolve after the column's ground heights are final — from
+     * either path above — so foundations, pillars and cuts line up with the
+     * exact terrain each subchunk is about to generate. Not cached with the
+     * terrain: structure resolution is itself memoized per region, and its
+     * output is only valid for the worker that produced it.
+     */
+    private void resolveStructures(WorldHandle worldHandle, long chunkCoordinate, TerrainColumnAsyncContainer column) {
+        column.structureWrites = structureManager.resolveChunk(worldHandle, chunkCoordinate, column.groundHeightBlocks);
     }
 
     /*
@@ -413,6 +436,158 @@ public class WorldGenerationManager extends ManagerPackage {
         return blockManager.getBlockHandleFromBlockID(blockID).getGeometry() == DynamicGeometryType.FULL;
     }
 
+    // Point Sampling \\
+
+    /*
+     * Ground height at one world block column, computed the same way
+     * computeColumn() computes it — the macro shape and detail layers
+     * evaluated at their world-aligned grid points and bilinearly
+     * interpolated down to the column — so a structure planned against this
+     * height lands where generation will actually put the ground. Grid
+     * points are memoized in the caller's TerrainSampleStruct. The position
+     * is wrapped into the world first, so a road planned across the seam
+     * samples the terrain it will really cross.
+     */
+    public int sampleGroundHeightBlocks(WorldHandle worldHandle, long worldX, long worldZ, TerrainSampleStruct sample) {
+
+        long wrappedX = Math.floorMod(worldX, (long) worldHandle.getWorldScale().x);
+        long wrappedZ = Math.floorMod(worldZ, (long) worldHandle.getWorldScale().y);
+
+        int macroStride = TerrainColumnAsyncContainer.MACRO_SAMPLE_STRIDE;
+        int detailStride = TerrainColumnAsyncContainer.DETAIL_SAMPLE_STRIDE;
+
+        long macroX = Math.floorDiv(wrappedX, macroStride) * macroStride;
+        long macroZ = Math.floorDiv(wrappedZ, macroStride) * macroStride;
+        float macroTx = (wrappedX - macroX) / (float) macroStride;
+        float macroTz = (wrappedZ - macroZ) / (float) macroStride;
+
+        float shape = bilerp(
+                resolveMacroPoint(worldHandle, macroX, macroZ, sample)[0],
+                resolveMacroPoint(worldHandle, macroX + macroStride, macroZ, sample)[0],
+                resolveMacroPoint(worldHandle, macroX, macroZ + macroStride, sample)[0],
+                resolveMacroPoint(worldHandle, macroX + macroStride, macroZ + macroStride, sample)[0],
+                macroTx, macroTz);
+
+        long detailX = Math.floorDiv(wrappedX, detailStride) * detailStride;
+        long detailZ = Math.floorDiv(wrappedZ, detailStride) * detailStride;
+        float detailTx = (wrappedX - detailX) / (float) detailStride;
+        float detailTz = (wrappedZ - detailZ) / (float) detailStride;
+
+        float detail = bilerp(
+                resolveDetailPoint(worldHandle, detailX, detailZ, sample),
+                resolveDetailPoint(worldHandle, detailX + detailStride, detailZ, sample),
+                resolveDetailPoint(worldHandle, detailX, detailZ + detailStride, sample),
+                resolveDetailPoint(worldHandle, detailX + detailStride, detailZ + detailStride, sample),
+                detailTx, detailTz);
+
+        return TerrainShapeUtility.finalizeGroundHeightBlocks(shape, detail);
+    }
+
+    // Whether this column floods below sea level — the same threshold generation applies.
+    public boolean sampleOceanWater(WorldHandle worldHandle, long worldX, long worldZ, TerrainSampleStruct sample) {
+
+        long wrappedX = Math.floorMod(worldX, (long) worldHandle.getWorldScale().x);
+        long wrappedZ = Math.floorMod(worldZ, (long) worldHandle.getWorldScale().y);
+
+        int macroStride = TerrainColumnAsyncContainer.MACRO_SAMPLE_STRIDE;
+
+        long macroX = Math.floorDiv(wrappedX, macroStride) * macroStride;
+        long macroZ = Math.floorDiv(wrappedZ, macroStride) * macroStride;
+
+        float ocean = bilerp(
+                resolveMacroPoint(worldHandle, macroX, macroZ, sample)[3],
+                resolveMacroPoint(worldHandle, macroX + macroStride, macroZ, sample)[3],
+                resolveMacroPoint(worldHandle, macroX, macroZ + macroStride, sample)[3],
+                resolveMacroPoint(worldHandle, macroX + macroStride, macroZ + macroStride, sample)[3],
+                (wrappedX - macroX) / (float) macroStride,
+                (wrappedZ - macroZ) / (float) macroStride);
+
+        return ocean > EngineSetting.BIOME_OCEAN_FLOOD_THRESHOLD;
+    }
+
+    /*
+     * Height of the walkable top of a column — the ground, or the water
+     * surface where the column floods above it.
+     */
+    public int sampleSurfaceHeightBlocks(WorldHandle worldHandle, long worldX, long worldZ, TerrainSampleStruct sample) {
+
+        int ground = sampleGroundHeightBlocks(worldHandle, worldX, worldZ, sample);
+
+        if (ground < EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS && sampleOceanWater(worldHandle, worldX, worldZ, sample))
+            return EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+
+        return ground;
+    }
+
+    public BiomeHandle sampleDominantBiome(WorldHandle worldHandle, double worldX, double worldZ, TerrainSampleStruct sample) {
+        biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, sample.blend);
+        return sample.blend.getDominantBiome();
+    }
+
+    private float[] resolveMacroPoint(WorldHandle worldHandle, long pointX, long pointZ, TerrainSampleStruct sample) {
+
+        long key = Coordinate2Long.pack((int) pointX, (int) pointZ);
+        float[] point = sample.macroPoints.get(key);
+
+        if (point != null)
+            return point;
+
+        BiomeBlendStruct blend = sample.blend;
+
+        biomeManager.sampleBiomeField(worldHandle, pointX, pointZ, blend);
+
+        point = new float[] {
+                TerrainShapeUtility.computeMacroShapeBlocks(
+                        worldHandle.getSeed(), pointX, pointZ,
+                        worldHandle.getWorldScale().x, worldHandle.getWorldScale().y, blend),
+                TerrainShapeUtility.computeDetailAmplitudeBlocks(blend),
+                TerrainShapeUtility.computeDetailWavelengthBlocks(blend),
+                blend.getOceanWeight()
+        };
+
+        sample.macroPoints.put(key, point);
+
+        return point;
+    }
+
+    private float resolveDetailPoint(WorldHandle worldHandle, long pointX, long pointZ, TerrainSampleStruct sample) {
+
+        long key = Coordinate2Long.pack((int) pointX, (int) pointZ);
+
+        if (sample.detailPoints.containsKey(key))
+            return sample.detailPoints.get(key);
+
+        int macroStride = TerrainColumnAsyncContainer.MACRO_SAMPLE_STRIDE;
+
+        long macroX = Math.floorDiv(pointX, macroStride) * macroStride;
+        long macroZ = Math.floorDiv(pointZ, macroStride) * macroStride;
+        float tx = (pointX - macroX) / (float) macroStride;
+        float tz = (pointZ - macroZ) / (float) macroStride;
+
+        float[] p00 = resolveMacroPoint(worldHandle, macroX, macroZ, sample);
+        float[] p10 = resolveMacroPoint(worldHandle, macroX + macroStride, macroZ, sample);
+        float[] p01 = resolveMacroPoint(worldHandle, macroX, macroZ + macroStride, sample);
+        float[] p11 = resolveMacroPoint(worldHandle, macroX + macroStride, macroZ + macroStride, sample);
+
+        float amplitude = bilerp(p00[1], p10[1], p01[1], p11[1], tx, tz);
+        float wavelength = bilerp(p00[2], p10[2], p01[2], p11[2], tx, tz);
+
+        float detail = TerrainShapeUtility.computeDetailBlocks(
+                worldHandle.getSeed(), pointX, pointZ,
+                worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
+                wavelength, amplitude);
+
+        sample.detailPoints.put(key, detail);
+
+        return detail;
+    }
+
+    private static float bilerp(float v00, float v10, float v01, float v11, float tx, float tz) {
+        float top = v00 + (v10 - v00) * tx;
+        float bottom = v01 + (v11 - v01) * tx;
+        return top + (bottom - top) * tz;
+    }
+
     // Generator — once per subchunk \\
 
     public boolean generateSubChunk(WorldHandle worldHandle, long chunkCoordinate, SubChunkInstance subChunkInstance) {
@@ -425,25 +600,35 @@ public class WorldGenerationManager extends ManagerPackage {
 
         subChunkInstance.beginGeneration(column.biomeID);
 
-        int offsetY = (int) subChunkInstance.getCoordinate() * CHUNK_SIZE;
-
-        if (offsetY > column.columnTopBlocks) {
-            subChunkInstance.markKnownEmpty();
-            return true;
-        }
+        int subChunkIndex = (int) subChunkInstance.getCoordinate();
+        int offsetY = subChunkIndex * CHUNK_SIZE;
 
         int surfaceDepth = EngineSetting.TERRAIN_SURFACE_DEPTH_BLOCKS;
         int seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
         int subChunkTopY = offsetY + CHUNK_SIZE - 1;
 
-        if (subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
-            subChunkInstance.markUniformFill(DynamicGeometryType.FULL, stoneBlockId);
-            return true;
-        }
+        // A structure writing into this subchunk voids every shortcut below —
+        // open sky can hold a bridge, solid stone a tunnel.
+        boolean hasStructureWrites = column.structureWrites != null
+                && column.structureWrites.isResolvedFor(chunkCoordinate)
+                && column.structureWrites.hasWritesInSubChunk(subChunkIndex);
 
-        if (column.allOceanWater && offsetY > column.columnMaxGroundHeightBlocks && subChunkTopY <= seaLevel) {
-            subChunkInstance.markUniformFill(DynamicGeometryType.LIQUID, waterBlockId);
-            return true;
+        if (!hasStructureWrites) {
+
+            if (offsetY > column.columnTopBlocks) {
+                subChunkInstance.markKnownEmpty();
+                return true;
+            }
+
+            if (subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
+                subChunkInstance.markUniformFill(DynamicGeometryType.FULL, stoneBlockId);
+                return true;
+            }
+
+            if (column.allOceanWater && offsetY > column.columnMaxGroundHeightBlocks && subChunkTopY <= seaLevel) {
+                subChunkInstance.markUniformFill(DynamicGeometryType.LIQUID, waterBlockId);
+                return true;
+            }
         }
 
         BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
@@ -524,6 +709,12 @@ public class WorldGenerationManager extends ManagerPackage {
             }
         }
 
+        if (hasStructureWrites) {
+            applyStructureWrites(column.structureWrites, offsetY, blocks, liquidLevels);
+            isUniform = false;
+            hasAirOrWater = true;
+        }
+
         if (isUniform) {
             DynamicGeometryType uniformGeometry = uniformBlockID == airBlockId
                     ? DynamicGeometryType.NONE
@@ -533,9 +724,44 @@ public class WorldGenerationManager extends ManagerPackage {
             subChunkInstance.markOpaqueInterior();
         }
 
-        subChunkInstance.setLiquidStable(true);
+        // Structures can open air beside water that terrain generation never
+        // did, so a subchunk they touched gets one look from the fluid pass.
+        subChunkInstance.setLiquidStable(!hasStructureWrites);
 
         return true;
+    }
+
+    /*
+     * Overlays the structure writes that fall inside this subchunk onto the
+     * terrain just generated in it. Every overwritten cell's liquid level is
+     * reset to match what now occupies it, so a road embankment laid through
+     * a shallow sea leaves no stranded water level behind in solid blocks.
+     */
+    private void applyStructureWrites(
+            StructureWriteAsyncContainer writes,
+            int offsetY,
+            BlockPaletteHandle blocks,
+            BlockPaletteHandle liquidLevels) {
+
+        for (int localY = 0; localY < CHUNK_SIZE; localY++) {
+            for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
+                for (int localX = 0; localX < CHUNK_SIZE; localX++) {
+
+                    short blockID = writes.getWrite(localX, offsetY + localY, localZ);
+
+                    if (blockID == StructureTemplateData.BLOCK_SKIP)
+                        continue;
+
+                    blocks.setBlock(localX, localY, localZ, blockID);
+
+                    boolean liquid = blockID != airBlockId
+                            && blockManager.getBlockHandleFromBlockID(blockID).getGeometry() == DynamicGeometryType.LIQUID;
+
+                    liquidLevels.setBlock(localX, localY, localZ,
+                            liquid ? EngineSetting.LIQUID_LEVEL_MAX : EngineSetting.LIQUID_LEVEL_EMPTY);
+                }
+            }
+        }
     }
 
     // Surface Profile \\

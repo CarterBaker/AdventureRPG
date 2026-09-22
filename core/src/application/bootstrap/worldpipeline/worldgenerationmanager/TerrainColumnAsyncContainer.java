@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
+import application.bootstrap.worldpipeline.structure.StructureWriteAsyncContainer;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
 
@@ -65,6 +66,10 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     short biomeID;
     boolean allOceanWater;
     boolean allFillBlocksFullGeometry;
+
+    // Structure blocks resolved for this column by StructureManager — the
+    // same worker's thread-local write set, re-filled every computeColumn()
+    StructureWriteAsyncContainer structureWrites;
 
     @Override
     protected void create() {

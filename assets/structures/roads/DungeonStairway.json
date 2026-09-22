@@ -1,0 +1,15 @@
+{
+    "type": "ROAD",
+    "road": {
+        "width": 3,
+        "surface": "TerraArcanaBlocks/Stone Block",
+        "foundation": "TerraArcanaBlocks/Stone Block",
+        "max_grade": 0.5,
+        "smoothing": 0,
+        "tunnel": {
+            "height": 3,
+            "wall": "TerraArcanaBlocks/Stone Block",
+            "ceiling": "TerraArcanaBlocks/Stone Block"
+        }
+    }
+}

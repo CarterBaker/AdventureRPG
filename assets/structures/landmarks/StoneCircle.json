@@ -1,0 +1,58 @@
+{
+    "type": "STRUCTURE",
+    "spawn": {
+        "frequency": 0.2,
+        "spacing_chunks": 24,
+        "max_slope": 3
+    },
+    "template": {
+        "palette": {
+            "S": "TerraArcanaBlocks/Stone Block",
+            "D": "TerraArcanaBlocks/Dirt Block",
+            "s": "TerraArcanaBlocks/Sand",
+            "g": "TerraArcanaBlocks/Grass Block",
+            "c": "TerraArcanaBlocks/Coal Ore",
+            ".": "air"
+        },
+        "layers": [
+            [
+                "    S    ",
+                " S     S ",
+                "         ",
+                "         ",
+                "S   c   S",
+                "         ",
+                "         ",
+                " S     S ",
+                "    S    "
+            ],
+            [
+                "    S    ",
+                " S     S ",
+                "         ",
+                "         ",
+                "S       S",
+                "         ",
+                "         ",
+                " S     S ",
+                "    S    "
+            ],
+            [
+                "    S    ",
+                " S     S ",
+                "         ",
+                "         ",
+                "S       S",
+                "         ",
+                "         ",
+                " S     S ",
+                "    S    "
+            ]
+        ],
+        "anchor": [
+            4,
+            0,
+            4
+        ]
+    }
+}

@@ -1,0 +1,75 @@
+{
+    "type": "STRUCTURE",
+    "template": {
+        "palette": {
+            "S": "TerraArcanaBlocks/Stone Block",
+            "D": "TerraArcanaBlocks/Dirt Block",
+            "s": "TerraArcanaBlocks/Sand",
+            "g": "TerraArcanaBlocks/Grass Block",
+            "c": "TerraArcanaBlocks/Coal Ore",
+            ".": "air"
+        },
+        "layers": [
+            [
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS"
+            ],
+            [
+                "DDDDD.DDDDD",
+                "D.........D",
+                "D.........D",
+                "D.........D",
+                "D.........D",
+                "D.........D",
+                "DDDDDDDDDDD"
+            ],
+            [
+                "DDD.D..DD.D",
+                "D.........D",
+                "D..........",
+                "..........D",
+                "D.........D",
+                "D..........",
+                "DDD.DD.DD.D"
+            ],
+            [
+                "DDDDDDDDDDD",
+                "D.........D",
+                "D.........D",
+                "D.........D",
+                "D.........D",
+                "D.........D",
+                "DDDDDDDDDDD"
+            ],
+            [
+                "DDDDDDDDDDD",
+                "D.........D",
+                "D.........D",
+                "D.........D",
+                "D.........D",
+                "D.........D",
+                "DDDDDDDDDDD"
+            ],
+            [
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS",
+                "SSSSSSSSSSS"
+            ]
+        ],
+        "anchor": [
+            5,
+            0,
+            3
+        ],
+        "foundation": "TerraArcanaBlocks/Stone Block"
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "type": "ROAD",
+    "road": {
+        "width": 4,
+        "surface": [
+            {
+                "block": "TerraArcanaBlocks/Stone Block",
+                "weight": 5
+            },
+            {
+                "block": "TerraArcanaBlocks/Sand",
+                "weight": 1
+            }
+        ],
+        "edge": "TerraArcanaBlocks/Sand",
+        "foundation": "TerraArcanaBlocks/Stone Block",
+        "clearance": 5,
+        "max_fill": 3,
+        "max_grade": 0.25,
+        "smoothing": 4,
+        "bridge": {
+            "deck": "TerraArcanaBlocks/Stone Block",
+            "rail": "TerraArcanaBlocks/Stone Block",
+            "support": "TerraArcanaBlocks/Stone Block",
+            "support_spacing": 6
+        }
+    }
+}

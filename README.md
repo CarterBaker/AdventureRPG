@@ -40,6 +40,33 @@ Systems are registered into a global engine registry or a context-local registry
 
 ---
 
+## Structures
+
+Structures live in `assets/structures/` and are named by their path without the extension (for example `settlements/Village`). They load through the usual loader/builder pair: batched from boot, and on demand the moment generation asks for one by name. Placement is a pure function of the world seed, so every chunk and every worker agree on where things are.
+
+`"type"` is required and picks the body section:
+
+| Type | Body | What it is |
+|---|---|---|
+| `STRUCTURE` | `template` | One block template. It can place itself, or only appear inside a layout. |
+| `SETTLEMENT` | `layout` | Streets with buildings lining them and fill structures in between. Surface by default. |
+| `DUNGEON` | `layout` | Same generator, but underground by default: flat corridors plus an entrance passage up to the surface. |
+| `ROAD` | `road` | The blocks and shape rules for a path. Referenced by `road_link` and by layout streets. |
+
+**Shared, optional on every placeable type**
+- `"elevation"`: `SURFACE`, `UNDERGROUND` or `ABSOLUTE`.
+- `"spawn"`: procedural placement. Fields are `biomes` (empty means any), `frequency` (chance per cell), `spacing_chunks` (cell size), `min_height`/`max_height`, `depth` `[min, max]` (underground only), `max_slope` and `allow_water`. Leave out `spawn` to place a structure only at its locations or inside layouts.
+- `"locations"`: hand-placed spots, either `{ "x", "z" }` in blocks or `{ "pixel": [px, pz] }` on the world map. Optional `"y"` and `"rotation"` (0-3). A location always spawns and wins every overlap.
+- `"road_link"`: `{ "road": "roads/DirtRoad", "max_distance", "max_connections" }`. Joins the road network by linking to the nearest connectable neighbours. Leave it out for isolated structures.
+
+**`template`**: `"layers"` run bottom to top. Each layer is a list of rows (row 0 is the front, which faces the street or road), and each row is read along +X. Every character maps through `"palette"` to a block name (`"air"` is allowed). A space means "leave the terrain alone". `"anchor"` `[x, y, z]` is the cell placed on the ground point, and its `y` is the floor layer. `"foundation"` fills down to the ground under solid bottom cells.
+
+**`road`**: `width`, `surface` (a block name or weighted `[{ "block", "weight" }]`), `edge`, `foundation`, `clearance`, `max_fill`, `max_grade`, `smoothing`, `tunnel` `{ height, wall, ceiling }`, `bridge` `{ deck, rail, support, support_spacing }` and `always_tunnel` (for enclosed dungeon corridors). Routes come from an A* search over the terrain, so they wind and switch back up slopes. Heights are grade-limited, and a point becomes a bridge when the road ends up well above the ground and a tunnel when it ends up well below.
+
+**`layout`**: `street` (a ROAD), `radius`, `main_street_length`, `branches` `{ count, length, depth }`, `lot_spacing`, `lot_setback`, `landmarks` (placed first, nearest the centre, once each), `buildings` and `fill` (weighted `{ "structure", "weight" }`), `fill_attempts`, `entrance`, `entrance_road` and `entrance_length`.
+
+---
+
 ## Project modules
 
 - `core` — all engine and application logic.

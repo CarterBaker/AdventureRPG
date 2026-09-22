@@ -1,0 +1,125 @@
+{
+    "type": "STRUCTURE",
+    "spawn": {
+        "biomes": [
+            "BlackBiome"
+        ],
+        "frequency": 0.3,
+        "spacing_chunks": 48,
+        "max_slope": 6
+    },
+    "road_link": {
+        "road": "roads/DirtRoad",
+        "max_distance": 1200,
+        "max_connections": 2
+    },
+    "template": {
+        "palette": {
+            "S": "TerraArcanaBlocks/Stone Block",
+            "D": "TerraArcanaBlocks/Dirt Block",
+            "s": "TerraArcanaBlocks/Sand",
+            "g": "TerraArcanaBlocks/Grass Block",
+            "c": "TerraArcanaBlocks/Coal Ore",
+            ".": "air"
+        },
+        "layers": [
+            [
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS"
+            ],
+            [
+                "SS.SS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SS.SS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SSSSS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SSSSS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SSSSS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SSSSS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SS.SS",
+                "S...S",
+                ".....",
+                "S...S",
+                "SS.SS"
+            ],
+            [
+                "SS.SS",
+                "S...S",
+                ".....",
+                "S...S",
+                "SS.SS"
+            ],
+            [
+                "SSSSS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SSSSS",
+                "S...S",
+                "S...S",
+                "S...S",
+                "SSSSS"
+            ],
+            [
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS",
+                "SSSSS"
+            ],
+            [
+                "S S S",
+                "     ",
+                "S   S",
+                "     ",
+                "S S S"
+            ]
+        ],
+        "anchor": [
+            2,
+            0,
+            2
+        ],
+        "foundation": "TerraArcanaBlocks/Stone Block"
+    }
+}

@@ -1,0 +1,54 @@
+{
+    "type": "DUNGEON",
+    "elevation": "UNDERGROUND",
+    "spawn": {
+        "frequency": 0.35,
+        "spacing_chunks": 64,
+        "depth": [
+            20,
+            36
+        ],
+        "max_slope": 40
+    },
+    "road_link": {
+        "road": "roads/DirtRoad",
+        "max_distance": 1200,
+        "max_connections": 1
+    },
+    "layout": {
+        "street": "roads/DungeonCorridor",
+        "radius": 48,
+        "main_street_length": [
+            40,
+            70
+        ],
+        "branches": {
+            "count": [
+                2,
+                4
+            ],
+            "length": [
+                10,
+                24
+            ],
+            "depth": 2
+        },
+        "lot_spacing": 1,
+        "lot_setback": 0,
+        "landmarks": [
+            "dungeons/rooms/BossChamber"
+        ],
+        "buildings": [
+            {
+                "structure": "dungeons/rooms/Cell",
+                "weight": 4
+            },
+            {
+                "structure": "dungeons/rooms/Storeroom",
+                "weight": 1
+            }
+        ],
+        "entrance": true,
+        "entrance_road": "roads/DungeonStairway"
+    }
+}

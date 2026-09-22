@@ -1,0 +1,112 @@
+{
+    "type": "STRUCTURE",
+    "template": {
+        "palette": {
+            "S": "TerraArcanaBlocks/Stone Block",
+            "D": "TerraArcanaBlocks/Dirt Block",
+            "s": "TerraArcanaBlocks/Sand",
+            "g": "TerraArcanaBlocks/Grass Block",
+            "c": "TerraArcanaBlocks/Coal Ore",
+            ".": "air"
+        },
+        "layers": [
+            [
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS"
+            ],
+            [
+                "SSSSSS.SSSSSS",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "SSSSSSSSSSSSS"
+            ],
+            [
+                "SSS.SS.SS.SSS",
+                "S...........S",
+                "S...........S",
+                ".............",
+                "S...........S",
+                "S...........S",
+                ".............",
+                "S...........S",
+                "S...........S",
+                ".............",
+                "SS.SS.SS.SS.S"
+            ],
+            [
+                "SSS.SS.SS.SSS",
+                "S...........S",
+                "S...........S",
+                ".............",
+                "S...........S",
+                "S...........S",
+                ".............",
+                "S...........S",
+                "S...........S",
+                ".............",
+                "SS.SS.SS.SS.S"
+            ],
+            [
+                "SSSSSSSSSSSSS",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "SSSSSSSSSSSSS"
+            ],
+            [
+                "SSSSSSSSSSSSS",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "S...........S",
+                "SSSSSSSSSSSSS"
+            ],
+            [
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS",
+                "SSSSSSSSSSSSS"
+            ]
+        ],
+        "anchor": [
+            6,
+            0,
+            5
+        ],
+        "foundation": "TerraArcanaBlocks/Stone Block"
+    }
+}
