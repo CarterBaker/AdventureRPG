@@ -1,15 +1,13 @@
 #version 330 core
 
 layout (location = 0) in vec3  aPos;
-layout (location = 1) in float aNorIndex;
-layout (location = 2) in float aColor;
-layout (location = 3) in vec2  aUVOrigin;
-layout (location = 4) in float aOrient;
-layout (location = 5) in float aQuadSize;
-layout (location = 6) in float aFluidLevel; // 0..LIQUID_LEVEL_MAX — same vertex slot FullGeometryBranch uses for bevel masks on solid blocks
-layout (location = 7) in float aFluidTop;   // 1.0 on vertices sitting at this face's surface height, 0.0 otherwise
-layout (location = 8) in float aBevelMaskB0; // unused for liquid
-layout (location = 9) in float aBevelMaskB1; // unused for liquid
+layout (location = 1) in vec2  aUVOrigin;   // unused for liquid — same ChunkVAO layout StandardSurfaceShader reads
+layout (location = 2) in float aMeta;       // face index in bits 0-2, packed exactly like solid geometry
+layout (location = 3) in float aColor;      // unused for liquid
+layout (location = 4) in float aFluidLevel; // edge A0 slot: 0..LIQUID_LEVEL_MAX
+layout (location = 5) in float aFluidTop;   // edge A1 slot: 1.0 on vertices sitting at this face's surface height
+layout (location = 6) in float aEdgeB0;     // unused for liquid
+layout (location = 7) in float aEdgeB1;     // unused for liquid
 
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
@@ -41,7 +39,7 @@ void main() {
     if (aFluidTop > 0.5)
     worldPos.y -= (1.0 - clamp(aFluidLevel / LIQUID_LEVEL_MAX, 0.0, 1.0));
 
-    vWorldNormal = NORMALS[int(aNorIndex)];
+    vWorldNormal = NORMALS[int(aMeta) & 7];
 
     // Water previously skipped both world bends entirely, so a shoreline
     // visibly split away from the land it borders at any real distance.
