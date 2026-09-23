@@ -19,8 +19,8 @@ public final class BiomeFieldUtility extends EngineUtility {
      * used to land as a cliff on the chunk grid.
      */
 
-    public static final int MAP_SAMPLE_COUNT = 4;
-    public static final int PATCH_SAMPLE_COUNT = 9;
+    public static final int MAP_SAMPLE_COUNT = EngineSetting.BIOME_MAP_SAMPLE_COUNT;
+    public static final int PATCH_SAMPLE_COUNT = EngineSetting.BIOME_PATCH_SAMPLE_COUNT;
 
     private BiomeFieldUtility() {
         throw new AssertionError("Utility class cannot be instantiated");

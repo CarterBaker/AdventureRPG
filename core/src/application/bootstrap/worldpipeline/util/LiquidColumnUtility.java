@@ -18,7 +18,7 @@ public class LiquidColumnUtility extends EngineUtility {
      * (0..WORLD_HEIGHT * CHUNK_SIZE), not a chunk-local coordinate.
      */
 
-    public static final float NO_SURFACE = Float.NaN;
+    public static final float NO_SURFACE = EngineSetting.LIQUID_NO_SURFACE;
 
     private static final int WORLD_TOP_Y = EngineSetting.WORLD_HEIGHT * EngineSetting.CHUNK_SIZE;
 
