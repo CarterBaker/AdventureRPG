@@ -30,9 +30,7 @@ public class SwimBranch extends BranchPackage {
      * and this liquid's drag/viscosity for the whole frame. Everything
      * downstream (isSwimming(), calculate(), attemptClimbOut(),
      * MovementManager's wading flag, MovementBranch's speed multiplier)
-     * reads off those cached results rather than re-querying the world; this
-     * is the same scratch-field pattern FluidSimulationSystem uses for its
-     * own neighbor resolution.
+     * reads off those cached results rather than re-querying the world.
      *
      * isSwimming() is the gate between two very different feels:
      * - Not enough to completely submerge the entity (surface height below

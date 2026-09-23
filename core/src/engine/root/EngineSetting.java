@@ -80,6 +80,7 @@ public class EngineSetting {
         public static final int INDEX_NOT_FOUND = -1;
         public static final double NOISE_SEAM_BLEND_WAVELENGTHS = 3.0;
         public static final short REGISTRY_RESERVED_ID = 0;
+        public static final int REGISTRY_SHORT_ID_COUNT = 0x8000;
 
         // Engine & Application \\
 
@@ -312,16 +313,24 @@ public class EngineSetting {
 
         // Liquid & Swimming \\
 
-        public static final int LIQUID_BASIN_FILL_THRESHOLD = 2;
-        public static final int LIQUID_BASIN_SCAN_LIMIT = 256;
+        public static final int LIQUID_BASIN_MIN_DEPTH = 8;
+        public static final int LIQUID_BASIN_SCAN_LIMIT = 1024;
+        public static final int LIQUID_BASIN_TRIGGER_LEVEL = 32;
+        public static final float LIQUID_EVAPORATION_CHANCE = 0.125f;
+        public static final int LIQUID_EVAPORATION_LEVEL = 3;
+        public static final int LIQUID_EVAPORATION_RATE = 1;
         public static final float LIQUID_FLOW_INTERVAL_MAX_SECONDS = 20.0f;
         public static final float LIQUID_FLOW_INTERVAL_MIN_SECONDS = 0.1f;
-        public static final int LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS = 1;
+        public static final short LIQUID_LEVEL_BLOCKED = -1;
         public static final short LIQUID_LEVEL_EMPTY = 0;
-        public static final short LIQUID_LEVEL_MAX = 8;
+        public static final short LIQUID_LEVEL_MAX = 64;
         public static final float LIQUID_NO_SURFACE = Float.NaN;
-        public static final int LIQUID_PERMANENCE_THRESHOLD = 64;
+        public static final int LIQUID_PERMANENCE_THRESHOLD = 512;
+        public static final int LIQUID_SCAN_SUBCHUNK_LIMIT = 32;
+        public static final int LIQUID_SPREAD_LOSS = 1;
+        public static final int LIQUID_SPREAD_MIN_DIFFERENCE = 2;
         public static final float LIQUID_VISCOSITY_TO_FLOW_SECONDS = 2.0f;
+        public static final int LIQUID_WET_MIN_LEVEL = 4;
         public static final float SWIM_CLIMB_OUT_MAX_VISCOSITY = 1.0f;
         public static final int SWIM_CLIMB_OUT_SCAN_DEPTH = 4;
         public static final float SWIM_DEEP_THRESHOLD = 0.1f;

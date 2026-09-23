@@ -305,6 +305,7 @@ class ChunkQueueManager extends ManagerPackage {
                         chunkCoordinate,
                         chunkStreamManager.getChunkVAO(),
                         airBlockId,
+                        blockManager,
                         activeChunks);
 
                 activeChunks.put(chunkCoordinate, freshInstance);
@@ -328,6 +329,7 @@ class ChunkQueueManager extends ManagerPackage {
                         chunkCoordinate,
                         chunkStreamManager.getChunkVAO(),
                         airBlockId,
+                        blockManager,
                         activeChunks);
             } finally {
                 syncContainer.release();

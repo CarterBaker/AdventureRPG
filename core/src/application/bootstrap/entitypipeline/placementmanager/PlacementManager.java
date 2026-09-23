@@ -73,16 +73,7 @@ public class PlacementManager extends ManagerPackage {
         if (timeSinceLastPlacement < placementInterval)
             return;
 
-        WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
-
-        raycastManager.castBlock(
-                worldPosition.getChunkCoordinate(),
-                origin,
-                direction,
-                entity.getStatisticsHandle().getReach() * EngineSetting.REACH_SCALE,
-                castStruct);
-
-        if (!castStruct.isHit()) {
+        if (!castFrom(entity, origin, direction)) {
             blockBranch.resetBreakTarget();
             return;
         }
@@ -99,6 +90,36 @@ public class PlacementManager extends ManagerPackage {
             if (handlePlaceAction(entity, direction, castStruct))
                 timeSinceLastPlacement = 0;
         }
+    }
+
+    // Placement \\
+
+    public boolean placeBlock(
+            EntityInstance entity,
+            Vector3 origin,
+            Vector3 direction,
+            short blockID) {
+
+        if (!castFrom(entity, origin, direction))
+            return false;
+
+        return blockBranch.tryPlace(castStruct, blockID);
+    }
+
+    // Raycast \\
+
+    private boolean castFrom(EntityInstance entity, Vector3 origin, Vector3 direction) {
+
+        WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
+
+        raycastManager.castBlock(
+                worldPosition.getChunkCoordinate(),
+                origin,
+                direction,
+                entity.getStatisticsHandle().getReach() * EngineSetting.REACH_SCALE,
+                castStruct);
+
+        return castStruct.isHit();
     }
 
     // Routing \\

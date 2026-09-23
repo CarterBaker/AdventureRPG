@@ -16,6 +16,7 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.Coordinate3Int;
 
 public class WorldGenerationManager extends ManagerPackage {
 
@@ -516,7 +517,6 @@ public class WorldGenerationManager extends ManagerPackage {
         }
 
         BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
-        BlockPaletteHandle liquidLevels = subChunkInstance.getLiquidLevelPaletteHandle();
 
         int beachRange = EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
 
@@ -568,8 +568,9 @@ public class WorldGenerationManager extends ManagerPackage {
                     } else if (worldY > groundHeight) {
                         resultBlockID = waterBlockId;
                         hasAirOrWater = true;
-                        blocks.setBlock(localX, localY, localZ, waterBlockId);
-                        liquidLevels.setBlock(localX, localY, localZ, EngineSetting.LIQUID_LEVEL_MAX);
+                        int packedXYZ = Coordinate3Int.pack(localX, localY, localZ);
+                        blocks.setBlock(packedXYZ, waterBlockId);
+                        blocks.setLiquidPermanent(packedXYZ, true);
                     } else if (worldY == groundHeight) {
                         resultBlockID = topBlockID;
                         blocks.setBlock(localX, localY, localZ, topBlockID);
@@ -601,8 +602,6 @@ public class WorldGenerationManager extends ManagerPackage {
         } else if (!hasAirOrWater && column.allFillBlocksFullGeometry) {
             subChunkInstance.markOpaqueInterior();
         }
-
-        subChunkInstance.setLiquidStable(true);
 
         return true;
     }

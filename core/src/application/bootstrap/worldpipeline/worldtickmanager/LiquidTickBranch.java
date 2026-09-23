@@ -1,7 +1,6 @@
 package application.bootstrap.worldpipeline.worldtickmanager;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
-import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -9,8 +8,8 @@ import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.fluidsimulationsystem.FluidSimulationSystem;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.TickQuadrant;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -18,6 +17,7 @@ import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortIterator;
 import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
@@ -25,33 +25,21 @@ import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 public class LiquidTickBranch extends BranchPackage {
 
     /*
-     * Drives per-block liquid flow, scoped to each grid's IMMEDIATE range only
-     * (GridInstance.getImmediateSlotCount()) and quadrant-cycled so a full
-     * sweep happens every four firings rather than all at once. A bounded
-     * connectivity scan (FluidSimulationSystem.isConnectedBodyPermanent) runs
-     * once per unstable subchunk to check whether it belongs to a body large
-     * enough to be marked permanent, so that scan is never repeated for the
-     * same body — permanent only skips that scan, it does not skip flow.
-     * Flow still runs every interval regardless of permanence, and the
-     * subchunk only goes stable (skipped entirely) once a pass produces no
-     * change, exactly like a small body — the difference is that a permanent
-     * body never dissolves for lack of room (see FluidSimulationSystem), so a
-     * touched ocean settles back to stable water instead of eroding away. Any
-     * real change rebuilds only the affected subchunk's own geometry inline,
-     * then cascade-clears the owning chunk's MERGE_DATA so the existing
-     * async, GPU-upload-budgeted ChunkQueueManager pipeline handles the
-     * re-merge and re-upload on its own schedule instead of that work ever
-     * running synchronously here.
+     * Schedules liquid flow over each grid's IMMEDIATE range, quadrant-cycled
+     * so a full sweep takes four firings. Only subchunks holding active liquid
+     * cells are visited, so settled water and permanent bodies such as oceans
+     * cost nothing until something disturbs them. Each chunk is ticked under
+     * its own lock inside a LiquidManager chunk tick; every subchunk the flow
+     * touched is rebuilt inline and its chunk's MERGE_DATA cascade-cleared so
+     * the async, GPU-upload-budgeted streaming pipeline re-merges it.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
+    private LiquidManager liquidManager;
     private DynamicGeometryManager dynamicGeometryManager;
     private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
-
-    // Branches
-    private FluidSimulationSystem fluidSimulationSystem;
 
     // Settings
     private int intervalFrames;
@@ -60,6 +48,9 @@ public class LiquidTickBranch extends BranchPackage {
     private int frameCounter;
     private int quadrantCursor;
     private long[] lastQuadrantTickMillis;
+
+    // Scratch
+    private LongArrayList touchedChunkCoordinates;
 
     // Internal \\
 
@@ -73,6 +64,9 @@ public class LiquidTickBranch extends BranchPackage {
         this.frameCounter = EngineSetting.LIQUID_TICK_PHASE_FRAMES;
         this.quadrantCursor = 0;
         this.lastQuadrantTickMillis = new long[TickQuadrant.VALUES.length];
+
+        // Scratch
+        this.touchedChunkCoordinates = new LongArrayList();
     }
 
     @Override
@@ -81,9 +75,9 @@ public class LiquidTickBranch extends BranchPackage {
         // Internal
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
+        this.liquidManager = get(LiquidManager.class);
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
-        this.fluidSimulationSystem = get(FluidSimulationSystem.class);
     }
 
     // Schedule \\
@@ -102,6 +96,8 @@ public class LiquidTickBranch extends BranchPackage {
     // Tick \\
 
     public void tick() {
+
+        liquidManager.retryDeferredWakes();
 
         TickQuadrant quadrant = TickQuadrant.VALUES[quadrantCursor];
         quadrantCursor = (quadrantCursor + 1) % TickQuadrant.VALUES.length;
@@ -143,13 +139,6 @@ public class LiquidTickBranch extends BranchPackage {
         }
     }
 
-    /*
-     * Holds the chunk's own sync lock across every subchunk tick. On any
-     * change, cascade-clears MERGE_DATA so the streaming pipeline re-merges
-     * and re-uploads this chunk on its own async/budgeted schedule instead
-     * of that work happening here. Skips the whole chunk for this pass if
-     * the async pipeline currently owns it.
-     */
     private void tickChunk(ChunkInstance chunk, float delta) {
 
         ChunkDataSyncContainer syncContainer = chunk.getChunkDataSyncContainer();
@@ -157,123 +146,56 @@ public class LiquidTickBranch extends BranchPackage {
         if (!syncContainer.tryAcquire())
             return;
 
-        boolean chunkChanged;
+        touchedChunkCoordinates.clear();
+        liquidManager.beginChunkTick(chunk);
 
         try {
             SubChunkInstance[] subChunks = chunk.getSubChunks();
-            chunkChanged = false;
 
             for (int i = 0; i < subChunks.length; i++)
-                if (tickSubChunk(chunk, subChunks[i], delta))
-                    chunkChanged = true;
+                tickSubChunk(chunk, subChunks[i], delta);
 
-            if (chunkChanged)
-                ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, syncContainer.getData());
+            rebuildTouched();
         } finally {
+            liquidManager.endChunkTick();
             syncContainer.release();
         }
 
-        if (!chunkChanged)
-            return;
-
-        worldStreamManager.invalidateMegaForChunk(chunk.getCoordinate());
+        for (int i = 0; i < touchedChunkCoordinates.size(); i++)
+            worldStreamManager.invalidateMegaForChunk(touchedChunkCoordinates.getLong(i));
     }
 
-    private boolean tickSubChunk(ChunkInstance chunk, SubChunkInstance subChunk, float delta) {
+    private void tickSubChunk(ChunkInstance chunk, SubChunkInstance subChunk, float delta) {
 
-        if (!subChunk.hasBlockType(DynamicGeometryType.LIQUID) || subChunk.isLiquidStable())
-            return false;
+        if (!subChunk.hasActiveLiquid())
+            return;
 
         subChunk.addLiquidFlowTime(delta);
 
-        float interval = resolveFlowInterval(subChunk);
-
-        if (subChunk.getLiquidFlowAccumulator() < interval)
-            return false;
+        if (subChunk.getLiquidFlowAccumulator() < resolveFlowInterval(subChunk))
+            return;
 
         subChunk.resetLiquidFlowAccumulator();
-
-        if (!subChunk.isLiquidPermanent())
-            assessPermanence(chunk, subChunk);
-
-        if (!fluidSimulationSystem.flow(chunk, subChunk)) {
-            subChunk.setLiquidStable(true);
-            return false;
-        }
-
-        rebuildSubChunkGeometry(chunk, (int) subChunk.getCoordinate());
-        rebuildTouchedNeighbors(chunk);
-
-        return true;
+        liquidManager.flow(chunk, subChunk);
     }
 
-    /*
-     * Runs the bounded connectivity scan for every distinct liquid type this
-     * subchunk contains (almost always exactly one), only ever called once
-     * per unstable subchunk since the caller skips this entirely once
-     * isLiquidPermanent() is already true. Marks the subchunk permanent the
-     * moment any one of them turns out to be part of a body meeting
-     * LIQUID_PERMANENCE_THRESHOLD — this does not by itself stop flow() from
-     * running this tick or any future one.
-     */
-    private void assessPermanence(ChunkInstance chunk, SubChunkInstance subChunk) {
+    // Rebuild \\
 
-        ShortOpenHashSet liquidBlockIDs = subChunk.getContainedLiquidBlockIDs();
-        ShortIterator iterator = liquidBlockIDs.iterator();
+    private void rebuildTouched() {
 
-        while (iterator.hasNext()) {
-
-            short liquidBlockID = iterator.nextShort();
-            int seedPacked = subChunk.findLiquidCell(liquidBlockID);
-
-            if (seedPacked == -1)
-                throwException("Subchunk's tallied liquid block ID has no matching cell in its own palette — "
-                        + "geometry tally is out of sync with block storage.");
-
-            if (fluidSimulationSystem.isConnectedBodyPermanent(chunk, subChunk, seedPacked)) {
-                subChunk.setLiquidPermanent(true);
-                return;
-            }
-        }
-    }
-
-    /*
-     * A flow step can write into a subchunk other than the one just ticked —
-     * the column below it falling, or a neighbor chunk it spread into — and
-     * that subchunk's geometry needs to reflect it. lockedChunk is the chunk
-     * tickChunk() already holds the lock for, so its own touched subchunks
-     * are rebuilt inline without a second lock cycle; every other touched
-     * chunk gets its own tryAcquire and, on success, has its MERGE_DATA
-     * cascade-cleared the same way the locked chunk's is.
-     */
-    private void rebuildTouchedNeighbors(ChunkInstance lockedChunk) {
-
-        ObjectArrayList<ChunkInstance> touchedChunks = fluidSimulationSystem.getTouchedChunks();
-        IntArrayList touchedSubChunkY = fluidSimulationSystem.getTouchedSubChunkY();
+        ObjectArrayList<ChunkInstance> touchedChunks = liquidManager.getTouchedChunks();
+        IntArrayList touchedSubChunkY = liquidManager.getTouchedSubChunkY();
 
         for (int i = 0; i < touchedChunks.size(); i++) {
 
             ChunkInstance touchedChunk = touchedChunks.get(i);
-            int subChunkY = touchedSubChunkY.getInt(i);
+            rebuildSubChunkGeometry(touchedChunk, touchedSubChunkY.getInt(i));
 
-            if (touchedChunk == lockedChunk) {
-                rebuildSubChunkGeometry(touchedChunk, subChunkY);
-                continue;
-            }
-
-            ChunkDataSyncContainer touchedSync = touchedChunk.getChunkDataSyncContainer();
-
-            if (!touchedSync.tryAcquire())
+            if (touchedChunkCoordinates.contains(touchedChunk.getCoordinate()))
                 continue;
 
-            try {
-                rebuildSubChunkGeometry(touchedChunk, subChunkY);
-                ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, touchedSync.getData());
-            } finally {
-                touchedSync.release();
-            }
-
-            worldStreamManager.invalidateMegaForChunk(touchedChunk.getCoordinate());
+            ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, touchedChunk.getChunkDataSyncContainer().getData());
+            touchedChunkCoordinates.add(touchedChunk.getCoordinate());
         }
     }
 

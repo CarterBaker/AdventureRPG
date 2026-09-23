@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.block;
 
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
+import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
@@ -18,7 +20,10 @@ public final class BlockPaletteHandle extends HandlePackage {
      * palette exceeds the configured threshold. releaseStorage() drops all
      * backing storage without forgetting the handle's own config, so a caller
      * that only needs this palette some of the time (see SubChunkInstance)
-     * can construct it, release it, and construct it again cheaply.
+     * can construct it, release it, and construct it again cheaply. A block
+     * palette constructed with a BlockManager is partitioned: it also owns one
+     * child palette per geometry type, routes every write through them, and
+     * answers type and liquid queries by dipping into the matching child.
      */
 
     // Palette Config
@@ -38,6 +43,14 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     // Storage — direct mode (post-threshold)
     private short[] directData;
+
+    // Children — realized only by a partitioned block palette
+    private BlockManager blockManager;
+    private BlockTypePaletteHandle fullPaletteHandle;
+    private BlockTypePaletteHandle partialPaletteHandle;
+    private BlockTypePaletteHandle complexPaletteHandle;
+    private LiquidBlockPaletteHandle liquidPaletteHandle;
+    private BlockTypePaletteHandle[] geometryType2TypePalette;
 
     // Construction \\
 
@@ -68,6 +81,43 @@ public final class BlockPaletteHandle extends HandlePackage {
         allocatePackedArray();
     }
 
+    public void constructor(
+            int paletteAxisSize,
+            int paletteThreshold,
+            short defaultBlockId,
+            BlockManager blockManager) {
+
+        constructor(paletteAxisSize, paletteThreshold, defaultBlockId);
+
+        if (blocksPerCell != 1)
+            throwException("A partitioned block palette must store exactly one block per cell");
+
+        this.blockManager = blockManager;
+
+        if (geometryType2TypePalette == null)
+            createTypePalettes();
+
+        for (BlockTypePaletteHandle typePalette : geometryType2TypePalette)
+            if (typePalette != null)
+                typePalette.constructor(totalCells);
+
+        fillTypePalettes(defaultBlockId);
+    }
+
+    private void createTypePalettes() {
+
+        this.fullPaletteHandle = create(BlockTypePaletteHandle.class);
+        this.partialPaletteHandle = create(BlockTypePaletteHandle.class);
+        this.complexPaletteHandle = create(BlockTypePaletteHandle.class);
+        this.liquidPaletteHandle = create(LiquidBlockPaletteHandle.class);
+
+        this.geometryType2TypePalette = new BlockTypePaletteHandle[DynamicGeometryType.LENGTH];
+        this.geometryType2TypePalette[DynamicGeometryType.FULL.ordinal()] = fullPaletteHandle;
+        this.geometryType2TypePalette[DynamicGeometryType.PARTIAL.ordinal()] = partialPaletteHandle;
+        this.geometryType2TypePalette[DynamicGeometryType.COMPLEX.ordinal()] = complexPaletteHandle;
+        this.geometryType2TypePalette[DynamicGeometryType.LIQUID.ordinal()] = liquidPaletteHandle;
+    }
+
     public void clear() {
         fill(defaultBlockId);
     }
@@ -92,6 +142,9 @@ public final class BlockPaletteHandle extends HandlePackage {
             packedData = new long[longsNeeded];
 
         directData = null;
+
+        if (isPartitioned())
+            fillTypePalettes(blockId);
     }
 
     /*
@@ -100,10 +153,18 @@ public final class BlockPaletteHandle extends HandlePackage {
      * later to bring it back at full cost only when actually needed.
      */
     public void releaseStorage() {
+
         palette = null;
         paletteIndexLookup = null;
         packedData = null;
         directData = null;
+
+        if (geometryType2TypePalette == null)
+            return;
+
+        for (BlockTypePaletteHandle typePalette : geometryType2TypePalette)
+            if (typePalette != null)
+                typePalette.releaseStorage();
     }
 
     // Internal \\
@@ -228,6 +289,37 @@ public final class BlockPaletteHandle extends HandlePackage {
         writePackedValue(index, paletteIndex);
     }
 
+    private short readBlock(int index) {
+        return directData != null ? directData[index] : palette.getShort(readPackedValue(index));
+    }
+
+    private void writeBlock(int index, short blockId) {
+
+        if (directData != null) {
+            directData[index] = blockId;
+            return;
+        }
+
+        int paletteIndex = paletteIndexLookup.get(blockId);
+
+        if (paletteIndex == -1) {
+
+            if (palette.size() >= maxPaletteSize) {
+                convertToDirect();
+                directData[index] = blockId;
+                return;
+            }
+
+            paletteIndex = addToPalette(blockId);
+
+            int neededBits = calculateBitsNeeded(palette.size());
+            if (neededBits > bitsPerEntry)
+                expandBits(neededBits);
+        }
+
+        writePackedValue(index, paletteIndex);
+    }
+
     private void collapse() {
 
         ShortArrayList oldPalette = directData != null ? null : palette;
@@ -257,6 +349,12 @@ public final class BlockPaletteHandle extends HandlePackage {
 
         int[] interiorCoordinates = ChunkCoordinate3Int.getInteriorBlockCoordinates();
 
+        if (isPartitioned())
+            for (int packedXYZ : interiorCoordinates) {
+                int index = getCellIndex(packedXYZ);
+                routeTypePalettes(index, readBlock(index), airBlockId);
+            }
+
         if (directData != null) {
             for (int packedXYZ : interiorCoordinates)
                 directData[getCellIndex(packedXYZ)] = airBlockId;
@@ -274,40 +372,122 @@ public final class BlockPaletteHandle extends HandlePackage {
         collapse();
     }
 
+    // Type Palettes \\
+
+    private boolean isPartitioned() {
+        return blockManager != null;
+    }
+
+    private BlockTypePaletteHandle resolveTypePalette(short blockId) {
+        return geometryType2TypePalette[blockManager.getGeometryFromBlockID(blockId).ordinal()];
+    }
+
+    private void fillTypePalettes(short blockId) {
+
+        for (BlockTypePaletteHandle typePalette : geometryType2TypePalette)
+            if (typePalette != null)
+                typePalette.clear();
+
+        BlockTypePaletteHandle typePalette = resolveTypePalette(blockId);
+
+        if (typePalette != null)
+            typePalette.fillAll();
+    }
+
+    private void routeTypePalettes(int index, short oldBlockId, short newBlockId) {
+
+        if (oldBlockId == newBlockId)
+            return;
+
+        BlockTypePaletteHandle oldTypePalette = resolveTypePalette(oldBlockId);
+        BlockTypePaletteHandle newTypePalette = resolveTypePalette(newBlockId);
+
+        if (oldTypePalette != null)
+            oldTypePalette.remove(index);
+
+        if (newTypePalette != null)
+            newTypePalette.add(index);
+    }
+
+    private BlockTypePaletteHandle requireTypePalette(DynamicGeometryType geometryType) {
+
+        if (!isPartitioned())
+            throwException("Block type queries require a palette constructed with a BlockManager");
+
+        BlockTypePaletteHandle typePalette = geometryType2TypePalette[geometryType.ordinal()];
+
+        if (typePalette == null)
+            throwException("Geometry type " + geometryType + " has no child palette");
+
+        return typePalette;
+    }
+
+    private LiquidBlockPaletteHandle requireLiquidPalette() {
+
+        if (!isPartitioned())
+            throwException("Liquid queries require a palette constructed with a BlockManager");
+
+        return liquidPaletteHandle;
+    }
+
+    // Block Types \\
+
+    public int getBlockTypeCount(DynamicGeometryType geometryType) {
+        return requireTypePalette(geometryType).getCount();
+    }
+
+    public int nextBlockOfType(DynamicGeometryType geometryType, int fromIndex) {
+        return requireTypePalette(geometryType).nextMember(fromIndex);
+    }
+
+    // Liquid \\
+
+    public short getLiquidLevel(int packedXYZ) {
+        return requireLiquidPalette().getLevel(getCellIndex(packedXYZ));
+    }
+
+    public void setLiquidLevel(int packedXYZ, short level) {
+        requireLiquidPalette().setLevel(getCellIndex(packedXYZ), level);
+    }
+
+    public boolean isLiquidPermanent(int packedXYZ) {
+        return requireLiquidPalette().isPermanent(getCellIndex(packedXYZ));
+    }
+
+    public void setLiquidPermanent(int packedXYZ, boolean permanent) {
+        requireLiquidPalette().setPermanent(getCellIndex(packedXYZ), permanent);
+    }
+
+    public void activateLiquid(int packedXYZ) {
+        requireLiquidPalette().activate(getCellIndex(packedXYZ));
+    }
+
+    public void deactivateLiquid(int packedXYZ) {
+        requireLiquidPalette().deactivate(getCellIndex(packedXYZ));
+    }
+
+    public int getActiveLiquidCount() {
+        return requireLiquidPalette().getActiveCount();
+    }
+
+    public int collectActiveLiquid(int[] target) {
+        return requireLiquidPalette().collectActive(target);
+    }
+
     // Accessible \\
 
     public short getBlock(int packedXYZ) {
-        int index = getCellIndex(packedXYZ);
-        return directData != null ? directData[index] : palette.getShort(readPackedValue(index));
+        return readBlock(getCellIndex(packedXYZ));
     }
 
     public void setBlock(int packedXYZ, short blockId) {
 
         int index = getCellIndex(packedXYZ);
 
-        if (directData != null) {
-            directData[index] = blockId;
-            return;
-        }
+        if (isPartitioned())
+            routeTypePalettes(index, readBlock(index), blockId);
 
-        int paletteIndex = paletteIndexLookup.get(blockId);
-
-        if (paletteIndex == -1) {
-
-            if (palette.size() >= maxPaletteSize) {
-                convertToDirect();
-                directData[index] = blockId;
-                return;
-            }
-
-            paletteIndex = addToPalette(blockId);
-
-            int neededBits = calculateBitsNeeded(palette.size());
-            if (neededBits > bitsPerEntry)
-                expandBits(neededBits);
-        }
-
-        writePackedValue(index, paletteIndex);
+        writeBlock(index, blockId);
     }
 
     public short getBlock(int x, int y, int z) {

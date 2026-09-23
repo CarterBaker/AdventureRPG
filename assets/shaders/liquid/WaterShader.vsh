@@ -29,7 +29,7 @@ const vec3 NORMALS[6] = vec3[](
 // Must match EngineSetting.LIQUID_LEVEL_MAX — GLSL has no visibility into
 // the Java constant, so this is a manually-kept mirror, same convention
 // StandardSurface.tes already uses for its own constant re-derivations.
-const float LIQUID_LEVEL_MAX = 8.0;
+const float LIQUID_LEVEL_MAX = 64.0;
 
 out vec3 vWorldNormal;
 

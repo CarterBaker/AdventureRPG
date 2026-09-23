@@ -1,38 +1,26 @@
 package application.bootstrap.entitypipeline.placementmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
-import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
-import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
-import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
-import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
+import application.bootstrap.worldpipeline.blockplacementsystem.BlockPlacementSystem;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
-import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
 
 class BlockBranch extends BranchPackage {
 
     /*
-     * Handles block breaking for PlacementManager. Tracks the current break
-     * target across frames, accumulates hits against block durability, and
-     * triggers a chunk rebuild when a block is destroyed.
+     * Handles block breaking and placement for PlacementManager. Tracks the
+     * current break target across frames and accumulates hits against block
+     * durability. Every world edit it makes, a destroyed block or a placed
+     * one, goes through BlockPlacementSystem.
      */
 
     // Internal
     private BlockManager blockManager;
-    private WorldStreamManager worldStreamManager;
-    private DynamicGeometryManager dynamicGeometryManager;
-    private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
-    private WorldRenderManager worldRenderManager;
-
-    // Settings
-    private int chunkSize;
-    private int worldHeight;
+    private BlockPlacementSystem blockPlacementSystem;
 
     // Block IDs
     private short airBlockID;
@@ -47,11 +35,6 @@ class BlockBranch extends BranchPackage {
 
     @Override
     protected void create() {
-
-        // Settings
-        this.chunkSize = EngineSetting.CHUNK_SIZE;
-        this.worldHeight = EngineSetting.WORLD_HEIGHT;
-
         resetBreakTarget();
     }
 
@@ -60,10 +43,7 @@ class BlockBranch extends BranchPackage {
 
         // Internal
         this.blockManager = get(BlockManager.class);
-        this.worldStreamManager = get(WorldStreamManager.class);
-        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
-        this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
-        this.worldRenderManager = get(WorldRenderManager.class);
+        this.blockPlacementSystem = get(BlockPlacementSystem.class);
     }
 
     @Override
@@ -114,30 +94,18 @@ class BlockBranch extends BranchPackage {
         if (currentHits < block.getDurability())
             return true;
 
-        ChunkInstance chunk = worldStreamManager.getChunkInstance(castStruct.getChunkCoordinate());
-
-        if (chunk == null)
+        if (!blockPlacementSystem.replaceBlock(castStruct, airBlockID))
             return true;
-
-        writeBlock(
-                chunk,
-                castStruct.getBlockX(),
-                castStruct.getBlockY(),
-                castStruct.getBlockZ(),
-                castStruct.getSubChunkY(),
-                airBlockID);
-
-        rebuildAffected(
-                chunk,
-                castStruct.getChunkCoordinate(),
-                castStruct.getBlockX(),
-                castStruct.getBlockY(),
-                castStruct.getBlockZ(),
-                castStruct.getSubChunkY());
 
         resetBreakTarget();
 
         return true;
+    }
+
+    // Place \\
+
+    boolean tryPlace(BlockCastStruct castStruct, short blockID) {
+        return blockPlacementSystem.placeBlockAgainstFace(castStruct, blockID);
     }
 
     // Break Target \\
@@ -157,87 +125,5 @@ class BlockBranch extends BranchPackage {
 
     private boolean isCorrectTool(EntityInstance entity, BlockHandle block) {
         return block.getRequiredToolTypeID() == EngineSetting.TOOL_NONE;
-    }
-
-    // Rebuild \\
-
-    private void rebuildAffected(
-            ChunkInstance chunk,
-            long chunkCoordinate,
-            int blockX, int blockY, int blockZ,
-            int subChunkY) {
-
-        rebuildSubChunk(chunk, subChunkY);
-
-        if (blockY == 0 && subChunkY > 0)
-            rebuildSubChunk(chunk, subChunkY - 1);
-
-        if (blockY == chunkSize - 1 && subChunkY < worldHeight - 1)
-            rebuildSubChunk(chunk, subChunkY + 1);
-
-        mergeAndRender(chunk, chunkCoordinate);
-
-        int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
-        int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
-
-        if (blockX == 0)
-            rebuildNeighbour(chunkX - 1, chunkZ, subChunkY);
-
-        if (blockX == chunkSize - 1)
-            rebuildNeighbour(chunkX + 1, chunkZ, subChunkY);
-
-        if (blockZ == 0)
-            rebuildNeighbour(chunkX, chunkZ - 1, subChunkY);
-
-        if (blockZ == chunkSize - 1)
-            rebuildNeighbour(chunkX, chunkZ + 1, subChunkY);
-    }
-
-    /*
-     * Rebuilds geometry for a subchunk touched by this break, either directly
-     * or across a chunk/Y boundary. Also invalidates its liquid stability —
-     * any of these subchunks may have had a supporting or blocking neighbor
-     * removed, so any liquid resting there needs to re-check whether it can
-     * still stay put.
-     */
-    private void rebuildSubChunk(ChunkInstance chunk, int subChunkY) {
-        SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
-        subChunk.getDynamicPacketInstance().clear();
-        subChunk.invalidateLiquid();
-        dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
-    }
-
-    private void rebuildNeighbour(int chunkX, int chunkZ, int subChunkY) {
-
-        long coord = Coordinate2Long.pack(chunkX, chunkZ);
-        ChunkInstance neighbour = worldStreamManager.getChunkInstance(coord);
-
-        if (neighbour == null)
-            return;
-
-        rebuildSubChunk(neighbour, subChunkY);
-        mergeAndRender(neighbour, coord);
-    }
-
-    private void mergeAndRender(ChunkInstance chunk, long chunkCoordinate) {
-        chunk.merge();
-        worldRenderManager.addChunkInstance(chunk);
-        worldStreamManager.invalidateMegaForChunk(chunkCoordinate);
-        worldStreamManager.invalidateChunkBatch(chunkCoordinate);
-    }
-
-    // Write \\
-
-    private void writeBlock(
-            ChunkInstance chunk,
-            int blockX, int blockY, int blockZ,
-            int subChunkY, short blockID) {
-
-        SubChunkInstance subChunk = chunk.getSubChunk(subChunkY);
-
-        if (subChunk == null)
-            return;
-
-        subChunk.setBlock(blockX, blockY, blockZ, blockID);
     }
 }

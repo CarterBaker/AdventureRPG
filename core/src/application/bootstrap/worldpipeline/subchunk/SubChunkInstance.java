@@ -5,7 +5,7 @@ import java.util.Arrays;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
-import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemPaletteHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
@@ -20,8 +20,8 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     /*
      * One vertical slice of a chunk covering CHUNK_SIZE^3 blocks. A subchunk
-     * carries real per-block palette storage (biome, block, rotation, liquid
-     * level) only once something genuinely needs cell-by-cell data — pure air
+     * carries real per-block palette storage (biome, block, rotation) only
+     * once something genuinely needs cell-by-cell data — pure air
      * (knownEmpty) and single-block-type regions (uniformFill) are tracked as
      * scalars and never allocate a palette at all. Storage is realized on
      * first real need: a block edit, or a geometry build that finds the
@@ -36,18 +36,18 @@ public class SubChunkInstance extends WorldRenderInstance {
      * like liquid ticking can skip subchunks that never need them. Tally
      * writes only ever happen while the owning chunk's ChunkDataSyncContainer
      * is held; readers off the build thread must acquire that lock first.
-     * liquidStable/liquidPermanent gate LiquidTickBranch: stable means "no
-     * need to simulate right now," permanent means "this body is large
-     * enough it should never be re-simulated just because something changed
-     * nearby" — see markUniformFill() and notifyNeighborBlockChanged().
+     * Liquid state lives per cell in the block palette's liquid child, so a
+     * subchunk is liquid-stable exactly when none of its liquid cells are
+     * active, and value reads answer for a virtual subchunk without ever
+     * realizing storage.
      */
 
     // Internal
     private BlockPaletteHandle biomePaletteHandle;
     private BlockPaletteHandle blockPaletteHandle;
     private BlockPaletteHandle blockRotationPaletteHandle;
-    private BlockPaletteHandle liquidLevelPaletteHandle;
     private WorldItemPaletteHandle worldItemPaletteHandle;
+    private BlockManager blockManager;
 
     // Storage — lazily realized
     private boolean populated;
@@ -61,8 +61,6 @@ public class SubChunkInstance extends WorldRenderInstance {
     // Liquid Flow
     private ShortOpenHashSet containedLiquidBlockIDs;
     private float liquidFlowAccumulator;
-    private boolean liquidStable;
-    private boolean liquidPermanent;
 
     // Empty Fast Path — set only by WorldGenerationManager when a subchunk
     // is proven to hold no blocks at all
@@ -96,7 +94,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.biomePaletteHandle = create(BlockPaletteHandle.class);
         this.blockPaletteHandle = create(BlockPaletteHandle.class);
         this.blockRotationPaletteHandle = create(BlockPaletteHandle.class);
-        this.liquidLevelPaletteHandle = create(BlockPaletteHandle.class);
         this.worldItemPaletteHandle = create(WorldItemPaletteHandle.class);
         this.worldItemPaletteHandle.constructor();
 
@@ -107,8 +104,6 @@ public class SubChunkInstance extends WorldRenderInstance {
 
         this.containedLiquidBlockIDs = new ShortOpenHashSet();
         this.liquidFlowAccumulator = 0f;
-        this.liquidStable = false;
-        this.liquidPermanent = false;
 
         this.knownEmpty = false;
         this.uniformFill = false;
@@ -121,7 +116,8 @@ public class SubChunkInstance extends WorldRenderInstance {
             WorldHandle worldHandle,
             long coordinate,
             VAOHandle vaoHandle,
-            short airBlockId) {
+            short airBlockId,
+            BlockManager blockManager) {
 
         super.constructor(
                 worldRenderManager,
@@ -131,6 +127,7 @@ public class SubChunkInstance extends WorldRenderInstance {
                 vaoHandle);
 
         this.airBlockId = airBlockId;
+        this.blockManager = blockManager;
         this.columnBiomeID = EngineSetting.REGISTRY_RESERVED_ID;
         this.populated = false;
         this.knownEmpty = false;
@@ -149,8 +146,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         Arrays.fill(blockTypeCounts, 0);
         containedLiquidBlockIDs.clear();
         liquidFlowAccumulator = 0f;
-        liquidStable = false;
-        liquidPermanent = false;
         knownEmpty = false;
         uniformFill = false;
         opaqueInterior = false;
@@ -176,18 +171,13 @@ public class SubChunkInstance extends WorldRenderInstance {
         biomePaletteHandle.fill(columnBiomeID);
 
         blockPaletteHandle.constructor(
-                EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD, airBlockId);
+                EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD, airBlockId, blockManager);
         blockRotationPaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD,
                 EngineSetting.DEFAULT_BLOCK_ORIENTATION);
-        liquidLevelPaletteHandle.constructor(
-                EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD, EngineSetting.LIQUID_LEVEL_EMPTY);
 
-        if (uniformFill) {
+        if (uniformFill)
             blockPaletteHandle.fill(uniformBlockID);
-            if (uniformGeometryType == DynamicGeometryType.LIQUID)
-                liquidLevelPaletteHandle.fill(EngineSetting.LIQUID_LEVEL_MAX);
-        }
 
         populated = true;
     }
@@ -200,7 +190,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         biomePaletteHandle.releaseStorage();
         blockPaletteHandle.releaseStorage();
         blockRotationPaletteHandle.releaseStorage();
-        liquidLevelPaletteHandle.releaseStorage();
 
         populated = false;
     }
@@ -216,9 +205,6 @@ public class SubChunkInstance extends WorldRenderInstance {
      * Drops any previously realized storage — this instance may be pooled
      * and reused for a different location — and records the column's biome
      * as a scalar; a palette is only ever built once something needs one.
-     * Liquid stability/permanence are reset here unconditionally so every
-     * fresh generation attempt starts from a known state regardless of
-     * whatever a prior occupant of this pooled instance left behind.
      */
     public void beginGeneration(short columnBiomeID) {
         releaseStorageIfPopulated();
@@ -226,8 +212,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.knownEmpty = false;
         this.uniformFill = false;
         this.opaqueInterior = false;
-        this.liquidStable = false;
-        this.liquidPermanent = false;
     }
 
     /*
@@ -242,7 +226,6 @@ public class SubChunkInstance extends WorldRenderInstance {
             return;
 
         blockPaletteHandle.dumpInteriorBlocks(airBlockId);
-        liquidLevelPaletteHandle.dumpInteriorBlocks(EngineSetting.LIQUID_LEVEL_EMPTY);
         clearUniformFill();
         opaqueInterior = false;
     }
@@ -299,39 +282,12 @@ public class SubChunkInstance extends WorldRenderInstance {
         liquidFlowAccumulator = 0f;
     }
 
+    public boolean hasActiveLiquid() {
+        return populated && blockPaletteHandle.getActiveLiquidCount() > 0;
+    }
+
     public boolean isLiquidStable() {
-        return liquidStable;
-    }
-
-    public void setLiquidStable(boolean liquidStable) {
-        this.liquidStable = liquidStable;
-    }
-
-    public boolean isLiquidPermanent() {
-        return liquidPermanent;
-    }
-
-    public void setLiquidPermanent(boolean liquidPermanent) {
-        this.liquidPermanent = liquidPermanent;
-    }
-
-    /*
-     * Linear scan for a single cell in this subchunk holding the given
-     * liquid block ID — seeds FluidSimulationSystem.isConnectedBodyPermanent
-     * without that scan needing any knowledge of this subchunk's storage
-     * layout. Exits on the first match. Only ever called for a populated
-     * subchunk whose tally already claims this ID is present.
-     */
-    public int findLiquidCell(short liquidBlockID) {
-
-        BlockPaletteHandle palette = getBlockPaletteHandle();
-        int[] coordinates = ChunkCoordinate3Int.getBlockCoordinates();
-
-        for (int i = 0; i < coordinates.length; i++)
-            if (palette.getBlock(coordinates[i]) == liquidBlockID)
-                return coordinates[i];
-
-        return -1;
+        return !hasActiveLiquid();
     }
 
     // Empty Fast Path \\
@@ -347,26 +303,15 @@ public class SubChunkInstance extends WorldRenderInstance {
     // Uniform Fill Fast Path \\
 
     /*
-     * A subchunk uniformly filled with one liquid is, by construction, a
-     * single contiguous body spanning its entire CHUNK_SIZE^3 volume —
-     * unconditionally far larger than any sane permanence threshold, so
-     * there is nothing to gain from ever running the connectivity scan
-     * against it. Marking it stable and permanent here, at the one place
-     * every uniform-fill classification (generation's fast paths and the
-     * generation loop's own post-hoc collapse) funnels through, means deep
-     * open water — including but not limited to oceans — never costs a
-     * single tick of simulation for its entire lifetime unless a direct
-     * edit actually breaks its uniformity.
+     * A subchunk uniformly filled with one liquid is a single contiguous body
+     * spanning its entire volume, so it reads as permanent and settled
+     * without ever realizing storage — deep open water never costs a tick of
+     * simulation unless a direct edit breaks its uniformity.
      */
     public void markUniformFill(DynamicGeometryType geometryType, short blockID) {
         this.uniformFill = true;
         this.uniformGeometryType = geometryType;
         this.uniformBlockID = blockID;
-
-        if (geometryType == DynamicGeometryType.LIQUID) {
-            this.liquidStable = true;
-            this.liquidPermanent = true;
-        }
     }
 
     public void clearUniformFill() {
@@ -420,39 +365,11 @@ public class SubChunkInstance extends WorldRenderInstance {
     /*
      * Every write realizes storage first, so an edit to a single cell of a
      * uniform or empty subchunk correctly backfills the other 4095 cells to
-     * their prior value before applying. invalidateLiquid() is also called
-     * directly by systems that alter a NEIGHBORING subchunk in a way that
-     * could open or close this subchunk's own flow paths.
+     * their prior value before applying.
      */
-
-    public void invalidateLiquid() {
-        liquidStable = false;
-        liquidPermanent = false;
-    }
-
-    /*
-     * Called when a block adjacent to (or below) this subchunk's own
-     * footprint changes in a NEIGHBORING subchunk — never for edits to this
-     * subchunk's own blocks, which always go through invalidateLiquid()
-     * directly via setBlock()/setLiquidLevel() below regardless of
-     * permanence. A body already confirmed permanent ignores this: a large,
-     * established body of water should not pay for reassessment every time
-     * something changes nearby. Anything smaller is cheap to re-settle and
-     * should respond immediately, so gameplay like draining a pond or
-     * opening a new channel behaves correctly.
-     */
-    public void notifyNeighborBlockChanged() {
-        if (!liquidPermanent)
-            invalidateLiquid();
-    }
 
     public void setBlock(int x, int y, int z, short blockID) {
-        ensurePopulated();
-        blockPaletteHandle.setBlock(x, y, z, blockID);
-        knownEmpty = false;
-        uniformFill = false;
-        opaqueInterior = false;
-        invalidateLiquid();
+        setBlock(Coordinate3Int.pack(x, y, z), blockID);
     }
 
     public void setBlock(int packedXYZ, short blockID) {
@@ -461,19 +378,51 @@ public class SubChunkInstance extends WorldRenderInstance {
         knownEmpty = false;
         uniformFill = false;
         opaqueInterior = false;
-        invalidateLiquid();
     }
 
     public void setLiquidLevel(int x, int y, int z, short level) {
-        ensurePopulated();
-        liquidLevelPaletteHandle.setBlock(x, y, z, level);
-        invalidateLiquid();
+        setLiquidLevel(Coordinate3Int.pack(x, y, z), level);
     }
 
     public void setLiquidLevel(int packedXYZ, short level) {
         ensurePopulated();
-        liquidLevelPaletteHandle.setBlock(packedXYZ, level);
-        invalidateLiquid();
+        blockPaletteHandle.setLiquidLevel(packedXYZ, level);
+    }
+
+    public void setLiquidPermanent(int packedXYZ, boolean permanent) {
+        ensurePopulated();
+        blockPaletteHandle.setLiquidPermanent(packedXYZ, permanent);
+    }
+
+    // Liquid Activity \\
+
+    public void activateLiquid(int packedXYZ) {
+
+        if (!isLiquid(getBlock(packedXYZ)))
+            return;
+
+        ensurePopulated();
+        blockPaletteHandle.activateLiquid(packedXYZ);
+    }
+
+    public void deactivateLiquid(int packedXYZ) {
+
+        if (!populated)
+            return;
+
+        blockPaletteHandle.deactivateLiquid(packedXYZ);
+    }
+
+    public int collectActiveLiquid(int[] target) {
+
+        if (!populated)
+            return 0;
+
+        return blockPaletteHandle.collectActiveLiquid(target);
+    }
+
+    private boolean isLiquid(short blockID) {
+        return blockManager.getGeometryFromBlockID(blockID) == DynamicGeometryType.LIQUID;
     }
 
     // Accessible \\
@@ -493,11 +442,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         return blockRotationPaletteHandle;
     }
 
-    public BlockPaletteHandle getLiquidLevelPaletteHandle() {
-        ensurePopulated();
-        return liquidLevelPaletteHandle;
-    }
-
     public WorldItemPaletteHandle getWorldItemPaletteHandle() {
         return worldItemPaletteHandle;
     }
@@ -508,16 +452,34 @@ public class SubChunkInstance extends WorldRenderInstance {
      * filled uniformly.
      */
     public short getBlock(int x, int y, int z) {
+        return getBlock(Coordinate3Int.pack(x, y, z));
+    }
+
+    public short getBlock(int packedXYZ) {
         if (!populated)
             return uniformFill ? uniformBlockID : airBlockId;
-        return blockPaletteHandle.getBlock(Coordinate3Int.pack(x, y, z));
+        return blockPaletteHandle.getBlock(packedXYZ);
     }
 
     public short getLiquidLevel(int x, int y, int z) {
+        return getLiquidLevel(Coordinate3Int.pack(x, y, z));
+    }
+
+    public short getLiquidLevel(int packedXYZ) {
         if (!populated)
-            return uniformFill && uniformGeometryType == DynamicGeometryType.LIQUID
+            return isUniformLiquid()
                     ? EngineSetting.LIQUID_LEVEL_MAX
                     : EngineSetting.LIQUID_LEVEL_EMPTY;
-        return liquidLevelPaletteHandle.getBlock(Coordinate3Int.pack(x, y, z));
+        return blockPaletteHandle.getLiquidLevel(packedXYZ);
+    }
+
+    public boolean isLiquidPermanent(int packedXYZ) {
+        if (!populated)
+            return isUniformLiquid();
+        return blockPaletteHandle.isLiquidPermanent(packedXYZ);
+    }
+
+    private boolean isUniformLiquid() {
+        return uniformFill && uniformGeometryType == DynamicGeometryType.LIQUID;
     }
 }

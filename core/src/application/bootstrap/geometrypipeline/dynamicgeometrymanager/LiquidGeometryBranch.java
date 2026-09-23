@@ -127,7 +127,7 @@ class LiquidGeometryBranch extends BranchPackage {
             BitSet accumulatedBatch,
             BitSet batchReturn) {
 
-        short level = subChunkInstance.getLiquidLevelPaletteHandle().getBlock(xyz);
+        short level = blockPaletteHandle.getLiquidLevel(xyz);
 
         byte sizeA = 1;
         byte sizeB = 1;
@@ -205,7 +205,7 @@ class LiquidGeometryBranch extends BranchPackage {
             short comparativeBiomeID = biomePaletteHandle.getBlock(checkXYZ);
             BiomeHandle comparativeBiomeHandle = biomeManager.getBiomeHandleFromBiomeID(comparativeBiomeID);
             short comparativeBlockID = blockPaletteHandle.getBlock(checkXYZ);
-            short comparativeLevel = subChunkInstance.getLiquidLevelPaletteHandle().getBlock(checkXYZ);
+            short comparativeLevel = blockPaletteHandle.getLiquidLevel(checkXYZ);
 
             if (comparativeBlockID != blockHandle.getBlockID() ||
                     comparativeBiomeHandle != biomeHandle ||
