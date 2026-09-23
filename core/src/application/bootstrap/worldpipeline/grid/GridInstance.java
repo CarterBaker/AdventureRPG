@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.grid;
 
 import application.bootstrap.calendarpipeline.clock.ClockInstance;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.oceanpipeline.turbulence.TurbulenceInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.weatherpipeline.temperature.TemperatureInstance;
@@ -29,8 +30,9 @@ public class GridInstance extends InstancePackage {
      * The active spatial grid for a single focal entity — one per window.
      * Owns the load order, slot handles, active chunks/megas, pending
      * load/unload requests, this grid's render queues, and this window's own
-     * cloned location state (clock, weather, wind, and the Time/Sun/Moon/
-     * Sky/Weather-Map/Wind UBO instances) handed to it by GridBuildSystem.
+     * cloned location state (clock, weather, wind, ocean turbulence, and the
+     * Time/Sun/Moon/Sky/Weather-Map/Wind/Ocean UBO instances) handed to it by
+     * GridBuildSystem.
      */
 
     // Focal
@@ -71,6 +73,10 @@ public class GridInstance extends InstancePackage {
     private WindInstance windInstance;
     private UBOInstance windDataUBO;
 
+    // Ocean
+    private TurbulenceInstance turbulenceInstance;
+    private UBOInstance oceanDataUBO;
+
     // Chunk State
     private Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks;
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
@@ -109,7 +115,9 @@ public class GridInstance extends InstancePackage {
             WeatherInstance weatherInstance,
             TemperatureInstance temperatureInstance,
             WindInstance windInstance,
-            UBOInstance windDataUBO) {
+            UBOInstance windDataUBO,
+            TurbulenceInstance turbulenceInstance,
+            UBOInstance oceanDataUBO) {
 
         // Focal
         this.focalEntity = focalEntity;
@@ -148,6 +156,10 @@ public class GridInstance extends InstancePackage {
         // Wind
         this.windInstance = windInstance;
         this.windDataUBO = windDataUBO;
+
+        // Ocean
+        this.turbulenceInstance = turbulenceInstance;
+        this.oceanDataUBO = oceanDataUBO;
 
         // Chunk State
         this.activeChunks = new Long2ObjectLinkedOpenHashMap<>(maxChunks);
@@ -365,6 +377,14 @@ public class GridInstance extends InstancePackage {
 
     public UBOInstance getWindDataUBO() {
         return windDataUBO;
+    }
+
+    public TurbulenceInstance getTurbulenceInstance() {
+        return turbulenceInstance;
+    }
+
+    public UBOInstance getOceanDataUBO() {
+        return oceanDataUBO;
     }
 
     public Long2ObjectLinkedOpenHashMap<ChunkInstance> getActiveChunks() {

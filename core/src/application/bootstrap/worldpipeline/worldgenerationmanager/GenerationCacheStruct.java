@@ -6,14 +6,15 @@ import engine.root.StructPackage;
 /**
  * Per-chunk-column memo of WorldGenerationManager.computeColumn()'s output —
  * the chunk's identity biome, and per block column its ground height, its
- * dressing blocks, and whether it floods below sea level. computeColumn() is a
+ * dressing blocks, and whether the ocean reaches it. computeColumn() is a
  * pure function of (seed, coordinate), so a cache hit and a fresh recompute
  * always produce identical results; this exists purely to skip the noise and
  * biome field work on a GENERATION_DATA reload, never to preserve player-edited
  * state — it never observes a block write, so it carries none. Heights are
  * stored as short rather than int: TERRAIN_MIN/MAX_HEIGHT_BLOCKS bound every
  * value to [24, 900], comfortably inside a short, halving that array's
- * footprint for free.
+ * footprint for free. The tide pass reads the per-column ground height and
+ * ocean reach straight from here, which is why they are exposed per column.
  */
 public class GenerationCacheStruct extends StructPackage {
 
@@ -35,6 +36,7 @@ public class GenerationCacheStruct extends StructPackage {
     private short columnTopBlocks;
 
     private boolean allOceanWater;
+    private boolean hasTidalColumns;
     private boolean allFillBlocksFullGeometry;
 
     // Store \\
@@ -51,6 +53,7 @@ public class GenerationCacheStruct extends StructPackage {
             int columnMaxGroundHeightBlocks,
             int columnTopBlocks,
             boolean allOceanWater,
+            boolean hasTidalColumns,
             boolean allFillBlocksFullGeometry) {
 
         this.cachedChunkCoordinate = chunkCoordinate;
@@ -69,6 +72,7 @@ public class GenerationCacheStruct extends StructPackage {
         this.columnTopBlocks = (short) columnTopBlocks;
 
         this.allOceanWater = allOceanWater;
+        this.hasTidalColumns = hasTidalColumns;
         this.allFillBlocksFullGeometry = allFillBlocksFullGeometry;
 
         this.valid = true;
@@ -114,6 +118,14 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(oceanWater, 0, destination, 0, COLUMN_COUNT);
     }
 
+    public int getGroundHeightBlocks(int columnIndex) {
+        return groundHeightBlocks[columnIndex];
+    }
+
+    public boolean hasOceanWater(int columnIndex) {
+        return oceanWater[columnIndex];
+    }
+
     public int getColumnMinGroundHeightBlocks() {
         return columnMinGroundHeightBlocks;
     }
@@ -128,6 +140,10 @@ public class GenerationCacheStruct extends StructPackage {
 
     public boolean hasAllOceanWater() {
         return allOceanWater;
+    }
+
+    public boolean hasTidalColumns() {
+        return hasTidalColumns;
     }
 
     public boolean hasAllFillBlocksFullGeometry() {

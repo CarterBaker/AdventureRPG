@@ -1,5 +1,6 @@
 {
     "ocean_water": false,
+    "beach_biome": "CliffBeachBiome",
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [250, 290, 340, 400, 470]

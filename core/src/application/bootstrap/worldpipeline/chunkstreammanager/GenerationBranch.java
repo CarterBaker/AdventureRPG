@@ -23,7 +23,9 @@ public class GenerationBranch extends BranchPackage {
      * only ever needs to happen once per chunk for the life of the world, not
      * once per GENERATION_DATA reload. Once every subchunk has generated,
      * StructureManager stamps every structure reaching this chunk into it,
-     * so terrain and structures always publish together. Sets LOAD_DATA,
+     * so terrain and structures always publish together, and the tide surface
+     * the ocean was generated against is recorded on the chunk for the tide
+     * pass. Sets LOAD_DATA,
      * ESSENTIAL_DATA, and GENERATION_DATA on the sync container once the
      * chunk is fully populated. Runs on the WorldStreaming thread.
      */
@@ -110,6 +112,7 @@ public class GenerationBranch extends BranchPackage {
 
         if (success) {
             structureManager.generateStructures(worldHandle, chunkCoordinate, subChunks);
+            chunkInstance.setTideSurfaceLevels(worldGenerationManager.getColumnTideSurfaceLevels(chunkCoordinate));
             container.getData()[essentialIndex] = true;
             container.getData()[generationIndex] = true;
         }

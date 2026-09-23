@@ -365,6 +365,7 @@ public class EngineSetting {
         public static final float BIOME_PATCH_KERNEL_RADIUS_CELLS = 1.25f;
         public static final long BIOME_PATCH_SEED = 0x4F1D2C6E9A7B31F5L;
         public static final int BIOME_PATCH_SAMPLE_COUNT = 9;
+        public static final float BIOME_SHORE_BUFFER_FULL_OCEAN_SHARE = 0.12f;
 
         // Terrain Generation \\
 
@@ -411,6 +412,48 @@ public class EngineSetting {
         public static final double TERRAIN_PV_WAVELENGTH_BLOCKS = 380.0;
         public static final int TERRAIN_SEA_LEVEL_BLOCKS = 160;
         public static final int TERRAIN_SURFACE_DEPTH_BLOCKS = 4;
+
+        // Ocean & Tide \\
+
+        public static final String OCEAN_DATA_UBO = "OceanData";
+        public static final int OCEAN_SPILL_CHUNKS = 2;
+        public static final float OCEAN_REACH_THRESHOLD = BIOME_OCEAN_FLOOD_THRESHOLD
+                        - OCEAN_SPILL_CHUNKS / (BIOME_BLEND_BAND_PIXELS * CHUNKS_PER_PIXEL);
+        public static final float OCEAN_TIDE_AMPLITUDE_BLOCKS = 3.0f;
+        public static final int OCEAN_TIDE_CHUNKS_PER_TICK = 24;
+        public static final int OCEAN_TIDE_LEVEL_STEP = 4;
+        public static final float OCEAN_TIDE_NEAP_AMPLITUDE_RATIO = 0.6f;
+        public static final double OCEAN_TIDE_PEAK_TIME_OF_DAY = 0.0;
+        public static final int OCEAN_TIDE_RANGE_CHUNKS = 16;
+        public static final double OCEAN_TIDE_SPRING_NEAP_PERIOD_DAYS = 14.0;
+        public static final int OCEAN_TIDE_UNAPPLIED = Integer.MIN_VALUE;
+
+        // Ocean Turbulence & Waves \\
+
+        public static final float OCEAN_TURBULENCE_CELL_WEIGHT = 4.0f;
+        public static final float OCEAN_TURBULENCE_GUST_FREQUENCY = 0.05f;
+        public static final float OCEAN_TURBULENCE_GUST_VARIANCE = 0.35f;
+        public static final float OCEAN_TURBULENCE_MAX_STRENGTH = 4.0f;
+        public static final float OCEAN_TURBULENCE_PRECIPITATION_WEIGHT = 0.8f;
+        public static final long OCEAN_TURBULENCE_SEED = 0x3C6EF372FE94F82BL;
+        public static final int OCEAN_TURBULENCE_STRENGTHS_PER_VECTOR = 4;
+        public static final int OCEAN_TURBULENCE_UBO_MAX_ENTRIES = 16;
+        public static final float OCEAN_TURBULENCE_WIND_WEIGHT = 1.0f;
+        public static final float OCEAN_WAVE_AMPLITUDE_PER_TURBULENCE_BLOCKS = 0.18f;
+        public static final float[] OCEAN_WAVE_AMPLITUDE_RATIOS = { 1.0f, 0.55f, 0.35f, 0.2f };
+        public static final float[] OCEAN_WAVE_ANGLES_DEGREES = { 0.0f, 28.0f, -35.0f, 62.0f };
+        public static final float OCEAN_WAVE_BASE_WAVELENGTH_BLOCKS = 24.0f;
+        public static final int OCEAN_WAVE_COUNT = 4;
+        public static final float OCEAN_WAVE_MAX_AMPLITUDE_BLOCKS = 0.9f;
+        public static final float OCEAN_WAVE_SPEED_SCALE = 1.0f;
+        public static final double OCEAN_WAVE_TIME_WRAP_SECONDS = 3600.0;
+        public static final float[] OCEAN_WAVE_WAVELENGTH_RATIOS = { 1.0f, 0.62f, 0.41f, 0.27f };
+        public static final String UNIFORM_OCEAN_SURFACE = "u_oceanSurface";
+        public static final String UNIFORM_OCEAN_TURBULENCE_CELLS = "u_oceanTurbulenceCells";
+        public static final String UNIFORM_OCEAN_TURBULENCE_COUNT = "u_oceanTurbulenceCount";
+        public static final String UNIFORM_OCEAN_TURBULENCE_STRENGTHS = "u_oceanTurbulenceStrengths";
+        public static final String UNIFORM_OCEAN_WAVES = "u_oceanWaves";
+        public static final String UNIFORM_OCEAN_WAVE_SCALE = "u_oceanWaveScale";
 
         // Structure Generation \\
 

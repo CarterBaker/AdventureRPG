@@ -29,6 +29,9 @@ public class ChunkInstance extends WorldRenderInstance {
      * allocated once in create() and reconfigured in place on every reuse rather
      * than reallocated, since a chunk streams in and out of view far too often
      * to pay for a fresh allocation and wrap computation each time.
+     * tideSurfaceLevels is the tide surface this chunk's ocean water was last
+     * written against, so the tide pass only revisits a chunk the tide has
+     * actually moved away from.
      */
 
     // Internal
@@ -48,6 +51,9 @@ public class ChunkInstance extends WorldRenderInstance {
     // Merge Version
     private static final AtomicLong MERGE_VERSION_SEQUENCE = new AtomicLong();
     private volatile long mergeVersion;
+
+    // Tide
+    private int tideSurfaceLevels;
 
     // Internal \\
 
@@ -71,6 +77,9 @@ public class ChunkInstance extends WorldRenderInstance {
 
         // Settings
         this.chunkSize = EngineSetting.CHUNK_SIZE;
+
+        // Tide
+        this.tideSurfaceLevels = EngineSetting.OCEAN_TIDE_UNAPPLIED;
 
         super.create();
     }
@@ -112,6 +121,7 @@ public class ChunkInstance extends WorldRenderInstance {
         getDynamicPacket().clear();
         worldItemInstancePaletteHandle.clear();
         terrainCache.invalidate();
+        tideSurfaceLevels = EngineSetting.OCEAN_TIDE_UNAPPLIED;
 
         for (SubChunkInstance subChunk : subChunks)
             subChunk.reset();
@@ -179,5 +189,13 @@ public class ChunkInstance extends WorldRenderInstance {
 
     public long getMergeVersion() {
         return mergeVersion;
+    }
+
+    public int getTideSurfaceLevels() {
+        return tideSurfaceLevels;
+    }
+
+    public void setTideSurfaceLevels(int tideSurfaceLevels) {
+        this.tideSurfaceLevels = tideSurfaceLevels;
     }
 }

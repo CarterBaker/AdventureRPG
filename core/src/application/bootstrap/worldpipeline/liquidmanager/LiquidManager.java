@@ -26,6 +26,10 @@ public class LiquidManager extends ManagerPackage {
      * write goes through writeLiquid()/clearLiquid(), which wake the cells
      * that could now move into the changed one; a wake that cannot claim its
      * chunk is deferred and retried on the next firing instead of being lost.
+     * The ocean is the one exception: tide() re-levels a chunk's tidal cells
+     * to the live tide through writeTidalLiquid()/clearTidalLiquid(), which
+     * mark the subchunk for rebuild but wake nothing, since the tide moves the
+     * whole body at once rather than flowing from cell to cell.
      */
 
     private static final Direction3Vector[] WAKE_DIRECTIONS = {
@@ -39,6 +43,7 @@ public class LiquidManager extends ManagerPackage {
 
     // Branches
     private LiquidFlowBranch liquidFlowBranch;
+    private LiquidTideBranch liquidTideBranch;
 
     // Settings
     private int worldHeight;
@@ -70,6 +75,7 @@ public class LiquidManager extends ManagerPackage {
         // Branches
         this.liquidFlowBranch = create(LiquidFlowBranch.class);
         create(LiquidBasinBranch.class);
+        this.liquidTideBranch = create(LiquidTideBranch.class);
 
         // Settings
         this.worldHeight = EngineSetting.WORLD_HEIGHT;
@@ -123,6 +129,14 @@ public class LiquidManager extends ManagerPackage {
             throwException("Liquid flow ran on a chunk outside the open chunk tick.");
 
         liquidFlowBranch.flow(chunkInstance, subChunkInstance);
+    }
+
+    public boolean tide(ChunkInstance chunkInstance, int surfaceLevels) {
+
+        if (chunkInstance != tickChunk)
+            throwException("The tide ran on a chunk outside the open chunk tick.");
+
+        return liquidTideBranch.applyTide(chunkInstance, surfaceLevels);
     }
 
     public void endChunkTick() {
@@ -271,6 +285,22 @@ public class LiquidManager extends ManagerPackage {
 
     void deactivate(LiquidCellStruct cell) {
         cell.getSubChunkInstance().deactivateLiquid(cell.getPackedXYZ());
+    }
+
+    void writeTidalLiquid(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int packedXYZ,
+            short liquidBlockID,
+            short level) {
+
+        subChunkInstance.writeTidalLiquid(packedXYZ, liquidBlockID, level);
+        markTouched(chunkInstance, subChunkInstance);
+    }
+
+    void clearTidalLiquid(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance, int packedXYZ) {
+        subChunkInstance.setBlock(packedXYZ, airBlockID);
+        markTouched(chunkInstance, subChunkInstance);
     }
 
     private void commitChange(LiquidCellStruct cell) {

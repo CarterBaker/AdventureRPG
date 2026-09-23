@@ -306,7 +306,8 @@ public class SubChunkInstance extends WorldRenderInstance {
      * A subchunk uniformly filled with one liquid is a single contiguous body
      * spanning its entire volume, so it reads as permanent and settled
      * without ever realizing storage — deep open water never costs a tick of
-     * simulation unless a direct edit breaks its uniformity.
+     * simulation unless a direct edit breaks its uniformity. Only ocean
+     * generation ever produces one, so it also reads as tidal.
      */
     public void markUniformFill(DynamicGeometryType geometryType, short blockID) {
         this.uniformFill = true;
@@ -394,6 +395,28 @@ public class SubChunkInstance extends WorldRenderInstance {
         blockPaletteHandle.setLiquidPermanent(packedXYZ, permanent);
     }
 
+    /*
+     * The single write path for ocean water. Places the liquid if the cell
+     * does not already hold it and marks it permanent and tidal at the given
+     * level, without waking anything — the tide owns this cell's level, not
+     * the flow simulation, which only takes it over once an edit wakes it.
+     */
+    public void writeTidalLiquid(int packedXYZ, short liquidBlockID, short level) {
+
+        ensurePopulated();
+
+        if (blockPaletteHandle.getBlock(packedXYZ) != liquidBlockID)
+            blockPaletteHandle.setBlock(packedXYZ, liquidBlockID);
+
+        knownEmpty = false;
+        uniformFill = false;
+        opaqueInterior = false;
+
+        blockPaletteHandle.setLiquidLevel(packedXYZ, level);
+        blockPaletteHandle.setLiquidPermanent(packedXYZ, true);
+        blockPaletteHandle.setLiquidTidal(packedXYZ, true);
+    }
+
     // Liquid Activity \\
 
     public void activateLiquid(int packedXYZ) {
@@ -477,6 +500,12 @@ public class SubChunkInstance extends WorldRenderInstance {
         if (!populated)
             return isUniformLiquid();
         return blockPaletteHandle.isLiquidPermanent(packedXYZ);
+    }
+
+    public boolean isLiquidTidal(int packedXYZ) {
+        if (!populated)
+            return isUniformLiquid();
+        return blockPaletteHandle.isLiquidTidal(packedXYZ);
     }
 
     private boolean isUniformLiquid() {

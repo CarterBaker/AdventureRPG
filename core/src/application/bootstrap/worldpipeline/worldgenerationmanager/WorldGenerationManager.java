@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.worldgenerationmanager;
 import java.util.concurrent.ConcurrentHashMap;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
+import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
@@ -11,6 +12,7 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
+import application.bootstrap.worldpipeline.util.TideUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
@@ -23,15 +25,19 @@ public class WorldGenerationManager extends ManagerPackage {
     /*
      * Drives per-chunk-column terrain generation. computeColumn() evaluates
      * the biome field once per macro grid point at that point's own world
-     * position, derives ground height, detail response, ocean share, and
+     * position, derives ground height, detail response, coastal share, and
      * dressing blocks from the field there, and interpolates all of it down
      * to the chunk's 256 block columns — so biome influence varies inside a
      * chunk instead of being chosen for the whole chunk at its center, and a
      * grid point on a chunk edge resolves identically from either neighbor.
-     * Whether a column floods below sea level is likewise a per-column
-     * decision, thresholded against the blended ocean share rather than read
-     * off one biome's flag, which is what lets a shoreline cut diagonally
-     * across a chunk and lets a dry biome keep a below-sea-level valley.
+     * Whether the ocean reaches a column is likewise a per-column decision,
+     * thresholded against the blended share of ocean and shore buffer rather
+     * than read off one biome's flag and lowered by OCEAN_SPILL_CHUNKS so the
+     * sea laps a little past its beaches, which is what lets a shoreline cut
+     * diagonally across a chunk and lets a dry biome keep a below-sea-level
+     * valley. A reached column floods up to the live tide surface captured
+     * for the chunk when its column is computed, and every ocean cell is
+     * written tidal so the tide pass can raise and lower it afterwards.
      * generateSubChunk() then classifies each subchunk against that data
      * before any storage is realized, so a subchunk entirely above every
      * column's terrain stays knownEmpty and one entirely below the surface
@@ -51,6 +57,7 @@ public class WorldGenerationManager extends ManagerPackage {
     // Internal
     private BlockManager blockManager;
     private BiomeManager biomeManager;
+    private TideManager tideManager;
 
     private TerrainColumnAsyncContainer terrainColumnContainer;
     private TerrainColumnAsyncContainer probeColumnContainer;
@@ -76,6 +83,7 @@ public class WorldGenerationManager extends ManagerPackage {
     protected void get() {
         this.blockManager = get(BlockManager.class);
         this.biomeManager = get(BiomeManager.class);
+        this.tideManager = get(TideManager.class);
     }
 
     @Override
@@ -90,6 +98,7 @@ public class WorldGenerationManager extends ManagerPackage {
     public void computeColumn(WorldHandle worldHandle, long chunkCoordinate, GenerationCacheStruct terrainCache) {
 
         TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();
+        column.tideSurfaceLevels = tideManager.getSurfaceLevels();
 
         if (terrainCache.isValidFor(chunkCoordinate)) {
             applyCachedColumn(column, worldHandle, chunkCoordinate, terrainCache);
@@ -129,6 +138,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 column.columnMaxGroundHeightBlocks,
                 column.columnTopBlocks,
                 column.allOceanWater,
+                column.hasTidalColumns,
                 column.allFillBlocksFullGeometry);
     }
 
@@ -165,7 +175,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
                 column.macroDetailAmplitudeGrid[index] = TerrainShapeUtility.computeDetailAmplitudeBlocks(blend);
                 column.macroDetailWavelengthGrid[index] = TerrainShapeUtility.computeDetailWavelengthBlocks(blend);
-                column.macroOceanWeightGrid[index] = blend.getOceanWeight();
+                column.macroCoastalWeightGrid[index] = blend.getCoastalWeight();
 
                 BiomeHandle dominantBiome = blend.getDominantBiome();
                 TerrainSurfaceProfile profile = resolveSurfaceProfile(dominantBiome);
@@ -212,7 +222,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
     /*
      * Interpolates the grids down to the chunk's 256 block columns. Height and
-     * ocean share interpolate as scalars so both stay smooth; dressing blocks
+     * coastal share interpolate as scalars so both stay smooth; dressing blocks
      * cannot interpolate, so each column draws its profile from one of the
      * four surrounding grid points chosen by a position-hashed roll against
      * their bilinear weights. Where those four agree — everywhere but within
@@ -225,12 +235,11 @@ public class WorldGenerationManager extends ManagerPackage {
             long seed,
             long worldOffsetX, long worldOffsetZ) {
 
-        int seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
-
         int maxGroundHeight = Integer.MIN_VALUE;
         int minGroundHeight = Integer.MAX_VALUE;
         int columnTop = Integer.MIN_VALUE;
         boolean allOceanWater = true;
+        boolean hasTidalColumns = false;
 
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {
             for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
@@ -250,7 +259,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 column.columnSubsurfaceBlockID[columnIndex] = column.macroSubsurfaceBlockIDGrid[cornerIndex];
                 column.columnUnderwaterBlockID[columnIndex] = column.macroUnderwaterBlockIDGrid[cornerIndex];
 
-                int top = oceanWater ? Math.max(groundHeight, seaLevel) : groundHeight;
+                int top = oceanWater ? Math.max(groundHeight, TideUtility.BAND_MAX_Y) : groundHeight;
 
                 if (groundHeight > maxGroundHeight)
                     maxGroundHeight = groundHeight;
@@ -263,6 +272,8 @@ public class WorldGenerationManager extends ManagerPackage {
 
                 if (!oceanWater)
                     allOceanWater = false;
+                else if (groundHeight < TideUtility.BAND_MAX_Y)
+                    hasTidalColumns = true;
             }
         }
 
@@ -270,6 +281,7 @@ public class WorldGenerationManager extends ManagerPackage {
         column.columnMinGroundHeightBlocks = minGroundHeight;
         column.columnTopBlocks = columnTop;
         column.allOceanWater = allOceanWater;
+        column.hasTidalColumns = hasTidalColumns;
     }
 
     private int resolveGroundHeight(TerrainColumnAsyncContainer column, int localX, int localZ) {
@@ -281,8 +293,8 @@ public class WorldGenerationManager extends ManagerPackage {
     }
 
     private boolean resolveOceanWater(TerrainColumnAsyncContainer column, int localX, int localZ) {
-        return sampleMacroBilinear(column.macroOceanWeightGrid, localX, localZ)
-                > EngineSetting.BIOME_OCEAN_FLOOD_THRESHOLD;
+        return sampleMacroBilinear(column.macroCoastalWeightGrid, localX, localZ)
+                > EngineSetting.OCEAN_REACH_THRESHOLD;
     }
 
     private void applyCachedColumn(
@@ -304,6 +316,7 @@ public class WorldGenerationManager extends ManagerPackage {
         column.columnTopBlocks = terrainCache.getColumnTopBlocks();
 
         column.allOceanWater = terrainCache.hasAllOceanWater();
+        column.hasTidalColumns = terrainCache.hasTidalColumns();
         column.allFillBlocksFullGeometry = terrainCache.hasAllFillBlocksFullGeometry();
 
         column.computedWorldHandle = worldHandle;
@@ -511,7 +524,9 @@ public class WorldGenerationManager extends ManagerPackage {
             return true;
         }
 
-        if (column.allOceanWater && offsetY > column.columnMaxGroundHeightBlocks && subChunkTopY <= seaLevel) {
+        if (column.allOceanWater
+                && offsetY > column.columnMaxGroundHeightBlocks
+                && subChunkTopY < TideUtility.BAND_MIN_Y) {
             subChunkInstance.markUniformFill(DynamicGeometryType.LIQUID, waterBlockId);
             return true;
         }
@@ -519,6 +534,8 @@ public class WorldGenerationManager extends ManagerPackage {
         BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
 
         int beachRange = EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
+        int tideSurfaceLevels = column.tideSurfaceLevels;
+        int topWaterY = TideUtility.getTopWaterY(tideSurfaceLevels);
 
         short uniformBlockID = airBlockId;
         boolean uniformKnown = false;
@@ -532,7 +549,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
                 int groundHeight = column.groundHeightBlocks[columnIndex];
                 boolean oceanWater = column.columnOceanWater[columnIndex];
-                int columnTop = oceanWater ? Math.max(groundHeight, seaLevel) : groundHeight;
+                int columnTop = oceanWater ? Math.max(groundHeight, topWaterY) : groundHeight;
 
                 if (offsetY > columnTop) {
                     hasAirOrWater = true;
@@ -566,11 +583,13 @@ public class WorldGenerationManager extends ManagerPackage {
                         resultBlockID = airBlockId;
                         hasAirOrWater = true;
                     } else if (worldY > groundHeight) {
+                        short level = TideUtility.getFillLevel(tideSurfaceLevels, worldY);
                         resultBlockID = waterBlockId;
                         hasAirOrWater = true;
-                        int packedXYZ = Coordinate3Int.pack(localX, localY, localZ);
-                        blocks.setBlock(packedXYZ, waterBlockId);
-                        blocks.setLiquidPermanent(packedXYZ, true);
+                        subChunkInstance.writeTidalLiquid(
+                                Coordinate3Int.pack(localX, localY, localZ), waterBlockId, level);
+                        if (level < EngineSetting.LIQUID_LEVEL_MAX)
+                            isUniform = false;
                     } else if (worldY == groundHeight) {
                         resultBlockID = topBlockID;
                         blocks.setBlock(localX, localY, localZ, topBlockID);
@@ -621,6 +640,10 @@ public class WorldGenerationManager extends ManagerPackage {
 
     public int getColumnGroundHeight(long chunkCoordinate, int localX, int localZ) {
         return requireComputedColumn(chunkCoordinate).groundHeightBlocks[localZ * CHUNK_SIZE + localX];
+    }
+
+    public int getColumnTideSurfaceLevels(long chunkCoordinate) {
+        return requireComputedColumn(chunkCoordinate).tideSurfaceLevels;
     }
 
     // Surface Profile \\

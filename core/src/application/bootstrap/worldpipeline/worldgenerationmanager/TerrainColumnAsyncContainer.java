@@ -13,13 +13,14 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
      * macro grid point at that point's true world position — never once per
      * chunk — and everything that depends on biome is derived there, so a
      * grid point shared with the neighboring chunk resolves identically from
-     * either side. Shape, detail amplitude and wavelength, ocean share, and
+     * either side. Shape, detail amplitude and wavelength, coastal share, and
      * the dominant biome's dressing blocks are all carried per grid point and
      * interpolated down to the 256 block columns, which is what lets a single
      * chunk hold both sides of a coastline or a biome border without a step
      * anywhere in it. WorldGenerationManager.computeColumn() fills this once
-     * per chunk; every generateSubChunk() call for that chunk reads from it
-     * instead of re-running the terrain noise stack.
+     * per chunk, together with the tide surface that chunk generates its
+     * ocean against; every generateSubChunk() call for that chunk reads from
+     * it instead of re-running the terrain noise stack.
      */
 
     static final int COLUMN_COUNT = EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
@@ -43,7 +44,7 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     float[] macroShapeGridBlocks;
     float[] macroDetailAmplitudeGrid;
     float[] macroDetailWavelengthGrid;
-    float[] macroOceanWeightGrid;
+    float[] macroCoastalWeightGrid;
     short[] macroBiomeIDGrid;
     short[] macroSurfaceBlockIDGrid;
     short[] macroSubsurfaceBlockIDGrid;
@@ -66,7 +67,11 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
 
     short biomeID;
     boolean allOceanWater;
+    boolean hasTidalColumns;
     boolean allFillBlocksFullGeometry;
+
+    // Tide
+    int tideSurfaceLevels;
 
     @Override
     protected void create() {
@@ -79,7 +84,7 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
         this.macroShapeGridBlocks = new float[MACRO_SAMPLE_COUNT];
         this.macroDetailAmplitudeGrid = new float[MACRO_SAMPLE_COUNT];
         this.macroDetailWavelengthGrid = new float[MACRO_SAMPLE_COUNT];
-        this.macroOceanWeightGrid = new float[MACRO_SAMPLE_COUNT];
+        this.macroCoastalWeightGrid = new float[MACRO_SAMPLE_COUNT];
         this.macroBiomeIDGrid = new short[MACRO_SAMPLE_COUNT];
         this.macroSurfaceBlockIDGrid = new short[MACRO_SAMPLE_COUNT];
         this.macroSubsurfaceBlockIDGrid = new short[MACRO_SAMPLE_COUNT];

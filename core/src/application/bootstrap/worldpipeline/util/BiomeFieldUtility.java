@@ -176,6 +176,28 @@ public final class BiomeFieldUtility extends EngineUtility {
         return count;
     }
 
+    // Shore Buffer \\
+
+    /*
+     * Share of a land biome's weight handed to its beach at a position the
+     * ocean holds oceanWeight of. Zero where no ocean reaches, rising along a
+     * smooth curve to the whole share once the ocean holds
+     * BIOME_SHORE_BUFFER_FULL_OCEAN_SHARE, so a beach grows out of the land
+     * edge of the blend band and meets the sea floor without a crease.
+     */
+    public static float computeShoreBufferFraction(float oceanWeight) {
+
+        float t = oceanWeight / EngineSetting.BIOME_SHORE_BUFFER_FULL_OCEAN_SHARE;
+
+        if (t <= 0f)
+            return 0f;
+
+        if (t >= 1f)
+            return 1f;
+
+        return t * t * (3f - 2f * t);
+    }
+
     // Hashing \\
 
     public static long hashCell(long seed, int cellX, int cellZ) {

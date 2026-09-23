@@ -28,7 +28,8 @@ class BiomeBuilder extends BuilderPackage {
      * block, "map_color", "probable_biomes", surface/subsurface/underwater block
      * names, the boolean "ocean_water" flag that gates whether this biome's
      * below-sea-level terrain is flooded at all (see WorldGenerationManager),
-     * and the terrain
+     * the optional "beach_biome" BiomeManager inserts wherever this biome
+     * borders an ocean, and the terrain
      * shape controls — "continentalness_spline", "erosion_spline",
      * "peaks_valleys_spline",
      * "detail_amplitude_blocks", "detail_wavelength_blocks", and
@@ -70,6 +71,7 @@ class BiomeBuilder extends BuilderPackage {
                 json, "underwater_block", EngineSetting.DEFAULT_UNDERWATER_BLOCK_NAME);
 
         boolean oceanWater = JsonUtility.getBoolean(json, "ocean_water", false);
+        String beachBiomeName = parseBeachBiomeName(json, biomeName, oceanWater);
 
         LinearSpline continentalnessSpline = parseSpline(
                 json, "continentalness_spline", "x", "height_blocks",
@@ -105,7 +107,7 @@ class BiomeBuilder extends BuilderPackage {
                 surfaceBlockName, subsurfaceBlockName, underwaterBlockName,
                 continentalnessSpline, erosionSpline, peaksValleysSpline,
                 detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale,
-                oceanWater);
+                oceanWater, beachBiomeName);
 
         BiomeHandle biomeHandle = create(BiomeHandle.class);
         biomeHandle.constructor(biomeData);
@@ -220,6 +222,25 @@ class BiomeBuilder extends BuilderPackage {
             outNames.add(variantName);
             outChances.add(chance);
         }
+    }
+
+    // Beach Biome Parsing \\
+
+    private String parseBeachBiomeName(JsonObject json, String biomeName, boolean oceanWater) {
+
+        if (!json.has("beach_biome"))
+            return null;
+
+        String beachBiomeName = json.get("beach_biome").getAsString();
+
+        if (oceanWater)
+            throwException("Biome \"" + biomeName + "\" is an ocean and declares \"beach_biome\" \""
+                    + beachBiomeName + "\" — beaches are declared by the land biomes an ocean borders.");
+
+        if (beachBiomeName.equals(biomeName))
+            throwException("Biome \"" + biomeName + "\" declares itself as its own \"beach_biome\".");
+
+        return beachBiomeName;
     }
 
     // Terrain Shape Parsing \\
