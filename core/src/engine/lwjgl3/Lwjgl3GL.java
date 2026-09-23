@@ -386,6 +386,10 @@ class Lwjgl3GL implements GL40 {
         GL30C.glBindFramebuffer(target, framebuffer);
     }
 
+    public void glDeleteFramebuffer(int framebuffer) {
+        GL30C.glDeleteFramebuffers(framebuffer);
+    }
+
     public void glFramebufferTexture2D(int target, int attachment, int textarget, int texture, int level) {
         GL30C.glFramebufferTexture2D(target, attachment, textarget, texture, level);
     }

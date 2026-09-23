@@ -137,6 +137,10 @@ public class FboRenderSystem extends SystemPackage {
         window2BlitQueue.remove(window);
     }
 
+    public void removeBlitModel(FboInstance fbo) {
+        fbo2BlitModel.remove(fbo);
+    }
+
     // Internal \\
 
     private FBODestinationStruct resolveDestRect(WindowInstance window, FBODestinationStruct destRect) {

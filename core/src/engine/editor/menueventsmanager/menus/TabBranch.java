@@ -29,10 +29,13 @@ public class TabBranch extends BranchPackage {
      * if hover moves elsewhere mid-drag.
      *
      * window_frame (on_drag → onTabFrameDrag(WindowInstance)):
-     * Handles BSP divider resize only. On the first drag frame it calls
-     * findDividerAt — if no divider is found the gesture is ignored entirely,
-     * so dragging the tab background never accidentally triggers a tab move.
-     * Window-edge resize is handled natively by the OS.
+     * Handles BSP divider resize only. The divider is the one hover found
+     * under the cursor when the press landed — onTabFrameHover() tracks it
+     * every frame for cursor feedback, and hover callbacks stop while a drag
+     * is latched — so a fast gesture that has already moved off the divider
+     * by the first drag frame still grabs it. No divider means the gesture is
+     * ignored entirely, so dragging the tab background never accidentally
+     * triggers a tab move. Window-edge resize is handled natively by the OS.
      *
      * tab_toolbar (on_drag → onTabToolbarDrag(WindowInstance)):
      * Delegates entirely to TabDragManager, passing the exact window the
@@ -44,7 +47,8 @@ public class TabBranch extends BranchPackage {
      * because draggedHandle is already set.
      *
      * isDividerDrag is set on the first frame a divider is confirmed and held
-     * until mouse release.
+     * until mouse release, even if the cursor leaves the frame mid-drag. The
+     * finished ratio is persisted through tabManager.notifyLayoutChanged().
      *
      * getHoverMouseX/Y is used in checkResizeCursor — hover callbacks must not
      * gate on focus so an unfocused tab still shows correct cursor feedback.
@@ -52,6 +56,9 @@ public class TabBranch extends BranchPackage {
      * onTabFrameHoverExit is wired to window_frame only. If the cursor moves
      * from window_frame into tab_toolbar the exit fires and clears the cursor,
      * which is correct because the toolbar area should not show resize feedback.
+     *
+     * Cursor sprites are resolved in awake() — this branch is owned by the
+     * editor bootstrap, so get() only resolves systems.
      */
 
     // Internal
@@ -66,6 +73,7 @@ public class TabBranch extends BranchPackage {
     private SpriteHandle cursorResizeV;
 
     // Divider drag state
+    private DockNodeStruct hoveredDivider;
     private DockNodeStruct dragNode;
     private WindowInstance dragWindow;
     private boolean isDividerDrag;
@@ -79,6 +87,10 @@ public class TabBranch extends BranchPackage {
         this.spriteManager = get(SpriteManager.class);
         this.dockLayoutSystem = get(DockLayoutSystem.class);
         this.tabDragManager = get(TabDragManager.class);
+    }
+
+    @Override
+    protected void awake() {
         this.cursorResizeH = spriteManager.getSpriteHandleFromSpriteName(EditorSetting.CURSOR_RESIZE_H);
         this.cursorResizeV = spriteManager.getSpriteHandleFromSpriteName(EditorSetting.CURSOR_RESIZE_V);
     }
@@ -105,10 +117,10 @@ public class TabBranch extends BranchPackage {
         float localX = window.getCompositeX() + mouseX;
         float localY = window.getCompositeY() + mouseY;
 
-        DockNodeStruct divider = dockLayoutSystem.findDividerAt(window.getGLWindow(), localX, localY);
+        hoveredDivider = dockLayoutSystem.findDividerAt(window.getGLWindow(), localX, localY);
 
-        if (divider != null) {
-            inputManager.setCursorSprite(divider.isSplitHorizontal() ? cursorResizeV : cursorResizeH);
+        if (hoveredDivider != null) {
+            inputManager.setCursorSprite(hoveredDivider.isSplitHorizontal() ? cursorResizeV : cursorResizeH);
             return;
         }
 
@@ -116,7 +128,7 @@ public class TabBranch extends BranchPackage {
     }
 
     public void onTabFrameHoverExit() {
-        dragNode = null;
+        hoveredDivider = null;
         inputManager.clearCursor();
     }
 
@@ -127,14 +139,10 @@ public class TabBranch extends BranchPackage {
 
         if (!isDividerDrag) {
 
-            float localX = window.getCompositeX() + inputManager.getHoverMouseX(window);
-            float localY = window.getCompositeY() + inputManager.getHoverMouseY(window);
-
-            dragNode = dockLayoutSystem.findDividerAt(window.getGLWindow(), localX, localY);
-
-            if (dragNode == null)
+            if (hoveredDivider == null)
                 return; // Not a divider — nothing for the background drag to do.
 
+            dragNode = hoveredDivider;
             dragWindow = window;
             isDividerDrag = true;
         }
@@ -177,6 +185,7 @@ public class TabBranch extends BranchPackage {
         dragNode = null;
         dragWindow = null;
         isDividerDrag = false;
+        tabManager.notifyLayoutChanged();
     }
 
     // Resize Cursor \\

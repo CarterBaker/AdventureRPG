@@ -1,88 +1,68 @@
 package engine.editor;
 
+import application.bootstrap.menupipeline.canvas.CanvasInstance;
+import application.bootstrap.menupipeline.elementhitsystem.ElementHitSystem;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
+import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.SystemPackage;
 
 public class EditorMenuSystem extends SystemPackage {
 
     /*
-     * Opens two menus against two logical windows on the main window's GL context.
-     *
-     * Base window (zOrder 0, inherited from the main OS window) — background
-     * sprite and dock canvas area. This is what EditorTabCompositorSystem reads
-     * for dock bounds.
-     *
-     * Toolbar window — toolbar chrome only, brought to front once at creation
-     * so it starts above anything already open. It never needs to be brought
-     * to front again: tabs live in the dock canvas region and the toolbar
-     * lives in its own strip, so their rects never overlap and their relative
-     * zOrder never matters for rendering or hit-testing. Each window gets its
-     * own cloned FBO so they write to separate render targets and neither
-     * overwrites the other.
-     *
-     * Toolbar rect is mirrored from the main window dimensions each frame.
-     * The OS window has no compositeRect — its source of truth is getWidth()
-     * and getHeight(). Fires only when dimensions change.
-     *
-     * captureEligible(false) + focusIndependent(true) mean the toolbar never
-     * pins the cursor and always receives hover-driven input regardless of
-     * which window currently owns engine-wide focus.
+     * Owns the editor chrome of the OS window its context is paired with. The
+     * base menu (background and dock canvas) renders on the OS window itself;
+     * the toolbar lives in its own logical window so its dropdowns composite
+     * above tabs. Each frame the dock canvas is published to TabManager and
+     * the toolbar window is kept sized to the OS window, re-raised whenever
+     * anything has been brought up over it, and given an input rect: the strip
+     * above the dock canvas while idle, so it never covers the tabs hover and
+     * focus resolve against, and the whole window while one of its dropdowns
+     * is hovered open. Only input changes — the toolbar is never resized for
+     * it, so its FBO and layout stay stable.
      */
 
     // Internal
     private WindowManager windowManager;
     private MenuManager menuManager;
+    private ElementHitSystem elementHitSystem;
     private FboManager fboManager;
-
-    // Windows
-    private WindowInstance mainWindow;
-    private WindowInstance toolbarWindow;
+    private TabManager tabManager;
 
     // Menus
     private MenuInstance baseMenu;
     private MenuInstance toolbarMenu;
 
-    // Cached Toolbar Rect
-    private int lastW;
-    private int lastH;
-
-    // Internal \\
+    // Base \\
 
     @Override
     protected void get() {
-
-        // Internal
-        windowManager = get(WindowManager.class);
-        menuManager = get(MenuManager.class);
-        fboManager = get(FboManager.class);
+        this.windowManager = get(WindowManager.class);
+        this.menuManager = get(MenuManager.class);
+        this.elementHitSystem = get(ElementHitSystem.class);
+        this.fboManager = get(FboManager.class);
+        this.tabManager = get(TabManager.class);
     }
 
     @Override
     protected void awake() {
 
-        mainWindow = windowManager.getMainWindow();
+        WindowInstance osWindow = context.getWindow();
 
-        // Base — background + dock canvas
-        FboInstance baseFbo = fboManager.getFbo(RuntimeSetting.FBO_UI);
-        menuManager.setMenuTargetFbo(mainWindow, baseFbo);
-        baseMenu = menuManager.openMenu(EditorSetting.MENU_EDITOR_BASE, mainWindow);
+        menuManager.setMenuTargetFbo(osWindow, fboManager.cloneFbo(RuntimeSetting.FBO_UI, osWindow));
+        this.baseMenu = menuManager.openMenu(EditorSetting.MENU_EDITOR_BASE, osWindow);
+        this.toolbarMenu = menuManager.openMenuWindow(EditorSetting.MENU_EDITOR_TOOLBAR, osWindow);
+    }
 
-        // Toolbar — own logical window, own cloned FBO, always receives input
-        toolbarWindow = windowManager.createLogicalWindow(
-                EditorSetting.WINDOW_TITLE_EDITOR_TOOLBAR, mainWindow);
-        toolbarWindow.setCaptureEligible(false);
-        toolbarWindow.setFocusIndependent(true);
-        windowManager.bringToFront(toolbarWindow);
-
-        FboInstance toolbarFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, toolbarWindow);
-        menuManager.setMenuTargetFbo(toolbarWindow, toolbarFbo);
-        toolbarMenu = menuManager.openMenu(EditorSetting.MENU_EDITOR_TOOLBAR, toolbarWindow);
+    @Override
+    protected void dispose() {
+        menuManager.closeMenuWindow(toolbarMenu);
+        menuManager.closeMenu(baseMenu);
+        menuManager.setMenuTargetFbo(context.getWindow(), null);
     }
 
     // Update \\
@@ -90,33 +70,40 @@ public class EditorMenuSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        int w = mainWindow.getWidth();
-        int h = mainWindow.getHeight();
+        WindowInstance osWindow = context.getWindow();
 
-        if (w <= 0 || h <= 0)
+        syncDockRect(osWindow);
+        syncToolbar(osWindow);
+    }
+
+    private void syncDockRect(WindowInstance osWindow) {
+
+        CanvasInstance canvas = baseMenu.getCanvas();
+
+        if (canvas == null)
             return;
 
-        if (w == lastW && h == lastH)
-            return;
-
-        lastW = w;
-        lastH = h;
-
-        toolbarWindow.setCompositeRect(0, 0, w, h);
-        toolbarWindow.resize(w, h);
+        tabManager.setDockRect(osWindow, canvas.getX(), canvas.getY(), canvas.getW(), canvas.getH());
     }
 
-    // Accessible \\
+    private void syncToolbar(WindowInstance osWindow) {
 
-    public MenuInstance getBaseMenu() {
-        return baseMenu;
+        WindowInstance toolbarWindow = toolbarMenu.getWindow();
+        int w = osWindow.getWidth();
+        int h = osWindow.getHeight();
+
+        if (w > 0 && h > 0 && (w != toolbarWindow.getWidth() || h != toolbarWindow.getHeight()))
+            toolbarWindow.place(0, 0, w, h);
+
+        float inputTop = elementHitSystem.getHoveredMenu() == toolbarMenu ? 0f : getDockTop();
+        toolbarWindow.setInputRect(0, inputTop, w, h - inputTop);
+
+        if (!windowManager.isFrontmost(toolbarWindow))
+            windowManager.bringToFront(toolbarWindow);
     }
 
-    public MenuInstance getToolbarMenu() {
-        return toolbarMenu;
-    }
-
-    public WindowInstance getToolbarWindow() {
-        return toolbarWindow;
+    private float getDockTop() {
+        CanvasInstance canvas = baseMenu.getCanvas();
+        return canvas != null ? canvas.getY() + canvas.getH() : 0f;
     }
 }

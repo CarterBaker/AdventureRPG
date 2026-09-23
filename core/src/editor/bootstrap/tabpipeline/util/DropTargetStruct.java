@@ -9,9 +9,10 @@ public class DropTargetStruct extends StructPackage {
     /*
      * Resolved drop destination for the current drag frame. Holds the OS window
      * the cursor is over, the BSP leaf under the cursor, and which quadrant of
-     * that leaf the cursor occupies. Null leaf means the cursor is over an OS
-     * window but outside any valid leaf — treated as a no-drop frame. Null
-     * instance means the cursor is outside all OS windows — drop opens a new one.
+     * that leaf the cursor occupies. Null leaf (and zone) means the cursor is
+     * over an OS window but outside every leaf — the drop docks into that
+     * window's largest leaf, or becomes its first tab. No target at all means
+     * the cursor is outside every OS window — the drop opens a new one.
      */
 
     // Target

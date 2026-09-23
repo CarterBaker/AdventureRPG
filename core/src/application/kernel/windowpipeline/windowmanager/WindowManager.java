@@ -59,30 +59,27 @@ public class WindowManager extends ManagerPackage {
 
         syncHoveredWindows();
 
+        // A destroyed OS window takes every window composited onto it along,
+        // so the index is clamped back into range after each teardown.
         for (int i = windows.size() - 1; i >= 0; i--) {
+
             WindowInstance window = windows.get(i);
-            if (window == mainWindow)
-                continue;
-            if (!window.hasNativeHandle())
-                continue;
+
             if (!internal.windowPlatform.shouldClose(window))
                 continue;
-            internal.windowPlatform.makeContextCurrent(window);
-            window.dispose();
-            internal.windowPlatform.destroyWindow(window);
+
+            destroyOsWindow(window);
+            i = Math.min(i, windows.size());
         }
     }
 
     @Override
     protected void dispose() {
-        for (int i = windows.size() - 1; i >= 0; i--) {
-            WindowInstance window = windows.get(i);
-            if (window == mainWindow || !window.hasNativeHandle())
-                continue;
-            internal.windowPlatform.makeContextCurrent(window);
-            window.dispose();
-            internal.windowPlatform.destroyWindow(window);
-        }
+
+        ObjectArrayList<WindowInstance> snapshot = new ObjectArrayList<>(windows);
+
+        for (int i = snapshot.size() - 1; i >= 0; i--)
+            destroyOsWindow(snapshot.get(i));
     }
 
     private void syncHoveredWindows() {
@@ -125,7 +122,7 @@ public class WindowManager extends ManagerPackage {
                     continue;
                 if (logical.getCompositeTarget() != w)
                     continue;
-                if (isMouseOver(logical, mx, my))
+                if (logical.acceptsInputAt(mx, my))
                     hoveredWindows.add(logical);
             }
         }
@@ -142,13 +139,6 @@ public class WindowManager extends ManagerPackage {
         return w.hasNativeHandle()
                 ? (long) w.getWidth() * w.getHeight()
                 : (long) w.getCompositeW() * (long) w.getCompositeH();
-    }
-
-    private boolean isMouseOver(WindowInstance w, float mx, float my) {
-        return mx >= w.getCompositeX()
-                && mx < w.getCompositeX() + w.getCompositeW()
-                && my >= w.getCompositeY()
-                && my < w.getCompositeY() + w.getCompositeH();
     }
 
     // Registration \\
@@ -226,6 +216,24 @@ public class WindowManager extends ManagerPackage {
         window.setZOrder(nextZOrder++);
     }
 
+    /*
+     * True when no other window composited onto the same OS window sits above
+     * the given one. Lets persistent chrome re-raise itself only when something
+     * has actually been brought up over it.
+     */
+    public boolean isFrontmost(WindowInstance window) {
+
+        WindowInstance glWindow = window.getGLWindow();
+
+        for (int i = 0; i < windows.size(); i++) {
+            WindowInstance other = windows.get(i);
+            if (other.getGLWindow() == glWindow && other.getZOrder() > window.getZOrder())
+                return false;
+        }
+
+        return true;
+    }
+
     // Render / context frame tracking \\
 
     public void beginRenderWindow(WindowInstance window) {
@@ -296,8 +304,14 @@ public class WindowManager extends ManagerPackage {
         return mainWindow != null;
     }
 
+    /*
+     * The one way a logical window changes OS windows. Render resources bound
+     * to the previous OS window's GL context are migrated in the same call.
+     */
     public void reparentWindow(WindowInstance window, WindowInstance newParent) {
+        WindowInstance previousGLWindow = window.getGLWindow();
         window.setCompositeTarget(newParent);
+        window.migrateRenderResources(previousGLWindow);
     }
 
     // Validation \\
@@ -321,6 +335,11 @@ public class WindowManager extends ManagerPackage {
         return false;
     }
 
+    /*
+     * The one teardown path for an OS window — explicit close requests, the
+     * platform close button, and engine shutdown all route through here, so
+     * the main GL context is always restored after the window is gone.
+     */
     public void destroyOsWindow(WindowInstance window) {
         if (window == null || window == mainWindow || !window.hasNativeHandle())
             return;

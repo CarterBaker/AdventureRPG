@@ -227,9 +227,20 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushSkinnedCall(meshHandle, material, modelMatrix, skinningMatrices, fbo, window);
     }
 
+    // Window Resources \\
+
+    public void resizeWindowResources(WindowInstance window) {
+        fboManager.resizeWindowRelative(window, window.getWidth(), window.getHeight());
+    }
+
+    public void migrateWindowResources(WindowInstance window, WindowInstance previousGLWindow) {
+        fboManager.migrateWindowFbos(window, previousGLWindow);
+    }
+
     public void removeWindowResources(WindowInstance window) {
         renderSystem.removeWindowResources(window);
         fboRenderSystem.removeWindowResources(window);
+        fboManager.releaseWindowFbos(window);
     }
 
     // Internal \\

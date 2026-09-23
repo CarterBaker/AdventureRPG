@@ -65,6 +65,7 @@ public class ElementHitSystem extends SystemPackage {
     private ElementInstance hoveredElement;
     private ElementInstance draggedElement;
     private ElementInstance openClickState;
+    private MenuInstance hoveredElementMenu;
     private WindowInstance hoveredElementWindow;
     private WindowInstance draggedElementWindow;
     private WindowInstance openClickStateWindow;
@@ -169,6 +170,7 @@ public class ElementHitSystem extends SystemPackage {
 
         // Walk windows in priority order — first element hit across any window wins.
         ElementInstance nextElement = null;
+        MenuInstance nextMenu = null;
         WindowInstance nextWindow = null;
 
         outer: for (int i = 0; i < hoveredWindows.size(); i++) {
@@ -192,6 +194,7 @@ public class ElementHitSystem extends SystemPackage {
                         menu.getElements(), mx, my, 0, 0, window.getWidth(), window.getHeight());
                 if (hit != null) {
                     nextElement = hit;
+                    nextMenu = menu;
                     nextWindow = window;
                     break outer;
                 }
@@ -208,6 +211,7 @@ public class ElementHitSystem extends SystemPackage {
             return;
 
         hoveredElement = nextElement;
+        hoveredElementMenu = nextMenu;
         hoveredElementWindow = nextWindow;
         hoveredElement.setHovered(true);
 
@@ -216,7 +220,7 @@ public class ElementHitSystem extends SystemPackage {
             hoveredElement.setActiveHoverState(enterState);
             if (enterState.hasAction())
                 executeCallback(enterState.getActionClass(), enterState.getActionMethod(),
-                        enterState.getActionArg(), null, hoveredElementWindow, hoveredElement);
+                        enterState.getActionArg(), hoveredElementMenu, hoveredElementWindow, hoveredElement);
         }
 
         // Immediately transition to hoverState if defined
@@ -231,10 +235,11 @@ public class ElementHitSystem extends SystemPackage {
             hoveredElement.setActiveHoverState(exitState);
             if (exitState.hasAction())
                 executeCallback(exitState.getActionClass(), exitState.getActionMethod(),
-                        exitState.getActionArg(), null, hoveredElementWindow, hoveredElement);
+                        exitState.getActionArg(), hoveredElementMenu, hoveredElementWindow, hoveredElement);
         }
         hoveredElement.setHovered(false);
         hoveredElement = null;
+        hoveredElementMenu = null;
         hoveredElementWindow = null;
     }
 
@@ -247,7 +252,7 @@ public class ElementHitSystem extends SystemPackage {
         hoveredElement.setActiveHoverState(hoverState);
         if (hoverState.hasAction())
             executeCallback(hoverState.getActionClass(), hoverState.getActionMethod(),
-                    hoverState.getActionArg(), null, hoveredElementWindow, hoveredElement);
+                    hoverState.getActionArg(), hoveredElementMenu, hoveredElementWindow, hoveredElement);
     }
 
     private void clearHover() {
@@ -256,6 +261,7 @@ public class ElementHitSystem extends SystemPackage {
         hoveredElement.clearActiveHoverState();
         hoveredElement.setHovered(false);
         hoveredElement = null;
+        hoveredElementMenu = null;
         hoveredElementWindow = null;
     }
 
@@ -592,6 +598,12 @@ public class ElementHitSystem extends SystemPackage {
             this.target = target;
             this.method = method;
         }
+    }
+
+    // Accessible \\
+
+    public MenuInstance getHoveredMenu() {
+        return hoveredElementMenu;
     }
 
     // Util \\
