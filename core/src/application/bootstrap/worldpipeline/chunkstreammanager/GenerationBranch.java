@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.chunkstreammanager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
@@ -20,14 +21,17 @@ public class GenerationBranch extends BranchPackage {
      * ChunkTerrainCache instead of rederiving them whenever that cache is
      * already valid for this exact coordinate — the expensive noise/biome work
      * only ever needs to happen once per chunk for the life of the world, not
-     * once per GENERATION_DATA reload. Sets LOAD_DATA, ESSENTIAL_DATA, and
-     * GENERATION_DATA on the sync container once the chunk is fully populated.
-     * Runs on the WorldStreaming thread.
+     * once per GENERATION_DATA reload. Once every subchunk has generated,
+     * StructureManager stamps every structure reaching this chunk into it,
+     * so terrain and structures always publish together. Sets LOAD_DATA,
+     * ESSENTIAL_DATA, and GENERATION_DATA on the sync container once the
+     * chunk is fully populated. Runs on the WorldStreaming thread.
      */
 
     // Internal
     private ThreadHandle threadHandle;
     private WorldGenerationManager worldGenerationManager;
+    private StructureManager structureManager;
 
     // Settings
     private int loadIndex;
@@ -42,6 +46,7 @@ public class GenerationBranch extends BranchPackage {
         // Internal
         this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
         this.worldGenerationManager = get(WorldGenerationManager.class);
+        this.structureManager = get(StructureManager.class);
 
         // Settings
         this.loadIndex = ChunkData.LOAD_DATA.index;
@@ -104,6 +109,7 @@ public class GenerationBranch extends BranchPackage {
         }
 
         if (success) {
+            structureManager.generateStructures(worldHandle, chunkCoordinate, subChunks);
             container.getData()[essentialIndex] = true;
             container.getData()[generationIndex] = true;
         }

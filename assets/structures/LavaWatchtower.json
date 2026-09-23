@@ -1,0 +1,46 @@
+{
+    "origin": [2, 0, 2],
+    "y_offset_blocks": -1,
+    "foundation_block": "TerraArcanaBlocks/Stone Block",
+    "rules": {
+        "biomes": ["MountainBiome"],
+        "surface": "LAND",
+        "min_ground_height_blocks": 200,
+        "max_ground_height_blocks": 900,
+        "max_slope_blocks": 10
+    },
+    "frequency": {
+        "chance": 0.6,
+        "spacing_blocks": 96,
+        "separation_blocks": 16,
+        "random_rotation": true
+    },
+    "fixed_placements": [
+        { "x": 512, "z": 512, "rotation": 0, "enforce_rules": true }
+    ],
+    "blocks": [
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [0, 0, 0], "to": [4, 0, 4] },
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [0, 1, 0], "to": [4, 9, 4] },
+        { "block": "TerraArcanaBlocks/Air", "from": [1, 1, 1], "to": [3, 9, 3] },
+        { "block": "TerraArcanaBlocks/Air", "from": [2, 1, 0], "to": [2, 2, 0] },
+        { "block": "TerraArcanaBlocks/Air", "position": [2, 6, 0] },
+        { "block": "TerraArcanaBlocks/Air", "position": [2, 6, 4] },
+        { "block": "TerraArcanaBlocks/Air", "position": [0, 6, 2] },
+        { "block": "TerraArcanaBlocks/Air", "position": [4, 6, 2] },
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [-1, 10, -1], "to": [5, 10, 5] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [-1, 11, -1] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [1, 11, -1] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [3, 11, -1] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [5, 11, -1] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [-1, 11, 5] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [1, 11, 5] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [3, 11, 5] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [5, 11, 5] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [-1, 11, 1] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [-1, 11, 3] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [5, 11, 1] },
+        { "block": "TerraArcanaBlocks/Stone Block", "position": [5, 11, 3] },
+        { "block": "TerraArcanaBlocks/Iron Ore", "from": [1, 11, 1], "to": [3, 11, 3] },
+        { "block": "TerraArcanaBlocks/Lava", "position": [2, 11, 2] }
+    ]
+}

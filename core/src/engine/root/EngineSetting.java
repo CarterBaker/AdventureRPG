@@ -123,6 +123,7 @@ public class EngineSetting {
         public static final String SEASON_JSON_PATH = "seasons";
         public static final String SHADER_PATH = "shaders";
         public static final String SPRITE_PATH = "sprites";
+        public static final String STRUCTURE_JSON_PATH = "structures";
         public static final ObjectArraySet<String> TCS_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tcs",
                 "tesc" });
         public static final ObjectArraySet<String> TES_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tes",
@@ -400,6 +401,21 @@ public class EngineSetting {
         public static final double TERRAIN_PV_WAVELENGTH_BLOCKS = 380.0;
         public static final int TERRAIN_SEA_LEVEL_BLOCKS = 160;
         public static final int TERRAIN_SURFACE_DEPTH_BLOCKS = 4;
+
+        // Structure Generation \\
+
+        public static final int DEFAULT_STRUCTURE_SEPARATION_BLOCKS = 0;
+        public static final int DEFAULT_STRUCTURE_Y_OFFSET_BLOCKS = 0;
+        public static final long STRUCTURE_CHANCE_SALT = 0x3E9A71C45B0D82F6L;
+        public static final long STRUCTURE_ID_HASH_MULTIPLIER = 0xD6E8FEB86659FD93L;
+        public static final int STRUCTURE_MAX_BLOCK_COUNT = 262144;
+        public static final int STRUCTURE_MAX_EXTENT_BLOCKS = 1024;
+        public static final long STRUCTURE_OFFSET_X_SALT = 0x5C1F8B2A7E94D063L;
+        public static final long STRUCTURE_OFFSET_Z_SALT = 0x8D47E0B3169AC52FL;
+        public static final int STRUCTURE_ORIENTATION_SPIN_COUNT = 4;
+        public static final long STRUCTURE_PLACEMENT_SEED = 0x1B7F3D95C28E46A0L;
+        public static final int STRUCTURE_QUARTER_TURN_COUNT = 4;
+        public static final long STRUCTURE_ROTATION_SALT = 0xA60C9E4F2D7B1853L;
 
         // Sky & Atmosphere \\
 
