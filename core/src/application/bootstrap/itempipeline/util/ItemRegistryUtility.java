@@ -18,7 +18,7 @@ public class ItemRegistryUtility extends EngineUtility {
     private static final int FNV_OFFSET_BASIS = EngineSetting.FNV_OFFSET_BASIS;
     private static final int FNV_PRIME = EngineSetting.FNV_PRIME;
 
-    public static final int RESERVED_ID = 0;
+    public static final int RESERVED_ID = EngineSetting.REGISTRY_RESERVED_ID;
 
     // Hashing \\
 

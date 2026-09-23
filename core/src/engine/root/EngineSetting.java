@@ -5,166 +5,96 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
 public class EngineSetting {
 
-        // GL — Buffers \\
+        // OpenGL Constants \\
 
         public static final int GL_ARRAY_BUFFER = 0x8892;
-        public static final int GL_ELEMENT_ARRAY_BUFFER = 0x8893;
-        public static final int GL_UNIFORM_BUFFER = 0x8A11;
-        public static final int GL_DYNAMIC_DRAW = 0x88E8;
-        public static final int GL_STATIC_DRAW = 0x88E4;
-        public static final int GL_PIXEL_PACK_BUFFER = 0x88EB;
-        public static final int GL_STREAM_READ = 0x88E1;
-
-        // GL — Buffer Mapping \\
-
-        public static final int GL_MAP_READ_BIT = 0x0001;
-
-        // GL — Primitives \\
-
-        public static final int GL_TRIANGLES = 0x0004;
-        public static final int GL_UNSIGNED_SHORT = 0x1403;
-        public static final int GL_UNSIGNED_BYTE = 0x1401;
-        public static final int GL_FLOAT = 0x1406;
-        public static final int GL_PATCHES = 0x000E;
-
-        // GL — Textures \\
-
-        public static final int GL_TEXTURE_2D = 0x0DE1;
-        public static final int GL_TEXTURE_2D_ARRAY = 0x8C1A;
-        public static final int GL_TEXTURE0 = 0x84C0;
-        public static final int GL_TEXTURE_MIN_FILTER = 0x2801;
-        public static final int GL_TEXTURE_MAG_FILTER = 0x2800;
-        public static final int GL_TEXTURE_WRAP_S = 0x2802;
-        public static final int GL_TEXTURE_WRAP_T = 0x2803;
-        public static final int GL_LINEAR = 0x2601;
-        public static final int GL_NEAREST = 0x2600;
+        public static final int GL_BACK = 0x0405;
+        public static final int GL_BGRA = 0x80E1;
+        public static final int GL_BLEND = 0x0BE2;
+        public static final int GL_CCW = 0x0901;
         public static final int GL_CLAMP_TO_EDGE = 0x812F;
-        public static final int GL_REPEAT = 0x2901;
-
-        // GL — Texture Formats \\
-
-        public static final int GL_RGBA = 0x1908;
-        public static final int GL_RGB = 0x1907;
+        public static final int GL_COLOR_ATTACHMENT0 = 0x8CE0;
+        public static final int GL_COLOR_BUFFER_BIT = 0x4000;
+        public static final int GL_COMPILE_STATUS = 0x8B81;
+        public static final int GL_CULL_FACE = 0x0B44;
+        public static final int GL_DEPTH_ATTACHMENT = 0x8D00;
+        public static final int GL_DEPTH_BUFFER_BIT = 0x0100;
         public static final int GL_DEPTH_COMPONENT = 0x1902;
-        public static final int GL_RGBA8 = 0x8058;
-        public static final int GL_RGB8 = 0x8051;
+        public static final int GL_DEPTH_COMPONENT32F = 0x8CAC;
+        public static final int GL_DEPTH_TEST = 0x0B71;
+        public static final int GL_DYNAMIC_DRAW = 0x88E8;
+        public static final int GL_ELEMENT_ARRAY_BUFFER = 0x8893;
+        public static final int GL_FLOAT = 0x1406;
+        public static final int GL_FRAGMENT_SHADER = 0x8B30;
+        public static final int GL_FRAMEBUFFER = 0x8D40;
+        public static final int GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
+        public static final int GL_FRONT = 0x0404;
+        public static final int GL_LEQUAL = 0x0203;
+        public static final int GL_LINEAR = 0x2601;
+        public static final int GL_LINK_STATUS = 0x8B82;
+        public static final int GL_MAP_READ_BIT = 0x0001;
+        public static final int GL_NEAREST = 0x2600;
+        public static final int GL_ONE = 0x0001;
+        public static final int GL_ONE_MINUS_SRC_ALPHA = 0x0303;
+        public static final int GL_PATCHES = 0x000E;
+        public static final int GL_PATCH_VERTICES = 0x8E72;
+        public static final int GL_PIXEL_PACK_BUFFER = 0x88EB;
+        public static final int GL_RENDERBUFFER = 0x8D41;
+        public static final int GL_REPEAT = 0x2901;
+        public static final int GL_RGB = 0x1907;
         public static final int GL_RGB16F = 0x881B;
         public static final int GL_RGB32F = 0x8815;
-        public static final int GL_RGBA32F = 0x8814;
+        public static final int GL_RGB8 = 0x8051;
+        public static final int GL_RGBA = 0x1908;
         public static final int GL_RGBA16F = 0x881A;
-        public static final int GL_DEPTH_COMPONENT24 = 0x81A6;
-        public static final int GL_DEPTH_COMPONENT32F = 0x8CAC;
-
-        // GL — State \\
-
-        public static final int GL_DEPTH_TEST = 0x0B71;
-        public static final int GL_BLEND = 0x0BE2;
-        public static final int GL_CULL_FACE = 0x0B44;
+        public static final int GL_RGBA32F = 0x8814;
+        public static final int GL_RGBA8 = 0x8058;
         public static final int GL_SCISSOR_TEST = 0x0C11;
-        public static final int GL_ONE = 0x0001;
         public static final int GL_SRC_ALPHA = 0x0302;
-        public static final int GL_ONE_MINUS_SRC_ALPHA = 0x0303;
-        public static final int GL_BACK = 0x0405;
-        public static final int GL_CCW = 0x0901;
-        public static final int GL_LEQUAL = 0x0203;
-        public static final int GL_NO_ERROR = 0;
-
-        // GL — Shaders \\
-
+        public static final int GL_STATIC_DRAW = 0x88E4;
+        public static final int GL_STREAM_READ = 0x88E1;
+        public static final int GL_TEXTURE0 = 0x84C0;
+        public static final int GL_TEXTURE_2D = 0x0DE1;
+        public static final int GL_TEXTURE_2D_ARRAY = 0x8C1A;
+        public static final int GL_TEXTURE_MAG_FILTER = 0x2800;
+        public static final int GL_TEXTURE_MIN_FILTER = 0x2801;
+        public static final int GL_TEXTURE_WRAP_S = 0x2802;
+        public static final int GL_TEXTURE_WRAP_T = 0x2803;
+        public static final int GL_TRIANGLES = 0x0004;
+        public static final int GL_UNIFORM_BUFFER = 0x8A11;
+        public static final int GL_UNSIGNED_BYTE = 0x1401;
+        public static final int GL_UNSIGNED_SHORT = 0x1403;
         public static final int GL_VERTEX_SHADER = 0x8B31;
-        public static final int GL_FRAGMENT_SHADER = 0x8B30;
-        public static final int GL_LINK_STATUS = 0x8B82;
-        public static final int GL_COMPILE_STATUS = 0x8B81;
 
-        // GL — Framebuffers \\
-
-        public static final int GL_FRAMEBUFFER = 0x8D40;
-        public static final int GL_RENDERBUFFER = 0x8D41;
-        public static final int GL_COLOR_BUFFER_BIT = 0x4000;
-        public static final int GL_DEPTH_BUFFER_BIT = 0x0100;
-        public static final int GL_COLOR_ATTACHMENT0 = 0x8CE0;
-        public static final int GL_COLOR_ATTACHMENT1 = 0x8CE1;
-        public static final int GL_COLOR_ATTACHMENT2 = 0x8CE2;
-        public static final int GL_COLOR_ATTACHMENT3 = 0x8CE3;
-        public static final int GL_DEPTH_ATTACHMENT = 0x8D00;
-        public static final int GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
-
-        // GL — Read Buffer \\
-
-        public static final int GL_FRONT = 0x0404;
-        public static final int GL_BGRA = 0x80E1;
-
-        // GL — Tessellation \\
-
-        public static final int GL_PATCH_VERTICES = 0x8E72;
-
-        // Application \\
-
-        public static final String GAME_DIRECTORY = "AdventureRPG";
-        public static final String GAME_DOCUMENTS_SUBPATH = "Documents/My Games";
-        public static final String SETTINGS_FILE_NAME = "Settings.json";
-        public static final String EDITOR_SETTINGS_FILE_NAME = "EditorSettings.json";
-        public static final String BIN_DIRECTORY = "bin";
-        public static final String EDITOR_LAYOUT_DIRECTORY = "editorLayout";
-        public static final String EDITOR_LAYOUT_SESSION_FILE = "LastSession.json";
-
-        // Engine \\
-
-        public static final String VERSION = "0.0.0.1a";
-        public static final int LOADER_BATCH_SIZE = 32;
-
-        // Frame Rate \\
-
-        public static final int TARGET_FRAME_RATE = 60;
-        public static final long NANOS_PER_SECOND = 1_000_000_000L;
-        public static final long NANOS_PER_MILLI = 1_000_000L;
-        public static final long FRAME_PACING_SLEEP_THRESHOLD_NANOS = 2_000_000L;
-        public static final long FRAME_PACING_SLEEP_CHUNK_NANOS = 1_000_000L;
-
-        // Registry \\
-
-        public static final int FNV_OFFSET_BASIS = 0x811c9dc5;
-        public static final int FNV_PRIME = 0x01000193;
-        public static final short REGISTRY_RESERVED_ID = 0;
-        public static final long HASH_FINALIZER_MULTIPLIER_1 = 0xff51afd7ed558ccdL;
-        public static final long HASH_FINALIZER_MULTIPLIER_2 = 0xc4ceb9fe1a85ec53L;
-
-        // Sentinel Values \\
-
-        public static final int GL_HANDLE_NONE = 0;
-        public static final int GL_INVALID_INDEX = 0xFFFFFFFF;
-        public static final int INDEX_NOT_FOUND = -1;
-
-        // Axis Indices \\
+        // Sentinel & Utility Values \\
 
         public static final int AXIS_X = 0;
         public static final int AXIS_Y = 1;
         public static final int AXIS_Z = 2;
-
-        // Noise — Seamless Axis Wrap \\
-
+        public static final int FNV_OFFSET_BASIS = 0x811c9dc5;
+        public static final int FNV_PRIME = 0x01000193;
+        public static final int GL_HANDLE_NONE = 0;
+        public static final int GL_INVALID_INDEX = 0xFFFFFFFF;
+        public static final long HASH_FINALIZER_MULTIPLIER_1 = 0xff51afd7ed558ccdL;
+        public static final long HASH_FINALIZER_MULTIPLIER_2 = 0xc4ceb9fe1a85ec53L;
+        public static final int INDEX_NOT_FOUND = -1;
         public static final double NOISE_SEAM_BLEND_WAVELENGTHS = 3.0;
+        public static final short REGISTRY_RESERVED_ID = 0;
 
-        // File Extensions \\
+        // Engine & Application \\
 
-        public static final ObjectArraySet<String> FONT_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        new String[] { "ttf", "otf" });
-        public static final ObjectArraySet<String> FRAG_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        new String[] { "fsh", "frag", "fs", "fragment", "pixel" });
-        public static final ObjectArraySet<String> INCLUDE_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        new String[] { "glsl", "inc", "glslinc" });
-        public static final ObjectArraySet<String> JSON_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        new String[] { "json" });
-        public static final ObjectArraySet<String> TEXTURE_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        new String[] { "png", "jpg", "jpeg", "tga", "bmp" });
-        public static final ObjectArraySet<String> VERT_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        new String[] { "vsh", "vert", "vs", "vertex" });
-        public static final ObjectArraySet<String> TCS_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        new String[] { "tcs", "tesc" });
-        public static final ObjectArraySet<String> TES_FILE_EXTENSIONS = new ObjectArraySet<>(
-                        new String[] { "tes", "tese" });
+        public static final String BIN_DIRECTORY = "bin";
+        public static final String EDITOR_LAYOUT_DIRECTORY = "editorLayout";
+        public static final String EDITOR_LAYOUT_SESSION_FILE = "LastSession.json";
+        public static final String EDITOR_SETTINGS_FILE_NAME = "EditorSettings.json";
+        public static final String GAME_DIRECTORY = "AdventureRPG";
+        public static final String GAME_DOCUMENTS_SUBPATH = "Documents/My Games";
+        public static final int LOADER_BATCH_SIZE = 32;
+        public static final String SETTINGS_FILE_NAME = "Settings.json";
+        public static final String SETTINGS_UBO = "SettingsData";
+        public static final String VERSION = "0.0.0.1a";
 
-        // Asset Paths \\
+        // File Paths & Extensions \\
 
         public static final String ANIMATION_JSON_PATH = "animations";
         public static final String BEHAVIOR_JSON_PATH = "behaviors";
@@ -173,153 +103,101 @@ public class EngineSetting {
         public static final String BLOCK_TEXTURE_ALIAS_PATH = "texturealiases";
         public static final String BLOCK_TEXTURE_PATH = "textures";
         public static final String CALENDAR_JSON_PATH = "calendars";
+        public static final String CLOUD_JSON_PATH = "clouds";
         public static final String ENTITY_JSON_PATH = "entities";
         public static final String FBO_CATALOG_JSON_PATH = "application/fbos";
+        public static final ObjectArraySet<String> FONT_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "ttf",
+                "otf" });
         public static final String FONT_PATH = "fonts";
+        public static final ObjectArraySet<String> FRAG_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "fsh",
+                "frag", "fs", "fragment", "pixel" });
+        public static final ObjectArraySet<String> INCLUDE_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "glsl",
+                "inc", "glslinc" });
         public static final String ITEM_JSON_PATH = "items";
+        public static final ObjectArraySet<String> JSON_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "json" });
         public static final String MATERIAL_JSON_PATH = "materials";
         public static final String MENU_JSON_PATH = "menus";
         public static final String MESH_JSON_PATH = "mesh";
         public static final String PASS_JSON_PATH = "processingpasses";
-        public static final String SHADER_PATH = "shaders";
         public static final String RIG_JSON_PATH = "rigs";
+        public static final String SEASON_JSON_PATH = "seasons";
+        public static final String SHADER_PATH = "shaders";
         public static final String SPRITE_PATH = "sprites";
+        public static final ObjectArraySet<String> TCS_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tcs",
+                "tesc" });
+        public static final ObjectArraySet<String> TES_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tes",
+                "tese" });
+        public static final ObjectArraySet<String> TEXTURE_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "png",
+                "jpg", "jpeg", "tga", "bmp" });
         public static final String THREAD_CATALOG_PATH = "application/threads";
         public static final String TOOL_TYPE_JSON_PATH = "tools";
         public static final String UBO_JSON_PATH = "ubos";
-        public static final String WORLD_TEXTURE_PATH = "worlds";
+        public static final ObjectArraySet<String> VERT_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "vsh",
+                "vert", "vs", "vertex" });
         public static final String WEATHER_JSON_PATH = "weathers";
-        public static final String CLOUD_JSON_PATH = "clouds";
-        public static final String SEASON_JSON_PATH = "seasons";
+        public static final String WORLD_TEXTURE_PATH = "worlds";
 
-        // Thread Pools \\
+        // Threading & Frame Rate \\
 
-        public static final int MIN_AUTO_THREAD_POOL_SIZE = 2;
         public static final int AUTO_THREAD_POOL_RESERVED_CORES = 2;
-        public static final int MAX_THREAD_POOL_SIZE = 32;
         public static final int DEFAULT_IN_FLIGHT_MULTIPLIER = 3;
+        public static final long FRAME_PACING_SLEEP_CHUNK_NANOS = 1_000_000L;
+        public static final long FRAME_PACING_SLEEP_THRESHOLD_NANOS = 2_000_000L;
+        public static final int MAX_THREAD_POOL_SIZE = 32;
+        public static final int MIN_AUTO_THREAD_POOL_SIZE = 2;
+        public static final long NANOS_PER_MILLI = 1_000_000L;
+        public static final long NANOS_PER_SECOND = 1_000_000_000L;
+        public static final int TARGET_FRAME_RATE = 60;
 
-        // FBO \\
+        // Window & Display \\
 
-        public static final String SCENE_FBO_NAME = "MainScene";
-
-        // Settings \\
-
-        public static final String SETTINGS_UBO = "SettingsData";
-
-        // Window \\
-
-        public static final String WINDOW_TITLE = "TerraArcana";
-        public static final int MIN_WINDOW_DIMENSION = 64;
-
-        // Blit \\
-
-        public static final String DEFAULT_BLIT_MATERIAL = "util/BlitMaterial";
-        public static final String DEFAULT_BLIT_MESH = "util/BlitMesh";
-
-        // Sprite \\
-
-        public static final String SPRITE_DEFAULT_MATERIAL = "sprites/StandardSpriteMaterial";
-        public static final String SPRITE_DEFAULT_MESH = "sprites/SpriteMesh";
-
-        // Cursor \\
-
-        public static final int CURSOR_DEFAULT = 0;
         public static final int CURSOR_RESIZE_H = 1;
         public static final int CURSOR_RESIZE_V = 2;
+        public static final int MIN_WINDOW_DIMENSION = 64;
+        public static final String WINDOW_TITLE = "TerraArcana";
 
-        // Scale \\
+        // World Scale \\
 
-        public static final float BLOCK_SIZE = 1.0f;
         public static final int BIOME_SIZE = 4;
-        public static final int CHUNK_SIZE = 16;
-        public static final int CHUNKS_PER_PIXEL = 32;
-        public static final int MEGA_CHUNK_SIZE = 4;
-        public static final int WORLD_HEIGHT = 64;
         public static final int BLOCK_PALETTE_THRESHOLD = 512;
+        public static final float BLOCK_SIZE = 1.0f;
+        public static final int CHUNKS_PER_PIXEL = 32;
+        public static final int CHUNK_SIZE = 16;
+        public static final int MEGA_CHUNK_SIZE = 4;
         public static final int SUB_VOXEL_RESOLUTION = 16;
+        public static final int WORLD_HEIGHT = 64;
 
         // Natural Noise \\
 
+        public static final float NATURAL_GROUND_OFFSET_SMOOTHING = 10.0f;
+        public static final float NATURAL_NOISE_COLLISION_GRADIENT_PROBE_BLOCKS = 0.05f;
+        public static final float NATURAL_NOISE_DISTANT_RISE_MARGIN_BLOCKS = 512.0f;
         public static final float NATURAL_NOISE_HASH_DOT_X = 127.1f;
         public static final float NATURAL_NOISE_HASH_DOT_Z = 311.7f;
         public static final float NATURAL_NOISE_HASH_SCALE = 43758.5453f;
+        public static final float NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS = 0.4f;
+        public static final float NATURAL_NOISE_JITTER_VERTICAL_BLOCKS = 0.08f;
         public static final float NATURAL_NOISE_SEED_SCALE = 0.5f;
         public static final int NATURAL_NOISE_LATTICE_PERIOD = (int) (CHUNK_SIZE * NATURAL_NOISE_SEED_SCALE);
-        public static final int NATURAL_NOISE_LATTICE_SIZE = NATURAL_NOISE_LATTICE_PERIOD
-                        * NATURAL_NOISE_LATTICE_PERIOD;
+        public static final int NATURAL_NOISE_LATTICE_SIZE = NATURAL_NOISE_LATTICE_PERIOD * NATURAL_NOISE_LATTICE_PERIOD;
         public static final int NATURAL_NOISE_LATTICE_VEC4_COUNT = (NATURAL_NOISE_LATTICE_SIZE + 3) / 4;
         public static final float NATURAL_NOISE_OFFSET_X_X = 17.3f;
         public static final float NATURAL_NOISE_OFFSET_X_Z = 0.0f;
-        public static final float NATURAL_NOISE_OFFSET_Z_X = 0.0f;
-        public static final float NATURAL_NOISE_OFFSET_Z_Z = 31.7f;
         public static final float NATURAL_NOISE_OFFSET_Y_X = 53.1f;
         public static final float NATURAL_NOISE_OFFSET_Y_Z = 83.2f;
-        public static final float NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS = 0.4f;
-        public static final float NATURAL_NOISE_JITTER_VERTICAL_BLOCKS = 0.08f;
-        public static final float NATURAL_NOISE_DISTANT_RISE_MARGIN_BLOCKS = 512.0f;
+        public static final float NATURAL_NOISE_OFFSET_Z_X = 0.0f;
+        public static final float NATURAL_NOISE_OFFSET_Z_Z = 31.7f;
         public static final String NATURAL_NOISE_UBO = "NaturalNoiseData";
-        public static final float NATURAL_NOISE_COLLISION_GRADIENT_PROBE_BLOCKS = 0.05f;
-        public static final float NATURAL_NOISE_COLLISION_DEFLECTION_SCALE = 2.0f;
-        public static final float NATURAL_NOISE_COLLISION_MAX_DEFLECTION_BLOCKS = 0.5f;
 
-        // Natural Ground Offset \\
+        // Rendering Pipeline \\
 
-        public static final float NATURAL_GROUND_OFFSET_SMOOTHING = 10.0f;
-
-        // Rendering \\
-
-        public static final int MAX_RENDER_CALLS_PER_FRAME = 16384;
-
-        // Shader Pipeline \\
-
-        public static final int SHADER_ALIAS_LIBRARY_INITIAL_CAPACITY = 16;
-        public static final int SHADER_ALIAS_LIBRARY_GROWTH_FACTOR = 2;
-        public static final float SHADER_ALIAS_DEFAULT_ALPHA = 1.0f;
-        public static final int SHADER_UBO_UNSPECIFIED_BINDING = INDEX_NOT_FOUND;
-        public static final int GL_TESS_CONTROL_SHADER = 0x8E88;
-        public static final int GL_TESS_EVALUATION_SHADER = 0x8E87;
-
-        // Composite Rendering \\
-
+        public static final String CAMERA_DATA_UBO = "CameraData";
+        public static final int COMPOSITE_BUFFER_INITIAL_CAPACITY = 64;
         public static final int COMPOSITE_UPLOAD_BUFFER_GROWTH_FACTOR = 2;
         public static final int COMPOSITE_UPLOAD_VERSION_UNINITIALIZED = INDEX_NOT_FOUND;
-
-        // Camera \\
-
-        public static final float CAMERA_NEAR_PLANE = 0.1f;
-        public static final float CAMERA_FAR_PLANE = 1000f;
-        public static final float CAMERA_MAX_PITCH_DEGREES = 89f;
-
-        // Camera Zoom \\
-
-        public static final float CAMERA_ZOOM_MIN = 0f;
-        public static final float CAMERA_ZOOM_MAX = 6f;
-        public static final float CAMERA_ZOOM_DEFAULT = 4f;
-        public static final float CAMERA_ZOOM_SCROLL_SPEED = 0.75f;
-        public static final float CAMERA_ZOOM_SMOOTHING = 10f;
-        public static final float CAMERA_FIRST_PERSON_THRESHOLD = 0.1f;
-
-        // Camera UBO Uniforms \\
-
-        public static final String UNIFORM_CAM_FAR_PLANE = "u_farPlane";
-        public static final String UNIFORM_CAM_FOV = "u_cameraFOV";
-        public static final String UNIFORM_CAM_INVERSE_PROJECTION = "u_inverseProjection";
-        public static final String UNIFORM_CAM_INVERSE_VIEW = "u_inverseView";
-        public static final String UNIFORM_CAM_NEAR_PLANE = "u_nearPlane";
-        public static final String UNIFORM_CAM_POSITION = "u_cameraPosition";
-        public static final String UNIFORM_CAM_PROJECTION = "u_projection";
-        public static final String UNIFORM_CAM_VIEW = "u_view";
-        public static final String UNIFORM_CAM_VIEW_PROJECTION = "u_viewProjection";
-        public static final String UNIFORM_CAM_VIEWPORT = "u_viewport";
-
-        // Ortho UBO Uniforms \\
-
-        public static final String UNIFORM_ORTHO_PROJECTION = "u_orthoProjection";
-        public static final String UNIFORM_ORTHO_SCREEN_SIZE = "u_screenSize";
-
-        // Frustum Culling \\
-
+        public static final String DEFAULT_BLIT_MATERIAL = "util/BlitMaterial";
+        public static final String DEFAULT_BLIT_MESH = "util/BlitMesh";
+        public static final int DEFAULT_BLOCK_DIRECTION = 4;
         public static final float FRUSTUM_ALWAYS_VISIBLE_DIST_SQ = 4.5f;
         public static final float FRUSTUM_CHUNK_BLEED_SCALE = 0.75f;
         public static final float FRUSTUM_HALF_PI = (float) (Math.PI / 2f);
@@ -329,442 +207,54 @@ public class EngineSetting {
         public static final float FRUSTUM_PITCH_POWER_ANGLE = 1f;
         public static final float FRUSTUM_PITCH_POWER_DISTANCE = 6f;
         public static final float FRUSTUM_TWO_PI = (float) (Math.PI * 2f);
-
-        // Texture \\
-
-        public static final String TEXTURE_UV_SCALE_UNIFORM = "u_uvPerBlock";
-
-        // Mesh \\
-
-        public static final int CHUNK_VERT_BUFFER = 128;
-        public static final int DEFAULT_BLOCK_DIRECTION = 4;
-        public static final int MESH_VERT_LIMIT = 32767;
-
-        // Geometry \\
-
-        public static final int QUAD_VERTEX_COUNT = 4;
-        public static final int QUAD_INDEX_COUNT = 6;
-        public static final int COMPOSITE_BUFFER_INITIAL_CAPACITY = 64;
-
-        // UBOs \\
-
-        public static final String CAMERA_DATA_UBO = "CameraData";
-        public static final String SUN_LIGHT_UBO = "SunLightData";
-        public static final String MOON_LIGHT_UBO = "MoonLightData";
+        public static final int GL_TESS_CONTROL_SHADER = 0x8E88;
+        public static final int GL_TESS_EVALUATION_SHADER = 0x8E87;
         public static final String GRID_COORDINATE_UBO = "GridCoordinateData";
-        public static final String ITEM_ROTATION_UBO = "ItemRotationData";
+        public static final int MAX_RENDER_CALLS_PER_FRAME = 16384;
+        public static final int MESH_VERT_LIMIT = 32767;
+        public static final String MOON_LIGHT_UBO = "MoonLightData";
         public static final String ORTHO_DATA_UBO = "OrthoData";
         public static final String PLAYER_POSITION_UBO = "PlayerPositionData";
+        public static final int QUAD_INDEX_COUNT = 6;
+        public static final int QUAD_VERTEX_COUNT = 4;
+        public static final float SHADER_ALIAS_DEFAULT_ALPHA = 1.0f;
+        public static final int SHADER_ALIAS_LIBRARY_GROWTH_FACTOR = 2;
+        public static final int SHADER_ALIAS_LIBRARY_INITIAL_CAPACITY = 16;
+        public static final int SHADER_UBO_UNSPECIFIED_BINDING = INDEX_NOT_FOUND;
+        public static final String SPRITE_DEFAULT_MATERIAL = "sprites/StandardSpriteMaterial";
+        public static final String SPRITE_DEFAULT_MESH = "sprites/SpriteMesh";
+        public static final String SUN_LIGHT_UBO = "SunLightData";
+        public static final String TEXTURE_UV_SCALE_UNIFORM = "u_uvPerBlock";
         public static final String UBO_TIME_DATA_NAME = "TimeData";
 
-        // Sun/Moon UBO Uniforms \\
+        // Camera \\
 
-        public static final String UNIFORM_SUN_DIRECTION = "u_sunDirection";
-        public static final String UNIFORM_SUN_INTENSITY = "u_sunIntensity";
-        public static final String UNIFORM_SUN_COLOR = "u_sunColor";
-        public static final String UNIFORM_MOON_DIRECTION = "u_moonDirection";
-        public static final String UNIFORM_MOON_INTENSITY = "u_moonIntensity";
-        public static final String UNIFORM_MOON_COLOR = "u_moonColor";
+        public static final float CAMERA_FAR_PLANE = 1000f;
+        public static final float CAMERA_FIRST_PERSON_THRESHOLD = 0.1f;
+        public static final float CAMERA_MAX_PITCH_DEGREES = 89f;
+        public static final float CAMERA_NEAR_PLANE = 0.1f;
+        public static final float CAMERA_ZOOM_DEFAULT = 4f;
+        public static final float CAMERA_ZOOM_MAX = 6f;
+        public static final float CAMERA_ZOOM_MIN = 0f;
+        public static final float CAMERA_ZOOM_SCROLL_SPEED = 0.75f;
+        public static final float CAMERA_ZOOM_SMOOTHING = 10f;
+        public static final String UNIFORM_CAM_FAR_PLANE = "u_farPlane";
+        public static final String UNIFORM_CAM_FOV = "u_cameraFOV";
+        public static final String UNIFORM_CAM_INVERSE_PROJECTION = "u_inverseProjection";
+        public static final String UNIFORM_CAM_INVERSE_VIEW = "u_inverseView";
+        public static final String UNIFORM_CAM_NEAR_PLANE = "u_nearPlane";
+        public static final String UNIFORM_CAM_POSITION = "u_cameraPosition";
+        public static final String UNIFORM_CAM_PROJECTION = "u_projection";
+        public static final String UNIFORM_CAM_VIEW = "u_view";
+        public static final String UNIFORM_CAM_VIEWPORT = "u_viewport";
+        public static final String UNIFORM_CAM_VIEW_PROJECTION = "u_viewProjection";
+        public static final String UNIFORM_ORTHO_PROJECTION = "u_orthoProjection";
+        public static final String UNIFORM_ORTHO_SCREEN_SIZE = "u_screenSize";
 
         // Post Processing \\
 
         public static final String SSAO_DATA_UBO = "SSAOData";
         public static final int SSAO_KERNEL_SIZE = 64;
-
-        // Block \\
-
-        public static final String AIR_BLOCK_NAME = "TerraArcanaBlocks/Air";
-        public static final short DEFAULT_BLOCK_ORIENTATION = (short) (DEFAULT_BLOCK_DIRECTION * 4);
-        public static final int ENCODED_FACE_NATURAL_FULL_OFFSET = 24;
-        public static final float BLOCK_VISCOSITY_UNDEFINED = -1.0f;
-
-        // World \\
-
-        public static final String CHUNK_VAO = "util/vao/ChunkVAO";
-        public static final int CHUNK_POOL_MAX_OVERFLOW = 32;
-        public static final int GRID_SLOTS_SCAN_PER_FRAME = 32;
-        public static final int MAX_CHUNK_STREAM_PER_BATCH = 32;
-        public static final int MAX_CHUNK_GPU_UPLOADS_PER_FRAME = 16;
-        public static final int MAX_MEGA_GPU_UPLOADS_PER_FRAME = 4;
-        public static final int MAX_CHUNK_STREAM_PER_FRAME = 128;
-        public static final int MAX_CHUNK_STREAM_PER_QUEUE = 1024;
-        public static final int MEGA_ASSESS_PER_FRAME = GRID_SLOTS_SCAN_PER_FRAME / MEGA_CHUNK_SIZE;
-        public static final int MEGA_POOL_MAX_OVERFLOW = 8;
-        public static final String STARTING_WORLD = "TerraArcana";
-
-        // World Tick \\
-
-        public static final int FULL_TICK_INTERVAL_FRAMES = 60;
-        public static final int FULL_TICK_PHASE_FRAMES = 0;
-        public static final int PARTIAL_TICK_INTERVAL_FRAMES = 60;
-        public static final int PARTIAL_TICK_PHASE_FRAMES = 15;
-        public static final int COMPLEX_TICK_INTERVAL_FRAMES = 60;
-        public static final int COMPLEX_TICK_PHASE_FRAMES = 30;
-        public static final int LIQUID_TICK_INTERVAL_FRAMES = 6;
-        public static final int LIQUID_TICK_PHASE_FRAMES = 3;
-
-        // Liquid Physics \\
-
-        public static final float LIQUID_VISCOSITY_TO_FLOW_SECONDS = 2.0f;
-        public static final float LIQUID_FLOW_INTERVAL_MIN_SECONDS = 0.1f;
-        public static final float LIQUID_FLOW_INTERVAL_MAX_SECONDS = 20.0f;
-
-        // Liquid Simulation \\
-
-        public static final short LIQUID_LEVEL_EMPTY = 0;
-        public static final short LIQUID_LEVEL_MAX = 8;
-        public static final int LIQUID_BASIN_SCAN_LIMIT = 256;
-        public static final int LIQUID_BASIN_FILL_THRESHOLD = 2;
-        public static final int LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS = 1;
-        public static final int LIQUID_PERMANENCE_THRESHOLD = 64;
-
-        // Swimming \\
-
-        public static final float SWIM_FULL_SUBMERGE_FRACTION = 1.0f;
-        public static final float SWIM_DEEP_THRESHOLD = 0.1f;
-        public static final float SWIM_HEAD_CLEARANCE = 0.12f;
-        public static final float SWIM_UP_SPEED = 2.4f;
-        public static final float SWIM_SINK_SPEED = 0.5f;
-        public static final float SWIM_TREAD_SPEED = 2.0f;
-        public static final float SWIM_TREAD_RESPONSIVENESS = 6.0f;
-        public static final float SWIM_VISCOSITY_REFERENCE = 1.0f;
-        public static final float SWIM_VISCOSITY_DRAG_SCALE = 0.12f;
-        public static final float SWIM_MIN_SPEED_MULTIPLIER = 0.15f;
-
-        // Wading \\
-
-        public static final float WADE_JUMP_HEIGHT_MULTIPLIER = 0.5f;
-
-        // Swim Climb-Out \\
-
-        public static final float SWIM_CLIMB_OUT_MAX_VISCOSITY = 1.0f;
-        public static final int SWIM_CLIMB_OUT_SCAN_DEPTH = 4;
-
-        // World Defaults \\
-
-        public static final String DEFAULT_CALENDAR_NAME = "standard/Default";
-        public static final float DEFAULT_GRAVITY_MULTIPLIER = 1.0f;
-        public static final float DEFAULT_GRAVITY_X = 0.0f;
-        public static final float DEFAULT_GRAVITY_Y = -1.0f;
-        public static final float DEFAULT_GRAVITY_Z = 0.0f;
-        public static final float DEFAULT_WORLD_ROTATION_SPEED = 1.0f;
-        public static final float DEFAULT_AXIAL_TILT_DEGREES = 23.5f;
-        public static final float DEFAULT_PLANETARY_OFFSET = 0.0f;
-
-        // Biome Map Resolution \\
-
-        public static final long BIOME_BORDER_WARP_SEED = 0x8B3C9F1E2A47D5B1L;
-        public static final float BIOME_BORDER_WARP_FREQUENCY = 0.5f;
-        public static final float BIOME_BORDER_WARP_STRENGTH_PIXELS = 0.4f;
-        public static final float BIOME_BORDER_WARP_DETAIL_FREQUENCY = 2.7f;
-        public static final float BIOME_BORDER_WARP_DETAIL_STRENGTH_PIXELS = 0.11f;
-
-        // Biome Field Blending \\
-
-        public static final int BIOME_FIELD_MAX_CONTRIBUTORS = 12;
-        public static final float BIOME_BLEND_BAND_PIXELS = 0.55f;
-        public static final float BIOME_OCEAN_FLOOD_THRESHOLD = 0.5f;
-        public static final long BIOME_MATERIAL_DITHER_SEED = 0x7D2B5E0C93A6F418L;
-
-        // Biome Probable Patches \\
-
-        public static final long BIOME_PATCH_SEED = 0x4F1D2C6E9A7B31F5L;
-        public static final int BIOME_PATCH_CELLS_PER_PIXEL = 2;
-        public static final float BIOME_PATCH_CELL_JITTER = 0.4f;
-        public static final float BIOME_PATCH_KERNEL_RADIUS_CELLS = 1.25f;
-        public static final float BIOME_PATCH_FALLOFF_POWER = 2.5f;
-
-        // Terrain Generation — Defaults \\
-
-        public static final String DEFAULT_SURFACE_BLOCK_NAME = "TerraArcanaBlocks/Grass Block";
-        public static final String DEFAULT_SUBSURFACE_BLOCK_NAME = "TerraArcanaBlocks/Dirt Block";
-        public static final String DEFAULT_UNDERWATER_BLOCK_NAME = "TerraArcanaBlocks/Sand";
-        public static final String DEFAULT_STONE_BLOCK_NAME = "TerraArcanaBlocks/Stone Block";
-        public static final String DEFAULT_WATER_BLOCK_NAME = "TerraArcanaBlocks/Water";
-
-        // Terrain Generation — World Shape \\
-
-        public static final int TERRAIN_SEA_LEVEL_BLOCKS = 160;
-        public static final int TERRAIN_SURFACE_DEPTH_BLOCKS = 4;
-        public static final int TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS = 3;
-        public static final int TERRAIN_MIN_HEIGHT_BLOCKS = 24;
-        public static final int TERRAIN_MAX_HEIGHT_BLOCKS = 900;
-        public static final int TERRAIN_MACRO_SAMPLE_STRIDE_BLOCKS = 8;
-        public static final int TERRAIN_DETAIL_SAMPLE_STRIDE_BLOCKS = 4;
-
-        // Terrain Generation — Noise Salts \\
-
-        public static final long TERRAIN_CONTINENTALNESS_SEED_SALT = 0x6C4F3A2E9D1B8F73L;
-        public static final long TERRAIN_EROSION_SEED_SALT = 0x2F8E4C7A19D3B650L;
-        public static final long TERRAIN_PV_SEED_SALT = 0xA37D1E9C5B2F8064L;
-        public static final long TERRAIN_DETAIL_SEED_SALT = 0x4B9F2D6E8C1A3075L;
-        public static final long TERRAIN_OCTAVE_HASH_SALT = 0x9E3779B97F4A7C15L;
-
-        // Terrain Generation — Continentalness \\
-
-        public static final double TERRAIN_CONTINENTALNESS_WAVELENGTH_BLOCKS = 2400.0;
-        public static final int TERRAIN_CONTINENTALNESS_OCTAVES = 4;
-        public static final float TERRAIN_CONTINENTALNESS_PERSISTENCE = 0.5f;
-        public static final float TERRAIN_CONTINENTALNESS_LACUNARITY = 2.0f;
-        public static final float[] TERRAIN_CONTINENTALNESS_SPLINE_X = { -1.0f, -0.55f, -0.25f, -0.05f, 0.0f, 0.10f,
-                        0.30f, 0.60f, 1.0f };
-        public static final float[] TERRAIN_CONTINENTALNESS_SPLINE_HEIGHT_BLOCKS = { 40f, 60f, 100f, 145f, 160f, 168f,
-                        190f, 230f, 290f };
-
-        // Terrain Generation — Erosion \\
-
-        public static final double TERRAIN_EROSION_WAVELENGTH_BLOCKS = 1100.0;
-        public static final int TERRAIN_EROSION_OCTAVES = 3;
-        public static final float TERRAIN_EROSION_PERSISTENCE = 0.5f;
-        public static final float TERRAIN_EROSION_LACUNARITY = 2.0f;
-        public static final float[] TERRAIN_EROSION_SPLINE_X = { -1.0f, -0.6f, -0.2f, 0.2f, 0.6f, 1.0f };
-        public static final float[] TERRAIN_EROSION_SPLINE_AMPLITUDE_BLOCKS = { 220f, 150f, 70f, 30f, 10f, 4f };
-
-        // Terrain Generation — Peaks & Valleys \\
-
-        public static final double TERRAIN_PV_WAVELENGTH_BLOCKS = 380.0;
-        public static final int TERRAIN_PV_OCTAVES = 4;
-        public static final float TERRAIN_PV_PERSISTENCE = 0.5f;
-        public static final float TERRAIN_PV_LACUNARITY = 2.0f;
-        public static final float[] TERRAIN_PV_SPLINE_X = { 0.0f, 0.5f, 0.75f, 0.9f, 1.0f };
-        public static final float[] TERRAIN_PV_SPLINE_CONTRIBUTION = { -1.0f, -0.1f, 0.3f, 0.7f, 1.0f };
-
-        // Terrain Generation — Surface Detail \\
-
-        public static final float DEFAULT_BIOME_TERRAIN_HEIGHT_SCALE = 1.0f;
-        public static final float TERRAIN_DETAIL_WAVELENGTH_BLOCKS = 40.0f;
-        public static final int TERRAIN_DETAIL_OCTAVES = 3;
-        public static final float TERRAIN_DETAIL_PERSISTENCE = 0.5f;
-        public static final float TERRAIN_DETAIL_LACUNARITY = 2.0f;
-        public static final float TERRAIN_DETAIL_AMPLITUDE_BLOCKS = 3.0f;
-
-        // Rotation \\
-
-        public static final double DEGREES_PER_FULL_ROTATION = 360.0;
-
-        // Sky \\
-
-        public static final String SKY_COLOR_UBO = "SkyColorData";
-
-        // Cloud \\
-
-        public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 120.0f;
-        public static final int MAX_CLOUD_TYPES = 8;
-
-        // Weather \\
-
-        public static final float WEATHER_NOISE_CELL_SIZE = 512.0f;
-        public static final float WEATHER_LOCAL_EVOLUTION_PERIOD = 2520.0f;
-        public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
-        public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
-        public static final float DEFAULT_WEATHER_HUMIDITY = 0.5f;
-        public static final float DEFAULT_WEATHER_VISIBILITY = 1.0f;
-        public static final float DEFAULT_WEATHER_FOG_DENSITY_SCALE = 1.0f;
-
-        // Weather Authoring Defaults \\
-
-        public static final float DEFAULT_WEATHER_CLOUD_COVERAGE = 0.0f;
-        public static final float DEFAULT_WEATHER_CLOUD_DENSITY_MULTIPLIER = 1.0f;
-        public static final float DEFAULT_WEATHER_PRECIPITATION_INTENSITY = 0.0f;
-        public static final float DEFAULT_WEATHER_VISUAL_SCALE = 1.0f;
-        public static final float DEFAULT_WEATHER_TEMPERATURE_MODIFIER = 0.0f;
-        public static final float WEATHER_CLOUD_NO_ALTITUDE_OVERRIDE = -1.0f;
-        public static final float DEFAULT_CLOUD_ENTRY_DENSITY_MULTIPLIER = 1.0f;
-        public static final float DEFAULT_CLOUD_ENTRY_CHANCE = 1.0f;
-        public static final float DEFAULT_NEXT_WEATHER_CHANCE = 1.0f;
-        public static final float DEFAULT_BIOME_WEATHER_CHANCE = 1.0f;
-        public static final float WEATHER_NEXT_SUGGESTION_INFLUENCE = 1.5f;
-
-        // Weather Drift \\
-
-        public static final float WEATHER_BASE_DRIFT_SPEED_KPH = 25.0f;
-        public static final float KPH_TO_METERS_PER_SECOND = 1000f / 3600f;
-
-        // Weather Sampling Range \\
-
-        public static final int WEATHER_RANGE_CHUNKS = 512;
-
-        // Global Weather Noise \\
-
-        public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f;
-        public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f;
-        public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f;
-        public static final int GLOBAL_WEATHER_MEANDER_WAVE_NUMBER = 1;
-        public static final float GLOBAL_WEATHER_MEANDER_INFLUENCE = 0.025f;
-        public static final long GLOBAL_WEATHER_INTENSITY_SEED = 0xB16B00B5DEADC0DEL;
-
-        // Weather Region Noise \\
-
-        public static final long WEATHER_NOISE_SEED = 0x51A5F00DCAFEBEEFL;
-        public static final double WEATHER_NOISE_MIN_CYCLES_AROUND_WORLD = 4.0;
-        public static final double WEATHER_NOISE_CROSS_STREAM_COMPRESSION = 3.2;
-        public static final double WEATHER_NOISE_MACRO_FREQUENCY = 0.36;
-        public static final float WEATHER_NOISE_MACRO_WEIGHT = 0.55f;
-        public static final double WEATHER_NOISE_DETAIL_FREQUENCY = 3.2;
-        public static final float WEATHER_NOISE_DETAIL_WEIGHT = 0.26f;
-        public static final long WEATHER_HASH_SALT_PRIMARY = 0x2545F4914F6CDD1DL;
-        public static final long WEATHER_HASH_SALT_SECONDARY = 0x9E3779B97F4A7C15L;
-
-        // Season Blend \\
-
-        public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
-
-        // Season Authoring Defaults \\
-
-        public static final float DEFAULT_SEASON_BASE_WIND_SPEED = 3.0f;
-        public static final float DEFAULT_SEASON_WIND_VARIANCE = 1.0f;
-        public static final float DEFAULT_SEASON_PREVAILING_WIND_DIRECTION_DEGREES = 0.0f;
-        public static final float DEFAULT_SEASON_TEMPERATURE_VARIANCE = 5.0f;
-        public static final float DEFAULT_SEASON_PRECIPITATION_CHANCE_SCALE = 1.0f;
-        public static final float DEFAULT_SEASON_TINT_R = 1.0f;
-        public static final float DEFAULT_SEASON_TINT_G = 1.0f;
-        public static final float DEFAULT_SEASON_TINT_B = 1.0f;
-        public static final float DEFAULT_SEASON_SUNRISE_R = 0.90f;
-        public static final float DEFAULT_SEASON_SUNRISE_G = 0.53f;
-        public static final float DEFAULT_SEASON_SUNRISE_B = 0.39f;
-
-        // Latitude Day Length \\
-
-        public static final float LATITUDE_DAYLENGTH_REFERENCE_TILT_DEGREES = 23.5f;
-        public static final float LATITUDE_DAYLENGTH_CURVE_POWER = 1.0f;
-
-        // Overhead — Weather Patterns \\
-
-        public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
-        public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 300;
-        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 480.0f;
-        public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
-        public static final float WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
-        public static final long WEATHER_PATTERN_LOCAL_KEY_SEED = Long.MIN_VALUE;
-
-        // Weather Render \\
-
-        public static final String WEATHER_DEFAULT_MATERIAL = "weather/WeatherMaterial";
-        public static final float WEATHER_SEA_LEVEL_BLOCKS = 512.0f;
-        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 515.0f;
-        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 1050.0f;
-
-        // Cloud Dome \\
-
-        public static final float CLOUD_DOME_FADE_ALTITUDE_BLOCKS = 512.0f;
-        public static final float CLOUD_DOME_BEND_CURVE = 0.5f;
-
-        // Cloud Height Variation \\
-
-        public static final float WEATHER_CLOUD_PATTERN_HEIGHT_OFFSET_RATIO = 0.35f;
-        public static final float WEATHER_CLOUD_LOCAL_HEIGHT_JITTER_RATIO = 0.18f;
-        public static final float WEATHER_CLOUD_LOCAL_HEIGHT_JITTER_FREQUENCY = 0.004f;
-        public static final float WEATHER_CLOUD_VERTICAL_WISP_FREQUENCY = 0.02f;
-
-        // Weather Pattern Lifecycle \\
-
-        public static final float WEATHER_TICK_NOISE_FRACTION = 0.12f;
-        public static final float WEATHER_TICK_MIN_SECONDS = 20.0f;
-        public static final float WEATHER_TICK_MAX_SECONDS = 180.0f;
-        public static final float WEATHER_PATTERN_TRANSITION_DURATION_SECONDS = 10.0f;
-        public static final float WEATHER_PATTERN_FADE_IN_RATE = 0.12f;
-        public static final float WEATHER_PATTERN_FADE_OUT_RATE = 0.12f;
-
-        // Weather Map (GPU) \\
-
-        public static final String WEATHER_MAP_UBO = "WeatherMapData";
-        public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 32;
-        public static final int MAX_CLOUDS_PER_WEATHER = 3;
-        public static final float WEATHER_MAP_RANGE_FADE_CHUNKS = 64.0f;
-        public static final float WEATHER_MAP_LAYER_BOUND_MARGIN_BLOCKS = 16.0f;
-        public static final long WEATHER_MAP_RENDER_SEED_MIX = 0x94D049BB133111EBL;
-
-        // Weather Cloud Placement \\
-
-        public static final float WEATHER_CLOUD_SUBREGION_RADIUS_RATIO = 0.62f;
-        public static final float WEATHER_CLOUD_SUBREGION_OFFSET_RATIO = 0.5f;
-        public static final float WEATHER_CLOUD_ALTITUDE_JITTER_BLOCKS = 25.0f;
-        public static final long WEATHER_CLOUD_SUBREGION_SEED_SALT = 0x7F4A7C15D2B89E33L;
-
-        // Wind \\
-
-        public static final float WIND_GLOBAL_DIRECTION_DEGREES = 45.0f;
-        public static final float WIND_GLOBAL_SPEED = 1.0f;
-        public static final float WIND_MIN_SPEED_FLOOR = 0.05f;
-        public static final float WIND_GUST_SPEED_FREQUENCY = 0.13f;
-        public static final float WIND_GUST_SPEED_FREQUENCY_SECONDARY = 0.045f;
-        public static final float WIND_GUST_DIRECTION_FREQUENCY = 0.07f;
-        public static final float WIND_GUST_DIRECTION_WOBBLE_DEGREES = 8.0f;
-        public static final float WIND_DIURNAL_PEAK_TIME = 0.65f;
-        public static final float WIND_DIURNAL_STRENGTH = 0.25f;
-
-        // Wind Data (GPU) \\
-
-        public static final String WIND_DATA_UBO = "WindData";
-        public static final String UNIFORM_WIND_DIRECTION = "u_windDirection";
-        public static final String UNIFORM_WIND_SPEED = "u_windSpeed";
-        public static final String UNIFORM_WIND_DRIFT_OFFSET = "u_windDriftOffset";
-        public static final String UNIFORM_TEMPERATURE = "u_temperature";
-        public static final float SKY_WIND_DRIFT_SCALE = 0.02f;
-        public static final float SKY_WIND_DRIFT_WRAP = 100000.0f;
-
-        // Temperature \\
-
-        public static final float DEFAULT_BASE_TEMPERATURE = 15.0f;
-        public static final float TEMPERATURE_DIURNAL_PEAK_TIME = 0.65f;
-        public static final float TEMPERATURE_DRIFT_FREQUENCY = 0.02f;
-        public static final float TEMPERATURE_PRECIPITATION_COOLING = 4.0f;
-
-        // Sky Seasonal \\
-
-        public static final float SKY_SEASONAL_TINT_OFFSET_SCALE = 0.15f;
-        public static final float SKY_SEASONAL_STRENGTH_SCALE = 0.50f;
-        public static final float SKY_HORIZON_DESATURATION = 0.12f;
-
-        // Sky Daily Variation \\
-
-        public static final float SKY_DAILY_OFFSET_R_SCALE = 0.08f;
-        public static final float SKY_DAILY_OFFSET_R_BIAS = -0.04f;
-        public static final float SKY_DAILY_OFFSET_G_SCALE = 0.06f;
-        public static final float SKY_DAILY_OFFSET_G_BIAS = -0.03f;
-        public static final float SKY_DAILY_OFFSET_B_SCALE = 0.04f;
-        public static final float SKY_DAILY_OFFSET_B_BIAS = -0.02f;
-        public static final float SKY_DAILY_HASH_G = 7919.0f;
-        public static final float SKY_DAILY_HASH_B = 5333.0f;
-
-        // Sky Palette - Night \\
-
-        public static final float SKY_NIGHT_TOP_R = 0.020f;
-        public static final float SKY_NIGHT_TOP_G = 0.020f;
-        public static final float SKY_NIGHT_TOP_B = 0.080f;
-        public static final float SKY_NIGHT_BOTTOM_R = 0.005f;
-        public static final float SKY_NIGHT_BOTTOM_G = 0.005f;
-        public static final float SKY_NIGHT_BOTTOM_B = 0.020f;
-
-        // Sky Palette - Day \\
-
-        public static final float SKY_DAY_TOP_R = 0.60f;
-        public static final float SKY_DAY_TOP_G = 0.82f;
-        public static final float SKY_DAY_TOP_B = 1.00f;
-        public static final float SKY_DAY_BOTTOM_R = 0.32f;
-        public static final float SKY_DAY_BOTTOM_G = 0.52f;
-        public static final float SKY_DAY_BOTTOM_B = 0.80f;
-
-        // Sky Temperature Accent \\
-
-        public static final float SKY_TEMPERATURE_COLD_REFERENCE = -10.0f;
-        public static final float SKY_TEMPERATURE_HOT_REFERENCE = 30.0f;
-        public static final float SKY_TEMPERATURE_COLD_ACCENT_R = 0.95f;
-        public static final float SKY_TEMPERATURE_COLD_ACCENT_G = 0.75f;
-        public static final float SKY_TEMPERATURE_COLD_ACCENT_B = 0.88f;
-        public static final float SKY_TEMPERATURE_HOT_ACCENT_R = 1.00f;
-        public static final float SKY_TEMPERATURE_HOT_ACCENT_G = 0.55f;
-        public static final float SKY_TEMPERATURE_HOT_ACCENT_B = 0.18f;
-        public static final float SKY_TEMPERATURE_ACCENT_STRENGTH = 0.55f;
-
-        // Sky Cloud Color \\
-
-        public static final float SKY_CLOUD_COLOR_HORIZON_WEIGHT = 0.65f;
-        public static final float SKY_CLOUD_COLOR_ACCENT_STRENGTH = 0.7f;
-
-        // Sky Fog Color \\
-
-        public static final float SKY_FOG_COLOR_LIFT = 0.04f;
 
         // Lighting \\
 
@@ -777,16 +267,299 @@ public class EngineSetting {
         public static final float MOON_MAX_INTENSITY = 0.25f;
         public static final float MOON_PHASE_MAX = 0.95f;
         public static final float MOON_PHASE_MIN = 0.05f;
-        public static final float SUN_BLEND_THRESHOLD = 0.15f;
         public static final float SUN_HORIZON_CUTOFF = 0.85f;
+        public static final String UNIFORM_MOON_COLOR = "u_moonColor";
+        public static final String UNIFORM_MOON_DIRECTION = "u_moonDirection";
+        public static final String UNIFORM_MOON_INTENSITY = "u_moonIntensity";
+        public static final String UNIFORM_SUN_COLOR = "u_sunColor";
+        public static final String UNIFORM_SUN_DIRECTION = "u_sunDirection";
+        public static final String UNIFORM_SUN_INTENSITY = "u_sunIntensity";
 
-        // Time \\
+        // Block & World \\
 
-        public static final long MILLIS_PER_REAL_DAY = 86400000L;
+        public static final String AIR_BLOCK_NAME = "TerraArcanaBlocks/Air";
+        public static final float BLOCK_VISCOSITY_UNDEFINED = -1.0f;
+        public static final int CHUNK_POOL_MAX_OVERFLOW = 32;
+        public static final String CHUNK_VAO = "util/vao/ChunkVAO";
+        public static final int COMPLEX_TICK_INTERVAL_FRAMES = 60;
+        public static final int COMPLEX_TICK_PHASE_FRAMES = 30;
+        public static final float DEFAULT_AXIAL_TILT_DEGREES = 23.5f;
+        public static final short DEFAULT_BLOCK_ORIENTATION = (short) (DEFAULT_BLOCK_DIRECTION * 4);
+        public static final String DEFAULT_CALENDAR_NAME = "standard/Default";
+        public static final float DEFAULT_GRAVITY_MULTIPLIER = 1.0f;
+        public static final float DEFAULT_GRAVITY_X = 0.0f;
+        public static final float DEFAULT_GRAVITY_Y = -1.0f;
+        public static final float DEFAULT_GRAVITY_Z = 0.0f;
+        public static final float DEFAULT_PLANETARY_OFFSET = 0.0f;
+        public static final float DEFAULT_WORLD_ROTATION_SPEED = 1.0f;
+        public static final int ENCODED_FACE_NATURAL_FULL_OFFSET = 24;
+        public static final int FULL_TICK_INTERVAL_FRAMES = 60;
+        public static final int FULL_TICK_PHASE_FRAMES = 0;
+        public static final int GRID_SLOTS_SCAN_PER_FRAME = 32;
+        public static final int LIQUID_TICK_INTERVAL_FRAMES = 6;
+        public static final int LIQUID_TICK_PHASE_FRAMES = 3;
+        public static final int MAX_CHUNK_GPU_UPLOADS_PER_FRAME = 16;
+        public static final int MAX_CHUNK_STREAM_PER_BATCH = 32;
+        public static final int MAX_CHUNK_STREAM_PER_FRAME = 128;
+        public static final int MAX_CHUNK_STREAM_PER_QUEUE = 1024;
+        public static final int MAX_MEGA_GPU_UPLOADS_PER_FRAME = 4;
+        public static final int MEGA_ASSESS_PER_FRAME = GRID_SLOTS_SCAN_PER_FRAME / MEGA_CHUNK_SIZE;
+        public static final int MEGA_POOL_MAX_OVERFLOW = 8;
+        public static final int PARTIAL_TICK_INTERVAL_FRAMES = 60;
+        public static final int PARTIAL_TICK_PHASE_FRAMES = 15;
+        public static final String STARTING_WORLD = "TerraArcana";
 
-        // Clock \\
+        // Liquid & Swimming \\
 
-        public static final double CLOCK_MIDNIGHT = 0.0;
+        public static final int LIQUID_BASIN_FILL_THRESHOLD = 2;
+        public static final int LIQUID_BASIN_SCAN_LIMIT = 256;
+        public static final float LIQUID_FLOW_INTERVAL_MAX_SECONDS = 20.0f;
+        public static final float LIQUID_FLOW_INTERVAL_MIN_SECONDS = 0.1f;
+        public static final int LIQUID_HORIZONTAL_MOVE_CONSISTENCY_LOSS = 1;
+        public static final short LIQUID_LEVEL_EMPTY = 0;
+        public static final short LIQUID_LEVEL_MAX = 8;
+        public static final float LIQUID_NO_SURFACE = Float.NaN;
+        public static final int LIQUID_PERMANENCE_THRESHOLD = 64;
+        public static final float LIQUID_VISCOSITY_TO_FLOW_SECONDS = 2.0f;
+        public static final float SWIM_CLIMB_OUT_MAX_VISCOSITY = 1.0f;
+        public static final int SWIM_CLIMB_OUT_SCAN_DEPTH = 4;
+        public static final float SWIM_DEEP_THRESHOLD = 0.1f;
+        public static final float SWIM_FULL_SUBMERGE_FRACTION = 1.0f;
+        public static final float SWIM_HEAD_CLEARANCE = 0.12f;
+        public static final float SWIM_MIN_SPEED_MULTIPLIER = 0.15f;
+        public static final float SWIM_SINK_SPEED = 0.5f;
+        public static final float SWIM_TREAD_RESPONSIVENESS = 6.0f;
+        public static final float SWIM_TREAD_SPEED = 2.0f;
+        public static final float SWIM_UP_SPEED = 2.4f;
+        public static final float SWIM_VISCOSITY_DRAG_SCALE = 0.12f;
+        public static final float SWIM_VISCOSITY_REFERENCE = 1.0f;
+        public static final float WADE_JUMP_HEIGHT_MULTIPLIER = 0.5f;
+
+        // Biome \\
+
+        public static final float BIOME_BLEND_BAND_PIXELS = 0.55f;
+        public static final float BIOME_BORDER_WARP_DETAIL_FREQUENCY = 2.7f;
+        public static final float BIOME_BORDER_WARP_DETAIL_STRENGTH_PIXELS = 0.11f;
+        public static final float BIOME_BORDER_WARP_FREQUENCY = 0.5f;
+        public static final long BIOME_BORDER_WARP_SEED = 0x8B3C9F1E2A47D5B1L;
+        public static final float BIOME_BORDER_WARP_STRENGTH_PIXELS = 0.4f;
+        public static final int BIOME_FIELD_MAX_CONTRIBUTORS = 12;
+        public static final int BIOME_MAP_COLOR_UNDEFINED = -1;
+        public static final int BIOME_MAP_SAMPLE_COUNT = 4;
+        public static final long BIOME_MATERIAL_DITHER_SEED = 0x7D2B5E0C93A6F418L;
+        public static final float BIOME_OCEAN_FLOOD_THRESHOLD = 0.5f;
+        public static final int BIOME_PATCH_CELLS_PER_PIXEL = 2;
+        public static final float BIOME_PATCH_CELL_JITTER = 0.4f;
+        public static final float BIOME_PATCH_FALLOFF_POWER = 2.5f;
+        public static final float BIOME_PATCH_KERNEL_RADIUS_CELLS = 1.25f;
+        public static final long BIOME_PATCH_SEED = 0x4F1D2C6E9A7B31F5L;
+        public static final int BIOME_PATCH_SAMPLE_COUNT = 9;
+
+        // Terrain Generation \\
+
+        public static final float DEFAULT_BIOME_TERRAIN_HEIGHT_SCALE = 1.0f;
+        public static final String DEFAULT_STONE_BLOCK_NAME = "TerraArcanaBlocks/Stone Block";
+        public static final String DEFAULT_SUBSURFACE_BLOCK_NAME = "TerraArcanaBlocks/Dirt Block";
+        public static final String DEFAULT_SURFACE_BLOCK_NAME = "TerraArcanaBlocks/Grass Block";
+        public static final String DEFAULT_UNDERWATER_BLOCK_NAME = "TerraArcanaBlocks/Sand";
+        public static final String DEFAULT_WATER_BLOCK_NAME = "TerraArcanaBlocks/Water";
+        public static final int TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS = 3;
+        public static final float TERRAIN_CONTINENTALNESS_LACUNARITY = 2.0f;
+        public static final int TERRAIN_CONTINENTALNESS_OCTAVES = 4;
+        public static final float TERRAIN_CONTINENTALNESS_PERSISTENCE = 0.5f;
+        public static final long TERRAIN_CONTINENTALNESS_SEED_SALT = 0x6C4F3A2E9D1B8F73L;
+        public static final float[] TERRAIN_CONTINENTALNESS_SPLINE_HEIGHT_BLOCKS = { 40f, 60f, 100f, 145f, 160f,
+                168f, 190f, 230f, 290f };
+        public static final float[] TERRAIN_CONTINENTALNESS_SPLINE_X = { -1.0f, -0.55f, -0.25f, -0.05f, 0.0f, 0.10f,
+                0.30f, 0.60f, 1.0f };
+        public static final double TERRAIN_CONTINENTALNESS_WAVELENGTH_BLOCKS = 2400.0;
+        public static final float TERRAIN_DETAIL_AMPLITUDE_BLOCKS = 3.0f;
+        public static final float TERRAIN_DETAIL_LACUNARITY = 2.0f;
+        public static final int TERRAIN_DETAIL_OCTAVES = 3;
+        public static final float TERRAIN_DETAIL_PERSISTENCE = 0.5f;
+        public static final int TERRAIN_DETAIL_SAMPLE_STRIDE_BLOCKS = 4;
+        public static final long TERRAIN_DETAIL_SEED_SALT = 0x4B9F2D6E8C1A3075L;
+        public static final float TERRAIN_DETAIL_WAVELENGTH_BLOCKS = 40.0f;
+        public static final float TERRAIN_EROSION_LACUNARITY = 2.0f;
+        public static final int TERRAIN_EROSION_OCTAVES = 3;
+        public static final float TERRAIN_EROSION_PERSISTENCE = 0.5f;
+        public static final long TERRAIN_EROSION_SEED_SALT = 0x2F8E4C7A19D3B650L;
+        public static final float[] TERRAIN_EROSION_SPLINE_AMPLITUDE_BLOCKS = { 220f, 150f, 70f, 30f, 10f, 4f };
+        public static final float[] TERRAIN_EROSION_SPLINE_X = { -1.0f, -0.6f, -0.2f, 0.2f, 0.6f, 1.0f };
+        public static final double TERRAIN_EROSION_WAVELENGTH_BLOCKS = 1100.0;
+        public static final int TERRAIN_MACRO_SAMPLE_STRIDE_BLOCKS = 8;
+        public static final int TERRAIN_MAX_HEIGHT_BLOCKS = 900;
+        public static final int TERRAIN_MIN_HEIGHT_BLOCKS = 24;
+        public static final long TERRAIN_OCTAVE_HASH_SALT = 0x9E3779B97F4A7C15L;
+        public static final float TERRAIN_PV_LACUNARITY = 2.0f;
+        public static final int TERRAIN_PV_OCTAVES = 4;
+        public static final float TERRAIN_PV_PERSISTENCE = 0.5f;
+        public static final long TERRAIN_PV_SEED_SALT = 0xA37D1E9C5B2F8064L;
+        public static final float[] TERRAIN_PV_SPLINE_CONTRIBUTION = { -1.0f, -0.1f, 0.3f, 0.7f, 1.0f };
+        public static final float[] TERRAIN_PV_SPLINE_X = { 0.0f, 0.5f, 0.75f, 0.9f, 1.0f };
+        public static final double TERRAIN_PV_WAVELENGTH_BLOCKS = 380.0;
+        public static final int TERRAIN_SEA_LEVEL_BLOCKS = 160;
+        public static final int TERRAIN_SURFACE_DEPTH_BLOCKS = 4;
+
+        // Sky & Atmosphere \\
+
+        public static final double DEGREES_PER_FULL_ROTATION = 360.0;
+        public static final float SKY_CLOUD_COLOR_ACCENT_STRENGTH = 0.7f;
+        public static final float SKY_CLOUD_COLOR_HORIZON_WEIGHT = 0.65f;
+        public static final String SKY_COLOR_UBO = "SkyColorData";
+        public static final float SKY_DAILY_HASH_B = 5333.0f;
+        public static final float SKY_DAILY_HASH_G = 7919.0f;
+        public static final float SKY_DAILY_OFFSET_B_BIAS = -0.02f;
+        public static final float SKY_DAILY_OFFSET_B_SCALE = 0.04f;
+        public static final float SKY_DAILY_OFFSET_G_BIAS = -0.03f;
+        public static final float SKY_DAILY_OFFSET_G_SCALE = 0.06f;
+        public static final float SKY_DAILY_OFFSET_R_BIAS = -0.04f;
+        public static final float SKY_DAILY_OFFSET_R_SCALE = 0.08f;
+        public static final float SKY_DAY_BOTTOM_B = 0.80f;
+        public static final float SKY_DAY_BOTTOM_G = 0.52f;
+        public static final float SKY_DAY_BOTTOM_R = 0.32f;
+        public static final float SKY_DAY_TOP_B = 1.00f;
+        public static final float SKY_DAY_TOP_G = 0.82f;
+        public static final float SKY_DAY_TOP_R = 0.60f;
+        public static final float SKY_FOG_COLOR_LIFT = 0.04f;
+        public static final float SKY_HORIZON_DESATURATION = 0.12f;
+        public static final float SKY_NIGHT_BOTTOM_B = 0.020f;
+        public static final float SKY_NIGHT_BOTTOM_G = 0.005f;
+        public static final float SKY_NIGHT_BOTTOM_R = 0.005f;
+        public static final float SKY_NIGHT_TOP_B = 0.080f;
+        public static final float SKY_NIGHT_TOP_G = 0.020f;
+        public static final float SKY_NIGHT_TOP_R = 0.020f;
+        public static final float SKY_SEASONAL_STRENGTH_SCALE = 0.50f;
+        public static final float SKY_SEASONAL_TINT_OFFSET_SCALE = 0.15f;
+        public static final float SKY_TEMPERATURE_ACCENT_STRENGTH = 0.55f;
+        public static final float SKY_TEMPERATURE_COLD_ACCENT_B = 0.88f;
+        public static final float SKY_TEMPERATURE_COLD_ACCENT_G = 0.75f;
+        public static final float SKY_TEMPERATURE_COLD_ACCENT_R = 0.95f;
+        public static final float SKY_TEMPERATURE_COLD_REFERENCE = -10.0f;
+        public static final float SKY_TEMPERATURE_HOT_ACCENT_B = 0.18f;
+        public static final float SKY_TEMPERATURE_HOT_ACCENT_G = 0.55f;
+        public static final float SKY_TEMPERATURE_HOT_ACCENT_R = 1.00f;
+        public static final float SKY_TEMPERATURE_HOT_REFERENCE = 30.0f;
+
+        // Weather \\
+
+        public static final float DEFAULT_BIOME_WEATHER_CHANCE = 1.0f;
+        public static final float DEFAULT_CLOUD_ENTRY_CHANCE = 1.0f;
+        public static final float DEFAULT_CLOUD_ENTRY_DENSITY_MULTIPLIER = 1.0f;
+        public static final float DEFAULT_NEXT_WEATHER_CHANCE = 1.0f;
+        public static final float DEFAULT_WEATHER_CLOUD_COVERAGE = 0.0f;
+        public static final float DEFAULT_WEATHER_CLOUD_DENSITY_MULTIPLIER = 1.0f;
+        public static final float DEFAULT_WEATHER_FOG_DENSITY_SCALE = 1.0f;
+        public static final float DEFAULT_WEATHER_HUMIDITY = 0.5f;
+        public static final float DEFAULT_WEATHER_PRECIPITATION_INTENSITY = 0.0f;
+        public static final float DEFAULT_WEATHER_TEMPERATURE_MODIFIER = 0.0f;
+        public static final float DEFAULT_WEATHER_VISIBILITY = 1.0f;
+        public static final float DEFAULT_WEATHER_VISUAL_SCALE = 1.0f;
+        public static final float DEFAULT_WEATHER_WIND_SPEED_SCALE = 1.0f;
+        public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
+        public static final float GLOBAL_WEATHER_INFLUENCE = 0.35f;
+        public static final long GLOBAL_WEATHER_INTENSITY_SEED = 0xB16B00B5DEADC0DEL;
+        public static final float GLOBAL_WEATHER_MEANDER_INFLUENCE = 0.025f;
+        public static final int GLOBAL_WEATHER_MEANDER_WAVE_NUMBER = 1;
+        public static final float GLOBAL_WEATHER_NOISE_CELL_SIZE = 4096.0f;
+        public static final float GLOBAL_WEATHER_TILT_INFLUENCE = 0.20f;
+        public static final float KPH_TO_METERS_PER_SECOND = 1000f / 3600f;
+        public static final int MAX_CLOUDS_PER_WEATHER = 3;
+        public static final float WEATHER_BASE_DRIFT_SPEED_KPH = 25.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_JITTER_BLOCKS = 25.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MAX = 1050.0f;
+        public static final float WEATHER_CLOUD_ALTITUDE_MIN = 515.0f;
+        public static final float WEATHER_CLOUD_NO_ALTITUDE_OVERRIDE = -1.0f;
+        public static final float WEATHER_CLOUD_SUBREGION_OFFSET_RATIO = 0.5f;
+        public static final float WEATHER_CLOUD_SUBREGION_RADIUS_RATIO = 0.62f;
+        public static final long WEATHER_CLOUD_SUBREGION_SEED_SALT = 0x7F4A7C15D2B89E33L;
+        public static final long WEATHER_HASH_SALT_PRIMARY = 0x2545F4914F6CDD1DL;
+        public static final long WEATHER_HASH_SALT_SECONDARY = 0x9E3779B97F4A7C15L;
+        public static final float WEATHER_LOCAL_EVOLUTION_PERIOD = 2520.0f;
+        public static final float WEATHER_MAP_LAYER_BOUND_MARGIN_BLOCKS = 16.0f;
+        public static final float WEATHER_MAP_RANGE_FADE_CHUNKS = 64.0f;
+        public static final long WEATHER_MAP_RENDER_SEED_MIX = 0x94D049BB133111EBL;
+        public static final String WEATHER_MAP_UBO = "WeatherMapData";
+        public static final int WEATHER_MAP_UBO_MAX_ENTRIES = 32;
+        public static final float WEATHER_NEXT_SUGGESTION_INFLUENCE = 1.5f;
+        public static final float WEATHER_NOISE_CELL_SIZE = 512.0f;
+        public static final double WEATHER_NOISE_CROSS_STREAM_COMPRESSION = 3.2;
+        public static final double WEATHER_NOISE_DETAIL_FREQUENCY = 3.2;
+        public static final float WEATHER_NOISE_DETAIL_WEIGHT = 0.26f;
+        public static final double WEATHER_NOISE_MACRO_FREQUENCY = 0.36;
+        public static final float WEATHER_NOISE_MACRO_WEIGHT = 0.55f;
+        public static final double WEATHER_NOISE_MIN_CYCLES_AROUND_WORLD = 4.0;
+        public static final long WEATHER_NOISE_SEED = 0x51A5F00DCAFEBEEFL;
+        public static final int WEATHER_PATTERN_CELL_SIZE_CHUNKS = 300;
+        public static final float WEATHER_PATTERN_DEFAULT_DRIFT_SPEED_SCALE = 1.0f;
+        public static final float WEATHER_PATTERN_FADE_IN_RATE = 0.12f;
+        public static final float WEATHER_PATTERN_FADE_OUT_RATE = 0.12f;
+        public static final float WEATHER_PATTERN_HOME_JITTER_RATIO = 0.5f;
+        public static final long WEATHER_PATTERN_LOCAL_KEY_SEED = Long.MIN_VALUE;
+        public static final int WEATHER_PATTERN_MAX_ACTIVE_COUNT = 64;
+        public static final float WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS = 480.0f;
+        public static final float WEATHER_PATTERN_TRANSITION_DURATION_SECONDS = 10.0f;
+        public static final int WEATHER_RANGE_CHUNKS = 512;
+        public static final float WEATHER_TICK_MAX_SECONDS = 180.0f;
+        public static final float WEATHER_TICK_MIN_SECONDS = 20.0f;
+        public static final float WEATHER_TICK_NOISE_FRACTION = 0.12f;
+
+        // Cloud \\
+
+        public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 120.0f;
+        public static final float CLOUD_DOME_BEND_CURVE = 0.5f;
+        public static final float CLOUD_DOME_FADE_ALTITUDE_BLOCKS = 512.0f;
+        public static final int MAX_CLOUD_TYPES = 8;
+        public static final float WEATHER_CLOUD_LOCAL_HEIGHT_JITTER_FREQUENCY = 0.004f;
+        public static final float WEATHER_CLOUD_LOCAL_HEIGHT_JITTER_RATIO = 0.18f;
+        public static final float WEATHER_CLOUD_PATTERN_HEIGHT_OFFSET_RATIO = 0.35f;
+        public static final float WEATHER_CLOUD_VERTICAL_WISP_FREQUENCY = 0.02f;
+
+        // Wind \\
+
+        public static final float SKY_WIND_DRIFT_SCALE = 0.02f;
+        public static final float SKY_WIND_DRIFT_WRAP = 100000.0f;
+        public static final String UNIFORM_TEMPERATURE = "u_temperature";
+        public static final String UNIFORM_WIND_DIRECTION = "u_windDirection";
+        public static final String UNIFORM_WIND_DRIFT_OFFSET = "u_windDriftOffset";
+        public static final String UNIFORM_WIND_SPEED = "u_windSpeed";
+        public static final String WIND_DATA_UBO = "WindData";
+        public static final float WIND_DIURNAL_PEAK_TIME = 0.65f;
+        public static final float WIND_DIURNAL_STRENGTH = 0.25f;
+        public static final float WIND_GLOBAL_DIRECTION_DEGREES = 45.0f;
+        public static final float WIND_GLOBAL_SPEED = 1.0f;
+        public static final float WIND_GUST_DIRECTION_FREQUENCY = 0.07f;
+        public static final float WIND_GUST_DIRECTION_WOBBLE_DEGREES = 8.0f;
+        public static final float WIND_GUST_SPEED_FREQUENCY = 0.13f;
+        public static final float WIND_GUST_SPEED_FREQUENCY_SECONDARY = 0.045f;
+        public static final float WIND_MIN_SPEED_FLOOR = 0.05f;
+
+        // Temperature \\
+
+        public static final float DEFAULT_BASE_TEMPERATURE = 15.0f;
+        public static final float TEMPERATURE_DIURNAL_PEAK_TIME = 0.65f;
+        public static final float TEMPERATURE_DRIFT_FREQUENCY = 0.02f;
+        public static final float TEMPERATURE_PRECIPITATION_COOLING = 4.0f;
+
+        // Season \\
+
+        public static final float DEFAULT_SEASON_BASE_WIND_SPEED = 3.0f;
+        public static final float DEFAULT_SEASON_PRECIPITATION_CHANCE_SCALE = 1.0f;
+        public static final float DEFAULT_SEASON_PREVAILING_WIND_DIRECTION_DEGREES = 0.0f;
+        public static final float DEFAULT_SEASON_SUNRISE_B = 0.39f;
+        public static final float DEFAULT_SEASON_SUNRISE_G = 0.53f;
+        public static final float DEFAULT_SEASON_SUNRISE_R = 0.90f;
+        public static final float DEFAULT_SEASON_TEMPERATURE_VARIANCE = 5.0f;
+        public static final float DEFAULT_SEASON_TINT_B = 1.0f;
+        public static final float DEFAULT_SEASON_TINT_G = 1.0f;
+        public static final float DEFAULT_SEASON_TINT_R = 1.0f;
+        public static final float DEFAULT_SEASON_WIND_VARIANCE = 1.0f;
+        public static final float LATITUDE_DAYLENGTH_CURVE_POWER = 1.0f;
+        public static final float LATITUDE_DAYLENGTH_REFERENCE_TILT_DEGREES = 23.5f;
+        public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
+
+        // Time & Clock \\
+
         public static final double CLOCK_NOISE_DIVISOR = 1.6777216E7;
         public static final long CLOCK_NOISE_MASK = 16777215L;
         public static final double CLOCK_NOISE_MIN = 0.001;
@@ -798,50 +571,38 @@ public class EngineSetting {
         public static final double CLOCK_SUNSET_MAX = 0.95;
         public static final double CLOCK_SUNSET_MIN = 0.60;
         public static final double CLOCK_THREE_QUARTERS = 0.75;
+        public static final long MILLIS_PER_REAL_DAY = 86400000L;
 
-        // Physics \\
+        // Physics & Movement \\
 
         public static final float FIXED_TIME_STEP = 0.02f;
         public static final float GRAVITY_FORCE = 9.8f;
         public static final float JUMP_HOLD_FRACTION = 0.4f;
-        public static final float MOVEMENT_ACCELERATION = 8.0f;
-
-        // Movement \\
-
-        public static final float BASE_WALKING_SPEED = 1.5f;
         public static final float JUMP_SCALE = 1.8f;
+        public static final float MOVEMENT_ACCELERATION = 8.0f;
         public static final float MOVEMENT_SCALE = 1.5f;
-
-        // Raycast \\
-
         public static final float REACH_SCALE = 4.0f;
 
-        // Entity \\
+        // Entity, Rig & Player \\
 
+        public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f;
+        public static final float BONE_WEIGHT_SUM_EPSILON = 0.001f;
+        public static final float DEFAULT_BONE_SIZE = 0.25f;
         public static final float DEFAULT_ENTITY_SIZE = 1f;
         public static final float DEFAULT_ENTITY_WEIGHT = 1f;
         public static final float DEFAULT_EYE_LEVEL = 0.91f;
         public static final float DEFAULT_JUMP_DURATION = 0.5f;
         public static final float DEFAULT_JUMP_HEIGHT = 0.5f;
         public static final float DEFAULT_MOVEMENT_SPEED = 3.3f;
+        public static final String DEFAULT_PLAYER_RACE = "HumanoidEntity";
         public static final float DEFAULT_REACH = 1f;
         public static final float DEFAULT_SPRINT_SPEED = 7f;
         public static final float DEFAULT_SWIM_SPEED = 2.4f;
         public static final float DEFAULT_WALK_SPEED = 1.4f;
-
-        // Rig \\
-
-        public static final float DEFAULT_BONE_SIZE = 0.25f;
         public static final int MAX_BONE_INFLUENCES = 4;
-        public static final float BONE_WEIGHT_SUM_EPSILON = 0.001f;
         public static final int SKINNED_BONE_TEXELS_PER_BONE = 3;
-        public static final int SKINNED_INSTANCE_MODEL_FLOATS = 16;
         public static final int SKINNED_INSTANCE_INITIAL_CAPACITY = 64;
-
-        // Player \\
-
-        public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f;
-        public static final String DEFAULT_PLAYER_RACE = "HumanoidEntity";
+        public static final int SKINNED_INSTANCE_MODEL_FLOATS = 16;
 
         // Item \\
 
@@ -852,86 +613,69 @@ public class EngineSetting {
 
         public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
         public static final Color FONT_DEFAULT_COLOR = Color.RED;
-        public static final int FONT_DEFAULT_OFFSET_INDEX_X = 0;
-        public static final int FONT_DEFAULT_OFFSET_INDEX_Y = 1;
         public static final String FONT_DEFAULT_MATERIAL = "fonts/StandardFontMaterial";
         public static final String FONT_DEFAULT_MESH = "fonts/FontMesh";
         public static final String FONT_DEFAULT_NAME = "MontserratAlternates";
         public static final String FONT_DEFAULT_SIZE_PERCENT = "50%";
-        public static final String FONT_DEFAULT_VAO = "util/vao/LabelVAO";
         public static final float FONT_LETTER_SPACING_RATIO = 0.05f;
         public static final int FONT_RASTER_SIZE = 24;
-        public static final float FONT_SPACE_WIDTH_RATIO = 0.25f;
 
-        // Menu \\
+        // Menu & UI \\
 
-        public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
-        public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
-        public static final String TAB_TITLE_PREVIEW = "Preview";
-        public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
+        public static final float DIVIDER_HIT_TOLERANCE = 6f;
         public static final float DROPDOWN_COLLAPSE_TOLERANCE = 12f;
         public static final String ELEMENT_DEFAULT_MAX_SIZE = "100%";
         public static final String ELEMENT_DEFAULT_MIN_SIZE = "0%";
         public static final String ELEMENT_DEFAULT_POSITION = "0%";
         public static final String ELEMENT_DEFAULT_SIZE = "100%";
         public static final int MAX_MASK_DEPTH = 8;
-
-        // Tab Drag \\
-
-        public static final float DIVIDER_HIT_TOLERANCE = 6f;
-        public static final float RATIO_MIN = 0.1f;
+        public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
+        public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
         public static final float RATIO_MAX = 0.9f;
-        public static final int TAB_DRAG_PREVIEW_W = 256;
-        public static final int TAB_DRAG_PREVIEW_H = 144;
+        public static final float RATIO_MIN = 0.1f;
         public static final float TAB_DRAG_EDGE_FRACTION = 0.25f;
+        public static final int TAB_DRAG_PREVIEW_H = 144;
+        public static final int TAB_DRAG_PREVIEW_W = 256;
+        public static final String TAB_TITLE_PREVIEW = "Preview";
         public static final String TAB_ZONE_GHOST_WINDOW_TITLE = "TabZoneGhost";
+        public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
 
-        // Screen Capture \\
+        // Screen Capture & Recording \\
 
+        public static final int AVI_FLAG_HAS_INDEX = 0x00000010;
+        public static final int AVI_FRAME_CHUNK_HEADER_LENGTH_BYTES = 8;
+        public static final int AVI_INDEX_ENTRY_LENGTH_BYTES = 16;
+        public static final int AVI_INDEX_FLAG_KEYFRAME = 0x00000010;
+        public static final int AVI_MAIN_HEADER_LENGTH_BYTES = 56;
+        public static final int AVI_STREAM_FORMAT_LENGTH_BYTES = 40;
+        public static final int AVI_STREAM_HEADER_LENGTH_BYTES = 56;
+        public static final String AVI_UNCOMPRESSED_FOURCC = "DIB ";
+        public static final int BYTES_PER_PIXEL_BGRA = 4;
         public static final String CAPTURE_ROOT_DIRECTORY = "Capture";
-        public static final String SCREENSHOT_OUTPUT_DIRECTORY = "Images";
-        public static final String RECORDING_OUTPUT_DIRECTORY = "Videos";
-        public static final String SCREENSHOT_FILE_PREFIX = "Screenshot_";
-        public static final String RECORDING_FILE_PREFIX = "Recording_";
         public static final String CAPTURE_TIMESTAMP_PATTERN = "yyyy-MM-dd_HH-mm-ss";
-        public static final String SCREENSHOT_STANDARD_FORMAT = "png";
-        public static final String SCREENSHOT_LOSSLESS_EXTENSION = "tga";
-        public static final String RECORDING_STANDARD_EXTENSION = "mp4";
-        public static final String RECORDING_LOSSLESS_EXTENSION = "avi";
-        public static final String RECORDING_CONVERSION_TEMP_SUFFIX = ".converting";
-        public static final String SCREEN_CAPTURE_THREAD_NAME = "ScreenCapture";
-        public static final String VIDEO_ENCODE_THREAD_NAME = "VideoEncode";
-        public static final String VIDEO_WRITE_THREAD_NAME = "VideoWrite";
         public static final int RECORDING_LOSSLESS_FRAME_RATE = 60;
+        public static final int RECORDING_CAPTURE_MAX_OWED_FRAMES = RECORDING_LOSSLESS_FRAME_RATE * 2;
+        public static final String RECORDING_CONVERSION_TEMP_SUFFIX = ".converting";
+        public static final String RECORDING_FILE_PREFIX = "Recording_";
+        public static final int RECORDING_LOSSLESS_BUFFER_COUNT = 4;
+        public static final String RECORDING_LOSSLESS_EXTENSION = "avi";
+        public static final int RECORDING_LOSSLESS_MAX_OWED_FRAMES = RECORDING_LOSSLESS_FRAME_RATE * 2;
+        public static final String RECORDING_OUTPUT_DIRECTORY = "Videos";
+        public static final String RECORDING_STANDARD_EXTENSION = "mp4";
         public static final int RECORDING_STANDARD_FRAME_RATE = 30;
         public static final int RECORDING_STANDARD_FRAME_SAMPLE_STRIDE = RECORDING_LOSSLESS_FRAME_RATE
                         / RECORDING_STANDARD_FRAME_RATE;
         public static final int RECORDING_STANDARD_MAX_WIDTH = 1280;
-        public static final int RECORDING_CAPTURE_MAX_OWED_FRAMES = RECORDING_LOSSLESS_FRAME_RATE * 2;
-        public static final int RECORDING_LOSSLESS_MAX_OWED_FRAMES = RECORDING_LOSSLESS_FRAME_RATE * 2;
-        public static final int RECORDING_LOSSLESS_BUFFER_COUNT = 4;
-        public static final int BYTES_PER_PIXEL_BGRA = 4;
-
-        // PBO Readback \\
-
-        public static final int PBO_ASYNC_READBACK_DEPTH = 3;
-
-        // Screenshot — TGA Format \\
-
+        public static final int RIFF_CHUNK_HEADER_LENGTH_BYTES = 8;
+        public static final String SCREENSHOT_FILE_PREFIX = "Screenshot_";
+        public static final String SCREENSHOT_LOSSLESS_EXTENSION = "tga";
+        public static final String SCREENSHOT_OUTPUT_DIRECTORY = "Images";
+        public static final String SCREENSHOT_STANDARD_FORMAT = "png";
+        public static final String SCREEN_CAPTURE_THREAD_NAME = "ScreenCapture";
         public static final int TGA_HEADER_LENGTH_BYTES = 18;
+        public static final int TGA_IMAGE_DESCRIPTOR_BOTTOM_LEFT_ALPHA = 0x08;
         public static final int TGA_IMAGE_TYPE_UNCOMPRESSED_TRUECOLOR = 2;
         public static final int TGA_PIXEL_DEPTH_BITS = 32;
-        public static final int TGA_IMAGE_DESCRIPTOR_BOTTOM_LEFT_ALPHA = 0x08;
-
-        // Recording — AVI Container \\
-
-        public static final String AVI_UNCOMPRESSED_FOURCC = "DIB ";
-        public static final int AVI_FLAG_HAS_INDEX = 0x00000010;
-        public static final int AVI_INDEX_FLAG_KEYFRAME = 0x00000010;
-        public static final int AVI_MAIN_HEADER_LENGTH_BYTES = 56;
-        public static final int AVI_STREAM_HEADER_LENGTH_BYTES = 56;
-        public static final int AVI_STREAM_FORMAT_LENGTH_BYTES = 40;
-        public static final int AVI_INDEX_ENTRY_LENGTH_BYTES = 16;
-        public static final int AVI_FRAME_CHUNK_HEADER_LENGTH_BYTES = 8;
-        public static final int RIFF_CHUNK_HEADER_LENGTH_BYTES = 8;
+        public static final String VIDEO_ENCODE_THREAD_NAME = "VideoEncode";
+        public static final String VIDEO_WRITE_THREAD_NAME = "VideoWrite";
 }

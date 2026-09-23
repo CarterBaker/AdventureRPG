@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.biome;
 
 import engine.graphics.color.Color;
 import engine.root.DataPackage;
+import engine.root.EngineSetting;
 import engine.util.mathematics.extras.LinearSpline;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -21,7 +22,7 @@ public class BiomeData extends DataPackage {
      * curves (or false, for oceanWater) when a biome's JSON omits them.
      */
 
-    public static final int MAP_COLOR_UNDEFINED = -1;
+    public static final int MAP_COLOR_UNDEFINED = EngineSetting.BIOME_MAP_COLOR_UNDEFINED;
 
     private final String biomeName;
     private final short biomeID;
