@@ -329,6 +329,7 @@ public class EngineSetting {
         public static final int LIQUID_SCAN_SUBCHUNK_LIMIT = 32;
         public static final int LIQUID_SPREAD_LOSS = 1;
         public static final int LIQUID_SPREAD_MIN_DIFFERENCE = 2;
+        public static final int LIQUID_SPREAD_RATE = 4;
         public static final float LIQUID_VISCOSITY_TO_FLOW_SECONDS = 2.0f;
         public static final int LIQUID_WET_MIN_LEVEL = 4;
         public static final float SWIM_CLIMB_OUT_MAX_VISCOSITY = 1.0f;

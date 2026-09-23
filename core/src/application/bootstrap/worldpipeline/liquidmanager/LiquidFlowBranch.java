@@ -11,20 +11,14 @@ import engine.util.mathematics.extras.Direction3Vector;
 class LiquidFlowBranch extends BranchPackage {
 
     /*
-     * Advances one subchunk's active liquid cells by a single step, Terraria
-     * style. A cell pours straight down first, then levels out sideways
-     * against lower neighbors — only toward neighbors that open onto a drop
-     * when any do, otherwise split evenly across all of them — and streams
-     * that meet simply combine. Wetting dry ground takes LIQUID_WET_MIN_LEVEL
-     * and costs LIQUID_SPREAD_LOSS, so water thins out the further it runs.
-     * Thin water asks LiquidBasinBranch whether it can fill the basin it is
-     * spreading into. A cell that can no longer move settles and goes
-     * inactive, unless it is a thin rim against dry ground outside a fed
-     * basin, which stays active and evaporates inward at
-     * LIQUID_EVAPORATION_CHANCE per step. Permanent cells
-     * are infinite sources: they give without ever losing level. Only cells
-     * active when the step starts are processed, alternating direction each
-     * step, so water moves at most one cell per step with no directional bias.
+     * Advances one subchunk's active liquid cells by one Terraria-style step:
+     * pour straight down, then level out sideways toward lower neighbors,
+     * favoring drops, splitting evenly otherwise, and passing no more than
+     * LIQUID_SPREAD_RATE per neighbor so water holds its shape as it runs.
+     * Wetting dry ground costs LIQUID_SPREAD_LOSS, thin water asks
+     * LiquidBasinBranch whether it can fill its basin, and a thin rim that
+     * cannot move evaporates inward. Permanent cells pour uncapped and give
+     * without ever losing level.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -129,7 +123,7 @@ class LiquidFlowBranch extends BranchPackage {
                 && liquidBasinBranch.tryFill(cell, liquidBlockID))
             return;
 
-        int spread = spread(liquidBlockID, remaining);
+        int spread = spread(liquidBlockID, remaining, permanent);
         drain(liquidBlockID, remaining, spread, permanent);
 
         if (fallen > 0 || spread > 0)
@@ -168,7 +162,7 @@ class LiquidFlowBranch extends BranchPackage {
 
     // Lateral Spread \\
 
-    private int spread(short liquidBlockID, int level) {
+    private int spread(short liquidBlockID, int level, boolean permanent) {
 
         int targetCount = collectSpreadTargets(liquidBlockID, level);
 
@@ -196,12 +190,14 @@ class LiquidFlowBranch extends BranchPackage {
         if (budget <= 0)
             return 0;
 
+        int rate = permanent ? EngineSetting.LIQUID_LEVEL_MAX : EngineSetting.LIQUID_SPREAD_RATE;
+
         int delivered = 0;
 
         for (int i = 0; i < targetCount && budget > 0; i++) {
 
             int need = share + (i < remainder ? 1 : 0) - targetLevels[i];
-            int amount = Math.min(need, budget);
+            int amount = Math.min(Math.min(need, budget), rate);
 
             if (amount <= 0)
                 continue;
