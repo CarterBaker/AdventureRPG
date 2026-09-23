@@ -1,0 +1,39 @@
+{
+    "origin": [4, 0, 4],
+    "y_offset_blocks": -1,
+    "foundation_block": "TerraArcanaBlocks/Stone Block",
+    "rules": {
+        "biomes": ["BlackBiome"],
+        "surface": "LAND",
+        "min_ground_height_blocks": 161,
+        "max_ground_height_blocks": 260,
+        "max_slope_blocks": 3
+    },
+    "frequency": {
+        "chance": 0.4,
+        "spacing_blocks": 160,
+        "separation_blocks": 32,
+        "random_rotation": true
+    },
+    "fixed_placements": [
+        { "x": 256, "y": 220, "z": 256, "rotation": 2 }
+    ],
+    "blocks": [
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [0, 0, 0], "to": [8, 0, 8] },
+        { "block": "TerraArcanaBlocks/Air", "from": [0, 1, 0], "to": [8, 5, 8] },
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [3, 1, 3], "to": [5, 1, 5] },
+        { "block": "TerraArcanaBlocks/Water", "position": [4, 1, 4] },
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [0, 1, 0], "to": [0, 4, 0] },
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [8, 1, 0], "to": [8, 4, 0] },
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [0, 1, 8], "to": [0, 4, 8] },
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [8, 1, 8], "to": [8, 4, 8] },
+        { "block": "TerraArcanaBlocks/Gold Ore", "position": [0, 5, 0] },
+        { "block": "TerraArcanaBlocks/Iron Ore", "position": [8, 5, 0] },
+        { "block": "TerraArcanaBlocks/Copper Ore", "position": [0, 5, 8] },
+        { "block": "TerraArcanaBlocks/Coal Ore", "position": [8, 5, 8] },
+        { "block": "TerraArcanaBlocks/Grass Block", "position": [2, 1, 4], "facing": "EAST", "spin": 0 },
+        { "block": "TerraArcanaBlocks/Grass Block", "position": [6, 1, 4], "facing": "WEST", "spin": 0 },
+        { "block": "TerraArcanaBlocks/Grass Block", "position": [4, 1, 2], "facing": "SOUTH", "spin": 0 },
+        { "block": "TerraArcanaBlocks/Grass Block", "position": [4, 1, 6], "facing": "NORTH", "spin": 0 }
+    ]
+}

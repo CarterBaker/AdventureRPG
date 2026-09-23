@@ -129,6 +129,24 @@ public class WorldWrapUtility extends EngineUtility {
         return wrappedDelta(a, b, worldHeightChunks);
     }
 
+    // Block Wrap \\
+
+    public static long wrapBlockX(WorldHandle worldHandle, long blockX) {
+        return Math.floorMod(blockX, (long) worldHandle.getWorldScale().x);
+    }
+
+    public static long wrapBlockZ(WorldHandle worldHandle, long blockZ) {
+        return Math.floorMod(blockZ, (long) worldHandle.getWorldScale().y);
+    }
+
+    public static long wrappedBlockDeltaX(WorldHandle worldHandle, long a, long b) {
+        return (long) wrappedDelta(a, b, worldHandle.getWorldScale().x);
+    }
+
+    public static long wrappedBlockDeltaZ(WorldHandle worldHandle, long a, long b) {
+        return (long) wrappedDelta(a, b, worldHandle.getWorldScale().y);
+    }
+
     // Y-Axis Fraction \\
 
     private static double wrappedYFraction(WorldHandle worldHandle, long chunkCoordinate) {

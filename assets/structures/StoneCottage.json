@@ -1,0 +1,37 @@
+{
+    "origin": [3, 0, 3],
+    "y_offset_blocks": -1,
+    "foundation_block": "TerraArcanaBlocks/Stone Block",
+    "rules": {
+        "biomes": ["WhiteBiome"],
+        "surface": "LAND",
+        "min_ground_height_blocks": 161,
+        "max_ground_height_blocks": 240,
+        "max_slope_blocks": 4
+    },
+    "frequency": {
+        "chance": 0.5,
+        "spacing_blocks": 128,
+        "separation_blocks": 24,
+        "random_rotation": true
+    },
+    "fixed_placements": [
+        { "x": 64, "z": 64, "rotation": 1 }
+    ],
+    "blocks": [
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [0, 0, 0], "to": [6, 0, 6] },
+        { "block": "TerraArcanaBlocks/Stone Block", "from": [0, 1, 0], "to": [6, 3, 6] },
+        { "block": "TerraArcanaBlocks/Air", "from": [1, 1, 1], "to": [5, 3, 5] },
+        { "block": "TerraArcanaBlocks/Air", "from": [3, 1, 6], "to": [3, 2, 6] },
+        { "block": "TerraArcanaBlocks/Air", "position": [0, 2, 3] },
+        { "block": "TerraArcanaBlocks/Air", "position": [6, 2, 3] },
+        { "block": "TerraArcanaBlocks/Air", "position": [3, 2, 0] },
+        { "block": "TerraArcanaBlocks/Grass Block", "from": [2, 3, 6], "to": [4, 3, 6], "facing": "NORTH", "spin": 0 },
+        { "block": "TerraArcanaBlocks/Coal Ore", "position": [5, 1, 5] },
+        { "block": "TerraArcanaBlocks/Gold Ore", "position": [1, 1, 5] },
+        { "block": "TerraArcanaBlocks/Grass Block", "from": [-1, 4, -1], "to": [7, 4, 7] },
+        { "block": "TerraArcanaBlocks/Grass Block", "from": [0, 5, 0], "to": [6, 5, 6] },
+        { "block": "TerraArcanaBlocks/Grass Block", "from": [1, 6, 1], "to": [5, 6, 5] },
+        { "block": "TerraArcanaBlocks/Grass Block", "from": [2, 7, 2], "to": [4, 7, 4] }
+    ]
+}

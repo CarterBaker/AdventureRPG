@@ -11,6 +11,7 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -40,7 +41,10 @@ public class WorldGenerationManager extends ManagerPackage {
      * GenerationCacheStruct already holds a result for this exact coordinate.
      * Chunks generate concurrently on separate worker threads, so the
      * surface-profile cache below is a ConcurrentHashMap rather than a locked
-     * map.
+     * map. The probe resolves ground height and flooding for any single world
+     * column through that column's own chunk grids on a separate thread-local
+     * container, so structure placement can anchor across chunk borders and
+     * always agree exactly with the terrain the neighbor generates.
      */
 
     // Internal
@@ -48,6 +52,7 @@ public class WorldGenerationManager extends ManagerPackage {
     private BiomeManager biomeManager;
 
     private TerrainColumnAsyncContainer terrainColumnContainer;
+    private TerrainColumnAsyncContainer probeColumnContainer;
     private final ConcurrentHashMap<Short, TerrainSurfaceProfile> surfaceProfileCache = new ConcurrentHashMap<>();
 
     private int CHUNK_SIZE;
@@ -63,6 +68,7 @@ public class WorldGenerationManager extends ManagerPackage {
     protected void create() {
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
         this.terrainColumnContainer = create(TerrainColumnAsyncContainer.class);
+        this.probeColumnContainer = create(TerrainColumnAsyncContainer.class);
     }
 
     @Override
@@ -85,7 +91,7 @@ public class WorldGenerationManager extends ManagerPackage {
         TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();
 
         if (terrainCache.isValidFor(chunkCoordinate)) {
-            applyCachedColumn(column, chunkCoordinate, terrainCache);
+            applyCachedColumn(column, worldHandle, chunkCoordinate, terrainCache);
             return;
         }
 
@@ -106,6 +112,7 @@ public class WorldGenerationManager extends ManagerPackage {
         column.biomeID = column.macroBiomeIDGrid[TerrainColumnAsyncContainer.MACRO_CENTER_INDEX];
         column.allFillBlocksFullGeometry = resolveFillGeometryUniformity(column);
 
+        column.computedWorldHandle = worldHandle;
         column.computedChunkCoordinate = chunkCoordinate;
         column.hasComputedColumn = true;
 
@@ -229,15 +236,10 @@ public class WorldGenerationManager extends ManagerPackage {
 
                 int columnIndex = localZ * CHUNK_SIZE + localX;
 
-                float macroShape = sampleMacroBilinear(column.macroShapeGridBlocks, localX, localZ);
-                float detail = sampleDetailBilinear(column.detailGridBlocks, localX, localZ);
-
-                int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(macroShape, detail);
+                int groundHeight = resolveGroundHeight(column, localX, localZ);
                 column.groundHeightBlocks[columnIndex] = groundHeight;
 
-                boolean oceanWater = sampleMacroBilinear(column.macroOceanWeightGrid, localX,
-                        localZ) > EngineSetting.BIOME_OCEAN_FLOOD_THRESHOLD;
-
+                boolean oceanWater = resolveOceanWater(column, localX, localZ);
                 column.columnOceanWater[columnIndex] = oceanWater;
 
                 int cornerIndex = pickMacroCorner(
@@ -269,8 +271,22 @@ public class WorldGenerationManager extends ManagerPackage {
         column.allOceanWater = allOceanWater;
     }
 
+    private int resolveGroundHeight(TerrainColumnAsyncContainer column, int localX, int localZ) {
+
+        float macroShape = sampleMacroBilinear(column.macroShapeGridBlocks, localX, localZ);
+        float detail = sampleDetailBilinear(column.detailGridBlocks, localX, localZ);
+
+        return TerrainShapeUtility.finalizeGroundHeightBlocks(macroShape, detail);
+    }
+
+    private boolean resolveOceanWater(TerrainColumnAsyncContainer column, int localX, int localZ) {
+        return sampleMacroBilinear(column.macroOceanWeightGrid, localX, localZ)
+                > EngineSetting.BIOME_OCEAN_FLOOD_THRESHOLD;
+    }
+
     private void applyCachedColumn(
             TerrainColumnAsyncContainer column,
+            WorldHandle worldHandle,
             long chunkCoordinate,
             GenerationCacheStruct terrainCache) {
 
@@ -289,8 +305,65 @@ public class WorldGenerationManager extends ManagerPackage {
         column.allOceanWater = terrainCache.hasAllOceanWater();
         column.allFillBlocksFullGeometry = terrainCache.hasAllFillBlocksFullGeometry();
 
+        column.computedWorldHandle = worldHandle;
         column.computedChunkCoordinate = chunkCoordinate;
         column.hasComputedColumn = true;
+    }
+
+    // Probe — any single block column \\
+
+    public int probeGroundHeight(WorldHandle worldHandle, long worldX, long worldZ) {
+
+        long wrappedX = WorldWrapUtility.wrapBlockX(worldHandle, worldX);
+        long wrappedZ = WorldWrapUtility.wrapBlockZ(worldHandle, worldZ);
+
+        TerrainColumnAsyncContainer probe = resolveProbeColumn(worldHandle, wrappedX, wrappedZ);
+
+        return resolveGroundHeight(probe, (int) (wrappedX % CHUNK_SIZE), (int) (wrappedZ % CHUNK_SIZE));
+    }
+
+    public boolean probeFlooded(WorldHandle worldHandle, long worldX, long worldZ) {
+
+        long wrappedX = WorldWrapUtility.wrapBlockX(worldHandle, worldX);
+        long wrappedZ = WorldWrapUtility.wrapBlockZ(worldHandle, worldZ);
+
+        TerrainColumnAsyncContainer probe = resolveProbeColumn(worldHandle, wrappedX, wrappedZ);
+
+        int localX = (int) (wrappedX % CHUNK_SIZE);
+        int localZ = (int) (wrappedZ % CHUNK_SIZE);
+
+        return resolveOceanWater(probe, localX, localZ)
+                && resolveGroundHeight(probe, localX, localZ) < EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+    }
+
+    private TerrainColumnAsyncContainer resolveProbeColumn(WorldHandle worldHandle, long wrappedX, long wrappedZ) {
+
+        TerrainColumnAsyncContainer probe = probeColumnContainer.getInstance();
+
+        int chunkX = (int) (wrappedX / CHUNK_SIZE);
+        int chunkZ = (int) (wrappedZ / CHUNK_SIZE);
+        long chunkCoordinate = Coordinate2Long.pack(chunkX, chunkZ);
+
+        if (probe.hasComputedColumn
+                && probe.computedWorldHandle == worldHandle
+                && probe.computedChunkCoordinate == chunkCoordinate)
+            return probe;
+
+        long seed = worldHandle.getSeed();
+        long worldOffsetX = (long) chunkX * CHUNK_SIZE;
+        long worldOffsetZ = (long) chunkZ * CHUNK_SIZE;
+
+        double worldWidthBlocks = worldHandle.getWorldScale().x;
+        double worldHeightBlocks = worldHandle.getWorldScale().y;
+
+        sampleMacroGrid(worldHandle, probe, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
+        sampleDetailGrid(probe, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
+
+        probe.computedWorldHandle = worldHandle;
+        probe.computedChunkCoordinate = chunkCoordinate;
+        probe.hasComputedColumn = true;
+
+        return probe;
     }
 
     // Grid Interpolation \\
@@ -417,11 +490,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
     public boolean generateSubChunk(WorldHandle worldHandle, long chunkCoordinate, SubChunkInstance subChunkInstance) {
 
-        TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();
-
-        if (!column.hasComputedColumn || column.computedChunkCoordinate != chunkCoordinate)
-            throwException("generateSubChunk() called for a chunk whose column data was never computed on this "
-                    + "thread — computeColumn() must run once for this exact chunk coordinate first.");
+        TerrainColumnAsyncContainer column = requireComputedColumn(chunkCoordinate);
 
         subChunkInstance.beginGeneration(column.biomeID);
 
@@ -536,6 +605,23 @@ public class WorldGenerationManager extends ManagerPackage {
         subChunkInstance.setLiquidStable(true);
 
         return true;
+    }
+
+    private TerrainColumnAsyncContainer requireComputedColumn(long chunkCoordinate) {
+
+        TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();
+
+        if (!column.hasComputedColumn || column.computedChunkCoordinate != chunkCoordinate)
+            throwException("Column data was read for a chunk whose column was never computed on this thread — "
+                    + "computeColumn() must run once for this exact chunk coordinate first.");
+
+        return column;
+    }
+
+    // Accessible \\
+
+    public int getColumnGroundHeight(long chunkCoordinate, int localX, int localZ) {
+        return requireComputedColumn(chunkCoordinate).groundHeightBlocks[localZ * CHUNK_SIZE + localX];
     }
 
     // Surface Profile \\

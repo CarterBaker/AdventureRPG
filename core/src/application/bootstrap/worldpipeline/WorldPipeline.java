@@ -4,6 +4,7 @@ import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.fluidsimulationsystem.FluidSimulationSystem;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
+import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
@@ -22,6 +23,8 @@ public class WorldPipeline extends PipelinePackage {
      * frame so the render queue is current when rendering runs. WorldTickManager
      * is registered immediately after WorldStreamManager so its update() runs
      * later in the same frame, after that frame's wrap state is known.
+     * StructureManager follows WorldGenerationManager, whose terrain probe it
+     * anchors structures against.
      */
 
     @Override
@@ -31,6 +34,7 @@ public class WorldPipeline extends PipelinePackage {
         create(BiomeManager.class);
         create(FluidSimulationSystem.class);
         create(WorldGenerationManager.class);
+        create(StructureManager.class);
         create(GridManager.class);
         create(WorldStreamManager.class);
         create(WorldTickManager.class);

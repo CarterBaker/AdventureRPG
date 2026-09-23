@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
 
@@ -34,6 +35,7 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     static final int DETAIL_SAMPLE_COUNT = DETAIL_SAMPLES_PER_AXIS * DETAIL_SAMPLES_PER_AXIS;
 
     boolean hasComputedColumn;
+    WorldHandle computedWorldHandle;
     long computedChunkCoordinate;
 
     // Macro Grid — one biome field evaluation each
