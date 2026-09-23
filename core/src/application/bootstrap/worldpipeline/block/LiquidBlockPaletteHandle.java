@@ -10,8 +10,10 @@ class LiquidBlockPaletteHandle extends BlockTypePaletteHandle {
     /*
      * Liquid child of BlockPaletteHandle. On top of membership it owns every
      * per-cell liquid property: fill level, whether the cell is active (may
-     * still move and so must be simulated), and whether it belongs to a
-     * permanent body that acts as an infinite source. Levels are realized on
+     * still move and so must be simulated), whether it belongs to a
+     * permanent body that acts as an infinite source, and whether it belongs
+     * to the tidal ocean, whose level the tide owns rather than the flow
+     * simulation. Levels are realized on
      * the first liquid cell, so a palette that never holds liquid never pays
      * for them.
      */
@@ -26,6 +28,9 @@ class LiquidBlockPaletteHandle extends BlockTypePaletteHandle {
     // Permanence
     private BitSet permanent;
 
+    // Tide
+    private BitSet tidal;
+
     // Constructor \\
 
     @Override
@@ -35,6 +40,7 @@ class LiquidBlockPaletteHandle extends BlockTypePaletteHandle {
 
         this.active = resetBits(active, totalCells);
         this.permanent = resetBits(permanent, totalCells);
+        this.tidal = resetBits(tidal, totalCells);
         this.activeCount = 0;
 
         if (levels != null)
@@ -47,6 +53,7 @@ class LiquidBlockPaletteHandle extends BlockTypePaletteHandle {
         levels = null;
         active = null;
         permanent = null;
+        tidal = null;
         activeCount = 0;
     }
 
@@ -65,6 +72,7 @@ class LiquidBlockPaletteHandle extends BlockTypePaletteHandle {
 
         levels[cellIndex] = (byte) EngineSetting.LIQUID_LEVEL_MAX;
         permanent.clear(cellIndex);
+        tidal.clear(cellIndex);
         deactivate(cellIndex);
     }
 
@@ -77,6 +85,7 @@ class LiquidBlockPaletteHandle extends BlockTypePaletteHandle {
             levels[cellIndex] = (byte) EngineSetting.LIQUID_LEVEL_EMPTY;
 
         permanent.clear(cellIndex);
+        tidal.clear(cellIndex);
         deactivate(cellIndex);
     }
 
@@ -88,6 +97,7 @@ class LiquidBlockPaletteHandle extends BlockTypePaletteHandle {
 
         Arrays.fill(levels, (byte) EngineSetting.LIQUID_LEVEL_MAX);
         permanent.set(0, totalCells);
+        tidal.set(0, totalCells);
         active.clear();
         activeCount = 0;
     }
@@ -102,6 +112,7 @@ class LiquidBlockPaletteHandle extends BlockTypePaletteHandle {
 
         active.clear();
         permanent.clear();
+        tidal.clear();
         activeCount = 0;
     }
 
@@ -135,6 +146,20 @@ class LiquidBlockPaletteHandle extends BlockTypePaletteHandle {
             return;
 
         permanent.set(cellIndex, isPermanent);
+    }
+
+    // Tide \\
+
+    boolean isTidal(int cellIndex) {
+        return tidal.get(cellIndex);
+    }
+
+    void setTidal(int cellIndex, boolean isTidal) {
+
+        if (!contains(cellIndex))
+            return;
+
+        tidal.set(cellIndex, isTidal);
     }
 
     // Activity \\

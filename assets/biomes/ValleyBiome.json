@@ -1,25 +1,20 @@
 {
-    "map_color": "#000000",
     "ocean_water": false,
     "beach_biome": "SandyBeachBiome",
-    "probable_biomes": [
-        { "name": "ValleyBiome", "chance": 0.2 },
-        { "name": "MountainBiome", "chance": 0.1 }
-    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
-        "height_blocks": [172, 180, 188, 198, 214]
+        "height_blocks": [128, 134, 140, 147, 154]
     },
     "erosion_spline": {
         "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
-        "amplitude_blocks": [72, 60, 48, 38, 30]
+        "amplitude_blocks": [26, 22, 18, 14, 10]
     },
     "peaks_valleys_spline": {
-        "x": [0.0, 0.3, 0.6, 0.85, 1.0],
-        "contribution": [-0.25, 0.15, 0.5, 0.8, 1.0]
+        "x": [0.0, 0.4, 0.7, 1.0],
+        "contribution": [-0.6, -0.2, 0.2, 0.5]
     },
-    "detail_amplitude_blocks": 5.0,
-    "detail_wavelength_blocks": 22,
+    "detail_amplitude_blocks": 3.0,
+    "detail_wavelength_blocks": 28,
     "surface_block": "TerraArcanaBlocks/Grass Block",
     "subsurface_block": "TerraArcanaBlocks/Dirt Block",
     "underwater_block": "TerraArcanaBlocks/Sand",

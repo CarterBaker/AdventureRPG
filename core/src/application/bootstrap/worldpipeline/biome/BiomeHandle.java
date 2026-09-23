@@ -128,4 +128,12 @@ public class BiomeHandle extends HandlePackage {
     public boolean hasOceanWater() {
         return biomeData.hasOceanWater();
     }
+
+    public String getBeachBiomeName() {
+        return biomeData.getBeachBiomeName();
+    }
+
+    public boolean hasBeachBiome() {
+        return biomeData.hasBeachBiome();
+    }
 }

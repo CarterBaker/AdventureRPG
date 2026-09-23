@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.worldtickmanager;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
+import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
@@ -9,6 +10,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.TickQuadrant;
@@ -32,17 +34,26 @@ public class LiquidTickBranch extends BranchPackage {
      * its own lock inside a LiquidManager chunk tick; every subchunk the flow
      * touched is rebuilt inline and its chunk's MERGE_DATA cascade-cleared so
      * the async, GPU-upload-budgeted streaming pipeline re-merges it.
+     * Every firing also assesses the ocean against the live tide: loaded
+     * chunks within OCEAN_TIDE_RANGE_CHUNKS whose water was last written
+     * against a different tide surface are re-levelled nearest-first, at
+     * most OCEAN_TIDE_CHUNKS_PER_TICK of them, through the same lock,
+     * rebuild, and re-merge path the flow uses. Chunks past that range keep
+     * the tide they were written with until the player nears them; the
+     * water shader draws every ocean surface at the live tide regardless.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
     private LiquidManager liquidManager;
+    private TideManager tideManager;
     private DynamicGeometryManager dynamicGeometryManager;
     private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
 
     // Settings
     private int intervalFrames;
+    private float tideRangeSquared;
 
     // State
     private int frameCounter;
@@ -59,6 +70,7 @@ public class LiquidTickBranch extends BranchPackage {
 
         // Settings
         this.intervalFrames = EngineSetting.LIQUID_TICK_INTERVAL_FRAMES;
+        this.tideRangeSquared = EngineSetting.OCEAN_TIDE_RANGE_CHUNKS * EngineSetting.OCEAN_TIDE_RANGE_CHUNKS;
 
         // State
         this.frameCounter = EngineSetting.LIQUID_TICK_PHASE_FRAMES;
@@ -76,6 +88,7 @@ public class LiquidTickBranch extends BranchPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
         this.liquidManager = get(LiquidManager.class);
+        this.tideManager = get(TideManager.class);
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
     }
@@ -98,6 +111,7 @@ public class LiquidTickBranch extends BranchPackage {
     public void tick() {
 
         liquidManager.retryDeferredWakes();
+        tickTide();
 
         TickQuadrant quadrant = TickQuadrant.VALUES[quadrantCursor];
         quadrantCursor = (quadrantCursor + 1) % TickQuadrant.VALUES.length;
@@ -161,8 +175,7 @@ public class LiquidTickBranch extends BranchPackage {
             syncContainer.release();
         }
 
-        for (int i = 0; i < touchedChunkCoordinates.size(); i++)
-            worldStreamManager.invalidateMegaForChunk(touchedChunkCoordinates.getLong(i));
+        invalidateTouchedMegas();
     }
 
     private void tickSubChunk(ChunkInstance chunk, SubChunkInstance subChunk, float delta) {
@@ -177,6 +190,71 @@ public class LiquidTickBranch extends BranchPackage {
 
         subChunk.resetLiquidFlowAccumulator();
         liquidManager.flow(chunk, subChunk);
+    }
+
+    // Tide \\
+
+    private void tickTide() {
+
+        int surfaceLevels = tideManager.getSurfaceLevels();
+        int budget = EngineSetting.OCEAN_TIDE_CHUNKS_PER_TICK;
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size && budget > 0; i++)
+            budget = tideGrid((GridInstance) elements[i], surfaceLevels, budget);
+    }
+
+    private int tideGrid(GridInstance grid, int surfaceLevels, int budget) {
+
+        long[] loadOrder = grid.getLoadOrder();
+        int totalSlots = grid.getTotalSlots();
+        Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
+
+        for (int i = 0; i < totalSlots && budget > 0; i++) {
+
+            GridSlotHandle slot = grid.getGridSlot(loadOrder[i]);
+
+            if (slot.getChunkDistanceFromCenter() > tideRangeSquared)
+                break;
+
+            ChunkInstance chunk = activeChunks.get(grid.getChunkCoordinateForSlot(loadOrder[i]));
+
+            if (chunk != null && chunk.getTideSurfaceLevels() != surfaceLevels && tideChunk(chunk, surfaceLevels))
+                budget--;
+        }
+
+        return budget;
+    }
+
+    private boolean tideChunk(ChunkInstance chunk, int surfaceLevels) {
+
+        ChunkDataSyncContainer syncContainer = chunk.getChunkDataSyncContainer();
+
+        if (!syncContainer.tryAcquire())
+            return false;
+
+        boolean tidal = false;
+
+        touchedChunkCoordinates.clear();
+        liquidManager.beginChunkTick(chunk);
+
+        try {
+            if (syncContainer.getData()[ChunkData.GENERATION_DATA.index]
+                    && chunk.getTideSurfaceLevels() != surfaceLevels) {
+                tidal = liquidManager.tide(chunk, surfaceLevels);
+                rebuildTouched();
+            }
+        } finally {
+            liquidManager.endChunkTick();
+            syncContainer.release();
+        }
+
+        invalidateTouchedMegas();
+
+        return tidal;
     }
 
     // Rebuild \\
@@ -197,6 +275,11 @@ public class LiquidTickBranch extends BranchPackage {
             ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, touchedChunk.getChunkDataSyncContainer().getData());
             touchedChunkCoordinates.add(touchedChunk.getCoordinate());
         }
+    }
+
+    private void invalidateTouchedMegas() {
+        for (int i = 0; i < touchedChunkCoordinates.size(); i++)
+            worldStreamManager.invalidateMegaForChunk(touchedChunkCoordinates.getLong(i));
     }
 
     private void rebuildSubChunkGeometry(ChunkInstance targetChunk, int subChunkY) {

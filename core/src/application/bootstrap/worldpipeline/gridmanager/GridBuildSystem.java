@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.oceanpipeline.turbulencemanager.TurbulenceManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
@@ -28,7 +29,7 @@ class GridBuildSystem extends SystemPackage {
     /*
      * Constructs a GridInstance and all GridSlotHandles for a given focal
      * entity and window, including each window's own cloned clock, weather,
-     * wind, and lighting UBO instances.
+     * wind, ocean turbulence, and lighting UBO instances.
      */
 
     // Internal
@@ -36,6 +37,7 @@ class GridBuildSystem extends SystemPackage {
     private ClockManager clockManager;
     private WeatherPatternManager weatherPatternManager;
     private WindManager windManager;
+    private TurbulenceManager turbulenceManager;
 
     // Config
     private int chunkSize;
@@ -49,6 +51,7 @@ class GridBuildSystem extends SystemPackage {
     private UBOHandle skyColorBase;
     private UBOHandle weatherMapBase;
     private UBOHandle windDataBase;
+    private UBOHandle oceanDataBase;
 
     // Internal \\
 
@@ -65,6 +68,7 @@ class GridBuildSystem extends SystemPackage {
         this.clockManager = get(ClockManager.class);
         this.weatherPatternManager = get(WeatherPatternManager.class);
         this.windManager = get(WindManager.class);
+        this.turbulenceManager = get(TurbulenceManager.class);
     }
 
     @Override
@@ -75,6 +79,7 @@ class GridBuildSystem extends SystemPackage {
         this.skyColorBase = uboManager.getUBOHandleFromUBOName(EngineSetting.SKY_COLOR_UBO);
         this.weatherMapBase = uboManager.getUBOHandleFromUBOName(EngineSetting.WEATHER_MAP_UBO);
         this.windDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.WIND_DATA_UBO);
+        this.oceanDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.OCEAN_DATA_UBO);
     }
 
     // Build \\
@@ -123,7 +128,9 @@ class GridBuildSystem extends SystemPackage {
                 weatherPatternManager.createLocalWeatherInstance(),
                 weatherPatternManager.createTemperatureInstance(),
                 windManager.createWindInstance(),
-                uboManager.createUBOInstance(windDataBase));
+                uboManager.createUBOInstance(windDataBase),
+                turbulenceManager.createTurbulenceInstance(),
+                uboManager.createUBOInstance(oceanDataBase));
 
         return gridInstance;
     }

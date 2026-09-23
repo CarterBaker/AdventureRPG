@@ -1,25 +1,21 @@
 {
-    "map_color": "#FFFFFF",
     "ocean_water": false,
-    "probable_biomes": [
-        { "name": "MountainBiome", "chance": 0.15 }
-    ],
     "continentalness_spline": {
-        "x": [-1.0, -0.3, 0.0, 0.3, 1.0],
-        "height_blocks": [155, 165, 170, 180, 200]
+        "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
+        "height_blocks": [158, 159, 161, 163, 166]
     },
     "erosion_spline": {
         "x": [-1.0, 0.0, 1.0],
-        "amplitude_blocks": [15, 8, 4]
+        "amplitude_blocks": [6, 4, 2]
     },
     "peaks_valleys_spline": {
         "x": [0.0, 0.5, 1.0],
-        "contribution": [-0.3, 0.1, 0.4]
+        "contribution": [-0.4, 0.1, 0.5]
     },
-    "detail_amplitude_blocks": 2.5,
-    "detail_wavelength_blocks": 32,
-    "surface_block": "TerraArcanaBlocks/Grass Block",
-    "subsurface_block": "TerraArcanaBlocks/Dirt Block",
+    "detail_amplitude_blocks": 1.0,
+    "detail_wavelength_blocks": 40,
+    "surface_block": "TerraArcanaBlocks/Sand",
+    "subsurface_block": "TerraArcanaBlocks/Sand",
     "underwater_block": "TerraArcanaBlocks/Sand",
     "weathers": {
         "Spring": [

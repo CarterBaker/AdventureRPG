@@ -1,0 +1,11 @@
+{
+    "blockName": "OceanData",
+    "uniforms": [
+        { "name": "u_oceanWaves",               "type": "VECTOR4", "count": 4  },
+        { "name": "u_oceanTurbulenceCells",     "type": "VECTOR4", "count": 16 },
+        { "name": "u_oceanTurbulenceStrengths", "type": "VECTOR4", "count": 4  },
+        { "name": "u_oceanSurface",             "type": "VECTOR4" },
+        { "name": "u_oceanWaveScale",           "type": "VECTOR2" },
+        { "name": "u_oceanTurbulenceCount",     "type": "INT" }
+    ]
+}

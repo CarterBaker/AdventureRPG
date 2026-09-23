@@ -26,7 +26,11 @@ public class BiomeManager extends ManagerPackage {
      * per-chunk lookup, so a border between two painted regions resolves as
      * a gradient of both biomes' authored values instead of a hard switch,
      * and a biome's probable variants appear as soft-edged patches inside
-     * it. Every read path is lock-free: both registries and the color
+     * it. Wherever the field puts a land biome against an ocean, the land
+     * biome's declared beach takes over its share across the shore band, so
+     * a coast always lands on sand, cliff, or whatever the land authored —
+     * a land biome with no beach simply blends straight into the ocean.
+     * Every read path is lock-free: both registries and the color
      * resolution memo are ConcurrentHashMaps, and the map-color index is an
      * immutable snapshot published through a volatile reference. Only the
      * rare mutation paths take a lock, and that lock never blocks a reader.
@@ -176,6 +180,30 @@ public class BiomeManager extends ManagerPackage {
         }
 
         outBlend.normalize();
+        resolveShoreBuffers(outBlend);
+    }
+
+    private void resolveShoreBuffers(BiomeBlendStruct blend) {
+
+        float oceanWeight = blend.getOceanWeight();
+
+        if (oceanWeight <= 0f || oceanWeight >= 1f)
+            return;
+
+        float fraction = BiomeFieldUtility.computeShoreBufferFraction(oceanWeight);
+        int count = blend.getCount();
+
+        for (int i = 0; i < count; i++) {
+
+            BiomeHandle biome = blend.getBiome(i);
+
+            if (biome.hasOceanWater() || !biome.hasBeachBiome())
+                continue;
+
+            blend.convertToBuffer(i, getBiomeHandleFromBiomeName(biome.getBeachBiomeName()), fraction);
+        }
+
+        blend.normalize();
     }
 
     /*

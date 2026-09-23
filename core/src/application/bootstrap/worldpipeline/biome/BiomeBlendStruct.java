@@ -12,7 +12,9 @@ public class BiomeBlendStruct extends StructPackage {
      * TerrainShapeUtility, so a full chunk's worth of field sampling never
      * allocates. Contributions beyond BIOME_FIELD_MAX_CONTRIBUTORS displace
      * the smallest weight currently held, which is deterministic because the
-     * accumulation order is fixed by the sampling kernels themselves.
+     * accumulation order is fixed by the sampling kernels themselves. Weight
+     * moved into a shore buffer biome is tallied separately, so the share of
+     * a position the ocean and its beaches hold together stays readable.
      */
 
     private static final int CAPACITY = EngineSetting.BIOME_FIELD_MAX_CONTRIBUTORS;
@@ -22,6 +24,7 @@ public class BiomeBlendStruct extends StructPackage {
 
     private int count;
     private float weightSum;
+    private float bufferWeight;
 
     // Accumulation \\
 
@@ -32,6 +35,7 @@ public class BiomeBlendStruct extends StructPackage {
 
         count = 0;
         weightSum = 0f;
+        bufferWeight = 0f;
     }
 
     public void accumulate(BiomeHandle biome, float weight) {
@@ -79,7 +83,22 @@ public class BiomeBlendStruct extends StructPackage {
         for (int i = 0; i < count; i++)
             weights[i] *= inverse;
 
+        bufferWeight *= inverse;
         weightSum = 1f;
+    }
+
+    public void convertToBuffer(int index, BiomeHandle bufferBiome, float fraction) {
+
+        float converted = weights[index] * fraction;
+
+        if (converted <= 0f)
+            return;
+
+        weights[index] -= converted;
+        weightSum -= converted;
+        bufferWeight += converted;
+
+        accumulate(bufferBiome, converted);
     }
 
     // Accessible \\
@@ -115,12 +134,6 @@ public class BiomeBlendStruct extends StructPackage {
         return biomes[dominant];
     }
 
-    /*
-     * Share of this position's influence held by biomes authored as ocean.
-     * WorldGenerationManager thresholds this per block column rather than
-     * reading one biome's flag, so a coastline follows the blended field
-     * instead of snapping to whichever biome happened to win the chunk.
-     */
     public float getOceanWeight() {
 
         float oceanWeight = 0f;
@@ -130,5 +143,16 @@ public class BiomeBlendStruct extends StructPackage {
                 oceanWeight += weights[i];
 
         return oceanWeight;
+    }
+
+    /*
+     * Share of this position held by the ocean together with the shore
+     * buffers inserted against it. WorldGenerationManager thresholds this per
+     * block column rather than reading one biome's flag, so the reach of the
+     * tide follows the blended coastline instead of snapping to whichever
+     * biome happened to win the chunk.
+     */
+    public float getCoastalWeight() {
+        return getOceanWeight() + bufferWeight;
     }
 }

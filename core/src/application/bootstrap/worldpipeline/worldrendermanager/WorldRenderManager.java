@@ -38,7 +38,10 @@ public class WorldRenderManager extends ManagerPackage {
      * material actually grows or shrinks. This keeps per-window VAO clones
      * (see VAOManager) valid across updates, since they reference these same
      * handles, and eliminates the GL object churn that made frequent updates
-     * — liquid ticks especially — extremely expensive.
+     * — liquid ticks especially — extremely expensive. An entry whose shader
+     * declares the OceanData block also has the drawing grid's own ocean UBO
+     * bound on every push, so each window's water rides its own tide and
+     * turbulence.
      */
 
     private MaterialManager materialManager;
@@ -117,11 +120,11 @@ public class WorldRenderManager extends ManagerPackage {
             Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = megaEntries.get(coordinate);
 
             if (materialEntries == null) {
-                renderCoveredChunksIndividually(slot, window, worldFbo);
+                renderCoveredChunksIndividually(slot, grid, window, worldFbo);
                 continue;
             }
 
-            pushEntries(materialEntries, slot.getSlotUBO(), worldFbo, window);
+            pushEntries(materialEntries, slot.getSlotUBO(), grid, worldFbo, window);
         }
     }
 
@@ -136,7 +139,11 @@ public class WorldRenderManager extends ManagerPackage {
      * instant the mega itself produces entries, since this only runs when it
      * hasn't.
      */
-    private void renderCoveredChunksIndividually(GridSlotHandle megaSlot, WindowInstance window, FboInstance worldFbo) {
+    private void renderCoveredChunksIndividually(
+            GridSlotHandle megaSlot,
+            GridInstance grid,
+            WindowInstance window,
+            FboInstance worldFbo) {
 
         ObjectArrayList<GridSlotHandle> coveredSlots = megaSlot.getCoveredSlots();
 
@@ -153,7 +160,7 @@ public class WorldRenderManager extends ManagerPackage {
             if (materialEntries == null)
                 continue;
 
-            pushEntries(materialEntries, coveredSlot.getSlotUBO(), worldFbo, window);
+            pushEntries(materialEntries, coveredSlot.getSlotUBO(), grid, worldFbo, window);
         }
     }
 
@@ -179,21 +186,29 @@ public class WorldRenderManager extends ManagerPackage {
             if (materialEntries == null)
                 continue;
 
-            pushEntries(materialEntries, slot.getSlotUBO(), worldFbo, window);
+            pushEntries(materialEntries, slot.getSlotUBO(), grid, worldFbo, window);
         }
     }
 
     private void pushEntries(
             Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries,
             UBOInstance slotUBO,
+            GridInstance grid,
             FboInstance worldFbo,
             WindowInstance window) {
 
         for (ObjectArrayList<RenderEntry> bucketList : materialEntries.values()) {
             for (int i = 0; i < bucketList.size(); i++) {
-                ModelInstance model = bucketList.get(i).modelInstance;
-                model.getMaterial().setUBO(slotUBO);
-                renderManager.pushRenderCall(model, worldFbo, 0, window);
+
+                RenderEntry entry = bucketList.get(i);
+                MaterialInstance material = entry.modelInstance.getMaterial();
+
+                material.setUBO(slotUBO);
+
+                if (entry.usesOceanData)
+                    material.setUBO(grid.getOceanDataUBO());
+
+                renderManager.pushRenderCall(entry.modelInstance, worldFbo, 0, window);
             }
         }
     }
@@ -362,10 +377,13 @@ public class WorldRenderManager extends ManagerPackage {
 
         final MeshInstance meshInstance;
         final ModelInstance modelInstance;
+        final boolean usesOceanData;
 
         RenderEntry(MeshInstance meshInstance, ModelInstance modelInstance) {
             this.meshInstance = meshInstance;
             this.modelInstance = modelInstance;
+            this.usesOceanData = modelInstance.getMaterial().getShaderHandle()
+                    .getCompiledUBOBlockNames().contains(EngineSetting.OCEAN_DATA_UBO);
         }
     }
 }

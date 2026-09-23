@@ -6,7 +6,7 @@ layout (location = 2) in float aMeta;       // face index in bits 0-2, packed ex
 layout (location = 3) in float aColor;      // unused for liquid
 layout (location = 4) in float aFluidLevel; // edge A0 slot: 0..LIQUID_LEVEL_MAX
 layout (location = 5) in float aFluidTop;   // edge A1 slot: 1.0 on vertices sitting at this face's surface height
-layout (location = 6) in float aEdgeB0;     // unused for liquid
+layout (location = 6) in float aEdgeB0;     // edge B0 slot: 1.0 on tidal ocean surface vertices
 layout (location = 7) in float aEdgeB1;     // unused for liquid
 
 #include "includes/CameraData.glsl"
@@ -15,6 +15,7 @@ layout (location = 7) in float aEdgeB1;     // unused for liquid
 #include "includes/WorldCurvature.glsl"
 #include "includes/WorldDistantRise.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
+#include "liquid/includes/OceanSurface.glsl"
 
 const vec3 NORMALS[6] = vec3[](
     vec3(0, 0, 1),
@@ -29,17 +30,33 @@ const vec3 NORMALS[6] = vec3[](
 // StandardSurface.tes already uses for its own constant re-derivations.
 const float LIQUID_LEVEL_MAX = 64.0;
 
-out vec3 vWorldNormal;
+out vec3  vWorldNormal;
+out vec3  vOceanPos;
+out float vOceanSurface;
+out float vTurbulence;
 
 void main() {
     vec3 worldPos = aPos;
     worldPos.x   += u_gridPosition.x;
     worldPos.z   += u_gridPosition.y;
 
-    if (aFluidTop > 0.5)
+    vOceanSurface = 0.0;
+    vTurbulence   = 0.0;
+
+    // Tidal ocean surface vertices ignore the level their cell was last
+    // written at and ride the live tide plus the swell the turbulence field
+    // raises here, so the sea rises, falls, and rolls continuously at every
+    // range — including chunks the tide pass has not yet re-levelled.
+    if (aEdgeB0 > 0.5) {
+        vTurbulence   = sampleOceanTurbulence(worldPos.xz);
+        worldPos.y    = u_oceanSurface.x + oceanWaveAmplitude(vTurbulence) * sampleOceanSwell(worldPos.xz);
+        vOceanSurface = 1.0;
+    }
+    else if (aFluidTop > 0.5)
     worldPos.y -= (1.0 - clamp(aFluidLevel / LIQUID_LEVEL_MAX, 0.0, 1.0));
 
     vWorldNormal = NORMALS[int(aMeta) & 7];
+    vOceanPos    = worldPos;
 
     // Water previously skipped both world bends entirely, so a shoreline
     // visibly split away from the land it borders at any real distance.

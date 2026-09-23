@@ -43,7 +43,11 @@ class LiquidGeometryBranch extends BranchPackage {
      * in the ChunkVAO's exact layout — face, orientation, and merged size in
      * the meta word like FullGeometryBranch, with level and surface flag in
      * the first two edge-state slots liquid never uses — letting WaterShader
-     * pull each vertex down toward the true fluid surface.
+     * pull each vertex down toward the true fluid surface. A surface vertex
+     * of tidal ocean water is also flagged in the third slot, and tidal and
+     * non-tidal water never merge into one quad, so WaterShader can lift
+     * exactly the ocean to the live tide and roll its waves while lakes and
+     * streams keep the level their cells hold.
      */
 
     // Internal
@@ -128,6 +132,9 @@ class LiquidGeometryBranch extends BranchPackage {
             BitSet batchReturn) {
 
         short level = blockPaletteHandle.getLiquidLevel(xyz);
+        boolean tidal = subChunkInstance.isLiquidTidal(xyz);
+        boolean tidalSurface = tidal
+                && isBeneathOpenSurface(chunkInstance, subChunkInstance, xyz, blockHandle);
 
         byte sizeA = 1;
         byte sizeB = 1;
@@ -147,7 +154,7 @@ class LiquidGeometryBranch extends BranchPackage {
                     if (tryExpand(
                             chunkInstance, subChunkInstance, biomePaletteHandle, blockPaletteHandle,
                             xyz, direction3Vector, tangentA, tangentB, sizeA, sizeB,
-                            level, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
+                            level, tidal, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
                         accumulatedBatch.or(batchReturn);
                         sizeA++;
                     } else
@@ -158,7 +165,7 @@ class LiquidGeometryBranch extends BranchPackage {
                     if (tryExpand(
                             chunkInstance, subChunkInstance, biomePaletteHandle, blockPaletteHandle,
                             xyz, direction3Vector, tangentB, tangentA, sizeB, sizeA,
-                            level, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
+                            level, tidal, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
                         accumulatedBatch.or(batchReturn);
                         sizeB++;
                     } else
@@ -167,7 +174,7 @@ class LiquidGeometryBranch extends BranchPackage {
             } while (checkA || checkB);
         }
 
-        finalizeFace(verts, xyz, sizeA, sizeB, direction3Vector, biomeHandle, blockHandle, level);
+        finalizeFace(verts, xyz, sizeA, sizeB, direction3Vector, biomeHandle, blockHandle, level, tidalSurface);
     }
 
     private boolean tryExpand(
@@ -182,6 +189,7 @@ class LiquidGeometryBranch extends BranchPackage {
             int currentSize,
             int tangentSize,
             short level,
+            boolean tidal,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             BitSet accumulatedBatch,
@@ -210,6 +218,7 @@ class LiquidGeometryBranch extends BranchPackage {
             if (comparativeBlockID != blockHandle.getBlockID() ||
                     comparativeBiomeHandle != biomeHandle ||
                     comparativeLevel != level ||
+                    subChunkInstance.isLiquidTidal(checkXYZ) != tidal ||
                     accumulatedBatch.get(ChunkCoordinate3Int.getIndex(checkXYZ)) ||
                     !hasExposedFace(chunkInstance, subChunkInstance, checkXYZ, direction3Vector, blockHandle)) {
                 batchReturn.clear();
@@ -263,6 +272,23 @@ class LiquidGeometryBranch extends BranchPackage {
         return comparativeBlockHandle.getGeometry() != DynamicGeometryType.FULL;
     }
 
+    private boolean isBeneathOpenSurface(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int xyz,
+            BlockHandle blockHandle) {
+
+        SubChunkInstance aboveSubChunkInstance = getComparativeSubChunkInstance(
+                chunkInstance, subChunkInstance, xyz, Direction3Vector.UP);
+
+        if (aboveSubChunkInstance == null)
+            return true;
+
+        int aboveXYZ = ChunkCoordinate3Int.getNeighborAndWrap(xyz, Direction3Vector.UP);
+
+        return aboveSubChunkInstance.getBlock(aboveXYZ) != blockHandle.getBlockID();
+    }
+
     private boolean isLateral(Direction3Vector direction3Vector) {
         return direction3Vector != Direction3Vector.UP && direction3Vector != Direction3Vector.DOWN;
     }
@@ -311,7 +337,8 @@ class LiquidGeometryBranch extends BranchPackage {
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            short level) {
+            short level,
+            boolean tidalSurface) {
 
         Direction3Vector tangentA = Direction3Vector.getTangentA(direction3Vector);
         Direction3Vector tangentB = Direction3Vector.getTangentB(direction3Vector);
@@ -341,14 +368,23 @@ class LiquidGeometryBranch extends BranchPackage {
 
         FloatArrayList buffer = verts.computeIfAbsent(blockHandle.getMaterialID(), k -> new FloatArrayList());
 
-        writeVertex(buffer, vert0XYZ, fMeta, color, levelF, surfaceFlag(direction3Vector, y0, maxY));
-        writeVertex(buffer, vert1XYZ, fMeta, color, levelF, surfaceFlag(direction3Vector, y1, maxY));
-        writeVertex(buffer, vert2XYZ, fMeta, color, levelF, surfaceFlag(direction3Vector, y2, maxY));
-        writeVertex(buffer, vert3XYZ, fMeta, color, levelF, surfaceFlag(direction3Vector, y3, maxY));
+        float surface0 = surfaceFlag(direction3Vector, y0, maxY);
+        float surface1 = surfaceFlag(direction3Vector, y1, maxY);
+        float surface2 = surfaceFlag(direction3Vector, y2, maxY);
+        float surface3 = surfaceFlag(direction3Vector, y3, maxY);
+
+        writeVertex(buffer, vert0XYZ, fMeta, color, levelF, surface0, tidalFlag(tidalSurface, surface0));
+        writeVertex(buffer, vert1XYZ, fMeta, color, levelF, surface1, tidalFlag(tidalSurface, surface1));
+        writeVertex(buffer, vert2XYZ, fMeta, color, levelF, surface2, tidalFlag(tidalSurface, surface2));
+        writeVertex(buffer, vert3XYZ, fMeta, color, levelF, surface3, tidalFlag(tidalSurface, surface3));
     }
 
     private float surfaceFlag(Direction3Vector direction3Vector, int vertY, int maxY) {
         return direction3Vector != Direction3Vector.DOWN && vertY == maxY ? 1f : 0f;
+    }
+
+    private float tidalFlag(boolean tidalSurface, float isSurface) {
+        return tidalSurface ? isSurface : 0f;
     }
 
     private float packColor(Color color) {
@@ -366,7 +402,8 @@ class LiquidGeometryBranch extends BranchPackage {
             float meta,
             float color,
             float level,
-            float isSurface) {
+            float isSurface,
+            float isTidalSurface) {
 
         buffer.add((float) Coordinate3Int.unpackX(vertXYZ));
         buffer.add((float) Coordinate3Int.unpackY(vertXYZ));
@@ -377,7 +414,7 @@ class LiquidGeometryBranch extends BranchPackage {
         buffer.add(color);
         buffer.add(level); // edge A0 slot: fluid level, 0..LIQUID_LEVEL_MAX
         buffer.add(isSurface); // edge A1 slot: 1 = pull to fluid surface height
-        buffer.add(0f);
+        buffer.add(isTidalSurface); // edge B0 slot: 1 = ride the live tide and ocean waves
         buffer.add(0f);
     }
 }

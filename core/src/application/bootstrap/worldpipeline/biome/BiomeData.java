@@ -17,9 +17,11 @@ public class BiomeData extends DataPackage {
      * peaks-valleys ridge-contribution spline, a small-scale detail
      * amplitude/wavelength pair, an overall height-scale multiplier, and
      * oceanWater — whether this biome is permitted to flood its
-     * below-sea-level terrain with water at all. Each resolved once at load
-     * time in BiomeBuilder and defaulting to TerrainShapeUtility's global
-     * curves (or false, for oceanWater) when a biome's JSON omits them.
+     * below-sea-level terrain with water at all — and beachBiomeName, the
+     * buffer biome BiomeManager inserts between this biome and any ocean it
+     * borders. Each resolved once at load time in BiomeBuilder and defaulting
+     * to TerrainShapeUtility's global curves (or false, or no beach) when a
+     * biome's JSON omits them.
      */
 
     public static final int MAP_COLOR_UNDEFINED = EngineSetting.BIOME_MAP_COLOR_UNDEFINED;
@@ -49,6 +51,7 @@ public class BiomeData extends DataPackage {
     private final float terrainHeightScale;
 
     private final boolean oceanWater;
+    private final String beachBiomeName;
 
     public BiomeData(
             String biomeName,
@@ -69,7 +72,8 @@ public class BiomeData extends DataPackage {
             float detailAmplitudeBlocks,
             float detailWavelengthBlocks,
             float terrainHeightScale,
-            boolean oceanWater) {
+            boolean oceanWater,
+            String beachBiomeName) {
 
         this.biomeName = biomeName;
         this.biomeID = biomeID;
@@ -96,6 +100,7 @@ public class BiomeData extends DataPackage {
         this.terrainHeightScale = terrainHeightScale;
 
         this.oceanWater = oceanWater;
+        this.beachBiomeName = beachBiomeName;
     }
 
     public String getBiomeName() {
@@ -176,5 +181,13 @@ public class BiomeData extends DataPackage {
 
     public boolean hasOceanWater() {
         return oceanWater;
+    }
+
+    public String getBeachBiomeName() {
+        return beachBiomeName;
+    }
+
+    public boolean hasBeachBiome() {
+        return beachBiomeName != null;
     }
 }

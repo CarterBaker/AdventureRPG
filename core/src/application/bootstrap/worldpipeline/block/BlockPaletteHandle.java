@@ -458,6 +458,14 @@ public final class BlockPaletteHandle extends HandlePackage {
         requireLiquidPalette().setPermanent(getCellIndex(packedXYZ), permanent);
     }
 
+    public boolean isLiquidTidal(int packedXYZ) {
+        return requireLiquidPalette().isTidal(getCellIndex(packedXYZ));
+    }
+
+    public void setLiquidTidal(int packedXYZ, boolean tidal) {
+        requireLiquidPalette().setTidal(getCellIndex(packedXYZ), tidal);
+    }
+
     public void activateLiquid(int packedXYZ) {
         requireLiquidPalette().activate(getCellIndex(packedXYZ));
     }
