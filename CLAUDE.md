@@ -40,14 +40,20 @@ When in doubt, find the closest existing system and mirror it exactly.
   `*Pipeline` (PipelinePackage), `*Manager` (ManagerPackage), `*Branch` (BranchPackage), `*System`
   (SystemPackage), `*Context` (ContextPackage), `*Loader` (LoaderPackage), `*Builder` (BuilderPackage),
   `*Handle` (HandlePackage), `*Instance` (InstancePackage), `*Data` (DataPackage), `*Struct` (StructPackage),
-  `*Utility` (UtilityPackage), `*Assembly` (AssemblyPackage).
+  `*Utility` (UtilityPackage), `*Assembly` (AssemblyPackage), `*Setting` (plain constants class).
 - **Folder layout mirrors the pipeline.** `xpipeline/XPipeline.java`, `xpipeline/xmanager/` (manager, loader,
   builder, branches, systems), `xpipeline/x/` (handle, data, instance, structs).
 - **Lifecycle is enforced.** Register systems in `create()`, resolve dependencies in `get()`. Never construct
   systems, handles, or instances with `new`; use `create(Class)`. Data and Struct objects may use constructors.
 - **Handles wrap Data.** A Handle takes its Data through `constructor(...)` and delegates accessors to it.
-- **All constants live in `EngineSetting`** (editor-only constants in `EditorSetting`). No magic numbers or
-  hard-coded paths in logic.
+- **All constants live in a settings file.** No magic numbers, hard-coded strings, or hard-coded paths in logic.
+  - `EngineSetting` holds every constant the engine itself needs or shares across contexts.
+  - A context may own its own `<Name>Setting` class, placed beside the context (e.g. `RuntimeSetting` next to
+    `RuntimeContext`), for constants only that context uses and the engine does not need to define.
+  - Editor-only constants go in `EditorSetting`.
+  - Setting classes are plain `public static final` holders with a short class comment and `//` group labels.
+  - Put each constant in exactly one settings file. If more than one context needs it, it belongs in
+    `EngineSetting`.
 - **JSON-driven content** goes through the Loader/Builder pattern, with validation via `JsonUtility`.
 - **No raw `Thread` usage.** Async work goes through the thread pipeline.
 - **Errors use `throwException(...)`** with a clear, specific message. Logging uses the `UtilityPackage` helpers.
