@@ -1,6 +1,8 @@
 package application.bootstrap.worldpipeline.blockmanager;
 
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.block.BlockHandle;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -14,6 +16,7 @@ public class BlockManager extends ManagerPackage {
     // Palette
     private Object2IntOpenHashMap<String> blockName2BlockID;
     private Int2ObjectOpenHashMap<BlockHandle> blockID2BlockHandle;
+    private DynamicGeometryType[] blockID2GeometryType;
 
     // Base \\
 
@@ -24,6 +27,7 @@ public class BlockManager extends ManagerPackage {
         this.blockName2BlockID.defaultReturnValue(-1);
 
         this.blockID2BlockHandle = new Int2ObjectOpenHashMap<>();
+        this.blockID2GeometryType = new DynamicGeometryType[EngineSetting.REGISTRY_SHORT_ID_COUNT];
 
         this.internalBufferSystem = create(BlockBufferSystem.class);
 
@@ -46,6 +50,7 @@ public class BlockManager extends ManagerPackage {
 
         blockName2BlockID.put(blockHandle.getBlockName(), blockHandle.getBlockID());
         blockID2BlockHandle.put(blockHandle.getBlockID(), blockHandle);
+        blockID2GeometryType[blockHandle.getBlockID()] = blockHandle.getGeometry();
     }
 
     // On-Demand \\
@@ -81,6 +86,16 @@ public class BlockManager extends ManagerPackage {
             throwException("No handle registered for block ID: " + blockID);
 
         return handle;
+    }
+
+    public DynamicGeometryType getGeometryFromBlockID(short blockID) {
+
+        DynamicGeometryType geometry = blockID2GeometryType[blockID];
+
+        if (geometry == null)
+            throwException("No geometry registered for block ID: " + blockID);
+
+        return geometry;
     }
 
     public BlockHandle getBlockHandleFromBlockName(String blockName) {

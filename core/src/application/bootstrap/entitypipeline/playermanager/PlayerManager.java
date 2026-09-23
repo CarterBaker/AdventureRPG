@@ -214,13 +214,7 @@ public class PlayerManager extends ManagerPackage {
 
         // Eye position — where gameplay (aiming, raycasts) actually happens,
         // regardless of where the visual camera ends up.
-        cameraOffset.set(
-                player.getSize().x / 2,
-                player.getEyeHeight(),
-                player.getSize().z / 2);
-
-        eyePosition.set(worldPositionStruct.getPosition());
-        eyePosition.add(cameraOffset);
+        resolveEyePosition(player);
 
         float distance = updateZoom(windowID, raw);
 
@@ -245,6 +239,32 @@ public class PlayerManager extends ManagerPackage {
                 input.isSecondaryAction());
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
+    }
+
+    private void resolveEyePosition(EntityInstance player) {
+
+        cameraOffset.set(
+                player.getSize().x / 2,
+                player.getEyeHeight(),
+                player.getSize().z / 2);
+
+        eyePosition.set(player.getWorldPositionStruct().getPosition());
+        eyePosition.add(cameraOffset);
+    }
+
+    // Placement \\
+
+    public boolean placeBlockForWindow(int windowID, short blockID) {
+
+        EntityInstance player = windowID2Player.get(windowID);
+        CameraInstance camera = windowID2Camera.get(windowID);
+
+        if (player == null || camera == null)
+            return false;
+
+        resolveEyePosition(player);
+
+        return placementManager.placeBlock(player, eyePosition, camera.getDirection(), blockID);
     }
 
     // Zoom \\

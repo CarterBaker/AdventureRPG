@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.chunk;
 import java.util.concurrent.atomic.AtomicLong;
 
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
+import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.GenerationCacheStruct;
@@ -82,6 +83,7 @@ public class ChunkInstance extends WorldRenderInstance {
             long coordinate,
             VAOHandle vaoHandle,
             short airBlockId,
+            BlockManager blockManager,
             Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
 
         super.constructor(
@@ -97,7 +99,8 @@ public class ChunkInstance extends WorldRenderInstance {
                     worldHandle,
                     subChunkCoordinate,
                     vaoHandle,
-                    airBlockId);
+                    airBlockId,
+                    blockManager);
 
         this.chunkNeighbors.reconfigure(coordinate, this, activeChunks);
     }

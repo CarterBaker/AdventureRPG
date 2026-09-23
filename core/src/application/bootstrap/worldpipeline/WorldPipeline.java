@@ -2,8 +2,9 @@ package application.bootstrap.worldpipeline;
 
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
-import application.bootstrap.worldpipeline.fluidsimulationsystem.FluidSimulationSystem;
+import application.bootstrap.worldpipeline.blockplacementsystem.BlockPlacementSystem;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
+import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
 import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
@@ -32,7 +33,7 @@ public class WorldPipeline extends PipelinePackage {
         create(WorldManager.class);
         create(BlockManager.class);
         create(BiomeManager.class);
-        create(FluidSimulationSystem.class);
+        create(LiquidManager.class);
         create(WorldGenerationManager.class);
         create(StructureManager.class);
         create(GridManager.class);
@@ -41,5 +42,6 @@ public class WorldPipeline extends PipelinePackage {
         create(WorldRenderManager.class);
         create(WorldItemRenderSystem.class);
         create(WorldItemPlacementSystem.class);
+        create(BlockPlacementSystem.class);
     }
 }

@@ -147,7 +147,9 @@ public abstract class SystemPackage extends UtilityPackage {
     final <T extends InstancePackage> T createInstance(Class<T> instanceClass) {
         try {
             InstancePackage.setupConstructor(this.internal, this);
-            T instance = instanceClass.getDeclaredConstructor().newInstance();
+            var constructor = instanceClass.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            T instance = constructor.newInstance();
             instance.internalCreate();
             instance.internalGet();
             instance.internalAwake();

@@ -40,10 +40,10 @@ class LiquidGeometryBranch extends BranchPackage {
      * like FullGeometryBranch, so a still lake collapses to a handful of quads
      * instead of one per block. Fill level and "does this vertex sit at the
      * fluid surface" are always written per vertex regardless of stability,
-     * packed into the two vertex fields FullGeometryBranch reserves for bevel
-     * masks — liquid never bevels, so those floats are otherwise idle here —
-     * letting WaterShader pull each vertex down toward the true fluid surface
-     * with no VAO change anywhere in the pipeline.
+     * in the ChunkVAO's exact layout — face, orientation, and merged size in
+     * the meta word like FullGeometryBranch, with level and surface flag in
+     * the first two edge-state slots liquid never uses — letting WaterShader
+     * pull each vertex down toward the true fluid surface.
      */
 
     // Internal
@@ -127,7 +127,7 @@ class LiquidGeometryBranch extends BranchPackage {
             BitSet accumulatedBatch,
             BitSet batchReturn) {
 
-        short level = subChunkInstance.getLiquidLevelPaletteHandle().getBlock(xyz);
+        short level = blockPaletteHandle.getLiquidLevel(xyz);
 
         byte sizeA = 1;
         byte sizeB = 1;
@@ -205,7 +205,7 @@ class LiquidGeometryBranch extends BranchPackage {
             short comparativeBiomeID = biomePaletteHandle.getBlock(checkXYZ);
             BiomeHandle comparativeBiomeHandle = biomeManager.getBiomeHandleFromBiomeID(comparativeBiomeID);
             short comparativeBlockID = blockPaletteHandle.getBlock(checkXYZ);
-            short comparativeLevel = subChunkInstance.getLiquidLevelPaletteHandle().getBlock(checkXYZ);
+            short comparativeLevel = blockPaletteHandle.getLiquidLevel(checkXYZ);
 
             if (comparativeBlockID != blockHandle.getBlockID() ||
                     comparativeBiomeHandle != biomeHandle ||
@@ -246,10 +246,13 @@ class LiquidGeometryBranch extends BranchPackage {
         int comparativeXYZ = ChunkCoordinate3Int.getNeighborAndWrap(xyz, direction3Vector);
         short comparativeBlockID = comparativeSubChunkInstance.getBlockPaletteHandle().getBlock(comparativeXYZ);
 
-        // Same exact liquid on the other side — always an internal boundary,
-        // never a real face, regardless of the two columns' relative fill.
+        // Same liquid on the other side is an internal boundary, except
+        // sideways against a lower neighbor — that step down in the surface
+        // is exactly what a flowing stream needs to show.
         if (comparativeBlockID == blockHandle.getBlockID())
-            return false;
+            return isLateral(direction3Vector)
+                    && comparativeSubChunkInstance.getLiquidLevel(comparativeXYZ)
+                            < subChunkInstance.getLiquidLevel(xyz);
 
         // Anything else exposes the face UNLESS that neighbor is an opaque
         // full cube — a solid block covers this entire face from every angle
@@ -258,6 +261,10 @@ class LiquidGeometryBranch extends BranchPackage {
         BlockHandle comparativeBlockHandle = blockManager.getBlockHandleFromBlockID(comparativeBlockID);
 
         return comparativeBlockHandle.getGeometry() != DynamicGeometryType.FULL;
+    }
+
+    private boolean isLateral(Direction3Vector direction3Vector) {
+        return direction3Vector != Direction3Vector.UP && direction3Vector != Direction3Vector.DOWN;
     }
 
     private SubChunkInstance getComparativeSubChunkInstance(
@@ -323,41 +330,53 @@ class LiquidGeometryBranch extends BranchPackage {
         int y3 = Coordinate3Int.unpackY(vert3XYZ);
         int maxY = Math.max(Math.max(y0, y1), Math.max(y2, y3));
 
-        float nor = (float) direction3Vector.index;
-        float color = Color.rgba8888(biomeHandle.getBiomeColor());
-        float encodedFace = (float) (direction3Vector.ordinal() * 4);
-        float quadSize = (float) ((sizeA & 0xFF) | ((sizeB & 0xFF) << 8));
+        int meta = (direction3Vector.index & 0x7)
+                | (((direction3Vector.ordinal() * 4) & 0x3F) << 3)
+                | (((sizeA - 1) & 0xF) << 9)
+                | (((sizeB - 1) & 0xF) << 13);
+
+        float fMeta = (float) meta;
+        float color = packColor(biomeHandle.getBiomeColor());
         float levelF = (float) level;
 
         FloatArrayList buffer = verts.computeIfAbsent(blockHandle.getMaterialID(), k -> new FloatArrayList());
 
-        writeVertex(buffer, vert0XYZ, nor, color, encodedFace, quadSize, levelF, y0 == maxY ? 1f : 0f);
-        writeVertex(buffer, vert1XYZ, nor, color, encodedFace, quadSize, levelF, y1 == maxY ? 1f : 0f);
-        writeVertex(buffer, vert2XYZ, nor, color, encodedFace, quadSize, levelF, y2 == maxY ? 1f : 0f);
-        writeVertex(buffer, vert3XYZ, nor, color, encodedFace, quadSize, levelF, y3 == maxY ? 1f : 0f);
+        writeVertex(buffer, vert0XYZ, fMeta, color, levelF, surfaceFlag(direction3Vector, y0, maxY));
+        writeVertex(buffer, vert1XYZ, fMeta, color, levelF, surfaceFlag(direction3Vector, y1, maxY));
+        writeVertex(buffer, vert2XYZ, fMeta, color, levelF, surfaceFlag(direction3Vector, y2, maxY));
+        writeVertex(buffer, vert3XYZ, fMeta, color, levelF, surfaceFlag(direction3Vector, y3, maxY));
+    }
+
+    private float surfaceFlag(Direction3Vector direction3Vector, int vertY, int maxY) {
+        return direction3Vector != Direction3Vector.DOWN && vertY == maxY ? 1f : 0f;
+    }
+
+    private float packColor(Color color) {
+
+        int r = Math.round(Math.min(Math.max(color.r, 0f), 1f) * 255f);
+        int g = Math.round(Math.min(Math.max(color.g, 0f), 1f) * 255f);
+        int b = Math.round(Math.min(Math.max(color.b, 0f), 1f) * 255f);
+
+        return (float) ((r << 16) | (g << 8) | b);
     }
 
     private void writeVertex(
             FloatArrayList buffer,
             int vertXYZ,
-            float nor,
+            float meta,
             float color,
-            float encodedFace,
-            float quadSize,
             float level,
             float isSurface) {
 
         buffer.add((float) Coordinate3Int.unpackX(vertXYZ));
         buffer.add((float) Coordinate3Int.unpackY(vertXYZ));
         buffer.add((float) Coordinate3Int.unpackZ(vertXYZ));
-        buffer.add(nor);
-        buffer.add(color);
         buffer.add(0f); // u — liquid is untextured
         buffer.add(0f); // v — liquid is untextured
-        buffer.add(encodedFace);
-        buffer.add(quadSize);
-        buffer.add(level); // repurposed bevel-mask slot: fluid level, 0..LIQUID_LEVEL_MAX
-        buffer.add(isSurface); // repurposed bevel-mask slot: 1 = pull to fluid surface height
+        buffer.add(meta);
+        buffer.add(color);
+        buffer.add(level); // edge A0 slot: fluid level, 0..LIQUID_LEVEL_MAX
+        buffer.add(isSurface); // edge A1 slot: 1 = pull to fluid surface height
         buffer.add(0f);
         buffer.add(0f);
     }
