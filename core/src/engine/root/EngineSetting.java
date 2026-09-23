@@ -337,7 +337,7 @@ public class EngineSetting {
 
         // Biome \\
 
-        public static final float BIOME_BLEND_BAND_PIXELS = 0.55f;
+        public static final float BIOME_BLEND_BAND_PIXELS = 0.9f;
         public static final float BIOME_BORDER_WARP_DETAIL_FREQUENCY = 2.7f;
         public static final float BIOME_BORDER_WARP_DETAIL_STRENGTH_PIXELS = 0.11f;
         public static final float BIOME_BORDER_WARP_FREQUENCY = 0.5f;
@@ -348,7 +348,7 @@ public class EngineSetting {
         public static final int BIOME_MAP_SAMPLE_COUNT = 4;
         public static final long BIOME_MATERIAL_DITHER_SEED = 0x7D2B5E0C93A6F418L;
         public static final float BIOME_OCEAN_FLOOD_THRESHOLD = 0.5f;
-        public static final int BIOME_PATCH_CELLS_PER_PIXEL = 2;
+        public static final int BIOME_PATCH_CELLS_PER_PIXEL = 1;
         public static final float BIOME_PATCH_CELL_JITTER = 0.4f;
         public static final float BIOME_PATCH_FALLOFF_POWER = 2.5f;
         public static final float BIOME_PATCH_KERNEL_RADIUS_CELLS = 1.25f;
