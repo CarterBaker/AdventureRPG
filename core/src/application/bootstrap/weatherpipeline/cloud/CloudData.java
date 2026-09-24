@@ -7,10 +7,10 @@ public class CloudData extends DataPackage {
 
     /*
      * Immutable "Cloud Settings" for one named cloud archetype, loaded from
-     * JSON. Every value a shader needs to draw this archetype — shape,
-     * material, motion, and instance variance — lives here and only here.
-     * CloudHandle wraps this class and delegates every accessor to it, so
-     * there is exactly one place any cloud value can ever live.
+     * JSON. Every value the weather shader needs to draw this archetype as a
+     * layer of the sky — tint, shape, noise, placement, and motion — lives
+     * here and only here. CloudHandle wraps this class and delegates every
+     * accessor to it.
      */
 
     // Identity
@@ -26,6 +26,7 @@ public class CloudData extends DataPackage {
     private final float density;
     private final float verticalThickness;
     private final float fullness;
+    private final float elongation;
 
     // Density Noise
     private final float densityNoiseScale;
@@ -41,13 +42,6 @@ public class CloudData extends DataPackage {
     // Motion
     private final float driftSpeedScale;
 
-    // Instance Variation — spread, and per-instance size/shape jitter range
-    private final float spreadRatio;
-    private final float sizeVarianceMin;
-    private final float sizeVarianceMax;
-    private final float elongationMin;
-    private final float elongationMax;
-
     // Constructor \\
 
     public CloudData(
@@ -59,17 +53,13 @@ public class CloudData extends DataPackage {
             float density,
             float verticalThickness,
             float fullness,
+            float elongation,
             float densityNoiseScale,
             float noiseWarpStrength,
             float coverageBias,
             float silhouetteSoftness,
             float baseAltitude,
-            float driftSpeedScale,
-            float spreadRatio,
-            float sizeVarianceMin,
-            float sizeVarianceMax,
-            float elongationMin,
-            float elongationMax) {
+            float driftSpeedScale) {
 
         this.cloudName = cloudName;
         this.cloudID = cloudID;
@@ -79,17 +69,13 @@ public class CloudData extends DataPackage {
         this.density = density;
         this.verticalThickness = verticalThickness;
         this.fullness = fullness;
+        this.elongation = elongation;
         this.densityNoiseScale = densityNoiseScale;
         this.noiseWarpStrength = noiseWarpStrength;
         this.coverageBias = coverageBias;
         this.silhouetteSoftness = silhouetteSoftness;
         this.baseAltitude = baseAltitude;
         this.driftSpeedScale = driftSpeedScale;
-        this.spreadRatio = spreadRatio;
-        this.sizeVarianceMin = sizeVarianceMin;
-        this.sizeVarianceMax = sizeVarianceMax;
-        this.elongationMin = elongationMin;
-        this.elongationMax = elongationMax;
     }
 
     // Accessible \\
@@ -126,6 +112,10 @@ public class CloudData extends DataPackage {
         return fullness;
     }
 
+    public float getElongation() {
+        return elongation;
+    }
+
     public float getDensityNoiseScale() {
         return densityNoiseScale;
     }
@@ -148,25 +138,5 @@ public class CloudData extends DataPackage {
 
     public float getDriftSpeedScale() {
         return driftSpeedScale;
-    }
-
-    public float getSpreadRatio() {
-        return spreadRatio;
-    }
-
-    public float getSizeVarianceMin() {
-        return sizeVarianceMin;
-    }
-
-    public float getSizeVarianceMax() {
-        return sizeVarianceMax;
-    }
-
-    public float getElongationMin() {
-        return elongationMin;
-    }
-
-    public float getElongationMax() {
-        return elongationMax;
     }
 }

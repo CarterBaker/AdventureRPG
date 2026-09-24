@@ -10,7 +10,7 @@ public class TurbulenceInstance extends InstancePackage {
     /*
      * One grid's resolved ocean turbulence field. A baseline strength from the
      * grid's own local weather sits under up to
-     * OCEAN_TURBULENCE_UBO_MAX_ENTRIES cells, one per nearby weather pattern,
+     * OCEAN_TURBULENCE_UBO_MAX_ENTRIES cells, one per nearby weather cell,
      * each centered in blocks relative to the grid's reference chunk exactly
      * as the shader sees its fragments. A position's strength is the weighted
      * mean of the baseline and every cell reaching it, so storms raise the

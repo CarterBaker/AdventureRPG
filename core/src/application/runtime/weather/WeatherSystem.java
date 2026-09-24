@@ -7,26 +7,20 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
-import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.world.WorldSystem;
-import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.vectors.Vector2;
 
 public class WeatherSystem extends SystemPackage {
 
     /*
-     * Renders all weather/cloud visuals in a single fullscreen raymarched
-     * pass, driven by the shared processing-pass pipeline. This system only
-     * clones the per-window FBO target and pushes the handful of uniforms
-     * that can't be known until runtime — raymarch bounds, the prevailing
-     * flow direction cloud shapes elongate along, and CloudDome's horizon-
-     * bend tuning knobs — all constant for the session, so all pushed once
-     * here rather than every frame. Cloud motion itself is never a shader
-     * uniform: patterns are moved CPU-side by WeatherPatternManager and the
-     * shader only reads where they currently are.
+     * Renders the sky's clouds in a single fullscreen raymarched pass, driven
+     * by the shared processing-pass pipeline. This system only clones the
+     * per-window FBO target and binds the grid's own UBOs — the weather map,
+     * its cloud layers, and where the flow has carried them are all written
+     * per grid by WeatherMapBufferSystem, so nothing about the clouds is a
+     * material setting here.
      */
 
     // Internal
@@ -35,7 +29,6 @@ public class WeatherSystem extends SystemPackage {
     private FboManager fboManager;
     private FboRenderSystem fboRenderSystem;
     private WorldSystem worldSystem;
-    private WeatherManager weatherManager;
 
     // Render Target
     private PassHandle weatherPass;
@@ -50,55 +43,12 @@ public class WeatherSystem extends SystemPackage {
         this.fboManager = get(FboManager.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
-        this.weatherManager = get(WeatherManager.class);
     }
 
     @Override
     protected void awake() {
-
         this.weatherPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_WEATHER);
         this.weatherFbo = fboManager.cloneFbo(RuntimeSetting.FBO_WEATHER, context.getWindow());
-
-        MaterialInstance material = weatherPass.getModelInstance().getMaterial();
-
-        assignRaymarchBounds(material);
-        assignFlowUniforms(material);
-        assignDomeBendUniforms(material);
-    }
-
-    // Raymarch Bounds \\
-
-    private void assignRaymarchBounds(MaterialInstance material) {
-
-        float maxDistanceBlocks = (weatherManager.getEffectiveRangeChunks()
-                + EngineSetting.WEATHER_PATTERN_SKY_FOOTPRINT_CHUNKS) * EngineSetting.CHUNK_SIZE;
-
-        material.setUniform("u_cloudAltitudeMin", EngineSetting.WEATHER_CLOUD_ALTITUDE_MIN);
-        material.setUniform("u_cloudAltitudeMax", EngineSetting.WEATHER_CLOUD_ALTITUDE_MAX);
-        material.setUniform("u_cloudMaxDistance", maxDistanceBlocks);
-    }
-
-    // Flow Uniforms \\
-
-    /*
-     * Prevailing flow axis only. Cloud shapes elongate and orient along it;
-     * nothing in the shader translates clouds with it, because pattern
-     * positions are already streamed per frame from the CPU pool.
-     */
-    private void assignFlowUniforms(MaterialInstance material) {
-        material.setUniform("u_weatherDriftDirection", new Vector2(-1f, 0f));
-    }
-
-    // Dome Bend Uniforms \\
-
-    /*
-     * CloudDome.glsl's tunable horizon-bend knobs — see
-     * EngineSetting.CLOUD_DOME_FADE_ALTITUDE_BLOCKS / CLOUD_DOME_BEND_CURVE
-     * for what each one controls.
-     */
-    private void assignDomeBendUniforms(MaterialInstance material) {
-        material.setUniform("u_cloudDomeFadeAltitude", EngineSetting.CLOUD_DOME_FADE_ALTITUDE_BLOCKS);
-        material.setUniform("u_cloudDomeBendCurve", EngineSetting.CLOUD_DOME_BEND_CURVE);
     }
 
     @Override
@@ -121,7 +71,6 @@ public class WeatherSystem extends SystemPackage {
 
         MaterialInstance mat = weatherPass.getModelInstance().getMaterial();
 
-        mat.setUBO(grid.getTimeDataUBO());
         mat.setUBO(grid.getSkyColorUBO());
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());

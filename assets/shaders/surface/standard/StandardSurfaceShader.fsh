@@ -41,9 +41,10 @@ layout(location = 2) out vec4 gMaterial;
  * surface/includes/AtmosphericFog.glsl.
  */
 
-// Sun visibility under in-range cloud cover, written into gMaterial.r so the
-// deferred lighting pass can attenuate direct sunlight without resampling
-// WeatherMapData itself. Skipped entirely once the sun is below the
+// Sun visibility under the grid's cloud layers, written into gMaterial.r so
+// the deferred lighting pass can attenuate direct sunlight without resampling
+// WeatherMapData itself. The occluding cloud lies toward the sun, so the
+// offset follows u_sunDirection. Skipped entirely once the sun is below the
 // horizon, since nothing is around to cast a shadow then.
 const float SUN_SHADOW_MIN_ELEVATION = 0.05;
 
@@ -51,7 +52,7 @@ float resolveSunVisibility() {
     if (u_sunIntensity <= 0.0)
     return 1.0;
 
-    vec2 sunHorizonOffset = -u_sunDirection.xz / max(u_sunDirection.y, SUN_SHADOW_MIN_ELEVATION);
+    vec2 sunHorizonOffset = u_sunDirection.xz / max(u_sunDirection.y, SUN_SHADOW_MIN_ELEVATION);
 
     return 1.0 - sampleCloudShadow(vLocalPos, sunHorizonOffset);
 }

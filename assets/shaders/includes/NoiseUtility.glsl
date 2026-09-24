@@ -323,4 +323,67 @@ float fbmGradient2D(vec2 p, int octaves, float lacunarity, float gain) {
     return clamp((sum / max(norm, 0.0001)) * 0.5 + 0.5, 0.0, 1.0);
 }
 
+// ── Periodic gradient noise (weather cloud shapes) ──────────────────────────
+// Lattice coordinates wrap at a whole-cell period, so a field sampled across
+// exactly one period tiles without a seam. Hashing is integer PCG rather than
+// the sin-based hashes above, so lattice coordinates in the thousands keep
+// full precision on every GPU.
+
+uvec2 pcgHash2D(uvec2 v) {
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * 1664525u;
+    v.y += v.x * 1664525u;
+    v = v ^ (v >> 16u);
+    v.x += v.y * 1664525u;
+    v.y += v.x * 1664525u;
+    v = v ^ (v >> 16u);
+    return v;
+}
+
+vec2 periodicGradient2D(vec2 lattice, uint seed) {
+    uvec2 h = pcgHash2D(uvec2(lattice) + uvec2(seed, seed * 747796405u));
+    return vec2(h) * (2.0 / 4294967295.0) - 1.0;
+}
+
+float periodicGradientNoise2D(vec2 p, vec2 period, uint seed) {
+    vec2 cell = floor(p);
+    vec2 f = p - cell;
+    vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+    vec2 c0 = mod(cell, period);
+    vec2 c1 = mod(cell + 1.0, period);
+
+    float n00 = dot(periodicGradient2D(vec2(c0.x, c0.y), seed), f - vec2(0.0, 0.0));
+    float n10 = dot(periodicGradient2D(vec2(c1.x, c0.y), seed), f - vec2(1.0, 0.0));
+    float n01 = dot(periodicGradient2D(vec2(c0.x, c1.y), seed), f - vec2(0.0, 1.0));
+    float n11 = dot(periodicGradient2D(vec2(c1.x, c1.y), seed), f - vec2(1.0, 1.0));
+
+    return mix(mix(n00, n10, u.x), mix(n01, n11, u.x), u.y);
+}
+
+// Plain fbm (x, rebiased into [0,1]) and billow (y, folded into [0,1]) built
+// from the same octaves, so a caller blending sheet and puffy shapes pays for
+// one set of taps. Lacunarity is fixed at 2 so every octave keeps a whole-cell
+// period.
+vec2 periodicFbmBillow2D(vec2 p, vec2 period, int octaves, uint seed) {
+    float fbmSum    = 0.0;
+    float billowSum = 0.0;
+    float norm      = 0.0;
+    float amp       = 0.5;
+
+    for (int i = 0; i < octaves; i++) {
+        float n = periodicGradientNoise2D(p, period, seed + uint(i) * 1013u);
+        fbmSum    += amp * n;
+        billowSum += amp * (1.0 - abs(n));
+        norm      += amp;
+        p         *= 2.0;
+        period    *= 2.0;
+        amp       *= 0.5;
+    }
+
+    return vec2(
+        clamp(fbmSum / max(norm, 0.0001) * 0.5 + 0.5, 0.0, 1.0),
+        clamp(billowSum / max(norm, 0.0001), 0.0, 1.0));
+}
+
 #endif

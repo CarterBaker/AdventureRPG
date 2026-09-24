@@ -56,6 +56,10 @@ public class CloudHandle extends HandlePackage {
         return cloudData.getFullness();
     }
 
+    public float getElongation() {
+        return cloudData.getElongation();
+    }
+
     public float getDensityNoiseScale() {
         return cloudData.getDensityNoiseScale();
     }
@@ -78,26 +82,6 @@ public class CloudHandle extends HandlePackage {
 
     public float getDriftSpeedScale() {
         return cloudData.getDriftSpeedScale();
-    }
-
-    public float getSpreadRatio() {
-        return cloudData.getSpreadRatio();
-    }
-
-    public float getSizeVarianceMin() {
-        return cloudData.getSizeVarianceMin();
-    }
-
-    public float getSizeVarianceMax() {
-        return cloudData.getSizeVarianceMax();
-    }
-
-    public float getElongationMin() {
-        return cloudData.getElongationMin();
-    }
-
-    public float getElongationMax() {
-        return cloudData.getElongationMax();
     }
 
     // Cloud Type Registry \\

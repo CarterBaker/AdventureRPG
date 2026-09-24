@@ -5,10 +5,9 @@ import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
-import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
@@ -18,50 +17,49 @@ import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 public class WeatherManager extends ManagerPackage {
 
     /*
-     * Owns the weather definition palette and resolves whichever biome
-     * governs a given world location, through BiomeManager, into that
-     * biome's own chance-weighted pool of candidate weathers for the
-     * active season, then hands that pool to RegionSampleSystem to pick
-     * exactly one weather — never a blend of two. Each biome's pool is
-     * built once per season and cached by biome ID, so repeated queries
-     * against the same biome never re-walk its weather list or reallocate.
+     * Owns the weather definition palette and answers what the weather is at
+     * any point of the world. WeatherFlowSystem scrolls the static weather
+     * image across the world; RegionSampleSystem reads a pixel of it as a
+     * percentile and walks the governing biome's pool for the active season,
+     * which is built once per season, ordered calmest to most severe, and
+     * cached by biome ID. The answer is a pure function of position and
+     * shared world time, so every player sees the same weather.
      */
 
+    // Internal
     private ClockManager clockManager;
     private BiomeManager biomeManager;
     private SeasonManager seasonManager;
     private WorldManager worldManager;
-
-    private GlobalNoiseSystem globalNoiseSystem;
+    private WeatherFlowSystem weatherFlowSystem;
     private RegionSampleSystem regionSampleSystem;
 
+    // Palette
     private Object2ShortOpenHashMap<String> weatherName2WeatherID;
     private Short2ObjectOpenHashMap<WeatherHandle> weatherID2WeatherHandle;
 
+    // Season
     private String activeSeason;
 
-    // Per-Biome Pool Cache — rebuilt whenever the active season changes
-    private final Short2ObjectOpenHashMap<ObjectArrayList<WeatherHandle>> biomeWeatherHandles = new Short2ObjectOpenHashMap<>();
-    private final Short2ObjectOpenHashMap<FloatArrayList> biomeWeatherChances = new Short2ObjectOpenHashMap<>();
+    // Biome Pools
+    private Short2ObjectOpenHashMap<ObjectArrayList<WeatherHandle>> biomeID2WeatherHandles;
+    private Short2ObjectOpenHashMap<FloatArrayList> biomeID2WeatherChances;
 
-    // Biased Pool — recycled scratch for "next weather" biasing
-    private final ObjectArrayList<WeatherHandle> biasedWeatherHandles = new ObjectArrayList<>();
-    private final FloatArrayList biasedWeatherChances = new FloatArrayList();
-
-    // Resolved Pool — points at either a cached biome pool or the biased
-    // scratch pool above, reassigned fresh ahead of every weather resolution
-    private ObjectArrayList<WeatherHandle> resolvedPoolHandles;
-    private FloatArrayList resolvedPoolChances;
+    // Base \\
 
     @Override
     protected void create() {
 
+        // Palette
         this.weatherName2WeatherID = new Object2ShortOpenHashMap<>();
         this.weatherName2WeatherID.defaultReturnValue((short) -1);
-
         this.weatherID2WeatherHandle = new Short2ObjectOpenHashMap<>();
 
-        this.globalNoiseSystem = create(GlobalNoiseSystem.class);
+        // Biome Pools
+        this.biomeID2WeatherHandles = new Short2ObjectOpenHashMap<>();
+        this.biomeID2WeatherChances = new Short2ObjectOpenHashMap<>();
+
+        this.weatherFlowSystem = create(WeatherFlowSystem.class);
         this.regionSampleSystem = create(RegionSampleSystem.class);
 
         create(WeatherLoader.class);
@@ -80,11 +78,12 @@ public class WeatherManager extends ManagerPackage {
 
         String currentSeason = clockManager.getClockHandle().getCurrentSeason();
 
-        if (currentSeason != null && !currentSeason.equals(activeSeason)) {
-            biomeWeatherHandles.clear();
-            biomeWeatherChances.clear();
-            this.activeSeason = currentSeason;
-        }
+        if (currentSeason == null || currentSeason.equals(activeSeason))
+            return;
+
+        biomeID2WeatherHandles.clear();
+        biomeID2WeatherChances.clear();
+        this.activeSeason = currentSeason;
     }
 
     // Management \\
@@ -111,22 +110,12 @@ public class WeatherManager extends ManagerPackage {
         ((WeatherLoader) internalLoader).request(weatherName);
     }
 
-    // Biome-Resolved Pool \\
+    // Biome Pool \\
 
-    private void resolvePoolForChunkCoordinate(long chunkCoordinate) {
-
-        BiomeHandle biomeHandle = biomeManager.getBiome(
-                worldManager.getActiveWorld(), chunkCoordinate);
-
-        short biomeID = biomeHandle.getBiomeID();
-
-        if (biomeWeatherHandles.containsKey(biomeID)) {
-            resolvedPoolHandles = biomeWeatherHandles.get(biomeID);
-            resolvedPoolChances = biomeWeatherChances.get(biomeID);
-            return;
-        }
-
-        buildBiomePool(biomeHandle);
+    private BiomeHandle resolveBiome(long worldChunkCoordinate) {
+        return biomeManager.getBiome(
+                worldManager.getActiveWorld(),
+                WorldWrapUtility.wrapAroundWorld(worldManager.getActiveWorld(), worldChunkCoordinate));
     }
 
     private void buildBiomePool(BiomeHandle biomeHandle) {
@@ -140,7 +129,8 @@ public class WeatherManager extends ManagerPackage {
         }
 
         FloatArrayList chances = biomeHandle.getWeatherChancesForSeason(resolvedSeason);
-        float precipitationBias = resolvePrecipitationBias(resolvedSeason);
+        float precipitationBias = seasonManager.getSeasonHandleFromSeasonName(resolvedSeason)
+                .getPrecipitationChanceScale();
         int size = names.size();
 
         ObjectArrayList<WeatherHandle> handles = new ObjectArrayList<>(size);
@@ -154,19 +144,26 @@ public class WeatherManager extends ManagerPackage {
             if (handle.getPrecipitationIntensity() > 0f)
                 chance *= precipitationBias;
 
-            handles.add(handle);
-            weightedChances.add(chance);
+            insertBySeverity(handles, weightedChances, handle, chance);
         }
 
-        biomeWeatherHandles.put(biomeHandle.getBiomeID(), handles);
-        biomeWeatherChances.put(biomeHandle.getBiomeID(), weightedChances);
-
-        resolvedPoolHandles = handles;
-        resolvedPoolChances = weightedChances;
+        biomeID2WeatherHandles.put(biomeHandle.getBiomeID(), handles);
+        biomeID2WeatherChances.put(biomeHandle.getBiomeID(), weightedChances);
     }
 
-    private float resolvePrecipitationBias(String season) {
-        return seasonManager.getSeasonHandleFromSeasonName(season).getPrecipitationChanceScale();
+    private void insertBySeverity(
+            ObjectArrayList<WeatherHandle> handles,
+            FloatArrayList chances,
+            WeatherHandle handle,
+            float chance) {
+
+        int index = handles.size();
+
+        while (index > 0 && handles.get(index - 1).getSeverity() > handle.getSeverity())
+            index--;
+
+        handles.add(index, handle);
+        chances.add(index, chance);
     }
 
     private String resolveFallbackSeasonName(BiomeHandle biomeHandle, String season) {
@@ -183,33 +180,6 @@ public class WeatherManager extends ManagerPackage {
                 fallbackSeason + "\". Defined seasons: " + biomeHandle.getDefinedSeasonNames());
 
         return fallbackSeason;
-    }
-
-    // Next Weather Bias \\
-
-    private void applyNextWeatherBias(WeatherHandle currentWeather) {
-
-        if (currentWeather == null || !currentWeather.hasNextWeatherSuggestions())
-            return;
-
-        int size = resolvedPoolHandles.size();
-
-        biasedWeatherHandles.clear();
-        biasedWeatherChances.clear();
-
-        for (int i = 0; i < size; i++) {
-
-            WeatherHandle handle = resolvedPoolHandles.get(i);
-            float suggestionChance = currentWeather.getNextWeatherChanceFor(handle);
-            float biasedChance = resolvedPoolChances.getFloat(i)
-                    + suggestionChance * EngineSetting.WEATHER_NEXT_SUGGESTION_INFLUENCE;
-
-            biasedWeatherHandles.add(handle);
-            biasedWeatherChances.add(biasedChance);
-        }
-
-        resolvedPoolHandles = biasedWeatherHandles;
-        resolvedPoolChances = biasedWeatherChances;
     }
 
     // Accessible \\
@@ -249,68 +219,38 @@ public class WeatherManager extends ManagerPackage {
         return activeSeason != null;
     }
 
-    public float getEffectiveRangeChunks() {
-        return regionSampleSystem.getEffectiveRangeChunks();
+    public double getFlowOffsetXBlocks() {
+        return weatherFlowSystem.getOffsetXBlocks();
     }
 
-    public float getWorldDriftChunksPerSecondX() {
-        return globalNoiseSystem.getWorldDriftChunksPerSecondX();
+    public double getFlowOffsetZBlocks() {
+        return weatherFlowSystem.getOffsetZBlocks();
     }
 
-    public float getGlobalStormIntensityAt(long chunkCoordinate) {
-        return globalNoiseSystem.sampleGlobalIntensity(chunkCoordinate);
+    public float sampleNoisePercentile(double noiseChunkX, double noiseChunkZ) {
+        return regionSampleSystem.samplePercentile(noiseChunkX, noiseChunkZ);
     }
 
     /*
-     * Resolves the single active weather at an exact chunk coordinate — no
-     * horizon blending, no next-weather bias, just that coordinate's own
-     * biome pool read straight against the noise field.
+     * Resolves the single weather a pixel of the weather image produces at a
+     * world chunk: that chunk's biome pool for the active season, read at
+     * the pixel's percentile.
      */
-    public WeatherHandle resolveWeather(long chunkCoordinate) {
+    public WeatherHandle resolveWeather(long worldChunkCoordinate, float noisePercentile) {
 
         if (!hasActiveWeatherPool())
             throwException("Cannot resolve weather before any season has been resolved. "
                     + "Callers should check hasActiveWeatherPool() first.");
 
-        resolvePoolForChunkCoordinate(chunkCoordinate);
+        BiomeHandle biomeHandle = resolveBiome(worldChunkCoordinate);
+        short biomeID = biomeHandle.getBiomeID();
 
-        int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
-        int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
+        if (!biomeID2WeatherHandles.containsKey(biomeID))
+            buildBiomePool(biomeHandle);
 
-        return regionSampleSystem.resolveWeather(chunkX, chunkZ, resolvedPoolHandles, resolvedPoolChances);
-    }
-
-    public WeatherHandle resolveWeatherTowardHorizon(long homeChunkCoordinate, long referenceChunkCoordinate) {
-        return resolveWeatherTowardHorizonInternal(homeChunkCoordinate, referenceChunkCoordinate, null);
-    }
-
-    public WeatherHandle resolveWeatherTowardHorizonBiased(
-            long homeChunkCoordinate,
-            long referenceChunkCoordinate,
-            WeatherHandle currentWeather) {
-        return resolveWeatherTowardHorizonInternal(homeChunkCoordinate, referenceChunkCoordinate, currentWeather);
-    }
-
-    private WeatherHandle resolveWeatherTowardHorizonInternal(
-            long homeChunkCoordinate,
-            long referenceChunkCoordinate,
-            WeatherHandle currentWeather) {
-
-        if (!hasActiveWeatherPool())
-            throwException("Cannot resolve weather before any season has been resolved. "
-                    + "Callers should check hasActiveWeatherPool() first.");
-
-        resolvePoolForChunkCoordinate(homeChunkCoordinate);
-        applyNextWeatherBias(currentWeather);
-
-        int homeChunkX = Coordinate2Long.unpackX(homeChunkCoordinate);
-        int homeChunkZ = Coordinate2Long.unpackY(homeChunkCoordinate);
-
-        int referenceChunkX = Coordinate2Long.unpackX(referenceChunkCoordinate);
-        int referenceChunkZ = Coordinate2Long.unpackY(referenceChunkCoordinate);
-
-        return regionSampleSystem.resolveWeatherTowardHorizon(
-                homeChunkX, homeChunkZ, referenceChunkX, referenceChunkZ,
-                resolvedPoolHandles, resolvedPoolChances);
+        return regionSampleSystem.pickFromPool(
+                biomeID2WeatherHandles.get(biomeID),
+                biomeID2WeatherChances.get(biomeID),
+                noisePercentile);
     }
 }

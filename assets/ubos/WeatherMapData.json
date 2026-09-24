@@ -1,18 +1,13 @@
 {
     "blockName": "WeatherMapData",
     "uniforms": [
-        { "name": "u_weatherBounds",           "type": "VECTOR4", "count": 32 },
-        { "name": "u_weatherPatternState",     "type": "VECTOR4", "count": 32 },
-        { "name": "u_weatherCloudColorScale",  "type": "VECTOR4", "count": 32 },
-        { "name": "u_weatherCloudMaterial",    "type": "VECTOR4", "count": 32 },
-        { "name": "u_weatherCloudShape",       "type": "VECTOR4", "count": 32 },
-        { "name": "u_weatherCloudNoise",       "type": "VECTOR4", "count": 32 },
-        { "name": "u_weatherCloudVariance0",   "type": "VECTOR4", "count": 32 },
-        { "name": "u_weatherCloudVariance1",   "type": "VECTOR4", "count": 32 },
-        { "name": "u_weatherHeightVariation",  "type": "VECTOR4" },
-        { "name": "u_weatherEntryCount",       "type": "INT" },
-        { "name": "u_weatherCloudLayerMinY",   "type": "FLOAT" },
-        { "name": "u_weatherCloudLayerMaxY",   "type": "FLOAT" },
-        { "name": "u_weatherRangeBlocks",      "type": "FLOAT" }
+        { "name": "u_weatherCells",        "type": "VECTOR4_INT", "count": 576 },
+        { "name": "u_weatherLayerColor",   "type": "VECTOR4",     "count": 8 },
+        { "name": "u_weatherLayerShape",   "type": "VECTOR4",     "count": 8 },
+        { "name": "u_weatherLayerNoise",   "type": "VECTOR4",     "count": 8 },
+        { "name": "u_weatherLayerSurface", "type": "VECTOR4",     "count": 8 },
+        { "name": "u_weatherMapOrigin",    "type": "VECTOR4" },
+        { "name": "u_weatherShapePeriod",  "type": "FLOAT" },
+        { "name": "u_weatherLayerCount",   "type": "INT" }
     ]
 }

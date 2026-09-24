@@ -1,117 +1,104 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
+import java.util.Arrays;
+
 import application.bootstrap.weatherpipeline.util.WeatherNoiseUtility;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RegionSampleSystem extends SystemPackage {
 
     /*
-     * Resolves the regional weather noise field into exactly one weather
-     * handle from a chance-weighted pool — no blending between candidates.
-     * Callers own their own reference coordinate and any state/smoothing on
-     * top of whatever this returns.
+     * Reads the static weather image and turns a pixel of it into exactly one
+     * weather. Raw noise clusters around its midpoint, so every read is first
+     * converted into a percentile against the active world's own measured
+     * noise distribution — a weather authored at 20% chance then genuinely
+     * owns 20% of the map. The percentile walks a biome pool that
+     * WeatherManager has ordered from calmest to most severe, so neighbouring
+     * weathers in the image grade into one another the way a front does.
      */
 
-    private GlobalNoiseSystem globalNoiseSystem;
+    // Internal
     private WorldManager worldManager;
+
+    // Distribution
+    private WorldHandle distributionWorld;
+    private float[] noiseDistribution;
+
+    // Base \\
+
+    @Override
+    protected void create() {
+        int sampleCount = EngineSetting.WEATHER_NOISE_DISTRIBUTION_SAMPLES_X
+                * EngineSetting.WEATHER_NOISE_DISTRIBUTION_SAMPLES_Z;
+
+        this.noiseDistribution = new float[sampleCount];
+    }
 
     @Override
     protected void get() {
-        this.globalNoiseSystem = get(GlobalNoiseSystem.class);
         this.worldManager = get(WorldManager.class);
     }
 
-    /*
-     * Fixed, terrain-independent range — the sky/weather map is resolved
-     * from UBO data and a ray/plane intersection, never from loaded chunk
-     * geometry, so it must never be clamped against the terrain streaming
-     * radius (settings.maxRenderDistance). This is the sole authority for
-     * how far the CPU weather simulation and the skybox's distant cloud
-     * sampling reach — the same single range is used to stream patterns in,
-     * cull the weather map, retire patterns that drift out of it, and to
-     * place the horizon-ward reference point used for noise blending below.
-     */
+    // Sample \\
 
-    float getEffectiveRangeChunks() {
-        return EngineSetting.WEATHER_RANGE_CHUNKS;
-    }
-
-    private float combinedNoiseAt(int chunkX, int chunkZ) {
-
-        float localNoise = sampleNoise(chunkX, chunkZ);
-        float globalIntensity = globalNoiseSystem.sampleGlobalIntensity(Coordinate2Long.pack(chunkX, chunkZ));
-
-        return lerp(localNoise, globalIntensity, globalNoiseSystem.getGlobalInfluence());
-    }
-
-    WeatherHandle resolveWeather(
-            int chunkX, int chunkZ,
-            ObjectArrayList<WeatherHandle> poolHandles,
-            FloatArrayList poolChances) {
-        return pickFromPool(poolHandles, poolChances, combinedNoiseAt(chunkX, chunkZ));
-    }
-
-    WeatherHandle resolveWeatherTowardHorizon(
-            int homeChunkX,
-            int homeChunkZ,
-            int referenceChunkX,
-            int referenceChunkZ,
-            ObjectArrayList<WeatherHandle> poolHandles,
-            FloatArrayList poolChances) {
+    float samplePercentile(double noiseChunkX, double noiseChunkZ) {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
 
-        double dx = WorldWrapUtility.wrappedDeltaX(activeWorld, homeChunkX, referenceChunkX);
-        double dz = WorldWrapUtility.wrappedDeltaZ(activeWorld, homeChunkZ, referenceChunkZ);
-        double distanceChunks = Math.sqrt(dx * dx + dz * dz);
+        if (activeWorld != distributionWorld)
+            buildDistribution(activeWorld);
 
-        double effectiveRangeChunks = getEffectiveRangeChunks();
-        double clampedDistance = Math.min(distanceChunks, effectiveRangeChunks);
-        float distanceT = effectiveRangeChunks > 0.0
-                ? (float) (clampedDistance / effectiveRangeChunks)
-                : 1f;
-
-        float nearNoise = combinedNoiseAt(homeChunkX, homeChunkZ);
-
-        if (distanceT <= 0.0001f)
-            return pickFromPool(poolHandles, poolChances, nearNoise);
-
-        int farChunkX = homeChunkX;
-        int farChunkZ = homeChunkZ;
-
-        // The far sample sits at the edge of the same range everything
-        // else in the weather system is bound by, rather than a second,
-        // independently tuned distance — one range, used consistently.
-        if (distanceChunks > 0.0001) {
-            double dirX = dx / distanceChunks;
-            double dirZ = dz / distanceChunks;
-            farChunkX = referenceChunkX + (int) Math.round(dirX * effectiveRangeChunks);
-            farChunkZ = referenceChunkZ + (int) Math.round(dirZ * effectiveRangeChunks);
-        }
-
-        float farNoise = combinedNoiseAt(farChunkX, farChunkZ);
-        float blendedNoise = lerp(nearNoise, farNoise, distanceT);
-
-        return pickFromPool(poolHandles, poolChances, blendedNoise);
+        return resolvePercentile(sampleNoise(activeWorld, noiseChunkX, noiseChunkZ));
     }
 
-    /*
-     * Noise picks exactly one weather from the pool — whichever chance-
-     * weighted band it falls into. No blending between candidates; a
-     * weather either owns this sample or it doesn't.
-     */
-    private WeatherHandle pickFromPool(
+    private float sampleNoise(WorldHandle activeWorld, double noiseChunkX, double noiseChunkZ) {
+        return WeatherNoiseUtility.sample(
+                EngineSetting.WEATHER_NOISE_SEED,
+                noiseChunkX,
+                noiseChunkZ,
+                activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE,
+                activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE,
+                EngineSetting.WEATHER_NOISE_CELL_SIZE);
+    }
+
+    // Distribution \\
+
+    private void buildDistribution(WorldHandle activeWorld) {
+
+        int samplesX = EngineSetting.WEATHER_NOISE_DISTRIBUTION_SAMPLES_X;
+        int samplesZ = EngineSetting.WEATHER_NOISE_DISTRIBUTION_SAMPLES_Z;
+        double stepX = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE / samplesX;
+        double stepZ = activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE / samplesZ;
+
+        for (int z = 0; z < samplesZ; z++)
+            for (int x = 0; x < samplesX; x++)
+                noiseDistribution[z * samplesX + x] = sampleNoise(
+                        activeWorld, (x + 0.5) * stepX, (z + 0.5) * stepZ);
+
+        Arrays.sort(noiseDistribution);
+        this.distributionWorld = activeWorld;
+    }
+
+    private float resolvePercentile(float noise) {
+
+        int index = Arrays.binarySearch(noiseDistribution, noise);
+        int insertion = index >= 0 ? index : -index - 1;
+
+        return clamp01(insertion / (float) noiseDistribution.length);
+    }
+
+    // Pool \\
+
+    WeatherHandle pickFromPool(
             ObjectArrayList<WeatherHandle> poolHandles,
             FloatArrayList poolChances,
-            float noise) {
+            float percentile) {
 
         if (poolHandles.size() == 1)
             return poolHandles.get(0);
@@ -124,53 +111,23 @@ class RegionSampleSystem extends SystemPackage {
         if (total <= 0f)
             return poolHandles.get(0);
 
-        float target = clamp01(noise) * total;
+        float target = clamp01(percentile) * total;
         float cumulative = 0f;
 
         for (int i = 0; i < poolHandles.size(); i++) {
 
-            float chance = Math.max(0f, poolChances.getFloat(i));
-            cumulative += chance;
+            cumulative += Math.max(0f, poolChances.getFloat(i));
 
-            boolean isLast = i == poolHandles.size() - 1;
-
-            if (target <= cumulative || isLast)
+            if (target <= cumulative)
                 return poolHandles.get(i);
         }
 
         return poolHandles.get(poolHandles.size() - 1);
     }
 
-    private float lerp(float a, float b, float t) {
-        return a + (b - a) * t;
-    }
+    // Utility \\
 
     private float clamp01(float value) {
         return Math.max(0f, Math.min(1f, value));
-    }
-
-    private float sampleNoise(int chunkX, int chunkZ) {
-
-        WorldHandle activeWorld = worldManager.getActiveWorld();
-        double worldWidthChunks = activeWorld.getWorldScale().x / (double) EngineSetting.CHUNK_SIZE;
-        double worldHeightChunks = activeWorld.getWorldScale().y / (double) EngineSetting.CHUNK_SIZE;
-        double wavelengthChunks = EngineSetting.WEATHER_NOISE_CELL_SIZE;
-
-        double rotationPhase = (globalNoiseSystem.getRotationAngleDegrees() / EngineSetting.DEGREES_PER_FULL_ROTATION)
-                * (Math.PI * 2.0);
-
-        double meanderAmplitudeChunks = EngineSetting.GLOBAL_WEATHER_MEANDER_INFLUENCE * wavelengthChunks;
-
-        return WeatherNoiseUtility.sample(
-                EngineSetting.WEATHER_NOISE_SEED,
-                chunkX, chunkZ,
-                worldWidthChunks,
-                worldHeightChunks,
-                wavelengthChunks,
-                rotationPhase,
-                globalNoiseSystem.getSeasonalDriftZChunks(),
-                globalNoiseSystem.getMeanderWaveNumber(),
-                meanderAmplitudeChunks,
-                globalNoiseSystem.getMeanderPhase());
     }
 }
