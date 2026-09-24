@@ -46,6 +46,7 @@ public class FontInstance extends InstancePackage {
     // Metrics
     private float textWidth;
     private float textHeight;
+    private float textBottom;
 
     // Color
     private final Vector4 color = new Vector4(1f, 1f, 1f, 1f);
@@ -77,6 +78,7 @@ public class FontInstance extends InstancePackage {
         glyphCount = 0;
         textWidth = 0f;
         textHeight = 0f;
+        textBottom = 0f;
 
         if (text == null || text.isEmpty()) {
             textDirty = true;
@@ -90,6 +92,7 @@ public class FontInstance extends InstancePackage {
         float letterSpacing = handle.getAtlasPixelSize() * EngineSetting.FONT_LETTER_SPACING_RATIO;
         float atlasPixelSize = handle.getAtlasPixelSize();
         float cursorX = 0f;
+        float textTop = 0f;
 
         for (int i = 0; i < text.length();) {
 
@@ -119,10 +122,18 @@ public class FontInstance extends InstancePackage {
             glyphLayout[base + 7] = glyphHandle.getV1() - glyphHandle.getV0();
 
             cursorX += metric.advance + letterSpacing;
-            if (metric.height > textHeight)
-                textHeight = metric.height;
+
+            float glyphBottom = metric.bearingY - metric.height;
+
+            if (glyphCount == 0 || glyphBottom < textBottom)
+                textBottom = glyphBottom;
+            if (glyphCount == 0 || metric.bearingY > textTop)
+                textTop = metric.bearingY;
+
             glyphCount++;
         }
+
+        textHeight = glyphCount > 0 ? textTop - textBottom : 0f;
 
         if (cursorX > 0f)
             cursorX -= letterSpacing;
@@ -211,6 +222,10 @@ public class FontInstance extends InstancePackage {
 
     public float getTextHeight() {
         return textHeight;
+    }
+
+    public float getTextBottom() {
+        return textBottom;
     }
 
     public boolean hasGlyphs() {

@@ -9,6 +9,7 @@ import application.bootstrap.renderpipeline.fbo.AttachmentStruct;
 import application.bootstrap.renderpipeline.fbo.FboData;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.fbo.FboSizingStrategy;
+import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.io.JsonUtility;
@@ -122,6 +123,7 @@ class FBOBuilder extends BuilderPackage {
         int width = JsonUtility.getInt(json, "width", settings.windowWidth);
         int height = JsonUtility.getInt(json, "height", settings.windowHeight);
         boolean premultipliedBlend = json.has("premultipliedBlend") && json.get("premultipliedBlend").getAsBoolean();
+        Color clearColor = parseClearColor(json);
 
         ObjectArrayList<AttachmentStruct> attachments = new ObjectArrayList<>();
         JsonArray attArray = JsonUtility.validateArray(json, "attachments");
@@ -134,7 +136,21 @@ class FBOBuilder extends BuilderPackage {
             attachments.add(new AttachmentStruct(attName, isDepth, resolveInternalFormat(formatName)));
         }
 
-        return new FboData(name, attachments, strategy, width, height, premultipliedBlend);
+        return new FboData(name, attachments, strategy, width, height, premultipliedBlend, clearColor);
+    }
+
+    private Color parseClearColor(JsonObject json) {
+
+        if (!json.has("clearColor"))
+            return new Color(Color.CLEAR);
+
+        JsonArray clearColor = JsonUtility.validateArray(json, "clearColor", 4);
+
+        return new Color(
+                clearColor.get(0).getAsFloat(),
+                clearColor.get(1).getAsFloat(),
+                clearColor.get(2).getAsFloat(),
+                clearColor.get(3).getAsFloat());
     }
 
     private int resolveInternalFormat(String formatName) {

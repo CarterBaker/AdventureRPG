@@ -1,5 +1,6 @@
 package application.bootstrap.renderpipeline.fbo;
 
+import engine.graphics.color.Color;
 import engine.root.DataPackage;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -18,6 +19,10 @@ public class FboData extends DataPackage {
      * uses GL_ONE instead of GL_SRC_ALPHA as the source blend factor for
      * these, so a transparent-cleared target receives an unmodified copy of
      * what the shader wrote rather than an extra, incorrect alpha multiply.
+     *
+     * clearColor is what RenderSystem clears the target to each frame —
+     * transparent unless the JSON declares one, so a target that should
+     * never show what lies beneath it (an editor viewport) can be opaque.
      */
 
     // Identity
@@ -26,6 +31,7 @@ public class FboData extends DataPackage {
     private final Object2IntOpenHashMap<String> colorName2Index;
     private final FboSizingStrategy sizingStrategy;
     private final boolean premultipliedBlend;
+    private final Color clearColor;
 
     // Dimensions
     private final int width;
@@ -39,7 +45,8 @@ public class FboData extends DataPackage {
             FboSizingStrategy sizingStrategy,
             int width,
             int height,
-            boolean premultipliedBlend) {
+            boolean premultipliedBlend,
+            Color clearColor) {
 
         this.name = name;
         this.attachments = attachments;
@@ -47,6 +54,7 @@ public class FboData extends DataPackage {
         this.width = width;
         this.height = height;
         this.premultipliedBlend = premultipliedBlend;
+        this.clearColor = clearColor;
         this.colorName2Index = new Object2IntOpenHashMap<>();
         this.colorName2Index.defaultReturnValue(-1);
 
@@ -84,6 +92,10 @@ public class FboData extends DataPackage {
 
     public boolean isPremultipliedBlend() {
         return premultipliedBlend;
+    }
+
+    public Color getClearColor() {
+        return clearColor;
     }
 
     public int getWidth() {

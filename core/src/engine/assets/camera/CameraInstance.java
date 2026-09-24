@@ -91,4 +91,8 @@ public class CameraInstance extends InstancePackage {
     public float getFarPlane() {
         return data.getFarPlane();
     }
+
+    public void getPickRay(float ndcX, float ndcY, Vector3 outOrigin, Vector3 outDirection) {
+        data.getPickRay(ndcX, ndcY, outOrigin, outDirection);
+    }
 }

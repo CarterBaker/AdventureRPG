@@ -7,6 +7,7 @@ import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
+import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.geometrypipeline.vbomanager.VBOManager;
 import engine.root.PipelinePackage;
@@ -23,7 +24,9 @@ public class GeometryPipeline extends PipelinePackage {
      * only builds GPU buffers on demand, later, when EntityRenderSystem
      * first requests one for a given rigged MeshHandle — but is registered
      * last here since every buffer it manages is created from a mesh this
-     * pipeline already owns.
+     * pipeline already owns. SubVoxelManager has no load-time ordering
+     * requirement either — MeshBuilder resolves it during get() and only
+     * calls into it while meshes load, after every manager exists.
      */
 
     @Override
@@ -33,6 +36,7 @@ public class GeometryPipeline extends PipelinePackage {
         create(VAOManager.class);
         create(RigManager.class);
         create(MeshManager.class);
+        create(SubVoxelManager.class);
         create(ModelManager.class);
         create(DynamicGeometryManager.class);
         create(CompositeBufferManager.class);

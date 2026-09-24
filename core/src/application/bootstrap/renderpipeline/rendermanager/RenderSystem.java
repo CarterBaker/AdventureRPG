@@ -20,6 +20,7 @@ import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
@@ -83,7 +84,8 @@ class RenderSystem extends SystemPackage {
                 RenderGLSLUtility.enableBlending();
 
             RenderGLSLUtility.disableCulling();
-            RenderGLSLUtility.clearBuffer(0f, 0f, 0f, 0f);
+            Color clearColor = target.getFboData().getClearColor();
+            RenderGLSLUtility.clearBuffer(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
             RenderGLSLUtility.clearDepthBuffer();
 
             drawDepthSortedBatches(queue, target, window);

@@ -4,8 +4,8 @@ public class EditorSetting {
 
     /*
      * Editor-only constants — chrome menus, cursors, input keys, menu entry
-     * point indices, and layout persistence used by the editor windows and
-     * their menu branches.
+     * point indices, layout persistence, tool tabs, the name dialog, and the
+     * item editor's library, hierarchy tab, and status text.
      */
 
     // Cursors \\
@@ -24,7 +24,7 @@ public class EditorSetting {
     public static final String MENU_EDITOR_BASE = "editor/EditorWindow/Base";
     public static final String MENU_EDITOR_SECONDARY = "editor/EditorWindow/Secondary";
     public static final String MENU_EDITOR_TOOLBAR = "editor/EditorWindow/Toolbar";
-    public static final String MENU_EDITOR_CREATE_LAYOUT_DIALOG = "editor/EditorWindow/CreateLayoutDialog";
+    public static final String MENU_EDITOR_NAME_DIALOG = "editor/EditorWindow/NameDialog";
     public static final String MENU_EDITOR_LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";
 
     // Elements \\
@@ -46,5 +46,45 @@ public class EditorSetting {
 
     // Entry point indices
     public static final int ENTRY_LAYOUTS_LIST = 0;
-    public static final int ENTRY_CREATE_NAME_LABEL = 0;
+    public static final int ENTRY_NAME_DIALOG_LABEL = 0;
+    public static final int ENTRY_NAME_DIALOG_TITLE = 1;
+
+    // Name Dialog \\
+    public static final int NAME_INPUT_MAX_LENGTH = 32;
+    public static final String DIALOG_TITLE_CREATE_LAYOUT = "New Layout";
+    public static final String DIALOG_TITLE_NEW_ITEM = "New Item";
+    public static final String DIALOG_TITLE_NEW_PART = "New Part";
+
+    // Tabs \\
+    public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
+    public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
+
+    // Item Library \\
+    public static final String ITEM_EDITOR_FILE_EXTENSION = "json";
+    public static final String ITEM_EDITOR_MESH_DIRECTORY = "items";
+    public static final String ITEM_EDITOR_DEFINITION_FILE = "EditorItems";
+    public static final String ITEM_EDITOR_TEXTURE_ARRAY = "items/standard";
+    public static final String ITEM_EDITOR_DEFAULT_PART_NAME = "Body";
+
+    // Item Hierarchy \\
+    public static final String HIERARCHY_TAB_ITEMS = "Items";
+    public static final String HIERARCHY_ITEM_KEY_PREFIX = "item:";
+    public static final String HIERARCHY_PART_KEY_PREFIX = "part:";
+    public static final String HIERARCHY_KEY_SEPARATOR = ":";
+
+    // Item Status \\
+    public static final String ITEM_EDITOR_DIRTY_MARKER = "*";
+    public static final String ITEM_EDITOR_STATUS_SEPARATOR = "  |  ";
+    public static final String ITEM_EDITOR_STATUS_NO_ITEM = "No item open. Press New or pick one in the Hierarchy.";
+    public static final String ITEM_EDITOR_TOOL_PLACE = "Place";
+    public static final String ITEM_EDITOR_TOOL_ERASE = "Erase";
+    public static final String ITEM_EDITOR_TOOL_PAINT = "Paint";
+    public static final String ITEM_EDITOR_MESSAGE_SAVED = "Saved ";
+    public static final String ITEM_EDITOR_MESSAGE_RELOADED = "Reloaded ";
+    public static final String ITEM_EDITOR_MESSAGE_CREATED = "Created ";
+    public static final String ITEM_EDITOR_MESSAGE_EMPTY = "Nothing to save: the item has no cubes";
+    public static final String ITEM_EDITOR_MESSAGE_NOT_SAVED = "Not saved yet: nothing to reload";
+    public static final String ITEM_EDITOR_MESSAGE_MESH_LIMIT = "Edit refused: the item would pass the vertex limit";
+    public static final String ITEM_EDITOR_MESSAGE_LAST_PART = "An item needs at least one part";
+    public static final String ITEM_EDITOR_MESSAGE_PART_LIMIT = "An item cannot hold any more parts";
 }

@@ -1,0 +1,7 @@
+{
+    "shader": "editor/itemeditor/ItemEditorCursorShader",
+    "uniforms": {
+        "u_color": { "value": [0.2, 0.45, 0.95, 0.35] },
+        "u_inflate": { "value": 0.02 }
+    }
+}

@@ -119,29 +119,11 @@ public class LayoutManager extends ManagerPackage {
         return layoutName.equalsIgnoreCase(EditorSetting.LAYOUT_SESSION_NAME);
     }
 
-    private boolean isLayoutNameCharacter(char character) {
-        return (character >= 'a' && character <= 'z')
-                || (character >= 'A' && character <= 'Z')
-                || (character >= '0' && character <= '9')
-                || character == '_'
-                || character == '-';
-    }
-
     // Accessible \\
 
     public boolean isLayoutNameValid(String layoutName) {
-
-        if (layoutName == null
-                || layoutName.isEmpty()
-                || layoutName.length() > EditorSetting.LAYOUT_NAME_MAX_LENGTH
-                || isSessionName(layoutName))
-            return false;
-
-        for (int i = 0; i < layoutName.length(); i++)
-            if (!isLayoutNameCharacter(layoutName.charAt(i)))
-                return false;
-
-        return true;
+        return FileUtility.isValidFileName(layoutName, EditorSetting.LAYOUT_NAME_MAX_LENGTH)
+                && !isSessionName(layoutName);
     }
 
     public ObjectArrayList<String> getLayoutNames() {

@@ -13,7 +13,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 /*
  * Filesystem helpers shared across all bootstrap loading paths. Covers
  * directory validation, filtered file collection at varying depths, extension
- * inspection, path-relative name resolution, and name format conversion.
+ * inspection, path-relative name resolution, name validation, and name format
+ * conversion.
  */
 public class FileUtility extends EngineUtility {
 
@@ -170,6 +171,28 @@ public class FileUtility extends EngineUtility {
                 fileName.substring(0, firstUnderscore),
                 fileName.substring(firstUnderscore + 1)
         };
+    }
+
+    // Name Validation \\
+
+    public static boolean isValidFileName(String name, int maxLength) {
+
+        if (name == null || name.isEmpty() || name.length() > maxLength)
+            return false;
+
+        for (int i = 0; i < name.length(); i++)
+            if (!isFileNameCharacter(name.charAt(i)))
+                return false;
+
+        return true;
+    }
+
+    public static boolean isFileNameCharacter(char character) {
+        return (character >= 'a' && character <= 'z')
+                || (character >= 'A' && character <= 'Z')
+                || (character >= '0' && character <= '9')
+                || character == '_'
+                || character == '-';
     }
 
     // Name Format Conversion \\

@@ -1,0 +1,336 @@
+{
+  "menus": [
+    {
+      "id": "Toolbar",
+      "raycast_input": true,
+      "lock_input": false,
+      "entry_points": [
+        "item_editor_status_label"
+      ],
+      "elements": [
+        {
+          "id": "item_editor_toolbar",
+          "type": "container",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "size": {
+            "x": "100%",
+            "y": "28px"
+          },
+          "sprite": "menus/ToolBar",
+          "stack": "horizontal",
+          "on_hover_exit": {},
+          "elements": [
+            {
+              "id": "item_editor_new_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "newItem"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_new_label",
+                  "type": "label",
+                  "text": "New",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "item_editor_save_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "saveItem"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_save_label",
+                  "type": "label",
+                  "text": "Save",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "item_editor_reload_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "reloadItem"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_reload_label",
+                  "type": "label",
+                  "text": "Reload",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "item_editor_place_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "selectPlaceTool"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_place_label",
+                  "type": "label",
+                  "text": "Place",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "item_editor_erase_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "selectEraseTool"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_erase_label",
+                  "type": "label",
+                  "text": "Erase",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "item_editor_paint_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "selectPaintTool"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_paint_label",
+                  "type": "label",
+                  "text": "Paint",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "item_editor_add_part_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "addPart"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_add_part_label",
+                  "type": "label",
+                  "text": "+ Part",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "item_editor_remove_part_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "removePart"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_remove_part_label",
+                  "type": "label",
+                  "text": "- Part",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "item_editor_previous_texture_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "previousTexture"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_previous_texture_label",
+                  "type": "label",
+                  "text": "< Texture",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "item_editor_next_texture_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "72px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "nextTexture"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_next_texture_label",
+                  "type": "label",
+                  "text": "Texture >",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "item_editor_status_bar",
+          "type": "sprite",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "100%",
+            "y": "22px"
+          },
+          "sprite": "menus/ToolBar",
+          "on_hover_exit": {},
+          "elements": [
+            {
+              "id": "item_editor_status_label",
+              "type": "label",
+              "anchor": "bottom_left",
+              "pivot": "top_left",
+              "position": {
+                "x": "0px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "100%",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "",
+              "font_size": "60%",
+              "color": [
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

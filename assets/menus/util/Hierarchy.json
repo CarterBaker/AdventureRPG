@@ -1,0 +1,217 @@
+{
+  "elements": [
+    {
+      "id": "hierarchy_tab",
+      "type": "button",
+      "size": {
+        "x": "96px",
+        "y": "24px"
+      },
+      "on_click": {
+        "class": "application.bootstrap.menupipeline.hierarchymanager.HierarchyBranch",
+        "method": "selectTab"
+      },
+      "elements": [
+        {
+          "id": "hierarchy_tab_label",
+          "type": "label",
+          "text": "",
+          "font_size": "60%",
+          "color": [
+            0.45,
+            0.45,
+            0.45,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hierarchy_tab_active",
+      "type": "button",
+      "sprite": "menus/DefaultElement",
+      "size": {
+        "x": "96px",
+        "y": "24px"
+      },
+      "on_click": {
+        "class": "application.bootstrap.menupipeline.hierarchymanager.HierarchyBranch",
+        "method": "selectTab"
+      },
+      "elements": [
+        {
+          "id": "hierarchy_tab_label",
+          "type": "label",
+          "text": "",
+          "font_size": "60%",
+          "color": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hierarchy_row",
+      "type": "button",
+      "size": {
+        "x": "100%",
+        "y": "20px"
+      },
+      "on_click": {
+        "class": "application.bootstrap.menupipeline.hierarchymanager.HierarchyBranch",
+        "method": "selectNode"
+      },
+      "elements": [
+        {
+          "id": "hierarchy_toggle",
+          "type": "button",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "16px",
+            "y": "100%"
+          },
+          "on_click": {
+            "class": "application.bootstrap.menupipeline.hierarchymanager.HierarchyBranch",
+            "method": "toggleNode"
+          },
+          "elements": [
+            {
+              "id": "hierarchy_toggle_label",
+              "type": "label",
+              "text": "",
+              "font_size": "70%",
+              "color": [
+                0,
+                0,
+                0,
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "id": "hierarchy_label",
+          "type": "label",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "calc(100% - 16px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hierarchy_row_selected",
+      "type": "button",
+      "sprite": "menus/DefaultElement",
+      "size": {
+        "x": "100%",
+        "y": "20px"
+      },
+      "on_click": {
+        "class": "application.bootstrap.menupipeline.hierarchymanager.HierarchyBranch",
+        "method": "selectNode"
+      },
+      "elements": [
+        {
+          "id": "hierarchy_toggle",
+          "type": "button",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "16px",
+            "y": "100%"
+          },
+          "on_click": {
+            "class": "application.bootstrap.menupipeline.hierarchymanager.HierarchyBranch",
+            "method": "toggleNode"
+          },
+          "elements": [
+            {
+              "id": "hierarchy_toggle_label",
+              "type": "label",
+              "text": "",
+              "font_size": "70%",
+              "color": [
+                0.1,
+                0.35,
+                0.85,
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "id": "hierarchy_label",
+          "type": "label",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "calc(100% - 16px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": [
+            0.1,
+            0.35,
+            0.85,
+            1
+          ]
+        }
+      ]
+    }
+  ],
+  "menus": [
+    {
+      "id": "Hierarchy",
+      "raycast_input": true,
+      "lock_input": false,
+      "entry_points": [
+        "hierarchy_tab_strip",
+        "hierarchy_rows"
+      ],
+      "elements": [
+        {
+          "id": "hierarchy_tab_strip",
+          "type": "container",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "size": {
+            "x": "100%",
+            "y": "24px"
+          },
+          "sprite": "menus/ToolBar",
+          "stack": "horizontal"
+        },
+        {
+          "id": "hierarchy_rows",
+          "type": "container",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "100%",
+            "y": "calc(100% - 28px)"
+          },
+          "stack": "vertical",
+          "mask": true
+        }
+      ]
+    }
+  ]
+}

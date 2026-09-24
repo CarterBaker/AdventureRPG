@@ -1,7 +1,5 @@
-package application.debug;
+package editor.debug;
 
-import application.debug.freecamera.FreeCameraSystem;
-import application.runtime.debug.DebugWaterPlacementSystem;
 import application.runtime.input.InputSystem;
 import application.runtime.lighting.SkySystem;
 import application.runtime.menu.MenuSystem;
@@ -10,6 +8,8 @@ import application.runtime.postprocessing.PostProcessingManager;
 import application.runtime.recording.RecordingInputSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
+import editor.debug.freecamera.FreeCameraSystem;
+import editor.debug.waterplacement.DebugWaterPlacementSystem;
 import engine.root.ContextPackage;
 
 public class DebugContext extends ContextPackage {
@@ -20,6 +20,7 @@ public class DebugContext extends ContextPackage {
      * spawns a free camera in place of the player — no character is drawn
      * or controlled, and the camera flies through the world with no physics.
      * The editor pairs it with a Debug tab exactly as it does a preview.
+     * Debug-only systems live beside it in the editor, never in runtime.
      */
 
     // Runtime

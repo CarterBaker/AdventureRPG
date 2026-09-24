@@ -1,0 +1,11 @@
+{
+    "shader": "editor/itemeditor/ItemEditorModelShader",
+    "uniforms": {
+        "u_textureArray": {
+            "type": "SAMPLE_IMAGE_2D_ARRAY",
+            "value": "items/standard"
+        },
+        "u_lightDirection": { "value": [-0.4, -1.0, -0.6] },
+        "u_ambient": { "value": 0.35 }
+    }
+}
