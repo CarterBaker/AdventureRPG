@@ -25,6 +25,8 @@ public interface WindowPlatform {
 
     void syncWindowSize(WindowInstance window);
 
+    void placeWindow(WindowInstance window, int screenX, int screenY, int width, int height);
+
     void exit();
 
     /*

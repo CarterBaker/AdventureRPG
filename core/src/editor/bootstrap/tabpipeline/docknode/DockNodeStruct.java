@@ -1,6 +1,7 @@
 package editor.bootstrap.tabpipeline.docknode;
 
 import editor.bootstrap.tabpipeline.tab.TabHandle;
+import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
 public class DockNodeStruct extends StructPackage {
@@ -31,7 +32,7 @@ public class DockNodeStruct extends StructPackage {
     private boolean splitHorizontal;
     private DockNodeStruct first;
     private DockNodeStruct second;
-    private float ratio = 0.5f;
+    private float ratio = EngineSetting.RATIO_DEFAULT;
 
     // Leaf
     private TabHandle tab;
