@@ -15,6 +15,13 @@ float hash31(vec3 p) {
     return fract((p.x + p.y) * p.z);
 }
 
+// Interleaved gradient noise: a stable per-pixel value in [0, 1) whose
+// neighbours are spread evenly, so offsets drawn from it read as a fine,
+// even dither rather than blotchy grain.
+float interleavedGradientNoise(vec2 pixel) {
+    return fract(52.9829189 * fract(dot(pixel, vec2(0.06711056, 0.00583715))));
+}
+
 vec3 hash33(vec3 p) {
     p = vec3(
         dot(p, vec3(127.1, 311.7, 74.7)),

@@ -13,6 +13,7 @@ public class RuntimeSetting {
     public static final String PASS_SSAO = "SSAO";
     public static final String PASS_LIGHTING = "Lighting";
     public static final String PASS_WEATHER = "Weather";
+    public static final String PASS_PRECIPITATION = "Precipitation";
 
     // FBO Targets
     public static final String FBO_SKY = "SkyScene";
@@ -21,10 +22,15 @@ public class RuntimeSetting {
     public static final String FBO_SSAO = "SSAOScene";
     public static final String FBO_UI = "UIScene";
     public static final String FBO_WEATHER = "WeatherScene";
+    public static final String FBO_PRECIPITATION = "PrecipitationScene";
 
     // Composite Layers
     public static final int LAYER_SKY = -10;
     public static final int LAYER_WEATHER = -5;
     public static final int LAYER_WORLD = 0;
+    public static final int LAYER_PRECIPITATION = 5;
     public static final int LAYER_UI = 10;
+
+    // Pass Uniforms
+    public static final String UNIFORM_SCENE_DEPTH = "u_sceneDepth";
 }

@@ -92,7 +92,7 @@ void main() {
     vec3  cloudColor   = vec3(0.0);
     float cloudVisible = 1.0;
 
-    integrateCloudFog(fragDir, fragDistance, cloudColor, cloudVisible);
+    integrateCloudFog(fragDir, fragDistance, interleavedGradientNoise(gl_FragCoord.xy), cloudColor, cloudVisible);
 
     lit = lit * cloudVisible + cloudColor;
 

@@ -640,6 +640,25 @@ public class EngineSetting {
         public static final float WIND_GUST_SPEED_FREQUENCY_SECONDARY = 0.045f;
         public static final float WIND_MIN_SPEED_FLOOR = 0.05f;
 
+        // Precipitation \\
+
+        public static final String PRECIPITATION_DATA_UBO = "PrecipitationData";
+        public static final int PRECIPITATION_HEIGHT_BITS = 16;
+        public static final int PRECIPITATION_HEIGHT_MASK = 0xFFFF;
+        public static final int PRECIPITATION_HEIGHTS_PER_INT = 2;
+        public static final int PRECIPITATION_INTS_PER_VECTOR = 4;
+        public static final int PRECIPITATION_MAP_SIZE = 64;
+        public static final int PRECIPITATION_REFRESH_PER_FRAME = 128;
+        public static final float PRECIPITATION_SNOW_BLEND_RANGE = 1.5f;
+        public static final float PRECIPITATION_SNOW_TEMPERATURE = 0.5f;
+        public static final int PRECIPITATION_STALE_REFRESH_LIMIT = 1024;
+        public static final int PRECIPITATION_UNASSIGNED_COLUMN = Integer.MIN_VALUE;
+        public static final int PRECIPITATION_UNKNOWN_HEIGHT = 0xFFFF;
+        public static final float PRECIPITATION_WIND_DRIFT_SCALE = 1.0f;
+        public static final String UNIFORM_PRECIPITATION_COLUMNS = "u_precipitationColumns";
+        public static final String UNIFORM_PRECIPITATION_STATE = "u_precipitationState";
+        public static final String UNIFORM_PRECIPITATION_WINDOW = "u_precipitationWindow";
+
         // Temperature \\
 
         public static final float DEFAULT_BASE_TEMPERATURE = 15.0f;

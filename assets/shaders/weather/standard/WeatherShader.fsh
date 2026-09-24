@@ -33,7 +33,7 @@ void main() {
     vec3  color         = vec3(0.0);
     float transmittance = 1.0;
 
-    integrateCloudSky(normalize(v_dir), color, transmittance);
+    integrateCloudSky(normalize(v_dir), interleavedGradientNoise(gl_FragCoord.xy), color, transmittance);
 
     float coverage = 1.0 - transmittance;
 

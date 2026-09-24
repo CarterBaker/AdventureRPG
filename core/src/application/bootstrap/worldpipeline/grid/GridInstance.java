@@ -5,6 +5,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.oceanpipeline.turbulence.TurbulenceInstance;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
+import application.bootstrap.weatherpipeline.precipitation.PrecipitationInstance;
 import application.bootstrap.weatherpipeline.temperature.TemperatureInstance;
 import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.weatherpipeline.wind.WindInstance;
@@ -30,9 +31,9 @@ public class GridInstance extends InstancePackage {
      * The active spatial grid for a single focal entity — one per window.
      * Owns the load order, slot handles, active chunks/megas, pending
      * load/unload requests, this grid's render queues, and this window's own
-     * cloned location state (clock, weather, wind, ocean turbulence, and the
-     * Time/Sun/Moon/Sky/Weather-Map/Wind/Ocean UBO instances) handed to it by
-     * GridBuildSystem.
+     * cloned location state (clock, weather, wind, precipitation, ocean
+     * turbulence, and the Time/Sun/Moon/Sky/Weather-Map/Wind/Precipitation/
+     * Ocean UBO instances) handed to it by GridBuildSystem.
      */
 
     // Focal
@@ -72,6 +73,10 @@ public class GridInstance extends InstancePackage {
     // Wind
     private WindInstance windInstance;
     private UBOInstance windDataUBO;
+
+    // Precipitation
+    private PrecipitationInstance precipitationInstance;
+    private UBOInstance precipitationDataUBO;
 
     // Ocean
     private TurbulenceInstance turbulenceInstance;
@@ -116,6 +121,8 @@ public class GridInstance extends InstancePackage {
             TemperatureInstance temperatureInstance,
             WindInstance windInstance,
             UBOInstance windDataUBO,
+            PrecipitationInstance precipitationInstance,
+            UBOInstance precipitationDataUBO,
             TurbulenceInstance turbulenceInstance,
             UBOInstance oceanDataUBO) {
 
@@ -156,6 +163,10 @@ public class GridInstance extends InstancePackage {
         // Wind
         this.windInstance = windInstance;
         this.windDataUBO = windDataUBO;
+
+        // Precipitation
+        this.precipitationInstance = precipitationInstance;
+        this.precipitationDataUBO = precipitationDataUBO;
 
         // Ocean
         this.turbulenceInstance = turbulenceInstance;
@@ -377,6 +388,14 @@ public class GridInstance extends InstancePackage {
 
     public UBOInstance getWindDataUBO() {
         return windDataUBO;
+    }
+
+    public PrecipitationInstance getPrecipitationInstance() {
+        return precipitationInstance;
+    }
+
+    public UBOInstance getPrecipitationDataUBO() {
+        return precipitationDataUBO;
     }
 
     public TurbulenceInstance getTurbulenceInstance() {
