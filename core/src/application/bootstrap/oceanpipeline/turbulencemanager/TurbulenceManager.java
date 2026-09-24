@@ -5,6 +5,7 @@ import java.util.Arrays;
 import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.oceanpipeline.turbulence.TurbulenceInstance;
 import application.bootstrap.weatherpipeline.weather.WeatherInstance;
+import application.bootstrap.weatherpipeline.weather.WeatherWindowStruct;
 import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
 import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -25,17 +26,18 @@ public class TurbulenceManager extends ManagerPackage {
      * Owns ocean turbulence — how rough the sea is at any point of the world
      * — and the wave set that turbulence drives. Strength comes from weather:
      * each weather's blended wind speed, wind turbulence, and precipitation,
-     * swung over time by per-pattern gust noise so no two storms breathe in
+     * swung over time by per-cell gust noise so no two storms breathe in
      * step. Every frame each grid's TurbulenceInstance is rebuilt from its own
-     * local weather as a baseline plus one cell per weather pattern in range,
-     * nearest first, so a storm on the horizon raises distant waves while the
-     * water underfoot stays calm. The wave set is a few directional
-     * components travelling with the prevailing wind, each wave vector
-     * snapped to the world's wrap period so the sea tiles across the world
-     * seam, and each grid's phase for them is folded from its reference chunk
-     * and the elapsed time in double precision. The sampling methods here are
-     * the CPU side of exactly what WaterShader evaluates, so gameplay can ask
-     * how high the sea stands at any position.
+     * local weather as a baseline plus one cell per nearby weather-map cell
+     * whose weather differs from it, nearest first, so a storm drifting in
+     * roughens the sea ahead of it while the water underfoot stays calm. The
+     * wave set is a few directional components travelling with the
+     * prevailing wind, each wave vector snapped to the world's wrap period so
+     * the sea tiles across the world seam, and each grid's phase for them is
+     * folded from its reference chunk and the elapsed time in double
+     * precision. The sampling methods here are the CPU side of exactly what
+     * WaterShader evaluates, so gameplay can ask how high the sea stands at
+     * any position.
      */
 
     // Internal
@@ -56,7 +58,9 @@ public class TurbulenceManager extends ManagerPackage {
     private float[] waveAmplitudeShare;
 
     // Scratch
+    private final WeatherWindowStruct windowScratch = new WeatherWindowStruct();
     private long[] sortScratch;
+    private float[] cellStrengthScratch;
 
     // Base \\
 
@@ -73,7 +77,9 @@ public class TurbulenceManager extends ManagerPackage {
         this.waveAmplitudeShare = new float[EngineSetting.OCEAN_WAVE_COUNT];
 
         // Scratch
-        this.sortScratch = new long[EngineSetting.WEATHER_PATTERN_MAX_ACTIVE_COUNT];
+        int mapCellCount = EngineSetting.WEATHER_MAP_RESOLUTION * EngineSetting.WEATHER_MAP_RESOLUTION;
+        this.sortScratch = new long[mapCellCount];
+        this.cellStrengthScratch = new float[mapCellCount];
 
         create(TurbulenceBufferSystem.class);
     }
@@ -106,94 +112,126 @@ public class TurbulenceManager extends ManagerPackage {
         int size = grids.size();
 
         for (int i = 0; i < size; i++)
-            resolveGrid((GridInstance) elements[i], activeWorld);
+            resolveGrid((GridInstance) elements[i]);
     }
 
-    private void resolveGrid(GridInstance grid, WorldHandle activeWorld) {
+    private void resolveGrid(GridInstance grid) {
 
         TurbulenceInstance turbulence = grid.getTurbulenceInstance();
         WeatherInstance localWeather = grid.getWeatherInstance();
 
         float ambientStrength = localWeather.isConfigured()
-                ? computeStrength(localWeather, EngineSetting.WEATHER_PATTERN_LOCAL_KEY_SEED)
+                ? computeStrength(localWeather, EngineSetting.WEATHER_LOCAL_KEY_SEED)
+                : 0f;
+        float ambientWeatherStrength = localWeather.isConfigured()
+                ? computeWeatherStrength(localWeather)
                 : 0f;
 
         turbulence.beginField(ambientStrength);
 
-        long referenceCoordinate = grid.getActiveChunkCoordinate();
-
-        resolveCells(turbulence, referenceCoordinate, activeWorld);
-        resolveWavePhases(turbulence, referenceCoordinate);
+        resolveCells(turbulence, grid, ambientWeatherStrength);
+        resolveWavePhases(turbulence, grid.getActiveChunkCoordinate());
     }
 
     // Cells \\
 
-    private void resolveCells(TurbulenceInstance turbulence, long referenceCoordinate, WorldHandle activeWorld) {
+    /*
+     * Every weather cell near the grid whose weather stirs the sea differently
+     * from the grid's own ambient weather becomes one turbulence cell, nearest
+     * first, its influence faded out toward the edge of
+     * OCEAN_TURBULENCE_WEATHER_RANGE_CELLS so a cell sliding out of reach
+     * never drops out abruptly.
+     */
+    private void resolveCells(TurbulenceInstance turbulence, GridInstance grid, float ambientWeatherStrength) {
 
-        int refChunkX = Coordinate2Long.unpackX(referenceCoordinate);
-        int refChunkZ = Coordinate2Long.unpackY(referenceCoordinate);
+        if (!weatherPatternManager.hasActiveMap())
+            return;
 
-        int worldWidthChunks = activeWorld.getWorldScale().x / EngineSetting.CHUNK_SIZE;
-        int worldHeightChunks = activeWorld.getWorldScale().y / EngineSetting.CHUNK_SIZE;
+        weatherPatternManager.resolveWindow(grid, windowScratch);
 
-        float rangeChunks = weatherPatternManager.getRangeChunks();
-        WeatherInstance[] pool = weatherPatternManager.getPatternPool();
-        int patternCount = 0;
+        int resolution = weatherPatternManager.getMapResolution();
+        float cellSizeBlocks = weatherPatternManager.getCellSizeBlocks();
+        float rangeBlocks = EngineSetting.OCEAN_TURBULENCE_WEATHER_RANGE_CELLS * cellSizeBlocks;
+        int candidateCount = 0;
 
-        for (int slot = 0; slot < pool.length; slot++) {
+        for (int z = 0; z < resolution; z++) {
+            for (int x = 0; x < resolution; x++) {
 
-            if (!weatherPatternManager.isPatternActive(slot))
-                continue;
+                WeatherInstance cell = weatherPatternManager.getCell(windowScratch, x, z);
 
-            WeatherInstance pattern = pool[slot];
+                if (cell == null)
+                    continue;
 
-            double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
-            double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
-            float distanceChunks = (float) Math.sqrt(dx * dx + dz * dz);
+                float centerX = (x + 0.5f) * cellSizeBlocks - windowScratch.getMapOriginXBlocks();
+                float centerZ = (z + 0.5f) * cellSizeBlocks - windowScratch.getMapOriginZBlocks();
+                float distanceBlocks = (float) Math.sqrt(centerX * centerX + centerZ * centerZ);
 
-            if (distanceChunks - pattern.getFootprintRadiusChunks() > rangeChunks)
-                continue;
+                if (distanceBlocks >= rangeBlocks)
+                    continue;
 
-            sortScratch[patternCount++] = ((long) Float.floatToRawIntBits(distanceChunks) << 32)
-                    | (slot & 0xFFFFFFFFL);
+                if (Math.abs(computeWeatherStrength(cell) - ambientWeatherStrength)
+                        <= EngineSetting.OCEAN_TURBULENCE_STRENGTH_EPSILON)
+                    continue;
+
+                int index = z * resolution + x;
+                cellStrengthScratch[index] = computeStrength(cell, cell.getCellKey());
+                sortScratch[candidateCount++] = ((long) Float.floatToRawIntBits(distanceBlocks) << 32)
+                        | (index & 0xFFFFFFFFL);
+            }
         }
 
-        Arrays.sort(sortScratch, 0, patternCount);
+        Arrays.sort(sortScratch, 0, candidateCount);
 
-        for (int i = 0; i < patternCount; i++) {
+        float radiusBlocks = cellSizeBlocks * EngineSetting.OCEAN_TURBULENCE_WEATHER_CELL_RADIUS_RATIO;
 
-            WeatherInstance pattern = pool[(int) (sortScratch[i] & 0xFFFFFFFFL)];
+        for (int i = 0; i < candidateCount; i++) {
 
-            double dx = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkX(), refChunkX, worldWidthChunks);
-            double dz = WorldWrapUtility.wrappedDelta(pattern.getCurrentChunkZ(), refChunkZ, worldHeightChunks);
+            int index = (int) (sortScratch[i] & 0xFFFFFFFFL);
+            float distanceBlocks = Float.intBitsToFloat((int) (sortScratch[i] >>> 32));
+            int x = index % resolution;
+            int z = index / resolution;
 
             boolean added = turbulence.addCell(
-                    (float) (dx * EngineSetting.CHUNK_SIZE),
-                    (float) (dz * EngineSetting.CHUNK_SIZE),
-                    pattern.getFootprintRadiusChunks() * EngineSetting.CHUNK_SIZE,
-                    pattern.getFadeAlpha() * EngineSetting.OCEAN_TURBULENCE_CELL_WEIGHT,
-                    computeStrength(pattern, pattern.getPatternKey()));
+                    (x + 0.5f) * cellSizeBlocks - windowScratch.getMapOriginXBlocks(),
+                    (z + 0.5f) * cellSizeBlocks - windowScratch.getMapOriginZBlocks(),
+                    radiusBlocks,
+                    EngineSetting.OCEAN_TURBULENCE_CELL_WEIGHT * resolveRangeFade(distanceBlocks, rangeBlocks),
+                    cellStrengthScratch[index]);
 
             if (!added)
                 return;
         }
     }
 
-    private float computeStrength(WeatherInstance weather, long gustKey) {
+    private float resolveRangeFade(float distanceBlocks, float rangeBlocks) {
 
-        float windStrength = weather.getBlendedWindSpeedScale() * weather.getBlendedWindTurbulenceScale()
-                * EngineSetting.OCEAN_TURBULENCE_WIND_WEIGHT;
-        float rainStrength = weather.getBlendedPrecipitationIntensity()
-                * EngineSetting.OCEAN_TURBULENCE_PRECIPITATION_WEIGHT;
+        float fadeStart = rangeBlocks * EngineSetting.OCEAN_TURBULENCE_WEATHER_FADE_START_RATIO;
+        float t = Math.max(0f, Math.min(1f, (distanceBlocks - fadeStart) / Math.max(rangeBlocks - fadeStart, 1f)));
+
+        return 1f - t * t * (3f - 2f * t);
+    }
+
+    private float computeStrength(WeatherInstance weather, long gustKey) {
 
         float gust = NoiseUtility.noise2(
                 EngineSetting.OCEAN_TURBULENCE_SEED ^ gustKey,
                 elapsedSeconds * EngineSetting.OCEAN_TURBULENCE_GUST_FREQUENCY,
                 0.0);
 
-        float strength = (windStrength + rainStrength) * (1f + gust * EngineSetting.OCEAN_TURBULENCE_GUST_VARIANCE);
+        float strength = computeWeatherStrength(weather)
+                * (1f + gust * EngineSetting.OCEAN_TURBULENCE_GUST_VARIANCE);
 
         return Math.max(0f, Math.min(EngineSetting.OCEAN_TURBULENCE_MAX_STRENGTH, strength));
+    }
+
+    private float computeWeatherStrength(WeatherInstance weather) {
+
+        float windStrength = weather.getBlendedWindSpeedScale() * weather.getBlendedWindTurbulenceScale()
+                * EngineSetting.OCEAN_TURBULENCE_WIND_WEIGHT;
+        float rainStrength = weather.getBlendedPrecipitationIntensity()
+                * EngineSetting.OCEAN_TURBULENCE_PRECIPITATION_WEIGHT;
+
+        return windStrength + rainStrength;
     }
 
     // Waves \\

@@ -9,33 +9,24 @@ public class WeatherData extends DataPackage {
 
     /*
      * Immutable weather definition loaded from JSON — the condition-level
-     * atmosphere values for one named weather, its chance-weighted cloud
-     * pool, and its own suggested next weathers. Cloud entries and next-
-     * weather suggestions are parallel fastutil lists rather than a
-     * wrapper type per entry. cloudCoverage is the fraction of sky/area
-     * this weather's clouds occupy; cloudDensityMultiplier separately
-     * scales how thick/opaque those clouds read, independent of how much
-     * area they cover. visualScale controls how large this weather reads
-     * in the sky.
-     *
-     * The "no altitude override" sentinel and the default per-cloud-entry
-     * density multiplier both live on EngineSetting now (WEATHER_CLOUD_
-     * NO_ALTITUDE_OVERRIDE / DEFAULT_CLOUD_ENTRY_DENSITY_MULTIPLIER) —
-     * they're authoring/parsing constants, not data this class owns, so
-     * they don't belong here.
+     * atmosphere values for one named weather and the cloud archetypes it
+     * fills the sky with. Cloud entries are parallel fastutil lists: each
+     * entry's resolved coverage (the weather's cloudCoverage shared out by
+     * the entry's chance) and density scale (the entry's densityMultiplier
+     * times the weather's cloudDensityMultiplier), exactly as the weather map
+     * consumes them.
      */
 
+    // Identity
     private final String weatherName;
     private final short weatherID;
 
+    // Clouds
     private final ObjectArrayList<CloudHandle> cloudHandles;
-    private final FloatArrayList cloudChances;
-    private final FloatArrayList cloudAltitudeOverrides;
-    private final FloatArrayList cloudDensityMultipliers;
+    private final FloatArrayList cloudCoverages;
+    private final FloatArrayList cloudDensityScales;
 
-    private final ObjectArrayList<String> nextWeatherNames;
-    private final FloatArrayList nextWeatherChances;
-
+    // Atmosphere
     private final float cloudCoverage;
     private final float cloudDensityMultiplier;
     private final float precipitationIntensity;
@@ -44,19 +35,16 @@ public class WeatherData extends DataPackage {
     private final float fogDensityScale;
     private final float humidity;
     private final float visibility;
-    private final float visualScale;
-
     private final float temperatureModifier;
+
+    // Constructor \\
 
     public WeatherData(
             String weatherName,
             short weatherID,
             ObjectArrayList<CloudHandle> cloudHandles,
-            FloatArrayList cloudChances,
-            FloatArrayList cloudAltitudeOverrides,
-            FloatArrayList cloudDensityMultipliers,
-            ObjectArrayList<String> nextWeatherNames,
-            FloatArrayList nextWeatherChances,
+            FloatArrayList cloudCoverages,
+            FloatArrayList cloudDensityScales,
             float cloudCoverage,
             float cloudDensityMultiplier,
             float precipitationIntensity,
@@ -65,17 +53,13 @@ public class WeatherData extends DataPackage {
             float fogDensityScale,
             float humidity,
             float visibility,
-            float visualScale,
             float temperatureModifier) {
 
         this.weatherName = weatherName;
         this.weatherID = weatherID;
         this.cloudHandles = cloudHandles;
-        this.cloudChances = cloudChances;
-        this.cloudAltitudeOverrides = cloudAltitudeOverrides;
-        this.cloudDensityMultipliers = cloudDensityMultipliers;
-        this.nextWeatherNames = nextWeatherNames;
-        this.nextWeatherChances = nextWeatherChances;
+        this.cloudCoverages = cloudCoverages;
+        this.cloudDensityScales = cloudDensityScales;
         this.cloudCoverage = cloudCoverage;
         this.cloudDensityMultiplier = cloudDensityMultiplier;
         this.precipitationIntensity = precipitationIntensity;
@@ -84,9 +68,10 @@ public class WeatherData extends DataPackage {
         this.fogDensityScale = fogDensityScale;
         this.humidity = humidity;
         this.visibility = visibility;
-        this.visualScale = visualScale;
         this.temperatureModifier = temperatureModifier;
     }
+
+    // Accessible \\
 
     public String getWeatherName() {
         return weatherName;
@@ -100,24 +85,12 @@ public class WeatherData extends DataPackage {
         return cloudHandles;
     }
 
-    public FloatArrayList getCloudChances() {
-        return cloudChances;
+    public FloatArrayList getCloudCoverages() {
+        return cloudCoverages;
     }
 
-    public FloatArrayList getCloudAltitudeOverrides() {
-        return cloudAltitudeOverrides;
-    }
-
-    public FloatArrayList getCloudDensityMultipliers() {
-        return cloudDensityMultipliers;
-    }
-
-    public ObjectArrayList<String> getNextWeatherNames() {
-        return nextWeatherNames;
-    }
-
-    public FloatArrayList getNextWeatherChances() {
-        return nextWeatherChances;
+    public FloatArrayList getCloudDensityScales() {
+        return cloudDensityScales;
     }
 
     public float getCloudCoverage() {
@@ -150,10 +123,6 @@ public class WeatherData extends DataPackage {
 
     public float getVisibility() {
         return visibility;
-    }
-
-    public float getVisualScale() {
-        return visualScale;
     }
 
     public float getTemperatureModifier() {

@@ -1,76 +1,119 @@
 #ifndef CLOUD_DOME_GLSL
 #define CLOUD_DOME_GLSL
 
+#include "includes/CameraData.glsl"
 #include "includes/WeatherMapData.glsl"
 
 /*
-* Bends an authored cloud altitude toward u_cloudDomeFadeAltitude as the
- * sampled point's horizontal distance from world center grows, so a pattern
- * sits at its real block elevation overhead and reaches exactly the fade
- * altitude at the edge of simulated weather range — a spherical dome rather
- * than a flat blanket. Distance is normalized against u_weatherRangeBlocks,
- * the same range the CPU streams patterns across: distanceT 0.0 is world
- * center (authored altitude) and distanceT 1.0 is range edge (fade altitude,
- * exactly, with no tolerance applied anywhere). Past the range edge the
- * surface is a true constant-altitude plane at the fade altitude, which the
- * clamp below produces for free so callers need no special case.
- * u_cloudDomeBendCurve reshapes the 0..1 falloff through a pow() exponent of
- * 1/curve — 1.0 is linear (a cone), 0.5 is a parabola, approaching 0.0 holds
- * true elevation almost the whole way out and drops to the fade altitude only
- * at the very edge. Both uniforms are pushed once at awake() by WeatherSystem
- * from EngineSetting.CLOUD_DOME_FADE_ALTITUDE_BLOCKS / CLOUD_DOME_BEND_CURVE.
- * The slope and normal below are the analytic derivative of that same curve,
- * used by the weather pass to know which way the bent layer is actually
- * facing at any point.
+ * The sky's dome is the planet itself. Every cloud layer is the shell between
+ * two spheres around the planet's centre — one planet radius below sea level,
+ * straight beneath the camera — at the layer's own altitude above sea level,
+ * so a cloud belongs to the world rather than to the viewer: it stays where
+ * it is as the camera climbs, can be flown into, and can be looked down on
+ * from above. Overhead the shell is nearly flat, so a cloud there is seen
+ * from beneath; toward the horizon the planet's curvature carries the same
+ * shell down to eye level, so the view runs through the clouds' sides
+ * instead. The weather itself stays flat: a sample's place on the weather map
+ * is its horizontal offset, so the map slides across the dome with the flow.
  */
 
-uniform float u_cloudDomeFadeAltitude;
-uniform float u_cloudDomeBendCurve;
+const float CLOUD_DOME_EPSILON = 0.0001;
+const float CLOUD_DOME_NO_HIT   = 1.0e30;
 
-const float CLOUD_DOME_BEND_CURVE_MIN = 0.02;
-const float CLOUD_DOME_BEND_CURVE_MAX = 1.0;
-
-float resolveCloudDomeBendExponent() {
-    return 1.0 / clamp(u_cloudDomeBendCurve, CLOUD_DOME_BEND_CURVE_MIN, CLOUD_DOME_BEND_CURVE_MAX);
+float resolveCloudDomeCameraAltitude() {
+    return u_cameraPosition.y - u_weatherPlanet.y;
 }
 
-float resolveCloudDomeAltitude(float authoredAltitude, float distanceBlocks) {
-    float distanceT = clamp(distanceBlocks / max(u_weatherRangeBlocks, 1.0), 0.0, 1.0);
-    float bendT     = pow(distanceT, resolveCloudDomeBendExponent());
-    return mix(authoredAltitude, u_cloudDomeFadeAltitude, bendT);
+float resolveCloudDomeCameraRadius() {
+    return u_weatherPlanet.x + resolveCloudDomeCameraAltitude();
 }
 
-// Rate of altitude change per block of horizontal distance. Zero at world
-// center and flat past the range edge, where the dome is a constant plane.
-float resolveCloudDomeSlope(float authoredAltitude, float distanceBlocks) {
-    float range     = max(u_weatherRangeBlocks, 1.0);
-    float distanceT = distanceBlocks / range;
+// Both crossings of a unit ray from the camera with the sphere at the given
+// altitude above sea level: x = near, y = far. Solved around the camera with
+// the constant term factored, so the planet's large radius never cancels the
+// small height differences away.
+bool intersectCloudDomeSphere(float altitude, vec3 rayDir, out vec2 crossings) {
+    float cameraRadius = resolveCloudDomeCameraRadius();
+    float b            = rayDir.y * cameraRadius;
+    float c            = (resolveCloudDomeCameraAltitude() - altitude)
+    * (cameraRadius + u_weatherPlanet.x + altitude);
+    float discriminant = b * b - c;
 
-    if (distanceT <= 0.0 || distanceT >= 1.0)
-    return 0.0;
+    crossings = vec2(CLOUD_DOME_NO_HIT);
 
-    float exponent = resolveCloudDomeBendExponent();
+    if (discriminant < 0.0)
+    return false;
 
-    return (u_cloudDomeFadeAltitude - authoredAltitude)
-    * exponent * pow(distanceT, exponent - 1.0) / range;
+    float q = b >= 0.0 ? -(b + sqrt(discriminant)) : sqrt(discriminant) - b;
+
+    if (abs(q) < CLOUD_DOME_EPSILON) {
+        crossings = vec2(-b);
+        return true;
+    }
+
+    float other = c / q;
+    crossings = vec2(min(q, other), max(q, other));
+
+    return true;
 }
 
-// Outward surface normal of the bent layer at a world position. This is the
-// layer's local "up" — the weather pass shades and angle-tests against it
-// rather than against world up, which is what lets a strongly bent, distant
-// portion of the dome read as edge-on instead of as the same flat stamp
-// every other angle produces.
-vec3 resolveCloudDomeNormal(float authoredAltitude, vec3 worldPos) {
-    vec2  radial         = worldPos.xz;
-    float distanceBlocks = length(radial);
+// Distance to the ground the planet presents: sea level, or the camera's own
+// height when it stands below sea level, so no cloud is ever drawn through
+// the planet beneath the horizon.
+float resolveCloudDomeGroundDistance(vec3 rayDir) {
+    vec2 crossings;
 
-    if (distanceBlocks < 1.0)
-    return vec3(0.0, 1.0, 0.0);
+    if (!intersectCloudDomeSphere(min(resolveCloudDomeCameraAltitude(), 0.0), rayDir, crossings))
+    return CLOUD_DOME_NO_HIT;
 
-    float slope   = resolveCloudDomeSlope(authoredAltitude, distanceBlocks);
-    vec2  radialN = radial / distanceBlocks;
+    return crossings.y > 0.0 ? max(crossings.x, 0.0) : CLOUD_DOME_NO_HIT;
+}
 
-    return normalize(vec3(-slope * radialN.x, 1.0, -slope * radialN.y));
+// The first stretch of the ray, within maxDistance, that lies inside a layer
+// between baseAltitude and topAltitude — from beneath, from inside, or from
+// above.
+bool resolveCloudDomeInterval(
+    float baseAltitude, float topAltitude, vec3 rayDir, float maxDistance,
+    out float tEnter, out float tExit) {
+    vec2 outer;
+    vec2 inner;
+
+    tEnter = 0.0;
+    tExit  = 0.0;
+
+    if (!intersectCloudDomeSphere(topAltitude, rayDir, outer) || outer.y <= 0.0)
+    return false;
+
+    tEnter = max(outer.x, 0.0);
+    tExit  = min(outer.y, maxDistance);
+
+    if (intersectCloudDomeSphere(baseAltitude, rayDir, inner)) {
+        if (tEnter >= inner.x && tEnter < inner.y) {
+            tEnter = inner.y;
+        } else if (inner.x > tEnter) {
+            tExit = min(tExit, inner.x);
+        }
+    }
+
+    return tExit > tEnter;
+}
+
+// Altitude above sea level of a point relativePosition away from the camera.
+float resolveCloudDomeAltitude(vec3 relativePosition) {
+    float radial       = resolveCloudDomeCameraRadius() + relativePosition.y;
+    float horizontalSq = dot(relativePosition.xz, relativePosition.xz);
+
+    return resolveCloudDomeCameraAltitude() + relativePosition.y
+    + horizontalSq / (sqrt(horizontalSq + radial * radial) + radial);
+}
+
+// The planet's local up at a point, which the shading lights against so a
+// distant stretch of the curved layer reads as tilted toward the horizon.
+vec3 resolveCloudDomeNormal(vec3 relativePosition) {
+    return normalize(vec3(
+        relativePosition.x,
+        resolveCloudDomeCameraRadius() + relativePosition.y,
+        relativePosition.z));
 }
 
 #endif

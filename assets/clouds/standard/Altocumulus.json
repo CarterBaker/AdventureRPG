@@ -1,19 +1,15 @@
 {
     "color": { "r": 1.0, "g": 1.0, "b": 1.0 },
     "saturation": 0.95,
-    "scale": 65.0,
+    "scaleKm": 1.5,
     "density": 0.7,
-    "verticalThickness": 30.0,
+    "verticalThicknessKm": 0.8,
     "fullness": 0.65,
+    "elongation": 1.5,
     "densityNoiseScale": 1.2,
     "noiseWarpStrength": 0.55,
     "coverageBias": 0.5,
     "silhouetteSoftness": 0.12,
-    "baseAltitude": 677.0,
-    "driftSpeedScale": 1.1,
-    "spread": 0.8,
-    "sizeVarianceMin": 0.6,
-    "sizeVarianceMax": 1.4,
-    "elongationMin": 1.1,
-    "elongationMax": 1.9
+    "baseAltitudeKm": 3.5,
+    "driftSpeedScale": 1.1
 }

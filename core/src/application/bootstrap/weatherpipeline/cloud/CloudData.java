@@ -7,10 +7,12 @@ public class CloudData extends DataPackage {
 
     /*
      * Immutable "Cloud Settings" for one named cloud archetype, loaded from
-     * JSON. Every value a shader needs to draw this archetype — shape,
-     * material, motion, and instance variance — lives here and only here.
-     * CloudHandle wraps this class and delegates every accessor to it, so
-     * there is exactly one place any cloud value can ever live.
+     * JSON. Every value the weather shader needs to draw this archetype as a
+     * layer of the sky — tint, shape, noise, placement, and motion — lives
+     * here and only here. Sizes and elevations are real-world kilometres,
+     * converted into blocks through the active world's own scale when the
+     * weather map is written. CloudHandle wraps this class and delegates
+     * every accessor to it.
      */
 
     // Identity
@@ -22,10 +24,11 @@ public class CloudData extends DataPackage {
     private final float saturation;
 
     // Shape — width, height, fullness
-    private final float scale;
+    private final float scaleKm;
     private final float density;
-    private final float verticalThickness;
+    private final float verticalThicknessKm;
     private final float fullness;
+    private final float elongation;
 
     // Density Noise
     private final float densityNoiseScale;
@@ -35,18 +38,11 @@ public class CloudData extends DataPackage {
     // Silhouette
     private final float silhouetteSoftness;
 
-    // Placement — elevation
-    private final float baseAltitude;
+    // Placement — elevation above sea level
+    private final float baseAltitudeKm;
 
     // Motion
     private final float driftSpeedScale;
-
-    // Instance Variation — spread, and per-instance size/shape jitter range
-    private final float spreadRatio;
-    private final float sizeVarianceMin;
-    private final float sizeVarianceMax;
-    private final float elongationMin;
-    private final float elongationMax;
 
     // Constructor \\
 
@@ -55,41 +51,33 @@ public class CloudData extends DataPackage {
             short cloudID,
             Vector3 cloudColor,
             float saturation,
-            float scale,
+            float scaleKm,
             float density,
-            float verticalThickness,
+            float verticalThicknessKm,
             float fullness,
+            float elongation,
             float densityNoiseScale,
             float noiseWarpStrength,
             float coverageBias,
             float silhouetteSoftness,
-            float baseAltitude,
-            float driftSpeedScale,
-            float spreadRatio,
-            float sizeVarianceMin,
-            float sizeVarianceMax,
-            float elongationMin,
-            float elongationMax) {
+            float baseAltitudeKm,
+            float driftSpeedScale) {
 
         this.cloudName = cloudName;
         this.cloudID = cloudID;
         this.cloudColor = cloudColor;
         this.saturation = saturation;
-        this.scale = scale;
+        this.scaleKm = scaleKm;
         this.density = density;
-        this.verticalThickness = verticalThickness;
+        this.verticalThicknessKm = verticalThicknessKm;
         this.fullness = fullness;
+        this.elongation = elongation;
         this.densityNoiseScale = densityNoiseScale;
         this.noiseWarpStrength = noiseWarpStrength;
         this.coverageBias = coverageBias;
         this.silhouetteSoftness = silhouetteSoftness;
-        this.baseAltitude = baseAltitude;
+        this.baseAltitudeKm = baseAltitudeKm;
         this.driftSpeedScale = driftSpeedScale;
-        this.spreadRatio = spreadRatio;
-        this.sizeVarianceMin = sizeVarianceMin;
-        this.sizeVarianceMax = sizeVarianceMax;
-        this.elongationMin = elongationMin;
-        this.elongationMax = elongationMax;
     }
 
     // Accessible \\
@@ -110,20 +98,24 @@ public class CloudData extends DataPackage {
         return saturation;
     }
 
-    public float getScale() {
-        return scale;
+    public float getScaleKm() {
+        return scaleKm;
     }
 
     public float getDensity() {
         return density;
     }
 
-    public float getVerticalThickness() {
-        return verticalThickness;
+    public float getVerticalThicknessKm() {
+        return verticalThicknessKm;
     }
 
     public float getFullness() {
         return fullness;
+    }
+
+    public float getElongation() {
+        return elongation;
     }
 
     public float getDensityNoiseScale() {
@@ -142,31 +134,11 @@ public class CloudData extends DataPackage {
         return silhouetteSoftness;
     }
 
-    public float getBaseAltitude() {
-        return baseAltitude;
+    public float getBaseAltitudeKm() {
+        return baseAltitudeKm;
     }
 
     public float getDriftSpeedScale() {
         return driftSpeedScale;
-    }
-
-    public float getSpreadRatio() {
-        return spreadRatio;
-    }
-
-    public float getSizeVarianceMin() {
-        return sizeVarianceMin;
-    }
-
-    public float getSizeVarianceMax() {
-        return sizeVarianceMax;
-    }
-
-    public float getElongationMin() {
-        return elongationMin;
-    }
-
-    public float getElongationMax() {
-        return elongationMax;
     }
 }

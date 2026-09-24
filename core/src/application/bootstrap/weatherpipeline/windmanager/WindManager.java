@@ -9,7 +9,6 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WindManager extends ManagerPackage {
@@ -20,7 +19,7 @@ public class WindManager extends ManagerPackage {
      * LocalWindBranch, blending that global airflow with each grid's own
      * season and active weather, and lives on that grid's own WindInstance
      * — never a single shared value — so every window's location tracks
-     * its own wind and sky-dome drift independently.
+     * its own wind independently.
      *
      * Also pushes that same grid's current ambient temperature (see
      * TemperatureInstance, computed by WeatherPatternManager's own
@@ -39,8 +38,6 @@ public class WindManager extends ManagerPackage {
     private LocalWindBranch localWindBranch;
 
     private WindHandle windHandle;
-
-    private final Vector2 windDriftOffsetScratch = new Vector2();
 
     @Override
     protected void create() {
@@ -80,7 +77,6 @@ public class WindManager extends ManagerPackage {
             WindInstance windInstance = grid.getWindInstance();
 
             localWindBranch.updateLocalWind(windInstance, grid.getWeatherInstance(), grid.getClockInstance());
-            windInstance.advanceSkyDrift(deltaTime);
             pushWindData(grid, windInstance);
         }
     }
@@ -93,10 +89,6 @@ public class WindManager extends ManagerPackage {
 
         windData.updateUniform(EngineSetting.UNIFORM_WIND_DIRECTION, windInstance.getLocalWindDirection());
         windData.updateUniform(EngineSetting.UNIFORM_WIND_SPEED, windInstance.getLocalWindSpeed());
-
-        windDriftOffsetScratch.set((float) windInstance.getSkyDriftX(), (float) windInstance.getSkyDriftZ());
-        windData.updateUniform(EngineSetting.UNIFORM_WIND_DRIFT_OFFSET, windDriftOffsetScratch);
-
         windData.updateUniform(EngineSetting.UNIFORM_TEMPERATURE, grid.getTemperatureInstance().getTemperature());
 
         uboManager.push(windData);

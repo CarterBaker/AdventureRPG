@@ -3,13 +3,6 @@
         { "name": "standard/Stratocumulus", "chance": 60 },
         { "name": "standard/Altostratus", "chance": 40 }
     ],
-    "nextWeatherChances": [
-        { "name": "standard/StormyWeather", "chance": 30 },
-        { "name": "standard/CloudyWeather", "chance": 30 },
-        { "name": "standard/SunnyWeather", "chance": 15 },
-        { "name": "standard/ClearWeather", "chance": 15 },
-        { "name": "standard/HighCirrusWeather", "chance": 10 }
-    ],
     "cloudCoverage": 0.85,
     "cloudDensityMultiplier": 1.1,
     "precipitationIntensity": 0.0,
@@ -18,6 +11,5 @@
     "fogDensityScale": 1.15,
     "humidity": 0.65,
     "visibility": 0.75,
-    "visualScale": 1.15,
     "temperatureModifier": -1.5
 }

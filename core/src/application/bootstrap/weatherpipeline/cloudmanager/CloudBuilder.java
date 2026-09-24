@@ -17,10 +17,14 @@ class CloudBuilder extends BuilderPackage {
 
     /*
      * Parses cloud JSON into a CloudData and wraps it in a CloudHandle. Every
-     * field falls back to a sensible default when omitted. "scale" is the
-     * cloud's full XZ width in blocks; CloudVolumeMesh is a literal 1x1x1
-     * unit cube multiplied directly by it, with no other implicit base size.
+     * field falls back to its EngineSetting default when omitted.
+     * "scaleKm" is the archetype's feature width, "verticalThicknessKm" its
+     * depth, and "baseAltitudeKm" its base above sea level, all in real-world
+     * kilometres so the same archetype sits correctly in a world of any
+     * scale. "elongation" stretches the width along the prevailing flow.
      */
+
+    // Build \\
 
     CloudHandle build(File file, File root) {
 
@@ -29,44 +33,40 @@ class CloudBuilder extends BuilderPackage {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
 
-        Vector3 cloudColor = parseColor(json, "color", new Vector3(1f, 1f, 1f));
-        float saturation = parseUnitFloat(json, cloudName, "saturation", 1.0f);
-        float scale = parseFloat(json, "scale", EngineSetting.CLOUD_DEFAULT_DIAMETER_BLOCKS);
-        float density = parseFloat(json, "density", 0.8f);
-        float verticalThickness = parseFloat(json, "verticalThickness", 24.0f);
-        float fullness = parseUnitFloat(json, cloudName, "fullness", 0.7f);
-        float densityNoiseScale = parseFloat(json, "densityNoiseScale", 1.0f);
-        float noiseWarpStrength = parseFloat(json, "noiseWarpStrength", 0.6f);
-        float coverageBias = parseFloat(json, "coverageBias", 0.5f);
-        float silhouetteSoftness = parseFloat(json, "silhouetteSoftness", 0.08f);
-        float baseAltitude = parseFloat(json, "baseAltitude", 600.0f);
-        float driftSpeedScale = parseFloat(json, "driftSpeedScale", 1.0f);
-        float spreadRatio = parseFloat(json, "spread", 0.85f);
-        float sizeVarianceMin = parseFloat(json, "sizeVarianceMin", 0.65f);
-        float sizeVarianceMax = parseFloat(json, "sizeVarianceMax", 1.6f);
-        float elongationMin = parseFloat(json, "elongationMin", 1.0f);
-        float elongationMax = parseFloat(json, "elongationMax", 2.4f);
+        Vector3 cloudColor = parseColor(json, "color");
+        float saturation = parseUnitFloat(json, cloudName, "saturation", EngineSetting.DEFAULT_CLOUD_SATURATION);
+        float scaleKm = parsePositiveFloat(json, cloudName, "scaleKm", EngineSetting.DEFAULT_CLOUD_SCALE_KM);
+        float density = parseFloat(json, "density", EngineSetting.DEFAULT_CLOUD_DENSITY);
+        float verticalThicknessKm = parsePositiveFloat(
+                json, cloudName, "verticalThicknessKm", EngineSetting.DEFAULT_CLOUD_VERTICAL_THICKNESS_KM);
+        float fullness = parseUnitFloat(json, cloudName, "fullness", EngineSetting.DEFAULT_CLOUD_FULLNESS);
+        float elongation = parsePositiveFloat(json, cloudName, "elongation", EngineSetting.DEFAULT_CLOUD_ELONGATION);
+        float densityNoiseScale = parseFloat(
+                json, "densityNoiseScale", EngineSetting.DEFAULT_CLOUD_DENSITY_NOISE_SCALE);
+        float noiseWarpStrength = parseFloat(
+                json, "noiseWarpStrength", EngineSetting.DEFAULT_CLOUD_NOISE_WARP_STRENGTH);
+        float coverageBias = parseUnitFloat(json, cloudName, "coverageBias", EngineSetting.DEFAULT_CLOUD_COVERAGE_BIAS);
+        float silhouetteSoftness = parseFloat(
+                json, "silhouetteSoftness", EngineSetting.DEFAULT_CLOUD_SILHOUETTE_SOFTNESS);
+        float baseAltitudeKm = parseFloat(json, "baseAltitudeKm", EngineSetting.DEFAULT_CLOUD_BASE_ALTITUDE_KM);
+        float driftSpeedScale = parseFloat(json, "driftSpeedScale", EngineSetting.DEFAULT_CLOUD_DRIFT_SPEED_SCALE);
 
         CloudData cloudData = new CloudData(
                 cloudName,
                 cloudID,
                 cloudColor,
                 saturation,
-                scale,
+                scaleKm,
                 density,
-                verticalThickness,
+                verticalThicknessKm,
                 fullness,
+                elongation,
                 densityNoiseScale,
                 noiseWarpStrength,
                 coverageBias,
                 silhouetteSoftness,
-                baseAltitude,
-                driftSpeedScale,
-                spreadRatio,
-                sizeVarianceMin,
-                sizeVarianceMax,
-                elongationMin,
-                elongationMax);
+                baseAltitudeKm,
+                driftSpeedScale);
 
         CloudHandle cloudHandle = create(CloudHandle.class);
         cloudHandle.constructor(cloudData);
@@ -86,10 +86,7 @@ class CloudBuilder extends BuilderPackage {
 
     private float parseUnitFloat(JsonObject json, String cloudName, String field, float fallback) {
 
-        if (!json.has(field))
-            return fallback;
-
-        float value = json.get(field).getAsFloat();
+        float value = parseFloat(json, field, fallback);
 
         if (value < 0f || value > 1f)
             throwException("Cloud \"" + cloudName + "\" field \"" + field
@@ -98,10 +95,24 @@ class CloudBuilder extends BuilderPackage {
         return value;
     }
 
-    private Vector3 parseColor(JsonObject json, String field, Vector3 fallback) {
+    private float parsePositiveFloat(JsonObject json, String cloudName, String field, float fallback) {
+
+        float value = parseFloat(json, field, fallback);
+
+        if (value <= 0f)
+            throwException("Cloud \"" + cloudName + "\" field \"" + field + "\" must be greater than 0.0, got: "
+                    + value);
+
+        return value;
+    }
+
+    private Vector3 parseColor(JsonObject json, String field) {
 
         if (!json.has(field))
-            return fallback;
+            return new Vector3(
+                    EngineSetting.DEFAULT_CLOUD_COLOR_R,
+                    EngineSetting.DEFAULT_CLOUD_COLOR_G,
+                    EngineSetting.DEFAULT_CLOUD_COLOR_B);
 
         JsonObject colorObject = json.getAsJsonObject(field);
 

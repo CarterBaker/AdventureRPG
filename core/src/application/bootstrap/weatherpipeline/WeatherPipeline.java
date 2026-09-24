@@ -15,14 +15,12 @@ public class WeatherPipeline extends PipelinePackage {
      * managers in dependency order.
      *
      * Update order matters here independent of get()-phase wiring:
-     * WindManager reads each grid's local WeatherInstance (blended wind
-     * speed/turbulence scale) and its TemperatureInstance — both are only
-     * current for this frame once WeatherPatternManager's own update() has
-     * run. WeatherPatternManager is therefore registered (and so updated)
-     * before WindManager, or wind/temperature would read one frame stale.
-     * SkyManager reads that same per-grid temperature plus the calendar's
-     * season blend, so it stays last — it should always see the most
-     * current state every other weather system produced this frame.
+     * WeatherManager advances the shared weather flow before
+     * WeatherPatternManager places every grid's window of cells against it.
+     * WindManager then reads each grid's local WeatherInstance and its
+     * TemperatureInstance, both only current once WeatherPatternManager has
+     * updated this frame. SkyManager reads that same per-grid temperature
+     * plus the calendar's season blend, so it stays last.
      */
 
     @Override

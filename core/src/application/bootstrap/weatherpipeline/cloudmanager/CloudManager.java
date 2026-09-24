@@ -18,9 +18,8 @@ public class CloudManager extends ManagerPackage {
      *
      * Also owns the cloud type registry — every archetype gets a stable,
      * sequential index (0..MAX_CLOUD_TYPES-1) the moment it's registered,
-     * whether it loaded during bootstrap or on-demand. That index is what
-     * the weather map UBO uses to slot each weather pattern's
-     * per-cloud-type weight.
+     * whether it loaded during bootstrap or on-demand. That index is how the
+     * weather map resolves which of its layers an archetype is drawn in.
      */
 
     // Palette
