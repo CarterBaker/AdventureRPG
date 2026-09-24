@@ -1,10 +1,10 @@
 package editor.itemeditor;
 
 import editor.itemeditor.camera.ItemEditorCameraSystem;
-import editor.itemeditor.input.ItemEditorInputSystem;
 import editor.itemeditor.menu.ItemEditorMenuSystem;
 import editor.itemeditor.render.ItemEditorRenderSystem;
 import editor.itemeditor.tool.ItemEditorToolSystem;
+import engine.editor.EditorInputSystem;
 import engine.root.ContextPackage;
 
 public class ItemEditorContext extends ContextPackage {
@@ -16,7 +16,7 @@ public class ItemEditorContext extends ContextPackage {
      */
 
     // Internal
-    private ItemEditorInputSystem itemEditorInputSystem;
+    private EditorInputSystem editorInputSystem;
     private ItemEditorCameraSystem itemEditorCameraSystem;
     private ItemEditorToolSystem itemEditorToolSystem;
     private ItemEditorRenderSystem itemEditorRenderSystem;
@@ -26,7 +26,7 @@ public class ItemEditorContext extends ContextPackage {
 
     @Override
     protected void create() {
-        this.itemEditorInputSystem = create(ItemEditorInputSystem.class);
+        this.editorInputSystem = create(EditorInputSystem.class);
         this.itemEditorCameraSystem = create(ItemEditorCameraSystem.class);
         this.itemEditorToolSystem = create(ItemEditorToolSystem.class);
         this.itemEditorRenderSystem = create(ItemEditorRenderSystem.class);

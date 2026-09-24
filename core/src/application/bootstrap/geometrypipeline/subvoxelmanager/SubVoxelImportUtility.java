@@ -7,7 +7,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
-import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -71,13 +70,14 @@ class SubVoxelImportUtility extends EngineUtility {
                         continue;
 
                     if (texture2Part[textureIndex] == EngineSetting.INDEX_NOT_FOUND)
-                        texture2Part[textureIndex] = addPart(model, textureNames.get(textureIndex));
+                        texture2Part[textureIndex] = SubVoxelPartUtility.addTexturePart(
+                                model, textureNames.get(textureIndex));
 
                     model.setCell(x, y, z, texture2Part[textureIndex]);
                 }
 
         if (model.getPartCount() == 0)
-            model.addPart(new SubVoxelPartStruct(resolvePartName(model, fallbackTextureName), fallbackTextureName));
+            SubVoxelPartUtility.addTexturePart(model, fallbackTextureName);
 
         return model;
     }
@@ -201,32 +201,5 @@ class SubVoxelImportUtility extends EngineUtility {
 
         float distance = (e2x * qx + e2y * qy + e2z * qz) * inverse;
         return distance > EngineSetting.SUB_VOXEL_IMPORT_EPSILON ? distance : -1f;
-    }
-
-    // Parts \\
-
-    private static int addPart(SubVoxelModelStruct model, String textureName) {
-        return model.addPart(new SubVoxelPartStruct(resolvePartName(model, textureName), textureName));
-    }
-
-    private static String resolvePartName(SubVoxelModelStruct model, String textureName) {
-
-        String baseName = textureName.substring(textureName.lastIndexOf('/') + 1);
-        String partName = baseName;
-        int suffix = 1;
-
-        while (hasPartName(model, partName))
-            partName = baseName + (++suffix);
-
-        return partName;
-    }
-
-    private static boolean hasPartName(SubVoxelModelStruct model, String partName) {
-
-        for (int i = 0; i < model.getPartCount(); i++)
-            if (model.getPart(i).getPartName().equals(partName))
-                return true;
-
-        return false;
     }
 }

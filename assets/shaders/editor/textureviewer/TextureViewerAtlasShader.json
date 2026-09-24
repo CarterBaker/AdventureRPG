@@ -1,0 +1,4 @@
+{
+    "vert": "editor/textureviewer/TextureViewerAtlasShader.vsh",
+    "frag": "editor/textureviewer/TextureViewerAtlasShader.fsh"
+}

@@ -90,6 +90,10 @@ public class ItemEditorBranch extends BranchPackage {
         itemEditorManager.removeSelectedPart();
     }
 
+    public void clearBrush() {
+        itemEditorManager.clearBrush();
+    }
+
     public void previousTexture() {
         itemEditorManager.cycleTexture(-1);
     }

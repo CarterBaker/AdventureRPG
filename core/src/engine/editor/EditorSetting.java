@@ -60,6 +60,14 @@ public class EditorSetting {
     // Tabs \\
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
+    public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
+
+    // Viewports \\
+    public static final String FBO_EDITOR_SCENE = "EditorScene";
+
+    // Texture Viewer \\
+    public static final String TEXTURE_VIEWER_STATUS_HOVERED = "Texture: ";
+    public static final String TEXTURE_VIEWER_STATUS_NO_BRUSH = "No brush. Click a texture to paint items with it.";
 
     // Item Library \\
     public static final String ITEM_EDITOR_FILE_EXTENSION = "json";
@@ -78,6 +86,7 @@ public class EditorSetting {
     // Item Status \\
     public static final String ITEM_EDITOR_DIRTY_MARKER = "*";
     public static final String ITEM_EDITOR_STATUS_SEPARATOR = "  |  ";
+    public static final String ITEM_EDITOR_STATUS_BRUSH = "Brush: ";
     public static final String ITEM_EDITOR_STATUS_NO_ITEM = "No item open. Pick one in the Hierarchy or press New.";
     public static final String ITEM_EDITOR_TOOL_PLACE = "Place";
     public static final String ITEM_EDITOR_TOOL_ERASE = "Erase";

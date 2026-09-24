@@ -54,6 +54,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openItemEditor(window.getGLWindow());
     }
 
+    public void openTextureViewer(WindowInstance window) {
+        tabManager.openTextureViewer(window.getGLWindow());
+    }
+
     // Layout Dropdown \\
 
     public void refreshLayoutList(MenuInstance menu) {

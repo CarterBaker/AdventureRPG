@@ -86,7 +86,7 @@
       "pivot": "bottom_left",
       "size": {
         "x": "150px",
-        "y": "56px"
+        "y": "84px"
       },
       "elements": [
         {
@@ -96,7 +96,7 @@
           "pivot": "bottom_left",
           "size": {
             "x": "150px",
-            "y": "56px"
+            "y": "84px"
           },
           "stack": "vertical",
           "font_size": "50%",
@@ -145,6 +145,32 @@
                   "id": "open_item_editor_label",
                   "type": "label",
                   "text": "Item Editor",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "open_texture_viewer_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "150px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                "method": "openTextureViewer"
+              },
+              "elements": [
+                {
+                  "id": "open_texture_viewer_label",
+                  "type": "label",
+                  "text": "Texture Viewer",
                   "color": [
                     0,
                     0,

@@ -1,0 +1,76 @@
+{
+  "menus": [
+    {
+      "id": "Status",
+      "raycast_input": true,
+      "lock_input": false,
+      "entry_points": [
+        "texture_viewer_status_label"
+      ],
+      "elements": [
+        {
+          "id": "texture_viewer_status_bar",
+          "type": "sprite",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "100%",
+            "y": "24px"
+          },
+          "sprite": "menus/ToolBar",
+          "on_hover_exit": {},
+          "elements": [
+            {
+              "id": "texture_viewer_status_label",
+              "type": "label",
+              "anchor": "bottom_left",
+              "pivot": "top_left",
+              "size": {
+                "x": "calc(100% - 104px)",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "",
+              "font_size": "60%",
+              "color": [
+                0,
+                0,
+                0,
+                1
+              ]
+            },
+            {
+              "id": "texture_viewer_clear_brush_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "anchor": "bottom_right",
+              "pivot": "top_right",
+              "size": {
+                "x": "100px",
+                "y": "100%"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "clearBrush"
+              },
+              "elements": [
+                {
+                  "id": "texture_viewer_clear_brush_label",
+                  "type": "label",
+                  "text": "Clear Brush",
+                  "font_size": "60%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

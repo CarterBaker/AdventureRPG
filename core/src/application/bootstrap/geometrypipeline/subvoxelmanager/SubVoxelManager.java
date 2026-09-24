@@ -130,6 +130,16 @@ public class SubVoxelManager extends ManagerPackage {
         return SubVoxelJsonUtility.toMeshJson(model);
     }
 
+    // Parts \\
+
+    public int findTexturePart(SubVoxelModelStruct model, String textureName) {
+        return SubVoxelPartUtility.findTexturePart(model, textureName);
+    }
+
+    public int addTexturePart(SubVoxelModelStruct model, String textureName) {
+        return SubVoxelPartUtility.addTexturePart(model, textureName);
+    }
+
     // Import \\
 
     public boolean hasQuads(JsonObject meshJson) {

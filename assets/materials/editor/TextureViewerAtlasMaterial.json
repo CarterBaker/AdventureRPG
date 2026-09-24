@@ -1,0 +1,14 @@
+{
+    "shader": "editor/textureviewer/TextureViewerAtlasShader",
+    "uniforms": {
+        "u_textureArray": {
+            "type": "SAMPLE_IMAGE_2D_ARRAY",
+            "value": "items/standard"
+        },
+        "u_backgroundColor": { "value": [0.12, 0.12, 0.12, 1.0] },
+        "u_outlineColor": { "value": [0.6, 0.6, 0.6, 0.8] },
+        "u_hoverColor": { "value": [1.0, 0.85, 0.2, 1.0] },
+        "u_selectColor": { "value": [0.2, 0.55, 1.0, 1.0] },
+        "u_outlineWidth": { "value": 2.0 }
+    }
+}

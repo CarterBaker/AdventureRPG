@@ -40,7 +40,7 @@
             ]
         },
         {
-            "name": "ItemEditorScene",
+            "name": "EditorScene",
             "sizingStrategy": "WINDOW_RELATIVE",
             "clearColor": [0.0, 0.0, 0.0, 1.0],
             "attachments": [

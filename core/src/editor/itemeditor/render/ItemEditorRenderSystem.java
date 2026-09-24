@@ -17,6 +17,7 @@ import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
 import editor.itemeditor.ItemEditorSetting;
 import editor.itemeditor.tool.ItemEditorToolSystem;
+import engine.editor.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -79,7 +80,7 @@ public class ItemEditorRenderSystem extends SystemPackage {
     @Override
     protected void awake() {
 
-        this.sceneFbo = fboManager.cloneFbo(ItemEditorSetting.FBO_ITEM_EDITOR, context.getWindow());
+        this.sceneFbo = fboManager.cloneFbo(EditorSetting.FBO_EDITOR_SCENE, context.getWindow());
 
         this.gridModel = createModel(ItemEditorSetting.MESH_GRID, ItemEditorSetting.MATERIAL_GRID);
         this.placeCursorModel = createModel(ItemEditorSetting.MESH_CURSOR, ItemEditorSetting.MATERIAL_CURSOR_PLACE);

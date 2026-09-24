@@ -5,12 +5,9 @@ import engine.input.Buttons;
 public class ItemEditorSetting {
 
     /*
-     * Constants used only by ItemEditorContext — its render target, viewport
-     * meshes and materials, orbit camera, mouse bindings, and toolbar menu.
+     * Constants used only by ItemEditorContext — its viewport meshes and
+     * materials, orbit camera, mouse bindings, and toolbar menu.
      */
-
-    // Render Target
-    public static final String FBO_ITEM_EDITOR = "ItemEditorScene";
 
     // Meshes
     public static final String MESH_GRID = "editor/ItemEditorGrid";

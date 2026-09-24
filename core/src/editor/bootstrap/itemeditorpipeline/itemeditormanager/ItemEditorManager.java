@@ -17,8 +17,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ItemEditorManager extends ManagerPackage {
 
     /*
-     * Owns the item editor's shared state — open items, the active item and
-     * tool, and the status line. Items stay open with their edits until saved,
+     * Owns the item editor's shared state — open items, the active item, tool,
+     * and brush texture, and the status line. Items stay open with their edits until saved,
      * deleted, or the editor closes. New items join the active item's
      * definition file, or the editor's own when nothing is open. Disk access,
      * model edits, and the hierarchy tab each live in their own branch.
@@ -36,6 +36,7 @@ public class ItemEditorManager extends ManagerPackage {
     // Active
     private ItemDocumentInstance activeDocument;
     private ItemEditorTool activeTool;
+    private String brushTextureName;
 
     // Status
     private String statusMessage;
@@ -220,6 +221,7 @@ public class ItemEditorManager extends ManagerPackage {
             return;
 
         activeDocument.selectPart(partIndex);
+        this.brushTextureName = null;
         notifyChanged();
     }
 
@@ -266,7 +268,29 @@ public class ItemEditorManager extends ManagerPackage {
     public void applyTool(SubVoxelHitStruct hit) {
 
         if (activeDocument != null)
-            itemEditBranch.applyTool(activeDocument, activeTool, hit);
+            itemEditBranch.applyTool(activeDocument, activeTool, hit, brushTextureName);
+    }
+
+    // Brush \\
+
+    public void selectBrushTexture(String textureName) {
+
+        if (!getTextureNames().contains(textureName))
+            throwException("'" + textureName + "' is not in the item texture array '"
+                    + EditorSetting.ITEM_EDITOR_TEXTURE_ARRAY + "'.");
+
+        this.brushTextureName = textureName;
+        notifyChanged();
+    }
+
+    public void clearBrush() {
+
+        this.brushTextureName = null;
+        notifyChanged();
+    }
+
+    public String getBrushTextureName() {
+        return brushTextureName;
     }
 
     // Status \\
@@ -283,7 +307,7 @@ public class ItemEditorManager extends ManagerPackage {
 
     // Utility \\
 
-    private ObjectArrayList<String> getTextureNames() {
+    public ObjectArrayList<String> getTextureNames() {
 
         if (textureNames == null)
             this.textureNames = textureManager.getTextureNamesInArray(EditorSetting.ITEM_EDITOR_TEXTURE_ARRAY);
@@ -337,6 +361,11 @@ public class ItemEditorManager extends ManagerPackage {
             status.append(EditorSetting.ITEM_EDITOR_STATUS_NO_ITEM);
         else
             appendDocumentStatus(status);
+
+        if (brushTextureName != null)
+            status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR)
+                    .append(EditorSetting.ITEM_EDITOR_STATUS_BRUSH)
+                    .append(brushTextureName);
 
         if (statusMessage != null)
             status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(statusMessage);
