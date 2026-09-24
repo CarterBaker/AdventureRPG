@@ -2,9 +2,9 @@ package application.bootstrap.menupipeline.element;
 
 import application.bootstrap.menupipeline.util.DimensionValue;
 import application.bootstrap.menupipeline.util.LayoutStruct;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
-import engine.graphics.color.Color;
 import engine.root.DataPackage;
 
 public class ElementData extends DataPackage {
@@ -17,7 +17,9 @@ public class ElementData extends DataPackage {
      * on_click fires once on primary press — method only, no element swap.
      * on_drag fires every frame while primary held — method only, no element swap.
      * Visual hover behavior is handled by ElementStateStruct blocks on
-     * ElementHandle.
+     * ElementHandle. hover_color is the lightweight alternative: the element's
+     * sprite and text take that color while the cursor is over it, including
+     * inside an open hover dropdown.
      */
 
     // Identity
@@ -31,7 +33,8 @@ public class ElementData extends DataPackage {
     private final String materialName;
     private final DimensionValue fontSize;
     private final boolean explicitFontSize;
-    private final Color color;
+    private final MenuColorStruct color;
+    private final MenuColorStruct hoverColor;
 
     // Layout
     private final LayoutStruct layout;
@@ -64,7 +67,8 @@ public class ElementData extends DataPackage {
             String materialName,
             DimensionValue fontSize,
             boolean explicitFontSize,
-            Color color,
+            MenuColorStruct color,
+            MenuColorStruct hoverColor,
             LayoutStruct layout,
             boolean mask,
             StackDirection stackDirection,
@@ -87,6 +91,7 @@ public class ElementData extends DataPackage {
         this.fontSize = fontSize;
         this.explicitFontSize = explicitFontSize;
         this.color = color;
+        this.hoverColor = hoverColor;
         this.layout = layout;
         this.mask = mask;
         this.stackDirection = stackDirection;
@@ -135,8 +140,12 @@ public class ElementData extends DataPackage {
         return explicitFontSize;
     }
 
-    public Color getColor() {
+    public MenuColorStruct getColor() {
         return color;
+    }
+
+    public MenuColorStruct getHoverColor() {
+        return hoverColor;
     }
 
     public LayoutStruct getLayout() {
@@ -213,5 +222,9 @@ public class ElementData extends DataPackage {
 
     public boolean hasColor() {
         return color != null;
+    }
+
+    public boolean hasHoverColor() {
+        return hoverColor != null;
     }
 }

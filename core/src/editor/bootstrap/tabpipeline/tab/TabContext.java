@@ -1,5 +1,6 @@
 package editor.bootstrap.tabpipeline.tab;
 
+import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FboManager;
@@ -119,10 +120,12 @@ public class TabContext extends ContextPackage {
 
     /*
      * Wires this context back to the TabHandle that owns it. Called once,
-     * immediately after both are constructed, alongside linkContent().
+     * immediately after both are constructed, alongside linkContent(). The
+     * chrome header shows the owner's title from then on.
      */
     public void setOwnerHandle(TabHandle handle) {
         this.ownerHandle = handle;
+        showTitle(handle.getTabTitle());
     }
 
     /*
@@ -203,6 +206,16 @@ public class TabContext extends ContextPackage {
     public void moveTo(WindowInstance targetOsWindow) {
         windowManager.reparentWindow(getWindow(), targetOsWindow);
         windowManager.reparentWindow(contentContext.getWindow(), targetOsWindow);
+    }
+
+    // Utility \\
+
+    private void showTitle(String title) {
+
+        ElementInstance titleLabel = chromeMenu.getEntryPoint(EngineSetting.TAB_ENTRY_TITLE);
+
+        if (titleLabel != null)
+            titleLabel.setFontText(title);
     }
 
     // Accessible \\

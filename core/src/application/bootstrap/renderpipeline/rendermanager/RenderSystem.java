@@ -178,7 +178,7 @@ class RenderSystem extends SystemPackage {
                 RenderCallStruct renderCall = (RenderCallStruct) callElements[i];
                 MaskStruct callMask = renderCall.getMask();
 
-                if (callMask != activeMask) {
+                if (callMask == null ? activeMask != null : !callMask.matches(activeMask)) {
                     if (callMask != null)
                         RenderGLSLUtility.enableScissor(
                                 callMask.getX(), callMask.getY(),

@@ -4,15 +4,19 @@
       "id": "TabFrame",
       "raycast_input": true,
       "lock_input": true,
+      "entry_points": [
+        "tab_title_label"
+      ],
       "elements": [
         {
           "id": "window_frame",
-          "type": "sprite",
-          "sprite": "menus/EditorTab",
+          "type": "container",
           "anchor": "top_left",
           "pivot": "bottom_left",
-          "size": { "x": "100%", "y": "100%" },
-          "color": [1.0, 1.0, 1.0, 1.0],
+          "size": {
+            "x": "100%",
+            "y": "100%"
+          },
           "on_drag": {
             "class": "engine.editor.menueventsmanager.menus.TabBranch",
             "method": "onTabFrameDrag"
@@ -28,33 +32,113 @@
               "class": "engine.editor.menueventsmanager.menus.TabBranch",
               "method": "onTabFrameHoverExit"
             }
-          }
+          },
+          "elements": [
+            {
+              "id": "tab_body",
+              "type": "sprite",
+              "sprite": "menus/Panel",
+              "anchor": "center",
+              "pivot": "center",
+              "size": {
+                "x": "calc(100% - 4px)",
+                "y": "calc(100% - 4px)"
+              },
+              "color": "panel"
+            }
+          ]
         },
         {
           "id": "tab_toolbar",
           "type": "sprite",
-          "sprite": "menus/DefaultElement",
+          "sprite": "menus/PanelHeader",
           "anchor": "top_left",
           "pivot": "bottom_left",
-          "size": { "x": "100%", "y": "28px" },
+          "position": {
+            "x": "2px",
+            "y": "-2px"
+          },
+          "size": {
+            "x": "calc(100% - 4px)",
+            "y": "30px"
+          },
+          "color": "header",
           "on_drag": {
             "class": "engine.editor.menueventsmanager.menus.TabBranch",
             "method": "onTabToolbarDrag"
           },
           "elements": [
             {
+              "id": "tab_title_accent",
+              "type": "sprite",
+              "sprite": "util/Default",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "10px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "3px",
+                "y": "14px"
+              },
+              "color": "accent"
+            },
+            {
+              "id": "tab_title_label",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "16px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "calc(100% - 48px)",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "",
+              "font_size": "46%",
+              "color": "text"
+            },
+            {
               "id": "close_button",
               "type": "button",
-              "sprite": "menus/CloseIcon",
-              "anchor": "top_right",
-              "pivot": "bottom_right",
-              "position": { "x": "-4px", "y": "-4px" },
-              "size": { "x": "20px", "y": "20px" },
-              "color": [1.0, 1.0, 1.0, 0.7],
+              "sprite": "menus/Button",
+              "anchor": "right",
+              "pivot": "right",
+              "position": {
+                "x": "-5px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "20px",
+                "y": "20px"
+              },
+              "color": {
+                "theme": "danger",
+                "alpha": 0
+              },
+              "hover_color": "danger",
               "on_click": {
                 "class": "engine.editor.menueventsmanager.menus.TabBranch",
                 "method": "closeTab"
-              }
+              },
+              "elements": [
+                {
+                  "id": "close_icon",
+                  "type": "sprite",
+                  "sprite": "menus/CloseIcon",
+                  "anchor": "center",
+                  "pivot": "center",
+                  "size": {
+                    "x": "12px",
+                    "y": "12px"
+                  },
+                  "color": "text_muted"
+                }
+              ]
             }
           ]
         },
@@ -63,8 +147,26 @@
           "type": "canvas_area",
           "anchor": "bottom_left",
           "pivot": "top_left",
-          "position": { "x": "5px", "y": "5px" },
-          "size": { "x": "calc(100% - 10px)", "y": "calc(100% - 33px)" }
+          "position": {
+            "x": "4px",
+            "y": "4px"
+          },
+          "size": {
+            "x": "calc(100% - 8px)",
+            "y": "calc(100% - 36px)"
+          }
+        },
+        {
+          "id": "tab_outline",
+          "type": "sprite",
+          "sprite": "menus/PanelOutline",
+          "anchor": "center",
+          "pivot": "center",
+          "size": {
+            "x": "calc(100% - 4px)",
+            "y": "calc(100% - 4px)"
+          },
+          "color": "outline"
         }
       ]
     },
@@ -74,22 +176,31 @@
       "lock_input": false,
       "elements": [
         {
-          "id": "window_frame",
+          "id": "ghost_body",
           "type": "sprite",
-          "sprite": "menus/EditorTab",
-          "anchor": "top_left",
-          "pivot": "bottom_left",
-          "size": { "x": "100%", "y": "100%" },
-          "color": [1.0, 1.0, 1.0, 0.5]
+          "sprite": "menus/Panel",
+          "anchor": "center",
+          "pivot": "center",
+          "size": {
+            "x": "calc(100% - 8px)",
+            "y": "calc(100% - 8px)"
+          },
+          "color": {
+            "theme": "accent",
+            "alpha": 0.22
+          }
         },
         {
-          "id": "tab_toolbar",
+          "id": "ghost_outline",
           "type": "sprite",
-          "sprite": "menus/DefaultElement",
-          "anchor": "top_left",
-          "pivot": "bottom_left",
-          "size": { "x": "100%", "y": "28px" },
-          "color": [1.0, 1.0, 1.0, 0.5]
+          "sprite": "menus/PanelOutline",
+          "anchor": "center",
+          "pivot": "center",
+          "size": {
+            "x": "calc(100% - 8px)",
+            "y": "calc(100% - 8px)"
+          },
+          "color": "accent"
         }
       ]
     }

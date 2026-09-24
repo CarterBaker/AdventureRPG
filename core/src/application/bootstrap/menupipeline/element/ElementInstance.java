@@ -3,6 +3,7 @@ package application.bootstrap.menupipeline.element;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import engine.root.InstancePackage;
 import engine.util.mathematics.matrices.Matrix4;
@@ -27,6 +28,10 @@ public class ElementInstance extends InstancePackage {
      *
      * setFontText() updates both the local textOverride field and the live
      * FontInstance so the rendered label reflects the new string immediately.
+     *
+     * pointed is set by ElementHitSystem on the deepest element with a
+     * hover_color under the cursor — unlike hovered, it reaches elements inside
+     * an open hover dropdown, whose owner keeps the hover itself.
      */
 
     // Internal
@@ -55,6 +60,9 @@ public class ElementInstance extends InstancePackage {
 
     // Text
     private String textOverride;
+
+    // Color
+    private MenuColorStruct colorOverride;
 
     // Children
     private ObjectArrayList<ElementInstance> children;
@@ -94,6 +102,7 @@ public class ElementInstance extends InstancePackage {
 
     // State flags
     private boolean hovered;
+    private boolean pointed;
     private boolean clickExpanded;
 
     @Override
@@ -112,6 +121,7 @@ public class ElementInstance extends InstancePackage {
             SpriteInstance clickSpriteInstance,
             FontInstance fontInstance,
             String textOverride,
+            MenuColorStruct colorOverride,
             String actionClassOverride,
             String actionMethodOverride,
             String actionArgOverride,
@@ -134,6 +144,7 @@ public class ElementInstance extends InstancePackage {
         this.clickSpriteInstance = clickSpriteInstance;
         this.fontInstance = fontInstance;
         this.textOverride = textOverride;
+        this.colorOverride = colorOverride;
         this.actionClassOverride = actionClassOverride;
         this.actionMethodOverride = actionMethodOverride;
         this.actionArgOverride = actionArgOverride;
@@ -471,6 +482,14 @@ public class ElementInstance extends InstancePackage {
         return hovered;
     }
 
+    public void setPointed(boolean pointed) {
+        this.pointed = pointed;
+    }
+
+    public boolean isPointed() {
+        return pointed;
+    }
+
     // Click-State \\
 
     public void setClickExpanded(boolean clickExpanded) {
@@ -597,5 +616,9 @@ public class ElementInstance extends InstancePackage {
 
     public String getText() {
         return textOverride != null ? textOverride : data.getText();
+    }
+
+    public MenuColorStruct getColor() {
+        return colorOverride != null ? colorOverride : data.getColor();
     }
 }

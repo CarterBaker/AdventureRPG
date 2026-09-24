@@ -7,6 +7,8 @@ import com.google.gson.JsonObject;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.LayoutStruct;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.menupipeline.util.ThemeColor;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -24,6 +26,9 @@ class MenuFileParserUtility extends EngineUtility {
      *
      * parseOnDrag parses on_drag — method callback only, no element swap.
      * parseOnClick parses on_click — method callback only, no element swap.
+     *
+     * parseColor and parseHoverColor accept a literal [r, g, b, a] array, a
+     * theme slot name such as "accent", or { "theme": name, "alpha": value }.
      */
 
     // Callbacks — method only \\
@@ -80,21 +85,54 @@ class MenuFileParserUtility extends EngineUtility {
 
     // Color \\
 
-    static Color parseColor(JsonObject json) {
+    static MenuColorStruct parseColor(JsonObject json) {
+        return parseColor(json, "color");
+    }
 
-        if (!json.has("color"))
+    static MenuColorStruct parseHoverColor(JsonObject json) {
+        return parseColor(json, "hover_color");
+    }
+
+    private static MenuColorStruct parseColor(JsonObject json, String key) {
+
+        if (!json.has(key))
             return null;
 
-        JsonArray arr = json.getAsJsonArray("color");
+        JsonElement el = json.get(key);
 
-        if (arr.size() != 4)
-            throwException("'color' must be exactly 4 floats [r, g, b, a]");
+        if (el.isJsonPrimitive())
+            return new MenuColorStruct(
+                    parseThemeColor(el.getAsString(), key),
+                    EngineSetting.MENU_THEME_ALPHA_DEFAULT);
 
-        return new Color(
+        if (el.isJsonObject()) {
+            JsonObject obj = el.getAsJsonObject();
+            return new MenuColorStruct(
+                    parseThemeColor(JsonUtility.validateString(obj, "theme"), key),
+                    JsonUtility.getFloat(obj, "alpha", EngineSetting.MENU_THEME_ALPHA_DEFAULT));
+        }
+
+        JsonArray arr = el.getAsJsonArray();
+
+        if (arr.size() != EngineSetting.COLOR_CHANNEL_COUNT)
+            throwException("'" + key + "' must be exactly 4 floats [r, g, b, a], a theme name, "
+                    + "or { \"theme\": name, \"alpha\": value }");
+
+        return new MenuColorStruct(new Color(
                 arr.get(0).getAsFloat(),
                 arr.get(1).getAsFloat(),
                 arr.get(2).getAsFloat(),
-                arr.get(3).getAsFloat());
+                arr.get(3).getAsFloat()));
+    }
+
+    private static ThemeColor parseThemeColor(String name, String key) {
+
+        ThemeColor themeColor = ThemeColor.fromString(name);
+
+        if (themeColor == null)
+            throwException("Unknown theme color '" + name + "' in '" + key + "'");
+
+        return themeColor;
     }
 
     // Layout — full parse, absent fields get defaults \\

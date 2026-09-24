@@ -59,6 +59,39 @@ public class SettingsUtility {
 
         if (settings.nearTessellationRadius < 1)
             settings.nearTessellationRadius = 1;
+
+        sanitizeColors(settings);
+    }
+
+    private static void sanitizeColors(Settings settings) {
+
+        Settings defaults = new Settings();
+
+        settings.uiColorBackground = sanitizeColor(settings.uiColorBackground, defaults.uiColorBackground);
+        settings.uiColorPanel = sanitizeColor(settings.uiColorPanel, defaults.uiColorPanel);
+        settings.uiColorHeader = sanitizeColor(settings.uiColorHeader, defaults.uiColorHeader);
+        settings.uiColorControl = sanitizeColor(settings.uiColorControl, defaults.uiColorControl);
+        settings.uiColorControlHover = sanitizeColor(settings.uiColorControlHover, defaults.uiColorControlHover);
+        settings.uiColorAccent = sanitizeColor(settings.uiColorAccent, defaults.uiColorAccent);
+        settings.uiColorAccentHover = sanitizeColor(settings.uiColorAccentHover, defaults.uiColorAccentHover);
+        settings.uiColorOutline = sanitizeColor(settings.uiColorOutline, defaults.uiColorOutline);
+        settings.uiColorShadow = sanitizeColor(settings.uiColorShadow, defaults.uiColorShadow);
+        settings.uiColorText = sanitizeColor(settings.uiColorText, defaults.uiColorText);
+        settings.uiColorTextMuted = sanitizeColor(settings.uiColorTextMuted, defaults.uiColorTextMuted);
+        settings.uiColorTextOnAccent = sanitizeColor(settings.uiColorTextOnAccent, defaults.uiColorTextOnAccent);
+        settings.uiColorDanger = sanitizeColor(settings.uiColorDanger, defaults.uiColorDanger);
+    }
+
+    private static float[] sanitizeColor(float[] color, float[] fallback) {
+
+        if (color == null || color.length != EngineSetting.COLOR_CHANNEL_COUNT)
+            return fallback;
+
+        for (int i = 0; i < color.length; i++)
+            color[i] = Math.max(EngineSetting.COLOR_CHANNEL_MIN,
+                    Math.min(EngineSetting.COLOR_CHANNEL_MAX, color[i]));
+
+        return color;
     }
 
     // KeyBindings \\

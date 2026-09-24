@@ -14,5 +14,6 @@ void main() {
     if (alpha <= 0.0)
         discard;
 
-    out_color = vec4(u_color.rgb, u_color.a * alpha);
+    float coverage = u_color.a * alpha;
+    out_color = vec4(u_color.rgb * coverage, coverage);
 }

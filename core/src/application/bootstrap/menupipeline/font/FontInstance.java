@@ -89,8 +89,8 @@ public class FontInstance extends InstancePackage {
         if (glyphLayout.length < maxGlyphs * FLOATS_PER_GLYPH)
             glyphLayout = new float[maxGlyphs * FLOATS_PER_GLYPH];
 
-        float letterSpacing = handle.getAtlasPixelSize() * EngineSetting.FONT_LETTER_SPACING_RATIO;
-        float atlasPixelSize = handle.getAtlasPixelSize();
+        float rasterPixelSize = handle.getRasterPixelSize();
+        float letterSpacing = rasterPixelSize * EngineSetting.FONT_LETTER_SPACING_RATIO;
         float cursorX = 0f;
         float textTop = 0f;
 
@@ -101,7 +101,8 @@ public class FontInstance extends InstancePackage {
 
             if (codepoint == ' ') {
                 GlyphMetricStruct space = handle.getGlyph(codepoint);
-                cursorX += (space != null ? space.advance : atlasPixelSize * 0.25f) + letterSpacing;
+                cursorX += (space != null ? space.advance : rasterPixelSize * EngineSetting.FONT_SPACE_ADVANCE_RATIO)
+                        + letterSpacing;
                 continue;
             }
 

@@ -23,6 +23,10 @@ public class FboData extends DataPackage {
      * clearColor is what RenderSystem clears the target to each frame —
      * transparent unless the JSON declares one, so a target that should
      * never show what lies beneath it (an editor viewport) can be opaque.
+     *
+     * premultipliedBlit marks targets whose premultiplied content must be
+     * restored to straight alpha when FboRenderSystem blits them to their
+     * window, so translucent pixels keep their full coverage on screen.
      */
 
     // Identity
@@ -31,6 +35,7 @@ public class FboData extends DataPackage {
     private final Object2IntOpenHashMap<String> colorName2Index;
     private final FboSizingStrategy sizingStrategy;
     private final boolean premultipliedBlend;
+    private final boolean premultipliedBlit;
     private final Color clearColor;
 
     // Dimensions
@@ -46,6 +51,7 @@ public class FboData extends DataPackage {
             int width,
             int height,
             boolean premultipliedBlend,
+            boolean premultipliedBlit,
             Color clearColor) {
 
         this.name = name;
@@ -54,6 +60,7 @@ public class FboData extends DataPackage {
         this.width = width;
         this.height = height;
         this.premultipliedBlend = premultipliedBlend;
+        this.premultipliedBlit = premultipliedBlit;
         this.clearColor = clearColor;
         this.colorName2Index = new Object2IntOpenHashMap<>();
         this.colorName2Index.defaultReturnValue(-1);
@@ -92,6 +99,10 @@ public class FboData extends DataPackage {
 
     public boolean isPremultipliedBlend() {
         return premultipliedBlend;
+    }
+
+    public boolean isPremultipliedBlit() {
+        return premultipliedBlit;
     }
 
     public Color getClearColor() {

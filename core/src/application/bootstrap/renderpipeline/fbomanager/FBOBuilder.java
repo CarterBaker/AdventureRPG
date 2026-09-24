@@ -123,6 +123,7 @@ class FBOBuilder extends BuilderPackage {
         int width = JsonUtility.getInt(json, "width", settings.windowWidth);
         int height = JsonUtility.getInt(json, "height", settings.windowHeight);
         boolean premultipliedBlend = json.has("premultipliedBlend") && json.get("premultipliedBlend").getAsBoolean();
+        boolean premultipliedBlit = JsonUtility.getBoolean(json, "premultipliedBlit", false);
         Color clearColor = parseClearColor(json);
 
         ObjectArrayList<AttachmentStruct> attachments = new ObjectArrayList<>();
@@ -136,7 +137,8 @@ class FBOBuilder extends BuilderPackage {
             attachments.add(new AttachmentStruct(attName, isDepth, resolveInternalFormat(formatName)));
         }
 
-        return new FboData(name, attachments, strategy, width, height, premultipliedBlend, clearColor);
+        return new FboData(name, attachments, strategy, width, height, premultipliedBlend, premultipliedBlit,
+                clearColor);
     }
 
     private Color parseClearColor(JsonObject json) {

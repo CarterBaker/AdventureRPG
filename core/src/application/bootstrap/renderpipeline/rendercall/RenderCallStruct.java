@@ -13,6 +13,10 @@ public class RenderCallStruct extends StructPackage {
      * Per-frame render submission. Pre-allocated in a fixed array by RenderManager
      * and handed out by cursor — never allocated per frame. Reset by cursor
      * rewind at the start of each draw. Never instantiate directly.
+     *
+     * The mask is copied into this call's own MaskStruct on init. Submitters
+     * reuse pooled masks across the frame while calls draw later, so holding
+     * their reference would clip every call to whichever rect was set last.
      */
 
     private static final UniformStruct<?>[] EMPTY_UNIFORMS = new UniformStruct<?>[0];
@@ -23,7 +27,8 @@ public class RenderCallStruct extends StructPackage {
     private MaterialInstance materialInstance;
     private UniformStruct<?>[] cachedUniforms;
     private UBOInstance[] cachedInstanceUBOs;
-    private MaskStruct mask;
+    private final MaskStruct mask = new MaskStruct();
+    private boolean masked;
 
     // Init \\
 
@@ -31,7 +36,10 @@ public class RenderCallStruct extends StructPackage {
 
         this.modelInstance = modelInstance;
         this.materialInstance = modelInstance.getMaterial();
-        this.mask = mask;
+        this.masked = mask != null;
+
+        if (masked)
+            this.mask.set(mask);
 
         var keys = materialInstance.getUniformKeys();
         if (keys != null && !keys.isEmpty()) {
@@ -68,10 +76,10 @@ public class RenderCallStruct extends StructPackage {
     }
 
     public MaskStruct getMask() {
-        return mask;
+        return masked ? mask : null;
     }
 
     public boolean hasMask() {
-        return mask != null;
+        return masked;
     }
 }

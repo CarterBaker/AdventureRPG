@@ -167,8 +167,10 @@ public class FboRenderSystem extends SystemPackage {
             meshData = meshManager.getMeshHandleFromMeshName(EngineSetting.DEFAULT_BLIT_MESH).getMeshData();
 
         MaterialInstance material = fbo.getBlitMaterialOverride();
-        if (material == null)
+        if (material == null) {
             material = materialManager.cloneMaterial(EngineSetting.DEFAULT_BLIT_MATERIAL);
+            material.setUniform(EngineSetting.BLIT_PREMULTIPLIED_UNIFORM, fbo.getFboData().isPremultipliedBlit());
+        }
 
         model = create(ModelInstance.class);
         model.constructor(meshData, material);

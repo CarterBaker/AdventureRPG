@@ -28,6 +28,21 @@ public class Settings {
     // Input
     public float mouseSensitivity = 0.15f;
 
+    // Editor — Interface Colors
+    public float[] uiColorBackground = { 0.075f, 0.082f, 0.098f, 1.0f };
+    public float[] uiColorPanel = { 0.118f, 0.129f, 0.153f, 1.0f };
+    public float[] uiColorHeader = { 0.153f, 0.165f, 0.192f, 1.0f };
+    public float[] uiColorControl = { 0.204f, 0.220f, 0.259f, 1.0f };
+    public float[] uiColorControlHover = { 0.263f, 0.282f, 0.333f, 1.0f };
+    public float[] uiColorAccent = { 0.298f, 0.553f, 0.965f, 1.0f };
+    public float[] uiColorAccentHover = { 0.420f, 0.643f, 0.984f, 1.0f };
+    public float[] uiColorOutline = { 0.231f, 0.251f, 0.294f, 1.0f };
+    public float[] uiColorShadow = { 0.0f, 0.0f, 0.0f, 0.55f };
+    public float[] uiColorText = { 0.886f, 0.898f, 0.925f, 1.0f };
+    public float[] uiColorTextMuted = { 0.576f, 0.604f, 0.659f, 1.0f };
+    public float[] uiColorTextOnAccent = { 1.0f, 1.0f, 1.0f, 1.0f };
+    public float[] uiColorDanger = { 0.898f, 0.302f, 0.302f, 1.0f };
+
     // Bindings — Game Movement
     public int[] bindMoveForward = { Keys.W };
     public int[] bindMoveBack = { Keys.S };

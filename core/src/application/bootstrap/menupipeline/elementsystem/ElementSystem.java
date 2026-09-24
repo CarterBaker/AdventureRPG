@@ -17,7 +17,6 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
-import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.registry.RegistryUtility;
@@ -32,6 +31,9 @@ public class ElementSystem extends SystemPackage {
      * from their respective MenuNodeStruct lists. When a state has a master
      * handle, a state root ElementInstance is built from that master so the
      * render system can position and render it as a full positioned overlay.
+     *
+     * Colors are not applied here — MenuRenderSystem resolves every sprite
+     * tint and text color each frame, so themed colors track user Settings.
      */
 
     private SpriteManager spriteManager;
@@ -157,6 +159,7 @@ public class ElementSystem extends SystemPackage {
                 clickSprite,
                 fontInstance,
                 node.getTextOverride(),
+                node.getColorOverride(),
                 node.getActionClassOverride(),
                 node.getActionMethodOverride(),
                 node.getActionArgOverride(),
@@ -218,6 +221,7 @@ public class ElementSystem extends SystemPackage {
                 null, null, null, null,
                 fontInstance,
                 null,
+                null,
                 null, null, null,
                 null, null, null,
                 null,
@@ -244,12 +248,6 @@ public class ElementSystem extends SystemPackage {
 
         FontInstance fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
 
-        Color color = node.hasColorOverride() ? node.getColorOverride()
-                : data.hasColor() ? data.getColor()
-                        : EngineSetting.FONT_DEFAULT_COLOR;
-
-        fontInstance.setColor(color.r, color.g, color.b, color.a);
-
         String text = node.getTextOverride() != null ? node.getTextOverride() : data.getText();
         if (text != null)
             fontInstance.setText(text);
@@ -270,9 +268,6 @@ public class ElementSystem extends SystemPackage {
                 : EngineSetting.FONT_DEFAULT_MATERIAL;
 
         FontInstance fontInstance = fontManager.cloneFont(resolvedFontName, materialName);
-
-        Color color = data.hasColor() ? data.getColor() : EngineSetting.FONT_DEFAULT_COLOR;
-        fontInstance.setColor(color.r, color.g, color.b, color.a);
 
         if (data.getText() != null)
             fontInstance.setText(data.getText());

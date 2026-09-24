@@ -9,6 +9,7 @@ import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.fontrendersystem.FontRenderSystem;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.util.LayoutStruct;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
@@ -20,6 +21,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MenuRenderSystem extends SystemPackage {
@@ -41,6 +43,12 @@ public class MenuRenderSystem extends SystemPackage {
      * resolveSprite picks the correct sprite instance for the active state:
      * hoverEnter, hover, hoverExit, or click.
      *
+     * resolveColor picks one color per element for both its sprite tint and
+     * its text: the active state's color, then hover_color while the element
+     * is hovered or pointed, then the element's own color. Themed colors are
+     * resolved against user Settings here every frame, so the interface
+     * palette can change live. A fully transparent sprite is never drawn.
+     *
      * Label text is fitted to its element: font_size is the size text grows
      * to, and it shrinks until it fits inside the element less its padding.
      * The text's full glyph box — descenders included — is centred
@@ -58,11 +66,14 @@ public class MenuRenderSystem extends SystemPackage {
     private WindowInstance currentWindow;
     private FboInstance targetFbo;
 
+    private Vector4 resolvedColor;
+
     @Override
     protected void create() {
         this.maskPool = new MaskStruct[EngineSetting.MAX_MASK_DEPTH];
         for (int i = 0; i < maskPool.length; i++)
             maskPool[i] = new MaskStruct();
+        this.resolvedColor = new Vector4();
     }
 
     @Override
@@ -142,12 +153,14 @@ public class MenuRenderSystem extends SystemPackage {
         if (type == ElementType.CANVAS_AREA)
             return;
 
+        MenuColorStruct color = resolveColor(element, activeState);
+
         SpriteInstance sprite = resolveSprite(element, activeState);
         if (sprite != null)
-            pushSpriteRenderCall(element, sprite);
+            pushSpriteRenderCall(element, sprite, color);
 
         if (element.hasFont())
-            pushFontRenderCall(element, activeState);
+            pushFontRenderCall(element, activeState, color);
 
         // Active hover state — root-based overlay takes priority over inline children
         if (activeState != null && !element.isClickExpanded()) {
@@ -262,6 +275,19 @@ public class MenuRenderSystem extends SystemPackage {
         return element.hasSprite() ? element.getSpriteInstance() : null;
     }
 
+    private MenuColorStruct resolveColor(ElementInstance element, ElementStateStruct activeState) {
+
+        if (activeState != null && activeState.hasColorOverride())
+            return activeState.getColorOverride();
+
+        ElementData data = element.getElementData();
+
+        if (data.hasHoverColor() && (element.isHovered() || element.isPointed()))
+            return data.getHoverColor();
+
+        return element.getColor();
+    }
+
     private LayoutStruct resolveLayout(ElementInstance element, ElementStateStruct activeState) {
         if (activeState != null && activeState.hasLayoutOverride())
             return activeState.getLayoutOverride();
@@ -360,24 +386,29 @@ public class MenuRenderSystem extends SystemPackage {
 
     // Render Calls \\
 
-    private void pushSpriteRenderCall(ElementInstance element, SpriteInstance sprite) {
+    private void pushSpriteRenderCall(ElementInstance element, SpriteInstance sprite, MenuColorStruct color) {
+
+        Vector4 tint = resolveTint(color, EngineSetting.SPRITE_DEFAULT_COLOR);
+
+        if (tint.w <= EngineSetting.COLOR_CHANNEL_MIN)
+            return;
+
+        sprite.setColor(tint);
         sprite.getModelInstance().getMaterial().setUniform("u_transform", element.getTransform());
         renderManager.pushRenderCall(sprite.getModelInstance(),
                 targetFbo, 0, currentMask(), currentWindow);
     }
 
-    private void pushFontRenderCall(ElementInstance element, ElementStateStruct activeState) {
+    private void pushFontRenderCall(
+            ElementInstance element,
+            ElementStateStruct activeState,
+            MenuColorStruct color) {
 
         FontInstance font = element.getFontInstance();
         ElementData data = element.getElementData();
 
-        if (activeState != null && activeState.hasColorOverride()) {
-            Color c = activeState.getColorOverride();
-            font.setColor(c.r, c.g, c.b, c.a);
-        } else if (data.hasColor()) {
-            Color c = data.getColor();
-            font.setColor(c.r, c.g, c.b, c.a);
-        }
+        Vector4 tint = resolveTint(color, EngineSetting.FONT_DEFAULT_COLOR);
+        font.setColor(tint.x, tint.y, tint.z, tint.w);
 
         String text = activeState != null && activeState.getTextOverride() != null
                 ? activeState.getTextOverride()
@@ -399,6 +430,18 @@ public class MenuRenderSystem extends SystemPackage {
                 - font.getTextBottom() * scale;
 
         fontRenderSystem.submit(font, x, y, scale, currentMask(), targetFbo, currentWindow);
+    }
+
+    // Color \\
+
+    private Vector4 resolveTint(MenuColorStruct color, Color fallback) {
+
+        if (color != null)
+            color.resolve(settings, resolvedColor);
+        else
+            resolvedColor.set(fallback.r, fallback.g, fallback.b, fallback.a);
+
+        return resolvedColor;
     }
 
     // Text Fit \\
