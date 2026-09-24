@@ -31,6 +31,12 @@ public class WindowInstance extends InstancePackage {
      * every tab, every dialog, every drag ghost — with no separate manual
      * scan anywhere else in the engine responsible for remembering to do so.
      *
+     * Render resources follow a logical window through its whole life via
+     * RenderManager: place() keeps its tracked FBOs sized to it, reparenting
+     * migrates them into the new OS window's GL context, and dispose() releases
+     * them. Nothing outside this class has to remember any of the three. OS
+     * windows are resized by the platform and RenderManager's draw pass.
+     *
      * disposeListener is an optional hook fired once, after this window is
      * fully torn down, regardless of what triggered the teardown — an
      * explicit close request, the platform's own window-close button, or
@@ -39,6 +45,8 @@ public class WindowInstance extends InstancePackage {
      * WindowManager needing to know anything about tabs or docking.
      *
      * Input is hover-driven — no active or focus concept exists at this level.
+     * A logical window receives hover and clicks across its whole composite
+     * rect unless an input rect narrows that region; drawing is unaffected.
      *
      * captureEligible gates whether InputSystem may capture this window.
      * focusIndependent marks windows that must receive hover-driven input
@@ -81,6 +89,13 @@ public class WindowInstance extends InstancePackage {
     private float compositeW;
     private float compositeH;
     private boolean compositeRect;
+
+    // Input region — logical windows only, OS-window space like compositeRect
+    private float inputX;
+    private float inputY;
+    private float inputW;
+    private float inputH;
+    private boolean inputRect;
 
     // Draw / hit-test order
     private int zOrder;
@@ -189,6 +204,17 @@ public class WindowInstance extends InstancePackage {
         return compositeTarget != null;
     }
 
+    /*
+     * Positions and sizes a logical window on its composite target in one
+     * call — the composite rect, the window's own dimensions, and the FBOs
+     * tracked against it always move together.
+     */
+    public void place(float x, float y, float w, float h) {
+        setCompositeRect(x, y, w, h);
+        resize((int) w, (int) h);
+        renderManager.resizeWindowResources(this);
+    }
+
     public void setCompositeRect(float x, float y, float w, float h) {
         this.compositeX = x;
         this.compositeY = y;
@@ -219,6 +245,29 @@ public class WindowInstance extends InstancePackage {
 
     public float getCompositeH() {
         return compositeH;
+    }
+
+    // Input Region \\
+
+    public void setInputRect(float x, float y, float w, float h) {
+        this.inputX = x;
+        this.inputY = y;
+        this.inputW = w;
+        this.inputH = h;
+        this.inputRect = true;
+    }
+
+    /*
+     * True when the given OS-window point falls inside the region this logical
+     * window receives input in — its input rect when one is set, otherwise its
+     * whole composite rect.
+     */
+    public boolean acceptsInputAt(float x, float y) {
+
+        if (inputRect)
+            return x >= inputX && x < inputX + inputW && y >= inputY && y < inputY + inputH;
+
+        return x >= compositeX && x < compositeX + compositeW && y >= compositeY && y < compositeY + compositeH;
     }
 
     public WindowInstance getGLWindow() {
@@ -315,6 +364,15 @@ public class WindowInstance extends InstancePackage {
 
         if (context != null)
             context.onResize(width, height);
+    }
+
+    /*
+     * Moves render resources that belong to a single GL context over to the
+     * context of the OS window this window now composites onto. Called by
+     * WindowManager.reparentWindow() right after the composite target changes.
+     */
+    public void migrateRenderResources(WindowInstance previousGLWindow) {
+        renderManager.migrateWindowResources(this, previousGLWindow);
     }
 
     /*

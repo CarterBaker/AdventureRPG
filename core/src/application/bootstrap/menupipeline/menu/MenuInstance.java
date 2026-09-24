@@ -18,6 +18,10 @@ public class MenuInstance extends InstancePackage {
      * space bounds into it every frame. Null means no canvas. Callers null-check
      * getCanvas() directly.
      *
+     * Entry points resolve anywhere in the live element tree, including the
+     * overlay roots an element shows while hovered, so content injected into a
+     * hover dropdown lands in the same instance the renderer draws.
+     *
      * Visible by default.
      */
 
@@ -70,16 +74,33 @@ public class MenuInstance extends InstancePackage {
 
     private ElementInstance findById(ObjectArrayList<ElementInstance> list, String id) {
         for (int i = 0; i < list.size(); i++) {
-            ElementInstance el = list.get(i);
-            if (el.getElementData().getId().equals(id))
-                return el;
-            if (el.hasChildren()) {
-                ElementInstance found = findById(el.getChildren(), id);
-                if (found != null)
-                    return found;
-            }
+            ElementInstance found = findById(list.get(i), id);
+            if (found != null)
+                return found;
         }
         return null;
+    }
+
+    private ElementInstance findById(ElementInstance element, String id) {
+
+        if (element == null)
+            return null;
+
+        if (element.getElementData().getId().equals(id))
+            return element;
+
+        ElementInstance found = findById(element.getChildren(), id);
+
+        if (found == null)
+            found = findById(element.getHoverEnterStateRoot(), id);
+
+        if (found == null)
+            found = findById(element.getHoverStateRoot(), id);
+
+        if (found == null)
+            found = findById(element.getHoverExitStateRoot(), id);
+
+        return found;
     }
 
     // Visibility \\

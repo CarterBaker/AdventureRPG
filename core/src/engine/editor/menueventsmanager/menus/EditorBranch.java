@@ -3,12 +3,8 @@ package engine.editor.menueventsmanager.menus;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
-import application.runtime.RuntimeSetting;
 import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.editor.EditorSetting;
@@ -18,27 +14,29 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EditorBranch extends BranchPackage {
     /*
-     * Menu event handlers for the main editor menu.
+     * Menu event handlers for the editor toolbar. Handlers that act on a
+     * window take the WindowInstance the click happened in and resolve its OS
+     * window, so a preview or dialog always opens in the window that asked
+     * for it.
      *
      * Tab/window operations delegate to TabManager with no policy here.
      *
      * Layout operations:
-     * toggleLayoutDropdown(MenuInstance) — toggles the layout list and populates
-     * it fresh from disk each time it opens so the list is always current.
-     * openCreateLayoutDialog() — opens the modal create dialog in its own logical
-     * window, brought to front so it composites above everything currently open.
+     * refreshLayoutList(MenuInstance) — fired when the layouts dropdown opens;
+     * repopulates its list fresh from disk so it is always current.
+     * openCreateLayoutDialog(WindowInstance) — opens the create dialog through
+     * MenuManager.openMenuWindow() on the invoking window.
      * update() — polls keyboard input each frame while the dialog is open,
      * appending typed characters to nameBuffer and pushing the result to the
      * name display label via setFontText(). Backspace trims, Enter confirms.
-     * confirmCreate(MenuInstance) — saves nameBuffer content if non-empty, closes.
-     * cancelCreate(MenuInstance) — closes without saving; called by the toolbar
-     * close button (arg: $parent).
+     * confirmCreate() — saves nameBuffer content if non-empty, closes.
+     * cancelCreate() — closes without saving; called by the dialog close button.
      * loadLayout(String) — loads a named layout via LayoutManager.
      *
      * updateNameInput() polls the dialog window's own raw input via
-     * InputManager.getRawInput(dialog.getWindow()) — never through the
-     * engine-wide EngineContext.input global, which reflects whichever window
-     * currently owns focus and is very often not this dialog.
+     * InputManager.getRawInput() — never through the engine-wide
+     * EngineContext.input global, which reflects whichever window currently
+     * owns focus and is very often not this dialog.
      *
      * Key constants are defined in EditorSetting as raw GLFW values — the same
      * integers the engine backend populates into each window's Input. No new
@@ -47,137 +45,105 @@ public class EditorBranch extends BranchPackage {
 
     // Internal
     private MenuManager menuManager;
-    private WindowManager windowManager;
     private TabManager tabManager;
     private LayoutManager layoutManager;
-    private FboManager fboManager;
     private InputManager inputManager;
 
-    // State
+    // Create Layout Dialog
     private MenuInstance createDialog;
-    private WindowInstance createDialogWindow;
-    private FboInstance createDialogFbo;
     private StringBuilder nameBuffer;
-    private ObjectArrayList<ElementInstance> injectedLayoutItems;
 
     // Base \\
 
     @Override
     protected void create() {
         this.nameBuffer = new StringBuilder();
-        this.injectedLayoutItems = new ObjectArrayList<>();
     }
 
     @Override
     protected void get() {
         this.menuManager = get(MenuManager.class);
-        this.windowManager = get(WindowManager.class);
         this.tabManager = get(TabManager.class);
         this.layoutManager = get(LayoutManager.class);
-        this.fboManager = get(FboManager.class);
         this.inputManager = get(InputManager.class);
     }
 
     @Override
     protected void update() {
-        if (createDialog != null)
-            updateNameInput(createDialog);
-    }
 
-    // Tab Operations \\
-    public void toggleTestingDropdown(MenuInstance parent) {
-
-        ElementInstance dropdown = parent.getEntryPoint(EditorSetting.ENTRY_TESTING_DROPDOWN);
-
-        if (dropdown == null)
+        if (createDialog == null)
             return;
 
-        dropdown.toggleExpanded();
+        if (!createDialog.getWindow().hasCompositeTarget()) {
+            closeCreateDialog();
+            return;
+        }
+
+        updateNameInput();
     }
 
-    public void openPreview() {
-        tabManager.openPreview();
+    // Window Operations \\
+
+    public void openPreview(WindowInstance window) {
+        tabManager.openPreview(window.getGLWindow());
     }
 
     public void openSecondaryWindow() {
-        tabManager.openSecondaryWindow();
+        tabManager.openSecondaryOsWindow();
     }
 
     // Layout Dropdown \\
 
     /*
-     * Toggles the layout dropdown. When opening, ejects stale injected items
-     * then injects one button per layout found on disk. Each button's label
-     * child has its font text set to the layout name and its click arg set to
-     * the same name so loadLayout() receives it on click.
+     * Ejects every item currently in the layouts list, then injects one button
+     * per layout found on disk. Each button's label child has its font text set
+     * to the layout name and its click arg set to the same name so loadLayout()
+     * receives it on click.
      */
+    public void refreshLayoutList(MenuInstance menu) {
 
-    public void toggleLayoutDropdown(MenuInstance parent) {
+        ElementInstance list = menu.getEntryPoint(EditorSetting.ENTRY_LAYOUTS_LIST);
 
-        ElementInstance dropdown = parent.getEntryPoint(EditorSetting.ENTRY_LAYOUTS_DROPDOWN);
-
-        if (dropdown == null)
+        if (list == null)
             return;
 
-        if (!dropdown.isExpanded()) {
+        ObjectArrayList<ElementInstance> staleItems = new ObjectArrayList<>(list.getChildren());
 
-            for (int i = 0; i < injectedLayoutItems.size(); i++)
-                menuManager.eject(parent, EditorSetting.ENTRY_LAYOUTS_LIST, injectedLayoutItems.get(i));
+        for (int i = 0; i < staleItems.size(); i++)
+            menuManager.eject(menu, EditorSetting.ENTRY_LAYOUTS_LIST, staleItems.get(i));
 
-            injectedLayoutItems.clear();
-            ObjectArrayList<String> layouts = layoutManager.listLayouts();
+        ObjectArrayList<String> layouts = layoutManager.listLayouts();
 
-            for (int i = 0; i < layouts.size(); i++) {
+        for (int i = 0; i < layouts.size(); i++) {
 
-                String name = layouts.get(i);
-                ElementInstance item = menuManager.inject(
-                        parent, EditorSetting.ENTRY_LAYOUTS_LIST, EditorSetting.MENU_EDITOR_LAYOUT_ITEM_TEMPLATE,
-                        el -> {
-                            el.setActionArgOverride(name);
-                            ElementInstance label = el.findChildById(EditorSetting.ELEMENT_LAYOUT_ITEM_LABEL);
-                            if (label != null)
-                                label.setFontText(name);
-                        });
-                injectedLayoutItems.add(item);
-            }
+            String name = layouts.get(i);
+            menuManager.inject(
+                    menu, EditorSetting.ENTRY_LAYOUTS_LIST, EditorSetting.MENU_EDITOR_LAYOUT_ITEM_TEMPLATE,
+                    el -> {
+                        el.setActionArgOverride(name);
+                        ElementInstance label = el.findChildById(EditorSetting.ELEMENT_LAYOUT_ITEM_LABEL);
+                        if (label != null)
+                            label.setFontText(name);
+                    });
         }
-
-        dropdown.toggleExpanded();
     }
 
     // Create Layout Dialog \\
     /*
-     * Opens the modal create dialog in its own logical window, brought to
-     * front so it composites above tabs and the toolbar regardless of how
-     * many are currently open. Guards against opening a second instance if
-     * one is already active. Clears the name buffer so the dialog always
-     * starts empty.
+     * Opens the create dialog over the OS window the request came from.
+     * Guards against opening a second instance if one is already active.
+     * Clears the name buffer so the dialog always starts empty. The dialog
+     * closes itself if the OS window it sits on is closed underneath it.
      */
 
-    public void openCreateLayoutDialog() {
+    public void openCreateLayoutDialog(WindowInstance window) {
 
         if (createDialog != null)
             return;
 
         nameBuffer.setLength(0);
-        createDialogWindow = windowManager.createLogicalWindow(
-                EditorSetting.WINDOW_TITLE_EDITOR_CREATE_LAYOUT_DIALOG,
-                windowManager.getMainWindow());
-
-        createDialogWindow.setCaptureEligible(false);
-        createDialogWindow.setFocusIndependent(true);
-
-        int w = windowManager.getMainWindow().getWidth();
-        int h = windowManager.getMainWindow().getHeight();
-
-        createDialogWindow.setCompositeRect(0, 0, w, h);
-        createDialogWindow.resize(w, h);
-        windowManager.bringToFront(createDialogWindow);
-        createDialogFbo = fboManager.cloneFbo(RuntimeSetting.FBO_UI, createDialogWindow);
-
-        menuManager.setMenuTargetFbo(createDialogWindow, createDialogFbo);
-        createDialog = menuManager.openMenu(EditorSetting.MENU_EDITOR_CREATE_LAYOUT_DIALOG, createDialogWindow);
-        refreshNameLabel(createDialog);
+        createDialog = menuManager.openMenuWindow(EditorSetting.MENU_EDITOR_CREATE_LAYOUT_DIALOG, window.getGLWindow());
+        refreshNameLabel();
     }
 
     /*
@@ -185,7 +151,7 @@ public class EditorBranch extends BranchPackage {
      * the OK button on_click and by Enter key in updateNameInput().
      */
 
-    public void confirmCreate(MenuInstance parent) {
+    public void confirmCreate() {
 
         String name = nameBuffer.toString().trim();
 
@@ -193,19 +159,15 @@ public class EditorBranch extends BranchPackage {
             return;
 
         layoutManager.saveLayout(name);
-        closeCreateDialog(parent);
+        closeCreateDialog();
     }
 
-    public void cancelCreate(MenuInstance parent) {
-        closeCreateDialog(parent);
+    public void cancelCreate() {
+        closeCreateDialog();
     }
 
-    private void closeCreateDialog(MenuInstance parent) {
-        menuManager.closeMenu(parent);
-        menuManager.setMenuTargetFbo(createDialogWindow, null);
-        windowManager.removeWindow(createDialogWindow);
-        createDialogWindow = null;
-        createDialogFbo = null;
+    private void closeCreateDialog() {
+        menuManager.closeMenuWindow(createDialog);
         createDialog = null;
         nameBuffer.setLength(0);
     }
@@ -221,37 +183,37 @@ public class EditorBranch extends BranchPackage {
      * file names path-safe.
      */
 
-    private void updateNameInput(MenuInstance dialog) {
+    private void updateNameInput() {
 
-        Input rawInput = inputManager.getRawInput(dialog.getWindow().getGLWindow());
+        Input rawInput = inputManager.getRawInput(createDialog.getWindow());
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE)) {
-            closeCreateDialog(dialog);
+            closeCreateDialog();
             return;
         }
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_ENTER)
                 || rawInput.isKeyClicked(EditorSetting.KEY_ENTER_NUMPAD)) {
-            confirmCreate(dialog);
+            confirmCreate();
             return;
         }
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_BACKSPACE)) {
             if (nameBuffer.length() > 0)
                 nameBuffer.deleteCharAt(nameBuffer.length() - 1);
-            refreshNameLabel(dialog);
+            refreshNameLabel();
             return;
         }
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_SPACE)) {
             nameBuffer.append('_');
-            refreshNameLabel(dialog);
+            refreshNameLabel();
             return;
         }
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_MINUS)) {
             nameBuffer.append('-');
-            refreshNameLabel(dialog);
+            refreshNameLabel();
             return;
         }
 
@@ -261,24 +223,21 @@ public class EditorBranch extends BranchPackage {
         for (int key = EditorSetting.KEY_A; key <= EditorSetting.KEY_Z; key++)
             if (rawInput.isKeyClicked(key)) {
                 nameBuffer.append(shift ? (char) key : (char) (key + 32));
-                refreshNameLabel(dialog);
+                refreshNameLabel();
                 return;
             }
 
         for (int key = EditorSetting.KEY_0; key <= EditorSetting.KEY_9; key++)
             if (rawInput.isKeyClicked(key)) {
                 nameBuffer.append((char) key);
-                refreshNameLabel(dialog);
+                refreshNameLabel();
                 return;
             }
     }
 
-    private void refreshNameLabel(MenuInstance dialog) {
+    private void refreshNameLabel() {
 
-        if (dialog == null)
-            return;
-
-        ElementInstance label = dialog.getEntryPoint(EditorSetting.ENTRY_CREATE_NAME_LABEL);
+        ElementInstance label = createDialog.getEntryPoint(EditorSetting.ENTRY_CREATE_NAME_LABEL);
 
         if (label != null)
             label.setFontText(nameBuffer.toString());
@@ -288,7 +247,7 @@ public class EditorBranch extends BranchPackage {
 
     /*
      * Receives the layout name as the click action arg wired by the injected
-     * button in toggleLayoutDropdown(). Delegates directly to LayoutManager.
+     * button in refreshLayoutList(). Delegates directly to LayoutManager.
      */
 
     public void loadLayout(String name) {

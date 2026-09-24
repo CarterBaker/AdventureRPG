@@ -206,8 +206,6 @@
       "raycast_input": true,
       "lock_input": true,
       "entry_points": [
-        "testing_dropdown_panel",
-        "layouts_dropdown_panel",
         "layouts_list_container"
       ],
       "elements": [
@@ -309,149 +307,13 @@
                     "y": "28px"
                   },
                   "on_hover_enter": {
-                    "use": "editor/EditorWindow/layouts_dropdown_panel"
+                    "use": "editor/EditorWindow/layouts_dropdown_panel",
+                    "on_click": {
+                      "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                      "method": "refreshLayoutList"
+                    }
                   },
                   "on_hover_exit": {}
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "SaveLayoutDialog",
-      "raycast_input": true,
-      "lock_input": true,
-      "entry_points": [
-        "name_display_label"
-      ],
-      "elements": [
-        {
-          "id": "dialog_backing",
-          "type": "sprite",
-          "anchor": "center",
-          "pivot": "center",
-          "size": {
-            "x": "320px",
-            "y": "120px"
-          },
-          "sprite": "util/Default",
-          "color": [
-            0.18,
-            0.18,
-            0.18,
-            1.0
-          ],
-          "stack": "vertical",
-          "spacing": "8px",
-          "elements": [
-            {
-              "id": "dialog_title",
-              "type": "label",
-              "size": {
-                "x": "100%",
-                "y": "28px"
-              },
-              "text": "Save Layout",
-              "font_size": "50%",
-              "color": [
-                1,
-                1,
-                1,
-                1
-              ]
-            },
-            {
-              "id": "name_input_backing",
-              "type": "sprite",
-              "size": {
-                "x": "288px",
-                "y": "32px"
-              },
-              "sprite": "menus/DefaultElement",
-              "elements": [
-                {
-                  "id": "name_display_label",
-                  "type": "label",
-                  "size": {
-                    "x": "100%",
-                    "y": "100%"
-                  },
-                  "text": "",
-                  "font_size": "50%",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "dialog_buttons",
-              "type": "container",
-              "size": {
-                "x": "288px",
-                "y": "32px"
-              },
-              "stack": "horizontal",
-              "spacing": "8px",
-              "elements": [
-                {
-                  "id": "confirm_button",
-                  "type": "button",
-                  "size": {
-                    "x": "136px",
-                    "y": "28px"
-                  },
-                  "sprite": "menus/DefaultElement",
-                  "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                    "method": "confirmSave"
-                  },
-                  "elements": [
-                    {
-                      "id": "confirm_label",
-                      "type": "label",
-                      "text": "Save",
-                      "font_size": "50%",
-                      "color": [
-                        0,
-                        0,
-                        0,
-                        1
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "id": "cancel_button",
-                  "type": "button",
-                  "size": {
-                    "x": "136px",
-                    "y": "28px"
-                  },
-                  "sprite": "menus/DefaultElement",
-                  "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                    "method": "cancelSave"
-                  },
-                  "elements": [
-                    {
-                      "id": "cancel_label",
-                      "type": "label",
-                      "text": "Cancel",
-                      "font_size": "50%",
-                      "color": [
-                        0,
-                        0,
-                        0,
-                        1
-                      ]
-                    }
-                  ]
                 }
               ]
             }
@@ -596,7 +458,24 @@
       "id": "Secondary",
       "elements": [
         {
-          "id": "dock_canvas",
+          "id": "secondary_background",
+          "type": "sprite",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "size": {
+            "x": "100%",
+            "y": "100%"
+          },
+          "sprite": "util/Default",
+          "color": [
+            0.13,
+            0.13,
+            0.13,
+            1.0
+          ]
+        },
+        {
+          "id": "secondary_dock_canvas",
           "type": "canvas_area",
           "anchor": "bottom_left",
           "pivot": "top_left",

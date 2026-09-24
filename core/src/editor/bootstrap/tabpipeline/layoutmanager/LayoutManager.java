@@ -43,19 +43,17 @@ public class LayoutManager extends ManagerPackage {
      * used identically whether a tab disappears live or during restore.
      *
      * Restoration flow:
-     * 1. Close all currently open tabs.
+     * 1. tabManager.closeAll() — every secondary window and every tab goes,
+     * so no window from the previous layout is left behind.
      * 2. Reset tab counters so titles reproduce deterministically.
-     * 3. Open each saved tab. A tab that fails for any reason is logged and
-     * skipped rather than aborting the rest of the restore. Every tab that
-     * opens successfully is recorded in an id→handle map.
-     * 4. Pass 1: restore the main window BSP via restoreRoot().
-     * 5. Pass 2: for each secondary window entry, deserialize its BSP first
-     * — if every tab it referenced failed to restore, the whole tree
-     * collapses to null and no empty window is ever created for it —
-     * otherwise open the secondary OS window via
-     * tabManager.openSecondaryOsWindow(), move every surviving tab onto it,
-     * and commit the BSP via restoreRoot().
-     * 6. pushRects() settles all positions.
+     * 3. For each saved window: resolve its OS window (the main window, or a
+     * new one from tabManager.openSecondaryOsWindow()), open every tab its
+     * tree references directly on that window, and commit the rebuilt tree
+     * via restoreRoot(). A tab that fails for any reason is logged and
+     * skipped rather than aborting the rest of the restore. A secondary
+     * window whose tabs all failed closes again through the same
+     * tabManager.closeOsWindowIfEmpty() rule used everywhere else.
+     * 4. endBatch() settles all positions.
      *
      * The entire restore runs inside tabManager.beginBatch()/endBatch(), and
      * both entry points (awake() and loadLayout()) go through the same
@@ -64,8 +62,8 @@ public class LayoutManager extends ManagerPackage {
      * — the same defensive posture in both places, not just one.
      *
      * Divider-drag ratio changes are serialized in each BSP node's "ratio"
-     * field. The divider drag manager must call tabManager.notifyLayoutChanged()
-     * after each drag completes to persist those changes.
+     * field. TabBranch calls tabManager.notifyLayoutChanged() when each
+     * divider drag completes to persist those changes.
      */
     // Internal
     private TabManager tabManager;
@@ -188,36 +186,22 @@ public class LayoutManager extends ManagerPackage {
         try {
             JsonObject root = JsonUtility.loadJsonObject(file);
             JsonArray tabsArray = root.getAsJsonArray("tabs");
-            if (tabsArray == null || tabsArray.size() == 0)
+            JsonArray windowsArray = root.getAsJsonArray("windows");
+            if (tabsArray == null || tabsArray.size() == 0 || windowsArray == null)
                 return;
 
-            ObjectArrayList<TabHandle> existing = new ObjectArrayList<>(tabManager.getOpenTabs());
-            for (int i = 0; i < existing.size(); i++)
-                tabManager.closeTab(existing.get(i));
+            tabManager.closeAll();
             tabManager.resetCounters();
 
-            Int2ObjectOpenHashMap<TabHandle> restoredById = new Int2ObjectOpenHashMap<>();
+            Int2ObjectOpenHashMap<JsonObject> savedId2TabObj = new Int2ObjectOpenHashMap<>();
 
             for (int i = 0; i < tabsArray.size(); i++) {
-
                 JsonObject tabObj = tabsArray.get(i).getAsJsonObject();
-                int savedId = tabObj.get("id").getAsInt();
-                String baseTitle = tabObj.get("baseTitle").getAsString();
-                String className = tabObj.get("contentClass").getAsString();
-
-                try {
-                    @SuppressWarnings("unchecked")
-                    Class<? extends ContextPackage> contentClass = (Class<? extends ContextPackage>) Class
-                            .forName(className);
-                    restoredById.put(savedId, tabManager.openTab(baseTitle, contentClass));
-                } catch (Exception e) {
-                    errorLog("Layout restore: skipping tab '" + baseTitle
-                            + "' (" + className + ") — " + e.getMessage());
-                }
+                savedId2TabObj.put(tabObj.get("id").getAsInt(), tabObj);
             }
 
-            if (root.has("windows"))
-                restoreWindows(root.getAsJsonArray("windows"), restoredById);
+            for (int i = 0; i < windowsArray.size(); i++)
+                restoreWindow(windowsArray.get(i).getAsJsonObject(), savedId2TabObj);
 
         } finally {
             tabManager.endBatch();
@@ -226,61 +210,63 @@ public class LayoutManager extends ManagerPackage {
 
     // Window Restore \\
     /*
-     * Two-pass restore so the main window BSP is committed before any
-     * secondary window is opened. Pass 1 restores the main entry's tree
-     * directly. Pass 2 deserializes each secondary entry's tree first — a
-     * tree that collapses to null (every tab it referenced failed to
-     * restore) is discarded before any OS window is opened for it —
-     * otherwise opens the OS window via tabManager.openSecondaryOsWindow(),
-     * moves every surviving tab onto it, and commits the tree.
+     * Restores one saved window. The OS window is resolved first so every tab
+     * its tree references opens directly on the window it belongs to; the
+     * rebuilt tree then replaces whatever openTab() docked automatically.
      */
-    private void restoreWindows(JsonArray windowsArray, Int2ObjectOpenHashMap<TabHandle> restoredById) {
+    private void restoreWindow(JsonObject windowObj, Int2ObjectOpenHashMap<JsonObject> savedId2TabObj) {
 
-        for (int i = 0; i < windowsArray.size(); i++) {
-            JsonObject windowObj = windowsArray.get(i).getAsJsonObject();
-            if (!windowObj.get("isMain").getAsBoolean())
-                continue;
-            if (!windowObj.has("node"))
-                continue;
-            DockNodeStruct restoredRoot = deserializeNode(windowObj.getAsJsonObject("node"), restoredById);
-            dockLayoutSystem.restoreRoot(windowManager.getMainWindow(), restoredRoot);
-        }
+        if (!windowObj.has("node"))
+            return;
 
-        for (int i = 0; i < windowsArray.size(); i++) {
+        WindowInstance osWindow = windowObj.get("isMain").getAsBoolean()
+                ? windowManager.getMainWindow()
+                : tabManager.openSecondaryOsWindow();
 
-            JsonObject windowObj = windowsArray.get(i).getAsJsonObject();
+        JsonObject node = windowObj.getAsJsonObject("node");
+        Int2ObjectOpenHashMap<TabHandle> restoredById = new Int2ObjectOpenHashMap<>();
 
-            if (windowObj.get("isMain").getAsBoolean())
-                continue;
-            if (!windowObj.has("node"))
-                continue;
-
-            DockNodeStruct restoredRoot = deserializeNode(windowObj.getAsJsonObject("node"), restoredById);
-
-            if (restoredRoot == null)
-                continue;
-
-            WindowInstance osWindow = tabManager.openSecondaryOsWindow();
-
-            ObjectArrayList<TabHandle> windowTabs = new ObjectArrayList<>();
-            collectTabs(restoredRoot, windowTabs);
-
-            for (int j = 0; j < windowTabs.size(); j++)
-                tabManager.moveTabToOsWindow(windowTabs.get(j), osWindow);
-
-            dockLayoutSystem.restoreRoot(osWindow, restoredRoot);
-        }
+        openSavedTabs(node, savedId2TabObj, osWindow, restoredById);
+        dockLayoutSystem.restoreRoot(osWindow, deserializeNode(node, restoredById));
+        tabManager.closeOsWindowIfEmpty(osWindow);
     }
 
-    private void collectTabs(DockNodeStruct node, ObjectArrayList<TabHandle> result) {
-        if (node == null)
-            return;
-        if (!node.isSplit()) {
-            result.add(node.getTab());
+    private void openSavedTabs(
+            JsonObject node,
+            Int2ObjectOpenHashMap<JsonObject> savedId2TabObj,
+            WindowInstance osWindow,
+            Int2ObjectOpenHashMap<TabHandle> restoredById) {
+
+        if (node.get("split").getAsBoolean()) {
+            openSavedTabs(node.getAsJsonObject("first"), savedId2TabObj, osWindow, restoredById);
+            openSavedTabs(node.getAsJsonObject("second"), savedId2TabObj, osWindow, restoredById);
             return;
         }
-        collectTabs(node.getFirst(), result);
-        collectTabs(node.getSecond(), result);
+
+        int savedId = node.get("tab").getAsInt();
+        JsonObject tabObj = savedId2TabObj.get(savedId);
+
+        if (tabObj == null)
+            return;
+
+        TabHandle handle = openSavedTab(tabObj, osWindow);
+
+        if (handle != null)
+            restoredById.put(savedId, handle);
+    }
+
+    private TabHandle openSavedTab(JsonObject tabObj, WindowInstance osWindow) {
+
+        String baseTitle = tabObj.get("baseTitle").getAsString();
+        String className = tabObj.get("contentClass").getAsString();
+
+        try {
+            Class<? extends ContextPackage> contentClass = Class.forName(className).asSubclass(ContextPackage.class);
+            return tabManager.openTab(baseTitle, contentClass, osWindow);
+        } catch (Exception e) {
+            errorLog("Layout restore: skipping tab '" + baseTitle + "' (" + className + ") — " + e.getMessage());
+            return null;
+        }
     }
 
     /*

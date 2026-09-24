@@ -706,7 +706,6 @@ public class EngineSetting {
         public static final int TAB_DRAG_PREVIEW_H = 144;
         public static final int TAB_DRAG_PREVIEW_W = 256;
         public static final String TAB_TITLE_PREVIEW = "Preview";
-        public static final String TAB_ZONE_GHOST_WINDOW_TITLE = "TabZoneGhost";
         public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
 
         // Screen Capture & Recording \\

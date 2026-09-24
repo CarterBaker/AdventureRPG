@@ -2,6 +2,11 @@ package engine.editor;
 
 public class EditorSetting {
 
+    /*
+     * Editor-only constants — chrome menus, cursors, input keys, and menu entry
+     * point indices used by the editor windows and their menu branches.
+     */
+
     // Cursors \\
     public static final String CURSOR_RESIZE_H = "menus/CursorStretchIconHorizontal";
     public static final String CURSOR_RESIZE_V = "menus/CursorStretchIconVertical";
@@ -15,11 +20,6 @@ public class EditorSetting {
     public static final String MENU_EDITOR_TOOLBAR = "editor/EditorWindow/Toolbar";
     public static final String MENU_EDITOR_CREATE_LAYOUT_DIALOG = "editor/EditorWindow/CreateLayoutDialog";
     public static final String MENU_EDITOR_LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";
-
-    // Windows \\
-    public static final String WINDOW_TITLE_EDITOR_TOOLBAR = "Editor Toolbar";
-    public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
-    public static final String WINDOW_TITLE_EDITOR_CREATE_LAYOUT_DIALOG = "CreateLayoutDialog";
 
     // Elements \\
     public static final String ELEMENT_LAYOUT_ITEM_LABEL = "layout_item_label";
@@ -39,8 +39,6 @@ public class EditorSetting {
     public static final int KEY_RIGHT_SHIFT = 344;
 
     // Entry point indices
-    public static final int ENTRY_TESTING_DROPDOWN = 0;
-    public static final int ENTRY_LAYOUTS_DROPDOWN = 1;
-    public static final int ENTRY_LAYOUTS_LIST = 2;
+    public static final int ENTRY_LAYOUTS_LIST = 0;
     public static final int ENTRY_CREATE_NAME_LABEL = 0;
 }

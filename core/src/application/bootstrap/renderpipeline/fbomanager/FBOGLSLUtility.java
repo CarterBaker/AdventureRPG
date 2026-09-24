@@ -27,6 +27,10 @@ class FBOGLSLUtility extends EngineUtility {
         EngineContext.gl30.glBindFramebuffer(EngineSetting.GL_FRAMEBUFFER, EngineSetting.GL_HANDLE_NONE);
     }
 
+    static void deleteFramebuffer(int fbo) {
+        EngineContext.gl30.glDeleteFramebuffer(fbo);
+    }
+
     static void framebufferTexture2D(int texture) {
         EngineContext.gl30.glFramebufferTexture2D(
                 EngineSetting.GL_FRAMEBUFFER,
@@ -78,6 +82,10 @@ class FBOGLSLUtility extends EngineUtility {
 
     static void unbindTexture() {
         EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
+    }
+
+    static void deleteTexture(int texture) {
+        EngineContext.gl20.glDeleteTexture(texture);
     }
 
     static void texImage2D(int internalFormat, int width, int height) {

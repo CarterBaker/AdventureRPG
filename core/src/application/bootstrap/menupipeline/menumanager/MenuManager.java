@@ -12,6 +12,7 @@ import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
 import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -44,6 +45,11 @@ public class MenuManager extends ManagerPackage {
      * without this, flushPendingClosedMenus would never see window == focusedWindow
      * and captureCursor would never fire for logical windows.
      *
+     * openMenuWindow() / closeMenuWindow() are the single pair for a menu that
+     * lives in its own logical window over an OS window — toolbars, dialogs,
+     * drag previews. Opening creates the window, its FBO, and its routing;
+     * closing tears all three down through the window's own dispose().
+     *
      * Cursor capture is driven here as a side effect of menu lock state
      * transitions.
      * openMenu releases capture when a lock_input menu opens on the focused window.
@@ -57,6 +63,7 @@ public class MenuManager extends ManagerPackage {
     private ElementHitSystem hitSystem;
     private WindowManager windowManager;
     private InputManager inputManager;
+    private FboManager fboManager;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -87,6 +94,7 @@ public class MenuManager extends ManagerPackage {
         this.hitSystem = get(ElementHitSystem.class);
         this.windowManager = get(WindowManager.class);
         this.inputManager = get(InputManager.class);
+        this.fboManager = get(FboManager.class);
     }
 
     @Override
@@ -241,6 +249,37 @@ public class MenuManager extends ManagerPackage {
             hitSystem.resetPressed();
 
         return null;
+    }
+
+    // Menu Windows \\
+
+    /*
+     * Opens a menu in its own logical window composited over the given OS
+     * window, sized to fill it and brought above everything already open.
+     * The window never pins the cursor and always receives hover input.
+     */
+    public MenuInstance openMenuWindow(String menuName, WindowInstance osWindow) {
+
+        WindowInstance window = windowManager.createLogicalWindow(menuName, osWindow);
+        window.setCaptureEligible(false);
+        window.setFocusIndependent(true);
+        windowManager.bringToFront(window);
+
+        setMenuTargetFbo(window, fboManager.cloneFbo(RuntimeSetting.FBO_UI, window));
+        window.place(0, 0, osWindow.getWidth(), osWindow.getHeight());
+
+        return openMenu(menuName, window);
+    }
+
+    public void closeMenuWindow(MenuInstance instance) {
+
+        if (instance == null)
+            return;
+
+        WindowInstance window = instance.getWindow();
+        closeMenu(instance);
+        setMenuTargetFbo(window, null);
+        window.dispose();
     }
 
     public ObjectArrayList<MenuInstance> getActiveMenus(WindowInstance window) {

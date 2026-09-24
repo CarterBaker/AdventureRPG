@@ -24,6 +24,8 @@ public interface GL30 extends GL20 {
 
         void glBindFramebuffer(int target, int framebuffer);
 
+        void glDeleteFramebuffer(int framebuffer);
+
         void glFramebufferTexture2D(int target, int attachment, int textarget, int texture, int level);
 
         int glGenRenderbuffer();

@@ -48,11 +48,7 @@ class FBOBuilder extends BuilderPackage {
         IntArrayList textures = new IntArrayList();
         IntArrayList depthTextures = new IntArrayList();
 
-        int fbo = FBOGLSLUtility.genFramebuffer();
-        FBOGLSLUtility.bindFramebuffer(fbo);
-
         ObjectArrayList<AttachmentStruct> attachments = data.getAttachments();
-        int colorIndex = 0;
 
         for (int i = 0; i < attachments.size(); i++) {
             AttachmentStruct attachment = attachments.get(i);
@@ -62,17 +58,48 @@ class FBOBuilder extends BuilderPackage {
             if (attachment.isDepth()) {
                 FBOGLSLUtility.texImage2DDepth(width, height);
                 FBOGLSLUtility.texParameterNearest();
-                FBOGLSLUtility.framebufferTexture2DDepth(tex);
                 depthTextures.add(tex);
             } else {
                 FBOGLSLUtility.texImage2DColor(attachment.getInternalFormat(), width, height);
                 FBOGLSLUtility.texParameterLinear();
-                FBOGLSLUtility.framebufferTexture2DColor(tex, colorIndex);
                 textures.add(tex);
-                colorIndex++;
             }
 
             FBOGLSLUtility.unbindTexture();
+        }
+
+        framebuffers.add(buildFramebuffer(data, textures, depthTextures));
+
+        FboInstance instance = create(FboInstance.class);
+        instance.constructor(data, framebuffers, textures, depthTextures, width, height);
+
+        return instance;
+    }
+
+    /*
+     * Creates a framebuffer object in the current GL context and attaches the
+     * given textures to it. Textures are shared across every context in the
+     * share group but framebuffer objects are not, so this is the one step
+     * repeated whenever an FboInstance has to be bound from a different context.
+     */
+    int buildFramebuffer(FboData data, IntArrayList textures, IntArrayList depthTextures) {
+
+        int fbo = FBOGLSLUtility.genFramebuffer();
+        FBOGLSLUtility.bindFramebuffer(fbo);
+
+        ObjectArrayList<AttachmentStruct> attachments = data.getAttachments();
+        int colorIndex = 0;
+        int depthIndex = 0;
+
+        for (int i = 0; i < attachments.size(); i++) {
+
+            if (attachments.get(i).isDepth()) {
+                FBOGLSLUtility.framebufferTexture2DDepth(depthTextures.getInt(depthIndex));
+                depthIndex++;
+            } else {
+                FBOGLSLUtility.framebufferTexture2DColor(textures.getInt(colorIndex), colorIndex);
+                colorIndex++;
+            }
         }
 
         if (colorIndex > 0)
@@ -83,12 +110,7 @@ class FBOBuilder extends BuilderPackage {
 
         FBOGLSLUtility.unbindFramebuffer();
 
-        framebuffers.add(fbo);
-
-        FboInstance instance = create(FboInstance.class);
-        instance.constructor(data, framebuffers, textures, depthTextures, width, height);
-
-        return instance;
+        return fbo;
     }
 
     // Internal \\
