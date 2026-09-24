@@ -324,8 +324,8 @@ float fbmGradient2D(vec2 p, int octaves, float lacunarity, float gain) {
 }
 
 // ── Periodic gradient noise (weather cloud shapes) ──────────────────────────
-// Horizontal lattice coordinates wrap at a whole-cell period, so a field
-// sampled across exactly one period tiles without a seam. Hashing is integer PCG rather than
+// Lattice coordinates wrap at a whole-cell period, so a field sampled across
+// exactly one period tiles without a seam. Hashing is integer PCG rather than
 // the sin-based hashes above, so lattice coordinates in the thousands keep
 // full precision on every GPU.
 
@@ -385,19 +385,19 @@ float periodicGradientNoise3D(vec3 p, vec2 periodXZ, uint seed) {
     vec3 f    = p - cell;
     vec3 u    = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
 
-    vec2 x0z0 = mod(cell.xz, periodXZ);
-    vec2 x1z1 = mod(cell.xz + 1.0, periodXZ);
+    vec2  xz0 = mod(cell.xz, periodXZ);
+    vec2  xz1 = mod(cell.xz + 1.0, periodXZ);
     float y0  = cell.y;
     float y1  = cell.y + 1.0;
 
-    float n000 = dot(periodicGradient3D(vec3(x0z0.x, y0, x0z0.y), seed), f - vec3(0.0, 0.0, 0.0));
-    float n100 = dot(periodicGradient3D(vec3(x1z1.x, y0, x0z0.y), seed), f - vec3(1.0, 0.0, 0.0));
-    float n010 = dot(periodicGradient3D(vec3(x0z0.x, y1, x0z0.y), seed), f - vec3(0.0, 1.0, 0.0));
-    float n110 = dot(periodicGradient3D(vec3(x1z1.x, y1, x0z0.y), seed), f - vec3(1.0, 1.0, 0.0));
-    float n001 = dot(periodicGradient3D(vec3(x0z0.x, y0, x1z1.y), seed), f - vec3(0.0, 0.0, 1.0));
-    float n101 = dot(periodicGradient3D(vec3(x1z1.x, y0, x1z1.y), seed), f - vec3(1.0, 0.0, 1.0));
-    float n011 = dot(periodicGradient3D(vec3(x0z0.x, y1, x1z1.y), seed), f - vec3(0.0, 1.0, 1.0));
-    float n111 = dot(periodicGradient3D(vec3(x1z1.x, y1, x1z1.y), seed), f - vec3(1.0, 1.0, 1.0));
+    float n000 = dot(periodicGradient3D(vec3(xz0.x, y0, xz0.y), seed), f - vec3(0.0, 0.0, 0.0));
+    float n100 = dot(periodicGradient3D(vec3(xz1.x, y0, xz0.y), seed), f - vec3(1.0, 0.0, 0.0));
+    float n010 = dot(periodicGradient3D(vec3(xz0.x, y1, xz0.y), seed), f - vec3(0.0, 1.0, 0.0));
+    float n110 = dot(periodicGradient3D(vec3(xz1.x, y1, xz0.y), seed), f - vec3(1.0, 1.0, 0.0));
+    float n001 = dot(periodicGradient3D(vec3(xz0.x, y0, xz1.y), seed), f - vec3(0.0, 0.0, 1.0));
+    float n101 = dot(periodicGradient3D(vec3(xz1.x, y0, xz1.y), seed), f - vec3(1.0, 0.0, 1.0));
+    float n011 = dot(periodicGradient3D(vec3(xz0.x, y1, xz1.y), seed), f - vec3(0.0, 1.0, 1.0));
+    float n111 = dot(periodicGradient3D(vec3(xz1.x, y1, xz1.y), seed), f - vec3(1.0, 1.0, 1.0));
 
     float nx00 = mix(n000, n100, u.x);
     float nx10 = mix(n010, n110, u.x);
@@ -424,6 +424,28 @@ vec2 periodicFbmBillow2D(vec2 p, vec2 period, int octaves, uint seed) {
         norm      += amp;
         p         *= 2.0;
         period    *= 2.0;
+        amp       *= 0.5;
+    }
+
+    return vec2(
+        clamp(fbmSum / max(norm, 0.0001) * 0.5 + 0.5, 0.0, 1.0),
+        clamp(billowSum / max(norm, 0.0001), 0.0, 1.0));
+}
+
+// The same pair over a volume, periodic on x and z.
+vec2 periodicFbmBillow3D(vec3 p, vec2 periodXZ, int octaves, uint seed) {
+    float fbmSum    = 0.0;
+    float billowSum = 0.0;
+    float norm      = 0.0;
+    float amp       = 0.5;
+
+    for (int i = 0; i < octaves; i++) {
+        float n = periodicGradientNoise3D(p, periodXZ, seed + uint(i) * 1013u);
+        fbmSum    += amp * n;
+        billowSum += amp * (1.0 - abs(n));
+        norm      += amp;
+        p         *= 2.0;
+        periodXZ  *= 2.0;
         amp       *= 0.5;
     }
 

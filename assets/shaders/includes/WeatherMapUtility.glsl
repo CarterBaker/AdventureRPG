@@ -12,9 +12,13 @@
  * density is its archetype's periodic shape field, cut by the local
  * coverage, shaped by a vertical envelope, and eroded toward the crown in
  * proportion to fullness, so puffy archetypes grow rounded domes while
- * sheets stay flat slabs. The silhouette is a 2D field, but a 3D octave and
- * 3D edge detail vary it with height, so a cloud seen from the side has
- * billowed flanks rather than straight curtains.
+ * sheets stay flat slabs. Thin sheet archetypes read a 2D field, which is
+ * all a slab seen from below or edge-on needs. Puffy archetypes read a
+ * true volume — the same noise running through height at the same scale as
+ * across the ground — so seen from the side they have rounded, billowing
+ * flanks instead of the vertical curtains an extruded 2D field shows, and,
+ * being isotropic, the volume never slices a cloud into horizontal ledges.
+ * Archetypes in between blend the two by fullness.
  */
 
 const float WEATHER_MAP_EPSILON           = 0.001;
@@ -27,9 +31,9 @@ const float CLOUD_LAYER_BILLOW_FLOOR       = 0.45;
 const float CLOUD_LAYER_LUMP_MIN           = 0.72;
 const float CLOUD_LAYER_LUMP_MAX           = 1.18;
 const float CLOUD_LAYER_DETAIL_STRENGTH    = 0.28;
-const float CLOUD_LAYER_VERTICAL_FREQUENCY = 2.0;
-const float CLOUD_LAYER_VERTICAL_STRENGTH  = 0.35;
-const float CLOUD_LAYER_COVERAGE_BIAS_BASE = 0.5;
+const float CLOUD_LAYER_VOLUME_FULLNESS_MIN = 0.35;
+const float CLOUD_LAYER_VOLUME_FULLNESS_MAX = 0.75;
+const float CLOUD_LAYER_COVERAGE_BIAS_BASE = 0.4;
 const float CLOUD_LAYER_CROWN_EROSION      = 0.85;
 const float CLOUD_LAYER_MIN_SOFTNESS       = 0.02;
 const float CLOUD_LAYER_SHEET_BASE_RAMP    = 0.30;
@@ -40,8 +44,8 @@ const float CLOUD_LAYER_PUFFY_TOP_START    = 0.60;
 const uint CLOUD_LAYER_SEED_STRIDE = 7919u;
 const uint CLOUD_LAYER_WARP_SEED_X = 131u;
 const uint CLOUD_LAYER_WARP_SEED_Z = 257u;
-const uint CLOUD_LAYER_DETAIL_SEED   = 521u;
-const uint CLOUD_LAYER_VERTICAL_SEED = 877u;
+const uint CLOUD_LAYER_DETAIL_SEED = 521u;
+const uint CLOUD_LAYER_VOLUME_SEED = 877u;
 
 // ── Weather Window ─────────────────────────────────────────────────────────
 
@@ -112,30 +116,34 @@ float sampleCloudLayerShape(int layer, vec2 positionXZ, float heightBlocks, int 
     vec4  surface     = u_weatherLayerSurface[layer];
     float fullness    = u_weatherLayerShape[layer].w;
 
-    vec2 lattice = max(noiseParams.xy, vec2(1.0));
-    vec2 p       = (surface.xy + positionXZ) / u_weatherMapOrigin.w * lattice;
-    uint seed    = uint(layer) * CLOUD_LAYER_SEED_STRIDE;
+    vec2  lattice = max(noiseParams.xy, vec2(1.0));
+    vec2  p       = (surface.xy + positionXZ) / u_weatherMapOrigin.w * lattice;
+    float rise    = heightBlocks * lattice.y / u_weatherMapOrigin.w;
+    uint  seed    = uint(layer) * CLOUD_LAYER_SEED_STRIDE;
 
     vec2 warp = vec2(
         periodicGradientNoise2D(p, lattice, seed + CLOUD_LAYER_WARP_SEED_X),
         periodicGradientNoise2D(p, lattice, seed + CLOUD_LAYER_WARP_SEED_Z));
     p += warp * noiseParams.w * CLOUD_LAYER_WARP_AMPLITUDE;
 
-    vec2  field = periodicFbmBillow2D(p, lattice, octaves, seed);
+    float volumeWeight = smoothstep(CLOUD_LAYER_VOLUME_FULLNESS_MIN, CLOUD_LAYER_VOLUME_FULLNESS_MAX, fullness);
+    vec2  field        = vec2(0.0);
+
+    if (volumeWeight < 1.0)
+    field += periodicFbmBillow2D(p, lattice, octaves, seed) * (1.0 - volumeWeight);
+
+    if (volumeWeight > 0.0)
+    field += periodicFbmBillow3D(vec3(p.x, rise, p.y), lattice, octaves, seed + CLOUD_LAYER_VOLUME_SEED)
+    * volumeWeight;
+
     float sheet = clamp((field.x - 0.5) * CLOUD_LAYER_FIELD_CONTRAST + 0.5, 0.0, 1.0);
     float lumps = clamp((field.y - CLOUD_LAYER_BILLOW_FLOOR) / (1.0 - CLOUD_LAYER_BILLOW_FLOOR), 0.0, 1.0);
     float shape = sheet * mix(1.0, mix(CLOUD_LAYER_LUMP_MIN, CLOUD_LAYER_LUMP_MAX, lumps), fullness);
 
-    vec3  volume   = vec3(p.x, heightBlocks * lattice.y / u_weatherMapOrigin.w, p.y);
-    float vertical = periodicGradientNoise3D(
-        volume * CLOUD_LAYER_VERTICAL_FREQUENCY, lattice * CLOUD_LAYER_VERTICAL_FREQUENCY,
-        seed + CLOUD_LAYER_VERTICAL_SEED);
-    shape = clamp(shape + vertical * CLOUD_LAYER_VERTICAL_STRENGTH, 0.0, 1.0);
-
     if (detailFade > WEATHER_MAP_EPSILON) {
         float detailMultiplier = max(noiseParams.z, 1.0);
         float detail = periodicGradientNoise3D(
-            volume * detailMultiplier, lattice * detailMultiplier, seed + CLOUD_LAYER_DETAIL_SEED);
+            vec3(p.x, rise, p.y) * detailMultiplier, lattice * detailMultiplier, seed + CLOUD_LAYER_DETAIL_SEED);
         shape = clamp(shape + detail * CLOUD_LAYER_DETAIL_STRENGTH * detailFade, 0.0, 1.0);
     }
 

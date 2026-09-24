@@ -10,20 +10,19 @@
 /*
  * Integrates the grid's cloud layers along a ray from the camera, out to a
  * given distance, at one of two qualities. The sky march runs in the weather
- * pass at reduced resolution: it refines finely where the ray meets cloud,
- * resolves full detail, and — wherever a ray's steps grow coarse next to the
- * layer, as they do toward the horizon — offsets them by the caller's
- * per-pixel step offset, which turns step slicing into fine grain that the
- * pass's own upscale then smooths away. Rays with fine steps, such as those
- * looking up through a layer, keep centred steps and no grain at all. The
- * engine prepends every include to every stage of a program, so nothing here
- * touches fragment-only built-ins; the offset is resolved by the fragment
- * stage itself. The fog march runs per terrain
- * fragment in the lighting pass, only where cloud stands between the camera
- * and the fragment, with a few fixed steps and no detail — terrain fog needs
- * the cloud's density, not its fine silhouette. Layers are marched nearest
- * first, whichever side of them the camera is on, and composited front to
- * back through one running transmittance.
+ * pass at reduced resolution: it refines finely where the ray meets cloud
+ * and resolves full detail. The fog march runs per terrain fragment in the
+ * lighting pass, only where cloud stands between the camera and the
+ * fragment, with a few fixed steps and no detail — terrain fog needs the
+ * cloud's density, not its fine silhouette. Light reaching a sample is
+ * attenuated through the layer above it along the light's slant, but never
+ * through more than about one cloud's width — light enters a cloud through
+ * its nearest flank, so a tall tower's sunward side stays lit. Steps sit at
+ * fixed positions along the ray with no per-pixel jitter, so the image is
+ * stable and free of grain. Layers are marched nearest first, whichever side
+ * of them the camera is on, and composited front to back through one running
+ * transmittance. The engine prepends every include to every stage of a
+ * program, so nothing here touches fragment-only built-ins.
  */
 
 struct CloudMarchQuality {
@@ -45,8 +44,8 @@ const float CLOUD_MARCH_STEP_THICKNESS_RATIO = 0.2;
 const float CLOUD_MARCH_STEP_FEATURE_RATIO   = 0.6;
 const float CLOUD_MARCH_REFINE_RATIO         = 0.25;
 const float CLOUD_MARCH_CENTERED_OFFSET      = 0.5;
-const float CLOUD_MARCH_JITTER_FULL_RATIO    = 2.0;
 const float CLOUD_MARCH_UNBOUNDED_DISTANCE   = 1.0e30;
+const float CLOUD_MARCH_LIGHT_REACH_RATIO    = 1.0;
 
 // Coarse steps until the ray meets cloud, then back up half a step and
 // continue in fine steps, so the surface the eye actually sees is resolved
@@ -55,7 +54,7 @@ const float CLOUD_MARCH_UNBOUNDED_DISTANCE   = 1.0e30;
 // steps until it meets the next one.
 void marchCloudLayer(
     int layer, CloudMarchQuality quality, CloudLight light, vec3 rayDir, float tEnter, float tExit,
-    float stepOffset, inout vec3 color, inout float transmittance) {
+    inout vec3 color, inout float transmittance) {
     vec4  shape        = u_weatherLayerShape[layer];
     float baseAltitude = shape.x - u_weatherPlanet.y;
     float thickness    = max(shape.y, CLOUD_MARCH_MIN_THICKNESS_BLOCKS);
@@ -71,14 +70,12 @@ void marchCloudLayer(
         quality.stepCountMin, quality.stepCountMax);
 
     float coarseStep = pathLength / float(stepCount);
-    float coarseness = clamp(
-        (coarseStep / max(stepTarget, CLOUD_MARCH_EPSILON) - 1.0) / (CLOUD_MARCH_JITTER_FULL_RATIO - 1.0), 0.0, 1.0);
-    float offset     = mix(CLOUD_MARCH_CENTERED_OFFSET, stepOffset, coarseness);
     int   exitSteps  = int(ceil(1.0 / CLOUD_MARCH_REFINE_RATIO));
     bool  refined    = false;
     int   emptySteps = 0;
     float stepLength = coarseStep;
-    float t          = tEnter + stepLength * offset;
+    float lightReach = featureSize * CLOUD_MARCH_LIGHT_REACH_RATIO;
+    float t          = tEnter + stepLength * CLOUD_MARCH_CENTERED_OFFSET;
 
     for (int s = 0; s < quality.stepBudget; s++) {
         if (t > tExit || transmittance <= CLOUD_MARCH_TRANSMITTANCE_CUTOFF)
@@ -108,16 +105,21 @@ void marchCloudLayer(
             refined    = true;
             emptySteps = 0;
             stepLength = coarseStep * CLOUD_MARCH_REFINE_RATIO;
-            t          = max(tEnter, t - coarseStep * CLOUD_MARCH_CENTERED_OFFSET) + stepLength * offset;
+            t          = max(tEnter, t - coarseStep * CLOUD_MARCH_CENTERED_OFFSET)
+            + stepLength * CLOUD_MARCH_CENTERED_OFFSET;
             continue;
         }
 
         emptySteps = 0;
 
         float stepTransmittance = exp(-density * CLOUD_VISUAL_EXTINCTION_PER_BLOCK * stepLength);
+        vec3  domeNormal        = resolveCloudDomeNormal(relativePosition);
+        float sunPath  = min(resolveCloudLightPath(domeNormal, light.sunDir, heightFraction, thickness), lightReach);
+        float moonPath = min(resolveCloudLightPath(domeNormal, light.moonDir, heightFraction, thickness), lightReach);
 
         vec3 lit = shadeCloudSample(
-            light, albedo, resolveCloudDomeNormal(relativePosition), heightFraction, density, thickness,
+            light, albedo, heightFraction, density, thickness,
+            resolveCloudLightOpticalDepth(density, sunPath), resolveCloudLightOpticalDepth(density, moonPath),
             length(relativePosition.xz));
 
         color         += lit * (1.0 - stepTransmittance) * transmittance;
@@ -128,8 +130,7 @@ void marchCloudLayer(
 }
 
 void integrateCloudLayers(
-    vec3 rayDir, float maxDistance, CloudMarchQuality quality, float stepOffset,
-    inout vec3 color, inout float transmittance) {
+    vec3 rayDir, float maxDistance, CloudMarchQuality quality, inout vec3 color, inout float transmittance) {
     int   layerCount       = min(u_weatherLayerCount, WEATHER_MAP_MAX_LAYERS);
     float limit            = min(maxDistance, resolveCloudDomeGroundDistance(rayDir));
     float horizontalLength = length(rayDir.xz);
@@ -183,23 +184,19 @@ void integrateCloudLayers(
         if (nearest < 0)
         break;
 
-        marchCloudLayer(
-            nearest, quality, light, rayDir, enters[nearest], exits[nearest], stepOffset, color, transmittance);
+        marchCloudLayer(nearest, quality, light, rayDir, enters[nearest], exits[nearest], color, transmittance);
         enters[nearest] = CLOUD_DOME_NO_HIT;
     }
 }
 
 // The sky seen along a view ray, out to the edge of the weather map.
-// stepOffset is the pixel's own offset in [0, 1).
-void integrateCloudSky(vec3 rayDir, float stepOffset, inout vec3 color, inout float transmittance) {
-    integrateCloudLayers(
-        rayDir, CLOUD_MARCH_UNBOUNDED_DISTANCE, CLOUD_MARCH_SKY, stepOffset, color, transmittance);
+void integrateCloudSky(vec3 rayDir, inout vec3 color, inout float transmittance) {
+    integrateCloudLayers(rayDir, CLOUD_MARCH_UNBOUNDED_DISTANCE, CLOUD_MARCH_SKY, color, transmittance);
 }
 
 // Cloud standing between the camera and a surface fragmentDistance away.
 void integrateCloudFog(vec3 rayDir, float fragmentDistance, inout vec3 color, inout float transmittance) {
-    integrateCloudLayers(
-        rayDir, fragmentDistance, CLOUD_MARCH_FOG, CLOUD_MARCH_CENTERED_OFFSET, color, transmittance);
+    integrateCloudLayers(rayDir, fragmentDistance, CLOUD_MARCH_FOG, color, transmittance);
 }
 
 #endif

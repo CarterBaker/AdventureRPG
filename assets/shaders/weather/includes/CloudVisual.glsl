@@ -9,10 +9,11 @@
 
 /*
  * Shared cloud look for the weather pass: how much detail a sample can
- * afford at its distance, and how a sample is lit. Light toward the sun is
- * attenuated through whatever of the layer still lies above the sample, so
- * bases fall into shade while crowns catch the sun — overhead the view meets
- * those shaded bases, from the side it meets the lit domes. A second, softer
+ * afford at its distance, and how a sample is lit. Light is attenuated by the
+ * cloud between the sample and the light, estimated by the march from the
+ * part of the layer above the sample, so bases and cores fall into shade
+ * while crowns catch the light: overhead the view meets shaded bases, from
+ * the side it meets lit domes. A second, softer
  * attenuation stands in for light scattered many times inside the cloud, so
  * thick bases read grey rather than black. Ambient comes from the day's own
  * sky gradient, a forward-scattering lobe silvers edges against the sun, and
@@ -43,8 +44,8 @@ const int   CLOUD_VISUAL_OCTAVES_MID        = 3;
 const int   CLOUD_VISUAL_OCTAVES_FAR        = 2;
 const float CLOUD_VISUAL_OCTAVES_NEAR_ANGLE = 0.12;
 const float CLOUD_VISUAL_OCTAVES_MID_ANGLE  = 0.04;
-const float CLOUD_VISUAL_LOD_MIN_ANGLE      = 0.002;
-const float CLOUD_VISUAL_LOD_FULL_ANGLE     = 0.012;
+const float CLOUD_VISUAL_LOD_MIN_ANGLE      = 0.006;
+const float CLOUD_VISUAL_LOD_FULL_ANGLE     = 0.024;
 
 // ── Level of Detail ────────────────────────────────────────────────────────
 
@@ -108,32 +109,38 @@ vec3 resolveCloudLayerAlbedo(int layer) {
     return mix(albedo, albedo * u_skyCloudColor, CLOUD_VISUAL_SKY_TINT_STRENGTH);
 }
 
-// Transmittance toward a light through the part of the layer above the
-// sample, measured along the light's slant through the shell.
-float resolveCloudLightTransmittance(vec3 domeNormal, vec3 lightDir, float extinction, float remainingBlocks) {
-    float cosine      = max(dot(domeNormal, lightDir), CLOUD_VISUAL_LIGHT_MIN_COSINE);
-    float opticalPath = extinction * remainingBlocks / cosine * CLOUD_VISUAL_SELF_SHADOW;
+// Blocks of cloud a light crosses to reach a sample: the rest of the layer
+// above it, along the light's slant through the shell.
+float resolveCloudLightPath(vec3 domeNormal, vec3 lightDir, float heightFraction, float thickness) {
+    float cosine = max(dot(domeNormal, lightDir), CLOUD_VISUAL_LIGHT_MIN_COSINE);
+    return (1.0 - clamp(heightFraction, 0.0, 1.0)) * thickness / cosine;
+}
 
+// Optical depth toward a light when the cloud along its path is assumed as
+// dense as the sample itself.
+float resolveCloudLightOpticalDepth(float density, float lightPathBlocks) {
+    return density * CLOUD_VISUAL_EXTINCTION_PER_BLOCK * lightPathBlocks * CLOUD_VISUAL_SELF_SHADOW;
+}
+
+// Transmittance through an optical depth, with a softer second term standing
+// in for light scattered many times inside the cloud.
+float resolveCloudScatteredTransmittance(float opticalDepth) {
     return mix(
-        exp(-opticalPath),
-        exp(-opticalPath * CLOUD_VISUAL_MULTI_SCATTER_SCALE),
+        exp(-opticalDepth),
+        exp(-opticalDepth * CLOUD_VISUAL_MULTI_SCATTER_SCALE),
         CLOUD_VISUAL_MULTI_SCATTER_WEIGHT);
 }
 
 vec3 shadeCloudSample(
-    CloudLight light, vec3 albedo, vec3 domeNormal, float heightFraction, float density, float thickness,
-    float horizontalDistance) {
+    CloudLight light, vec3 albedo, float heightFraction, float density, float thickness,
+    float sunOpticalDepth, float moonOpticalDepth, float horizontalDistance) {
     float h          = clamp(heightFraction, 0.0, 1.0);
     float extinction = density * CLOUD_VISUAL_EXTINCTION_PER_BLOCK;
-    float remaining  = (1.0 - h) * thickness;
 
     float powder = mix(1.0, 1.0 - exp(-extinction * thickness * 2.0), CLOUD_VISUAL_POWDER_STRENGTH);
 
-    vec3 sunLight = light.sunRadiance * powder
-    * resolveCloudLightTransmittance(domeNormal, light.sunDir, extinction, remaining);
-
-    vec3 moonLight = light.moonRadiance
-    * resolveCloudLightTransmittance(domeNormal, light.moonDir, extinction, remaining);
+    vec3 sunLight  = light.sunRadiance * powder * resolveCloudScatteredTransmittance(sunOpticalDepth);
+    vec3 moonLight = light.moonRadiance * resolveCloudScatteredTransmittance(moonOpticalDepth);
 
     vec3 ambient = mix(u_skyHorizonColor, u_skyZenithColor, h)
     * mix(CLOUD_VISUAL_AMBIENT_BASE, CLOUD_VISUAL_AMBIENT_TOP, h);
