@@ -255,8 +255,10 @@ public class TabManager extends ManagerPackage {
      * Registers the dock tree and dock rect for an editor OS window, and wires
      * a dispose listener that unregisters both the moment the window is torn
      * down — whether via closeOsWindow(), the platform's own window-close
-     * button, or engine shutdown. The dock rect starts empty so nothing is
-     * placed until the window's dock canvas has been measured.
+     * button, or engine shutdown — and marks the layout changed so a window
+     * closed from its title bar is not restored with the next session. The
+     * dock rect starts empty so nothing is placed until the window's dock
+     * canvas has been measured.
      */
     private void registerOsWindow(WindowInstance osWindow) {
         dockLayoutSystem.initWindow(osWindow);
@@ -264,6 +266,7 @@ public class TabManager extends ManagerPackage {
         osWindow.setDisposeListener(() -> {
             dockLayoutSystem.removeWindow(osWindow);
             osWindow2DockRect.remove(osWindow);
+            notifyLayoutChanged();
         });
     }
 
@@ -349,9 +352,10 @@ public class TabManager extends ManagerPackage {
 
     // Layout \\
     /*
-     * Routes to LayoutManager. Called after every structural mutation and
-     * after a divider drag completes. No-ops while batching is active, for
-     * the same reason pushRects() does.
+     * Routes to LayoutManager, which writes the session once at the end of the
+     * frame. Called after every structural mutation and after a divider drag
+     * completes. No-ops while batching is active, for the same reason
+     * pushRects() does.
      */
     public void notifyLayoutChanged() {
         if (batching)

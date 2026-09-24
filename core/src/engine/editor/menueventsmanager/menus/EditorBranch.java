@@ -13,34 +13,13 @@ import engine.root.BranchPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EditorBranch extends BranchPackage {
+
     /*
-     * Menu event handlers for the editor toolbar. Handlers that act on a
-     * window take the WindowInstance the click happened in and resolve its OS
-     * window, so a preview or dialog always opens in the window that asked
-     * for it.
-     *
-     * Tab/window operations delegate to TabManager with no policy here.
-     *
-     * Layout operations:
-     * refreshLayoutList(MenuInstance) — fired when the layouts dropdown opens;
-     * repopulates its list fresh from disk so it is always current.
-     * openCreateLayoutDialog(WindowInstance) — opens the create dialog through
-     * MenuManager.openMenuWindow() on the invoking window.
-     * update() — polls keyboard input each frame while the dialog is open,
-     * appending typed characters to nameBuffer and pushing the result to the
-     * name display label via setFontText(). Backspace trims, Enter confirms.
-     * confirmCreate() — saves nameBuffer content if non-empty, closes.
-     * cancelCreate() — closes without saving; called by the dialog close button.
-     * loadLayout(String) — loads a named layout via LayoutManager.
-     *
-     * updateNameInput() polls the dialog window's own raw input via
-     * InputManager.getRawInput() — never through the engine-wide
-     * EngineContext.input global, which reflects whichever window currently
-     * owns focus and is very often not this dialog.
-     *
-     * Key constants are defined in EditorSetting as raw GLFW values — the same
-     * integers the engine backend populates into each window's Input. No new
-     * binding type is needed since the dialog is editor-only and not remappable.
+     * Menu event handlers for the editor toolbar. Window operations open tabs
+     * in the OS window the click came from. Layout operations list saved
+     * layouts when the dropdown opens, load one on click, and run the create
+     * dialog, which reads typed keys from the dialog window's own raw input
+     * and saves the current arrangement under the entered name.
      */
 
     // Internal
@@ -94,12 +73,6 @@ public class EditorBranch extends BranchPackage {
 
     // Layout Dropdown \\
 
-    /*
-     * Ejects every item currently in the layouts list, then injects one button
-     * per layout found on disk. Each button's label child has its font text set
-     * to the layout name and its click arg set to the same name so loadLayout()
-     * receives it on click.
-     */
     public void refreshLayoutList(MenuInstance menu) {
 
         ElementInstance list = menu.getEntryPoint(EditorSetting.ENTRY_LAYOUTS_LIST);
@@ -112,29 +85,28 @@ public class EditorBranch extends BranchPackage {
         for (int i = 0; i < staleItems.size(); i++)
             menuManager.eject(menu, EditorSetting.ENTRY_LAYOUTS_LIST, staleItems.get(i));
 
-        ObjectArrayList<String> layouts = layoutManager.listLayouts();
+        ObjectArrayList<String> layoutNames = layoutManager.getLayoutNames();
 
-        for (int i = 0; i < layouts.size(); i++) {
+        for (int i = 0; i < layoutNames.size(); i++)
+            injectLayoutItem(menu, layoutNames.get(i));
+    }
 
-            String name = layouts.get(i);
-            menuManager.inject(
-                    menu, EditorSetting.ENTRY_LAYOUTS_LIST, EditorSetting.MENU_EDITOR_LAYOUT_ITEM_TEMPLATE,
-                    el -> {
-                        el.setActionArgOverride(name);
-                        ElementInstance label = el.findChildById(EditorSetting.ELEMENT_LAYOUT_ITEM_LABEL);
-                        if (label != null)
-                            label.setFontText(name);
-                    });
-        }
+    private void injectLayoutItem(MenuInstance menu, String layoutName) {
+        menuManager.inject(
+                menu, EditorSetting.ENTRY_LAYOUTS_LIST, EditorSetting.MENU_EDITOR_LAYOUT_ITEM_TEMPLATE,
+                item -> {
+                    item.setActionArgOverride(layoutName);
+                    ElementInstance label = item.findChildById(EditorSetting.ELEMENT_LAYOUT_ITEM_LABEL);
+                    if (label != null)
+                        label.setFontText(layoutName);
+                });
+    }
+
+    public void loadLayout(String layoutName) {
+        layoutManager.loadLayout(layoutName);
     }
 
     // Create Layout Dialog \\
-    /*
-     * Opens the create dialog over the OS window the request came from.
-     * Guards against opening a second instance if one is already active.
-     * Clears the name buffer so the dialog always starts empty. The dialog
-     * closes itself if the OS window it sits on is closed underneath it.
-     */
 
     public void openCreateLayoutDialog(WindowInstance window) {
 
@@ -146,19 +118,14 @@ public class EditorBranch extends BranchPackage {
         refreshNameLabel();
     }
 
-    /*
-     * Saves the current nameBuffer content if non-empty then closes. Called by
-     * the OK button on_click and by Enter key in updateNameInput().
-     */
-
     public void confirmCreate() {
 
-        String name = nameBuffer.toString().trim();
+        String layoutName = nameBuffer.toString();
 
-        if (name.isEmpty())
+        if (!layoutManager.isLayoutNameValid(layoutName))
             return;
 
-        layoutManager.saveLayout(name);
+        layoutManager.saveLayout(layoutName);
         closeCreateDialog();
     }
 
@@ -173,15 +140,6 @@ public class EditorBranch extends BranchPackage {
     }
 
     // Name Input \\
-
-    /*
-     * Polls the dialog window's own raw input each frame while the dialog is
-     * open. Appends printable characters to nameBuffer and calls
-     * refreshNameLabel() so the display label reflects the current buffer on
-     * the next render frame. Backspace trims the last character. Enter
-     * confirms. Escape cancels. Space is stored as underscore to keep layout
-     * file names path-safe.
-     */
 
     private void updateNameInput() {
 
@@ -199,40 +157,54 @@ public class EditorBranch extends BranchPackage {
         }
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_BACKSPACE)) {
-            if (nameBuffer.length() > 0)
-                nameBuffer.deleteCharAt(nameBuffer.length() - 1);
-            refreshNameLabel();
+            removeNameCharacter();
             return;
         }
 
-        if (rawInput.isKeyClicked(EditorSetting.KEY_SPACE)) {
-            nameBuffer.append('_');
-            refreshNameLabel();
-            return;
-        }
+        char typed = resolveTypedCharacter(rawInput);
 
-        if (rawInput.isKeyClicked(EditorSetting.KEY_MINUS)) {
-            nameBuffer.append('-');
-            refreshNameLabel();
-            return;
-        }
+        if (typed != 0)
+            appendNameCharacter(typed);
+    }
+
+    private char resolveTypedCharacter(Input rawInput) {
+
+        if (rawInput.isKeyClicked(EditorSetting.KEY_SPACE))
+            return '_';
+
+        if (rawInput.isKeyClicked(EditorSetting.KEY_MINUS))
+            return '-';
 
         boolean shift = rawInput.isKeyDown(EditorSetting.KEY_LEFT_SHIFT)
                 || rawInput.isKeyDown(EditorSetting.KEY_RIGHT_SHIFT);
 
         for (int key = EditorSetting.KEY_A; key <= EditorSetting.KEY_Z; key++)
-            if (rawInput.isKeyClicked(key)) {
-                nameBuffer.append(shift ? (char) key : (char) (key + 32));
-                refreshNameLabel();
-                return;
-            }
+            if (rawInput.isKeyClicked(key))
+                return shift ? (char) key : Character.toLowerCase((char) key);
 
         for (int key = EditorSetting.KEY_0; key <= EditorSetting.KEY_9; key++)
-            if (rawInput.isKeyClicked(key)) {
-                nameBuffer.append((char) key);
-                refreshNameLabel();
-                return;
-            }
+            if (rawInput.isKeyClicked(key))
+                return (char) key;
+
+        return 0;
+    }
+
+    private void appendNameCharacter(char character) {
+
+        if (nameBuffer.length() >= EditorSetting.LAYOUT_NAME_MAX_LENGTH)
+            return;
+
+        nameBuffer.append(character);
+        refreshNameLabel();
+    }
+
+    private void removeNameCharacter() {
+
+        if (nameBuffer.length() == 0)
+            return;
+
+        nameBuffer.deleteCharAt(nameBuffer.length() - 1);
+        refreshNameLabel();
     }
 
     private void refreshNameLabel() {
@@ -241,16 +213,5 @@ public class EditorBranch extends BranchPackage {
 
         if (label != null)
             label.setFontText(nameBuffer.toString());
-    }
-
-    // Load \\
-
-    /*
-     * Receives the layout name as the click action arg wired by the injected
-     * button in refreshLayoutList(). Delegates directly to LayoutManager.
-     */
-
-    public void loadLayout(String name) {
-        layoutManager.loadLayout(name);
     }
 }

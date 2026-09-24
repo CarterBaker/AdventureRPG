@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import org.lwjgl.BufferUtils;
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLCapabilities;
@@ -48,6 +49,10 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     private final DoubleBuffer cursorScratchY = BufferUtils.createDoubleBuffer(1);
     private final IntBuffer posScratchX = BufferUtils.createIntBuffer(1);
     private final IntBuffer posScratchY = BufferUtils.createIntBuffer(1);
+    private final IntBuffer sizeScratchW = BufferUtils.createIntBuffer(1);
+    private final IntBuffer sizeScratchH = BufferUtils.createIntBuffer(1);
+    private final IntBuffer framebufferScratchW = BufferUtils.createIntBuffer(1);
+    private final IntBuffer framebufferScratchH = BufferUtils.createIntBuffer(1);
 
     public Lwjgl3WindowPlatform() {
         windowID2Handle.defaultReturnValue(0L);
@@ -202,6 +207,43 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
             window.resize(width, height);
     }
 
+    // Placement — OS-level window bounds \\
+
+    /*
+     * Moves and resizes an OS window. Width and height arrive in framebuffer
+     * pixels, the same units getWidth() and getHeight() report, and are
+     * converted to the screen units GLFW sizes windows in. A position that
+     * would leave the window on no connected monitor is ignored, so a layout
+     * saved with a monitor that is no longer attached never strands a window
+     * off-screen.
+     */
+    @Override
+    public void placeWindow(WindowInstance window, int screenX, int screenY, int width, int height) {
+
+        if (!window.hasNativeHandle() || width <= 0 || height <= 0)
+            return;
+
+        long handle = window.getNativeHandle();
+
+        sizeScratchW.clear();
+        sizeScratchH.clear();
+        framebufferScratchW.clear();
+        framebufferScratchH.clear();
+        GLFW.glfwGetWindowSize(handle, sizeScratchW, sizeScratchH);
+        GLFW.glfwGetFramebufferSize(handle, framebufferScratchW, framebufferScratchH);
+
+        int screenWidth = toScreenUnits(width, sizeScratchW.get(0), framebufferScratchW.get(0));
+        int screenHeight = toScreenUnits(height, sizeScratchH.get(0), framebufferScratchH.get(0));
+
+        GLFW.glfwSetWindowSize(handle, screenWidth, screenHeight);
+
+        if (isOnAnyMonitor(screenX, screenY, screenWidth, screenHeight))
+            GLFW.glfwSetWindowPos(handle, screenX, screenY);
+
+        syncWindowSize(window);
+        syncScreenPosition(window);
+    }
+
     // Cursor position — window-local, no context switch \\
 
     /*
@@ -308,6 +350,42 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         posScratchY.clear();
         GLFW.glfwGetWindowPos(window.getNativeHandle(), posScratchX, posScratchY);
         window.setScreenPosition(posScratchX.get(0), posScratchY.get(0));
+    }
+
+    private int toScreenUnits(int framebufferPixels, int windowSize, int framebufferSize) {
+
+        if (windowSize <= 0 || framebufferSize <= 0)
+            return framebufferPixels;
+
+        return Math.max(1, Math.round(framebufferPixels * (float) windowSize / framebufferSize));
+    }
+
+    private boolean isOnAnyMonitor(int screenX, int screenY, int width, int height) {
+
+        PointerBuffer monitors = GLFW.glfwGetMonitors();
+
+        if (monitors == null)
+            return false;
+
+        for (int i = 0; i < monitors.limit(); i++) {
+
+            posScratchX.clear();
+            posScratchY.clear();
+            sizeScratchW.clear();
+            sizeScratchH.clear();
+            GLFW.glfwGetMonitorWorkarea(monitors.get(i), posScratchX, posScratchY, sizeScratchW, sizeScratchH);
+
+            int monitorX = posScratchX.get(0);
+            int monitorY = posScratchY.get(0);
+
+            if (screenX < monitorX + sizeScratchW.get(0)
+                    && screenX + width > monitorX
+                    && screenY < monitorY + sizeScratchH.get(0)
+                    && screenY + height > monitorY)
+                return true;
+        }
+
+        return false;
     }
 
     private long resolveOrCreateHandle(WindowInstance window) {

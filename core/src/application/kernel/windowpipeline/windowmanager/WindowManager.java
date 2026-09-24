@@ -314,6 +314,12 @@ public class WindowManager extends ManagerPackage {
         window.migrateRenderResources(previousGLWindow);
     }
 
+    public void placeOsWindow(WindowInstance window, int screenX, int screenY, int width, int height) {
+        if (window == null || !window.hasNativeHandle())
+            throwException("Cannot place a window that has no OS window.");
+        internal.windowPlatform.placeWindow(window, screenX, screenY, width, height);
+    }
+
     // Validation \\
 
     private void verifyWindowRegistration(WindowInstance window, boolean isMain) {

@@ -40,9 +40,11 @@ public class DockLayoutSystem extends SystemPackage {
      * the innermost node always wins when dividers are nested. setSplitRatio()
      * clamps and writes the ratio; propagateRect() reads it.
      *
-     * getRoots() exposes the raw map to LayoutManager for serialization.
-     * restoreRoot() lets LayoutManager replace the auto-built BSP after
-     * reopening tabs during a restore pass.
+     * getRoots() exposes the raw map for layout saving. createLeaf() and
+     * createSplit() build a tree during a layout restore, and restoreRoot()
+     * installs it in place of the tree openTab() built automatically.
+     * createSplit() and removeTab() share collapse(), the one rule for a split
+     * that lost a child: it is replaced by the child it kept, or by nothing.
      */
 
     // Per-OS-window BSP roots — null root means window is registered but empty.
@@ -72,9 +74,7 @@ public class DockLayoutSystem extends SystemPackage {
         DockNodeStruct root = roots.get(osWindow);
 
         if (root == null) {
-            root = new DockNodeStruct();
-            root.setTab(handle);
-            roots.put(osWindow, root);
+            roots.put(osWindow, createLeaf(handle));
             return;
         }
 
@@ -265,16 +265,13 @@ public class DockLayoutSystem extends SystemPackage {
         boolean splitHorizontal = zone == DropZone.TOP || zone == DropZone.BOTTOM;
         boolean incomingIsSecond = zone == DropZone.RIGHT || zone == DropZone.BOTTOM;
 
-        DockNodeStruct preserved = new DockNodeStruct();
-        preserved.setTab(leaf.getTab());
-
-        DockNodeStruct created = new DockNodeStruct();
-        created.setTab(incoming);
+        DockNodeStruct preserved = createLeaf(leaf.getTab());
+        DockNodeStruct created = createLeaf(incoming);
 
         leaf.setSplit(true);
         leaf.setSplitHorizontal(splitHorizontal);
         leaf.setTab(null);
-        leaf.setRatio(0.5f);
+        leaf.setRatio(EngineSetting.RATIO_DEFAULT);
 
         if (incomingIsSecond) {
             leaf.setFirst(preserved);
@@ -285,15 +282,6 @@ public class DockLayoutSystem extends SystemPackage {
         }
     }
 
-    /*
-     * Removes the leaf holding the given tab and collapses the tree above
-     * it. This is the one and only tree-collapse rule in the editor:
-     * both children gone → this node is gone too; one child gone → the
-     * other is promoted in its place. LayoutManager.deserializeNode() uses
-     * this exact same rule when a saved tab fails to reopen during restore
-     * — a tab vanishing live and a tab failing to restore are handled by
-     * identical logic, not two.
-     */
     private DockNodeStruct pruneTab(DockNodeStruct node, TabHandle handle) {
 
         if (node == null)
@@ -305,8 +293,10 @@ public class DockLayoutSystem extends SystemPackage {
         node.setFirst(pruneTab(node.getFirst(), handle));
         node.setSecond(pruneTab(node.getSecond(), handle));
 
-        if (node.getFirst() == null && node.getSecond() == null)
-            return null;
+        return collapse(node);
+    }
+
+    private DockNodeStruct collapse(DockNodeStruct node) {
 
         if (node.getFirst() == null)
             return node.getSecond();
@@ -319,19 +309,34 @@ public class DockLayoutSystem extends SystemPackage {
 
     // Layout Persistence \\
 
-    /*
-     * Exposes the raw map to LayoutManager for serialization. Callers
-     * outside this pipeline have no business walking raw BSP roots.
-     */
     public Object2ObjectOpenHashMap<WindowInstance, DockNodeStruct> getRoots() {
         return roots;
     }
 
-    /*
-     * Replaces the auto-built BSP for the given OS window with a deserialized
-     * tree after LayoutManager has reopened all tabs in the correct order.
-     * pushRects() must be called by the caller after this returns.
-     */
+    public DockNodeStruct createLeaf(TabHandle handle) {
+
+        DockNodeStruct leaf = new DockNodeStruct();
+        leaf.setTab(handle);
+
+        return leaf;
+    }
+
+    public DockNodeStruct createSplit(
+            DockNodeStruct first,
+            DockNodeStruct second,
+            boolean splitHorizontal,
+            float ratio) {
+
+        DockNodeStruct node = new DockNodeStruct();
+        node.setSplit(true);
+        node.setSplitHorizontal(splitHorizontal);
+        node.setFirst(first);
+        node.setSecond(second);
+        setSplitRatio(node, ratio);
+
+        return collapse(node);
+    }
+
     public void restoreRoot(WindowInstance osWindow, DockNodeStruct root) {
         roots.put(osWindow, root);
     }

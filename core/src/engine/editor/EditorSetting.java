@@ -3,13 +3,19 @@ package engine.editor;
 public class EditorSetting {
 
     /*
-     * Editor-only constants — chrome menus, cursors, input keys, and menu entry
-     * point indices used by the editor windows and their menu branches.
+     * Editor-only constants — chrome menus, cursors, input keys, menu entry
+     * point indices, and layout persistence used by the editor windows and
+     * their menu branches.
      */
 
     // Cursors \\
     public static final String CURSOR_RESIZE_H = "menus/CursorStretchIconHorizontal";
     public static final String CURSOR_RESIZE_V = "menus/CursorStretchIconVertical";
+
+    // Layouts \\
+    public static final String LAYOUT_FILE_EXTENSION = "json";
+    public static final int LAYOUT_NAME_MAX_LENGTH = 32;
+    public static final String LAYOUT_SESSION_NAME = "LastSession";
 
     // Resize \\
     public static final float RESIZE_EDGE_TOLERANCE = 8f;

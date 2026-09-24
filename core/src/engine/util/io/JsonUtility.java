@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileReader;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -18,6 +19,15 @@ public class JsonUtility extends EngineUtility {
             return JsonParser.parseReader(reader).getAsJsonObject();
         } catch (Exception e) {
             return throwException("Failed to load JSON file: " + file.getAbsolutePath(), e);
+        }
+    }
+
+    public static JsonObject tryLoadJsonObject(File file) {
+        try (FileReader reader = new FileReader(file)) {
+            JsonElement root = JsonParser.parseReader(reader);
+            return root.isJsonObject() ? root.getAsJsonObject() : null;
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -57,6 +67,16 @@ public class JsonUtility extends EngineUtility {
         }
     }
 
+    public static JsonObject validateObject(JsonObject json, String key) {
+        if (!json.has(key))
+            return throwException("Missing required object field: '" + key + "'");
+        try {
+            return json.getAsJsonObject(key);
+        } catch (ClassCastException e) {
+            return throwException("Field '" + key + "' is not a valid JSON object", e);
+        }
+    }
+
     public static JsonArray validateArray(JsonObject json, String key, int requiredSize) {
         JsonArray array = validateArray(json, key);
         if (requiredSize > 0 && array.size() != requiredSize)
@@ -81,5 +101,32 @@ public class JsonUtility extends EngineUtility {
 
     public static float getFloat(JsonObject json, String key, float defaultValue) {
         return json.has(key) ? json.get(key).getAsFloat() : defaultValue;
+    }
+
+    // Type checks — never throw \\
+
+    public static boolean hasString(JsonObject json, String key) {
+        JsonElement element = json.get(key);
+        return element != null && element.isJsonPrimitive() && element.getAsJsonPrimitive().isString();
+    }
+
+    public static boolean hasNumber(JsonObject json, String key) {
+        JsonElement element = json.get(key);
+        return element != null && element.isJsonPrimitive() && element.getAsJsonPrimitive().isNumber();
+    }
+
+    public static boolean hasBoolean(JsonObject json, String key) {
+        JsonElement element = json.get(key);
+        return element != null && element.isJsonPrimitive() && element.getAsJsonPrimitive().isBoolean();
+    }
+
+    public static boolean hasObject(JsonObject json, String key) {
+        JsonElement element = json.get(key);
+        return element != null && element.isJsonObject();
+    }
+
+    public static boolean hasArray(JsonObject json, String key) {
+        JsonElement element = json.get(key);
+        return element != null && element.isJsonArray();
     }
 }

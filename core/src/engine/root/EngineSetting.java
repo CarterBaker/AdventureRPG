@@ -86,7 +86,6 @@ public class EngineSetting {
 
         public static final String BIN_DIRECTORY = "bin";
         public static final String EDITOR_LAYOUT_DIRECTORY = "editorLayout";
-        public static final String EDITOR_LAYOUT_SESSION_FILE = "LastSession.json";
         public static final String EDITOR_SETTINGS_FILE_NAME = "EditorSettings.json";
         public static final String GAME_DIRECTORY = "AdventureRPG";
         public static final String GAME_DOCUMENTS_SUBPATH = "Documents/My Games";
@@ -702,6 +701,7 @@ public class EngineSetting {
         public static final int MAX_MASK_DEPTH = 8;
         public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
         public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
+        public static final float RATIO_DEFAULT = 0.5f;
         public static final float RATIO_MAX = 0.9f;
         public static final float RATIO_MIN = 0.1f;
         public static final float TAB_DRAG_EDGE_FRACTION = 0.25f;
