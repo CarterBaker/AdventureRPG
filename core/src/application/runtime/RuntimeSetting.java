@@ -24,6 +24,9 @@ public class RuntimeSetting {
     public static final String FBO_WEATHER = "WeatherScene";
     public static final String FBO_PRECIPITATION = "PrecipitationScene";
 
+    // Blit Materials
+    public static final String MATERIAL_WEATHER_RESOLVE = "weather/WeatherResolveMaterial";
+
     // Composite Layers
     public static final int LAYER_SKY = -10;
     public static final int LAYER_WEATHER = -5;
