@@ -5,9 +5,10 @@ import engine.graphics.display.Display;
 public class Lwjgl3Display implements Display {
 
     /*
-     * Holds the current display state for the main window. Size and position are
-     * updated via framebuffer and position callbacks — never stale after the first
-     * frame.
+     * Holds the current display state for the main window. Width and height track
+     * the framebuffer; position, window size, and maximized state track the last
+     * restored (non-maximized, non-minimized) bounds in screen units, which is what
+     * the launchers persist and restore.
      */
 
     // State
@@ -20,6 +21,9 @@ public class Lwjgl3Display implements Display {
     private long mainHandle;
     private int posX;
     private int posY;
+    private int windowWidth;
+    private int windowHeight;
+    private boolean maximized;
 
     Lwjgl3Display(int width, int height, boolean fullscreen) {
         this.width = width;
@@ -46,12 +50,15 @@ public class Lwjgl3Display implements Display {
         this.mainHandle = mainHandle;
     }
 
-    void setPosX(int posX) {
+    void setWindowBounds(int posX, int posY, int windowWidth, int windowHeight) {
         this.posX = posX;
+        this.posY = posY;
+        this.windowWidth = windowWidth;
+        this.windowHeight = windowHeight;
     }
 
-    void setPosY(int posY) {
-        this.posY = posY;
+    void setMaximized(boolean maximized) {
+        this.maximized = maximized;
     }
 
     // Accessible \\
@@ -86,5 +93,17 @@ public class Lwjgl3Display implements Display {
 
     public int getPosY() {
         return posY;
+    }
+
+    public int getWindowWidth() {
+        return windowWidth;
+    }
+
+    public int getWindowHeight() {
+        return windowHeight;
+    }
+
+    public boolean isMaximized() {
+        return maximized;
     }
 }

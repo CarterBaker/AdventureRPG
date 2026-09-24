@@ -1,6 +1,7 @@
 package engine.settings;
 
 import engine.input.Keys;
+import engine.root.EngineSetting;
 
 public class Settings {
 
@@ -17,8 +18,9 @@ public class Settings {
     public float FOV = 70;
     public int windowWidth = 1280;
     public int windowHeight = 720;
-    public int windowX = -1;
-    public int windowY = -1;
+    public int windowX = EngineSetting.WINDOW_POSITION_UNSET;
+    public int windowY = EngineSetting.WINDOW_POSITION_UNSET;
+    public boolean windowMaximized;
     public boolean fullscreen;
 
     // Render
