@@ -10,7 +10,8 @@ public class ItemEditorBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the Item Editor toolbar. Every action works on the
-     * shared active item; new items and parts are named through the name dialog.
+     * shared active item; new items and parts are named through the name dialog,
+     * and deleting an item asks for its name to be typed back as confirmation.
      */
 
     // Internal
@@ -41,6 +42,20 @@ public class ItemEditorBranch extends BranchPackage {
 
     public void reloadItem() {
         itemEditorManager.reloadActiveItem();
+    }
+
+    public void deleteItem(WindowInstance window) {
+
+        if (!itemEditorManager.hasActiveDocument())
+            return;
+
+        String localName = itemEditorManager.getActiveDocument().getEntry().getLocalName();
+
+        nameDialogBranch.open(
+                window,
+                EditorSetting.DIALOG_TITLE_DELETE_PREFIX + localName + EditorSetting.DIALOG_TITLE_DELETE_SUFFIX,
+                itemEditorManager::isActiveItemName,
+                confirmedName -> itemEditorManager.deleteActiveItem());
     }
 
     // Tools \\

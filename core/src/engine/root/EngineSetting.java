@@ -685,6 +685,9 @@ public class EngineSetting {
                         * SUB_VOXEL_RESOLUTION;
         public static final int SUB_VOXEL_EMPTY_CELL = 0;
         public static final int SUB_VOXEL_FACE_COUNT = 6;
+        public static final float SUB_VOXEL_IMPORT_EPSILON = 1e-6f;
+        public static final float SUB_VOXEL_IMPORT_RAY_Y = 0.0137f;
+        public static final float SUB_VOXEL_IMPORT_RAY_Z = 0.0071f;
         public static final int SUB_VOXEL_MAX_PARTS = 255;
         public static final String SUB_VOXEL_VAO = "util/vao/ItemVAO";
         public static final int SUB_VOXEL_VERTEX_STRIDE = 6;

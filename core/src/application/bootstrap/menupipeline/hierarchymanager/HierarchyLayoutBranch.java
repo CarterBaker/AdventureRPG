@@ -88,7 +88,7 @@ class HierarchyLayoutBranch extends BranchPackage {
             HierarchyNodeStruct node = nodes.get(i);
             injectRow(hierarchy, node, depth);
 
-            if (node.hasChildren() && hierarchy.isExpanded(node.getNodeKey()))
+            if (node.hasChildren() && hierarchy.isExpanded(node))
                 injectRows(hierarchy, node.getChildren(), depth + 1);
         }
     }
@@ -129,7 +129,7 @@ class HierarchyLayoutBranch extends BranchPackage {
         if (!node.hasChildren())
             return EngineSetting.HIERARCHY_LEAF_MARKER;
 
-        return hierarchy.isExpanded(node.getNodeKey())
+        return hierarchy.isExpanded(node)
                 ? EngineSetting.HIERARCHY_EXPANDED_MARKER
                 : EngineSetting.HIERARCHY_COLLAPSED_MARKER;
     }

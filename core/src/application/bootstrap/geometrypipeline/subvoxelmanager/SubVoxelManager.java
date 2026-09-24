@@ -21,7 +21,8 @@ public class SubVoxelManager extends ManagerPackage {
     /*
      * Engine entry point for sub-voxel models. Owns the one geometry path —
      * bootstrap meshes and live editor meshes are built identically here — and
-     * is the single access point for sub-voxel raycasting and the mesh format.
+     * is the single access point for sub-voxel raycasting, the mesh format,
+     * and converting authored quad meshes into sub-voxel models.
      */
 
     // Internal
@@ -127,5 +128,15 @@ public class SubVoxelManager extends ManagerPackage {
 
     public JsonObject toMeshJson(SubVoxelModelStruct model) {
         return SubVoxelJsonUtility.toMeshJson(model);
+    }
+
+    // Import \\
+
+    public boolean hasQuads(JsonObject meshJson) {
+        return SubVoxelImportUtility.hasQuads(meshJson);
+    }
+
+    public SubVoxelModelStruct importQuadMesh(JsonObject meshJson, String fallbackTextureName) {
+        return SubVoxelImportUtility.importQuads(meshJson, fallbackTextureName);
     }
 }

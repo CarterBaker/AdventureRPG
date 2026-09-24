@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
+import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
 import editor.bootstrap.itemeditorpipeline.util.ItemEditorTool;
 import engine.editor.EditorSetting;
 import engine.root.EngineSetting;
@@ -12,15 +13,15 @@ import engine.root.ManagerPackage;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public class ItemEditorManager extends ManagerPackage {
 
     /*
      * Owns the item editor's shared state — open items, the active item and
-     * tool, and the status line. Items stay open with their edits until the
-     * editor closes. Disk access, model edits, and the hierarchy tab each live
-     * in their own branch.
+     * tool, and the status line. Items stay open with their edits until saved,
+     * deleted, or the editor closes. New items join the active item's
+     * definition file, or the editor's own when nothing is open. Disk access,
+     * model edits, and the hierarchy tab each live in their own branch.
      */
 
     // Internal
@@ -68,18 +69,30 @@ public class ItemEditorManager extends ManagerPackage {
 
         ItemDocumentInstance document = itemName2ItemDocument.get(itemName);
 
-        if (document == null) {
-            document = createDocument(itemName, itemLibraryBranch.loadModel(itemName), true);
-            itemName2ItemDocument.put(itemName, document);
+        if (document != null) {
+            activate(document);
+            return;
         }
 
+        ItemEntryStruct entry = itemLibraryBranch.getEntry(itemName);
+
+        if (entry == null)
+            throwException("Cannot open unknown item '" + itemName + "'.");
+
+        boolean conversion = itemLibraryBranch.requiresConversion(entry);
+        SubVoxelModelStruct model = itemLibraryBranch.loadModel(entry, getTextureNames().get(0));
+
+        document = createDocument(entry, model, conversion);
         activate(document);
+
+        if (conversion)
+            setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_CONVERTED);
     }
 
-    public void createItem(String itemName) {
+    public void createItem(String localName) {
 
-        if (!isItemNameAvailable(itemName))
-            throwException("Cannot create an item named '" + itemName + "'.");
+        if (!isItemNameAvailable(localName))
+            throwException("Cannot create an item named '" + localName + "'.");
 
         int center = EngineSetting.SUB_VOXEL_RESOLUTION / 2;
         SubVoxelModelStruct model = new SubVoxelModelStruct();
@@ -87,11 +100,8 @@ public class ItemEditorManager extends ManagerPackage {
                 new SubVoxelPartStruct(EditorSetting.ITEM_EDITOR_DEFAULT_PART_NAME, getTextureNames().get(0)));
         model.setCell(center, 0, center, partIndex);
 
-        ItemDocumentInstance document = createDocument(itemName, model, false);
-        itemName2ItemDocument.put(itemName, document);
-
-        activate(document);
-        setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_CREATED + itemName);
+        activate(createDocument(createEntry(localName), model, true));
+        setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_CREATED + localName);
     }
 
     public void saveActiveItem() {
@@ -105,7 +115,7 @@ public class ItemEditorManager extends ManagerPackage {
         }
 
         itemLibraryBranch.save(activeDocument);
-        activeDocument.markSaved();
+        activeDocument.markClean();
         setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_SAVED + activeDocument.getItemName());
     }
 
@@ -114,26 +124,75 @@ public class ItemEditorManager extends ManagerPackage {
         if (activeDocument == null)
             return;
 
-        if (!activeDocument.isSaved()) {
+        ItemEntryStruct entry = activeDocument.getEntry();
+
+        if (!itemLibraryBranch.hasItem(entry.getItemName())) {
             setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_NOT_SAVED);
             return;
         }
 
-        activeDocument.replaceModel(itemLibraryBranch.loadModel(activeDocument.getItemName()));
-        activeDocument.markSaved();
-        setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_RELOADED + activeDocument.getItemName());
+        boolean conversion = itemLibraryBranch.requiresConversion(entry);
+        activeDocument.replaceModel(itemLibraryBranch.loadModel(entry, getTextureNames().get(0)));
+
+        if (conversion) {
+            activeDocument.markEdited();
+            setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_CONVERTED);
+            return;
+        }
+
+        activeDocument.markClean();
+        setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_RELOADED + entry.getItemName());
     }
 
-    public boolean isItemNameAvailable(String itemName) {
-        return FileUtility.isValidFileName(itemName, EditorSetting.NAME_INPUT_MAX_LENGTH)
-                && !itemName2ItemDocument.containsKey(itemName)
-                && !itemLibraryBranch.hasMesh(itemName);
+    public void deleteActiveItem() {
+
+        if (activeDocument == null)
+            return;
+
+        ItemEntryStruct entry = activeDocument.getEntry();
+
+        if (itemLibraryBranch.hasItem(entry.getItemName()))
+            itemLibraryBranch.delete(entry);
+
+        itemName2ItemDocument.remove(entry.getItemName());
+        activate(null);
+        setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_DELETED + entry.getItemName());
     }
 
-    private ItemDocumentInstance createDocument(String itemName, SubVoxelModelStruct model, boolean saved) {
+    public boolean isItemNameAvailable(String localName) {
+
+        if (!FileUtility.isValidFileName(localName, EditorSetting.NAME_INPUT_MAX_LENGTH))
+            return false;
+
+        ItemEntryStruct entry = createEntry(localName);
+
+        return !itemLibraryBranch.hasItem(entry.getItemName())
+                && !itemName2ItemDocument.containsKey(entry.getItemName())
+                && !itemLibraryBranch.hasMesh(entry.getMeshName())
+                && !isMeshOpen(entry.getMeshName());
+    }
+
+    public boolean isActiveItemName(String localName) {
+        return activeDocument != null && activeDocument.getEntry().getLocalName().equals(localName);
+    }
+
+    private ItemEntryStruct createEntry(String localName) {
+
+        String definitionName = activeDocument != null
+                ? activeDocument.getEntry().getDefinitionName()
+                : EditorSetting.ITEM_EDITOR_DEFINITION_FILE;
+
+        return new ItemEntryStruct(
+                definitionName,
+                localName,
+                EditorSetting.ITEM_EDITOR_MESH_DIRECTORY + "/" + localName);
+    }
+
+    private ItemDocumentInstance createDocument(ItemEntryStruct entry, SubVoxelModelStruct model, boolean dirty) {
 
         ItemDocumentInstance document = create(ItemDocumentInstance.class);
-        document.constructor(itemName, model, saved);
+        document.constructor(entry, model, dirty);
+        itemName2ItemDocument.put(entry.getItemName(), document);
         return document;
     }
 
@@ -142,6 +201,15 @@ public class ItemEditorManager extends ManagerPackage {
         this.activeDocument = document;
         this.statusMessage = null;
         notifyChanged();
+    }
+
+    private boolean isMeshOpen(String meshName) {
+
+        for (ItemDocumentInstance document : itemName2ItemDocument.values())
+            if (document.getEntry().getMeshName().equals(meshName))
+                return true;
+
+        return false;
     }
 
     // Parts \\
@@ -229,14 +297,16 @@ public class ItemEditorManager extends ManagerPackage {
 
     // Accessible \\
 
-    public ObjectArrayList<String> getItemNames() {
+    public ObjectArrayList<ItemEntryStruct> getItemEntries() {
 
-        ObjectOpenHashSet<String> itemNames = new ObjectOpenHashSet<>(itemLibraryBranch.getItemNames());
-        itemNames.addAll(itemName2ItemDocument.keySet());
+        ObjectArrayList<ItemEntryStruct> entries = itemLibraryBranch.getEntries();
 
-        ObjectArrayList<String> sortedNames = new ObjectArrayList<>(itemNames);
-        sortedNames.sort(String.CASE_INSENSITIVE_ORDER);
-        return sortedNames;
+        for (ItemDocumentInstance document : itemName2ItemDocument.values())
+            if (!itemLibraryBranch.hasItem(document.getItemName()))
+                entries.add(document.getEntry());
+
+        entries.sort((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(a.getItemName(), b.getItemName()));
+        return entries;
     }
 
     public ItemDocumentInstance getDocument(String itemName) {
@@ -261,11 +331,23 @@ public class ItemEditorManager extends ManagerPackage {
 
     public String getStatusText() {
 
+        StringBuilder status = new StringBuilder();
+
         if (activeDocument == null)
-            return EditorSetting.ITEM_EDITOR_STATUS_NO_ITEM;
+            status.append(EditorSetting.ITEM_EDITOR_STATUS_NO_ITEM);
+        else
+            appendDocumentStatus(status);
+
+        if (statusMessage != null)
+            status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(statusMessage);
+
+        return status.toString();
+    }
+
+    private void appendDocumentStatus(StringBuilder status) {
 
         SubVoxelPartStruct part = activeDocument.getModel().getPart(activeDocument.getSelectedPartIndex());
-        StringBuilder status = new StringBuilder(activeDocument.getItemName());
+        status.append(activeDocument.getItemName());
 
         if (activeDocument.isDirty())
             status.append(EditorSetting.ITEM_EDITOR_DIRTY_MARKER);
@@ -273,10 +355,5 @@ public class ItemEditorManager extends ManagerPackage {
         status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(part.getPartName());
         status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(part.getTextureName());
         status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(activeTool.getLabel());
-
-        if (statusMessage != null)
-            status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(statusMessage);
-
-        return status.toString();
     }
 }

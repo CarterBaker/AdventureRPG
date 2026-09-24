@@ -20,6 +20,12 @@ public class ItemRegistryUtility extends EngineUtility {
 
     public static final int RESERVED_ID = EngineSetting.REGISTRY_RESERVED_ID;
 
+    // Naming \\
+
+    public static String toItemName(String definitionName, String localName) {
+        return definitionName + "/" + localName;
+    }
+
     // Hashing \\
 
     public static int toItemIntID(String name) {

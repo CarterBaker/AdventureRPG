@@ -66,7 +66,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private ItemDefinitionHandle parseItem(JsonObject itemJson, String pathPrefix) {
 
         String localName = JsonUtility.validateString(itemJson, "name");
-        String itemName = pathPrefix + "/" + localName;
+        String itemName = ItemRegistryUtility.toItemName(pathPrefix, localName);
         int itemID = ItemRegistryUtility.toItemIntID(itemName);
         float weight = JsonUtility.getFloat(itemJson, "weight", 1.0f);
         boolean twoHanded = JsonUtility.getBoolean(itemJson, "two_handed", false);

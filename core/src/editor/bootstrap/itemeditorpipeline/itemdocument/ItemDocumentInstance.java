@@ -1,18 +1,19 @@
 package editor.bootstrap.itemeditorpipeline.itemdocument;
 
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
+import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
 import engine.root.InstancePackage;
 
 public class ItemDocumentInstance extends InstancePackage {
 
     /*
-     * One item open in the editor: its name, model, and selected part. The
-     * revision moves on every model change; dirty marks unsaved edits and saved
-     * marks that a file exists to reload from.
+     * One item open in the editor: where it lives on disk, the model being
+     * edited, and the selected part. The revision moves on every model change
+     * so viewports know when to rebuild; dirty marks changes not yet saved.
      */
 
     // Identity
-    private String itemName;
+    private ItemEntryStruct entry;
 
     // Model
     private SubVoxelModelStruct model;
@@ -22,22 +23,20 @@ public class ItemDocumentInstance extends InstancePackage {
 
     // State
     private boolean dirty;
-    private boolean saved;
     private int revision;
 
     // Constructor \\
 
-    public void constructor(String itemName, SubVoxelModelStruct model, boolean saved) {
+    public void constructor(ItemEntryStruct entry, SubVoxelModelStruct model, boolean dirty) {
 
         // Identity
-        this.itemName = itemName;
+        this.entry = entry;
 
         // Model
         this.model = model;
 
         // State
-        this.dirty = !saved;
-        this.saved = saved;
+        this.dirty = dirty;
     }
 
     // Management \\
@@ -48,10 +47,8 @@ public class ItemDocumentInstance extends InstancePackage {
         this.revision++;
     }
 
-    public void markSaved() {
-
+    public void markClean() {
         this.dirty = false;
-        this.saved = true;
     }
 
     public void replaceModel(SubVoxelModelStruct model) {
@@ -64,15 +61,19 @@ public class ItemDocumentInstance extends InstancePackage {
     public void selectPart(int partIndex) {
 
         if (!model.hasPart(partIndex))
-            throwException("Item '" + itemName + "' has no part at index " + partIndex + ".");
+            throwException("Item '" + getItemName() + "' has no part at index " + partIndex + ".");
 
         this.selectedPartIndex = partIndex;
     }
 
     // Accessible \\
 
+    public ItemEntryStruct getEntry() {
+        return entry;
+    }
+
     public String getItemName() {
-        return itemName;
+        return entry.getItemName();
     }
 
     public SubVoxelModelStruct getModel() {
@@ -85,10 +86,6 @@ public class ItemDocumentInstance extends InstancePackage {
 
     public boolean isDirty() {
         return dirty;
-    }
-
-    public boolean isSaved() {
-        return saved;
     }
 
     public int getRevision() {
