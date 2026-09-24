@@ -24,32 +24,6 @@
           "sprite": "menus/DefaultElement",
           "elements": [
             {
-              "id": "open_window_button",
-              "type": "button",
-              "sprite": "menus/DefaultElement",
-              "size": {
-                "x": "150px",
-                "y": "28px"
-              },
-              "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                "method": "openSecondaryWindow"
-              },
-              "elements": [
-                {
-                  "id": "open_window_label",
-                  "type": "label",
-                  "text": "Open Window",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
-                  ]
-                }
-              ]
-            },
-            {
               "id": "open_preview_button",
               "type": "button",
               "sprite": "menus/DefaultElement",
@@ -66,6 +40,32 @@
                   "id": "open_preview_label",
                   "type": "label",
                   "text": "Open Preview",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "open_debug_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "150px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                "method": "openDebug"
+              },
+              "elements": [
+                {
+                  "id": "open_debug_label",
+                  "type": "label",
+                  "text": "Open Debug",
                   "color": [
                     0,
                     0,

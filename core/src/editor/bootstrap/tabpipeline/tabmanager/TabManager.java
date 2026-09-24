@@ -38,8 +38,8 @@ public class TabManager extends ManagerPackage {
      * window's BSP, either at a leaf and zone or at the largest leaf. Tab
      * drops, drops into empty space, and every other move go through it.
      * openSecondaryOsWindow() — the one way a secondary editor OS window is
-     * created, for "open window", a tab dropped into empty space, and
-     * LayoutManager restoring a saved session alike.
+     * created, for a tab dropped into empty space and LayoutManager
+     * restoring a saved session alike.
      * closeOsWindowIfEmpty() — the one rule for when a secondary window goes
      * away: it has no tabs left. The main window never closes here.
      *
@@ -110,6 +110,10 @@ public class TabManager extends ManagerPackage {
     // Management \\
     public TabHandle openPreview(WindowInstance osWindow) {
         return openTab(EngineSetting.TAB_TITLE_PREVIEW, application.runtime.RuntimeContext.class, osWindow);
+    }
+
+    public TabHandle openDebug(WindowInstance osWindow) {
+        return openTab(EngineSetting.TAB_TITLE_DEBUG, application.debug.DebugContext.class, osWindow);
     }
 
     /*

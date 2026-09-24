@@ -88,8 +88,8 @@ public class EditorBranch extends BranchPackage {
         tabManager.openPreview(window.getGLWindow());
     }
 
-    public void openSecondaryWindow() {
-        tabManager.openSecondaryOsWindow();
+    public void openDebug(WindowInstance window) {
+        tabManager.openDebug(window.getGLWindow());
     }
 
     // Layout Dropdown \\
