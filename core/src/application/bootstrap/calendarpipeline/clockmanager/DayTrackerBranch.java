@@ -2,6 +2,7 @@ package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
+import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -16,17 +17,17 @@ class DayTrackerBranch extends BranchPackage {
      * elapsed day count rather than incremented, so any gap since the last
      * session lands on the correct date in one step, and advanceTime()
      * reports every recomputed day so month and year trackers can run their
-     * own change checks. The daily noise is hashed from the world's epoch
-     * and the absolute day, so the same day always reads the same value,
-     * and blendDailyNoise() eases it into the next day's value across the
-     * day so nothing driven by it ever pops at rollover.
+     * own change checks. Every day gets its own seed, hashed from the
+     * world's seed and the absolute day, so no two days share one and the
+     * same day always reproduces the same seed on any load. Any system can
+     * draw its own independent random stream from it through
+     * resolveDailyRandom(), which eases each day's value into the next
+     * day's across the day so nothing driven by it ever pops at rollover.
      */
 
     // Internal
-    private long NOISE_MASK;
-    private double NOISE_DIVISOR;
-    private long NOISE_MULTIPLIER;
-    private double NOISE_MIN;
+    private long STREAM_SALT;
+    private float NOISE_MIN;
     private CalendarHandle calendarHandle;
     private ClockHandle clockHandle;
 
@@ -38,9 +39,11 @@ class DayTrackerBranch extends BranchPackage {
     // Calendar Offset
     private long startDayOffset;
 
-    // Daily Noise
-    private float currentDayNoise;
-    private float nextDayNoise;
+    // Day Seed
+    private long worldSeed;
+    private long currentDaySeed;
+    private long nextDaySeed;
+    private float daySeedBlend;
 
     // Tracking
     private long lastDayElapsed;
@@ -51,9 +54,7 @@ class DayTrackerBranch extends BranchPackage {
     protected void create() {
 
         // Internal
-        this.NOISE_MASK = EngineSetting.CLOCK_NOISE_MASK;
-        this.NOISE_DIVISOR = EngineSetting.CLOCK_NOISE_DIVISOR;
-        this.NOISE_MULTIPLIER = EngineSetting.CLOCK_NOISE_MULTIPLIER;
+        this.STREAM_SALT = EngineSetting.CLOCK_DAILY_STREAM_SALT;
         this.NOISE_MIN = EngineSetting.CLOCK_NOISE_MIN;
 
         // Conversion Tables
@@ -67,11 +68,14 @@ class DayTrackerBranch extends BranchPackage {
 
     // Assignment \\
 
-    void assignData(CalendarHandle calendarHandle, ClockHandle clockHandle) {
+    void assignData(CalendarHandle calendarHandle, ClockHandle clockHandle, long worldSeed) {
 
         // Internal
         this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
+
+        // Day Seed
+        this.worldSeed = worldSeed;
 
         buildDayConversionTables();
 
@@ -123,9 +127,10 @@ class DayTrackerBranch extends BranchPackage {
         long totalDaysWithOffset = totalDaysElapsed + startDayOffset;
         int dayOfYear = (int) Math.floorMod(totalDaysWithOffset, (long) calendarHandle.getTotalDaysInYear()) + 1;
 
-        this.currentDayNoise = calculateRandomNoise(totalDaysWithOffset);
-        this.nextDayNoise = calculateRandomNoise(totalDaysWithOffset + 1);
+        this.currentDaySeed = calculateDaySeed(totalDaysWithOffset);
+        this.nextDaySeed = calculateDaySeed(totalDaysWithOffset + 1);
 
+        clockHandle.setCurrentDaySeed(currentDaySeed);
         clockHandle.setTotalDaysWithOffset(totalDaysWithOffset);
         clockHandle.setYearProgress(calculateYearProgress(dayOfYear));
         clockHandle.setCurrentDayOfWeek(calculateDayOfWeek(totalDaysWithOffset));
@@ -135,14 +140,32 @@ class DayTrackerBranch extends BranchPackage {
         return true;
     }
 
-    // Daily Noise \\
+    // Daily Random \\
 
-    void blendDailyNoise() {
+    void advanceDayBlend() {
 
-        double t = clockHandle.getDayProgress();
-        double eased = t * t * (3.0 - 2.0 * t);
+        float t = (float) clockHandle.getDayProgress();
 
-        clockHandle.setRandomNoiseFromDay((float) (currentDayNoise + (nextDayNoise - currentDayNoise) * eased));
+        this.daySeedBlend = t * t * (3f - 2f * t);
+
+        float noise = resolveDailyRandom01(EngineSetting.CLOCK_DAILY_STREAM_NOISE);
+
+        clockHandle.setRandomNoiseFromDay(Math.max(NOISE_MIN, noise));
+    }
+
+    // Signed [-1, 1] random for one stream of today's seed, eased into the
+    // same stream of tomorrow's seed as the day progresses.
+    float resolveDailyRandom(long stream) {
+        return resolveDailyRandom01(stream) * 2f - 1f;
+    }
+
+    private float resolveDailyRandom01(long stream) {
+
+        long streamSalt = stream * STREAM_SALT;
+        float current = BiomeFieldUtility.hash01(currentDaySeed ^ streamSalt);
+        float next = BiomeFieldUtility.hash01(nextDaySeed ^ streamSalt);
+
+        return current + (next - current) * daySeedBlend;
     }
 
     // Calculations \\
@@ -156,17 +179,11 @@ class DayTrackerBranch extends BranchPackage {
         return (long) calendarHandle.getStartYear() * calendarHandle.getTotalDaysInYear() + startDayOfYear - 1;
     }
 
-    float calculateRandomNoise(long totalDaysWithOffset) {
-
-        long mixed = totalDaysWithOffset ^ clockHandle.getWorldEpochStart();
-
-        mixed ^= mixed >>> 33;
-        mixed *= NOISE_MULTIPLIER;
-        mixed ^= mixed >>> 33;
-
-        double normalized = (double) (mixed & NOISE_MASK) / NOISE_DIVISOR;
-
-        return (float) Math.max(NOISE_MIN, normalized);
+    long calculateDaySeed(long totalDaysWithOffset) {
+        return BiomeFieldUtility.hashCell(
+                worldSeed,
+                (int) totalDaysWithOffset,
+                (int) (totalDaysWithOffset >>> 32));
     }
 
     double calculateYearProgress(int dayOfYear) {

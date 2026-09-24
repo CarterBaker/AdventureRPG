@@ -41,6 +41,9 @@ public class ClockData extends DataPackage {
     private int currentYear;
     private int currentAge;
 
+    // Day Seed
+    private long currentDaySeed;
+
     // Noise
     private float randomNoiseFromDay;
 
@@ -180,6 +183,14 @@ public class ClockData extends DataPackage {
 
     public void setCurrentAge(int currentAge) {
         this.currentAge = currentAge;
+    }
+
+    public long getCurrentDaySeed() {
+        return currentDaySeed;
+    }
+
+    public void setCurrentDaySeed(long currentDaySeed) {
+        this.currentDaySeed = currentDaySeed;
     }
 
     public float getRandomNoiseFromDay() {

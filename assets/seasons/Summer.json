@@ -8,6 +8,7 @@
     "sky": {
         "glowStrength": 1.15,
         "beltStrength": 0.55,
+        "variety": 0.90,
         "phases": {
             "night": {
                 "zenith":      [0.01, 0.016, 0.05],

@@ -94,7 +94,7 @@ public class ClockManager extends ManagerPackage {
         clockHandle.setCalendarHandle(calendarHandle);
 
         currentTracker.assignData(calendarHandle, clockHandle, world.getAxialTilt());
-        dayTracker.assignData(calendarHandle, clockHandle);
+        dayTracker.assignData(calendarHandle, clockHandle, world.getSeed());
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
 
@@ -111,7 +111,7 @@ public class ClockManager extends ManagerPackage {
                     yearTracker.advanceTime();
 
         currentTracker.advanceVisualYear();
-        dayTracker.blendDailyNoise();
+        dayTracker.advanceDayBlend();
 
         updateLocationTimes();
     }
@@ -186,6 +186,16 @@ public class ClockManager extends ManagerPackage {
 
     public CalendarHandle getCalendarHandle() {
         return calendarHandle;
+    }
+
+    /*
+     * A signed [-1, 1] random value for one named stream of today's seed,
+     * easing into that stream of tomorrow's seed across the day. Each
+     * caller passes its own stream constant, so every system gets
+     * independent values from the same day seed, and every day differs.
+     */
+    public float getDailyRandom(long stream) {
+        return dayTracker.resolveDailyRandom(stream);
     }
 
     /*

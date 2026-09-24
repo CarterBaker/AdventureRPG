@@ -176,6 +176,14 @@ public class ClockHandle extends HandlePackage {
         clockData.setCurrentAge(currentAge);
     }
 
+    public long getCurrentDaySeed() {
+        return clockData.getCurrentDaySeed();
+    }
+
+    public void setCurrentDaySeed(long currentDaySeed) {
+        clockData.setCurrentDaySeed(currentDaySeed);
+    }
+
     public float getRandomNoiseFromDay() {
         return clockData.getRandomNoiseFromDay();
     }

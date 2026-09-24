@@ -95,6 +95,29 @@ public final class SkyColorUtility extends EngineUtility {
                 lerp(color.z, target, amount));
     }
 
+    // Rotates a color's hue around the grey axis, keeping its overall
+    // brightness and saturation. Positive degrees turn red toward yellow and green;
+    // negative degrees turn orange toward red, pink, and violet.
+    public static void rotateHue(Vector3 color, float degrees) {
+
+        double radians = Math.toRadians(degrees);
+        float cos = (float) Math.cos(radians);
+        float sin = (float) Math.sin(radians);
+        float shared = (1f - cos) / 3f;
+        float axial = sin * EngineSetting.SKY_HUE_AXIS_INVERSE_ROOT;
+
+        float diagonal = cos + shared;
+        float leading = shared + axial;
+        float trailing = shared - axial;
+
+        color.set(
+                color.x * diagonal + color.y * trailing + color.z * leading,
+                color.x * leading + color.y * diagonal + color.z * trailing,
+                color.x * trailing + color.y * leading + color.z * diagonal);
+
+        clampPositive(color);
+    }
+
     public static void clampPositive(Vector3 color) {
         color.set(Math.max(0f, color.x), Math.max(0f, color.y), Math.max(0f, color.z));
     }

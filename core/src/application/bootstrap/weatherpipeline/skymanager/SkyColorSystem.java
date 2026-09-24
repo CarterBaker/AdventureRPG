@@ -1,6 +1,5 @@
 package application.bootstrap.weatherpipeline.skymanager;
 
-import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
@@ -22,8 +21,12 @@ class SkyColorSystem extends SystemPackage {
      * frame the season-blended palette is resolved once, then for every
      * active grid it is placed at that grid's own solar elevation, pushed
      * cooler and pinker by cold air or warmer and hazier by heat, greyed by
-     * overcast and humid local weather, and nudged by the clock's smoothly
-     * varying daily noise. The result — dome gradient, sun-side glow,
+     * overcast and humid local weather, and given its own character for the
+     * day from that day's seed: hue turns, saturation, glow and belt
+     * strength, and dusty or crisp air, each leaning with temperature and
+     * scaled by the season's variety so no two days share a sky. Every daily
+     * value eases into the next day's, so the sky never pops. The result —
+     * dome gradient, sun-side glow,
      * anti-solar belt, three cloud tints, fog, and the blend strengths the
      * shaders scale them by — goes into that grid's SkyColorData UBO.
      */
@@ -42,7 +45,6 @@ class SkyColorSystem extends SystemPackage {
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
     private ClockManager clockManager;
-    private ClockHandle clockHandle;
     private SkyPaletteBranch skyPaletteBranch;
 
     // Working Palette
@@ -56,6 +58,20 @@ class SkyColorSystem extends SystemPackage {
     private float daylight;
     private float overcast;
 
+    // Working Temperature
+    private float cold;
+    private float heat;
+
+    // Daily Character
+    private float dailyGlowHue;
+    private float dailyBeltHue;
+    private float dailyDomeHue;
+    private float dailyCloudHue;
+    private float dailySaturation;
+    private float dailyGlowStrength;
+    private float dailyBeltStrength;
+    private float dailyAir;
+
     // Base \\
 
     @Override
@@ -63,11 +79,6 @@ class SkyColorSystem extends SystemPackage {
         this.uboManager = get(UBOManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.clockManager = get(ClockManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        this.clockHandle = clockManager.getClockHandle();
     }
 
     // Assignment \\
@@ -89,6 +100,7 @@ class SkyColorSystem extends SystemPackage {
             return;
 
         skyPaletteBranch.resolvePalette();
+        resolveDailyCharacter();
 
         Object[] elements = grids.elements();
 
@@ -106,8 +118,8 @@ class SkyColorSystem extends SystemPackage {
 
         resolveCycle(solarElevation);
         applyTemperature(grid.getTemperatureInstance().getTemperature());
+        applyDailyCharacter();
         applyWeather(grid.getWeatherInstance());
-        applyDailyVariation(clockHandle.getRandomNoiseFromDay());
         resolveFog();
 
         UBOInstance skyColorUBO = grid.getSkyColorUBO();
@@ -163,11 +175,11 @@ class SkyColorSystem extends SystemPackage {
      */
     private void applyTemperature(float temperature) {
 
-        float cold = 1f - SkyColorUtility.remapClamped(
+        this.cold = 1f - SkyColorUtility.remapClamped(
                 temperature,
                 EngineSetting.SKY_TEMPERATURE_COLD_REFERENCE,
                 EngineSetting.SKY_TEMPERATURE_MILD_REFERENCE);
-        float heat = SkyColorUtility.remapClamped(
+        this.heat = SkyColorUtility.remapClamped(
                 temperature,
                 EngineSetting.SKY_TEMPERATURE_MILD_REFERENCE,
                 EngineSetting.SKY_TEMPERATURE_HOT_REFERENCE);
@@ -228,30 +240,72 @@ class SkyColorSystem extends SystemPackage {
         this.beltStrength *= damping;
     }
 
-    // Daily Variation \\
+    // Daily Character \\
 
     /*
-     * The clock's daily noise eases continuously from one day's value into
-     * the next, so every term here is a smooth function of it: a gentle
-     * rotating hue offset across the daytime dome and a small swing in how
-     * vivid each day's glow and belt are.
+     * Draws today's sky character from the day's seed, one independent
+     * stream per trait. Shared by every grid, so it is resolved once a frame.
      */
-    private void applyDailyVariation(float dailyNoise) {
+    private void resolveDailyCharacter() {
 
-        double angle = dailyNoise * Math.PI * 2.0;
+        this.dailyGlowHue = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_GLOW_HUE);
+        this.dailyBeltHue = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_BELT_HUE);
+        this.dailyDomeHue = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_DOME_HUE);
+        this.dailyCloudHue = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_CLOUD_HUE);
+        this.dailySaturation = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_SATURATION);
+        this.dailyGlowStrength = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_GLOW_STRENGTH);
+        this.dailyBeltStrength = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_BELT_STRENGTH);
+        this.dailyAir = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_AIR);
+    }
 
-        float offsetR = (float) Math.cos(angle) * EngineSetting.SKY_DAILY_OFFSET_R * daylight;
-        float offsetG = (float) Math.sin(angle) * EngineSetting.SKY_DAILY_OFFSET_G * daylight;
-        float offsetB = (float) Math.cos(angle + EngineSetting.SKY_DAILY_OFFSET_B_PHASE)
-                * EngineSetting.SKY_DAILY_OFFSET_B * daylight;
+    /*
+     * Applies today's character to one grid's palette. Every random trait
+     * is scaled by the season's variety; temperature then leans it — cold
+     * turns the glow and belt toward pink and violet and favours crisp,
+     * clear air, heat turns the glow toward deep red and favours dusty air
+     * that hazes the day and fires up the sunset.
+     */
+    private void applyDailyCharacter() {
 
-        phase.getZenith().add(offsetR, offsetG, offsetB);
-        phase.getHorizon().add(offsetR, offsetG, offsetB);
-        SkyColorUtility.clampPositive(phase.getZenith());
-        SkyColorUtility.clampPositive(phase.getHorizon());
+        float variety = skyPaletteBranch.getVariety();
 
-        this.glowStrength *= 1f + (dailyNoise - 0.5f) * EngineSetting.SKY_DAILY_GLOW_VARIANCE;
-        this.beltStrength *= 1f + (float) Math.sin(angle) * 0.5f * EngineSetting.SKY_DAILY_BELT_VARIANCE;
+        float glowHue = dailyGlowHue * EngineSetting.SKY_DAILY_GLOW_HUE_DEGREES * variety
+                - cold * EngineSetting.SKY_DAILY_COLD_HUE_BIAS_DEGREES
+                - heat * EngineSetting.SKY_DAILY_HOT_HUE_BIAS_DEGREES;
+        float beltHue = dailyBeltHue * EngineSetting.SKY_DAILY_BELT_HUE_DEGREES * variety
+                - cold * EngineSetting.SKY_DAILY_COLD_HUE_BIAS_DEGREES;
+        float domeHue = dailyDomeHue * EngineSetting.SKY_DAILY_DOME_HUE_DEGREES * variety;
+        float cloudHue = dailyCloudHue * EngineSetting.SKY_DAILY_CLOUD_HUE_DEGREES * variety;
+
+        SkyColorUtility.rotateHue(phase.getGlow(), glowHue);
+        SkyColorUtility.rotateHue(phase.getBelt(), beltHue);
+        SkyColorUtility.rotateHue(phase.getZenith(), domeHue);
+        SkyColorUtility.rotateHue(phase.getHorizon(), domeHue);
+        SkyColorUtility.rotateHue(phase.getCloudLight(), cloudHue);
+        SkyColorUtility.rotateHue(phase.getCloudShadow(), cloudHue);
+
+        float saturation = 1f + dailySaturation * EngineSetting.SKY_DAILY_SATURATION_RANGE * variety;
+
+        SkyColorUtility.saturate(phase.getZenith(), saturation);
+        SkyColorUtility.saturate(phase.getHorizon(), saturation);
+        SkyColorUtility.saturate(phase.getGlow(), saturation);
+        SkyColorUtility.saturate(phase.getBelt(), saturation);
+
+        this.glowStrength *= 1f + dailyGlowStrength * EngineSetting.SKY_DAILY_GLOW_STRENGTH_RANGE * variety;
+        this.beltStrength *= 1f + dailyBeltStrength * EngineSetting.SKY_DAILY_BELT_STRENGTH_RANGE * variety;
+
+        applyDailyAir(variety);
+    }
+
+    private void applyDailyAir(float variety) {
+
+        float dust = SkyColorUtility.clamp01(dailyAir + heat * EngineSetting.SKY_DAILY_HOT_DUST_BIAS) * variety;
+        float crisp = SkyColorUtility.clamp01(-dailyAir + cold * EngineSetting.SKY_DAILY_COLD_CRISP_BIAS) * variety;
+
+        this.glowStrength *= 1f + dust * EngineSetting.SKY_DAILY_DUST_GLOW_BOOST;
+
+        SkyColorUtility.haze(phase.getHorizon(), dust * EngineSetting.SKY_DAILY_DUST_HAZE * daylight);
+        SkyColorUtility.saturate(phase.getZenith(), 1f + crisp * EngineSetting.SKY_DAILY_CRISP_CLARITY);
     }
 
     // Fog \\

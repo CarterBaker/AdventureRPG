@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarData;
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
+import application.bootstrap.calendarpipeline.calendar.CalendarStarStruct;
 import application.bootstrap.calendarpipeline.calendar.CalendarStartStruct;
 import application.bootstrap.calendarpipeline.calendar.CalendarTimeStruct;
 import application.bootstrap.calendarpipeline.calendar.SeasonRangeStruct;
@@ -20,7 +21,8 @@ class CalendarBuilder extends BuilderPackage {
     /*
      * Parses calendar JSON into a CalendarData/CalendarHandle: the day-of-
      * week and month layout, this calendar's own day/year shape, its
-     * starting point, and its named seasons — each anchoring a name to a
+     * starting point, the star its world orbits, and its named seasons —
+     * each anchoring a name to a
      * start date and a day length. A season's climate and sky-color
      * values are resolved separately, by name, through SeasonManager.
      * Bootstrap-only.
@@ -38,11 +40,12 @@ class CalendarBuilder extends BuilderPackage {
 
         CalendarTimeStruct time = parseTime(json, calendarName);
         CalendarStartStruct start = parseStart(json, calendarName, monthNames, monthDays, time);
+        CalendarStarStruct star = parseStar(json, calendarName);
         ObjectArrayList<SeasonRangeStruct> seasons = parseSeasons(json, calendarName, monthNames, monthDays);
 
         CalendarData calendarData = new CalendarData(
                 calendarName, daysOfWeek, monthNames, monthDays, totalDaysInYear,
-                start, time, seasons);
+                start, time, star, seasons);
 
         CalendarHandle calendarHandle = create(CalendarHandle.class);
         calendarHandle.constructor(calendarData);
@@ -128,6 +131,24 @@ class CalendarBuilder extends BuilderPackage {
         validateStartTime(calendarName, hour, minute, time);
 
         return new CalendarStartStruct(year, age, month, dayOfMonth, hour, minute);
+    }
+
+    private CalendarStarStruct parseStar(JsonObject json, String calendarName) {
+
+        JsonObject starObject = JsonUtility.validateObject(json, "star");
+
+        float distance = JsonUtility.validateFloat(starObject, "distance");
+        float luminosity = JsonUtility.validateFloat(starObject, "luminosity");
+
+        if (distance <= 0f)
+            throwException("Calendar \"" + calendarName + "\" star.distance " + distance +
+                    " is out of range — must be greater than 0.0");
+
+        if (luminosity <= 0f)
+            throwException("Calendar \"" + calendarName + "\" star.luminosity " + luminosity +
+                    " is out of range — must be greater than 0.0");
+
+        return new CalendarStarStruct(distance, luminosity);
     }
 
     private ObjectArrayList<SeasonRangeStruct> parseSeasons(

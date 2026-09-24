@@ -8,7 +8,9 @@ public class SkyPaletteStruct extends StructPackage {
      * One season's sky palette: a SkyPhaseStruct per phase of the day,
      * ordered night to day to match EngineSetting.SKY_PHASE_NAMES and the
      * solar elevations in SKY_PHASE_ELEVATIONS, plus how strongly this
-     * season paints its sun-side glow and its anti-solar twilight belt.
+     * season paints its sun-side glow and its anti-solar twilight belt, and
+     * its variety — how far each day's seeded sky may wander from this
+     * palette, 0 for identical days and 1 for the engine's full range.
      */
 
     // Phases
@@ -18,9 +20,12 @@ public class SkyPaletteStruct extends StructPackage {
     private final float glowStrength;
     private final float beltStrength;
 
+    // Daily
+    private final float variety;
+
     // Constructor \\
 
-    public SkyPaletteStruct(SkyPhaseStruct[] phases, float glowStrength, float beltStrength) {
+    public SkyPaletteStruct(SkyPhaseStruct[] phases, float glowStrength, float beltStrength, float variety) {
 
         // Phases
         this.phases = phases;
@@ -28,6 +33,9 @@ public class SkyPaletteStruct extends StructPackage {
         // Twilight
         this.glowStrength = glowStrength;
         this.beltStrength = beltStrength;
+
+        // Daily
+        this.variety = variety;
     }
 
     // Accessible \\
@@ -46,5 +54,9 @@ public class SkyPaletteStruct extends StructPackage {
 
     public float getBeltStrength() {
         return beltStrength;
+    }
+
+    public float getVariety() {
+        return variety;
     }
 }

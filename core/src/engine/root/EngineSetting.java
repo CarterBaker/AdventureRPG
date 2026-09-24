@@ -488,12 +488,28 @@ public class EngineSetting {
         public static final float SKY_BELT_ELEVATION_START = -0.24f;
         public static final float SKY_CLOUD_COLOR_ACCENT_STRENGTH = 0.7f;
         public static final String SKY_COLOR_UBO = "SkyColorData";
-        public static final float SKY_DAILY_BELT_VARIANCE = 0.25f;
-        public static final float SKY_DAILY_GLOW_VARIANCE = 0.30f;
-        public static final float SKY_DAILY_OFFSET_B = 0.02f;
-        public static final float SKY_DAILY_OFFSET_B_PHASE = 2.094f;
-        public static final float SKY_DAILY_OFFSET_G = 0.03f;
-        public static final float SKY_DAILY_OFFSET_R = 0.04f;
+        public static final float SKY_DAILY_BELT_HUE_DEGREES = 34.0f;
+        public static final float SKY_DAILY_BELT_STRENGTH_RANGE = 0.50f;
+        public static final float SKY_DAILY_CLOUD_HUE_DEGREES = 18.0f;
+        public static final float SKY_DAILY_COLD_CRISP_BIAS = 0.5f;
+        public static final float SKY_DAILY_COLD_HUE_BIAS_DEGREES = 12.0f;
+        public static final float SKY_DAILY_CRISP_CLARITY = 0.20f;
+        public static final float SKY_DAILY_DOME_HUE_DEGREES = 9.0f;
+        public static final float SKY_DAILY_DUST_GLOW_BOOST = 0.45f;
+        public static final float SKY_DAILY_DUST_HAZE = 0.25f;
+        public static final float SKY_DAILY_GLOW_HUE_DEGREES = 28.0f;
+        public static final float SKY_DAILY_GLOW_STRENGTH_RANGE = 0.40f;
+        public static final float SKY_DAILY_HOT_DUST_BIAS = 0.5f;
+        public static final float SKY_DAILY_HOT_HUE_BIAS_DEGREES = 6.0f;
+        public static final float SKY_DAILY_SATURATION_RANGE = 0.20f;
+        public static final long SKY_DAILY_STREAM_AIR = 9L;
+        public static final long SKY_DAILY_STREAM_BELT_HUE = 3L;
+        public static final long SKY_DAILY_STREAM_BELT_STRENGTH = 8L;
+        public static final long SKY_DAILY_STREAM_CLOUD_HUE = 5L;
+        public static final long SKY_DAILY_STREAM_DOME_HUE = 4L;
+        public static final long SKY_DAILY_STREAM_GLOW_HUE = 2L;
+        public static final long SKY_DAILY_STREAM_GLOW_STRENGTH = 7L;
+        public static final long SKY_DAILY_STREAM_SATURATION = 6L;
         public static final float SKY_DAYLIGHT_ELEVATION_END = 0.35f;
         public static final float SKY_DAYLIGHT_ELEVATION_START = -0.08f;
         public static final float SKY_FOG_COLOR_LIFT = 0.04f;
@@ -502,6 +518,7 @@ public class EngineSetting {
         public static final float SKY_GLOW_ELEVATION_PEAK = -0.02f;
         public static final float SKY_GLOW_ELEVATION_START = -0.30f;
         public static final float SKY_HAZE_LIFT = 0.35f;
+        public static final float SKY_HUE_AXIS_INVERSE_ROOT = 0.57735027f;
         public static final float SKY_HUMIDITY_HAZE = 0.20f;
         public static final float SKY_LUMINANCE_B = 0.0722f;
         public static final float SKY_LUMINANCE_G = 0.7152f;
@@ -626,8 +643,11 @@ public class EngineSetting {
         // Temperature \\
 
         public static final float DEFAULT_BASE_TEMPERATURE = 15.0f;
+        public static final long TEMPERATURE_DAILY_STREAM = 1L;
+        public static final float TEMPERATURE_DAILY_VARIANCE_SCALE = 0.6f;
         public static final float TEMPERATURE_DIURNAL_PEAK_TIME = 0.65f;
         public static final float TEMPERATURE_DRIFT_FREQUENCY = 0.02f;
+        public static final float TEMPERATURE_KELVIN_OFFSET = 273.15f;
         public static final float TEMPERATURE_PRECIPITATION_COOLING = 4.0f;
 
         // Season \\
@@ -643,10 +663,9 @@ public class EngineSetting {
 
         // Time & Clock \\
 
-        public static final double CLOCK_NOISE_DIVISOR = 1.6777216E7;
-        public static final long CLOCK_NOISE_MASK = 16777215L;
-        public static final double CLOCK_NOISE_MIN = 0.001;
-        public static final long CLOCK_NOISE_MULTIPLIER = -49064778989728563L;
+        public static final long CLOCK_DAILY_STREAM_NOISE = 0L;
+        public static final long CLOCK_DAILY_STREAM_SALT = 0x9E3779B97F4A7C15L;
+        public static final float CLOCK_NOISE_MIN = 0.001f;
         public static final double CLOCK_NOON = 0.5;
         public static final double CLOCK_QUARTER = 0.25;
         public static final double CLOCK_SUNRISE_MAX = 0.40;

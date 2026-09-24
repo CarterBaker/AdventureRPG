@@ -26,6 +26,7 @@ class SkyPaletteBranch extends BranchPackage {
     private SkyPhaseStruct[] phases;
     private float glowStrength;
     private float beltStrength;
+    private float variety;
 
     // Elevation
     private float[] phaseElevations;
@@ -63,6 +64,7 @@ class SkyPaletteBranch extends BranchPackage {
 
         this.glowStrength = SkyColorUtility.lerp(from.getGlowStrength(), to.getGlowStrength(), t);
         this.beltStrength = SkyColorUtility.lerp(from.getBeltStrength(), to.getBeltStrength(), t);
+        this.variety = SkyColorUtility.lerp(from.getVariety(), to.getVariety(), t);
     }
 
     // Phase \\
@@ -112,5 +114,9 @@ class SkyPaletteBranch extends BranchPackage {
 
     float getBeltStrength() {
         return beltStrength;
+    }
+
+    float getVariety() {
+        return variety;
     }
 }

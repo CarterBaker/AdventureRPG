@@ -13,6 +13,10 @@
     "lunarCycleDays": 28,
     "middayOffset": 0.5,
     "yearsPerAge": 1500,
+    "star": {
+        "distance": 1.0,
+        "luminosity": 1.0
+    },
     "daysOfWeek": [
         "Onesday",
         "Ensday",

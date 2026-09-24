@@ -86,8 +86,9 @@ class SeasonBuilder extends BuilderPackage {
 
         float glowStrength = parseStrength(skyObject, "glowStrength", seasonName);
         float beltStrength = parseStrength(skyObject, "beltStrength", seasonName);
+        float variety = parseStrength(skyObject, "variety", seasonName);
 
-        return new SkyPaletteStruct(phases, glowStrength, beltStrength);
+        return new SkyPaletteStruct(phases, glowStrength, beltStrength, variety);
     }
 
     private SkyPhaseStruct parseSkyPhase(JsonObject phaseObject, String seasonName) {
