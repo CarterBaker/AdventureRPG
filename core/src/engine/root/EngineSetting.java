@@ -668,6 +668,8 @@ public class EngineSetting {
         public static final float DEFAULT_SPRINT_SPEED = 7f;
         public static final float DEFAULT_SWIM_SPEED = 2.4f;
         public static final float DEFAULT_WALK_SPEED = 1.4f;
+        public static final float FREE_CAMERA_FLIGHT_SPEED = 12f;
+        public static final float FREE_CAMERA_SPRINT_MULTIPLIER = 4f;
         public static final int MAX_BONE_INFLUENCES = 4;
         public static final int SKINNED_BONE_TEXELS_PER_BONE = 3;
         public static final int SKINNED_INSTANCE_INITIAL_CAPACITY = 64;
@@ -705,6 +707,7 @@ public class EngineSetting {
         public static final float TAB_DRAG_EDGE_FRACTION = 0.25f;
         public static final int TAB_DRAG_PREVIEW_H = 144;
         public static final int TAB_DRAG_PREVIEW_W = 256;
+        public static final String TAB_TITLE_DEBUG = "Debug";
         public static final String TAB_TITLE_PREVIEW = "Preview";
         public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
 

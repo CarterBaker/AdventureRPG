@@ -31,6 +31,11 @@ public class MovementManager extends ManagerPackage {
      * wrap are final. It never writes back into position — it only maintains
      * a smoothed cosmetic value that camera/eye code reads separately — so it
      * can never affect collision, gravity, or block composition.
+     *
+     * fly() is the physics-free counterpart used by free cameras: FlightBranch
+     * supplies the displacement and nothing else touches it. Both paths share
+     * applyMovement(), the single place position, chunk boundary, and world
+     * wrap are resolved.
      */
 
     // Internal
@@ -39,6 +44,7 @@ public class MovementManager extends ManagerPackage {
     private BlockCollisionBranch blockCollisionBranch;
     private SwimBranch swimBranch;
     private NaturalGroundOffsetBranch naturalGroundOffsetBranch;
+    private FlightBranch flightBranch;
 
     // Cached Vectors
     private Vector3 movement;
@@ -58,6 +64,7 @@ public class MovementManager extends ManagerPackage {
         this.blockCollisionBranch = create(BlockCollisionBranch.class);
         this.swimBranch = create(SwimBranch.class);
         this.naturalGroundOffsetBranch = create(NaturalGroundOffsetBranch.class);
+        this.flightBranch = create(FlightBranch.class);
 
         // Cached Vectors
         this.movement = new Vector3();
@@ -71,11 +78,7 @@ public class MovementManager extends ManagerPackage {
 
     public void move(EntityInstance entity) {
 
-        WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
-        Vector3 position = worldPosition.getPosition();
-        long chunkCoordinate = worldPosition.getChunkCoordinate();
-        int chunkCoordinateX = Coordinate2Long.unpackX(chunkCoordinate);
-        int chunkCoordinateY = Coordinate2Long.unpackY(chunkCoordinate);
+        Vector3 position = entity.getWorldPositionStruct().getPosition();
 
         movement.set(0, 0, 0);
 
@@ -106,23 +109,48 @@ public class MovementManager extends ManagerPackage {
         else
             gravityBranch.postCollision(preCollisionSnapshot, movement, entity, wading);
 
-        // 7. Apply
+        // 7. Apply, chunk update, and world wrap
+        applyMovement(entity);
+
+        // 8. Cosmetic ground offset — reads the now-final flat position only
+        naturalGroundOffsetBranch.update(entity);
+    }
+
+    public void fly(EntityInstance entity) {
+
+        movement.set(0, 0, 0);
+
+        // 1. Free flight — no liquid, gravity, or collision
+        flightBranch.calculate(movement, entity);
+
+        // 2. Apply, chunk update, and world wrap
+        applyMovement(entity);
+    }
+
+    // Apply \\
+
+    private void applyMovement(EntityInstance entity) {
+
+        WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
+        Vector3 position = worldPosition.getPosition();
+        long chunkCoordinate = worldPosition.getChunkCoordinate();
+        int chunkCoordinateX = Coordinate2Long.unpackX(chunkCoordinate);
+        int chunkCoordinateY = Coordinate2Long.unpackY(chunkCoordinate);
+
+        // Apply
         position.x += movement.x;
         position.y += movement.y;
         position.z += movement.z;
 
-        // 8. Chunk update
+        // Chunk update
         chunkCoordinate = updateChunkCoordinateFrom(position, chunkCoordinateX, chunkCoordinateY);
 
-        // 9. World wrap
+        // World wrap
         WorldWrapUtility.wrapAroundChunk(position);
         chunkCoordinate = WorldWrapUtility.wrapAroundWorld(entity.getWorldHandle(), chunkCoordinate);
 
         worldPosition.setPosition(position);
         worldPosition.setChunkCoordinate(chunkCoordinate);
-
-        // 10. Cosmetic ground offset — reads the now-final flat position only
-        naturalGroundOffsetBranch.update(entity);
     }
 
     // Chunk \\

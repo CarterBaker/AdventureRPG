@@ -76,6 +76,12 @@ public class PlayerManager extends ManagerPackage {
      * EntityRenderSystem.pushCharacter(), shared with every NPC. This class
      * owns only the state that entry point needs: which entity, which
      * camera, and (via isFirstPerson()) which bone to hide.
+     *
+     * spawnFreeCamera() registers a window exactly like spawnPlayer(), but
+     * the entity is only an anchor the world streams around — it is never
+     * drawn or animated and never places or breaks blocks. Each frame it is
+     * flown through MovementManager.fly() instead of moved, and the camera
+     * sits directly at its eye position with no zoom.
      */
 
     // Internal
@@ -96,6 +102,7 @@ public class PlayerManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<RawInputHandle> windowID2RawInput;
     private Int2ObjectOpenHashMap<WindowInstance> windowID2Window;
     private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
+    private Int2BooleanOpenHashMap windowID2FreeCamera;
 
     // Per-window zoom
     private Int2FloatOpenHashMap windowID2ZoomDistance;
@@ -125,6 +132,7 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2RawInput = new Int2ObjectOpenHashMap<>();
         this.windowID2Window = new Int2ObjectOpenHashMap<>();
         this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
+        this.windowID2FreeCamera = new Int2BooleanOpenHashMap();
 
         this.windowID2ZoomDistance = new Int2FloatOpenHashMap();
         this.windowID2ZoomTarget = new Int2FloatOpenHashMap();
@@ -171,6 +179,14 @@ public class PlayerManager extends ManagerPackage {
     // Spawn \\
 
     public EntityInstance spawnPlayer(WindowInstance window, RawInputHandle rawInput) {
+        return registerPlayer(window, rawInput, false);
+    }
+
+    public EntityInstance spawnFreeCamera(WindowInstance window, RawInputHandle rawInput) {
+        return registerPlayer(window, rawInput, true);
+    }
+
+    private EntityInstance registerPlayer(WindowInstance window, RawInputHandle rawInput, boolean freeCamera) {
         EntityInstance player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
         int windowID = window.getWindowID();
         windowID2Player.put(windowID, player);
@@ -178,6 +194,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2RawInput.put(windowID, rawInput);
         windowID2Window.put(windowID, window);
         windowID2VerifyPlayerPosition.put(windowID, true);
+        windowID2FreeCamera.put(windowID, freeCamera);
         windowID2ZoomDistance.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2ZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2FirstPersonToggled.put(windowID, false);
@@ -207,6 +224,11 @@ public class PlayerManager extends ManagerPackage {
 
         // Translate raw hardware → game intent before anything reads EntityInputHandle
         playerInputSystem.translate(raw, player.getEntityInputHandle());
+
+        if (windowID2FreeCamera.get(windowID)) {
+            calculateFreeCameraPosition(player, camera);
+            return;
+        }
 
         writeMovementState(player);
         updateAnimationState(player);
@@ -239,6 +261,16 @@ public class PlayerManager extends ManagerPackage {
                 input.isSecondaryAction());
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
+    }
+
+    private void calculateFreeCameraPosition(EntityInstance anchor, CameraInstance camera) {
+
+        movementManager.fly(anchor);
+
+        resolveEyePosition(anchor);
+        camera.setPosition(eyePosition);
+
+        internalBufferSystem.updatePlayerPosition(anchor.getWorldPositionStruct());
     }
 
     private void resolveEyePosition(EntityInstance player) {
