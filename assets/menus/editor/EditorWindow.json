@@ -487,11 +487,11 @@
                   "anchor": "bottom_left",
                   "pivot": "top_left",
                   "position": {
-                    "x": "8px",
+                    "x": "0px",
                     "y": "0px"
                   },
                   "size": {
-                    "x": "calc(100% - 40px)",
+                    "x": "calc(100% - 28px)",
                     "y": "100%"
                   },
                   "align": "left",

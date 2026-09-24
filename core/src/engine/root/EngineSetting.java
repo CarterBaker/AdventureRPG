@@ -697,6 +697,8 @@ public class EngineSetting {
         public static final String FONT_DEFAULT_MESH = "fonts/FontMesh";
         public static final String FONT_DEFAULT_NAME = "MontserratAlternates";
         public static final String FONT_DEFAULT_SIZE_PERCENT = "50%";
+        public static final float FONT_FIT_PADDING_X_PIXELS = 6f;
+        public static final float FONT_FIT_PADDING_Y_PIXELS = 2f;
         public static final float FONT_LETTER_SPACING_RATIO = 0.05f;
         public static final int FONT_RASTER_SIZE = 24;
 

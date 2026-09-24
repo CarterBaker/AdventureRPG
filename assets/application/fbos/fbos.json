@@ -42,6 +42,7 @@
         {
             "name": "ItemEditorScene",
             "sizingStrategy": "WINDOW_RELATIVE",
+            "clearColor": [0.0, 0.0, 0.0, 1.0],
             "attachments": [
                 { "type": "color", "format": "RGBA8",   "name": "color" },
                 { "type": "depth", "format": "DEPTH24", "name": "depth" }

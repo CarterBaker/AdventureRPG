@@ -40,6 +40,11 @@ public class MenuRenderSystem extends SystemPackage {
      *
      * resolveSprite picks the correct sprite instance for the active state:
      * hoverEnter, hover, hoverExit, or click.
+     *
+     * Label text is fitted to its element: font_size is the size text grows
+     * to, and it shrinks until it fits inside the element less its padding.
+     * The text's full glyph box — descenders included — is centred
+     * vertically, and horizontally unless the label aligns left or right.
      */
 
     private RenderManager renderManager;
@@ -381,29 +386,59 @@ public class MenuRenderSystem extends SystemPackage {
         if (text != null)
             font.setText(text);
 
-        float targetFontSize = Math.max(1f, data.getFontSize().resolve(element.getComputedH()));
-        font.setFontSize(targetFontSize);
+        float rasterPixelSize = font.getHandle().getRasterPixelSize();
+        float scale = resolveTextScale(element, font, data, rasterPixelSize);
+        font.setFontSize(scale * rasterPixelSize);
 
         if (!font.hasGlyphs())
             return;
 
-        float rasterPixelSize = font.getHandle().getRasterPixelSize();
-        float scale = rasterPixelSize > 0f ? targetFontSize / rasterPixelSize : 1f;
-        float scaledW = font.getTextWidth() * scale;
-        float scaledH = font.getTextHeight() * scale;
-
-        TextAlign align = data.getTextAlign();
-        float x;
-        if (align == TextAlign.LEFT)
-            x = element.getComputedLeft();
-        else if (align == TextAlign.RIGHT)
-            x = element.getComputedLeft() + element.getComputedW() - scaledW;
-        else
-            x = element.getComputedLeft() + (element.getComputedW() - scaledW) * 0.5f;
-
-        float y = element.getComputedTop() + (element.getComputedH() - scaledH) * 0.5f;
+        float x = resolveTextX(element, data.getTextAlign(), font.getTextWidth() * scale);
+        float y = element.getComputedTop()
+                + (element.getComputedH() - font.getTextHeight() * scale) * 0.5f
+                - font.getTextBottom() * scale;
 
         fontRenderSystem.submit(font, x, y, scale, currentMask(), targetFbo, currentWindow);
+    }
+
+    // Text Fit \\
+
+    private float resolveTextScale(
+            ElementInstance element,
+            FontInstance font,
+            ElementData data,
+            float rasterPixelSize) {
+
+        if (rasterPixelSize <= 0f)
+            return 1f;
+
+        float targetFontSize = Math.max(1f, data.getFontSize().resolve(element.getComputedH()));
+        float scale = targetFontSize / rasterPixelSize;
+
+        float availableW = element.getComputedW() - EngineSetting.FONT_FIT_PADDING_X_PIXELS * 2f;
+        float availableH = element.getComputedH() - EngineSetting.FONT_FIT_PADDING_Y_PIXELS * 2f;
+
+        if (font.getTextWidth() > 0f && availableW > 0f)
+            scale = Math.min(scale, availableW / font.getTextWidth());
+
+        if (font.getTextHeight() > 0f && availableH > 0f)
+            scale = Math.min(scale, availableH / font.getTextHeight());
+
+        return scale;
+    }
+
+    private float resolveTextX(ElementInstance element, TextAlign align, float scaledW) {
+
+        float left = element.getComputedLeft();
+        float width = element.getComputedW();
+
+        if (align == TextAlign.LEFT)
+            return left + EngineSetting.FONT_FIT_PADDING_X_PIXELS;
+
+        if (align == TextAlign.RIGHT)
+            return left + width - EngineSetting.FONT_FIT_PADDING_X_PIXELS - scaledW;
+
+        return left + (width - scaledW) * 0.5f;
     }
 
     // Mask \\
