@@ -453,6 +453,38 @@
           ]
         }
       ]
+    },
+    {
+      "id": "Secondary",
+      "elements": [
+        {
+          "id": "secondary_background",
+          "type": "sprite",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "size": {
+            "x": "100%",
+            "y": "100%"
+          },
+          "sprite": "util/Default",
+          "color": [
+            0.13,
+            0.13,
+            0.13,
+            1.0
+          ]
+        },
+        {
+          "id": "secondary_dock_canvas",
+          "type": "canvas_area",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "100%",
+            "y": "100%"
+          }
+        }
+      ]
     }
   ]
 }

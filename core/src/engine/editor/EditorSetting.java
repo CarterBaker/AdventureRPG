@@ -16,6 +16,7 @@ public class EditorSetting {
 
     // Menus \\
     public static final String MENU_EDITOR_BASE = "editor/EditorWindow/Base";
+    public static final String MENU_EDITOR_SECONDARY = "editor/EditorWindow/Secondary";
     public static final String MENU_EDITOR_TOOLBAR = "editor/EditorWindow/Toolbar";
     public static final String MENU_EDITOR_CREATE_LAYOUT_DIALOG = "editor/EditorWindow/CreateLayoutDialog";
     public static final String MENU_EDITOR_LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";

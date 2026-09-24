@@ -9,8 +9,8 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
     /*
      * Editor bootstrap root. Registers editor-global bootstrap managers that
      * must be available before runtime editor contexts and menu reflection run:
-     * the tab pipeline, and the one set of editor menu branches every editor
-     * window's chrome routes its callbacks to.
+     * the tab pipeline, and the one set of editor menu branches the toolbar and
+     * every tab's chrome route their callbacks to.
      */
 
     // Internal \\

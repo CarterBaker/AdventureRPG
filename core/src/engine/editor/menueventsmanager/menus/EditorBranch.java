@@ -14,10 +14,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EditorBranch extends BranchPackage {
     /*
-     * Menu event handlers for the editor toolbar. One instance serves the
-     * toolbar of every editor window: handlers that act on a window take the
-     * WindowInstance the click happened in and resolve its OS window, so a
-     * preview or dialog always opens in the window that asked for it.
+     * Menu event handlers for the editor toolbar. Handlers that act on a
+     * window take the WindowInstance the click happened in and resolve its OS
+     * window, so a preview or dialog always opens in the window that asked
+     * for it.
      *
      * Tab/window operations delegate to TabManager with no policy here.
      *

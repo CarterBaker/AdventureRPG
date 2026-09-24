@@ -3,7 +3,7 @@ package engine.root;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.screencapturepipeline.screencapturemanager.ScreenCaptureManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import engine.editor.EditorWindowContext;
+import engine.editor.EditorMainWindowContext;
 
 public class EditorEngine extends EnginePackage {
 
@@ -11,8 +11,8 @@ public class EditorEngine extends EnginePackage {
      * EditorEngine defines the concrete editor engine instance. Registers
      * kernel infrastructure via KernelAssembly, bootstraps both the shared
      * game pipeline and the editor-specific pipeline via their respective
-     * BootstrapAssemblies, then pairs the main window with the same
-     * EditorWindowContext every secondary editor window uses, in awake().
+     * BootstrapAssemblies, then pairs the main window with
+     * EditorMainWindowContext in awake().
      * draw() flushes the main window only — detached windows flush themselves
      * in their own ApplicationListener.render() callback after the engine's
      * full push phase is complete — and is also the engine's sole authority
@@ -31,7 +31,7 @@ public class EditorEngine extends EnginePackage {
     private editor.bootstrap.EditorBootstrapAssembly editorBootstrapAssembly;
 
     // Runtime
-    private EditorWindowContext editorWindowContext;
+    private EditorMainWindowContext editorMainWindowContext;
 
     // Render
     private WindowManager windowManager;
@@ -71,7 +71,7 @@ public class EditorEngine extends EnginePackage {
 
     @Override
     protected void awake() {
-        this.editorWindowContext = createContext(EditorWindowContext.class, windowManager.getMainWindow());
+        this.editorMainWindowContext = createContext(EditorMainWindowContext.class, windowManager.getMainWindow());
     }
 
     // Draw \\

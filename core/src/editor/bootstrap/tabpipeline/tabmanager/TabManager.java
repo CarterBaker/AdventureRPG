@@ -10,7 +10,7 @@ import editor.bootstrap.tabpipeline.tab.TabContext;
 import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
-import engine.editor.EditorWindowContext;
+import engine.editor.EditorSecondaryWindowContext;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -24,9 +24,9 @@ public class TabManager extends ManagerPackage {
     /*
      * Coordinates tab registration, BSP bookkeeping, and rect propagation
      * across every editor OS window. The main window and every secondary
-     * window are registered through the same registerOsWindow() and run the
-     * same EditorWindowContext, so no path here branches on which window a
-     * tab lives in.
+     * window are registered through the same registerOsWindow() and publish
+     * their dock through the same EditorDockSystem, so no path here branches
+     * on which window a tab lives in.
      *
      * Each structural operation has exactly one owner:
      *
@@ -236,13 +236,13 @@ public class TabManager extends ManagerPackage {
     // OS Window Lifecycle \\
     /*
      * The one and only way a secondary editor OS window is ever created. The
-     * window runs the same EditorWindowContext as the main window, so it gets
-     * the same chrome and toolbar.
+     * window runs EditorSecondaryWindowContext — the same dock as the main
+     * window, filling the whole window, with no toolbar.
      */
     public WindowInstance openSecondaryOsWindow() {
         WindowInstance osWindow = windowManager.openWindow(
                 EngineSetting.WINDOW_TITLE_EDITOR_SECONDARY,
-                EditorWindowContext.class);
+                EditorSecondaryWindowContext.class);
         registerOsWindow(osWindow);
         return osWindow;
     }
