@@ -1,4 +1,0 @@
-{
-    "vert": "util/BlitShader.vsh",
-    "frag": "weather/resolve/WeatherResolveShader.fsh"
-}

@@ -19,9 +19,9 @@ out vec4 fragColor;
  * target declares and sampled back up when composited. Every live cloud
  * layer is integrated along the view ray out to the edge of the weather map
  * (CloudMarch) and written premultiplied, so the upscale blends cloud edges
- * against transparency rather than against black. The target composites
- * through WeatherResolveShader, which averages away the march's per-pixel
- * jitter while upscaling and restores straight alpha. Terrain composites
+ * against transparency rather than against black. The target declares a
+ * resolving blit, which averages away the march's per-pixel jitter while
+ * upscaling and restores straight alpha. Terrain composites
  * over this pass; clouds standing in front of terrain are fogged in by the
  * lighting pass.
  */

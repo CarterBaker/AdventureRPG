@@ -128,6 +128,7 @@ class FBOBuilder extends BuilderPackage {
         int height = JsonUtility.getInt(json, "height", settings.windowHeight);
         boolean premultipliedBlend = json.has("premultipliedBlend") && json.get("premultipliedBlend").getAsBoolean();
         boolean premultipliedBlit = JsonUtility.getBoolean(json, "premultipliedBlit", false);
+        boolean resolveBlit = JsonUtility.getBoolean(json, "resolveBlit", false);
         Color clearColor = parseClearColor(json);
         float resolutionScale = JsonUtility.getFloat(
                 json, "resolutionScale", EngineSetting.DEFAULT_FBO_RESOLUTION_SCALE);
@@ -148,7 +149,7 @@ class FBOBuilder extends BuilderPackage {
         }
 
         return new FboData(name, attachments, strategy, width, height, premultipliedBlend, premultipliedBlit,
-                clearColor, resolutionScale);
+                resolveBlit, clearColor, resolutionScale);
     }
 
     private Color parseClearColor(JsonObject json) {

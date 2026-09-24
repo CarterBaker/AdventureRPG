@@ -170,6 +170,7 @@ public class FboRenderSystem extends SystemPackage {
         if (material == null) {
             material = materialManager.cloneMaterial(EngineSetting.DEFAULT_BLIT_MATERIAL);
             material.setUniform(EngineSetting.BLIT_PREMULTIPLIED_UNIFORM, fbo.getFboData().isPremultipliedBlit());
+            material.setUniform(EngineSetting.BLIT_RESOLVE_UNIFORM, fbo.getFboData().isResolveBlit());
         }
 
         model = create(ModelInstance.class);
