@@ -42,8 +42,12 @@ class FBOBuilder extends BuilderPackage {
     }
 
     FboInstance buildInstance(FboData data) {
-        int width = data.getSizingStrategy() == FboSizingStrategy.FIXED ? data.getWidth() : settings.windowWidth;
-        int height = data.getSizingStrategy() == FboSizingStrategy.FIXED ? data.getHeight() : settings.windowHeight;
+        int width = data.getSizingStrategy() == FboSizingStrategy.FIXED
+                ? data.getWidth()
+                : data.scaleWindowDimension(settings.windowWidth);
+        int height = data.getSizingStrategy() == FboSizingStrategy.FIXED
+                ? data.getHeight()
+                : data.scaleWindowDimension(settings.windowHeight);
 
         IntArrayList framebuffers = new IntArrayList();
         IntArrayList textures = new IntArrayList();
@@ -125,6 +129,12 @@ class FBOBuilder extends BuilderPackage {
         boolean premultipliedBlend = json.has("premultipliedBlend") && json.get("premultipliedBlend").getAsBoolean();
         boolean premultipliedBlit = JsonUtility.getBoolean(json, "premultipliedBlit", false);
         Color clearColor = parseClearColor(json);
+        float resolutionScale = JsonUtility.getFloat(
+                json, "resolutionScale", EngineSetting.DEFAULT_FBO_RESOLUTION_SCALE);
+
+        if (resolutionScale <= 0f || resolutionScale > 1f)
+            throwException("FBO \"" + name + "\" resolutionScale must be greater than 0.0 and at most 1.0, got: "
+                    + resolutionScale);
 
         ObjectArrayList<AttachmentStruct> attachments = new ObjectArrayList<>();
         JsonArray attArray = JsonUtility.validateArray(json, "attachments");
@@ -138,7 +148,7 @@ class FBOBuilder extends BuilderPackage {
         }
 
         return new FboData(name, attachments, strategy, width, height, premultipliedBlend, premultipliedBlit,
-                clearColor);
+                clearColor, resolutionScale);
     }
 
     private Color parseClearColor(JsonObject json) {

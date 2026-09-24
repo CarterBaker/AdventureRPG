@@ -339,8 +339,11 @@ public class FboManager extends ManagerPackage {
         Object[] elements = instances.elements();
         int count = instances.size();
 
-        for (int i = 0; i < count; i++)
-            resize((FboInstance) elements[i], width, height);
+        for (int i = 0; i < count; i++) {
+            FboInstance instance = (FboInstance) elements[i];
+            FboData data = instance.getFboData();
+            resize(instance, data.scaleWindowDimension(width), data.scaleWindowDimension(height));
+        }
     }
 
     private void track(

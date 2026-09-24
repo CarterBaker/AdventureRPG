@@ -27,6 +27,10 @@ public class FboData extends DataPackage {
      * premultipliedBlit marks targets whose premultiplied content must be
      * restored to straight alpha when FboRenderSystem blits them to their
      * window, so translucent pixels keep their full coverage on screen.
+     *
+     * resolutionScale sizes a WINDOW_RELATIVE target as a fraction of its
+     * window, for passes soft enough to render below screen resolution — the
+     * blit samples it linearly back up to the window.
      */
 
     // Identity
@@ -37,6 +41,7 @@ public class FboData extends DataPackage {
     private final boolean premultipliedBlend;
     private final boolean premultipliedBlit;
     private final Color clearColor;
+    private final float resolutionScale;
 
     // Dimensions
     private final int width;
@@ -52,7 +57,8 @@ public class FboData extends DataPackage {
             int height,
             boolean premultipliedBlend,
             boolean premultipliedBlit,
-            Color clearColor) {
+            Color clearColor,
+            float resolutionScale) {
 
         this.name = name;
         this.attachments = attachments;
@@ -62,6 +68,7 @@ public class FboData extends DataPackage {
         this.premultipliedBlend = premultipliedBlend;
         this.premultipliedBlit = premultipliedBlit;
         this.clearColor = clearColor;
+        this.resolutionScale = resolutionScale;
         this.colorName2Index = new Object2IntOpenHashMap<>();
         this.colorName2Index.defaultReturnValue(-1);
 
@@ -107,6 +114,14 @@ public class FboData extends DataPackage {
 
     public Color getClearColor() {
         return clearColor;
+    }
+
+    public float getResolutionScale() {
+        return resolutionScale;
+    }
+
+    public int scaleWindowDimension(int windowDimension) {
+        return Math.max(1, Math.round(windowDimension * resolutionScale));
     }
 
     public int getWidth() {

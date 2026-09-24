@@ -203,6 +203,7 @@ public class EngineSetting {
         public static final String DEFAULT_BLIT_MATERIAL = "util/BlitMaterial";
         public static final String DEFAULT_BLIT_MESH = "util/BlitMesh";
         public static final int DEFAULT_BLOCK_DIRECTION = 4;
+        public static final float DEFAULT_FBO_RESOLUTION_SCALE = 1.0f;
         public static final float FRUSTUM_ALWAYS_VISIBLE_DIST_SQ = 4.5f;
         public static final float FRUSTUM_CHUNK_BLEED_SCALE = 0.75f;
         public static final float FRUSTUM_HALF_PI = (float) (Math.PI / 2f);

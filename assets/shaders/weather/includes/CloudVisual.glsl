@@ -49,8 +49,8 @@ const float CLOUD_VISUAL_LOD_FULL_ANGLE     = 0.012;
 // ── Level of Detail ────────────────────────────────────────────────────────
 
 // Octaves whose features are still wider than a pixel at this distance.
-int resolveCloudOctaves(int layer, float sampleDistance) {
-    float angle = resolveCloudLayerFeatureSize(layer) / max(sampleDistance, 1.0);
+int resolveCloudOctaves(float featureSize, float sampleDistance) {
+    float angle = featureSize / max(sampleDistance, 1.0);
 
     if (angle > CLOUD_VISUAL_OCTAVES_NEAR_ANGLE)
     return CLOUD_VISUAL_OCTAVES_NEAR;
@@ -59,9 +59,8 @@ int resolveCloudOctaves(int layer, float sampleDistance) {
 }
 
 // Fraction of the detail octave still larger than a pixel at this distance.
-float resolveCloudDetailFade(int layer, float sampleDistance) {
-    float detailSize = resolveCloudLayerFeatureSize(layer) / max(u_weatherLayerNoise[layer].z, 1.0);
-    float angle      = detailSize / max(sampleDistance, 1.0);
+float resolveCloudDetailFade(float detailSize, float sampleDistance) {
+    float angle = detailSize / max(sampleDistance, 1.0);
 
     return clamp(
         (angle - CLOUD_VISUAL_LOD_MIN_ANGLE) / (CLOUD_VISUAL_LOD_FULL_ANGLE - CLOUD_VISUAL_LOD_MIN_ANGLE),
@@ -70,6 +69,15 @@ float resolveCloudDetailFade(int layer, float sampleDistance) {
 
 // ── Lighting ───────────────────────────────────────────────────────────────
 
+// Everything about the lights that is constant along one ray, resolved once
+// per ray rather than once per step.
+struct CloudLight {
+    vec3  sunDir;
+    vec3  moonDir;
+    vec3  sunRadiance;
+    vec3  moonRadiance;
+};
+
 // Henyey-Greenstein normalised so isotropic scattering is 1, blended in as a
 // lobe rather than replacing the flat response.
 float resolveCloudPhase(float cosTheta) {
@@ -77,6 +85,27 @@ float resolveCloudPhase(float cosTheta) {
     float hg = (1.0 - g * g) / pow(max(1.0 + g * g - 2.0 * g * cosTheta, CLOUD_VISUAL_EPSILON), 1.5);
 
     return mix(1.0, hg, CLOUD_VISUAL_FORWARD_WEIGHT);
+}
+
+CloudLight resolveCloudLight(vec3 rayDir) {
+    CloudLight light;
+
+    light.sunDir       = normalize(u_sunDirection);
+    light.moonDir      = normalize(u_moonDirection);
+    light.sunRadiance  = u_sunColor * u_sunIntensity * resolveCloudPhase(dot(rayDir, light.sunDir));
+    light.moonRadiance = u_moonColor * CLOUD_VISUAL_MOON_TINT
+    * min(u_moonIntensity, CLOUD_VISUAL_MOON_INTENSITY_MAX);
+
+    return light;
+}
+
+// A layer's albedo, constant across the layer, resolved once per layer.
+vec3 resolveCloudLayerAlbedo(int layer) {
+    vec4  colorParams = u_weatherLayerColor[layer];
+    float luminance   = dot(colorParams.rgb, vec3(0.299, 0.587, 0.114));
+    vec3  albedo      = mix(vec3(luminance), colorParams.rgb, colorParams.a);
+
+    return mix(albedo, albedo * u_skyCloudColor, CLOUD_VISUAL_SKY_TINT_STRENGTH);
 }
 
 // Transmittance toward a light through the part of the layer above the
@@ -92,30 +121,22 @@ float resolveCloudLightTransmittance(vec3 domeNormal, vec3 lightDir, float extin
 }
 
 vec3 shadeCloudSample(
-    int layer, vec3 rayDir, vec3 domeNormal, float heightFraction, float density, float thickness,
+    CloudLight light, vec3 albedo, vec3 domeNormal, float heightFraction, float density, float thickness,
     float horizontalDistance) {
-    vec4  colorParams = u_weatherLayerColor[layer];
-    vec3  sunDir      = normalize(u_sunDirection);
-    vec3  moonDir     = normalize(u_moonDirection);
-    float h           = clamp(heightFraction, 0.0, 1.0);
-    float extinction  = density * CLOUD_VISUAL_EXTINCTION_PER_BLOCK;
-    float remaining   = (1.0 - h) * thickness;
+    float h          = clamp(heightFraction, 0.0, 1.0);
+    float extinction = density * CLOUD_VISUAL_EXTINCTION_PER_BLOCK;
+    float remaining  = (1.0 - h) * thickness;
 
     float powder = mix(1.0, 1.0 - exp(-extinction * thickness * 2.0), CLOUD_VISUAL_POWDER_STRENGTH);
 
-    vec3 sunLight = u_sunColor * u_sunIntensity
-    * resolveCloudLightTransmittance(domeNormal, sunDir, extinction, remaining)
-    * resolveCloudPhase(dot(rayDir, sunDir)) * powder;
+    vec3 sunLight = light.sunRadiance * powder
+    * resolveCloudLightTransmittance(domeNormal, light.sunDir, extinction, remaining);
 
-    vec3 moonLight = u_moonColor * CLOUD_VISUAL_MOON_TINT * min(u_moonIntensity, CLOUD_VISUAL_MOON_INTENSITY_MAX)
-    * resolveCloudLightTransmittance(domeNormal, moonDir, extinction, remaining);
+    vec3 moonLight = light.moonRadiance
+    * resolveCloudLightTransmittance(domeNormal, light.moonDir, extinction, remaining);
 
     vec3 ambient = mix(u_skyHorizonColor, u_skyZenithColor, h)
     * mix(CLOUD_VISUAL_AMBIENT_BASE, CLOUD_VISUAL_AMBIENT_TOP, h);
-
-    float luminance = dot(colorParams.rgb, vec3(0.299, 0.587, 0.114));
-    vec3  albedo    = mix(vec3(luminance), colorParams.rgb, colorParams.a);
-    albedo = mix(albedo, albedo * u_skyCloudColor, CLOUD_VISUAL_SKY_TINT_STRENGTH);
 
     vec3 shaded = albedo * (ambient + sunLight + moonLight);
 

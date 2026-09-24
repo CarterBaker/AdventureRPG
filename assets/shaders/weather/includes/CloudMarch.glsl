@@ -9,63 +9,92 @@
 
 /*
  * Integrates the grid's cloud layers along a ray from the camera, out to a
- * given distance. The weather pass integrates to the edge of the weather map
- * for the sky; the lighting pass integrates only as far as each fragment, so
- * a peak wrapped in cloud, or terrain seen from inside one, fogs exactly as
- * the sky's clouds are drawn. Layers are marched nearest first, whichever
- * side of them the camera is on, and composited front to back through one
- * running transmittance. Steps are sized to each layer's thickness and
- * features, and fixed along the ray with no screen-space jitter, so the image
- * stays stable as the camera turns.
+ * given distance, at one of two qualities. The sky march runs in the weather
+ * pass at reduced resolution: it refines finely where the ray meets cloud,
+ * resolves full detail, and — wherever a ray's steps grow coarse next to the
+ * layer, as they do toward the horizon — offsets them by a per-pixel
+ * interleaved gradient, which turns step slicing into fine grain that the
+ * pass's own upscale then smooths away. Rays with fine steps, such as those
+ * looking up through a layer, keep centred steps and no grain at all. The fog march runs per terrain
+ * fragment in the lighting pass, only where cloud stands between the camera
+ * and the fragment, with a few fixed steps and no detail — terrain fog needs
+ * the cloud's density, not its fine silhouette. Layers are marched nearest
+ * first, whichever side of them the camera is on, and composited front to
+ * back through one running transmittance.
  */
 
-const float CLOUD_MARCH_EPSILON                = 0.001;
-const float CLOUD_MARCH_TRANSMITTANCE_CUTOFF   = 0.02;
-const float CLOUD_MARCH_MIN_THICKNESS_BLOCKS   = 1.0;
-const float CLOUD_MARCH_STEP_THICKNESS_RATIO   = 0.2;
-const float CLOUD_MARCH_STEP_FEATURE_RATIO     = 0.6;
-const int   CLOUD_MARCH_STEP_COUNT_MIN         = 6;
-const int   CLOUD_MARCH_STEP_COUNT_MAX         = 24;
-const int   CLOUD_MARCH_STEP_BUDGET            = 48;
-const float CLOUD_MARCH_REFINE_RATIO           = 0.2;
+struct CloudMarchQuality {
+    int  stepCountMin;
+    int  stepCountMax;
+    int  stepBudget;
+    int  octaveLimit;
+    bool refine;
+    bool detail;
+};
+
+const CloudMarchQuality CLOUD_MARCH_SKY = CloudMarchQuality(6, 32, 64, 4, true, true);
+const CloudMarchQuality CLOUD_MARCH_FOG = CloudMarchQuality(4, 8, 8, 2, false, false);
+
+const float CLOUD_MARCH_EPSILON              = 0.001;
+const float CLOUD_MARCH_TRANSMITTANCE_CUTOFF = 0.02;
+const float CLOUD_MARCH_MIN_THICKNESS_BLOCKS = 1.0;
+const float CLOUD_MARCH_STEP_THICKNESS_RATIO = 0.2;
+const float CLOUD_MARCH_STEP_FEATURE_RATIO   = 0.6;
+const float CLOUD_MARCH_REFINE_RATIO         = 0.25;
+const float CLOUD_MARCH_CENTERED_OFFSET      = 0.5;
+const float CLOUD_MARCH_JITTER_FULL_RATIO    = 2.0;
+const float CLOUD_MARCH_UNBOUNDED_DISTANCE   = 1.0e30;
+const vec3  CLOUD_MARCH_JITTER_MAGIC         = vec3(0.06711056, 0.00583715, 52.9829189);
+
+// Interleaved gradient noise: a per-pixel step offset whose neighbours are
+// as different as possible, so slicing breaks into the finest grain.
+float resolveCloudMarchJitter() {
+    return fract(CLOUD_MARCH_JITTER_MAGIC.z * fract(dot(gl_FragCoord.xy, CLOUD_MARCH_JITTER_MAGIC.xy)));
+}
 
 // Coarse steps until the ray meets cloud, then back up half a step and
 // continue in fine steps, so the surface the eye actually sees is resolved
 // finely while empty sky is crossed cheaply. Once a coarse step's worth of
 // fine steps finds nothing, the ray has left that cloud and returns to coarse
 // steps until it meets the next one.
-void marchCloudLayer(int layer, vec3 rayDir, float tEnter, float tExit,
-    inout vec3 color, inout float transmittance) {
+void marchCloudLayer(
+    int layer, CloudMarchQuality quality, CloudLight light, vec3 rayDir, float tEnter, float tExit,
+    float stepOffset, inout vec3 color, inout float transmittance) {
     vec4  shape        = u_weatherLayerShape[layer];
     float baseAltitude = shape.x - u_weatherPlanet.y;
     float thickness    = max(shape.y, CLOUD_MARCH_MIN_THICKNESS_BLOCKS);
+    float featureSize  = resolveCloudLayerFeatureSize(layer);
+    float detailSize   = featureSize / max(u_weatherLayerNoise[layer].z, 1.0);
+    vec3  albedo       = resolveCloudLayerAlbedo(layer);
     float pathLength   = tExit - tEnter;
     float stepTarget   = min(
         thickness * CLOUD_MARCH_STEP_THICKNESS_RATIO,
-        resolveCloudLayerFeatureSize(layer) * CLOUD_MARCH_STEP_FEATURE_RATIO);
+        featureSize * CLOUD_MARCH_STEP_FEATURE_RATIO);
     int   stepCount    = clamp(
         int(ceil(pathLength / max(stepTarget, CLOUD_MARCH_EPSILON))),
-        CLOUD_MARCH_STEP_COUNT_MIN, CLOUD_MARCH_STEP_COUNT_MAX);
+        quality.stepCountMin, quality.stepCountMax);
 
     float coarseStep = pathLength / float(stepCount);
+    float coarseness = clamp(
+        (coarseStep / max(stepTarget, CLOUD_MARCH_EPSILON) - 1.0) / (CLOUD_MARCH_JITTER_FULL_RATIO - 1.0), 0.0, 1.0);
+    float offset     = mix(CLOUD_MARCH_CENTERED_OFFSET, stepOffset, coarseness);
     int   exitSteps  = int(ceil(1.0 / CLOUD_MARCH_REFINE_RATIO));
     bool  refined    = false;
     int   emptySteps = 0;
     float stepLength = coarseStep;
-    float t          = tEnter + stepLength * 0.5;
+    float t          = tEnter + stepLength * offset;
 
-    for (int s = 0; s < CLOUD_MARCH_STEP_BUDGET; s++) {
+    for (int s = 0; s < quality.stepBudget; s++) {
         if (t > tExit || transmittance <= CLOUD_MARCH_TRANSMITTANCE_CUTOFF)
         break;
 
-        vec3  relativePosition   = rayDir * t;
-        vec2  positionXZ         = u_cameraPosition.xz + relativePosition.xz;
-        float heightFraction     = (resolveCloudDomeAltitude(relativePosition) - baseAltitude) / thickness;
-        float horizontalDistance = length(relativePosition.xz);
+        vec3  relativePosition = rayDir * t;
+        float heightFraction   = (resolveCloudDomeAltitude(relativePosition) - baseAltitude) / thickness;
+        int   octaves          = min(resolveCloudOctaves(featureSize, t), quality.octaveLimit);
+        float detailFade       = quality.detail ? resolveCloudDetailFade(detailSize, t) : 0.0;
 
         float density = resolveCloudLayerDensity(
-            layer, positionXZ, heightFraction,
-            resolveCloudOctaves(layer, t), resolveCloudDetailFade(layer, t));
+            layer, u_cameraPosition.xz + relativePosition.xz, heightFraction, octaves, detailFade);
 
         if (density <= CLOUD_MARCH_EPSILON) {
             emptySteps++;
@@ -79,21 +108,21 @@ void marchCloudLayer(int layer, vec3 rayDir, float tEnter, float tExit,
             continue;
         }
 
-        if (!refined) {
+        if (quality.refine && !refined) {
             refined    = true;
             emptySteps = 0;
             stepLength = coarseStep * CLOUD_MARCH_REFINE_RATIO;
-            t          = max(tEnter, t - coarseStep * 0.5) + stepLength * 0.5;
+            t          = max(tEnter, t - coarseStep * CLOUD_MARCH_CENTERED_OFFSET) + stepLength * offset;
             continue;
         }
 
         emptySteps = 0;
 
         float stepTransmittance = exp(-density * CLOUD_VISUAL_EXTINCTION_PER_BLOCK * stepLength);
-        vec3  domeNormal        = resolveCloudDomeNormal(relativePosition);
 
         vec3 lit = shadeCloudSample(
-            layer, rayDir, domeNormal, heightFraction, density, thickness, horizontalDistance);
+            light, albedo, resolveCloudDomeNormal(relativePosition), heightFraction, density, thickness,
+            length(relativePosition.xz));
 
         color         += lit * (1.0 - stepTransmittance) * transmittance;
         transmittance *= stepTransmittance;
@@ -102,7 +131,9 @@ void marchCloudLayer(int layer, vec3 rayDir, float tEnter, float tExit,
     }
 }
 
-void integrateCloudLayers(vec3 rayDir, float maxDistance, inout vec3 color, inout float transmittance) {
+void integrateCloudLayers(
+    vec3 rayDir, float maxDistance, CloudMarchQuality quality, float stepOffset,
+    inout vec3 color, inout float transmittance) {
     int   layerCount       = min(u_weatherLayerCount, WEATHER_MAP_MAX_LAYERS);
     float limit            = min(maxDistance, resolveCloudDomeGroundDistance(rayDir));
     float horizontalLength = length(rayDir.xz);
@@ -112,6 +143,7 @@ void integrateCloudLayers(vec3 rayDir, float maxDistance, inout vec3 color, inou
 
     float enters[WEATHER_MAP_MAX_LAYERS];
     float exits[WEATHER_MAP_MAX_LAYERS];
+    bool  anyLayer = false;
 
     for (int layer = 0; layer < WEATHER_MAP_MAX_LAYERS; layer++) {
         enters[layer] = CLOUD_DOME_NO_HIT;
@@ -129,8 +161,14 @@ void integrateCloudLayers(vec3 rayDir, float maxDistance, inout vec3 color, inou
         if (resolveCloudDomeInterval(baseAltitude, topAltitude, rayDir, limit, tEnter, tExit)) {
             enters[layer] = tEnter;
             exits[layer]  = tExit;
+            anyLayer      = true;
         }
     }
+
+    if (!anyLayer)
+    return;
+
+    CloudLight light = resolveCloudLight(rayDir);
 
     for (int pass = 0; pass < layerCount; pass++) {
         if (transmittance <= CLOUD_MARCH_TRANSMITTANCE_CUTOFF)
@@ -149,9 +187,22 @@ void integrateCloudLayers(vec3 rayDir, float maxDistance, inout vec3 color, inou
         if (nearest < 0)
         break;
 
-        marchCloudLayer(nearest, rayDir, enters[nearest], exits[nearest], color, transmittance);
+        marchCloudLayer(
+            nearest, quality, light, rayDir, enters[nearest], exits[nearest], stepOffset, color, transmittance);
         enters[nearest] = CLOUD_DOME_NO_HIT;
     }
+}
+
+// The sky seen along a view ray, out to the edge of the weather map.
+void integrateCloudSky(vec3 rayDir, inout vec3 color, inout float transmittance) {
+    integrateCloudLayers(
+        rayDir, CLOUD_MARCH_UNBOUNDED_DISTANCE, CLOUD_MARCH_SKY, resolveCloudMarchJitter(), color, transmittance);
+}
+
+// Cloud standing between the camera and a surface fragmentDistance away.
+void integrateCloudFog(vec3 rayDir, float fragmentDistance, inout vec3 color, inout float transmittance) {
+    integrateCloudLayers(
+        rayDir, fragmentDistance, CLOUD_MARCH_FOG, CLOUD_MARCH_CENTERED_OFFSET, color, transmittance);
 }
 
 #endif
