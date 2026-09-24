@@ -158,6 +158,7 @@ public class EngineSetting {
         public static final int CURSOR_RESIZE_H = 1;
         public static final int CURSOR_RESIZE_V = 2;
         public static final int MIN_WINDOW_DIMENSION = 64;
+        public static final int WINDOW_POSITION_UNSET = Integer.MIN_VALUE;
         public static final String WINDOW_TITLE = "TerraArcana";
 
         // World Scale \\

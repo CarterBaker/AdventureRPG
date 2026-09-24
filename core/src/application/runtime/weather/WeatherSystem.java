@@ -5,6 +5,7 @@ import application.bootstrap.renderpipeline.fbomanager.FboManager;
 import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -20,11 +21,13 @@ public class WeatherSystem extends SystemPackage {
      * per-window FBO target and binds the grid's own UBOs — the weather map,
      * its cloud layers, and where the flow has carried them are all written
      * per grid by WeatherMapBufferSystem, so nothing about the clouds is a
-     * material setting here.
+     * material setting here. The target is composited through its own resolve
+     * material, which smooths the march's per-pixel dither while upscaling.
      */
 
     // Internal
     private PassManager passManager;
+    private MaterialManager materialManager;
     private RenderManager renderManager;
     private FboManager fboManager;
     private FboRenderSystem fboRenderSystem;
@@ -39,6 +42,7 @@ public class WeatherSystem extends SystemPackage {
     @Override
     protected void get() {
         this.passManager = get(PassManager.class);
+        this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FboManager.class);
         this.fboRenderSystem = get(FboRenderSystem.class);
@@ -49,6 +53,11 @@ public class WeatherSystem extends SystemPackage {
     protected void awake() {
         this.weatherPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_WEATHER);
         this.weatherFbo = fboManager.cloneFbo(RuntimeSetting.FBO_WEATHER, context.getWindow());
+
+        fboRenderSystem.setBlitOverride(
+                weatherFbo,
+                null,
+                materialManager.cloneMaterial(RuntimeSetting.MATERIAL_WEATHER_RESOLVE));
     }
 
     @Override
