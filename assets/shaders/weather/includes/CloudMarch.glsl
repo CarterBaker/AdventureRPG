@@ -12,10 +12,13 @@
  * given distance, at one of two qualities. The sky march runs in the weather
  * pass at reduced resolution: it refines finely where the ray meets cloud,
  * resolves full detail, and — wherever a ray's steps grow coarse next to the
- * layer, as they do toward the horizon — offsets them by a per-pixel
- * interleaved gradient, which turns step slicing into fine grain that the
+ * layer, as they do toward the horizon — offsets them by the caller's
+ * per-pixel step offset, which turns step slicing into fine grain that the
  * pass's own upscale then smooths away. Rays with fine steps, such as those
- * looking up through a layer, keep centred steps and no grain at all. The fog march runs per terrain
+ * looking up through a layer, keep centred steps and no grain at all. The
+ * engine prepends every include to every stage of a program, so nothing here
+ * touches fragment-only built-ins; the offset is resolved by the fragment
+ * stage itself. The fog march runs per terrain
  * fragment in the lighting pass, only where cloud stands between the camera
  * and the fragment, with a few fixed steps and no detail — terrain fog needs
  * the cloud's density, not its fine silhouette. Layers are marched nearest
@@ -44,13 +47,6 @@ const float CLOUD_MARCH_REFINE_RATIO         = 0.25;
 const float CLOUD_MARCH_CENTERED_OFFSET      = 0.5;
 const float CLOUD_MARCH_JITTER_FULL_RATIO    = 2.0;
 const float CLOUD_MARCH_UNBOUNDED_DISTANCE   = 1.0e30;
-const vec3  CLOUD_MARCH_JITTER_MAGIC         = vec3(0.06711056, 0.00583715, 52.9829189);
-
-// Interleaved gradient noise: a per-pixel step offset whose neighbours are
-// as different as possible, so slicing breaks into the finest grain.
-float resolveCloudMarchJitter() {
-    return fract(CLOUD_MARCH_JITTER_MAGIC.z * fract(dot(gl_FragCoord.xy, CLOUD_MARCH_JITTER_MAGIC.xy)));
-}
 
 // Coarse steps until the ray meets cloud, then back up half a step and
 // continue in fine steps, so the surface the eye actually sees is resolved
@@ -194,9 +190,10 @@ void integrateCloudLayers(
 }
 
 // The sky seen along a view ray, out to the edge of the weather map.
-void integrateCloudSky(vec3 rayDir, inout vec3 color, inout float transmittance) {
+// stepOffset is the pixel's own offset in [0, 1).
+void integrateCloudSky(vec3 rayDir, float stepOffset, inout vec3 color, inout float transmittance) {
     integrateCloudLayers(
-        rayDir, CLOUD_MARCH_UNBOUNDED_DISTANCE, CLOUD_MARCH_SKY, resolveCloudMarchJitter(), color, transmittance);
+        rayDir, CLOUD_MARCH_UNBOUNDED_DISTANCE, CLOUD_MARCH_SKY, stepOffset, color, transmittance);
 }
 
 // Cloud standing between the camera and a surface fragmentDistance away.

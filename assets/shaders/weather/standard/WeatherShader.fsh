@@ -25,6 +25,13 @@ out vec4 fragColor;
  */
 
 const float CLOUD_PASS_ALPHA_DISCARD = 0.003;
+const vec3  CLOUD_PASS_JITTER_MAGIC  = vec3(0.06711056, 0.00583715, 52.9829189);
+
+// Interleaved gradient noise: a per-pixel step offset whose neighbours are
+// as different as possible, so step slicing breaks into the finest grain.
+float resolveCloudStepOffset() {
+    return fract(CLOUD_PASS_JITTER_MAGIC.z * fract(dot(gl_FragCoord.xy, CLOUD_PASS_JITTER_MAGIC.xy)));
+}
 
 void main() {
     if (u_weatherLayerCount == 0)
@@ -33,7 +40,7 @@ void main() {
     vec3  color         = vec3(0.0);
     float transmittance = 1.0;
 
-    integrateCloudSky(normalize(v_dir), color, transmittance);
+    integrateCloudSky(normalize(v_dir), resolveCloudStepOffset(), color, transmittance);
 
     float coverage = 1.0 - transmittance;
 
