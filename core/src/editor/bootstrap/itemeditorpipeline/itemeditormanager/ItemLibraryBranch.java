@@ -9,30 +9,36 @@ import com.google.gson.JsonObject;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
+import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
 import engine.editor.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class ItemLibraryBranch extends BranchPackage {
 
     /*
-     * Reads and writes items on disk. An item saves as a sub-voxel mesh — the
-     * file the game loads — and is registered in the editor's item definition
-     * file, keeping any properties an existing entry already has.
+     * Reads and writes items on disk. The catalog is every item every
+     * definition file in the item directory declares — the same set the game
+     * loads — kept current as items are saved and deleted. An item's mesh
+     * opens as sub-voxels, converting an authored quad mesh on the way, and
+     * saves back to the same mesh file with its definition entry kept intact.
+     * Deleting drops the definition entry, and the mesh unless another item
+     * still draws with it.
      */
 
     // Internal
     private SubVoxelManager subVoxelManager;
 
     // Directory
-    private File meshDirectory;
-    private File definitionFile;
+    private File definitionRoot;
+    private File meshRoot;
 
-    // Library
-    private ObjectArrayList<String> itemNames;
+    // Catalog
+    private Object2ObjectOpenHashMap<String, ItemEntryStruct> itemName2ItemEntry;
 
     // Base \\
 
@@ -40,9 +46,11 @@ class ItemLibraryBranch extends BranchPackage {
     protected void create() {
 
         // Directory
-        this.meshDirectory = new File(EngineSetting.MESH_JSON_PATH, EditorSetting.ITEM_EDITOR_MESH_DIRECTORY);
-        this.definitionFile = new File(EngineSetting.ITEM_JSON_PATH,
-                EditorSetting.ITEM_EDITOR_DEFINITION_FILE + "." + EditorSetting.ITEM_EDITOR_FILE_EXTENSION);
+        this.definitionRoot = new File(EngineSetting.ITEM_JSON_PATH);
+        this.meshRoot = new File(EngineSetting.MESH_JSON_PATH);
+
+        // Catalog
+        this.itemName2ItemEntry = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -52,64 +60,102 @@ class ItemLibraryBranch extends BranchPackage {
 
     @Override
     protected void awake() {
-        this.itemNames = scanItemNames();
+        scanCatalog();
     }
 
     // Load \\
 
-    private ObjectArrayList<String> scanItemNames() {
+    private void scanCatalog() {
 
-        ObjectArrayList<String> scannedNames = new ObjectArrayList<>();
+        if (!definitionRoot.isDirectory())
+            return;
 
-        if (!meshDirectory.isDirectory())
-            return scannedNames;
+        List<File> definitionFiles = FileUtility.collectFiles(definitionRoot, EngineSetting.JSON_FILE_EXTENSIONS);
 
-        List<File> meshFiles = FileUtility.collectFilesShallow(meshDirectory, EngineSetting.JSON_FILE_EXTENSIONS);
-
-        for (int i = 0; i < meshFiles.size(); i++) {
-
-            JsonObject meshJson = JsonUtility.tryLoadJsonObject(meshFiles.get(i));
-
-            if (meshJson != null && subVoxelManager.hasSubVoxels(meshJson))
-                scannedNames.add(FileUtility.getFileName(meshFiles.get(i)));
-        }
-
-        return scannedNames;
+        for (int i = 0; i < definitionFiles.size(); i++)
+            scanDefinitionFile(definitionFiles.get(i));
     }
 
-    SubVoxelModelStruct loadModel(String itemName) {
+    private void scanDefinitionFile(File definitionFile) {
 
-        File meshFile = getMeshFile(itemName);
+        JsonObject rootJson = JsonUtility.tryLoadJsonObject(definitionFile);
+
+        if (rootJson == null || !JsonUtility.hasArray(rootJson, "items"))
+            return;
+
+        String definitionName = FileUtility.getPathWithFileNameWithoutExtension(definitionRoot, definitionFile);
+        JsonArray itemsJson = rootJson.getAsJsonArray("items");
+
+        for (int i = 0; i < itemsJson.size(); i++) {
+
+            if (!itemsJson.get(i).isJsonObject())
+                continue;
+
+            JsonObject itemJson = itemsJson.get(i).getAsJsonObject();
+
+            if (!JsonUtility.hasString(itemJson, "name") || !JsonUtility.hasString(itemJson, "mesh"))
+                continue;
+
+            addEntry(new ItemEntryStruct(
+                    definitionName,
+                    itemJson.get("name").getAsString(),
+                    itemJson.get("mesh").getAsString()));
+        }
+    }
+
+    SubVoxelModelStruct loadModel(ItemEntryStruct entry, String fallbackTextureName) {
+
+        JsonObject meshJson = loadMeshJson(entry);
+
+        if (subVoxelManager.hasSubVoxels(meshJson)) {
+
+            SubVoxelModelStruct model = subVoxelManager.parseModel(meshJson);
+
+            if (model.getPartCount() == 0)
+                throwException("Item '" + entry.getItemName() + "' declares no parts in mesh '"
+                        + entry.getMeshName() + "'.");
+
+            return model;
+        }
+
+        if (subVoxelManager.hasQuads(meshJson))
+            return subVoxelManager.importQuadMesh(meshJson, fallbackTextureName);
+
+        return throwException("Item '" + entry.getItemName() + "' uses mesh '" + entry.getMeshName()
+                + "', which holds neither sub-voxels nor quads.");
+    }
+
+    boolean requiresConversion(ItemEntryStruct entry) {
+        return !subVoxelManager.hasSubVoxels(loadMeshJson(entry));
+    }
+
+    private JsonObject loadMeshJson(ItemEntryStruct entry) {
+
+        File meshFile = getMeshFile(entry.getMeshName());
 
         if (!meshFile.isFile())
-            throwException("Item '" + itemName + "' has no mesh file: " + meshFile.getAbsolutePath());
+            throwException("Item '" + entry.getItemName() + "' has no mesh file: " + meshFile.getAbsolutePath());
 
-        SubVoxelModelStruct model = subVoxelManager.parseModel(JsonUtility.loadJsonObject(meshFile));
-
-        if (model.getPartCount() == 0)
-            throwException("Item '" + itemName + "' declares no parts: " + meshFile.getAbsolutePath());
-
-        return model;
+        return JsonUtility.loadJsonObject(meshFile);
     }
 
     // Save \\
 
     void save(ItemDocumentInstance document) {
 
-        String itemName = document.getItemName();
+        ItemEntryStruct entry = document.getEntry();
 
         JsonUtility.writeJsonObject(
-                getMeshFile(itemName),
+                getMeshFile(entry.getMeshName()),
                 subVoxelManager.toMeshJson(document.getModel()),
                 internal.gson);
-        registerDefinition(itemName);
-
-        if (!itemNames.contains(itemName))
-            itemNames.add(itemName);
+        writeDefinition(entry);
+        addEntry(entry);
     }
 
-    private void registerDefinition(String itemName) {
+    private void writeDefinition(ItemEntryStruct entry) {
 
+        File definitionFile = getDefinitionFile(entry.getDefinitionName());
         JsonObject rootJson = definitionFile.isFile()
                 ? JsonUtility.loadJsonObject(definitionFile)
                 : new JsonObject();
@@ -118,48 +164,107 @@ class ItemLibraryBranch extends BranchPackage {
             rootJson.add("items", new JsonArray());
 
         JsonArray itemsJson = rootJson.getAsJsonArray("items");
-        JsonObject itemJson = findDefinition(itemsJson, itemName);
+        int definitionIndex = findDefinition(itemsJson, entry.getLocalName());
+        JsonObject itemJson = definitionIndex != EngineSetting.INDEX_NOT_FOUND
+                ? itemsJson.get(definitionIndex).getAsJsonObject()
+                : createDefinition(itemsJson, entry.getLocalName());
 
-        if (itemJson == null) {
-            itemJson = new JsonObject();
-            itemJson.addProperty("name", itemName);
-            itemsJson.add(itemJson);
-        }
-
-        itemJson.addProperty("mesh", getMeshName(itemName));
+        itemJson.addProperty("mesh", entry.getMeshName());
         JsonUtility.writeJsonObject(definitionFile, rootJson, internal.gson);
     }
 
-    private JsonObject findDefinition(JsonArray itemsJson, String itemName) {
+    private JsonObject createDefinition(JsonArray itemsJson, String localName) {
 
-        for (int i = 0; i < itemsJson.size(); i++) {
+        JsonObject itemJson = new JsonObject();
+        itemJson.addProperty("name", localName);
+        itemsJson.add(itemJson);
+        return itemJson;
+    }
 
-            JsonObject itemJson = itemsJson.get(i).getAsJsonObject();
+    // Delete \\
 
-            if (itemName.equals(JsonUtility.getString(itemJson, "name", null)))
-                return itemJson;
+    void delete(ItemEntryStruct entry) {
+
+        File definitionFile = getDefinitionFile(entry.getDefinitionName());
+
+        if (definitionFile.isFile()) {
+
+            JsonObject rootJson = JsonUtility.loadJsonObject(definitionFile);
+
+            if (JsonUtility.hasArray(rootJson, "items")) {
+
+                JsonArray itemsJson = rootJson.getAsJsonArray("items");
+                int definitionIndex = findDefinition(itemsJson, entry.getLocalName());
+
+                if (definitionIndex != EngineSetting.INDEX_NOT_FOUND) {
+                    itemsJson.remove(definitionIndex);
+                    JsonUtility.writeJsonObject(definitionFile, rootJson, internal.gson);
+                }
+            }
         }
 
-        return null;
+        itemName2ItemEntry.remove(entry.getItemName());
+
+        File meshFile = getMeshFile(entry.getMeshName());
+
+        if (!isMeshReferenced(entry.getMeshName()) && meshFile.isFile() && !meshFile.delete())
+            throwException("Failed to delete mesh file: " + meshFile.getAbsolutePath());
     }
 
     // Utility \\
 
-    private File getMeshFile(String itemName) {
-        return new File(meshDirectory, itemName + "." + EditorSetting.ITEM_EDITOR_FILE_EXTENSION);
+    private void addEntry(ItemEntryStruct entry) {
+        itemName2ItemEntry.put(entry.getItemName(), entry);
     }
 
-    private String getMeshName(String itemName) {
-        return EditorSetting.ITEM_EDITOR_MESH_DIRECTORY + "/" + itemName;
+    private int findDefinition(JsonArray itemsJson, String localName) {
+
+        for (int i = 0; i < itemsJson.size(); i++) {
+
+            if (!itemsJson.get(i).isJsonObject())
+                continue;
+
+            JsonObject itemJson = itemsJson.get(i).getAsJsonObject();
+
+            if (localName.equals(JsonUtility.getString(itemJson, "name", null)))
+                return i;
+        }
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private boolean isMeshReferenced(String meshName) {
+
+        for (ItemEntryStruct entry : itemName2ItemEntry.values())
+            if (entry.getMeshName().equals(meshName))
+                return true;
+
+        return false;
+    }
+
+    private File getDefinitionFile(String definitionName) {
+        return new File(definitionRoot, definitionName + "." + EditorSetting.ITEM_EDITOR_FILE_EXTENSION);
+    }
+
+    private File getMeshFile(String meshName) {
+        return new File(meshRoot, meshName + "." + EditorSetting.ITEM_EDITOR_FILE_EXTENSION);
     }
 
     // Accessible \\
 
-    boolean hasMesh(String itemName) {
-        return getMeshFile(itemName).exists();
+    boolean hasItem(String itemName) {
+        return itemName2ItemEntry.containsKey(itemName);
     }
 
-    ObjectArrayList<String> getItemNames() {
-        return itemNames;
+    boolean hasMesh(String meshName) {
+        return getMeshFile(meshName).exists() || isMeshReferenced(meshName);
+    }
+
+    ItemEntryStruct getEntry(String itemName) {
+        return itemName2ItemEntry.get(itemName);
+    }
+
+    ObjectArrayList<ItemEntryStruct> getEntries() {
+        return new ObjectArrayList<>(itemName2ItemEntry.values());
     }
 }

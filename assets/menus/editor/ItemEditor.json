@@ -26,7 +26,7 @@
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {
@@ -53,7 +53,7 @@
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {
@@ -80,7 +80,7 @@
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {
@@ -103,11 +103,38 @@
               ]
             },
             {
+              "id": "item_editor_delete_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "64px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "method": "deleteItem"
+              },
+              "elements": [
+                {
+                  "id": "item_editor_delete_label",
+                  "type": "label",
+                  "text": "Delete",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
               "id": "item_editor_place_button",
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {
@@ -134,7 +161,7 @@
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {
@@ -161,7 +188,7 @@
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {
@@ -188,7 +215,7 @@
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {
@@ -215,7 +242,7 @@
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {
@@ -242,7 +269,7 @@
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {
@@ -269,7 +296,7 @@
               "type": "button",
               "sprite": "menus/DefaultElement",
               "size": {
-                "x": "72px",
+                "x": "64px",
                 "y": "28px"
               },
               "on_click": {

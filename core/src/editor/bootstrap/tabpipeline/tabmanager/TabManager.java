@@ -125,6 +125,13 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_ITEM_EDITOR, editor.itemeditor.ItemEditorContext.class, osWindow);
     }
 
+    public TabHandle openTextureViewer(WindowInstance osWindow) {
+        return openTab(
+                EditorSetting.TAB_TITLE_TEXTURE_VIEWER,
+                editor.textureviewer.TextureViewerContext.class,
+                osWindow);
+    }
+
     /*
      * Registers a new tab on the given OS window. Creates chrome and content
      * windows composited onto it, pairs them, adds the tab to that window's

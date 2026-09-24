@@ -2,8 +2,8 @@ package editor.itemeditor.camera;
 
 import application.kernel.inputpipeline.input.RawInputHandle;
 import editor.itemeditor.ItemEditorSetting;
-import editor.itemeditor.input.ItemEditorInputSystem;
 import engine.assets.camera.CameraInstance;
+import engine.editor.EditorInputSystem;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
@@ -16,7 +16,7 @@ public class ItemEditorCameraSystem extends SystemPackage {
      */
 
     // Internal
-    private ItemEditorInputSystem itemEditorInputSystem;
+    private EditorInputSystem editorInputSystem;
 
     // Orbit
     private Vector3 target;
@@ -41,7 +41,7 @@ public class ItemEditorCameraSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.itemEditorInputSystem = get(ItemEditorInputSystem.class);
+        this.editorInputSystem = get(EditorInputSystem.class);
     }
 
     @Override
@@ -56,7 +56,7 @@ public class ItemEditorCameraSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        RawInputHandle rawInput = itemEditorInputSystem.getRawInputHandle();
+        RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
 
         if (rawInput.isButtonHeld(ItemEditorSetting.BUTTON_ORBIT))
             rotate(rawInput.getDeltaX(), rawInput.getDeltaY());

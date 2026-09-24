@@ -10,7 +10,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 public class HierarchyInstance extends InstancePackage {
 
     /*
-     * One open hierarchy panel: its menu, active tab, expanded node keys, and the
+     * One open hierarchy panel: its menu, active tab, toggled node keys, and the
      * tab and row elements it has injected. Needs layout when marked dirty or
      * when its provider's revision moves.
      */
@@ -22,7 +22,7 @@ public class HierarchyInstance extends InstancePackage {
     private String activeTabName;
 
     // Expansion
-    private ObjectOpenHashSet<String> expandedNodeKeys;
+    private ObjectOpenHashSet<String> toggledNodeKeys;
 
     // Layout
     private boolean layoutDirty;
@@ -38,7 +38,7 @@ public class HierarchyInstance extends InstancePackage {
         this.menu = menu;
 
         // Expansion
-        this.expandedNodeKeys = new ObjectOpenHashSet<>();
+        this.toggledNodeKeys = new ObjectOpenHashSet<>();
 
         // Layout
         this.layoutDirty = true;
@@ -61,14 +61,14 @@ public class HierarchyInstance extends InstancePackage {
 
     // Expansion \\
 
-    public boolean isExpanded(String nodeKey) {
-        return expandedNodeKeys.contains(nodeKey);
+    public boolean isExpanded(HierarchyNodeStruct node) {
+        return node.isExpandedByDefault() != toggledNodeKeys.contains(node.getNodeKey());
     }
 
     public void toggleExpanded(String nodeKey) {
 
-        if (!expandedNodeKeys.remove(nodeKey))
-            expandedNodeKeys.add(nodeKey);
+        if (!toggledNodeKeys.remove(nodeKey))
+            toggledNodeKeys.add(nodeKey);
 
         this.layoutDirty = true;
     }

@@ -5,6 +5,7 @@ import application.bootstrap.menupipeline.hierarchy.HierarchyNodeStruct;
 import application.bootstrap.menupipeline.hierarchy.HierarchyTabProvider;
 import application.bootstrap.menupipeline.hierarchymanager.HierarchyManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
+import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
 import engine.editor.EditorSetting;
 import engine.root.BranchPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -12,9 +13,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class ItemHierarchyBranch extends BranchPackage implements HierarchyTabProvider {
 
     /*
-     * The hierarchy's Items tab. Lists saved and open items, with an open
-     * item's parts as children. Clicking an item opens it; clicking a part opens
-     * its item and selects the part.
+     * The hierarchy's Items tab. Every item in the game is listed under the
+     * definition file that declares it, with unsaved items marked and the
+     * active item expanded to its parts. Clicking an item opens it; clicking a
+     * part opens its item and selects the part for building.
      */
 
     // Internal
@@ -49,23 +51,50 @@ class ItemHierarchyBranch extends BranchPackage implements HierarchyTabProvider 
     @Override
     public void buildNodes(ObjectArrayList<HierarchyNodeStruct> roots) {
 
-        ObjectArrayList<String> itemNames = itemEditorManager.getItemNames();
+        ObjectArrayList<ItemEntryStruct> entries = itemEditorManager.getItemEntries();
         ItemDocumentInstance activeDocument = itemEditorManager.getActiveDocument();
+        HierarchyNodeStruct fileNode = null;
 
-        for (int i = 0; i < itemNames.size(); i++) {
+        entries.sort((a, b) -> {
+            int byFile = String.CASE_INSENSITIVE_ORDER.compare(a.getDefinitionName(), b.getDefinitionName());
+            return byFile != 0 ? byFile : String.CASE_INSENSITIVE_ORDER.compare(a.getLocalName(), b.getLocalName());
+        });
 
-            String itemName = itemNames.get(i);
-            ItemDocumentInstance document = itemEditorManager.getDocument(itemName);
-            boolean active = document != null && document == activeDocument;
+        for (int i = 0; i < entries.size(); i++) {
 
-            HierarchyNodeStruct itemNode = new HierarchyNodeStruct(
-                    toItemKey(itemName), resolveItemLabel(itemName, document), active);
+            ItemEntryStruct entry = entries.get(i);
 
-            if (document != null)
-                addPartNodes(itemNode, document, active);
+            if (fileNode == null || !fileNode.getNodeKey().equals(toFileKey(entry.getDefinitionName()))) {
+                fileNode = createFileNode(entry.getDefinitionName(), activeDocument);
+                roots.add(fileNode);
+            }
 
-            roots.add(itemNode);
+            fileNode.addChild(createItemNode(entry, activeDocument));
         }
+    }
+
+    private HierarchyNodeStruct createFileNode(String definitionName, ItemDocumentInstance activeDocument) {
+
+        boolean active = activeDocument != null
+                && activeDocument.getEntry().getDefinitionName().equals(definitionName);
+
+        return new HierarchyNodeStruct(toFileKey(definitionName), definitionName, active, true);
+    }
+
+    private HierarchyNodeStruct createItemNode(ItemEntryStruct entry, ItemDocumentInstance activeDocument) {
+
+        ItemDocumentInstance document = itemEditorManager.getDocument(entry.getItemName());
+        boolean active = document != null && document == activeDocument;
+        String label = document != null && document.isDirty()
+                ? entry.getLocalName() + EditorSetting.ITEM_EDITOR_DIRTY_MARKER
+                : entry.getLocalName();
+
+        HierarchyNodeStruct itemNode = new HierarchyNodeStruct(toItemKey(entry.getItemName()), label, active, active);
+
+        if (document != null)
+            addPartNodes(itemNode, document, active);
+
+        return itemNode;
     }
 
     private void addPartNodes(HierarchyNodeStruct itemNode, ItemDocumentInstance document, boolean active) {
@@ -77,12 +106,6 @@ class ItemHierarchyBranch extends BranchPackage implements HierarchyTabProvider 
                     toPartKey(document.getItemName(), partIndex),
                     model.getPart(partIndex).getPartName(),
                     active && partIndex == document.getSelectedPartIndex()));
-    }
-
-    private String resolveItemLabel(String itemName, ItemDocumentInstance document) {
-        return document != null && document.isDirty()
-                ? itemName + EditorSetting.ITEM_EDITOR_DIRTY_MARKER
-                : itemName;
     }
 
     @Override
@@ -104,6 +127,10 @@ class ItemHierarchyBranch extends BranchPackage implements HierarchyTabProvider 
     }
 
     // Keys \\
+
+    private String toFileKey(String definitionName) {
+        return EditorSetting.HIERARCHY_FILE_KEY_PREFIX + definitionName;
+    }
 
     private String toItemKey(String itemName) {
         return EditorSetting.HIERARCHY_ITEM_KEY_PREFIX + itemName;
