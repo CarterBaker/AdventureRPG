@@ -4,6 +4,7 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWVidMode;
 
 import engine.graphics.display.DisplayModeStruct;
+import engine.root.EngineSetting;
 
 import java.util.function.BooleanSupplier;
 
@@ -25,11 +26,12 @@ public class Lwjgl3Configuration {
     private int glMajor = 3;
     private int glMinor = 3;
     private boolean fullscreen;
+    private boolean maximized;
     private boolean vsync = true;
 
     // Position
-    private int windowX = -1;
-    private int windowY = -1;
+    private int windowX = EngineSetting.WINDOW_POSITION_UNSET;
+    private int windowY = EngineSetting.WINDOW_POSITION_UNSET;
 
     // Callback
     private BooleanSupplier closeCallback;
@@ -67,6 +69,10 @@ public class Lwjgl3Configuration {
         this.height = mode.getHeight();
     }
 
+    public void setMaximized(boolean maximized) {
+        this.maximized = maximized;
+    }
+
     public void useVsync(boolean vsync) {
         this.vsync = vsync;
     }
@@ -90,6 +96,10 @@ public class Lwjgl3Configuration {
 
     public boolean isFullscreen() {
         return fullscreen;
+    }
+
+    public boolean isMaximized() {
+        return maximized;
     }
 
     public boolean isVsync() {

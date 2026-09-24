@@ -2,14 +2,19 @@ package engine.lwjgl3;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 
 import engine.input.Input;
 import engine.root.EngineContext;
 import engine.root.EnginePackage;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
+import java.nio.IntBuffer;
 import java.util.function.BooleanSupplier;
 
 public class Lwjgl3Application {
@@ -19,6 +24,10 @@ public class Lwjgl3Application {
      * GL context. The loop advances the engine tick and pumps input — all context
      * switching, drawing, and buffer swapping are driven by RenderManager uniformly
      * across every window, main and secondary alike.
+     *
+     * The main window is created hidden and fitted inside the work area of the
+     * monitor it was saved on before it is shown, so a stale, oversized, or
+     * off-screen saved placement never leaves its title bar out of reach.
      */
 
     // Internal
@@ -37,6 +46,20 @@ public class Lwjgl3Application {
     // State
     private boolean running;
 
+    // Scratch buffers — reused to avoid per-call allocation
+    private final IntBuffer posScratchX = BufferUtils.createIntBuffer(1);
+    private final IntBuffer posScratchY = BufferUtils.createIntBuffer(1);
+    private final IntBuffer sizeScratchW = BufferUtils.createIntBuffer(1);
+    private final IntBuffer sizeScratchH = BufferUtils.createIntBuffer(1);
+    private final IntBuffer areaScratchX = BufferUtils.createIntBuffer(1);
+    private final IntBuffer areaScratchY = BufferUtils.createIntBuffer(1);
+    private final IntBuffer areaScratchW = BufferUtils.createIntBuffer(1);
+    private final IntBuffer areaScratchH = BufferUtils.createIntBuffer(1);
+    private final IntBuffer frameScratchLeft = BufferUtils.createIntBuffer(1);
+    private final IntBuffer frameScratchTop = BufferUtils.createIntBuffer(1);
+    private final IntBuffer frameScratchRight = BufferUtils.createIntBuffer(1);
+    private final IntBuffer frameScratchBottom = BufferUtils.createIntBuffer(1);
+
     public Lwjgl3Application(
             EnginePackage engine,
             Lwjgl3Configuration config,
@@ -53,28 +76,35 @@ public class Lwjgl3Application {
         this.glMinor = config.getGlMinor();
         this.swapInterval = config.isVsync() ? 1 : 0;
         applyWindowHints(glMajor, glMinor);
+        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
 
         long monitor = config.isFullscreen() ? GLFW.glfwGetPrimaryMonitor() : 0L;
         this.mainHandle = GLFW.glfwCreateWindow(config.width, config.height, config.title, monitor, 0L);
+        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_TRUE);
 
         if (mainHandle == 0L) {
             GLFW.glfwTerminate();
             EngineUtility.throwException("Failed to create GLFW window");
         }
 
-        if (config.getWindowX() >= 0 && config.getWindowY() >= 0)
-            GLFW.glfwSetWindowPos(mainHandle, config.getWindowX(), config.getWindowY());
+        if (!config.isFullscreen())
+            placeMainWindow(config);
 
         GLFW.glfwMakeContextCurrent(mainHandle);
         GLFW.glfwSwapInterval(swapInterval);
         GL.createCapabilities();
 
+        sizeScratchW.clear();
+        sizeScratchH.clear();
+        GLFW.glfwGetFramebufferSize(mainHandle, sizeScratchW, sizeScratchH);
+
         this.input = new Lwjgl3Input(mainHandle);
         this.input.initCursors();
-        this.display = new Lwjgl3Display(config.width, config.height, config.isFullscreen());
+        this.display = new Lwjgl3Display(sizeScratchW.get(0), sizeScratchH.get(0), config.isFullscreen());
         this.engine = engine;
 
         display.setMainHandle(mainHandle);
+        captureWindowedBounds();
 
         Lwjgl3GL gl = new Lwjgl3GL();
         EngineContext.display = display;
@@ -84,10 +114,11 @@ public class Lwjgl3Application {
         EngineContext.gl40 = gl;
 
         registerCallbacks(mainHandle, input, config.getCloseCallback());
-        GLFW.glfwSetWindowPosCallback(mainHandle, (w, x, y) -> {
-            display.setPosX(x);
-            display.setPosY(y);
-        });
+        registerPlacementCallbacks();
+        GLFW.glfwShowWindow(mainHandle);
+
+        if (config.isMaximized() && !config.isFullscreen())
+            GLFW.glfwMaximizeWindow(mainHandle);
 
         platform.setApplication(this);
 
@@ -132,6 +163,12 @@ public class Lwjgl3Application {
             });
     }
 
+    private void registerPlacementCallbacks() {
+        GLFW.glfwSetWindowPosCallback(mainHandle, (w, x, y) -> onWindowMoved(w));
+        GLFW.glfwSetWindowSizeCallback(mainHandle, (w, width, height) -> captureWindowedBounds());
+        GLFW.glfwSetWindowMaximizeCallback(mainHandle, (w, maximized) -> display.setMaximized(maximized));
+    }
+
     private void loop() {
 
         long last = System.nanoTime();
@@ -153,6 +190,135 @@ public class Lwjgl3Application {
         }
 
         engine.shutdown();
+    }
+
+    // Placement \\
+
+    private void placeMainWindow(Lwjgl3Configuration config) {
+
+        long monitor = resolvePlacementMonitor(config);
+
+        if (monitor == 0L || !readMonitorWorkarea(monitor))
+            return;
+
+        int areaX = areaScratchX.get(0);
+        int areaY = areaScratchY.get(0);
+        int areaWidth = areaScratchW.get(0);
+        int areaHeight = areaScratchH.get(0);
+
+        frameScratchLeft.clear();
+        frameScratchTop.clear();
+        frameScratchRight.clear();
+        frameScratchBottom.clear();
+        GLFW.glfwGetWindowFrameSize(mainHandle, frameScratchLeft, frameScratchTop, frameScratchRight,
+                frameScratchBottom);
+
+        int frameLeft = frameScratchLeft.get(0);
+        int frameTop = frameScratchTop.get(0);
+        int frameRight = frameScratchRight.get(0);
+        int frameBottom = frameScratchBottom.get(0);
+
+        int maxWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, areaWidth - frameLeft - frameRight);
+        int maxHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, areaHeight - frameTop - frameBottom);
+        int width = Math.clamp(config.width, EngineSetting.MIN_WINDOW_DIMENSION, maxWidth);
+        int height = Math.clamp(config.height, EngineSetting.MIN_WINDOW_DIMENSION, maxHeight);
+
+        int minX = areaX + frameLeft;
+        int minY = areaY + frameTop;
+        int maxX = Math.max(minX, areaX + areaWidth - frameRight - width);
+        int maxY = Math.max(minY, areaY + areaHeight - frameBottom - height);
+
+        int x = hasWindowPosition(config)
+                ? Math.clamp(config.getWindowX(), minX, maxX)
+                : minX + (maxX - minX) / 2;
+        int y = hasWindowPosition(config)
+                ? Math.clamp(config.getWindowY(), minY, maxY)
+                : minY + (maxY - minY) / 2;
+
+        GLFW.glfwSetWindowSize(mainHandle, width, height);
+        GLFW.glfwSetWindowPos(mainHandle, x, y);
+    }
+
+    private long resolvePlacementMonitor(Lwjgl3Configuration config) {
+
+        long primaryMonitor = GLFW.glfwGetPrimaryMonitor();
+        PointerBuffer monitors = GLFW.glfwGetMonitors();
+
+        if (!hasWindowPosition(config) || monitors == null)
+            return primaryMonitor;
+
+        long bestMonitor = primaryMonitor;
+        long bestOverlap = 0L;
+
+        for (int i = 0; i < monitors.limit(); i++) {
+
+            long candidate = monitors.get(i);
+
+            if (!readMonitorWorkarea(candidate))
+                continue;
+
+            long overlap = (long) overlapSpan(config.getWindowX(), config.width, areaScratchX.get(0),
+                    areaScratchW.get(0))
+                    * overlapSpan(config.getWindowY(), config.height, areaScratchY.get(0), areaScratchH.get(0));
+
+            if (overlap > bestOverlap) {
+                bestOverlap = overlap;
+                bestMonitor = candidate;
+            }
+        }
+
+        return bestMonitor;
+    }
+
+    private boolean readMonitorWorkarea(long monitor) {
+
+        areaScratchX.clear();
+        areaScratchY.clear();
+        areaScratchW.clear();
+        areaScratchH.clear();
+        GLFW.glfwGetMonitorWorkarea(monitor, areaScratchX, areaScratchY, areaScratchW, areaScratchH);
+
+        if (areaScratchW.get(0) > 0 && areaScratchH.get(0) > 0)
+            return true;
+
+        GLFWVidMode mode = GLFW.glfwGetVideoMode(monitor);
+
+        if (mode == null)
+            return false;
+
+        GLFW.glfwGetMonitorPos(monitor, areaScratchX, areaScratchY);
+        areaScratchW.put(0, mode.width());
+        areaScratchH.put(0, mode.height());
+        return true;
+    }
+
+    private void captureWindowedBounds() {
+
+        if (GLFW.glfwGetWindowMonitor(mainHandle) != 0L
+                || GLFW.glfwGetWindowAttrib(mainHandle, GLFW.GLFW_ICONIFIED) == GLFW.GLFW_TRUE
+                || GLFW.glfwGetWindowAttrib(mainHandle, GLFW.GLFW_MAXIMIZED) == GLFW.GLFW_TRUE)
+            return;
+
+        posScratchX.clear();
+        posScratchY.clear();
+        sizeScratchW.clear();
+        sizeScratchH.clear();
+        GLFW.glfwGetWindowPos(mainHandle, posScratchX, posScratchY);
+        GLFW.glfwGetWindowSize(mainHandle, sizeScratchW, sizeScratchH);
+
+        if (sizeScratchW.get(0) <= 0 || sizeScratchH.get(0) <= 0)
+            return;
+
+        display.setWindowBounds(posScratchX.get(0), posScratchY.get(0), sizeScratchW.get(0), sizeScratchH.get(0));
+    }
+
+    private static boolean hasWindowPosition(Lwjgl3Configuration config) {
+        return config.getWindowX() != EngineSetting.WINDOW_POSITION_UNSET
+                && config.getWindowY() != EngineSetting.WINDOW_POSITION_UNSET;
+    }
+
+    private static int overlapSpan(int start, int length, int areaStart, int areaLength) {
+        return Math.max(0, Math.min(start + length, areaStart + areaLength) - Math.max(start, areaStart));
     }
 
     // Accessible \\
@@ -185,6 +351,11 @@ public class Lwjgl3Application {
             handle2Input.remove(handle);
             return;
         }
+    }
+
+    void onWindowMoved(long handle) {
+        if (handle == mainHandle)
+            captureWindowedBounds();
     }
 
     public void exit() {

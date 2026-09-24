@@ -83,6 +83,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         GLFW.glfwSetWindowPosCallback(handle, (h, x, y) -> {
             window.setScreenPosition(x, y);
+            application.onWindowMoved(h);
         });
     }
 

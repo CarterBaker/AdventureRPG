@@ -85,9 +85,8 @@ public class Lwjgl3Launcher {
             int width = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowWidth);
             int height = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowHeight);
             config.setWindowedMode(width, height);
-
-            if (settings.windowX >= 0 && settings.windowY >= 0)
-                config.setWindowPosition(settings.windowX, settings.windowY);
+            config.setWindowPosition(settings.windowX, settings.windowY);
+            config.setMaximized(settings.windowMaximized);
         }
 
         return config;
@@ -98,11 +97,16 @@ public class Lwjgl3Launcher {
         if (!(EngineContext.display instanceof Lwjgl3Display display))
             return;
 
-        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWidth());
-        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getHeight());
-        settings.windowX = display.getPosX();
-        settings.windowY = display.getPosY();
         settings.fullscreen = display.isFullscreen();
+
+        if (!display.isFullscreen()) {
+            settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWindowWidth());
+            settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWindowHeight());
+            settings.windowX = display.getPosX();
+            settings.windowY = display.getPosY();
+            settings.windowMaximized = display.isMaximized();
+        }
+
         SettingsUtility.save(file, settings, ENGINE_GSON);
     }
 }
