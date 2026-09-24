@@ -1,0 +1,50 @@
+{
+    "baseWindSpeed": 2.0,
+    "windVariance": 1.0,
+    "prevailingWindDirectionDegrees": 200.0,
+    "baseTemperature": 24.0,
+    "temperatureVariance": 5.0,
+    "precipitationChanceScale": 0.75,
+    "sky": {
+        "glowStrength": 1.15,
+        "beltStrength": 0.55,
+        "phases": {
+            "night": {
+                "zenith":      [0.01, 0.016, 0.05],
+                "horizon":     [0.04, 0.045, 0.085],
+                "glow":        [0.13, 0.08, 0.10],
+                "belt":        [0.06, 0.05, 0.11],
+                "cloud":       [0.82, 0.84, 0.92],
+                "cloudLight":  [0.55, 0.58, 0.76],
+                "cloudShadow": [0.05, 0.05, 0.10]
+            },
+            "twilight": {
+                "zenith":      [0.14, 0.16, 0.38],
+                "horizon":     [0.78, 0.46, 0.34],
+                "glow":        [1.00, 0.50, 0.22],
+                "belt":        [0.78, 0.52, 0.62],
+                "cloud":       [1.00, 0.86, 0.80],
+                "cloudLight":  [1.00, 0.52, 0.30],
+                "cloudShadow": [0.36, 0.26, 0.36]
+            },
+            "golden": {
+                "zenith":      [0.26, 0.46, 0.82],
+                "horizon":     [0.98, 0.78, 0.52],
+                "glow":        [1.00, 0.70, 0.34],
+                "belt":        [0.84, 0.70, 0.72],
+                "cloud":       [1.00, 0.94, 0.84],
+                "cloudLight":  [1.00, 0.80, 0.52],
+                "cloudShadow": [0.54, 0.52, 0.62]
+            },
+            "day": {
+                "zenith":      [0.18, 0.44, 0.92],
+                "horizon":     [0.66, 0.80, 0.96],
+                "glow":        [1.00, 0.94, 0.80],
+                "belt":        [0.74, 0.82, 0.96],
+                "cloud":       [1.00, 1.00, 0.99],
+                "cloudLight":  [1.00, 0.98, 0.92],
+                "cloudShadow": [0.56, 0.62, 0.76]
+            }
+        }
+    }
+}

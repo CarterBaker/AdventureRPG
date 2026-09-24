@@ -13,9 +13,9 @@ public class WorldData extends DataPackage {
      * planetary offset used to phase the day/night gradient across the
      * world's Y axis, and the generation seed. calendarName points to the
      * per-world calendar definition, which owns daysPerDay and every other
-     * day/year shape setting. worldEpochStart is the one mutable field —
-     * written from the save file at runtime, never from the world
-     * definition itself.
+     * day/year shape setting. worldEpochStart is the real instant the
+     * world's calendar sat on its own start date and time, persisted in the
+     * companion JSON so the world's clock carries on between sessions.
      */
 
     // Identity
@@ -30,7 +30,7 @@ public class WorldData extends DataPackage {
 
     // Time
     private final String calendarName;
-    private long worldEpochStart;
+    private final long worldEpochStart;
 
     // Rotation
     private final float rotationSpeed;
@@ -61,6 +61,7 @@ public class WorldData extends DataPackage {
             float gravityMultiplier,
             Vector3 gravityDirection,
             String calendarName,
+            long worldEpochStart,
             float rotationSpeed,
             float axialTilt,
             float planetaryOffset,
@@ -78,7 +79,7 @@ public class WorldData extends DataPackage {
 
         // Time
         this.calendarName = calendarName;
-        this.worldEpochStart = -1L;
+        this.worldEpochStart = worldEpochStart;
 
         // Rotation
         this.rotationSpeed = rotationSpeed;
@@ -125,10 +126,6 @@ public class WorldData extends DataPackage {
 
     public long getWorldEpochStart() {
         return worldEpochStart;
-    }
-
-    public void setWorldEpochStart(long worldEpochStart) {
-        this.worldEpochStart = worldEpochStart;
     }
 
     public float getRotationSpeed() {

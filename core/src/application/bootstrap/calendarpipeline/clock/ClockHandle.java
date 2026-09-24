@@ -10,10 +10,10 @@ public class ClockHandle extends HandlePackage {
      * all clock branches for reading and writing time state each frame.
      * Delegates all accessors and mutators through ClockData. The current
      * season is resolved live from the active calendar rather than a fixed
-     * enum — see CalendarData.getSeasonNameForMonth() — so it reflects
+     * enum — see CalendarData.getSeasonNameForDate() — so it reflects
      * whatever seasons that calendar defines. Everything here is global and
      * location-independent; per-location visual time of day lives on each
-     * grid's own LocationTimeStruct instead.
+     * grid's own ClockInstance instead.
      */
 
     // Internal
@@ -47,6 +47,14 @@ public class ClockHandle extends HandlePackage {
 
     public void setWorldEpochStart(long worldEpochStart) {
         clockData.setWorldEpochStart(worldEpochStart);
+    }
+
+    public double getWorldSecondsElapsed() {
+        return clockData.getWorldSecondsElapsed();
+    }
+
+    public void setWorldSecondsElapsed(double worldSecondsElapsed) {
+        clockData.setWorldSecondsElapsed(worldSecondsElapsed);
     }
 
     public long getTotalDaysElapsed() {

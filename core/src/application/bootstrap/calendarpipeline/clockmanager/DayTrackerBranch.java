@@ -12,23 +12,14 @@ class DayTrackerBranch extends BranchPackage {
     /*
      * Advances the day-level clock when the day rolls over. Builds lookup
      * tables from the calendar definition for fast day-of-year to month and
-     * day-of-month resolution. Month/day-of-month/day-of-week/year-progress
-     * are always derived directly from the elapsed day count (never
-     * incremented one day at a time), so any gap — the game being closed
-     * for days, months, or years — lands on the correct values in one shot.
-     *
-     * advanceTime() returns true whenever the day was actually recomputed
-     * (the elapsed day count changed) — not only when the new day-of-month
-     * happens to be 1. MonthTrackerBranch/YearTrackerBranch each do their
-     * own direct "did this actually change" comparison downstream, so it's
-     * cheap and correct to let them check every time a day passes; gating
-     * on day-of-month == 1 would miss any month/year rollover that doesn't
-     * land exactly on the 1st, which is guaranteed to happen after a long
-     * enough absence (or even on a freshly created world whose calendar
-     * start date isn't the 1st of its first month).
-     *
-     * The world's starting year/month/day and years-per-age all come from
-     * the active calendar now, rather than fixed engine-wide constants.
+     * day-of-month resolution. Every value is derived directly from the
+     * elapsed day count rather than incremented, so any gap since the last
+     * session lands on the correct date in one step, and advanceTime()
+     * reports every recomputed day so month and year trackers can run their
+     * own change checks. The daily noise is hashed from the world's epoch
+     * and the absolute day, so the same day always reads the same value,
+     * and blendDailyNoise() eases it into the next day's value across the
+     * day so nothing driven by it ever pops at rollover.
      */
 
     // Internal
@@ -43,6 +34,13 @@ class DayTrackerBranch extends BranchPackage {
     private Int2ObjectOpenHashMap<Int2IntOpenHashMap> monthToDayOfMonthToDayOfYear;
     private Int2IntOpenHashMap dayOfYearToDayOfMonth;
     private Int2IntOpenHashMap dayOfYearToMonth;
+
+    // Calendar Offset
+    private long startDayOffset;
+
+    // Daily Noise
+    private float currentDayNoise;
+    private float nextDayNoise;
 
     // Tracking
     private long lastDayElapsed;
@@ -76,9 +74,19 @@ class DayTrackerBranch extends BranchPackage {
         this.clockHandle = clockHandle;
 
         buildDayConversionTables();
+
+        // Calendar Offset
+        this.startDayOffset = calculateStartDayOffset();
+
+        // Tracking
+        this.lastDayElapsed = -1;
     }
 
     private void buildDayConversionTables() {
+
+        monthToDayOfMonthToDayOfYear.clear();
+        dayOfYearToDayOfMonth.clear();
+        dayOfYearToMonth.clear();
 
         int runningDayOfYear = 1;
         int monthCount = calendarHandle.getMonthCount();
@@ -112,51 +120,45 @@ class DayTrackerBranch extends BranchPackage {
 
         lastDayElapsed = totalDaysElapsed;
 
-        long totalDaysWithOffset = calculateTotalDaysWithOffset(totalDaysElapsed);
-        float randomNoise = calculateRandomNoise(totalDaysWithOffset);
-        double yearProgress = calculateYearProgress(totalDaysWithOffset);
-        double visualYearProgress = calculateVisualYearProgress(yearProgress);
-        int currentDayOfWeek = calculateDayOfWeek(totalDaysWithOffset);
+        long totalDaysWithOffset = totalDaysElapsed + startDayOffset;
+        int dayOfYear = (int) Math.floorMod(totalDaysWithOffset, (long) calendarHandle.getTotalDaysInYear()) + 1;
 
-        int totalDaysInYear = calendarHandle.getTotalDaysInYear();
-        int dayOfYear = (int) ((totalDaysWithOffset % totalDaysInYear) + 1);
-        int currentMonth = getMonthFromDayOfYear(dayOfYear);
-        int currentDayOfMonth = getDayOfMonthFromDayOfYear(dayOfYear);
+        this.currentDayNoise = calculateRandomNoise(totalDaysWithOffset);
+        this.nextDayNoise = calculateRandomNoise(totalDaysWithOffset + 1);
 
         clockHandle.setTotalDaysWithOffset(totalDaysWithOffset);
-        clockHandle.setRandomNoiseFromDay(randomNoise);
-        clockHandle.setYearProgress(yearProgress);
-        clockHandle.setVisualYearProgress(visualYearProgress);
-        clockHandle.setCurrentDayOfWeek(currentDayOfWeek);
-        clockHandle.setCurrentDayOfMonth(currentDayOfMonth);
-        clockHandle.setCurrentMonth(currentMonth);
+        clockHandle.setYearProgress(calculateYearProgress(dayOfYear));
+        clockHandle.setCurrentDayOfWeek(calculateDayOfWeek(totalDaysWithOffset));
+        clockHandle.setCurrentDayOfMonth(getDayOfMonthFromDayOfYear(dayOfYear));
+        clockHandle.setCurrentMonth(getMonthFromDayOfYear(dayOfYear));
 
         return true;
     }
 
+    // Daily Noise \\
+
+    void blendDailyNoise() {
+
+        double t = clockHandle.getDayProgress();
+        double eased = t * t * (3.0 - 2.0 * t);
+
+        clockHandle.setRandomNoiseFromDay((float) (currentDayNoise + (nextDayNoise - currentDayNoise) * eased));
+    }
+
     // Calculations \\
 
-    long calculateTotalDaysWithOffset(long totalDaysElapsed) {
+    long calculateStartDayOffset() {
 
-        int startMonth = calendarHandle.getStartMonth();
-        int startDayOfMonth = calendarHandle.getStartDayOfMonth();
-        int startYear = calendarHandle.getStartYear();
+        int startDayOfYear = getDayOfYearFromDayAndMonth(
+                calendarHandle.getStartDayOfMonth(),
+                calendarHandle.getStartMonth());
 
-        int dayOfYear = 0;
-
-        for (int i = 0; i < startMonth; i++)
-            dayOfYear += calendarHandle.getMonthDays(i);
-
-        dayOfYear += startDayOfMonth - 1;
-
-        long dayOffset = (long) startYear * calendarHandle.getTotalDaysInYear() + dayOfYear;
-
-        return totalDaysElapsed + dayOffset;
+        return (long) calendarHandle.getStartYear() * calendarHandle.getTotalDaysInYear() + startDayOfYear - 1;
     }
 
     float calculateRandomNoise(long totalDaysWithOffset) {
 
-        long mixed = totalDaysWithOffset ^ System.currentTimeMillis();
+        long mixed = totalDaysWithOffset ^ clockHandle.getWorldEpochStart();
 
         mixed ^= mixed >>> 33;
         mixed *= NOISE_MULTIPLIER;
@@ -167,21 +169,12 @@ class DayTrackerBranch extends BranchPackage {
         return (float) Math.max(NOISE_MIN, normalized);
     }
 
-    double calculateYearProgress(long totalDaysWithOffset) {
-
-        int totalDaysInYear = calendarHandle.getTotalDaysInYear();
-        long yearsPerAgeDays = (long) calendarHandle.getYearsPerAge() * totalDaysInYear;
-        long dayOfAge = totalDaysWithOffset % yearsPerAgeDays;
-
-        return (double) (dayOfAge % totalDaysInYear) / totalDaysInYear;
-    }
-
-    double calculateVisualYearProgress(double yearProgress) {
-        return yearProgress;
+    double calculateYearProgress(int dayOfYear) {
+        return (dayOfYear - 1) / (double) calendarHandle.getTotalDaysInYear();
     }
 
     int calculateDayOfWeek(long totalDaysWithOffset) {
-        return (int) ((totalDaysWithOffset % calendarHandle.getDaysPerWeek()) + 1);
+        return (int) Math.floorMod(totalDaysWithOffset, (long) calendarHandle.getDaysPerWeek()) + 1;
     }
 
     // Conversion Utilities \\

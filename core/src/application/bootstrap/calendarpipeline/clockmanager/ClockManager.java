@@ -20,7 +20,9 @@ public class ClockManager extends ManagerPackage {
      * Drives the in-game clock for the active world. Owns the global
      * ClockHandle and calendar wiring; each grid holds its own
      * ClockInstance, handed out by this manager, so time of day resolves
-     * independently per location.
+     * independently per location. Loading and switching worlds share one
+     * wiring path, and the clock is solved immediately afterward so every
+     * value is already correct before the first frame reads it.
      */
 
     // Internal
@@ -70,14 +72,9 @@ public class ClockManager extends ManagerPackage {
     protected void awake() {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
-        this.calendarHandle = calendarManager.getCalendarHandleFromCalendarName(activeWorld.getCalendarName());
 
-        if (activeWorld.getWorldEpochStart() == -1L)
-            activeWorld.setWorldEpochStart(System.currentTimeMillis());
-
-        ClockData clockData = new ClockData(activeWorld.getWorldEpochStart());
-        clockHandle.constructor(clockData);
-        clockHandle.setCalendarHandle(calendarHandle);
+        clockHandle.constructor(new ClockData(activeWorld.getWorldEpochStart()));
+        internalBuffer.assignData(clockHandle);
 
         wireData(activeWorld);
     }
@@ -89,15 +86,19 @@ public class ClockManager extends ManagerPackage {
 
     // Clock \\
 
-    private void wireData(WorldHandle activeWorld) {
-        currentTracker.assignData(
-                calendarHandle,
-                clockHandle,
-                activeWorld.getAxialTilt());
+    private void wireData(WorldHandle world) {
+
+        this.calendarHandle = calendarManager.getCalendarHandleFromCalendarName(world.getCalendarName());
+
+        clockHandle.setWorldEpochStart(world.getWorldEpochStart());
+        clockHandle.setCalendarHandle(calendarHandle);
+
+        currentTracker.assignData(calendarHandle, clockHandle, world.getAxialTilt());
         dayTracker.assignData(calendarHandle, clockHandle);
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
-        internalBuffer.assignData(clockHandle);
+
+        advanceGameClock();
     }
 
     private void advanceGameClock() {
@@ -108,6 +109,9 @@ public class ClockManager extends ManagerPackage {
             if (dayTracker.advanceTime())
                 if (monthTracker.advanceTime())
                     yearTracker.advanceTime();
+
+        currentTracker.advanceVisualYear();
+        dayTracker.blendDailyNoise();
 
         updateLocationTimes();
     }
@@ -156,23 +160,11 @@ public class ClockManager extends ManagerPackage {
 
     /*
      * Call when the player travels to a different world. Swaps calendar,
-     * time rate, axial tilt, and epoch anchor immediately.
+     * axial tilt, and epoch anchor and re-solves the clock immediately.
+     * Season-driven systems follow the new calendar on their own.
      */
     public void switchWorld(WorldHandle newWorld) {
-
-        this.calendarHandle = calendarManager.getCalendarHandleFromCalendarName(newWorld.getCalendarName());
-
-        if (newWorld.getWorldEpochStart() == -1L)
-            newWorld.setWorldEpochStart(System.currentTimeMillis());
-
-        clockHandle.setWorldEpochStart(newWorld.getWorldEpochStart());
-        clockHandle.setCalendarHandle(calendarHandle);
-        currentTracker.setCalendarHandle(calendarHandle);
-        currentTracker.setAxialTilt(newWorld.getAxialTilt());
-
-        dayTracker.assignData(calendarHandle, clockHandle);
-        monthTracker.assignData(clockHandle);
-        yearTracker.assignData(calendarHandle, clockHandle);
+        wireData(newWorld);
     }
 
     // Location Clocks \\

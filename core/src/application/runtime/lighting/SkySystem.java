@@ -16,10 +16,10 @@ public class SkySystem extends SystemPackage {
 
     /*
      * Submits the sky pass render call each frame and queues the sky FBO
-     * for compositing. Binds this window's own grid's Time/Sky UBO
-     * instances so sky color reflects this grid's own location. The sky
-     * pass has no knowledge of weather or clouds — that is handled
-     * entirely by the weather fullscreen pass.
+     * for compositing. Binds this window's own grid's Time, Sky, and Sun
+     * UBO instances so sky color and the sun-side glow reflect this grid's
+     * own location. The sky pass has no knowledge of weather or clouds —
+     * that is handled entirely by the weather fullscreen pass.
      */
 
     // Internal
@@ -72,6 +72,7 @@ public class SkySystem extends SystemPackage {
 
         mat.setUBO(grid.getTimeDataUBO());
         mat.setUBO(grid.getSkyColorUBO());
+        mat.setUBO(grid.getSunLightUBO());
     }
 
     // Accessible \\

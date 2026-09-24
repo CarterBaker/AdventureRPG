@@ -36,7 +36,7 @@ class CalendarBuilder extends BuilderPackage {
         Object2ByteOpenHashMap<String> monthDays = parseMonths(json, monthNames);
         int totalDaysInYear = calculateTotalDaysInYear(monthDays);
 
-        CalendarTimeStruct time = parseTime(json);
+        CalendarTimeStruct time = parseTime(json, calendarName);
         CalendarStartStruct start = parseStart(json, calendarName, monthNames, monthDays, time);
         ObjectArrayList<SeasonRangeStruct> seasons = parseSeasons(json, calendarName, monthNames, monthDays);
 
@@ -89,7 +89,7 @@ class CalendarBuilder extends BuilderPackage {
         return monthDays;
     }
 
-    private CalendarTimeStruct parseTime(JsonObject json) {
+    private CalendarTimeStruct parseTime(JsonObject json, String calendarName) {
 
         int daysPerDay = JsonUtility.validateInt(json, "daysPerDay");
         int hoursPerDay = JsonUtility.validateInt(json, "hoursPerDay");
@@ -97,6 +97,9 @@ class CalendarBuilder extends BuilderPackage {
         int lunarCycleDays = JsonUtility.validateInt(json, "lunarCycleDays");
         float middayOffset = JsonUtility.validateFloat(json, "middayOffset");
         int yearsPerAge = JsonUtility.validateInt(json, "yearsPerAge");
+
+        validateTime(calendarName, daysPerDay, hoursPerDay, minutesPerHour, lunarCycleDays, middayOffset,
+                yearsPerAge);
 
         return new CalendarTimeStruct(daysPerDay, hoursPerDay, minutesPerHour, lunarCycleDays, middayOffset,
                 yearsPerAge);
@@ -182,6 +185,36 @@ class CalendarBuilder extends BuilderPackage {
     }
 
     // Validation \\
+
+    private void validateTime(
+            String calendarName,
+            int daysPerDay,
+            int hoursPerDay,
+            int minutesPerHour,
+            int lunarCycleDays,
+            float middayOffset,
+            int yearsPerAge) {
+
+        validatePositive(calendarName, "daysPerDay", daysPerDay);
+        validatePositive(calendarName, "hoursPerDay", hoursPerDay);
+        validatePositive(calendarName, "minutesPerHour", minutesPerHour);
+        validatePositive(calendarName, "yearsPerAge", yearsPerAge);
+
+        if (lunarCycleDays < 0)
+            throwException("Calendar \"" + calendarName + "\" lunarCycleDays " + lunarCycleDays +
+                    " is out of range — must be 0 or greater");
+
+        if (middayOffset < 0f || middayOffset >= 1f)
+            throwException("Calendar \"" + calendarName + "\" middayOffset " + middayOffset +
+                    " is out of range — must be at least 0.0 and below 1.0");
+    }
+
+    private void validatePositive(String calendarName, String field, int value) {
+
+        if (value < 1)
+            throwException("Calendar \"" + calendarName + "\" " + field + " " + value +
+                    " is out of range — must be 1 or greater");
+    }
 
     private void validateStartDate(
             String calendarName,

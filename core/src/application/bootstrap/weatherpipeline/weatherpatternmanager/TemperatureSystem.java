@@ -1,7 +1,6 @@
 package application.bootstrap.weatherpipeline.weatherpatternmanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
-import application.bootstrap.weatherpipeline.season.SeasonHandle;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import engine.root.EngineSetting;
@@ -10,19 +9,22 @@ import engine.root.SystemPackage;
 class TemperatureSystem extends SystemPackage {
 
     /*
-     * Computes ambient temperature from the active season's base and
+     * Computes ambient temperature from the season-blended base and
      * variance, shaped by a diurnal curve and a slow shared drift, cooled
      * by a local weather instance's precipitation and offset by its
-     * temperature modifier.
+     * temperature modifier. The season values ease across the year and the
+     * drift runs on the world's own clock, so temperature carries on from
+     * wherever it left off between sessions instead of restarting.
      */
 
+    // Internal
     private ClockManager clockManager;
     private SeasonManager seasonManager;
 
-    private String lastSeasonName;
-    private SeasonHandle activeSeason;
+    // Drift
+    private double driftSeconds;
 
-    private float elapsedTime;
+    // Internal \\
 
     @Override
     protected void get() {
@@ -31,22 +33,18 @@ class TemperatureSystem extends SystemPackage {
     }
 
     void advanceClock() {
-        elapsedTime += internal.getDeltaTime();
-        resolveActiveSeason();
+        this.driftSeconds = clockManager.getClockHandle().getWorldSecondsElapsed();
     }
+
+    // Temperature \\
 
     float computeTemperature(WeatherInstance localPattern, double visualTimeOfDay) {
 
-        float baseTemperature = EngineSetting.DEFAULT_BASE_TEMPERATURE;
-        float temperatureVariance = 0f;
-
-        if (activeSeason != null) {
-            baseTemperature = activeSeason.getBaseTemperature();
-            temperatureVariance = activeSeason.getTemperatureVariance();
-        }
+        float baseTemperature = seasonManager.getBlendedBaseTemperature();
+        float temperatureVariance = seasonManager.getBlendedTemperatureVariance();
 
         float diurnalOffset = computeDiurnalOffset(visualTimeOfDay) * temperatureVariance;
-        float driftOffset = (float) Math.sin(elapsedTime * EngineSetting.TEMPERATURE_DRIFT_FREQUENCY)
+        float driftOffset = (float) Math.sin(driftSeconds * EngineSetting.TEMPERATURE_DRIFT_FREQUENCY)
                 * 0.5f * temperatureVariance;
 
         float precipitationIntensity = localPattern != null ? localPattern.getBlendedPrecipitationIntensity() : 0f;
@@ -55,17 +53,6 @@ class TemperatureSystem extends SystemPackage {
         float precipitationCooling = precipitationIntensity * EngineSetting.TEMPERATURE_PRECIPITATION_COOLING;
 
         return baseTemperature + diurnalOffset + driftOffset - precipitationCooling + temperatureModifier;
-    }
-
-    private void resolveActiveSeason() {
-
-        String currentSeasonName = clockManager.getClockHandle().getCurrentSeason();
-
-        if (currentSeasonName == null || currentSeasonName.equals(lastSeasonName))
-            return;
-
-        lastSeasonName = currentSeasonName;
-        activeSeason = seasonManager.getSeasonHandleFromSeasonName(currentSeasonName);
     }
 
     private float computeDiurnalOffset(double visualTimeOfDay) {

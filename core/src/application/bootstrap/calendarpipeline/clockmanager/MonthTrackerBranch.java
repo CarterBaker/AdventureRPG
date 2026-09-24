@@ -34,7 +34,12 @@ class MonthTrackerBranch extends BranchPackage {
     // Assignment \\
 
     void assignData(ClockHandle clockHandle) {
+
+        // Internal
         this.clockHandle = clockHandle;
+
+        // Tracking
+        this.lastMonth = -1;
     }
 
     // Month Tracker \\

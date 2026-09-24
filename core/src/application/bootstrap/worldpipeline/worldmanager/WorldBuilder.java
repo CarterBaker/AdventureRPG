@@ -28,9 +28,10 @@ class WorldBuilder extends BuilderPackage {
      * All fields are resolved before WorldData construction — the handle is
      * never mutated after constructor() is called. Bootstrap-only. The
      * companion JSON is also the durable home for the world's generation
-     * seed: once assigned, it is written back to disk immediately so every
-     * future load of this world, on any machine, reproduces the same seed
-     * and therefore the same terrain.
+     * seed and its epoch start: once assigned, each is written back to disk
+     * immediately so every future load reproduces the same terrain and the
+     * same clock — the world keeps time from its epoch whether or not the
+     * game is running.
      */
 
     private static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -84,6 +85,7 @@ class WorldBuilder extends BuilderPackage {
         }
 
         long seed = resolveWorldSeed(json, jsonFile, worldName);
+        long worldEpochStart = resolveWorldEpochStart(json, jsonFile, worldName);
 
         WorldData data = new WorldData(
                 worldName,
@@ -93,6 +95,7 @@ class WorldBuilder extends BuilderPackage {
                 gravityMultiplier,
                 gravityDirection,
                 calendarName,
+                worldEpochStart,
                 rotationSpeed,
                 axialTilt,
                 planetaryOffset,
@@ -124,12 +127,35 @@ class WorldBuilder extends BuilderPackage {
         return seed;
     }
 
+    // Epoch \\
+
+    /*
+     * Reads "epoch_start" from the companion JSON if present — the real
+     * instant, in epoch milliseconds, at which this world's calendar sat on
+     * its own start date and start time. If it's missing the world begins
+     * now, and that instant is persisted immediately so the clock carries on
+     * from it across every future session.
+     */
+    private long resolveWorldEpochStart(JsonObject json, File jsonFile, String worldName) {
+
+        if (json.has("epoch_start"))
+            return json.get("epoch_start").getAsLong();
+
+        long worldEpochStart = System.currentTimeMillis();
+        json.addProperty("epoch_start", worldEpochStart);
+        persistCompanionJson(json, jsonFile, worldName);
+
+        return worldEpochStart;
+    }
+
+    // Persistence \\
+
     private void persistCompanionJson(JsonObject json, File jsonFile, String worldName) {
 
         try (FileWriter writer = new FileWriter(jsonFile)) {
             PRETTY_GSON.toJson(json, writer);
         } catch (IOException e) {
-            throwException("Failed to persist generated seed for world: \"" + worldName + "\"", e);
+            throwException("Failed to persist companion JSON for world: \"" + worldName + "\"", e);
         }
     }
 

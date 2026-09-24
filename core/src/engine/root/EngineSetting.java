@@ -483,42 +483,60 @@ public class EngineSetting {
         // Sky & Atmosphere \\
 
         public static final double DEGREES_PER_FULL_ROTATION = 360.0;
+        public static final float SKY_BELT_ELEVATION_END = 0.10f;
+        public static final float SKY_BELT_ELEVATION_PEAK = -0.07f;
+        public static final float SKY_BELT_ELEVATION_START = -0.24f;
         public static final float SKY_CLOUD_COLOR_ACCENT_STRENGTH = 0.7f;
-        public static final float SKY_CLOUD_COLOR_HORIZON_WEIGHT = 0.65f;
         public static final String SKY_COLOR_UBO = "SkyColorData";
-        public static final float SKY_DAILY_HASH_B = 5333.0f;
-        public static final float SKY_DAILY_HASH_G = 7919.0f;
-        public static final float SKY_DAILY_OFFSET_B_BIAS = -0.02f;
-        public static final float SKY_DAILY_OFFSET_B_SCALE = 0.04f;
-        public static final float SKY_DAILY_OFFSET_G_BIAS = -0.03f;
-        public static final float SKY_DAILY_OFFSET_G_SCALE = 0.06f;
-        public static final float SKY_DAILY_OFFSET_R_BIAS = -0.04f;
-        public static final float SKY_DAILY_OFFSET_R_SCALE = 0.08f;
-        public static final float SKY_DAY_BOTTOM_B = 0.80f;
-        public static final float SKY_DAY_BOTTOM_G = 0.52f;
-        public static final float SKY_DAY_BOTTOM_R = 0.32f;
-        public static final float SKY_DAY_TOP_B = 1.00f;
-        public static final float SKY_DAY_TOP_G = 0.82f;
-        public static final float SKY_DAY_TOP_R = 0.60f;
+        public static final float SKY_DAILY_BELT_VARIANCE = 0.25f;
+        public static final float SKY_DAILY_GLOW_VARIANCE = 0.30f;
+        public static final float SKY_DAILY_OFFSET_B = 0.02f;
+        public static final float SKY_DAILY_OFFSET_B_PHASE = 2.094f;
+        public static final float SKY_DAILY_OFFSET_G = 0.03f;
+        public static final float SKY_DAILY_OFFSET_R = 0.04f;
+        public static final float SKY_DAYLIGHT_ELEVATION_END = 0.35f;
+        public static final float SKY_DAYLIGHT_ELEVATION_START = -0.08f;
         public static final float SKY_FOG_COLOR_LIFT = 0.04f;
-        public static final float SKY_HORIZON_DESATURATION = 0.12f;
-        public static final float SKY_NIGHT_BOTTOM_B = 0.020f;
-        public static final float SKY_NIGHT_BOTTOM_G = 0.005f;
-        public static final float SKY_NIGHT_BOTTOM_R = 0.005f;
-        public static final float SKY_NIGHT_TOP_B = 0.080f;
-        public static final float SKY_NIGHT_TOP_G = 0.020f;
-        public static final float SKY_NIGHT_TOP_R = 0.020f;
-        public static final float SKY_SEASONAL_STRENGTH_SCALE = 0.50f;
-        public static final float SKY_SEASONAL_TINT_OFFSET_SCALE = 0.15f;
+        public static final float SKY_FOG_GLOW_TRANSFER = 0.35f;
+        public static final float SKY_GLOW_ELEVATION_END = 0.30f;
+        public static final float SKY_GLOW_ELEVATION_PEAK = -0.02f;
+        public static final float SKY_GLOW_ELEVATION_START = -0.30f;
+        public static final float SKY_HAZE_LIFT = 0.35f;
+        public static final float SKY_HUMIDITY_HAZE = 0.20f;
+        public static final float SKY_LUMINANCE_B = 0.0722f;
+        public static final float SKY_LUMINANCE_G = 0.7152f;
+        public static final float SKY_LUMINANCE_R = 0.2126f;
+        public static final float SKY_OVERCAST_CLOUD_SHADE = 0.35f;
+        public static final float SKY_OVERCAST_COVERAGE_WEIGHT = 0.8f;
+        public static final float SKY_OVERCAST_DESATURATION = 0.75f;
+        public static final float SKY_OVERCAST_DIMMING = 0.30f;
+        public static final float SKY_OVERCAST_GLOW_DAMPING = 0.85f;
+        public static final float SKY_OVERCAST_PRECIPITATION_WEIGHT = 0.6f;
+        public static final float[] SKY_PHASE_ELEVATIONS = { -0.30f, -0.08f, 0.06f, 0.35f };
+        public static final String[] SKY_PHASE_NAMES = { "night", "twilight", "golden", "day" };
         public static final float SKY_TEMPERATURE_ACCENT_STRENGTH = 0.55f;
         public static final float SKY_TEMPERATURE_COLD_ACCENT_B = 0.88f;
         public static final float SKY_TEMPERATURE_COLD_ACCENT_G = 0.75f;
         public static final float SKY_TEMPERATURE_COLD_ACCENT_R = 0.95f;
+        public static final float SKY_TEMPERATURE_COLD_BELT_BOOST = 0.6f;
+        public static final float SKY_TEMPERATURE_COLD_CLARITY = 0.15f;
         public static final float SKY_TEMPERATURE_COLD_REFERENCE = -10.0f;
         public static final float SKY_TEMPERATURE_HOT_ACCENT_B = 0.18f;
         public static final float SKY_TEMPERATURE_HOT_ACCENT_G = 0.55f;
         public static final float SKY_TEMPERATURE_HOT_ACCENT_R = 1.00f;
+        public static final float SKY_TEMPERATURE_HOT_GLOW_BOOST = 0.35f;
+        public static final float SKY_TEMPERATURE_HOT_HAZE = 0.30f;
         public static final float SKY_TEMPERATURE_HOT_REFERENCE = 30.0f;
+        public static final float SKY_TEMPERATURE_MILD_REFERENCE = 12.0f;
+        public static final String UNIFORM_SKY_BELT_COLOR = "u_skyBeltColor";
+        public static final String UNIFORM_SKY_BLEND = "u_skyBlend";
+        public static final String UNIFORM_SKY_CLOUD_COLOR = "u_skyCloudColor";
+        public static final String UNIFORM_SKY_CLOUD_LIGHT_COLOR = "u_skyCloudLightColor";
+        public static final String UNIFORM_SKY_CLOUD_SHADOW_COLOR = "u_skyCloudShadowColor";
+        public static final String UNIFORM_SKY_FOG_COLOR = "u_skyFogColor";
+        public static final String UNIFORM_SKY_GLOW_COLOR = "u_skyGlowColor";
+        public static final String UNIFORM_SKY_HORIZON_COLOR = "u_skyHorizonColor";
+        public static final String UNIFORM_SKY_ZENITH_COLOR = "u_skyZenithColor";
 
         // Weather \\
 
@@ -617,17 +635,11 @@ public class EngineSetting {
         public static final float DEFAULT_SEASON_BASE_WIND_SPEED = 3.0f;
         public static final float DEFAULT_SEASON_PRECIPITATION_CHANCE_SCALE = 1.0f;
         public static final float DEFAULT_SEASON_PREVAILING_WIND_DIRECTION_DEGREES = 0.0f;
-        public static final float DEFAULT_SEASON_SUNRISE_B = 0.39f;
-        public static final float DEFAULT_SEASON_SUNRISE_G = 0.53f;
-        public static final float DEFAULT_SEASON_SUNRISE_R = 0.90f;
         public static final float DEFAULT_SEASON_TEMPERATURE_VARIANCE = 5.0f;
-        public static final float DEFAULT_SEASON_TINT_B = 1.0f;
-        public static final float DEFAULT_SEASON_TINT_G = 1.0f;
-        public static final float DEFAULT_SEASON_TINT_R = 1.0f;
         public static final float DEFAULT_SEASON_WIND_VARIANCE = 1.0f;
         public static final float LATITUDE_DAYLENGTH_CURVE_POWER = 1.0f;
         public static final float LATITUDE_DAYLENGTH_REFERENCE_TILT_DEGREES = 23.5f;
-        public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.01f;
+        public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.00001f;
 
         // Time & Clock \\
 

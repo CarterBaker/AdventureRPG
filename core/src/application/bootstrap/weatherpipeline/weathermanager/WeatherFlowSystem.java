@@ -48,8 +48,7 @@ class WeatherFlowSystem extends SystemPackage {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
 
-        this.flowSeconds = (internal.getTime() - clockManager.getClockHandle().getWorldEpochStart())
-                / EngineSetting.MILLIS_PER_SECOND;
+        this.flowSeconds = clockManager.getClockHandle().getWorldSecondsElapsed();
 
         double prevailingSpeed = resolvePrevailingSpeedBlocksPerSecond(activeWorld);
         double lateralSpeed = Math.abs(prevailingSpeed)
