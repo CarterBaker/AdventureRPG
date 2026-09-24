@@ -1,4 +1,4 @@
-package application.debug.freecamera;
+package editor.debug.freecamera;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.runtime.input.InputSystem;

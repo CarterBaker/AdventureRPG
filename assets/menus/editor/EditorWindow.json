@@ -80,6 +80,85 @@
       ]
     },
     {
+      "id": "tools_dropdown_panel",
+      "type": "container",
+      "anchor": "bottom_left",
+      "pivot": "bottom_left",
+      "size": {
+        "x": "150px",
+        "y": "56px"
+      },
+      "elements": [
+        {
+          "id": "tools_dropdown_content",
+          "type": "container",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "size": {
+            "x": "150px",
+            "y": "56px"
+          },
+          "stack": "vertical",
+          "font_size": "50%",
+          "sprite": "menus/DefaultElement",
+          "elements": [
+            {
+              "id": "open_hierarchy_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "150px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                "method": "openHierarchy"
+              },
+              "elements": [
+                {
+                  "id": "open_hierarchy_label",
+                  "type": "label",
+                  "text": "Hierarchy",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "open_item_editor_button",
+              "type": "button",
+              "sprite": "menus/DefaultElement",
+              "size": {
+                "x": "150px",
+                "y": "28px"
+              },
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                "method": "openItemEditor"
+              },
+              "elements": [
+                {
+                  "id": "open_item_editor_label",
+                  "type": "label",
+                  "text": "Item Editor",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "layouts_dropdown_panel",
       "type": "container",
       "anchor": "bottom_right",
@@ -264,6 +343,56 @@
               ]
             },
             {
+              "id": "tools_menu",
+              "type": "container",
+              "anchor": "top_left",
+              "pivot": "bottom_left",
+              "size": {
+                "x": "100px",
+                "y": "28px"
+              },
+              "elements": [
+                {
+                  "id": "tools_button_bg",
+                  "type": "container",
+                  "anchor": "top_left",
+                  "pivot": "bottom_left",
+                  "size": {
+                    "x": "100px",
+                    "y": "28px"
+                  },
+                  "elements": [
+                    {
+                      "id": "tools_bg_label",
+                      "type": "label",
+                      "text": "Tools",
+                      "font_size": "50%",
+                      "color": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "tools_button",
+                  "type": "button",
+                  "anchor": "top_left",
+                  "pivot": "bottom_left",
+                  "size": {
+                    "x": "100px",
+                    "y": "28px"
+                  },
+                  "on_hover_enter": {
+                    "use": "editor/EditorWindow/tools_dropdown_panel"
+                  },
+                  "on_hover_exit": {}
+                }
+              ]
+            },
+            {
               "id": "layouts_menu",
               "type": "container",
               "anchor": "top_right",
@@ -322,11 +451,12 @@
       ]
     },
     {
-      "id": "CreateLayoutDialog",
+      "id": "NameDialog",
       "raycast_input": true,
       "lock_input": true,
       "entry_points": [
-        "create_name_display_label"
+        "name_dialog_label",
+        "name_dialog_title_label"
       ],
       "elements": [
         {
@@ -352,6 +482,29 @@
               },
               "elements": [
                 {
+                  "id": "name_dialog_title_label",
+                  "type": "label",
+                  "anchor": "bottom_left",
+                  "pivot": "top_left",
+                  "position": {
+                    "x": "8px",
+                    "y": "0px"
+                  },
+                  "size": {
+                    "x": "calc(100% - 40px)",
+                    "y": "100%"
+                  },
+                  "align": "left",
+                  "text": "",
+                  "font_size": "50%",
+                  "color": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                },
+                {
                   "id": "dialog_close_button",
                   "type": "button",
                   "sprite": "menus/CloseIcon",
@@ -372,8 +525,8 @@
                     0.7
                   ],
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                    "method": "cancelCreate"
+                    "class": "engine.editor.menueventsmanager.menus.NameDialogBranch",
+                    "method": "cancel"
                   }
                 }
               ]
@@ -395,7 +548,7 @@
               "spacing": "8px",
               "elements": [
                 {
-                  "id": "create_name_input_backing",
+                  "id": "name_dialog_input_backing",
                   "type": "sprite",
                   "size": {
                     "x": "288px",
@@ -404,7 +557,7 @@
                   "sprite": "menus/DefaultElement",
                   "elements": [
                     {
-                      "id": "create_name_display_label",
+                      "id": "name_dialog_label",
                       "type": "label",
                       "size": {
                         "x": "100%",
@@ -422,7 +575,7 @@
                   ]
                 },
                 {
-                  "id": "create_confirm_button",
+                  "id": "name_dialog_confirm_button",
                   "type": "button",
                   "size": {
                     "x": "288px",
@@ -430,12 +583,12 @@
                   },
                   "sprite": "menus/DefaultElement",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                    "method": "confirmCreate"
+                    "class": "engine.editor.menueventsmanager.menus.NameDialogBranch",
+                    "method": "confirm"
                   },
                   "elements": [
                     {
-                      "id": "create_confirm_label",
+                      "id": "name_dialog_confirm_label",
                       "type": "label",
                       "text": "OK",
                       "font_size": "50%",

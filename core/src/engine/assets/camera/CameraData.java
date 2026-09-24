@@ -72,6 +72,29 @@ public class CameraData extends DataPackage {
         syncCaches();
     }
 
+    public void getPickRay(float ndcX, float ndcY, Vector3 outOrigin, Vector3 outDirection) {
+
+        float safeWidth = Math.max(1f, viewportVec.x);
+        float safeHeight = Math.max(1f, viewportVec.y);
+        float safeFov = Math.max(1f, Math.min(179f, fov));
+        float aspect = safeWidth / safeHeight;
+        float tanHalfFov = (float) Math.tan(Math.toRadians(safeFov) * 0.5);
+
+        Vector3 f = new Vector3(directionVec).normalize();
+        Vector3 s = new Vector3(f.y * upVec.z - f.z * upVec.y, f.z * upVec.x - f.x * upVec.z,
+                f.x * upVec.y - f.y * upVec.x).normalize();
+        Vector3 u = new Vector3(s.y * f.z - s.z * f.y, s.z * f.x - s.x * f.z, s.x * f.y - s.y * f.x);
+
+        float horizontal = ndcX * tanHalfFov * aspect;
+        float vertical = ndcY * tanHalfFov;
+
+        outOrigin.set(positionVec);
+        outDirection.set(
+                f.x + s.x * horizontal + u.x * vertical,
+                f.y + s.y * horizontal + u.y * vertical,
+                f.z + s.z * horizontal + u.z * vertical).normalize();
+    }
+
     private void syncCaches() {
         setPerspective(projectionMat, fov, viewportVec.x, viewportVec.y, nearPlane, farPlane);
         setLookAt(viewMat, positionVec, directionVec, upVec);

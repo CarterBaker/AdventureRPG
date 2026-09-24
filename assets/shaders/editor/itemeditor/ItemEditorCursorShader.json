@@ -1,0 +1,4 @@
+{
+    "vert": "editor/itemeditor/ItemEditorCursorShader.vsh",
+    "frag": "editor/itemeditor/ItemEditorCursorShader.fsh"
+}

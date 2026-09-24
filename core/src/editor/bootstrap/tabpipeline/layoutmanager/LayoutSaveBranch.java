@@ -1,8 +1,6 @@
 package editor.bootstrap.tabpipeline.layoutmanager;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -14,6 +12,7 @@ import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.BranchPackage;
+import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -48,7 +47,7 @@ public class LayoutSaveBranch extends BranchPackage {
         layoutJson.add("tabs", buildTabs());
         layoutJson.add("windows", buildWindows());
 
-        write(layoutFile, layoutJson);
+        JsonUtility.writeJsonObject(layoutFile, layoutJson, internal.gson);
     }
 
     // Build \\
@@ -121,18 +120,5 @@ public class LayoutSaveBranch extends BranchPackage {
         nodeJson.add("first", buildNode(node.getFirst()));
         nodeJson.add("second", buildNode(node.getSecond()));
         return nodeJson;
-    }
-
-    // Utility \\
-
-    private void write(File layoutFile, JsonObject layoutJson) {
-
-        layoutFile.getParentFile().mkdirs();
-
-        try (FileWriter writer = new FileWriter(layoutFile)) {
-            internal.gson.toJson(layoutJson, writer);
-        } catch (IOException e) {
-            throwException("Failed to write layout file: " + layoutFile.getAbsolutePath(), e);
-        }
     }
 }

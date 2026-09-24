@@ -8,6 +8,7 @@ import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TextureManager extends ManagerPackage {
 
@@ -166,6 +167,19 @@ public class TextureManager extends ManagerPackage {
 
     public TextureHandle getTextureHandleFromArrayName(String arrayName) {
         return getTextureHandleFromArrayID(getArrayIDFromArrayName(arrayName));
+    }
+
+    public ObjectArrayList<String> getTextureNamesInArray(String arrayName) {
+
+        int arrayID = getArrayIDFromArrayName(arrayName);
+        ObjectArrayList<String> textureNames = new ObjectArrayList<>();
+
+        for (TextureHandle handle : tileID2TextureHandle.values())
+            if (handle.getArrayID() == arrayID)
+                textureNames.add(handle.getTileName());
+
+        textureNames.sort(String.CASE_INSENSITIVE_ORDER);
+        return textureNames;
     }
 
     public int createFloatTexture2D(float[] pixels, int width, int height, int wrapMode, int filterMode) {

@@ -11,6 +11,7 @@ import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
 import engine.editor.EditorSecondaryWindowContext;
+import engine.editor.EditorSetting;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -113,7 +114,15 @@ public class TabManager extends ManagerPackage {
     }
 
     public TabHandle openDebug(WindowInstance osWindow) {
-        return openTab(EngineSetting.TAB_TITLE_DEBUG, application.debug.DebugContext.class, osWindow);
+        return openTab(EngineSetting.TAB_TITLE_DEBUG, editor.debug.DebugContext.class, osWindow);
+    }
+
+    public TabHandle openHierarchy(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_HIERARCHY, editor.hierarchy.HierarchyContext.class, osWindow);
+    }
+
+    public TabHandle openItemEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_ITEM_EDITOR, editor.itemeditor.ItemEditorContext.class, osWindow);
     }
 
     /*

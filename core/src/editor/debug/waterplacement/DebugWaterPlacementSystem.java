@@ -1,4 +1,4 @@
-package application.runtime.debug;
+package editor.debug.waterplacement;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -14,7 +14,7 @@ public class DebugWaterPlacementSystem extends SystemPackage {
      * this context's window asks the engine to pour a Water block wherever
      * that window's player is aiming. Raycasting, placement, liquid wake-up,
      * and every geometry rebuild live in the engine. Flip ENABLED to false,
-     * or remove the create() call in RuntimeContext, to take this out.
+     * or remove the create() call in DebugContext, to take this out.
      */
 
     private static final boolean ENABLED = true;

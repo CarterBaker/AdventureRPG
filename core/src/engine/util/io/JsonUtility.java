@@ -2,7 +2,10 @@ package engine.util.io;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -28,6 +31,22 @@ public class JsonUtility extends EngineUtility {
             return root.isJsonObject() ? root.getAsJsonObject() : null;
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    // Writers \\
+
+    public static void writeJsonObject(File file, JsonObject json, Gson gson) {
+
+        File parent = file.getAbsoluteFile().getParentFile();
+
+        if (parent != null)
+            parent.mkdirs();
+
+        try (FileWriter writer = new FileWriter(file)) {
+            gson.toJson(json, writer);
+        } catch (IOException e) {
+            throwException("Failed to write JSON file: " + file.getAbsolutePath(), e);
         }
     }
 

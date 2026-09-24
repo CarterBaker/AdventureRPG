@@ -679,6 +679,16 @@ public class EngineSetting {
         public static final String DEFAULT_ITEM_MATERIAL = "items/StandardItemMaterial";
         public static final short TOOL_NONE = 0;
 
+        // Sub-Voxel Model \\
+
+        public static final int SUB_VOXEL_CELL_COUNT = SUB_VOXEL_RESOLUTION * SUB_VOXEL_RESOLUTION
+                        * SUB_VOXEL_RESOLUTION;
+        public static final int SUB_VOXEL_EMPTY_CELL = 0;
+        public static final int SUB_VOXEL_FACE_COUNT = 6;
+        public static final int SUB_VOXEL_MAX_PARTS = 255;
+        public static final String SUB_VOXEL_VAO = "util/vao/ItemVAO";
+        public static final int SUB_VOXEL_VERTEX_STRIDE = 6;
+
         // Font \\
 
         public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";
@@ -698,7 +708,23 @@ public class EngineSetting {
         public static final String ELEMENT_DEFAULT_MIN_SIZE = "0%";
         public static final String ELEMENT_DEFAULT_POSITION = "0%";
         public static final String ELEMENT_DEFAULT_SIZE = "100%";
+        public static final String HIERARCHY_COLLAPSED_MARKER = "+";
+        public static final String HIERARCHY_ELEMENT_LABEL = "hierarchy_label";
+        public static final String HIERARCHY_ELEMENT_TAB_LABEL = "hierarchy_tab_label";
+        public static final String HIERARCHY_ELEMENT_TOGGLE = "hierarchy_toggle";
+        public static final String HIERARCHY_ELEMENT_TOGGLE_LABEL = "hierarchy_toggle_label";
+        public static final int HIERARCHY_ENTRY_ROWS = 1;
+        public static final int HIERARCHY_ENTRY_TABS = 0;
+        public static final String HIERARCHY_EXPANDED_MARKER = "-";
+        public static final float HIERARCHY_INDENT_PIXELS = 14f;
+        public static final String HIERARCHY_LEAF_MARKER = "";
+        public static final String HIERARCHY_ROW_SELECTED_TEMPLATE = "util/Hierarchy/hierarchy_row_selected";
+        public static final String HIERARCHY_ROW_TEMPLATE = "util/Hierarchy/hierarchy_row";
+        public static final String HIERARCHY_TAB_ACTIVE_TEMPLATE = "util/Hierarchy/hierarchy_tab_active";
+        public static final String HIERARCHY_TAB_TEMPLATE = "util/Hierarchy/hierarchy_tab";
+        public static final float HIERARCHY_TOGGLE_WIDTH_PIXELS = 16f;
         public static final int MAX_MASK_DEPTH = 8;
+        public static final String MENU_HIERARCHY = "util/Hierarchy/Hierarchy";
         public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
         public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
         public static final float RATIO_DEFAULT = 0.5f;

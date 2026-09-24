@@ -1,0 +1,7 @@
+{
+    "shader": "editor/itemeditor/ItemEditorGridShader",
+    "uniforms": {
+        "u_lineColor": { "value": [0.55, 0.55, 0.55, 0.6] },
+        "u_borderColor": { "value": [0.2, 0.2, 0.2, 1.0] }
+    }
+}
