@@ -51,6 +51,8 @@
         {
             "name": "UIScene",
             "sizingStrategy": "WINDOW_RELATIVE",
+            "premultipliedBlend": true,
+            "premultipliedBlit": true,
             "attachments": [
                 { "type": "color", "format": "RGBA8", "name": "color" }
             ]

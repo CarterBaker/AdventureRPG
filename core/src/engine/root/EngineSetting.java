@@ -71,6 +71,9 @@ public class EngineSetting {
         public static final int AXIS_X = 0;
         public static final int AXIS_Y = 1;
         public static final int AXIS_Z = 2;
+        public static final int COLOR_CHANNEL_COUNT = 4;
+        public static final float COLOR_CHANNEL_MAX = 1.0f;
+        public static final float COLOR_CHANNEL_MIN = 0.0f;
         public static final int FNV_OFFSET_BASIS = 0x811c9dc5;
         public static final int FNV_PRIME = 0x01000193;
         public static final int GL_HANDLE_NONE = 0;
@@ -192,6 +195,7 @@ public class EngineSetting {
 
         // Rendering Pipeline \\
 
+        public static final String BLIT_PREMULTIPLIED_UNIFORM = "u_premultiplied";
         public static final String CAMERA_DATA_UBO = "CameraData";
         public static final int COMPOSITE_BUFFER_INITIAL_CAPACITY = 64;
         public static final int COMPOSITE_UPLOAD_BUFFER_GROWTH_FACTOR = 2;
@@ -222,6 +226,8 @@ public class EngineSetting {
         public static final int SHADER_ALIAS_LIBRARY_GROWTH_FACTOR = 2;
         public static final int SHADER_ALIAS_LIBRARY_INITIAL_CAPACITY = 16;
         public static final int SHADER_UBO_UNSPECIFIED_BINDING = INDEX_NOT_FOUND;
+        public static final String SPRITE_COLOR_UNIFORM = "u_color";
+        public static final Color SPRITE_DEFAULT_COLOR = Color.WHITE;
         public static final String SPRITE_DEFAULT_MATERIAL = "sprites/StandardSpriteMaterial";
         public static final String SPRITE_DEFAULT_MESH = "sprites/SpriteMesh";
         public static final String SUN_LIGHT_UBO = "SunLightData";
@@ -704,6 +710,7 @@ public class EngineSetting {
         public static final float FONT_FIT_PADDING_Y_PIXELS = 2f;
         public static final float FONT_LETTER_SPACING_RATIO = 0.05f;
         public static final int FONT_RASTER_SIZE = 24;
+        public static final float FONT_SPACE_ADVANCE_RATIO = 0.25f;
 
         // Menu & UI \\
 
@@ -732,12 +739,14 @@ public class EngineSetting {
         public static final String MENU_HIERARCHY = "util/Hierarchy/Hierarchy";
         public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
         public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
+        public static final float MENU_THEME_ALPHA_DEFAULT = 1.0f;
         public static final float RATIO_DEFAULT = 0.5f;
         public static final float RATIO_MAX = 0.9f;
         public static final float RATIO_MIN = 0.1f;
         public static final float TAB_DRAG_EDGE_FRACTION = 0.25f;
         public static final int TAB_DRAG_PREVIEW_H = 144;
         public static final int TAB_DRAG_PREVIEW_W = 256;
+        public static final int TAB_ENTRY_TITLE = 0;
         public static final String TAB_TITLE_DEBUG = "Debug";
         public static final String TAB_TITLE_PREVIEW = "Preview";
         public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";

@@ -58,11 +58,18 @@ public class ElementHitSystem extends SystemPackage {
      * openClickStateWindow to track which window owns it. The collapse check
      * fires per frame using that window's cursor coordinates, and also collapses
      * immediately if that window is no longer in hoveredWindows.
+     *
+     * pointedElement — the deepest element with a hover_color under the cursor,
+     * searched in the same menu hover resolved to. Hover itself stays with the
+     * owner of an open hover dropdown so the dropdown remains open; the pointed
+     * search descends into that dropdown instead, so its items can highlight.
+     * Visual only — it never fires callbacks.
      */
 
     private InputManager inputManager;
 
     private ElementInstance hoveredElement;
+    private ElementInstance pointedElement;
     private ElementInstance draggedElement;
     private ElementInstance openClickState;
     private MenuInstance hoveredElementMenu;
@@ -109,8 +116,10 @@ public class ElementHitSystem extends SystemPackage {
             draggedElementWindow = null;
         }
 
-        if (hoveredWindows.isEmpty())
+        if (hoveredWindows.isEmpty()) {
+            pointElement(null);
             return;
+        }
 
         updateHover(hoveredWindows);
         fireOnHoverPerFrame();
@@ -170,6 +179,7 @@ public class ElementHitSystem extends SystemPackage {
 
         // Walk windows in priority order — first element hit across any window wins.
         ElementInstance nextElement = null;
+        ElementInstance nextPointed = null;
         MenuInstance nextMenu = null;
         WindowInstance nextWindow = null;
 
@@ -194,12 +204,16 @@ public class ElementHitSystem extends SystemPackage {
                         menu.getElements(), mx, my, 0, 0, window.getWidth(), window.getHeight());
                 if (hit != null) {
                     nextElement = hit;
+                    nextPointed = pointTestElements(
+                            menu.getElements(), mx, my, 0, 0, window.getWidth(), window.getHeight());
                     nextMenu = menu;
                     nextWindow = window;
                     break outer;
                 }
             }
         }
+
+        pointElement(nextPointed);
 
         if (nextElement == hoveredElement)
             return;
@@ -256,6 +270,7 @@ public class ElementHitSystem extends SystemPackage {
     }
 
     private void clearHover() {
+        pointElement(null);
         if (hoveredElement == null)
             return;
         hoveredElement.clearActiveHoverState();
@@ -272,7 +287,86 @@ public class ElementHitSystem extends SystemPackage {
             return;
         if (hoveredWindows.contains(hoveredElementWindow))
             return;
+        pointElement(null);
         fireHoverExit();
+    }
+
+    // Point \\
+
+    private void pointElement(ElementInstance element) {
+
+        if (element == pointedElement)
+            return;
+
+        if (pointedElement != null)
+            pointedElement.setPointed(false);
+
+        pointedElement = element;
+
+        if (pointedElement != null)
+            pointedElement.setPointed(true);
+    }
+
+    private ElementInstance pointTestElements(
+            ObjectArrayList<ElementInstance> elements,
+            float mouseX, float mouseY,
+            float clipLeft, float clipTop,
+            float clipRight, float clipBottom) {
+
+        for (int i = elements.size() - 1; i >= 0; i--) {
+
+            ElementInstance element = elements.get(i);
+
+            if (element.hasChildren()) {
+                float cl = clipLeft, ct = clipTop, cr = clipRight, cb = clipBottom;
+                if (element.getElementData().isMask()) {
+                    cl = Math.max(cl, element.getComputedLeft());
+                    ct = Math.max(ct, element.getComputedTop());
+                    cr = Math.min(cr, element.getComputedLeft() + element.getComputedW());
+                    cb = Math.min(cb, element.getComputedTop() + element.getComputedH());
+                }
+                ElementInstance childHit = pointTestElements(
+                        element.getChildren(), mouseX, mouseY, cl, ct, cr, cb);
+                if (childHit != null)
+                    return childHit;
+            }
+
+            if (element.isClickExpanded() && element.hasClickStateChildren()) {
+                ElementInstance childHit = pointTestElements(
+                        element.getClickStateChildren(), mouseX, mouseY,
+                        clipLeft, clipTop, clipRight, clipBottom);
+                if (childHit != null)
+                    return childHit;
+            }
+
+            if (element.hasActiveHoverState()) {
+                ElementInstance activeRoot = resolveActiveHoverRoot(element);
+                if (activeRoot != null) {
+                    ElementInstance childHit = pointTestElements(
+                            activeRoot.getChildren(), mouseX, mouseY,
+                            clipLeft, clipTop, clipRight, clipBottom);
+                    if (childHit != null)
+                        return childHit;
+                }
+                ObjectArrayList<ElementInstance> activeChildren = resolveActiveHoverChildren(element);
+                if (activeChildren != null && !activeChildren.isEmpty()) {
+                    ElementInstance childHit = pointTestElements(
+                            activeChildren, mouseX, mouseY,
+                            clipLeft, clipTop, clipRight, clipBottom);
+                    if (childHit != null)
+                        return childHit;
+                }
+            }
+
+            if (!element.getElementData().hasHoverColor())
+                continue;
+            if (mouseX < clipLeft || mouseX > clipRight || mouseY < clipTop || mouseY > clipBottom)
+                continue;
+            if (isHit(element, mouseX, mouseY))
+                return element;
+        }
+
+        return null;
     }
 
     // Hover Test \\

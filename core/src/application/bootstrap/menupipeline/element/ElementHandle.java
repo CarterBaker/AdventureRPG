@@ -3,9 +3,9 @@ package application.bootstrap.menupipeline.element;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.util.DimensionValue;
 import application.bootstrap.menupipeline.util.LayoutStruct;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
-import engine.graphics.color.Color;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -97,7 +97,8 @@ public class ElementHandle extends HandlePackage {
 
     public boolean isHoverable() {
         return hoverEnterState != null || hoverState != null
-                || hoverExitState != null || elementData.hasOnDrag();
+                || hoverExitState != null || elementData.hasOnDrag()
+                || elementData.hasHoverColor();
     }
 
     public String getId() {
@@ -132,8 +133,12 @@ public class ElementHandle extends HandlePackage {
         return elementData.hasExplicitFontSize();
     }
 
-    public Color getColor() {
+    public MenuColorStruct getColor() {
         return elementData.getColor();
+    }
+
+    public MenuColorStruct getHoverColor() {
+        return elementData.getHoverColor();
     }
 
     public LayoutStruct getLayout() {

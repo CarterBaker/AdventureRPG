@@ -29,6 +29,16 @@ public class MaskStruct extends StructPackage {
         this.h = h;
     }
 
+    public void set(MaskStruct other) {
+        set(other.x, other.y, other.w, other.h);
+    }
+
+    // Comparison \\
+
+    public boolean matches(MaskStruct other) {
+        return other != null && x == other.x && y == other.y && w == other.w && h == other.h;
+    }
+
     // Accessible \\
 
     public int getX() {

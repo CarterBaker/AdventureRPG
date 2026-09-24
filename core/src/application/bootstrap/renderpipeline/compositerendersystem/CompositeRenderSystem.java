@@ -102,7 +102,7 @@ public class CompositeRenderSystem extends SystemPackage {
         if (batches == null || batches.isEmpty())
             return;
 
-        CompositeRenderGLSLUtility.beginUIPass();
+        CompositeRenderGLSLUtility.beginUIPass(fbo != null && fbo.getFboData().isPremultipliedBlend());
         Object[] batchElements = batches.elements();
         int batchCount = batches.size();
 

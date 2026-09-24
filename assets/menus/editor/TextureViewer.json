@@ -11,44 +11,50 @@
         {
           "id": "texture_viewer_status_bar",
           "type": "sprite",
+          "sprite": "menus/StatusBar",
           "anchor": "bottom_left",
           "pivot": "top_left",
           "size": {
             "x": "100%",
-            "y": "24px"
+            "y": "28px"
           },
-          "sprite": "menus/ToolBar",
+          "color": "header",
           "on_hover_exit": {},
           "elements": [
             {
               "id": "texture_viewer_status_label",
               "type": "label",
-              "anchor": "bottom_left",
-              "pivot": "top_left",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "4px",
+                "y": "0px"
+              },
               "size": {
-                "x": "calc(100% - 104px)",
+                "x": "calc(100% - 112px)",
                 "y": "100%"
               },
               "align": "left",
               "text": "",
-              "font_size": "60%",
-              "color": [
-                0,
-                0,
-                0,
-                1
-              ]
+              "font_size": "50%",
+              "color": "text_muted"
             },
             {
               "id": "texture_viewer_clear_brush_button",
               "type": "button",
-              "sprite": "menus/DefaultElement",
-              "anchor": "bottom_right",
-              "pivot": "top_right",
+              "sprite": "menus/Button",
+              "anchor": "right",
+              "pivot": "right",
+              "position": {
+                "x": "-4px",
+                "y": "0px"
+              },
               "size": {
                 "x": "100px",
-                "y": "100%"
+                "y": "20px"
               },
+              "color": "control",
+              "hover_color": "control_hover",
               "on_click": {
                 "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
                 "method": "clearBrush"
@@ -58,13 +64,8 @@
                   "id": "texture_viewer_clear_brush_label",
                   "type": "label",
                   "text": "Clear Brush",
-                  "font_size": "60%",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
-                  ]
+                  "font_size": "64%",
+                  "color": "text"
                 }
               ]
             }

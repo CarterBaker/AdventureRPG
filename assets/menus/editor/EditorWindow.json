@@ -6,74 +6,129 @@
       "anchor": "bottom_left",
       "pivot": "bottom_left",
       "size": {
-        "x": "150px",
-        "y": "56px"
+        "x": "180px",
+        "y": "70px"
       },
       "elements": [
         {
+          "id": "testing_dropdown_shadow",
+          "type": "sprite",
+          "sprite": "menus/Shadow",
+          "anchor": "center",
+          "pivot": "center",
+          "position": {
+            "x": "0px",
+            "y": "-5px"
+          },
+          "size": {
+            "x": "calc(100% + 24px)",
+            "y": "calc(100% + 18px)"
+          },
+          "color": "shadow"
+        },
+        {
           "id": "testing_dropdown_content",
           "type": "container",
-          "anchor": "top_left",
-          "pivot": "bottom_left",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
           "size": {
-            "x": "150px",
-            "y": "56px"
+            "x": "100%",
+            "y": "calc(100% - 6px)"
           },
-          "stack": "vertical",
-          "font_size": "50%",
-          "sprite": "menus/DefaultElement",
+          "sprite": "menus/Panel",
+          "color": "panel",
           "elements": [
             {
-              "id": "open_preview_button",
-              "type": "button",
-              "sprite": "menus/DefaultElement",
+              "id": "testing_dropdown_list",
+              "type": "container",
+              "anchor": "center",
+              "pivot": "center",
               "size": {
-                "x": "150px",
-                "y": "28px"
+                "x": "calc(100% - 8px)",
+                "y": "calc(100% - 8px)"
               },
-              "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                "method": "openPreview"
-              },
+              "stack": "vertical",
+              "font_size": "50%",
               "elements": [
                 {
-                  "id": "open_preview_label",
-                  "type": "label",
-                  "text": "Open Preview",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
+                  "id": "open_preview_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "100%",
+                    "y": "28px"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "method": "openPreview"
+                  },
+                  "elements": [
+                    {
+                      "id": "open_preview_label",
+                      "type": "label",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "calc(100% - 12px)",
+                        "y": "100%"
+                      },
+                      "align": "left",
+                      "text": "Open Preview",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "open_debug_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "100%",
+                    "y": "28px"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "method": "openDebug"
+                  },
+                  "elements": [
+                    {
+                      "id": "open_debug_label",
+                      "type": "label",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "calc(100% - 12px)",
+                        "y": "100%"
+                      },
+                      "align": "left",
+                      "text": "Open Debug",
+                      "color": "text"
+                    }
                   ]
                 }
               ]
             },
             {
-              "id": "open_debug_button",
-              "type": "button",
-              "sprite": "menus/DefaultElement",
+              "id": "testing_dropdown_outline",
+              "type": "sprite",
+              "sprite": "menus/PanelOutline",
+              "anchor": "center",
+              "pivot": "center",
               "size": {
-                "x": "150px",
-                "y": "28px"
+                "x": "100%",
+                "y": "100%"
               },
-              "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                "method": "openDebug"
-              },
-              "elements": [
-                {
-                  "id": "open_debug_label",
-                  "type": "label",
-                  "text": "Open Debug",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
-                  ]
-                }
-              ]
+              "color": "outline"
             }
           ]
         }
@@ -85,100 +140,162 @@
       "anchor": "bottom_left",
       "pivot": "bottom_left",
       "size": {
-        "x": "150px",
-        "y": "84px"
+        "x": "180px",
+        "y": "98px"
       },
       "elements": [
         {
+          "id": "tools_dropdown_shadow",
+          "type": "sprite",
+          "sprite": "menus/Shadow",
+          "anchor": "center",
+          "pivot": "center",
+          "position": {
+            "x": "0px",
+            "y": "-5px"
+          },
+          "size": {
+            "x": "calc(100% + 24px)",
+            "y": "calc(100% + 18px)"
+          },
+          "color": "shadow"
+        },
+        {
           "id": "tools_dropdown_content",
           "type": "container",
-          "anchor": "top_left",
-          "pivot": "bottom_left",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
           "size": {
-            "x": "150px",
-            "y": "84px"
+            "x": "100%",
+            "y": "calc(100% - 6px)"
           },
-          "stack": "vertical",
-          "font_size": "50%",
-          "sprite": "menus/DefaultElement",
+          "sprite": "menus/Panel",
+          "color": "panel",
           "elements": [
             {
-              "id": "open_hierarchy_button",
-              "type": "button",
-              "sprite": "menus/DefaultElement",
+              "id": "tools_dropdown_list",
+              "type": "container",
+              "anchor": "center",
+              "pivot": "center",
               "size": {
-                "x": "150px",
-                "y": "28px"
+                "x": "calc(100% - 8px)",
+                "y": "calc(100% - 8px)"
               },
-              "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                "method": "openHierarchy"
-              },
+              "stack": "vertical",
+              "font_size": "50%",
               "elements": [
                 {
-                  "id": "open_hierarchy_label",
-                  "type": "label",
-                  "text": "Hierarchy",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
+                  "id": "open_hierarchy_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "100%",
+                    "y": "28px"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "method": "openHierarchy"
+                  },
+                  "elements": [
+                    {
+                      "id": "open_hierarchy_label",
+                      "type": "label",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "calc(100% - 12px)",
+                        "y": "100%"
+                      },
+                      "align": "left",
+                      "text": "Hierarchy",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "open_item_editor_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "100%",
+                    "y": "28px"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "method": "openItemEditor"
+                  },
+                  "elements": [
+                    {
+                      "id": "open_item_editor_label",
+                      "type": "label",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "calc(100% - 12px)",
+                        "y": "100%"
+                      },
+                      "align": "left",
+                      "text": "Item Editor",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "open_texture_viewer_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "100%",
+                    "y": "28px"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "method": "openTextureViewer"
+                  },
+                  "elements": [
+                    {
+                      "id": "open_texture_viewer_label",
+                      "type": "label",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "calc(100% - 12px)",
+                        "y": "100%"
+                      },
+                      "align": "left",
+                      "text": "Texture Viewer",
+                      "color": "text"
+                    }
                   ]
                 }
               ]
             },
             {
-              "id": "open_item_editor_button",
-              "type": "button",
-              "sprite": "menus/DefaultElement",
+              "id": "tools_dropdown_outline",
+              "type": "sprite",
+              "sprite": "menus/PanelOutline",
+              "anchor": "center",
+              "pivot": "center",
               "size": {
-                "x": "150px",
-                "y": "28px"
+                "x": "100%",
+                "y": "100%"
               },
-              "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                "method": "openItemEditor"
-              },
-              "elements": [
-                {
-                  "id": "open_item_editor_label",
-                  "type": "label",
-                  "text": "Item Editor",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "open_texture_viewer_button",
-              "type": "button",
-              "sprite": "menus/DefaultElement",
-              "size": {
-                "x": "150px",
-                "y": "28px"
-              },
-              "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                "method": "openTextureViewer"
-              },
-              "elements": [
-                {
-                  "id": "open_texture_viewer_label",
-                  "type": "label",
-                  "text": "Texture Viewer",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
-                  ]
-                }
-              ]
+              "color": "outline"
             }
           ]
         }
@@ -190,57 +307,128 @@
       "anchor": "bottom_right",
       "pivot": "bottom_right",
       "size": {
-        "x": "180px",
-        "y": "308px"
+        "x": "200px",
+        "y": "275px"
       },
       "elements": [
         {
+          "id": "layouts_dropdown_shadow",
+          "type": "sprite",
+          "sprite": "menus/Shadow",
+          "anchor": "center",
+          "pivot": "center",
+          "position": {
+            "x": "0px",
+            "y": "-5px"
+          },
+          "size": {
+            "x": "calc(100% + 24px)",
+            "y": "calc(100% + 18px)"
+          },
+          "color": "shadow"
+        },
+        {
           "id": "layouts_dropdown_content",
           "type": "container",
-          "anchor": "top_right",
-          "pivot": "bottom_right",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
           "size": {
-            "x": "180px",
-            "y": "308px"
+            "x": "100%",
+            "y": "calc(100% - 6px)"
           },
-          "stack": "vertical",
-          "font_size": "50%",
-          "sprite": "menus/DefaultElement",
+          "sprite": "menus/Panel",
+          "color": "panel",
           "elements": [
             {
-              "id": "create_layout_button",
-              "type": "button",
-              "sprite": "menus/DefaultElement",
+              "id": "layouts_dropdown_list",
+              "type": "container",
+              "anchor": "center",
+              "pivot": "center",
               "size": {
-                "x": "180px",
-                "y": "28px"
+                "x": "calc(100% - 8px)",
+                "y": "calc(100% - 8px)"
               },
-              "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                "method": "openCreateLayoutDialog"
-              },
+              "stack": "vertical",
+              "font_size": "50%",
               "elements": [
                 {
-                  "id": "create_layout_label",
-                  "type": "label",
-                  "text": "Create New",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
+                  "id": "create_layout_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "100%",
+                    "y": "28px"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "method": "openCreateLayoutDialog"
+                  },
+                  "elements": [
+                    {
+                      "id": "create_layout_label",
+                      "type": "label",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "calc(100% - 12px)",
+                        "y": "100%"
+                      },
+                      "align": "left",
+                      "text": "New Layout",
+                      "color": "text"
+                    }
                   ]
+                },
+                {
+                  "id": "layouts_separator",
+                  "type": "container",
+                  "size": {
+                    "x": "100%",
+                    "y": "9px"
+                  },
+                  "elements": [
+                    {
+                      "id": "layouts_separator_line",
+                      "type": "sprite",
+                      "sprite": "util/Default",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "calc(100% - 12px)",
+                        "y": "1px"
+                      },
+                      "color": "outline"
+                    }
+                  ]
+                },
+                {
+                  "id": "layouts_list_container",
+                  "type": "container",
+                  "size": {
+                    "x": "100%",
+                    "y": "224px"
+                  },
+                  "stack": "vertical",
+                  "mask": true
                 }
               ]
             },
             {
-              "id": "layouts_list_container",
-              "type": "container",
+              "id": "layouts_dropdown_outline",
+              "type": "sprite",
+              "sprite": "menus/PanelOutline",
+              "anchor": "center",
+              "pivot": "center",
               "size": {
-                "x": "180px",
-                "y": "280px"
+                "x": "100%",
+                "y": "100%"
               },
-              "stack": "vertical"
+              "color": "outline"
             }
           ]
         }
@@ -249,11 +437,16 @@
     {
       "id": "layout_item_template",
       "type": "button",
-      "sprite": "menus/DefaultElement",
+      "sprite": "menus/Button",
       "size": {
-        "x": "180px",
+        "x": "100%",
         "y": "28px"
       },
+      "color": {
+        "theme": "control_hover",
+        "alpha": 0
+      },
+      "hover_color": "control_hover",
       "on_click": {
         "class": "engine.editor.menueventsmanager.menus.EditorBranch",
         "method": "loadLayout"
@@ -262,13 +455,15 @@
         {
           "id": "layout_item_label",
           "type": "label",
+          "anchor": "center",
+          "pivot": "center",
+          "size": {
+            "x": "calc(100% - 12px)",
+            "y": "100%"
+          },
+          "align": "left",
           "text": "",
-          "color": [
-            0,
-            0,
-            0,
-            1
-          ]
+          "color": "text"
         }
       ]
     }
@@ -287,12 +482,7 @@
             "y": "100%"
           },
           "sprite": "util/Default",
-          "color": [
-            0.13,
-            0.13,
-            0.13,
-            1.0
-          ]
+          "color": "background"
         },
         {
           "id": "dock_canvas",
@@ -301,7 +491,7 @@
           "pivot": "top_left",
           "size": {
             "x": "100%",
-            "y": "calc(100% - 28px)"
+            "y": "calc(100% - 32px)"
           }
         }
       ]
@@ -319,52 +509,73 @@
           "use": "util/MenuToolBar",
           "elements": [
             {
+              "id": "toolbar_logo",
+              "type": "sprite",
+              "sprite": "menus/Logo",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "12px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "16px",
+                "y": "16px"
+              },
+              "color": "accent"
+            },
+            {
               "id": "testing_menu",
               "type": "container",
               "anchor": "top_left",
               "pivot": "bottom_left",
+              "position": {
+                "x": "36px",
+                "y": "0px"
+              },
               "size": {
                 "x": "100px",
-                "y": "28px"
+                "y": "32px"
               },
               "elements": [
                 {
+                  "id": "testing_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "anchor": "center",
+                  "pivot": "center",
+                  "size": {
+                    "x": "calc(100% - 4px)",
+                    "y": "24px"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_hover_enter": {
+                    "use": "editor/EditorWindow/testing_dropdown_panel"
+                  },
+                  "on_hover_exit": {}
+                },
+                {
                   "id": "testing_button_bg",
                   "type": "container",
-                  "anchor": "top_left",
-                  "pivot": "bottom_left",
+                  "anchor": "center",
+                  "pivot": "center",
                   "size": {
-                    "x": "100px",
-                    "y": "28px"
+                    "x": "100%",
+                    "y": "100%"
                   },
                   "elements": [
                     {
                       "id": "testing_bg_label",
                       "type": "label",
                       "text": "Testing",
-                      "font_size": "50%",
-                      "color": [
-                        0,
-                        0,
-                        0,
-                        1
-                      ]
+                      "font_size": "44%",
+                      "color": "text"
                     }
                   ]
-                },
-                {
-                  "id": "testing_button",
-                  "type": "button",
-                  "anchor": "top_left",
-                  "pivot": "bottom_left",
-                  "size": {
-                    "x": "100px",
-                    "y": "28px"
-                  },
-                  "on_hover_enter": {
-                    "use": "editor/EditorWindow/testing_dropdown_panel"
-                  },
-                  "on_hover_exit": {}
                 }
               ]
             },
@@ -373,48 +584,53 @@
               "type": "container",
               "anchor": "top_left",
               "pivot": "bottom_left",
+              "position": {
+                "x": "136px",
+                "y": "0px"
+              },
               "size": {
                 "x": "100px",
-                "y": "28px"
+                "y": "32px"
               },
               "elements": [
                 {
+                  "id": "tools_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "anchor": "center",
+                  "pivot": "center",
+                  "size": {
+                    "x": "calc(100% - 4px)",
+                    "y": "24px"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_hover_enter": {
+                    "use": "editor/EditorWindow/tools_dropdown_panel"
+                  },
+                  "on_hover_exit": {}
+                },
+                {
                   "id": "tools_button_bg",
                   "type": "container",
-                  "anchor": "top_left",
-                  "pivot": "bottom_left",
+                  "anchor": "center",
+                  "pivot": "center",
                   "size": {
-                    "x": "100px",
-                    "y": "28px"
+                    "x": "100%",
+                    "y": "100%"
                   },
                   "elements": [
                     {
                       "id": "tools_bg_label",
                       "type": "label",
                       "text": "Tools",
-                      "font_size": "50%",
-                      "color": [
-                        0,
-                        0,
-                        0,
-                        1
-                      ]
+                      "font_size": "44%",
+                      "color": "text"
                     }
                   ]
-                },
-                {
-                  "id": "tools_button",
-                  "type": "button",
-                  "anchor": "top_left",
-                  "pivot": "bottom_left",
-                  "size": {
-                    "x": "100px",
-                    "y": "28px"
-                  },
-                  "on_hover_enter": {
-                    "use": "editor/EditorWindow/tools_dropdown_panel"
-                  },
-                  "on_hover_exit": {}
                 }
               ]
             },
@@ -423,44 +639,30 @@
               "type": "container",
               "anchor": "top_right",
               "pivot": "bottom_right",
+              "position": {
+                "x": "-8px",
+                "y": "0px"
+              },
               "size": {
                 "x": "100px",
-                "y": "28px"
+                "y": "32px"
               },
               "elements": [
                 {
-                  "id": "layouts_button_bg",
-                  "type": "container",
-                  "anchor": "top_right",
-                  "pivot": "bottom_right",
-                  "size": {
-                    "x": "100px",
-                    "y": "28px"
-                  },
-                  "elements": [
-                    {
-                      "id": "layouts_bg_label",
-                      "type": "label",
-                      "text": "Layouts",
-                      "font_size": "50%",
-                      "color": [
-                        0,
-                        0,
-                        0,
-                        1
-                      ]
-                    }
-                  ]
-                },
-                {
                   "id": "layouts_button",
                   "type": "button",
-                  "anchor": "top_right",
-                  "pivot": "bottom_right",
+                  "sprite": "menus/Button",
+                  "anchor": "center",
+                  "pivot": "center",
                   "size": {
-                    "x": "100px",
-                    "y": "28px"
+                    "x": "calc(100% - 4px)",
+                    "y": "24px"
                   },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
                   "on_hover_enter": {
                     "use": "editor/EditorWindow/layouts_dropdown_panel",
                     "on_click": {
@@ -469,6 +671,25 @@
                     }
                   },
                   "on_hover_exit": {}
+                },
+                {
+                  "id": "layouts_button_bg",
+                  "type": "container",
+                  "anchor": "center",
+                  "pivot": "center",
+                  "size": {
+                    "x": "100%",
+                    "y": "100%"
+                  },
+                  "elements": [
+                    {
+                      "id": "layouts_bg_label",
+                      "type": "label",
+                      "text": "Layouts",
+                      "font_size": "44%",
+                      "color": "text"
+                    }
+                  ]
                 }
               ]
             }
@@ -486,128 +707,208 @@
       ],
       "elements": [
         {
+          "id": "dialog_backdrop",
+          "type": "sprite",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "size": {
+            "x": "100%",
+            "y": "100%"
+          },
+          "sprite": "util/Default",
+          "color": {
+            "theme": "shadow",
+            "alpha": 0.6
+          }
+        },
+        {
           "id": "dialog_frame",
           "type": "container",
           "anchor": "center",
           "pivot": "center",
           "size": {
-            "x": "320px",
-            "y": "112px"
+            "x": "340px",
+            "y": "144px"
           },
-          "sprite": "menus/DefaultElement",
           "elements": [
+            {
+              "id": "dialog_shadow",
+              "type": "sprite",
+              "sprite": "menus/Shadow",
+              "anchor": "center",
+              "pivot": "center",
+              "position": {
+                "x": "0px",
+                "y": "-3px"
+              },
+              "size": {
+                "x": "calc(100% + 24px)",
+                "y": "calc(100% + 24px)"
+              },
+              "color": "shadow"
+            },
+            {
+              "id": "dialog_body",
+              "type": "sprite",
+              "sprite": "menus/Panel",
+              "anchor": "center",
+              "pivot": "center",
+              "size": {
+                "x": "100%",
+                "y": "100%"
+              },
+              "color": "panel"
+            },
             {
               "id": "dialog_toolbar",
               "type": "sprite",
+              "sprite": "menus/PanelHeader",
               "anchor": "top_left",
-              "pivot": "top_left",
-              "sprite": "menus/DefaultElement",
+              "pivot": "bottom_left",
               "size": {
-                "x": "320px",
-                "y": "28px"
+                "x": "100%",
+                "y": "34px"
               },
+              "color": "header",
               "elements": [
                 {
-                  "id": "name_dialog_title_label",
-                  "type": "label",
-                  "anchor": "bottom_left",
-                  "pivot": "top_left",
+                  "id": "dialog_title_accent",
+                  "type": "sprite",
+                  "sprite": "util/Default",
+                  "anchor": "left",
+                  "pivot": "left",
                   "position": {
-                    "x": "0px",
+                    "x": "12px",
                     "y": "0px"
                   },
                   "size": {
-                    "x": "calc(100% - 28px)",
+                    "x": "3px",
+                    "y": "14px"
+                  },
+                  "color": "accent"
+                },
+                {
+                  "id": "name_dialog_title_label",
+                  "type": "label",
+                  "anchor": "left",
+                  "pivot": "left",
+                  "position": {
+                    "x": "18px",
+                    "y": "0px"
+                  },
+                  "size": {
+                    "x": "calc(100% - 52px)",
                     "y": "100%"
                   },
                   "align": "left",
                   "text": "",
-                  "font_size": "50%",
-                  "color": [
-                    0,
-                    0,
-                    0,
-                    1
-                  ]
+                  "font_size": "44%",
+                  "color": "text"
                 },
                 {
                   "id": "dialog_close_button",
                   "type": "button",
-                  "sprite": "menus/CloseIcon",
-                  "anchor": "top_right",
-                  "pivot": "top_right",
+                  "sprite": "menus/Button",
+                  "anchor": "right",
+                  "pivot": "right",
                   "position": {
-                    "x": "-4px",
-                    "y": "-4px"
+                    "x": "-6px",
+                    "y": "0px"
                   },
                   "size": {
-                    "x": "20px",
-                    "y": "20px"
+                    "x": "22px",
+                    "y": "22px"
                   },
-                  "color": [
-                    1.0,
-                    1.0,
-                    1.0,
-                    0.7
-                  ],
+                  "color": {
+                    "theme": "danger",
+                    "alpha": 0
+                  },
+                  "hover_color": "danger",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.NameDialogBranch",
                     "method": "cancel"
-                  }
+                  },
+                  "elements": [
+                    {
+                      "id": "dialog_close_icon",
+                      "type": "sprite",
+                      "sprite": "menus/CloseIcon",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "12px",
+                        "y": "12px"
+                      },
+                      "color": "text"
+                    }
+                  ]
                 }
               ]
             },
             {
-              "id": "dialog_body",
+              "id": "dialog_body_content",
               "type": "container",
-              "anchor": "top_left",
+              "anchor": "bottom_left",
               "pivot": "top_left",
               "position": {
                 "x": "16px",
-                "y": "-48px"
+                "y": "16px"
               },
               "size": {
-                "x": "288px",
-                "y": "68px"
+                "x": "calc(100% - 32px)",
+                "y": "80px"
               },
               "stack": "vertical",
-              "spacing": "8px",
+              "spacing": "12px",
               "elements": [
                 {
                   "id": "name_dialog_input_backing",
                   "type": "sprite",
+                  "sprite": "menus/Button",
                   "size": {
-                    "x": "288px",
-                    "y": "32px"
+                    "x": "100%",
+                    "y": "36px"
                   },
-                  "sprite": "menus/DefaultElement",
+                  "color": "background",
                   "elements": [
                     {
-                      "id": "name_dialog_label",
-                      "type": "label",
+                      "id": "name_dialog_input_outline",
+                      "type": "sprite",
+                      "sprite": "menus/ButtonOutline",
+                      "anchor": "center",
+                      "pivot": "center",
                       "size": {
                         "x": "100%",
                         "y": "100%"
                       },
+                      "color": "accent"
+                    },
+                    {
+                      "id": "name_dialog_label",
+                      "type": "label",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "calc(100% - 12px)",
+                        "y": "100%"
+                      },
+                      "align": "left",
                       "text": "",
-                      "font_size": "50%",
-                      "color": [
-                        0,
-                        0,
-                        0,
-                        1
-                      ]
+                      "font_size": "44%",
+                      "color": "text"
                     }
                   ]
                 },
                 {
                   "id": "name_dialog_confirm_button",
                   "type": "button",
+                  "sprite": "menus/Button",
                   "size": {
-                    "x": "288px",
-                    "y": "28px"
+                    "x": "100%",
+                    "y": "32px"
                   },
-                  "sprite": "menus/DefaultElement",
+                  "color": "accent",
+                  "hover_color": "accent_hover",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.NameDialogBranch",
                     "method": "confirm"
@@ -618,16 +919,23 @@
                       "type": "label",
                       "text": "OK",
                       "font_size": "50%",
-                      "color": [
-                        0,
-                        0,
-                        0,
-                        1
-                      ]
+                      "color": "text_on_accent"
                     }
                   ]
                 }
               ]
+            },
+            {
+              "id": "dialog_outline",
+              "type": "sprite",
+              "sprite": "menus/PanelOutline",
+              "anchor": "center",
+              "pivot": "center",
+              "size": {
+                "x": "100%",
+                "y": "100%"
+              },
+              "color": "outline"
             }
           ]
         }
@@ -646,12 +954,7 @@
             "y": "100%"
           },
           "sprite": "util/Default",
-          "color": [
-            0.13,
-            0.13,
-            0.13,
-            1.0
-          ]
+          "color": "background"
         },
         {
           "id": "secondary_dock_canvas",

@@ -14,10 +14,10 @@ import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.util.DimensionValue;
 import application.bootstrap.menupipeline.util.LayoutStruct;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
-import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.io.JsonUtility;
@@ -36,6 +36,11 @@ class MenuBuilder extends BuilderPackage {
      *
      * on_drag is parsed as a plain method callback — no state block, no element
      * swap. on_click is unchanged.
+     *
+     * Inline masters are registered under the scope they are declared in: a
+     * top-level element under its file, a menu's elements under that menu, and
+     * every child under its parent's key. Two templates can therefore share a
+     * child id — the id code finds elements by — without sharing its master.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -117,7 +122,7 @@ class MenuBuilder extends BuilderPackage {
         }
 
         ObjectArrayList<MenuNodeStruct> nodes = buildNodes(
-                filePath, menuJson, null,
+                filePath + "/" + id, menuJson, null,
                 DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true);
 
         MenuData data = new MenuData(
@@ -175,7 +180,7 @@ class MenuBuilder extends BuilderPackage {
     // Node Building \\
 
     private ObjectArrayList<MenuNodeStruct> buildNodes(
-            String filePath,
+            String scope,
             JsonObject parent,
             String inheritedFontName,
             DimensionValue inheritedFontSize,
@@ -188,14 +193,14 @@ class MenuBuilder extends BuilderPackage {
         ObjectArrayList<MenuNodeStruct> nodes = new ObjectArrayList<>(array.size());
 
         for (int i = 0; i < array.size(); i++)
-            nodes.add(buildNode(filePath, array.get(i).getAsJsonObject(),
+            nodes.add(buildNode(scope, array.get(i).getAsJsonObject(),
                     inheritedFontName, inheritedFontSize, inheritedExplicitFontSize));
 
         return nodes;
     }
 
     private MenuNodeStruct buildNode(
-            String filePath,
+            String scope,
             JsonObject json,
             String inheritedFontName,
             DimensionValue inheritedFontSize,
@@ -204,29 +209,29 @@ class MenuBuilder extends BuilderPackage {
         String id = JsonUtility.validateString(json, "id");
 
         if (json.has("ref"))
-            return buildRefNode(filePath, id, json);
+            return buildRefNode(scope, id, json);
 
         if (json.has("use"))
-            return buildUseNode(filePath, id, json, inheritedFontName, inheritedFontSize,
+            return buildUseNode(scope, id, json, inheritedFontName, inheritedFontSize,
                     inheritedExplicitFontSize);
 
-        return buildInlineNode(filePath, id, json, inheritedFontName, inheritedFontSize,
+        return buildInlineNode(scope, id, json, inheritedFontName, inheritedFontSize,
                 inheritedExplicitFontSize);
     }
 
     private MenuNodeStruct buildInlineNode(
-            String filePath,
+            String scope,
             String id,
             JsonObject json,
             String inheritedFontName,
             DimensionValue inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
-        String key = filePath + "/" + id;
+        String key = scope + "/" + id;
         ElementHandle master = elementSystem.getMaster(key);
 
         if (master == null) {
-            master = buildMasterFromJson(filePath, id, json, inheritedFontName,
+            master = buildMasterFromJson(scope, id, json, inheritedFontName,
                     inheritedFontSize, inheritedExplicitFontSize);
             elementSystem.registerMaster(key, master);
         }
@@ -235,7 +240,7 @@ class MenuBuilder extends BuilderPackage {
     }
 
     private MenuNodeStruct buildUseNode(
-            String filePath,
+            String scope,
             String id,
             JsonObject json,
             String inheritedFontName,
@@ -252,7 +257,7 @@ class MenuBuilder extends BuilderPackage {
                 : template.getFontSize();
 
         ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(
-                filePath, json, resolvedFontName, resolvedFontSize, explicitFontSize);
+                scope + "/" + id, json, resolvedFontName, resolvedFontSize, explicitFontSize);
         ObjectArrayList<MenuNodeStruct> children = !jsonChildren.isEmpty()
                 ? jsonChildren
                 : template.getChildren();
@@ -265,7 +270,7 @@ class MenuBuilder extends BuilderPackage {
         String spritePath = JsonUtility.getString(json, "sprite", null);
         String spriteNameOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
         String textOverride = JsonUtility.getString(json, "text", null);
-        Color colorOverride = MenuFileParserUtility.parseColor(json);
+        MenuColorStruct colorOverride = MenuFileParserUtility.parseColor(json);
         String[] onClick = MenuFileParserUtility.parseOnClick(json);
         String[] onDrag = MenuFileParserUtility.parseOnDrag(json);
 
@@ -291,7 +296,7 @@ class MenuBuilder extends BuilderPackage {
                 children);
     }
 
-    private MenuNodeStruct buildRefNode(String filePath, String id, JsonObject json) {
+    private MenuNodeStruct buildRefNode(String scope, String id, JsonObject json) {
 
         String refKey = json.get("ref").getAsString();
         LayoutStruct partialOverride = MenuFileParserUtility.parseLayoutOverride(json);
@@ -337,7 +342,7 @@ class MenuBuilder extends BuilderPackage {
     // Master Building \\
 
     private ElementHandle buildMasterFromJson(
-            String filePath,
+            String scope,
             String id,
             JsonObject json,
             String inheritedFontName,
@@ -354,7 +359,8 @@ class MenuBuilder extends BuilderPackage {
         DimensionValue fontSize = json.has("font_size")
                 ? DimensionValue.parse(json.get("font_size").getAsString())
                 : inheritedFontSize;
-        Color color = MenuFileParserUtility.parseColor(json);
+        MenuColorStruct color = MenuFileParserUtility.parseColor(json);
+        MenuColorStruct hoverColor = MenuFileParserUtility.parseHoverColor(json);
         LayoutStruct layout = MenuFileParserUtility.parseLayout(json);
         boolean mask = JsonUtility.getBoolean(json, "mask", false);
         StackDirection stackDirection = json.has("stack")
@@ -373,11 +379,11 @@ class MenuBuilder extends BuilderPackage {
         String[] onDrag = MenuFileParserUtility.parseOnDrag(json);
 
         ObjectArrayList<MenuNodeStruct> defaultChildren = buildNodes(
-                filePath, json, fontName, fontSize, explicitFontSize);
+                scope + "/" + id, json, fontName, fontSize, explicitFontSize);
 
         ElementData data = new ElementData(
                 id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize,
-                color, layout, mask, stackDirection, spacing, textAlign, startExpanded,
+                color, hoverColor, layout, mask, stackDirection, spacing, textAlign, startExpanded,
                 onClick != null ? onClick[0] : null,
                 onClick != null ? onClick[1] : null,
                 onClick != null ? onClick[2] : null,
@@ -386,13 +392,13 @@ class MenuBuilder extends BuilderPackage {
                 onDrag != null ? onDrag[2] : null);
 
         ElementStateStruct hoverEnterState = parseStateBlock(
-                filePath, id, json, "on_hover_enter", fontName, fontSize, explicitFontSize);
+                scope, id, json, "on_hover_enter", fontName, fontSize, explicitFontSize);
         ElementStateStruct hoverState = parseStateBlock(
-                filePath, id, json, "on_hover", fontName, fontSize, explicitFontSize);
+                scope, id, json, "on_hover", fontName, fontSize, explicitFontSize);
         ElementStateStruct hoverExitState = parseStateBlock(
-                filePath, id, json, "on_hover_exit", fontName, fontSize, explicitFontSize);
+                scope, id, json, "on_hover_exit", fontName, fontSize, explicitFontSize);
         ElementStateStruct clickState = parseStateBlock(
-                filePath, id, json, "click_state", fontName, fontSize, explicitFontSize);
+                scope, id, json, "click_state", fontName, fontSize, explicitFontSize);
 
         ElementHandle master = create(ElementHandle.class);
         master.constructor(data, defaultChildren, hoverEnterState, hoverState, hoverExitState, clickState);
@@ -403,7 +409,7 @@ class MenuBuilder extends BuilderPackage {
     // State Block Parsing \\
 
     private ElementStateStruct parseStateBlock(
-            String filePath,
+            String scope,
             String id,
             JsonObject json,
             String stateKey,
@@ -434,7 +440,7 @@ class MenuBuilder extends BuilderPackage {
                 : (baseMaster != null ? baseMaster.getFontSize() : inheritedFontSize);
 
         ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(
-                filePath, stateJson, fontName, fontSize, explicitFontSize);
+                scope + "/" + id + "/" + stateKey, stateJson, fontName, fontSize, explicitFontSize);
         ObjectArrayList<MenuNodeStruct> children = !jsonChildren.isEmpty()
                 ? jsonChildren
                 : baseMaster != null ? baseMaster.getChildren() : new ObjectArrayList<>();
@@ -450,7 +456,7 @@ class MenuBuilder extends BuilderPackage {
         String spritePath = JsonUtility.getString(stateJson, "sprite", null);
         String spriteOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
         String textOverride = JsonUtility.getString(stateJson, "text", null);
-        Color colorOverride = MenuFileParserUtility.parseColor(stateJson);
+        MenuColorStruct colorOverride = MenuFileParserUtility.parseColor(stateJson);
 
         String[] callback = MenuFileParserUtility.parseOnClick(stateJson);
         String actionClass = callback != null ? callback[0] : null;

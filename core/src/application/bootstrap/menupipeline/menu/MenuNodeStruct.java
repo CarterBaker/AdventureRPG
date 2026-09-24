@@ -2,7 +2,7 @@ package application.bootstrap.menupipeline.menu;
 
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.util.LayoutStruct;
-import engine.graphics.color.Color;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -23,7 +23,7 @@ public class MenuNodeStruct extends StructPackage {
     // Overrides — visuals
     private final String spriteNameOverride;
     private final String textOverride;
-    private final Color colorOverride;
+    private final MenuColorStruct colorOverride;
     private LayoutStruct layoutOverride;
 
     // Overrides — on_click
@@ -60,7 +60,7 @@ public class MenuNodeStruct extends StructPackage {
             ElementHandle master,
             String spriteNameOverride,
             String textOverride,
-            Color colorOverride,
+            MenuColorStruct colorOverride,
             String actionClassOverride,
             String actionMethodOverride,
             String actionArgOverride,
@@ -105,7 +105,7 @@ public class MenuNodeStruct extends StructPackage {
         return textOverride;
     }
 
-    public Color getColorOverride() {
+    public MenuColorStruct getColorOverride() {
         return colorOverride;
     }
 

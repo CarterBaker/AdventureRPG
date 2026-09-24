@@ -21,11 +21,13 @@ class CompositeRenderGLSLUtility extends EngineUtility {
 
     // UI Pass State \\
 
-    static void beginUIPass() {
+    static void beginUIPass(boolean premultiplied) {
         EngineContext.gl20.glDisable(EngineSetting.GL_DEPTH_TEST);
         EngineContext.gl20.glDepthMask(false);
         EngineContext.gl20.glEnable(EngineSetting.GL_BLEND);
-        EngineContext.gl20.glBlendFunc(EngineSetting.GL_SRC_ALPHA, EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
+        EngineContext.gl20.glBlendFunc(
+                premultiplied ? EngineSetting.GL_ONE : EngineSetting.GL_SRC_ALPHA,
+                EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
     }
 
     static void endUIPass() {

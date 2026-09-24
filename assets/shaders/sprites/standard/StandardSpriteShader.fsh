@@ -7,6 +7,7 @@ out vec4 out_color;
 
 uniform sampler2D u_sprite;
 uniform mat4 u_transform;
+uniform vec4 u_color;
 
 void main() {
     float bL = u_border.x;
@@ -14,11 +15,13 @@ void main() {
     float bR = u_border.z;
     float bT = u_border.w;
 
+    // Output is premultiplied — menu targets blend and blit in premultiplied form
+
     // No border — normal sprite, straight UV passthrough
     if (bL == 0.0 && bB == 0.0 && bR == 0.0 && bT == 0.0) {
-        vec4 color = texture(u_sprite, v_uv);
+        vec4 color = texture(u_sprite, v_uv) * u_color;
         if (color.a <= 0.0) discard;
-        out_color = color;
+        out_color = vec4(color.rgb * color.a, color.a);
         return;
     }
 
@@ -57,7 +60,7 @@ void main() {
         v = (bB + mod(pixel.y - bB, centerTexH)) / u_texSize.y;
     }
 
-    vec4 color = texture(u_sprite, vec2(u, v));
+    vec4 color = texture(u_sprite, vec2(u, v)) * u_color;
     if (color.a <= 0.0) discard;
-    out_color = color;
+    out_color = vec4(color.rgb * color.a, color.a);
 }
