@@ -8,8 +8,8 @@ public class CalendarHandle extends HandlePackage {
     /*
      * Persistent reference to a loaded calendar definition. Registered and
      * owned by CalendarManager. Delegates all accessors through CalendarData,
-     * including the calendar's starting point, its own day/year shape, and
-     * its own named seasons.
+     * including the calendar's starting point, its own day/year shape, the
+     * star its world orbits, and its own named seasons.
      */
 
     // Internal
@@ -111,6 +111,20 @@ public class CalendarHandle extends HandlePackage {
 
     public int getYearsPerAge() {
         return calendarData.getTime().getYearsPerAge();
+    }
+
+    // Star \\
+
+    public float getStarDistance() {
+        return calendarData.getStar().getDistance();
+    }
+
+    public float getStarLuminosity() {
+        return calendarData.getStar().getLuminosity();
+    }
+
+    public float getStarTemperatureScale() {
+        return calendarData.getStar().getTemperatureScale();
     }
 
     // Seasons \\

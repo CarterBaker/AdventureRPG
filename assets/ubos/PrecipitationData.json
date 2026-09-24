@@ -1,0 +1,8 @@
+{
+    "blockName": "PrecipitationData",
+    "uniforms": [
+        { "name": "u_precipitationColumns", "type": "VECTOR4_INT", "count": 512 },
+        { "name": "u_precipitationWindow",  "type": "VECTOR4_INT" },
+        { "name": "u_precipitationState",   "type": "VECTOR4" }
+    ]
+}

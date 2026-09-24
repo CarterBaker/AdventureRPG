@@ -12,8 +12,9 @@ public class CalendarData extends DataPackage {
     /*
      * Immutable calendar definition loaded from JSON. Holds the day and
      * month layout for one named calendar, the exact starting point in the
-     * calendar's own units of time, the shape of its day and year, and the
-     * named seasons that divide its year. Owned by CalendarHandle for the
+     * calendar's own units of time, the shape of its day and year, the star
+     * its world orbits, and the named seasons that divide its year. Owned by
+     * CalendarHandle for the
      * engine lifetime. Also resolves the calendar's own day-length curve —
      * derived directly from its seasons' keyframes — so anything needing
      * day length reads it straight from here.
@@ -33,6 +34,9 @@ public class CalendarData extends DataPackage {
 
     // Time Structure
     private final CalendarTimeStruct time;
+
+    // Star
+    private final CalendarStarStruct star;
 
     // Seasons
     private final ObjectArrayList<SeasonRangeStruct> seasons;
@@ -54,6 +58,7 @@ public class CalendarData extends DataPackage {
             int totalDaysInYear,
             CalendarStartStruct start,
             CalendarTimeStruct time,
+            CalendarStarStruct star,
             ObjectArrayList<SeasonRangeStruct> seasons) {
 
         // Internal
@@ -70,6 +75,9 @@ public class CalendarData extends DataPackage {
 
         // Time Structure
         this.time = time;
+
+        // Star
+        this.star = star;
 
         // Seasons
         this.seasons = seasons;
@@ -103,6 +111,10 @@ public class CalendarData extends DataPackage {
 
     public CalendarTimeStruct getTime() {
         return time;
+    }
+
+    public CalendarStarStruct getStar() {
+        return star;
     }
 
     public ObjectArrayList<SeasonRangeStruct> getSeasons() {

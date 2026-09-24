@@ -5,6 +5,47 @@
     "baseTemperature": -2.0,
     "temperatureVariance": 8.0,
     "precipitationChanceScale": 1.30,
-    "tintColor": [0.70, 0.75, 0.95],
-    "sunriseColor": [0.80, 0.50, 0.60]
+    "sky": {
+        "glowStrength": 1.00,
+        "beltStrength": 1.00,
+        "variety": 1.20,
+        "phases": {
+            "night": {
+                "zenith":      [0.016, 0.022, 0.065],
+                "horizon":     [0.05, 0.06, 0.115],
+                "glow":        [0.12, 0.10, 0.20],
+                "belt":        [0.09, 0.08, 0.17],
+                "cloud":       [0.86, 0.88, 1.00],
+                "cloudLight":  [0.62, 0.66, 0.90],
+                "cloudShadow": [0.07, 0.08, 0.15]
+            },
+            "twilight": {
+                "zenith":      [0.26, 0.26, 0.56],
+                "horizon":     [0.90, 0.66, 0.80],
+                "glow":        [1.00, 0.64, 0.66],
+                "belt":        [0.96, 0.66, 0.84],
+                "cloud":       [1.00, 0.90, 0.96],
+                "cloudLight":  [1.00, 0.66, 0.78],
+                "cloudShadow": [0.50, 0.42, 0.66]
+            },
+            "golden": {
+                "zenith":      [0.40, 0.54, 0.88],
+                "horizon":     [0.96, 0.80, 0.86],
+                "glow":        [1.00, 0.76, 0.72],
+                "belt":        [0.94, 0.76, 0.88],
+                "cloud":       [1.00, 0.94, 0.98],
+                "cloudLight":  [1.00, 0.82, 0.84],
+                "cloudShadow": [0.62, 0.60, 0.80]
+            },
+            "day": {
+                "zenith":      [0.36, 0.56, 0.92],
+                "horizon":     [0.80, 0.86, 0.96],
+                "glow":        [1.00, 0.94, 0.94],
+                "belt":        [0.86, 0.86, 0.98],
+                "cloud":       [1.00, 1.00, 1.00],
+                "cloudLight":  [1.00, 0.98, 0.98],
+                "cloudShadow": [0.66, 0.70, 0.86]
+            }
+        }
+    }
 }

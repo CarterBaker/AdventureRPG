@@ -6,6 +6,7 @@
 #include "includes/SkyColorData.glsl"
 #include "includes/WeatherMapData.glsl"
 #include "includes/WeatherMapUtility.glsl"
+#include "sky/util/SkyColor.glsl"
 
 /*
  * Shared cloud look for the weather pass: how much detail a sample can
@@ -15,29 +16,39 @@
  * while crowns catch the light: overhead the view meets shaded bases, from
  * the side it meets lit domes. A second, softer
  * attenuation stands in for light scattered many times inside the cloud, so
- * thick bases read grey rather than black. Ambient comes from the day's own
- * sky gradient, a forward-scattering lobe silvers edges against the sun, and
- * distance washes every sample toward the horizon sky so the far rim of the
- * dome melts into the horizon.
+ * thick bases read grey rather than black. Ambient is the light of the whole
+ * sky dome, horizon included, so a cloud is never darker than the sky that
+ * surrounds it allows, and clouds keep catching a share of sunlight through
+ * twilight while the ground below has already dimmed, since they stand
+ * kilometres higher. Every color comes from the same SkyColorData palette
+ * the sky pass draws: sunlight is tinted by the palette's cloud light, shade
+ * by its cloud shadow, the twilight glow and
+ * anti-solar belt wash the sides of clouds facing them, a forward-scattering
+ * lobe silvers edges against the sun, and distance hazes every sample
+ * toward the exact sky color behind it so the far rim melts into the sky.
  */
 
 const float CLOUD_VISUAL_EPSILON = 0.001;
 
 const float CLOUD_VISUAL_EXTINCTION_PER_BLOCK = 0.08;
-const float CLOUD_VISUAL_SELF_SHADOW          = 0.6;
-const float CLOUD_VISUAL_MULTI_SCATTER_SCALE  = 0.25;
-const float CLOUD_VISUAL_MULTI_SCATTER_WEIGHT = 0.55;
+const float CLOUD_VISUAL_SELF_SHADOW          = 0.4;
+const float CLOUD_VISUAL_MULTI_SCATTER_SCALE  = 0.18;
+const float CLOUD_VISUAL_MULTI_SCATTER_WEIGHT = 0.7;
 const float CLOUD_VISUAL_LIGHT_MIN_COSINE     = 0.15;
 const float CLOUD_VISUAL_POWDER_STRENGTH      = 0.5;
 const float CLOUD_VISUAL_FORWARD_SCATTER      = 0.6;
 const float CLOUD_VISUAL_FORWARD_WEIGHT       = 0.18;
-const float CLOUD_VISUAL_AMBIENT_BASE         = 0.45;
+const float CLOUD_VISUAL_AMBIENT_BASE         = 0.6;
 const float CLOUD_VISUAL_AMBIENT_TOP          = 0.95;
+const float CLOUD_VISUAL_AMBIENT_ZENITH_SHARE = 0.6;
+const float CLOUD_VISUAL_LOW_SUN_FLOOR        = 0.4;
 const float CLOUD_VISUAL_SKY_TINT_STRENGTH    = 0.35;
 const vec3  CLOUD_VISUAL_MOON_TINT            = vec3(0.58, 0.74, 1.00);
 const float CLOUD_VISUAL_MOON_INTENSITY_MAX   = 0.18;
 const float CLOUD_VISUAL_HAZE_START           = 0.35;
 const float CLOUD_VISUAL_HAZE_STRENGTH        = 0.85;
+const float CLOUD_VISUAL_TWILIGHT_WEIGHT      = 0.8;
+const float CLOUD_VISUAL_TWILIGHT_BASE        = 0.45;
 
 const int   CLOUD_VISUAL_OCTAVES_NEAR       = 4;
 const int   CLOUD_VISUAL_OCTAVES_MID        = 3;
@@ -77,6 +88,8 @@ struct CloudLight {
     vec3  moonDir;
     vec3  sunRadiance;
     vec3  moonRadiance;
+    vec3  twilightRadiance;
+    vec3  hazeColor;
 };
 
 // Henyey-Greenstein normalised so isotropic scattering is 1, blended in as a
@@ -93,9 +106,17 @@ CloudLight resolveCloudLight(vec3 rayDir) {
 
     light.sunDir       = normalize(u_sunDirection);
     light.moonDir      = normalize(u_moonDirection);
-    light.sunRadiance  = u_sunColor * u_sunIntensity * resolveCloudPhase(dot(rayDir, light.sunDir));
+    float sunIntensity = max(u_sunIntensity, CLOUD_VISUAL_LOW_SUN_FLOOR * clamp(u_skyBlend.x, 0.0, 1.0));
+
+    light.sunRadiance  = u_sunColor * u_skyCloudLightColor * sunIntensity
+    * resolveCloudPhase(dot(rayDir, light.sunDir));
     light.moonRadiance = u_moonColor * CLOUD_VISUAL_MOON_TINT
     * min(u_moonIntensity, CLOUD_VISUAL_MOON_INTENSITY_MAX);
+
+    light.twilightRadiance = (u_skyGlowColor * clamp(resolveSkyGlowMask(rayDir, light.sunDir) * u_skyBlend.x, 0.0, 1.0)
+    + u_skyBeltColor * clamp(resolveSkyBeltMask(rayDir, light.sunDir) * u_skyBlend.y, 0.0, 1.0))
+    * CLOUD_VISUAL_TWILIGHT_WEIGHT;
+    light.hazeColor = resolveSkyColor(rayDir, light.sunDir, 0.0);
 
     return light;
 }
@@ -142,15 +163,18 @@ vec3 shadeCloudSample(
     vec3 sunLight  = light.sunRadiance * powder * resolveCloudScatteredTransmittance(sunOpticalDepth);
     vec3 moonLight = light.moonRadiance * resolveCloudScatteredTransmittance(moonOpticalDepth);
 
-    vec3 ambient = mix(u_skyHorizonColor, u_skyZenithColor, h)
+    vec3 skyDome = mix(u_skyHorizonColor, u_skyZenithColor, CLOUD_VISUAL_AMBIENT_ZENITH_SHARE);
+    vec3 ambient = mix(u_skyCloudShadowColor, skyDome, h)
     * mix(CLOUD_VISUAL_AMBIENT_BASE, CLOUD_VISUAL_AMBIENT_TOP, h);
 
-    vec3 shaded = albedo * (ambient + sunLight + moonLight);
+    vec3 twilight = light.twilightRadiance * mix(CLOUD_VISUAL_TWILIGHT_BASE, 1.0, h);
+
+    vec3 shaded = albedo * (ambient + sunLight + moonLight + twilight);
 
     float reach = resolveWeatherMapReach();
     float haze  = smoothstep(reach * CLOUD_VISUAL_HAZE_START, reach, horizontalDistance);
 
-    return mix(shaded, u_skyHorizonColor, haze * CLOUD_VISUAL_HAZE_STRENGTH);
+    return mix(shaded, light.hazeColor, haze * CLOUD_VISUAL_HAZE_STRENGTH);
 }
 
 #endif

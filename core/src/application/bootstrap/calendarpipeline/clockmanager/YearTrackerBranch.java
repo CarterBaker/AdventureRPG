@@ -32,8 +32,13 @@ class YearTrackerBranch extends BranchPackage {
     // Assignment \\
 
     void assignData(CalendarHandle calendarHandle, ClockHandle clockHandle) {
+
+        // Internal
         this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
+
+        // Tracking
+        this.lastYear = -1;
     }
 
     // Year Tracker \\

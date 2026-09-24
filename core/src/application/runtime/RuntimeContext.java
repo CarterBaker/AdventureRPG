@@ -8,6 +8,7 @@ import application.runtime.player.PlayerRenderSystem;
 import application.runtime.player.PlayerSystem;
 import application.runtime.postprocessing.PostProcessingManager;
 import application.runtime.recording.RecordingInputSystem;
+import application.runtime.weather.PrecipitationSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.ContextPackage;
@@ -34,6 +35,7 @@ public class RuntimeContext extends ContextPackage {
     private PostProcessingManager postProcessingManager;
     private PlayerRenderSystem playerRenderSystem;
     private WeatherSystem weatherSystem;
+    private PrecipitationSystem precipitationSystem;
 
     // Internal \\
 
@@ -51,5 +53,6 @@ public class RuntimeContext extends ContextPackage {
         this.postProcessingManager = create(PostProcessingManager.class);
         this.playerRenderSystem = create(PlayerRenderSystem.class);
         this.weatherSystem = create(WeatherSystem.class);
+        this.precipitationSystem = create(PrecipitationSystem.class);
     }
 }

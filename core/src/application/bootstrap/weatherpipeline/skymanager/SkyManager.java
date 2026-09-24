@@ -1,46 +1,34 @@
 package application.bootstrap.weatherpipeline.skymanager;
 
-import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import engine.root.ManagerPackage;
 
 public class SkyManager extends ManagerPackage {
 
     /*
-     * Owns the sky's live color state. SeasonColorBlendBranch resolves the
-     * calendar's own season keyframes into a blended tint/sunrise color;
-     * SkyColorSystem combines that with time of day and live temperature
-     * into the per-grid SkyColorData UBO every frame.
+     * Owns the sky's live color state. SkyPaletteBranch blends the season
+     * palettes the year currently sits between and places them at any solar
+     * elevation; SkyColorSystem combines that with each grid's temperature
+     * and local weather into the per-grid SkyColorData UBO every frame. The
+     * season blend follows the clock's calendar on its own, so a world
+     * switch needs nothing from here.
      */
 
-    private ClockManager clockManager;
-
-    private SeasonBlendSystem seasonBlendSystem;
+    // Branches
+    private SkyPaletteBranch skyPaletteBranch;
     private SkyColorSystem skyColorSystem;
 
-    // Internal \\
+    // Base \\
 
     @Override
     protected void create() {
-        this.seasonBlendSystem = create(SeasonBlendSystem.class);
+
+        // Branches
+        this.skyPaletteBranch = create(SkyPaletteBranch.class);
         this.skyColorSystem = create(SkyColorSystem.class);
     }
 
     @Override
-    protected void get() {
-        this.clockManager = get(ClockManager.class);
-    }
-
-    @Override
     protected void awake() {
-        seasonBlendSystem.assignData(clockManager.getCalendarHandle());
-        skyColorSystem.assignData(seasonBlendSystem);
-    }
-
-    /*
-     * Re-resolves the season color keyframes against the active world's
-     * calendar. Call after ClockManager.switchWorld().
-     */
-    public void refreshCalendar() {
-        seasonBlendSystem.assignData(clockManager.getCalendarHandle());
+        skyColorSystem.assignData(skyPaletteBranch);
     }
 }

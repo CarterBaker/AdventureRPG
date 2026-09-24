@@ -6,6 +6,7 @@ import application.runtime.menu.MenuSystem;
 import application.runtime.menueventsmanager.MenuEventsManager;
 import application.runtime.postprocessing.PostProcessingManager;
 import application.runtime.recording.RecordingInputSystem;
+import application.runtime.weather.PrecipitationSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
 import editor.debug.freecamera.FreeCameraSystem;
@@ -33,6 +34,7 @@ public class DebugContext extends ContextPackage {
     private RecordingInputSystem recordingInputSystem;
     private PostProcessingManager postProcessingManager;
     private WeatherSystem weatherSystem;
+    private PrecipitationSystem precipitationSystem;
     private DebugWaterPlacementSystem debugWaterPlacementSystem;
 
     // Internal \\
@@ -50,6 +52,7 @@ public class DebugContext extends ContextPackage {
         this.recordingInputSystem = create(RecordingInputSystem.class);
         this.postProcessingManager = create(PostProcessingManager.class);
         this.weatherSystem = create(WeatherSystem.class);
+        this.precipitationSystem = create(PrecipitationSystem.class);
         this.debugWaterPlacementSystem = create(DebugWaterPlacementSystem.class);
     }
 }

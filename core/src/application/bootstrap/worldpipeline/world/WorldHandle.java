@@ -9,8 +9,7 @@ public class WorldHandle extends HandlePackage {
 
     /*
      * Persistent world definition owned by WorldManager for the engine lifetime.
-     * Wraps WorldData and delegates all access through it. worldEpochStart is
-     * the only mutable value — written once from the save file at runtime.
+     * Wraps WorldData and delegates all access through it.
      */
 
     // Internal
@@ -58,10 +57,6 @@ public class WorldHandle extends HandlePackage {
 
     public long getWorldEpochStart() {
         return data.getWorldEpochStart();
-    }
-
-    public void setWorldEpochStart(long worldEpochStart) {
-        data.setWorldEpochStart(worldEpochStart);
     }
 
     public float getRotationSpeed() {

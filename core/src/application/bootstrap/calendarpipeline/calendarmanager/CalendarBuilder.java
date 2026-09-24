@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarData;
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
+import application.bootstrap.calendarpipeline.calendar.CalendarStarStruct;
 import application.bootstrap.calendarpipeline.calendar.CalendarStartStruct;
 import application.bootstrap.calendarpipeline.calendar.CalendarTimeStruct;
 import application.bootstrap.calendarpipeline.calendar.SeasonRangeStruct;
@@ -20,7 +21,8 @@ class CalendarBuilder extends BuilderPackage {
     /*
      * Parses calendar JSON into a CalendarData/CalendarHandle: the day-of-
      * week and month layout, this calendar's own day/year shape, its
-     * starting point, and its named seasons — each anchoring a name to a
+     * starting point, the star its world orbits, and its named seasons —
+     * each anchoring a name to a
      * start date and a day length. A season's climate and sky-color
      * values are resolved separately, by name, through SeasonManager.
      * Bootstrap-only.
@@ -36,13 +38,14 @@ class CalendarBuilder extends BuilderPackage {
         Object2ByteOpenHashMap<String> monthDays = parseMonths(json, monthNames);
         int totalDaysInYear = calculateTotalDaysInYear(monthDays);
 
-        CalendarTimeStruct time = parseTime(json);
+        CalendarTimeStruct time = parseTime(json, calendarName);
         CalendarStartStruct start = parseStart(json, calendarName, monthNames, monthDays, time);
+        CalendarStarStruct star = parseStar(json, calendarName);
         ObjectArrayList<SeasonRangeStruct> seasons = parseSeasons(json, calendarName, monthNames, monthDays);
 
         CalendarData calendarData = new CalendarData(
                 calendarName, daysOfWeek, monthNames, monthDays, totalDaysInYear,
-                start, time, seasons);
+                start, time, star, seasons);
 
         CalendarHandle calendarHandle = create(CalendarHandle.class);
         calendarHandle.constructor(calendarData);
@@ -89,7 +92,7 @@ class CalendarBuilder extends BuilderPackage {
         return monthDays;
     }
 
-    private CalendarTimeStruct parseTime(JsonObject json) {
+    private CalendarTimeStruct parseTime(JsonObject json, String calendarName) {
 
         int daysPerDay = JsonUtility.validateInt(json, "daysPerDay");
         int hoursPerDay = JsonUtility.validateInt(json, "hoursPerDay");
@@ -97,6 +100,9 @@ class CalendarBuilder extends BuilderPackage {
         int lunarCycleDays = JsonUtility.validateInt(json, "lunarCycleDays");
         float middayOffset = JsonUtility.validateFloat(json, "middayOffset");
         int yearsPerAge = JsonUtility.validateInt(json, "yearsPerAge");
+
+        validateTime(calendarName, daysPerDay, hoursPerDay, minutesPerHour, lunarCycleDays, middayOffset,
+                yearsPerAge);
 
         return new CalendarTimeStruct(daysPerDay, hoursPerDay, minutesPerHour, lunarCycleDays, middayOffset,
                 yearsPerAge);
@@ -125,6 +131,24 @@ class CalendarBuilder extends BuilderPackage {
         validateStartTime(calendarName, hour, minute, time);
 
         return new CalendarStartStruct(year, age, month, dayOfMonth, hour, minute);
+    }
+
+    private CalendarStarStruct parseStar(JsonObject json, String calendarName) {
+
+        JsonObject starObject = JsonUtility.validateObject(json, "star");
+
+        float distance = JsonUtility.validateFloat(starObject, "distance");
+        float luminosity = JsonUtility.validateFloat(starObject, "luminosity");
+
+        if (distance <= 0f)
+            throwException("Calendar \"" + calendarName + "\" star.distance " + distance +
+                    " is out of range — must be greater than 0.0");
+
+        if (luminosity <= 0f)
+            throwException("Calendar \"" + calendarName + "\" star.luminosity " + luminosity +
+                    " is out of range — must be greater than 0.0");
+
+        return new CalendarStarStruct(distance, luminosity);
     }
 
     private ObjectArrayList<SeasonRangeStruct> parseSeasons(
@@ -182,6 +206,36 @@ class CalendarBuilder extends BuilderPackage {
     }
 
     // Validation \\
+
+    private void validateTime(
+            String calendarName,
+            int daysPerDay,
+            int hoursPerDay,
+            int minutesPerHour,
+            int lunarCycleDays,
+            float middayOffset,
+            int yearsPerAge) {
+
+        validatePositive(calendarName, "daysPerDay", daysPerDay);
+        validatePositive(calendarName, "hoursPerDay", hoursPerDay);
+        validatePositive(calendarName, "minutesPerHour", minutesPerHour);
+        validatePositive(calendarName, "yearsPerAge", yearsPerAge);
+
+        if (lunarCycleDays < 0)
+            throwException("Calendar \"" + calendarName + "\" lunarCycleDays " + lunarCycleDays +
+                    " is out of range — must be 0 or greater");
+
+        if (middayOffset < 0f || middayOffset >= 1f)
+            throwException("Calendar \"" + calendarName + "\" middayOffset " + middayOffset +
+                    " is out of range — must be at least 0.0 and below 1.0");
+    }
+
+    private void validatePositive(String calendarName, String field, int value) {
+
+        if (value < 1)
+            throwException("Calendar \"" + calendarName + "\" " + field + " " + value +
+                    " is out of range — must be 1 or greater");
+    }
 
     private void validateStartDate(
             String calendarName,

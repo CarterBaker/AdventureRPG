@@ -7,6 +7,8 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.weatherpipeline.season.SeasonData;
 import application.bootstrap.weatherpipeline.season.SeasonHandle;
+import application.bootstrap.weatherpipeline.season.SkyPaletteStruct;
+import application.bootstrap.weatherpipeline.season.SkyPhaseStruct;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
@@ -19,10 +21,13 @@ class SeasonBuilder extends BuilderPackage {
      * Parses season JSON into a SeasonData and wraps it in a SeasonHandle.
      * The season's name is taken directly from the file name — whatever
      * named seasons the active calendar defines is whatever files should
-     * exist here. Every fallback below when a JSON field is omitted comes
-     * from EngineSetting — nothing is authored as a bare literal here.
-     * Bootstrap-only and on-demand.
+     * exist here. Every fallback below when a climate field is omitted
+     * comes from EngineSetting. The "sky" block is required: it carries the
+     * season's full sky and cloud palette for every phase of the day named
+     * in EngineSetting.SKY_PHASE_NAMES. Bootstrap-only and on-demand.
      */
+
+    // Build \\
 
     SeasonHandle build(File file, File root) {
 
@@ -40,14 +45,7 @@ class SeasonBuilder extends BuilderPackage {
                 json, "temperatureVariance", EngineSetting.DEFAULT_SEASON_TEMPERATURE_VARIANCE);
         float precipitationChanceScale = parseFloat(
                 json, "precipitationChanceScale", EngineSetting.DEFAULT_SEASON_PRECIPITATION_CHANCE_SCALE);
-        Vector3 tintColor = parseColor(json, "tintColor", new Vector3(
-                EngineSetting.DEFAULT_SEASON_TINT_R,
-                EngineSetting.DEFAULT_SEASON_TINT_G,
-                EngineSetting.DEFAULT_SEASON_TINT_B));
-        Vector3 sunriseColor = parseColor(json, "sunriseColor", new Vector3(
-                EngineSetting.DEFAULT_SEASON_SUNRISE_R,
-                EngineSetting.DEFAULT_SEASON_SUNRISE_G,
-                EngineSetting.DEFAULT_SEASON_SUNRISE_B));
+        SkyPaletteStruct skyPalette = parseSkyPalette(json, seasonName);
 
         SeasonData seasonData = new SeasonData(
                 seasonName,
@@ -57,14 +55,15 @@ class SeasonBuilder extends BuilderPackage {
                 baseTemperature,
                 temperatureVariance,
                 precipitationChanceScale,
-                tintColor,
-                sunriseColor);
+                skyPalette);
 
         SeasonHandle seasonHandle = create(SeasonHandle.class);
         seasonHandle.constructor(seasonData);
 
         return seasonHandle;
     }
+
+    // Parsing \\
 
     private float parseFloat(JsonObject json, String field, float fallback) {
 
@@ -74,16 +73,58 @@ class SeasonBuilder extends BuilderPackage {
         return json.get(field).getAsFloat();
     }
 
-    private Vector3 parseColor(JsonObject json, String field, Vector3 fallback) {
+    private SkyPaletteStruct parseSkyPalette(JsonObject json, String seasonName) {
 
-        if (!json.has(field))
-            return fallback;
+        JsonObject skyObject = JsonUtility.validateObject(json, "sky");
+        JsonObject phasesObject = JsonUtility.validateObject(skyObject, "phases");
 
-        JsonArray array = json.getAsJsonArray(field);
+        String[] phaseNames = EngineSetting.SKY_PHASE_NAMES;
+        SkyPhaseStruct[] phases = new SkyPhaseStruct[phaseNames.length];
 
-        return new Vector3(
+        for (int i = 0; i < phaseNames.length; i++)
+            phases[i] = parseSkyPhase(JsonUtility.validateObject(phasesObject, phaseNames[i]), seasonName);
+
+        float glowStrength = parseStrength(skyObject, "glowStrength", seasonName);
+        float beltStrength = parseStrength(skyObject, "beltStrength", seasonName);
+        float variety = parseStrength(skyObject, "variety", seasonName);
+
+        return new SkyPaletteStruct(phases, glowStrength, beltStrength, variety);
+    }
+
+    private SkyPhaseStruct parseSkyPhase(JsonObject phaseObject, String seasonName) {
+        return new SkyPhaseStruct(
+                parseColor(phaseObject, "zenith", seasonName),
+                parseColor(phaseObject, "horizon", seasonName),
+                parseColor(phaseObject, "glow", seasonName),
+                parseColor(phaseObject, "belt", seasonName),
+                parseColor(phaseObject, "cloud", seasonName),
+                parseColor(phaseObject, "cloudLight", seasonName),
+                parseColor(phaseObject, "cloudShadow", seasonName));
+    }
+
+    private float parseStrength(JsonObject json, String field, String seasonName) {
+
+        float strength = JsonUtility.validateFloat(json, field);
+
+        if (strength < 0f)
+            throwException("Season \"" + seasonName + "\" sky " + field + " " + strength +
+                    " is out of range — must be 0.0 or greater");
+
+        return strength;
+    }
+
+    private Vector3 parseColor(JsonObject json, String field, String seasonName) {
+
+        JsonArray array = JsonUtility.validateArray(json, field, 3);
+        Vector3 color = new Vector3(
                 array.get(0).getAsFloat(),
                 array.get(1).getAsFloat(),
                 array.get(2).getAsFloat());
+
+        if (color.x < 0f || color.y < 0f || color.z < 0f)
+            throwException("Season \"" + seasonName + "\" sky color \"" + field +
+                    "\" has a negative channel — every channel must be 0.0 or greater");
+
+        return color;
     }
 }

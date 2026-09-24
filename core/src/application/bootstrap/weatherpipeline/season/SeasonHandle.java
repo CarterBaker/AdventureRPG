@@ -1,7 +1,6 @@
 package application.bootstrap.weatherpipeline.season;
 
 import engine.root.HandlePackage;
-import engine.util.mathematics.vectors.Vector3;
 
 public class SeasonHandle extends HandlePackage {
 
@@ -52,11 +51,7 @@ public class SeasonHandle extends HandlePackage {
         return seasonData.getPrecipitationChanceScale();
     }
 
-    public Vector3 getTintColor() {
-        return seasonData.getTintColor();
-    }
-
-    public Vector3 getSunriseColor() {
-        return seasonData.getSunriseColor();
+    public SkyPaletteStruct getSkyPalette() {
+        return seasonData.getSkyPalette();
     }
 }

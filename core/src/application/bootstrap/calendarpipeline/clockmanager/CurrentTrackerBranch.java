@@ -9,22 +9,20 @@ class CurrentTrackerBranch extends BranchPackage {
 
     /*
      * Advances the sub-day clock every frame from the real system clock.
-     * totalDaysElapsed (whole calendar days since the world's epoch) and
-     * dayProgress (fraction of the current calendar day) are both derived
-     * from the same elapsed-since-epoch value and the same
-     * millisPerGameDay divisor, so the calendar date always rolls over at
-     * exactly the instant dayProgress wraps to midnight. computeVisualTimeOfDay()
-     * then localizes that shared raw time per grid, bending it by season
-     * and by latitude so day length varies correctly with time of year and
-     * with distance from the equator.
+     * The world's epoch is the real instant its calendar's start date and
+     * start time were reached, so the start time is folded into the elapsed
+     * value once and totalDaysElapsed, dayProgress, hour, and minute all fall
+     * out of that single number. The date rolls over at exactly the instant
+     * dayProgress wraps to midnight, and any gap since the last session
+     * resolves in one step. computeVisualTimeOfDay() then localizes the
+     * shared solar time per grid, bending it by season and latitude.
      */
 
     // Internal
     private long MILLIS_PER_REAL_DAY;
     private double LATITUDE_CURVE_POWER;
 
-    // Seasonal Bending — safety bounds only; the shift amount itself comes
-    // from the calendar's own data-driven day length.
+    // Seasonal Bending
     private double SUNRISE_MIN;
     private double SUNRISE_MAX;
     private double SUNSET_MIN;
@@ -35,10 +33,11 @@ class CurrentTrackerBranch extends BranchPackage {
 
     // Calendar
     private CalendarHandle calendarHandle;
+    private long millisPerGameDay;
+    private long startMillisIntoDay;
+    private int totalDaysInYear;
 
     // Per-world
-    private int daysPerDay;
-    private float axialTilt;
     private double axialTiltStrength;
     private ClockHandle clockHandle;
 
@@ -70,45 +69,46 @@ class CurrentTrackerBranch extends BranchPackage {
             CalendarHandle calendarHandle,
             ClockHandle clockHandle,
             float axialTilt) {
+
         this.clockHandle = clockHandle;
-        setCalendarHandle(calendarHandle);
-        setAxialTilt(axialTilt);
-    }
-
-    void setCalendarHandle(CalendarHandle calendarHandle) {
         this.calendarHandle = calendarHandle;
-        this.daysPerDay = calendarHandle.getDaysPerDay();
-    }
-
-    void setAxialTilt(float axialTilt) {
-        this.axialTilt = axialTilt;
+        this.millisPerGameDay = MILLIS_PER_REAL_DAY / calendarHandle.getDaysPerDay();
+        this.startMillisIntoDay = calculateStartMillisIntoDay();
+        this.totalDaysInYear = calendarHandle.getTotalDaysInYear();
         this.axialTiltStrength = Math.max(
                 0.0,
                 axialTilt / EngineSetting.LATITUDE_DAYLENGTH_REFERENCE_TILT_DEGREES);
+        this.lastDay = -1;
+    }
+
+    private long calculateStartMillisIntoDay() {
+
+        int minutesPerDay = calendarHandle.getHoursPerDay() * calendarHandle.getMinutesPerHour();
+        int startMinuteOfDay = calendarHandle.getStartHour() * calendarHandle.getMinutesPerHour()
+                + calendarHandle.getStartMinute();
+
+        return Math.round(startMinuteOfDay / (double) minutesPerDay * millisPerGameDay);
     }
 
     // Global Time \\
 
     boolean advanceGlobalTime() {
 
-        long now = internal.getTime();
-        long millisPerGameDay = MILLIS_PER_REAL_DAY / daysPerDay;
+        long elapsedSinceEpoch = internal.getTime() - clockHandle.getWorldEpochStart();
+        long elapsedSinceStartDay = elapsedSinceEpoch + startMillisIntoDay;
 
-        long elapsedSinceEpoch = now - clockHandle.getWorldEpochStart();
-        long totalDaysElapsed = Math.floorDiv(elapsedSinceEpoch, millisPerGameDay);
-        long millisIntoCurrentGameDay = Math.floorMod(elapsedSinceEpoch, millisPerGameDay);
+        long totalDaysElapsed = Math.floorDiv(elapsedSinceStartDay, millisPerGameDay);
+        long millisIntoCurrentGameDay = Math.floorMod(elapsedSinceStartDay, millisPerGameDay);
 
         double dayProgress = millisIntoCurrentGameDay / (double) millisPerGameDay;
+        int minuteOfDay = calculateMinuteOfDay(dayProgress);
 
-        double rawTimeOfDay = calculateRawTimeOfDay(dayProgress);
-        int currentMinute = calculateMinute(rawTimeOfDay);
-        int currentHour = calculateHour(rawTimeOfDay);
-
+        clockHandle.setWorldSecondsElapsed(elapsedSinceEpoch / EngineSetting.MILLIS_PER_SECOND);
         clockHandle.setTotalDaysElapsed(totalDaysElapsed);
         clockHandle.setDayProgress(dayProgress);
-        clockHandle.setRawTimeOfDay(rawTimeOfDay);
-        clockHandle.setCurrentMinute(currentMinute);
-        clockHandle.setCurrentHour(currentHour);
+        clockHandle.setRawTimeOfDay(calculateRawTimeOfDay(dayProgress));
+        clockHandle.setCurrentHour(minuteOfDay / calendarHandle.getMinutesPerHour());
+        clockHandle.setCurrentMinute(minuteOfDay % calendarHandle.getMinutesPerHour());
 
         boolean dayChanged = lastDay != totalDaysElapsed;
         lastDay = totalDaysElapsed;
@@ -116,12 +116,27 @@ class CurrentTrackerBranch extends BranchPackage {
         return dayChanged;
     }
 
+    // Visual Year \\
+
+    /*
+     * Year progress is only recomputed per whole day, so the fraction of
+     * the current day is added on top here to give a continuous point in
+     * the year for anything blending across seasons.
+     */
+    void advanceVisualYear() {
+
+        double visualYearProgress = clockHandle.getYearProgress()
+                + clockHandle.getDayProgress() / totalDaysInYear;
+
+        clockHandle.setVisualYearProgress(wrapFraction(visualYearProgress));
+    }
+
     // Location Time \\
 
     double computeVisualTimeOfDay(double locationOffset, double latitudeFactor) {
 
         double rawTimeOfDay = clockHandle.getRawTimeOfDay();
-        double yearProgress = clockHandle.getYearProgress();
+        double yearProgress = clockHandle.getVisualYearProgress();
 
         double localRawTimeOfDay = wrapFraction(rawTimeOfDay + locationOffset);
 
@@ -130,26 +145,22 @@ class CurrentTrackerBranch extends BranchPackage {
 
     // Calculations \\
 
+    /*
+     * Solar time for the calendar's reference location: the calendar's
+     * middayOffset is the fraction of its day at which the sun peaks, so it
+     * is shifted onto NOON here. Clock-face hours and minutes are read from
+     * dayProgress instead and are never shifted.
+     */
     double calculateRawTimeOfDay(double dayProgress) {
-
-        double raw = (dayProgress + calendarHandle.getMiddayOffset()) % 1.0;
-
-        if (raw < 0)
-            raw += 1.0;
-
-        return raw;
+        return wrapFraction(dayProgress - calendarHandle.getMiddayOffset() + NOON);
     }
 
-    int calculateMinute(double rawTimeOfDay) {
+    int calculateMinuteOfDay(double dayProgress) {
 
-        int hoursPerDay = calendarHandle.getHoursPerDay();
-        int minutesPerHour = calendarHandle.getMinutesPerHour();
+        int minutesPerDay = calendarHandle.getHoursPerDay() * calendarHandle.getMinutesPerHour();
+        int minuteOfDay = (int) (dayProgress * minutesPerDay);
 
-        return (int) ((rawTimeOfDay * hoursPerDay * minutesPerHour) % minutesPerHour);
-    }
-
-    int calculateHour(double rawTimeOfDay) {
-        return (int) (rawTimeOfDay * calendarHandle.getHoursPerDay());
+        return Math.min(minuteOfDay, minutesPerDay - 1);
     }
 
     double calculateVisualTimeOfDay(double rawTimeOfDay, double yearProgress, double latitudeFactor) {

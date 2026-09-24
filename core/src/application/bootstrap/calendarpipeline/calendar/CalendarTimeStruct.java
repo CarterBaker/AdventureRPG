@@ -5,11 +5,11 @@ import engine.root.StructPackage;
 public class CalendarTimeStruct extends StructPackage {
 
     /*
-     * The shape of a day and a year for this calendar — hours per day,
-     * minutes per hour, days in a lunar cycle, the visual midday offset used
-     * when bending raw time-of-day into a sunrise/noon/sunset curve, and how
-     * many years make up one age. All of this used to be fixed, engine-wide
-     * constants; now each calendar defines its own.
+     * The shape of a day and a year for this calendar — game days per real
+     * day, hours per day, minutes per hour, days in a lunar cycle, the
+     * middayOffset (the fraction of the calendar day at which the sun
+     * peaks, 0.5 for a clock-face noon), and how many years make up one
+     * age. Each calendar defines its own.
      */
 
     // Internal

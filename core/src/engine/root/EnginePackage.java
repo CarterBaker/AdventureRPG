@@ -537,6 +537,7 @@ public class EnginePackage extends ManagerPackage {
 
     private final void preAwake() {
 
+        this.stampFrameTime();
         this.setContext(SystemContext.AWAKE);
 
         for (int i = 0; i < this.systemArray.length; i++)
@@ -545,8 +546,15 @@ public class EnginePackage extends ManagerPackage {
 
     @Override
     protected final void internalAwake() {
+        this.stampFrameTime();
         this.setContext(SystemContext.AWAKE);
         super.internalAwake();
+    }
+
+    // Frame Time \\
+
+    private final void stampFrameTime() {
+        this.frameTimeMillis = Instant.now().toEpochMilli();
     }
 
     // Release \\
@@ -580,7 +588,7 @@ public class EnginePackage extends ManagerPackage {
     @Override
     protected final void internalUpdate() {
 
-        this.frameTimeMillis = Instant.now().toEpochMilli();
+        this.stampFrameTime();
 
         this.setContext(SystemContext.UPDATE);
 

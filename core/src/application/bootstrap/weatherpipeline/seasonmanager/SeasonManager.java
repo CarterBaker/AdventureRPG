@@ -11,8 +11,14 @@ public class SeasonManager extends ManagerPackage {
      * no longer a fixed enum — the active calendar defines whichever named
      * seasons it wants (see CalendarData.getSeasons()), so this registry is
      * keyed by name exactly like clouds, weathers, and biomes, and supports
-     * the same on-demand loading via InternalLoader on a cache miss.
+     * the same on-demand loading via InternalLoader on a cache miss. Its
+     * SeasonBlendSystem resolves where the year sits between the active
+     * calendar's seasons every frame, so season-driven values blend through
+     * here rather than stepping when the season name changes.
      */
+
+    // Systems
+    private SeasonBlendSystem seasonBlendSystem;
 
     // Palette
     private Object2ObjectOpenHashMap<String, SeasonHandle> seasonName2SeasonHandle;
@@ -24,6 +30,9 @@ public class SeasonManager extends ManagerPackage {
 
         // Palette
         this.seasonName2SeasonHandle = new Object2ObjectOpenHashMap<>();
+
+        // Systems
+        this.seasonBlendSystem = create(SeasonBlendSystem.class);
 
         create(SeasonLoader.class);
     }
@@ -59,5 +68,27 @@ public class SeasonManager extends ManagerPackage {
             throwException("No handle registered for season: \"" + seasonName + "\"");
 
         return handle;
+    }
+
+    // Season Blend \\
+
+    public SeasonHandle getPreviousSeason() {
+        return seasonBlendSystem.getPreviousSeason();
+    }
+
+    public SeasonHandle getNextSeason() {
+        return seasonBlendSystem.getNextSeason();
+    }
+
+    public float getSeasonBlendFactor() {
+        return seasonBlendSystem.getBlendFactor();
+    }
+
+    public float getBlendedBaseTemperature() {
+        return seasonBlendSystem.getBaseTemperature();
+    }
+
+    public float getBlendedTemperatureVariance() {
+        return seasonBlendSystem.getTemperatureVariance();
     }
 }

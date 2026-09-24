@@ -10,13 +10,16 @@ public class ClockInstance extends InstancePackage {
      * in day and night simultaneously. Recomputed every frame per grid by
      * ClockManager, from the shared global clock plus that grid's own
      * active chunk coordinate. One instance per grid, created once and
-     * held for that grid's lifetime — never shared, never rebuilt.
+     * held for that grid's lifetime — never shared, never rebuilt. Solar
+     * elevation is the vertical component of the sun's direction for that
+     * same visual time, from -1 (nadir) through 0 (horizon) to 1 (zenith).
      */
 
     // State
     private double visualTimeOfDay;
     private double locationOffset;
     private double latitudeFactor;
+    private double solarElevation;
 
     // Update \\
 
@@ -24,6 +27,7 @@ public class ClockInstance extends InstancePackage {
         this.visualTimeOfDay = visualTimeOfDay;
         this.locationOffset = locationOffset;
         this.latitudeFactor = latitudeFactor;
+        this.solarElevation = -Math.cos(visualTimeOfDay * Math.PI * 2.0);
     }
 
     // Accessible \\
@@ -38,5 +42,9 @@ public class ClockInstance extends InstancePackage {
 
     public double getLatitudeFactor() {
         return latitudeFactor;
+    }
+
+    public double getSolarElevation() {
+        return solarElevation;
     }
 }

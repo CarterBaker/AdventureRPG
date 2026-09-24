@@ -10,10 +10,11 @@ public class ClockData extends DataPackage {
      * to derive all time values, a reference to the active world's calendar
      * (source of the current season and the world's starting point), plus
      * all calculated current time fields updated each frame by the clock
-     * branches. The epoch is the only field that needs to be persisted to
-     * disk to fully restore session state. This is global, location-
-     * independent state — visual time of day for a specific place on the
-     * world's Y axis lives in LocationTimeStruct instead.
+     * branches. The epoch is the only field persisted to disk — it lives in
+     * the world's companion JSON — and every other value here is re-derived
+     * from it and the system clock. This is global, location-independent
+     * state — visual time of day for a specific place on the world's Y axis
+     * lives in each grid's ClockInstance instead.
      */
 
     // Epoch
@@ -23,6 +24,7 @@ public class ClockData extends DataPackage {
     private CalendarHandle calendarHandle;
 
     // Time State
+    private double worldSecondsElapsed;
     private long totalDaysElapsed;
     private long totalDaysWithOffset;
     private double dayProgress;
@@ -38,6 +40,9 @@ public class ClockData extends DataPackage {
     private int currentMonth;
     private int currentYear;
     private int currentAge;
+
+    // Day Seed
+    private long currentDaySeed;
 
     // Noise
     private float randomNoiseFromDay;
@@ -66,6 +71,14 @@ public class ClockData extends DataPackage {
 
     public void setCalendarHandle(CalendarHandle calendarHandle) {
         this.calendarHandle = calendarHandle;
+    }
+
+    public double getWorldSecondsElapsed() {
+        return worldSecondsElapsed;
+    }
+
+    public void setWorldSecondsElapsed(double worldSecondsElapsed) {
+        this.worldSecondsElapsed = worldSecondsElapsed;
     }
 
     public long getTotalDaysElapsed() {
@@ -170,6 +183,14 @@ public class ClockData extends DataPackage {
 
     public void setCurrentAge(int currentAge) {
         this.currentAge = currentAge;
+    }
+
+    public long getCurrentDaySeed() {
+        return currentDaySeed;
+    }
+
+    public void setCurrentDaySeed(long currentDaySeed) {
+        this.currentDaySeed = currentDaySeed;
     }
 
     public float getRandomNoiseFromDay() {

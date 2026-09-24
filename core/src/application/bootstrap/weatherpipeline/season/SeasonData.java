@@ -1,16 +1,15 @@
 package application.bootstrap.weatherpipeline.season;
 
 import engine.root.DataPackage;
-import engine.util.mathematics.vectors.Vector3;
 
 public class SeasonData extends DataPackage {
 
     /*
      * Immutable climate and sky-color definition for one named season,
      * loaded from JSON. Wind and temperature values drive WindManager and
-     * WeatherManager; tintColor and sunriseColor are the season's own
-     * contribution to the sky's blended color palette, consumed by the
-     * weather pipeline's sky system. Season identity and calendar
+     * WeatherManager; skyPalette is the season's own sky and cloud colors
+     * for every phase of the day, blended across the year by the weather
+     * pipeline's sky system. Season identity and calendar
      * ordering are defined by the active calendar instead — this class
      * only carries the values a named season contributes once active.
      */
@@ -26,8 +25,7 @@ public class SeasonData extends DataPackage {
 
     private final float precipitationChanceScale;
 
-    private final Vector3 tintColor;
-    private final Vector3 sunriseColor;
+    private final SkyPaletteStruct skyPalette;
 
     public SeasonData(
             String seasonName,
@@ -37,8 +35,7 @@ public class SeasonData extends DataPackage {
             float baseTemperature,
             float temperatureVariance,
             float precipitationChanceScale,
-            Vector3 tintColor,
-            Vector3 sunriseColor) {
+            SkyPaletteStruct skyPalette) {
 
         this.seasonName = seasonName;
         this.baseWindSpeed = baseWindSpeed;
@@ -47,8 +44,7 @@ public class SeasonData extends DataPackage {
         this.baseTemperature = baseTemperature;
         this.temperatureVariance = temperatureVariance;
         this.precipitationChanceScale = precipitationChanceScale;
-        this.tintColor = tintColor;
-        this.sunriseColor = sunriseColor;
+        this.skyPalette = skyPalette;
     }
 
     public String getSeasonName() {
@@ -79,11 +75,7 @@ public class SeasonData extends DataPackage {
         return precipitationChanceScale;
     }
 
-    public Vector3 getTintColor() {
-        return tintColor;
-    }
-
-    public Vector3 getSunriseColor() {
-        return sunriseColor;
+    public SkyPaletteStruct getSkyPalette() {
+        return skyPalette;
     }
 }

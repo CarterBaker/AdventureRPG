@@ -8,5 +8,6 @@
   "days_per_day": 20.0,
   "calendar": "TerraArcanaCalendar",
   "rotation": 1.0,
-  "seed": -460303020507535510
+  "seed": -460303020507535510,
+  "epoch_start": 1790282251530
 }
