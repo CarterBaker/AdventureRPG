@@ -17,10 +17,11 @@ class CloudBuilder extends BuilderPackage {
 
     /*
      * Parses cloud JSON into a CloudData and wraps it in a CloudHandle. Every
-     * field falls back to its EngineSetting default when omitted. "scale" is
-     * the archetype's feature width in blocks, "elongation" stretches that
-     * width along the prevailing flow, and "baseAltitude" plus
-     * "verticalThickness" place the archetype's layer in the sky.
+     * field falls back to its EngineSetting default when omitted.
+     * "scaleKm" is the archetype's feature width, "verticalThicknessKm" its
+     * depth, and "baseAltitudeKm" its base above sea level, all in real-world
+     * kilometres so the same archetype sits correctly in a world of any
+     * scale. "elongation" stretches the width along the prevailing flow.
      */
 
     // Build \\
@@ -34,10 +35,10 @@ class CloudBuilder extends BuilderPackage {
 
         Vector3 cloudColor = parseColor(json, "color");
         float saturation = parseUnitFloat(json, cloudName, "saturation", EngineSetting.DEFAULT_CLOUD_SATURATION);
-        float scale = parsePositiveFloat(json, cloudName, "scale", EngineSetting.CLOUD_DEFAULT_DIAMETER_BLOCKS);
+        float scaleKm = parsePositiveFloat(json, cloudName, "scaleKm", EngineSetting.DEFAULT_CLOUD_SCALE_KM);
         float density = parseFloat(json, "density", EngineSetting.DEFAULT_CLOUD_DENSITY);
-        float verticalThickness = parsePositiveFloat(
-                json, cloudName, "verticalThickness", EngineSetting.DEFAULT_CLOUD_VERTICAL_THICKNESS);
+        float verticalThicknessKm = parsePositiveFloat(
+                json, cloudName, "verticalThicknessKm", EngineSetting.DEFAULT_CLOUD_VERTICAL_THICKNESS_KM);
         float fullness = parseUnitFloat(json, cloudName, "fullness", EngineSetting.DEFAULT_CLOUD_FULLNESS);
         float elongation = parsePositiveFloat(json, cloudName, "elongation", EngineSetting.DEFAULT_CLOUD_ELONGATION);
         float densityNoiseScale = parseFloat(
@@ -47,7 +48,7 @@ class CloudBuilder extends BuilderPackage {
         float coverageBias = parseUnitFloat(json, cloudName, "coverageBias", EngineSetting.DEFAULT_CLOUD_COVERAGE_BIAS);
         float silhouetteSoftness = parseFloat(
                 json, "silhouetteSoftness", EngineSetting.DEFAULT_CLOUD_SILHOUETTE_SOFTNESS);
-        float baseAltitude = parseFloat(json, "baseAltitude", EngineSetting.DEFAULT_CLOUD_BASE_ALTITUDE);
+        float baseAltitudeKm = parseFloat(json, "baseAltitudeKm", EngineSetting.DEFAULT_CLOUD_BASE_ALTITUDE_KM);
         float driftSpeedScale = parseFloat(json, "driftSpeedScale", EngineSetting.DEFAULT_CLOUD_DRIFT_SPEED_SCALE);
 
         CloudData cloudData = new CloudData(
@@ -55,16 +56,16 @@ class CloudBuilder extends BuilderPackage {
                 cloudID,
                 cloudColor,
                 saturation,
-                scale,
+                scaleKm,
                 density,
-                verticalThickness,
+                verticalThicknessKm,
                 fullness,
                 elongation,
                 densityNoiseScale,
                 noiseWarpStrength,
                 coverageBias,
                 silhouetteSoftness,
-                baseAltitude,
+                baseAltitudeKm,
                 driftSpeedScale);
 
         CloudHandle cloudHandle = create(CloudHandle.class);

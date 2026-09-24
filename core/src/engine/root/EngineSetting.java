@@ -535,26 +535,25 @@ public class EngineSetting {
         public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
         public static final float KPH_TO_METERS_PER_SECOND = 1000f / 3600f;
         public static final int MAX_CLOUDS_PER_WEATHER = 3;
+        public static final double METERS_PER_KILOMETER = 1000.0;
         public static final int WEATHER_CELL_RESOLVES_PER_FRAME = 32;
-        public static final int WEATHER_CELL_SIZE_CHUNKS = CHUNKS_PER_PIXEL;
+        public static final int WEATHER_CELL_SIZE_PIXELS = 2;
         public static final double WEATHER_FLOW_MEANDER_ANGLE_DEGREES = 18.0;
         public static final double WEATHER_FLOW_MEANDER_PERIOD_SECONDS = 5400.0;
         public static final double WEATHER_FLOW_MEANDER_SECONDARY_PERIOD_SECONDS = 1980.0;
         public static final double WEATHER_FLOW_MEANDER_SECONDARY_PHASE = 1.7;
         public static final double WEATHER_FLOW_MEANDER_SECONDARY_WEIGHT = 0.35;
-        public static final double WEATHER_FLOW_REFERENCE_CIRCUMFERENCE_METERS = 40_075_000.0;
-        public static final double WEATHER_FLOW_SPEED_KPH = 80.0;
+        public static final double WEATHER_FLOW_SPEED_KPH = 40.0;
         public static final long WEATHER_HASH_SALT_PRIMARY = 0x2545F4914F6CDD1DL;
         public static final long WEATHER_HASH_SALT_SECONDARY = 0x9E3779B97F4A7C15L;
         public static final long WEATHER_LOCAL_KEY_SEED = Long.MIN_VALUE;
         public static final float WEATHER_MAP_CHANNEL_MAX = 255f;
         public static final float WEATHER_MAP_DENSITY_SCALE_MAX = 2.5f;
-        public static final int WEATHER_MAP_DOME_RANGE_CELLS = 9;
         public static final int WEATHER_MAP_LAYERS_PER_COMPONENT = 4;
         public static final int WEATHER_MAP_MAX_LAYERS = 8;
         public static final int WEATHER_MAP_RESOLUTION = 24;
         public static final int WEATHER_MAP_RETAIN_MARGIN_CELLS = 1;
-        public static final int WEATHER_MAP_SHAPE_PERIOD_MAX_CELLS = 32;
+        public static final int WEATHER_MAP_SHAPE_PERIOD_MAX_CELLS = 16;
         public static final String WEATHER_MAP_UBO = "WeatherMapData";
         public static final float WEATHER_NOISE_CELL_SIZE = 512.0f;
         public static final double WEATHER_NOISE_CROSS_STREAM_COMPRESSION = 3.2;
@@ -566,13 +565,13 @@ public class EngineSetting {
         public static final float WEATHER_NOISE_MACRO_WEIGHT = 0.55f;
         public static final double WEATHER_NOISE_MIN_CYCLES_AROUND_WORLD = 4.0;
         public static final long WEATHER_NOISE_SEED = 0x51A5F00DCAFEBEEFL;
+        public static final double WEATHER_REFERENCE_CIRCUMFERENCE_METERS = 40_075_000.0;
         public static final float WEATHER_TRANSITION_DURATION_SECONDS = 20.0f;
 
         // Cloud \\
 
-        public static final float CLOUD_DEFAULT_DIAMETER_BLOCKS = 120.0f;
         public static final float CLOUD_DETAIL_FREQUENCY_RATIO = 4.0f;
-        public static final float DEFAULT_CLOUD_BASE_ALTITUDE = 600.0f;
+        public static final float DEFAULT_CLOUD_BASE_ALTITUDE_KM = 1.5f;
         public static final float DEFAULT_CLOUD_COLOR_B = 1.0f;
         public static final float DEFAULT_CLOUD_COLOR_G = 1.0f;
         public static final float DEFAULT_CLOUD_COLOR_R = 1.0f;
@@ -584,8 +583,9 @@ public class EngineSetting {
         public static final float DEFAULT_CLOUD_FULLNESS = 0.7f;
         public static final float DEFAULT_CLOUD_NOISE_WARP_STRENGTH = 0.6f;
         public static final float DEFAULT_CLOUD_SATURATION = 1.0f;
+        public static final float DEFAULT_CLOUD_SCALE_KM = 2.0f;
         public static final float DEFAULT_CLOUD_SILHOUETTE_SOFTNESS = 0.08f;
-        public static final float DEFAULT_CLOUD_VERTICAL_THICKNESS = 24.0f;
+        public static final float DEFAULT_CLOUD_VERTICAL_THICKNESS_KM = 1.0f;
         public static final int MAX_CLOUD_TYPES = 8;
 
         // Wind \\

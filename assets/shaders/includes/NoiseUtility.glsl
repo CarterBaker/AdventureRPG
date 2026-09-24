@@ -324,8 +324,8 @@ float fbmGradient2D(vec2 p, int octaves, float lacunarity, float gain) {
 }
 
 // ── Periodic gradient noise (weather cloud shapes) ──────────────────────────
-// Lattice coordinates wrap at a whole-cell period, so a field sampled across
-// exactly one period tiles without a seam. Hashing is integer PCG rather than
+// Horizontal lattice coordinates wrap at a whole-cell period, so a field
+// sampled across exactly one period tiles without a seam. Hashing is integer PCG rather than
 // the sin-based hashes above, so lattice coordinates in the thousands keep
 // full precision on every GPU.
 
@@ -359,6 +359,52 @@ float periodicGradientNoise2D(vec2 p, vec2 period, uint seed) {
     float n11 = dot(periodicGradient2D(vec2(c1.x, c1.y), seed), f - vec2(1.0, 1.0));
 
     return mix(mix(n00, n10, u.x), mix(n01, n11, u.x), u.y);
+}
+
+uvec3 pcgHash3D(uvec3 v) {
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.z;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    v = v ^ (v >> 16u);
+    v.x += v.y * v.z;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    return v;
+}
+
+vec3 periodicGradient3D(vec3 lattice, uint seed) {
+    uvec3 h = pcgHash3D(uvec3(ivec3(lattice)) + uvec3(seed, seed * 747796405u, seed * 2891336453u));
+    return vec3(h) * (2.0 / 4294967295.0) - 1.0;
+}
+
+// Wraps on x and z at periodXZ; y is left unbounded, since a cloud layer only
+// ever spans a few cells vertically.
+float periodicGradientNoise3D(vec3 p, vec2 periodXZ, uint seed) {
+    vec3 cell = floor(p);
+    vec3 f    = p - cell;
+    vec3 u    = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+    vec2 x0z0 = mod(cell.xz, periodXZ);
+    vec2 x1z1 = mod(cell.xz + 1.0, periodXZ);
+    float y0  = cell.y;
+    float y1  = cell.y + 1.0;
+
+    float n000 = dot(periodicGradient3D(vec3(x0z0.x, y0, x0z0.y), seed), f - vec3(0.0, 0.0, 0.0));
+    float n100 = dot(periodicGradient3D(vec3(x1z1.x, y0, x0z0.y), seed), f - vec3(1.0, 0.0, 0.0));
+    float n010 = dot(periodicGradient3D(vec3(x0z0.x, y1, x0z0.y), seed), f - vec3(0.0, 1.0, 0.0));
+    float n110 = dot(periodicGradient3D(vec3(x1z1.x, y1, x0z0.y), seed), f - vec3(1.0, 1.0, 0.0));
+    float n001 = dot(periodicGradient3D(vec3(x0z0.x, y0, x1z1.y), seed), f - vec3(0.0, 0.0, 1.0));
+    float n101 = dot(periodicGradient3D(vec3(x1z1.x, y0, x1z1.y), seed), f - vec3(1.0, 0.0, 1.0));
+    float n011 = dot(periodicGradient3D(vec3(x0z0.x, y1, x1z1.y), seed), f - vec3(0.0, 1.0, 1.0));
+    float n111 = dot(periodicGradient3D(vec3(x1z1.x, y1, x1z1.y), seed), f - vec3(1.0, 1.0, 1.0));
+
+    float nx00 = mix(n000, n100, u.x);
+    float nx10 = mix(n010, n110, u.x);
+    float nx01 = mix(n001, n101, u.x);
+    float nx11 = mix(n011, n111, u.x);
+
+    return mix(mix(nx00, nx10, u.y), mix(nx01, nx11, u.y), u.z);
 }
 
 // Plain fbm (x, rebiased into [0,1]) and billow (y, folded into [0,1]) built

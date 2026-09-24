@@ -1,6 +1,7 @@
 package application.bootstrap.weatherpipeline.weathermanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
+import application.bootstrap.weatherpipeline.util.WeatherScaleUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.EngineSetting;
@@ -12,10 +13,10 @@ class WeatherFlowSystem extends SystemPackage {
      * Scrolls the static weather image across the world. The offset is a
      * closed-form function of the world's shared epoch time, so every player
      * and every window reads the same weather at the same moment, and it
-     * advances smoothly every frame. Prevailing speed is a kph figure scaled
-     * to the world's size against a real planet and to its rotation, and a
-     * two-wave cross-stream meander swings the heading so storms do not
-     * always arrive from the same bearing.
+     * advances smoothly every frame. Prevailing speed is a real-world kph
+     * figure converted through the world's own scale (WeatherScaleUtility)
+     * and its rotation, and a two-wave cross-stream meander swings the
+     * heading so storms do not always arrive from the same bearing.
      */
 
     // Internal
@@ -61,13 +62,8 @@ class WeatherFlowSystem extends SystemPackage {
     // Speed \\
 
     private double resolvePrevailingSpeedBlocksPerSecond(WorldHandle activeWorld) {
-
-        double worldCircumferenceMeters = activeWorld.getWorldScale().x * (double) EngineSetting.BLOCK_SIZE;
-        double worldScaleRatio = worldCircumferenceMeters / EngineSetting.WEATHER_FLOW_REFERENCE_CIRCUMFERENCE_METERS;
-        double metersPerSecond = EngineSetting.WEATHER_FLOW_SPEED_KPH * EngineSetting.KPH_TO_METERS_PER_SECOND
-                * worldScaleRatio;
-
-        return -(metersPerSecond / EngineSetting.BLOCK_SIZE) * activeWorld.getRotationSpeed();
+        return -WeatherScaleUtility.kphToBlocksPerSecond(activeWorld, EngineSetting.WEATHER_FLOW_SPEED_KPH)
+                * activeWorld.getRotationSpeed();
     }
 
     // Meander \\

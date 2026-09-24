@@ -20,8 +20,9 @@ public class WeatherPatternManager extends ManagerPackage {
 
     /*
      * Owns the live weather pattern — the pixels of the static weather image
-     * that any grid can currently see. The image is divided into cells one
-     * world-map pixel wide, fixed in noise space, and WeatherManager's flow
+     * that any grid can currently see. The image is divided into cells a
+     * whole number of world-map pixels wide, fixed in noise space, and
+     * WeatherManager's flow
      * slides the whole image across the world every frame, so a storm keeps
      * its shape and reaches every player beneath its path in turn. Each grid
      * reads a square window of cells centred above it; cells enter the pool
@@ -41,6 +42,7 @@ public class WeatherPatternManager extends ManagerPackage {
     // Map Geometry
     private WorldHandle mapWorld;
     private int mapResolution;
+    private double cellSizeChunks;
     private double cellSizeBlocks;
     private double worldWidthBlocks;
     private double worldHeightBlocks;
@@ -65,7 +67,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
         // Map Geometry
         this.mapResolution = EngineSetting.WEATHER_MAP_RESOLUTION;
-        this.cellSizeBlocks = (double) EngineSetting.WEATHER_CELL_SIZE_CHUNKS * EngineSetting.CHUNK_SIZE;
 
         // Cells
         int retainedSpan = mapResolution + EngineSetting.WEATHER_MAP_RETAIN_MARGIN_CELLS * 2;
@@ -124,23 +125,32 @@ public class WeatherPatternManager extends ManagerPackage {
 
         releaseAllCells();
 
+        int pixelBlocks = EngineSetting.CHUNKS_PER_PIXEL * EngineSetting.CHUNK_SIZE;
+        int pixelCountX = Math.max(1, activeWorld.getWorldScale().x / pixelBlocks);
+        int pixelCountZ = Math.max(1, activeWorld.getWorldScale().y / pixelBlocks);
+        int cellPixels = resolveLargestDivisor(
+                greatestCommonDivisor(pixelCountX, pixelCountZ), EngineSetting.WEATHER_CELL_SIZE_PIXELS);
+
         this.mapWorld = activeWorld;
         this.worldWidthBlocks = activeWorld.getWorldScale().x;
         this.worldHeightBlocks = activeWorld.getWorldScale().y;
-        this.worldCellCountX = Math.max(1, (int) Math.round(worldWidthBlocks / cellSizeBlocks));
-        this.worldCellCountZ = Math.max(1, (int) Math.round(worldHeightBlocks / cellSizeBlocks));
-        this.shapePeriodBlocks = cellSizeBlocks * resolveShapePeriodCells(worldCellCountX, worldCellCountZ);
+        this.cellSizeChunks = (double) cellPixels * EngineSetting.CHUNKS_PER_PIXEL;
+        this.cellSizeBlocks = cellSizeChunks * EngineSetting.CHUNK_SIZE;
+        this.worldCellCountX = pixelCountX / cellPixels;
+        this.worldCellCountZ = pixelCountZ / cellPixels;
+        this.shapePeriodBlocks = cellSizeBlocks * resolveLargestDivisor(
+                greatestCommonDivisor(worldCellCountX, worldCellCountZ),
+                EngineSetting.WEATHER_MAP_SHAPE_PERIOD_MAX_CELLS);
     }
 
-    // The cloud shape noise tiles at this period, so it has to divide both
-    // world axes exactly or the shapes would seam where the world wraps.
-    private int resolveShapePeriodCells(int cellCountX, int cellCountZ) {
+    // Cells and the cloud shape period both have to divide the world's axes
+    // exactly, or the weather and the cloud shapes would seam where the world
+    // wraps.
+    private int resolveLargestDivisor(int value, int maximum) {
 
-        int divisor = greatestCommonDivisor(cellCountX, cellCountZ);
-
-        for (int period = Math.min(divisor, EngineSetting.WEATHER_MAP_SHAPE_PERIOD_MAX_CELLS); period > 1; period--)
-            if (divisor % period == 0)
-                return period;
+        for (int divisor = Math.min(value, maximum); divisor > 1; divisor--)
+            if (value % divisor == 0)
+                return divisor;
 
         return 1;
     }
@@ -224,7 +234,6 @@ public class WeatherPatternManager extends ManagerPackage {
                 ? create(WeatherInstance.class)
                 : freeCells.remove(freeCells.size() - 1);
 
-        double cellSizeChunks = EngineSetting.WEATHER_CELL_SIZE_CHUNKS;
         float noisePercentile = weatherManager.sampleNoisePercentile(
                 (cellX + 0.5) * cellSizeChunks,
                 (cellZ + 0.5) * cellSizeChunks);
@@ -370,10 +379,6 @@ public class WeatherPatternManager extends ManagerPackage {
 
     public float getCellSizeBlocks() {
         return (float) cellSizeBlocks;
-    }
-
-    public float getDomeRangeBlocks() {
-        return (float) (EngineSetting.WEATHER_MAP_DOME_RANGE_CELLS * cellSizeBlocks);
     }
 
     public float getShapePeriodBlocks() {

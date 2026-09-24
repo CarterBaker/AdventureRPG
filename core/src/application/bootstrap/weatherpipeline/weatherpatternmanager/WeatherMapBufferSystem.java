@@ -5,10 +5,13 @@ import java.util.Arrays;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
+import application.bootstrap.weatherpipeline.util.WeatherScaleUtility;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.weatherpipeline.weather.WeatherWindowStruct;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -23,7 +26,10 @@ class WeatherMapBufferSystem extends SystemPackage {
      * Packs each grid's weather window into its own WeatherMapData UBO every
      * frame. The cloud archetypes present anywhere in the window become the
      * frame's layers, ordered by altitude, and each layer's archetype
-     * settings are written once into a small table. Every cell is then a
+     * settings are written once into a small table — its real-world
+     * kilometres converted into blocks through the world's own scale, its
+     * base placed at an absolute world height above sea level, so the clouds
+     * belong to the world rather than to the viewer. Every cell is then a
      * single ivec4: one byte of coverage and one byte of density scale per
      * layer, cross-faded across the cell's own weather transition, so the
      * shader reads the whole sky with one fetch per cell and interpolates
@@ -35,6 +41,7 @@ class WeatherMapBufferSystem extends SystemPackage {
     private WeatherPatternManager weatherPatternManager;
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
+    private WorldManager worldManager;
 
     // Cells
     private Vector4Int[] cells;
@@ -52,6 +59,7 @@ class WeatherMapBufferSystem extends SystemPackage {
     private final WeatherWindowStruct windowScratch = new WeatherWindowStruct();
     private final Vector2 shapeOriginScratch = new Vector2();
     private final Vector4 mapOrigin = new Vector4();
+    private final Vector2 planet = new Vector2();
     private float[] cellCoverage;
     private float[] cellDensityWeighted;
     private float[] cellDensityWeight;
@@ -88,6 +96,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         this.weatherPatternManager = get(WeatherPatternManager.class);
         this.uboManager = get(UBOManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.worldManager = get(WorldManager.class);
     }
 
     // Update \\
@@ -108,17 +117,21 @@ class WeatherMapBufferSystem extends SystemPackage {
 
     private void writeGrid(GridInstance grid) {
 
+        WorldHandle activeWorld = worldManager.getActiveWorld();
+
         weatherPatternManager.resolveWindow(grid, windowScratch);
 
         resolveLayers();
-        writeLayerTable(grid);
+        writeLayerTable(grid, activeWorld);
         writeCells();
 
         mapOrigin.set(
                 windowScratch.getMapOriginXBlocks(),
                 windowScratch.getMapOriginZBlocks(),
                 weatherPatternManager.getCellSizeBlocks(),
-                weatherPatternManager.getDomeRangeBlocks());
+                weatherPatternManager.getShapePeriodBlocks());
+
+        planet.set(WeatherScaleUtility.resolvePlanetRadiusBlocks(activeWorld), EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
 
         UBOInstance weatherMapUBO = grid.getWeatherMapUBO();
 
@@ -128,7 +141,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         weatherMapUBO.updateUniform("u_weatherLayerNoise", layerNoise);
         weatherMapUBO.updateUniform("u_weatherLayerSurface", layerSurface);
         weatherMapUBO.updateUniform("u_weatherMapOrigin", mapOrigin);
-        weatherMapUBO.updateUniform("u_weatherShapePeriod", weatherPatternManager.getShapePeriodBlocks());
+        weatherMapUBO.updateUniform("u_weatherPlanet", planet);
         weatherMapUBO.updateUniform("u_weatherLayerCount", layerCount);
 
         uboManager.push(weatherMapUBO);
@@ -188,7 +201,7 @@ class WeatherMapBufferSystem extends SystemPackage {
             CloudHandle handle = layerHandles[i];
             int j = i - 1;
 
-            while (j >= 0 && layerHandles[j].getBaseAltitude() > handle.getBaseAltitude()) {
+            while (j >= 0 && layerHandles[j].getBaseAltitudeKm() > handle.getBaseAltitudeKm()) {
                 layerHandles[j + 1] = layerHandles[j];
                 j--;
             }
@@ -197,13 +210,14 @@ class WeatherMapBufferSystem extends SystemPackage {
         }
     }
 
-    private void writeLayerTable(GridInstance grid) {
+    private void writeLayerTable(GridInstance grid, WorldHandle activeWorld) {
 
         float shapePeriodBlocks = weatherPatternManager.getShapePeriodBlocks();
 
         for (int slot = 0; slot < layerCount; slot++) {
 
             CloudHandle cloud = layerHandles[slot];
+            float scaleBlocks = WeatherScaleUtility.kilometersToBlocks(activeWorld, cloud.getScaleKm());
 
             weatherPatternManager.resolveShapeOrigin(grid, cloud.getDriftSpeedScale(), shapeOriginScratch);
 
@@ -214,14 +228,15 @@ class WeatherMapBufferSystem extends SystemPackage {
                     cloud.getSaturation());
 
             layerShape[slot].set(
-                    cloud.getBaseAltitude(),
-                    cloud.getVerticalThickness(),
+                    EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS
+                            + WeatherScaleUtility.kilometersToBlocks(activeWorld, cloud.getBaseAltitudeKm()),
+                    WeatherScaleUtility.kilometersToBlocks(activeWorld, cloud.getVerticalThicknessKm()),
                     cloud.getDensity(),
                     cloud.getFullness());
 
             layerNoise[slot].set(
-                    resolveLatticeCount(shapePeriodBlocks, cloud.getScale() * cloud.getElongation()),
-                    resolveLatticeCount(shapePeriodBlocks, cloud.getScale()),
+                    resolveLatticeCount(shapePeriodBlocks, scaleBlocks * cloud.getElongation()),
+                    resolveLatticeCount(shapePeriodBlocks, scaleBlocks),
                     Math.max(1f, Math.round(EngineSetting.CLOUD_DETAIL_FREQUENCY_RATIO * cloud.getDensityNoiseScale())),
                     cloud.getNoiseWarpStrength());
 

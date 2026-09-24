@@ -1,15 +1,15 @@
 {
     "color": { "r": 1.0, "g": 1.0, "b": 1.0 },
     "saturation": 1.0,
-    "scale": 140.0,
+    "scaleKm": 1.5,
     "density": 0.85,
-    "verticalThickness": 80.0,
+    "verticalThicknessKm": 1.5,
     "fullness": 0.9,
     "elongation": 1.5,
     "densityNoiseScale": 1.0,
     "noiseWarpStrength": 0.6,
     "coverageBias": 0.55,
     "silhouetteSoftness": 0.08,
-    "baseAltitude": 587.0,
+    "baseAltitudeKm": 1.2,
     "driftSpeedScale": 1.0
 }

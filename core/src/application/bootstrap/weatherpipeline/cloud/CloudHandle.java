@@ -40,16 +40,16 @@ public class CloudHandle extends HandlePackage {
         return cloudData.getSaturation();
     }
 
-    public float getScale() {
-        return cloudData.getScale();
+    public float getScaleKm() {
+        return cloudData.getScaleKm();
     }
 
     public float getDensity() {
         return cloudData.getDensity();
     }
 
-    public float getVerticalThickness() {
-        return cloudData.getVerticalThickness();
+    public float getVerticalThicknessKm() {
+        return cloudData.getVerticalThicknessKm();
     }
 
     public float getFullness() {
@@ -76,8 +76,8 @@ public class CloudHandle extends HandlePackage {
         return cloudData.getSilhouetteSoftness();
     }
 
-    public float getBaseAltitude() {
-        return cloudData.getBaseAltitude();
+    public float getBaseAltitudeKm() {
+        return cloudData.getBaseAltitudeKm();
     }
 
     public float getDriftSpeedScale() {

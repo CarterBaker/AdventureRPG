@@ -10,6 +10,12 @@ out vec4 fragColor;
 #include "includes/SkyColorData.glsl"
 #include "postprocessing/includes/ViewPosReconstruct.glsl"
 #include "postprocessing/lighting/includes/AtmosphericFog.glsl"
+#include "includes/WeatherMapData.glsl"
+#include "includes/NoiseUtility.glsl"
+#include "includes/WeatherMapUtility.glsl"
+#include "weather/includes/CloudDome.glsl"
+#include "weather/includes/CloudVisual.glsl"
+#include "weather/includes/CloudMarch.glsl"
 
 // FOG_SHADOW_SCALE / FOG_LIT_SCALE re-weight computeFogAmount()'s result by
 // how directly lit the fragment is, since fog should read stronger on
@@ -76,6 +82,19 @@ void main() {
     float fogBlend  = clamp(fogT * mix(FOG_SHADOW_SCALE, FOG_LIT_SCALE, litAmount), 0.0, 1.0);
 
     lit = mix(lit, u_skyFogColor, fogBlend);
+
+    // Cloud between the camera and this fragment — a peak wrapped in cloud,
+    // or terrain seen from inside a cloud — fogs it with the same clouds the
+    // weather pass draws in the sky.
+    vec3  toFragment   = fragPosWorld - u_cameraPosition;
+    float fragDistance = length(toFragment);
+    vec3  fragDir      = toFragment / max(fragDistance, CLOUD_MARCH_EPSILON);
+    vec3  cloudColor   = vec3(0.0);
+    float cloudVisible = 1.0;
+
+    integrateCloudLayers(fragDir, fragDistance, cloudColor, cloudVisible);
+
+    lit = lit * cloudVisible + cloudColor;
 
     fragColor = vec4(lit, 1.0);
 }

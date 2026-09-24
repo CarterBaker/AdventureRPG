@@ -23,8 +23,9 @@
 //                      z = density scale of layers 0-3, w = density scale of
 //                      layers 4-7 (byte / 255 * WEATHER_MAP_DENSITY_SCALE_MAX).
 // weatherLayerColor:   xyz = archetype color, w = saturation
-// weatherLayerShape:   x = base altitude, y = vertical thickness,
-//                      z = density, w = fullness (0 = sheet, 1 = puffy)
+// weatherLayerShape:   x = base height in world blocks (absolute, above the
+//                      world's own sea level), y = vertical thickness in
+//                      blocks, z = density, w = fullness (0 = sheet, 1 = puffy)
 // weatherLayerNoise:   x = shape lattice cells across the shape period on X
 //                      (elongated along the flow), y = the same on Z,
 //                      z = detail lattice multiplier, w = domain warp strength
@@ -32,10 +33,11 @@
 //                      the flow and wrapped into the shape period,
 //                      z = coverage bias, w = silhouette softness
 // weatherMapOrigin:    xy = offset from a position to its place on the window
-//                      in blocks, z = cell size in blocks, w = dome range in
-//                      blocks (where each layer's dome meets the horizon)
-// weatherShapePeriod:  blocks after which every layer's shape noise repeats;
-//                      divides both world axes so the sky never seams
+//                      in blocks, z = cell size in blocks, w = shape period —
+//                      the blocks after which every layer's shape noise
+//                      repeats; divides both world axes so the sky never seams
+// weatherPlanet:       x = planet radius in blocks (from the world's own
+//                      circumference), y = sea level in world blocks
 // weatherLayerCount:   live layers, ordered by base altitude
 layout(std140) uniform WeatherMapData {
     ivec4 u_weatherCells[WEATHER_MAP_RESOLUTION * WEATHER_MAP_RESOLUTION];
@@ -44,7 +46,7 @@ layout(std140) uniform WeatherMapData {
     vec4  u_weatherLayerNoise[WEATHER_MAP_MAX_LAYERS];
     vec4  u_weatherLayerSurface[WEATHER_MAP_MAX_LAYERS];
     vec4  u_weatherMapOrigin;
-    float u_weatherShapePeriod;
+    vec2  u_weatherPlanet;
     int   u_weatherLayerCount;
 };
 

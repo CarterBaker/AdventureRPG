@@ -17,12 +17,14 @@ public class LightingSystem extends SystemPackage {
     /*
      * Deferred lighting pass. Reads the full G-buffer and SSAO result,
      * computes final lit color, and writes into LitScene. Cloud shadowing
-     * is resolved upstream by StandardSurfaceShader against WeatherMapData
-     * and baked into gMaterial.r as a sun-visibility factor — this pass
-     * only needs to read that channel, not the weather map itself. Binds
-     * this window's own grid's Sun/Moon UBO instances onto the lighting
-     * pass material each frame so the directional lighting math reflects
-     * the correct location.
+     * is resolved upstream by StandardSurfaceShader and baked into
+     * gMaterial.r as a sun-visibility factor. Clouds standing between the
+     * camera and a fragment — a peak wrapped in cloud, or the camera inside
+     * a cloud itself — are integrated here against the grid's WeatherMapData
+     * so terrain fogs exactly as the sky's clouds are drawn. Binds this
+     * window's own grid's Sun/Moon, sky color, and weather map UBO instances
+     * onto the lighting pass material each frame so the result reflects the
+     * correct location.
      */
 
     // Internal
@@ -86,5 +88,7 @@ public class LightingSystem extends SystemPackage {
         MaterialInstance mat = lightingPass.getModelInstance().getMaterial();
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());
+        mat.setUBO(grid.getSkyColorUBO());
+        mat.setUBO(grid.getWeatherMapUBO());
     }
 }

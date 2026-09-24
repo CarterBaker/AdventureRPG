@@ -12,11 +12,14 @@
  * density is its archetype's periodic shape field, cut by the local
  * coverage, shaped by a vertical envelope, and eroded toward the crown in
  * proportion to fullness, so puffy archetypes grow rounded domes while
- * sheets stay flat slabs.
+ * sheets stay flat slabs. The silhouette is a 2D field, but a 3D octave and
+ * 3D edge detail vary it with height, so a cloud seen from the side has
+ * billowed flanks rather than straight curtains.
  */
 
 const float WEATHER_MAP_EPSILON           = 0.001;
 const float WEATHER_MAP_EDGE_MARGIN_CELLS = 1.5;
+const float WEATHER_MAP_EDGE_FADE_CELLS   = 2.0;
 
 const float CLOUD_LAYER_WARP_AMPLITUDE     = 0.6;
 const float CLOUD_LAYER_FIELD_CONTRAST     = 2.2;
@@ -24,6 +27,8 @@ const float CLOUD_LAYER_BILLOW_FLOOR       = 0.45;
 const float CLOUD_LAYER_LUMP_MIN           = 0.72;
 const float CLOUD_LAYER_LUMP_MAX           = 1.18;
 const float CLOUD_LAYER_DETAIL_STRENGTH    = 0.28;
+const float CLOUD_LAYER_VERTICAL_FREQUENCY = 2.0;
+const float CLOUD_LAYER_VERTICAL_STRENGTH  = 0.35;
 const float CLOUD_LAYER_COVERAGE_BIAS_BASE = 0.5;
 const float CLOUD_LAYER_CROWN_EROSION      = 0.85;
 const float CLOUD_LAYER_MIN_SOFTNESS       = 0.02;
@@ -35,23 +40,24 @@ const float CLOUD_LAYER_PUFFY_TOP_START    = 0.60;
 const uint CLOUD_LAYER_SEED_STRIDE = 7919u;
 const uint CLOUD_LAYER_WARP_SEED_X = 131u;
 const uint CLOUD_LAYER_WARP_SEED_Z = 257u;
-const uint CLOUD_LAYER_DETAIL_SEED = 521u;
+const uint CLOUD_LAYER_DETAIL_SEED   = 521u;
+const uint CLOUD_LAYER_VERTICAL_SEED = 877u;
 
 // ── Weather Window ─────────────────────────────────────────────────────────
 
-float unpackWeatherChannel(int packed, int layer) {
+float unpackWeatherChannel(int channels, int layer) {
     int shift = (layer % WEATHER_MAP_LAYERS_PER_COMPONENT) * 8;
-    return float((packed >> shift) & 255) / WEATHER_MAP_CHANNEL_MAX;
+    return float((channels >> shift) & 255) / WEATHER_MAP_CHANNEL_MAX;
 }
 
 // x = coverage, y = density scale of one layer in one cell.
 vec2 readWeatherCell(ivec2 cell, int layer) {
-    ivec4 packed = u_weatherCells[cell.y * WEATHER_MAP_RESOLUTION + cell.x];
-    bool  upper  = layer >= WEATHER_MAP_LAYERS_PER_COMPONENT;
+    ivec4 cellData = u_weatherCells[cell.y * WEATHER_MAP_RESOLUTION + cell.x];
+    bool  upper    = layer >= WEATHER_MAP_LAYERS_PER_COMPONENT;
 
     return vec2(
-        unpackWeatherChannel(upper ? packed.y : packed.x, layer),
-        unpackWeatherChannel(upper ? packed.w : packed.z, layer) * WEATHER_MAP_DENSITY_SCALE_MAX);
+        unpackWeatherChannel(upper ? cellData.y : cellData.x, layer),
+        unpackWeatherChannel(upper ? cellData.w : cellData.z, layer) * WEATHER_MAP_DENSITY_SCALE_MAX);
 }
 
 // Density is weighted by coverage, so an empty neighbour never drags a
@@ -90,22 +96,24 @@ float resolveWeatherMapReach() {
 }
 
 float resolveWeatherMapEdgeFade(vec2 positionXZ) {
-    return 1.0 - smoothstep(u_weatherMapOrigin.w, resolveWeatherMapReach(), length(positionXZ));
+    float reach = resolveWeatherMapReach();
+    return 1.0 - smoothstep(reach - WEATHER_MAP_EDGE_FADE_CELLS * u_weatherMapOrigin.z, reach, length(positionXZ));
 }
 
 // ── Cloud Layer Shape ──────────────────────────────────────────────────────
 
 float resolveCloudLayerFeatureSize(int layer) {
-    return u_weatherShapePeriod / max(u_weatherLayerNoise[layer].y, 1.0);
+    return u_weatherMapOrigin.w / max(u_weatherLayerNoise[layer].y, 1.0);
 }
 
-float sampleCloudLayerShape(int layer, vec2 positionXZ, int octaves, float detailFade) {
+// heightBlocks is the sample's height above the layer's base.
+float sampleCloudLayerShape(int layer, vec2 positionXZ, float heightBlocks, int octaves, float detailFade) {
     vec4  noiseParams = u_weatherLayerNoise[layer];
     vec4  surface     = u_weatherLayerSurface[layer];
     float fullness    = u_weatherLayerShape[layer].w;
 
     vec2 lattice = max(noiseParams.xy, vec2(1.0));
-    vec2 p       = (surface.xy + positionXZ) / u_weatherShapePeriod * lattice;
+    vec2 p       = (surface.xy + positionXZ) / u_weatherMapOrigin.w * lattice;
     uint seed    = uint(layer) * CLOUD_LAYER_SEED_STRIDE;
 
     vec2 warp = vec2(
@@ -118,10 +126,16 @@ float sampleCloudLayerShape(int layer, vec2 positionXZ, int octaves, float detai
     float lumps = clamp((field.y - CLOUD_LAYER_BILLOW_FLOOR) / (1.0 - CLOUD_LAYER_BILLOW_FLOOR), 0.0, 1.0);
     float shape = sheet * mix(1.0, mix(CLOUD_LAYER_LUMP_MIN, CLOUD_LAYER_LUMP_MAX, lumps), fullness);
 
+    vec3  volume   = vec3(p.x, heightBlocks * lattice.y / u_weatherMapOrigin.w, p.y);
+    float vertical = periodicGradientNoise3D(
+        volume * CLOUD_LAYER_VERTICAL_FREQUENCY, lattice * CLOUD_LAYER_VERTICAL_FREQUENCY,
+        seed + CLOUD_LAYER_VERTICAL_SEED);
+    shape = clamp(shape + vertical * CLOUD_LAYER_VERTICAL_STRENGTH, 0.0, 1.0);
+
     if (detailFade > WEATHER_MAP_EPSILON) {
         float detailMultiplier = max(noiseParams.z, 1.0);
-        float detail = periodicGradientNoise2D(
-            p * detailMultiplier, lattice * detailMultiplier, seed + CLOUD_LAYER_DETAIL_SEED);
+        float detail = periodicGradientNoise3D(
+            volume * detailMultiplier, lattice * detailMultiplier, seed + CLOUD_LAYER_DETAIL_SEED);
         shape = clamp(shape + detail * CLOUD_LAYER_DETAIL_STRENGTH * detailFade, 0.0, 1.0);
     }
 
@@ -154,7 +168,7 @@ float resolveCloudLayerDensity(int layer, vec2 positionXZ, float heightFraction,
     + effectiveCoverage * h * h * fullness * CLOUD_LAYER_CROWN_EROSION;
     float softness  = max(surface.w, CLOUD_LAYER_MIN_SOFTNESS);
 
-    float field = sampleCloudLayerShape(layer, positionXZ, octaves, detailFade);
+    float field = sampleCloudLayerShape(layer, positionXZ, h * shape.y, octaves, detailFade);
     float body  = smoothstep(threshold - softness, threshold + softness, field);
 
     return body * envelope * shape.z * weather.y;

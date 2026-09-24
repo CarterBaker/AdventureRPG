@@ -119,8 +119,8 @@ vec3 shadeCloudSample(
 
     vec3 shaded = albedo * (ambient + sunLight + moonLight);
 
-    float haze = smoothstep(
-        u_weatherMapOrigin.w * CLOUD_VISUAL_HAZE_START, u_weatherMapOrigin.w, horizontalDistance);
+    float reach = resolveWeatherMapReach();
+    float haze  = smoothstep(reach * CLOUD_VISUAL_HAZE_START, reach, horizontalDistance);
 
     return mix(shaded, u_skyHorizonColor, haze * CLOUD_VISUAL_HAZE_STRENGTH);
 }
