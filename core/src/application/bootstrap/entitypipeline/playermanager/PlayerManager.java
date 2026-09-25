@@ -421,6 +421,9 @@ public class PlayerManager extends ManagerPackage {
         if (safeY == -1)
             return true;
 
+        if (safeY == totalY)
+            return false;
+
         position.x = blockX;
         position.y = safeY;
         position.z = blockZ;

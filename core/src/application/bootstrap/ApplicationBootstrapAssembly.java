@@ -10,6 +10,7 @@ import application.bootstrap.menupipeline.MenuPipeline;
 import application.bootstrap.oceanpipeline.OceanPipeline;
 import application.bootstrap.physicspipeline.PhysicsPipeline;
 import application.bootstrap.renderpipeline.RenderPipeline;
+import application.bootstrap.savepipeline.SavePipeline;
 import application.bootstrap.screencapturepipeline.ScreenCapturePipeline;
 import application.bootstrap.settingspipeline.SettingsPipeline;
 import application.bootstrap.shaderpipeline.ShaderPipeline;
@@ -41,5 +42,6 @@ public class ApplicationBootstrapAssembly extends AssemblyPackage {
         create(LightingPipeline.class);
         create(MenuPipeline.class);
         create(SettingsPipeline.class);
+        create(SavePipeline.class);
     }
 }

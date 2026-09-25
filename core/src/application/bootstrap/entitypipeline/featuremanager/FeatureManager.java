@@ -54,6 +54,11 @@ public class FeatureManager extends ManagerPackage {
         return featureName2FeatureHandle.containsKey(featureName);
     }
 
+    public boolean isFeatureAvailable(String featureName) {
+        return hasFeature(featureName)
+                || (internalLoader != null && ((FeatureLoader) internalLoader).hasFeatureFile(featureName));
+    }
+
     public FeatureHandle getFeatureHandleFromFeatureID(short featureID) {
         return featureID2FeatureHandle.get(featureID);
     }
