@@ -185,6 +185,14 @@ public class EntityInstance extends InstancePackage {
         return worldPositionStruct;
     }
 
+    public void setLocation(Vector3 position, long chunkCoordinate) {
+
+        worldPositionStruct.setPosition(position);
+        worldPositionStruct.setChunkCoordinate(chunkCoordinate);
+
+        updateBlockComposition();
+    }
+
     public Vector3Int getBlockComposition() {
         return blockComposition;
     }

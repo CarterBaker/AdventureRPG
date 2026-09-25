@@ -88,12 +88,15 @@ public class EngineSetting {
         // Engine & Application \\
 
         public static final String BIN_DIRECTORY = "bin";
+        public static final String CHARACTER_FILE_EXTENSION = "json";
+        public static final int CHARACTER_NAME_FIRST_NUMBER = 1;
+        public static final String CHARACTER_NAME_PREFIX = "Character ";
+        public static final String CHARACTER_SAVE_DIRECTORY = "Characters";
         public static final String EDITOR_LAYOUT_DIRECTORY = "editorLayout";
         public static final String EDITOR_SETTINGS_FILE_NAME = "EditorSettings.json";
         public static final String GAME_DIRECTORY = "AdventureRPG";
         public static final String GAME_DOCUMENTS_SUBPATH = "Documents/My Games";
         public static final int LOADER_BATCH_SIZE = 32;
-        public static final String PLAYER_SAVE_FILE_NAME = "Player.json";
         public static final String SAVE_DIRECTORY = "Saves";
         public static final String SETTINGS_FILE_NAME = "Settings.json";
         public static final String SETTINGS_UBO = "SettingsData";

@@ -6,8 +6,9 @@ import engine.root.PipelinePackage;
 public class SavePipeline extends PipelinePackage {
 
     /*
-     * Registers the save pipeline. SaveManager owns every save file on disk
-     * and is the single entry point runtime systems route persistence through.
+     * Registers the save pipeline. SaveManager owns every character save on
+     * disk and is the single entry point runtime systems route persistence
+     * through.
      */
 
     @Override

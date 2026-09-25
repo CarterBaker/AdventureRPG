@@ -8,7 +8,6 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
-import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import engine.root.BranchPackage;
 import engine.util.io.JsonUtility;
@@ -18,13 +17,12 @@ import engine.util.mathematics.vectors.Vector3;
 class PlayerRestoreBranch extends BranchPackage {
 
     /*
-     * Applies a player save to a freshly spawned player. The whole save is
-     * validated before anything changes — its world must be the one the player
-     * spawned into and every feature must still exist and fit the character —
-     * so a stale or malformed save leaves the player untouched. The location
-     * is wrapped back into chunk and world bounds the same way movement wraps
-     * it, and spawn verification still holds the player until its chunk has
-     * generated.
+     * Applies a character save to a window's player in place. The whole save
+     * is validated before anything changes — its world must be the one the
+     * player lives in and every feature must still exist and fit the
+     * character — so a stale or malformed save leaves the player untouched.
+     * The location is wrapped back into chunk and world bounds the same way
+     * movement wraps it.
      */
 
     // Internal
@@ -54,14 +52,13 @@ class PlayerRestoreBranch extends BranchPackage {
 
     private void restoreLocation(JsonObject locationJson, EntityInstance player) {
 
-        WorldPositionStruct worldPositionStruct = player.getWorldPositionStruct();
         JsonObject chunkJson = JsonUtility.validateObject(locationJson, "chunk");
         long chunkCoordinate = Coordinate2Long.pack(
                 JsonUtility.validateInt(chunkJson, "x"),
                 JsonUtility.validateInt(chunkJson, "z"));
 
-        worldPositionStruct.setPosition(WorldWrapUtility.wrapAroundChunk(parseVector(locationJson, "position")));
-        worldPositionStruct.setChunkCoordinate(
+        player.setLocation(
+                WorldWrapUtility.wrapAroundChunk(parseVector(locationJson, "position")),
                 WorldWrapUtility.wrapAroundWorld(player.getWorldHandle(), chunkCoordinate));
     }
 

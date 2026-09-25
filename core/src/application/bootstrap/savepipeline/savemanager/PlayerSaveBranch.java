@@ -17,22 +17,22 @@ import engine.util.mathematics.vectors.Vector3;
 class PlayerSaveBranch extends BranchPackage {
 
     /*
-     * Captures the player as save JSON and writes it to disk. The character
-     * records its body size, its weight and, when it has one, its appearance —
-     * skin and hair color, head proportion, and the feature worn in every
-     * filled slot. The location records the world, the chunk coordinate, and
-     * the chunk-local position the player stands at.
+     * Captures a window's player as character save JSON and writes it to
+     * disk. The character records its body size, its weight and, when it has
+     * one, its appearance — skin and hair color, head proportion, and the
+     * feature worn in every filled slot. The location records the world, the
+     * chunk coordinate, and the chunk-local position the player stands at.
      */
 
     // Management \\
 
-    void save(File playerSaveFile, EntityInstance player) {
+    void save(File characterFile, EntityInstance player) {
 
         JsonObject playerJson = new JsonObject();
         playerJson.add("character", buildCharacter(player));
         playerJson.add("location", buildLocation(player));
 
-        JsonUtility.writeJsonObject(playerSaveFile, playerJson, internal.gson);
+        JsonUtility.writeJsonObject(characterFile, playerJson, internal.gson);
     }
 
     // Build \\

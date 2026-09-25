@@ -19,7 +19,10 @@ public class EntityManager extends ManagerPackage {
     /*
      * Owns the entity template palette and drives the entity bootstrap pipeline.
      * Handles on-demand template loading and provides the spawnEntity() factory
-     * for creating runtime EntityInstances from template handles.
+     * for creating runtime EntityInstances from template handles. rerollEntity()
+     * rolls an existing instance again in place — a new random chunk, size,
+     * weight, and the template's default appearance — for anything that holds
+     * the instance by reference and cannot swap in a new one.
      */
 
     // Internal
@@ -110,5 +113,18 @@ public class EntityManager extends ManagerPackage {
 
     public EntityInstance spawnEntity(String templateName) {
         return spawnEntity(getEntityHandleFromTemplateName(templateName));
+    }
+
+    public void rerollEntity(EntityInstance entityInstance) {
+
+        EntityData entityData = entityInstance.getEntityData();
+        long randomChunk = WorldPositionUtility.getRandomChunk(entityInstance.getWorldHandle());
+
+        entityInstance.setLocation(new Vector3(), randomChunk);
+        entityInstance.setSize(entityData.getRandomSize());
+        entityInstance.setWeight(entityData.getRandomWeight());
+
+        if (entityInstance.hasAppearance())
+            entityInstance.getAppearanceHandle().resetToDefaults();
     }
 }
