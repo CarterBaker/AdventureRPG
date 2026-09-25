@@ -102,6 +102,19 @@ public class EngineSetting {
         public static final String SETTINGS_UBO = "SettingsData";
         public static final String VERSION = "0.0.0.1a";
 
+        // Logging \\
+
+        public static final String LOG_DIRECTORY = "Logs";
+        public static final String LOG_DIRECTORY_PROPERTY = "adventurerpg.logDirectory";
+        public static final String LOG_FILE_NAME_FORMAT = "AdventureRPG_%s_%s.log";
+        public static final String LOG_FILE_TIMESTAMP_PATTERN = "yyyy-MM-dd_HH-mm-ss";
+        public static final int LOG_HISTORY_CAPACITY = 4096;
+        public static final String LOG_LINE_BREAK_PATTERN = "\\R";
+        public static final String LOG_LINE_FORMAT = "[%s] [%s] %s";
+        public static final String LOG_SESSION_EDITOR = "Editor";
+        public static final String LOG_SESSION_GAME = "Game";
+        public static final String LOG_TIME_PATTERN = "HH:mm:ss.SSS";
+
         // File Paths & Extensions \\
 
         public static final String ANIMATION_JSON_PATH = "animations";

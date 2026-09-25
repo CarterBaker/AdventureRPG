@@ -52,23 +52,63 @@ dependencies {
 }
 
 def os = System.properties['os.name'].toLowerCase()
+def logDirectory = rootProject.file('logs')
+def gameJvmArgs = [
+  "-XX:ErrorFile=${logDirectory}/AdventureRPG_%p.log".toString(),
+  "-Dadventurerpg.logDirectory=${logDirectory}".toString()
+]
+if (os.contains('mac')) gameJvmArgs += '-XstartOnFirstThread'
+def editorJvmArgs = ['-XX:+UseSerialGC', '-XX:CICompilerCount=2'] + gameJvmArgs
 
 run {
   workingDir = rootProject.file('assets').path
-  jvmArgs += "-XX:ErrorFile=${rootProject.file('logs')}/AdventureRPG_%p.log"
-  if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
+  jvmArgs += gameJvmArgs
 }
 
 tasks.create('runEditor', JavaExec) {
   workingDir = rootProject.file('assets').path
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'lwjgl3.Lwjgl3LauncherEditor'
-  jvmArgs += ['-XX:+UseSerialGC', '-XX:CICompilerCount=2']
-  jvmArgs += "-XX:ErrorFile=${rootProject.file('logs')}/AdventureRPG_%p.log"
+  jvmArgs += editorJvmArgs
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(21)
   }
-  if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
+}
+
+// Starts the game or editor in its own process with no console attached. The
+// windowed javaw launcher is used where the JDK ships one (Windows); output is
+// discarded because the engine writes everything to its session log instead.
+def launchWithoutConsole = { String launchMainClass, List<String> launchJvmArgs ->
+  File javaExecutable = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+  }.get().executablePath.asFile
+  File windowedExecutable = new File(javaExecutable.parentFile, 'javaw.exe')
+  List<String> command = [(windowedExecutable.exists() ? windowedExecutable : javaExecutable).path]
+  command += launchJvmArgs
+  command += ['-cp', sourceSets.main.runtimeClasspath.asPath, launchMainClass]
+  new ProcessBuilder(command)
+    .directory(rootProject.file('assets'))
+    .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+    .redirectError(ProcessBuilder.Redirect.DISCARD)
+    .start()
+}
+
+tasks.register('launch') {
+  group = 'application'
+  description = 'Starts the game with no console window.'
+  dependsOn sourceSets.main.runtimeClasspath
+  doLast {
+    launchWithoutConsole('lwjgl3.Lwjgl3Launcher', gameJvmArgs)
+  }
+}
+
+tasks.register('launchEditor') {
+  group = 'application'
+  description = 'Starts the editor with no console window.'
+  dependsOn sourceSets.main.runtimeClasspath
+  doLast {
+    launchWithoutConsole('lwjgl3.Lwjgl3LauncherEditor', editorJvmArgs)
+  }
 }
 
 jar {

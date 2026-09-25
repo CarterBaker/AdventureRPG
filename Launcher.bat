@@ -1,3 +1,3 @@
 @echo off
-call gradlew.bat run
-pause
+call gradlew.bat :lwjgl3:launch
+if errorlevel 1 pause

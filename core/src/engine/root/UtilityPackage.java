@@ -3,14 +3,17 @@ package engine.root;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
+import engine.util.log.LogUtility;
+
 public abstract class UtilityPackage {
 
     /*
      * Base utility class shared by all engine-level systems.
      *
      * Provides:
-     * - Standardized debug and logging output
-     * - Centralized fatal exception handling
+     * - Standardized debug and logging output, routed into the session log
+     * - Centralized fatal exception handling, contained to the failing
+     *   context while it runs inside an isolation boundary
      * - Common timing utilities
      *
      * Intended to enforce consistent diagnostics and failure
@@ -31,8 +34,8 @@ public abstract class UtilityPackage {
     }
 
     protected final void debug(Object input) {
-        System.out.println("(" + packageName + ")");
-        System.out.println("[" + systemName + "] " + String.valueOf(input));
+        LogUtility.info("(" + packageName + ")");
+        LogUtility.info("[" + systemName + "] " + String.valueOf(input));
     }
 
     protected final void timeStampDebug(Object input) {
@@ -42,15 +45,20 @@ public abstract class UtilityPackage {
     // Log \\
 
     protected final void log(Object input) {
-        System.out.println(String.valueOf(input));
+        LogUtility.info(String.valueOf(input));
     }
 
     protected final void errorLog(Object input) {
-        System.err.println(String.valueOf(input));
+        LogUtility.error(String.valueOf(input));
+    }
+
+    protected final void errorLog(Object input, Throwable cause) {
+        errorLog(input);
+        errorLog(LogUtility.describe(cause));
     }
 
     protected final void timeStampLog(Object input) {
-        System.out.println("[" + timeStamp() + "] " + String.valueOf(input));
+        LogUtility.info("[" + timeStamp() + "] " + String.valueOf(input));
     }
 
     // Exception Handling \\
@@ -69,6 +77,10 @@ public abstract class UtilityPackage {
 
     protected final <T> T throwException(String message, Throwable cause) {
         InternalException exception = new InternalException("[" + systemName + "] " + message, cause);
+
+        if (EnginePackage.ISOLATION_BOUNDARY.get() != null)
+            throw exception;
+
         logFatal(message, exception);
         Runtime.getRuntime().halt(1); // Fatal by design — halts immediately so a failure can never retry-loop or
                                       // log-spam.
@@ -116,7 +128,7 @@ public abstract class UtilityPackage {
         log("");
 
         log("Stack Trace:");
-        exception.printStackTrace(System.err);
+        errorLog(LogUtility.describe(exception));
 
         log("=======================================");
     }

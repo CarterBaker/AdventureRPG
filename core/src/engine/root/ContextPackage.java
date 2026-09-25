@@ -5,6 +5,13 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public abstract class ContextPackage extends ManagerPackage {
 
+    /*
+     * Attaches a set of systems to a window and runs them through the engine
+     * lifecycle. A context given a crash listener is isolated: the engine runs
+     * it inside a crash boundary, a failure is recorded here instead of ending
+     * the process, and the listener is told once per frame until it closes it.
+     */
+
     // Window
     private WindowInstance window;
 
@@ -13,6 +20,10 @@ public abstract class ContextPackage extends ManagerPackage {
 
     // Lifecycle
     boolean pendingStart;
+
+    // Isolation
+    private Runnable crashListener;
+    private volatile Throwable crashCause;
 
     protected ContextPackage() {
         super();
@@ -42,6 +53,34 @@ public abstract class ContextPackage extends ManagerPackage {
     @SuppressWarnings("unchecked")
     <T> T getLocal(Class<T> type) {
         return (T) this.localRegistry.get(type);
+    }
+
+    // Isolation \\
+
+    void setCrashListener(Runnable crashListener) {
+        this.crashListener = crashListener;
+    }
+
+    synchronized void crash(Throwable failure) {
+
+        if (crashCause != null)
+            return;
+
+        this.crashCause = failure;
+        errorLog(getClass().getSimpleName() + " crashed and was stopped.", failure);
+    }
+
+    void notifyCrashListener() {
+        if (crashListener != null)
+            crashListener.run();
+    }
+
+    boolean isIsolated() {
+        return crashListener != null;
+    }
+
+    public boolean isCrashed() {
+        return crashCause != null;
     }
 
     // Resize \\

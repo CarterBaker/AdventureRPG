@@ -1,0 +1,118 @@
+{
+  "elements": [
+    {
+      "id": "console_line",
+      "type": "label",
+      "size": {
+        "x": "100%",
+        "y": "18px"
+      },
+      "align": "left",
+      "text": "",
+      "font_size": "60%",
+      "color": "text"
+    },
+    {
+      "id": "console_line_error",
+      "type": "label",
+      "size": {
+        "x": "100%",
+        "y": "18px"
+      },
+      "align": "left",
+      "text": "",
+      "font_size": "60%",
+      "color": "danger"
+    }
+  ],
+  "menus": [
+    {
+      "id": "Console",
+      "raycast_input": true,
+      "lock_input": false,
+      "entry_points": [
+        "console_lines"
+      ],
+      "elements": [
+        {
+          "id": "console_tool_bar",
+          "type": "sprite",
+          "sprite": "menus/ToolBar",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "size": {
+            "x": "100%",
+            "y": "30px"
+          },
+          "color": "panel",
+          "elements": [
+            {
+              "id": "console_title_label",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "8px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "calc(100% - 112px)",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "Console",
+              "font_size": "50%",
+              "color": "text_muted"
+            },
+            {
+              "id": "console_clear_button",
+              "type": "button",
+              "sprite": "menus/Button",
+              "anchor": "right",
+              "pivot": "right",
+              "position": {
+                "x": "-4px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "100px",
+                "y": "20px"
+              },
+              "color": "control",
+              "hover_color": "control_hover",
+              "on_click": {
+                "class": "engine.editor.menueventsmanager.menus.ConsoleBranch",
+                "method": "clear"
+              },
+              "elements": [
+                {
+                  "id": "console_clear_label",
+                  "type": "label",
+                  "text": "Clear",
+                  "font_size": "64%",
+                  "color": "text"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "console_lines",
+          "type": "container",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "position": {
+            "x": "4px",
+            "y": "4px"
+          },
+          "size": {
+            "x": "calc(100% - 8px)",
+            "y": "calc(100% - 38px)"
+          },
+          "stack": "vertical",
+          "mask": true
+        }
+      ]
+    }
+  ]
+}

@@ -73,13 +73,16 @@ public class ThreadManager extends ManagerPackage {
      * delegates here, so in-flight tracking only needs to live in one place
      * to cover every caller in the engine. beginTask()/endTask() bracket the
      * ACTUAL execution, not the submission, so hasCapacity() reflects real
-     * pool saturation (queued + running), not just queue depth.
+     * pool saturation (queued + running), not just queue depth. Work
+     * submitted from inside an isolated context carries that context's crash
+     * boundary onto the worker thread.
      */
     public Future<?> executeAsync(ThreadHandle handle, Runnable task) {
+        Runnable isolatedTask = internal.isolateAsync(task);
         handle.beginTask();
         return handle.getExecutor().submit(() -> {
             try {
-                task.run();
+                isolatedTask.run();
             } finally {
                 handle.endTask();
             }

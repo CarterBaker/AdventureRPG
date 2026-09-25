@@ -32,6 +32,9 @@ public class TabManager extends ManagerPackage {
      * Each structural operation has exactly one owner:
      *
      * openTab() — register, create chrome + content on an OS window, add to BSP.
+     * The content context is isolated, so a tab that crashes — a failing
+     * preview included — is closed through closeTab() instead of taking the
+     * editor down.
      * closeTab() — dispose the chrome window; TabContext.dispose() cascades
      * into everything else a tab owns exactly the same way regardless of
      * what triggered it.
@@ -132,6 +135,10 @@ public class TabManager extends ManagerPackage {
                 osWindow);
     }
 
+    public TabHandle openConsole(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CONSOLE, editor.console.ConsoleContext.class, osWindow);
+    }
+
     /*
      * Registers a new tab on the given OS window. Creates chrome and content
      * windows composited onto it, pairs them, adds the tab to that window's
@@ -152,6 +159,9 @@ public class TabManager extends ManagerPackage {
         String title = baseTitle + " " + instance;
         if (hasTab(title))
             throwException("Tab title collision: " + title);
+        // Handle
+        TabHandle handle = create(TabHandle.class);
+        handle.constructor(new TabData(baseTitle, title, contentClass));
         // Chrome window
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, osWindow);
         tabWindow.setCaptureEligible(false);
@@ -161,12 +171,12 @@ public class TabManager extends ManagerPackage {
         contentWindow.setCaptureEligible(true);
         // Contexts
         TabContext tabContext = internal.createContext(TabContext.class, tabWindow);
-        ContextPackage contentContext = internal.createContext(contentClass, contentWindow);
+        ContextPackage contentContext = internal.createContext(
+                contentClass,
+                contentWindow,
+                () -> closeCrashedTab(handle));
         tabContext.linkContent(contentContext);
         tabContext.bringToFront();
-        // Handle
-        TabHandle handle = create(TabHandle.class);
-        handle.constructor(new TabData(baseTitle, title, contentClass));
         handle.mount(tabContext);
         tabContext.setOwnerHandle(handle);
         int tabID = RegistryUtility.toIntID(title);
@@ -195,6 +205,13 @@ public class TabManager extends ManagerPackage {
         closeOsWindowIfEmpty(osWindow);
         pushRects();
         notifyLayoutChanged();
+    }
+
+    private void closeCrashedTab(TabHandle handle) {
+        if (!handle.isOpen())
+            return;
+        errorLog("Tab '" + handle.getTabTitle() + "' crashed and was closed.");
+        closeTab(handle);
     }
 
     /*
