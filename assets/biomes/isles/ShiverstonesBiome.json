@@ -1,0 +1,66 @@
+{
+    "display_name": "The Shiverstones",
+    "map_color": "#B7C3D2",
+    "ocean_water": false,
+    "beach_biome": "shores/GreyspinePalisadesBiome",
+    "probable_biomes": [
+        { "name": "isles/shiver/ShiverTorsBiome", "chance": 0.08 },
+        { "name": "isles/shiver/ShiverMireBiome", "chance": 0.06 },
+        { "name": "isles/shiver/ShiverRavinesBiome", "chance": 0.04 }
+    ],
+    "continentalness_spline": {
+        "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
+        "height_blocks": [170, 183, 194, 205, 214]
+    },
+    "erosion_spline": {
+        "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
+        "amplitude_blocks": [56, 48, 39, 31, 24]
+    },
+    "peaks_valleys_spline": {
+        "x": [0.0, 0.3, 0.6, 0.85, 1.0],
+        "contribution": [-0.5, -0.1, 0.45, 0.9, 1.0]
+    },
+    "detail_amplitude_blocks": 5.0,
+    "detail_wavelength_blocks": 16,
+    "surface_block": "TerraArcanaBlocks/Grass Block",
+    "subsurface_block": "TerraArcanaBlocks/Stone Block",
+    "underwater_block": "TerraArcanaBlocks/Stone Block",
+    "weathers": {
+        "Spring": [
+            { "name": "standard/OvercastWeather", "chance": 24 },
+            { "name": "standard/CloudyWeather", "chance": 24 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 16 },
+            { "name": "standard/StormyWeather", "chance": 12 },
+            { "name": "standard/SunnyWeather", "chance": 10 },
+            { "name": "standard/ClearWeather", "chance": 8 },
+            { "name": "standard/HighCirrusWeather", "chance": 6 }
+        ],
+        "Summer": [
+            { "name": "standard/PartlyCloudyWeather", "chance": 24 },
+            { "name": "standard/CloudyWeather", "chance": 20 },
+            { "name": "standard/SunnyWeather", "chance": 16 },
+            { "name": "standard/OvercastWeather", "chance": 14 },
+            { "name": "standard/ClearWeather", "chance": 10 },
+            { "name": "standard/HighCirrusWeather", "chance": 8 },
+            { "name": "standard/StormyWeather", "chance": 8 }
+        ],
+        "Autumn": [
+            { "name": "standard/OvercastWeather", "chance": 28 },
+            { "name": "standard/StormyWeather", "chance": 22 },
+            { "name": "standard/CloudyWeather", "chance": 22 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 12 },
+            { "name": "standard/SunnyWeather", "chance": 6 },
+            { "name": "standard/ClearWeather", "chance": 5 },
+            { "name": "standard/HighCirrusWeather", "chance": 5 }
+        ],
+        "Winter": [
+            { "name": "standard/OvercastWeather", "chance": 30 },
+            { "name": "standard/StormyWeather", "chance": 26 },
+            { "name": "standard/CloudyWeather", "chance": 22 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 10 },
+            { "name": "standard/ClearWeather", "chance": 5 },
+            { "name": "standard/SunnyWeather", "chance": 4 },
+            { "name": "standard/HighCirrusWeather", "chance": 3 }
+        ]
+    }
+}

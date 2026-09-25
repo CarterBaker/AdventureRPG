@@ -1,0 +1,65 @@
+{
+    "display_name": "The Bay of Brine",
+    "map_color": "#1E4E87",
+    "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/brine/BrineMangroveCaysBiome", "chance": 0.05 },
+        { "name": "seas/brine/BrineSandBanksBiome", "chance": 0.08 },
+        { "name": "seas/brine/BrineMudBanksBiome", "chance": 0.06 }
+    ],
+    "continentalness_spline": {
+        "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
+        "height_blocks": [112, 122, 131, 140, 150]
+    },
+    "erosion_spline": {
+        "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
+        "amplitude_blocks": [16, 14, 11, 9, 7]
+    },
+    "peaks_valleys_spline": {
+        "x": [0.0, 0.4, 0.7, 1.0],
+        "contribution": [-0.5, 0.0, 0.3, 0.6]
+    },
+    "detail_amplitude_blocks": 2.0,
+    "detail_wavelength_blocks": 38,
+    "surface_block": "TerraArcanaBlocks/Sand",
+    "subsurface_block": "TerraArcanaBlocks/Sand",
+    "underwater_block": "TerraArcanaBlocks/Sand",
+    "weathers": {
+        "Spring": [
+            { "name": "standard/PartlyCloudyWeather", "chance": 22 },
+            { "name": "standard/SunnyWeather", "chance": 20 },
+            { "name": "standard/CloudyWeather", "chance": 18 },
+            { "name": "standard/ClearWeather", "chance": 14 },
+            { "name": "standard/HighCirrusWeather", "chance": 12 },
+            { "name": "standard/OvercastWeather", "chance": 8 },
+            { "name": "standard/StormyWeather", "chance": 6 }
+        ],
+        "Summer": [
+            { "name": "standard/StormyWeather", "chance": 34 },
+            { "name": "standard/OvercastWeather", "chance": 22 },
+            { "name": "standard/CloudyWeather", "chance": 20 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 12 },
+            { "name": "standard/SunnyWeather", "chance": 6 },
+            { "name": "standard/ClearWeather", "chance": 3 },
+            { "name": "standard/HighCirrusWeather", "chance": 3 }
+        ],
+        "Autumn": [
+            { "name": "standard/CloudyWeather", "chance": 22 },
+            { "name": "standard/StormyWeather", "chance": 20 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 18 },
+            { "name": "standard/OvercastWeather", "chance": 14 },
+            { "name": "standard/SunnyWeather", "chance": 14 },
+            { "name": "standard/ClearWeather", "chance": 7 },
+            { "name": "standard/HighCirrusWeather", "chance": 5 }
+        ],
+        "Winter": [
+            { "name": "standard/SunnyWeather", "chance": 30 },
+            { "name": "standard/ClearWeather", "chance": 24 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 18 },
+            { "name": "standard/HighCirrusWeather", "chance": 14 },
+            { "name": "standard/CloudyWeather", "chance": 8 },
+            { "name": "standard/OvercastWeather", "chance": 4 },
+            { "name": "standard/StormyWeather", "chance": 2 }
+        ]
+    }
+}

@@ -1,0 +1,67 @@
+{
+    "display_name": "The Cinderfields of Emberfall",
+    "map_color": "#5C3D3D",
+    "ocean_water": false,
+    "beach_biome": "shores/BlacksandShoreBiome",
+    "probable_biomes": [
+        { "name": "solmara/emberfall/EmberfallCinderConesBiome", "chance": 0.08 },
+        { "name": "solmara/emberfall/EmberfallLavaFlowsBiome", "chance": 0.1 },
+        { "name": "solmara/emberfall/EmberfallFumarolesBiome", "chance": 0.06 },
+        { "name": "solmara/emberfall/EmberfallGeyserFlatsBiome", "chance": 0.05 }
+    ],
+    "continentalness_spline": {
+        "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
+        "height_blocks": [168, 178, 187, 195, 202]
+    },
+    "erosion_spline": {
+        "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
+        "amplitude_blocks": [44, 37, 31, 24, 18]
+    },
+    "peaks_valleys_spline": {
+        "x": [0.0, 0.3, 0.6, 0.85, 1.0],
+        "contribution": [-0.35, 0.05, 0.45, 0.8, 1.0]
+    },
+    "detail_amplitude_blocks": 7.0,
+    "detail_wavelength_blocks": 12,
+    "surface_block": "TerraArcanaBlocks/Stone Block",
+    "subsurface_block": "TerraArcanaBlocks/Stone Block",
+    "underwater_block": "TerraArcanaBlocks/Stone Block",
+    "weathers": {
+        "Spring": [
+            { "name": "standard/OvercastWeather", "chance": 28 },
+            { "name": "standard/CloudyWeather", "chance": 24 },
+            { "name": "standard/StormyWeather", "chance": 16 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 12 },
+            { "name": "standard/HighCirrusWeather", "chance": 8 },
+            { "name": "standard/SunnyWeather", "chance": 7 },
+            { "name": "standard/ClearWeather", "chance": 5 }
+        ],
+        "Summer": [
+            { "name": "standard/OvercastWeather", "chance": 24 },
+            { "name": "standard/CloudyWeather", "chance": 22 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 16 },
+            { "name": "standard/StormyWeather", "chance": 14 },
+            { "name": "standard/SunnyWeather", "chance": 10 },
+            { "name": "standard/HighCirrusWeather", "chance": 8 },
+            { "name": "standard/ClearWeather", "chance": 6 }
+        ],
+        "Autumn": [
+            { "name": "standard/OvercastWeather", "chance": 30 },
+            { "name": "standard/StormyWeather", "chance": 22 },
+            { "name": "standard/CloudyWeather", "chance": 22 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 12 },
+            { "name": "standard/HighCirrusWeather", "chance": 6 },
+            { "name": "standard/SunnyWeather", "chance": 5 },
+            { "name": "standard/ClearWeather", "chance": 3 }
+        ],
+        "Winter": [
+            { "name": "standard/OvercastWeather", "chance": 32 },
+            { "name": "standard/StormyWeather", "chance": 26 },
+            { "name": "standard/CloudyWeather", "chance": 22 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 10 },
+            { "name": "standard/HighCirrusWeather", "chance": 4 },
+            { "name": "standard/SunnyWeather", "chance": 3 },
+            { "name": "standard/ClearWeather", "chance": 3 }
+        ]
+    }
+}

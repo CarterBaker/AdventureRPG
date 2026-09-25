@@ -1,0 +1,68 @@
+{
+    "display_name": "The Redrock Badlands",
+    "map_color": "#B8502E",
+    "ocean_water": false,
+    "beach_biome": "shores/RedwallBluffsBiome",
+    "probable_biomes": [
+        { "name": "solmara/redrock/RedrockHoodooChoirBiome", "chance": 0.04 },
+        { "name": "solmara/redrock/RedrockButtesBiome", "chance": 0.08 },
+        { "name": "solmara/redrock/RedrockMesasBiome", "chance": 0.06 },
+        { "name": "solmara/redrock/RedrockGorgeBiome", "chance": 0.06 },
+        { "name": "solmara/redrock/RedrockArchesBiome", "chance": 0.04 }
+    ],
+    "continentalness_spline": {
+        "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
+        "height_blocks": [176, 191, 204, 216, 226]
+    },
+    "erosion_spline": {
+        "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
+        "amplitude_blocks": [70, 60, 49, 38, 29]
+    },
+    "peaks_valleys_spline": {
+        "x": [0.0, 0.3, 0.6, 0.85, 1.0],
+        "contribution": [0.1, 0.35, 0.6, 0.85, 1.0]
+    },
+    "detail_amplitude_blocks": 4.0,
+    "detail_wavelength_blocks": 20,
+    "surface_block": "TerraArcanaBlocks/Sand",
+    "subsurface_block": "TerraArcanaBlocks/Stone Block",
+    "underwater_block": "TerraArcanaBlocks/Sand",
+    "weathers": {
+        "Spring": [
+            { "name": "standard/SunnyWeather", "chance": 40 },
+            { "name": "standard/ClearWeather", "chance": 25 },
+            { "name": "standard/HighCirrusWeather", "chance": 14 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 12 },
+            { "name": "standard/CloudyWeather", "chance": 5 },
+            { "name": "standard/OvercastWeather", "chance": 2 },
+            { "name": "standard/StormyWeather", "chance": 2 }
+        ],
+        "Summer": [
+            { "name": "standard/SunnyWeather", "chance": 50 },
+            { "name": "standard/ClearWeather", "chance": 28 },
+            { "name": "standard/HighCirrusWeather", "chance": 12 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 6 },
+            { "name": "standard/CloudyWeather", "chance": 2 },
+            { "name": "standard/StormyWeather", "chance": 1 },
+            { "name": "standard/OvercastWeather", "chance": 1 }
+        ],
+        "Autumn": [
+            { "name": "standard/SunnyWeather", "chance": 38 },
+            { "name": "standard/ClearWeather", "chance": 24 },
+            { "name": "standard/HighCirrusWeather", "chance": 14 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 12 },
+            { "name": "standard/CloudyWeather", "chance": 6 },
+            { "name": "standard/StormyWeather", "chance": 4 },
+            { "name": "standard/OvercastWeather", "chance": 2 }
+        ],
+        "Winter": [
+            { "name": "standard/SunnyWeather", "chance": 30 },
+            { "name": "standard/ClearWeather", "chance": 26 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 16 },
+            { "name": "standard/HighCirrusWeather", "chance": 12 },
+            { "name": "standard/CloudyWeather", "chance": 8 },
+            { "name": "standard/OvercastWeather", "chance": 4 },
+            { "name": "standard/StormyWeather", "chance": 4 }
+        ]
+    }
+}

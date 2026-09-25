@@ -11,7 +11,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class BiomeData extends DataPackage {
 
     /*
-     * Persistent biome record, including every response curve
+     * Persistent biome record — the registry name, the human-readable
+     * displayName (absent on the unnamed variants a parent links through
+     * probable_biomes, which take their parent's name), and every response curve
      * WorldGenerationManager needs to shape this biome's own terrain — a
      * continentalness-to-height spline, an erosion-to-amplitude spline, a
      * peaks-valleys ridge-contribution spline, a small-scale detail
@@ -27,6 +29,7 @@ public class BiomeData extends DataPackage {
     public static final int MAP_COLOR_UNDEFINED = EngineSetting.BIOME_MAP_COLOR_UNDEFINED;
 
     private final String biomeName;
+    private final String displayName;
     private final short biomeID;
 
     private final Color biomeColor;
@@ -55,6 +58,7 @@ public class BiomeData extends DataPackage {
 
     public BiomeData(
             String biomeName,
+            String displayName,
             short biomeID,
             Color biomeColor,
             Object2ObjectOpenHashMap<String, ObjectArrayList<String>> seasonWeatherNames,
@@ -76,6 +80,7 @@ public class BiomeData extends DataPackage {
             String beachBiomeName) {
 
         this.biomeName = biomeName;
+        this.displayName = displayName;
         this.biomeID = biomeID;
 
         this.biomeColor = biomeColor;
@@ -105,6 +110,14 @@ public class BiomeData extends DataPackage {
 
     public String getBiomeName() {
         return biomeName;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public boolean hasDisplayName() {
+        return displayName != null;
     }
 
     public short getBiomeID() {

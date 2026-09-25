@@ -1,0 +1,69 @@
+{
+    "display_name": "The Saffron Wastes of Qadira",
+    "map_color": "#F0B042",
+    "ocean_water": false,
+    "beach_biome": "shores/SaffronStrandBiome",
+    "probable_biomes": [
+        { "name": "solmara/saffron/SaffronSingingDunesBiome", "chance": 0.2 },
+        { "name": "solmara/saffron/SaffronStarDunesBiome", "chance": 0.06 },
+        { "name": "solmara/saffron/SaffronPlayaBiome", "chance": 0.05 },
+        { "name": "solmara/saffron/SaffronMesasBiome", "chance": 0.04 },
+        { "name": "solmara/saffron/SaffronOasisPoolsBiome", "chance": 0.02 },
+        { "name": "solmara/saffron/SaffronInselbergBiome", "chance": 0.02 }
+    ],
+    "continentalness_spline": {
+        "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
+        "height_blocks": [166, 173, 178, 184, 188]
+    },
+    "erosion_spline": {
+        "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
+        "amplitude_blocks": [30, 26, 21, 16, 13]
+    },
+    "peaks_valleys_spline": {
+        "x": [0.0, 0.3, 0.6, 0.85, 1.0],
+        "contribution": [-0.3, 0.1, 0.45, 0.75, 0.9]
+    },
+    "detail_amplitude_blocks": 5.0,
+    "detail_wavelength_blocks": 48,
+    "surface_block": "TerraArcanaBlocks/Sand",
+    "subsurface_block": "TerraArcanaBlocks/Sand",
+    "underwater_block": "TerraArcanaBlocks/Sand",
+    "weathers": {
+        "Spring": [
+            { "name": "standard/SunnyWeather", "chance": 40 },
+            { "name": "standard/ClearWeather", "chance": 25 },
+            { "name": "standard/HighCirrusWeather", "chance": 14 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 12 },
+            { "name": "standard/CloudyWeather", "chance": 5 },
+            { "name": "standard/OvercastWeather", "chance": 2 },
+            { "name": "standard/StormyWeather", "chance": 2 }
+        ],
+        "Summer": [
+            { "name": "standard/SunnyWeather", "chance": 50 },
+            { "name": "standard/ClearWeather", "chance": 28 },
+            { "name": "standard/HighCirrusWeather", "chance": 12 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 6 },
+            { "name": "standard/CloudyWeather", "chance": 2 },
+            { "name": "standard/StormyWeather", "chance": 1 },
+            { "name": "standard/OvercastWeather", "chance": 1 }
+        ],
+        "Autumn": [
+            { "name": "standard/SunnyWeather", "chance": 38 },
+            { "name": "standard/ClearWeather", "chance": 24 },
+            { "name": "standard/HighCirrusWeather", "chance": 14 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 12 },
+            { "name": "standard/CloudyWeather", "chance": 6 },
+            { "name": "standard/StormyWeather", "chance": 4 },
+            { "name": "standard/OvercastWeather", "chance": 2 }
+        ],
+        "Winter": [
+            { "name": "standard/SunnyWeather", "chance": 30 },
+            { "name": "standard/ClearWeather", "chance": 26 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 16 },
+            { "name": "standard/HighCirrusWeather", "chance": 12 },
+            { "name": "standard/CloudyWeather", "chance": 8 },
+            { "name": "standard/OvercastWeather", "chance": 4 },
+            { "name": "standard/StormyWeather", "chance": 4 }
+        ]
+    }
+}
