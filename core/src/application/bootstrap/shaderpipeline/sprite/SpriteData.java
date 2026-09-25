@@ -10,6 +10,8 @@ public class SpriteData extends DataPackage {
      * Complete sprite record. Identity and GPU texture handle are shared
      * references — never cloned. ModelInstance and sliceData are per-instance
      * state — populated on clone. sliceData is null on a SpriteHandle.
+     * stretch selects how a sliced center fills the element: scaled when true,
+     * tiled when false.
      */
 
     // Identity — shared, never copied
@@ -21,6 +23,7 @@ public class SpriteData extends DataPackage {
     private final float borderBottom;
     private final float borderRight;
     private final float borderTop;
+    private final boolean stretch;
 
     // Per-instance state
     private final ModelInstance modelInstance;
@@ -37,6 +40,7 @@ public class SpriteData extends DataPackage {
             float borderBottom,
             float borderRight,
             float borderTop,
+            boolean stretch,
             ModelInstance modelInstance) {
 
         this.name = name;
@@ -47,6 +51,7 @@ public class SpriteData extends DataPackage {
         this.borderBottom = borderBottom;
         this.borderRight = borderRight;
         this.borderTop = borderTop;
+        this.stretch = stretch;
         this.modelInstance = modelInstance;
         this.sliceData = null;
     }
@@ -63,6 +68,7 @@ public class SpriteData extends DataPackage {
         this.borderBottom = source.borderBottom;
         this.borderRight = source.borderRight;
         this.borderTop = source.borderTop;
+        this.stretch = source.stretch;
         this.modelInstance = modelInstance;
         this.sliceData = sliceData;
     }
@@ -99,6 +105,10 @@ public class SpriteData extends DataPackage {
 
     public float getBorderTop() {
         return borderTop;
+    }
+
+    public boolean isStretch() {
+        return stretch;
     }
 
     public ModelInstance getModelInstance() {

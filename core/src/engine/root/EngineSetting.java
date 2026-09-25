@@ -233,6 +233,7 @@ public class EngineSetting {
         public static final Color SPRITE_DEFAULT_COLOR = Color.WHITE;
         public static final String SPRITE_DEFAULT_MATERIAL = "sprites/StandardSpriteMaterial";
         public static final String SPRITE_DEFAULT_MESH = "sprites/SpriteMesh";
+        public static final String SPRITE_STRETCH_UNIFORM = "u_stretch";
         public static final String SUN_LIGHT_UBO = "SunLightData";
         public static final String TEXTURE_UV_SCALE_UNIFORM = "u_uvPerBlock";
         public static final String UBO_TIME_DATA_NAME = "TimeData";
@@ -786,6 +787,8 @@ public class EngineSetting {
         public static final String HIERARCHY_TAB_TEMPLATE = "util/Hierarchy/hierarchy_tab";
         public static final float HIERARCHY_TOGGLE_WIDTH_PIXELS = 16f;
         public static final int MAX_MASK_DEPTH = 8;
+        public static final float MENU_ANIMATION_MAX_STEP_SECONDS = 0.1f;
+        public static final float MENU_EASE_BACK_OVERSHOOT = 1.70158f;
         public static final String MENU_HIERARCHY = "util/Hierarchy/Hierarchy";
         public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
         public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";

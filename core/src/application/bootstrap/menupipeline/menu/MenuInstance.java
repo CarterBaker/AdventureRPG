@@ -3,6 +3,7 @@ package application.bootstrap.menupipeline.menu;
 import application.bootstrap.menupipeline.canvas.CanvasInstance;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -22,6 +23,10 @@ public class MenuInstance extends InstancePackage {
      * overlay roots an element shows while hovered, so content injected into a
      * hover dropdown lands in the same instance the renderer draws.
      *
+     * Clock: elapsed counts seconds since the menu opened and drives every
+     * element animation in it. MenuManager advances it once per rendered frame;
+     * each step is capped so a load hitch never skips an intro animation.
+     *
      * Visible by default.
      */
 
@@ -37,6 +42,9 @@ public class MenuInstance extends InstancePackage {
 
     // State
     private boolean visible;
+
+    // Clock
+    private float elapsed;
 
     // Constructor \\
 
@@ -101,6 +109,16 @@ public class MenuInstance extends InstancePackage {
             found = findById(element.getHoverExitStateRoot(), id);
 
         return found;
+    }
+
+    // Clock \\
+
+    public void advance(float deltaTime) {
+        this.elapsed += Math.min(deltaTime, EngineSetting.MENU_ANIMATION_MAX_STEP_SECONDS);
+    }
+
+    public float getElapsed() {
+        return elapsed;
     }
 
     // Visibility \\

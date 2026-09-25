@@ -116,8 +116,11 @@ public class MenuManager extends ManagerPackage {
                 continue;
             ObjectArrayList<MenuInstance> menus = menuList.getMenus();
             int menuCount = menus.size();
-            for (int j = 0; j < menuCount; j++)
-                renderSystem.renderMenu(menus.get(j), menuTargetFbo, RuntimeSetting.LAYER_UI);
+            for (int j = 0; j < menuCount; j++) {
+                MenuInstance menu = menus.get(j);
+                menu.advance(internal.getDeltaTime());
+                renderSystem.renderMenu(menu, menuTargetFbo, RuntimeSetting.LAYER_UI);
+            }
         }
 
         // Input — ordered list of all hovered windows, highest priority first.

@@ -13,7 +13,9 @@ import engine.util.io.JsonUtility;
 /*
  * Loads raw images from disk and parses companion border JSON files.
  * Image loading and border parsing are separated so InternalLoader owns
- * the full SpriteData construction with all fields available.
+ * the full SpriteData construction with all fields available. A companion
+ * may set "stretch": true so the sliced center scales instead of tiling —
+ * for artwork with gradients that must span the whole element.
  */
 class SpriteBuilder extends BuilderPackage {
 
@@ -34,14 +36,9 @@ class SpriteBuilder extends BuilderPackage {
 
     float[] parseCompanionBorder(File imageFile) {
 
-        File jsonFile = getCompanionJson(imageFile);
+        JsonObject json = loadCompanionJson(imageFile);
 
-        if (!jsonFile.exists())
-            return new float[] { 0, 0, 0, 0 };
-
-        JsonObject json = JsonUtility.loadJsonObject(jsonFile);
-
-        if (!json.has("border"))
+        if (json == null || !json.has("border"))
             return new float[] { 0, 0, 0, 0 };
 
         JsonArray b = json.getAsJsonArray("border");
@@ -52,6 +49,20 @@ class SpriteBuilder extends BuilderPackage {
                 b.get(2).getAsFloat(),
                 b.get(3).getAsFloat()
         };
+    }
+
+    boolean parseCompanionStretch(File imageFile) {
+
+        JsonObject json = loadCompanionJson(imageFile);
+
+        return json != null && JsonUtility.getBoolean(json, "stretch", false);
+    }
+
+    private JsonObject loadCompanionJson(File imageFile) {
+
+        File jsonFile = getCompanionJson(imageFile);
+
+        return jsonFile.exists() ? JsonUtility.loadJsonObject(jsonFile) : null;
     }
 
     private File getCompanionJson(File imageFile) {

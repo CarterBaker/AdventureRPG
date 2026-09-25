@@ -141,6 +141,10 @@ public class ElementHandle extends HandlePackage {
         return elementData.getHoverColor();
     }
 
+    public MenuColorStruct getParentHoverColor() {
+        return elementData.getParentHoverColor();
+    }
+
     public LayoutStruct getLayout() {
         return elementData.getLayout();
     }
@@ -163,6 +167,14 @@ public class ElementHandle extends HandlePackage {
 
     public boolean isStartExpanded() {
         return elementData.isStartExpanded();
+    }
+
+    public ElementAnimationStruct getAnimation() {
+        return elementData.getAnimation();
+    }
+
+    public boolean hasAnimation() {
+        return elementData.hasAnimation();
     }
 
     public String getActionClass() {

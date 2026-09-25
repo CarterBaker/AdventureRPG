@@ -10,6 +10,7 @@ import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector4;
@@ -126,6 +127,7 @@ public class SpriteManager extends ManagerPackage {
         sliceData.updateUniform("u_texSize", new Vector2(
                 (float) handle.getWidth(),
                 (float) handle.getHeight()));
+        sliceData.updateUniform(EngineSetting.SPRITE_STRETCH_UNIFORM, handle.isStretch() ? 1f : 0f);
 
         uboManager.push(sliceData);
 

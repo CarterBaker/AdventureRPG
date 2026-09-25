@@ -1,8 +1,10 @@
 package application.bootstrap.menupipeline.menurendersystem;
 
+import application.bootstrap.menupipeline.element.ElementAnimationStruct;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
+import application.bootstrap.menupipeline.element.ElementPoseStruct;
 import application.bootstrap.menupipeline.element.ElementStateStruct;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.font.FontInstance;
@@ -45,14 +47,20 @@ public class MenuRenderSystem extends SystemPackage {
      *
      * resolveColor picks one color per element for both its sprite tint and
      * its text: the active state's color, then hover_color while the element
-     * is hovered or pointed, then the element's own color. Themed colors are
-     * resolved against user Settings here every frame, so the interface
-     * palette can change live. A fully transparent sprite is never drawn.
+     * is hovered or pointed, then parent_hover_color while an ancestor is —
+     * tracked in hoverScope as the tree renders — then the element's own
+     * color. Themed colors are resolved against user Settings here every
+     * frame, so the interface palette can change live. A fully transparent
+     * sprite is never drawn.
      *
      * Label text is fitted to its element: font_size is the size text grows
      * to, and it shrinks until it fits inside the element less its padding.
      * The text's full glyph box — descenders included — is centred
      * vertically, and horizontally unless the label aligns left or right.
+     *
+     * Animated elements are posed after layout, before anything is drawn, by
+     * sampling their timeline at the menu's clock. A pose's alpha multiplies
+     * into alphaScale, which fades the element and its whole subtree.
      */
 
     private RenderManager renderManager;
@@ -68,12 +76,17 @@ public class MenuRenderSystem extends SystemPackage {
 
     private Vector4 resolvedColor;
 
+    private ElementPoseStruct pose;
+    private float alphaScale;
+    private boolean hoverScope;
+
     @Override
     protected void create() {
         this.maskPool = new MaskStruct[EngineSetting.MAX_MASK_DEPTH];
         for (int i = 0; i < maskPool.length; i++)
             maskPool[i] = new MaskStruct();
         this.resolvedColor = new Vector4();
+        this.pose = new ElementPoseStruct();
     }
 
     @Override
@@ -93,6 +106,8 @@ public class MenuRenderSystem extends SystemPackage {
         currentMenu = instance;
         currentWindow = instance.getWindow();
         this.targetFbo = uiTargetFbo;
+        this.alphaScale = 1f;
+        this.hoverScope = false;
 
         float screenW = currentWindow.getWidth();
         float screenH = currentWindow.getHeight();
@@ -153,6 +168,12 @@ public class MenuRenderSystem extends SystemPackage {
         if (type == ElementType.CANVAS_AREA)
             return;
 
+        float parentAlphaScale = alphaScale;
+        boolean parentHoverScope = hoverScope;
+
+        if (data.hasAnimation())
+            applyAnimation(element, data.getAnimation());
+
         MenuColorStruct color = resolveColor(element, activeState);
 
         SpriteInstance sprite = resolveSprite(element, activeState);
@@ -161,6 +182,8 @@ public class MenuRenderSystem extends SystemPackage {
 
         if (element.hasFont())
             pushFontRenderCall(element, activeState, color);
+
+        hoverScope |= element.isHovered() || element.isPointed();
 
         // Active hover state — root-based overlay takes priority over inline children
         if (activeState != null && !element.isClickExpanded()) {
@@ -186,6 +209,17 @@ public class MenuRenderSystem extends SystemPackage {
 
         if (element.isClickExpanded() && element.hasClickStateChildren())
             renderClickStateChildren(element);
+
+        alphaScale = parentAlphaScale;
+        hoverScope = parentHoverScope;
+    }
+
+    // Animation \\
+
+    private void applyAnimation(ElementInstance element, ElementAnimationStruct animation) {
+        animation.sample(currentMenu.getElapsed(), pose);
+        element.applyPose(pose);
+        alphaScale *= pose.getAlpha();
     }
 
     private void renderChildren(
@@ -285,6 +319,9 @@ public class MenuRenderSystem extends SystemPackage {
         if (data.hasHoverColor() && (element.isHovered() || element.isPointed()))
             return data.getHoverColor();
 
+        if (data.hasParentHoverColor() && hoverScope)
+            return data.getParentHoverColor();
+
         return element.getColor();
     }
 
@@ -312,13 +349,7 @@ public class MenuRenderSystem extends SystemPackage {
 
             ElementInstance child = children.get(i);
             LayoutStruct layout = resolveLayout(child, resolveActiveState(child));
-
-            float childH = layout.getSize().getY().resolve(parentH);
-
-            if (layout.hasMinSize())
-                childH = Math.max(childH, layout.getMinSize().getY().resolve(parentH));
-            if (layout.hasMaxSize())
-                childH = Math.min(childH, layout.getMaxSize().getY().resolve(parentH));
+            float childH = layout.resolveHeight(parentW, parentH);
 
             cursor -= childH;
             totalH += childH;
@@ -357,12 +388,7 @@ public class MenuRenderSystem extends SystemPackage {
 
             if (vertical) {
 
-                float childH = layout.getSize().getY().resolve(parentH);
-
-                if (layout.hasMinSize())
-                    childH = Math.max(childH, layout.getMinSize().getY().resolve(parentH));
-                if (layout.hasMaxSize())
-                    childH = Math.min(childH, layout.getMaxSize().getY().resolve(parentH));
+                float childH = layout.resolveHeight(parentW, parentH);
 
                 cursor -= childH;
                 renderStackedElement(child, parent.getComputedLeft(), cursor, parentW, parentH);
@@ -440,6 +466,8 @@ public class MenuRenderSystem extends SystemPackage {
             color.resolve(settings, resolvedColor);
         else
             resolvedColor.set(fallback.r, fallback.g, fallback.b, fallback.a);
+
+        resolvedColor.w *= alphaScale;
 
         return resolvedColor;
     }
