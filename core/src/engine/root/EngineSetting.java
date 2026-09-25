@@ -197,6 +197,7 @@ public class EngineSetting {
         // Rendering Pipeline \\
 
         public static final String BLIT_PREMULTIPLIED_UNIFORM = "u_premultiplied";
+        public static final String BLIT_RESOLVE_UNIFORM = "u_resolve";
         public static final String CAMERA_DATA_UBO = "CameraData";
         public static final int COMPOSITE_BUFFER_INITIAL_CAPACITY = 64;
         public static final int COMPOSITE_UPLOAD_BUFFER_GROWTH_FACTOR = 2;

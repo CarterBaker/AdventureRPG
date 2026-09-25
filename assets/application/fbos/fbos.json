@@ -23,6 +23,7 @@
             "resolutionScale": 0.5,
             "premultipliedBlend": true,
             "premultipliedBlit": true,
+            "resolveBlit": true,
             "attachments": [
                 { "type": "color", "format": "RGBA16F", "name": "color" }
             ]
