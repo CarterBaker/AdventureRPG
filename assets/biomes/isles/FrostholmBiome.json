@@ -3,6 +3,12 @@
     "map_color": "#A9B8C6",
     "ocean_water": false,
     "beach_biome": "shores/FrostShingleBiome",
+    "probable_biomes": [
+        { "name": "isles/frostholm/FrostholmIceDomesBiome", "chance": 0.08 },
+        { "name": "isles/frostholm/FrostholmMorainesBiome", "chance": 0.06 },
+        { "name": "isles/frostholm/FrostholmKettleLakesBiome", "chance": 0.04 },
+        { "name": "isles/frostholm/FrostholmTorsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [170, 182, 192, 202, 210]

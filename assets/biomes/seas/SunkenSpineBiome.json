@@ -2,6 +2,12 @@
     "display_name": "The Sunken Spine",
     "map_color": "#2E3D6B",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/spine/SpineVentFieldsBiome", "chance": 0.12 },
+        { "name": "seas/spine/SpineSeamountsBiome", "chance": 0.08 },
+        { "name": "seas/spine/SpineRiftValleysBiome", "chance": 0.1 },
+        { "name": "seas/spine/SpineVolcanicIslesBiome", "chance": 0.02 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [112, 122, 132, 140, 146]

@@ -3,6 +3,13 @@
     "map_color": "#B8502E",
     "ocean_water": false,
     "beach_biome": "shores/RedwallBluffsBiome",
+    "probable_biomes": [
+        { "name": "solmara/redrock/RedrockHoodooChoirBiome", "chance": 0.04 },
+        { "name": "solmara/redrock/RedrockButtesBiome", "chance": 0.08 },
+        { "name": "solmara/redrock/RedrockMesasBiome", "chance": 0.06 },
+        { "name": "solmara/redrock/RedrockGorgeBiome", "chance": 0.06 },
+        { "name": "solmara/redrock/RedrockArchesBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [176, 191, 204, 216, 226]

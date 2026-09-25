@@ -3,6 +3,12 @@
     "map_color": "#2C6839",
     "ocean_water": false,
     "beach_biome": "shores/MossbackBluffsBiome",
+    "probable_biomes": [
+        { "name": "thornwyld/umbral/UmbralCloudPeaksBiome", "chance": 0.06 },
+        { "name": "thornwyld/umbral/UmbralGorgeBiome", "chance": 0.06 },
+        { "name": "thornwyld/umbral/UmbralScarpsBiome", "chance": 0.05 },
+        { "name": "thornwyld/umbral/UmbralTepuiBiome", "chance": 0.02 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [186, 204, 219, 234, 246]

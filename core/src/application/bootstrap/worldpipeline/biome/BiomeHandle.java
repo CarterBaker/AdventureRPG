@@ -42,6 +42,10 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getDisplayName();
     }
 
+    public boolean hasDisplayName() {
+        return biomeData.hasDisplayName();
+    }
+
     public short getBiomeID() {
         return biomeData.getBiomeID();
     }

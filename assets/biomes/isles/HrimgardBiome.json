@@ -3,6 +3,11 @@
     "map_color": "#B2BFCE",
     "ocean_water": false,
     "beach_biome": "shores/FrostShingleBiome",
+    "probable_biomes": [
+        { "name": "isles/hrimgard/HrimgardMorainesBiome", "chance": 0.06 },
+        { "name": "isles/hrimgard/HrimgardTorsBiome", "chance": 0.06 },
+        { "name": "isles/hrimgard/HrimgardPingosBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [168, 179, 188, 197, 204]

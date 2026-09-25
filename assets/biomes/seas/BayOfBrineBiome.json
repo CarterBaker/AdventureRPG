@@ -2,6 +2,11 @@
     "display_name": "The Bay of Brine",
     "map_color": "#1E4E87",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/brine/BrineMangroveCaysBiome", "chance": 0.05 },
+        { "name": "seas/brine/BrineSandBanksBiome", "chance": 0.08 },
+        { "name": "seas/brine/BrineMudBanksBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [112, 122, 131, 140, 150]

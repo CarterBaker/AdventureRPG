@@ -30,6 +30,8 @@ public class BiomeManager extends ManagerPackage {
      * biome's declared beach takes over its share across the shore band, so
      * a coast always lands on sand, cliff, or whatever the land authored —
      * a land biome with no beach simply blends straight into the ocean.
+     * Every variant belongs to exactly one parent, recorded as the parent
+     * registers, and an unnamed variant is known by its parent's name.
      * Every read path is lock-free: both registries and the color
      * resolution memo are ConcurrentHashMaps, and the map-color index is an
      * immutable snapshot published through a volatile reference. Only the
@@ -39,6 +41,7 @@ public class BiomeManager extends ManagerPackage {
     // Palette
     private final ConcurrentHashMap<String, BiomeHandle> biomeName2BiomeHandle = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Short, BiomeHandle> biomeID2BiomeHandle = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> variantName2ParentName = new ConcurrentHashMap<>();
 
     // Map Color Index — an immutable snapshot swapped in on every
     // registration, so getNearestBiomeNameForColor() never locks against it.
@@ -93,6 +96,19 @@ public class BiomeManager extends ManagerPackage {
 
         biomeName2BiomeHandle.put(biomeHandle.getBiomeName(), biomeHandle);
         biomeID2BiomeHandle.put(biomeHandle.getBiomeID(), biomeHandle);
+
+        for (String variantName : biomeHandle.getProbableBiomeNames())
+            linkVariant(variantName, biomeHandle.getBiomeName());
+    }
+
+    private void linkVariant(String variantName, String parentName) {
+
+        String existingParentName = variantName2ParentName.putIfAbsent(variantName, parentName);
+
+        if (existingParentName != null && !existingParentName.equals(parentName))
+            throwException("Biome \"" + variantName + "\" is listed in \"probable_biomes\" by both \""
+                    + existingParentName + "\" and \"" + parentName
+                    + "\" — every variant belongs to exactly one parent biome.");
     }
 
     synchronized void registerMapColor(String biomeName, int mapColor) {
@@ -319,6 +335,24 @@ public class BiomeManager extends ManagerPackage {
                     + "Check for a resource-name/path mismatch between the biome directory and its declared name.");
 
         return handle;
+    }
+
+    /*
+     * The name players see for a biome. An unnamed variant resolves through
+     * the parent that links it, climbing until a named biome is reached.
+     */
+    public String getDisplayName(BiomeHandle biomeHandle) {
+
+        if (biomeHandle.hasDisplayName())
+            return biomeHandle.getDisplayName();
+
+        String parentName = variantName2ParentName.get(biomeHandle.getBiomeName());
+
+        if (parentName == null)
+            throwException("Biome \"" + biomeHandle.getBiomeName() + "\" declares no \"display_name\" and no "
+                    + "registered biome lists it in \"probable_biomes\" — an unnamed biome must be a linked variant.");
+
+        return getDisplayName(getBiomeHandleFromBiomeName(parentName));
     }
 
     public short getBiomeIDFromBiomeName(String biomeName) {

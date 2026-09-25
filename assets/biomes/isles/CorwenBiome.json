@@ -3,6 +3,12 @@
     "map_color": "#ACCB4D",
     "ocean_water": false,
     "beach_biome": "shores/GreyspinePalisadesBiome",
+    "probable_biomes": [
+        { "name": "isles/corwen/CorwenDownsBiome", "chance": 0.1 },
+        { "name": "isles/corwen/CorwenMireBiome", "chance": 0.08 },
+        { "name": "isles/corwen/CorwenTorsBiome", "chance": 0.04 },
+        { "name": "isles/corwen/CorwenLochsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [168, 178, 186, 194, 200]

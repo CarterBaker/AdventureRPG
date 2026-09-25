@@ -2,6 +2,11 @@
     "display_name": "The Saltglass Flats",
     "map_color": "#F7F1DE",
     "ocean_water": false,
+    "probable_biomes": [
+        { "name": "solmara/saltglass/SaltglassSaltDomesBiome", "chance": 0.05 },
+        { "name": "solmara/saltglass/SaltglassBrinePoolsBiome", "chance": 0.06 },
+        { "name": "solmara/saltglass/SaltglassThornkeepBiome", "chance": 0.03 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [162, 163, 164, 165, 167]

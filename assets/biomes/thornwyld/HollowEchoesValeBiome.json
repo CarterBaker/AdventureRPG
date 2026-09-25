@@ -3,6 +3,11 @@
     "map_color": "#8CCD72",
     "ocean_water": false,
     "beach_biome": "shores/MudflatsOfThornwyldBiome",
+    "probable_biomes": [
+        { "name": "thornwyld/echoes/EchoesOxbowsBiome", "chance": 0.07 },
+        { "name": "thornwyld/echoes/EchoesKnollsBiome", "chance": 0.06 },
+        { "name": "thornwyld/echoes/EchoesClearingsBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [163, 167, 170, 173, 175]

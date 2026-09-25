@@ -3,6 +3,13 @@
     "map_color": "#19431D",
     "ocean_water": false,
     "beach_biome": "shores/FrostShingleBiome",
+    "probable_biomes": [
+        { "name": "aldermere/northmark/NorthmarkMorainesBiome", "chance": 0.08 },
+        { "name": "aldermere/northmark/NorthmarkMireBiome", "chance": 0.08 },
+        { "name": "aldermere/northmark/NorthmarkKettleLakesBiome", "chance": 0.06 },
+        { "name": "aldermere/northmark/NorthmarkTorsBiome", "chance": 0.04 },
+        { "name": "aldermere/northmark/NorthmarkDrumlinsBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [170, 181, 190, 199, 206]

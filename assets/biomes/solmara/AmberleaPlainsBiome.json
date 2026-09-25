@@ -4,7 +4,12 @@
     "ocean_water": false,
     "beach_biome": "shores/AmberCoastBiome",
     "probable_biomes": [
-        { "name": "solmara/HollowboughCopseBiome", "chance": 0.15 }
+        { "name": "solmara/amberlea/AmberleaHollowboughCopseBiome", "chance": 0.12 },
+        { "name": "solmara/amberlea/AmberleaButtesBiome", "chance": 0.03 },
+        { "name": "solmara/amberlea/AmberleaRavinesBiome", "chance": 0.04 },
+        { "name": "solmara/amberlea/AmberleaPotholesBiome", "chance": 0.05 },
+        { "name": "solmara/amberlea/AmberleaMonadnockBiome", "chance": 0.02 },
+        { "name": "solmara/amberlea/AmberleaHillsBiome", "chance": 0.06 }
     ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],

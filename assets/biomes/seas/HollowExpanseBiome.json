@@ -2,6 +2,13 @@
     "display_name": "The Hollow Expanse",
     "map_color": "#194478",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/hollow/HollowIcebergsBiome", "chance": 0.03 },
+        { "name": "seas/hollow/HollowVolcanicIslesBiome", "chance": 0.015 },
+        { "name": "seas/hollow/HollowAbyssalPlainBiome", "chance": 0.12 },
+        { "name": "seas/hollow/HollowSeamountsBiome", "chance": 0.04 },
+        { "name": "seas/hollow/HollowTabularBergsBiome", "chance": 0.02 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [74, 91, 108, 125, 142]

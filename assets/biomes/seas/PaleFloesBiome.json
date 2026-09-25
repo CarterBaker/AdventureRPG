@@ -2,6 +2,11 @@
     "display_name": "The Pale Floes",
     "map_color": "#C9E5ED",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/pale/PaleIcebergsBiome", "chance": 0.1 },
+        { "name": "seas/pale/PaleTabularBergsBiome", "chance": 0.06 },
+        { "name": "seas/pale/PalePressureRidgesBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [140, 145, 149, 153, 156]

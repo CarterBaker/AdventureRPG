@@ -3,6 +3,12 @@
     "map_color": "#337343",
     "ocean_water": false,
     "beach_biome": "shores/FrostShingleBiome",
+    "probable_biomes": [
+        { "name": "thornwyld/grieving/GrievingMorainesBiome", "chance": 0.06 },
+        { "name": "thornwyld/grieving/GrievingMireBiome", "chance": 0.08 },
+        { "name": "thornwyld/grieving/GrievingKettleLakesBiome", "chance": 0.05 },
+        { "name": "thornwyld/grieving/GrievingTorsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [168, 177, 184, 192, 198]

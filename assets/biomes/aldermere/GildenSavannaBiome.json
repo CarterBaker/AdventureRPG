@@ -4,7 +4,11 @@
     "ocean_water": false,
     "beach_biome": "shores/GildenshoreBiome",
     "probable_biomes": [
-        { "name": "aldermere/KopjeHillsBiome", "chance": 0.12 }
+        { "name": "aldermere/gilden/GildenKopjeHillsBiome", "chance": 0.12 },
+        { "name": "aldermere/gilden/GildenWaterholesBiome", "chance": 0.05 },
+        { "name": "aldermere/gilden/GildenLionsmountBiome", "chance": 0.03 },
+        { "name": "aldermere/gilden/GildenGrovesBiome", "chance": 0.08 },
+        { "name": "aldermere/gilden/GildenMesasBiome", "chance": 0.03 }
     ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],

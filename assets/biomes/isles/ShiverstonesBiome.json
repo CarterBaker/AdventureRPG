@@ -3,6 +3,11 @@
     "map_color": "#B7C3D2",
     "ocean_water": false,
     "beach_biome": "shores/GreyspinePalisadesBiome",
+    "probable_biomes": [
+        { "name": "isles/shiver/ShiverTorsBiome", "chance": 0.08 },
+        { "name": "isles/shiver/ShiverMireBiome", "chance": 0.06 },
+        { "name": "isles/shiver/ShiverRavinesBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [170, 183, 194, 205, 214]

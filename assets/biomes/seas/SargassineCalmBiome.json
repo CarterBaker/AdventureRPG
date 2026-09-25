@@ -2,6 +2,12 @@
     "display_name": "The Sargassine Calm",
     "map_color": "#1A477D",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/sargassine/SargassineDriftingIslesBiome", "chance": 0.02 },
+        { "name": "seas/sargassine/SargassineSeamountsBiome", "chance": 0.05 },
+        { "name": "seas/sargassine/SargassineVentFieldsBiome", "chance": 0.03 },
+        { "name": "seas/sargassine/SargassineAbyssalPlainBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [96, 108, 121, 134, 146]

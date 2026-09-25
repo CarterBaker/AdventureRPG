@@ -24,8 +24,10 @@ class BiomeBuilder extends BuilderPackage {
 
     /*
      * Parses biome JSON into a BiomeData and wraps it in a BiomeHandle. Reads the
-     * required "display_name" — the name players see for this biome, kept
-     * apart from the registry name its file path produces — the
+     * "display_name" — the name players see for this biome, kept apart from
+     * the registry name its file path produces, required on every biome
+     * painted on the world map and omitted by the unnamed variants a parent
+     * links through "probable_biomes" — the
      * optional "weathers"
      * block, "map_color", "probable_biomes", surface/subsurface/underwater block
      * names, the boolean "ocean_water" flag that gates whether this biome's
@@ -53,8 +55,6 @@ class BiomeBuilder extends BuilderPackage {
 
         JsonObject json = JsonUtility.loadJsonObject(file);
 
-        String displayName = parseDisplayName(json, biomeName);
-
         ObjectArrayList<String> seasonNames = new ObjectArrayList<>();
         Object2ObjectOpenHashMap<String, ObjectArrayList<String>> seasonWeatherNames = new Object2ObjectOpenHashMap<>();
         Object2ObjectOpenHashMap<String, FloatArrayList> seasonWeatherChances = new Object2ObjectOpenHashMap<>();
@@ -62,6 +62,7 @@ class BiomeBuilder extends BuilderPackage {
         parseWeathers(json, seasonNames, seasonWeatherNames, seasonWeatherChances);
 
         int mapColor = parseMapColor(json, biomeName);
+        String displayName = parseDisplayName(json, biomeName, mapColor);
 
         ObjectArrayList<String> probableBiomeNames = new ObjectArrayList<>();
         FloatArrayList probableBiomeChances = new FloatArrayList();
@@ -121,11 +122,16 @@ class BiomeBuilder extends BuilderPackage {
 
     // Display Name Parsing \\
 
-    private String parseDisplayName(JsonObject json, String biomeName) {
+    private String parseDisplayName(JsonObject json, String biomeName, int mapColor) {
 
-        if (!json.has("display_name"))
-            throwException("Biome \"" + biomeName + "\" is missing required \"display_name\" — every biome must "
-                    + "declare the name players see for it.");
+        if (!json.has("display_name")) {
+
+            if (mapColor != BiomeData.MAP_COLOR_UNDEFINED)
+                throwException("Biome \"" + biomeName + "\" is painted on the world map but declares no "
+                        + "\"display_name\" — only variants linked through \"probable_biomes\" may be unnamed.");
+
+            return null;
+        }
 
         String displayName = json.get("display_name").getAsString().trim();
 

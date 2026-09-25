@@ -3,6 +3,13 @@
     "map_color": "#DEC67C",
     "ocean_water": false,
     "beach_biome": "shores/AmberCoastBiome",
+    "probable_biomes": [
+        { "name": "solmara/aurelmark/AurelmarkKurgansBiome", "chance": 0.06 },
+        { "name": "solmara/aurelmark/AurelmarkSaltLakesBiome", "chance": 0.04 },
+        { "name": "solmara/aurelmark/AurelmarkHillsBiome", "chance": 0.06 },
+        { "name": "solmara/aurelmark/AurelmarkInselbergBiome", "chance": 0.02 },
+        { "name": "solmara/aurelmark/AurelmarkDunesBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [170, 179, 186, 194, 200]

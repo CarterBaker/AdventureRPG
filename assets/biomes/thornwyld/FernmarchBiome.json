@@ -3,6 +3,12 @@
     "map_color": "#265C2F",
     "ocean_water": false,
     "beach_biome": "shores/MossbackBluffsBiome",
+    "probable_biomes": [
+        { "name": "thornwyld/fernmarch/FernmarchRavinesBiome", "chance": 0.08 },
+        { "name": "thornwyld/fernmarch/FernmarchKnollsBiome", "chance": 0.08 },
+        { "name": "thornwyld/fernmarch/FernmarchClearingsBiome", "chance": 0.05 },
+        { "name": "thornwyld/fernmarch/FernmarchMeresBiome", "chance": 0.03 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [170, 181, 191, 200, 208]

@@ -2,6 +2,11 @@
     "display_name": "The Cinder Bay",
     "map_color": "#1C4A82",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/cinder/CinderSurtlingIslesBiome", "chance": 0.05 },
+        { "name": "seas/cinder/CinderVentFieldsBiome", "chance": 0.04 },
+        { "name": "seas/cinder/CinderSeamountsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [110, 120, 130, 139, 149]

@@ -3,6 +3,12 @@
     "map_color": "#E28DBF",
     "ocean_water": false,
     "beach_biome": "shores/SunlitStrandBiome",
+    "probable_biomes": [
+        { "name": "aldermere/blush/BlushKnollsBiome", "chance": 0.12 },
+        { "name": "aldermere/blush/BlushClearingsBiome", "chance": 0.08 },
+        { "name": "aldermere/blush/BlushTorsBiome", "chance": 0.04 },
+        { "name": "aldermere/blush/BlushMeresBiome", "chance": 0.02 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [172, 184, 194, 204, 212]

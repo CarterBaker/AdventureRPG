@@ -3,6 +3,11 @@
     "map_color": "#99D37F",
     "ocean_water": false,
     "beach_biome": "shores/AmberCoastBiome",
+    "probable_biomes": [
+        { "name": "solmara/ninekings/NinekingsTerracesBiome", "chance": 0.08 },
+        { "name": "solmara/ninekings/NinekingsKnollsBiome", "chance": 0.06 },
+        { "name": "solmara/ninekings/NinekingsMeresBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [166, 171, 175, 179, 182]

@@ -3,6 +3,12 @@
     "map_color": "#C7D1D0",
     "ocean_water": false,
     "beach_biome": "shores/GreyspinePalisadesBiome",
+    "probable_biomes": [
+        { "name": "thornwyld/mourn/MournTorsBiome", "chance": 0.08 },
+        { "name": "thornwyld/mourn/MournMireBiome", "chance": 0.06 },
+        { "name": "thornwyld/mourn/MournMonadnockBiome", "chance": 0.03 },
+        { "name": "thornwyld/mourn/MournGorgeBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [170, 182, 192, 202, 210]

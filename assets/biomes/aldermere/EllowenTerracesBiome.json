@@ -3,6 +3,12 @@
     "map_color": "#83BC3C",
     "ocean_water": false,
     "beach_biome": "shores/SunlitStrandBiome",
+    "probable_biomes": [
+        { "name": "aldermere/ellowen/EllowenScarpsBiome", "chance": 0.08 },
+        { "name": "aldermere/ellowen/EllowenGrovesBiome", "chance": 0.1 },
+        { "name": "aldermere/ellowen/EllowenKarstTowersBiome", "chance": 0.04 },
+        { "name": "aldermere/ellowen/EllowenMeresBiome", "chance": 0.02 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [176, 189, 200, 211, 220]

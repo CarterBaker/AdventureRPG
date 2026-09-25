@@ -3,6 +3,11 @@
     "map_color": "#E5F0F5",
     "ocean_water": false,
     "beach_biome": "shores/IcecliffsBiome",
+    "probable_biomes": [
+        { "name": "isles/winterglacier/WinterglacierIceDomesBiome", "chance": 0.08 },
+        { "name": "isles/winterglacier/WinterglacierCrevassesBiome", "chance": 0.06 },
+        { "name": "isles/winterglacier/WinterglacierNunataksBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [172, 187, 200, 212, 222]

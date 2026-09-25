@@ -3,6 +3,10 @@
     "map_color": "#AEBBCA",
     "ocean_water": false,
     "beach_biome": "shores/BlacksandShoreBiome",
+    "probable_biomes": [
+        { "name": "isles/skaldhorn/SkaldhornCinderConesBiome", "chance": 0.08 },
+        { "name": "isles/skaldhorn/SkaldhornLavaFlowsBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [172, 187, 200, 212, 222]

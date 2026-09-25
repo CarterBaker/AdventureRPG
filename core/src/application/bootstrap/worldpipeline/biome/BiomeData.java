@@ -12,7 +12,8 @@ public class BiomeData extends DataPackage {
 
     /*
      * Persistent biome record — the registry name, the human-readable
-     * displayName every biome declares, and every response curve
+     * displayName (absent on the unnamed variants a parent links through
+     * probable_biomes, which take their parent's name), and every response curve
      * WorldGenerationManager needs to shape this biome's own terrain — a
      * continentalness-to-height spline, an erosion-to-amplitude spline, a
      * peaks-valleys ridge-contribution spline, a small-scale detail
@@ -113,6 +114,10 @@ public class BiomeData extends DataPackage {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public boolean hasDisplayName() {
+        return displayName != null;
     }
 
     public short getBiomeID() {

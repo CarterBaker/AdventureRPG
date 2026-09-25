@@ -2,6 +2,11 @@
     "display_name": "The Wreckers' Shoals",
     "map_color": "#5CBED7",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/wreckers/WreckersShipbreakersBiome", "chance": 0.05 },
+        { "name": "seas/wreckers/WreckersSkerriesBiome", "chance": 0.05 },
+        { "name": "seas/wreckers/WreckersKelpForestBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

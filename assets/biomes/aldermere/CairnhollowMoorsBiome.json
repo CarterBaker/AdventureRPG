@@ -3,6 +3,13 @@
     "map_color": "#875E87",
     "ocean_water": false,
     "beach_biome": "shores/FjordsOfCairnhollowBiome",
+    "probable_biomes": [
+        { "name": "aldermere/cairnhollow/CairnhollowTorsBiome", "chance": 0.1 },
+        { "name": "aldermere/cairnhollow/CairnhollowLochsBiome", "chance": 0.06 },
+        { "name": "aldermere/cairnhollow/CairnhollowMireBiome", "chance": 0.08 },
+        { "name": "aldermere/cairnhollow/CairnhollowMonadnockBiome", "chance": 0.04 },
+        { "name": "aldermere/cairnhollow/CairnhollowGorgeBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [172, 184, 194, 204, 212]

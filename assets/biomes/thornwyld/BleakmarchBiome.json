@@ -3,6 +3,12 @@
     "map_color": "#AFC0BD",
     "ocean_water": false,
     "beach_biome": "shores/FrostShingleBiome",
+    "probable_biomes": [
+        { "name": "thornwyld/bleakmarch/BleakmarchPingosBiome", "chance": 0.08 },
+        { "name": "thornwyld/bleakmarch/BleakmarchKettleLakesBiome", "chance": 0.07 },
+        { "name": "thornwyld/bleakmarch/BleakmarchMorainesBiome", "chance": 0.06 },
+        { "name": "thornwyld/bleakmarch/BleakmarchMesasBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [164, 171, 176, 182, 186]

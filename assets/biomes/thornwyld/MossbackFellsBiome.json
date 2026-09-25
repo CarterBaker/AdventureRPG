@@ -3,6 +3,12 @@
     "map_color": "#635045",
     "ocean_water": false,
     "beach_biome": "shores/MossbackBluffsBiome",
+    "probable_biomes": [
+        { "name": "thornwyld/fells/FellsBaldsBiome", "chance": 0.1 },
+        { "name": "thornwyld/fells/FellsGorgeBiome", "chance": 0.06 },
+        { "name": "thornwyld/fells/FellsKnobsBiome", "chance": 0.06 },
+        { "name": "thornwyld/fells/FellsCirquesBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [196, 216, 232, 249, 262]

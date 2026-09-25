@@ -2,6 +2,11 @@
     "display_name": "The Frostholm Sound",
     "map_color": "#0E2A51",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/sound/SoundIcebergsBiome", "chance": 0.05 },
+        { "name": "seas/sound/SoundSkerriesBiome", "chance": 0.03 },
+        { "name": "seas/sound/SoundSeamountsBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [96, 108, 121, 134, 146]

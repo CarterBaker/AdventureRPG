@@ -3,6 +3,10 @@
     "map_color": "#C6CFDD",
     "ocean_water": false,
     "beach_biome": "shores/FrostShingleBiome",
+    "probable_biomes": [
+        { "name": "isles/winterskerry/WinterskerryTorsBiome", "chance": 0.06 },
+        { "name": "isles/winterskerry/WinterskerryIceDomesBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [166, 175, 182, 190, 196]

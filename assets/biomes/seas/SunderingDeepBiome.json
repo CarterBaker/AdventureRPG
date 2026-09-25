@@ -2,6 +2,13 @@
     "display_name": "The Sundering Deep",
     "map_color": "#0B2446",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/sundering/SunderingSmokingIslesBiome", "chance": 0.02 },
+        { "name": "seas/sundering/SunderingSeamountsBiome", "chance": 0.06 },
+        { "name": "seas/sundering/SunderingGuyotsBiome", "chance": 0.04 },
+        { "name": "seas/sundering/SunderingAbyssalPlainBiome", "chance": 0.12 },
+        { "name": "seas/sundering/SunderingVentFieldsBiome", "chance": 0.03 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [66, 84, 103, 122, 140]

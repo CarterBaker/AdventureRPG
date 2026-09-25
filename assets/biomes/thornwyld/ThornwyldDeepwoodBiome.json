@@ -4,7 +4,11 @@
     "ocean_water": false,
     "beach_biome": "shores/MudflatsOfThornwyldBiome",
     "probable_biomes": [
-        { "name": "thornwyld/MoonlitGladesBiome", "chance": 0.15 }
+        { "name": "thornwyld/deepwyld/DeepwyldMoonlitGladesBiome", "chance": 0.15 },
+        { "name": "thornwyld/deepwyld/DeepwyldTepuiOlvashtiBiome", "chance": 0.02 },
+        { "name": "thornwyld/deepwyld/DeepwyldCenotesBiome", "chance": 0.04 },
+        { "name": "thornwyld/deepwyld/DeepwyldKarstTowersBiome", "chance": 0.03 },
+        { "name": "thornwyld/deepwyld/DeepwyldHillsBiome", "chance": 0.06 }
     ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],

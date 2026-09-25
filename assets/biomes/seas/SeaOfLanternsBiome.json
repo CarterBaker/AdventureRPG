@@ -2,6 +2,13 @@
     "display_name": "The Sea of Lanterns",
     "map_color": "#235895",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/lantern/LanternHighIslesBiome", "chance": 0.05 },
+        { "name": "seas/lantern/LanternCoralCaysBiome", "chance": 0.05 },
+        { "name": "seas/lantern/LanternSeamountsBiome", "chance": 0.05 },
+        { "name": "seas/lantern/LanternVentFieldsBiome", "chance": 0.03 },
+        { "name": "seas/lantern/LanternVolcanicIslesBiome", "chance": 0.02 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [90, 104, 118, 132, 146]

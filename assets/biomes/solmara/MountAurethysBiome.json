@@ -3,6 +3,10 @@
     "map_color": "#EC3713",
     "ocean_water": false,
     "beach_biome": "shores/DragonwallCliffsBiome",
+    "probable_biomes": [
+        { "name": "solmara/aurethys/AurethysSpiresBiome", "chance": 0.12 },
+        { "name": "solmara/aurethys/AurethysCirquesBiome", "chance": 0.08 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [560, 614, 659, 704, 740]

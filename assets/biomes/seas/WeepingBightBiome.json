@@ -2,6 +2,11 @@
     "display_name": "The Weeping Bight",
     "map_color": "#143A6A",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/bight/BightSeaStacksBiome", "chance": 0.03 },
+        { "name": "seas/bight/BightSandBanksBiome", "chance": 0.05 },
+        { "name": "seas/bight/BightSeamountsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [100, 112, 124, 136, 148]

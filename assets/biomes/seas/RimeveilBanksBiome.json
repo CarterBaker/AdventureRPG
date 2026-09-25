@@ -2,6 +2,11 @@
     "display_name": "The Rimeveil Banks",
     "map_color": "#30A3CC",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/rimebank/RimebankIcebergsBiome", "chance": 0.06 },
+        { "name": "seas/rimebank/RimebankSkerriesBiome", "chance": 0.04 },
+        { "name": "seas/rimebank/RimebankSandBanksBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

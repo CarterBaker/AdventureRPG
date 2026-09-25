@@ -2,6 +2,11 @@
     "display_name": "The Strait of Veyl",
     "map_color": "#163D6F",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/strait/StraitHighIslesBiome", "chance": 0.03 },
+        { "name": "seas/strait/StraitCoralCaysBiome", "chance": 0.04 },
+        { "name": "seas/strait/StraitSeamountsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [104, 115, 126, 137, 148]

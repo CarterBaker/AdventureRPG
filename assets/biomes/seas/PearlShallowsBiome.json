@@ -2,6 +2,11 @@
     "display_name": "The Pearl Shallows",
     "map_color": "#7FCEDF",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/pearl/PearlReefsBiome", "chance": 0.08 },
+        { "name": "seas/pearl/PearlCoralCaysBiome", "chance": 0.05 },
+        { "name": "seas/pearl/PearlSandBanksBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

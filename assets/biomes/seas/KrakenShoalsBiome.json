@@ -2,6 +2,11 @@
     "display_name": "The Kraken Shoals",
     "map_color": "#3AABD0",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/shoals/ShoalsSkerriesBiome", "chance": 0.05 },
+        { "name": "seas/shoals/ShoalsIcebergsBiome", "chance": 0.04 },
+        { "name": "seas/shoals/ShoalsKelpForestBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

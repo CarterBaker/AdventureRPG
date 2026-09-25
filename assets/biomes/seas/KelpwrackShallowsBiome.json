@@ -2,6 +2,11 @@
     "display_name": "The Kelpwrack Shallows",
     "map_color": "#34A8CF",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/kelpwrack/KelpwrackKelpForestBiome", "chance": 0.15 },
+        { "name": "seas/kelpwrack/KelpwrackSkerriesBiome", "chance": 0.05 },
+        { "name": "seas/kelpwrack/KelpwrackSeaStacksBiome", "chance": 0.03 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

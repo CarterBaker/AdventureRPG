@@ -3,6 +3,12 @@
     "map_color": "#50958A",
     "ocean_water": false,
     "beach_biome": "shores/BrinewoodMangrovesBiome",
+    "probable_biomes": [
+        { "name": "solmara/delta/DeltaMangrovesBiome", "chance": 0.1 },
+        { "name": "solmara/delta/DeltaLagoonsBiome", "chance": 0.08 },
+        { "name": "solmara/delta/DeltaLeveesBiome", "chance": 0.08 },
+        { "name": "solmara/delta/DeltaTerracesBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [161, 163, 165, 167, 169]

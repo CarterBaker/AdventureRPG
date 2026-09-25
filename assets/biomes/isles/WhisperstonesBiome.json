@@ -3,6 +3,10 @@
     "map_color": "#BED357",
     "ocean_water": false,
     "beach_biome": "shores/SunlitStrandBiome",
+    "probable_biomes": [
+        { "name": "isles/whisperkey/WhisperkeyMangrovesBiome", "chance": 0.1 },
+        { "name": "isles/whisperkey/WhisperkeyLagoonsBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [163, 167, 170, 173, 175]

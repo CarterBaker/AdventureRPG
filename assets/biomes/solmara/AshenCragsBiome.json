@@ -3,6 +3,12 @@
     "map_color": "#775E4E",
     "ocean_water": false,
     "beach_biome": "shores/BlacksandShoreBiome",
+    "probable_biomes": [
+        { "name": "solmara/ashen/AshenCinderConesBiome", "chance": 0.08 },
+        { "name": "solmara/ashen/AshenFumarolesBiome", "chance": 0.06 },
+        { "name": "solmara/ashen/AshenScreeFieldsBiome", "chance": 0.06 },
+        { "name": "solmara/ashen/AshenSpiresBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [220, 277, 324, 372, 410]

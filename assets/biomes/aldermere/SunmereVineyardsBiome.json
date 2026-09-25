@@ -3,6 +3,12 @@
     "map_color": "#9BCA50",
     "ocean_water": false,
     "beach_biome": "shores/SunmereStrandBiome",
+    "probable_biomes": [
+        { "name": "aldermere/sunmere/SunmereHillsBiome", "chance": 0.1 },
+        { "name": "aldermere/sunmere/SunmereGrovesBiome", "chance": 0.06 },
+        { "name": "aldermere/sunmere/SunmereScarpsBiome", "chance": 0.04 },
+        { "name": "aldermere/sunmere/SunmereButtesBiome", "chance": 0.03 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [170, 181, 191, 200, 208]

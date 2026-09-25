@@ -2,6 +2,12 @@
     "display_name": "The Rimeveil Sea",
     "map_color": "#0D274B",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/rimeveil/RimeveilIcebergsBiome", "chance": 0.05 },
+        { "name": "seas/rimeveil/RimeveilTabularBergsBiome", "chance": 0.03 },
+        { "name": "seas/rimeveil/RimeveilSeamountsBiome", "chance": 0.04 },
+        { "name": "seas/rimeveil/RimeveilAbyssalPlainBiome", "chance": 0.08 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [88, 102, 117, 132, 146]

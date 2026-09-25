@@ -2,6 +2,10 @@
     "display_name": "Lake Solenne",
     "map_color": "#569AC3",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "lakes/solenne/SolenneReedIslesBiome", "chance": 0.05 },
+        { "name": "lakes/solenne/SolenneDeepPoolsBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [130, 138, 144, 149, 153]

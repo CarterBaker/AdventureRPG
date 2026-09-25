@@ -3,6 +3,11 @@
     "map_color": "#E0E06C",
     "ocean_water": false,
     "beach_biome": "shores/GreyspinePalisadesBiome",
+    "probable_biomes": [
+        { "name": "isles/serren/SerrenWatchersQuarryBiome", "chance": 0.06 },
+        { "name": "isles/serren/SerrenCinderConesBiome", "chance": 0.06 },
+        { "name": "isles/serren/SerrenDownsBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [168, 179, 188, 197, 204]

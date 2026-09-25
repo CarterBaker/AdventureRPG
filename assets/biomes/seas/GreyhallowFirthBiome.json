@@ -2,6 +2,11 @@
     "display_name": "The Greyhallow Firth",
     "map_color": "#10305B",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/greyhallow/GreyhallowSkerriesBiome", "chance": 0.05 },
+        { "name": "seas/greyhallow/GreyhallowSeaStacksBiome", "chance": 0.03 },
+        { "name": "seas/greyhallow/GreyhallowSeamountsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [108, 118, 128, 138, 148]

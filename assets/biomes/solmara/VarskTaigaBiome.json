@@ -3,6 +3,13 @@
     "map_color": "#3B7F4E",
     "ocean_water": false,
     "beach_biome": "shores/FrostShingleBiome",
+    "probable_biomes": [
+        { "name": "solmara/varsk/VarskMorainesBiome", "chance": 0.06 },
+        { "name": "solmara/varsk/VarskMireBiome", "chance": 0.1 },
+        { "name": "solmara/varsk/VarskKettleLakesBiome", "chance": 0.06 },
+        { "name": "solmara/varsk/VarskPingosBiome", "chance": 0.04 },
+        { "name": "solmara/varsk/VarskHillsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [168, 178, 186, 194, 200]

@@ -2,6 +2,11 @@
     "display_name": "The Whisperstone Shoals",
     "map_color": "#4BB4D4",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/whisperstone/WhisperstoneMangroveCaysBiome", "chance": 0.07 },
+        { "name": "seas/whisperstone/WhisperstoneSandCaysBiome", "chance": 0.05 },
+        { "name": "seas/whisperstone/WhisperstoneSandBanksBiome", "chance": 0.08 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

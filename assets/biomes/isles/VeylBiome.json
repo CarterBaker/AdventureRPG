@@ -3,6 +3,11 @@
     "map_color": "#B5CF52",
     "ocean_water": false,
     "beach_biome": "shores/PearlbeachBiome",
+    "probable_biomes": [
+        { "name": "isles/veyl/VeylTsingarStoneForestBiome", "chance": 0.06 },
+        { "name": "isles/veyl/VeylHillsBiome", "chance": 0.06 },
+        { "name": "isles/veyl/VeylMangrovesBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [170, 183, 194, 205, 214]

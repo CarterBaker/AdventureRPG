@@ -2,6 +2,11 @@
     "display_name": "The Weedmire Shallows",
     "map_color": "#68C3DA",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/weedmire/WeedmireSandBanksBiome", "chance": 0.06 },
+        { "name": "seas/weedmire/WeedmireReefsBiome", "chance": 0.06 },
+        { "name": "seas/weedmire/WeedmireSandCaysBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

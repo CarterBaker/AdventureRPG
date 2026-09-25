@@ -2,6 +2,10 @@
     "display_name": "The Skyfall Tarn",
     "map_color": "#66AACC",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "lakes/tarn/TarnReedfolkIslesBiome", "chance": 0.08 },
+        { "name": "lakes/tarn/TarnDeepPoolsBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [132, 139, 145, 149, 153]

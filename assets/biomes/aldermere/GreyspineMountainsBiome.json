@@ -3,6 +3,13 @@
     "map_color": "#3F3631",
     "ocean_water": false,
     "beach_biome": "shores/GreyspinePalisadesBiome",
+    "probable_biomes": [
+        { "name": "aldermere/greyspine/GreyspineAlpineMeadowsBiome", "chance": 0.12 },
+        { "name": "aldermere/greyspine/GreyspineSpiresBiome", "chance": 0.06 },
+        { "name": "aldermere/greyspine/GreyspineCirquesBiome", "chance": 0.06 },
+        { "name": "aldermere/greyspine/GreyspineScreeFieldsBiome", "chance": 0.06 },
+        { "name": "aldermere/greyspine/GreyspineSaddlesBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [240, 303, 356, 408, 450]

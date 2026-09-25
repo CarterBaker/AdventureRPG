@@ -2,6 +2,13 @@
     "display_name": "The Glasswater Sea",
     "map_color": "#123360",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/glasswater/GlasswaterHighIslesBiome", "chance": 0.03 },
+        { "name": "seas/glasswater/GlasswaterSirensRocksBiome", "chance": 0.02 },
+        { "name": "seas/glasswater/GlasswaterSeamountsBiome", "chance": 0.05 },
+        { "name": "seas/glasswater/GlasswaterAbyssalPlainBiome", "chance": 0.06 },
+        { "name": "seas/glasswater/GlasswaterBirdRocksBiome", "chance": 0.02 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [102, 114, 125, 136, 148]

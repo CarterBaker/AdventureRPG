@@ -2,6 +2,12 @@
     "display_name": "The Tidemourn Shoals",
     "map_color": "#2F9EC6",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/tidemourn/TidemournKelpForestBiome", "chance": 0.08 },
+        { "name": "seas/tidemourn/TidemournSeaStacksBiome", "chance": 0.03 },
+        { "name": "seas/tidemourn/TidemournSandBanksBiome", "chance": 0.06 },
+        { "name": "seas/tidemourn/TidemournSkerriesBiome", "chance": 0.03 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

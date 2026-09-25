@@ -3,6 +3,12 @@
     "map_color": "#B29D80",
     "ocean_water": false,
     "beach_biome": "shores/DragonwallCliffsBiome",
+    "probable_biomes": [
+        { "name": "solmara/highthrone/HighthroneMonadnockBiome", "chance": 0.06 },
+        { "name": "solmara/highthrone/HighthroneMorainesBiome", "chance": 0.06 },
+        { "name": "solmara/highthrone/HighthroneRavinesBiome", "chance": 0.04 },
+        { "name": "solmara/highthrone/HighthronePlayaBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [300, 318, 333, 348, 360]

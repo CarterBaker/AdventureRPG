@@ -1,0 +1,58 @@
+{
+    "ocean_water": false,
+    "continentalness_spline": {
+        "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
+        "height_blocks": [180, 184, 187, 190, 193]
+    },
+    "erosion_spline": {
+        "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
+        "amplitude_blocks": [10, 8, 7, 6, 4]
+    },
+    "peaks_valleys_spline": {
+        "x": [0.0, 0.4, 0.7, 1.0],
+        "contribution": [0.1, 0.3, 0.6, 0.8]
+    },
+    "detail_amplitude_blocks": 1.6,
+    "detail_wavelength_blocks": 28,
+    "surface_block": "TerraArcanaBlocks/Sand",
+    "subsurface_block": "TerraArcanaBlocks/Sand",
+    "underwater_block": "TerraArcanaBlocks/Sand",
+    "weathers": {
+        "Spring": [
+            { "name": "standard/SunnyWeather", "chance": 30 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 22 },
+            { "name": "standard/ClearWeather", "chance": 16 },
+            { "name": "standard/HighCirrusWeather", "chance": 12 },
+            { "name": "standard/CloudyWeather", "chance": 10 },
+            { "name": "standard/StormyWeather", "chance": 6 },
+            { "name": "standard/OvercastWeather", "chance": 4 }
+        ],
+        "Summer": [
+            { "name": "standard/SunnyWeather", "chance": 32 },
+            { "name": "standard/PartlyCloudyWeather", "chance": 20 },
+            { "name": "standard/StormyWeather", "chance": 14 },
+            { "name": "standard/ClearWeather", "chance": 14 },
+            { "name": "standard/HighCirrusWeather", "chance": 10 },
+            { "name": "standard/CloudyWeather", "chance": 7 },
+            { "name": "standard/OvercastWeather", "chance": 3 }
+        ],
+        "Autumn": [
+            { "name": "standard/PartlyCloudyWeather", "chance": 22 },
+            { "name": "standard/SunnyWeather", "chance": 22 },
+            { "name": "standard/StormyWeather", "chance": 18 },
+            { "name": "standard/CloudyWeather", "chance": 14 },
+            { "name": "standard/ClearWeather", "chance": 12 },
+            { "name": "standard/HighCirrusWeather", "chance": 8 },
+            { "name": "standard/OvercastWeather", "chance": 4 }
+        ],
+        "Winter": [
+            { "name": "standard/PartlyCloudyWeather", "chance": 24 },
+            { "name": "standard/SunnyWeather", "chance": 22 },
+            { "name": "standard/CloudyWeather", "chance": 18 },
+            { "name": "standard/ClearWeather", "chance": 14 },
+            { "name": "standard/HighCirrusWeather", "chance": 10 },
+            { "name": "standard/OvercastWeather", "chance": 7 },
+            { "name": "standard/StormyWeather", "chance": 5 }
+        ]
+    }
+}

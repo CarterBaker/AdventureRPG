@@ -2,6 +2,10 @@
     "display_name": "The Drowned Throne",
     "map_color": "#060637",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/throne/ThroneHadalPitsBiome", "chance": 0.2 },
+        { "name": "seas/throne/ThroneBrineLakesBiome", "chance": 0.1 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [24, 25, 26, 28, 30]

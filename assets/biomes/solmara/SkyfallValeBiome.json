@@ -3,6 +3,11 @@
     "map_color": "#A6D98C",
     "ocean_water": false,
     "beach_biome": "shores/DragonwallCliffsBiome",
+    "probable_biomes": [
+        { "name": "solmara/skyfall/SkyfallPlayaBiome", "chance": 0.06 },
+        { "name": "solmara/skyfall/SkyfallKnollsBiome", "chance": 0.06 },
+        { "name": "solmara/skyfall/SkyfallTorsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [200, 212, 222, 232, 240]

@@ -2,6 +2,11 @@
     "display_name": "The Blackwater Shallows",
     "map_color": "#6EC6DB",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/blackwater/BlackwaterBasaltIslesBiome", "chance": 0.06 },
+        { "name": "seas/blackwater/BlackwaterSeaStacksBiome", "chance": 0.04 },
+        { "name": "seas/blackwater/BlackwaterHotSpringsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

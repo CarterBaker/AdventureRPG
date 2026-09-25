@@ -2,6 +2,10 @@
     "display_name": "The Shattered Floes",
     "map_color": "#B0DCE8",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/shattered/ShatteredIcebergsBiome", "chance": 0.12 },
+        { "name": "seas/shattered/ShatteredPressureRidgesBiome", "chance": 0.08 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [140, 145, 149, 153, 156]

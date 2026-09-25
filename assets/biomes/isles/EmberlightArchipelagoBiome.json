@@ -3,6 +3,12 @@
     "map_color": "#C7D65C",
     "ocean_water": false,
     "beach_biome": "shores/SunlitStrandBiome",
+    "probable_biomes": [
+        { "name": "isles/emberlight/EmberlightHillsBiome", "chance": 0.06 },
+        { "name": "isles/emberlight/EmberlightTwinPitonsBiome", "chance": 0.04 },
+        { "name": "isles/emberlight/EmberlightGrovesBiome", "chance": 0.08 },
+        { "name": "isles/emberlight/EmberlightLagoonsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [164, 175, 184, 193, 200]

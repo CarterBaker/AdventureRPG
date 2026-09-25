@@ -2,6 +2,11 @@
     "display_name": "The Nethervault Trench",
     "map_color": "#040A25",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/nethervault/NethervaultHadalPitsBiome", "chance": 0.1 },
+        { "name": "seas/nethervault/NethervaultVentFieldsBiome", "chance": 0.06 },
+        { "name": "seas/nethervault/NethervaultTrenchWallsBiome", "chance": 0.1 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [30, 36, 44, 54, 66]

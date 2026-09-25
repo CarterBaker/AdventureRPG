@@ -2,6 +2,11 @@
     "display_name": "Mirrormere",
     "map_color": "#4689B9",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "lakes/mirror/MirrorReedIslesBiome", "chance": 0.06 },
+        { "name": "lakes/mirror/MirrorShallowsBiome", "chance": 0.08 },
+        { "name": "lakes/mirror/MirrorDeepPoolsBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [134, 140, 145, 149, 153]

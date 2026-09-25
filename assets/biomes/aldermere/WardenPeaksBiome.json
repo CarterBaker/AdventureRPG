@@ -3,6 +3,12 @@
     "map_color": "#51433C",
     "ocean_water": false,
     "beach_biome": "shores/GreyspinePalisadesBiome",
+    "probable_biomes": [
+        { "name": "aldermere/warden/WardenSpiresBiome", "chance": 0.12 },
+        { "name": "aldermere/warden/WardenAlpineMeadowsBiome", "chance": 0.08 },
+        { "name": "aldermere/warden/WardenScreeFieldsBiome", "chance": 0.08 },
+        { "name": "aldermere/warden/WardenCirquesBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [230, 293, 346, 398, 440]

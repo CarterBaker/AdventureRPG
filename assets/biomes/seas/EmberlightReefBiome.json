@@ -2,6 +2,12 @@
     "display_name": "The Emberlight Reef",
     "map_color": "#45B1D3",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/reef/ReefCoralCaysBiome", "chance": 0.08 },
+        { "name": "seas/reef/ReefPalmIslesBiome", "chance": 0.05 },
+        { "name": "seas/reef/ReefBlueEyeBiome", "chance": 0.02 },
+        { "name": "seas/reef/ReefReefsBiome", "chance": 0.1 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

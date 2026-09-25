@@ -2,6 +2,11 @@
     "display_name": "The Winterholt Channel",
     "map_color": "#1F518B",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/channel/ChannelIcebergsBiome", "chance": 0.05 },
+        { "name": "seas/channel/ChannelSkerriesBiome", "chance": 0.04 },
+        { "name": "seas/channel/ChannelSeamountsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [100, 112, 124, 135, 147]

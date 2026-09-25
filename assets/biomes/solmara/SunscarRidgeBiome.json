@@ -3,6 +3,12 @@
     "map_color": "#A07A5C",
     "ocean_water": false,
     "beach_biome": "shores/RedwallBluffsBiome",
+    "probable_biomes": [
+        { "name": "solmara/sunscar/SunscarMesasBiome", "chance": 0.08 },
+        { "name": "solmara/sunscar/SunscarButtesBiome", "chance": 0.06 },
+        { "name": "solmara/sunscar/SunscarRavinesBiome", "chance": 0.05 },
+        { "name": "solmara/sunscar/SunscarHoodoosBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [210, 248, 279, 311, 336]

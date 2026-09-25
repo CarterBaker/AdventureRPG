@@ -2,6 +2,11 @@
     "display_name": "The Bonewhite Banks",
     "map_color": "#62C1D9",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/bonewhite/BonewhiteIcebergsBiome", "chance": 0.04 },
+        { "name": "seas/bonewhite/BonewhiteSkerriesBiome", "chance": 0.04 },
+        { "name": "seas/bonewhite/BonewhiteSandBanksBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [138, 143, 148, 152, 155]

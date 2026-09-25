@@ -2,6 +2,12 @@
     "display_name": "The Kraken's Gate",
     "map_color": "#0F2D56",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/kraken/KrakenKrakensTeethBiome", "chance": 0.04 },
+        { "name": "seas/kraken/KrakenSeamountsBiome", "chance": 0.05 },
+        { "name": "seas/kraken/KrakenVentFieldsBiome", "chance": 0.04 },
+        { "name": "seas/kraken/KrakenIcebergsBiome", "chance": 0.02 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [104, 115, 126, 137, 148]

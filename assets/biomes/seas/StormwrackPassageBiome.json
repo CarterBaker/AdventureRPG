@@ -2,6 +2,11 @@
     "display_name": "The Stormwrack Passage",
     "map_color": "#174074",
     "ocean_water": true,
+    "probable_biomes": [
+        { "name": "seas/stormwrack/StormwrackIcebergsBiome", "chance": 0.04 },
+        { "name": "seas/stormwrack/StormwrackSeaStacksBiome", "chance": 0.03 },
+        { "name": "seas/stormwrack/StormwrackAbyssalPlainBiome", "chance": 0.1 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [72, 90, 107, 124, 142]

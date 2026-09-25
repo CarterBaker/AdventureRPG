@@ -3,6 +3,10 @@
     "map_color": "#AF8A6A",
     "ocean_water": false,
     "beach_biome": "shores/IcecliffsBiome",
+    "probable_biomes": [
+        { "name": "isles/jotun/JotunSpiresBiome", "chance": 0.1 },
+        { "name": "isles/jotun/JotunCirquesBiome", "chance": 0.06 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [220, 265, 302, 340, 370]

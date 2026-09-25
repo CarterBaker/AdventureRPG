@@ -3,6 +3,11 @@
     "map_color": "#CFDA61",
     "ocean_water": false,
     "beach_biome": "shores/PearlbeachBiome",
+    "probable_biomes": [
+        { "name": "isles/cinnabar/CinnabarLagoonsBiome", "chance": 0.08 },
+        { "name": "isles/cinnabar/CinnabarMangrovesBiome", "chance": 0.08 },
+        { "name": "isles/cinnabar/CinnabarDunesBiome", "chance": 0.05 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [163, 168, 172, 176, 179]

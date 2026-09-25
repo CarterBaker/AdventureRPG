@@ -3,6 +3,11 @@
     "map_color": "#428A5A",
     "ocean_water": false,
     "beach_biome": "shores/FrostShingleBiome",
+    "probable_biomes": [
+        { "name": "isles/winterpine/WinterpineMorainesBiome", "chance": 0.06 },
+        { "name": "isles/winterpine/WinterpineMireBiome", "chance": 0.06 },
+        { "name": "isles/winterpine/WinterpineTorsBiome", "chance": 0.04 }
+    ],
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
         "height_blocks": [168, 180, 190, 200, 208]
