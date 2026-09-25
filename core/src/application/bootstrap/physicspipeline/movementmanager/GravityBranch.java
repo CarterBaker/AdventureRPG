@@ -4,7 +4,6 @@ import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
-import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.entitypipeline.util.EntityInputHandle;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.BranchPackage;
@@ -15,20 +14,12 @@ public class GravityBranch extends BranchPackage {
 
     /*
      * Applies gravity and jump force along all three axes based on the world
-     * gravity direction each frame. Reads jump input from the entity's
-     * EntityInputHandle.
-     * Writes displacement directly into the shared movement vector passed by
-     * MovementManager.
-     *
-     * wading, passed in by MovementManager whenever the entity is touching
-     * liquid too shallow to fully submerge it (see SwimBranch.isSwimming()),
-     * diminishes the jump impulse by WADE_JUMP_HEIGHT_MULTIPLIER and, once
-     * grounded again with nothing else claiming the state this frame, marks
-     * the entity as EntityState.WADING instead of leaving whatever
-     * IDLE/WALKING/RUNNING/MOVING state PlayerManager wrote earlier this
-     * frame — the same full override SWIMMING already gets in SwimBranch.
-     * WADING is never excluded from EntityStateHandle.isGrounded(), so jump
-     * input is still read normally while wading, just with a smaller impulse.
+     * gravity direction each frame, writing displacement into the shared
+     * movement vector passed by MovementManager. The jump height arrives
+     * already resolved by SwimBranch, so water depth nerfs it without this
+     * branch knowing about liquid; jump() is the single place a jump impulse
+     * is applied, shared by grounded jumps and every water leap. wading marks
+     * a grounded entity as EntityState.WADING instead of its land state.
      */
 
     // Settings
@@ -49,36 +40,27 @@ public class GravityBranch extends BranchPackage {
 
     // Gravity \\
 
-    void calculate(Vector3 movement, EntityInstance entity, boolean wading) {
+    void calculate(
+            Vector3 movement,
+            EntityInstance entity,
+            float jumpHeight,
+            boolean wading) {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         BehaviorHandle behavior = entity.getBehaviorHandle();
         WorldHandle world = entity.getWorldHandle();
-        StatisticsHandle stats = entity.getStatisticsHandle();
         EntityInputHandle input = entity.getEntityInputHandle();
         Vector3 gravVel = state.getGravityVelocity();
         Vector3 gravDir = world.getGravityDirection();
         float delta = internal.getDeltaTime();
         float gravMult = world.getGravityMultiplier();
         int verticalInput = input.getVertical();
-
-        float gravLen = (float) Math.sqrt(
-                gravDir.x * gravDir.x + gravDir.y * gravDir.y + gravDir.z * gravDir.z);
-
-        if (gravLen == 0f)
-            gravLen = 1f;
-
-        float jumpHeight = stats.getJumpHeight() * (wading ? EngineSetting.WADE_JUMP_HEIGHT_MULTIPLIER : 1f);
-        float jumpImpulse = (float) Math.sqrt(2.0 * gravityForce * gravMult * jumpHeight) * jumpScale;
+        float gravLen = calculateGravityLength(gravDir);
+        float jumpImpulse = calculateJumpImpulse(world, jumpHeight);
 
         // Jump initiation — instant velocity set opposite to gravity direction
-        if (verticalInput == 1 && state.isGrounded()) {
-            gravVel.x = (-gravDir.x / gravLen) * jumpImpulse;
-            gravVel.y = (-gravDir.y / gravLen) * jumpImpulse;
-            gravVel.z = (-gravDir.z / gravLen) * jumpImpulse;
-            state.setJumpStartTime(internal.getTime());
-            state.setMovementState(EntityState.JUMPING);
-        }
+        if (verticalInput == 1 && state.isGrounded())
+            jump(entity, jumpHeight);
 
         // Hold force — fraction of impulse applied opposite to gravity while held
         // within cap
@@ -147,5 +129,36 @@ public class GravityBranch extends BranchPackage {
             state.setMovementState(wading ? EntityState.WADING : EntityState.IDLE);
         else
             state.setMovementState(EntityState.FALLING);
+    }
+
+    // Jump \\
+
+    void jump(EntityInstance entity, float jumpHeight) {
+
+        EntityStateHandle state = entity.getEntityStateHandle();
+        WorldHandle world = entity.getWorldHandle();
+        Vector3 gravVel = state.getGravityVelocity();
+        Vector3 gravDir = world.getGravityDirection();
+        float gravLen = calculateGravityLength(gravDir);
+        float jumpImpulse = calculateJumpImpulse(world, jumpHeight);
+
+        gravVel.x = (-gravDir.x / gravLen) * jumpImpulse;
+        gravVel.y = (-gravDir.y / gravLen) * jumpImpulse;
+        gravVel.z = (-gravDir.z / gravLen) * jumpImpulse;
+
+        state.setJumpStartTime(internal.getTime());
+        state.setMovementState(EntityState.JUMPING);
+    }
+
+    private float calculateJumpImpulse(WorldHandle world, float jumpHeight) {
+        return (float) Math.sqrt(2.0 * gravityForce * world.getGravityMultiplier() * jumpHeight) * jumpScale;
+    }
+
+    private float calculateGravityLength(Vector3 gravDir) {
+
+        float gravLen = (float) Math.sqrt(
+                gravDir.x * gravDir.x + gravDir.y * gravDir.y + gravDir.z * gravDir.z);
+
+        return gravLen == 0f ? 1f : gravLen;
     }
 }

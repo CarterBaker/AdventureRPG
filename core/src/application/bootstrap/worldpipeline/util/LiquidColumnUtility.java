@@ -92,4 +92,27 @@ public class LiquidColumnUtility extends EngineUtility {
 
         return WORLD_TOP_Y;
     }
+
+    // Floor \\
+
+    public static float findFloorHeight(
+            ChunkInstance chunkInstance,
+            BlockManager blockManager,
+            int blockX,
+            int fromTotalY,
+            int blockZ,
+            int minTotalY) {
+
+        int floorLimit = Math.max(0, minTotalY);
+
+        for (int scanY = fromTotalY; scanY >= floorLimit; scanY--) {
+
+            BlockHandle block = getBlockAt(chunkInstance, blockManager, blockX, scanY, blockZ);
+
+            if (!isLiquid(block))
+                return scanY + 1;
+        }
+
+        return floorLimit;
+    }
 }
