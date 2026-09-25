@@ -3,6 +3,7 @@ package application.bootstrap.renderpipeline.entityrendersystem;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
@@ -32,7 +33,7 @@ public class EntityRenderSystem extends SystemPackage {
      * empty exactly once, no matter how many windows are open.
      *
      * 2. pushCharacter() — builds the model matrix from the entity's own
-     * world position, facing direction, and height, then forwards one
+     * world position, smoothed body yaw, and height, then forwards one
      * skinned draw per character part to RenderManager.pushSkinnedCall():
      * the body mesh, and for an entity with an appearance its worn head,
      * nose, and hair meshes too, all sharing one model matrix, one pose, and one
@@ -45,8 +46,10 @@ public class EntityRenderSystem extends SystemPackage {
      * exact same centering PlayerManager already uses to place the
      * camera's eye position — so the rendered body and the point the
      * camera orbits/aims from always agree; worldPosition itself is the
-     * entity's bounding-box min corner, never its center. Everything that
-     * differs between two characters of one template — skin and hair tint,
+     * entity's bounding-box min corner, never its center. The body is
+     * lifted by the entity's cosmetic ground offset so it stands on the
+     * jittered surface of natural blocks. Everything that differs between
+     * two characters of one template — skin and hair tint,
      * face overlays, the hidden bone — is packed into the per-instance
      * SkinnedAppearanceStruct row, so they still draw instanced together.
      * Runtime code never builds this matrix or that row, and never touches
@@ -99,21 +102,19 @@ public class EntityRenderSystem extends SystemPackage {
      * character model (entity.hasAnimationState() == false) — safe to call
      * unconditionally for any EntityInstance, player or NPC.
      *
-     * viewDirection drives yaw-only facing — pitch is intentionally
-     * excluded, a body shouldn't tip forward/back just because whatever
-     * camera is looking at it points up or down.
+     * Facing is the body's own yaw from EntityStateHandle — yaw only, a
+     * body never tips forward/back because a camera points up or down.
      *
-     * hiddenBoneName, when non-null, resolves that bone against this
-     * entity's own rig and collapses every vertex weighted mostly to it —
-     * used by first-person view to hide the head (and the hair skinned to
-     * it) without a second mesh or draw call. It rides in this entity's own
-     * appearance row, so hiding one player's head never hides anyone else's.
-     * Pass null to render every bone normally.
+     * hideHead collapses every vertex weighted mostly to the head bone the
+     * entity's appearance names — used by first-person view to hide the
+     * head (and the hair skinned to it) without a second mesh or draw call.
+     * It rides in this entity's own appearance row, so hiding one player's
+     * head never hides anyone else's. An entity with no appearance has no
+     * head bone to hide and always renders every bone.
      */
     public void pushCharacter(
             EntityInstance entity,
-            Vector3 viewDirection,
-            String hiddenBoneName,
+            boolean hideHead,
             FboInstance targetFbo,
             WindowInstance window) {
 
@@ -124,8 +125,8 @@ public class EntityRenderSystem extends SystemPackage {
         MaterialInstance material = entityData.getCharacterMaterial();
         Matrix4[] skinningMatrices = entity.getAnimationStateHandle().getSkinningMatrices();
 
-        composeModelMatrix(entity, viewDirection);
-        resolveAppearance(entity, hiddenBoneName);
+        composeModelMatrix(entity);
+        resolveAppearance(entity, hideHead);
 
         if (!entity.hasAppearance()) {
             pushCharacterPart(entityData.getCharacterMesh(), material, skinningMatrices, targetFbo, window);
@@ -181,11 +182,11 @@ public class EntityRenderSystem extends SystemPackage {
 
     // Model Matrix \\
 
-    private void composeModelMatrix(EntityInstance entity, Vector3 viewDirection) {
+    private void composeModelMatrix(EntityInstance entity) {
 
+        EntityStateHandle state = entity.getEntityStateHandle();
         Vector3 position = entity.getWorldPositionStruct().getPosition();
         Vector3 size = entity.getSize();
-        float yawRadians = (float) Math.atan2(viewDirection.x, viewDirection.z);
         float scale = size.y / entity.getEntityData().getModelHeight();
 
         // Center the footprint on the entity's own bounding box, exactly like
@@ -193,9 +194,9 @@ public class EntityRenderSystem extends SystemPackage {
         // min corner, not its center.
         positionScratch.set(
                 position.x + size.x * 0.5f,
-                position.y,
+                position.y + state.getGroundOffset(),
                 position.z + size.z * 0.5f);
-        rotationScratch.set(0f, (float) Math.toDegrees(yawRadians), 0f);
+        rotationScratch.set(0f, state.getBodyYaw(), 0f);
         scaleScratch.set(scale, scale, scale);
 
         RigMathUtility.composeLocal(
@@ -205,11 +206,11 @@ public class EntityRenderSystem extends SystemPackage {
 
     // Appearance \\
 
-    private void resolveAppearance(EntityInstance entity, String hiddenBoneName) {
+    private void resolveAppearance(EntityInstance entity, boolean hideHead) {
 
         appearanceScratch.reset();
-        appearanceScratch.setHiddenBone(hiddenBoneName != null
-                ? (float) entity.getEntityData().getRigHandle().getBoneIndex(hiddenBoneName)
+        appearanceScratch.setHiddenBone(hideHead && entity.hasAppearance()
+                ? (float) entity.getEntityData().getAppearanceData().getHeadBoneIndex()
                 : EngineSetting.SKINNED_HIDDEN_BONE_NONE);
 
         if (!entity.hasAppearance())

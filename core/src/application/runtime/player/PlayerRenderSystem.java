@@ -5,7 +5,6 @@ import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.renderpipeline.entityrendersystem.EntityRenderSystem;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.runtime.world.WorldSystem;
-import engine.assets.camera.CameraInstance;
 import engine.root.SystemPackage;
 
 public class PlayerRenderSystem extends SystemPackage {
@@ -20,13 +19,9 @@ public class PlayerRenderSystem extends SystemPackage {
      * anymore — see EntityRenderSystem for that. Mirrors how
      * WorldItemPlacementSystem/WorldItemRenderSystem keep all composite-item
      * logic in bootstrap and runtime only ever calls the entry points.
-     *
-     * "head" is hardcoded as the bone hidden in first person — every
-     * humanoid rig this engine loads is expected to name its head bone
-     * exactly that (see Humanoid.json).
+     * The body faces its own smoothed heading, and the head it hides in
+     * first person is the one its appearance JSON names.
      */
-
-    private static final String HEAD_BONE_NAME = "head";
 
     // Internal
     private PlayerManager playerManager;
@@ -53,18 +48,12 @@ public class PlayerRenderSystem extends SystemPackage {
             return;
 
         EntityInstance player = playerManager.getPlayerForWindow(windowID);
-        CameraInstance camera = playerManager.getCameraForWindow(windowID);
 
-        if (camera == null)
-            return;
-
-        String hiddenBone = playerManager.isFirstPerson(windowID) ? HEAD_BONE_NAME : null;
         FboInstance worldFbo = worldSystem.getWorldFbo();
 
         entityRenderSystem.pushCharacter(
                 player,
-                playerManager.getFacingDirectionForWindow(windowID),
-                hiddenBone,
+                playerManager.isFirstPerson(windowID),
                 worldFbo,
                 context.getWindow());
     }

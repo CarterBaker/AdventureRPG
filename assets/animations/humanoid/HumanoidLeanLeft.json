@@ -1,0 +1,18 @@
+{
+  "rig": "HumanoidRig",
+  "loop": true,
+  "tracks": {
+    "lower_torso": [
+      { "time": 0.0, "rotation": { "x": 0.0, "y": 0.0, "z": -5.0 } },
+      { "time": 1.0, "rotation": { "x": 0.0, "y": 0.0, "z": -5.0 } }
+    ],
+    "upper_torso": [
+      { "time": 0.0, "rotation": { "x": 0.0, "y": 3.0, "z": -4.0 } },
+      { "time": 1.0, "rotation": { "x": 0.0, "y": 3.0, "z": -4.0 } }
+    ],
+    "head": [
+      { "time": 0.0, "rotation": { "x": 0.0, "y": 4.0, "z": 6.0 } },
+      { "time": 1.0, "rotation": { "x": 0.0, "y": 4.0, "z": 6.0 } }
+    ]
+  }
+}

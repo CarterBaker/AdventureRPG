@@ -1,0 +1,144 @@
+{
+  "rig": "HumanoidRig",
+  "layers": [
+    {
+      "name": "base",
+      "blend": 0.22,
+      "nodes": {
+        "idle": { "clip": "humanoid/HumanoidIdle", "blend": 0.3 },
+        "locomotion": {
+          "parameter": "speed",
+          "rate_scale": true,
+          "blend": 0.25,
+          "clips": [
+            { "clip": "humanoid/HumanoidWalk", "value": 2.1 },
+            { "clip": "humanoid/HumanoidJog", "value": 4.95 },
+            { "clip": "humanoid/HumanoidRun", "value": 10.5 }
+          ]
+        },
+        "jump": { "clip": "humanoid/HumanoidJump", "blend": 0.15 },
+        "fall": { "clip": "humanoid/HumanoidFall", "blend": 0.25, "delay": 0.12 },
+        "swim": {
+          "parameter": "speed",
+          "blend": 0.3,
+          "clips": [
+            { "clip": "humanoid/HumanoidTread", "value": 0.0 },
+            { "clip": "humanoid/HumanoidSwim", "value": 2.4 }
+          ]
+        },
+        "wade_idle": { "clip": "humanoid/HumanoidWadeIdle", "blend": 0.3 },
+        "wade": {
+          "parameter": "speed",
+          "rate_scale": true,
+          "blend": 0.25,
+          "clips": [
+            { "clip": "humanoid/HumanoidWade", "value": 1.6 },
+            { "clip": "humanoid/HumanoidWadeRun", "value": 3.2 }
+          ]
+        },
+        "wade_shallow": {
+          "parameter": "speed",
+          "rate_scale": true,
+          "blend": 0.25,
+          "clips": [
+            { "clip": "humanoid/HumanoidWadeShallow", "value": 2.4 },
+            { "clip": "humanoid/HumanoidWadeRun", "value": 4.0 }
+          ]
+        },
+        "water_jump": { "clip": "humanoid/HumanoidWaterJump", "blend": 0.15 },
+        "water_leap": { "clip": "humanoid/HumanoidWaterLeap", "blend": 0.15 }
+      },
+      "states": {
+        "idle": "idle",
+        "walking": "locomotion",
+        "moving": "locomotion",
+        "running": "locomotion",
+        "jumping": "jump",
+        "falling": "fall",
+        "swimming": "swim",
+        "treading": "swim",
+        "wading": "wade",
+        "wading_idle": "wade_idle",
+        "shallow_wading": "wade_shallow",
+        "wading_running": "wade",
+        "water_jumping": "water_jump",
+        "water_leaping": "water_leap"
+      },
+      "transitions": [
+        { "from": "idle", "to": "locomotion", "blend": 0.2 },
+        { "from": "locomotion", "to": "idle", "blend": 0.3 },
+        { "from": "jump", "to": "fall", "blend": 0.35 },
+        { "from": "fall", "to": "idle", "blend": 0.18 },
+        { "from": "fall", "to": "locomotion", "blend": 0.16 },
+        { "from": "wade_idle", "to": "wade", "blend": 0.2 },
+        { "from": "wade_idle", "to": "wade_shallow", "blend": 0.2 }
+      ]
+    },
+    {
+      "name": "lean",
+      "mode": "additive",
+      "blend": 0.3,
+      "mask": { "lower_torso": 0.6, "upper_torso": 1.0, "head": 1.0 },
+      "nodes": {
+        "lean": {
+          "parameter": "turn_rate",
+          "clips": [
+            { "clip": "humanoid/HumanoidLeanRight", "value": -360.0 },
+            { "clip": "humanoid/HumanoidLeanLeft", "value": 360.0 }
+          ]
+        }
+      },
+      "states": {
+        "walking": "lean",
+        "moving": "lean",
+        "running": "lean",
+        "swimming": "lean",
+        "wading": "lean",
+        "shallow_wading": "lean",
+        "wading_running": "lean"
+      }
+    },
+    {
+      "name": "look_pitch",
+      "mode": "additive",
+      "blend": 0.25,
+      "mask": { "upper_torso": 0.5, "head": 1.0 },
+      "nodes": {
+        "look": {
+          "parameter": "look_pitch",
+          "clips": [
+            { "clip": "humanoid/HumanoidLookDown", "value": -60.0 },
+            { "clip": "humanoid/HumanoidLookForward", "value": 0.0 },
+            { "clip": "humanoid/HumanoidLookUp", "value": 60.0 }
+          ]
+        }
+      },
+      "default": "look"
+    },
+    {
+      "name": "look_yaw",
+      "mode": "additive",
+      "blend": 0.4,
+      "mask": { "upper_torso": 0.5, "head": 1.0 },
+      "nodes": {
+        "look": {
+          "parameter": "look_yaw",
+          "clips": [
+            { "clip": "humanoid/HumanoidLookForward", "value": -180.0 },
+            { "clip": "humanoid/HumanoidLookRight", "value": -120.0 },
+            { "clip": "humanoid/HumanoidLookRight", "value": -60.0 },
+            { "clip": "humanoid/HumanoidLookForward", "value": 0.0 },
+            { "clip": "humanoid/HumanoidLookLeft", "value": 60.0 },
+            { "clip": "humanoid/HumanoidLookLeft", "value": 120.0 },
+            { "clip": "humanoid/HumanoidLookForward", "value": 180.0 }
+          ]
+        }
+      },
+      "states": {
+        "idle": "look",
+        "wading_idle": "look",
+        "treading": "look"
+      }
+    }
+  ]
+}

@@ -7,7 +7,8 @@ public class BehaviorData extends DataPackage {
     /*
      * Immutable behavior definition loaded from JSON. Holds the identity and
      * movement rules for one named behavior type. Owned by BehaviorHandle
-     * for the engine lifetime.
+     * for the engine lifetime. turnResponsiveness is how quickly the body
+     * swings round to face where the entity is heading, per second.
      */
 
     // Identity
@@ -16,13 +17,15 @@ public class BehaviorData extends DataPackage {
 
     // Rules
     private final float jumpDuration;
+    private final float turnResponsiveness;
 
     // Constructor \\
 
     public BehaviorData(
             String behaviorName,
             short behaviorID,
-            float jumpDuration) {
+            float jumpDuration,
+            float turnResponsiveness) {
 
         // Identity
         this.behaviorName = behaviorName;
@@ -30,6 +33,7 @@ public class BehaviorData extends DataPackage {
 
         // Rules
         this.jumpDuration = jumpDuration;
+        this.turnResponsiveness = turnResponsiveness;
     }
 
     // Accessible \\
@@ -44,5 +48,9 @@ public class BehaviorData extends DataPackage {
 
     public float getJumpDuration() {
         return jumpDuration;
+    }
+
+    public float getTurnResponsiveness() {
+        return turnResponsiveness;
     }
 }

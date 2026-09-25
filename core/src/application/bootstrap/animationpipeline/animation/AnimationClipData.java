@@ -11,8 +11,8 @@ public class AnimationClipData extends DataPackage {
      * with no authored motion in this clip. duration is derived from the
      * latest keyframe time across every track at build time, never authored
      * directly, so it can never drift out of sync with the data it describes.
-     * blendDuration is how long an entity cross-fades into this clip from
-     * whatever pose it held when the clip was chosen.
+     * How a clip blends with others is never decided here — that belongs to
+     * the animation tree node that plays it.
      */
 
     // Identity
@@ -22,7 +22,6 @@ public class AnimationClipData extends DataPackage {
     // Timing
     private final float duration;
     private final boolean looping;
-    private final float blendDuration;
 
     // Tracks — indexed by bone index against rigHandle
     private final BoneTrackStruct[] boneTracks;
@@ -34,7 +33,6 @@ public class AnimationClipData extends DataPackage {
             RigHandle rigHandle,
             float duration,
             boolean looping,
-            float blendDuration,
             BoneTrackStruct[] boneTracks) {
 
         // Identity
@@ -44,7 +42,6 @@ public class AnimationClipData extends DataPackage {
         // Timing
         this.duration = duration;
         this.looping = looping;
-        this.blendDuration = blendDuration;
 
         // Tracks
         this.boneTracks = boneTracks;
@@ -66,10 +63,6 @@ public class AnimationClipData extends DataPackage {
 
     public boolean isLooping() {
         return looping;
-    }
-
-    public float getBlendDuration() {
-        return blendDuration;
     }
 
     public BoneTrackStruct getBoneTrack(int boneIndex) {

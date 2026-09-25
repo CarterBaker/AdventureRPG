@@ -1,6 +1,5 @@
 package application.bootstrap.entitypipeline.playermanager;
 
-import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
@@ -50,11 +49,14 @@ public class PlayerManager extends ManagerPackage {
      *
      * isFirstPerson(windowID) exposes whether the current distance is at/below
      * the first-person threshold — consumed by the render side (via
-     * EntityRenderSystem.pushCharacter()'s hiddenBoneName) to decide whether
-     * to hide the character's head. This is a live distance check, not the
-     * F5 toggle state directly, so the head fades out/in exactly as the
-     * lerp crosses the threshold regardless of whether zero was reached by
-     * scrolling or by F5.
+     * EntityRenderSystem.pushCharacter()'s hideHead) to decide whether to
+     * hide the character's head, and by movement, which holds the body to
+     * the camera in first person by asking the input to strafe. In third
+     * person the body turns toward wherever the player heads, so the
+     * character runs toward the camera rather than backpedalling. This is a
+     * live distance check, not the F5 toggle state directly, so the head
+     * fades out/in exactly as the lerp crosses the threshold regardless of
+     * whether zero was reached by scrolling or by F5.
      *
      * Camera rotation is driven externally by the runtime context.
      *
@@ -63,12 +65,12 @@ public class PlayerManager extends ManagerPackage {
      * Movement is additionally gated on the window's menu lock state so that
      * open menus suppress input without any external coordination.
      *
-     * Animation clip selection is driven here too, right after
-     * MovementManager.move() each frame, so the clip reflects the final
-     * movement state — including the jumping, falling, wading, and swimming
-     * states only movement can resolve. entityData.getClipForState() maps
-     * that EntityState to whatever clip that template authored for it.
-     * Entities with no character model skip this entirely.
+     * The player's animation is advanced here too, right after
+     * MovementManager.move() each frame, so its animation tree reads the
+     * final movement state, speed, and facing — including the jumping,
+     * falling, wading, and swimming states only movement can resolve.
+     * EntityInstance.updateAnimation() is the one path that feeds them in;
+     * entities with no character model skip it entirely.
      *
      * Character rendering itself — model matrix, entity-size scale, and the
      * actual skinned draw submission — lives entirely in the engine-side
@@ -91,9 +93,8 @@ public class PlayerManager extends ManagerPackage {
      * beginCharacterPreview() turns a window's player into the subject of a
      * character creator: it stands idle, animating, while the camera frames
      * it from the front, offset so the character sits clear of the creator's
-     * panels. rotateCharacterPreview() turns it on the spot, and
-     * getFacingDirectionForWindow() is the one facing the render side reads,
-     * the preview's while it runs and the camera's otherwise.
+     * panels. The preview faces the body by strafing toward the preview
+     * direction, so rotateCharacterPreview() turns it smoothly on the spot.
      * endCharacterPreview() hands the camera back looking the way the
      * character faces.
      */
@@ -265,6 +266,7 @@ public class PlayerManager extends ManagerPackage {
 
         // Translate raw hardware → game intent before anything reads EntityInputHandle
         playerInputSystem.translate(raw, player.getEntityInputHandle());
+        player.getEntityInputHandle().setStrafe(isFirstPerson(windowID));
 
         if (windowID2FreeCamera.get(windowID)) {
             calculateFreeCameraPosition(player, camera);
@@ -273,7 +275,7 @@ public class PlayerManager extends ManagerPackage {
 
         writeMovementState(player);
         movementManager.move(player);
-        updateAnimationState(player);
+        player.updateAnimation(internal.getDeltaTime());
 
         // Eye position — where gameplay (aiming, raycasts) actually happens,
         // regardless of where the visual camera ends up.
@@ -350,14 +352,6 @@ public class PlayerManager extends ManagerPackage {
                 windowID2CharacterPreviewYaw.get(windowID) + (float) Math.toRadians(degrees));
     }
 
-    public Vector3 getFacingDirectionForWindow(int windowID) {
-
-        if (windowID2CharacterPreview.get(windowID))
-            return resolvePreviewFacing(windowID);
-
-        return windowID2Camera.get(windowID).getDirection();
-    }
-
     private Vector3 resolvePreviewFacing(int windowID) {
 
         float yaw = windowID2CharacterPreviewYaw.get(windowID);
@@ -368,10 +362,18 @@ public class PlayerManager extends ManagerPackage {
     // The camera looks back at a point beside the character; its right axis along -facing is (facing.z, 0, -facing.x)
     private void updateCharacterPreview(int windowID, EntityInstance player, CameraInstance camera) {
 
-        player.getEntityStateHandle().setMovementState(EntityState.IDLE);
-        updateAnimationState(player);
-
         Vector3 facing = resolvePreviewFacing(windowID);
+        EntityStateHandle state = player.getEntityStateHandle();
+        EntityInputHandle input = player.getEntityInputHandle();
+
+        state.setMovementState(EntityState.IDLE);
+        state.setSpeed(0f, 0f);
+        input.setFacingDirection(facing.x, 0f, facing.z);
+        input.setStrafe(true);
+
+        movementManager.face(player);
+        player.updateAnimation(internal.getDeltaTime());
+
         Vector3 size = player.getSize();
         float lateral = EngineSetting.CHARACTER_PREVIEW_LATERAL_OFFSET;
         float distance = EngineSetting.CHARACTER_PREVIEW_DISTANCE;
@@ -488,22 +490,6 @@ public class PlayerManager extends ManagerPackage {
             state.setMovementState(EntityState.RUNNING);
         else
             state.setMovementState(EntityState.MOVING);
-    }
-
-    // Animation \\
-
-    private void updateAnimationState(EntityInstance player) {
-
-        if (!player.hasAnimationState())
-            return;
-
-        EntityState state = player.getEntityStateHandle().getMovementState();
-        AnimationClipHandle clip = player.getEntityData().getClipForState(state);
-
-        if (clip != null)
-            player.getAnimationStateHandle().setClip(clip);
-
-        player.getAnimationStateHandle().update(internal.getDeltaTime());
     }
 
     // Spawn Verification \\

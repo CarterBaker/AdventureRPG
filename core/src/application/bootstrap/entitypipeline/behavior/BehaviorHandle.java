@@ -37,4 +37,8 @@ public class BehaviorHandle extends HandlePackage {
     public float getJumpDuration() {
         return behaviorData.getJumpDuration();
     }
+
+    public float getTurnResponsiveness() {
+        return behaviorData.getTurnResponsiveness();
+    }
 }

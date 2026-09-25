@@ -3,12 +3,11 @@ package application.bootstrap.entitypipeline.entitymanager;
 import java.io.File;
 import com.google.gson.JsonObject;
 
-import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
-import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
+import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
+import application.bootstrap.entitypipeline.animationtreemanager.AnimationTreeManager;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityHandle;
-import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
@@ -25,8 +24,8 @@ class EntityBuilder extends BuilderPackage {
      * Parses entity template JSON into an EntityData and wraps it in an
      * EntityHandle. All size, weight, and eye level fields fall back to
      * engine defaults if not specified. The optional "model" block resolves
-     * a character mesh, a single shared material clone, and a rig, plus a
-     * clip handle per EntityState this template declares animations for,
+     * a character mesh, a single shared material clone, and a rig, plus the
+     * animation tree that drives it, which must be built on that same rig,
      * and — through AppearanceBuilder — the optional "appearance" block of
      * swappable features. The model's full height is read off the body
      * mesh and, when present, the default head together. Bootstrap-only.
@@ -35,7 +34,7 @@ class EntityBuilder extends BuilderPackage {
     // Internal
     private MeshManager meshManager;
     private MaterialManager materialManager;
-    private AnimationManager animationManager;
+    private AnimationTreeManager animationTreeManager;
     private AppearanceBuilder appearanceBuilder;
 
     // Base \\
@@ -46,7 +45,7 @@ class EntityBuilder extends BuilderPackage {
         // Internal
         this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
-        this.animationManager = get(AnimationManager.class);
+        this.animationTreeManager = get(AnimationTreeManager.class);
         this.appearanceBuilder = get(AppearanceBuilder.class);
     }
 
@@ -65,7 +64,7 @@ class EntityBuilder extends BuilderPackage {
 
         MeshHandle characterMesh = null;
         MaterialInstance characterMaterial = null;
-        AnimationClipHandle[] stateClips = null;
+        AnimationTreeHandle animationTreeHandle = null;
         float modelHeight = 0f;
         AppearanceData appearanceData = null;
 
@@ -82,7 +81,7 @@ class EntityBuilder extends BuilderPackage {
                         + "\" has no rig — cannot be used as a character model. File: " + file.getName());
 
             characterMaterial = materialManager.cloneMaterial(materialName);
-            stateClips = parseStateClips(modelJson, file);
+            animationTreeHandle = parseAnimationTree(modelJson, characterMesh, file);
 
             if (JsonUtility.hasObject(modelJson, "appearance"))
                 appearanceData = appearanceBuilder.build(
@@ -95,7 +94,7 @@ class EntityBuilder extends BuilderPackage {
 
         EntityData entityData = new EntityData(
                 sizeMin, sizeMax, weightMin, weightMax, eyeLevel, behaviorName,
-                characterMesh, characterMaterial, stateClips, modelHeight, appearanceData);
+                characterMesh, characterMaterial, animationTreeHandle, modelHeight, appearanceData);
 
         EntityHandle entityHandle = create(EntityHandle.class);
         entityHandle.constructor(entityData);
@@ -105,40 +104,16 @@ class EntityBuilder extends BuilderPackage {
 
     // Model Parsing \\
 
-    private AnimationClipHandle[] parseStateClips(JsonObject modelJson, File file) {
+    private AnimationTreeHandle parseAnimationTree(JsonObject modelJson, MeshHandle characterMesh, File file) {
 
-        AnimationClipHandle[] stateClips = new AnimationClipHandle[EntityState.values().length];
+        String treeName = JsonUtility.validateString(modelJson, "animation_tree");
+        AnimationTreeHandle animationTreeHandle = animationTreeManager.getAnimationTreeHandleFromTreeName(treeName);
 
-        if (!modelJson.has("animations") || modelJson.get("animations").isJsonNull())
-            return stateClips;
+        if (animationTreeHandle.getRigHandle() != characterMesh.getRigHandle())
+            throwException("Entity animation tree \"" + treeName
+                    + "\" targets a different rig than its model mesh. File: " + file.getName());
 
-        JsonObject animationsJson = modelJson.getAsJsonObject("animations");
-
-        for (EntityState state : EntityState.values()) {
-
-            String key = state.name().toLowerCase();
-
-            if (!animationsJson.has(key))
-                continue;
-
-            String clipName = animationsJson.get(key).getAsString();
-            stateClips[state.ordinal()] = animationManager.getClipHandleFromClipName(clipName);
-        }
-
-        resolveFallbackClips(stateClips);
-
-        return stateClips;
-    }
-
-    private void resolveFallbackClips(AnimationClipHandle[] stateClips) {
-
-        for (EntityState state : EntityState.values()) {
-
-            if (stateClips[state.ordinal()] != null || !state.hasFallback())
-                continue;
-
-            stateClips[state.ordinal()] = stateClips[state.getFallback().ordinal()];
-        }
+        return animationTreeHandle;
     }
 
     private float resolveModelHeight(MeshHandle characterMesh, AppearanceData appearanceData) {
