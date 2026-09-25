@@ -5,9 +5,11 @@ import com.google.gson.JsonObject;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
+import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityHandle;
 import application.bootstrap.entitypipeline.entity.EntityState;
+import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
@@ -24,14 +26,17 @@ class EntityBuilder extends BuilderPackage {
      * EntityHandle. All size, weight, and eye level fields fall back to
      * engine defaults if not specified. The optional "model" block resolves
      * a character mesh, a single shared material clone, and a rig, plus a
-     * clip handle per EntityState this template declares animations for.
-     * Bootstrap-only.
+     * clip handle per EntityState this template declares animations for,
+     * and — through AppearanceBuilder — the optional "appearance" block of
+     * swappable features. The model's full height is read off the body
+     * mesh and, when present, the default head together. Bootstrap-only.
      */
 
     // Internal
     private MeshManager meshManager;
     private MaterialManager materialManager;
     private AnimationManager animationManager;
+    private AppearanceBuilder appearanceBuilder;
 
     // Base \\
 
@@ -42,6 +47,7 @@ class EntityBuilder extends BuilderPackage {
         this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
         this.animationManager = get(AnimationManager.class);
+        this.appearanceBuilder = get(AppearanceBuilder.class);
     }
 
     // Build \\
@@ -60,6 +66,8 @@ class EntityBuilder extends BuilderPackage {
         MeshHandle characterMesh = null;
         MaterialInstance characterMaterial = null;
         AnimationClipHandle[] stateClips = null;
+        float modelHeight = 0f;
+        AppearanceData appearanceData = null;
 
         if (json.has("model") && !json.get("model").isJsonNull()) {
 
@@ -75,11 +83,19 @@ class EntityBuilder extends BuilderPackage {
 
             characterMaterial = materialManager.cloneMaterial(materialName);
             stateClips = parseStateClips(modelJson, file);
+
+            if (JsonUtility.hasObject(modelJson, "appearance"))
+                appearanceData = appearanceBuilder.build(
+                        modelJson.getAsJsonObject("appearance"),
+                        characterMesh.getRigHandle(),
+                        file);
+
+            modelHeight = resolveModelHeight(characterMesh, appearanceData);
         }
 
         EntityData entityData = new EntityData(
                 sizeMin, sizeMax, weightMin, weightMax, eyeLevel, behaviorName,
-                characterMesh, characterMaterial, stateClips);
+                characterMesh, characterMaterial, stateClips, modelHeight, appearanceData);
 
         EntityHandle entityHandle = create(EntityHandle.class);
         entityHandle.constructor(entityData);
@@ -110,6 +126,18 @@ class EntityBuilder extends BuilderPackage {
         }
 
         return stateClips;
+    }
+
+    private float resolveModelHeight(MeshHandle characterMesh, AppearanceData appearanceData) {
+
+        if (appearanceData == null)
+            return characterMesh.getHeight();
+
+        MeshHandle headMesh = appearanceData.getDefaultFeature(FeatureSlot.HEAD).getMeshHandle();
+        float bottom = Math.min(characterMesh.getBoundsMin().y, headMesh.getBoundsMin().y);
+        float top = Math.max(characterMesh.getBoundsMax().y, headMesh.getBoundsMax().y);
+
+        return top - bottom;
     }
 
     // Parse \\

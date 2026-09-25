@@ -24,6 +24,10 @@ public class RigMathUtility extends EngineUtility {
      * instead of allocating — this runs once per bone per entity per
      * frame, a genuine hot path. Callers own three pre-allocated Matrix4
      * instances (out, scratchA, scratchB) and reuse them forever.
+     *
+     * setScale is public as well — AnimationStateHandle applies a bone's
+     * non-inherited proportion scale with it between the bone's current
+     * world matrix and its bind inverse.
      */
 
     // Compose \\
@@ -66,7 +70,7 @@ public class RigMathUtility extends EngineUtility {
 
     // Scale \\
 
-    private static void setScale(Matrix4 out, Vector3 scale) {
+    public static void setScale(Matrix4 out, Vector3 scale) {
         out.set(
                 scale.x, 0, 0, 0,
                 0, scale.y, 0, 0,

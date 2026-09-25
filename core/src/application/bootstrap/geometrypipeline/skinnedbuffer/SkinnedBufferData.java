@@ -9,8 +9,9 @@ public class SkinnedBufferData extends DataPackage {
 
     /*
      * Holds all mutable state for one instanced skinned draw — GPU handles,
-     * the rigged mesh it draws, CPU-side per-instance model matrices and
-     * per-instance bone palettes, and the realloc flag. All mutation is
+     * the rigged mesh it draws, CPU-side per-instance rows (model matrix
+     * followed by the SkinnedAppearanceStruct row), per-instance bone
+     * palettes, and the realloc flag. All mutation is
      * driven by SkinnedBufferInstance. boneCapacity is fixed to this mesh's
      * own rig's exact bone count — not a shared global maximum — so no
      * skinned buffer ever wastes a single float on bones it doesn't have.
@@ -30,8 +31,9 @@ public class SkinnedBufferData extends DataPackage {
     private final RigHandle rigHandle;
     private final int boneCapacity;
 
-    // Instance Data — model matrices, one mat4 (16 floats) per instance
-    private float[] instanceModelData;
+    // Instance Data — one SKINNED_INSTANCE_FLOATS row per instance: the
+    // model mat4 followed by the appearance row
+    private float[] instanceData;
 
     // Instance Data — bone palettes, one row of boneCapacity * 3 texels
     // (12 floats) per instance
@@ -58,7 +60,7 @@ public class SkinnedBufferData extends DataPackage {
         this.instanceCount = 0;
 
         // Instance Data
-        this.instanceModelData = new float[maxInstances * EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS];
+        this.instanceData = new float[maxInstances * EngineSetting.SKINNED_INSTANCE_FLOATS];
         this.boneMatrixData = new float[maxInstances * boneCapacity * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE * 4];
 
         // Realloc
@@ -95,12 +97,12 @@ public class SkinnedBufferData extends DataPackage {
         return boneCapacity;
     }
 
-    public float[] getInstanceModelData() {
-        return instanceModelData;
+    public float[] getInstanceData() {
+        return instanceData;
     }
 
-    public void setInstanceModelData(float[] instanceModelData) {
-        this.instanceModelData = instanceModelData;
+    public void setInstanceData(float[] instanceData) {
+        this.instanceData = instanceData;
     }
 
     public float[] getBoneMatrixData() {

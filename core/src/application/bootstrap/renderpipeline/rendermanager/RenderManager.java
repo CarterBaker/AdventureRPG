@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
@@ -212,19 +213,22 @@ public class RenderManager extends ManagerPackage {
             MeshHandle meshHandle,
             MaterialInstance material,
             Matrix4 modelMatrix,
+            SkinnedAppearanceStruct appearance,
             Matrix4[] skinningMatrices,
             FboInstance fbo) {
-        renderSystem.pushSkinnedCall(meshHandle, material, modelMatrix, skinningMatrices, fbo, resolveDefaultWindow());
+        renderSystem.pushSkinnedCall(
+                meshHandle, material, modelMatrix, appearance, skinningMatrices, fbo, resolveDefaultWindow());
     }
 
     public void pushSkinnedCall(
             MeshHandle meshHandle,
             MaterialInstance material,
             Matrix4 modelMatrix,
+            SkinnedAppearanceStruct appearance,
             Matrix4[] skinningMatrices,
             FboInstance fbo,
             WindowInstance window) {
-        renderSystem.pushSkinnedCall(meshHandle, material, modelMatrix, skinningMatrices, fbo, window);
+        renderSystem.pushSkinnedCall(meshHandle, material, modelMatrix, appearance, skinningMatrices, fbo, window);
     }
 
     // Window Resources \\

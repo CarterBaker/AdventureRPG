@@ -55,6 +55,7 @@ class EntityLoader extends LoaderPackage {
 
     @Override
     protected void create() {
+        create(AppearanceBuilder.class);
         this.internalBuilder = create(EntityBuilder.class);
     }
 

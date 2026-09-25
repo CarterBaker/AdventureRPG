@@ -1,0 +1,30 @@
+{
+  "rig": "HumanoidRig",
+  "vao": [3, 2],
+  "vbo": [
+    { "quad": [[-0.14,1.53,0.14],[0.14,1.53,0.14],[0.14,1.83,0.14],[-0.14,1.83,0.14]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Face" },
+    { "quad": [[0.14,1.53,0.14],[0.14,1.53,-0.14],[0.14,1.83,-0.14],[0.14,1.83,0.14]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[0.14,1.53,-0.14],[-0.14,1.53,-0.14],[-0.14,1.83,-0.14],[0.14,1.83,-0.14]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.14,1.53,-0.14],[-0.14,1.53,0.14],[-0.14,1.83,0.14],[-0.14,1.83,-0.14]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.14,1.53,0.14],[0.14,1.53,0.14],[0.14,1.53,-0.14],[-0.14,1.53,-0.14]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.14,1.83,0.14],[0.14,1.83,0.14],[0.14,1.83,-0.14],[-0.14,1.83,-0.14]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.022,1.6238,0.168],[0.022,1.6238,0.168],[0.022,1.6706,0.168],[-0.022,1.6706,0.168]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[0.022,1.6238,0.168],[0.022,1.6238,0.13],[0.022,1.6706,0.13],[0.022,1.6706,0.168]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[0.022,1.6238,0.13],[-0.022,1.6238,0.13],[-0.022,1.6706,0.13],[0.022,1.6706,0.13]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.022,1.6238,0.13],[-0.022,1.6238,0.168],[-0.022,1.6706,0.168],[-0.022,1.6706,0.13]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.022,1.6238,0.168],[0.022,1.6238,0.168],[0.022,1.6238,0.13],[-0.022,1.6238,0.13]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.022,1.6706,0.168],[0.022,1.6706,0.168],[0.022,1.6706,0.13],[-0.022,1.6706,0.13]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[0.13,1.635,0.02],[0.158,1.635,0.02],[0.158,1.715,0.02],[0.13,1.715,0.02]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[0.158,1.635,0.02],[0.158,1.635,-0.03],[0.158,1.715,-0.03],[0.158,1.715,0.02]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[0.158,1.635,-0.03],[0.13,1.635,-0.03],[0.13,1.715,-0.03],[0.158,1.715,-0.03]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[0.13,1.635,-0.03],[0.13,1.635,0.02],[0.13,1.715,0.02],[0.13,1.715,-0.03]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[0.13,1.635,0.02],[0.158,1.635,0.02],[0.158,1.635,-0.03],[0.13,1.635,-0.03]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[0.13,1.715,0.02],[0.158,1.715,0.02],[0.158,1.715,-0.03],[0.13,1.715,-0.03]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.158,1.635,0.02],[-0.13,1.635,0.02],[-0.13,1.715,0.02],[-0.158,1.715,0.02]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.13,1.635,0.02],[-0.13,1.635,-0.03],[-0.13,1.715,-0.03],[-0.13,1.715,0.02]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.13,1.635,-0.03],[-0.158,1.635,-0.03],[-0.158,1.715,-0.03],[-0.13,1.715,-0.03]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.158,1.635,-0.03],[-0.158,1.635,0.02],[-0.158,1.715,0.02],[-0.158,1.715,-0.03]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.158,1.635,0.02],[-0.13,1.635,0.02],[-0.13,1.635,-0.03],[-0.158,1.635,-0.03]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" },
+    { "quad": [[-0.158,1.715,0.02],[-0.13,1.715,0.02],[-0.13,1.715,-0.03],[-0.158,1.715,-0.03]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Skin" }
+  ]
+}

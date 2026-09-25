@@ -1,10 +1,12 @@
 package application.bootstrap.entitypipeline.entity;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
+import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import engine.root.DataPackage;
+import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
 
 public class EntityData extends DataPackage {
@@ -21,7 +23,11 @@ public class EntityData extends DataPackage {
      * same reference — the same guarantee EntityData itself already gives
      * every other field. This is load-bearing for instancing: a distinct
      * MaterialInstance per entity would make every entity its own draw
-     * batch of one.
+     * batch of one — per-entity looks ride in each instance's appearance
+     * row instead (see AppearanceHandle). appearanceData is null unless the
+     * "model" block also declares an "appearance". modelHeight is the full
+     * authored height of the character — body plus default head — that an
+     * entity's size.y is divided by to scale the model.
      */
 
     // Size
@@ -41,6 +47,10 @@ public class EntityData extends DataPackage {
     private final MaterialInstance characterMaterial;
     private final RigHandle rigHandle;
     private final AnimationClipHandle[] stateClips;
+    private final float modelHeight;
+
+    // Appearance — optional
+    private final AppearanceData appearanceData;
 
     // Constructor \\
 
@@ -53,7 +63,9 @@ public class EntityData extends DataPackage {
             String behaviorName,
             MeshHandle characterMesh,
             MaterialInstance characterMaterial,
-            AnimationClipHandle[] stateClips) {
+            AnimationClipHandle[] stateClips,
+            float modelHeight,
+            AppearanceData appearanceData) {
 
         // Size
         this.sizeMin = sizeMin;
@@ -72,6 +84,10 @@ public class EntityData extends DataPackage {
         this.characterMaterial = characterMaterial;
         this.rigHandle = characterMesh != null ? characterMesh.getRigHandle() : null;
         this.stateClips = stateClips;
+        this.modelHeight = modelHeight;
+
+        // Appearance
+        this.appearanceData = appearanceData;
     }
 
     // Accessible \\
@@ -120,6 +136,18 @@ public class EntityData extends DataPackage {
         return stateClips == null ? null : stateClips[state.ordinal()];
     }
 
+    public float getModelHeight() {
+        return modelHeight;
+    }
+
+    public boolean hasAppearance() {
+        return appearanceData != null;
+    }
+
+    public AppearanceData getAppearanceData() {
+        return appearanceData;
+    }
+
     // Utility \\
 
     public Vector3 getRandomSize() {
@@ -133,5 +161,15 @@ public class EntityData extends DataPackage {
 
     public float getRandomWeight() {
         return weightMin + (float) (Math.random() * (weightMax - weightMin));
+    }
+
+    public float getWeightRatio(float weight) {
+
+        float range = weightMax - weightMin;
+
+        if (range <= 0f)
+            return EngineSetting.DEFAULT_WEIGHT_RATIO;
+
+        return Math.max(0f, Math.min(1f, (weight - weightMin) / range));
     }
 }

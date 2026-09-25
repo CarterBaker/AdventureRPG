@@ -1,0 +1,18 @@
+{
+  "rig": "HumanoidRig",
+  "vao": [3, 2],
+  "vbo": [
+    { "quad": [[-0.032,1.83,0.1],[0.032,1.83,0.1],[0.032,1.94,0.1],[-0.032,1.94,0.1]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[0.032,1.83,0.1],[0.032,1.83,-0.15],[0.032,1.94,-0.15],[0.032,1.94,0.1]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[0.032,1.83,-0.15],[-0.032,1.83,-0.15],[-0.032,1.94,-0.15],[0.032,1.94,-0.15]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[-0.032,1.83,-0.15],[-0.032,1.83,0.1],[-0.032,1.94,0.1],[-0.032,1.94,-0.15]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[-0.032,1.83,0.1],[0.032,1.83,0.1],[0.032,1.83,-0.15],[-0.032,1.83,-0.15]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[-0.032,1.94,0.1],[0.032,1.94,0.1],[0.032,1.94,-0.15],[-0.032,1.94,-0.15]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[-0.032,1.62,-0.13],[0.032,1.62,-0.13],[0.032,1.83,-0.13],[-0.032,1.83,-0.13]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[0.032,1.62,-0.13],[0.032,1.62,-0.152],[0.032,1.83,-0.152],[0.032,1.83,-0.13]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[0.032,1.62,-0.152],[-0.032,1.62,-0.152],[-0.032,1.83,-0.152],[0.032,1.83,-0.152]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[-0.032,1.62,-0.152],[-0.032,1.62,-0.13],[-0.032,1.83,-0.13],[-0.032,1.83,-0.152]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[-0.032,1.62,-0.13],[0.032,1.62,-0.13],[0.032,1.62,-0.152],[-0.032,1.62,-0.152]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" },
+    { "quad": [[-0.032,1.83,-0.13],[0.032,1.83,-0.13],[0.032,1.83,-0.152],[-0.032,1.83,-0.152]], "bones": [{ "bone": "head" }], "texture": "characters/standard/Hair" }
+  ]
+}

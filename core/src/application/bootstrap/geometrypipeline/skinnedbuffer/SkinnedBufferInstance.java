@@ -14,7 +14,8 @@ public class SkinnedBufferInstance extends InstancePackage {
      * rig is submitted into the same instance, drawn in a single
      * glDrawElementsInstanced call. clear() is called once at the start of
      * each frame's gather pass; addInstance() is then called once per
-     * visible entity using this mesh. There is no updateInstance() or
+     * visible entity using this mesh, carrying that entity's model matrix,
+     * appearance row, and skinning matrices. There is no updateInstance() or
      * removeInstance() — unlike CompositeBufferInstance, nothing here
      * persists across frames, since an animated pose is never stable
      * between two frames. SkinnedBufferManager owns GPU upload and drawing.
@@ -79,14 +80,17 @@ public class SkinnedBufferInstance extends InstancePackage {
         skinnedBufferData.setInstanceCount(0);
     }
 
-    public int addInstance(Matrix4 modelMatrix, Matrix4[] skinningMatrices) {
+    public int addInstance(
+            Matrix4 modelMatrix,
+            SkinnedAppearanceStruct appearance,
+            Matrix4[] skinningMatrices) {
 
         int index = skinnedBufferData.getInstanceCount();
 
         if (index >= skinnedBufferData.getMaxInstances())
             grow();
 
-        writeModelMatrix(index, modelMatrix);
+        writeInstanceRow(index, modelMatrix, appearance);
         writeBoneMatrices(index, skinningMatrices);
 
         skinnedBufferData.setInstanceCount(index + 1);
@@ -96,12 +100,13 @@ public class SkinnedBufferInstance extends InstancePackage {
 
     // Write \\
 
-    private void writeModelMatrix(int index, Matrix4 modelMatrix) {
+    private void writeInstanceRow(int index, Matrix4 modelMatrix, SkinnedAppearanceStruct appearance) {
 
-        float[] instanceModelData = skinnedBufferData.getInstanceModelData();
-        int base = index * EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS;
+        float[] instanceData = skinnedBufferData.getInstanceData();
+        int base = index * EngineSetting.SKINNED_INSTANCE_FLOATS;
 
-        System.arraycopy(modelMatrix.val, 0, instanceModelData, base, EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS);
+        System.arraycopy(modelMatrix.val, 0, instanceData, base, EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS);
+        appearance.write(instanceData, base + EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS);
     }
 
     private void writeBoneMatrices(int index, Matrix4[] skinningMatrices) {
@@ -143,11 +148,11 @@ public class SkinnedBufferInstance extends InstancePackage {
 
         int newMax = skinnedBufferData.getMaxInstances() * 2;
 
-        float[] grownModel = new float[newMax * EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS];
+        float[] grownInstances = new float[newMax * EngineSetting.SKINNED_INSTANCE_FLOATS];
         System.arraycopy(
-                skinnedBufferData.getInstanceModelData(), 0,
-                grownModel, 0,
-                skinnedBufferData.getInstanceModelData().length);
+                skinnedBufferData.getInstanceData(), 0,
+                grownInstances, 0,
+                skinnedBufferData.getInstanceData().length);
 
         int boneFloatsPerInstance = skinnedBufferData.getBoneCapacity()
                 * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE * 4;
@@ -158,7 +163,7 @@ public class SkinnedBufferInstance extends InstancePackage {
                 skinnedBufferData.getBoneMatrixData().length);
 
         skinnedBufferData.setMaxInstances(newMax);
-        skinnedBufferData.setInstanceModelData(grownModel);
+        skinnedBufferData.setInstanceData(grownInstances);
         skinnedBufferData.setBoneMatrixData(grownBones);
         skinnedBufferData.setNeedsGpuRealloc(true);
     }
