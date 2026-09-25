@@ -6,7 +6,8 @@ public class ItemEditorSetting {
 
     /*
      * Constants used only by ItemEditorContext — its viewport meshes and
-     * materials, orbit camera, mouse bindings, and toolbar menu.
+     * materials, orbit camera, mouse bindings, and toolbar menu with its
+     * parts panel.
      */
 
     // Meshes
@@ -46,5 +47,11 @@ public class ItemEditorSetting {
 
     // Menus
     public static final String MENU_TOOLBAR = "editor/ItemEditor/Toolbar";
+    public static final String TEMPLATE_PART_ROW = "editor/ItemEditor/item_editor_part_row";
+    public static final String TEMPLATE_PART_ROW_SELECTED = "editor/ItemEditor/item_editor_part_row_selected";
     public static final int ENTRY_STATUS = 0;
+    public static final int ENTRY_PARTS = 1;
+
+    // Elements
+    public static final String ELEMENT_PART_LABEL = "item_editor_part_label";
 }

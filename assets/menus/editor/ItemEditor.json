@@ -1,11 +1,93 @@
 {
+  "elements": [
+    {
+      "id": "item_editor_part_row",
+      "type": "button",
+      "sprite": "menus/Button",
+      "size": {
+        "x": "100%",
+        "y": "22px"
+      },
+      "color": {
+        "theme": "control_hover",
+        "alpha": 0
+      },
+      "hover_color": "control_hover",
+      "on_click": {
+        "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+        "method": "selectPart"
+      },
+      "elements": [
+        {
+          "id": "item_editor_part_label",
+          "type": "label",
+          "anchor": "left",
+          "pivot": "left",
+          "position": {
+            "x": "8px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(100% - 12px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": "text"
+        }
+      ]
+    },
+    {
+      "id": "item_editor_part_row_selected",
+      "type": "button",
+      "sprite": "menus/Button",
+      "size": {
+        "x": "100%",
+        "y": "22px"
+      },
+      "color": {
+        "theme": "accent",
+        "alpha": 0.32
+      },
+      "hover_color": {
+        "theme": "accent",
+        "alpha": 0.45
+      },
+      "on_click": {
+        "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+        "method": "selectPart"
+      },
+      "elements": [
+        {
+          "id": "item_editor_part_label",
+          "type": "label",
+          "anchor": "left",
+          "pivot": "left",
+          "position": {
+            "x": "8px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(100% - 12px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": "text"
+        }
+      ]
+    }
+  ],
   "menus": [
     {
       "id": "Toolbar",
       "raycast_input": true,
       "lock_input": false,
       "entry_points": [
-        "item_editor_status_label"
+        "item_editor_status_label",
+        "item_editor_part_rows"
       ],
       "elements": [
         {
@@ -248,41 +330,101 @@
                       "color": "text"
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "item_editor_parts_panel",
+          "type": "sprite",
+          "sprite": "menus/Panel",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "position": {
+            "x": "4px",
+            "y": "-36px"
+          },
+          "size": {
+            "x": "200px",
+            "y": "calc(100% - 64px)"
+          },
+          "color": "panel",
+          "on_hover_exit": {},
+          "elements": [
+            {
+              "id": "item_editor_parts_header",
+              "type": "sprite",
+              "sprite": "menus/PanelHeader",
+              "anchor": "top_left",
+              "pivot": "bottom_left",
+              "size": {
+                "x": "100%",
+                "y": "24px"
+              },
+              "color": "header",
+              "elements": [
+                {
+                  "id": "item_editor_parts_accent",
+                  "type": "sprite",
+                  "sprite": "util/Default",
+                  "anchor": "left",
+                  "pivot": "left",
+                  "position": {
+                    "x": "8px",
+                    "y": "0px"
+                  },
+                  "size": {
+                    "x": "3px",
+                    "y": "12px"
+                  },
+                  "color": "accent"
                 },
                 {
-                  "id": "item_editor_tool_separator",
-                  "type": "container",
+                  "id": "item_editor_parts_title",
+                  "type": "label",
+                  "anchor": "left",
+                  "pivot": "left",
+                  "position": {
+                    "x": "16px",
+                    "y": "0px"
+                  },
                   "size": {
-                    "x": "13px",
+                    "x": "calc(100% - 24px)",
                     "y": "100%"
                   },
-                  "elements": [
-                    {
-                      "id": "item_editor_tool_separator_line",
-                      "type": "sprite",
-                      "sprite": "util/Default",
-                      "anchor": "center",
-                      "pivot": "center",
-                      "size": {
-                        "x": "1px",
-                        "y": "calc(100% - 8px)"
-                      },
-                      "color": "outline"
-                    }
-                  ]
-                },
+                  "align": "left",
+                  "text": "Parts",
+                  "font_size": "56%",
+                  "color": "text"
+                }
+              ]
+            },
+            {
+              "id": "item_editor_part_actions",
+              "type": "container",
+              "anchor": "top_left",
+              "pivot": "bottom_left",
+              "position": {
+                "x": "4px",
+                "y": "-28px"
+              },
+              "size": {
+                "x": "calc(100% - 8px)",
+                "y": "22px"
+              },
+              "stack": "horizontal",
+              "spacing": "2px",
+              "elements": [
                 {
                   "id": "item_editor_add_part_button",
                   "type": "button",
                   "sprite": "menus/Button",
                   "size": {
-                    "x": "62px",
+                    "x": "calc(33% - 1px)",
                     "y": "100%"
                   },
-                  "color": {
-                    "theme": "control_hover",
-                    "alpha": 0
-                  },
+                  "color": "control",
                   "hover_color": "control_hover",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
@@ -292,7 +434,31 @@
                     {
                       "id": "item_editor_add_part_label",
                       "type": "label",
-                      "text": "+ Part",
+                      "text": "Add",
+                      "font_size": "54%",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "item_editor_rename_part_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "calc(34% - 2px)",
+                    "y": "100%"
+                  },
+                  "color": "control",
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "method": "renamePart"
+                  },
+                  "elements": [
+                    {
+                      "id": "item_editor_rename_part_label",
+                      "type": "label",
+                      "text": "Rename",
                       "font_size": "54%",
                       "color": "text"
                     }
@@ -303,13 +469,10 @@
                   "type": "button",
                   "sprite": "menus/Button",
                   "size": {
-                    "x": "62px",
+                    "x": "calc(33% - 1px)",
                     "y": "100%"
                   },
-                  "color": {
-                    "theme": "control_hover",
-                    "alpha": 0
-                  },
+                  "color": "control",
                   "hover_color": "control_hover",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
@@ -319,46 +482,39 @@
                     {
                       "id": "item_editor_remove_part_label",
                       "type": "label",
-                      "text": "- Part",
+                      "text": "Remove",
                       "font_size": "54%",
                       "color": "text"
                     }
                   ]
-                },
-                {
-                  "id": "item_editor_part_separator",
-                  "type": "container",
-                  "size": {
-                    "x": "13px",
-                    "y": "100%"
-                  },
-                  "elements": [
-                    {
-                      "id": "item_editor_part_separator_line",
-                      "type": "sprite",
-                      "sprite": "util/Default",
-                      "anchor": "center",
-                      "pivot": "center",
-                      "size": {
-                        "x": "1px",
-                        "y": "calc(100% - 8px)"
-                      },
-                      "color": "outline"
-                    }
-                  ]
-                },
+                }
+              ]
+            },
+            {
+              "id": "item_editor_texture_actions",
+              "type": "container",
+              "anchor": "top_left",
+              "pivot": "bottom_left",
+              "position": {
+                "x": "4px",
+                "y": "-52px"
+              },
+              "size": {
+                "x": "calc(100% - 8px)",
+                "y": "22px"
+              },
+              "stack": "horizontal",
+              "spacing": "2px",
+              "elements": [
                 {
                   "id": "item_editor_previous_texture_button",
                   "type": "button",
                   "sprite": "menus/Button",
                   "size": {
-                    "x": "62px",
+                    "x": "calc(50% - 1px)",
                     "y": "100%"
                   },
-                  "color": {
-                    "theme": "control_hover",
-                    "alpha": 0
-                  },
+                  "color": "control",
                   "hover_color": "control_hover",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
@@ -379,13 +535,10 @@
                   "type": "button",
                   "sprite": "menus/Button",
                   "size": {
-                    "x": "62px",
+                    "x": "calc(50% - 1px)",
                     "y": "100%"
                   },
-                  "color": {
-                    "theme": "control_hover",
-                    "alpha": 0
-                  },
+                  "color": "control",
                   "hover_color": "control_hover",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
@@ -402,6 +555,23 @@
                   ]
                 }
               ]
+            },
+            {
+              "id": "item_editor_part_rows",
+              "type": "container",
+              "anchor": "bottom_left",
+              "pivot": "top_left",
+              "position": {
+                "x": "4px",
+                "y": "4px"
+              },
+              "size": {
+                "x": "calc(100% - 8px)",
+                "y": "calc(100% - 84px)"
+              },
+              "stack": "vertical",
+              "spacing": "1px",
+              "mask": true
             }
           ]
         },

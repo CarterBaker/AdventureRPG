@@ -9,9 +9,11 @@ import engine.root.BranchPackage;
 public class ItemEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Item Editor toolbar. Every action works on the
-     * shared active item; new items and parts are named through the name dialog,
-     * and deleting an item asks for its name to be typed back as confirmation.
+     * Menu event handlers for the Item Editor toolbar and parts panel. Every
+     * action works on the shared active item; new items and parts, and part
+     * renames, are named through the name dialog, and deleting an item asks
+     * for its name to be typed back as confirmation. Part rows carry their
+     * part index.
      */
 
     // Internal
@@ -74,6 +76,10 @@ public class ItemEditorBranch extends BranchPackage {
 
     // Parts \\
 
+    public void selectPart(String partIndex) {
+        itemEditorManager.selectPart(Integer.parseInt(partIndex));
+    }
+
     public void addPart(WindowInstance window) {
 
         if (!itemEditorManager.hasActiveDocument())
@@ -88,6 +94,18 @@ public class ItemEditorBranch extends BranchPackage {
 
     public void removePart() {
         itemEditorManager.removeSelectedPart();
+    }
+
+    public void renamePart(WindowInstance window) {
+
+        if (!itemEditorManager.hasActiveDocument())
+            return;
+
+        nameDialogBranch.open(
+                window,
+                EditorSetting.DIALOG_TITLE_RENAME_PART,
+                itemEditorManager::isPartNameAvailable,
+                itemEditorManager::renameSelectedPart);
     }
 
     public void clearBrush() {

@@ -1,0 +1,377 @@
+{
+  "tab": "Seasons",
+  "order": 7,
+  "directory": "seasons",
+  "fields": [
+    {
+      "key": "baseWindSpeed",
+      "type": "float",
+      "default": 3.0
+    },
+    {
+      "key": "windVariance",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "prevailingWindDirectionDegrees",
+      "type": "float",
+      "default": 0.0
+    },
+    {
+      "key": "baseTemperature",
+      "type": "float",
+      "default": 15.0
+    },
+    {
+      "key": "temperatureVariance",
+      "type": "float",
+      "default": 5.0
+    },
+    {
+      "key": "precipitationChanceScale",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "sky",
+      "type": "object",
+      "required": true,
+      "fields": [
+        {
+          "key": "glowStrength",
+          "type": "float",
+          "required": true,
+          "default": 1.0
+        },
+        {
+          "key": "beltStrength",
+          "type": "float",
+          "required": true,
+          "default": 1.0
+        },
+        {
+          "key": "variety",
+          "type": "float",
+          "required": true,
+          "default": 1.0
+        },
+        {
+          "key": "phases",
+          "type": "object",
+          "required": true,
+          "fields": [
+            {
+              "key": "night",
+              "type": "object",
+              "required": true,
+              "fields": [
+                {
+                  "key": "zenith",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "horizon",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "glow",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "belt",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloud",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloudLight",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloudShadow",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                }
+              ]
+            },
+            {
+              "key": "twilight",
+              "type": "object",
+              "required": true,
+              "fields": [
+                {
+                  "key": "zenith",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "horizon",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "glow",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "belt",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloud",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloudLight",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloudShadow",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                }
+              ]
+            },
+            {
+              "key": "golden",
+              "type": "object",
+              "required": true,
+              "fields": [
+                {
+                  "key": "zenith",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "horizon",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "glow",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "belt",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloud",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloudLight",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloudShadow",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                }
+              ]
+            },
+            {
+              "key": "day",
+              "type": "object",
+              "required": true,
+              "fields": [
+                {
+                  "key": "zenith",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "horizon",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "glow",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "belt",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloud",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloudLight",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                },
+                {
+                  "key": "cloudShadow",
+                  "type": "array",
+                  "required": true,
+                  "length": 3,
+                  "element": {
+                    "type": "float",
+                    "default": 0.0
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

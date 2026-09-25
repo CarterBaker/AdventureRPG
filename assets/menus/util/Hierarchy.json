@@ -1,6 +1,16 @@
 {
   "elements": [
     {
+      "id": "hierarchy_tab_row",
+      "type": "container",
+      "size": {
+        "x": "100%",
+        "y": "26px"
+      },
+      "stack": "horizontal",
+      "spacing": "2px"
+    },
+    {
       "id": "hierarchy_tab",
       "type": "button",
       "sprite": "menus/Button",
@@ -191,7 +201,8 @@
       "lock_input": false,
       "entry_points": [
         "hierarchy_tab_strip",
-        "hierarchy_rows"
+        "hierarchy_rows",
+        "hierarchy_tab_bar"
       ],
       "elements": [
         {
@@ -219,7 +230,7 @@
                 "x": "calc(100% - 8px)",
                 "y": "26px"
               },
-              "stack": "horizontal",
+              "stack": "vertical",
               "spacing": "2px"
             }
           ]

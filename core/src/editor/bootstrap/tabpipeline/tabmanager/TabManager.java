@@ -124,6 +124,10 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_HIERARCHY, editor.hierarchy.HierarchyContext.class, osWindow);
     }
 
+    public TabHandle openInfoPanel(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_INFO_PANEL, editor.infopanel.InfoPanelContext.class, osWindow);
+    }
+
     public TabHandle openItemEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ITEM_EDITOR, editor.itemeditor.ItemEditorContext.class, osWindow);
     }

@@ -1,0 +1,62 @@
+{
+  "tab": "Calendars",
+  "order": 6,
+  "directory": "calendars",
+  "fields": [
+    {
+      "key": "start",
+      "type": "object",
+      "required": true,
+      "fields": [
+        { "key": "year", "type": "int", "required": true, "default": 1 },
+        { "key": "age", "type": "int", "required": true, "default": 1 },
+        { "key": "month", "type": "int", "required": true, "default": 0 },
+        { "key": "dayOfMonth", "type": "int", "required": true, "default": 1 },
+        { "key": "hour", "type": "int", "required": true, "default": 12 },
+        { "key": "minute", "type": "int", "required": true, "default": 0 }
+      ]
+    },
+    { "key": "daysPerDay", "type": "int", "required": true, "default": 1 },
+    { "key": "hoursPerDay", "type": "int", "required": true, "default": 24 },
+    { "key": "minutesPerHour", "type": "int", "required": true, "default": 60 },
+    { "key": "lunarCycleDays", "type": "int", "required": true, "default": 28 },
+    { "key": "middayOffset", "type": "float", "required": true, "default": 0.5 },
+    { "key": "yearsPerAge", "type": "int", "required": true, "default": 1000 },
+    {
+      "key": "star",
+      "type": "object",
+      "required": true,
+      "fields": [
+        { "key": "distance", "type": "float", "required": true, "default": 1.0 },
+        { "key": "luminosity", "type": "float", "required": true, "default": 1.0 }
+      ]
+    },
+    { "key": "daysOfWeek", "type": "array", "required": true, "element": { "type": "string", "default": "" } },
+    {
+      "key": "months",
+      "type": "array",
+      "required": true,
+      "element": {
+        "type": "object",
+        "fields": [
+          { "key": "name", "type": "string", "required": true, "default": "" },
+          { "key": "days", "type": "int", "required": true, "default": 30 }
+        ]
+      }
+    },
+    {
+      "key": "seasons",
+      "type": "array",
+      "required": true,
+      "element": {
+        "type": "object",
+        "fields": [
+          { "key": "name", "type": "string", "required": true, "default": "" },
+          { "key": "startMonth", "type": "int", "required": true, "default": 0 },
+          { "key": "startDayOfMonth", "type": "int", "default": 1 },
+          { "key": "dayLength", "type": "float", "required": true, "default": 0.5 }
+        ]
+      }
+    }
+  ]
+}

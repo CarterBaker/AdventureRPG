@@ -1,0 +1,77 @@
+{
+  "tab": "Weathers",
+  "order": 8,
+  "directory": "weathers",
+  "fields": [
+    {
+      "key": "clouds",
+      "type": "array",
+      "element": {
+        "type": "object",
+        "fields": [
+          {
+            "key": "name",
+            "type": "string",
+            "required": true,
+            "default": ""
+          },
+          {
+            "key": "chance",
+            "type": "float",
+            "default": 1.0
+          },
+          {
+            "key": "densityMultiplier",
+            "type": "float",
+            "default": 1.0
+          }
+        ]
+      }
+    },
+    {
+      "key": "cloudCoverage",
+      "type": "float",
+      "default": 0.0
+    },
+    {
+      "key": "cloudDensityMultiplier",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "precipitationIntensity",
+      "type": "float",
+      "default": 0.0
+    },
+    {
+      "key": "windSpeedScale",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "windTurbulenceScale",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "fogDensityScale",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "humidity",
+      "type": "float",
+      "default": 0.5
+    },
+    {
+      "key": "visibility",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "temperatureModifier",
+      "type": "float",
+      "default": 0.0
+    }
+  ]
+}

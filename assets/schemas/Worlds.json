@@ -1,0 +1,15 @@
+{
+  "tab": "Worlds",
+  "order": 5,
+  "directory": "worlds",
+  "fields": [
+    { "key": "gravity_multiplier", "type": "float", "default": 1.0 },
+    { "key": "gravity_direction", "type": "array", "length": 3, "element": { "type": "float", "default": 0.0 } },
+    { "key": "calendar", "type": "string", "default": "TerraArcanaCalendar" },
+    { "key": "rotation", "type": "float", "default": 1.0 },
+    { "key": "axial_tilt", "type": "float", "default": 23.5 },
+    { "key": "planetary_offset", "type": "float", "default": 0.0 },
+    { "key": "seed", "type": "int", "default": 0 },
+    { "key": "epoch_start", "type": "int", "default": 0 }
+  ]
+}

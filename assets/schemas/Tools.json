@@ -1,0 +1,12 @@
+{
+  "tab": "Tools",
+  "order": 1,
+  "directory": "tools",
+  "entries": "tools",
+  "name_field": "name",
+  "default_file": "Standard",
+  "fields": [
+    { "key": "name", "type": "string", "required": true, "default": "" },
+    { "key": "model", "type": "string", "default": "" }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "tab": "Materials",
+  "order": 17,
+  "directory": "materials",
+  "fields": [
+    {
+      "key": "shader",
+      "type": "string",
+      "required": true,
+      "default": ""
+    },
+    {
+      "key": "ubos",
+      "type": "map",
+      "element": {
+        "type": "json",
+        "default": {}
+      }
+    },
+    {
+      "key": "uniforms",
+      "type": "map",
+      "element": {
+        "type": "object",
+        "fields": [
+          {
+            "key": "value",
+            "type": "json",
+            "required": true,
+            "default": 0
+          },
+          {
+            "key": "type",
+            "type": "enum",
+            "values": [
+              "FLOAT",
+              "DOUBLE",
+              "INT",
+              "BOOL",
+              "VECTOR2",
+              "VECTOR3",
+              "VECTOR4",
+              "VECTOR2_DOUBLE",
+              "VECTOR3_DOUBLE",
+              "VECTOR4_DOUBLE",
+              "VECTOR2_INT",
+              "VECTOR3_INT",
+              "VECTOR4_INT",
+              "VECTOR2_BOOLEAN",
+              "VECTOR3_BOOLEAN",
+              "VECTOR4_BOOLEAN",
+              "MATRIX2",
+              "MATRIX3",
+              "MATRIX4",
+              "MATRIX2_DOUBLE",
+              "MATRIX3_DOUBLE",
+              "MATRIX4_DOUBLE",
+              "SAMPLE_IMAGE_2D",
+              "SAMPLE_IMAGE_2D_ARRAY"
+            ],
+            "default": "FLOAT"
+          },
+          {
+            "key": "count",
+            "type": "int",
+            "default": 1
+          }
+        ]
+      }
+    }
+  ]
+}

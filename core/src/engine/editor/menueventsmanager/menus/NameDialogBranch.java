@@ -10,14 +10,18 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.editor.EditorSetting;
 import engine.input.Input;
+import engine.input.InputListener;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 
-public class NameDialogBranch extends BranchPackage {
+public class NameDialogBranch extends BranchPackage implements InputListener {
 
     /*
-     * The editor's one name-entry dialog. Callers supply a title, a validation
-     * rule, and a confirm action; typed keys only ever produce valid file-name
-     * characters.
+     * The editor's one text-entry dialog. Callers supply a title, a validation
+     * rule, and a confirm action. A name dialog starts empty and typed keys
+     * only ever produce valid file-name characters; a text dialog starts from
+     * the given text and accepts any character the editor font can draw, read
+     * from the dialog window's typed characters for as long as it is open.
      */
 
     // Internal
@@ -26,6 +30,8 @@ public class NameDialogBranch extends BranchPackage {
 
     // Dialog
     private MenuInstance dialog;
+    private Input textInput;
+    private int maxLength;
     private StringBuilder nameBuffer;
     private Predicate<String> nameValidator;
     private Consumer<String> confirmAction;
@@ -64,17 +70,44 @@ public class NameDialogBranch extends BranchPackage {
             String title,
             Predicate<String> nameValidator,
             Consumer<String> confirmAction) {
+        openDialog(window, title, "", false, nameValidator, confirmAction);
+    }
+
+    public void openText(
+            WindowInstance window,
+            String title,
+            String initialText,
+            Predicate<String> textValidator,
+            Consumer<String> confirmAction) {
+        openDialog(window, title, initialText, true, textValidator, confirmAction);
+    }
+
+    private void openDialog(
+            WindowInstance window,
+            String title,
+            String initialText,
+            boolean freeText,
+            Predicate<String> nameValidator,
+            Consumer<String> confirmAction) {
 
         if (dialog != null)
             return;
 
         this.nameValidator = nameValidator;
         this.confirmAction = confirmAction;
+        this.maxLength = freeText ? EditorSetting.TEXT_INPUT_MAX_LENGTH : EditorSetting.NAME_INPUT_MAX_LENGTH;
         nameBuffer.setLength(0);
+        nameBuffer.append(initialText, 0, Math.min(initialText.length(), maxLength));
 
         dialog = menuManager.openMenuWindow(EditorSetting.MENU_EDITOR_NAME_DIALOG, window.getGLWindow());
         setEntryText(EditorSetting.ENTRY_NAME_DIALOG_TITLE, title);
         refreshNameLabel();
+
+        if (!freeText)
+            return;
+
+        this.textInput = inputManager.getRawInput(dialog.getWindow());
+        textInput.addListener(this);
     }
 
     public boolean isOpen() {
@@ -107,6 +140,11 @@ public class NameDialogBranch extends BranchPackage {
         if (dialog == null)
             return;
 
+        if (textInput != null) {
+            textInput.removeListener(this);
+            textInput = null;
+        }
+
         menuManager.closeMenuWindow(dialog);
         dialog = null;
         nameValidator = null;
@@ -136,6 +174,9 @@ public class NameDialogBranch extends BranchPackage {
             return;
         }
 
+        if (textInput != null)
+            return;
+
         char typed = resolveTypedCharacter(rawInput);
 
         if (typed != 0)
@@ -164,9 +205,16 @@ public class NameDialogBranch extends BranchPackage {
         return 0;
     }
 
+    @Override
+    public void onChar(char character) {
+
+        if (textInput != null && EngineSetting.FONT_DEFAULT_CHARSET.indexOf(character) != EngineSetting.INDEX_NOT_FOUND)
+            appendNameCharacter(character);
+    }
+
     private void appendNameCharacter(char character) {
 
-        if (nameBuffer.length() >= EditorSetting.NAME_INPUT_MAX_LENGTH)
+        if (nameBuffer.length() >= maxLength)
             return;
 
         nameBuffer.append(character);

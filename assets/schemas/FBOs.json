@@ -1,0 +1,100 @@
+{
+  "tab": "FBOs",
+  "order": 21,
+  "directory": "application/fbos",
+  "entries": "fbos",
+  "name_field": "name",
+  "default_file": "fbos",
+  "fields": [
+    {
+      "key": "name",
+      "type": "string",
+      "required": true,
+      "default": ""
+    },
+    {
+      "key": "sizingStrategy",
+      "type": "enum",
+      "values": [
+        "WINDOW_RELATIVE",
+        "FIXED"
+      ],
+      "default": "WINDOW_RELATIVE"
+    },
+    {
+      "key": "width",
+      "type": "int",
+      "default": 1920
+    },
+    {
+      "key": "height",
+      "type": "int",
+      "default": 1080
+    },
+    {
+      "key": "resolutionScale",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "premultipliedBlend",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "key": "premultipliedBlit",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "key": "resolveBlit",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "key": "clearColor",
+      "type": "array",
+      "length": 4,
+      "element": {
+        "type": "float",
+        "default": 0.0
+      }
+    },
+    {
+      "key": "attachments",
+      "type": "array",
+      "required": true,
+      "element": {
+        "type": "object",
+        "fields": [
+          {
+            "key": "type",
+            "type": "enum",
+            "values": [
+              "color",
+              "depth"
+            ],
+            "default": "color"
+          },
+          {
+            "key": "format",
+            "type": "enum",
+            "values": [
+              "RGBA8",
+              "RGBA16F",
+              "RGB16F",
+              "RGB8",
+              "DEPTH24"
+            ],
+            "default": "RGBA8"
+          },
+          {
+            "key": "name",
+            "type": "string",
+            "default": ""
+          }
+        ]
+      }
+    }
+  ]
+}

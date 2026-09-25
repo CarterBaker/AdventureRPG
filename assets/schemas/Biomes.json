@@ -1,0 +1,65 @@
+{
+  "tab": "Biomes",
+  "order": 3,
+  "directory": "biomes",
+  "fields": [
+    { "key": "map_color", "type": "string", "default": "#FFFFFF" },
+    { "key": "ocean_water", "type": "boolean", "default": false },
+    { "key": "beach_biome", "type": "string", "default": "" },
+    { "key": "surface_block", "type": "string", "default": "TerraArcanaBlocks/Grass Block" },
+    { "key": "subsurface_block", "type": "string", "default": "TerraArcanaBlocks/Dirt Block" },
+    { "key": "underwater_block", "type": "string", "default": "TerraArcanaBlocks/Sand" },
+    {
+      "key": "probable_biomes",
+      "type": "array",
+      "element": {
+        "type": "object",
+        "fields": [
+          { "key": "name", "type": "string", "required": true, "default": "" },
+          { "key": "chance", "type": "float", "required": true, "default": 0.1 }
+        ]
+      }
+    },
+    {
+      "key": "continentalness_spline",
+      "type": "object",
+      "fields": [
+        { "key": "x", "type": "array", "required": true, "element": { "type": "float", "default": 0.0 } },
+        { "key": "height_blocks", "type": "array", "required": true, "element": { "type": "float", "default": 0.0 } }
+      ]
+    },
+    {
+      "key": "erosion_spline",
+      "type": "object",
+      "fields": [
+        { "key": "x", "type": "array", "required": true, "element": { "type": "float", "default": 0.0 } },
+        { "key": "amplitude_blocks", "type": "array", "required": true, "element": { "type": "float", "default": 0.0 } }
+      ]
+    },
+    {
+      "key": "peaks_valleys_spline",
+      "type": "object",
+      "fields": [
+        { "key": "x", "type": "array", "required": true, "element": { "type": "float", "default": 0.0 } },
+        { "key": "contribution", "type": "array", "required": true, "element": { "type": "float", "default": 0.0 } }
+      ]
+    },
+    { "key": "detail_amplitude_blocks", "type": "float", "default": 3.0 },
+    { "key": "detail_wavelength_blocks", "type": "float", "default": 40.0 },
+    { "key": "terrain_height_scale", "type": "float", "default": 1.0 },
+    {
+      "key": "weathers",
+      "type": "map",
+      "element": {
+        "type": "array",
+        "element": {
+          "type": "object",
+          "fields": [
+            { "key": "name", "type": "string", "required": true, "default": "" },
+            { "key": "chance", "type": "float", "default": 1.0 }
+          ]
+        }
+      }
+    }
+  ]
+}

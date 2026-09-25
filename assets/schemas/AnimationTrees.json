@@ -1,0 +1,262 @@
+{
+  "tab": "Anim Trees",
+  "order": 15,
+  "directory": "animationtrees",
+  "fields": [
+    {
+      "key": "rig",
+      "type": "string",
+      "required": true,
+      "default": "HumanoidRig"
+    },
+    {
+      "key": "layers",
+      "type": "array",
+      "required": true,
+      "element": {
+        "type": "object",
+        "fields": [
+          {
+            "key": "name",
+            "type": "string",
+            "required": true,
+            "default": ""
+          },
+          {
+            "key": "mode",
+            "type": "enum",
+            "values": [
+              "OVERRIDE",
+              "ADDITIVE"
+            ],
+            "default": "OVERRIDE"
+          },
+          {
+            "key": "weight",
+            "type": "float",
+            "default": 1.0
+          },
+          {
+            "key": "blend",
+            "type": "float",
+            "default": 0.22
+          },
+          {
+            "key": "default",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "key": "mask",
+            "type": "map",
+            "element": {
+              "type": "float",
+              "default": 1.0
+            }
+          },
+          {
+            "key": "nodes",
+            "type": "map",
+            "required": true,
+            "element": {
+              "type": "object",
+              "fields": [
+                {
+                  "key": "clip",
+                  "type": "string",
+                  "default": ""
+                },
+                {
+                  "key": "parameter",
+                  "type": "enum",
+                  "values": [
+                    "speed",
+                    "vertical_speed",
+                    "turn_rate",
+                    "look_pitch",
+                    "look_yaw"
+                  ],
+                  "default": "speed"
+                },
+                {
+                  "key": "clips",
+                  "type": "array",
+                  "element": {
+                    "type": "object",
+                    "fields": [
+                      {
+                        "key": "clip",
+                        "type": "string",
+                        "required": true,
+                        "default": ""
+                      },
+                      {
+                        "key": "value",
+                        "type": "float",
+                        "required": true,
+                        "default": 0.0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "rate",
+                  "type": "float",
+                  "default": 1.0
+                },
+                {
+                  "key": "rate_scale",
+                  "type": "boolean",
+                  "default": false
+                },
+                {
+                  "key": "blend",
+                  "type": "float",
+                  "default": 0.22
+                },
+                {
+                  "key": "delay",
+                  "type": "float",
+                  "default": 0.0
+                }
+              ]
+            }
+          },
+          {
+            "key": "states",
+            "type": "object",
+            "fields": [
+              {
+                "key": "idle",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "walking",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "moving",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "running",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "jumping",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "falling",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "swimming",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "treading",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "underwater_swimming",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "underwater_treading",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "diving",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "surfacing",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "wading",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "wading_idle",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "wading_running",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "shallow_wading",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "shallow_wading_idle",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "shallow_wading_running",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "water_jumping",
+                "type": "string",
+                "default": ""
+              },
+              {
+                "key": "water_leaping",
+                "type": "string",
+                "default": ""
+              }
+            ]
+          },
+          {
+            "key": "transitions",
+            "type": "array",
+            "element": {
+              "type": "object",
+              "fields": [
+                {
+                  "key": "from",
+                  "type": "string",
+                  "required": true,
+                  "default": ""
+                },
+                {
+                  "key": "to",
+                  "type": "string",
+                  "required": true,
+                  "default": ""
+                },
+                {
+                  "key": "blend",
+                  "type": "float",
+                  "required": true,
+                  "default": 0.22
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

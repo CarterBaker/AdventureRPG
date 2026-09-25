@@ -1,0 +1,99 @@
+{
+  "tab": "Animations",
+  "order": 14,
+  "directory": "animations",
+  "fields": [
+    {
+      "key": "rig",
+      "type": "string",
+      "required": true,
+      "default": "HumanoidRig"
+    },
+    {
+      "key": "loop",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "key": "tracks",
+      "type": "map",
+      "element": {
+        "type": "array",
+        "element": {
+          "type": "object",
+          "fields": [
+            {
+              "key": "time",
+              "type": "float",
+              "required": true,
+              "default": 0.0
+            },
+            {
+              "key": "rotation",
+              "type": "object",
+              "fields": [
+                {
+                  "key": "x",
+                  "type": "float",
+                  "default": 0.0
+                },
+                {
+                  "key": "y",
+                  "type": "float",
+                  "default": 0.0
+                },
+                {
+                  "key": "z",
+                  "type": "float",
+                  "default": 0.0
+                }
+              ]
+            },
+            {
+              "key": "position",
+              "type": "object",
+              "fields": [
+                {
+                  "key": "x",
+                  "type": "float",
+                  "default": 0.0
+                },
+                {
+                  "key": "y",
+                  "type": "float",
+                  "default": 0.0
+                },
+                {
+                  "key": "z",
+                  "type": "float",
+                  "default": 0.0
+                }
+              ]
+            },
+            {
+              "key": "scale",
+              "type": "object",
+              "fields": [
+                {
+                  "key": "x",
+                  "type": "float",
+                  "default": 1.0
+                },
+                {
+                  "key": "y",
+                  "type": "float",
+                  "default": 1.0
+                },
+                {
+                  "key": "z",
+                  "type": "float",
+                  "default": 1.0
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

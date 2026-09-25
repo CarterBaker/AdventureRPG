@@ -1,0 +1,16 @@
+{
+  "tab": "Items",
+  "order": 0,
+  "directory": "items",
+  "entries": "items",
+  "name_field": "name",
+  "default_file": "EditorItems",
+  "fields": [
+    { "key": "name", "type": "string", "required": true, "default": "" },
+    { "key": "mesh", "type": "string", "required": true, "default": "" },
+    { "key": "material", "type": "string", "default": "items/StandardItemMaterial" },
+    { "key": "weight", "type": "float", "default": 1.0 },
+    { "key": "two_handed", "type": "boolean", "default": false },
+    { "key": "is_backpack", "type": "boolean", "default": false }
+  ]
+}

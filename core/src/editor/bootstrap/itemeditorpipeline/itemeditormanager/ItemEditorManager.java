@@ -4,6 +4,8 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelHitStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
+import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
 import editor.bootstrap.itemeditorpipeline.util.ItemEditorTool;
@@ -11,26 +13,31 @@ import engine.editor.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.io.FileUtility;
+import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ItemEditorManager extends ManagerPackage {
 
     /*
-     * Owns the item editor's shared state — open items, the active item, tool,
-     * and brush texture, and the status line. Items stay open with their edits until saved,
-     * deleted, or the editor closes. New items join the active item's
-     * definition file, or the editor's own when nothing is open. Disk access,
-     * model edits, and the hierarchy tab each live in their own branch.
+     * Owns the item editor's shared state — open item meshes, the active item,
+     * tool, and brush texture, and the status line. Items themselves are JSON
+     * entries owned by InfoManager: selecting one there opens the mesh it
+     * names here, starting a fresh model when that mesh has no file yet, and
+     * new and deleted items go through it. Meshes stay open with their edits
+     * until saved, deleted, or the editor closes. New items join the active
+     * item's definition file, or the editor's own when nothing is open. Disk
+     * access and model edits each live in their own branch.
      */
 
     // Internal
     private TextureManager textureManager;
+    private InfoManager infoManager;
     private ItemLibraryBranch itemLibraryBranch;
     private ItemEditBranch itemEditBranch;
 
     // Palette
-    private Object2ObjectOpenHashMap<String, ItemDocumentInstance> itemName2ItemDocument;
+    private Object2ObjectOpenHashMap<String, ItemDocumentInstance> meshName2ItemDocument;
     private ObjectArrayList<String> textureNames;
 
     // Active
@@ -50,10 +57,9 @@ public class ItemEditorManager extends ManagerPackage {
         // Internal
         this.itemLibraryBranch = create(ItemLibraryBranch.class);
         this.itemEditBranch = create(ItemEditBranch.class);
-        create(ItemHierarchyBranch.class);
 
         // Palette
-        this.itemName2ItemDocument = new Object2ObjectOpenHashMap<>();
+        this.meshName2ItemDocument = new Object2ObjectOpenHashMap<>();
 
         // Active
         this.activeTool = ItemEditorTool.PLACE;
@@ -62,29 +68,49 @@ public class ItemEditorManager extends ManagerPackage {
     @Override
     protected void get() {
         this.textureManager = get(TextureManager.class);
+        this.infoManager = get(InfoManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        infoManager.addSelectionListener(EditorSetting.INFO_SCHEMA_ITEMS, this::openEntry);
     }
 
     // Items \\
 
-    public void openItem(String itemName) {
+    private void openEntry(InfoEntryStruct entry) {
 
-        ItemDocumentInstance document = itemName2ItemDocument.get(itemName);
+        String meshName = toMeshName(entry);
+
+        if (meshName.isEmpty()) {
+            activate(null);
+            setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_NO_MESH);
+            return;
+        }
+
+        openItem(new ItemEntryStruct(entry.getDefinitionName(), entry.getEntryName(), meshName));
+    }
+
+    private void openItem(ItemEntryStruct entry) {
+
+        ItemDocumentInstance document = meshName2ItemDocument.get(entry.getMeshName());
 
         if (document != null) {
+            document.setEntry(entry);
             activate(document);
             return;
         }
 
-        ItemEntryStruct entry = itemLibraryBranch.getEntry(itemName);
-
-        if (entry == null)
-            throwException("Cannot open unknown item '" + itemName + "'.");
+        if (!itemLibraryBranch.hasMesh(entry.getMeshName())) {
+            activate(createDocument(entry, createStarterModel(), true));
+            setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_NEW_MESH);
+            return;
+        }
 
         boolean conversion = itemLibraryBranch.requiresConversion(entry);
         SubVoxelModelStruct model = itemLibraryBranch.loadModel(entry, getTextureNames().get(0));
 
-        document = createDocument(entry, model, conversion);
-        activate(document);
+        activate(createDocument(entry, model, conversion));
 
         if (conversion)
             setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_CONVERTED);
@@ -95,13 +121,13 @@ public class ItemEditorManager extends ManagerPackage {
         if (!isItemNameAvailable(localName))
             throwException("Cannot create an item named '" + localName + "'.");
 
-        int center = EngineSetting.SUB_VOXEL_RESOLUTION / 2;
-        SubVoxelModelStruct model = new SubVoxelModelStruct();
-        int partIndex = model.addPart(
-                new SubVoxelPartStruct(EditorSetting.ITEM_EDITOR_DEFAULT_PART_NAME, getTextureNames().get(0)));
-        model.setCell(center, 0, center, partIndex);
+        ItemEntryStruct entry = toItemEntry(localName);
 
-        activate(createDocument(createEntry(localName), model, true));
+        infoManager.createEntry(
+                EditorSetting.INFO_SCHEMA_ITEMS,
+                entry.getDefinitionName(),
+                localName,
+                itemJson -> itemJson.addProperty(EditorSetting.INFO_ITEM_MESH_FIELD, entry.getMeshName()));
         setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_CREATED + localName);
     }
 
@@ -115,7 +141,13 @@ public class ItemEditorManager extends ManagerPackage {
             return;
         }
 
+        ItemEntryStruct entry = activeDocument.getEntry();
+
         itemLibraryBranch.save(activeDocument);
+
+        if (hasItemDefinition(entry))
+            infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName());
+
         activeDocument.markClean();
         setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_SAVED + activeDocument.getItemName());
     }
@@ -127,7 +159,7 @@ public class ItemEditorManager extends ManagerPackage {
 
         ItemEntryStruct entry = activeDocument.getEntry();
 
-        if (!itemLibraryBranch.hasItem(entry.getItemName())) {
+        if (!itemLibraryBranch.hasMesh(entry.getMeshName())) {
             setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_NOT_SAVED);
             return;
         }
@@ -152,10 +184,15 @@ public class ItemEditorManager extends ManagerPackage {
 
         ItemEntryStruct entry = activeDocument.getEntry();
 
-        if (itemLibraryBranch.hasItem(entry.getItemName()))
-            itemLibraryBranch.delete(entry);
+        if (hasItemDefinition(entry)) {
+            infoManager.deleteEntry(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName(), entry.getLocalName());
+            infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName());
+        }
 
-        itemName2ItemDocument.remove(entry.getItemName());
+        if (!isMeshReferenced(entry.getMeshName()))
+            itemLibraryBranch.deleteMesh(entry.getMeshName());
+
+        meshName2ItemDocument.remove(entry.getMeshName());
         activate(null);
         setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_DELETED + entry.getItemName());
     }
@@ -165,19 +202,19 @@ public class ItemEditorManager extends ManagerPackage {
         if (!FileUtility.isValidFileName(localName, EditorSetting.NAME_INPUT_MAX_LENGTH))
             return false;
 
-        ItemEntryStruct entry = createEntry(localName);
+        ItemEntryStruct entry = toItemEntry(localName);
 
-        return !itemLibraryBranch.hasItem(entry.getItemName())
-                && !itemName2ItemDocument.containsKey(entry.getItemName())
+        return !hasItemDefinition(entry)
                 && !itemLibraryBranch.hasMesh(entry.getMeshName())
-                && !isMeshOpen(entry.getMeshName());
+                && !meshName2ItemDocument.containsKey(entry.getMeshName())
+                && !isMeshReferenced(entry.getMeshName());
     }
 
     public boolean isActiveItemName(String localName) {
         return activeDocument != null && activeDocument.getEntry().getLocalName().equals(localName);
     }
 
-    private ItemEntryStruct createEntry(String localName) {
+    private ItemEntryStruct toItemEntry(String localName) {
 
         String definitionName = activeDocument != null
                 ? activeDocument.getEntry().getDefinitionName()
@@ -189,11 +226,22 @@ public class ItemEditorManager extends ManagerPackage {
                 EditorSetting.ITEM_EDITOR_MESH_DIRECTORY + "/" + localName);
     }
 
+    private SubVoxelModelStruct createStarterModel() {
+
+        int center = EngineSetting.SUB_VOXEL_RESOLUTION / 2;
+        SubVoxelModelStruct model = new SubVoxelModelStruct();
+        int partIndex = model.addPart(
+                new SubVoxelPartStruct(EditorSetting.ITEM_EDITOR_DEFAULT_PART_NAME, getTextureNames().get(0)));
+
+        model.setCell(center, 0, center, partIndex);
+        return model;
+    }
+
     private ItemDocumentInstance createDocument(ItemEntryStruct entry, SubVoxelModelStruct model, boolean dirty) {
 
         ItemDocumentInstance document = create(ItemDocumentInstance.class);
         document.constructor(entry, model, dirty);
-        itemName2ItemDocument.put(entry.getItemName(), document);
+        meshName2ItemDocument.put(entry.getMeshName(), document);
         return document;
     }
 
@@ -204,20 +252,33 @@ public class ItemEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
-    private boolean isMeshOpen(String meshName) {
+    private boolean hasItemDefinition(ItemEntryStruct entry) {
+        return infoManager.hasEntry(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName(), entry.getLocalName());
+    }
 
-        for (ItemDocumentInstance document : itemName2ItemDocument.values())
-            if (document.getEntry().getMeshName().equals(meshName))
+    private boolean isMeshReferenced(String meshName) {
+
+        ObjectArrayList<InfoEntryStruct> itemEntries = infoManager.getEntries(EditorSetting.INFO_SCHEMA_ITEMS);
+
+        for (int i = 0; i < itemEntries.size(); i++)
+            if (toMeshName(itemEntries.get(i)).equals(meshName))
                 return true;
 
         return false;
+    }
+
+    private String toMeshName(InfoEntryStruct itemEntry) {
+
+        return JsonUtility.hasString(itemEntry.getJson(), EditorSetting.INFO_ITEM_MESH_FIELD)
+                ? itemEntry.getJson().get(EditorSetting.INFO_ITEM_MESH_FIELD).getAsString()
+                : "";
     }
 
     // Parts \\
 
     public void selectPart(int partIndex) {
 
-        if (activeDocument == null)
+        if (activeDocument == null || !activeDocument.getModel().hasPart(partIndex))
             return;
 
         activeDocument.selectPart(partIndex);
@@ -235,6 +296,12 @@ public class ItemEditorManager extends ManagerPackage {
 
         if (activeDocument != null)
             itemEditBranch.removeSelectedPart(activeDocument);
+    }
+
+    public void renameSelectedPart(String partName) {
+
+        if (activeDocument != null)
+            itemEditBranch.renameSelectedPart(activeDocument, partName);
     }
 
     public boolean isPartNameAvailable(String partName) {
@@ -320,22 +387,6 @@ public class ItemEditorManager extends ManagerPackage {
     }
 
     // Accessible \\
-
-    public ObjectArrayList<ItemEntryStruct> getItemEntries() {
-
-        ObjectArrayList<ItemEntryStruct> entries = itemLibraryBranch.getEntries();
-
-        for (ItemDocumentInstance document : itemName2ItemDocument.values())
-            if (!itemLibraryBranch.hasItem(document.getItemName()))
-                entries.add(document.getEntry());
-
-        entries.sort((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(a.getItemName(), b.getItemName()));
-        return entries;
-    }
-
-    public ItemDocumentInstance getDocument(String itemName) {
-        return itemName2ItemDocument.get(itemName);
-    }
 
     public ItemDocumentInstance getActiveDocument() {
         return activeDocument;

@@ -1,0 +1,36 @@
+{
+  "tab": "Features",
+  "order": 12,
+  "directory": "features",
+  "fields": [
+    {
+      "key": "slot",
+      "type": "enum",
+      "required": true,
+      "values": [
+        "head",
+        "hair",
+        "nose",
+        "eyes",
+        "brows",
+        "mouth"
+      ],
+      "default": "hair"
+    },
+    {
+      "key": "mesh",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "texture",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "face",
+      "type": "string",
+      "default": ""
+    }
+  ]
+}

@@ -1,0 +1,646 @@
+{
+  "elements": [
+    {
+      "id": "info_value_row",
+      "type": "sprite",
+      "sprite": "menus/Button",
+      "size": {
+        "x": "100%",
+        "y": "22px"
+      },
+      "color": {
+        "theme": "control_hover",
+        "alpha": 0
+      },
+      "hover_color": {
+        "theme": "control_hover",
+        "alpha": 0.5
+      },
+      "elements": [
+        {
+          "id": "info_key_label",
+          "type": "label",
+          "anchor": "left",
+          "pivot": "left",
+          "position": {
+            "x": "20px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(40% - 20px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": "text_muted"
+        },
+        {
+          "id": "info_value_button",
+          "type": "button",
+          "sprite": "menus/Button",
+          "anchor": "right",
+          "pivot": "right",
+          "position": {
+            "x": "-26px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(60% - 30px)",
+            "y": "18px"
+          },
+          "color": "control",
+          "hover_color": "control_hover",
+          "on_click": {
+            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "method": "editValue"
+          },
+          "elements": [
+            {
+              "id": "info_value_label",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "6px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "calc(100% - 12px)",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "",
+              "font_size": "60%",
+              "color": "text"
+            }
+          ]
+        },
+        {
+          "id": "info_remove_button",
+          "type": "button",
+          "sprite": "menus/Button",
+          "anchor": "right",
+          "pivot": "right",
+          "position": {
+            "x": "-2px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "20px",
+            "y": "18px"
+          },
+          "color": {
+            "theme": "danger",
+            "alpha": 0
+          },
+          "hover_color": "danger",
+          "on_click": {
+            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "method": "removeValue"
+          },
+          "elements": [
+            {
+              "id": "info_remove_icon",
+              "type": "sprite",
+              "sprite": "menus/CloseIcon",
+              "anchor": "center",
+              "pivot": "center",
+              "size": {
+                "x": "10px",
+                "y": "10px"
+              },
+              "color": "text"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "info_group_row",
+      "type": "button",
+      "sprite": "menus/Button",
+      "size": {
+        "x": "100%",
+        "y": "22px"
+      },
+      "color": {
+        "theme": "control_hover",
+        "alpha": 0
+      },
+      "hover_color": {
+        "theme": "control_hover",
+        "alpha": 0.5
+      },
+      "on_click": {
+        "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+        "method": "toggleGroup"
+      },
+      "elements": [
+        {
+          "id": "info_toggle_label",
+          "type": "label",
+          "anchor": "left",
+          "pivot": "left",
+          "position": {
+            "x": "4px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "16px",
+            "y": "100%"
+          },
+          "text": "",
+          "font_size": "66%",
+          "color": "accent"
+        },
+        {
+          "id": "info_key_label",
+          "type": "label",
+          "anchor": "left",
+          "pivot": "left",
+          "position": {
+            "x": "20px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(100% - 72px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": "text"
+        },
+        {
+          "id": "info_add_button",
+          "type": "button",
+          "sprite": "menus/Button",
+          "anchor": "right",
+          "pivot": "right",
+          "position": {
+            "x": "-26px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "20px",
+            "y": "18px"
+          },
+          "color": "control",
+          "hover_color": "control_hover",
+          "on_click": {
+            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "method": "addElement"
+          },
+          "elements": [
+            {
+              "id": "info_add_label",
+              "type": "label",
+              "text": "+",
+              "font_size": "64%",
+              "color": "text"
+            }
+          ]
+        },
+        {
+          "id": "info_remove_button",
+          "type": "button",
+          "sprite": "menus/Button",
+          "anchor": "right",
+          "pivot": "right",
+          "position": {
+            "x": "-2px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "20px",
+            "y": "18px"
+          },
+          "color": {
+            "theme": "danger",
+            "alpha": 0
+          },
+          "hover_color": "danger",
+          "on_click": {
+            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "method": "removeValue"
+          },
+          "elements": [
+            {
+              "id": "info_remove_icon",
+              "type": "sprite",
+              "sprite": "menus/CloseIcon",
+              "anchor": "center",
+              "pivot": "center",
+              "size": {
+                "x": "10px",
+                "y": "10px"
+              },
+              "color": "text"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "info_missing_row",
+      "type": "sprite",
+      "sprite": "menus/Button",
+      "size": {
+        "x": "100%",
+        "y": "22px"
+      },
+      "color": {
+        "theme": "control_hover",
+        "alpha": 0
+      },
+      "hover_color": {
+        "theme": "control_hover",
+        "alpha": 0.5
+      },
+      "elements": [
+        {
+          "id": "info_key_label",
+          "type": "label",
+          "anchor": "left",
+          "pivot": "left",
+          "position": {
+            "x": "20px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(40% - 20px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": "outline"
+        },
+        {
+          "id": "info_add_button",
+          "type": "button",
+          "sprite": "menus/Button",
+          "anchor": "right",
+          "pivot": "right",
+          "position": {
+            "x": "-2px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "56px",
+            "y": "18px"
+          },
+          "color": "control",
+          "hover_color": "control_hover",
+          "on_click": {
+            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "method": "addField"
+          },
+          "elements": [
+            {
+              "id": "info_add_label",
+              "type": "label",
+              "text": "+ Add",
+              "font_size": "64%",
+              "color": "text"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "menus": [
+    {
+      "id": "InfoPanel",
+      "raycast_input": true,
+      "lock_input": false,
+      "entry_points": [
+        "info_panel_rows",
+        "info_panel_title_label",
+        "info_panel_status_label"
+      ],
+      "elements": [
+        {
+          "id": "info_panel_toolbar",
+          "type": "sprite",
+          "sprite": "menus/ToolBar",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "size": {
+            "x": "100%",
+            "y": "30px"
+          },
+          "color": "header",
+          "on_hover_exit": {},
+          "elements": [
+            {
+              "id": "info_panel_tool_row",
+              "type": "container",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "4px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "calc(100% - 8px)",
+                "y": "24px"
+              },
+              "stack": "horizontal",
+              "spacing": "1px",
+              "mask": true,
+              "elements": [
+                {
+                  "id": "info_panel_new_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "62px",
+                    "y": "100%"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "method": "newEntry"
+                  },
+                  "elements": [
+                    {
+                      "id": "info_panel_new_label",
+                      "type": "label",
+                      "text": "New",
+                      "font_size": "54%",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "info_panel_new_file_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "62px",
+                    "y": "100%"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "method": "newFile"
+                  },
+                  "elements": [
+                    {
+                      "id": "info_panel_new_file_label",
+                      "type": "label",
+                      "text": "New File",
+                      "font_size": "54%",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "info_panel_delete_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "62px",
+                    "y": "100%"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "method": "deleteSelection"
+                  },
+                  "elements": [
+                    {
+                      "id": "info_panel_delete_label",
+                      "type": "label",
+                      "text": "Delete",
+                      "font_size": "54%",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "info_panel_file_separator",
+                  "type": "container",
+                  "size": {
+                    "x": "13px",
+                    "y": "100%"
+                  },
+                  "elements": [
+                    {
+                      "id": "info_panel_file_separator_line",
+                      "type": "sprite",
+                      "sprite": "util/Default",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "1px",
+                        "y": "calc(100% - 8px)"
+                      },
+                      "color": "outline"
+                    }
+                  ]
+                },
+                {
+                  "id": "info_panel_save_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "62px",
+                    "y": "100%"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "method": "save"
+                  },
+                  "elements": [
+                    {
+                      "id": "info_panel_save_label",
+                      "type": "label",
+                      "text": "Save",
+                      "font_size": "54%",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "info_panel_save_all_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "62px",
+                    "y": "100%"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "method": "saveAll"
+                  },
+                  "elements": [
+                    {
+                      "id": "info_panel_save_all_label",
+                      "type": "label",
+                      "text": "Save All",
+                      "font_size": "54%",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "info_panel_revert_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "62px",
+                    "y": "100%"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "method": "revert"
+                  },
+                  "elements": [
+                    {
+                      "id": "info_panel_revert_label",
+                      "type": "label",
+                      "text": "Revert",
+                      "font_size": "54%",
+                      "color": "text"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "info_panel_title_bar",
+          "type": "sprite",
+          "sprite": "util/Default",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "position": {
+            "x": "0px",
+            "y": "-30px"
+          },
+          "size": {
+            "x": "100%",
+            "y": "24px"
+          },
+          "color": "panel",
+          "elements": [
+            {
+              "id": "info_panel_title_accent",
+              "type": "sprite",
+              "sprite": "util/Default",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "8px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "3px",
+                "y": "14px"
+              },
+              "color": "accent"
+            },
+            {
+              "id": "info_panel_title_label",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "16px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "calc(100% - 24px)",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "",
+              "font_size": "56%",
+              "color": "text"
+            }
+          ]
+        },
+        {
+          "id": "info_panel_rows",
+          "type": "container",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "position": {
+            "x": "4px",
+            "y": "28px"
+          },
+          "size": {
+            "x": "calc(100% - 8px)",
+            "y": "calc(100% - 88px)"
+          },
+          "stack": "vertical",
+          "spacing": "1px",
+          "mask": true
+        },
+        {
+          "id": "info_panel_status_bar",
+          "type": "sprite",
+          "sprite": "menus/StatusBar",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "100%",
+            "y": "24px"
+          },
+          "color": "header",
+          "elements": [
+            {
+              "id": "info_panel_status_label",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "4px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "calc(100% - 8px)",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "",
+              "font_size": "56%",
+              "color": "text_muted"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

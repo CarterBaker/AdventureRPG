@@ -1,0 +1,190 @@
+{
+  "tab": "Structures",
+  "order": 4,
+  "directory": "structures",
+  "fields": [
+    {
+      "key": "origin",
+      "type": "array",
+      "length": 3,
+      "element": {
+        "type": "int",
+        "default": 0
+      }
+    },
+    {
+      "key": "y_offset_blocks",
+      "type": "int",
+      "default": 0
+    },
+    {
+      "key": "foundation_block",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "rules",
+      "type": "object",
+      "fields": [
+        {
+          "key": "biomes",
+          "type": "array",
+          "element": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        {
+          "key": "surface",
+          "type": "enum",
+          "values": [
+            "LAND",
+            "UNDERWATER",
+            "ANY"
+          ],
+          "default": "LAND"
+        },
+        {
+          "key": "min_ground_height_blocks",
+          "type": "int",
+          "default": 24
+        },
+        {
+          "key": "max_ground_height_blocks",
+          "type": "int",
+          "default": 900
+        },
+        {
+          "key": "max_slope_blocks",
+          "type": "int",
+          "default": 4
+        }
+      ]
+    },
+    {
+      "key": "frequency",
+      "type": "object",
+      "fields": [
+        {
+          "key": "chance",
+          "type": "float",
+          "required": true,
+          "default": 0.5
+        },
+        {
+          "key": "spacing_blocks",
+          "type": "int",
+          "required": true,
+          "default": 128
+        },
+        {
+          "key": "separation_blocks",
+          "type": "int",
+          "default": 0
+        },
+        {
+          "key": "random_rotation",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "key": "fixed_placements",
+      "type": "array",
+      "element": {
+        "type": "object",
+        "fields": [
+          {
+            "key": "x",
+            "type": "int",
+            "required": true,
+            "default": 0
+          },
+          {
+            "key": "y",
+            "type": "int",
+            "default": 0
+          },
+          {
+            "key": "z",
+            "type": "int",
+            "required": true,
+            "default": 0
+          },
+          {
+            "key": "rotation",
+            "type": "int",
+            "default": 0
+          },
+          {
+            "key": "enforce_rules",
+            "type": "boolean",
+            "default": false
+          }
+        ]
+      }
+    },
+    {
+      "key": "blocks",
+      "type": "array",
+      "required": true,
+      "element": {
+        "type": "object",
+        "fields": [
+          {
+            "key": "block",
+            "type": "string",
+            "required": true,
+            "default": ""
+          },
+          {
+            "key": "position",
+            "type": "array",
+            "length": 3,
+            "element": {
+              "type": "int",
+              "default": 0
+            }
+          },
+          {
+            "key": "from",
+            "type": "array",
+            "length": 3,
+            "element": {
+              "type": "int",
+              "default": 0
+            }
+          },
+          {
+            "key": "to",
+            "type": "array",
+            "length": 3,
+            "element": {
+              "type": "int",
+              "default": 0
+            }
+          },
+          {
+            "key": "facing",
+            "type": "enum",
+            "values": [
+              "NORTH",
+              "EAST",
+              "SOUTH",
+              "WEST",
+              "UP",
+              "DOWN"
+            ],
+            "default": "NORTH"
+          },
+          {
+            "key": "spin",
+            "type": "int",
+            "default": 0
+          }
+        ]
+      }
+    }
+  ]
+}

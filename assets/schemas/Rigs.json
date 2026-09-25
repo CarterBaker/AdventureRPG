@@ -1,0 +1,92 @@
+{
+  "tab": "Rigs",
+  "order": 13,
+  "directory": "rigs",
+  "fields": [
+    {
+      "key": "bones",
+      "type": "array",
+      "required": true,
+      "element": {
+        "type": "object",
+        "fields": [
+          {
+            "key": "name",
+            "type": "string",
+            "required": true,
+            "default": ""
+          },
+          {
+            "key": "parent",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "key": "position",
+            "type": "object",
+            "required": true,
+            "fields": [
+              {
+                "key": "x",
+                "type": "float",
+                "default": 0.0
+              },
+              {
+                "key": "y",
+                "type": "float",
+                "default": 0.0
+              },
+              {
+                "key": "z",
+                "type": "float",
+                "default": 0.0
+              }
+            ]
+          },
+          {
+            "key": "rotation",
+            "type": "object",
+            "fields": [
+              {
+                "key": "x",
+                "type": "float",
+                "default": 0.0
+              },
+              {
+                "key": "y",
+                "type": "float",
+                "default": 0.0
+              },
+              {
+                "key": "z",
+                "type": "float",
+                "default": 0.0
+              }
+            ]
+          },
+          {
+            "key": "size",
+            "type": "object",
+            "fields": [
+              {
+                "key": "x",
+                "type": "float",
+                "default": 0.25
+              },
+              {
+                "key": "y",
+                "type": "float",
+                "default": 0.25
+              },
+              {
+                "key": "z",
+                "type": "float",
+                "default": 0.25
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
