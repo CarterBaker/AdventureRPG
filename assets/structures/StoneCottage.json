@@ -3,7 +3,7 @@
     "y_offset_blocks": -1,
     "foundation_block": "TerraArcanaBlocks/Stone Block",
     "rules": {
-        "biomes": ["lowland/AldermereHeartlandBiome", "lowland/AmberleaPlainsBiome", "lowland/GildenfieldsBiome"],
+        "biomes": ["aldermere/ValdrenHeartmeadowsBiome", "aldermere/SunmereVineyardsBiome", "solmara/AmberleaPlainsBiome"],
         "surface": "LAND",
         "min_ground_height_blocks": 161,
         "max_ground_height_blocks": 240,
