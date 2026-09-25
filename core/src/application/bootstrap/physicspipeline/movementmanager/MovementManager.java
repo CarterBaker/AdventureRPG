@@ -20,10 +20,11 @@ public class MovementManager extends ManagerPackage {
      * body's facing. SwimBranch resolves water depth first and decides
      * whether the entity wades (gravity owns Y with a depth-nerfed jump) or
      * swims (SwimBranch owns Y); any leap hands Y back to gravity until it
-     * falls again. fly() is the physics-free
-     * counterpart used by free cameras, and both paths share applyMovement(),
-     * which also records the speed actually travelled. face() turns an
-     * entity's body on its own, for entities posed without being moved.
+     * falls again; a swimmer blocked above or below stops moving that way.
+     * fly() is the physics-free counterpart used by free cameras, and both
+     * paths share applyMovement(), which also records the speed actually
+     * travelled. face() turns an entity's body on its own, for entities
+     * posed without being moved.
      */
 
     // Internal
@@ -106,6 +107,8 @@ public class MovementManager extends ManagerPackage {
 
         if (!climbedOut && !swimming)
             gravityBranch.postCollision(preCollisionSnapshot, movement, entity);
+        else if (!climbedOut)
+            swimBranch.postCollision(preCollisionSnapshot, movement, entity);
 
         // 8. Water movement state — wading, treading, and water jump variants
         if (!climbedOut)

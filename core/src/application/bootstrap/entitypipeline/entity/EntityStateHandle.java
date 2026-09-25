@@ -155,9 +155,15 @@ public class EntityStateHandle extends HandlePackage {
 
     public boolean isGrounded() {
         return !isJumping()
-                && movementState != EntityState.FALLING
-                && movementState != EntityState.SWIMMING
-                && movementState != EntityState.TREADING;
+                && !isSwimming()
+                && movementState != EntityState.FALLING;
+    }
+
+    public boolean isSwimming() {
+        return switch (movementState) {
+            case SWIMMING, TREADING, UNDERWATER_SWIMMING, UNDERWATER_TREADING, DIVING, SURFACING -> true;
+            default -> false;
+        };
     }
 
     public boolean isJumping() {
