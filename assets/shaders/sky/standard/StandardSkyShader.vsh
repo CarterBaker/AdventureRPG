@@ -11,7 +11,7 @@ void main() {
     gl_Position = vec4(ndc, 1.0, 1.0);
 
     vec4 farPoint = u_inverseProjection * vec4(ndc, 1.0, 1.0);
-    vec3 viewDir = normalize(farPoint.xyz / farPoint.w);
+    vec3 viewDir = farPoint.xyz / farPoint.w;
 
     v_dir = mat3(u_inverseView) * viewDir;
 }
