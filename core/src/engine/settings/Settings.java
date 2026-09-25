@@ -1,5 +1,7 @@
 package engine.settings;
 
+import engine.input.Buttons;
+import engine.input.InputCode;
 import engine.input.Keys;
 import engine.root.EngineSetting;
 
@@ -7,8 +9,9 @@ public class Settings {
 
     /*
      * User-configurable runtime values. Serialized to and from disk via
-     * LoadUtility. Fields are public and mutable — patched at runtime and
-     * flushed on close or settings change.
+     * SettingsUtility. Fields are public and mutable — patched at runtime and
+     * flushed on close or settings change. Bindings hold stored input codes,
+     * so a binding may be a key or a mouse button.
      */
 
     // Debug
@@ -22,6 +25,7 @@ public class Settings {
     public int windowY = EngineSetting.WINDOW_POSITION_UNSET;
     public boolean windowMaximized;
     public boolean fullscreen;
+    public boolean vsync = true;
 
     // Render
     public int maxRenderDistance = 64;
@@ -55,7 +59,11 @@ public class Settings {
     public int[] bindSprint = { Keys.SHIFT_LEFT };
 
     // Bindings — Game Actions
-    public int[] bindInventory = { Keys.I };
+    public int[] bindSecondary = { InputCode.storedMouseCode(Buttons.RIGHT) };
+
+    // Bindings — Screen Capture
+    public int[] bindScreenshot = { Keys.F12 };
+    public int[] bindRecordVideo = { Keys.F9 };
 
     // Bindings — Editor Single
     public int[] bindToggleInspector = { Keys.I };

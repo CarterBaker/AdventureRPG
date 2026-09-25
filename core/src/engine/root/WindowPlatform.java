@@ -27,6 +27,10 @@ public interface WindowPlatform {
 
     void placeWindow(WindowInstance window, int screenX, int screenY, int width, int height);
 
+    void setFullscreen(boolean fullscreen);
+
+    void setVsync(boolean vsync);
+
     void exit();
 
     /*

@@ -12,7 +12,9 @@ public class SettingsUtility {
 
     /*
      * Handles all Settings I/O and bridges Settings to KeyBindings. Single
-     * point of contact for loading, saving, applying, and flushing bindings.
+     * point of contact for loading, saving, applying, flushing, and resetting
+     * bindings. Loaded values are clamped to the ranges the settings menu
+     * offers, so a hand-edited file can never push the engine out of bounds.
      * Never held — all methods static.
      */
 
@@ -57,8 +59,22 @@ public class SettingsUtility {
         if (settings.windowHeight < EngineSetting.MIN_WINDOW_DIMENSION)
             settings.windowHeight = EngineSetting.MIN_WINDOW_DIMENSION;
 
-        if (settings.nearTessellationRadius < 1)
-            settings.nearTessellationRadius = 1;
+        settings.nearTessellationRadius = Math.clamp(
+                settings.nearTessellationRadius,
+                EngineSetting.NEAR_TESSELLATION_RADIUS_MIN,
+                EngineSetting.NEAR_TESSELLATION_RADIUS_MAX);
+        settings.maxRenderDistance = Math.clamp(
+                settings.maxRenderDistance,
+                EngineSetting.RENDER_DISTANCE_MIN,
+                EngineSetting.RENDER_DISTANCE_MAX);
+        settings.FOV = Math.clamp(
+                settings.FOV,
+                EngineSetting.FIELD_OF_VIEW_MIN,
+                EngineSetting.FIELD_OF_VIEW_MAX);
+        settings.mouseSensitivity = Math.clamp(
+                settings.mouseSensitivity,
+                EngineSetting.MOUSE_SENSITIVITY_MIN,
+                EngineSetting.MOUSE_SENSITIVITY_MAX);
 
         sanitizeColors(settings);
     }
@@ -105,7 +121,9 @@ public class SettingsUtility {
         KeyBindings.JUMP.set(toInputCodes(settings.bindJump));
         KeyBindings.WALK.set(toInputCodes(settings.bindWalk));
         KeyBindings.SPRINT.set(toInputCodes(settings.bindSprint));
-        KeyBindings.INVENTORY.set(toInputCodes(settings.bindInventory));
+        KeyBindings.SECONDARY.set(toInputCodes(settings.bindSecondary));
+        KeyBindings.SCREENSHOT.set(toInputCodes(settings.bindScreenshot));
+        KeyBindings.RECORD_VIDEO.set(toInputCodes(settings.bindRecordVideo));
         KeyBindings.TOGGLE_INSPECTOR.set(toInputCodes(settings.bindToggleInspector));
         KeyBindings.FOCUS_SELECTED.set(toInputCodes(settings.bindFocusSelected));
         KeyBindings.DELETE_SELECTED.set(toInputCodes(settings.bindDeleteSelected));
@@ -125,7 +143,9 @@ public class SettingsUtility {
         settings.bindJump = toCodes(KeyBindings.JUMP);
         settings.bindWalk = toCodes(KeyBindings.WALK);
         settings.bindSprint = toCodes(KeyBindings.SPRINT);
-        settings.bindInventory = toCodes(KeyBindings.INVENTORY);
+        settings.bindSecondary = toCodes(KeyBindings.SECONDARY);
+        settings.bindScreenshot = toCodes(KeyBindings.SCREENSHOT);
+        settings.bindRecordVideo = toCodes(KeyBindings.RECORD_VIDEO);
         settings.bindToggleInspector = toCodes(KeyBindings.TOGGLE_INSPECTOR);
         settings.bindFocusSelected = toCodes(KeyBindings.FOCUS_SELECTED);
         settings.bindDeleteSelected = toCodes(KeyBindings.DELETE_SELECTED);
@@ -136,12 +156,19 @@ public class SettingsUtility {
         settings.bindOpenConsole = toCodes(KeyBindings.OPEN_CONSOLE);
     }
 
+    public static void resetBindings(Settings settings) {
+        applyBindings(new Settings());
+        flushBindings(settings);
+    }
+
     // Internal \\
 
     private static InputCode[] toInputCodes(int[] codes) {
+        if (codes == null)
+            return null;
         InputCode[] result = new InputCode[codes.length];
         for (int i = 0; i < codes.length; i++)
-            result[i] = InputCode.key(codes[i]);
+            result[i] = InputCode.fromStoredCode(codes[i]);
         return result;
     }
 
@@ -149,7 +176,7 @@ public class SettingsUtility {
         InputCode[] codes = binding.getCodes();
         int[] result = new int[codes.length];
         for (int i = 0; i < codes.length; i++)
-            result[i] = codes[i].code;
+            result[i] = codes[i].toStoredCode();
         return result;
     }
 }

@@ -18,11 +18,12 @@ public class SaveManager extends ManagerPackage {
     /*
      * Owns character saves. The world is persistent on disk and never saved
      * here — every character is its own save file that loads into that same
-     * world. newCharacter() writes and releases whatever character the window
-     * was playing and rolls a fresh body for the character creator to shape;
-     * createCharacter() names that body and makes it the active character, as
-     * continuing the most recently played one or loading a chosen one also
-     * do. Continuing only succeeds when a character save exists and loads, and
+     * world. closeCharacter() writes and releases whatever character the
+     * window was playing, leaving the player where it stands with no active
+     * save; newCharacter() does the same and rolls a fresh body for the
+     * character creator to shape; createCharacter() names that body and makes
+     * it the active character, as continuing the most recently played one or
+     * loading a chosen one also do. Continuing only succeeds when a character save exists and loads, and
      * a name is only taken by one save. Becoming a character writes it at once,
      * and the active character is written again before it is replaced and when
      * its context tears down.
@@ -69,13 +70,16 @@ public class SaveManager extends ManagerPackage {
     // Management \\
 
     public void newCharacter(WindowInstance window) {
+        closeCharacter(window);
+        playerManager.rerollPlayerForWindow(window.getWindowID());
+    }
+
+    public void closeCharacter(WindowInstance window) {
 
         saveCharacter(window);
 
         if (isSaveWindow(window))
             this.activeCharacterName = null;
-
-        playerManager.rerollPlayerForWindow(window.getWindowID());
     }
 
     public boolean createCharacter(WindowInstance window, String characterName) {

@@ -72,7 +72,7 @@ public class Lwjgl3Launcher {
             return true;
         });
 
-        EnginePackage.setupConstructor(settings, baseGameDir, ENGINE_GSON, platform);
+        EnginePackage.setupConstructor(settings, settingsFile, baseGameDir, ENGINE_GSON, platform);
         GameEngine engine = new GameEngine();
         new Lwjgl3Application(engine, config, platform);
         LogUtility.closeSession();
@@ -83,17 +83,16 @@ public class Lwjgl3Launcher {
         Lwjgl3Configuration config = new Lwjgl3Configuration();
         config.setOpenGLVersion(4, 1);
         config.setTitle("AdventureRPG");
-        config.useVsync(true);
+        config.useVsync(settings.vsync);
 
-        if (settings.fullscreen) {
+        int width = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowWidth);
+        int height = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowHeight);
+        config.setWindowedMode(width, height);
+        config.setWindowPosition(settings.windowX, settings.windowY);
+        config.setMaximized(settings.windowMaximized);
+
+        if (settings.fullscreen)
             config.setFullscreenMode(Lwjgl3Configuration.getDisplayMode());
-        } else {
-            int width = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowWidth);
-            int height = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, settings.windowHeight);
-            config.setWindowedMode(width, height);
-            config.setWindowPosition(settings.windowX, settings.windowY);
-            config.setMaximized(settings.windowMaximized);
-        }
 
         return config;
     }
@@ -104,15 +103,13 @@ public class Lwjgl3Launcher {
             return;
 
         settings.fullscreen = display.isFullscreen();
+        settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWindowWidth());
+        settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWindowHeight());
+        settings.windowX = display.getPosX();
+        settings.windowY = display.getPosY();
+        settings.windowMaximized = display.isMaximized();
 
-        if (!display.isFullscreen()) {
-            settings.windowWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWindowWidth());
-            settings.windowHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWindowHeight());
-            settings.windowX = display.getPosX();
-            settings.windowY = display.getPosY();
-            settings.windowMaximized = display.isMaximized();
-        }
-
+        SettingsUtility.flushBindings(settings);
         SettingsUtility.save(file, settings, ENGINE_GSON);
     }
 }

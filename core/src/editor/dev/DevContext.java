@@ -10,7 +10,6 @@ import application.runtime.weather.PrecipitationSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
 import editor.dev.freecamera.FreeCameraSystem;
-import editor.dev.waterplacement.DevWaterPlacementSystem;
 import engine.root.ContextPackage;
 
 public class DevContext extends ContextPackage {
@@ -36,7 +35,6 @@ public class DevContext extends ContextPackage {
     private PostProcessingManager postProcessingManager;
     private WeatherSystem weatherSystem;
     private PrecipitationSystem precipitationSystem;
-    private DevWaterPlacementSystem devWaterPlacementSystem;
 
     // Internal \\
 
@@ -54,6 +52,5 @@ public class DevContext extends ContextPackage {
         this.postProcessingManager = create(PostProcessingManager.class);
         this.weatherSystem = create(WeatherSystem.class);
         this.precipitationSystem = create(PrecipitationSystem.class);
-        this.devWaterPlacementSystem = create(DevWaterPlacementSystem.class);
     }
 }

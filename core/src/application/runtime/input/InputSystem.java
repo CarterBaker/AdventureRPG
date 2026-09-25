@@ -3,12 +3,9 @@ package application.runtime.input;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.entitypipeline.util.EntityInputHandle;
-import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
-import application.runtime.menueventsmanager.menus.InventoryBranch;
 import engine.assets.camera.CameraInstance;
 import engine.root.SystemPackage;
-import engine.settings.KeyBindings;
 import engine.util.mathematics.vectors.Vector3;
 
 public class InputSystem extends SystemPackage {
@@ -25,8 +22,6 @@ public class InputSystem extends SystemPackage {
     // Internal
     private application.kernel.inputpipeline.inputmanager.InputManager bootstrapInput;
     private PlayerManager playerManager;
-    private MenuManager menuManager;
-    private InventoryBranch inventoryBranch;
 
     // Raw input — owned here, passed to PlayerManager at spawn
     private RawInputHandle rawInputHandle;
@@ -42,8 +37,6 @@ public class InputSystem extends SystemPackage {
     protected void get() {
         this.bootstrapInput = get(application.kernel.inputpipeline.inputmanager.InputManager.class);
         this.playerManager = get(PlayerManager.class);
-        this.menuManager = get(MenuManager.class);
-        this.inventoryBranch = get(InventoryBranch.class);
     }
 
     @Override
@@ -55,8 +48,6 @@ public class InputSystem extends SystemPackage {
         if (!playerManager.hasPlayerForWindow(windowID))
             return;
 
-        handleInventoryInput(windowID);
-
         if (context.getWindow().getMenuListHandle().isInputLocked())
             return;
 
@@ -65,21 +56,6 @@ public class InputSystem extends SystemPackage {
     }
 
     // Input \\
-
-    private void handleInventoryInput(int windowID) {
-
-        if (!rawInputHandle.isBindingClicked(KeyBindings.INVENTORY))
-            return;
-
-        // Block opening while another menu holds input lock.
-        // Closing always goes through so the inventory can never get stuck open.
-        if (!inventoryBranch.isOpen() && context.getWindow().getMenuListHandle().isInputLocked())
-            return;
-
-        inventoryBranch.toggleInventory(
-                playerManager.getPlayerForWindow(windowID),
-                context.getWindow());
-    }
 
     private void updateCameraRotation(int windowID) {
         CameraInstance camera = playerManager.getCameraForWindow(windowID);

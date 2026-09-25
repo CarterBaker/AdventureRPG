@@ -28,6 +28,8 @@ public class Lwjgl3Application {
      * The main window is created hidden and fitted inside the work area of the
      * monitor it was saved on before it is shown, so a stale, oversized, or
      * off-screen saved placement never leaves its title bar out of reach.
+     * Fullscreen and vsync can be switched at runtime; leaving fullscreen
+     * restores the last windowed bounds through that same placement path.
      */
 
     // Internal
@@ -37,7 +39,7 @@ public class Lwjgl3Application {
     private final Lwjgl3Input input;
     private final int glMajor;
     private final int glMinor;
-    private final int swapInterval;
+    private int swapInterval;
 
     // Secondary Windows
     private final LongArrayList secondaryHandles;
@@ -79,7 +81,9 @@ public class Lwjgl3Application {
         GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
 
         long monitor = config.isFullscreen() ? GLFW.glfwGetPrimaryMonitor() : 0L;
-        this.mainHandle = GLFW.glfwCreateWindow(config.width, config.height, config.title, monitor, 0L);
+        int createWidth = config.isFullscreen() ? config.getFullscreenWidth() : config.width;
+        int createHeight = config.isFullscreen() ? config.getFullscreenHeight() : config.height;
+        this.mainHandle = GLFW.glfwCreateWindow(createWidth, createHeight, config.title, monitor, 0L);
         GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_TRUE);
 
         if (mainHandle == 0L) {
@@ -88,7 +92,7 @@ public class Lwjgl3Application {
         }
 
         if (!config.isFullscreen())
-            placeMainWindow(config);
+            placeMainWindow(config.width, config.height, config.getWindowX(), config.getWindowY());
 
         GLFW.glfwMakeContextCurrent(mainHandle);
         GLFW.glfwSwapInterval(swapInterval);
@@ -104,7 +108,7 @@ public class Lwjgl3Application {
         this.engine = engine;
 
         display.setMainHandle(mainHandle);
-        captureWindowedBounds();
+        seedWindowedBounds(config);
 
         Lwjgl3GL gl = new Lwjgl3GL();
         EngineContext.display = display;
@@ -166,7 +170,12 @@ public class Lwjgl3Application {
     private void registerPlacementCallbacks() {
         GLFW.glfwSetWindowPosCallback(mainHandle, (w, x, y) -> onWindowMoved(w));
         GLFW.glfwSetWindowSizeCallback(mainHandle, (w, width, height) -> captureWindowedBounds());
-        GLFW.glfwSetWindowMaximizeCallback(mainHandle, (w, maximized) -> display.setMaximized(maximized));
+        GLFW.glfwSetWindowMaximizeCallback(mainHandle, (w, maximized) -> onWindowMaximized(maximized));
+    }
+
+    private void onWindowMaximized(boolean maximized) {
+        if (!display.isFullscreen())
+            display.setMaximized(maximized);
     }
 
     private void loop() {
@@ -194,9 +203,9 @@ public class Lwjgl3Application {
 
     // Placement \\
 
-    private void placeMainWindow(Lwjgl3Configuration config) {
+    private void placeMainWindow(int windowWidth, int windowHeight, int windowX, int windowY) {
 
-        long monitor = resolvePlacementMonitor(config);
+        long monitor = resolvePlacementMonitor(windowX, windowY, windowWidth, windowHeight);
 
         if (monitor == 0L || !readMonitorWorkarea(monitor))
             return;
@@ -220,31 +229,31 @@ public class Lwjgl3Application {
 
         int maxWidth = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, areaWidth - frameLeft - frameRight);
         int maxHeight = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, areaHeight - frameTop - frameBottom);
-        int width = Math.clamp(config.width, EngineSetting.MIN_WINDOW_DIMENSION, maxWidth);
-        int height = Math.clamp(config.height, EngineSetting.MIN_WINDOW_DIMENSION, maxHeight);
+        int width = Math.clamp(windowWidth, EngineSetting.MIN_WINDOW_DIMENSION, maxWidth);
+        int height = Math.clamp(windowHeight, EngineSetting.MIN_WINDOW_DIMENSION, maxHeight);
 
         int minX = areaX + frameLeft;
         int minY = areaY + frameTop;
         int maxX = Math.max(minX, areaX + areaWidth - frameRight - width);
         int maxY = Math.max(minY, areaY + areaHeight - frameBottom - height);
 
-        int x = hasWindowPosition(config)
-                ? Math.clamp(config.getWindowX(), minX, maxX)
+        int x = hasWindowPosition(windowX, windowY)
+                ? Math.clamp(windowX, minX, maxX)
                 : minX + (maxX - minX) / 2;
-        int y = hasWindowPosition(config)
-                ? Math.clamp(config.getWindowY(), minY, maxY)
+        int y = hasWindowPosition(windowX, windowY)
+                ? Math.clamp(windowY, minY, maxY)
                 : minY + (maxY - minY) / 2;
 
         GLFW.glfwSetWindowSize(mainHandle, width, height);
         GLFW.glfwSetWindowPos(mainHandle, x, y);
     }
 
-    private long resolvePlacementMonitor(Lwjgl3Configuration config) {
+    private long resolvePlacementMonitor(int windowX, int windowY, int windowWidth, int windowHeight) {
 
         long primaryMonitor = GLFW.glfwGetPrimaryMonitor();
         PointerBuffer monitors = GLFW.glfwGetMonitors();
 
-        if (!hasWindowPosition(config) || monitors == null)
+        if (!hasWindowPosition(windowX, windowY) || monitors == null)
             return primaryMonitor;
 
         long bestMonitor = primaryMonitor;
@@ -257,9 +266,8 @@ public class Lwjgl3Application {
             if (!readMonitorWorkarea(candidate))
                 continue;
 
-            long overlap = (long) overlapSpan(config.getWindowX(), config.width, areaScratchX.get(0),
-                    areaScratchW.get(0))
-                    * overlapSpan(config.getWindowY(), config.height, areaScratchY.get(0), areaScratchH.get(0));
+            long overlap = (long) overlapSpan(windowX, windowWidth, areaScratchX.get(0), areaScratchW.get(0))
+                    * overlapSpan(windowY, windowHeight, areaScratchY.get(0), areaScratchH.get(0));
 
             if (overlap > bestOverlap) {
                 bestOverlap = overlap;
@@ -292,6 +300,17 @@ public class Lwjgl3Application {
         return true;
     }
 
+    private void seedWindowedBounds(Lwjgl3Configuration config) {
+
+        if (!config.isFullscreen()) {
+            captureWindowedBounds();
+            return;
+        }
+
+        display.setWindowBounds(config.getWindowX(), config.getWindowY(), config.width, config.height);
+        display.setMaximized(config.isMaximized());
+    }
+
     private void captureWindowedBounds() {
 
         if (GLFW.glfwGetWindowMonitor(mainHandle) != 0L
@@ -312,13 +331,75 @@ public class Lwjgl3Application {
         display.setWindowBounds(posScratchX.get(0), posScratchY.get(0), sizeScratchW.get(0), sizeScratchH.get(0));
     }
 
-    private static boolean hasWindowPosition(Lwjgl3Configuration config) {
-        return config.getWindowX() != EngineSetting.WINDOW_POSITION_UNSET
-                && config.getWindowY() != EngineSetting.WINDOW_POSITION_UNSET;
+    private static boolean hasWindowPosition(int windowX, int windowY) {
+        return windowX != EngineSetting.WINDOW_POSITION_UNSET
+                && windowY != EngineSetting.WINDOW_POSITION_UNSET;
     }
 
     private static int overlapSpan(int start, int length, int areaStart, int areaLength) {
         return Math.max(0, Math.min(start + length, areaStart + areaLength) - Math.max(start, areaStart));
+    }
+
+    // Display Mode \\
+
+    /*
+     * Moves the main window onto or off a monitor at runtime. Entering takes
+     * the video mode of the monitor the restored bounds overlap most; leaving
+     * restores those bounds, fitted back inside a monitor's work area, and
+     * re-maximizes a window that was maximized before it went fullscreen.
+     */
+    void setFullscreen(boolean fullscreen) {
+
+        if (display.isFullscreen() == fullscreen)
+            return;
+
+        if (fullscreen)
+            enterFullscreen();
+        else
+            exitFullscreen();
+    }
+
+    private void enterFullscreen() {
+
+        long monitor = resolvePlacementMonitor(
+                display.getPosX(),
+                display.getPosY(),
+                display.getWindowWidth(),
+                display.getWindowHeight());
+        GLFWVidMode mode = monitor != 0L ? GLFW.glfwGetVideoMode(monitor) : null;
+
+        if (mode == null)
+            return;
+
+        display.setFullscreen(true);
+        GLFW.glfwSetWindowMonitor(mainHandle, monitor, 0, 0, mode.width(), mode.height(), mode.refreshRate());
+    }
+
+    private void exitFullscreen() {
+
+        int windowX = display.getPosX();
+        int windowY = display.getPosY();
+        int width = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWindowWidth());
+        int height = Math.max(EngineSetting.MIN_WINDOW_DIMENSION, display.getWindowHeight());
+        boolean positioned = hasWindowPosition(windowX, windowY);
+
+        GLFW.glfwSetWindowMonitor(
+                mainHandle,
+                0L,
+                positioned ? windowX : 0,
+                positioned ? windowY : 0,
+                width,
+                height,
+                GLFW.GLFW_DONT_CARE);
+        display.setFullscreen(false);
+        placeMainWindow(width, height, windowX, windowY);
+
+        if (display.isMaximized())
+            GLFW.glfwMaximizeWindow(mainHandle);
+    }
+
+    void setSwapInterval(int swapInterval) {
+        this.swapInterval = swapInterval;
     }
 
     // Accessible \\

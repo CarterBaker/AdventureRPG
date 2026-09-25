@@ -34,6 +34,10 @@ public class GridInstance extends InstancePackage {
      * cloned location state (clock, weather, wind, precipitation, ocean
      * turbulence, and the Time/Sun/Moon/Sky/Weather-Map/Wind/Precipitation/
      * Ocean UBO instances) handed to it by GridBuildSystem.
+     *
+     * A render distance change swaps only the slot layout in place through
+     * rebuildSlots(), so every system holding this grid keeps a live
+     * reference and the window's clock and weather carry on uninterrupted.
      */
 
     // Focal
@@ -134,12 +138,7 @@ public class GridInstance extends InstancePackage {
         this.renderTargetFbo = renderTargetFbo;
 
         // Grid
-        this.totalSlots = totalSlots;
-        this.loadOrder = loadOrder;
-        this.immediateSlotCount = immediateSlotCount;
-        this.gridCoordinates = gridCoordinates;
-        this.gridSlots = gridSlots;
-        this.radiusSquared = radiusSquared;
+        assignSlots(totalSlots, loadOrder, immediateSlotCount, gridCoordinates, gridSlots, radiusSquared);
 
         // Active State
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
@@ -186,6 +185,37 @@ public class GridInstance extends InstancePackage {
         this.batchedChunks = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
 
         this.scanCursor = 0;
+    }
+
+    // Slots \\
+
+    public void rebuildSlots(
+            int totalSlots,
+            long[] loadOrder,
+            int immediateSlotCount,
+            LongOpenHashSet gridCoordinates,
+            Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
+            float radiusSquared) {
+
+        assignSlots(totalSlots, loadOrder, immediateSlotCount, gridCoordinates, gridSlots, radiusSquared);
+        this.scanCursor = 0;
+        rebuildRenderQueue();
+    }
+
+    private void assignSlots(
+            int totalSlots,
+            long[] loadOrder,
+            int immediateSlotCount,
+            LongOpenHashSet gridCoordinates,
+            Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
+            float radiusSquared) {
+
+        this.totalSlots = totalSlots;
+        this.loadOrder = loadOrder;
+        this.immediateSlotCount = immediateSlotCount;
+        this.gridCoordinates = gridCoordinates;
+        this.gridSlots = gridSlots;
+        this.radiusSquared = radiusSquared;
     }
 
     // Render Queue \\
@@ -344,6 +374,10 @@ public class GridInstance extends InstancePackage {
 
     public GridSlotHandle getGridSlot(long gridCoordinate) {
         return gridSlots.get(gridCoordinate);
+    }
+
+    public Long2ObjectOpenHashMap<GridSlotHandle> getGridSlots() {
+        return gridSlots;
     }
 
     public float getRadiusSquared() {

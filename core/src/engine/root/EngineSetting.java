@@ -181,6 +181,28 @@ public class EngineSetting {
         public static final int WINDOW_POSITION_UNSET = Integer.MIN_VALUE;
         public static final String WINDOW_TITLE = "TerraArcana";
 
+        // Input & Bindings \\
+
+        public static final int BINDING_MOUSE_CODE_OFFSET = 1000;
+        public static final int INPUT_KEY_CODE_COUNT = 512;
+        public static final int INPUT_MOUSE_BUTTON_COUNT = 8;
+        public static final String INPUT_NAME_COMBO_SEPARATOR = " + ";
+        public static final String INPUT_NAME_FIELD_SEPARATOR = "_";
+        public static final String INPUT_NAME_MOUSE_PREFIX = "Mouse ";
+        public static final String INPUT_NAME_UNKNOWN = "Unbound";
+        public static final String INPUT_NAME_WORD_SEPARATOR = " ";
+
+        // User Settings \\
+
+        public static final float FIELD_OF_VIEW_MAX = 110f;
+        public static final float FIELD_OF_VIEW_MIN = 50f;
+        public static final float MOUSE_SENSITIVITY_MAX = 1.0f;
+        public static final float MOUSE_SENSITIVITY_MIN = 0.01f;
+        public static final int NEAR_TESSELLATION_RADIUS_MAX = 8;
+        public static final int NEAR_TESSELLATION_RADIUS_MIN = 1;
+        public static final int RENDER_DISTANCE_MAX = 112;
+        public static final int RENDER_DISTANCE_MIN = 16;
+
         // World Scale \\
 
         public static final int BIOME_SIZE = 4;

@@ -227,6 +227,10 @@
                             "anchor":   "bottom_left",
                             "pivot":    "top_left",
                             "size":     { "x": "47%", "y": "30.72%" },
+                            "on_click": {
+                                "class":  "application.runtime.menueventsmanager.menus.settings.SettingsMenuBranch",
+                                "method": "openMenu"
+                            },
                             "elements": [
                                 { "id": "optionsLabel", "use": "MainMenu/board_label", "text": "Options" }
                             ]

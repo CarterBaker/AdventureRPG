@@ -1,5 +1,6 @@
 package engine.lwjgl3;
 
+import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
@@ -32,6 +33,10 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
      * window. This ensures that render-loop context switches (makeContextCurrent
      * on secondary windows) cannot corrupt the input context that was established
      * by syncHoveredWindow earlier in the same frame.
+     *
+     * Display mode changes act on the main window only. Vsync is a per-context
+     * swap interval, so changing it re-applies the interval to every open OS
+     * window and restores whichever context was current before.
      */
 
     // Application
@@ -243,6 +248,29 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         syncWindowSize(window);
         syncScreenPosition(window);
+    }
+
+    // Display Mode \\
+
+    @Override
+    public void setFullscreen(boolean fullscreen) {
+        application.setFullscreen(fullscreen);
+    }
+
+    @Override
+    public void setVsync(boolean vsync) {
+
+        application.setSwapInterval(vsync ? 1 : 0);
+
+        long previousContext = GLFW.glfwGetCurrentContext();
+        GLCapabilities previousCapabilities = GL.getCapabilities();
+
+        for (Int2LongMap.Entry entry : windowID2Handle.int2LongEntrySet()) {
+            bindContext(entry.getIntKey(), entry.getLongValue());
+            GLFW.glfwSwapInterval(application.getSwapInterval());
+        }
+
+        restoreContext(previousContext, previousCapabilities);
     }
 
     // Cursor position — window-local, no context switch \\

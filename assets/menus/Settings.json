@@ -1,0 +1,377 @@
+{
+    "elements": [
+        {
+            "id":       "section_header",
+            "type":     "label",
+            "font":     "IMFellEnglish",
+            "font_size": "78%",
+            "text":     "",
+            "color":    [1, 0.84, 0.52, 1],
+            "align":    "left",
+            "size":     { "x": "100%", "y": "36px" }
+        },
+        {
+            "id":       "settings_note",
+            "type":     "label",
+            "font":     "IMFellEnglish",
+            "font_size": "70%",
+            "text":     "",
+            "color":    [0.97, 0.88, 0.7, 0.8],
+            "align":    "left",
+            "size":     { "x": "100%", "y": "30px" }
+        },
+        {
+            "id":          "settings_tab",
+            "type":        "button",
+            "sprite":      "menus/paper/PaperStrip",
+            "size":        { "x": "100%", "y": "46px" },
+            "color":       [0.74, 0.74, 0.74, 1],
+            "hover_color": [1, 1, 1, 1],
+            "on_click": {
+                "class":  "application.runtime.menueventsmanager.menus.settings.SettingsMenuBranch",
+                "method": "selectTab"
+            },
+            "elements": [
+                {
+                    "id":       "tab_label",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.24, 0.15, 0.08, 1],
+                    "parent_hover_color": [0.463, 0.086, 0.071, 1],
+                    "anchor":   "center",
+                    "pivot":    "center",
+                    "size":     { "x": "84%", "y": "100%" }
+                }
+            ]
+        },
+        {
+            "id":     "option_row",
+            "type":   "sprite",
+            "sprite": "menus/paper/PaperStrip",
+            "color":  [0.9, 0.9, 0.9, 1],
+            "size":   { "x": "100%", "y": "50px" },
+            "elements": [
+                {
+                    "id":       "row_label",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.24, 0.15, 0.08, 1],
+                    "align":    "left",
+                    "anchor":   "left",
+                    "pivot":    "left",
+                    "position": { "x": "5%", "y": "0%" },
+                    "size":     { "x": "38%", "y": "100%" }
+                },
+                {
+                    "id":       "row_previous",
+                    "type":     "button",
+                    "anchor":   "left",
+                    "pivot":    "left",
+                    "position": { "x": "44%", "y": "0%" },
+                    "size":     { "x": "10%", "y": "84%" },
+                    "on_click": {
+                        "class":  "application.runtime.menueventsmanager.menus.settings.SettingsOptionBranch",
+                        "method": "previousOption"
+                    },
+                    "elements": [
+                        {
+                            "id":       "row_previous_label",
+                            "type":     "label",
+                            "font":     "IMFellEnglish",
+                            "text":     "<",
+                            "color":    [0.24, 0.15, 0.08, 1],
+                            "parent_hover_color": [0.463, 0.086, 0.071, 1],
+                            "anchor":   "center",
+                            "pivot":    "center",
+                            "size":     { "x": "100%", "y": "100%" }
+                        }
+                    ]
+                },
+                {
+                    "id":       "row_value",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.463, 0.086, 0.071, 1],
+                    "anchor":   "left",
+                    "pivot":    "left",
+                    "position": { "x": "54%", "y": "0%" },
+                    "size":     { "x": "33%", "y": "100%" }
+                },
+                {
+                    "id":       "row_next",
+                    "type":     "button",
+                    "anchor":   "right",
+                    "pivot":    "right",
+                    "position": { "x": "-3%", "y": "0%" },
+                    "size":     { "x": "10%", "y": "84%" },
+                    "on_click": {
+                        "class":  "application.runtime.menueventsmanager.menus.settings.SettingsOptionBranch",
+                        "method": "nextOption"
+                    },
+                    "elements": [
+                        {
+                            "id":       "row_next_label",
+                            "type":     "label",
+                            "font":     "IMFellEnglish",
+                            "text":     ">",
+                            "color":    [0.24, 0.15, 0.08, 1],
+                            "parent_hover_color": [0.463, 0.086, 0.071, 1],
+                            "anchor":   "center",
+                            "pivot":    "center",
+                            "size":     { "x": "100%", "y": "100%" }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id":   "slider_row",
+            "type": "container",
+            "size": { "x": "100%", "y": "64px" },
+            "elements": [
+                {
+                    "id":       "slider_track",
+                    "type":     "sprite",
+                    "sprite":   "menus/creator/SliderTrack",
+                    "anchor":   "bottom_left",
+                    "pivot":    "top_left",
+                    "position": { "x": "0px", "y": "8px" },
+                    "size":     { "x": "calc(100% - 12px)", "y": "22px" },
+                    "on_drag": {
+                        "class":  "application.runtime.menueventsmanager.menus.settings.SettingsOptionBranch",
+                        "method": "dragSlider"
+                    },
+                    "elements": [
+                        {
+                            "id":       "slider_label",
+                            "type":     "label",
+                            "font":     "IMFellEnglish",
+                            "font_size": "76%",
+                            "text":     "",
+                            "color":    [0.97, 0.88, 0.7, 1],
+                            "align":    "left",
+                            "anchor":   "top_left",
+                            "pivot":    "top_left",
+                            "position": { "x": "0px", "y": "4px" },
+                            "size":     { "x": "62%", "y": "28px" }
+                        },
+                        {
+                            "id":       "slider_value",
+                            "type":     "label",
+                            "font":     "IMFellEnglish",
+                            "font_size": "76%",
+                            "text":     "",
+                            "color":    [1, 0.84, 0.52, 1],
+                            "align":    "right",
+                            "anchor":   "top_right",
+                            "pivot":    "top_right",
+                            "position": { "x": "0px", "y": "4px" },
+                            "size":     { "x": "38%", "y": "28px" }
+                        },
+                        {
+                            "id":     "slider_knob",
+                            "type":   "sprite",
+                            "sprite": "menus/wood/WoodPeg",
+                            "anchor": "left",
+                            "pivot":  "center",
+                            "size":   { "x": "18px", "y": "36px" }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id":          "binding_row",
+            "type":        "button",
+            "sprite":      "menus/paper/PaperStrip",
+            "size":        { "x": "100%", "y": "50px" },
+            "color":       [0.88, 0.88, 0.88, 1],
+            "hover_color": [1, 1, 1, 1],
+            "on_click": {
+                "class":  "application.runtime.menueventsmanager.menus.settings.SettingsBindingBranch",
+                "method": "selectBinding"
+            },
+            "elements": [
+                {
+                    "id":       "binding_label",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.24, 0.15, 0.08, 1],
+                    "align":    "left",
+                    "anchor":   "left",
+                    "pivot":    "left",
+                    "position": { "x": "5%", "y": "0%" },
+                    "size":     { "x": "50%", "y": "100%" }
+                },
+                {
+                    "id":       "binding_value",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.463, 0.086, 0.071, 1],
+                    "align":    "right",
+                    "anchor":   "right",
+                    "pivot":    "right",
+                    "position": { "x": "-5%", "y": "0%" },
+                    "size":     { "x": "40%", "y": "100%" }
+                }
+            ]
+        },
+        {
+            "id":          "action_row",
+            "type":        "button",
+            "sprite":      "menus/paper/PaperStrip",
+            "size":        { "x": "100%", "y": "50px" },
+            "color":       [0.74, 0.74, 0.74, 1],
+            "hover_color": [1, 1, 1, 1],
+            "on_click": {
+                "class":  "application.runtime.menueventsmanager.menus.settings.SettingsBindingBranch",
+                "method": "resetBindings"
+            },
+            "elements": [
+                {
+                    "id":       "action_label",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.24, 0.15, 0.08, 1],
+                    "parent_hover_color": [0.463, 0.086, 0.071, 1],
+                    "anchor":   "center",
+                    "pivot":    "center",
+                    "size":     { "x": "86%", "y": "100%" }
+                }
+            ]
+        },
+        {
+            "id":     "placeholder_note",
+            "type":   "sprite",
+            "sprite": "menus/paper/PaperStrip",
+            "color":  [0.9, 0.9, 0.9, 1],
+            "size":   { "x": "100%", "y": "150px" },
+            "elements": [
+                {
+                    "id":       "placeholder_title",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.24, 0.15, 0.08, 1],
+                    "anchor":   "top",
+                    "pivot":    "bottom",
+                    "position": { "x": "0%", "y": "-18px" },
+                    "size":     { "x": "84%", "y": "42px" }
+                },
+                {
+                    "id":       "placeholder_subtitle",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.463, 0.086, 0.071, 1],
+                    "anchor":   "top",
+                    "pivot":    "bottom",
+                    "position": { "x": "0%", "y": "-62px" },
+                    "size":     { "x": "84%", "y": "30px" }
+                },
+                {
+                    "id":       "placeholder_text",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "font_size": "76%",
+                    "text":     "",
+                    "color":    [0.24, 0.15, 0.08, 1],
+                    "anchor":   "top",
+                    "pivot":    "bottom",
+                    "position": { "x": "0%", "y": "-98px" },
+                    "size":     { "x": "86%", "y": "26px" }
+                }
+            ]
+        }
+    ],
+    "menus": [
+        {
+            "id":            "Settings",
+            "lock_input":    true,
+            "raycast_input": true,
+            "entry_points":  ["tab_list", "option_list"],
+            "elements": [
+                {
+                    "id":       "settings_panel",
+                    "type":     "sprite",
+                    "sprite":   "menus/wood/WoodPanel",
+                    "anchor":   "center",
+                    "pivot":    "center",
+                    "size":     { "x": "46%", "y": "82%" },
+                    "min_size": { "x": "640px", "y": "500px" },
+                    "animation": {
+                        "keyframes": [
+                            { "time": 0.0,  "offset": { "y": -0.08 }, "alpha": 0 },
+                            { "time": 0.35, "ease": "out" }
+                        ]
+                    },
+                    "elements": [
+                        {
+                            "id":       "settings_title",
+                            "type":     "sprite",
+                            "sprite":   "menus/paper/PaperScrap",
+                            "anchor":   "top",
+                            "pivot":    "bottom",
+                            "position": { "x": "0%", "y": "-12px" },
+                            "size":     { "x": "calc(100% - 50px)", "y": "56px" },
+                            "aspect":   3.6111,
+                            "elements": [
+                                {
+                                    "id":       "settings_title_label",
+                                    "type":     "label",
+                                    "font":     "IMFellEnglish",
+                                    "text":     "Settings",
+                                    "color":    [0.16, 0.1, 0.06, 1],
+                                    "anchor":   "center",
+                                    "pivot":    "center",
+                                    "position": { "x": "0%", "y": "2%" },
+                                    "size":     { "x": "70%", "y": "70%" }
+                                }
+                            ]
+                        },
+                        {
+                            "id":       "tab_list",
+                            "type":     "container",
+                            "mask":     true,
+                            "stack":    "vertical",
+                            "spacing":  "6px",
+                            "anchor":   "top_left",
+                            "pivot":    "bottom_left",
+                            "position": { "x": "24px", "y": "-84px" },
+                            "size":     { "x": "150px", "y": "calc(100% - 166px)" }
+                        },
+                        {
+                            "id":       "option_list",
+                            "type":     "container",
+                            "mask":     true,
+                            "stack":    "vertical",
+                            "spacing":  "6px",
+                            "anchor":   "top_left",
+                            "pivot":    "bottom_left",
+                            "position": { "x": "190px", "y": "-84px" },
+                            "size":     { "x": "calc(100% - 214px)", "y": "calc(100% - 166px)" }
+                        },
+                        {
+                            "id":       "back",
+                            "use":      "CharacterCreator/paper_button",
+                            "position": { "x": "0%", "y": "22px" },
+                            "on_click": {
+                                "class":  "application.runtime.menueventsmanager.menus.settings.SettingsMenuBranch",
+                                "method": "closeMenu"
+                            },
+                            "elements": [
+                                { "id": "back_label", "use": "CharacterCreator/paper_button_label", "text": "Back" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
