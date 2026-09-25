@@ -1,0 +1,5 @@
+{
+  "slot": "head",
+  "mesh": "characters/humanoid/heads/TaperedHeadMesh",
+  "face": "characters/standard/Face"
+}

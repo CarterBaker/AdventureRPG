@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferIns
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBufferInstance;
 import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
@@ -394,6 +395,7 @@ class RenderSystem extends SystemPackage {
             MeshHandle meshHandle,
             MaterialInstance material,
             Matrix4 modelMatrix,
+            SkinnedAppearanceStruct appearance,
             Matrix4[] skinningMatrices,
             FboInstance fbo,
             WindowInstance window) {
@@ -404,7 +406,7 @@ class RenderSystem extends SystemPackage {
             return;
 
         SkinnedBufferInstance skinnedBuffer = skinnedBufferManager.getSkinnedBuffer(meshHandle, material);
-        skinnedBuffer.addInstance(modelMatrix, skinningMatrices);
+        skinnedBuffer.addInstance(modelMatrix, appearance, skinningMatrices);
 
         ensureSkinnedBatchQueued(queue, fbo, skinnedBuffer, material, window);
     }
@@ -544,14 +546,12 @@ class RenderSystem extends SystemPackage {
         if (vao != 0)
             return vao;
 
-        int[] instanceAttrSizes = { 4, 4, 4, 4 };
-
         vao = RenderGLSLUtility.createInstancedVAO(
                 skinnedBuffer.getMeshHandle().getVertexHandle(),
                 skinnedBuffer.getMeshHandle().getAttrSizes(),
                 skinnedBuffer.getMeshHandle().getIndexHandle(),
                 skinnedBuffer.getInstanceVBO(),
-                instanceAttrSizes);
+                EngineSetting.SKINNED_INSTANCE_ATTRIBUTE_SIZES);
 
         buffer2VAO.put(skinnedBuffer, vao);
 

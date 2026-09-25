@@ -34,7 +34,10 @@ class MeshBuilder extends BuilderPackage {
      * "bones" list — one to MAX_BONE_INFLUENCES {bone, weight} entries whose
      * weights sum to 1.0 — resolved against that rig and baked into the
      * trailing boneIndex/boneWeight vertex attributes appended by the VAO
-     * builder, uniformly across all 4 corners of the quad. Quad expansion is
+     * builder. A flat list applies uniformly to all 4 corners of the quad;
+     * a list of 4 lists weights each corner on its own, which is what lets
+     * a joint ring blend between two bones so limbs bend as one continuous
+     * skin instead of separate rigid boxes. Quad expansion is
      * also where this mesh's own raw vertex position bounds are read
      * directly off the assembled position floats, before they are handed to
      * VBOManager and discarded — a rigged mesh needs those bounds to derive
@@ -324,8 +327,8 @@ class MeshBuilder extends BuilderPackage {
 
         boolean hasTexture = quadObj.has("texture") && !quadObj.get("texture").isJsonNull();
         int boneFloatCount = rigHandle != null ? EngineSetting.MAX_BONE_INFLUENCES * 2 : 0;
-        float[] boneData = rigHandle != null
-                ? resolveBoneWeights(quadObj, rigHandle, file)
+        float[][] boneData = rigHandle != null
+                ? resolveCornerBoneWeights(quadObj, rigHandle, file)
                 : null;
 
         if (hasTexture) {
@@ -359,7 +362,7 @@ class MeshBuilder extends BuilderPackage {
 
                 if (boneData != null)
                     for (int b = 0; b < boneFloatCount; b++)
-                        vertices.add(boneData[b]);
+                        vertices.add(boneData[i][b]);
             }
         } else {
 
@@ -378,7 +381,7 @@ class MeshBuilder extends BuilderPackage {
 
                 if (boneData != null)
                     for (int b = 0; b < boneFloatCount; b++)
-                        vertices.add(boneData[b]);
+                        vertices.add(boneData[i][b]);
             }
         }
 
@@ -393,21 +396,42 @@ class MeshBuilder extends BuilderPackage {
     // Bone Weights \\
 
     /*
-     * Resolves a quad's "bones" list into a fixed-width float array —
-     * MAX_BONE_INFLUENCES bone indices followed by MAX_BONE_INFLUENCES
-     * weights, uniform across all 4 corners of the quad. Unused influence
-     * slots are zero-padded (index 0, weight 0.0). Every quad in a
-     * rig-declaring mesh must supply "bones" — there is no implicit
-     * default, since a silently-unweighted quad on an animated character
-     * would simply never move with the rig.
+     * Resolves a quad's "bones" into one fixed-width bone array per corner.
+     * A flat list of {bone, weight} entries is shared by all 4 corners; a
+     * list of exactly 4 lists gives each corner its own influences. Every
+     * quad in a rig-declaring mesh must supply "bones" — there is no
+     * implicit default, since a silently-unweighted quad on an animated
+     * character would simply never move with the rig.
      */
-    private float[] resolveBoneWeights(JsonObject quadObj, RigHandle rigHandle, File file) {
+    private float[][] resolveCornerBoneWeights(JsonObject quadObj, RigHandle rigHandle, File file) {
 
         if (!hasValidElement(quadObj, "bones"))
             throwException("Quad is missing \"bones\" in a rig-declaring mesh. Every quad must "
                     + "specify at least one bone. File: " + file.getName());
 
         JsonArray bonesArray = quadObj.getAsJsonArray("bones");
+        float[][] cornerBoneData = new float[EngineSetting.QUAD_VERTEX_COUNT][];
+        boolean perCorner = bonesArray.size() > 0 && bonesArray.get(0).isJsonArray();
+
+        if (perCorner && bonesArray.size() != EngineSetting.QUAD_VERTEX_COUNT)
+            throwException("Per-corner quad \"bones\" must declare exactly " + EngineSetting.QUAD_VERTEX_COUNT
+                    + " influence lists, found " + bonesArray.size() + " in file: " + file.getName());
+
+        for (int corner = 0; corner < EngineSetting.QUAD_VERTEX_COUNT; corner++)
+            cornerBoneData[corner] = perCorner
+                    ? resolveBoneWeights(bonesArray.get(corner).getAsJsonArray(), rigHandle, file)
+                    : resolveBoneWeights(bonesArray, rigHandle, file);
+
+        return cornerBoneData;
+    }
+
+    /*
+     * Resolves one influence list into a fixed-width float array —
+     * MAX_BONE_INFLUENCES bone indices followed by MAX_BONE_INFLUENCES
+     * weights. Unused influence slots are zero-padded (index 0, weight 0.0).
+     */
+    private float[] resolveBoneWeights(JsonArray bonesArray, RigHandle rigHandle, File file) {
+
         int influenceCount = bonesArray.size();
 
         if (influenceCount == 0 || influenceCount > EngineSetting.MAX_BONE_INFLUENCES)

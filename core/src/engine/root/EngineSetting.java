@@ -108,6 +108,7 @@ public class EngineSetting {
         public static final String CALENDAR_JSON_PATH = "calendars";
         public static final String CLOUD_JSON_PATH = "clouds";
         public static final String ENTITY_JSON_PATH = "entities";
+        public static final String FEATURE_JSON_PATH = "features";
         public static final String FBO_CATALOG_JSON_PATH = "application/fbos";
         public static final ObjectArraySet<String> FONT_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "ttf",
                 "otf" });
@@ -728,8 +729,18 @@ public class EngineSetting {
         public static final float FREE_CAMERA_SPRINT_MULTIPLIER = 4f;
         public static final int MAX_BONE_INFLUENCES = 4;
         public static final int SKINNED_BONE_TEXELS_PER_BONE = 3;
+        public static final float SKINNED_HIDDEN_BONE_NONE = -1f;
+        public static final int SKINNED_INSTANCE_APPEARANCE_FLOATS = 24;
+        public static final int[] SKINNED_INSTANCE_ATTRIBUTE_SIZES = { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
         public static final int SKINNED_INSTANCE_INITIAL_CAPACITY = 64;
         public static final int SKINNED_INSTANCE_MODEL_FLOATS = 16;
+        public static final int SKINNED_INSTANCE_FLOATS = SKINNED_INSTANCE_MODEL_FLOATS
+                        + SKINNED_INSTANCE_APPEARANCE_FLOATS;
+
+        // Appearance \\
+
+        public static final float DEFAULT_BUILD_FACTOR = 1f;
+        public static final float DEFAULT_WEIGHT_RATIO = 0.5f;
 
         // Item \\
 

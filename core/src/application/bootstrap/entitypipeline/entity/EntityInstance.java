@@ -1,6 +1,7 @@
 package application.bootstrap.entitypipeline.entity;
 
 import application.bootstrap.entitypipeline.animation.AnimationStateHandle;
+import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
@@ -18,6 +19,8 @@ public class EntityInstance extends InstancePackage {
      * Runtime entity handed out by EntityManager.spawnEntity(). Holds a
      * reference to its template EntityData plus all per-instance runtime
      * state — position, physics, statistics, inventory, movement state, and input.
+     * Weight also drives the body build of an entity with an appearance, so
+     * setWeight() is the one path that keeps the two in step.
      */
 
     // Internal
@@ -35,6 +38,9 @@ public class EntityInstance extends InstancePackage {
 
     // Animation — created only if entityData.hasCharacterModel()
     private AnimationStateHandle animationStateHandle;
+
+    // Appearance — created only if entityData.hasAppearance()
+    private AppearanceHandle appearanceHandle;
 
     // Physics
     private WorldPositionStruct worldPositionStruct;
@@ -94,6 +100,15 @@ public class EntityInstance extends InstancePackage {
             this.animationStateHandle.constructor(
                     entityData.getRigHandle(),
                     entityData.getClipForState(EntityState.IDLE));
+        }
+
+        // Appearance
+        if (entityData.hasAppearance()) {
+            this.appearanceHandle = create(AppearanceHandle.class);
+            this.appearanceHandle.constructor(
+                    entityData.getAppearanceData(),
+                    animationStateHandle,
+                    entityData.getWeightRatio(weight));
         }
     }
 
@@ -158,6 +173,14 @@ public class EntityInstance extends InstancePackage {
         return animationStateHandle;
     }
 
+    public boolean hasAppearance() {
+        return appearanceHandle != null;
+    }
+
+    public AppearanceHandle getAppearanceHandle() {
+        return appearanceHandle;
+    }
+
     public WorldPositionStruct getWorldPositionStruct() {
         return worldPositionStruct;
     }
@@ -180,6 +203,14 @@ public class EntityInstance extends InstancePackage {
 
     public float getWeight() {
         return weight;
+    }
+
+    public void setWeight(float weight) {
+
+        this.weight = weight;
+
+        if (appearanceHandle != null)
+            appearanceHandle.setWeightRatio(entityData.getWeightRatio(weight));
     }
 
     public float getEyeHeight() {

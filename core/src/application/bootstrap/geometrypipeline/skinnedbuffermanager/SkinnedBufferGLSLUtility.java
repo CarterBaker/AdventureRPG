@@ -25,7 +25,7 @@ class SkinnedBufferGLSLUtility {
         static int createDynamicInstanceVBO(int maxInstances) {
 
                 GL20 gl20 = EngineContext.gl20;
-                int size = maxInstances * EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS * Float.BYTES;
+                int size = maxInstances * EngineSetting.SKINNED_INSTANCE_FLOATS * Float.BYTES;
 
                 int vbo = gl20.glGenBuffer();
                 gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
@@ -35,7 +35,7 @@ class SkinnedBufferGLSLUtility {
                 return vbo;
         }
 
-        static void uploadInstanceVBO(int vbo, float[] instanceModelData, int floatCount) {
+        static void uploadInstanceVBO(int vbo, float[] instanceData, int floatCount) {
 
                 GL20 gl20 = EngineContext.gl20;
 
@@ -43,7 +43,7 @@ class SkinnedBufferGLSLUtility {
                                 .allocateDirect(floatCount * Float.BYTES)
                                 .order(ByteOrder.nativeOrder())
                                 .asFloatBuffer();
-                buffer.put(instanceModelData, 0, floatCount).flip();
+                buffer.put(instanceData, 0, floatCount).flip();
 
                 gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
                 gl20.glBufferSubData(EngineSetting.GL_ARRAY_BUFFER, 0, floatCount * Float.BYTES, buffer);

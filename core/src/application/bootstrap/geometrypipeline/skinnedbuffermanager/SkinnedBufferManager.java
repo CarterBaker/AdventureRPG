@@ -16,15 +16,16 @@ public class SkinnedBufferManager extends ManagerPackage {
      * distinct (rigged MeshHandle, MaterialInstance) combination. Keyed by
      * material as well as mesh because the material controls which shader
      * and textures the whole instanced draw call binds — two entities
-     * sharing a mesh but wearing different skins cannot share a draw call,
+     * sharing a mesh but different materials cannot share a draw call,
      * exactly as RenderBatchStruct never merges two materials into one
-     * batch. For entities to actually batch together, callers must resolve
-     * a shared MaterialInstance per skin type rather than cloning one per
-     * entity — cloning per entity here would make every entity its own
-     * batch of one.
+     * batch. Skin tone, hair color, and chosen facial features are NOT
+     * material state — they ride in each instance's appearance row — so
+     * every character of one template shares one MaterialInstance and
+     * batches together however differently each one looks. Cloning a
+     * material per entity here would make every entity its own batch of one.
      *
-     * The instance VBO (per-instance model matrices) and bone palette
-     * texture are both ordinary buffer/texture objects — shareable across
+     * The instance VBO (per-instance model matrix + appearance rows) and
+     * bone palette texture are both ordinary buffer/texture objects — shareable across
      * GL contexts — so they live here, created once. The instanced VAO
      * wrapping them is context-local and cannot be shared, so it is
      * deliberately NOT built here — RenderSystem owns a per-window VAO
@@ -102,8 +103,8 @@ public class SkinnedBufferManager extends ManagerPackage {
 
         SkinnedBufferGLSLUtility.uploadInstanceVBO(
                 data.getInstanceVBO(),
-                data.getInstanceModelData(),
-                instanceCount * EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS);
+                data.getInstanceData(),
+                instanceCount * EngineSetting.SKINNED_INSTANCE_FLOATS);
 
         SkinnedBufferGLSLUtility.uploadBonePalette(
                 data.getBonePaletteTexture(),

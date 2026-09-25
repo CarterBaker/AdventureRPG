@@ -25,6 +25,15 @@ public class AnimationStateHandle extends HandlePackage {
      * space, so applying this matrix moves a vertex by exactly how far
      * its bone has moved away from the rest pose.
      *
+     * boneProportions is a per-bone, non-inherited geometry scale layered
+     * on top of the clip — skinningMatrices[boneIndex] = currentWorld *
+     * S(proportion) * bindWorldInverse — so scaling one bone reshapes only
+     * the skin it owns, never its children. A child's joint offset IS
+     * scaled by its parent's proportion, so a wider torso carries the
+     * shoulders and hips out with it. AppearanceHandle is the only writer
+     * (body build from weight, head shape); every proportion is 1.0 for an
+     * entity with no appearance.
+     *
      * Every array here is allocated once in constructor() and mutated in
      * place every update() — zero allocation in the per-frame pose walk.
      */
@@ -36,12 +45,16 @@ public class AnimationStateHandle extends HandlePackage {
     private AnimationClipHandle currentClip;
     private float playbackTime;
 
+    // Proportions — per bone, non-inherited
+    private Vector3[] boneProportions;
+
     // Output — consumed by rendering
     private Matrix4[] skinningMatrices;
 
     // Scratch — reused every update(), never reallocated
     private Matrix4[] currentWorldMatrices;
     private Matrix4 localScratch;
+    private Matrix4 proportionScratch;
     private Matrix4 matrixScratchA;
     private Matrix4 matrixScratchB;
     private Vector3 positionScratch;
@@ -57,16 +70,19 @@ public class AnimationStateHandle extends HandlePackage {
 
         // Output
         int boneCount = rigHandle.getBoneCount();
+        this.boneProportions = new Vector3[boneCount];
         this.skinningMatrices = new Matrix4[boneCount];
         this.currentWorldMatrices = new Matrix4[boneCount];
 
         for (int i = 0; i < boneCount; i++) {
+            boneProportions[i] = new Vector3(1f, 1f, 1f);
             skinningMatrices[i] = new Matrix4();
             currentWorldMatrices[i] = new Matrix4();
         }
 
         // Scratch
         this.localScratch = new Matrix4();
+        this.proportionScratch = new Matrix4();
         this.matrixScratchA = new Matrix4();
         this.matrixScratchB = new Matrix4();
         this.positionScratch = new Vector3();
@@ -97,10 +113,24 @@ public class AnimationStateHandle extends HandlePackage {
         return currentClip;
     }
 
+    // Proportions \\
+
+    public void setBoneProportion(int boneIndex, float x, float y, float z) {
+        boneProportions[boneIndex].set(x, y, z);
+    }
+
+    public Vector3 getBoneProportion(int boneIndex) {
+        return boneProportions[boneIndex];
+    }
+
     // Update \\
 
     public void update(float deltaTime) {
         advanceTime(deltaTime);
+        evaluatePose();
+    }
+
+    public void refreshPose() {
         evaluatePose();
     }
 
@@ -129,6 +159,9 @@ public class AnimationStateHandle extends HandlePackage {
 
             sampleTrack(track, bone);
 
+            if (!bone.isRoot())
+                positionScratch.multiply(boneProportions[bone.getParentIndex()]);
+
             RigMathUtility.composeLocal(
                     positionScratch, rotationScratch, scaleScratch,
                     localScratch, matrixScratchA, matrixScratchB);
@@ -140,7 +173,12 @@ public class AnimationStateHandle extends HandlePackage {
             else
                 currentWorld.set(currentWorldMatrices[bone.getParentIndex()]).multiply(localScratch);
 
-            skinningMatrices[i].set(currentWorld).multiply(rigHandle.getBindWorldInverseMatrix(i));
+            RigMathUtility.setScale(proportionScratch, boneProportions[i]);
+
+            skinningMatrices[i]
+                    .set(currentWorld)
+                    .multiply(proportionScratch)
+                    .multiply(rigHandle.getBindWorldInverseMatrix(i));
         }
     }
 

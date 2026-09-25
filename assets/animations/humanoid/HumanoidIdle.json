@@ -2,25 +2,50 @@
   "rig": "HumanoidRig",
   "loop": true,
   "tracks": {
+    "lower_torso": [
+      { "time": 0.0, "position": { "x": 0, "y": 0, "z": 0 } },
+      { "time": 1.2, "position": { "x": 0, "y": -0.005, "z": 0 } },
+      { "time": 2.4, "position": { "x": 0, "y": 0, "z": 0 } }
+    ],
     "upper_torso": [
       { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 0 }, "position": { "x": 0, "y": 0, "z": 0 } },
-      { "time": 1.2, "rotation": { "x": 1.5, "y": 0, "z": 0 }, "position": { "x": 0, "y": 0.015, "z": 0 } },
+      { "time": 1.2, "rotation": { "x": 1.5, "y": 0, "z": 0 }, "position": { "x": 0, "y": 0.008, "z": 0 } },
       { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 0 }, "position": { "x": 0, "y": 0, "z": 0 } }
     ],
     "head": [
       { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 0 } },
-      { "time": 1.2, "rotation": { "x": 0, "y": 5, "z": 0 } },
+      { "time": 1.2, "rotation": { "x": -1, "y": 4, "z": 0 } },
       { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 0 } }
     ],
     "upper_arm_l": [
-      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 0 } },
-      { "time": 1.2, "rotation": { "x": 0, "y": 0, "z": -2 } },
-      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 0 } }
+      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 3 } },
+      { "time": 1.2, "rotation": { "x": -2, "y": 0, "z": 5 } },
+      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 3 } }
+    ],
+    "lower_arm_l": [
+      { "time": 0.0, "rotation": { "x": -6, "y": 0, "z": 0 } },
+      { "time": 1.2, "rotation": { "x": -9, "y": 0, "z": 0 } },
+      { "time": 2.4, "rotation": { "x": -6, "y": 0, "z": 0 } }
+    ],
+    "hand_l": [
+      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": -2 } },
+      { "time": 1.2, "rotation": { "x": -4, "y": 0, "z": -3 } },
+      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": -2 } }
     ],
     "upper_arm_r": [
-      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 0 } },
-      { "time": 1.2, "rotation": { "x": 0, "y": 0, "z": 2 } },
-      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 0 } }
+      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": -3 } },
+      { "time": 1.2, "rotation": { "x": -2, "y": 0, "z": -5 } },
+      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": -3 } }
+    ],
+    "lower_arm_r": [
+      { "time": 0.0, "rotation": { "x": -6, "y": 0, "z": 0 } },
+      { "time": 1.2, "rotation": { "x": -9, "y": 0, "z": 0 } },
+      { "time": 2.4, "rotation": { "x": -6, "y": 0, "z": 0 } }
+    ],
+    "hand_r": [
+      { "time": 0.0, "rotation": { "x": 0, "y": 0, "z": 2 } },
+      { "time": 1.2, "rotation": { "x": -4, "y": 0, "z": 3 } },
+      { "time": 2.4, "rotation": { "x": 0, "y": 0, "z": 2 } }
     ]
   }
 }
