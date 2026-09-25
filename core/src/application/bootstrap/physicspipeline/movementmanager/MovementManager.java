@@ -1,6 +1,8 @@
 package application.bootstrap.physicspipeline.movementmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.entity.EntityState;
+import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import engine.root.EngineSetting;
@@ -11,31 +13,14 @@ import engine.util.mathematics.vectors.Vector3;
 public class MovementManager extends ManagerPackage {
 
     /*
-     * Drives the full movement pipeline for any entity each frame. Coordinates
-     * horizontal movement, swimming/wading/gravity, collision, post-collision
-     * correction, position application, and chunk boundary updates in a fixed
-     * order. Reads all input from the entity's InputHandle — never touches
-     * InputSystem directly.
-     *
-     * SwimBranch.refresh() runs first and decides, for the rest of the frame,
-     * whether the entity is touching liquid at all and — separately — whether
-     * that liquid is deep enough to fully submerge it. Not deep enough to
-     * submerge means wading: gravity keeps the Y axis (with a diminished jump,
-     * see GravityBranch), horizontal drag still applies, and the movement
-     * state is EntityState.WADING. Deep enough to submerge means swimming:
-     * SwimBranch owns the Y axis instead, and attemptClimbOut() gets a chance
-     * right after collision to pull the entity out onto any bank at or below
-     * the water's own surface height.
-     *
-     * NaturalGroundOffsetBranch runs last, strictly after position and chunk
-     * wrap are final. It never writes back into position — it only maintains
-     * a smoothed cosmetic value that camera/eye code reads separately — so it
-     * can never affect collision, gravity, or block composition.
-     *
-     * fly() is the physics-free counterpart used by free cameras: FlightBranch
-     * supplies the displacement and nothing else touches it. Both paths share
-     * applyMovement(), the single place position, chunk boundary, and world
-     * wrap are resolved.
+     * Drives the full movement pipeline for any entity each frame in a fixed
+     * order: liquid contact, water leaps, horizontal movement, swimming or
+     * gravity, collision, post-collision correction, the water movement
+     * state, position application, and the cosmetic ground offset. SwimBranch
+     * resolves water depth first and decides whether the entity wades (gravity
+     * owns Y with a depth-nerfed jump) or swims (SwimBranch owns Y); any leap
+     * hands Y back to gravity until it falls again. fly() is the physics-free
+     * counterpart used by free cameras, and both paths share applyMovement().
      */
 
     // Internal
@@ -79,40 +64,52 @@ public class MovementManager extends ManagerPackage {
     public void move(EntityInstance entity) {
 
         Vector3 position = entity.getWorldPositionStruct().getPosition();
+        EntityStateHandle state = entity.getEntityStateHandle();
 
         movement.set(0, 0, 0);
 
-        // 1. Water contact
+        // 1. Liquid contact
         boolean touchingLiquid = swimBranch.refresh(entity);
-        boolean swimming = touchingLiquid && swimBranch.isSwimming(entity);
-        boolean wading = touchingLiquid && !swimming;
-        float dragMultiplier = touchingLiquid ? swimBranch.getSpeedMultiplier() : 1f;
+        float jumpHeight = swimBranch.resolveJumpHeight(entity);
 
-        // 2. Horizontal
+        // 2. Water leaps — running entry, or jumping out from the surface
+        if (swimBranch.isEntryLeap(entity))
+            gravityBranch.jump(entity, swimBranch.getEntryLeapHeight(entity), EntityState.WATER_LEAPING);
+        else if (swimBranch.isSurfaceLeap(entity))
+            gravityBranch.jump(entity, jumpHeight, EntityState.WATER_JUMPING);
+
+        boolean swimming = swimBranch.isSwimming() && !state.isJumping();
+        float dragMultiplier = touchingLiquid ? swimBranch.getSpeedMultiplier(entity, swimming) : 1f;
+
+        // 3. Horizontal
         movementBranch.calculate(movement, entity, dragMultiplier, swimming);
 
-        // 3. Vertical
+        // 4. Vertical
         if (swimming)
             swimBranch.calculate(movement, entity);
         else
-            gravityBranch.calculate(movement, entity, wading);
+            gravityBranch.calculate(movement, entity, jumpHeight);
 
-        // 4. Snapshot before collision
+        // 5. Snapshot before collision
         preCollisionSnapshot.set(movement.x, movement.y, movement.z);
 
-        // 5. Collision — flat, jitter-free, the only authority on solid/air
+        // 6. Collision — flat, jitter-free, the only authority on solid/air
         blockCollisionBranch.calculate(position, movement, entity);
 
-        // 6. Post-collision
-        if (swimming)
-            swimBranch.attemptClimbOut(preCollisionSnapshot, movement, entity);
-        else
-            gravityBranch.postCollision(preCollisionSnapshot, movement, entity, wading);
+        // 7. Post-collision
+        boolean climbedOut = swimBranch.attemptClimbOut(preCollisionSnapshot, movement, entity, swimming);
 
-        // 7. Apply, chunk update, and world wrap
+        if (!climbedOut && !swimming)
+            gravityBranch.postCollision(preCollisionSnapshot, movement, entity);
+
+        // 8. Water movement state — wading, treading, and water jump variants
+        if (!climbedOut)
+            swimBranch.resolveMovementState(entity, swimming);
+
+        // 9. Apply, chunk update, and world wrap
         applyMovement(entity);
 
-        // 8. Cosmetic ground offset — reads the now-final flat position only
+        // 10. Cosmetic ground offset — reads the now-final flat position only
         naturalGroundOffsetBranch.update(entity);
     }
 

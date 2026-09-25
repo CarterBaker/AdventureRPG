@@ -125,7 +125,20 @@ class EntityBuilder extends BuilderPackage {
             stateClips[state.ordinal()] = animationManager.getClipHandleFromClipName(clipName);
         }
 
+        resolveFallbackClips(stateClips);
+
         return stateClips;
+    }
+
+    private void resolveFallbackClips(AnimationClipHandle[] stateClips) {
+
+        for (EntityState state : EntityState.values()) {
+
+            if (stateClips[state.ordinal()] != null || !state.hasFallback())
+                continue;
+
+            stateClips[state.ordinal()] = stateClips[state.getFallback().ordinal()];
+        }
     }
 
     private float resolveModelHeight(MeshHandle characterMesh, AppearanceData appearanceData) {

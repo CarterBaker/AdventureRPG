@@ -351,11 +351,14 @@ public class EngineSetting {
         public static final int LIQUID_SPREAD_RATE = 4;
         public static final float LIQUID_VISCOSITY_TO_FLOW_SECONDS = 2.0f;
         public static final int LIQUID_WET_MIN_LEVEL = 4;
+        public static final float SWIM_CLIMB_OUT_HEIGHT_FRACTION = 0.6f;
+        public static final float SWIM_CLIMB_OUT_LIFT = 0.05f;
         public static final float SWIM_CLIMB_OUT_MAX_VISCOSITY = 1.0f;
         public static final int SWIM_CLIMB_OUT_SCAN_DEPTH = 4;
         public static final float SWIM_DEEP_THRESHOLD = 0.1f;
-        public static final float SWIM_FULL_SUBMERGE_FRACTION = 1.0f;
+        public static final float SWIM_DEPTH_FRACTION = 0.75f;
         public static final float SWIM_HEAD_CLEARANCE = 0.12f;
+        public static final float SWIM_LEAP_REST_TOLERANCE = 0.1f;
         public static final float SWIM_MIN_SPEED_MULTIPLIER = 0.15f;
         public static final float SWIM_SINK_SPEED = 0.5f;
         public static final float SWIM_TREAD_RESPONSIVENESS = 6.0f;
@@ -363,7 +366,14 @@ public class EngineSetting {
         public static final float SWIM_UP_SPEED = 2.4f;
         public static final float SWIM_VISCOSITY_DRAG_SCALE = 0.12f;
         public static final float SWIM_VISCOSITY_REFERENCE = 1.0f;
-        public static final float WADE_JUMP_HEIGHT_MULTIPLIER = 0.5f;
+        public static final float WADE_DEEP_SPEED_MULTIPLIER = 0.55f;
+        public static final float WADE_RUN_SPEED_MULTIPLIER = 0.4f;
+        public static final float WADE_SHALLOW_DEPTH_FACTOR = 0.4f;
+        public static final float WATER_ENTRY_LEAP_MAX_FALL_SPEED = 5.0f;
+        public static final float WATER_ENTRY_LEAP_MIN_DEPTH_FACTOR = 0.3f;
+        public static final float WATER_ENTRY_LEAP_MULTIPLIER = 0.6f;
+        public static final float WATER_JUMP_DEEP_MULTIPLIER = 0.4f;
+        public static final float WATER_JUMP_MIN_HEIGHT = 0.35f;
 
         // Biome \\
 
