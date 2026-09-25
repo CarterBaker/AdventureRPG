@@ -18,8 +18,8 @@ public class GravityBranch extends BranchPackage {
      * movement vector passed by MovementManager. The jump height arrives
      * already resolved by SwimBranch, so water depth nerfs it without this
      * branch knowing about liquid; jump() is the single place a jump impulse
-     * is applied, shared by grounded jumps and every water leap. wading marks
-     * a grounded entity as EntityState.WADING instead of its land state.
+     * is applied, shared by grounded jumps and every water leap, and the jump
+     * state it starts with is kept until the entity begins to fall.
      */
 
     // Settings
@@ -40,11 +40,7 @@ public class GravityBranch extends BranchPackage {
 
     // Gravity \\
 
-    void calculate(
-            Vector3 movement,
-            EntityInstance entity,
-            float jumpHeight,
-            boolean wading) {
+    void calculate(Vector3 movement, EntityInstance entity, float jumpHeight) {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         BehaviorHandle behavior = entity.getBehaviorHandle();
@@ -60,7 +56,7 @@ public class GravityBranch extends BranchPackage {
 
         // Jump initiation — instant velocity set opposite to gravity direction
         if (verticalInput == 1 && state.isGrounded())
-            jump(entity, jumpHeight);
+            jump(entity, jumpHeight, EntityState.JUMPING);
 
         // Hold force — fraction of impulse applied opposite to gravity while held
         // within cap
@@ -79,14 +75,15 @@ public class GravityBranch extends BranchPackage {
         gravVel.y += gravDir.y * gravMult * gravityForce * delta;
         gravVel.z += gravDir.z * gravMult * gravityForce * delta;
 
-        // State — negative dot = moving against gravity (JUMPING), positive = FALLING
+        // State — negative dot = moving against gravity (keeps its jump state), positive = FALLING
         if (!state.isGrounded()) {
             float dot = gravVel.x * gravDir.x
                     + gravVel.y * gravDir.y
                     + gravVel.z * gravDir.z;
-            state.setMovementState(dot < 0f ? EntityState.JUMPING : EntityState.FALLING);
-        } else if (wading) {
-            state.setMovementState(EntityState.WADING);
+            if (dot >= 0f)
+                state.setMovementState(EntityState.FALLING);
+            else if (!state.isJumping())
+                state.setMovementState(EntityState.JUMPING);
         }
 
         // Write displacement into shared movement vector
@@ -95,7 +92,7 @@ public class GravityBranch extends BranchPackage {
         movement.z += gravVel.z * delta;
     }
 
-    void postCollision(Vector3 pre, Vector3 post, EntityInstance entity, boolean wading) {
+    void postCollision(Vector3 pre, Vector3 post, EntityInstance entity) {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         Vector3 gravDir = entity.getWorldHandle().getGravityDirection();
@@ -126,14 +123,14 @@ public class GravityBranch extends BranchPackage {
             return;
 
         if (movingWithGravity)
-            state.setMovementState(wading ? EntityState.WADING : EntityState.IDLE);
+            state.setMovementState(EntityState.IDLE);
         else
             state.setMovementState(EntityState.FALLING);
     }
 
     // Jump \\
 
-    void jump(EntityInstance entity, float jumpHeight) {
+    void jump(EntityInstance entity, float jumpHeight, EntityState jumpState) {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         WorldHandle world = entity.getWorldHandle();
@@ -147,7 +144,7 @@ public class GravityBranch extends BranchPackage {
         gravVel.z = (-gravDir.z / gravLen) * jumpImpulse;
 
         state.setJumpStartTime(internal.getTime());
-        state.setMovementState(EntityState.JUMPING);
+        state.setMovementState(jumpState);
     }
 
     private float calculateJumpImpulse(WorldHandle world, float jumpHeight) {

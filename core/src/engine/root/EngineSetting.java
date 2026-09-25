@@ -368,6 +368,7 @@ public class EngineSetting {
         public static final float SWIM_VISCOSITY_REFERENCE = 1.0f;
         public static final float WADE_DEEP_SPEED_MULTIPLIER = 0.55f;
         public static final float WADE_RUN_SPEED_MULTIPLIER = 0.4f;
+        public static final float WADE_SHALLOW_DEPTH_FACTOR = 0.4f;
         public static final float WATER_ENTRY_LEAP_MAX_FALL_SPEED = 5.0f;
         public static final float WATER_ENTRY_LEAP_MIN_DEPTH_FACTOR = 0.3f;
         public static final float WATER_ENTRY_LEAP_MULTIPLIER = 0.6f;

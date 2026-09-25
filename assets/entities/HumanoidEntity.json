@@ -16,7 +16,13 @@
       "jumping": "humanoid/HumanoidJump",
       "falling": "humanoid/HumanoidFall",
       "swimming": "humanoid/HumanoidSwim",
-      "wading": "humanoid/HumanoidWade"
+      "wading": "humanoid/HumanoidWade",
+      "treading": "humanoid/HumanoidTread",
+      "wading_idle": "humanoid/HumanoidWadeIdle",
+      "shallow_wading": "humanoid/HumanoidWadeShallow",
+      "wading_running": "humanoid/HumanoidWadeRun",
+      "water_jumping": "humanoid/HumanoidWaterJump",
+      "water_leaping": "humanoid/HumanoidWaterLeap"
     },
     "appearance": {
       "head_bone": "head",

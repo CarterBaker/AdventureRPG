@@ -22,8 +22,8 @@ public class SwimBranch extends BranchPackage {
      * move() and caches the surface height, the water depth down to the floor, and the viscosity drag for the rest
      * of the frame. Depth measured against the entity's own height drives everything else: wading drag and the
      * running penalty, the depth-scaled jump nerf with its minimum, the running entry leap, the switch to swimming
-     * once the water reaches SWIM_DEPTH_FRACTION of the entity's height, the surface leap, and climbing out onto
-     * any ledge or shelf within reach of the surface.
+     * once the water reaches SWIM_DEPTH_FRACTION of the entity's height, the surface leap, climbing out onto any
+     * ledge or shelf within reach of the surface, and the water flavour of the movement state animation reads.
      */
 
     // Internal
@@ -197,6 +197,37 @@ public class SwimBranch extends BranchPackage {
 
         return calculateGapAboveEye(entity) <= EngineSetting.SWIM_DEEP_THRESHOLD
                 && position.y <= restY + EngineSetting.SWIM_LEAP_REST_TOLERANCE;
+    }
+
+    // State \\
+
+    void resolveMovementState(EntityInstance entity, boolean swimming) {
+
+        if (!submerged)
+            return;
+
+        EntityStateHandle state = entity.getEntityStateHandle();
+        EntityState resolved = swimming
+                ? resolveSwimState(entity)
+                : resolveWadeState(state.getMovementState());
+
+        state.setMovementState(resolved);
+    }
+
+    private EntityState resolveSwimState(EntityInstance entity) {
+        return entity.getEntityInputHandle().hasHorizontalInput() ? EntityState.SWIMMING : EntityState.TREADING;
+    }
+
+    private EntityState resolveWadeState(EntityState movementState) {
+        return switch (movementState) {
+            case IDLE -> EntityState.WADING_IDLE;
+            case WALKING, MOVING -> depthFactor < EngineSetting.WADE_SHALLOW_DEPTH_FACTOR
+                    ? EntityState.SHALLOW_WADING
+                    : EntityState.WADING;
+            case RUNNING -> EntityState.WADING_RUNNING;
+            case JUMPING -> EntityState.WATER_JUMPING;
+            default -> movementState;
+        };
     }
 
     // Vertical \\

@@ -63,13 +63,12 @@ public class PlayerManager extends ManagerPackage {
      * Movement is additionally gated on the window's menu lock state so that
      * open menus suppress input without any external coordination.
      *
-     * Animation clip selection is driven here too, immediately after movement
-     * state is resolved each frame — entityData.getClipForState() maps the
-     * EntityState the entity is already in to whatever clip that template
-     * authored for it. Entities with no character model skip this entirely.
-     * JUMPING/FALLING states are never actually set anywhere in this class —
-     * that's MovementManager's responsibility once real jump/fall detection
-     * exists — so those two clips are wired and ready but currently unreachable.
+     * Animation clip selection is driven here too, right after
+     * MovementManager.move() each frame, so the clip reflects the final
+     * movement state — including the jumping, falling, wading, and swimming
+     * states only movement can resolve. entityData.getClipForState() maps
+     * that EntityState to whatever clip that template authored for it.
+     * Entities with no character model skip this entirely.
      *
      * Character rendering itself — model matrix, entity-size scale, and the
      * actual skinned draw submission — lives entirely in the engine-side
@@ -273,8 +272,8 @@ public class PlayerManager extends ManagerPackage {
         }
 
         writeMovementState(player);
-        updateAnimationState(player);
         movementManager.move(player);
+        updateAnimationState(player);
 
         // Eye position — where gameplay (aiming, raycasts) actually happens,
         // regardless of where the visual camera ends up.
