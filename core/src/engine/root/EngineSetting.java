@@ -816,7 +816,7 @@ public class EngineSetting {
         public static final int TAB_DRAG_PREVIEW_H = 144;
         public static final int TAB_DRAG_PREVIEW_W = 256;
         public static final int TAB_ENTRY_TITLE = 0;
-        public static final String TAB_TITLE_DEBUG = "Debug";
+        public static final String TAB_TITLE_DEV = "Dev Mode";
         public static final String TAB_TITLE_PREVIEW = "Preview";
         public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
 

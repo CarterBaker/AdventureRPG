@@ -113,8 +113,8 @@ public class TabManager extends ManagerPackage {
         return openTab(EngineSetting.TAB_TITLE_PREVIEW, application.runtime.RuntimeContext.class, osWindow);
     }
 
-    public TabHandle openDebug(WindowInstance osWindow) {
-        return openTab(EngineSetting.TAB_TITLE_DEBUG, editor.debug.DebugContext.class, osWindow);
+    public TabHandle openDev(WindowInstance osWindow) {
+        return openTab(EngineSetting.TAB_TITLE_DEV, editor.dev.DevContext.class, osWindow);
     }
 
     public TabHandle openHierarchy(WindowInstance osWindow) {

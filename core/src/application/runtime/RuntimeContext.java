@@ -2,6 +2,7 @@ package application.runtime;
 
 import application.runtime.input.InputSystem;
 import application.runtime.lighting.SkySystem;
+import application.runtime.menu.MainMenuSystem;
 import application.runtime.menu.MenuSystem;
 import application.runtime.menueventsmanager.MenuEventsManager;
 import application.runtime.player.PlayerRenderSystem;
@@ -28,6 +29,7 @@ public class RuntimeContext extends ContextPackage {
     private SkySystem skySystem;
     private PlayerSystem playerSystem;
     private MenuSystem menuSystem;
+    private MainMenuSystem mainMenuSystem;
     private MenuEventsManager menuEventsManager;
     private WorldSystem worldSystem;
     private InputSystem playerInputSystem;
@@ -46,6 +48,7 @@ public class RuntimeContext extends ContextPackage {
         this.skySystem = create(SkySystem.class);
         this.playerSystem = create(PlayerSystem.class);
         this.menuSystem = create(MenuSystem.class);
+        this.mainMenuSystem = create(MainMenuSystem.class);
         this.menuEventsManager = create(MenuEventsManager.class);
         this.worldSystem = create(WorldSystem.class);
         this.playerInputSystem = create(InputSystem.class);

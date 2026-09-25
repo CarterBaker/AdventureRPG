@@ -15,7 +15,8 @@ public class LoadMenuBranch extends BranchPackage {
     /*
      * Handles the load menu opened from the main menu. Opening hides the menu
      * it was opened from and lists every saved character, most recently played
-     * first; Back closes it and shows that menu again. Choosing a character
+     * first, or a notice when there are none; Back closes it and shows that
+     * menu again. Choosing a character
      * loads it into the window's player through SaveManager and closes both
      * menus so play begins — a character that fails to load leaves the menu
      * open. The hidden menu is tracked per window so every window's load menu
@@ -78,6 +79,11 @@ public class LoadMenuBranch extends BranchPackage {
     private void populateCharacterList(MenuInstance loadMenu) {
 
         ObjectArrayList<String> characterNames = saveManager.getCharacterNames();
+
+        if (characterNames.isEmpty()) {
+            menuManager.inject(loadMenu, RuntimeSetting.ENTRY_CHARACTER_LIST, RuntimeSetting.MENU_LOAD_EMPTY_NOTICE);
+            return;
+        }
 
         for (int i = 0; i < characterNames.size(); i++)
             injectCharacterSlot(loadMenu, characterNames.get(i));

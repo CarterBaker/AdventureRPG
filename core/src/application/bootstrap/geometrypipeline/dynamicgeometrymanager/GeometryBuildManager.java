@@ -42,7 +42,7 @@ class GeometryBuildManager extends ManagerPackage {
      * terrain (the common case under any real surface) from paying the
      * per-block cost just because it isn't a single block ID. build() is
      * only ever called by a caller already holding the owning chunk's own
-     * sync lock (BuildBranch, LiquidTickBranch, DebugWaterPlacementSystem),
+     * sync lock (BuildBranch, LiquidTickBranch, DevWaterPlacementSystem),
      * so the packet's GENERATING/READY status is never used as an entry
      * gate here — it's set purely so anything downstream can observe it.
      */

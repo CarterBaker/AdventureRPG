@@ -13,7 +13,8 @@ public class MainMenuBranch extends BranchPackage {
      * window/context and close actions are parent-aware so multi-window sessions
      * can close only the clicked menu instance. New Game and Continue route
      * through SaveManager — a fresh character or the most recently played one —
-     * then close the clicked menu so play begins.
+     * then close the clicked menu so play begins. Continue does nothing until a
+     * character save exists, so the menu stays open.
      */
 
     // Internal
@@ -48,7 +49,7 @@ public class MainMenuBranch extends BranchPackage {
     }
 
     public void continueGame(MenuInstance menu, WindowInstance window) {
-        saveManager.continueCharacter(window);
-        closeMenu(menu);
+        if (saveManager.continueCharacter(window))
+            closeMenu(menu);
     }
 }

@@ -84,7 +84,7 @@
                   ]
                 },
                 {
-                  "id": "open_debug_button",
+                  "id": "open_dev_button",
                   "type": "button",
                   "sprite": "menus/Button",
                   "size": {
@@ -98,11 +98,11 @@
                   "hover_color": "control_hover",
                   "on_click": {
                     "class": "engine.editor.menueventsmanager.menus.EditorBranch",
-                    "method": "openDebug"
+                    "method": "openDev"
                   },
                   "elements": [
                     {
-                      "id": "open_debug_label",
+                      "id": "open_dev_label",
                       "type": "label",
                       "anchor": "center",
                       "pivot": "center",
@@ -111,7 +111,7 @@
                         "y": "100%"
                       },
                       "align": "left",
-                      "text": "Open Debug",
+                      "text": "Open Dev Mode",
                       "color": "text"
                     }
                   ]

@@ -37,6 +37,7 @@ public class RuntimeSetting {
     // Load Menu
     public static final String MENU_LOAD = "MainMenu/Load";
     public static final String MENU_LOAD_CHARACTER_SLOT = "MainMenu/character_slot";
+    public static final String MENU_LOAD_EMPTY_NOTICE = "MainMenu/character_list_empty";
     public static final String ELEMENT_CHARACTER_SLOT_LABEL = "character_label";
     public static final int ENTRY_CHARACTER_LIST = 0;
 }

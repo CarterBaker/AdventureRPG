@@ -1,4 +1,4 @@
-package editor.debug;
+package editor.dev;
 
 import application.runtime.input.InputSystem;
 import application.runtime.lighting.SkySystem;
@@ -9,19 +9,20 @@ import application.runtime.recording.RecordingInputSystem;
 import application.runtime.weather.PrecipitationSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
-import editor.debug.freecamera.FreeCameraSystem;
-import editor.debug.waterplacement.DebugWaterPlacementSystem;
+import editor.dev.freecamera.FreeCameraSystem;
+import editor.dev.waterplacement.DevWaterPlacementSystem;
 import engine.root.ContextPackage;
 
-public class DebugContext extends ContextPackage {
+public class DevContext extends ContextPackage {
 
     /*
-     * Debug runtime entry point for testing. Runs the same world, sky,
-     * lighting, weather, menu, and capture systems as RuntimeContext, but
-     * spawns a free camera in place of the player — no character is drawn
-     * or controlled, and the camera flies through the world with no physics.
-     * The editor pairs it with a Debug tab exactly as it does a preview.
-     * Debug-only systems live beside it in the editor, never in runtime.
+     * Dev mode entry point for testing. Runs the same world, sky, lighting,
+     * weather, menu, and capture systems as RuntimeContext, but spawns a free
+     * camera in place of the player and opens no main menu — the window drops
+     * straight into the world, no character is drawn or controlled, and the
+     * camera flies through it with no physics. The editor pairs it with a Dev
+     * Mode tab exactly as it does a preview. Dev-only systems live beside it
+     * in the editor, never in runtime.
      */
 
     // Runtime
@@ -35,7 +36,7 @@ public class DebugContext extends ContextPackage {
     private PostProcessingManager postProcessingManager;
     private WeatherSystem weatherSystem;
     private PrecipitationSystem precipitationSystem;
-    private DebugWaterPlacementSystem debugWaterPlacementSystem;
+    private DevWaterPlacementSystem devWaterPlacementSystem;
 
     // Internal \\
 
@@ -53,6 +54,6 @@ public class DebugContext extends ContextPackage {
         this.postProcessingManager = create(PostProcessingManager.class);
         this.weatherSystem = create(WeatherSystem.class);
         this.precipitationSystem = create(PrecipitationSystem.class);
-        this.debugWaterPlacementSystem = create(DebugWaterPlacementSystem.class);
+        this.devWaterPlacementSystem = create(DevWaterPlacementSystem.class);
     }
 }

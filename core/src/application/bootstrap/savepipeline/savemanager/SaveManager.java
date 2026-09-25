@@ -20,7 +20,8 @@ public class SaveManager extends ManagerPackage {
      * here — every character is its own save file that loads into that same
      * world. A window's player becomes a character when the main menu starts a
      * new one, continues the most recently played one, or loads a chosen one;
-     * becoming a character writes it at once, and the active character is
+     * continuing only succeeds when a character save exists and loads. Becoming
+     * a character writes it at once, and the active character is
      * written again before it is replaced and when its context tears down.
      * Only the main window — the one the standalone game pairs its
      * RuntimeContext with — writes saves; editor previews may load a character
@@ -73,12 +74,11 @@ public class SaveManager extends ManagerPackage {
             activateCharacter(window, createCharacterName());
     }
 
-    public void continueCharacter(WindowInstance window) {
+    public boolean continueCharacter(WindowInstance window) {
 
         String characterName = getLatestCharacterName();
 
-        if (characterName == null || !loadCharacter(window, characterName))
-            newCharacter(window);
+        return characterName != null && loadCharacter(window, characterName);
     }
 
     public boolean loadCharacter(WindowInstance window, String characterName) {

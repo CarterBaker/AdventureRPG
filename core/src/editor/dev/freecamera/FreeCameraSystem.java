@@ -1,4 +1,4 @@
-package editor.debug.freecamera;
+package editor.dev.freecamera;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.runtime.input.InputSystem;
@@ -7,7 +7,7 @@ import engine.root.SystemPackage;
 public class FreeCameraSystem extends SystemPackage {
 
     /*
-     * Triggers free camera spawning at debug startup — the DebugContext
+     * Triggers free camera spawning at dev mode startup — the DevContext
      * counterpart of PlayerSystem. Passes the context window and the
      * context's RawInputHandle to spawnFreeCamera(), both caller-owned, so
      * the window streams the world around a camera that flies with no

@@ -50,6 +50,14 @@
             ]
         },
         {
+            "id":       "character_list_empty",
+            "type":     "label",
+            "font":     "IMFellEnglish",
+            "text":     "No saved characters",
+            "color":    [0.88, 0.8, 0.66, 1],
+            "size":     { "x": "100%", "y": "50px" }
+        },
+        {
             "id":       "title",
             "type":     "container",
             "anchor":   "top",
