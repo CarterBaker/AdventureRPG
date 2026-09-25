@@ -26,7 +26,9 @@ public class FontRenderSystem extends SystemPackage {
      *
      * MenuRenderSystem calls submit() while traversing visible elements; each
      * submit updates that font's composite buffer for the current frame and
-     * pushes the batch into RenderManager via pushCompositeCall().
+     * pushes the batch into RenderManager via pushCompositeCall(), clipped to
+     * a copy of the mask the label was drawn under — the menu's mask stack
+     * is pooled and rewritten as the tree renders.
      */
 
     private static final int[] INSTANCE_ATTR_SIZES = { 2, 2, 4 };
@@ -91,7 +93,14 @@ public class FontRenderSystem extends SystemPackage {
             state.buffer.addInstance(state.scratch);
         }
 
-        renderManager.pushCompositeCall(font.getMaterial(), state.buffer, fbo, window);
+        MaskStruct stateMask = null;
+
+        if (mask != null) {
+            state.mask.set(mask);
+            stateMask = state.mask;
+        }
+
+        renderManager.pushCompositeCall(font.getMaterial(), state.buffer, stateMask, fbo, window);
     }
 
     // Draw \\
@@ -133,5 +142,6 @@ public class FontRenderSystem extends SystemPackage {
     private static final class FontCompositeState {
         CompositeBufferInstance buffer;
         float[] scratch = new float[FLOATS_PER_INSTANCE];
+        MaskStruct mask = new MaskStruct();
     }
 }

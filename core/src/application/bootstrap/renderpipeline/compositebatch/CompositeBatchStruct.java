@@ -1,9 +1,9 @@
 package application.bootstrap.renderpipeline.compositebatch;
 
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
+import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
-import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -11,37 +11,46 @@ public class CompositeBatchStruct extends StructPackage {
 
     /*
      * Groups all CompositeBufferInstances sharing the same material for one
-     * draw pass. The MaterialInstance drives shader and UBO binding. Source
-     * UBOs and uniforms are lazily cached on first access — safe since they
-     * never change after bootstrap. Cleared after every draw flush.
+     * draw pass. The MaterialInstance drives shader and UBO binding; each
+     * buffer keeps the material instance it was submitted with, whose own
+     * uniforms (a label's color, for one) are pushed before that buffer
+     * draws, and the mask it is clipped to, if any. Source UBOs are lazily
+     * cached on first access — safe since they never change after bootstrap.
+     * Cleared after every draw flush.
      */
 
     private static final UBOHandle[] EMPTY_UBOS = new UBOHandle[0];
-    private static final UniformStruct<?>[] EMPTY_UNIFORMS = new UniformStruct<?>[0];
 
     // Internal
     private final MaterialInstance material;
     private final ObjectArrayList<CompositeBufferInstance> buffers;
+    private final ObjectArrayList<MaterialInstance> bufferMaterials;
+    private final ObjectArrayList<MaskStruct> bufferMasks;
 
     // Cache
     private UBOHandle[] cachedSourceUBOs;
-    private UniformStruct<?>[] cachedUniforms;
 
     // Constructor \\
 
     public CompositeBatchStruct(MaterialInstance material) {
         this.material = material;
         this.buffers = new ObjectArrayList<>();
+        this.bufferMaterials = new ObjectArrayList<>();
+        this.bufferMasks = new ObjectArrayList<>();
     }
 
     // Management \\
 
-    public void add(CompositeBufferInstance buffer) {
+    public void add(CompositeBufferInstance buffer, MaterialInstance bufferMaterial, MaskStruct bufferMask) {
         buffers.add(buffer);
+        bufferMaterials.add(bufferMaterial);
+        bufferMasks.add(bufferMask);
     }
 
     public void clear() {
         buffers.clear();
+        bufferMaterials.clear();
+        bufferMasks.clear();
     }
 
     public boolean isEmpty() {
@@ -56,6 +65,14 @@ public class CompositeBatchStruct extends StructPackage {
 
     public ObjectArrayList<CompositeBufferInstance> getBuffers() {
         return buffers;
+    }
+
+    public ObjectArrayList<MaterialInstance> getBufferMaterials() {
+        return bufferMaterials;
+    }
+
+    public ObjectArrayList<MaskStruct> getBufferMasks() {
+        return bufferMasks;
     }
 
     /*
@@ -75,24 +92,5 @@ public class CompositeBatchStruct extends StructPackage {
             cachedSourceUBOs = sourceUBOs.values().toArray(new UBOHandle[0]);
 
         return cachedSourceUBOs;
-    }
-
-    /*
-     * Lazily resolved on first call — uniforms are owned by the
-     * MaterialInstance and never change after bootstrap.
-     */
-    public UniformStruct<?>[] getCachedUniforms() {
-
-        if (cachedUniforms != null)
-            return cachedUniforms;
-
-        var uniforms = material.getUniforms();
-
-        if (uniforms == null || uniforms.isEmpty())
-            cachedUniforms = EMPTY_UNIFORMS;
-        else
-            cachedUniforms = uniforms.values().toArray(new UniformStruct<?>[0]);
-
-        return cachedUniforms;
     }
 }

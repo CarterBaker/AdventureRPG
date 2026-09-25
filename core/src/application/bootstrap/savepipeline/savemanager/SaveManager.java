@@ -18,11 +18,14 @@ public class SaveManager extends ManagerPackage {
     /*
      * Owns character saves. The world is persistent on disk and never saved
      * here — every character is its own save file that loads into that same
-     * world. A window's player becomes a character when the main menu starts a
-     * new one, continues the most recently played one, or loads a chosen one;
-     * continuing only succeeds when a character save exists and loads. Becoming
-     * a character writes it at once, and the active character is
-     * written again before it is replaced and when its context tears down.
+     * world. newCharacter() writes and releases whatever character the window
+     * was playing and rolls a fresh body for the character creator to shape;
+     * createCharacter() names that body and makes it the active character, as
+     * continuing the most recently played one or loading a chosen one also
+     * do. Continuing only succeeds when a character save exists and loads, and
+     * a name is only taken by one save. Becoming a character writes it at once,
+     * and the active character is written again before it is replaced and when
+     * its context tears down.
      * Only the main window — the one the standalone game pairs its
      * RuntimeContext with — writes saves; editor previews may load a character
      * but never write one. PlayerSaveBranch captures a character,
@@ -68,10 +71,23 @@ public class SaveManager extends ManagerPackage {
     public void newCharacter(WindowInstance window) {
 
         saveCharacter(window);
-        playerManager.rerollPlayerForWindow(window.getWindowID());
 
         if (isSaveWindow(window))
-            activateCharacter(window, createCharacterName());
+            this.activeCharacterName = null;
+
+        playerManager.rerollPlayerForWindow(window.getWindowID());
+    }
+
+    public boolean createCharacter(WindowInstance window, String characterName) {
+
+        if (!isSaveWindow(window))
+            return true;
+
+        if (!isCharacterNameAvailable(characterName))
+            return false;
+
+        activateCharacter(window, characterName);
+        return true;
     }
 
     public boolean continueCharacter(WindowInstance window) {
@@ -163,6 +179,14 @@ public class SaveManager extends ManagerPackage {
     }
 
     // Accessible \\
+
+    public boolean isCharacterNameAvailable(String characterName) {
+        return !getCharacterFile(characterName).exists();
+    }
+
+    public String getDefaultCharacterName() {
+        return createCharacterName();
+    }
 
     public ObjectArrayList<String> getCharacterNames() {
 

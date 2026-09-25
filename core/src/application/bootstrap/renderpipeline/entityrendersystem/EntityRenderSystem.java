@@ -34,8 +34,8 @@ public class EntityRenderSystem extends SystemPackage {
      * 2. pushCharacter() — builds the model matrix from the entity's own
      * world position, facing direction, and height, then forwards one
      * skinned draw per character part to RenderManager.pushSkinnedCall():
-     * the body mesh, and for an entity with an appearance its worn head and
-     * hair meshes too, all sharing one model matrix, one pose, and one
+     * the body mesh, and for an entity with an appearance its worn head,
+     * nose, and hair meshes too, all sharing one model matrix, one pose, and one
      * material. Scale is uniform — the entity's size.y divided by the
      * model's full authored height (EntityData.getModelHeight()) — so the
      * character keeps its own proportions at any height; width and girth
@@ -137,13 +137,25 @@ public class EntityRenderSystem extends SystemPackage {
         appearanceScratch.setTint(appearance.getSkinColor());
         pushCharacterPart(entityData.getCharacterMesh(), material, skinningMatrices, targetFbo, window);
         pushCharacterPart(appearance.getHeadMesh(), material, skinningMatrices, targetFbo, window);
-
-        if (!appearance.hasFeature(FeatureSlot.HAIR))
-            return;
+        pushFeaturePart(appearance, FeatureSlot.NOSE, material, skinningMatrices, targetFbo, window);
 
         appearanceScratch.setTint(appearance.getHairColor());
+        pushFeaturePart(appearance, FeatureSlot.HAIR, material, skinningMatrices, targetFbo, window);
+    }
+
+    private void pushFeaturePart(
+            AppearanceHandle appearance,
+            FeatureSlot featureSlot,
+            MaterialInstance material,
+            Matrix4[] skinningMatrices,
+            FboInstance targetFbo,
+            WindowInstance window) {
+
+        if (!appearance.hasFeature(featureSlot))
+            return;
+
         pushCharacterPart(
-                appearance.getFeature(FeatureSlot.HAIR).getMeshHandle(),
+                appearance.getFeature(featureSlot).getMeshHandle(),
                 material,
                 skinningMatrices,
                 targetFbo,

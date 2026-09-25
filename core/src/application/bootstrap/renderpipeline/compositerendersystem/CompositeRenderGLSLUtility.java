@@ -122,6 +122,17 @@ class CompositeRenderGLSLUtility extends EngineUtility {
         EngineContext.gl30.glBindVertexArray(0);
     }
 
+    // Scissor \\
+
+    static void enableScissor(int x, int y, int w, int h) {
+        EngineContext.gl20.glEnable(EngineSetting.GL_SCISSOR_TEST);
+        EngineContext.gl20.glScissor(x, y, w, h);
+    }
+
+    static void disableScissor() {
+        EngineContext.gl20.glDisable(EngineSetting.GL_SCISSOR_TEST);
+    }
+
     // Shader \\
 
     static void useShader(int shaderHandle) {

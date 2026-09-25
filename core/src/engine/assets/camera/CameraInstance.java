@@ -34,6 +34,10 @@ public class CameraInstance extends InstancePackage {
         data.setPosition(input);
     }
 
+    public void setDirection(Vector3 input) {
+        data.setDirection(input);
+    }
+
     public void updateViewport(float width, float height) {
         data.updateViewport(width, height);
     }

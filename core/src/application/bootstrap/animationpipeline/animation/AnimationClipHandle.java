@@ -45,6 +45,10 @@ public class AnimationClipHandle extends HandlePackage {
         return clipData.isLooping();
     }
 
+    public float getBlendDuration() {
+        return clipData.getBlendDuration();
+    }
+
     public BoneTrackStruct getBoneTrack(int boneIndex) {
         return clipData.getBoneTrack(boneIndex);
     }

@@ -11,10 +11,11 @@ public class MainMenuBranch extends BranchPackage {
     /*
      * Handles open and close actions for the main menu. Menus are opened per
      * window/context and close actions are parent-aware so multi-window sessions
-     * can close only the clicked menu instance. New Game and Continue route
-     * through SaveManager — a fresh character or the most recently played one —
-     * then close the clicked menu so play begins. Continue does nothing until a
-     * character save exists, so the menu stays open.
+     * can close only the clicked menu instance. Continue routes through
+     * SaveManager to the most recently played character, then closes the
+     * clicked menu so play begins; it does nothing until a character save
+     * exists, so the menu stays open. New Game opens the character creator,
+     * which CharacterCreatorBranch runs.
      */
 
     // Internal
@@ -42,11 +43,6 @@ public class MainMenuBranch extends BranchPackage {
     }
 
     // Game \\
-
-    public void newGame(MenuInstance menu, WindowInstance window) {
-        saveManager.newCharacter(window);
-        closeMenu(menu);
-    }
 
     public void continueGame(MenuInstance menu, WindowInstance window) {
         if (saveManager.continueCharacter(window))

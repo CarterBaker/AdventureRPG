@@ -67,6 +67,10 @@ public class DimensionValue extends StructPackage {
         return new DimensionValue(value, false, 0f);
     }
 
+    public static DimensionValue ofPercent(float value) {
+        return new DimensionValue(value, true, 0f);
+    }
+
     // Accessible \\
 
     public float resolve(float parentDimension) {

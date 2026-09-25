@@ -180,7 +180,7 @@ public class RenderManager extends ManagerPackage {
     }
 
     public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, FboInstance fbo) {
-        renderSystem.pushCompositeCall(material, buffer, fbo, resolveDefaultWindow());
+        renderSystem.pushCompositeCall(material, buffer, null, fbo, resolveDefaultWindow());
     }
 
     public void pushCompositeCall(
@@ -188,7 +188,16 @@ public class RenderManager extends ManagerPackage {
             CompositeBufferInstance buffer,
             FboInstance fbo,
             WindowInstance window) {
-        renderSystem.pushCompositeCall(material, buffer, fbo, window);
+        renderSystem.pushCompositeCall(material, buffer, null, fbo, window);
+    }
+
+    public void pushCompositeCall(
+            MaterialInstance material,
+            CompositeBufferInstance buffer,
+            MaskStruct mask,
+            FboInstance fbo,
+            WindowInstance window) {
+        renderSystem.pushCompositeCall(material, buffer, mask, fbo, window);
     }
 
     /*

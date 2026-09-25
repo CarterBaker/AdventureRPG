@@ -63,7 +63,7 @@ public class PlayerRenderSystem extends SystemPackage {
 
         entityRenderSystem.pushCharacter(
                 player,
-                camera.getDirection(),
+                playerManager.getFacingDirectionForWindow(windowID),
                 hiddenBone,
                 worldFbo,
                 context.getWindow());

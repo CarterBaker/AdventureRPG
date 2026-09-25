@@ -233,6 +233,10 @@ public class ElementInstance extends InstancePackage {
         this.actionArgOverride = arg;
     }
 
+    public void setOnDragArgOverride(String arg) {
+        this.onDragArgOverride = arg;
+    }
+
     /*
      * Updates the visible label text at runtime. Writes both the local
      * textOverride field (returned by getText()) and the live FontInstance so
@@ -242,6 +246,15 @@ public class ElementInstance extends InstancePackage {
         this.textOverride = text;
         if (fontInstance != null)
             fontInstance.setText(text);
+    }
+
+    /*
+     * Replaces the element's own color at runtime — the tint of its sprite
+     * and text whenever no hover or state color applies. Used to paint
+     * swatches and mark selected entries.
+     */
+    public void setColorOverride(MenuColorStruct color) {
+        this.colorOverride = color;
     }
 
     // Effective Action Accessors \\
@@ -416,7 +429,7 @@ public class ElementInstance extends InstancePackage {
     // Scroll \\
 
     public void setScrollX(float x) {
-        this.scrollX = x;
+        this.scrollX = Math.max(0, Math.min(x, getMaxScrollX()));
     }
 
     public void setScrollY(float y) {

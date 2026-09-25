@@ -380,9 +380,10 @@ class RenderSystem extends SystemPackage {
     void pushCompositeCall(
             MaterialInstance material,
             CompositeBufferInstance buffer,
+            MaskStruct mask,
             FboInstance fbo,
             WindowInstance window) {
-        compositeRenderSystem.submit(material, buffer, fbo, window);
+        compositeRenderSystem.submit(material, buffer, mask, fbo, window);
     }
 
     void removeWindowResources(WindowInstance window) {

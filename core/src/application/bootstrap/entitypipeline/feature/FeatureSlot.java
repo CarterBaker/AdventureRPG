@@ -3,8 +3,8 @@ package application.bootstrap.entitypipeline.feature;
 public enum FeatureSlot {
 
     /*
-     * Swappable parts of a character's appearance. Mesh slots (head, hair)
-     * are drawn as their own rigged mesh on the character's rig; texture
+     * Swappable parts of a character's appearance. Mesh slots (head, hair,
+     * nose) are drawn as their own rigged mesh on the character's rig; texture
      * slots (eyes, brows, mouth) are overlays painted onto the head's face
      * tile in the character shader. Only the head also carries a face tile,
      * and only the head is required — every other slot may be left empty.
@@ -12,6 +12,7 @@ public enum FeatureSlot {
 
     HEAD(true, true, true),
     HAIR(true, false, false),
+    NOSE(true, false, false),
     EYES(false, false, false),
     BROWS(false, false, false),
     MOUTH(false, false, false);

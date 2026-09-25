@@ -22,7 +22,8 @@ class AppearanceBuilder extends BuilderPackage {
      * default feature must sit in the slot it is declared under, fit the
      * rig and texture array (AppearanceData.isCompatible), and every
      * required slot must be filled. Colors default to white and the build
-     * curve to a flat 1.0 when omitted. Bootstrap-only.
+     * curve to a flat 1.0 when omitted; a palette left out holds only its
+     * default color. Bootstrap-only.
      */
 
     // Internal
@@ -46,6 +47,8 @@ class AppearanceBuilder extends BuilderPackage {
                     + "\" is not a bone of the character rig. File: " + file.getName());
 
         FeatureHandle[] defaultFeatures = parseFeatures(JsonUtility.validateObject(appearanceJson, "features"), file);
+        Color skinColor = parseColor(appearanceJson, "skin_color");
+        Color hairColor = parseColor(appearanceJson, "hair_color");
         JsonObject buildJson = JsonUtility.hasObject(appearanceJson, "build")
                 ? appearanceJson.getAsJsonObject("build")
                 : new JsonObject();
@@ -53,8 +56,10 @@ class AppearanceBuilder extends BuilderPackage {
         AppearanceData appearanceData = new AppearanceData(
                 rigHandle,
                 rigHandle.getBoneIndex(headBoneName),
-                parseColor(appearanceJson, "skin_color"),
-                parseColor(appearanceJson, "hair_color"),
+                skinColor,
+                hairColor,
+                parsePalette(appearanceJson, "skin_palette", skinColor, file),
+                parsePalette(appearanceJson, "hair_palette", hairColor, file),
                 defaultFeatures,
                 JsonUtility.getFloat(buildJson, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
                 JsonUtility.getFloat(buildJson, "heavy", EngineSetting.DEFAULT_BUILD_FACTOR),
@@ -144,8 +149,35 @@ class AppearanceBuilder extends BuilderPackage {
         if (!JsonUtility.hasArray(json, key))
             return new Color(Color.WHITE);
 
-        JsonArray color = JsonUtility.validateArray(json, key, 3);
+        return toColor(JsonUtility.validateArray(json, key, 3));
+    }
 
+    private Color[] parsePalette(JsonObject json, String key, Color defaultColor, File file) {
+
+        if (!JsonUtility.hasArray(json, key))
+            return new Color[] { new Color(defaultColor) };
+
+        JsonArray paletteJson = json.getAsJsonArray(key);
+
+        if (paletteJson.size() == 0)
+            throwException("Appearance \"" + key + "\" must list at least one color. File: " + file.getName());
+
+        Color[] palette = new Color[paletteJson.size()];
+
+        for (int i = 0; i < palette.length; i++) {
+
+            JsonArray color = paletteJson.get(i).getAsJsonArray();
+
+            if (color.size() != 3)
+                throwException("Appearance \"" + key + "\" entry " + i + " must be [r, g, b]. File: " + file.getName());
+
+            palette[i] = toColor(color);
+        }
+
+        return palette;
+    }
+
+    private Color toColor(JsonArray color) {
         return new Color(
                 color.get(0).getAsFloat(),
                 color.get(1).getAsFloat(),
