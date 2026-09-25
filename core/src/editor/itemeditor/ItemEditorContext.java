@@ -12,7 +12,8 @@ public class ItemEditorContext extends ContextPackage {
     /*
      * Editor tab for building items from sub-voxel cubes. Reads input, orbits
      * the camera, casts the pointer, draws the active item, and shows the
-     * toolbar — all state and cube logic live in the editor and engine.
+     * toolbar and parts panel — all state and cube logic live in the editor and
+     * engine.
      */
 
     // Internal

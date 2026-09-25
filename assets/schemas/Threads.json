@@ -1,0 +1,13 @@
+{
+  "tab": "Threads",
+  "order": 22,
+  "directory": "application/threads",
+  "entries": "threads",
+  "name_field": "name",
+  "default_file": "ThreadPools",
+  "fields": [
+    { "key": "name", "type": "string", "required": true, "default": "" },
+    { "key": "size", "type": "json", "required": true, "default": 1 },
+    { "key": "maxInFlight", "type": "int", "default": 3 }
+  ]
+}

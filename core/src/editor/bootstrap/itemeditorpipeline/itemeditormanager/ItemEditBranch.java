@@ -180,6 +180,13 @@ class ItemEditBranch extends BranchPackage {
         itemEditorManager.notifyChanged();
     }
 
+    void renameSelectedPart(ItemDocumentInstance document, String partName) {
+
+        document.getModel().getPart(document.getSelectedPartIndex()).setPartName(partName);
+        document.markEdited();
+        itemEditorManager.setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_RENAMED + partName);
+    }
+
     void cycleTexture(ItemDocumentInstance document, ObjectArrayList<String> textureNames, int direction) {
 
         SubVoxelPartStruct part = document.getModel().getPart(document.getSelectedPartIndex());

@@ -220,7 +220,8 @@
                 "y": "26px"
               },
               "stack": "horizontal",
-              "spacing": "2px"
+              "spacing": "2px",
+              "mask": true
             }
           ]
         },

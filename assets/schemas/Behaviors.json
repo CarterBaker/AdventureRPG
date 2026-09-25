@@ -1,0 +1,9 @@
+{
+  "tab": "Behaviors",
+  "order": 11,
+  "directory": "behaviors",
+  "fields": [
+    { "key": "jump_duration", "type": "float", "default": 0.35 },
+    { "key": "turn_responsiveness", "type": "float", "default": 12.0 }
+  ]
+}

@@ -7,9 +7,10 @@ import engine.root.InstancePackage;
 public class ItemDocumentInstance extends InstancePackage {
 
     /*
-     * One item open in the editor: where it lives on disk, the model being
-     * edited, and the selected part. The revision moves on every model change
-     * so viewports know when to rebuild; dirty marks changes not yet saved.
+     * One item mesh open in the editor: the item that last opened it, the
+     * model being edited, and the selected part. The revision moves on every
+     * model change so viewports know when to rebuild; dirty marks changes not
+     * yet saved.
      */
 
     // Identity
@@ -40,6 +41,10 @@ public class ItemDocumentInstance extends InstancePackage {
     }
 
     // Management \\
+
+    public void setEntry(ItemEntryStruct entry) {
+        this.entry = entry;
+    }
 
     public void markEdited() {
 

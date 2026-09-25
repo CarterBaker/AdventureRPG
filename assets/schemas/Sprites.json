@@ -1,0 +1,21 @@
+{
+  "tab": "Sprites",
+  "order": 23,
+  "directory": "sprites",
+  "fields": [
+    {
+      "key": "border",
+      "type": "array",
+      "length": 4,
+      "element": {
+        "type": "float",
+        "default": 0.0
+      }
+    },
+    {
+      "key": "stretch",
+      "type": "boolean",
+      "default": false
+    }
+  ]
+}

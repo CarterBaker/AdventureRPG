@@ -1,0 +1,37 @@
+{
+  "tab": "UBOs",
+  "order": 19,
+  "directory": "ubos",
+  "fields": [
+    { "key": "blockName", "type": "string", "required": true, "default": "" },
+    { "key": "binding", "type": "int", "default": 0 },
+    {
+      "key": "uniforms",
+      "type": "array",
+      "required": true,
+      "element": {
+        "type": "object",
+        "fields": [
+          { "key": "name", "type": "string", "required": true, "default": "" },
+          {
+            "key": "type",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "FLOAT", "DOUBLE", "INT", "BOOL",
+              "VECTOR2", "VECTOR3", "VECTOR4",
+              "VECTOR2_DOUBLE", "VECTOR3_DOUBLE", "VECTOR4_DOUBLE",
+              "VECTOR2_INT", "VECTOR3_INT", "VECTOR4_INT",
+              "VECTOR2_BOOLEAN", "VECTOR3_BOOLEAN", "VECTOR4_BOOLEAN",
+              "MATRIX2", "MATRIX3", "MATRIX4",
+              "MATRIX2_DOUBLE", "MATRIX3_DOUBLE", "MATRIX4_DOUBLE",
+              "SAMPLE_IMAGE_2D", "SAMPLE_IMAGE_2D_ARRAY"
+            ],
+            "default": "FLOAT"
+          },
+          { "key": "count", "type": "int", "default": 1 }
+        ]
+      }
+    }
+  ]
+}

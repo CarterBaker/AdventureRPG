@@ -1,0 +1,9 @@
+{
+  "tab": "Passes",
+  "order": 18,
+  "directory": "processingpasses",
+  "fields": [
+    { "key": "material", "type": "string", "required": true, "default": "" },
+    { "key": "mesh", "type": "string", "default": "util/PlanarPass" }
+  ]
+}

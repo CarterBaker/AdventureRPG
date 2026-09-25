@@ -14,9 +14,9 @@ public class HierarchyManager extends ManagerPackage {
 
     /*
      * Owns the hierarchy UI. Providers register once and become a tab on every
-     * panel. openHierarchy() and closeHierarchy() are the one pair for panels,
-     * and each frame any panel whose tab, expansion, or revision moved is laid
-     * out again.
+     * panel, and hear when a panel switches to them. openHierarchy() and
+     * closeHierarchy() are the one pair for panels, and each frame any panel
+     * whose tab, expansion, or revision moved is laid out again.
      */
 
     // Internal
@@ -110,11 +110,13 @@ public class HierarchyManager extends ManagerPackage {
     void selectTab(MenuInstance menu, String tabName) {
 
         HierarchyInstance hierarchy = getHierarchyForMenu(menu);
+        HierarchyTabProvider provider = tabName2HierarchyTabProvider.get(tabName);
 
-        if (hierarchy == null || !tabName2HierarchyTabProvider.containsKey(tabName))
+        if (hierarchy == null || provider == null)
             return;
 
         hierarchy.setActiveTabName(tabName);
+        provider.selectTab();
     }
 
     void selectNode(MenuInstance menu, String nodeKey) {

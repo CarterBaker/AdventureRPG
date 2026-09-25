@@ -1,0 +1,29 @@
+{
+  "tab": "Shaders",
+  "order": 16,
+  "directory": "shaders",
+  "fields": [
+    {
+      "key": "vert",
+      "type": "string",
+      "required": true,
+      "default": ""
+    },
+    {
+      "key": "frag",
+      "type": "string",
+      "required": true,
+      "default": ""
+    },
+    {
+      "key": "tcs",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "tes",
+      "type": "string",
+      "default": ""
+    }
+  ]
+}

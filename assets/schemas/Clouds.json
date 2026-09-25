@@ -1,0 +1,91 @@
+{
+  "tab": "Clouds",
+  "order": 9,
+  "directory": "clouds",
+  "fields": [
+    {
+      "key": "color",
+      "type": "object",
+      "fields": [
+        {
+          "key": "r",
+          "type": "float",
+          "required": true,
+          "default": 1.0
+        },
+        {
+          "key": "g",
+          "type": "float",
+          "required": true,
+          "default": 1.0
+        },
+        {
+          "key": "b",
+          "type": "float",
+          "required": true,
+          "default": 1.0
+        }
+      ]
+    },
+    {
+      "key": "saturation",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "scaleKm",
+      "type": "float",
+      "default": 2.0
+    },
+    {
+      "key": "density",
+      "type": "float",
+      "default": 0.8
+    },
+    {
+      "key": "verticalThicknessKm",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "fullness",
+      "type": "float",
+      "default": 0.7
+    },
+    {
+      "key": "elongation",
+      "type": "float",
+      "default": 1.5
+    },
+    {
+      "key": "densityNoiseScale",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "noiseWarpStrength",
+      "type": "float",
+      "default": 0.6
+    },
+    {
+      "key": "coverageBias",
+      "type": "float",
+      "default": 0.5
+    },
+    {
+      "key": "silhouetteSoftness",
+      "type": "float",
+      "default": 0.08
+    },
+    {
+      "key": "baseAltitudeKm",
+      "type": "float",
+      "default": 1.5
+    },
+    {
+      "key": "driftSpeedScale",
+      "type": "float",
+      "default": 1.0
+    }
+  ]
+}

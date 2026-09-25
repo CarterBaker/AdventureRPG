@@ -1,0 +1,212 @@
+{
+  "tab": "Entities",
+  "order": 10,
+  "directory": "entities",
+  "fields": [
+    {
+      "key": "behavior",
+      "type": "string",
+      "required": true,
+      "default": "Bipedal"
+    },
+    {
+      "key": "size_min",
+      "type": "object",
+      "fields": [
+        {
+          "key": "x",
+          "type": "float",
+          "default": 1.0
+        },
+        {
+          "key": "y",
+          "type": "float",
+          "default": 1.0
+        },
+        {
+          "key": "z",
+          "type": "float",
+          "default": 1.0
+        }
+      ]
+    },
+    {
+      "key": "size_max",
+      "type": "object",
+      "fields": [
+        {
+          "key": "x",
+          "type": "float",
+          "default": 1.0
+        },
+        {
+          "key": "y",
+          "type": "float",
+          "default": 1.0
+        },
+        {
+          "key": "z",
+          "type": "float",
+          "default": 1.0
+        }
+      ]
+    },
+    {
+      "key": "weight_min",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "weight_max",
+      "type": "float",
+      "default": 1.0
+    },
+    {
+      "key": "eye_level",
+      "type": "float",
+      "default": 0.91
+    },
+    {
+      "key": "model",
+      "type": "object",
+      "fields": [
+        {
+          "key": "mesh",
+          "type": "string",
+          "required": true,
+          "default": ""
+        },
+        {
+          "key": "material",
+          "type": "string",
+          "required": true,
+          "default": "characters/StandardCharacterMaterial"
+        },
+        {
+          "key": "animation_tree",
+          "type": "string",
+          "required": true,
+          "default": ""
+        },
+        {
+          "key": "appearance",
+          "type": "object",
+          "fields": [
+            {
+              "key": "head_bone",
+              "type": "string",
+              "required": true,
+              "default": "head"
+            },
+            {
+              "key": "skin_color",
+              "type": "array",
+              "length": 3,
+              "element": {
+                "type": "float",
+                "default": 1.0
+              }
+            },
+            {
+              "key": "hair_color",
+              "type": "array",
+              "length": 3,
+              "element": {
+                "type": "float",
+                "default": 1.0
+              }
+            },
+            {
+              "key": "skin_palette",
+              "type": "array",
+              "element": {
+                "type": "array",
+                "length": 3,
+                "element": {
+                  "type": "float",
+                  "default": 1.0
+                }
+              }
+            },
+            {
+              "key": "hair_palette",
+              "type": "array",
+              "element": {
+                "type": "array",
+                "length": 3,
+                "element": {
+                  "type": "float",
+                  "default": 1.0
+                }
+              }
+            },
+            {
+              "key": "features",
+              "type": "object",
+              "required": true,
+              "fields": [
+                {
+                  "key": "head",
+                  "type": "string",
+                  "required": true,
+                  "default": ""
+                },
+                {
+                  "key": "hair",
+                  "type": "string",
+                  "required": true,
+                  "default": ""
+                },
+                {
+                  "key": "nose",
+                  "type": "string",
+                  "required": true,
+                  "default": ""
+                },
+                {
+                  "key": "eyes",
+                  "type": "string",
+                  "default": ""
+                },
+                {
+                  "key": "brows",
+                  "type": "string",
+                  "default": ""
+                },
+                {
+                  "key": "mouth",
+                  "type": "string",
+                  "default": ""
+                }
+              ]
+            },
+            {
+              "key": "build",
+              "type": "object",
+              "fields": [
+                {
+                  "key": "thin",
+                  "type": "float",
+                  "default": 1.0
+                },
+                {
+                  "key": "heavy",
+                  "type": "float",
+                  "default": 1.0
+                },
+                {
+                  "key": "bones",
+                  "type": "map",
+                  "element": {
+                    "type": "float",
+                    "default": 1.0
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

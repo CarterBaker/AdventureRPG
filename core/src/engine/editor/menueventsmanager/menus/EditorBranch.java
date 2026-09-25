@@ -50,6 +50,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openHierarchy(window.getGLWindow());
     }
 
+    public void openInfoPanel(WindowInstance window) {
+        tabManager.openInfoPanel(window.getGLWindow());
+    }
+
     public void openItemEditor(WindowInstance window) {
         tabManager.openItemEditor(window.getGLWindow());
     }

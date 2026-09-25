@@ -1,0 +1,31 @@
+{
+  "tab": "Aliases",
+  "order": 20,
+  "directory": "texturealiases",
+  "fields": [
+    {
+      "key": "defaultColor",
+      "type": "array",
+      "required": true,
+      "length": 3,
+      "element": {
+        "type": "float",
+        "default": 1.0
+      }
+    },
+    {
+      "key": "uniformName",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "aliases",
+      "type": "array",
+      "required": true,
+      "element": {
+        "type": "string",
+        "default": ""
+      }
+    }
+  ]
+}
