@@ -3,6 +3,7 @@
   "order": 3,
   "directory": "biomes",
   "fields": [
+    { "key": "display_name", "type": "string", "required": true, "default": "" },
     { "key": "map_color", "type": "string", "default": "#FFFFFF" },
     { "key": "ocean_water", "type": "boolean", "default": false },
     { "key": "beach_biome", "type": "string", "default": "" },

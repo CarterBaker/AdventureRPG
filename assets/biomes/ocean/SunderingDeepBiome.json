@@ -1,20 +1,21 @@
 {
-    "map_color": "#FFFFFF",
+    "display_name": "The Sundering Deep",
+    "map_color": "#0B2A5C",
     "ocean_water": true,
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
-        "height_blocks": [96, 112, 126, 138, 148]
+        "height_blocks": [68, 88, 108, 126, 140]
     },
     "erosion_spline": {
         "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
-        "amplitude_blocks": [16, 14, 11, 8, 6]
+        "amplitude_blocks": [18, 16, 13, 10, 8]
     },
     "peaks_valleys_spline": {
         "x": [0.0, 0.4, 0.7, 1.0],
-        "contribution": [-0.5, 0.0, 0.3, 0.6]
+        "contribution": [-0.6, -0.1, 0.3, 0.6]
     },
     "detail_amplitude_blocks": 2.0,
-    "detail_wavelength_blocks": 36,
+    "detail_wavelength_blocks": 40,
     "surface_block": "TerraArcanaBlocks/Sand",
     "subsurface_block": "TerraArcanaBlocks/Sand",
     "underwater_block": "TerraArcanaBlocks/Sand",

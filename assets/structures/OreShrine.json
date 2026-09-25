@@ -3,7 +3,7 @@
     "y_offset_blocks": -1,
     "foundation_block": "TerraArcanaBlocks/Stone Block",
     "rules": {
-        "biomes": ["BlackBiome"],
+        "biomes": ["lowland/BarrowDownsBiome", "highland/MossbackFellsBiome"],
         "surface": "LAND",
         "min_ground_height_blocks": 161,
         "max_ground_height_blocks": 260,

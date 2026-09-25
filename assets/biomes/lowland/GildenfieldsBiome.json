@@ -1,21 +1,24 @@
 {
+    "display_name": "The Gildenfields",
+    "map_color": "#D8C45A",
     "ocean_water": false,
+    "beach_biome": "coast/SunlitStrandBiome",
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
-        "height_blocks": [158, 159, 161, 163, 166]
+        "height_blocks": [166, 169, 173, 177, 182]
     },
     "erosion_spline": {
-        "x": [-1.0, 0.0, 1.0],
-        "amplitude_blocks": [6, 4, 2]
+        "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
+        "amplitude_blocks": [20, 16, 12, 9, 6]
     },
     "peaks_valleys_spline": {
-        "x": [0.0, 0.5, 1.0],
-        "contribution": [-0.4, 0.1, 0.5]
+        "x": [0.0, 0.4, 0.7, 1.0],
+        "contribution": [-0.4, 0.0, 0.3, 0.5]
     },
-    "detail_amplitude_blocks": 1.0,
+    "detail_amplitude_blocks": 2.0,
     "detail_wavelength_blocks": 40,
-    "surface_block": "TerraArcanaBlocks/Sand",
-    "subsurface_block": "TerraArcanaBlocks/Sand",
+    "surface_block": "TerraArcanaBlocks/Grass Block",
+    "subsurface_block": "TerraArcanaBlocks/Dirt Block",
     "underwater_block": "TerraArcanaBlocks/Sand",
     "weathers": {
         "Spring": [

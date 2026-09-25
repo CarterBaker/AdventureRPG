@@ -1,22 +1,23 @@
 {
-    "ocean_water": false,
-    "beach_biome": "CliffBeachBiome",
+    "display_name": "The Sunwell Tarns",
+    "map_color": "#5A9FCB",
+    "ocean_water": true,
     "continentalness_spline": {
         "x": [-1.0, -0.3, 0.1, 0.5, 1.0],
-        "height_blocks": [250, 290, 340, 400, 470]
+        "height_blocks": [136, 141, 146, 150, 154]
     },
     "erosion_spline": {
         "x": [-1.0, -0.4, 0.2, 0.7, 1.0],
-        "amplitude_blocks": [180, 150, 120, 90, 70]
+        "amplitude_blocks": [6, 5, 4, 3, 2]
     },
     "peaks_valleys_spline": {
-        "x": [0.0, 0.3, 0.6, 0.85, 1.0],
-        "contribution": [-0.4, 0.0, 0.4, 0.8, 1.0]
+        "x": [0.0, 0.4, 0.7, 1.0],
+        "contribution": [-0.3, 0.0, 0.2, 0.4]
     },
-    "detail_amplitude_blocks": 6.0,
-    "detail_wavelength_blocks": 24,
-    "surface_block": "TerraArcanaBlocks/Grass Block",
-    "subsurface_block": "TerraArcanaBlocks/Stone Block",
+    "detail_amplitude_blocks": 1.0,
+    "detail_wavelength_blocks": 30,
+    "surface_block": "TerraArcanaBlocks/Sand",
+    "subsurface_block": "TerraArcanaBlocks/Dirt Block",
     "underwater_block": "TerraArcanaBlocks/Sand",
     "weathers": {
         "Spring": [
