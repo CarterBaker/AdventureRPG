@@ -8,6 +8,9 @@ import application.runtime.menueventsmanager.menus.charactercreator.CreatorAppea
 import application.runtime.menueventsmanager.menus.charactercreator.CreatorBodyBranch;
 import application.runtime.menueventsmanager.menus.charactercreator.CreatorNameBranch;
 import application.runtime.menueventsmanager.menus.charactercreator.CreatorProgressionBranch;
+import application.runtime.menueventsmanager.menus.settings.SettingsBindingBranch;
+import application.runtime.menueventsmanager.menus.settings.SettingsMenuBranch;
+import application.runtime.menueventsmanager.menus.settings.SettingsOptionBranch;
 import application.runtime.menueventsmanager.util.GenericButtonBranch;
 import engine.root.ManagerPackage;
 
@@ -22,6 +25,9 @@ public class MenuEventsManager extends ManagerPackage {
         create(CreatorAppearanceBranch.class);
         create(CreatorBodyBranch.class);
         create(CreatorProgressionBranch.class);
+        create(SettingsMenuBranch.class);
+        create(SettingsOptionBranch.class);
+        create(SettingsBindingBranch.class);
         create(InventoryBranch.class);
         create(GenericButtonBranch.class);
     }

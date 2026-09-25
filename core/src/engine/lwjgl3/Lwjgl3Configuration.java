@@ -12,7 +12,9 @@ public class Lwjgl3Configuration {
 
     /*
      * Boot-time configuration for the LWJGL3 application. Consumed once during
-     * Lwjgl3Application construction — never read again at runtime.
+     * Lwjgl3Application construction — never read again at runtime. The
+     * windowed size and position are kept even when starting fullscreen, so
+     * leaving fullscreen at runtime restores the saved windowed placement.
      */
 
     // Identity
@@ -21,6 +23,8 @@ public class Lwjgl3Configuration {
     // Dimensions
     int width = 1280;
     int height = 720;
+    private int fullscreenWidth;
+    private int fullscreenHeight;
 
     // Display
     private int glMajor = 3;
@@ -65,8 +69,8 @@ public class Lwjgl3Configuration {
 
     public void setFullscreenMode(DisplayModeStruct mode) {
         this.fullscreen = true;
-        this.width = mode.getWidth();
-        this.height = mode.getHeight();
+        this.fullscreenWidth = mode.getWidth();
+        this.fullscreenHeight = mode.getHeight();
     }
 
     public void setMaximized(boolean maximized) {
@@ -96,6 +100,14 @@ public class Lwjgl3Configuration {
 
     public boolean isFullscreen() {
         return fullscreen;
+    }
+
+    public int getFullscreenWidth() {
+        return fullscreenWidth;
+    }
+
+    public int getFullscreenHeight() {
+        return fullscreenHeight;
     }
 
     public boolean isMaximized() {

@@ -42,6 +42,10 @@ public class CameraInstance extends InstancePackage {
         data.updateViewport(width, height);
     }
 
+    public void setFOV(float fov) {
+        data.setFOV(fov);
+    }
+
     // Accessible \\
 
     public CameraData getCameraData() {

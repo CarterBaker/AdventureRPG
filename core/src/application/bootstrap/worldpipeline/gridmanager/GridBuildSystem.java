@@ -31,6 +31,9 @@ class GridBuildSystem extends SystemPackage {
      * Constructs a GridInstance and all GridSlotHandles for a given focal
      * entity and window, including each window's own cloned clock, weather,
      * wind, precipitation, ocean turbulence, and lighting UBO instances.
+     * Rebuilding re-lays an existing grid's slots for the current render
+     * distance in place and releases the slot UBOs it replaces, leaving the
+     * grid's per-window state untouched.
      */
 
     // Internal
@@ -95,10 +98,7 @@ class GridBuildSystem extends SystemPackage {
         float radiusSquared = radius * radius;
 
         long[] loadOrder = assignLoadOrder(radius);
-
-        LongOpenHashSet gridCoordinates = new LongOpenHashSet();
-        for (long coord : loadOrder)
-            gridCoordinates.add(coord);
+        LongOpenHashSet gridCoordinates = collectGridCoordinates(loadOrder);
 
         int totalSlots = loadOrder.length;
         int maxChunks = totalSlots + chunkPoolMaxOverflow;
@@ -140,6 +140,36 @@ class GridBuildSystem extends SystemPackage {
                 uboManager.createUBOInstance(oceanDataBase));
 
         return gridInstance;
+    }
+
+    // Rebuild \\
+
+    void rebuildGrid(GridInstance gridInstance) {
+
+        releaseSlotUBOs(gridInstance);
+
+        float radius = calculateRadius();
+        long[] loadOrder = assignLoadOrder(radius);
+        LongOpenHashSet gridCoordinates = collectGridCoordinates(loadOrder);
+
+        Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = createGridSlotHandles(
+                gridCoordinates,
+                gridInstance);
+
+        populateCoveredSlots(gridSlots);
+
+        gridInstance.rebuildSlots(
+                loadOrder.length,
+                loadOrder,
+                countImmediateSlots(loadOrder, gridSlots),
+                gridCoordinates,
+                gridSlots,
+                radius * radius);
+    }
+
+    private void releaseSlotUBOs(GridInstance gridInstance) {
+        for (GridSlotHandle gridSlotHandle : gridInstance.getGridSlots().values())
+            uboManager.destroyInstance(gridSlotHandle.getSlotUBO());
     }
 
     // Radius \\
@@ -191,6 +221,16 @@ class GridBuildSystem extends SystemPackage {
         }
 
         return sorted;
+    }
+
+    private LongOpenHashSet collectGridCoordinates(long[] loadOrder) {
+
+        LongOpenHashSet gridCoordinates = new LongOpenHashSet();
+
+        for (long coord : loadOrder)
+            gridCoordinates.add(coord);
+
+        return gridCoordinates;
     }
 
     // Grid Slot Handles \\

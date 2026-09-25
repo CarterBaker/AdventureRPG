@@ -37,7 +37,7 @@ public final class Binding {
     }
 
     public void set(InputCode... codes) {
-        if (codes == null)
+        if (codes == null || codes.length == 0)
             return;
         this.codes = codes;
     }

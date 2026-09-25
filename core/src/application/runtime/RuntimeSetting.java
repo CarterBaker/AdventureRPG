@@ -8,7 +8,8 @@ public class RuntimeSetting {
      * Compile-time constants for the runtime layer. FBO target keys mirror
      * EngineSetting so runtime code has a single import. Composite layers
      * control blit order — lower renders first, higher composites on top.
-     * The character creator's menus, text, ranges, and palette live here too.
+     * The character creator's and settings menu's menus, text, ranges, and
+     * colors live here too.
      */
 
     // Full Screen Passes
@@ -137,4 +138,98 @@ public class RuntimeSetting {
     public static final String[] CREATOR_STAT_NAMES = {
             "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma" };
     public static final String CREATOR_STAT_PLACEHOLDER_VALUE = "10";
+
+    // Settings Menus
+    public static final String MENU_SETTINGS = "Settings/Settings";
+    public static final String MENU_SETTINGS_TAB = "Settings/settings_tab";
+    public static final String MENU_SETTINGS_SECTION_HEADER = "Settings/section_header";
+    public static final String MENU_SETTINGS_OPTION_ROW = "Settings/option_row";
+    public static final String MENU_SETTINGS_SLIDER_ROW = "Settings/slider_row";
+    public static final String MENU_SETTINGS_BINDING_ROW = "Settings/binding_row";
+    public static final String MENU_SETTINGS_ACTION_ROW = "Settings/action_row";
+    public static final String MENU_SETTINGS_NOTE = "Settings/settings_note";
+    public static final String MENU_SETTINGS_PLACEHOLDER = "Settings/placeholder_note";
+
+    // Settings Entry Points
+    public static final int ENTRY_SETTINGS_TABS = 0;
+    public static final int ENTRY_SETTINGS_OPTIONS = 1;
+
+    // Settings Elements
+    public static final String ELEMENT_SETTINGS_TAB_LABEL = "tab_label";
+    public static final String ELEMENT_SETTINGS_ROW_LABEL = "row_label";
+    public static final String ELEMENT_SETTINGS_ROW_VALUE = "row_value";
+    public static final String ELEMENT_SETTINGS_ROW_PREVIOUS = "row_previous";
+    public static final String ELEMENT_SETTINGS_ROW_NEXT = "row_next";
+    public static final String ELEMENT_SETTINGS_SLIDER_TRACK = "slider_track";
+    public static final String ELEMENT_SETTINGS_SLIDER_KNOB = "slider_knob";
+    public static final String ELEMENT_SETTINGS_SLIDER_LABEL = "slider_label";
+    public static final String ELEMENT_SETTINGS_SLIDER_VALUE = "slider_value";
+    public static final String ELEMENT_SETTINGS_BINDING_LABEL = "binding_label";
+    public static final String ELEMENT_SETTINGS_BINDING_VALUE = "binding_value";
+    public static final String ELEMENT_SETTINGS_ACTION_LABEL = "action_label";
+    public static final String ELEMENT_SETTINGS_PLACEHOLDER_TITLE = "placeholder_title";
+    public static final String ELEMENT_SETTINGS_PLACEHOLDER_SUBTITLE = "placeholder_subtitle";
+    public static final String ELEMENT_SETTINGS_PLACEHOLDER_TEXT = "placeholder_text";
+
+    // Settings Tabs
+    public static final String SETTINGS_TAB_DISPLAY = "Display";
+    public static final String SETTINGS_TAB_GRAPHICS = "Graphics";
+    public static final String SETTINGS_TAB_CONTROLS = "Controls";
+    public static final String SETTINGS_TAB_AUDIO = "Audio";
+    public static final String SETTINGS_TAB_GAMEPLAY = "Gameplay";
+    public static final String SETTINGS_TAB_ACCESSIBILITY = "Accessibility";
+    public static final String SETTINGS_PLACEHOLDER_AUDIO = "Volume and sound options will be set here.";
+    public static final String SETTINGS_PLACEHOLDER_GAMEPLAY = "Difficulty and interface options will be set here.";
+    public static final String SETTINGS_PLACEHOLDER_ACCESSIBILITY = "Text size and color options will be set here.";
+    public static final String SETTINGS_PLACEHOLDER_COMING_SOON = "Coming soon";
+    public static final String SETTINGS_PLACEHOLDER_GAME_WINDOW_ONLY = "Game window only";
+    public static final String SETTINGS_PLACEHOLDER_DISPLAY_UNAVAILABLE = "Display settings change in the game window.";
+
+    // Settings Sections
+    public static final String SETTINGS_SECTION_WINDOW = "Window";
+    public static final String SETTINGS_SECTION_VIEW = "View";
+    public static final String SETTINGS_SECTION_WORLD = "World";
+    public static final String SETTINGS_SECTION_MOUSE = "Mouse";
+    public static final String SETTINGS_SECTION_MOVEMENT = "Movement";
+    public static final String SETTINGS_SECTION_ACTIONS = "Actions";
+    public static final String SETTINGS_SECTION_CAPTURE = "Capture";
+    public static final String SETTINGS_NOTE_WORLD_APPLY = "World changes apply when you leave Settings";
+
+    // Settings Options
+    public static final String SETTINGS_OPTION_FULLSCREEN = "Fullscreen";
+    public static final String SETTINGS_OPTION_VSYNC = "VSync";
+    public static final String SETTINGS_OPTION_FIELD_OF_VIEW = "Field of View";
+    public static final String SETTINGS_OPTION_RENDER_DISTANCE = "Distance";
+    public static final String SETTINGS_OPTION_TERRAIN_DETAIL = "Detail";
+    public static final String SETTINGS_SLIDER_MOUSE_SENSITIVITY = "Sensitivity";
+    public static final String SETTINGS_VALUE_ON = "On";
+    public static final String SETTINGS_VALUE_OFF = "Off";
+    public static final String SETTINGS_FORMAT_CHUNKS = "%d chunks";
+    public static final String SETTINGS_FORMAT_FIELD_OF_VIEW = "%.0f";
+    public static final String SETTINGS_FORMAT_SENSITIVITY = "%.2f";
+    public static final int SETTINGS_RENDER_DISTANCE_STEP = 8;
+    public static final int SETTINGS_RENDER_DISTANCE_PER_RADIUS = 2;
+    public static final int SETTINGS_TERRAIN_DETAIL_STEP = 1;
+    public static final float SETTINGS_FIELD_OF_VIEW_STEP = 5f;
+    public static final float SETTINGS_SLIDER_PERCENT_SCALE = 100f;
+
+    // Settings Bindings
+    public static final String SETTINGS_BINDING_MOVE_FORWARD = "Move Forward";
+    public static final String SETTINGS_BINDING_MOVE_BACK = "Move Back";
+    public static final String SETTINGS_BINDING_MOVE_LEFT = "Move Left";
+    public static final String SETTINGS_BINDING_MOVE_RIGHT = "Move Right";
+    public static final String SETTINGS_BINDING_JUMP = "Jump";
+    public static final String SETTINGS_BINDING_WALK = "Walk";
+    public static final String SETTINGS_BINDING_SPRINT = "Sprint";
+    public static final String SETTINGS_BINDING_USE = "Use";
+    public static final String SETTINGS_BINDING_INVENTORY = "Inventory";
+    public static final String SETTINGS_BINDING_SCREENSHOT = "Screenshot";
+    public static final String SETTINGS_BINDING_RECORD_VIDEO = "Record Video";
+    public static final String SETTINGS_BINDING_CAPTURE_PROMPT = "Press a key";
+    public static final String SETTINGS_ACTION_RESET_BINDINGS = "Reset Controls";
+
+    // Settings Colors
+    public static final Color SETTINGS_TAB_ACTIVE_COLOR = new Color(1f, 1f, 1f, 1f);
+    public static final Color SETTINGS_TAB_ACTIVE_LABEL_COLOR = new Color(0.463f, 0.086f, 0.071f, 1f);
+    public static final Color SETTINGS_BINDING_CAPTURE_COLOR = new Color(1f, 0.84f, 0.42f, 1f);
 }

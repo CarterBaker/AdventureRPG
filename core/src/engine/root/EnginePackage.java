@@ -37,6 +37,7 @@ public class EnginePackage extends ManagerPackage {
 
     // Root
     public final File path;
+    public final File settingsFile;
     public final Gson gson;
     public final WindowPlatform windowPlatform;
 
@@ -72,6 +73,7 @@ public class EnginePackage extends ManagerPackage {
 
         // Root
         this.path = data.path;
+        this.settingsFile = data.settingsFile;
         this.gson = data.gson;
         this.windowPlatform = data.windowPlatform;
 
@@ -101,6 +103,7 @@ public class EnginePackage extends ManagerPackage {
 
         // Internal
         final Settings settings;
+        final File settingsFile;
         final File path;
         final Gson gson;
         final WindowPlatform windowPlatform;
@@ -109,12 +112,14 @@ public class EnginePackage extends ManagerPackage {
 
         EngineStruct(
                 Settings settings,
+                File settingsFile,
                 File path,
                 Gson gson,
                 WindowPlatform windowPlatform) {
 
             // Identity
             this.settings = settings;
+            this.settingsFile = settingsFile;
             this.path = path;
             this.gson = gson;
             this.windowPlatform = windowPlatform;
@@ -123,12 +128,14 @@ public class EnginePackage extends ManagerPackage {
 
     public static void setupConstructor(
             Settings settings,
+            File settingsFile,
             File path,
             Gson gson,
             WindowPlatform windowPlatform) {
         ENGINE_STRUCT.set(
                 new EngineStruct(
                         settings,
+                        settingsFile,
                         path,
                         gson,
                         windowPlatform));

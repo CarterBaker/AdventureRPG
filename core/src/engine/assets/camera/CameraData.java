@@ -19,7 +19,7 @@ public class CameraData extends DataPackage {
     private final Vector3 upVec;
     private final Vector2 viewportVec;
 
-    private final float fov;
+    private float fov;
     private final float nearPlane;
     private final float farPlane;
 
@@ -75,6 +75,11 @@ public class CameraData extends DataPackage {
 
     public void updateViewport(float width, float height) {
         viewportVec.set(width, height);
+        syncCaches();
+    }
+
+    public void setFOV(float fov) {
+        this.fov = fov;
         syncCaches();
     }
 

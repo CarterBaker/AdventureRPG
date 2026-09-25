@@ -9,8 +9,9 @@ import engine.root.ManagerPackage;
 public class GridManager extends ManagerPackage {
 
     /*
-     * Pure factory for GridInstance construction. Delegates all build logic to
-     * GridBuildSystem. Holds no grid state — callers own what they build.
+     * Pure factory for GridInstance construction and in-place slot rebuilds.
+     * Delegates all build logic to GridBuildSystem. Holds no grid state —
+     * callers own what they build.
      */
 
     // Internal
@@ -27,5 +28,9 @@ public class GridManager extends ManagerPackage {
 
     public GridInstance buildGrid(EntityInstance focalEntity, WindowInstance windowInstance, FboInstance renderTargetFbo) {
         return gridBuildSystem.buildGrid(focalEntity, windowInstance, renderTargetFbo);
+    }
+
+    public void rebuildGrid(GridInstance gridInstance) {
+        gridBuildSystem.rebuildGrid(gridInstance);
     }
 }

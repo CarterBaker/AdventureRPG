@@ -18,12 +18,14 @@ public class WorldStreamManager extends ManagerPackage {
      * Single public entry point for all world streaming. Owns the grid registry
      * and drives grid lifecycle — create, remove, rebuild. Each grid is tied to
      * a WindowInstance so frustum culling and rendering operate per-window
-     * independently. update() drives coordinate tracking across all grids —
-     * each grid owns its own render queue rebuild on boundary crossing, and
-     * that rebuild is where a grid's slots get re-wrapped around the player's
-     * new position, so this manager also raises wrappingPlayer for that one
-     * frame — WorldTickManager reads it to hold its tick cycle rather than
-     * compete with the rebuild for the same frame. ChunkStreamManager and
+     * independently. A rebuild flushes the grid's chunks and megas, then
+     * re-lays its slots in place, so every holder of the grid stays valid.
+     * update() drives coordinate tracking across all grids — each grid owns
+     * its own render queue rebuild on boundary crossing, and that rebuild is
+     * where a grid's slots get re-wrapped around the player's new position,
+     * so this manager also raises wrappingPlayer for that one frame —
+     * WorldTickManager reads it to hold its tick cycle rather than compete
+     * with the rebuild for the same frame. ChunkStreamManager and
      * MegaStreamManager are internal.
      */
 
@@ -85,12 +87,7 @@ public class WorldStreamManager extends ManagerPackage {
     public void rebuildGrid(GridInstance grid) {
         chunkStreamManager.onGridRebuilt(grid);
         megaStreamManager.onGridRebuilt(grid);
-        GridInstance rebuilt = gridManager.buildGrid(
-                grid.getFocalEntity(),
-                grid.getWindowInstance(),
-                grid.getRenderTargetFbo());
-        int index = grids.indexOf(grid);
-        grids.set(index, rebuilt);
+        gridManager.rebuildGrid(grid);
     }
 
     // Utility \\
