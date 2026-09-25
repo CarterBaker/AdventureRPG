@@ -11,6 +11,7 @@ import application.bootstrap.menupipeline.util.StackDirection;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.input.Input;
+import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.settings.KeyBindings;
@@ -43,6 +44,8 @@ public class ElementHitSystem extends SystemPackage {
      * gesture started on directly, instead of re-deriving "which window is
      * this" a second time via a separately computed global lookup that
      * isn't guaranteed to agree with the one that triggered the callback.
+     * Every callback runs inside the crash boundary of the context paired
+     * with that window, so a failing editor preview action stays contained.
      *
      * on_drag latches on the frame primary is first pressed over an element
      * that has on_drag defined, remembering both the element and the window
@@ -765,6 +768,11 @@ public class ElementHitSystem extends SystemPackage {
                 args[i] = element;
         }
 
+        ContextPackage context = window != null ? window.getContext() : null;
+        internal.isolate(context, () -> invokeMethod(callback, args));
+    }
+
+    private void invokeMethod(ResolvedCallback callback, Object[] args) {
         try {
             callback.method.invoke(callback.target, args);
         } catch (Exception e) {

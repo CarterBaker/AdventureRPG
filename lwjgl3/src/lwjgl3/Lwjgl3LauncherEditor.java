@@ -13,14 +13,17 @@ import engine.root.EnginePackage;
 import engine.root.EngineSetting;
 import engine.settings.Settings;
 import engine.settings.SettingsUtility;
+import engine.util.log.LogUtility;
 
 import java.io.File;
 
 public class Lwjgl3LauncherEditor {
 
     /*
-     * Entry point for the editor. Loads editor settings, configures the GLFW
-     * window at GL 4.1, and hands control to Lwjgl3Application.
+     * Entry point for the editor. Opens the session log, loads editor
+     * settings, configures the GLFW window at GL 4.1, and hands control to
+     * Lwjgl3Application. Output goes to the session log, readable in the
+     * editor's Console tab and written to the log directory on any error.
      */
 
     // Identity
@@ -54,6 +57,8 @@ public class Lwjgl3LauncherEditor {
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
+        LogUtility.openSession(baseGameDir, EngineSetting.LOG_SESSION_EDITOR);
+
         File editorLayoutDir = new File(
                 baseGameDir,
                 EngineSetting.BIN_DIRECTORY + "/" + EngineSetting.EDITOR_LAYOUT_DIRECTORY);
@@ -76,6 +81,7 @@ public class Lwjgl3LauncherEditor {
         EnginePackage.setupConstructor(settings, baseGameDir, ENGINE_GSON, platform);
         EditorEngine engine = new EditorEngine();
         new Lwjgl3Application(engine, config, platform);
+        LogUtility.closeSession();
     }
 
     private static Lwjgl3Configuration buildConfig(Settings settings) {

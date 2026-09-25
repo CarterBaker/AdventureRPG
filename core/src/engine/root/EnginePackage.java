@@ -3,6 +3,7 @@ package engine.root;
 import java.io.File;
 import java.time.Instant;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 import com.google.gson.Gson;
 
@@ -25,10 +26,14 @@ public class EnginePackage extends ManagerPackage {
      * Root of the system hierarchy. Drives the core game loop, global state
      * machine, and master system registry. Owns bootstrap, context management,
      * frame timing, and lifecycle propagation to all registered systems.
+     * Contexts created with a crash listener run inside an isolation boundary:
+     * a failure marks only that context crashed, and its listener closes it at
+     * the start of the next frame while the engine keeps running.
      */
 
     // Core
     static final ThreadLocal<EngineStruct> ENGINE_STRUCT = new ThreadLocal<>();
+    static final ThreadLocal<ContextPackage> ISOLATION_BOUNDARY = new ThreadLocal<>();
 
     // Root
     public final File path;
@@ -207,6 +212,13 @@ public class EnginePackage extends ManagerPackage {
     // Context Management \\
 
     public <T extends ContextPackage> T createContext(Class<T> contextClass, WindowInstance window) {
+        return createContext(contextClass, window, null);
+    }
+
+    public <T extends ContextPackage> T createContext(
+            Class<T> contextClass,
+            WindowInstance window,
+            Runnable crashListener) {
 
         if (window == null)
             throwException("createContext() requires a WindowInstance — null was passed.");
@@ -224,6 +236,7 @@ public class EnginePackage extends ManagerPackage {
             T context = constructor.newInstance();
 
             context.pendingStart = true;
+            context.setCrashListener(crashListener);
             context.setWindow(window);
             window.setContext(context);
 
@@ -295,16 +308,16 @@ public class EnginePackage extends ManagerPackage {
 
         try {
             this.internalContext = SystemContext.CREATE;
-            context.internalCreate();
+            runContextPhase(context, ContextPackage::internalCreate);
 
             this.internalContext = SystemContext.GET;
-            context.internalGet();
+            runContextPhase(context, ContextPackage::internalGet);
 
             this.internalContext = SystemContext.AWAKE;
-            context.internalAwake();
+            runContextPhase(context, ContextPackage::internalAwake);
 
             this.internalContext = SystemContext.RELEASE;
-            context.internalRelease();
+            runContextPhase(context, ContextPackage::internalRelease);
         }
 
         finally {
@@ -316,7 +329,7 @@ public class EnginePackage extends ManagerPackage {
 
     public void destroyContext(ContextPackage context) {
 
-        context.internalDispose();
+        runIsolated(context, ContextPackage::internalDispose);
 
         WindowInstance window = context.getWindow();
         if (window != null)
@@ -340,7 +353,7 @@ public class EnginePackage extends ManagerPackage {
             EngineUtility.windowManager.beginContextWindow(context.getWindow());
 
             try {
-                context.internalStart();
+                runContextPhase(context, ContextPackage::internalStart);
             }
 
             finally {
@@ -355,8 +368,72 @@ public class EnginePackage extends ManagerPackage {
         this.cacheContextArray();
     }
 
+    private void flushCrashedContexts() {
+
+        ContextPackage[] contexts = this.contextArray;
+
+        for (int i = 0; i < contexts.length; i++) {
+
+            ContextPackage context = contexts[i];
+
+            if (context.isCrashed() && this.activeContextList.contains(context))
+                context.notifyCrashListener();
+        }
+    }
+
     private void cacheContextArray() {
         this.contextArray = this.activeContextList.toArray(new ContextPackage[0]);
+    }
+
+    // Isolation \\
+
+    public final void isolate(ContextPackage context, Runnable work) {
+
+        if (context == null) {
+            work.run();
+            return;
+        }
+
+        runContextPhase(context, isolatedContext -> work.run());
+    }
+
+    public final Runnable isolateAsync(Runnable task) {
+
+        ContextPackage context = ISOLATION_BOUNDARY.get();
+
+        if (context == null)
+            return task;
+
+        return () -> isolate(context, task);
+    }
+
+    private void runContextPhase(ContextPackage context, Consumer<ContextPackage> phase) {
+
+        if (!context.isCrashed())
+            runIsolated(context, phase);
+    }
+
+    private void runIsolated(ContextPackage context, Consumer<ContextPackage> work) {
+
+        if (!context.isIsolated()) {
+            work.accept(context);
+            return;
+        }
+
+        ContextPackage previousBoundary = ISOLATION_BOUNDARY.get();
+        ISOLATION_BOUNDARY.set(context);
+
+        try {
+            work.accept(context);
+        }
+
+        catch (Throwable failure) {
+            context.crash(failure);
+        }
+
+        finally {
+            ISOLATION_BOUNDARY.set(previousBoundary);
+        }
     }
 
     // Thread Management \\
@@ -459,6 +536,7 @@ public class EnginePackage extends ManagerPackage {
     private final void updateCycle() {
         EngineUtility.frameRateManager.beginFrame();
         this.flushPendingContexts();
+        this.flushCrashedContexts();
         this.internalUpdate();
         this.internalFixedUpdate();
         this.internalLateUpdate();
@@ -596,7 +674,7 @@ public class EnginePackage extends ManagerPackage {
 
         for (int i = 0; i < this.contextArray.length; i++) {
             EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-            this.contextArray[i].internalUpdate();
+            runContextPhase(this.contextArray[i], ContextPackage::internalUpdate);
             EngineUtility.windowManager.endContextWindow();
         }
 
@@ -622,7 +700,7 @@ public class EnginePackage extends ManagerPackage {
 
             for (int i = 0; i < this.contextArray.length; i++) {
                 EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-                this.contextArray[i].internalFixedUpdate();
+                runContextPhase(this.contextArray[i], ContextPackage::internalFixedUpdate);
                 EngineUtility.windowManager.endContextWindow();
             }
 
@@ -641,7 +719,7 @@ public class EnginePackage extends ManagerPackage {
 
         for (int i = 0; i < this.contextArray.length; i++) {
             EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-            this.contextArray[i].internalLateUpdate();
+            runContextPhase(this.contextArray[i], ContextPackage::internalLateUpdate);
             EngineUtility.windowManager.endContextWindow();
         }
 
@@ -659,7 +737,7 @@ public class EnginePackage extends ManagerPackage {
 
         for (int i = 0; i < this.contextArray.length; i++) {
             EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-            this.contextArray[i].internalRender();
+            runContextPhase(this.contextArray[i], ContextPackage::internalRender);
             EngineUtility.windowManager.endContextWindow();
         }
 
@@ -685,7 +763,7 @@ public class EnginePackage extends ManagerPackage {
         this.setContext(SystemContext.DISPOSE);
 
         for (int i = 0; i < this.contextArray.length; i++)
-            this.contextArray[i].internalDispose();
+            runIsolated(this.contextArray[i], ContextPackage::internalDispose);
 
         super.internalDispose();
     }
@@ -740,20 +818,10 @@ public class EnginePackage extends ManagerPackage {
         return this.frameTimeMillis;
     }
 
-    public final void close() {
+    public final void close(ContextPackage context) {
 
-        WindowInstance currentWindow = EngineUtility.windowManager.getContextWindow();
-
-        if (currentWindow == null || currentWindow == EngineUtility.windowManager.getMainWindow())
+        if (context != null && context.getWindow() == EngineUtility.windowManager.getMainWindow())
             this.shutdown();
-
-        else {
-
-            ContextPackage context = currentWindow.getContext();
-
-            if (context != null)
-                this.destroyContext(context);
-        }
     }
 
     public final void shutdown() {

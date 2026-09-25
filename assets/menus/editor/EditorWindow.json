@@ -141,7 +141,7 @@
       "pivot": "bottom_left",
       "size": {
         "x": "180px",
-        "y": "98px"
+        "y": "126px"
       },
       "elements": [
         {
@@ -279,6 +279,39 @@
                       },
                       "align": "left",
                       "text": "Texture Viewer",
+                      "color": "text"
+                    }
+                  ]
+                },
+                {
+                  "id": "open_console_button",
+                  "type": "button",
+                  "sprite": "menus/Button",
+                  "size": {
+                    "x": "100%",
+                    "y": "28px"
+                  },
+                  "color": {
+                    "theme": "control_hover",
+                    "alpha": 0
+                  },
+                  "hover_color": "control_hover",
+                  "on_click": {
+                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "method": "openConsole"
+                  },
+                  "elements": [
+                    {
+                      "id": "open_console_label",
+                      "type": "label",
+                      "anchor": "center",
+                      "pivot": "center",
+                      "size": {
+                        "x": "calc(100% - 12px)",
+                        "y": "100%"
+                      },
+                      "align": "left",
+                      "text": "Console",
                       "color": "text"
                     }
                   ]

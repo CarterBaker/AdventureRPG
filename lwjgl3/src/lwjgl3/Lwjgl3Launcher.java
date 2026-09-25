@@ -13,14 +13,17 @@ import engine.root.EngineSetting;
 import engine.root.GameEngine;
 import engine.settings.Settings;
 import engine.settings.SettingsUtility;
+import engine.util.log.LogUtility;
 
 import java.io.File;
 
 public class Lwjgl3Launcher {
 
     /*
-     * Entry point for the game client. Loads settings, configures the GLFW
-     * window, and hands control to Lwjgl3Application.
+     * Entry point for the game client. Opens the session log, loads settings,
+     * configures the GLFW window, and hands control to Lwjgl3Application. The
+     * game has no console: output goes to the session log, which is written
+     * to the log directory only if the session errors or crashes.
      */
 
     // Identity
@@ -54,6 +57,8 @@ public class Lwjgl3Launcher {
         if (!baseGameDir.exists())
             baseGameDir.mkdirs();
 
+        LogUtility.openSession(baseGameDir, EngineSetting.LOG_SESSION_GAME);
+
         File settingsFile = new File(baseGameDir, EngineSetting.SETTINGS_FILE_NAME);
         Settings settings = SettingsUtility.load(settingsFile, ENGINE_GSON);
         SettingsUtility.applyBindings(settings);
@@ -70,6 +75,7 @@ public class Lwjgl3Launcher {
         EnginePackage.setupConstructor(settings, baseGameDir, ENGINE_GSON, platform);
         GameEngine engine = new GameEngine();
         new Lwjgl3Application(engine, config, platform);
+        LogUtility.closeSession();
     }
 
     private static Lwjgl3Configuration buildConfig(Settings settings) {

@@ -1,5 +1,6 @@
 package engine.editor.menueventsmanager;
 
+import engine.editor.menueventsmanager.menus.ConsoleBranch;
 import engine.editor.menueventsmanager.menus.EditorBranch;
 import engine.editor.menueventsmanager.menus.ItemEditorBranch;
 import engine.editor.menueventsmanager.menus.NameDialogBranch;
@@ -14,5 +15,6 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(EditorBranch.class);
         create(TabBranch.class);
         create(ItemEditorBranch.class);
+        create(ConsoleBranch.class);
     }
 }

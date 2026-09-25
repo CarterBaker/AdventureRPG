@@ -58,6 +58,7 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_DELETE_SUFFIX = " to delete it";
 
     // Tabs \\
+    public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
