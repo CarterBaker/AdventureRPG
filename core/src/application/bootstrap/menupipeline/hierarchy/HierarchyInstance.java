@@ -11,8 +11,9 @@ public class HierarchyInstance extends InstancePackage {
 
     /*
      * One open hierarchy panel: its menu, active tab, toggled node keys, and the
-     * tab and row elements it has injected. Needs layout when marked dirty or
-     * when its provider's revision moves.
+     * tab rows and node rows it has injected. Needs layout when marked dirty,
+     * when its provider's revision moves, or when its width fits a different
+     * number of tabs per row.
      */
 
     // Menu
@@ -27,6 +28,7 @@ public class HierarchyInstance extends InstancePackage {
     // Layout
     private boolean layoutDirty;
     private int layoutRevision;
+    private int layoutTabsPerRow;
     private ObjectArrayList<ElementInstance> tabElements;
     private ObjectArrayList<ElementInstance> rowElements;
 
@@ -43,6 +45,7 @@ public class HierarchyInstance extends InstancePackage {
         // Layout
         this.layoutDirty = true;
         this.layoutRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.layoutTabsPerRow = EngineSetting.INDEX_NOT_FOUND;
         this.tabElements = new ObjectArrayList<>();
         this.rowElements = new ObjectArrayList<>();
     }
@@ -75,14 +78,15 @@ public class HierarchyInstance extends InstancePackage {
 
     // Layout \\
 
-    public boolean needsLayout(int providerRevision) {
-        return layoutDirty || layoutRevision != providerRevision;
+    public boolean needsLayout(int providerRevision, int tabsPerRow) {
+        return layoutDirty || layoutRevision != providerRevision || layoutTabsPerRow != tabsPerRow;
     }
 
-    public void markLaidOut(int providerRevision) {
+    public void markLaidOut(int providerRevision, int tabsPerRow) {
 
         this.layoutDirty = false;
         this.layoutRevision = providerRevision;
+        this.layoutTabsPerRow = tabsPerRow;
     }
 
     public ObjectArrayList<ElementInstance> getTabElements() {

@@ -16,7 +16,7 @@ public class HierarchyManager extends ManagerPackage {
      * Owns the hierarchy UI. Providers register once and become a tab on every
      * panel, and hear when a panel switches to them. openHierarchy() and
      * closeHierarchy() are the one pair for panels, and each frame any panel
-     * whose tab, expansion, or revision moved is laid out again.
+     * whose tab, expansion, revision, or tabs per row moved is laid out again.
      */
 
     // Internal
@@ -63,15 +63,17 @@ public class HierarchyManager extends ManagerPackage {
 
         HierarchyTabProvider activeProvider = resolveActiveProvider(hierarchy);
         int revision = activeProvider != null ? activeProvider.getRevision() : EngineSetting.INDEX_NOT_FOUND;
+        int tabsPerRow = hierarchyLayoutBranch.resolveTabsPerRow(hierarchy);
 
-        if (!hierarchy.needsLayout(revision))
+        if (!hierarchy.needsLayout(revision, tabsPerRow))
             return;
 
         hierarchyLayoutBranch.layout(
                 hierarchy,
                 new ObjectArrayList<>(tabName2HierarchyTabProvider.values()),
-                activeProvider);
-        hierarchy.markLaidOut(revision);
+                activeProvider,
+                tabsPerRow);
+        hierarchy.markLaidOut(revision, tabsPerRow);
     }
 
     // Management \\

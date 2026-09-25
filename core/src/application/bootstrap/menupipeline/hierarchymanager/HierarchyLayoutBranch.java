@@ -17,7 +17,9 @@ class HierarchyLayoutBranch extends BranchPackage {
     /*
      * Lays a hierarchy panel out into its menu: ejects the old tabs and rows,
      * then injects one tab per provider and one indented row per visible node,
-     * each carrying its node key as the click argument.
+     * each carrying its node key as the click argument. Tabs wrap onto as many
+     * rows as the panel's width needs, so every tab stays visible; the tab bar
+     * grows to hold them and the node list shrinks beneath it.
      */
 
     // Internal
@@ -35,15 +37,16 @@ class HierarchyLayoutBranch extends BranchPackage {
     void layout(
             HierarchyInstance hierarchy,
             ObjectArrayList<HierarchyTabProvider> providers,
-            HierarchyTabProvider activeProvider) {
+            HierarchyTabProvider activeProvider,
+            int tabsPerRow) {
 
         MenuInstance menu = hierarchy.getMenu();
 
         ejectAll(menu, EngineSetting.HIERARCHY_ENTRY_TABS, hierarchy.getTabElements());
         ejectAll(menu, EngineSetting.HIERARCHY_ENTRY_ROWS, hierarchy.getRowElements());
 
-        for (int i = 0; i < providers.size(); i++)
-            injectTab(hierarchy, providers.get(i).getTabName());
+        injectTabs(hierarchy, providers, tabsPerRow);
+        resizeTabBar(menu, Math.max(1, hierarchy.getTabElements().size()));
 
         if (activeProvider == null)
             return;
@@ -63,20 +66,65 @@ class HierarchyLayoutBranch extends BranchPackage {
 
     // Tabs \\
 
-    private void injectTab(HierarchyInstance hierarchy, String tabName) {
+    int resolveTabsPerRow(HierarchyInstance hierarchy) {
+
+        float availableWidth = hierarchy.getMenu().getWindow().getWidth()
+                - 2f * EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS;
+        int tabsPerRow = (int) ((availableWidth + EngineSetting.HIERARCHY_TAB_SPACING_PIXELS)
+                / (EngineSetting.HIERARCHY_TAB_WIDTH_PIXELS + EngineSetting.HIERARCHY_TAB_SPACING_PIXELS));
+
+        return Math.max(1, tabsPerRow);
+    }
+
+    private void injectTabs(
+            HierarchyInstance hierarchy,
+            ObjectArrayList<HierarchyTabProvider> providers,
+            int tabsPerRow) {
+
+        ElementInstance tabRow = null;
+
+        for (int i = 0; i < providers.size(); i++) {
+
+            if (i % tabsPerRow == 0) {
+                tabRow = menuManager.inject(
+                        hierarchy.getMenu(), EngineSetting.HIERARCHY_ENTRY_TABS,
+                        EngineSetting.HIERARCHY_TAB_ROW_TEMPLATE);
+                hierarchy.getTabElements().add(tabRow);
+            }
+
+            injectTab(hierarchy, tabRow, providers.get(i).getTabName());
+        }
+    }
+
+    private void injectTab(HierarchyInstance hierarchy, ElementInstance tabRow, String tabName) {
 
         String template = tabName.equals(hierarchy.getActiveTabName())
                 ? EngineSetting.HIERARCHY_TAB_ACTIVE_TEMPLATE
                 : EngineSetting.HIERARCHY_TAB_TEMPLATE;
 
-        ElementInstance tab = menuManager.inject(
-                hierarchy.getMenu(), EngineSetting.HIERARCHY_ENTRY_TABS, template,
+        menuManager.inject(
+                tabRow, template,
                 element -> {
                     element.setActionArgOverride(tabName);
                     setChildText(element, EngineSetting.HIERARCHY_ELEMENT_TAB_LABEL, tabName);
                 });
+    }
 
-        hierarchy.getTabElements().add(tab);
+    private void resizeTabBar(MenuInstance menu, int rowCount) {
+
+        float stripHeight = rowCount * EngineSetting.HIERARCHY_TAB_ROW_HEIGHT_PIXELS
+                + (rowCount - 1) * EngineSetting.HIERARCHY_TAB_SPACING_PIXELS;
+        float barHeight = stripHeight + EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS;
+
+        resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_TAB_BAR, new DimensionVector2(
+                DimensionValue.ofPercent(100f),
+                DimensionValue.ofAbsolute(barHeight)));
+        resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_TABS, new DimensionVector2(
+                DimensionValue.ofPercentWithOffset(100f, -2f * EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS),
+                DimensionValue.ofAbsolute(stripHeight)));
+        resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_ROWS, new DimensionVector2(
+                DimensionValue.ofPercentWithOffset(100f, -EngineSetting.HIERARCHY_ROWS_MARGIN_PIXELS),
+                DimensionValue.ofPercentWithOffset(100f, -(barHeight + EngineSetting.HIERARCHY_ROWS_MARGIN_PIXELS))));
     }
 
     // Rows \\
@@ -135,6 +183,14 @@ class HierarchyLayoutBranch extends BranchPackage {
     }
 
     // Utility \\
+
+    private void resizeEntry(MenuInstance menu, int entryPoint, DimensionVector2 size) {
+
+        ElementInstance entry = menu.getEntryPoint(entryPoint);
+
+        if (entry != null)
+            entry.setSizeOverride(size);
+    }
 
     private void setChildText(ElementInstance element, String childId, String text) {
 

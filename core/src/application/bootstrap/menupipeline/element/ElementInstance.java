@@ -29,6 +29,9 @@ public class ElementInstance extends InstancePackage {
      * setFontText() updates both the local textOverride field and the live
      * FontInstance so the rendered label reflects the new string immediately.
      *
+     * setSizeOverride() folds a new size into the layout override, so every
+     * layout path — anchored or stacked — resolves the element at that size.
+     *
      * pointed is set by ElementHitSystem on the deepest element with a
      * hover_color under the cursor — unlike hovered, it reaches elements inside
      * an open hover dropdown, whose owner keeps the hover itself.
@@ -488,6 +491,14 @@ public class ElementInstance extends InstancePackage {
 
     public void clearPositionOverride() {
         this.positionOverride = null;
+    }
+
+    // Size Override \\
+
+    public void setSizeOverride(DimensionVector2 size) {
+
+        LayoutStruct base = layoutOverride != null ? layoutOverride : data.getLayout();
+        this.layoutOverride = LayoutStruct.merge(base, new LayoutStruct(null, null, null, size, null, null, 0f));
     }
 
     // Expansion \\
