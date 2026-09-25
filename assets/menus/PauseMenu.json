@@ -83,7 +83,7 @@
                             "size":     { "x": "47%", "y": "47%" },
                             "on_click": {
                                 "class":  "application.runtime.menueventsmanager.menus.PauseMenuBranch",
-                                "method": "quitGame"
+                                "method": "quitToMainMenu"
                             },
                             "elements": [
                                 { "id": "quitLabel", "use": "MainMenu/board_label", "text": "Quit" }

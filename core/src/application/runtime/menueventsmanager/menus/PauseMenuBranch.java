@@ -7,7 +7,6 @@ import application.bootstrap.savepipeline.savemanager.SaveManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
-import application.runtime.menueventsmanager.util.GenericButtonBranch;
 import engine.root.BranchPackage;
 import engine.settings.KeyBindings;
 
@@ -17,8 +16,10 @@ public class PauseMenuBranch extends BranchPackage {
      * Runs the in-game pause menu for this context's window. Pause opens it
      * while a player is in the world and no other menu holds input; Pause or
      * Continue closes it and play resumes. Options opens the settings menu
-     * over it, which returns to it on close. Quit saves the character before
-     * the game closes. Pause only closes the menu once it has been on show a
+     * over it, which returns to it on close. Quit ends the play session —
+     * the character is saved and released through SaveManager — and brings
+     * the main menu back up over the world, with the player and camera left
+     * where they stood. Pause only closes the menu once it has been on show a
      * whole frame, so the key that backs out of Settings never also resumes
      * play, whichever branch reads it first.
      */
@@ -28,7 +29,7 @@ public class PauseMenuBranch extends BranchPackage {
     private InputManager inputManager;
     private PlayerManager playerManager;
     private SaveManager saveManager;
-    private GenericButtonBranch genericButtonBranch;
+    private MainMenuBranch mainMenuBranch;
 
     // State
     private MenuInstance pauseMenu;
@@ -42,7 +43,7 @@ public class PauseMenuBranch extends BranchPackage {
         this.inputManager = get(InputManager.class);
         this.playerManager = get(PlayerManager.class);
         this.saveManager = get(SaveManager.class);
-        this.genericButtonBranch = get(GenericButtonBranch.class);
+        this.mainMenuBranch = get(MainMenuBranch.class);
     }
 
     @Override
@@ -85,8 +86,9 @@ public class PauseMenuBranch extends BranchPackage {
 
     // Quit \\
 
-    public void quitGame(WindowInstance window) {
-        saveManager.saveCharacter(window);
-        genericButtonBranch.quitGame();
+    public void quitToMainMenu(WindowInstance window) {
+        closeMenu();
+        saveManager.closeCharacter(window);
+        mainMenuBranch.openMenu(window);
     }
 }
