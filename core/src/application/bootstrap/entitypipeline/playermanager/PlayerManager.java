@@ -82,6 +82,12 @@ public class PlayerManager extends ManagerPackage {
      * drawn or animated and never places or breaks blocks. Each frame it is
      * flown through MovementManager.fly() instead of moved, and the camera
      * sits directly at its eye position with no zoom.
+     *
+     * rerollPlayerForWindow() turns a window's player into a fresh character
+     * in place, and verifyPlayerPositionForWindow() holds a player that has
+     * just been moved until its new chunk has generated, then settles it on
+     * safe ground. A position that is already safe is kept exactly, so a
+     * restored save lands where it was left.
      */
 
     // Internal
@@ -200,6 +206,17 @@ public class PlayerManager extends ManagerPackage {
         windowID2FirstPersonToggled.put(windowID, false);
         windowID2PreFirstPersonZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         return player;
+    }
+
+    // Character \\
+
+    public void rerollPlayerForWindow(int windowID) {
+        entityManager.rerollEntity(windowID2Player.get(windowID));
+        verifyPlayerPositionForWindow(windowID);
+    }
+
+    public void verifyPlayerPositionForWindow(int windowID) {
+        windowID2VerifyPlayerPosition.put(windowID, true);
     }
 
     // Player \\
@@ -420,6 +437,9 @@ public class PlayerManager extends ManagerPackage {
 
         if (safeY == -1)
             return true;
+
+        if (safeY == totalY)
+            return false;
 
         position.x = blockX;
         position.y = safeY;

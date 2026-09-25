@@ -40,8 +40,8 @@ public class EditorBranch extends BranchPackage {
         tabManager.openPreview(window.getGLWindow());
     }
 
-    public void openDebug(WindowInstance window) {
-        tabManager.openDebug(window.getGLWindow());
+    public void openDev(WindowInstance window) {
+        tabManager.openDev(window.getGLWindow());
     }
 
     // Tool Operations \\

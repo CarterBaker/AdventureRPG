@@ -1,4 +1,4 @@
-package editor.debug.waterplacement;
+package editor.dev.waterplacement;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -7,14 +7,14 @@ import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.settings.KeyBindings;
 
-public class DebugWaterPlacementSystem extends SystemPackage {
+public class DevWaterPlacementSystem extends SystemPackage {
 
     /*
-     * Debug-only input linkage for the liquid pipeline: a secondary click in
+     * Dev mode input linkage for the liquid pipeline: a secondary click in
      * this context's window asks the engine to pour a Water block wherever
      * that window's player is aiming. Raycasting, placement, liquid wake-up,
      * and every geometry rebuild live in the engine. Flip ENABLED to false,
-     * or remove the create() call in DebugContext, to take this out.
+     * or remove the create() call in DevContext, to take this out.
      */
 
     private static final boolean ENABLED = true;

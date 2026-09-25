@@ -20,8 +20,10 @@ public class AppearanceHandle extends HandlePackage {
      * change routes through applyProportions(), the one place bone
      * proportions are written to the entity's AnimationStateHandle and its
      * pose re-evaluated, so edits show immediately even while the entity's
-     * animation is paused. No manager owns this — it lives directly on
-     * EntityInstance, same as AnimationStateHandle.
+     * animation is paused. resetToDefaults() is the one path that returns
+     * every customizable value to the template, used both on construction
+     * and when a fresh character is rolled. No manager owns this — it lives
+     * directly on EntityInstance, same as AnimationStateHandle.
      */
 
     // Internal
@@ -51,18 +53,30 @@ public class AppearanceHandle extends HandlePackage {
         this.animationStateHandle = animationStateHandle;
 
         // Colors
-        this.skinColor = new Color(appearanceData.getSkinColor());
-        this.hairColor = new Color(appearanceData.getHairColor());
+        this.skinColor = new Color();
+        this.hairColor = new Color();
 
         // Features
         this.features = new FeatureHandle[FeatureSlot.values().length];
 
+        // Proportions
+        this.weightRatio = weightRatio;
+        this.headProportion = new Vector3();
+
+        resetToDefaults();
+    }
+
+    // Defaults \\
+
+    public void resetToDefaults() {
+
+        skinColor.set(appearanceData.getSkinColor());
+        hairColor.set(appearanceData.getHairColor());
+
         for (FeatureSlot featureSlot : FeatureSlot.values())
             features[featureSlot.ordinal()] = appearanceData.getDefaultFeature(featureSlot);
 
-        // Proportions
-        this.weightRatio = weightRatio;
-        this.headProportion = new Vector3(1f, 1f, 1f);
+        headProportion.set(1f, 1f, 1f);
 
         applyProportions();
     }

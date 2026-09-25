@@ -88,4 +88,8 @@ class FeatureLoader extends LoaderPackage {
 
         request(file);
     }
+
+    boolean hasFeatureFile(String featureName) {
+        return featureName2File.containsKey(featureName);
+    }
 }

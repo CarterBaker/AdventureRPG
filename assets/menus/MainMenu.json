@@ -23,6 +23,41 @@
             "size":     { "x": "64%", "y": "48%" }
         },
         {
+            "id":          "character_slot",
+            "type":        "button",
+            "sprite":      "menus/paper/PaperStrip",
+            "size":        { "x": "100%", "y": "50px" },
+            "color":       [0.88, 0.88, 0.88, 1],
+            "hover_color": [1, 1, 1, 1],
+            "on_click": {
+                "class":  "application.runtime.menueventsmanager.menus.LoadMenuBranch",
+                "method": "loadCharacter"
+            },
+            "elements": [
+                {
+                    "id":       "character_label",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.24, 0.15, 0.08, 1],
+                    "parent_hover_color": [0.463, 0.086, 0.071, 1],
+                    "align":    "left",
+                    "anchor":   "left",
+                    "pivot":    "left",
+                    "position": { "x": "7%", "y": "0%" },
+                    "size":     { "x": "86%", "y": "100%" }
+                }
+            ]
+        },
+        {
+            "id":       "character_list_empty",
+            "type":     "label",
+            "font":     "IMFellEnglish",
+            "text":     "No saved characters",
+            "color":    [0.88, 0.8, 0.66, 1],
+            "size":     { "x": "100%", "y": "50px" }
+        },
+        {
             "id":       "title",
             "type":     "container",
             "anchor":   "top",
@@ -129,9 +164,9 @@
                     "type":     "container",
                     "anchor":   "center",
                     "pivot":    "center",
-                    "position": { "x": "0%",  "y": "-23%" },
-                    "size":     { "x": "46%", "y": "34%" },
-                    "aspect":   2.1176,
+                    "position": { "x": "0%",  "y": "-24%" },
+                    "size":     { "x": "46%", "y": "43%" },
+                    "aspect":   1.3841,
                     "animation": {
                         "delay": 1.0,
                         "keyframes": [
@@ -143,25 +178,44 @@
                         {
                             "id":       "continue",
                             "use":      "MainMenu/board_button",
-                            "anchor":   "top_left",
-                            "pivot":    "bottom_left",
-                            "size":     { "x": "47%", "y": "47%" },
+                            "sprite":   "menus/boards/BoardButtonWide",
+                            "anchor":   "top",
+                            "pivot":    "bottom",
+                            "size":     { "x": "94%", "y": "30.72%" },
+                            "aspect":   4.2353,
                             "on_click": {
                                 "class":  "application.runtime.menueventsmanager.menus.MainMenuBranch",
-                                "method": "closeMenu",
-                                "arg":    "$parent"
+                                "method": "continueGame"
                             },
                             "elements": [
                                 { "id": "continueLabel", "use": "MainMenu/board_label", "text": "Continue" }
                             ]
                         },
                         {
+                            "id":       "load",
+                            "use":      "MainMenu/board_button",
+                            "anchor":   "left",
+                            "pivot":    "left",
+                            "size":     { "x": "47%", "y": "30.72%" },
+                            "on_click": {
+                                "class":  "application.runtime.menueventsmanager.menus.LoadMenuBranch",
+                                "method": "openMenu"
+                            },
+                            "elements": [
+                                { "id": "loadLabel", "use": "MainMenu/board_label", "text": "Load" }
+                            ]
+                        },
+                        {
                             "id":       "new_game",
                             "use":      "MainMenu/board_button",
                             "sprite":   "menus/boards/BoardButtonB",
-                            "anchor":   "top_right",
-                            "pivot":    "bottom_right",
-                            "size":     { "x": "47%", "y": "47%" },
+                            "anchor":   "right",
+                            "pivot":    "right",
+                            "size":     { "x": "47%", "y": "30.72%" },
+                            "on_click": {
+                                "class":  "application.runtime.menueventsmanager.menus.MainMenuBranch",
+                                "method": "newGame"
+                            },
                             "elements": [
                                 { "id": "newGameLabel", "use": "MainMenu/board_label", "text": "New Game" }
                             ]
@@ -172,7 +226,7 @@
                             "sprite":   "menus/boards/BoardButtonC",
                             "anchor":   "bottom_left",
                             "pivot":    "top_left",
-                            "size":     { "x": "47%", "y": "47%" },
+                            "size":     { "x": "47%", "y": "30.72%" },
                             "elements": [
                                 { "id": "optionsLabel", "use": "MainMenu/board_label", "text": "Options" }
                             ]
@@ -182,9 +236,97 @@
                             "use":      "util/GenericButtons",
                             "anchor":   "bottom_right",
                             "pivot":    "top_right",
-                            "size":     { "x": "47%", "y": "47%" },
+                            "size":     { "x": "47%", "y": "30.72%" },
                             "elements": [
                                 { "id": "quitLabel", "use": "MainMenu/board_label", "text": "Quit" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id":            "Load",
+            "lock_input":    true,
+            "raycast_input": true,
+            "entry_points":  ["character_list"],
+            "elements": [
+                {
+                    "id":       "panel",
+                    "type":     "sprite",
+                    "sprite":   "menus/wood/WoodPanel",
+                    "anchor":   "center",
+                    "pivot":    "center",
+                    "position": { "x": "0%", "y": "0%" },
+                    "size":     { "x": "26%", "y": "72%" },
+                    "min_size": { "x": "280px", "y": "360px" },
+                    "animation": {
+                        "keyframes": [
+                            { "time": 0.0,  "offset": { "y": -0.08 }, "alpha": 0 },
+                            { "time": 0.35, "ease": "out" }
+                        ]
+                    },
+                    "elements": [
+                        {
+                            "id":       "title_note",
+                            "type":     "sprite",
+                            "sprite":   "menus/paper/PaperScrap",
+                            "anchor":   "top",
+                            "pivot":    "bottom",
+                            "position": { "x": "0%", "y": "-12px" },
+                            "size":     { "x": "calc(100% - 50px)", "y": "56px" },
+                            "aspect":   3.6111,
+                            "elements": [
+                                {
+                                    "id":       "title_label",
+                                    "type":     "label",
+                                    "font":     "IMFellEnglish",
+                                    "text":     "Load",
+                                    "color":    [0.16, 0.1, 0.06, 1],
+                                    "anchor":   "center",
+                                    "pivot":    "center",
+                                    "position": { "x": "0%", "y": "2%" },
+                                    "size":     { "x": "70%", "y": "70%" }
+                                }
+                            ]
+                        },
+                        {
+                            "id":       "character_list",
+                            "type":     "container",
+                            "mask":     true,
+                            "stack":    "vertical",
+                            "spacing":  "4px",
+                            "anchor":   "top_left",
+                            "pivot":    "bottom_left",
+                            "position": { "x": "22px", "y": "-76px" },
+                            "size":     { "x": "calc(100% - 44px)", "y": "calc(100% - 158px)" }
+                        },
+                        {
+                            "id":          "back",
+                            "type":        "button",
+                            "sprite":      "menus/paper/PaperStrip",
+                            "anchor":      "bottom",
+                            "pivot":       "top",
+                            "position":    { "x": "0%", "y": "22px" },
+                            "size":        { "x": "calc(100% - 44px)", "y": "50px" },
+                            "color":       [0.88, 0.88, 0.88, 1],
+                            "hover_color": [1, 1, 1, 1],
+                            "on_click": {
+                                "class":  "application.runtime.menueventsmanager.menus.LoadMenuBranch",
+                                "method": "closeMenu"
+                            },
+                            "elements": [
+                                {
+                                    "id":       "back_label",
+                                    "type":     "label",
+                                    "font":     "IMFellEnglish",
+                                    "text":     "Back",
+                                    "color":    [0.24, 0.15, 0.08, 1],
+                                    "parent_hover_color": [0.463, 0.086, 0.071, 1],
+                                    "anchor":   "center",
+                                    "pivot":    "center",
+                                    "size":     { "x": "86%", "y": "100%" }
+                                }
                             ]
                         }
                     ]

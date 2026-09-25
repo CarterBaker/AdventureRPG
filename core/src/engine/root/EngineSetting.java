@@ -88,11 +88,16 @@ public class EngineSetting {
         // Engine & Application \\
 
         public static final String BIN_DIRECTORY = "bin";
+        public static final String CHARACTER_FILE_EXTENSION = "json";
+        public static final int CHARACTER_NAME_FIRST_NUMBER = 1;
+        public static final String CHARACTER_NAME_PREFIX = "Character ";
+        public static final String CHARACTER_SAVE_DIRECTORY = "Characters";
         public static final String EDITOR_LAYOUT_DIRECTORY = "editorLayout";
         public static final String EDITOR_SETTINGS_FILE_NAME = "EditorSettings.json";
         public static final String GAME_DIRECTORY = "AdventureRPG";
         public static final String GAME_DOCUMENTS_SUBPATH = "Documents/My Games";
         public static final int LOADER_BATCH_SIZE = 32;
+        public static final String SAVE_DIRECTORY = "Saves";
         public static final String SETTINGS_FILE_NAME = "Settings.json";
         public static final String SETTINGS_UBO = "SettingsData";
         public static final String VERSION = "0.0.0.1a";
@@ -811,7 +816,7 @@ public class EngineSetting {
         public static final int TAB_DRAG_PREVIEW_H = 144;
         public static final int TAB_DRAG_PREVIEW_W = 256;
         public static final int TAB_ENTRY_TITLE = 0;
-        public static final String TAB_TITLE_DEBUG = "Debug";
+        public static final String TAB_TITLE_DEV = "Dev Mode";
         public static final String TAB_TITLE_PREVIEW = "Preview";
         public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
 
