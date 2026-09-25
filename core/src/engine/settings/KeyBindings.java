@@ -10,7 +10,9 @@ public final class KeyBindings {
     /*
      * Runtime key binding state. Holds all active Binding objects for the
      * session. Initialized with engine defaults at startup — overwritten by
-     * LoadUtility.applyBindings() once Settings are loaded.
+     * SettingsUtility.applyBindings() once Settings are loaded. Primary and
+     * Pause are never loaded or rebound — they are how a player reaches and
+     * clicks the menus, so they can never be bound away.
      */
 
     // Movement
@@ -22,13 +24,13 @@ public final class KeyBindings {
     public static Binding WALK = new Binding(InputCode.key(Keys.CONTROL_LEFT));
     public static Binding SPRINT = new Binding(InputCode.key(Keys.SHIFT_LEFT));
 
-    // Actions
-    public static Binding INVENTORY = new Binding(InputCode.key(Keys.I));
-
     // Mouse
     public static Binding PRIMARY = new Binding(InputCode.mouse(Buttons.LEFT));
     public static Binding SECONDARY = new Binding(InputCode.mouse(Buttons.RIGHT));
     public static Binding LOOK = new Binding(InputCode.mouse(Buttons.RIGHT));
+
+    // Menu
+    public static Binding PAUSE = new Binding(InputCode.key(Keys.ESCAPE));
 
     // Screen Capture
     public static Binding SCREENSHOT = new Binding(InputCode.key(Keys.F12));

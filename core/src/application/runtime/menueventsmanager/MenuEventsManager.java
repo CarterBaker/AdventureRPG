@@ -1,8 +1,8 @@
 package application.runtime.menueventsmanager;
 
-import application.runtime.menueventsmanager.menus.InventoryBranch;
 import application.runtime.menueventsmanager.menus.LoadMenuBranch;
 import application.runtime.menueventsmanager.menus.MainMenuBranch;
+import application.runtime.menueventsmanager.menus.PauseMenuBranch;
 import application.runtime.menueventsmanager.menus.charactercreator.CharacterCreatorBranch;
 import application.runtime.menueventsmanager.menus.charactercreator.CreatorAppearanceBranch;
 import application.runtime.menueventsmanager.menus.charactercreator.CreatorBodyBranch;
@@ -28,7 +28,7 @@ public class MenuEventsManager extends ManagerPackage {
         create(SettingsMenuBranch.class);
         create(SettingsOptionBranch.class);
         create(SettingsBindingBranch.class);
-        create(InventoryBranch.class);
+        create(PauseMenuBranch.class);
         create(GenericButtonBranch.class);
     }
 }

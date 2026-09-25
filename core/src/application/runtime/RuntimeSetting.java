@@ -45,6 +45,9 @@ public class RuntimeSetting {
     public static final String ELEMENT_CHARACTER_SLOT_LABEL = "character_label";
     public static final int ENTRY_CHARACTER_LIST = 0;
 
+    // Pause Menu
+    public static final String MENU_PAUSE = "PauseMenu/Pause";
+
     // Character Creator Menus
     public static final String MENU_CREATOR = "CharacterCreator/Creator";
     public static final String MENU_CREATOR_TAB = "CharacterCreator/creator_tab";
@@ -222,7 +225,6 @@ public class RuntimeSetting {
     public static final String SETTINGS_BINDING_WALK = "Walk";
     public static final String SETTINGS_BINDING_SPRINT = "Sprint";
     public static final String SETTINGS_BINDING_USE = "Use";
-    public static final String SETTINGS_BINDING_INVENTORY = "Inventory";
     public static final String SETTINGS_BINDING_SCREENSHOT = "Screenshot";
     public static final String SETTINGS_BINDING_RECORD_VIDEO = "Record Video";
     public static final String SETTINGS_BINDING_CAPTURE_PROMPT = "Press a key";

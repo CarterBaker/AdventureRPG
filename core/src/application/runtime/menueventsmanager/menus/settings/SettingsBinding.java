@@ -29,8 +29,6 @@ public enum SettingsBinding {
             KeyBindings.SPRINT),
     USE(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_USE,
             KeyBindings.SECONDARY),
-    INVENTORY(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_INVENTORY,
-            KeyBindings.INVENTORY),
     SCREENSHOT(RuntimeSetting.SETTINGS_SECTION_CAPTURE, RuntimeSetting.SETTINGS_BINDING_SCREENSHOT,
             KeyBindings.SCREENSHOT),
     RECORD_VIDEO(RuntimeSetting.SETTINGS_SECTION_CAPTURE, RuntimeSetting.SETTINGS_BINDING_RECORD_VIDEO,

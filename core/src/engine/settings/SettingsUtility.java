@@ -121,7 +121,6 @@ public class SettingsUtility {
         KeyBindings.JUMP.set(toInputCodes(settings.bindJump));
         KeyBindings.WALK.set(toInputCodes(settings.bindWalk));
         KeyBindings.SPRINT.set(toInputCodes(settings.bindSprint));
-        KeyBindings.INVENTORY.set(toInputCodes(settings.bindInventory));
         KeyBindings.SECONDARY.set(toInputCodes(settings.bindSecondary));
         KeyBindings.SCREENSHOT.set(toInputCodes(settings.bindScreenshot));
         KeyBindings.RECORD_VIDEO.set(toInputCodes(settings.bindRecordVideo));
@@ -144,7 +143,6 @@ public class SettingsUtility {
         settings.bindJump = toCodes(KeyBindings.JUMP);
         settings.bindWalk = toCodes(KeyBindings.WALK);
         settings.bindSprint = toCodes(KeyBindings.SPRINT);
-        settings.bindInventory = toCodes(KeyBindings.INVENTORY);
         settings.bindSecondary = toCodes(KeyBindings.SECONDARY);
         settings.bindScreenshot = toCodes(KeyBindings.SCREENSHOT);
         settings.bindRecordVideo = toCodes(KeyBindings.RECORD_VIDEO);

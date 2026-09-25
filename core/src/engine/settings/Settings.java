@@ -59,7 +59,6 @@ public class Settings {
     public int[] bindSprint = { Keys.SHIFT_LEFT };
 
     // Bindings — Game Actions
-    public int[] bindInventory = { Keys.I };
     public int[] bindSecondary = { InputCode.storedMouseCode(Buttons.RIGHT) };
 
     // Bindings — Screen Capture

@@ -1,0 +1,97 @@
+{
+    "elements": [],
+    "menus": [
+        {
+            "id":            "Pause",
+            "lock_input":    true,
+            "raycast_input": true,
+            "elements": [
+                {
+                    "id":       "boards",
+                    "type":     "container",
+                    "anchor":   "center",
+                    "pivot":    "center",
+                    "position": { "x": "0%",  "y": "-4%" },
+                    "size":     { "x": "46%", "y": "28.1%" },
+                    "aspect":   2.1177,
+                    "animation": {
+                        "keyframes": [
+                            { "time": 0.0,  "offset": { "y": -0.08 }, "alpha": 0 },
+                            { "time": 0.35, "ease": "out" }
+                        ]
+                    },
+                    "elements": [
+                        {
+                            "id":       "title_note",
+                            "type":     "sprite",
+                            "sprite":   "menus/paper/PaperScrap",
+                            "anchor":   "top",
+                            "pivot":    "top",
+                            "position": { "x": "0%", "y": "8%" },
+                            "size":     { "x": "44%", "y": "30%" },
+                            "aspect":   3.6111,
+                            "elements": [
+                                {
+                                    "id":       "title_label",
+                                    "type":     "label",
+                                    "font":     "IMFellEnglish",
+                                    "text":     "Paused",
+                                    "color":    [0.16, 0.1, 0.06, 1],
+                                    "anchor":   "center",
+                                    "pivot":    "center",
+                                    "position": { "x": "0%", "y": "2%" },
+                                    "size":     { "x": "70%", "y": "70%" }
+                                }
+                            ]
+                        },
+                        {
+                            "id":       "continue",
+                            "use":      "MainMenu/board_button",
+                            "sprite":   "menus/boards/BoardButtonWide",
+                            "anchor":   "top",
+                            "pivot":    "bottom",
+                            "size":     { "x": "94%", "y": "47%" },
+                            "aspect":   4.2353,
+                            "on_click": {
+                                "class":  "application.runtime.menueventsmanager.menus.PauseMenuBranch",
+                                "method": "closeMenu"
+                            },
+                            "elements": [
+                                { "id": "continueLabel", "use": "MainMenu/board_label", "text": "Continue" }
+                            ]
+                        },
+                        {
+                            "id":       "options",
+                            "use":      "MainMenu/board_button",
+                            "sprite":   "menus/boards/BoardButtonC",
+                            "anchor":   "bottom_left",
+                            "pivot":    "top_left",
+                            "size":     { "x": "47%", "y": "47%" },
+                            "on_click": {
+                                "class":  "application.runtime.menueventsmanager.menus.settings.SettingsMenuBranch",
+                                "method": "openMenu"
+                            },
+                            "elements": [
+                                { "id": "optionsLabel", "use": "MainMenu/board_label", "text": "Options" }
+                            ]
+                        },
+                        {
+                            "id":       "quit",
+                            "use":      "util/GenericButtons",
+                            "anchor":   "bottom_right",
+                            "pivot":    "top_right",
+                            "size":     { "x": "47%", "y": "47%" },
+                            "on_click": {
+                                "class":  "application.runtime.menueventsmanager.menus.PauseMenuBranch",
+                                "method": "quitGame"
+                            },
+                            "elements": [
+                                { "id": "quitLabel", "use": "MainMenu/board_label", "text": "Quit" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
