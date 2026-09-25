@@ -59,6 +59,10 @@ public class SpriteHandle extends HandlePackage {
         return spriteData.getBorderTop();
     }
 
+    public boolean isStretch() {
+        return spriteData.isStretch();
+    }
+
     public boolean hasSlice() {
         return spriteData.hasSlice();
     }

@@ -19,7 +19,13 @@ public class ElementData extends DataPackage {
      * Visual hover behavior is handled by ElementStateStruct blocks on
      * ElementHandle. hover_color is the lightweight alternative: the element's
      * sprite and text take that color while the cursor is over it, including
-     * inside an open hover dropdown.
+     * inside an open hover dropdown. parent_hover_color is its counterpart for
+     * content inside a control: the element takes that color while any
+     * ancestor is hovered, without becoming hoverable itself — a button's
+     * label lights up with the button and never steals its hover or click.
+     *
+     * animation is an optional keyframe timeline sampled against the owning
+     * menu's clock every frame — null when the element is static.
      */
 
     // Identity
@@ -35,6 +41,7 @@ public class ElementData extends DataPackage {
     private final boolean explicitFontSize;
     private final MenuColorStruct color;
     private final MenuColorStruct hoverColor;
+    private final MenuColorStruct parentHoverColor;
 
     // Layout
     private final LayoutStruct layout;
@@ -45,6 +52,9 @@ public class ElementData extends DataPackage {
 
     // Expansion
     private final boolean startExpanded;
+
+    // Animation
+    private final ElementAnimationStruct animation;
 
     // on_click
     private final String actionClass;
@@ -69,12 +79,14 @@ public class ElementData extends DataPackage {
             boolean explicitFontSize,
             MenuColorStruct color,
             MenuColorStruct hoverColor,
+            MenuColorStruct parentHoverColor,
             LayoutStruct layout,
             boolean mask,
             StackDirection stackDirection,
             DimensionValue spacing,
             TextAlign textAlign,
             boolean startExpanded,
+            ElementAnimationStruct animation,
             String actionClass,
             String actionMethod,
             String actionArg,
@@ -92,12 +104,14 @@ public class ElementData extends DataPackage {
         this.explicitFontSize = explicitFontSize;
         this.color = color;
         this.hoverColor = hoverColor;
+        this.parentHoverColor = parentHoverColor;
         this.layout = layout;
         this.mask = mask;
         this.stackDirection = stackDirection;
         this.spacing = spacing;
         this.textAlign = textAlign;
         this.startExpanded = startExpanded;
+        this.animation = animation;
         this.actionClass = actionClass;
         this.actionMethod = actionMethod;
         this.actionArg = actionArg;
@@ -148,6 +162,10 @@ public class ElementData extends DataPackage {
         return hoverColor;
     }
 
+    public MenuColorStruct getParentHoverColor() {
+        return parentHoverColor;
+    }
+
     public LayoutStruct getLayout() {
         return layout;
     }
@@ -170,6 +188,10 @@ public class ElementData extends DataPackage {
 
     public boolean isStartExpanded() {
         return startExpanded;
+    }
+
+    public ElementAnimationStruct getAnimation() {
+        return animation;
     }
 
     public String getActionClass() {
@@ -226,5 +248,13 @@ public class ElementData extends DataPackage {
 
     public boolean hasHoverColor() {
         return hoverColor != null;
+    }
+
+    public boolean hasParentHoverColor() {
+        return parentHoverColor != null;
+    }
+
+    public boolean hasAnimation() {
+        return animation != null;
     }
 }

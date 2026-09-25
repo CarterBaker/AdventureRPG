@@ -1,11 +1,14 @@
 {
     "elements": [
         {
-            "id":     "quit",
-            "type":   "button",
-            "sprite": "menus/DefaultElement",
-            "anchor": "center",
-            "pivot":  "center",
+            "id":          "quit",
+            "type":        "button",
+            "sprite":      "menus/boards/BoardButtonD",
+            "anchor":      "center",
+            "pivot":       "center",
+            "aspect":      2.1176,
+            "color":       [0.88, 0.88, 0.88, 1],
+            "hover_color": [1, 1, 1, 1],
             "on_click": {
                 "class":  "application.runtime.menueventsmanager.util.GenericButtonBranch",
                 "method": "quitGame"

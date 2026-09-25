@@ -32,6 +32,10 @@ public class ElementInstance extends InstancePackage {
      * pointed is set by ElementHitSystem on the deepest element with a
      * hover_color under the cursor — unlike hovered, it reaches elements inside
      * an open hover dropdown, whose owner keeps the hover itself.
+     *
+     * applyPose() moves, scales, and rotates the laid out element around its
+     * layout pivot. Offset and scale update the computed rect, so children and
+     * hit testing follow the pose; rotation lives only in the render transform.
      */
 
     // Internal
@@ -85,6 +89,8 @@ public class ElementInstance extends InstancePackage {
     private float computedTop;
     private float computedW;
     private float computedH;
+    private float computedPivotX;
+    private float computedPivotY;
 
     // Scroll
     private float scrollX;
@@ -291,18 +297,8 @@ public class ElementInstance extends InstancePackage {
 
         float posX = pos.getX().resolve(parentW);
         float posY = pos.getY().resolve(parentH);
-        float w = layout.getSize().getX().resolve(parentW);
-        float h = layout.getSize().getY().resolve(parentH);
-
-        if (layout.hasMinSize()) {
-            w = Math.max(w, layout.getMinSize().getX().resolve(parentW));
-            h = Math.max(h, layout.getMinSize().getY().resolve(parentH));
-        }
-
-        if (layout.hasMaxSize()) {
-            w = Math.min(w, layout.getMaxSize().getX().resolve(parentW));
-            h = Math.min(h, layout.getMaxSize().getY().resolve(parentH));
-        }
+        float w = layout.resolveWidth(parentW, parentH);
+        float h = layout.resolveHeight(parentW, parentH);
 
         float anchorX = parentLeft + layout.getAnchor().x * parentW;
         float anchorY = parentTop + layout.getAnchor().y * parentH;
@@ -313,6 +309,7 @@ public class ElementInstance extends InstancePackage {
         this.computedTop = ty;
         this.computedW = w;
         this.computedH = h;
+        storePivot(layout);
 
         transform.set(w, 0, 0, tx, 0, h, 0, ty, 0, 0, 1, 0, 0, 0, 0, 1);
     }
@@ -330,23 +327,14 @@ public class ElementInstance extends InstancePackage {
                 : layoutOverride != null ? layoutOverride
                         : data.getLayout();
 
-        float w = layout.getSize().getX().resolve(parentW);
-        float h = layout.getSize().getY().resolve(parentH);
-
-        if (layout.hasMinSize()) {
-            w = Math.max(w, layout.getMinSize().getX().resolve(parentW));
-            h = Math.max(h, layout.getMinSize().getY().resolve(parentH));
-        }
-
-        if (layout.hasMaxSize()) {
-            w = Math.min(w, layout.getMaxSize().getX().resolve(parentW));
-            h = Math.min(h, layout.getMaxSize().getY().resolve(parentH));
-        }
+        float w = layout.resolveWidth(parentW, parentH);
+        float h = layout.resolveHeight(parentW, parentH);
 
         this.computedLeft = left;
         this.computedTop = top;
         this.computedW = w;
         this.computedH = h;
+        storePivot(layout);
 
         transform.set(w, 0, 0, left, 0, h, 0, top, 0, 0, 1, 0, 0, 0, 0, 1);
     }
@@ -359,21 +347,48 @@ public class ElementInstance extends InstancePackage {
 
         LayoutStruct layout = layoutOverride != null ? layoutOverride : data.getLayout();
 
-        float h = layout.getSize().getY().resolve(screenH);
-
-        if (layout.hasMinSize())
-            h = Math.max(h, layout.getMinSize().getY().resolve(screenH));
-        if (layout.hasMaxSize())
-            h = Math.min(h, layout.getMaxSize().getY().resolve(screenH));
-
+        float h = layout.resolveHeight(screenW, screenH);
         float top = screenH - h;
 
         this.computedLeft = 0f;
         this.computedTop = top;
         this.computedW = screenW;
         this.computedH = h;
+        storePivot(layout);
 
         transform.set(screenW, 0, 0, 0f, 0, h, 0, top, 0, 0, 1, 0, 0, 0, 0, 1);
+    }
+
+    // Layout pivot y counts down from the top edge — flipped to a fraction up from the bottom
+    private void storePivot(LayoutStruct layout) {
+        this.computedPivotX = layout.getPivot().x;
+        this.computedPivotY = 1f - layout.getPivot().y;
+    }
+
+    // Pose \\
+
+    public void applyPose(ElementPoseStruct pose) {
+
+        float pivotX = computedLeft + computedPivotX * computedW + pose.getOffsetX() * computedW;
+        float pivotY = computedTop + computedPivotY * computedH + pose.getOffsetY() * computedH;
+        float w = computedW * pose.getScaleX();
+        float h = computedH * pose.getScaleY();
+        float localPivotX = computedPivotX * w;
+        float localPivotY = computedPivotY * h;
+
+        double radians = Math.toRadians(pose.getRotation());
+        float cos = (float) Math.cos(radians);
+        float sin = (float) Math.sin(radians);
+
+        this.computedLeft = pivotX - localPivotX;
+        this.computedTop = pivotY - localPivotY;
+        this.computedW = w;
+        this.computedH = h;
+
+        float tx = pivotX - (cos * localPivotX - sin * localPivotY);
+        float ty = pivotY - (sin * localPivotX + cos * localPivotY);
+
+        transform.set(w * cos, -h * sin, 0, tx, w * sin, h * cos, 0, ty, 0, 0, 1, 0, 0, 0, 0, 1);
     }
 
     // Child Mutation \\

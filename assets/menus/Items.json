@@ -3,8 +3,10 @@
         {
             "id": "item_slot",
             "type": "button",
-            "sprite": "menus/DefaultElement",
+            "sprite": "menus/paper/PaperStrip",
             "size": { "x": "100%", "y": "50px" },
+            "color":       [0.88, 0.88, 0.88, 1],
+            "hover_color": [1, 1, 1, 1],
             "on_click": {
                 "class":  "application.runtime.menueventsmanager.menus.InventoryBranch",
                 "method": "selectItem"
@@ -13,14 +15,15 @@
                 {
                     "id":       "item_label",
                     "type":     "label",
-                    "font":     "MontserratAlternates",
+                    "font":     "IMFellEnglish",
                     "text":     "Item",
-                    "color":    [0, 0, 0, 1],
+                    "color":    [0.24, 0.15, 0.08, 1],
+                    "parent_hover_color": [0.463, 0.086, 0.071, 1],
                     "align":    "left",
                     "anchor":   "left",
                     "pivot":    "left",
-                    "position": { "x": "5%", "y": "0%" },
-                    "size":     { "x": "90%", "y": "100%" }
+                    "position": { "x": "7%", "y": "0%" },
+                    "size":     { "x": "86%", "y": "100%" }
                 }
             ]
         }

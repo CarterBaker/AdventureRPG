@@ -4,6 +4,7 @@ import java.io.File;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+import application.bootstrap.menupipeline.element.ElementAnimationStruct;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementStateStruct;
@@ -35,7 +36,8 @@ class MenuBuilder extends BuilderPackage {
      * optional method callback identically.
      *
      * on_drag is parsed as a plain method callback — no state block, no element
-     * swap. on_click is unchanged.
+     * swap. on_click is unchanged. animation is parsed onto the master's data,
+     * so every placement of an element shares its timeline.
      *
      * Inline masters are registered under the scope they are declared in: a
      * top-level element under its file, a menu's elements under that menu, and
@@ -361,6 +363,7 @@ class MenuBuilder extends BuilderPackage {
                 : inheritedFontSize;
         MenuColorStruct color = MenuFileParserUtility.parseColor(json);
         MenuColorStruct hoverColor = MenuFileParserUtility.parseHoverColor(json);
+        MenuColorStruct parentHoverColor = MenuFileParserUtility.parseParentHoverColor(json);
         LayoutStruct layout = MenuFileParserUtility.parseLayout(json);
         boolean mask = JsonUtility.getBoolean(json, "mask", false);
         StackDirection stackDirection = json.has("stack")
@@ -373,6 +376,7 @@ class MenuBuilder extends BuilderPackage {
                 ? TextAlign.fromString(json.get("align").getAsString())
                 : TextAlign.CENTER;
         boolean startExpanded = JsonUtility.getBoolean(json, "start_expanded", false);
+        ElementAnimationStruct animation = MenuFileParserUtility.parseAnimation(json);
         String spriteName = resolveSpriteName(id, spritePath);
 
         String[] onClick = MenuFileParserUtility.parseOnClick(json);
@@ -383,7 +387,8 @@ class MenuBuilder extends BuilderPackage {
 
         ElementData data = new ElementData(
                 id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize,
-                color, hoverColor, layout, mask, stackDirection, spacing, textAlign, startExpanded,
+                color, hoverColor, parentHoverColor, layout, mask, stackDirection, spacing, textAlign, startExpanded,
+                animation,
                 onClick != null ? onClick[0] : null,
                 onClick != null ? onClick[1] : null,
                 onClick != null ? onClick[2] : null,

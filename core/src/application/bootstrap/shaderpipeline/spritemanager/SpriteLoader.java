@@ -105,6 +105,7 @@ class SpriteLoader extends LoaderPackage {
             BufferedImage image = internalBuilder.loadImage(file);
             int gpuHandle = SpriteGLSLUtility.pushSprite(image);
             float[] border = internalBuilder.parseCompanionBorder(file);
+            boolean stretch = internalBuilder.parseCompanionStretch(file);
 
             MaterialInstance material = materialManager.cloneMaterial(defaultMaterialID);
             material.setUniform("u_sprite", gpuHandle);
@@ -117,6 +118,7 @@ class SpriteLoader extends LoaderPackage {
                     image.getWidth(),
                     image.getHeight(),
                     border[0], border[1], border[2], border[3],
+                    stretch,
                     modelInstance);
 
             SpriteHandle handle = create(SpriteHandle.class);
