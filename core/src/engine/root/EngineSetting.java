@@ -255,6 +255,10 @@ public class EngineSetting {
         public static final float CAMERA_ZOOM_MIN = 0f;
         public static final float CAMERA_ZOOM_SCROLL_SPEED = 0.75f;
         public static final float CAMERA_ZOOM_SMOOTHING = 10f;
+        public static final float CHARACTER_PREVIEW_DISTANCE = 2.1f;
+        public static final float CHARACTER_PREVIEW_FOCUS_HEIGHT = 0.55f;
+        public static final float CHARACTER_PREVIEW_LATERAL_OFFSET = 0.26f;
+        public static final float CHARACTER_PREVIEW_LIFT = 0.2f;
         public static final String UNIFORM_CAM_FAR_PLANE = "u_farPlane";
         public static final String UNIFORM_CAM_FOV = "u_cameraFOV";
         public static final String UNIFORM_CAM_INVERSE_PROJECTION = "u_inverseProjection";
@@ -742,6 +746,10 @@ public class EngineSetting {
         public static final int SKINNED_INSTANCE_FLOATS = SKINNED_INSTANCE_MODEL_FLOATS
                         + SKINNED_INSTANCE_APPEARANCE_FLOATS;
 
+        // Animation \\
+
+        public static final float ANIMATION_BLEND_SECONDS = 0.22f;
+
         // Appearance \\
 
         public static final float DEFAULT_BUILD_FACTOR = 1f;
@@ -806,6 +814,7 @@ public class EngineSetting {
         public static final float MENU_ANIMATION_MAX_STEP_SECONDS = 0.1f;
         public static final float MENU_EASE_BACK_OVERSHOOT = 1.70158f;
         public static final String MENU_HIERARCHY = "util/Hierarchy/Hierarchy";
+        public static final float MENU_SCROLL_PIXELS = 48f;
         public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
         public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
         public static final float MENU_THEME_ALPHA_DEFAULT = 1.0f;

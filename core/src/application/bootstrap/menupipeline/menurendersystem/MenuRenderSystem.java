@@ -376,8 +376,8 @@ public class MenuRenderSystem extends SystemPackage {
                 : 0f;
 
         float cursor = vertical
-                ? parent.getComputedTop() + parent.getComputedH() - parent.getScrollY()
-                : parent.getComputedLeft() + parent.getScrollX();
+                ? parent.getComputedTop() + parent.getComputedH() + parent.getScrollY()
+                : parent.getComputedLeft() - parent.getScrollX();
 
         float contentSize = 0f;
 

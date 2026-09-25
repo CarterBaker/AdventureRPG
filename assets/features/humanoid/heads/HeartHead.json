@@ -1,0 +1,5 @@
+{
+  "slot": "head",
+  "mesh": "characters/humanoid/heads/HeartHeadMesh",
+  "face": "characters/standard/Face"
+}

@@ -67,6 +67,12 @@ public class CameraData extends DataPackage {
         syncCaches();
     }
 
+    public void setDirection(Vector3 input) {
+        directionVec.set(input).normalize();
+        upVec.set(0f, 1f, 0f);
+        syncCaches();
+    }
+
     public void updateViewport(float width, float height) {
         viewportVec.set(width, height);
         syncCaches();

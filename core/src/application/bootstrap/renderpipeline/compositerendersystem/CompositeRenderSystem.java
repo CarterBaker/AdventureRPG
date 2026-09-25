@@ -11,6 +11,7 @@ import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferIns
 import application.bootstrap.renderpipeline.compositebatch.CompositeBatchStruct;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.renderqueue.RenderQueueHandle;
+import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
@@ -26,6 +27,7 @@ public class CompositeRenderSystem extends SystemPackage {
      * depth 0 so composite draws appear over world geometry.
      * Depth testing and depth writes are disabled for the composite pass —
      * UI always draws on top. Blending is enabled for alpha transparency.
+     * A buffer submitted with a mask is scissored to it, as menu sprites are.
      * All hot-path iteration is index-based over pre-allocated arrays — zero
      * allocation per frame after the first few frames of material registration.
      */
@@ -49,6 +51,7 @@ public class CompositeRenderSystem extends SystemPackage {
     public void submit(
             MaterialInstance material,
             CompositeBufferInstance buffer,
+            MaskStruct mask,
             FboInstance fbo,
             WindowInstance window) {
 
@@ -89,7 +92,7 @@ public class CompositeRenderSystem extends SystemPackage {
             }
         }
 
-        batch.add(buffer);
+        batch.add(buffer, material, mask);
     }
 
     // Draw \\
@@ -105,6 +108,7 @@ public class CompositeRenderSystem extends SystemPackage {
         CompositeRenderGLSLUtility.beginUIPass(fbo != null && fbo.getFboData().isPremultipliedBlend());
         Object[] batchElements = batches.elements();
         int batchCount = batches.size();
+        MaskStruct activeMask = null;
 
         for (int i = 0; i < batchCount; i++) {
 
@@ -117,15 +121,44 @@ public class CompositeRenderSystem extends SystemPackage {
 
             ObjectArrayList<CompositeBufferInstance> buffers = batch.getBuffers();
             Object[] bufferElements = buffers.elements();
+            Object[] materialElements = batch.getBufferMaterials().elements();
+            Object[] maskElements = batch.getBufferMasks().elements();
             int bufferCount = buffers.size();
+            MaterialInstance pushedMaterial = null;
 
-            for (int j = 0; j < bufferCount; j++)
+            for (int j = 0; j < bufferCount; j++) {
+
+                MaterialInstance bufferMaterial = (MaterialInstance) materialElements[j];
+
+                if (bufferMaterial != pushedMaterial) {
+                    pushUniforms(bufferMaterial);
+                    pushedMaterial = bufferMaterial;
+                }
+
+                activeMask = applyMask((MaskStruct) maskElements[j], activeMask);
                 drawBuffer((CompositeBufferInstance) bufferElements[j], window.getWindowID());
+            }
 
             batch.clear();
         }
 
+        if (activeMask != null)
+            CompositeRenderGLSLUtility.disableScissor();
+
         CompositeRenderGLSLUtility.endUIPass();
+    }
+
+    private MaskStruct applyMask(MaskStruct mask, MaskStruct activeMask) {
+
+        if (mask == null ? activeMask == null : mask.matches(activeMask))
+            return activeMask;
+
+        if (mask != null)
+            CompositeRenderGLSLUtility.enableScissor(mask.getX(), mask.getY(), mask.getW(), mask.getH());
+        else
+            CompositeRenderGLSLUtility.disableScissor();
+
+        return mask;
     }
 
     public void drawScreen(RenderQueueHandle queue, WindowInstance window) {
@@ -192,12 +225,15 @@ public class CompositeRenderSystem extends SystemPackage {
             CompositeRenderGLSLUtility.bindUniformBlock(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
             CompositeRenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
         }
+    }
 
-        UniformStruct<?>[] uniforms = batch.getCachedUniforms();
+    private void pushUniforms(MaterialInstance material) {
+
+        ObjectArrayList<String> uniformKeys = material.getUniformKeys();
         int textureUnit = 0;
 
-        for (int i = 0; i < uniforms.length; i++) {
-            UniformStruct<?> uniform = uniforms[i];
+        for (int i = 0; i < uniformKeys.size(); i++) {
+            UniformStruct<?> uniform = material.getUniform(uniformKeys.get(i));
             if (uniform.attribute().isSampler()) {
                 uniform.attribute().bindTexture(textureUnit);
                 textureUnit++;

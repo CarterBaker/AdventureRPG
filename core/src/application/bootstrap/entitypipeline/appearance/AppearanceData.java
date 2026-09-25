@@ -11,7 +11,8 @@ public class AppearanceData extends DataPackage {
     /*
      * Immutable appearance template for one entity type, loaded from the
      * "appearance" block of its entity JSON: default skin and hair colors,
-     * the default feature per slot (null for an empty optional slot), the
+     * the skin and hair palettes a character creator offers, the default
+     * feature per slot (null for an empty optional slot), the
      * head bone head-shape proportions apply to, and the build curve that
      * widens each bone between thin and heavy. isCompatible() is the one
      * rule for whether a feature can be worn — its meshes must use this rig
@@ -28,6 +29,10 @@ public class AppearanceData extends DataPackage {
     private final Color skinColor;
     private final Color hairColor;
 
+    // Palettes
+    private final Color[] skinPalette;
+    private final Color[] hairPalette;
+
     // Features — indexed by FeatureSlot ordinal
     private final FeatureHandle[] defaultFeatures;
 
@@ -43,6 +48,8 @@ public class AppearanceData extends DataPackage {
             int headBoneIndex,
             Color skinColor,
             Color hairColor,
+            Color[] skinPalette,
+            Color[] hairPalette,
             FeatureHandle[] defaultFeatures,
             float thinBuildFactor,
             float heavyBuildFactor,
@@ -56,6 +63,10 @@ public class AppearanceData extends DataPackage {
         // Colors
         this.skinColor = skinColor;
         this.hairColor = hairColor;
+
+        // Palettes
+        this.skinPalette = skinPalette;
+        this.hairPalette = hairPalette;
 
         // Features
         this.defaultFeatures = defaultFeatures;
@@ -107,6 +118,14 @@ public class AppearanceData extends DataPackage {
 
     public Color getHairColor() {
         return hairColor;
+    }
+
+    public Color[] getSkinPalette() {
+        return skinPalette;
+    }
+
+    public Color[] getHairPalette() {
+        return hairPalette;
     }
 
     public FeatureHandle getDefaultFeature(FeatureSlot featureSlot) {

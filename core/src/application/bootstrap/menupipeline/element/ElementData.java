@@ -26,6 +26,9 @@ public class ElementData extends DataPackage {
      *
      * animation is an optional keyframe timeline sampled against the owning
      * menu's clock every frame — null when the element is static.
+     *
+     * A masked, stacked container is scrollable: content that overflows it
+     * scrolls along the stack direction under the mouse wheel.
      */
 
     // Identity
@@ -256,5 +259,9 @@ public class ElementData extends DataPackage {
 
     public boolean hasAnimation() {
         return animation != null;
+    }
+
+    public boolean isScrollable() {
+        return mask && stackDirection != StackDirection.NONE;
     }
 }

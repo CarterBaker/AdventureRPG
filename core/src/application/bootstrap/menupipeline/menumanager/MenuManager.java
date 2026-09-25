@@ -160,6 +160,29 @@ public class MenuManager extends ManagerPackage {
             String masterKey,
             Consumer<ElementInstance> customizer) {
 
+        ElementInstance instance = createInjected(masterKey, customizer);
+
+        menu.addToEntryPoint(entryPoint, instance);
+        return instance;
+    }
+
+    public ElementInstance inject(MenuInstance menu, int entryPoint, String masterKey) {
+        return inject(menu, entryPoint, masterKey, null);
+    }
+
+    public ElementInstance inject(
+            ElementInstance container,
+            String masterKey,
+            Consumer<ElementInstance> customizer) {
+
+        ElementInstance instance = createInjected(masterKey, customizer);
+
+        container.addChild(instance);
+        return instance;
+    }
+
+    private ElementInstance createInjected(String masterKey, Consumer<ElementInstance> customizer) {
+
         ElementHandle master = elementSystem.getMaster(masterKey);
 
         if (master == null)
@@ -171,12 +194,7 @@ public class MenuManager extends ManagerPackage {
         if (customizer != null)
             customizer.accept(instance);
 
-        menu.addToEntryPoint(entryPoint, instance);
         return instance;
-    }
-
-    public ElementInstance inject(MenuInstance menu, int entryPoint, String masterKey) {
-        return inject(menu, entryPoint, masterKey, null);
     }
 
     public void eject(MenuInstance menu, int entryPoint, ElementInstance instance) {

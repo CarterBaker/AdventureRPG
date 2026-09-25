@@ -25,6 +25,15 @@ public class AnimationStateHandle extends HandlePackage {
      * space, so applying this matrix moves a vertex by exactly how far
      * its bone has moved away from the rest pose.
      *
+     * Tracks are sampled with a cubic Hermite curve whose tangents come from
+     * the neighbouring keyframes — wrapping around the loop for a looping
+     * clip, flat at the ends of a one-shot — so motion eases through every
+     * key instead of changing direction on a hard corner. Switching clips
+     * never snaps: the pose the entity held at that moment is captured and
+     * cross-faded into the new clip over its blend duration with a smooth
+     * step. Switching between two looping clips carries the normalized
+     * phase across, so a walk that speeds into a run keeps its footfalls.
+     *
      * boneProportions is a per-bone, non-inherited geometry scale layered
      * on top of the clip — skinningMatrices[boneIndex] = currentWorld *
      * S(proportion) * bindWorldInverse — so scaling one bone reshapes only
@@ -44,6 +53,18 @@ public class AnimationStateHandle extends HandlePackage {
     // Playback
     private AnimationClipHandle currentClip;
     private float playbackTime;
+
+    // Blend — the captured pose the current clip is fading in over
+    private float blendElapsed;
+    private float blendDuration;
+    private Vector3[] blendPositions;
+    private Vector3[] blendRotations;
+    private Vector3[] blendScales;
+
+    // Pose — the local pose last evaluated, per bone
+    private Vector3[] posePositions;
+    private Vector3[] poseRotations;
+    private Vector3[] poseScales;
 
     // Proportions — per bone, non-inherited
     private Vector3[] boneProportions;
@@ -74,10 +95,26 @@ public class AnimationStateHandle extends HandlePackage {
         this.skinningMatrices = new Matrix4[boneCount];
         this.currentWorldMatrices = new Matrix4[boneCount];
 
+        // Blend
+        this.blendPositions = new Vector3[boneCount];
+        this.blendRotations = new Vector3[boneCount];
+        this.blendScales = new Vector3[boneCount];
+
+        // Pose
+        this.posePositions = new Vector3[boneCount];
+        this.poseRotations = new Vector3[boneCount];
+        this.poseScales = new Vector3[boneCount];
+
         for (int i = 0; i < boneCount; i++) {
             boneProportions[i] = new Vector3(1f, 1f, 1f);
             skinningMatrices[i] = new Matrix4();
             currentWorldMatrices[i] = new Matrix4();
+            blendPositions[i] = new Vector3();
+            blendRotations[i] = new Vector3();
+            blendScales[i] = new Vector3(1f, 1f, 1f);
+            posePositions[i] = new Vector3();
+            poseRotations[i] = new Vector3();
+            poseScales[i] = new Vector3(1f, 1f, 1f);
         }
 
         // Scratch
@@ -105,12 +142,48 @@ public class AnimationStateHandle extends HandlePackage {
         if (clip == currentClip)
             return;
 
+        if (currentClip != null)
+            beginBlend(clip);
+
+        this.playbackTime = resolveEntryTime(clip);
         this.currentClip = clip;
-        this.playbackTime = 0f;
     }
 
     public AnimationClipHandle getClip() {
         return currentClip;
+    }
+
+    private float resolveEntryTime(AnimationClipHandle clip) {
+
+        if (currentClip == null || !currentClip.isLooping() || !clip.isLooping())
+            return 0f;
+
+        return playbackTime / currentClip.getDuration() * clip.getDuration();
+    }
+
+    // Blend \\
+
+    private void beginBlend(AnimationClipHandle clip) {
+
+        for (int i = 0; i < rigHandle.getBoneCount(); i++) {
+            blendPositions[i].set(posePositions[i]);
+            blendRotations[i].set(poseRotations[i]);
+            blendScales[i].set(poseScales[i]);
+        }
+
+        this.blendElapsed = 0f;
+        this.blendDuration = clip.getBlendDuration();
+    }
+
+    private boolean isBlending() {
+        return blendElapsed < blendDuration;
+    }
+
+    private float resolveBlendWeight() {
+
+        float t = blendElapsed / blendDuration;
+
+        return t * t * (3f - 2f * t);
     }
 
     // Proportions \\
@@ -137,6 +210,7 @@ public class AnimationStateHandle extends HandlePackage {
     private void advanceTime(float deltaTime) {
 
         this.playbackTime += deltaTime;
+        this.blendElapsed += deltaTime;
 
         float duration = currentClip.getDuration();
 
@@ -151,6 +225,8 @@ public class AnimationStateHandle extends HandlePackage {
     private void evaluatePose() {
 
         int boneCount = rigHandle.getBoneCount();
+        boolean blending = isBlending();
+        float blendWeight = blending ? resolveBlendWeight() : 1f;
 
         for (int i = 0; i < boneCount; i++) {
 
@@ -158,6 +234,13 @@ public class AnimationStateHandle extends HandlePackage {
             BoneTrackStruct track = currentClip.hasBoneTrack(i) ? currentClip.getBoneTrack(i) : null;
 
             sampleTrack(track, bone);
+
+            if (blending)
+                blendFromCapture(i, blendWeight);
+
+            posePositions[i].set(positionScratch);
+            poseRotations[i].set(rotationScratch);
+            poseScales[i].set(scaleScratch);
 
             if (!bone.isRoot())
                 positionScratch.multiply(boneProportions[bone.getParentIndex()]);
@@ -180,6 +263,19 @@ public class AnimationStateHandle extends HandlePackage {
                     .multiply(proportionScratch)
                     .multiply(rigHandle.getBindWorldInverseMatrix(i));
         }
+    }
+
+    private void blendFromCapture(int boneIndex, float weight) {
+        mix(positionScratch, blendPositions[boneIndex], weight);
+        mix(rotationScratch, blendRotations[boneIndex], weight);
+        mix(scaleScratch, blendScales[boneIndex], weight);
+    }
+
+    private static void mix(Vector3 target, Vector3 from, float weight) {
+        target.set(
+                lerp(from.x, target.x, weight),
+                lerp(from.y, target.y, weight),
+                lerp(from.z, target.z, weight));
     }
 
     // Sampling \\
@@ -206,34 +302,99 @@ public class AnimationStateHandle extends HandlePackage {
             return;
         }
 
-        for (int i = 0; i < count - 1; i++) {
+        int segment = findSegment(keyframes);
+        boolean looping = currentClip.isLooping();
+        float period = keyframes[count - 1].getTime() - keyframes[0].getTime();
 
-            AnimationKeyframeStruct a = keyframes[i];
-            AnimationKeyframeStruct b = keyframes[i + 1];
+        AnimationKeyframeStruct a = keyframes[segment];
+        AnimationKeyframeStruct b = keyframes[segment + 1];
+        AnimationKeyframeStruct before = resolveBefore(keyframes, segment, looping);
+        AnimationKeyframeStruct after = resolveAfter(keyframes, segment + 1, looping);
 
-            if (playbackTime < a.getTime() || playbackTime > b.getTime())
-                continue;
+        float span = b.getTime() - a.getTime();
+        float t = (playbackTime - a.getTime()) / span;
+        float beforeTime = segment > 0 || !looping ? before.getTime() : before.getTime() - period;
+        float afterTime = segment + 1 < count - 1 || !looping ? after.getTime() : after.getTime() + period;
+        float inTangent = resolveTangentScale(span, beforeTime, b.getTime(), before == b);
+        float outTangent = resolveTangentScale(span, a.getTime(), afterTime, after == a);
 
-            float span = b.getTime() - a.getTime();
-            float t = span > 0f ? (playbackTime - a.getTime()) / span : 0f;
+        positionScratch.set(
+                bone.getPosition().x + hermite(before.getPosition().x, a.getPosition().x, b.getPosition().x,
+                        after.getPosition().x, inTangent, outTangent, t),
+                bone.getPosition().y + hermite(before.getPosition().y, a.getPosition().y, b.getPosition().y,
+                        after.getPosition().y, inTangent, outTangent, t),
+                bone.getPosition().z + hermite(before.getPosition().z, a.getPosition().z, b.getPosition().z,
+                        after.getPosition().z, inTangent, outTangent, t));
 
-            positionScratch.set(
-                    bone.getPosition().x + lerp(a.getPosition().x, b.getPosition().x, t),
-                    bone.getPosition().y + lerp(a.getPosition().y, b.getPosition().y, t),
-                    bone.getPosition().z + lerp(a.getPosition().z, b.getPosition().z, t));
+        rotationScratch.set(
+                bone.getRotation().x + hermite(before.getRotation().x, a.getRotation().x, b.getRotation().x,
+                        after.getRotation().x, inTangent, outTangent, t),
+                bone.getRotation().y + hermite(before.getRotation().y, a.getRotation().y, b.getRotation().y,
+                        after.getRotation().y, inTangent, outTangent, t),
+                bone.getRotation().z + hermite(before.getRotation().z, a.getRotation().z, b.getRotation().z,
+                        after.getRotation().z, inTangent, outTangent, t));
 
-            rotationScratch.set(
-                    bone.getRotation().x + lerp(a.getRotation().x, b.getRotation().x, t),
-                    bone.getRotation().y + lerp(a.getRotation().y, b.getRotation().y, t),
-                    bone.getRotation().z + lerp(a.getRotation().z, b.getRotation().z, t));
+        scaleScratch.set(
+                hermite(before.getScale().x, a.getScale().x, b.getScale().x,
+                        after.getScale().x, inTangent, outTangent, t),
+                hermite(before.getScale().y, a.getScale().y, b.getScale().y,
+                        after.getScale().y, inTangent, outTangent, t),
+                hermite(before.getScale().z, a.getScale().z, b.getScale().z,
+                        after.getScale().z, inTangent, outTangent, t));
+    }
 
-            scaleScratch.set(
-                    lerp(a.getScale().x, b.getScale().x, t),
-                    lerp(a.getScale().y, b.getScale().y, t),
-                    lerp(a.getScale().z, b.getScale().z, t));
+    private int findSegment(AnimationKeyframeStruct[] keyframes) {
 
-            return;
-        }
+        for (int i = 0; i < keyframes.length - 2; i++)
+            if (playbackTime < keyframes[i + 1].getTime())
+                return i;
+
+        return keyframes.length - 2;
+    }
+
+    // A looping track's last key repeats its first, so the neighbour across the seam skips it
+    private AnimationKeyframeStruct resolveBefore(AnimationKeyframeStruct[] keyframes, int index, boolean looping) {
+
+        if (index > 0)
+            return keyframes[index - 1];
+
+        return looping ? keyframes[Math.max(0, keyframes.length - 2)] : keyframes[index + 1];
+    }
+
+    private AnimationKeyframeStruct resolveAfter(AnimationKeyframeStruct[] keyframes, int index, boolean looping) {
+
+        if (index < keyframes.length - 1)
+            return keyframes[index + 1];
+
+        return looping ? keyframes[Math.min(1, keyframes.length - 1)] : keyframes[index - 1];
+    }
+
+    // A mirrored neighbour at a one-shot's end gives a flat tangent, easing into and out of the hold
+    private static float resolveTangentScale(float span, float fromTime, float toTime, boolean flat) {
+
+        float range = toTime - fromTime;
+
+        return flat || range <= 0f ? 0f : span / range;
+    }
+
+    private static float hermite(
+            float before,
+            float a,
+            float b,
+            float after,
+            float inTangent,
+            float outTangent,
+            float t) {
+
+        float t2 = t * t;
+        float t3 = t2 * t;
+        float tangentA = (b - before) * inTangent;
+        float tangentB = (after - a) * outTangent;
+
+        return (2f * t3 - 3f * t2 + 1f) * a
+                + (t3 - 2f * t2 + t) * tangentA
+                + (-2f * t3 + 3f * t2) * b
+                + (t3 - t2) * tangentB;
     }
 
     private void applyKeyframe(AnimationKeyframeStruct keyframe, RigBoneStruct bone) {

@@ -88,6 +88,15 @@ public class PlayerManager extends ManagerPackage {
      * just been moved until its new chunk has generated, then settles it on
      * safe ground. A position that is already safe is kept exactly, so a
      * restored save lands where it was left.
+     *
+     * beginCharacterPreview() turns a window's player into the subject of a
+     * character creator: it stands idle, animating, while the camera frames
+     * it from the front, offset so the character sits clear of the creator's
+     * panels. rotateCharacterPreview() turns it on the spot, and
+     * getFacingDirectionForWindow() is the one facing the render side reads,
+     * the preview's while it runs and the camera's otherwise.
+     * endCharacterPreview() hands the camera back looking the way the
+     * character faces.
      */
 
     // Internal
@@ -119,10 +128,15 @@ public class PlayerManager extends ManagerPackage {
     private Int2BooleanOpenHashMap windowID2FirstPersonToggled;
     private Int2FloatOpenHashMap windowID2PreFirstPersonZoomTarget;
 
+    // Per-window character preview
+    private Int2BooleanOpenHashMap windowID2CharacterPreview;
+    private Int2FloatOpenHashMap windowID2CharacterPreviewYaw;
+
     // Scratch
     private Vector3 cameraPosition;
     private Vector3 cameraOffset;
     private Vector3 eyePosition;
+    private Vector3 facingDirection;
 
     // Internal \\
 
@@ -146,9 +160,13 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2FirstPersonToggled = new Int2BooleanOpenHashMap();
         this.windowID2PreFirstPersonZoomTarget = new Int2FloatOpenHashMap();
 
+        this.windowID2CharacterPreview = new Int2BooleanOpenHashMap();
+        this.windowID2CharacterPreviewYaw = new Int2FloatOpenHashMap();
+
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
         this.eyePosition = new Vector3();
+        this.facingDirection = new Vector3();
     }
 
     @Override
@@ -205,6 +223,8 @@ public class PlayerManager extends ManagerPackage {
         windowID2ZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2FirstPersonToggled.put(windowID, false);
         windowID2PreFirstPersonZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
+        windowID2CharacterPreview.put(windowID, false);
+        windowID2CharacterPreviewYaw.put(windowID, 0f);
         return player;
     }
 
@@ -233,6 +253,11 @@ public class PlayerManager extends ManagerPackage {
         if (verifyPlayerPosition) {
             verifyPlayerPosition = verifyPlayerPosition(player, worldPositionStruct);
             windowID2VerifyPlayerPosition.put(windowID, verifyPlayerPosition);
+            return;
+        }
+
+        if (windowID2CharacterPreview.get(windowID)) {
+            updateCharacterPreview(windowID, player, camera);
             return;
         }
 
@@ -299,6 +324,73 @@ public class PlayerManager extends ManagerPackage {
 
         eyePosition.set(player.getWorldPositionStruct().getPosition());
         eyePosition.add(cameraOffset);
+    }
+
+    // Character Preview \\
+
+    public void beginCharacterPreview(int windowID) {
+
+        Vector3 direction = windowID2Camera.get(windowID).getDirection();
+
+        windowID2CharacterPreviewYaw.put(windowID, (float) Math.atan2(-direction.x, -direction.z));
+        windowID2CharacterPreview.put(windowID, true);
+    }
+
+    public void endCharacterPreview(int windowID) {
+
+        if (!windowID2CharacterPreview.get(windowID))
+            return;
+
+        windowID2CharacterPreview.put(windowID, false);
+        windowID2Camera.get(windowID).setDirection(resolvePreviewFacing(windowID));
+    }
+
+    public void rotateCharacterPreview(int windowID, float degrees) {
+        windowID2CharacterPreviewYaw.put(
+                windowID,
+                windowID2CharacterPreviewYaw.get(windowID) + (float) Math.toRadians(degrees));
+    }
+
+    public Vector3 getFacingDirectionForWindow(int windowID) {
+
+        if (windowID2CharacterPreview.get(windowID))
+            return resolvePreviewFacing(windowID);
+
+        return windowID2Camera.get(windowID).getDirection();
+    }
+
+    private Vector3 resolvePreviewFacing(int windowID) {
+
+        float yaw = windowID2CharacterPreviewYaw.get(windowID);
+
+        return facingDirection.set((float) Math.sin(yaw), 0f, (float) Math.cos(yaw));
+    }
+
+    // The camera looks back at a point beside the character; its right axis along -facing is (facing.z, 0, -facing.x)
+    private void updateCharacterPreview(int windowID, EntityInstance player, CameraInstance camera) {
+
+        player.getEntityStateHandle().setMovementState(EntityState.IDLE);
+        updateAnimationState(player);
+
+        Vector3 facing = resolvePreviewFacing(windowID);
+        Vector3 size = player.getSize();
+        float lateral = EngineSetting.CHARACTER_PREVIEW_LATERAL_OFFSET;
+        float distance = EngineSetting.CHARACTER_PREVIEW_DISTANCE;
+        float lift = EngineSetting.CHARACTER_PREVIEW_LIFT;
+
+        cameraPosition.set(player.getWorldPositionStruct().getPosition());
+        cameraPosition.add(
+                size.x * 0.5f - facing.z * lateral,
+                size.y * EngineSetting.CHARACTER_PREVIEW_FOCUS_HEIGHT,
+                size.z * 0.5f + facing.x * lateral);
+        cameraPosition.add(facing.x * distance, lift, facing.z * distance);
+
+        cameraOffset.set(-facing.x * distance, -lift, -facing.z * distance);
+
+        camera.setPosition(cameraPosition);
+        camera.setDirection(cameraOffset);
+
+        internalBufferSystem.updatePlayerPosition(player.getWorldPositionStruct());
     }
 
     // Placement \\
@@ -374,7 +466,8 @@ public class PlayerManager extends ManagerPackage {
     }
 
     public boolean isFirstPerson(int windowID) {
-        return windowID2ZoomDistance.get(windowID) <= EngineSetting.CAMERA_FIRST_PERSON_THRESHOLD;
+        return !windowID2CharacterPreview.get(windowID)
+                && windowID2ZoomDistance.get(windowID) <= EngineSetting.CAMERA_FIRST_PERSON_THRESHOLD;
     }
 
     private void writeMovementState(EntityInstance player) {

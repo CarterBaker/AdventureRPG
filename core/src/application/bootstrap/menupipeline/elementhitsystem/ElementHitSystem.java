@@ -7,6 +7,7 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.element.ElementStateStruct;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
+import application.bootstrap.menupipeline.util.StackDirection;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.input.Input;
@@ -64,6 +65,10 @@ public class ElementHitSystem extends SystemPackage {
      * owner of an open hover dropdown so the dropdown remains open; the pointed
      * search descends into that dropdown instead, so its items can highlight.
      * Visual only — it never fires callbacks.
+     *
+     * The mouse wheel scrolls the deepest scrollable container under the
+     * cursor along its stack direction, in the first hovered window that has
+     * one — searched in the same priority order and clip rules as hover.
      */
 
     private InputManager inputManager;
@@ -124,6 +129,7 @@ public class ElementHitSystem extends SystemPackage {
         updateHover(hoveredWindows);
         fireOnHoverPerFrame();
         checkClickStateCollapse(hoveredWindows);
+        updateScroll(hoveredWindows);
 
         // Check for a primary click — use the highest-priority hovered window
         // as the authority. If nothing is clicked, nothing to dispatch.
@@ -289,6 +295,89 @@ public class ElementHitSystem extends SystemPackage {
             return;
         pointElement(null);
         fireHoverExit();
+    }
+
+    // Scroll \\
+
+    private void updateScroll(ObjectArrayList<WindowInstance> hoveredWindows) {
+
+        for (int i = 0; i < hoveredWindows.size(); i++) {
+
+            WindowInstance window = hoveredWindows.get(i);
+            MenuListHandle menuList = window.getMenuListHandle();
+
+            if (!menuList.isRaycastLocked())
+                continue;
+
+            float wheel = inputManager.getRawInput(window).getScrollY();
+
+            if (wheel == 0f)
+                continue;
+
+            float mx = inputManager.getHoverMouseX(window);
+            float my = inputManager.getHoverMouseY(window);
+
+            ObjectArrayList<MenuInstance> menus = menuList.getMenus();
+
+            for (int j = menus.size() - 1; j >= 0; j--) {
+
+                MenuInstance menu = menus.get(j);
+
+                if (!menu.isVisible())
+                    continue;
+
+                ElementInstance scrollable = scrollTestElements(
+                        menu.getElements(), mx, my, 0, 0, window.getWidth(), window.getHeight());
+
+                if (scrollable != null) {
+                    scrollElement(scrollable, wheel * EngineSetting.MENU_SCROLL_PIXELS);
+                    return;
+                }
+            }
+        }
+    }
+
+    private ElementInstance scrollTestElements(
+            ObjectArrayList<ElementInstance> elements,
+            float mouseX, float mouseY,
+            float clipLeft, float clipTop,
+            float clipRight, float clipBottom) {
+
+        for (int i = elements.size() - 1; i >= 0; i--) {
+
+            ElementInstance element = elements.get(i);
+
+            if (element.hasChildren()) {
+                float cl = clipLeft, ct = clipTop, cr = clipRight, cb = clipBottom;
+                if (element.getElementData().isMask()) {
+                    cl = Math.max(cl, element.getComputedLeft());
+                    ct = Math.max(ct, element.getComputedTop());
+                    cr = Math.min(cr, element.getComputedLeft() + element.getComputedW());
+                    cb = Math.min(cb, element.getComputedTop() + element.getComputedH());
+                }
+                ElementInstance childHit = scrollTestElements(
+                        element.getChildren(), mouseX, mouseY, cl, ct, cr, cb);
+                if (childHit != null)
+                    return childHit;
+            }
+
+            if (!element.getElementData().isScrollable())
+                continue;
+            if (mouseX < clipLeft || mouseX > clipRight || mouseY < clipTop || mouseY > clipBottom)
+                continue;
+            if (isHit(element, mouseX, mouseY))
+                return element;
+        }
+
+        return null;
+    }
+
+    private void scrollElement(ElementInstance element, float distance) {
+
+        if (element.getElementData().getStackDirection() == StackDirection.VERTICAL)
+            element.setScrollY(element.getScrollY() - distance);
+        else
+            element.setScrollX(element.getScrollX() - distance);
     }
 
     // Point \\

@@ -12,6 +12,7 @@ import application.bootstrap.animationpipeline.animation.BoneTrackStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -24,7 +25,8 @@ class AnimationBuilder extends BuilderPackage {
      * indices at build time, never by name at runtime. Keyframes within a
      * track must be supplied in strictly increasing time order. Duration is
      * derived, never authored — the latest keyframe time across every
-     * track. Bootstrap-only.
+     * track. "blend" is the optional cross-fade time into the clip, falling
+     * back to the engine default. Bootstrap-only.
      */
 
     // Internal
@@ -45,6 +47,10 @@ class AnimationBuilder extends BuilderPackage {
         String rigName = JsonUtility.validateString(json, "rig");
         RigHandle rigHandle = rigManager.getRigHandleFromRigName(rigName);
         boolean looping = json.has("loop") && json.get("loop").getAsBoolean();
+        float blendDuration = JsonUtility.getFloat(json, "blend", EngineSetting.ANIMATION_BLEND_SECONDS);
+
+        if (blendDuration < 0f)
+            throwException("Clip \"" + clipName + "\" has a negative \"blend\" in file: " + file.getName());
 
         BoneTrackStruct[] boneTracks = new BoneTrackStruct[rigHandle.getBoneCount()];
         float duration = 0f;
@@ -72,7 +78,13 @@ class AnimationBuilder extends BuilderPackage {
         if (duration <= 0f)
             throwException("Clip \"" + clipName + "\" has no keyframes past time 0 in file: " + file.getName());
 
-        AnimationClipData clipData = new AnimationClipData(clipName, rigHandle, duration, looping, boneTracks);
+        AnimationClipData clipData = new AnimationClipData(
+                clipName,
+                rigHandle,
+                duration,
+                looping,
+                blendDuration,
+                boneTracks);
 
         AnimationClipHandle handle = create(AnimationClipHandle.class);
         handle.constructor(clipData);

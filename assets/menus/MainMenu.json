@@ -213,8 +213,8 @@
                             "pivot":    "right",
                             "size":     { "x": "47%", "y": "30.72%" },
                             "on_click": {
-                                "class":  "application.runtime.menueventsmanager.menus.MainMenuBranch",
-                                "method": "newGame"
+                                "class":  "application.runtime.menueventsmanager.menus.charactercreator.CharacterCreatorBranch",
+                                "method": "openMenu"
                             },
                             "elements": [
                                 { "id": "newGameLabel", "use": "MainMenu/board_label", "text": "New Game" }
