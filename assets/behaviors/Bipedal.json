@@ -1,3 +1,4 @@
 {
-  "jump_duration": 0.35
+  "jump_duration": 0.35,
+  "turn_responsiveness": 12.0
 }

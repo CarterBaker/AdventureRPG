@@ -1,0 +1,14 @@
+{
+  "rig": "HumanoidRig",
+  "loop": true,
+  "tracks": {
+    "upper_torso": [
+      { "time": 0.0, "rotation": { "x": 0.0, "y": -22.0, "z": 0.0 } },
+      { "time": 1.0, "rotation": { "x": 0.0, "y": -22.0, "z": 0.0 } }
+    ],
+    "head": [
+      { "time": 0.0, "rotation": { "x": 0.0, "y": -50.0, "z": -2.0 } },
+      { "time": 1.0, "rotation": { "x": 0.0, "y": -50.0, "z": -2.0 } }
+    ]
+  }
+}

@@ -9,7 +9,7 @@ public class AnimationClipHandle extends HandlePackage {
      * Persistent reference to a loaded animation clip. Registered and owned
      * by AnimationManager for the engine lifetime. Delegates all track
      * lookups through AnimationClipData — the single source every
-     * AnimationStateHandle samples from during pose evaluation.
+     * AnimationStateHandle samples from while it walks its animation tree.
      */
 
     // Internal
@@ -43,10 +43,6 @@ public class AnimationClipHandle extends HandlePackage {
 
     public boolean isLooping() {
         return clipData.isLooping();
-    }
-
-    public float getBlendDuration() {
-        return clipData.getBlendDuration();
     }
 
     public BoneTrackStruct getBoneTrack(int boneIndex) {

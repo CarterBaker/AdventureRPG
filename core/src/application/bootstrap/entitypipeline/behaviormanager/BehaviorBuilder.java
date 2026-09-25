@@ -27,8 +27,16 @@ class BehaviorBuilder extends BuilderPackage {
         float jumpDuration = json.has("jump_duration")
                 ? json.get("jump_duration").getAsFloat()
                 : EngineSetting.DEFAULT_JUMP_DURATION;
+        float turnResponsiveness = JsonUtility.getFloat(
+                json,
+                "turn_responsiveness",
+                EngineSetting.DEFAULT_TURN_RESPONSIVENESS);
 
-        BehaviorData behaviorData = new BehaviorData(behaviorName, behaviorID, jumpDuration);
+        if (turnResponsiveness <= 0f)
+            throwException("Behavior \"" + behaviorName + "\" must have a positive \"turn_responsiveness\". File: "
+                    + file.getName());
+
+        BehaviorData behaviorData = new BehaviorData(behaviorName, behaviorID, jumpDuration, turnResponsiveness);
 
         BehaviorHandle handle = create(BehaviorHandle.class);
         handle.constructor(behaviorData);

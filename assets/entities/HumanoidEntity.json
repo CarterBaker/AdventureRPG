@@ -8,22 +8,7 @@
   "model": {
     "mesh": "characters/humanoid/HumanoidBodyMesh",
     "material": "characters/StandardCharacterMaterial",
-    "animations": {
-      "idle": "humanoid/HumanoidIdle",
-      "walking": "humanoid/HumanoidWalk",
-      "moving": "humanoid/HumanoidJog",
-      "running": "humanoid/HumanoidRun",
-      "jumping": "humanoid/HumanoidJump",
-      "falling": "humanoid/HumanoidFall",
-      "swimming": "humanoid/HumanoidSwim",
-      "wading": "humanoid/HumanoidWade",
-      "treading": "humanoid/HumanoidTread",
-      "wading_idle": "humanoid/HumanoidWadeIdle",
-      "shallow_wading": "humanoid/HumanoidWadeShallow",
-      "wading_running": "humanoid/HumanoidWadeRun",
-      "water_jumping": "humanoid/HumanoidWaterJump",
-      "water_leaping": "humanoid/HumanoidWaterLeap"
-    },
+    "animation_tree": "humanoid/HumanoidAnimationTree",
     "appearance": {
       "head_bone": "head",
       "skin_color": [0.86, 0.66, 0.52],

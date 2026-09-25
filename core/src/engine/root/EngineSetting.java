@@ -118,6 +118,7 @@ public class EngineSetting {
         // File Paths & Extensions \\
 
         public static final String ANIMATION_JSON_PATH = "animations";
+        public static final String ANIMATION_TREE_JSON_PATH = "animationtrees";
         public static final String BEHAVIOR_JSON_PATH = "behaviors";
         public static final String BIOME_JSON_PATH = "biomes";
         public static final String BLOCK_JSON_PATH = "blocks";
@@ -370,13 +371,17 @@ public class EngineSetting {
         public static final int SWIM_CLIMB_OUT_SCAN_DEPTH = 4;
         public static final float SWIM_DEEP_THRESHOLD = 0.1f;
         public static final float SWIM_DEPTH_FRACTION = 0.75f;
+        public static final float SWIM_DIVE_PITCH_THRESHOLD = 0.5f;
+        public static final float SWIM_DIVE_SPEED = 2.0f;
         public static final float SWIM_HEAD_CLEARANCE = 0.12f;
         public static final float SWIM_LEAP_REST_TOLERANCE = 0.1f;
         public static final float SWIM_MIN_SPEED_MULTIPLIER = 0.15f;
-        public static final float SWIM_SINK_SPEED = 0.5f;
+        public static final float SWIM_SINK_SPEED = 0.15f;
         public static final float SWIM_TREAD_RESPONSIVENESS = 6.0f;
         public static final float SWIM_TREAD_SPEED = 2.0f;
         public static final float SWIM_UP_SPEED = 2.4f;
+        public static final float SWIM_VERTICAL_RESPONSIVENESS = 4.0f;
+        public static final float SWIM_VERTICAL_STATE_SPEED = 0.8f;
         public static final float SWIM_VISCOSITY_DRAG_SCALE = 0.12f;
         public static final float SWIM_VISCOSITY_REFERENCE = 1.0f;
         public static final float WADE_DEEP_SPEED_MULTIPLIER = 0.55f;
@@ -735,6 +740,7 @@ public class EngineSetting {
 
         public static final float FIXED_TIME_STEP = 0.02f;
         public static final float GRAVITY_FORCE = 9.8f;
+        public static final float GROUNDED_FALL_SPEED = 5.0f;
         public static final float JUMP_HOLD_FRACTION = 0.4f;
         public static final float JUMP_SCALE = 1.8f;
         public static final float MOVEMENT_ACCELERATION = 8.0f;
@@ -756,9 +762,12 @@ public class EngineSetting {
         public static final float DEFAULT_REACH = 1f;
         public static final float DEFAULT_SPRINT_SPEED = 7f;
         public static final float DEFAULT_SWIM_SPEED = 2.4f;
+        public static final float DEFAULT_TURN_RESPONSIVENESS = 12f;
         public static final float DEFAULT_WALK_SPEED = 1.4f;
+        public static final float FACING_VELOCITY_EPSILON = 0.01f;
         public static final float FREE_CAMERA_FLIGHT_SPEED = 12f;
         public static final float FREE_CAMERA_SPRINT_MULTIPLIER = 4f;
+        public static final float TURN_RATE_SMOOTHING = 8f;
         public static final int MAX_BONE_INFLUENCES = 4;
         public static final int SKINNED_BONE_TEXELS_PER_BONE = 3;
         public static final float SKINNED_HIDDEN_BONE_NONE = -1f;
@@ -772,6 +781,11 @@ public class EngineSetting {
         // Animation \\
 
         public static final float ANIMATION_BLEND_SECONDS = 0.22f;
+        public static final float ANIMATION_RATE_SCALE_MAX = 1.5f;
+        public static final float ANIMATION_RATE_SCALE_MIN = 0.35f;
+        public static final float DEFAULT_ANIMATION_LAYER_WEIGHT = 1f;
+        public static final float DEFAULT_ANIMATION_NODE_DELAY = 0f;
+        public static final float DEFAULT_ANIMATION_NODE_RATE = 1f;
 
         // Appearance \\
 

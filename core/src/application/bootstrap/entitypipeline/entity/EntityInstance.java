@@ -1,6 +1,7 @@
 package application.bootstrap.entitypipeline.entity;
 
 import application.bootstrap.entitypipeline.animation.AnimationStateHandle;
+import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
@@ -20,7 +21,9 @@ public class EntityInstance extends InstancePackage {
      * reference to its template EntityData plus all per-instance runtime
      * state — position, physics, statistics, inventory, movement state, and input.
      * Weight also drives the body build of an entity with an appearance, so
-     * setWeight() is the one path that keeps the two in step.
+     * setWeight() is the one path that keeps the two in step. updateAnimation()
+     * is the one path that feeds the entity's movement and facing into its
+     * animation tree as parameters and advances it a frame.
      */
 
     // Internal
@@ -98,8 +101,8 @@ public class EntityInstance extends InstancePackage {
         if (entityData.hasCharacterModel()) {
             this.animationStateHandle = create(AnimationStateHandle.class);
             this.animationStateHandle.constructor(
-                    entityData.getRigHandle(),
-                    entityData.getClipForState(EntityState.IDLE));
+                    entityData.getAnimationTreeHandle(),
+                    entityStateHandle.getMovementState());
         }
 
         // Appearance
@@ -110,6 +113,21 @@ public class EntityInstance extends InstancePackage {
                     animationStateHandle,
                     entityData.getWeightRatio(weight));
         }
+    }
+
+    // Animation \\
+
+    public void updateAnimation(float deltaTime) {
+
+        if (animationStateHandle == null)
+            return;
+
+        animationStateHandle.setParameter(AnimationParameter.SPEED, entityStateHandle.getHorizontalSpeed());
+        animationStateHandle.setParameter(AnimationParameter.VERTICAL_SPEED, entityStateHandle.getVerticalSpeed());
+        animationStateHandle.setParameter(AnimationParameter.TURN_RATE, entityStateHandle.getBodyYawRate());
+        animationStateHandle.setParameter(AnimationParameter.LOOK_PITCH, entityStateHandle.getLookPitch());
+        animationStateHandle.setParameter(AnimationParameter.LOOK_YAW, entityStateHandle.getLookYaw());
+        animationStateHandle.update(entityStateHandle.getMovementState(), deltaTime);
     }
 
     // Utility \\

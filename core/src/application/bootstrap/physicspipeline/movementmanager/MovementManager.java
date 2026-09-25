@@ -16,11 +16,15 @@ public class MovementManager extends ManagerPackage {
      * Drives the full movement pipeline for any entity each frame in a fixed
      * order: liquid contact, water leaps, horizontal movement, swimming or
      * gravity, collision, post-collision correction, the water movement
-     * state, position application, and the cosmetic ground offset. SwimBranch
-     * resolves water depth first and decides whether the entity wades (gravity
-     * owns Y with a depth-nerfed jump) or swims (SwimBranch owns Y); any leap
-     * hands Y back to gravity until it falls again. fly() is the physics-free
-     * counterpart used by free cameras, and both paths share applyMovement().
+     * state, position application, the cosmetic ground offset, and the
+     * body's facing. SwimBranch resolves water depth first and decides
+     * whether the entity wades (gravity owns Y with a depth-nerfed jump) or
+     * swims (SwimBranch owns Y); any leap hands Y back to gravity until it
+     * falls again; a swimmer blocked above or below stops moving that way.
+     * fly() is the physics-free counterpart used by free cameras, and both
+     * paths share applyMovement(), which also records the speed actually
+     * travelled. face() turns an entity's body on its own, for entities
+     * posed without being moved.
      */
 
     // Internal
@@ -30,6 +34,7 @@ public class MovementManager extends ManagerPackage {
     private SwimBranch swimBranch;
     private NaturalGroundOffsetBranch naturalGroundOffsetBranch;
     private FlightBranch flightBranch;
+    private FacingBranch facingBranch;
 
     // Cached Vectors
     private Vector3 movement;
@@ -50,6 +55,7 @@ public class MovementManager extends ManagerPackage {
         this.swimBranch = create(SwimBranch.class);
         this.naturalGroundOffsetBranch = create(NaturalGroundOffsetBranch.class);
         this.flightBranch = create(FlightBranch.class);
+        this.facingBranch = create(FacingBranch.class);
 
         // Cached Vectors
         this.movement = new Vector3();
@@ -101,6 +107,8 @@ public class MovementManager extends ManagerPackage {
 
         if (!climbedOut && !swimming)
             gravityBranch.postCollision(preCollisionSnapshot, movement, entity);
+        else if (!climbedOut)
+            swimBranch.postCollision(preCollisionSnapshot, movement, entity);
 
         // 8. Water movement state — wading, treading, and water jump variants
         if (!climbedOut)
@@ -111,6 +119,9 @@ public class MovementManager extends ManagerPackage {
 
         // 10. Cosmetic ground offset — reads the now-final flat position only
         naturalGroundOffsetBranch.update(entity);
+
+        // 11. Facing — turns the body toward the heading just travelled
+        facingBranch.update(entity);
     }
 
     public void fly(EntityInstance entity) {
@@ -124,6 +135,10 @@ public class MovementManager extends ManagerPackage {
         applyMovement(entity);
     }
 
+    public void face(EntityInstance entity) {
+        facingBranch.update(entity);
+    }
+
     // Apply \\
 
     private void applyMovement(EntityInstance entity) {
@@ -133,6 +148,9 @@ public class MovementManager extends ManagerPackage {
         long chunkCoordinate = worldPosition.getChunkCoordinate();
         int chunkCoordinateX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkCoordinateY = Coordinate2Long.unpackY(chunkCoordinate);
+
+        // Speed
+        recordSpeed(entity);
 
         // Apply
         position.x += movement.x;
@@ -148,6 +166,18 @@ public class MovementManager extends ManagerPackage {
 
         worldPosition.setPosition(position);
         worldPosition.setChunkCoordinate(chunkCoordinate);
+    }
+
+    private void recordSpeed(EntityInstance entity) {
+
+        float delta = internal.getDeltaTime();
+
+        if (delta <= 0f)
+            return;
+
+        float horizontal = (float) Math.sqrt(movement.x * movement.x + movement.z * movement.z);
+
+        entity.getEntityStateHandle().setSpeed(horizontal / delta, movement.y / delta);
     }
 
     // Chunk \\

@@ -19,13 +19,18 @@ public class GravityBranch extends BranchPackage {
      * already resolved by SwimBranch, so water depth nerfs it without this
      * branch knowing about liquid; jump() is the single place a jump impulse
      * is applied, shared by grounded jumps and every water leap, and the jump
-     * state it starts with is kept until the entity begins to fall.
+     * state it starts with is kept until the entity begins to fall. Landing
+     * settles an airborne entity to IDLE, while an entity already on the
+     * ground keeps the grounded state it was given. A grounded entity that
+     * is not held up by the ground only turns FALLING once it drops faster
+     * than GROUNDED_FALL_SPEED, so stepping down a block keeps its stride.
      */
 
     // Settings
     private float gravityForce;
     private float jumpScale;
     private float jumpHoldFraction;
+    private float groundedFallSpeed;
 
     // Internal \\
 
@@ -36,6 +41,7 @@ public class GravityBranch extends BranchPackage {
         this.gravityForce = EngineSetting.GRAVITY_FORCE;
         this.jumpScale = EngineSetting.JUMP_SCALE;
         this.jumpHoldFraction = EngineSetting.JUMP_HOLD_FRACTION;
+        this.groundedFallSpeed = EngineSetting.GROUNDED_FALL_SPEED;
     }
 
     // Gravity \\
@@ -119,12 +125,26 @@ public class GravityBranch extends BranchPackage {
             gravVel.z = 0f;
         }
 
-        if (!blocked)
+        if (!blocked) {
+            resolveUnsupported(state, gravVel, gravDir);
+            return;
+        }
+
+        if (!movingWithGravity)
+            state.setMovementState(EntityState.FALLING);
+        else if (!state.isGrounded())
+            state.setMovementState(EntityState.IDLE);
+    }
+
+    private void resolveUnsupported(EntityStateHandle state, Vector3 gravVel, Vector3 gravDir) {
+
+        if (!state.isGrounded())
             return;
 
-        if (movingWithGravity)
-            state.setMovementState(EntityState.IDLE);
-        else
+        float fallSpeed = (gravVel.x * gravDir.x + gravVel.y * gravDir.y + gravVel.z * gravDir.z)
+                / calculateGravityLength(gravDir);
+
+        if (fallSpeed > groundedFallSpeed)
             state.setMovementState(EntityState.FALLING);
     }
 

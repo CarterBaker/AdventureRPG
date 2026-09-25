@@ -1,6 +1,6 @@
 package application.bootstrap.entitypipeline.entity;
 
-import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
+import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
@@ -16,8 +16,9 @@ public class EntityData extends DataPackage {
      * range, weight range, eye level, and behavior name for one entity type.
      * Owned by EntityHandle in the manager palette for the engine lifetime.
      *
-     * characterMesh, characterMaterial, and stateClips are all null for any
-     * entity template with no "model" block in its JSON — entirely optional.
+     * characterMesh, characterMaterial, and animationTreeHandle are all null
+     * for any entity template with no "model" block in its JSON — entirely
+     * optional.
      * characterMaterial is resolved exactly once here, at template-load
      * time, and every EntityInstance of this template shares this exact
      * same reference — the same guarantee EntityData itself already gives
@@ -46,7 +47,7 @@ public class EntityData extends DataPackage {
     private final MeshHandle characterMesh;
     private final MaterialInstance characterMaterial;
     private final RigHandle rigHandle;
-    private final AnimationClipHandle[] stateClips;
+    private final AnimationTreeHandle animationTreeHandle;
     private final float modelHeight;
 
     // Appearance — optional
@@ -63,7 +64,7 @@ public class EntityData extends DataPackage {
             String behaviorName,
             MeshHandle characterMesh,
             MaterialInstance characterMaterial,
-            AnimationClipHandle[] stateClips,
+            AnimationTreeHandle animationTreeHandle,
             float modelHeight,
             AppearanceData appearanceData) {
 
@@ -83,7 +84,7 @@ public class EntityData extends DataPackage {
         this.characterMesh = characterMesh;
         this.characterMaterial = characterMaterial;
         this.rigHandle = characterMesh != null ? characterMesh.getRigHandle() : null;
-        this.stateClips = stateClips;
+        this.animationTreeHandle = animationTreeHandle;
         this.modelHeight = modelHeight;
 
         // Appearance
@@ -132,8 +133,8 @@ public class EntityData extends DataPackage {
         return rigHandle;
     }
 
-    public AnimationClipHandle getClipForState(EntityState state) {
-        return stateClips == null ? null : stateClips[state.ordinal()];
+    public AnimationTreeHandle getAnimationTreeHandle() {
+        return animationTreeHandle;
     }
 
     public float getModelHeight() {

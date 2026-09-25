@@ -11,7 +11,9 @@ public class EntityInputHandle extends HandlePackage {
      * PlayerManager for the player entity or by AI for NPCs. MovementManager
      * reads from this and never cares about the source.
      * Disconnected from RawInputHandle by design — the translation from raw
-     * hardware state to game intent happens in PlayerManager.
+     * hardware state to game intent happens in PlayerManager. strafe holds
+     * the body to the facing direction instead of letting it turn toward
+     * wherever the entity is heading.
      */
 
     // Movement
@@ -22,6 +24,7 @@ public class EntityInputHandle extends HandlePackage {
     private boolean jump;
     private boolean walk;
     private boolean sprint;
+    private boolean strafe;
 
     // Actions
     private boolean primaryAction;
@@ -95,6 +98,14 @@ public class EntityInputHandle extends HandlePackage {
         sprint = v;
     }
 
+    public boolean isStrafe() {
+        return strafe;
+    }
+
+    public void setStrafe(boolean v) {
+        strafe = v;
+    }
+
     public boolean isPrimaryAction() {
         return primaryAction;
     }
@@ -139,7 +150,7 @@ public class EntityInputHandle extends HandlePackage {
 
     public void clear() {
         forward = back = left = right = false;
-        jump = walk = sprint = false;
+        jump = walk = sprint = strafe = false;
         primaryAction = secondaryAction = false;
     }
 }

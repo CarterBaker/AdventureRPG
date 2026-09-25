@@ -24,6 +24,15 @@ public class SwimBranch extends BranchPackage {
      * running penalty, the depth-scaled jump nerf with its minimum, the running entry leap, the switch to swimming
      * once the water reaches SWIM_DEPTH_FRACTION of the entity's height, the surface leap, climbing out onto any
      * ledge or shelf within reach of the surface, and the water flavour of the movement state animation reads.
+     *
+     * A swimmer is either surfaced — treading so its eye clears the water — or under. Jump swims up and walk dives;
+     * swimming forward climbs or dives along the facing pitch, and looking down steeply enough, or walking, pulls a
+     * surfaced swimmer under. Left alone underwater it drifts down at SWIM_SINK_SPEED. Vertical speed eases toward
+     * its target at SWIM_VERTICAL_RESPONSIVENESS, so a fall into deep water plunges and recovers, and a swimmer
+     * bobs as it settles at the surface. The surface leap only fires while treading, never mid-stroke. The state
+     * splits surfaced swimming and treading from their underwater twins, with DIVING and SURFACING whenever the
+     * swimmer moves vertically faster than SWIM_VERTICAL_STATE_SPEED; wading states split shallow from deep water
+     * at WADE_SHALLOW_DEPTH_FACTOR.
      */
 
     // Internal
@@ -41,6 +50,7 @@ public class SwimBranch extends BranchPackage {
     private float surfaceY;
     private float depth;
     private float depthFactor;
+    private boolean surfaced;
 
     // Column
     private ChunkInstance currentChunk;
@@ -189,7 +199,9 @@ public class SwimBranch extends BranchPackage {
 
     boolean isSurfaceLeap(EntityInstance entity) {
 
-        if (!isSwimming() || !entity.getEntityInputHandle().isJump())
+        EntityInputHandle input = entity.getEntityInputHandle();
+
+        if (!isSwimming() || !input.isJump() || input.hasHorizontalInput())
             return false;
 
         Vector3 position = entity.getWorldPositionStruct().getPosition();
@@ -215,16 +227,31 @@ public class SwimBranch extends BranchPackage {
     }
 
     private EntityState resolveSwimState(EntityInstance entity) {
-        return entity.getEntityInputHandle().hasHorizontalInput() ? EntityState.SWIMMING : EntityState.TREADING;
+
+        boolean moving = entity.getEntityInputHandle().hasHorizontalInput();
+
+        if (surfaced)
+            return moving ? EntityState.SWIMMING : EntityState.TREADING;
+
+        float verticalSpeed = entity.getEntityStateHandle().getGravityVelocity().y;
+
+        if (verticalSpeed < -EngineSetting.SWIM_VERTICAL_STATE_SPEED)
+            return EntityState.DIVING;
+
+        if (verticalSpeed > EngineSetting.SWIM_VERTICAL_STATE_SPEED)
+            return EntityState.SURFACING;
+
+        return moving ? EntityState.UNDERWATER_SWIMMING : EntityState.UNDERWATER_TREADING;
     }
 
     private EntityState resolveWadeState(EntityState movementState) {
+
+        boolean shallow = depthFactor < EngineSetting.WADE_SHALLOW_DEPTH_FACTOR;
+
         return switch (movementState) {
-            case IDLE -> EntityState.WADING_IDLE;
-            case WALKING, MOVING -> depthFactor < EngineSetting.WADE_SHALLOW_DEPTH_FACTOR
-                    ? EntityState.SHALLOW_WADING
-                    : EntityState.WADING;
-            case RUNNING -> EntityState.WADING_RUNNING;
+            case IDLE -> shallow ? EntityState.SHALLOW_WADING_IDLE : EntityState.WADING_IDLE;
+            case WALKING, MOVING -> shallow ? EntityState.SHALLOW_WADING : EntityState.WADING;
+            case RUNNING -> shallow ? EntityState.SHALLOW_WADING_RUNNING : EntityState.WADING_RUNNING;
             case JUMPING -> EntityState.WATER_JUMPING;
             default -> movementState;
         };
@@ -236,27 +263,70 @@ public class SwimBranch extends BranchPackage {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         EntityInputHandle input = entity.getEntityInputHandle();
-        Vector3 position = entity.getWorldPositionStruct().getPosition();
         Vector3 vertical = state.getGravityVelocity();
         float delta = internal.getDeltaTime();
+        float smoothing = Math.min(1f, delta * EngineSetting.SWIM_VERTICAL_RESPONSIVENESS);
 
         state.setMovementState(EntityState.SWIMMING);
 
-        if (calculateGapAboveEye(entity) > EngineSetting.SWIM_DEEP_THRESHOLD) {
+        this.surfaced = calculateGapAboveEye(entity) <= EngineSetting.SWIM_DEEP_THRESHOLD
+                && !isDiving(input)
+                && !isPlunging(vertical);
 
-            // Underwater — sink gently, or swim up while jump is held
-            vertical.y = input.isJump()
-                    ? EngineSetting.SWIM_UP_SPEED * speedMultiplier
-                    : -EngineSetting.SWIM_SINK_SPEED * speedMultiplier;
-        } else {
+        float target = surfaced
+                ? resolveTreadSpeed(entity)
+                : resolveUnderwaterSpeed(input);
 
-            // Surface — tread so the eye clears the water by SWIM_HEAD_CLEARANCE
-            float diff = calculateTreadHeight(entity) - position.y;
-            float maxStep = EngineSetting.SWIM_TREAD_SPEED * speedMultiplier;
-            vertical.y = Math.max(-maxStep, Math.min(maxStep, diff * EngineSetting.SWIM_TREAD_RESPONSIVENESS));
-        }
-
+        vertical.y += (target - vertical.y) * smoothing;
         movement.y += vertical.y * delta;
+    }
+
+    // Surface — tread so the eye clears the water by SWIM_HEAD_CLEARANCE
+    private float resolveTreadSpeed(EntityInstance entity) {
+
+        float diff = calculateTreadHeight(entity) - entity.getWorldPositionStruct().getPosition().y;
+        float maxStep = EngineSetting.SWIM_TREAD_SPEED * speedMultiplier;
+
+        return Math.max(-maxStep, Math.min(maxStep, diff * EngineSetting.SWIM_TREAD_RESPONSIVENESS));
+    }
+
+    // Underwater — jump swims up, walk dives, a stroke follows the facing pitch, and a still swimmer drifts down
+    private float resolveUnderwaterSpeed(EntityInputHandle input) {
+
+        if (input.isJump())
+            return EngineSetting.SWIM_UP_SPEED * speedMultiplier;
+
+        if (input.isWalk())
+            return -EngineSetting.SWIM_DIVE_SPEED * speedMultiplier;
+
+        if (input.getHorizontalZ() != 0)
+            return resolveStrokePitch(input) * EngineSetting.SWIM_DIVE_SPEED * speedMultiplier;
+
+        return -EngineSetting.SWIM_SINK_SPEED * speedMultiplier;
+    }
+
+    private boolean isDiving(EntityInputHandle input) {
+        return input.isWalk() || resolveStrokePitch(input) < -EngineSetting.SWIM_DIVE_PITCH_THRESHOLD;
+    }
+
+    // Sinking faster than treading ever moves means the swimmer arrived from a fall and is still plunging
+    private boolean isPlunging(Vector3 vertical) {
+        return vertical.y < -EngineSetting.SWIM_TREAD_SPEED * speedMultiplier;
+    }
+
+    // How steeply the stroke heads up or down — the facing pitch, reversed when swimming backward
+    private float resolveStrokePitch(EntityInputHandle input) {
+
+        Vector3 facing = input.getFacingDirection();
+        float length = facing.length();
+
+        return length > 0f ? facing.y / length * input.getHorizontalZ() : 0f;
+    }
+
+    void postCollision(Vector3 preCollision, Vector3 postCollision, EntityInstance entity) {
+
+        if (preCollision.y != 0f && postCollision.y == 0f)
+            entity.getEntityStateHandle().getGravityVelocity().y = 0f;
     }
 
     private float calculateTreadHeight(EntityInstance entity) {
