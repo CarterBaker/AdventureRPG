@@ -106,6 +106,18 @@ public class PlacementManager extends ManagerPackage {
         return blockBranch.tryPlace(castStruct, blockID);
     }
 
+    public boolean placeSubBlock(
+            EntityInstance entity,
+            Vector3 origin,
+            Vector3 direction,
+            short blockID) {
+
+        if (!castFrom(entity, origin, direction))
+            return false;
+
+        return blockBranch.tryPlaceSubBlock(castStruct, blockID);
+    }
+
     // Raycast \\
 
     private boolean castFrom(EntityInstance entity, Vector3 origin, Vector3 direction) {

@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
@@ -19,6 +20,9 @@ class ItemBranch extends BranchPackage {
      * Handles world item placement for PlacementManager. Resolves the target
      * block face, computes sub-voxel placement position, determines item
      * orientation from camera direction, and delegates to WorldItemPlacementSystem.
+     * The face hit is the face of the sub-block the ray met, so an item set on
+     * a half-block slab rests on the slab rather than on the empty half above
+     * it, which stays in the same cell.
      */
 
     // Internal
@@ -28,6 +32,7 @@ class ItemBranch extends BranchPackage {
     // Settings
     private int chunkSize;
     private int subVoxelResolution;
+    private int subVoxelsPerSubBlock;
 
     // Internal \\
 
@@ -37,6 +42,7 @@ class ItemBranch extends BranchPackage {
         // Settings
         this.chunkSize = EngineSetting.CHUNK_SIZE;
         this.subVoxelResolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        this.subVoxelsPerSubBlock = subVoxelResolution / SubBlockUtility.DIVISIONS;
     }
 
     @Override
@@ -55,10 +61,13 @@ class ItemBranch extends BranchPackage {
             return false;
 
         Direction3Vector hitFace = castStruct.getHitFace();
+        int hitOctant = castStruct.getHitOctant();
+        int targetOctant = SubBlockUtility.stepOctant(hitOctant, hitFace);
+        int cellStep = SubBlockUtility.leavesCell(hitOctant, hitFace) ? 1 : 0;
 
-        int placeX = castStruct.getBlockX() + hitFace.x;
-        int placeY = castStruct.getBlockY() + hitFace.y;
-        int placeZ = castStruct.getBlockZ() + hitFace.z;
+        int placeX = castStruct.getBlockX() + hitFace.x * cellStep;
+        int placeY = castStruct.getBlockY() + hitFace.y * cellStep;
+        int placeZ = castStruct.getBlockZ() + hitFace.z * cellStep;
         int placeSubChunkY = castStruct.getSubChunkY();
 
         int placeChunkX = Coordinate2Long.unpackX(castStruct.getChunkCoordinate());
@@ -98,12 +107,15 @@ class ItemBranch extends BranchPackage {
         int rotation = resolveItemOrientation(hitFaceDir, direction);
         int chunkLocalY = placeSubChunkY * chunkSize + placeY;
 
-        int subX = placeX * subVoxelResolution
-                + (hitFace.x != 0 ? (hitFace.x > 0 ? 0 : subVoxelResolution - 1) : castStruct.getHitSubX());
-        int subY = chunkLocalY * subVoxelResolution
-                + (hitFace.y != 0 ? (hitFace.y > 0 ? 0 : subVoxelResolution - 1) : castStruct.getHitSubY());
-        int subZ = placeZ * subVoxelResolution
-                + (hitFace.z != 0 ? (hitFace.z > 0 ? 0 : subVoxelResolution - 1) : castStruct.getHitSubZ());
+        int subX = placeX * subVoxelResolution + (hitFace.x != 0
+                ? resolveFaceSubVoxel(SubBlockUtility.getOctantX(targetOctant), hitFace.x)
+                : castStruct.getHitSubX());
+        int subY = chunkLocalY * subVoxelResolution + (hitFace.y != 0
+                ? resolveFaceSubVoxel(SubBlockUtility.getOctantY(targetOctant), hitFace.y)
+                : castStruct.getHitSubY());
+        int subZ = placeZ * subVoxelResolution + (hitFace.z != 0
+                ? resolveFaceSubVoxel(SubBlockUtility.getOctantZ(targetOctant), hitFace.z)
+                : castStruct.getHitSubZ());
 
         ItemDefinitionHandle def = entity.getInventoryHandle().getBackpack().getItems().get(0);
         int packedItem = def.getItemID();
@@ -112,6 +124,11 @@ class ItemBranch extends BranchPackage {
         worldItemPlacementSystem.placeItem(placeChunk, placeSubChunkY, packedPosition, packedItem, def);
 
         return true;
+    }
+
+    // The sub-voxel of the target octant touching the face that was hit, along that face's axis
+    private int resolveFaceSubVoxel(int targetOctantAxis, int faceComponent) {
+        return targetOctantAxis * subVoxelsPerSubBlock + (faceComponent > 0 ? 0 : subVoxelsPerSubBlock - 1);
     }
 
     // Orientation \\

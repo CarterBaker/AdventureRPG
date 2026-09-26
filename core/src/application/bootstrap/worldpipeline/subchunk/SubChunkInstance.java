@@ -6,6 +6,7 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemPaletteHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
@@ -39,7 +40,10 @@ public class SubChunkInstance extends WorldRenderInstance {
      * Liquid state lives per cell in the block palette's liquid child, so a
      * subchunk is liquid-stable exactly when none of its liquid cells are
      * active, and value reads answer for a virtual subchunk without ever
-     * realizing storage.
+     * realizing storage. A cell subdivided into sub-blocks keeps its material
+     * as its block and its octants in the block palette's partial child, and
+     * setSubBlocks() is the single write path that subdivides, collapses, or
+     * clears one.
      */
 
     // Internal
@@ -381,6 +385,34 @@ public class SubChunkInstance extends WorldRenderInstance {
         opaqueInterior = false;
     }
 
+    /*
+     * The single write path for a cell's sub-blocks. The mask names which
+     * octants of blockID are present: every octant writes the whole block,
+     * none writes air, and anything between subdivides the cell.
+     */
+    public void setSubBlocks(int packedXYZ, short blockID, int mask) {
+
+        if (mask == SubBlockUtility.MASK_EMPTY) {
+            setBlock(packedXYZ, airBlockId);
+            return;
+        }
+
+        if (mask == SubBlockUtility.MASK_FULL) {
+            setBlock(packedXYZ, blockID);
+            return;
+        }
+
+        ensurePopulated();
+
+        if (blockPaletteHandle.getBlock(packedXYZ) != blockID)
+            blockPaletteHandle.setBlock(packedXYZ, blockID);
+
+        blockPaletteHandle.setSubBlockMask(packedXYZ, mask);
+        knownEmpty = false;
+        uniformFill = false;
+        opaqueInterior = false;
+    }
+
     public void setLiquidLevel(int x, int y, int z, short level) {
         setLiquidLevel(Coordinate3Int.pack(x, y, z), level);
     }
@@ -482,6 +514,16 @@ public class SubChunkInstance extends WorldRenderInstance {
         if (!populated)
             return uniformFill ? uniformBlockID : airBlockId;
         return blockPaletteHandle.getBlock(packedXYZ);
+    }
+
+    public int getSubBlockMask(int x, int y, int z) {
+        return getSubBlockMask(Coordinate3Int.pack(x, y, z));
+    }
+
+    public int getSubBlockMask(int packedXYZ) {
+        if (!populated)
+            return SubBlockUtility.MASK_FULL;
+        return blockPaletteHandle.getSubBlockMask(packedXYZ);
     }
 
     public short getLiquidLevel(int x, int y, int z) {

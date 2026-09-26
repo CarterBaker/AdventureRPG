@@ -169,11 +169,19 @@ class BlockBuilder extends BuilderPackage {
     // Utility \\
 
     private DynamicGeometryType parseBlockType(String typeStr) {
+
+        DynamicGeometryType blockType = null;
+
         try {
-            return DynamicGeometryType.valueOf(typeStr.toUpperCase());
+            blockType = DynamicGeometryType.valueOf(typeStr.toUpperCase());
         } catch (IllegalArgumentException e) {
             throwException("Invalid block type: " + typeStr);
-            return null;
         }
+
+        if (blockType == DynamicGeometryType.PARTIAL)
+            throwException("Block type PARTIAL is reserved for cells subdivided into sub-blocks — "
+                    + "declare the block FULL and subdivide it in the world instead");
+
+        return blockType;
     }
 }

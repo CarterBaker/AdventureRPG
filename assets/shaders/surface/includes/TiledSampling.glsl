@@ -1,6 +1,12 @@
 #ifndef TILED_SAMPLING_GLSL
 #define TILED_SAMPLING_GLSL
 
+#include "surface/includes/SurfaceTessellationTier.glsl"
+
+// Samples a face texture per block. A natural top or bottom face spins its tile by a hash of the block it
+// belongs to, found a quarter block behind the sampled position — inside the owning sub-block, so a sub-block
+// face lying inside its block, or on either side of a block boundary, always resolves to its own block.
+
 int blockPosHash(ivec3 p) {
     int h = p.x * 1619 + p.y * 31337 + p.z * 6271;
     h ^= (h >> 14);
@@ -18,7 +24,7 @@ vec2 tileUV(vec3 localPos, vec2 uvOrigin, vec3 normal, float encodedFaceF) {
     if (encodedFace >= 24) {
         int faceOrdinal = encodedFace - 24;
         axisMode = 0;
-        ivec3 blockPos = ivec3(floor(localPos - normal * 0.5));
+        ivec3 blockPos = ivec3(floor(localPos - normal * (SUB_BLOCK_SIZE * 0.5)));
         // Mask to [0, CHUNK_SIZE-1] so block (1,1,1) hashes identically in every chunk.
         // u_chunkSize = 16 (const from SettingsData.glsl); power-of-two so & mask is exact,
         // and two's complement makes it correct for negative coordinates too.

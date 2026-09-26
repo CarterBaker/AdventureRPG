@@ -6,7 +6,8 @@ import engine.root.StructPackage;
 /**
  * Per-chunk-column memo of WorldGenerationManager.computeColumn()'s output —
  * the chunk's identity biome, and per block column its ground height, its
- * dressing blocks, and whether the ocean reaches it. computeColumn() is a
+ * dressing blocks, whether the ocean reaches it, and the sub-block octants of
+ * its smoothed ground and cap cells. computeColumn() is a
  * pure function of (seed, coordinate), so a cache hit and a fresh recompute
  * always produce identical results; this exists purely to skip the noise and
  * biome field work on a GENERATION_DATA reload, never to preserve player-edited
@@ -30,6 +31,8 @@ public class GenerationCacheStruct extends StructPackage {
     private final short[] subsurfaceBlockID = new short[COLUMN_COUNT];
     private final short[] underwaterBlockID = new short[COLUMN_COUNT];
     private final boolean[] oceanWater = new boolean[COLUMN_COUNT];
+    private final byte[] groundMask = new byte[COLUMN_COUNT];
+    private final byte[] capMask = new byte[COLUMN_COUNT];
 
     private short columnMinGroundHeightBlocks;
     private short columnMaxGroundHeightBlocks;
@@ -49,6 +52,8 @@ public class GenerationCacheStruct extends StructPackage {
             short[] subsurfaceBlockID,
             short[] underwaterBlockID,
             boolean[] oceanWater,
+            byte[] groundMask,
+            byte[] capMask,
             int columnMinGroundHeightBlocks,
             int columnMaxGroundHeightBlocks,
             int columnTopBlocks,
@@ -66,6 +71,8 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(subsurfaceBlockID, 0, this.subsurfaceBlockID, 0, COLUMN_COUNT);
         System.arraycopy(underwaterBlockID, 0, this.underwaterBlockID, 0, COLUMN_COUNT);
         System.arraycopy(oceanWater, 0, this.oceanWater, 0, COLUMN_COUNT);
+        System.arraycopy(groundMask, 0, this.groundMask, 0, COLUMN_COUNT);
+        System.arraycopy(capMask, 0, this.capMask, 0, COLUMN_COUNT);
 
         this.columnMinGroundHeightBlocks = (short) columnMinGroundHeightBlocks;
         this.columnMaxGroundHeightBlocks = (short) columnMaxGroundHeightBlocks;
@@ -116,6 +123,14 @@ public class GenerationCacheStruct extends StructPackage {
 
     public void copyOceanWaterInto(boolean[] destination) {
         System.arraycopy(oceanWater, 0, destination, 0, COLUMN_COUNT);
+    }
+
+    public void copyGroundMasksInto(byte[] destination) {
+        System.arraycopy(groundMask, 0, destination, 0, COLUMN_COUNT);
+    }
+
+    public void copyCapMasksInto(byte[] destination) {
+        System.arraycopy(capMask, 0, destination, 0, COLUMN_COUNT);
     }
 
     public int getGroundHeightBlocks(int columnIndex) {

@@ -132,7 +132,7 @@ public final class NaturalNoiseUtility extends EngineUtility {
 
     public static float getTier1MaxSqDistChunks(float renderDistance, float chunkSize) {
         float halfD = renderDistance * 0.5f - 0.5f;
-        float marginChunks = EngineSetting.NATURAL_NOISE_DISTANT_RISE_MARGIN_BLOCKS
+        float marginChunks = EngineSetting.NATURAL_NOISE_MID_TIER_MARGIN_BLOCKS
                 / (chunkSize * (float) Math.sqrt(2.0));
         float farHalfD = Math.max(halfD - marginChunks, 1f);
         return farHalfD * farHalfD * 2f;

@@ -4,17 +4,14 @@ layout (location = 0) in vec3  aPos;
 layout (location = 1) in vec2  aUVOrigin;   // unused for liquid — same ChunkVAO layout StandardSurfaceShader reads
 layout (location = 2) in float aMeta;       // face index in bits 0-2, packed exactly like solid geometry
 layout (location = 3) in float aColor;      // unused for liquid
-layout (location = 4) in float aFluidLevel; // edge A0 slot: 0..LIQUID_LEVEL_MAX
-layout (location = 5) in float aFluidTop;   // edge A1 slot: 1.0 on vertices sitting at this face's surface height
-layout (location = 6) in float aEdgeB0;     // edge B0 slot: 1.0 on tidal ocean surface vertices
-layout (location = 7) in float aEdgeB1;     // unused for liquid
+layout (location = 4) in vec4  aLiquid;     // x: fluid level 0..LIQUID_LEVEL_MAX, y: 1.0 on surface-height vertices,
+                                            // z: 1.0 on tidal ocean surface vertices, w: unused
+layout (location = 5) in vec4  aEdgeHigh;   // unused for liquid — solid geometry's high edge words
 
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
 #include "includes/PlayerPositionData.glsl"
 #include "includes/WorldCurvature.glsl"
-#include "includes/WorldDistantRise.glsl"
-#include "surface/includes/SurfaceTessellationTier.glsl"
 #include "liquid/includes/OceanSurface.glsl"
 
 const vec3 NORMALS[6] = vec3[](
@@ -47,28 +44,20 @@ void main() {
     // written at and ride the live tide plus the swell the turbulence field
     // raises here, so the sea rises, falls, and rolls continuously at every
     // range — including chunks the tide pass has not yet re-levelled.
-    if (aEdgeB0 > 0.5) {
+    if (aLiquid.z > 0.5) {
         vTurbulence   = sampleOceanTurbulence(worldPos.xz);
         worldPos.y    = u_oceanSurface.x + oceanWaveAmplitude(vTurbulence) * sampleOceanSwell(worldPos.xz);
         vOceanSurface = 1.0;
     }
-    else if (aFluidTop > 0.5)
-    worldPos.y -= (1.0 - clamp(aFluidLevel / LIQUID_LEVEL_MAX, 0.0, 1.0));
+    else if (aLiquid.y > 0.5)
+    worldPos.y -= (1.0 - clamp(aLiquid.x / LIQUID_LEVEL_MAX, 0.0, 1.0));
 
     vWorldNormal = NORMALS[int(aMeta) & 7];
     vOceanPos    = worldPos;
 
-    // Water previously skipped both world bends entirely, so a shoreline
-    // visibly split away from the land it borders at any real distance.
-    // Applying the exact same shared functions the terrain uses keeps a
-    // water surface glued to its bank at every range. Gating is resolved
-    // from this vertex's own world position via computeDistanceFromCenterSq()
-    // rather than the shared-per-slot u_distanceFromCenter, so a shoreline
-    // never shows a step between an individually rendered chunk and a mega
-    // — see SurfaceTessellationTier.glsl.
-    if (computeDistanceFromCenterSq(worldPos) > getTier1MaxSqDist())
-    worldPos = applyDistantRise(worldPos);
-
+    // The exact same world bend the terrain uses, measured from the
+    // player's true position, keeps a water surface glued to its bank at
+    // every range.
     worldPos = applyWorldCurvature(worldPos);
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);

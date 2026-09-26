@@ -167,11 +167,20 @@ public final class TerrainShapeUtility extends EngineUtility {
         }
 
         public static int finalizeGroundHeightBlocks(float macroShapeBlocks, float detailBlocks) {
+                return Math.round(clampGroundHeightBlocks(macroShapeBlocks, detailBlocks));
+        }
+
+        /*
+         * The continuous ground height before it is rounded to a whole block.
+         * Sub-block edge smoothing compares it, sampled at a block corner,
+         * against the rounded height of each block sharing that corner.
+         */
+        public static float clampGroundHeightBlocks(float macroShapeBlocks, float detailBlocks) {
 
                 float finalHeight = macroShapeBlocks + detailBlocks;
 
-                return Math.round(Math.max(
+                return Math.max(
                                 EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS,
-                                Math.min(EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS, finalHeight)));
+                                Math.min(EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS, finalHeight));
         }
 }

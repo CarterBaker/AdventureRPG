@@ -7,7 +7,7 @@
   "default_file": "TerraArcanaBlocks",
   "fields": [
     { "key": "name", "type": "string", "required": true, "default": "" },
-    { "key": "type", "type": "enum", "values": [ "NONE", "FULL", "PARTIAL", "COMPLEX", "LIQUID" ], "default": "FULL" },
+    { "key": "type", "type": "enum", "values": [ "NONE", "FULL", "COMPLEX", "LIQUID" ], "default": "FULL" },
     { "key": "rotation", "type": "enum", "values": [ "NONE", "CARDINAL", "FULL", "NATURAL_FULL" ], "default": "NONE" },
     { "key": "natural", "type": "boolean", "default": false },
     { "key": "material", "type": "string", "default": "surface/StandardSurfaceMaterial" },

@@ -13,6 +13,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -45,6 +46,12 @@ class GeometryBuildManager extends ManagerPackage {
      * sync lock (BuildBranch, LiquidTickBranch, BlockPlacementSystem),
      * so the packet's GENERATING/READY status is never used as an entry
      * gate here — it's set purely so anything downstream can observe it.
+     * A block subdivided into sub-blocks is PARTIAL geometry here whatever
+     * its material, tallied as such and routed to PartialGeometryBranch; a
+     * whole FULL block's face goes to FullGeometryBranch only when
+     * SubCellSampleBranch proves it block-simple, and to the sub-block pass
+     * otherwise, so both resolutions share one classification and meet
+     * seamlessly wherever a step has been smoothed.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -52,6 +59,8 @@ class GeometryBuildManager extends ManagerPackage {
     };
 
     // Internal
+    private SubCellSampleBranch subCellSampleBranch;
+    private SurfaceEmissionBranch surfaceEmissionBranch;
     private FullGeometryBranch fullGeometryBranch;
     private PartialGeometryBranch partialGeometryBranch;
     private ComplexGeometryBranch complexGeometryBranch;
@@ -69,6 +78,8 @@ class GeometryBuildManager extends ManagerPackage {
     protected void create() {
 
         // Internal
+        this.subCellSampleBranch = create(SubCellSampleBranch.class);
+        this.surfaceEmissionBranch = create(SurfaceEmissionBranch.class);
         this.fullGeometryBranch = create(FullGeometryBranch.class);
         this.partialGeometryBranch = create(PartialGeometryBranch.class);
         this.complexGeometryBranch = create(ComplexGeometryBranch.class);
@@ -128,7 +139,9 @@ class GeometryBuildManager extends ManagerPackage {
         Int2ObjectOpenHashMap<FloatArrayList> verts = dynamicGeometryAsyncContainer.getVerts();
         BitSet[] directionalBatches = dynamicGeometryAsyncContainer.getDirectionalBatches();
         BitSet batchReturn = dynamicGeometryAsyncContainer.getBatchReturn();
-        Color[] vertColors = dynamicGeometryAsyncContainer.getVertColors();
+        BitSet[] subDirectionalBatches = dynamicGeometryAsyncContainer.getSubDirectionalBatches();
+        BitSet subBatchReturn = dynamicGeometryAsyncContainer.getSubBatchReturn();
+        Color vertColorAccumulator = dynamicGeometryAsyncContainer.getVertColorAccumulator();
 
         for (int i = 0; i < BLOCK_COORDINATE_COUNT; i++) {
 
@@ -137,7 +150,9 @@ class GeometryBuildManager extends ManagerPackage {
             BiomeHandle biomeHandle = biomeManager.getBiomeHandleFromBiomeID(biomeID);
             short blockID = blockPaletteHandle.getBlock(xyz);
             BlockHandle blockHandle = blockManager.getBlockHandleFromBlockID(blockID);
-            DynamicGeometryType blockGeometry = blockHandle.getGeometry();
+            DynamicGeometryType blockGeometry = SubBlockUtility.isSubdivided(blockPaletteHandle.getSubBlockMask(xyz))
+                    ? DynamicGeometryType.PARTIAL
+                    : blockHandle.getGeometry();
 
             if (blockGeometry == DynamicGeometryType.NONE)
                 continue;
@@ -155,7 +170,7 @@ class GeometryBuildManager extends ManagerPackage {
                 if (accumulatedBatch.get(i))
                     continue;
 
-                if (!assembleQuads(
+                assembleQuads(
                         blockGeometry,
                         chunkInstance,
                         subChunkInstance,
@@ -170,8 +185,9 @@ class GeometryBuildManager extends ManagerPackage {
                         verts,
                         accumulatedBatch,
                         batchReturn,
-                        vertColors))
-                    continue;
+                        subDirectionalBatches[direction],
+                        subBatchReturn,
+                        vertColorAccumulator);
             }
         }
 
@@ -207,39 +223,55 @@ class GeometryBuildManager extends ManagerPackage {
             Int2ObjectOpenHashMap<FloatArrayList> verts,
             BitSet accumulatedBatch,
             BitSet batchReturn,
-            Color[] vertColors) {
+            BitSet subAccumulatedBatch,
+            BitSet subBatchReturn,
+            Color vertColorAccumulator) {
 
         return switch (geometry) {
-            case FULL -> fullGeometryBranch.assembleQuads(
-                    chunkInstance,
-                    subChunkInstance,
-                    biomePaletteHandle,
-                    blockPaletteHandle,
-                    rotationPaletteHandle,
-                    dynamicPacketInstance,
-                    xyz,
-                    direction3Vector,
-                    biomeHandle,
-                    blockHandle,
-                    verts,
-                    accumulatedBatch,
-                    batchReturn,
-                    vertColors);
+            case FULL -> subCellSampleBranch.isBlockSimple(
+                    chunkInstance, subChunkInstance, xyz, direction3Vector, blockHandle)
+                            ? fullGeometryBranch.assembleQuads(
+                                    chunkInstance,
+                                    subChunkInstance,
+                                    biomePaletteHandle,
+                                    blockPaletteHandle,
+                                    rotationPaletteHandle,
+                                    xyz,
+                                    direction3Vector,
+                                    biomeHandle,
+                                    blockHandle,
+                                    verts,
+                                    accumulatedBatch,
+                                    batchReturn,
+                                    vertColorAccumulator)
+                            : partialGeometryBranch.assembleQuads(
+                                    chunkInstance,
+                                    subChunkInstance,
+                                    biomePaletteHandle,
+                                    blockPaletteHandle,
+                                    rotationPaletteHandle,
+                                    xyz,
+                                    direction3Vector,
+                                    biomeHandle,
+                                    blockHandle,
+                                    verts,
+                                    subAccumulatedBatch,
+                                    subBatchReturn,
+                                    vertColorAccumulator);
             case PARTIAL -> partialGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
                     biomePaletteHandle,
                     blockPaletteHandle,
                     rotationPaletteHandle,
-                    dynamicPacketInstance,
                     xyz,
                     direction3Vector,
                     biomeHandle,
                     blockHandle,
                     verts,
-                    accumulatedBatch,
-                    batchReturn,
-                    vertColors);
+                    subAccumulatedBatch,
+                    subBatchReturn,
+                    vertColorAccumulator);
             case COMPLEX -> complexGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
@@ -254,7 +286,7 @@ class GeometryBuildManager extends ManagerPackage {
                     verts,
                     accumulatedBatch,
                     batchReturn,
-                    vertColors);
+                    vertColorAccumulator);
             case LIQUID -> liquidGeometryBranch.assembleQuads(
                     chunkInstance,
                     subChunkInstance,
@@ -269,7 +301,7 @@ class GeometryBuildManager extends ManagerPackage {
                     verts,
                     accumulatedBatch,
                     batchReturn,
-                    vertColors);
+                    vertColorAccumulator);
             case NONE -> true;
         };
     }

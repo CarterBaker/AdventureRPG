@@ -22,6 +22,7 @@ public enum Direction2Vector {
         public static final int LENGTH = values().length;
 
         private static final Direction3Vector[] TO_3D_LOOKUP = new Direction3Vector[LENGTH];
+        private static final Direction2Vector[][] DIRECTION_LOOKUP = new Direction2Vector[3][3];
 
         static {
                 TO_3D_LOOKUP[NORTH.ordinal()] = Direction3Vector.NORTH;
@@ -32,6 +33,11 @@ public enum Direction2Vector {
                 TO_3D_LOOKUP[SOUTHWEST.ordinal()] = null;
                 TO_3D_LOOKUP[WEST.ordinal()] = Direction3Vector.WEST;
                 TO_3D_LOOKUP[NORTHWEST.ordinal()] = null;
+        }
+
+        static {
+                for (Direction2Vector direction : VALUES)
+                        DIRECTION_LOOKUP[direction.x + 1][direction.y + 1] = direction;
         }
 
         // Internal \\
@@ -51,5 +57,9 @@ public enum Direction2Vector {
 
         public Direction3Vector to3D() {
                 return TO_3D_LOOKUP[this.ordinal()];
+        }
+
+        public static Direction2Vector getDirection(int x, int y) {
+                return DIRECTION_LOOKUP[x + 1][y + 1];
         }
 }

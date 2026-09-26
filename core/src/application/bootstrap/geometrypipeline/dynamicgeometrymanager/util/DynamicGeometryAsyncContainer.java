@@ -2,8 +2,10 @@ package application.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
 import java.util.BitSet;
 
+import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
 import engine.graphics.color.Color;
 import engine.root.AsyncContainerPackage;
+import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -12,15 +14,18 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
 
     /*
      * Reusable scratch container for one geometry build pass. Holds per-material
-     * vertex buffers, directional greedy-mesh bitsets, and per-vertex color
-     * scratch space. Reset between passes via reset() — no allocations at runtime.
+     * vertex buffers, directional greedy-mesh bitsets at block resolution and
+     * at sub-block resolution, and a per-vertex color accumulator. Reset
+     * between passes via reset() — no allocations at runtime.
      */
 
     // Internal
     private Int2ObjectOpenHashMap<FloatArrayList> verts;
     private BitSet[] directionalBatches;
     private BitSet batchReturn;
-    private Color[] vertColors;
+    private BitSet[] subDirectionalBatches;
+    private BitSet subBatchReturn;
+    private Color vertColorAccumulator;
 
     // Internal \\
 
@@ -33,7 +38,14 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             directionalBatches[i] = new BitSet();
         this.batchReturn = new BitSet();
-        this.vertColors = new Color[VertBlockNeighbor3Vector.LENGTH];
+
+        int subCellCount = ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT * EngineSetting.SUB_BLOCK_OCTANT_COUNT;
+
+        this.subDirectionalBatches = new BitSet[Direction3Vector.LENGTH];
+        for (int i = 0; i < Direction3Vector.LENGTH; i++)
+            subDirectionalBatches[i] = new BitSet(subCellCount);
+        this.subBatchReturn = new BitSet(subCellCount);
+        this.vertColorAccumulator = new Color();
     }
 
     // Reset \\
@@ -44,10 +56,13 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
         for (FloatArrayList buffer : verts.values())
             buffer.clear();
 
-        for (int i = 0; i < Direction3Vector.LENGTH; i++)
+        for (int i = 0; i < Direction3Vector.LENGTH; i++) {
             directionalBatches[i].clear();
+            subDirectionalBatches[i].clear();
+        }
 
         batchReturn.clear();
+        subBatchReturn.clear();
     }
 
     // Accessible \\
@@ -64,7 +79,15 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
         return batchReturn;
     }
 
-    public Color[] getVertColors() {
-        return vertColors;
+    public BitSet[] getSubDirectionalBatches() {
+        return subDirectionalBatches;
+    }
+
+    public BitSet getSubBatchReturn() {
+        return subBatchReturn;
+    }
+
+    public Color getVertColorAccumulator() {
+        return vertColorAccumulator;
     }
 }

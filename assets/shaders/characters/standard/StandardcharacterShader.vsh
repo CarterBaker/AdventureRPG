@@ -13,6 +13,8 @@ layout(location = 12) in vec4 a_instanceBrowsRegion;
 layout(location = 13) in vec4 a_instanceMouthRegion;
 
 #include "includes/CameraData.glsl"
+#include "includes/PlayerPositionData.glsl"
+#include "includes/WorldCurvature.glsl"
 
 uniform sampler2D u_bonePalette;
 
@@ -62,6 +64,8 @@ void main() {
 
     vec4 skinnedPosition = skin * vec4(a_position, 1.0);
     vec4 worldPosition   = a_instanceModel * skinnedPosition;
+
+    worldPosition.xyz = applyWorldCurvature(worldPosition.xyz);
 
     v_uv           = a_uv;
     v_viewPosition = (u_view * worldPosition).xyz;
