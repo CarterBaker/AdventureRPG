@@ -14,12 +14,21 @@ import engine.root.EngineUtility;
 class CompositeRenderGLSLUtility extends EngineUtility {
 
     /*
-     * Stateless OpenGL helpers for CompositeRenderSystem. Covers UI pass state,
-     * instance VBO upload, instanced draw calls, shader binding, and UBO binding.
-     * Package-private — only CompositeRenderSystem may call these.
+     * Stateless OpenGL helpers for CompositeRenderSystem. Covers UI and scene
+     * pass state, instance VBO upload, instanced draw calls, shader binding,
+     * and UBO binding. Package-private — only CompositeRenderSystem may call
+     * these.
      */
 
-    // UI Pass State \\
+    // Pass State \\
+
+    static void beginScenePass() {
+        EngineContext.gl20.glEnable(EngineSetting.GL_DEPTH_TEST);
+        EngineContext.gl20.glDepthFunc(EngineSetting.GL_LEQUAL);
+        EngineContext.gl20.glDepthMask(true);
+        EngineContext.gl20.glEnable(EngineSetting.GL_BLEND);
+        EngineContext.gl20.glBlendFunc(EngineSetting.GL_SRC_ALPHA, EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
+    }
 
     static void beginUIPass(boolean premultiplied) {
         EngineContext.gl20.glDisable(EngineSetting.GL_DEPTH_TEST);
@@ -30,7 +39,7 @@ class CompositeRenderGLSLUtility extends EngineUtility {
                 EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
     }
 
-    static void endUIPass() {
+    static void endPass() {
         EngineContext.gl20.glEnable(EngineSetting.GL_DEPTH_TEST);
         EngineContext.gl20.glDepthMask(true);
         EngineContext.gl20.glDisable(EngineSetting.GL_BLEND);

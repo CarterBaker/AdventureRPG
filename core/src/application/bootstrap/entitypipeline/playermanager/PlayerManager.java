@@ -25,7 +25,6 @@ import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntSet;
 
 public class PlayerManager extends ManagerPackage {
 
@@ -80,11 +79,13 @@ public class PlayerManager extends ManagerPackage {
      * owns only the state that entry point needs: which entity, which
      * camera, and (via isFirstPerson()) which bone to hide.
      *
-     * spawnFreeCamera() registers a window exactly like spawnPlayer(), but
-     * the entity is only an anchor the world streams around — it is never
-     * drawn or animated and never places or breaks blocks. Each frame it is
-     * flown through MovementManager.fly() instead of moved, and the camera
-     * sits directly at its eye position with no zoom.
+     * setFreeCameraForWindow() switches a window's player to free flying and
+     * back. While flying, the entity is only an anchor the world streams
+     * around — it is never drawn or animated and never places or breaks
+     * blocks. Each frame it is flown through MovementManager.fly() instead of
+     * moved, and the camera sits directly at its eye position with no zoom.
+     * Switching back settles the character on safe ground beneath wherever
+     * the anchor flew.
      *
      * rerollPlayerForWindow() turns a window's player into a fresh character
      * in place, and verifyPlayerPositionForWindow() holds a player that has
@@ -214,14 +215,6 @@ public class PlayerManager extends ManagerPackage {
     // Spawn \\
 
     public EntityInstance spawnPlayer(WindowInstance window, RawInputHandle rawInput) {
-        return registerPlayer(window, rawInput, false);
-    }
-
-    public EntityInstance spawnFreeCamera(WindowInstance window, RawInputHandle rawInput) {
-        return registerPlayer(window, rawInput, true);
-    }
-
-    private EntityInstance registerPlayer(WindowInstance window, RawInputHandle rawInput, boolean freeCamera) {
         EntityInstance player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
         int windowID = window.getWindowID();
         windowID2Player.put(windowID, player);
@@ -229,7 +222,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2RawInput.put(windowID, rawInput);
         windowID2Window.put(windowID, window);
         windowID2VerifyPlayerPosition.put(windowID, true);
-        windowID2FreeCamera.put(windowID, freeCamera);
+        windowID2FreeCamera.put(windowID, false);
         windowID2ZoomDistance.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2ZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2FirstPersonToggled.put(windowID, false);
@@ -248,6 +241,17 @@ public class PlayerManager extends ManagerPackage {
 
     public void verifyPlayerPositionForWindow(int windowID) {
         windowID2VerifyPlayerPosition.put(windowID, true);
+    }
+
+    public void setFreeCameraForWindow(int windowID, boolean freeCamera) {
+
+        if (windowID2FreeCamera.get(windowID) == freeCamera)
+            return;
+
+        windowID2FreeCamera.put(windowID, freeCamera);
+
+        if (!freeCamera)
+            verifyPlayerPositionForWindow(windowID);
     }
 
     // Player \\
@@ -628,10 +632,6 @@ public class PlayerManager extends ManagerPackage {
 
     public boolean hasPlayerForWindow(int windowID) {
         return windowID2Player.containsKey(windowID);
-    }
-
-    public IntSet getPlayerWindowIDs() {
-        return windowID2Player.keySet();
     }
 
     public boolean isFreeCameraForWindow(int windowID) {

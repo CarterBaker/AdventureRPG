@@ -25,8 +25,11 @@ public class CompositeRenderSystem extends SystemPackage {
      * Collects instanced draw submissions during update, uploads instance data
      * to the GPU, and flushes all batches in draw(). Drawn after RenderManager
      * depth 0 so composite draws appear over world geometry.
-     * Depth testing and depth writes are disabled for the composite pass —
-     * UI always draws on top. Blending is enabled for alpha transparency.
+     * Into a target with a depth attachment the composite pass is a scene
+     * pass — depth tested and written, so world items stand among the terrain
+     * of the world target they are drawn into. Into any other target, and to
+     * the screen, depth testing and depth writes are disabled — UI always
+     * draws on top. Blending is enabled for alpha transparency.
      * A buffer submitted with a mask is scissored to it, as menu sprites are.
      * All hot-path iteration is index-based over pre-allocated arrays — zero
      * allocation per frame after the first few frames of material registration.
@@ -105,7 +108,11 @@ public class CompositeRenderSystem extends SystemPackage {
         if (batches == null || batches.isEmpty())
             return;
 
-        CompositeRenderGLSLUtility.beginUIPass(fbo != null && fbo.getFboData().isPremultipliedBlend());
+        if (fbo != null && !fbo.getDepthTextures().isEmpty())
+            CompositeRenderGLSLUtility.beginScenePass();
+        else
+            CompositeRenderGLSLUtility.beginUIPass(fbo != null && fbo.getFboData().isPremultipliedBlend());
+
         Object[] batchElements = batches.elements();
         int batchCount = batches.size();
         MaskStruct activeMask = null;
@@ -145,7 +152,7 @@ public class CompositeRenderSystem extends SystemPackage {
         if (activeMask != null)
             CompositeRenderGLSLUtility.disableScissor();
 
-        CompositeRenderGLSLUtility.endUIPass();
+        CompositeRenderGLSLUtility.endPass();
     }
 
     private MaskStruct applyMask(MaskStruct mask, MaskStruct activeMask) {

@@ -3,13 +3,15 @@ package application.bootstrap.worldpipeline.worlditemrendersystem;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.compositebuffermanager.CompositeBufferManager;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worlditem.WorldItemCompositeInstance;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -22,7 +24,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
  * Owns all composite buffer state for world items.
  * Push and pull operate on entire chunks — O(1) chunk lookup via coord map.
  * Single instance add/remove available for runtime placement.
- * Submit loop each frame pushes live buffers to the render system.
+ * Submit loop each frame pushes live buffers into every grid's world target,
+ * the same target its chunks draw into, so items are depth tested against
+ * the terrain and lit by the deferred pass like everything around them.
  *
  * Swap-remove fixup uses itemDefID2SlotMap (slot → instance per composite)
  * so displaced instances are always found in O(1) regardless of which chunk
@@ -35,7 +39,7 @@ public class WorldItemRenderSystem extends ManagerPackage {
     private MaterialManager materialManager;
     private CompositeBufferManager compositeBufferManager;
     private RenderManager renderSystem;
-    private WindowManager windowManager;
+    private WorldStreamManager worldStreamManager;
 
     // Per item definition — composite buffer + material
     private Int2ObjectOpenHashMap<WorldItemCompositeInstance> itemDefID2Composite;
@@ -60,13 +64,15 @@ public class WorldItemRenderSystem extends ManagerPackage {
         this.materialManager = get(MaterialManager.class);
         this.compositeBufferManager = get(CompositeBufferManager.class);
         this.renderSystem = get(RenderManager.class);
-        this.windowManager = get(WindowManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     @Override
     protected void update() {
-        if (windowManager.getWindows().isEmpty())
+        if (!worldStreamManager.hasGrids())
             return;
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
 
         for (var entry : itemDefID2Composite.int2ObjectEntrySet()) {
             WorldItemCompositeInstance composite = entry.getValue();
@@ -75,9 +81,15 @@ public class WorldItemRenderSystem extends ManagerPackage {
             if (buffer.isEmpty())
                 continue;
 
-            for (int i = 0; i < windowManager.getWindows().size(); i++) {
-                WindowInstance window = windowManager.getWindows().get(i);
-                renderSystem.pushCompositeCall(composite.getMaterial(), buffer, null, window);
+            for (int i = 0; i < grids.size(); i++) {
+                WindowInstance window = grids.get(i).getWindowInstance();
+                FboInstance worldFbo = grids.get(i).getRenderTargetFbo();
+
+                if (window == null || worldFbo == null)
+                    continue;
+
+                renderSystem.ensureFboRendered(worldFbo, window);
+                renderSystem.pushCompositeCall(composite.getMaterial(), buffer, worldFbo, window);
             }
         }
     }

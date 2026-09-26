@@ -339,7 +339,7 @@ public class RuntimeSetting {
     public static final float INVENTORY_HELD_ICON_SIZE = 72f;
     public static final float INVENTORY_DEPTH_RANGE = 8192f;
     public static final float INVENTORY_GRID_STEP = 4f;
-    public static final float INVENTORY_PREVIEW_FILL = 0.82f;
+    public static final float INVENTORY_PREVIEW_FILL = 0.84f;
     public static final float INVENTORY_ROTATE_DEGREES_PER_PIXEL = 0.6f;
     public static final int INVENTORY_DRAW_DEPTH = 0;
 

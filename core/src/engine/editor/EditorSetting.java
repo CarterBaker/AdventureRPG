@@ -53,7 +53,6 @@ public class EditorSetting {
     // Name Dialog \\
     public static final int NAME_INPUT_MAX_LENGTH = 32;
     public static final int TEXT_INPUT_MAX_LENGTH = 256;
-    public static final String TEXT_INPUT_EMPTY = "";
     public static final String DIALOG_TITLE_CREATE_LAYOUT = "New Layout";
     public static final String DIALOG_TITLE_NEW_ITEM = "New Item";
     public static final String DIALOG_TITLE_NEW_PART = "New Part";
@@ -64,19 +63,37 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_EDIT_PREFIX = "Edit ";
     public static final String DIALOG_TITLE_DELETE_PREFIX = "Type ";
     public static final String DIALOG_TITLE_DELETE_SUFFIX = " to delete it";
-    public static final String DIALOG_TITLE_GIVE_PLAYER = "Give Player - item name";
-
-    // Console Give
-    public static final String CONSOLE_GIVE_PACKED = "Gave %s to the player of window %d";
-    public static final String CONSOLE_GIVE_NO_ROOM = "The player of window %d has no room for %s";
-    public static final String CONSOLE_GIVE_NO_PLAYER = "No player is in the world to give %s to";
 
     // Tabs \\
+    public static final String TAB_TITLE_COMMAND_CONSOLE = "Command Console";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
+
+    // Commands \\
+    public static final String COMMAND_JSON_PATH = "commands";
+    public static final String COMMAND_TOKEN_SEPARATOR_PATTERN = "\\s+";
+    public static final String COMMAND_ARGUMENT_OPEN = " <";
+    public static final String COMMAND_ARGUMENT_CLOSE = ">";
+    public static final String COMMAND_ECHO_PREFIX = "> ";
+    public static final String COMMAND_MESSAGE_UNKNOWN = "Unknown command: ";
+    public static final String COMMAND_MESSAGE_USAGE = "Usage: ";
+    public static final String COMMAND_MESSAGE_NO_DEV_WINDOWS = "No Dev window is open to run the command";
+    public static final String COMMAND_MESSAGE_NO_ACTION = " has no action for command: ";
+
+    // Commands — Camera
+    public static final String COMMAND_FLY = "fly";
+    public static final String COMMAND_MESSAGE_FREE_CAMERA_ON = ": free flying";
+    public static final String COMMAND_MESSAGE_FREE_CAMERA_OFF = ": back on foot";
+
+    // Commands — Items
+    public static final String COMMAND_GIVE = "give";
+    public static final String COMMAND_MESSAGE_ITEM_UNKNOWN = ": no item is named ";
+    public static final String COMMAND_MESSAGE_ITEM_GIVEN = ": given ";
+    public static final String COMMAND_MESSAGE_ITEM_NO_ROOM = ": no room in the backpack or hands for ";
+    public static final String COMMAND_MESSAGE_ITEM_NO_CHARACTER = ": free flying, so there is no character to give ";
 
     // Viewports \\
     public static final String FBO_EDITOR_SCENE = "EditorScene";

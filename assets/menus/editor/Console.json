@@ -56,43 +56,13 @@
                 "y": "0px"
               },
               "size": {
-                "x": "calc(100% - 220px)",
+                "x": "calc(100% - 112px)",
                 "y": "100%"
               },
               "align": "left",
               "text": "Console",
               "font_size": "50%",
               "color": "text_muted"
-            },
-            {
-              "id": "console_give_button",
-              "type": "button",
-              "sprite": "menus/Button",
-              "anchor": "right",
-              "pivot": "right",
-              "position": {
-                "x": "-108px",
-                "y": "0px"
-              },
-              "size": {
-                "x": "100px",
-                "y": "20px"
-              },
-              "color": "control",
-              "hover_color": "control_hover",
-              "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.ConsoleBranch",
-                "method": "givePlayer"
-              },
-              "elements": [
-                {
-                  "id": "console_give_label",
-                  "type": "label",
-                  "text": "Give Player",
-                  "font_size": "64%",
-                  "color": "text"
-                }
-              ]
             },
             {
               "id": "console_clear_button",
