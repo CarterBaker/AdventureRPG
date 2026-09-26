@@ -6,14 +6,15 @@ import java.nio.IntBuffer;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.util.memory.BufferUtils;
+import engine.util.memory.BufferUtility;
 
-/*
- * GL30 wrapper for all UBO operations — creation, allocation, binding,
- * upload, and deletion. Single GL entry point for the UBO system.
- * Package-private and stateless.
- */
 class UBOGLSLUtility extends EngineUtility {
+
+    /*
+     * GL30 wrapper for all UBO operations — creation, allocation, binding,
+     * upload, and deletion. Single GL entry point for the UBO system.
+     * Package-private and stateless.
+     */
 
     // UBO Creation \\
 
@@ -43,7 +44,7 @@ class UBOGLSLUtility extends EngineUtility {
     // UBO Deletion \\
 
     static void deleteUniformBuffer(int buffer) {
-        IntBuffer buf = BufferUtils.newIntBuffer(1);
+        IntBuffer buf = BufferUtility.newIntBuffer(1);
         buf.put(buffer).flip();
         EngineContext.gl30.glDeleteBuffers(1, buf);
     }

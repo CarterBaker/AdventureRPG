@@ -1,9 +1,9 @@
 package application.bootstrap.physicspipeline.movementmanager;
 
+import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
-import application.bootstrap.entitypipeline.util.EntityInputHandle;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -18,21 +18,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class SwimBranch extends BranchPackage {
 
     /*
-     * Owns every liquid interaction for an entity. refresh() samples the column under the entity's feet once per
-     * move() and caches the surface height, the water depth down to the floor, and the viscosity drag for the rest
-     * of the frame. Depth measured against the entity's own height drives everything else: wading drag and the
-     * running penalty, the depth-scaled jump nerf with its minimum, the running entry leap, the switch to swimming
-     * once the water reaches SWIM_DEPTH_FRACTION of the entity's height, the surface leap, climbing out onto any
-     * ledge or shelf within reach of the surface, and the water flavour of the movement state animation reads.
-     *
-     * A swimmer is either surfaced — treading so its eye clears the water — or under. Jump swims up and walk dives;
-     * swimming forward climbs or dives along the facing pitch, and looking down steeply enough, or walking, pulls a
-     * surfaced swimmer under. Left alone underwater it drifts down at SWIM_SINK_SPEED. Vertical speed eases toward
-     * its target at SWIM_VERTICAL_RESPONSIVENESS, so a fall into deep water plunges and recovers, and a swimmer
-     * bobs as it settles at the surface. The surface leap only fires while treading, never mid-stroke. The state
-     * splits surfaced swimming and treading from their underwater twins, with DIVING and SURFACING whenever the
-     * swimmer moves vertically faster than SWIM_VERTICAL_STATE_SPEED; wading states split shallow from deep water
-     * at WADE_SHALLOW_DEPTH_FACTOR.
+     * Owns every liquid interaction for an entity. refresh() caches the water
+     * surface, depth and drag under the entity once per move; depth relative to
+     * the entity's height then drives wading, jump penalties, the switch to
+     * swimming, surface leaps, climbing out, treading, diving and sinking, and
+     * the water movement states animation reads.
      */
 
     // Internal

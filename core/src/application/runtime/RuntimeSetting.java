@@ -40,6 +40,34 @@ public class RuntimeSetting {
 
     // Pass Uniforms
     public static final String UNIFORM_SCENE_DEPTH = "u_sceneDepth";
+    public static final int PASS_DRAW_DEPTH = 0;
+
+    // Deferred Attachments
+    public static final String ATTACHMENT_ALBEDO = "albedo";
+    public static final String ATTACHMENT_NORMAL = "normal";
+    public static final String ATTACHMENT_MATERIAL = "material";
+    public static final String ATTACHMENT_AO = "ao";
+
+    // Deferred Uniforms
+    public static final String UNIFORM_G_ALBEDO = "u_gAlbedo";
+    public static final String UNIFORM_G_NORMAL = "u_gNormal";
+    public static final String UNIFORM_G_MATERIAL = "u_gMaterial";
+    public static final String UNIFORM_G_DEPTH = "u_gDepth";
+    public static final String UNIFORM_SSAO_TEXTURE = "u_ssaoTex";
+
+    // SSAO
+    public static final String SSAO_DATA_UBO = "SSAOData";
+    public static final String UNIFORM_SSAO_NOISE = "u_texNoise";
+    public static final String UNIFORM_SSAO_SAMPLES = "u_samples";
+    public static final String UNIFORM_SSAO_KERNEL_SIZE = "u_kernelSize";
+    public static final String UNIFORM_SSAO_RADIUS = "u_radius";
+    public static final String UNIFORM_SSAO_BIAS = "u_bias";
+    public static final int SSAO_KERNEL_SIZE = 64;
+    public static final float SSAO_KERNEL_MIN_SCALE = 0.1f;
+    public static final float SSAO_RADIUS = 0.3f;
+    public static final float SSAO_BIAS = 0.025f;
+    public static final int SSAO_NOISE_SIZE = 4;
+    public static final int SSAO_NOISE_CHANNELS = 3;
 
     // Load Menu
     public static final String MENU_LOAD = "MainMenu/Load";

@@ -1,8 +1,8 @@
 package application.runtime.world;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.runtime.RuntimeSetting;
@@ -20,10 +20,10 @@ public class WorldSystem extends SystemPackage {
     // Internal
     private PlayerManager playerManager;
     private WorldStreamManager worldStreamManager;
-    private FboManager fboManager;
+    private FBOManager fboManager;
 
     // Render Target
-    private FboInstance worldFbo;
+    private FBOInstance worldFbo;
 
     // Grid
     private GridInstance gridInstance;
@@ -34,7 +34,7 @@ public class WorldSystem extends SystemPackage {
         // Internal
         this.playerManager = get(PlayerManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
-        this.fboManager = get(FboManager.class);
+        this.fboManager = get(FBOManager.class);
     }
 
     @Override
@@ -50,7 +50,7 @@ public class WorldSystem extends SystemPackage {
 
     // Accessible \\
 
-    public FboInstance getWorldFbo() {
+    public FBOInstance getWorldFbo() {
         return worldFbo;
     }
 

@@ -4,7 +4,7 @@ import editor.bootstrap.commandpipeline.CommandPipeline;
 import editor.bootstrap.infopipeline.InfoPipeline;
 import editor.bootstrap.itemeditorpipeline.ItemEditorPipeline;
 import editor.bootstrap.tabpipeline.TabPipeline;
-import engine.editor.menueventsmanager.EditorMenuEventsManager;
+import editor.runtime.menueventsmanager.EditorMenuEventsManager;
 import engine.root.AssemblyPackage;
 
 public class EditorBootstrapAssembly extends AssemblyPackage {

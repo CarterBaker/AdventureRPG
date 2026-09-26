@@ -1,5 +1,6 @@
 package application.bootstrap.calendarpipeline.calendar;
 
+import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
 public class CalendarStarStruct extends StructPackage {
@@ -29,7 +30,9 @@ public class CalendarStarStruct extends StructPackage {
         this.luminosity = luminosity;
 
         // Calculated
-        this.temperatureScale = (float) Math.pow(luminosity / ((double) distance * distance), 0.25);
+        this.temperatureScale = (float) Math.pow(
+                luminosity / ((double) distance * distance),
+                EngineSetting.STAR_TEMPERATURE_EXPONENT);
     }
 
     // Accessible \\

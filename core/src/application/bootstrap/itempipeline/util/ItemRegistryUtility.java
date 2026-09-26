@@ -6,12 +6,9 @@ import engine.root.EngineUtility;
 public class ItemRegistryUtility extends EngineUtility {
 
     /*
-     * Int ID layout (32 bits):
-     * Bits 31-16 upper 16 bits: FNV-1a hash of item name, range [1, 65535]
-     * Bits 15- 0 lower 16 bits: 0x0000 — reserved for enchanting encoding
-     *
-     * When enchanting is wired in:
-     * int enchantedID = (baseItemID & 0xFFFF0000) | (enchantValue & 0xFFFF);
+     * Builds item IDs. The upper 16 bits hold the FNV-1a hash of the item name
+     * in [1, 65535]; the lower 16 bits are zero and reserved for enchantment
+     * values.
      */
 
     // Internal

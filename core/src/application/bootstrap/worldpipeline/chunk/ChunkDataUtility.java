@@ -6,20 +6,11 @@ import engine.root.EngineUtility;
 public final class ChunkDataUtility extends EngineUtility {
 
     /*
-     * Stateless graph walker for ChunkData stage transitions. Determines which
-     * stage to load or dump next based on the requires dependency graph and
-     * three live signals: the slot's detail level, needsIndividualRender, and
-     * partOfMegaBlock. A stage is needed when its own direct condition
-     * currently holds, or when some other stage whose direct condition
-     * currently holds requires it — evaluated purely against current
-     * conditions, never against whether that other stage has already
-     * finished loading, since a completed dependent can still represent a
-     * live, ongoing dependency: a mega member's BATCH_DATA never stops
-     * needing that chunk's own generated/built/merged geometry for as long
-     * as the chunk remains a mega member, because any future edit anywhere
-     * in the mega forces a full re-merge from every member's own CPU-side
-     * geometry. Dump eligibility mirrors load eligibility through this same
-     * check, so dump and load can never drift out of sync with each other.
+     * Stateless walker over the ChunkData dependency graph. Decides the next
+     * stage to load or dump from the slot's detail level, individual render
+     * need and mega membership. A stage is needed when its own condition holds
+     * or a stage that currently needs it requires it, so loading and dumping
+     * never drift apart.
      */
 
     // Load \\

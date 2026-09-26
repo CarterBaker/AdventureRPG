@@ -1,9 +1,6 @@
 package application.bootstrap.animationpipeline.animationmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import engine.root.EngineSetting;
@@ -37,18 +34,10 @@ class AnimationLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Animation JSON directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String clipName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        clipName2File.put(clipName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk animation directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String clipName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            clipName2File.put(clipName, file);
+            queueFile(file);
         }
     }
 

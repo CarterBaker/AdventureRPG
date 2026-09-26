@@ -17,6 +17,9 @@ public enum FeatureSlot {
     BROWS(false, false, false),
     MOUTH(false, false, false);
 
+    // Values
+    public static final FeatureSlot[] VALUES = values();
+
     // Internal
     private final boolean meshSlot;
     private final boolean required;

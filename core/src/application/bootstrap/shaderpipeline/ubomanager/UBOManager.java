@@ -29,7 +29,6 @@ public class UBOManager extends ManagerPackage {
     // Internal
     private int nextAvailableBinding;
     private IntOpenHashSet usedBindings;
-    private IntOpenHashSet releasedBindings;
 
     // Palette
     private Object2IntOpenHashMap<String> uboName2UBOID;
@@ -43,7 +42,6 @@ public class UBOManager extends ManagerPackage {
 
         this.nextAvailableBinding = 0;
         this.usedBindings = new IntOpenHashSet();
-        this.releasedBindings = new IntOpenHashSet();
         this.uboName2UBOID = new Object2IntOpenHashMap<>();
         this.uboID2UBOHandle = new Int2ObjectOpenHashMap<>();
         this.activeInstances = new ObjectArrayList<>();
@@ -64,7 +62,6 @@ public class UBOManager extends ManagerPackage {
         uboID2UBOHandle.clear();
         activeInstances.clear();
         usedBindings.clear();
-        releasedBindings.clear();
     }
 
     // Management \\
@@ -166,22 +163,10 @@ public class UBOManager extends ManagerPackage {
 
     private int allocateBindingPoint() {
 
-        int binding;
-
-        if (!releasedBindings.isEmpty()) {
-            binding = releasedBindings.iterator().nextInt();
-            releasedBindings.remove(binding);
-        } else {
-            binding = nextAvailableBinding++;
-        }
+        int binding = nextAvailableBinding++;
 
         usedBindings.add(binding);
         return binding;
-    }
-
-    private void releaseBindingPoint(int binding) {
-        usedBindings.remove(binding);
-        releasedBindings.add(binding);
     }
 
     // Std140 Layout \\

@@ -9,17 +9,10 @@ import engine.util.mathematics.vectors.Vector3;
 public class MeshData extends DataPackage {
 
     /*
-     * Flat aggregation of VAO, VBO, and IBO data for one GPU-resident mesh.
-     * Provides direct convenience accessors for all render-critical handles
-     * and counts without requiring callers to reach through each sub-data
-     * object. boundsMin/boundsMax are this mesh's own raw, unscaled vertex
-     * position extent in its authored bind-pose model space — read directly
-     * off the assembled vertex floats at bootstrap, never off the GPU
-     * buffer. width/height/length are derived from those bounds once here
-     * so callers needing an entity-scale ratio never recompute them. Meshes
-     * with no meaningful bounds (runtime dynamic geometry, referenced VBOs
-     * with no quad entries) carry zero bounds — they are never scaled to an
-     * entity's size and have no use for them.
+     * Flat aggregation of VAO, VBO and IBO data for one GPU mesh with direct
+     * accessors for render-critical handles and counts. Carries the mesh's raw
+     * authored bounds and derived dimensions, zero for dynamic meshes that are
+     * never scaled to an entity.
      */
 
     // Internal

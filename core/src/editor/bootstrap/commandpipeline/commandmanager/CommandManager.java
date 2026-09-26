@@ -7,7 +7,7 @@ import editor.bootstrap.commandpipeline.command.CommandStruct;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.dev.DevContext;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -53,7 +53,7 @@ public class CommandManager extends ManagerPackage {
     @Override
     protected void awake() {
 
-        ((CommandLoader) internalLoader).requestAll();
+        internalLoader.requestAll();
         groupNames.sort(String.CASE_INSENSITIVE_ORDER);
     }
 

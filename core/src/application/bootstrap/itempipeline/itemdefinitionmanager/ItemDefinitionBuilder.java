@@ -1,8 +1,8 @@
 package application.bootstrap.itempipeline.itemdefinitionmanager;
 
-import java.io.File;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
@@ -139,7 +139,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
     private float[] parseStats(JsonObject itemJson) {
 
-        float[] stats = new float[ItemStat.values().length];
+        float[] stats = new float[ItemStat.VALUES.length];
 
         if (!JsonUtility.hasObject(itemJson, "stats"))
             return stats;

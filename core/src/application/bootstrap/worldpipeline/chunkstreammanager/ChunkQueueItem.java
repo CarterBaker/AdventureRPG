@@ -9,5 +9,8 @@ enum ChunkQueueItem {
 
     SCAN_GRID_SLOTS,
     LOAD,
-    ASSESS_ACTIVE_CHUNKS
+    ASSESS_ACTIVE_CHUNKS;
+
+    // Values
+    public static final ChunkQueueItem[] VALUES = values();
 }

@@ -11,19 +11,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class BiomeData extends DataPackage {
 
     /*
-     * Persistent biome record — the registry name, the human-readable
-     * displayName (absent on the unnamed variants a parent links through
-     * probable_biomes, which take their parent's name), and every response curve
-     * WorldGenerationManager needs to shape this biome's own terrain — a
-     * continentalness-to-height spline, an erosion-to-amplitude spline, a
-     * peaks-valleys ridge-contribution spline, a small-scale detail
-     * amplitude/wavelength pair, an overall height-scale multiplier, and
-     * oceanWater — whether this biome is permitted to flood its
-     * below-sea-level terrain with water at all — and beachBiomeName, the
-     * buffer biome BiomeManager inserts between this biome and any ocean it
-     * borders. Each resolved once at load time in BiomeBuilder and defaulting
-     * to TerrainShapeUtility's global curves (or false, or no beach) when a
-     * biome's JSON omits them.
+     * Persistent biome record: registry and display names and every curve world
+     * generation shapes this biome with — continentalness, erosion and
+     * peaks-valleys splines, detail amplitude and wavelength, height scale —
+     * plus its ocean flag and beach biome. Omitted curves default to
+     * TerrainShapeUtility's.
      */
 
     public static final int MAP_COLOR_UNDEFINED = EngineSetting.BIOME_MAP_COLOR_UNDEFINED;

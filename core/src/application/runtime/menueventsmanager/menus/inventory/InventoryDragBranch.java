@@ -10,6 +10,7 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.inventory.InventoryViewUtility;
+import engine.input.Buttons;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.settings.KeyBindings;
@@ -18,17 +19,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class InventoryDragBranch extends BranchPackage {
 
     /*
-     * Carries items under the cursor. Picking an item up takes it out of its
-     * slot or container at once, so the space it filled is free while it
-     * moves. Over a container view the carried item shows where it would
-     * land: it is dropped in from the top at the cursor's point on the floor
-     * and falls until it rests, and the Rotate Item key turns it a quarter.
-     * Letting go over a slot wears or holds it — trading places with an item
-     * already there when that item fits where the carried one came from —
-     * over a view drops it where shown, over a list packs it wherever it
-     * fits, and anywhere else returns it. An item is never lost: whatever
-     * cannot land goes back where it came from. The item under the cursor is
-     * found here too, for the details panel.
+     * Carries items under the cursor. A picked item leaves its place at once;
+     * over a container view it previews where it would land and can be turned a
+     * quarter; dropping over a slot, view or list places it, trading with an
+     * item that fits the vacated place, and anything that cannot land goes
+     * back. Also finds the item under the cursor for the details panel.
      */
 
     // Internal
@@ -66,7 +61,7 @@ public class InventoryDragBranch extends BranchPackage {
 
         resolveDrop(session, x, y);
 
-        if (!inputManager.getRawInput(window).isMouseDown(0)) {
+        if (!inputManager.getRawInput(window).isMouseDown(Buttons.LEFT)) {
 
             if (session.isHolding())
                 drop(session, x, y);
@@ -297,7 +292,7 @@ public class InventoryDragBranch extends BranchPackage {
 
     private EquipmentSlot findSlotAt(InventorySessionStruct session, float x, float y) {
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.values())
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
             if (InventoryViewUtility.isInside(session.getSlotElement(equipmentSlot), x, y))
                 return equipmentSlot;
 

@@ -29,18 +29,8 @@ public class SubBlockSampleUtility extends EngineUtility {
     private static final int CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
     private static final int WORLD_TOP_CELL = EngineSetting.WORLD_HEIGHT * EngineSetting.CHUNK_SIZE;
 
-    // Internal \\
-
-    private SubBlockSampleUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
-
     // Lookup \\
 
-    /*
-     * The block occupying a sub-cell, or null where the sub-cell is empty,
-     * lies outside the world, or falls in a chunk that is not loaded.
-     */
     public static BlockHandle getSubBlockAt(
             WorldStreamManager worldStreamManager,
             BlockManager blockManager,
@@ -84,10 +74,6 @@ public class SubBlockSampleUtility extends EngineUtility {
         return blockHandle.getGeometry() == DynamicGeometryType.NONE ? null : blockHandle;
     }
 
-    /*
-     * Whether a sub-cell blocks movement. Liquid never does, and below the
-     * world is treated as solid so nothing can ever fall out of it.
-     */
     public static boolean isSolid(
             WorldStreamManager worldStreamManager,
             BlockManager blockManager,

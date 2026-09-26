@@ -118,11 +118,6 @@ class CurrentTrackerBranch extends BranchPackage {
 
     // Visual Year \\
 
-    /*
-     * Year progress is only recomputed per whole day, so the fraction of
-     * the current day is added on top here to give a continuous point in
-     * the year for anything blending across seasons.
-     */
     void advanceVisualYear() {
 
         double visualYearProgress = clockHandle.getYearProgress()
@@ -145,12 +140,6 @@ class CurrentTrackerBranch extends BranchPackage {
 
     // Calculations \\
 
-    /*
-     * Solar time for the calendar's reference location: the calendar's
-     * middayOffset is the fraction of its day at which the sun peaks, so it
-     * is shifted onto NOON here. Clock-face hours and minutes are read from
-     * dayProgress instead and are never shifted.
-     */
     double calculateRawTimeOfDay(double dayProgress) {
         return wrapFraction(dayProgress - calendarHandle.getMiddayOffset() + NOON);
     }
@@ -184,13 +173,7 @@ class CurrentTrackerBranch extends BranchPackage {
         return THREE_QUARTERS + ((rawTimeOfDay - actualSunset) / (1.0 - actualSunset)) * QUARTER;
     }
 
-    // latitudeFactor is signed (-1 at one pole, 0 at either equator
-    // crossing, +1 at the other pole), so the deviation from an even 0.5
-    // day/night split fades to nothing at the equator and reaches full
-    // strength at the poles, flipping direction between hemispheres.
-    // axialTiltStrength normalizes the world's own axial tilt against an
-    // Earth-like reference — an upright world (tilt 0) collapses this to
-    // a flat 0.5 everywhere.
+    // Bends the day length away from an even split toward the poles, flipped per hemisphere and scaled by tilt
     double applyLatitudeBend(float seasonDayLength, double latitudeFactor) {
 
         double curvedLatitude = Math.signum(latitudeFactor)

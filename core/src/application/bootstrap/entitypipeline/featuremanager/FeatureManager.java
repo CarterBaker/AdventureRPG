@@ -15,7 +15,7 @@ public class FeatureManager extends ManagerPackage {
      * indexes features by slot so a character menu can list the choices for
      * one slot. Which feature a given entity wears lives on its
      * AppearanceHandle, never here. Auto-triggers an on-demand load via
-     * InternalLoader on a name-based cache miss.
+     * FeatureLoader on a name-based cache miss.
      */
 
     // Palette
@@ -33,7 +33,7 @@ public class FeatureManager extends ManagerPackage {
         this.featureID2FeatureHandle = new Short2ObjectOpenHashMap<>();
         this.featureSlot2FeatureHandles = new Object2ObjectOpenHashMap<>();
 
-        for (FeatureSlot featureSlot : FeatureSlot.values())
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             featureSlot2FeatureHandles.put(featureSlot, new ObjectArrayList<>());
 
         create(FeatureLoader.class);

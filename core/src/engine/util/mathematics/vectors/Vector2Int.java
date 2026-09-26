@@ -6,6 +6,10 @@ import engine.util.mathematics.extras.Direction2Vector;
 
 public class Vector2Int extends EngineUtility {
 
+    /*
+     * Mutable two-component int vector with in-place arithmetic.
+     */
+
     // Data
     public int x, y;
 

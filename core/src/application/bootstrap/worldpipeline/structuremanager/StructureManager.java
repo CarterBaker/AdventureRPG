@@ -49,7 +49,7 @@ public class StructureManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        ((StructureLoader) internalLoader).requestAll();
+        internalLoader.requestAll();
     }
 
     // Management \\

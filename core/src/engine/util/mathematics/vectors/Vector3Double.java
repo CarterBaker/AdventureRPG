@@ -5,6 +5,10 @@ import engine.util.mathematics.extras.Direction3Vector;
 
 public class Vector3Double extends EngineUtility {
 
+    /*
+     * Mutable three-component double vector with in-place arithmetic.
+     */
+
     // Data
     public double x, y, z;
 

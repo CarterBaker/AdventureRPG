@@ -7,14 +7,10 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 public class SeasonManager extends ManagerPackage {
 
     /*
-     * Owns the season climate palette for the engine lifetime. Seasons are
-     * no longer a fixed enum — the active calendar defines whichever named
-     * seasons it wants (see CalendarData.getSeasons()), so this registry is
-     * keyed by name exactly like clouds, weathers, and biomes, and supports
-     * the same on-demand loading via InternalLoader on a cache miss. Its
-     * SeasonBlendSystem resolves where the year sits between the active
-     * calendar's seasons every frame, so season-driven values blend through
-     * here rather than stepping when the season name changes.
+     * Owns the season climate palette, keyed by the names the active calendar
+     * defines and loaded on demand like clouds and weathers. SeasonBlendSystem
+     * resolves where the year sits between those seasons every frame, so
+     * season-driven values blend instead of stepping.
      */
 
     // Systems

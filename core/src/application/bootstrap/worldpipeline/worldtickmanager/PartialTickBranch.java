@@ -46,6 +46,5 @@ public class PartialTickBranch extends BranchPackage {
     // Tick \\
 
     public void tick() {
-
     }
 }

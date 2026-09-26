@@ -1,8 +1,10 @@
 package application.bootstrap.worldpipeline.block;
 
+import java.util.Arrays;
+
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
-import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
@@ -13,22 +15,11 @@ import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 public final class BlockPaletteHandle extends HandlePackage {
 
     /*
-     * Compressed block palette for a single sub-chunk region. Stores block IDs
-     * using a bit-packed indirect palette that expands automatically as new
-     * block types are introduced, backed by an O(1) reverse index so neither
-     * writing a new value nor rebuilding the palette during a dump ever
-     * degrades into a linear scan. Converts to a flat direct array once the
-     * palette exceeds the configured threshold. releaseStorage() drops all
-     * backing storage without forgetting the handle's own config, so a caller
-     * that only needs this palette some of the time (see SubChunkInstance)
-     * can construct it, release it, and construct it again cheaply. A block
-     * palette constructed with a BlockManager is partitioned: it also owns one
-     * child palette per geometry type, routes every write through them, and
-     * answers type and liquid queries by dipping into the matching child.
-     * Its PARTIAL child is the sub-block palette: a cell subdivided into
-     * sub-blocks keeps its material as the block ID here and moves out of its
-     * material's geometry child into the partial one, which owns its octant
-     * mask, so every type query sees a subdivided cell as PARTIAL.
+     * Bit-packed indirect palette of block IDs for one subchunk with an O(1)
+     * reverse index, switching to a direct array past its threshold. A
+     * partitioned palette owns one child per geometry type, including the
+     * partial child that holds sub-block octant masks. releaseStorage() frees
+     * memory without losing configuration.
      */
 
     // Palette Config
@@ -127,12 +118,6 @@ public final class BlockPaletteHandle extends HandlePackage {
         fill(defaultBlockId);
     }
 
-    /*
-     * Resets every cell in this palette to a single value in O(1) — used
-     * instead of looping setBlock() calls when an entire palette region is
-     * known to share one value up front, such as a subchunk's biome
-     * palette, which is always uniform across a single chunk column.
-     */
     public void fill(short blockId) {
 
         palette.clear();
@@ -142,7 +127,7 @@ public final class BlockPaletteHandle extends HandlePackage {
 
         int longsNeeded = (totalCells + 63) >>> 6;
         if (packedData != null && packedData.length == longsNeeded)
-            java.util.Arrays.fill(packedData, 0L);
+            Arrays.fill(packedData, 0L);
         else
             packedData = new long[longsNeeded];
 
@@ -152,11 +137,6 @@ public final class BlockPaletteHandle extends HandlePackage {
             fillTypePalettes(blockId);
     }
 
-    /*
-     * Drops all backing storage, leaving the handle's config (axis size,
-     * threshold, default value) intact so constructor() can be called again
-     * later to bring it back at full cost only when actually needed.
-     */
     public void releaseStorage() {
 
         palette = null;
@@ -352,7 +332,7 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     public void dumpInteriorBlocks(short airBlockId) {
 
-        int[] interiorCoordinates = ChunkCoordinate3Int.getInteriorBlockCoordinates();
+        int[] interiorCoordinates = ChunkCoordinateUtility.getInteriorBlockCoordinates();
 
         if (isPartitioned())
             for (int packedXYZ : interiorCoordinates) {
@@ -497,11 +477,6 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     // Sub-Blocks \\
 
-    /*
-     * The octants of this cell's block that are present. A cell that is not
-     * subdivided answers MASK_FULL whatever its block — air included — so a
-     * caller always pairs the mask with the block's own geometry.
-     */
     public int getSubBlockMask(int packedXYZ) {
 
         if (!isPartitioned())
@@ -510,12 +485,6 @@ public final class BlockPaletteHandle extends HandlePackage {
         return subBlockPaletteHandle.getMask(getCellIndex(packedXYZ));
     }
 
-    /*
-     * Subdivides the cell's current block down to the given octants, or
-     * collapses it back to a whole block when every octant is present. An
-     * empty mask is not a subdivision — the caller writes air through
-     * setBlock() instead — and only a FULL-geometry block can be subdivided.
-     */
     public void setSubBlockMask(int packedXYZ, int mask) {
 
         if (!isPartitioned())

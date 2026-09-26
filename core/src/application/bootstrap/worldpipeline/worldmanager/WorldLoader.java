@@ -1,9 +1,6 @@
 package application.bootstrap.worldpipeline.worldmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
@@ -15,8 +12,8 @@ class WorldLoader extends LoaderPackage {
 
     /*
      * Scans the world map directory for PNG files and loads each one into
-     * WorldManager via InternalBuilder. World name is derived from the file
-     * stem. Companion JSON is resolved by InternalBuilder if present.
+     * WorldManager via WorldBuilder. World name is derived from the file
+     * stem. Companion JSON is resolved by WorldBuilder if present.
      */
 
     // Internal
@@ -37,19 +34,10 @@ class WorldLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "World directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.TEXTURE_FILE_EXTENSIONS.contains(
-                            FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String worldName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        worldName2File.put(worldName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk world directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.TEXTURE_FILE_EXTENSIONS)) {
+            String worldName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            worldName2File.put(worldName, file);
+            queueFile(file);
         }
     }
 

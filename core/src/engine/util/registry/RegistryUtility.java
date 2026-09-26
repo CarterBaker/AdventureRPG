@@ -3,12 +3,13 @@ package engine.util.registry;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
-/*
- * Hashing helpers for converting stable string names into numeric registry IDs.
- * Uses FNV-1a to guarantee the same name always produces the same ID across
- * runs, machines, and load orders — making IDs safe to persist in save files.
- */
 public class RegistryUtility extends EngineUtility {
+
+    /*
+     * Hashing helpers for converting stable string names into numeric registry IDs.
+     * Uses FNV-1a to guarantee the same name always produces the same ID across
+     * runs, machines, and load orders — making IDs safe to persist in save files.
+     */
 
     // Constants \\
 
@@ -19,10 +20,6 @@ public class RegistryUtility extends EngineUtility {
 
     // Hashing \\
 
-    /*
-     * Converts a registry name into a stable short ID in the range [1, 32767].
-     * ID 0 is reserved — if the hash resolves to 0 it is remapped to 1.
-     */
     public static short toShortID(String name) {
 
         if (name == null || name.isEmpty())
@@ -40,11 +37,6 @@ public class RegistryUtility extends EngineUtility {
         return id == RESERVED_ID ? 1 : id;
     }
 
-    /*
-     * Converts a registry name into a stable int ID.
-     * Used for systems that need a larger ID range than short allows.
-     * 0 is reserved — if the hash resolves to 0 it is remapped to 1.
-     */
     public static int toIntID(String name) {
 
         if (name == null || name.isEmpty())

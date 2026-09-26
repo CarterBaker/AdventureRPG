@@ -36,14 +36,6 @@ public class SeasonKeyframeStruct extends StructPackage {
         return count;
     }
 
-    /*
-     * Locates yearProgress between two keyframe centers and returns the
-     * eased local blend factor between them. Writes the sorted indices of
-     * the surrounding keyframes into indexOut[0] (previous) and
-     * indexOut[1] (next) — indexOut is caller-owned scratch of at least
-     * length 2, never allocated here. Handles wraparound at both ends of
-     * the year and the degenerate single-season case.
-     */
     public double resolveEasedT(double yearProgress, int[] indexOut) {
 
         double t = wrapFraction(yearProgress);

@@ -6,6 +6,12 @@ import engine.root.EngineContext;
 
 public final class FloatUniform extends UniformAttributeStruct<Float> {
 
+    /*
+     * GLSL float uniform.
+     */
+
+    // Constructor \\
+
     public FloatUniform() {
         super(UniformType.FLOAT, 0f);
     }
@@ -15,10 +21,14 @@ public final class FloatUniform extends UniformAttributeStruct<Float> {
         return new FloatUniform();
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Float value) {
         EngineContext.gl20.glUniform1f(handle, value);
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Float value) {

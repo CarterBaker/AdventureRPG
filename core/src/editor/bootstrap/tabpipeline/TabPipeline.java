@@ -8,6 +8,11 @@ import engine.root.PipelinePackage;
 
 public class TabPipeline extends PipelinePackage {
 
+    /*
+     * Registers the editor tab managers: tabs, dock layout, dragging and saved
+     * layouts.
+     */
+
     // Internal \\
 
     @Override

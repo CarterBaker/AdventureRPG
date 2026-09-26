@@ -1,14 +1,22 @@
 package engine.settings;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 
 import engine.input.Binding;
 import engine.input.InputCode;
 import engine.root.EngineSetting;
+import engine.root.EngineUtility;
 
-import java.io.*;
-
-public class SettingsUtility {
+public class SettingsUtility extends EngineUtility {
 
     /*
      * Handles all Settings I/O and bridges Settings to KeyBindings. Single
@@ -28,7 +36,8 @@ public class SettingsUtility {
             return defaults;
         }
 
-        try (Reader reader = new FileReader(file)) {
+        try (Reader reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
+
             Settings loaded = gson.fromJson(reader, Settings.class);
 
             if (loaded == null)
@@ -36,18 +45,27 @@ public class SettingsUtility {
 
             sanitize(loaded);
             return loaded;
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException | JsonParseException e) {
+            errorLog("Settings could not be read, defaults applied: " + file.getAbsolutePath());
             return new Settings();
         }
     }
 
     public static void save(File file, Settings settings, Gson gson) {
 
-        try (Writer writer = new FileWriter(file)) {
+        File temporary = new File(file.getParentFile(), file.getName() + EngineSetting.TEMPORARY_FILE_SUFFIX);
+
+        try (Writer writer = Files.newBufferedWriter(temporary.toPath(), StandardCharsets.UTF_8)) {
             gson.toJson(settings, writer);
         } catch (IOException e) {
-            e.printStackTrace();
+            errorLog("Settings could not be written: " + file.getAbsolutePath());
+            return;
+        }
+
+        try {
+            Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            errorLog("Settings could not be replaced: " + file.getAbsolutePath());
         }
     }
 

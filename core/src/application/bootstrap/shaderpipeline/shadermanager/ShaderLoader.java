@@ -1,8 +1,6 @@
 package application.bootstrap.shaderpipeline.shadermanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 
 import application.bootstrap.shaderpipeline.shader.ShaderData;
 import application.bootstrap.shaderpipeline.shader.ShaderHandle;
@@ -50,16 +48,10 @@ class ShaderLoader extends LoaderPackage {
         this.glslKey2Source = new Object2ObjectOpenHashMap<>();
         this.shaderName2File = new Object2ObjectOpenHashMap<>();
 
-        if (!root.exists() || !root.isDirectory())
-            throwException("Shader directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Shader directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .forEach(path -> categorizeFile(path.toFile()));
-        } catch (IOException e) {
-            throwException("Failed to walk shader directory: ", e);
-        }
+        for (File file : FileUtility.collectFiles(root))
+            categorizeFile(file);
     }
 
     @Override
@@ -90,7 +82,7 @@ class ShaderLoader extends LoaderPackage {
         if (EngineSetting.JSON_FILE_EXTENSIONS.contains(extension)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             shaderName2File.put(resourceName, file);
-            fileQueue.offer(file);
+            queueFile(file);
             return;
         }
 

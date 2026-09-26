@@ -11,18 +11,10 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 class DayTrackerBranch extends BranchPackage {
 
     /*
-     * Advances the day-level clock when the day rolls over. Builds lookup
-     * tables from the calendar definition for fast day-of-year to month and
-     * day-of-month resolution. Every value is derived directly from the
-     * elapsed day count rather than incremented, so any gap since the last
-     * session lands on the correct date in one step, and advanceTime()
-     * reports every recomputed day so month and year trackers can run their
-     * own change checks. Every day gets its own seed, hashed from the
-     * world's seed and the absolute day, so no two days share one and the
-     * same day always reproduces the same seed on any load. Any system can
-     * draw its own independent random stream from it through
-     * resolveDailyRandom(), which eases each day's value into the next
-     * day's across the day so nothing driven by it ever pops at rollover.
+     * Advances the day-level clock on rollover. Every value is derived from the
+     * elapsed day count, so any gap lands on the right date in one step. Each
+     * day has its own seed from the world seed, and resolveDailyRandom() eases
+     * a random stream from one day into the next.
      */
 
     // Internal

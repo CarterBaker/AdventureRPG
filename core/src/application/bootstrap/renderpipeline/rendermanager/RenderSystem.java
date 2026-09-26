@@ -9,14 +9,14 @@ import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBufferInstanc
 import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
-import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.renderbatch.RenderBatchStruct;
-import application.bootstrap.renderpipeline.rendercall.RenderCallStruct;
-import application.bootstrap.renderpipeline.renderqueue.RenderQueueHandle;
-import application.bootstrap.renderpipeline.skinnedbatch.SkinnedBatchStruct;
-import application.bootstrap.renderpipeline.util.MaskStruct;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.render.MaskStruct;
+import application.bootstrap.renderpipeline.render.RenderBatchStruct;
+import application.bootstrap.renderpipeline.render.RenderCallStruct;
+import application.bootstrap.renderpipeline.render.RenderQueueHandle;
+import application.bootstrap.renderpipeline.render.SkinnedBatchStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import application.bootstrap.shaderpipeline.shader.ShaderHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
@@ -27,6 +27,7 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -37,12 +38,16 @@ class RenderSystem extends SystemPackage {
      * depth-sorted batches, screen passes, and skinned characters.
      */
 
+    // Internal
     private CompositeRenderSystem compositeRenderSystem;
     private VAOManager vaoManager;
     private CameraManager cameraManager;
     private SkinnedBufferManager skinnedBufferManager;
 
+    // Skinned VAO Cache
     private Int2ObjectOpenHashMap<Object2IntOpenHashMap<SkinnedBufferInstance>> windowID2SkinnedVAOCache;
+
+    // Base \\
 
     @Override
     protected void create() {
@@ -57,6 +62,8 @@ class RenderSystem extends SystemPackage {
         this.skinnedBufferManager = get(SkinnedBufferManager.class);
     }
 
+    // Draw \\
+
     void drawToMappedTargets(WindowInstance window) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
@@ -68,7 +75,7 @@ class RenderSystem extends SystemPackage {
         int fboCount = queue.queuedFbos.size();
 
         for (int f = 0; f < fboCount; f++) {
-            FboInstance target = (FboInstance) fboObjects[f];
+            FBOInstance target = (FBOInstance) fboObjects[f];
             if (target == null)
                 continue;
 
@@ -99,7 +106,7 @@ class RenderSystem extends SystemPackage {
         queue.rewindFrame();
     }
 
-    void drawToTarget(WindowInstance window, FboInstance target) {
+    void drawToTarget(WindowInstance window, FBOInstance target) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
@@ -113,9 +120,9 @@ class RenderSystem extends SystemPackage {
         RenderGLSLUtility.clearBuffer();
         RenderGLSLUtility.clearDepthBuffer();
 
-        drawScreenPass(queue, window, 0);
+        drawScreenPass(queue, window, EngineSetting.SCREEN_ORDER_BACKGROUND);
         compositeRenderSystem.drawScreen(queue, window);
-        drawScreenPass(queue, window, 1);
+        drawScreenPass(queue, window, EngineSetting.SCREEN_ORDER_FOREGROUND);
 
         queue.rewindFrame();
 
@@ -123,7 +130,7 @@ class RenderSystem extends SystemPackage {
             target.unbind();
     }
 
-    private void drawDepthSortedBatches(RenderQueueHandle queue, FboInstance fbo, WindowInstance window) {
+    private void drawDepthSortedBatches(RenderQueueHandle queue, FBOInstance fbo, WindowInstance window) {
         IntArrayList depthOrder = queue.fbo2DepthOrder.get(fbo);
         Int2ObjectOpenHashMap<ObjectArrayList<RenderBatchStruct>> depth2BatchList = queue.fbo2Depth2BatchList.get(fbo);
 
@@ -201,7 +208,7 @@ class RenderSystem extends SystemPackage {
             RenderGLSLUtility.disableScissor();
     }
 
-    private void bindTarget(WindowInstance window, FboInstance target) {
+    private void bindTarget(WindowInstance window, FBOInstance target) {
         if (target == null) {
             internal.windowPlatform.makeContextCurrent(window);
             RenderGLSLUtility.unbindFramebuffer();
@@ -219,42 +226,31 @@ class RenderSystem extends SystemPackage {
     private void bindSourceUBOs(RenderBatchStruct batch) {
 
         UBOHandle[] handles = batch.getCachedSourceUBOs();
-
-        if (handles.length == 0)
-            return;
-
-        int shaderHandle = batch.getRepresentativeMaterial().getShaderHandle().getGpuHandle();
+        ShaderHandle shader = batch.getRepresentativeMaterial().getShaderHandle();
 
         for (int i = 0; i < handles.length; i++) {
             UBOHandle ubo = handles[i];
-            RenderGLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
-            RenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+            bindUBO(shader, ubo.getBlockName(), ubo.getBindingPoint(), ubo.getGpuHandle());
         }
     }
 
-    /*
-     * UBOs attached to a material per-call via MaterialInstance.setUBO()
-     * (grid-scoped data — time, sky color, sun/moon, weather map, wind)
-     * still need their block bound to THIS program's binding point, the
-     * same as a source UBO — glUniformBlockBinding is per-program state,
-     * so skipping this step leaves the block reading whatever happens to
-     * already sit at its default binding point instead of the buffer
-     * being updated every frame.
-     */
     private void pushInstanceUBOs(RenderCallStruct renderCall) {
 
         UBOInstance[] instances = renderCall.getCachedInstanceUBOs();
-
-        if (instances.length == 0)
-            return;
-
-        int shaderHandle = renderCall.getMaterialInstance().getShaderHandle().getGpuHandle();
+        ShaderHandle shader = renderCall.getMaterialInstance().getShaderHandle();
 
         for (int i = 0; i < instances.length; i++) {
             UBOInstance ubo = instances[i];
-            RenderGLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
-            RenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+            bindUBO(shader, ubo.getBlockName(), ubo.getBindingPoint(), ubo.getGpuHandle());
         }
+    }
+
+    private void bindUBO(ShaderHandle shader, String blockName, int bindingPoint, int gpuHandle) {
+
+        if (shader.claimBlockBinding(bindingPoint))
+            RenderGLSLUtility.bindUniformBlockToProgram(shader.getGpuHandle(), blockName, bindingPoint);
+
+        RenderGLSLUtility.bindUniformBuffer(bindingPoint, gpuHandle);
     }
 
     private void pushInstanceUniforms(RenderCallStruct renderCall) {
@@ -294,7 +290,13 @@ class RenderSystem extends SystemPackage {
         RenderGLSLUtility.unbindVAO();
     }
 
-    void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask,
+    // Submit \\
+
+    void pushRenderCall(
+            ModelInstance modelInstance,
+            FBOInstance fbo,
+            int depth,
+            MaskStruct mask,
             WindowInstance window) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
@@ -308,8 +310,8 @@ class RenderSystem extends SystemPackage {
         MaterialInstance material = modelInstance.getMaterial();
         int materialID = material.getMaterialID();
 
-        Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>> depth2MaterialBatches = queue.fbo2Depth2MaterialBatches
-                .get(fbo);
+        Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>> depth2MaterialBatches =
+                queue.fbo2Depth2MaterialBatches.get(fbo);
         if (depth2MaterialBatches == null) {
             depth2MaterialBatches = new Int2ObjectOpenHashMap<>();
             queue.fbo2Depth2MaterialBatches.put(fbo, depth2MaterialBatches);
@@ -381,13 +383,31 @@ class RenderSystem extends SystemPackage {
             MaterialInstance material,
             CompositeBufferInstance buffer,
             MaskStruct mask,
-            FboInstance fbo,
+            FBOInstance fbo,
             WindowInstance window) {
         compositeRenderSystem.submit(material, buffer, mask, fbo, window);
     }
 
     void removeWindowResources(WindowInstance window) {
         compositeRenderSystem.removeWindow(window.getWindowID());
+        removeSkinnedVAOs(window);
+    }
+
+    private void removeSkinnedVAOs(WindowInstance window) {
+
+        Object2IntOpenHashMap<SkinnedBufferInstance> buffer2VAO = windowID2SkinnedVAOCache.remove(window.getWindowID());
+
+        if (buffer2VAO == null)
+            return;
+
+        internal.windowPlatform.makeContextCurrent(window.getGLWindow());
+
+        IntIterator iterator = buffer2VAO.values().iterator();
+
+        while (iterator.hasNext())
+            RenderGLSLUtility.deleteVAO(iterator.nextInt());
+
+        internal.windowPlatform.restoreMainContext();
     }
 
     // Skinned \\
@@ -398,7 +418,7 @@ class RenderSystem extends SystemPackage {
             Matrix4 modelMatrix,
             SkinnedAppearanceStruct appearance,
             Matrix4[] skinningMatrices,
-            FboInstance fbo,
+            FBOInstance fbo,
             WindowInstance window) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
@@ -414,7 +434,7 @@ class RenderSystem extends SystemPackage {
 
     private void ensureSkinnedBatchQueued(
             RenderQueueHandle queue,
-            FboInstance fbo,
+            FBOInstance fbo,
             SkinnedBufferInstance skinnedBuffer,
             MaterialInstance material,
             WindowInstance window) {
@@ -437,7 +457,7 @@ class RenderSystem extends SystemPackage {
         ensureFboQueued(queue, fbo, window);
     }
 
-    void ensureTargetQueued(FboInstance fbo, WindowInstance window) {
+    void ensureTargetQueued(FBOInstance fbo, WindowInstance window) {
 
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
@@ -447,7 +467,7 @@ class RenderSystem extends SystemPackage {
         ensureFboQueued(queue, fbo, window);
     }
 
-    private void ensureFboQueued(RenderQueueHandle queue, FboInstance fbo, WindowInstance window) {
+    private void ensureFboQueued(RenderQueueHandle queue, FBOInstance fbo, WindowInstance window) {
 
         if (queue.queuedFbos.contains(fbo))
             return;
@@ -456,7 +476,7 @@ class RenderSystem extends SystemPackage {
         queue.fbo2Window.put(fbo, window);
     }
 
-    private void drawSkinnedBatches(RenderQueueHandle queue, FboInstance fbo, WindowInstance window) {
+    private void drawSkinnedBatches(RenderQueueHandle queue, FBOInstance fbo, WindowInstance window) {
 
         ObjectArrayList<SkinnedBatchStruct> batches = queue.fbo2SkinnedBatchList.get(fbo);
 
@@ -477,7 +497,7 @@ class RenderSystem extends SystemPackage {
             skinnedBufferManager.upload(skinnedBuffer);
 
             MaterialInstance material = batch.getMaterial();
-            material.setUniform("u_bonePalette", skinnedBuffer.getBonePaletteTexture());
+            material.setUniform(EngineSetting.UNIFORM_BONE_PALETTE, skinnedBuffer.getBonePaletteTexture());
 
             bindSkinnedMaterial(batch, material);
 
@@ -493,15 +513,14 @@ class RenderSystem extends SystemPackage {
 
     private void bindSkinnedMaterial(SkinnedBatchStruct batch, MaterialInstance material) {
 
-        int shaderHandle = material.getShaderHandle().getGpuHandle();
-        RenderGLSLUtility.useShader(shaderHandle);
+        ShaderHandle shader = material.getShaderHandle();
+        RenderGLSLUtility.useShader(shader.getGpuHandle());
 
         UBOHandle[] handles = batch.getCachedSourceUBOs();
 
         for (int i = 0; i < handles.length; i++) {
             UBOHandle ubo = handles[i];
-            RenderGLSLUtility.bindUniformBlockToProgram(shaderHandle, ubo.getBlockName(), ubo.getBindingPoint());
-            RenderGLSLUtility.bindUniformBuffer(ubo.getBindingPoint(), ubo.getGpuHandle());
+            bindUBO(shader, ubo.getBlockName(), ubo.getBindingPoint(), ubo.getGpuHandle());
         }
 
         pushMaterialUniforms(material);

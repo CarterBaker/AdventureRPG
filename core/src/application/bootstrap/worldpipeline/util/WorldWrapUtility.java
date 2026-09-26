@@ -1,4 +1,3 @@
-// WorldWrapUtility.java
 package application.bootstrap.worldpipeline.util;
 
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -9,6 +8,12 @@ import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
 
 public class WorldWrapUtility extends EngineUtility {
+
+    /*
+     * Wraps chunk-local positions, chunk coordinates and block coordinates
+     * around the world's edges, and measures the shortest wrapped distance
+     * between two positions.
+     */
 
     private static final double TWO_PI = Math.PI * 2.0;
 
@@ -28,16 +33,6 @@ public class WorldWrapUtility extends EngineUtility {
         return input;
     }
 
-    /*
-     * Wraps an absolute chunk coordinate around the world's chunk-space
-     * bounds. worldScale is stored in blocks, so it must be divided down to
-     * chunk units before use as the modulus here — every other chunk-space
-     * wrap in this class already does this (see wrappedDeltaX/Z); this was
-     * the one holdout still wrapping against the raw block-scale figure,
-     * which made the modulus CHUNK_SIZE times too large and sent any chunk
-     * near a real wrap seam — including the world's own origin — to a
-     * coordinate nowhere near the seam it was supposed to land on.
-     */
     public static long wrapAroundWorld(WorldHandle worldHandle, long input) {
 
         Vector2Int worldScale = worldHandle.getWorldScale();
@@ -58,19 +53,6 @@ public class WorldWrapUtility extends EngineUtility {
         return Coordinate2Long.pack(x, y);
     }
 
-    /*
-     * Inverse of wrapAroundWorld/getChunkCoordinateForSlot: recovers the
-     * signed grid-relative offset for an absolute (already-wrapped) chunk
-     * coordinate against a grid's current active chunk coordinate. A naive
-     * subtraction only works when the two coordinates never crossed a wrap
-     * seam; whenever activeChunkCoordinate sits within render distance of a
-     * seam, the raw difference lands far outside the small
-     * -radius..+radius range gridSlots is keyed by, and every lookup keyed
-     * off it silently misses. This walks each axis back to the shortest
-     * signed delta on the world's circular chunk-space domain instead,
-     * which always reproduces the exact grid coordinate the slot was
-     * created under, seam or no seam.
-     */
     public static long unwrapToGridCoordinate(
             WorldHandle worldHandle,
             long activeChunkCoordinate,

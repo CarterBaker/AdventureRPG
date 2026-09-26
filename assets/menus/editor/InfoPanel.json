@@ -52,7 +52,7 @@
           "color": "control",
           "hover_color": "control_hover",
           "on_click": {
-            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
             "method": "editValue"
           },
           "elements": [
@@ -96,7 +96,7 @@
           },
           "hover_color": "danger",
           "on_click": {
-            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
             "method": "removeValue"
           },
           "elements": [
@@ -133,7 +133,7 @@
         "alpha": 0.5
       },
       "on_click": {
-        "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+        "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
         "method": "toggleGroup"
       },
       "elements": [
@@ -189,7 +189,7 @@
           "color": "control",
           "hover_color": "control_hover",
           "on_click": {
-            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
             "method": "addElement"
           },
           "elements": [
@@ -222,7 +222,7 @@
           },
           "hover_color": "danger",
           "on_click": {
-            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
             "method": "removeValue"
           },
           "elements": [
@@ -294,7 +294,7 @@
           "color": "control",
           "hover_color": "control_hover",
           "on_click": {
-            "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+            "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
             "method": "addField"
           },
           "elements": [
@@ -365,7 +365,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
                     "method": "newEntry"
                   },
                   "elements": [
@@ -392,7 +392,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
                     "method": "newFile"
                   },
                   "elements": [
@@ -419,7 +419,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
                     "method": "deleteSelection"
                   },
                   "elements": [
@@ -468,7 +468,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
                     "method": "save"
                   },
                   "elements": [
@@ -495,7 +495,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
                     "method": "saveAll"
                   },
                   "elements": [
@@ -522,7 +522,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.InfoPanelBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.InfoPanelBranch",
                     "method": "revert"
                   },
                   "elements": [

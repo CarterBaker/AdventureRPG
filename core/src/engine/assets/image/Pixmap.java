@@ -1,5 +1,7 @@
 package engine.assets.image;
 
+import engine.root.EngineSetting;
+import engine.util.memory.BufferUtility;
 import javax.imageio.ImageIO;
 
 import engine.graphics.color.Color;
@@ -9,7 +11,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 public class Pixmap {
 
@@ -35,7 +36,7 @@ public class Pixmap {
     public Pixmap(int width, int height, Format format) {
         this.width = width;
         this.height = height;
-        this.pixels = ByteBuffer.allocateDirect(width * height * 4).order(ByteOrder.nativeOrder());
+        this.pixels = BufferUtility.newByteBuffer(width * height * EngineSetting.COLOR_CHANNEL_COUNT);
     }
 
     public Pixmap(File file) {
@@ -45,13 +46,12 @@ public class Pixmap {
         try {
             image = ImageIO.read(file);
         } catch (IOException e) {
-            EngineUtility.throwException("Failed loading image: " + file.getPath(), e);
-            throw new AssertionError();
+            image = EngineUtility.throwException("Failed loading image: " + file.getPath(), e);
         }
 
         this.width = image.getWidth();
         this.height = image.getHeight();
-        this.pixels = ByteBuffer.allocateDirect(width * height * 4).order(ByteOrder.nativeOrder());
+        this.pixels = BufferUtility.newByteBuffer(width * height * EngineSetting.COLOR_CHANNEL_COUNT);
 
         int[] argb = new int[width * height];
         image.getRGB(0, 0, width, height, argb, 0, width);
@@ -91,23 +91,16 @@ public class Pixmap {
         return (r << 24) | (g << 16) | (b << 8) | a;
     }
 
-    /*
-     * This pixel repacked as 0xRRGGBB with alpha discarded — the exact
-     * layout every "map_color" hex value in biome JSON parses into.
-     * Anything matching a sampled pixel against an authored map color
-     * must go through this rather than getPixel(), whose RGBA8888 layout
-     * puts red 8 bits higher and would silently corrupt every comparison.
-     */
     public int getPixelRGB(int x, int y) {
         return getPixel(x, y) >>> 8;
     }
 
     public Color getPixelColor(int x, int y) {
         int rgba = getPixel(x, y);
-        float r = ((rgba >> 24) & 0xFF) / 255.0f;
-        float g = ((rgba >> 16) & 0xFF) / 255.0f;
-        float b = ((rgba >> 8) & 0xFF) / 255.0f;
-        float a = (rgba & 0xFF) / 255.0f;
+        float r = ((rgba >> 24) & 0xFF) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
+        float g = ((rgba >> 16) & 0xFF) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
+        float b = ((rgba >> 8) & 0xFF) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
+        float a = (rgba & 0xFF) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
         return new Color(r, g, b, a);
     }
 

@@ -2,13 +2,11 @@ package application.bootstrap.worldpipeline;
 
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
-import application.bootstrap.worldpipeline.blockplacementsystem.BlockPlacementSystem;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
 import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
 import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
-import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
-import application.bootstrap.worldpipeline.worlditemrendersystem.WorldItemRenderSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemManager;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -40,8 +38,6 @@ public class WorldPipeline extends PipelinePackage {
         create(WorldStreamManager.class);
         create(WorldTickManager.class);
         create(WorldRenderManager.class);
-        create(WorldItemRenderSystem.class);
-        create(WorldItemPlacementSystem.class);
-        create(BlockPlacementSystem.class);
+        create(WorldItemManager.class);
     }
 }

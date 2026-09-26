@@ -12,29 +12,16 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class SkinnedBufferManager extends ManagerPackage {
 
     /*
-     * Creates, grows, uploads, and disposes SkinnedBufferInstances — one per
-     * distinct (rigged MeshHandle, MaterialInstance) combination. Keyed by
-     * material as well as mesh because the material controls which shader
-     * and textures the whole instanced draw call binds — two entities
-     * sharing a mesh but different materials cannot share a draw call,
-     * exactly as RenderBatchStruct never merges two materials into one
-     * batch. Skin tone, hair color, and chosen facial features are NOT
-     * material state — they ride in each instance's appearance row — so
-     * every character of one template shares one MaterialInstance and
-     * batches together however differently each one looks. Cloning a
-     * material per entity here would make every entity its own batch of one.
-     *
-     * The instance VBO (per-instance model matrix + appearance rows) and
-     * bone palette texture are both ordinary buffer/texture objects — shareable across
-     * GL contexts — so they live here, created once. The instanced VAO
-     * wrapping them is context-local and cannot be shared, so it is
-     * deliberately NOT built here — RenderSystem owns a per-window VAO
-     * cache over these handles, mirroring how CompositeRenderSystem caches
-     * per-window VAOs over CompositeBufferData.
+     * Creates, grows, uploads and disposes SkinnedBufferInstances, one per
+     * rigged mesh and material pair. Appearance rides in each instance row, so
+     * characters of one template share a material and batch together. The
+     * shareable instance VBO and bone palette texture live here; the
+     * context-local VAO is cached per window by RenderSystem.
      */
 
     // Registry
-    private Object2ObjectOpenHashMap<MeshHandle, Object2ObjectOpenHashMap<MaterialInstance, SkinnedBufferInstance>> mesh2Material2SkinnedBuffer;
+    private Object2ObjectOpenHashMap<MeshHandle, Object2ObjectOpenHashMap<MaterialInstance, SkinnedBufferInstance>> //
+            mesh2Material2SkinnedBuffer;
     private ObjectArrayList<SkinnedBufferInstance> activeBuffers;
 
     // Internal \\
@@ -54,8 +41,8 @@ public class SkinnedBufferManager extends ManagerPackage {
         if (!meshHandle.hasRig())
             throwException("Cannot create a skinned buffer for a mesh with no rig. Check MeshHandle.hasRig() first.");
 
-        Object2ObjectOpenHashMap<MaterialInstance, SkinnedBufferInstance> material2SkinnedBuffer = mesh2Material2SkinnedBuffer
-                .get(meshHandle);
+        Object2ObjectOpenHashMap<MaterialInstance, SkinnedBufferInstance> material2SkinnedBuffer =
+                mesh2Material2SkinnedBuffer.get(meshHandle);
 
         if (material2SkinnedBuffer == null) {
             material2SkinnedBuffer = new Object2ObjectOpenHashMap<>();

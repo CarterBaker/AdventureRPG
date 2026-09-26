@@ -12,18 +12,9 @@ import engine.root.PipelinePackage;
 public class WeatherPipeline extends PipelinePackage {
 
     /*
-     * Registers the cloud, weather, season, weather-pattern, wind,
-     * precipitation, and sky managers in dependency order.
-     *
-     * Update order matters here independent of get()-phase wiring:
-     * WeatherManager advances the shared weather flow before
-     * WeatherPatternManager places every grid's window of cells against it.
-     * WindManager then reads each grid's local WeatherInstance and its
-     * TemperatureInstance, both only current once WeatherPatternManager has
-     * updated this frame. PrecipitationManager reads that same local weather,
-     * temperature, and wind to decide what falls and how it drifts.
-     * SkyManager reads that same per-grid temperature
-     * plus the calendar's season blend, so it stays last.
+     * Registers the weather managers in update order: weather flow, then each
+     * grid's weather pattern, then wind and temperature, precipitation, and
+     * finally the sky, which reads all of them.
      */
 
     @Override

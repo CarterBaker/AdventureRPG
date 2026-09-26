@@ -18,8 +18,8 @@ import java.util.concurrent.Future;
 
 import org.jcodec.api.awt.AWTSequenceEncoder;
 
-import application.bootstrap.renderpipeline.pbo.PboInstance;
-import application.bootstrap.renderpipeline.pbomanager.PboManager;
+import application.bootstrap.renderpipeline.pbo.PBOInstance;
+import application.bootstrap.renderpipeline.pbomanager.PBOManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
@@ -46,8 +46,8 @@ class VideoRecordingSystem extends SystemPackage {
     private File recordingDirectory;
     private ThreadHandle aviWriteThread;
     private ThreadHandle videoEncodeThread;
-    private PboManager pboManager;
-    private PboInstance pboInstance;
+    private PBOManager pboManager;
+    private PBOInstance pboInstance;
 
     private boolean recording;
     private String activeBaseName;
@@ -118,7 +118,7 @@ class VideoRecordingSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.pboManager = get(PboManager.class);
+        this.pboManager = get(PBOManager.class);
     }
 
     // Draw Authority \\
@@ -364,7 +364,8 @@ class VideoRecordingSystem extends SystemPackage {
         boolean isStalled = repeatCount > EngineSetting.RECORDING_LOSSLESS_FRAME_RATE;
 
         if (isStalled && !currentlyStalled)
-            log("Lossless recording pipeline is falling behind real time — holding the last captured frame longer than usual.");
+            log("Lossless recording pipeline is falling behind real time — "
+                    + "holding the last captured frame longer than usual.");
 
         return isStalled;
     }
@@ -464,7 +465,6 @@ class VideoRecordingSystem extends SystemPackage {
             log("Opened lossless recording file: " + file.getName());
 
             return true;
-
         } catch (IOException e) {
             errorLog("Failed to open lossless recording file: " + file.getAbsolutePath() + " — " + e.getMessage());
             closeQuietly(this.aviFile);
@@ -562,7 +562,6 @@ class VideoRecordingSystem extends SystemPackage {
             frameSizes.add(frameBytes);
 
             return true;
-
         } catch (IOException e) {
             errorLog("Failed to write recorded frame to lossless file: " + e.getMessage());
             return false;
@@ -607,7 +606,6 @@ class VideoRecordingSystem extends SystemPackage {
             writeIntLE(totalFrames);
 
             aviFile.close();
-
         } catch (IOException e) {
             errorLog("Failed to finalize lossless recording file: " + e.getMessage());
         } finally {
@@ -731,7 +729,6 @@ class VideoRecordingSystem extends SystemPackage {
                     success = false;
                 }
             }
-
         } catch (IOException e) {
             errorLog("Standard recording conversion failed — could not read lossless file: " + e.getMessage());
             success = false;

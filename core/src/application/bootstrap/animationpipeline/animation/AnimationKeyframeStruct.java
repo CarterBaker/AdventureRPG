@@ -12,7 +12,7 @@ public class AnimationKeyframeStruct extends StructPackage {
      * zero for the overwhelming majority of keyframes. scale is a
      * multiplier on top of 1.0, per axis — used only for stretch/squash
      * style tracks. Keyframes within one BoneTrackStruct are supplied in
-     * strictly increasing time order — enforced by InternalBuilder, never
+     * strictly increasing time order — enforced by AnimationBuilder, never
      * re-checked at runtime.
      */
 

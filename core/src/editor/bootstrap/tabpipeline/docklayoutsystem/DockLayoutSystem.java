@@ -1,50 +1,21 @@
 package editor.bootstrap.tabpipeline.docklayoutsystem;
 
+import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
-import application.kernel.windowpipeline.window.WindowInstance;
-import engine.root.EngineSetting;
+import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class DockLayoutSystem extends SystemPackage {
 
     /*
-     * Manages one BSP tree per OS window. Every leaf holds exactly one tab —
-     * there is no stacked-tab concept anywhere in this class, and therefore
-     * no tab-strip switching logic to get wrong.
-     *
-     * addTab() always targets the largest leaf in the given window's tree
-     * and splits it. addTabToLeaf() performs a directed split on a specific
-     * leaf at a given DropZone. removeTab() removes the leaf holding the
-     * given tab outright and collapses redundant split nodes above it.
-     * computeRects() propagates dock canvas bounds down the tree each frame
-     * so every leaf knows its screen rect without storing stale state.
-     *
-     * initWindow() must be called when a new OS window is registered so the
-     * map entry exists before any tab is added. removeWindow() cleans up
-     * the entry when an OS window is closed.
-     *
-     * findDividerAt() and findLeafAt() are both window-scoped — every
-     * coordinate this class ever receives is already local to a specific OS
-     * window, and every method that walks a tree takes that window
-     * explicitly rather than guessing which tree a raw (x, y) pair belongs
-     * to. There is no global, all-windows variant of either — that
-     * ambiguity is exactly what used to make dividers in one window
-     * resolve against another window's tree when more than one OS window
-     * was open.
-     *
-     * Each split node owns a ratio in [0.1, 0.9] (default 0.5) controlling
-     * where its divider sits. findDividerAt() walks each tree bottom-up so
-     * the innermost node always wins when dividers are nested. setSplitRatio()
-     * clamps and writes the ratio; propagateRect() reads it.
-     *
-     * getRoots() exposes the raw map for layout saving. createLeaf() and
-     * createSplit() build a tree during a layout restore, and restoreRoot()
-     * installs it in place of the tree openTab() built automatically.
-     * createSplit() and removeTab() share collapse(), the one rule for a split
-     * that lost a child: it is replaced by the child it kept, or by nothing.
+     * Keeps one BSP dock tree per OS window, one tab per leaf. Adds, splits and
+     * removes leaves, propagates dock bounds into leaf rects each frame, and
+     * resolves dividers and leaves for window-local coordinates. Split ratios
+     * are clamped, and collapse() is the one rule for a split that lost a
+     * child.
      */
 
     // Per-OS-window BSP roots — null root means window is registered but empty.
@@ -155,14 +126,14 @@ public class DockLayoutSystem extends SystemPackage {
         if (node.isSplitHorizontal()) {
             float dividerY = node.getY() + node.getH() * node.getRatio();
             if (sx >= node.getX() && sx <= node.getX() + node.getW()
-                    && sy >= dividerY - EngineSetting.DIVIDER_HIT_TOLERANCE
-                    && sy <= dividerY + EngineSetting.DIVIDER_HIT_TOLERANCE)
+                    && sy >= dividerY - EditorSetting.DIVIDER_HIT_TOLERANCE
+                    && sy <= dividerY + EditorSetting.DIVIDER_HIT_TOLERANCE)
                 return node;
         } else {
             float dividerX = node.getX() + node.getW() * node.getRatio();
             if (sy >= node.getY() && sy <= node.getY() + node.getH()
-                    && sx >= dividerX - EngineSetting.DIVIDER_HIT_TOLERANCE
-                    && sx <= dividerX + EngineSetting.DIVIDER_HIT_TOLERANCE)
+                    && sx >= dividerX - EditorSetting.DIVIDER_HIT_TOLERANCE
+                    && sx <= dividerX + EditorSetting.DIVIDER_HIT_TOLERANCE)
                 return node;
         }
 
@@ -170,7 +141,7 @@ public class DockLayoutSystem extends SystemPackage {
     }
 
     public void setSplitRatio(DockNodeStruct node, float ratio) {
-        node.setRatio(Math.max(EngineSetting.RATIO_MIN, Math.min(EngineSetting.RATIO_MAX, ratio)));
+        node.setRatio(Math.max(EditorSetting.RATIO_MIN, Math.min(EditorSetting.RATIO_MAX, ratio)));
     }
 
     // Leaf At Screen Point — window-scoped \\
@@ -271,7 +242,7 @@ public class DockLayoutSystem extends SystemPackage {
         leaf.setSplit(true);
         leaf.setSplitHorizontal(splitHorizontal);
         leaf.setTab(null);
-        leaf.setRatio(EngineSetting.RATIO_DEFAULT);
+        leaf.setRatio(EditorSetting.RATIO_DEFAULT);
 
         if (incomingIsSecond) {
             leaf.setFirst(preserved);

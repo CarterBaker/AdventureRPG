@@ -19,7 +19,7 @@ public class MegaDataSyncContainer extends SyncContainerPackage {
     // Internal \\
 
     @Override
-    public void create() {
+    protected void create() {
         this.data = new boolean[MegaData.LENGTH];
     }
 

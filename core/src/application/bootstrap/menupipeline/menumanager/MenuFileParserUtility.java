@@ -7,7 +7,7 @@ import com.google.gson.JsonObject;
 import application.bootstrap.menupipeline.element.ElementAnimationStruct;
 import application.bootstrap.menupipeline.element.ElementKeyframeStruct;
 import application.bootstrap.menupipeline.element.ElementType;
-import application.bootstrap.menupipeline.util.DimensionVector2;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.MenuEase;
@@ -22,23 +22,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class MenuFileParserUtility extends EngineUtility {
 
     /*
-     * Stateless JSON parsing helpers shared by InternalBuilder.
-     *
-     * parseStateBlock handles on_hover_enter, on_hover, on_hover_exit, and
-     * click_state — all four are identical in shape: optional use/inline element,
-     * sprite, layout, color, text, children, and optional method callback.
-     *
-     * parseOnDrag parses on_drag — method callback only, no element swap.
-     * parseOnClick parses on_click — method callback only, no element swap.
-     *
-     * parseColor, parseHoverColor, and parseParentHoverColor accept a literal
-     * [r, g, b, a] array, a theme slot name such as "accent", or
-     * { "theme": name, "alpha": value }.
-     *
-     * parseAnimation parses an optional "animation" block — delay, loop,
-     * repeat_delay, and an ascending keyframe list. Each keyframe takes a time
-     * and optional offset, scale (number or { x, y }), rotation, alpha, and ease;
-     * absent fields fall back to the identity pose.
+     * Stateless JSON parsing for MenuBuilder: state blocks, click and drag
+     * callbacks, literal or themed colors, and element animation timelines.
      */
 
     // Callbacks — method only \\
@@ -66,14 +51,6 @@ class MenuFileParserUtility extends EngineUtility {
     }
 
     // State Block Keys \\
-
-    static boolean hasStateBlock(JsonObject json, String key) {
-        return json.has(key);
-    }
-
-    static JsonObject getStateBlock(JsonObject json, String key) {
-        return json.getAsJsonObject(key);
-    }
 
     // Element Type \\
 
@@ -231,16 +208,16 @@ class MenuFileParserUtility extends EngineUtility {
         return new LayoutStruct(
                 parseOriginField(json, "anchor"),
                 parseOriginField(json, "pivot"),
-                DimensionVector2.parse(json, "position",
+                DimensionVector2Struct.parse(json, "position",
                         EngineSetting.ELEMENT_DEFAULT_POSITION,
                         EngineSetting.ELEMENT_DEFAULT_POSITION),
-                DimensionVector2.parse(json, "size",
+                DimensionVector2Struct.parse(json, "size",
                         EngineSetting.ELEMENT_DEFAULT_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_SIZE),
-                json.has("min_size") ? DimensionVector2.parse(json, "min_size",
+                json.has("min_size") ? DimensionVector2Struct.parse(json, "min_size",
                         EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
-                json.has("max_size") ? DimensionVector2.parse(json, "max_size",
+                json.has("max_size") ? DimensionVector2Struct.parse(json, "max_size",
                         EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null,
                 parseAspect(json));
@@ -260,16 +237,16 @@ class MenuFileParserUtility extends EngineUtility {
         return new LayoutStruct(
                 json.has("anchor") ? parseOriginField(json, "anchor") : null,
                 json.has("pivot") ? parseOriginField(json, "pivot") : null,
-                json.has("position") ? DimensionVector2.parse(json, "position",
+                json.has("position") ? DimensionVector2Struct.parse(json, "position",
                         EngineSetting.ELEMENT_DEFAULT_POSITION,
                         EngineSetting.ELEMENT_DEFAULT_POSITION) : null,
-                json.has("size") ? DimensionVector2.parse(json, "size",
+                json.has("size") ? DimensionVector2Struct.parse(json, "size",
                         EngineSetting.ELEMENT_DEFAULT_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_SIZE) : null,
-                json.has("min_size") ? DimensionVector2.parse(json, "min_size",
+                json.has("min_size") ? DimensionVector2Struct.parse(json, "min_size",
                         EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
-                json.has("max_size") ? DimensionVector2.parse(json, "max_size",
+                json.has("max_size") ? DimensionVector2Struct.parse(json, "max_size",
                         EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null,
                 parseAspect(json));

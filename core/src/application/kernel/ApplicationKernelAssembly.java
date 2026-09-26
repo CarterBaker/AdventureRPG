@@ -7,13 +7,14 @@ import application.kernel.windowpipeline.WindowPipeline;
 import engine.root.AssemblyPackage;
 
 public class ApplicationKernelAssembly extends AssemblyPackage {
+
     /*
      * Creates and owns all kernel pipelines in dependency order.
      * Thread infrastructure is registered before windowing since
      * the window manager may depend on async execution.
      */
     @Override
-    public void create() {
+    protected void create() {
         create(ThreadPipeline.class);
         create(WindowPipeline.class);
         create(InputPipeline.class);

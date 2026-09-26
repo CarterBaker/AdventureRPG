@@ -1,9 +1,6 @@
 package application.bootstrap.menupipeline.menumanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import engine.root.EngineSetting;
@@ -42,18 +39,10 @@ class MenuLoader extends LoaderPackage {
         FileUtility.verifyDirectory(root,
                 "Menu JSON directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        resourceName2File.put(resourceName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk menu directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            resourceName2File.put(resourceName, file);
+            queueFile(file);
         }
     }
 

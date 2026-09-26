@@ -13,14 +13,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class TextureManager extends ManagerPackage {
 
     /*
-     * Owns all texture array GPU handles and the full tile lookup chain.
-     * Two palettes — tile and array — both following the standard name→ID→handle
-     * pattern. On tile miss, the parent array name is extracted and an on-demand
-     * load is triggered. GPU resources are released on dispose.
-     *
-     * Font atlases enter through the same registration path as block textures —
-     * a single-layer texture array, glyphs as tiles named fontName/glyph.
-     * No special casing anywhere in this class.
+     * Owns every texture array and the tile lookup chain, name to ID to handle,
+     * loading the parent array on a tile miss. Font atlases register through
+     * the same path as single-layer arrays.
      */
 
     // Tile Palette
@@ -184,5 +179,9 @@ public class TextureManager extends ManagerPackage {
 
     public int createFloatTexture2D(float[] pixels, int width, int height, int wrapMode, int filterMode) {
         return TextureGLSLUtility.createFloatTexture2D(pixels, width, height, wrapMode, filterMode);
+    }
+
+    public void deleteTexture2D(int handle) {
+        TextureGLSLUtility.deleteTexture2D(handle);
     }
 }

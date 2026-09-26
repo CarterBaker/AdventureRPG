@@ -16,17 +16,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class NaturalGroundOffsetBranch extends BranchPackage {
 
     /*
-     * Tracks a smoothed, purely cosmetic vertical offset representing where
-     * a natural block's own jittered top surface sits under an entity's
-     * feet, resampled every frame at the entity's footprint center. Never
-     * written back into WorldPositionStruct — collision, gravity, and block
-     * composition keep operating on the flat, jitter-free position exactly
-     * as before, so this can never reopen a tunneling path. Consumers such
-     * as the camera add the result on top of the flat position themselves.
-     * The block read is the sub-block directly beneath the footprint center,
-     * so a half-block slab under the feet answers for itself. Every other
-     * change to the offset — a stair step handing over its lift — eases out
-     * through the same smoothing.
+     * Tracks a smoothed, purely cosmetic vertical offset for where a natural
+     * block's jittered top sits under an entity's feet. It is never written
+     * into WorldPositionStruct, so collision and gravity stay on the flat
+     * position; the camera and other consumers add it themselves. Stair-step
+     * lifts ease out through the same smoothing.
      */
 
     // Internal

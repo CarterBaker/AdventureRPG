@@ -11,9 +11,9 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
@@ -32,16 +32,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class InventoryRenderSystem extends SystemPackage {
 
     /*
-     * Draws the 3D half of this window's open inventory into its own target,
-     * composited over the menus. Each container view shows the container's
-     * floor and far walls with every item standing where it rests, and —
-     * while an item is carried over it — that item where it would land,
-     * tinted by whether it fits. Every filled equipment slot shows its item
-     * turned to a three-quarter view, greyed when it is hidden on the
-     * character, and a carried item away from any view follows the cursor.
-     * All transforms come from InventoryViewUtility, the same ones the
-     * inventory picks with, and every draw takes a model of its own from
-     * ItemModelManager.
+     * Draws the 3D half of this window's open inventory into its own target
+     * over the menus: each container's shell and resting items, a carried
+     * item's landing preview tinted by fit, equipment icons, and a carried item
+     * following the cursor. All transforms come from InventoryViewUtility.
      */
 
     // Internal
@@ -51,11 +45,11 @@ public class InventoryRenderSystem extends SystemPackage {
     private MeshManager meshManager;
     private MaterialManager materialManager;
     private RenderManager renderManager;
-    private FboManager fboManager;
-    private FboRenderSystem fboRenderSystem;
+    private FBOManager fboManager;
+    private FBORenderSystem fboRenderSystem;
 
     // Render Target
-    private FboInstance inventoryFbo;
+    private FBOInstance inventoryFbo;
 
     // Resources
     private int itemMaterialID;
@@ -88,8 +82,8 @@ public class InventoryRenderSystem extends SystemPackage {
         this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
-        this.fboManager = get(FboManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
+        this.fboManager = get(FBOManager.class);
+        this.fboRenderSystem = get(FBORenderSystem.class);
     }
 
     @Override
@@ -192,7 +186,7 @@ public class InventoryRenderSystem extends SystemPackage {
 
         InventoryHandle inventory = session.getInventory();
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
 
             ElementInstance slotElement = session.getSlotElement(equipmentSlot);
 

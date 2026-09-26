@@ -5,6 +5,7 @@ import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -65,15 +66,15 @@ class ClockBufferSystem extends SystemPackage {
 
         UBOInstance timeData = grid.getTimeDataUBO();
 
-        timeData.updateUniform("u_timeOfDay", (float) grid.getClockInstance().getVisualTimeOfDay());
-        timeData.updateUniform("u_timeOfYear", (float) clockHandle.getVisualYearProgress());
-        timeData.updateUniform("u_rawTimeOfDay", (float) clockHandle.getDayProgress());
-        timeData.updateUniform("u_time", elapsedTime);
-        timeData.updateUniform("u_randomNoiseFromDay", clockHandle.getRandomNoiseFromDay());
-        timeData.updateUniform("u_deltaTime", deltaTime);
-        timeData.updateUniform("u_currentHour", clockHandle.getCurrentHour());
-        timeData.updateUniform("u_currentMinute", clockHandle.getCurrentMinute());
-        timeData.updateUniform("u_currentDay", clockHandle.getCurrentDayOfMonth());
+        timeData.updateUniform(EngineSetting.UNIFORM_TIME_OF_DAY, (float) grid.getClockInstance().getVisualTimeOfDay());
+        timeData.updateUniform(EngineSetting.UNIFORM_TIME_OF_YEAR, (float) clockHandle.getVisualYearProgress());
+        timeData.updateUniform(EngineSetting.UNIFORM_RAW_TIME_OF_DAY, (float) clockHandle.getDayProgress());
+        timeData.updateUniform(EngineSetting.UNIFORM_TIME, elapsedTime);
+        timeData.updateUniform(EngineSetting.UNIFORM_RANDOM_NOISE_FROM_DAY, clockHandle.getRandomNoiseFromDay());
+        timeData.updateUniform(EngineSetting.UNIFORM_DELTA_TIME, deltaTime);
+        timeData.updateUniform(EngineSetting.UNIFORM_CURRENT_HOUR, clockHandle.getCurrentHour());
+        timeData.updateUniform(EngineSetting.UNIFORM_CURRENT_MINUTE, clockHandle.getCurrentMinute());
+        timeData.updateUniform(EngineSetting.UNIFORM_CURRENT_DAY, clockHandle.getCurrentDayOfMonth());
         uboManager.push(timeData);
     }
 }

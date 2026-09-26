@@ -2,6 +2,7 @@ package application.bootstrap.shaderpipeline.shader;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import engine.root.DataPackage;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -11,7 +12,7 @@ public class ShaderData extends DataPackage {
      * Persistent runtime payload for a compiled GPU shader program. Owned by
      * ShaderHandle for the full engine session. Contains only what survives
      * past compilation — identity, the GL program integer, compiled uniforms,
-     * and UBO block names.
+     * UBO block names, and the binding points already assigned to its blocks.
      */
 
     // Identity
@@ -24,6 +25,7 @@ public class ShaderData extends DataPackage {
     // Runtime
     private final Object2ObjectOpenHashMap<String, UniformStruct<?>> compiledUniforms;
     private final ObjectArrayList<String> compiledUBOBlockNames;
+    private final IntOpenHashSet boundBindingPoints;
 
     // Constructor \\
 
@@ -41,6 +43,7 @@ public class ShaderData extends DataPackage {
         this.patchVertexCount = patchVertexCount;
         this.compiledUniforms = new Object2ObjectOpenHashMap<>();
         this.compiledUBOBlockNames = new ObjectArrayList<>();
+        this.boundBindingPoints = new IntOpenHashSet();
     }
 
     // Management \\
@@ -51,6 +54,10 @@ public class ShaderData extends DataPackage {
 
     void addCompiledUBOBlockName(String blockName) {
         compiledUBOBlockNames.add(blockName);
+    }
+
+    boolean claimBlockBinding(int bindingPoint) {
+        return boundBindingPoints.add(bindingPoint);
     }
 
     // Accessible \\

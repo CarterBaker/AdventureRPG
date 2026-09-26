@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import editor.bootstrap.commandpipeline.command.CommandStruct;
 import editor.dev.freecamera.FreeCameraSystem;
 import editor.dev.item.DevItemSystem;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

@@ -4,6 +4,10 @@ import engine.root.EngineUtility;
 
 public class Matrix3 extends EngineUtility {
 
+    /*
+     * Mutable 3x3 float matrix with in-place operations.
+     */
+
     // Data
     public final float[] val = new float[9];
 
@@ -52,13 +56,6 @@ public class Matrix3 extends EngineUtility {
         val[6] = array[2];
         val[7] = array[5];
         val[8] = array[8];
-    }
-
-    // Conversion \\
-
-    public Matrix3 fromNative(engine.util.mathematics.matrices.Matrix3 other) {
-        System.arraycopy(other.val, 0, val, 0, 9);
-        return this;
     }
 
     // Accessors \\

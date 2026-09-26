@@ -14,25 +14,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class EntityData extends DataPackage {
 
     /*
-     * Immutable entity template definition loaded from JSON. Holds the size
-     * range, weight range, eye level, and behavior name for one entity type.
-     * Owned by EntityHandle in the manager palette for the engine lifetime.
-     *
-     * characterMesh, characterMaterial, and animationTreeHandle are all null
-     * for any entity template with no "model" block in its JSON — entirely
-     * optional.
-     * characterMaterial is resolved exactly once here, at template-load
-     * time, and every EntityInstance of this template shares this exact
-     * same reference — the same guarantee EntityData itself already gives
-     * every other field. This is load-bearing for instancing: a distinct
-     * MaterialInstance per entity would make every entity its own draw
-     * batch of one — per-entity looks ride in each instance's appearance
-     * row instead (see AppearanceHandle). appearanceData is null unless the
-     * "model" block also declares an "appearance". modelHeight is the full
-     * authored height of the character — body plus default head — that an
-     * entity's size.y is divided by to scale the model. equipmentAnchors
-     * places worn items on the model and is empty for an entity with no
-     * "equipment" block.
+     * Immutable entity template loaded from JSON: size, weight and eye level
+     * ranges, behavior, and the optional character model with its material,
+     * animation tree, appearance, authored height and equipment anchors. The
+     * material is resolved once per template and shared by every instance so
+     * characters batch together.
      */
 
     // Size

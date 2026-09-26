@@ -1,14 +1,11 @@
 package application.bootstrap.renderpipeline.fbomanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
-import application.bootstrap.renderpipeline.fbo.FboData;
+import application.bootstrap.renderpipeline.fbo.FBOData;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
@@ -16,17 +13,18 @@ import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Drives the FBO bootstrap sequence: directory walked in scan(), all JSON
- * descriptors queued, data registered per load() call, self-releases when
- * the queue empties.
- */
 class FBOLoader extends LoaderPackage {
+
+    /*
+     * Drives the FBO bootstrap sequence: directory walked in scan(), all JSON
+     * descriptors queued, data registered per load() call, self-releases when
+     * the queue empties.
+     */
 
     // Internal
     private File root;
     private FBOBuilder internalBuilder;
-    private FboManager fboManager;
+    private FBOManager fboManager;
 
     // File Registry
     private Object2ObjectOpenHashMap<String, File> fboName2File;
@@ -40,7 +38,7 @@ class FBOLoader extends LoaderPackage {
 
     @Override
     protected void get() {
-        this.fboManager = get(FboManager.class);
+        this.fboManager = get(FBOManager.class);
     }
 
     @Override
@@ -50,25 +48,17 @@ class FBOLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "FBO directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(file -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(file)))
-                    .forEach(file -> {
-                        JsonObject jsonRoot = JsonUtility.loadJsonObject(file);
-                        JsonArray list = jsonRoot.has("fbos") ? JsonUtility.validateArray(jsonRoot, "fbos")
-                                : new JsonArray();
-                        if (list.size() == 0 && jsonRoot.has("name"))
-                            list.add(jsonRoot);
-                        for (int i = 0; i < list.size(); i++) {
-                            String name = JsonUtility.validateString(list.get(i).getAsJsonObject(), "name");
-                            fboName2File.put(name, file);
-                        }
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk FBO directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            JsonObject jsonRoot = JsonUtility.loadJsonObject(file);
+            JsonArray list = jsonRoot.has("fbos") ? JsonUtility.validateArray(jsonRoot, "fbos")
+                    : new JsonArray();
+            if (list.size() == 0 && jsonRoot.has("name"))
+                list.add(jsonRoot);
+            for (int i = 0; i < list.size(); i++) {
+                String name = JsonUtility.validateString(list.get(i).getAsJsonObject(), "name");
+                fboName2File.put(name, file);
+            }
+            queueFile(file);
         }
     }
 
@@ -76,7 +66,7 @@ class FBOLoader extends LoaderPackage {
 
     @Override
     protected void load(File file) {
-        ObjectArrayList<FboData> dataList = internalBuilder.buildData(file);
+        ObjectArrayList<FBOData> dataList = internalBuilder.buildData(file);
         for (int i = 0; i < dataList.size(); i++)
             fboManager.addFboData(dataList.get(i));
     }
@@ -91,5 +81,4 @@ class FBOLoader extends LoaderPackage {
 
         request(file);
     }
-
 }

@@ -6,15 +6,9 @@ import engine.root.StructPackage;
 public class AnimationLayerStruct extends StructPackage {
 
     /*
-     * Immutable layer of an animation tree. stateNodes maps every
-     * EntityState ordinal to the node this layer plays for it, or
-     * EngineSetting.INDEX_NOT_FOUND where the layer rests and fades out.
-     * boneMask is this layer's per-bone blend weight, indexed like the rig
-     * — 1.0 everywhere for an unmasked layer, 0.0 for any bone a mask
-     * leaves out. transitionBlends[from][to] is the cross-fade between two
-     * of its nodes, the target node's own blend unless a transition in
-     * JSON overrides it. blendDuration is how long the whole layer takes to
-     * fade in or out as its states come and go.
+     * Immutable layer of an animation tree: the node for each entity state, the
+     * per-bone mask weights, the cross-fade between each pair of nodes, and how
+     * long the whole layer fades in or out.
      */
 
     // Identity

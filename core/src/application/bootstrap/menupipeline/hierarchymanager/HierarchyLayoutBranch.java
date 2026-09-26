@@ -6,8 +6,8 @@ import application.bootstrap.menupipeline.hierarchy.HierarchyNodeStruct;
 import application.bootstrap.menupipeline.hierarchy.HierarchyTabProvider;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.DimensionValue;
-import application.bootstrap.menupipeline.util.DimensionVector2;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -116,15 +116,21 @@ class HierarchyLayoutBranch extends BranchPackage {
                 + (rowCount - 1) * EngineSetting.HIERARCHY_TAB_SPACING_PIXELS;
         float barHeight = stripHeight + EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS;
 
-        resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_TAB_BAR, new DimensionVector2(
-                DimensionValue.ofPercent(100f),
-                DimensionValue.ofAbsolute(barHeight)));
-        resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_TABS, new DimensionVector2(
-                DimensionValue.ofPercentWithOffset(100f, -2f * EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS),
-                DimensionValue.ofAbsolute(stripHeight)));
-        resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_ROWS, new DimensionVector2(
-                DimensionValue.ofPercentWithOffset(100f, -EngineSetting.HIERARCHY_ROWS_MARGIN_PIXELS),
-                DimensionValue.ofPercentWithOffset(100f, -(barHeight + EngineSetting.HIERARCHY_ROWS_MARGIN_PIXELS))));
+        resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_TAB_BAR, new DimensionVector2Struct(
+                DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX),
+                DimensionValueStruct.ofAbsolute(barHeight)));
+        resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_TABS, new DimensionVector2Struct(
+                DimensionValueStruct.ofPercentWithOffset(
+                        EngineSetting.PERCENT_MAX,
+                        -2f * EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS),
+                DimensionValueStruct.ofAbsolute(stripHeight)));
+        resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_ROWS, new DimensionVector2Struct(
+                DimensionValueStruct.ofPercentWithOffset(
+                        EngineSetting.PERCENT_MAX,
+                        -EngineSetting.HIERARCHY_ROWS_MARGIN_PIXELS),
+                DimensionValueStruct.ofPercentWithOffset(
+                        EngineSetting.PERCENT_MAX,
+                        -(barHeight + EngineSetting.HIERARCHY_ROWS_MARGIN_PIXELS))));
     }
 
     // Rows \\
@@ -184,7 +190,7 @@ class HierarchyLayoutBranch extends BranchPackage {
 
     // Utility \\
 
-    private void resizeEntry(MenuInstance menu, int entryPoint, DimensionVector2 size) {
+    private void resizeEntry(MenuInstance menu, int entryPoint, DimensionVector2Struct size) {
 
         ElementInstance entry = menu.getEntryPoint(entryPoint);
 
@@ -200,7 +206,7 @@ class HierarchyLayoutBranch extends BranchPackage {
             child.setFontText(text);
     }
 
-    private DimensionVector2 toOffset(float x) {
-        return new DimensionVector2(DimensionValue.ofAbsolute(x), DimensionValue.ofAbsolute(0f));
+    private DimensionVector2Struct toOffset(float x) {
+        return new DimensionVector2Struct(DimensionValueStruct.ofAbsolute(x), DimensionValueStruct.ofAbsolute(0f));
     }
 }

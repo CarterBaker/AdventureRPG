@@ -1,10 +1,10 @@
 package editor.textureviewer;
 
+import editor.runtime.EditorInputSystem;
 import editor.textureviewer.atlas.TextureViewerAtlasSystem;
 import editor.textureviewer.menu.TextureViewerMenuSystem;
 import editor.textureviewer.render.TextureViewerRenderSystem;
 import editor.textureviewer.select.TextureViewerSelectSystem;
-import engine.editor.EditorInputSystem;
 import engine.root.ContextPackage;
 
 public class TextureViewerContext extends ContextPackage {

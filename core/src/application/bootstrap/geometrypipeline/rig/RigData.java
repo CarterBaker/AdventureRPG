@@ -8,18 +8,9 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 public class RigData extends DataPackage {
 
     /*
-     * Immutable bone hierarchy for one rig template. Bones are stored in
-     * strict parent-before-child order — index 0 is always the root, and
-     * every bone's parentIndex is guaranteed to be less than its own index.
-     * This lets pose evaluation walk the array once, front to back, with
-     * every parent already resolved before its children are reached.
-     *
-     * bindWorldMatrices and bindWorldInverseMatrices are baked once here,
-     * at load time, from the bones' bind-pose position/rotation — identical
-     * for every entity sharing this rig, so this is computed per rig, never
-     * per entity. Runtime pose evaluation combines a bone's *current* world
-     * matrix with bindWorldInverseMatrices[boneIndex] to produce the
-     * skinning matrix fed to the GPU — see AnimationStateHandle.
+     * Immutable bone hierarchy for one rig, stored parent before child so poses
+     * evaluate in one pass. Bind-pose world matrices and their inverses are
+     * baked once per rig at load time.
      */
 
     // Bones

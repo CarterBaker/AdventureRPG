@@ -123,14 +123,6 @@ public class CalendarData extends DataPackage {
 
     // Season Resolution \\
 
-    /*
-     * Resolves the name of whichever season owns the given month/day. A
-     * season runs from its own (startMonth, startDayOfMonth) up to — but
-     * not including — the next season's start date; the last season in
-     * the list wraps around and also covers any date before the first
-     * season's start date. Returns null only if this calendar defines no
-     * seasons.
-     */
     public String getSeasonNameForDate(int monthIndex, int dayOfMonth) {
 
         if (seasons.isEmpty())
@@ -161,12 +153,6 @@ public class CalendarData extends DataPackage {
 
     // Season Keyframes \\
 
-    /*
-     * Lazily builds and caches this calendar's seasons as sorted, wrapped
-     * keyframe centers — shared by every system that blends a value across
-     * the season year (day length, sky color, or anything else), so the
-     * center/sort math exists in exactly one place.
-     */
     public SeasonKeyframeStruct getSeasonKeyframes() {
 
         if (seasonKeyframes != null)
@@ -221,13 +207,6 @@ public class CalendarData extends DataPackage {
 
     // Day Length \\
 
-    /*
-     * Blends this calendar's seasons' own dayLength across the year to
-     * drive the sunrise/sunset shift. Backed by the same keyframe centers
-     * getSeasonKeyframes() resolves, cached against the last yearProgress
-     * seen so repeated same-day calls (every grid, every frame) skip the
-     * recompute.
-     */
     public float getDayLengthForYearProgress(double yearProgress) {
 
         float[] dayLengths = getSeasonDayLengths();

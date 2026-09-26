@@ -20,6 +20,12 @@ import engine.root.ManagerPackage;
 
 public class MenuEventsManager extends ManagerPackage {
 
+    /*
+     * Owns this context's menu callback branches. Branches live in the
+     * context's registry, so menu actions from this window always reach this
+     * context's own instances.
+     */
+
     @Override
     protected void create() {
         create(MainMenuBranch.class);

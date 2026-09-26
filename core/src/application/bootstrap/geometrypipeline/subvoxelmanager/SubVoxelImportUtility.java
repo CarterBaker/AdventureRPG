@@ -23,7 +23,6 @@ class SubVoxelImportUtility extends EngineUtility {
      */
 
     // Layout
-    private static final int FLOATS_PER_TRIANGLE = 9;
 
     // Detection \\
 
@@ -146,7 +145,9 @@ class SubVoxelImportUtility extends EngineUtility {
 
         for (int i = 0; i < triangleTextures.size(); i++) {
 
-            float distance = intersect(originX, originY, originZ, triangles, i * FLOATS_PER_TRIANGLE);
+            float distance = intersect(
+                    originX, originY, originZ,
+                    triangles, i * EngineSetting.SUB_VOXEL_FLOATS_PER_TRIANGLE);
 
             if (distance < 0f)
                 continue;

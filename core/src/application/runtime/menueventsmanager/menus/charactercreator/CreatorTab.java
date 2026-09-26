@@ -17,6 +17,9 @@ public enum CreatorTab {
     PROFESSION(RuntimeSetting.CREATOR_TAB_PROFESSION, RuntimeSetting.CREATOR_PLACEHOLDER_PROFESSION),
     SKILLS(RuntimeSetting.CREATOR_TAB_SKILLS, RuntimeSetting.CREATOR_PLACEHOLDER_SKILLS);
 
+    // Values
+    public static final CreatorTab[] VALUES = values();
+
     // Internal
     private final String title;
     private final String placeholderText;

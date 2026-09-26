@@ -1,9 +1,6 @@
 package application.bootstrap.menupipeline.fontmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.menupipeline.font.FontHandle;
 import engine.root.EngineSetting;
@@ -15,7 +12,7 @@ class FontLoader extends LoaderPackage {
 
     /*
      * Scans the fonts directory for TTF/OTF files and loads each one into
-     * FontManager via InternalBuilder. Font name is derived from the file stem.
+     * FontManager via FontBuilder. Font name is derived from the file stem.
      * No JSON config — size, material, and charset fall back to EngineSetting
      * defaults. Supports on-demand loading by font name to file resolution.
      */
@@ -38,18 +35,10 @@ class FontLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Font directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> FileUtility.hasExtension(f, EngineSetting.FONT_FILE_EXTENSIONS))
-                    .forEach(file -> {
-                        String name = FileUtility.getFileName(file);
-                        fontName2File.put(name, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk font directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.FONT_FILE_EXTENSIONS)) {
+            String name = FileUtility.getFileName(file);
+            fontName2File.put(name, file);
+            queueFile(file);
         }
     }
 

@@ -1,7 +1,7 @@
 package application.bootstrap.menupipeline.element;
 
 import application.bootstrap.menupipeline.font.FontInstance;
-import application.bootstrap.menupipeline.util.DimensionVector2;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
@@ -12,33 +12,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ElementInstance extends InstancePackage {
 
     /*
-     * Runtime instance of a UI element.
-     *
-     * activeHoverState is set by ElementHitSystem:
-     * on enter → hoverEnterState
-     * per frame → hoverState (if defined, replaces enter state)
-     * on exit → hoverExitState
-     * on clear → null
-     *
-     * The render system reads activeHoverState via resolveActiveState.
-     * Sprite instances are cloned for all four states at open time.
-     *
-     * setActionArgOverride() allows runtime injection of click arguments —
-     * used by EditorBranch to wire each injected layout button to its name.
-     *
-     * setFontText() updates both the local textOverride field and the live
-     * FontInstance so the rendered label reflects the new string immediately.
-     *
-     * setSizeOverride() folds a new size into the layout override, so every
-     * layout path — anchored or stacked — resolves the element at that size.
-     *
-     * pointed is set by ElementHitSystem on the deepest element with a
-     * hover_color under the cursor — unlike hovered, it reaches elements inside
-     * an open hover dropdown, whose owner keeps the hover itself.
-     *
-     * applyPose() moves, scales, and rotates the laid out element around its
-     * layout pivot. Offset and scale update the computed rect, so children and
-     * hit testing follow the pose; rotation lives only in the render transform.
+     * Runtime instance of a UI element. Holds its computed layout, the hover,
+     * pointed and click state ElementHitSystem sets, runtime overrides for
+     * text, size and click arguments, and the pose applied to animated
+     * elements.
      */
 
     // Internal
@@ -63,7 +40,7 @@ public class ElementInstance extends InstancePackage {
 
     // Layout
     private LayoutStruct layoutOverride;
-    private DimensionVector2 positionOverride;
+    private DimensionVector2Struct positionOverride;
 
     // Text
     private String textOverride;
@@ -227,11 +204,6 @@ public class ElementInstance extends InstancePackage {
 
     // Runtime Mutation \\
 
-    /*
-     * Writes the click argument at runtime. Used by EditorBranch to wire each
-     * injected layout list button to its layout name without rebuilding the
-     * element from scratch.
-     */
     public void setActionArgOverride(String arg) {
         this.actionArgOverride = arg;
     }
@@ -240,22 +212,12 @@ public class ElementInstance extends InstancePackage {
         this.onDragArgOverride = arg;
     }
 
-    /*
-     * Updates the visible label text at runtime. Writes both the local
-     * textOverride field (returned by getText()) and the live FontInstance so
-     * the render system sees the new string immediately on the next frame.
-     */
     public void setFontText(String text) {
         this.textOverride = text;
         if (fontInstance != null)
             fontInstance.setText(text);
     }
 
-    /*
-     * Replaces the element's own color at runtime — the tint of its sprite
-     * and text whenever no hover or state color applies. Used to paint
-     * swatches and mark selected entries.
-     */
     public void setColorOverride(MenuColorStruct color) {
         this.colorOverride = color;
     }
@@ -309,7 +271,7 @@ public class ElementInstance extends InstancePackage {
                 : layoutOverride != null ? layoutOverride
                         : data.getLayout();
 
-        DimensionVector2 pos = positionOverride != null ? positionOverride : layout.getPosition();
+        DimensionVector2Struct pos = positionOverride != null ? positionOverride : layout.getPosition();
 
         float posX = pos.getX().resolve(parentW);
         float posY = pos.getY().resolve(parentH);
@@ -485,7 +447,7 @@ public class ElementInstance extends InstancePackage {
 
     // Position Override \\
 
-    public void setPositionOverride(DimensionVector2 pos) {
+    public void setPositionOverride(DimensionVector2Struct pos) {
         this.positionOverride = pos;
     }
 
@@ -495,7 +457,7 @@ public class ElementInstance extends InstancePackage {
 
     // Size Override \\
 
-    public void setSizeOverride(DimensionVector2 size) {
+    public void setSizeOverride(DimensionVector2Struct size) {
 
         LayoutStruct base = layoutOverride != null ? layoutOverride : data.getLayout();
         this.layoutOverride = LayoutStruct.merge(base, new LayoutStruct(null, null, null, size, null, null, 0f));

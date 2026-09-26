@@ -34,11 +34,6 @@ public final class MegaDataUtility extends EngineUtility {
         return null;
     }
 
-    /*
-     * A stage is needed when the slot is at or above its maximumLevel
-     * (less detailed than or equal to the maximum). Non-dumpable stages
-     * are always needed.
-     */
     private static boolean isNeeded(MegaData stage, GridSlotDetailLevel slotLevel) {
 
         if (!stage.dumpable)

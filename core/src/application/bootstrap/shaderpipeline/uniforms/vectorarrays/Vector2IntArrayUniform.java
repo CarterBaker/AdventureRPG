@@ -1,19 +1,34 @@
 package application.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import org.lwjgl.opengl.GL20C;
-import org.lwjgl.system.MemoryStack;
+import java.nio.IntBuffer;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
+import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector2Int;
+import engine.util.memory.BufferUtility;
 
 public final class Vector2IntArrayUniform extends UniformAttributeStruct<Object[]> {
 
+    /*
+     * GLSL ivec2 array uniform. Elements are packed into a preallocated
+     * direct buffer on push, so uploads never allocate.
+     */
+
+    // Internal
     private final int elementCount;
+    private final IntBuffer uniformBuffer;
+
+    // Constructor \\
 
     public Vector2IntArrayUniform(int elementCount) {
+
         super(UniformType.VECTOR2_INT, elementCount, new Vector2Int[elementCount]);
+
         this.elementCount = elementCount;
+        this.uniformBuffer = BufferUtility.newIntBuffer(elementCount * EngineSetting.VECTOR2_COMPONENT_COUNT);
+
         for (int i = 0; i < elementCount; i++)
             ((Vector2Int[]) value)[i] = new Vector2Int();
     }
@@ -23,26 +38,32 @@ public final class Vector2IntArrayUniform extends UniformAttributeStruct<Object[
         return new Vector2IntArrayUniform(elementCount);
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Object[] value) {
-        int[] flat = new int[elementCount * 2];
+
+        uniformBuffer.clear();
+
         for (int i = 0; i < elementCount; i++) {
-            Vector2Int v = (Vector2Int) value[i];
-            flat[i * 2] = v.x;
-            flat[i * 2 + 1] = v.y;
+            Vector2Int vector = (Vector2Int) value[i];
+            uniformBuffer.put(vector.x);
+            uniformBuffer.put(vector.y);
         }
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            java.nio.IntBuffer buf = stack.mallocInt(elementCount * 2);
-            buf.put(flat).flip();
-            GL20C.glUniform2iv(handle, buf);
-        }
+
+        uniformBuffer.flip();
+        EngineContext.gl20.glUniform2iv(handle, uniformBuffer);
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Object[] value) {
-        Vector2Int[] dst = (Vector2Int[]) this.value;
+
+        Vector2Int[] target = (Vector2Int[]) this.value;
+
         for (int i = 0; i < Math.min(value.length, elementCount); i++)
-            dst[i].set((Vector2Int) value[i]);
+            target[i].set((Vector2Int) value[i]);
     }
 
     public int elementCount() {

@@ -11,7 +11,7 @@ public class ToolTypeManager extends ManagerPackage {
     /*
      * Owns the tool type palette for the engine lifetime. Detects and rejects
      * ID collisions on registration. Supports on-demand loading via
-     * InternalLoader for tool types not yet in the palette at runtime.
+     * ToolTypeLoader for tool types not yet in the palette at runtime.
      * TOOL_NONE (0) is a reserved sentinel meaning no tool required.
      */
 

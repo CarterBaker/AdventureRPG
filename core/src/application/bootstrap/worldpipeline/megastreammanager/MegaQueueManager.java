@@ -2,7 +2,6 @@ package application.bootstrap.worldpipeline.megastreammanager;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.ArrayDeque;
 
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
@@ -24,20 +23,10 @@ import engine.util.mathematics.extras.Coordinate2Long;
 class MegaQueueManager extends ManagerPackage {
 
     /*
-     * Drives the per-frame mega chunk pipeline across all active grids. Each
-     * grid owns its own activeMegaChunks map. The mega pool is shared across
-     * all grids for efficiency. RENDER dispatch is bounded by its own
-     * megaGpuUploadBudget, separate from megaAssessPerFrame. resolveMegaForChunk/
-     * createMega/computeMegaMax touch activeMegaChunks and the shared pool,
-     * neither of which is thread-safe, so they must only ever be called from
-     * the main thread — BatchBranch resolves the mega synchronously before
-     * handing the actual CPU merge off to a worker thread via mergeIntoMega,
-     * which is safe from any thread since the target mega's own lock guards
-     * it. invalidateMegaForChunk runs on the main thread right before a
-     * chunk is returned to the pool for reuse under a different coordinate,
-     * so it blocks on the mega's own lock rather than skipping it on
-     * contention — a stale reference left behind here would have this
-     * mega's next re-merge read a completely unrelated chunk's geometry.
+     * Drives the per-frame mega chunk pipeline for every grid with its own GPU
+     * upload budget. Mega resolution and the shared pool are main-thread only;
+     * merges run on workers under the mega's lock. Invalidating a mega before
+     * its chunk is pooled blocks on that lock so no stale reference survives.
      */
 
     // Internal
@@ -52,7 +41,7 @@ class MegaQueueManager extends ManagerPackage {
     private MegaDumpBranch dumpBranch;
 
     // Pool — shared across all grids
-    private ArrayDeque<MegaChunkInstance> megaPool;
+    private ObjectArrayList<MegaChunkInstance> megaPool;
 
     // Settings
     private int megaPoolMaxOverflow;
@@ -76,7 +65,7 @@ class MegaQueueManager extends ManagerPackage {
         this.dumpBranch = create(MegaDumpBranch.class);
 
         // Pool
-        this.megaPool = new ArrayDeque<>();
+        this.megaPool = new ObjectArrayList<>();
 
         // Settings
         this.megaPoolMaxOverflow = EngineSetting.MEGA_POOL_MAX_OVERFLOW;
@@ -197,14 +186,14 @@ class MegaQueueManager extends ManagerPackage {
 
         if (!megaPool.isEmpty()) {
 
-            MegaChunkInstance pooled = megaPool.peek();
+            MegaChunkInstance pooled = megaPool.top();
             MegaDataSyncContainer sync = pooled.getMegaDataSyncContainer();
 
             if (!sync.tryAcquire())
                 return null;
 
             try {
-                megaPool.poll();
+                megaPool.pop();
                 return configureMega(pooled, megaCoord, grid);
             } finally {
                 sync.release();

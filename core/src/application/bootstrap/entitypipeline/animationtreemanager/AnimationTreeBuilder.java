@@ -1,9 +1,9 @@
 package application.bootstrap.entitypipeline.animationtreemanager;
 
-import java.io.File;
-import java.util.Arrays;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.io.File;
+import java.util.Arrays;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
@@ -290,7 +290,7 @@ class AnimationTreeBuilder extends BuilderPackage {
             boolean base,
             File file) {
 
-        int[] stateNodes = new int[EntityState.values().length];
+        int[] stateNodes = new int[EntityState.VALUES.length];
         int defaultNode = JsonUtility.hasString(layerJson, "default")
                 ? resolveNodeIndex(layerJson.get("default").getAsString(), layerName, nodeName2NodeIndex, file)
                 : EngineSetting.INDEX_NOT_FOUND;
@@ -314,7 +314,7 @@ class AnimationTreeBuilder extends BuilderPackage {
         }
 
         if (base)
-            for (EntityState state : EntityState.values())
+            for (EntityState state : EntityState.VALUES)
                 if (stateNodes[state.ordinal()] == EngineSetting.INDEX_NOT_FOUND)
                     throwException("Base layer \"" + layerName + "\" has no node for state \""
                             + state.name().toLowerCase() + "\" and no \"default\". File: " + file.getName());

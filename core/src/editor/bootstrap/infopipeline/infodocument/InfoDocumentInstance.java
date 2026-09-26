@@ -5,7 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

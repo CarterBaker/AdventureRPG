@@ -3,7 +3,7 @@ package application.bootstrap.worldpipeline.liquidmanager;
 import java.util.BitSet;
 
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
@@ -33,7 +33,7 @@ class LiquidVisitedStruct extends StructPackage {
         this.slotBits = new BitSet[EngineSetting.LIQUID_SCAN_SUBCHUNK_LIMIT];
 
         for (int i = 0; i < slotBits.length; i++)
-            slotBits[i] = new BitSet(ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT);
+            slotBits[i] = new BitSet(ChunkCoordinateUtility.BLOCK_COORDINATE_COUNT);
 
         this.slotCount = 0;
     }
@@ -51,7 +51,7 @@ class LiquidVisitedStruct extends StructPackage {
         if (slot == EngineSetting.INDEX_NOT_FOUND)
             return false;
 
-        return slotBits[slot].get(ChunkCoordinate3Int.getIndex(cell.getPackedXYZ()));
+        return slotBits[slot].get(ChunkCoordinateUtility.getIndex(cell.getPackedXYZ()));
     }
 
     void visit(LiquidCellStruct cell) {
@@ -69,7 +69,7 @@ class LiquidVisitedStruct extends StructPackage {
             subChunk2Slot.put(subChunkInstance, slot);
         }
 
-        slotBits[slot].set(ChunkCoordinate3Int.getIndex(cell.getPackedXYZ()));
+        slotBits[slot].set(ChunkCoordinateUtility.getIndex(cell.getPackedXYZ()));
     }
 
     void clear() {

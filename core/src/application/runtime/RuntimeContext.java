@@ -2,7 +2,6 @@ package application.runtime;
 
 import application.runtime.input.InputSystem;
 import application.runtime.inventory.InventoryRenderSystem;
-import application.runtime.lighting.SkySystem;
 import application.runtime.menu.MainMenuSystem;
 import application.runtime.menu.MenuSystem;
 import application.runtime.menueventsmanager.MenuEventsManager;
@@ -10,6 +9,7 @@ import application.runtime.player.PlayerRenderSystem;
 import application.runtime.player.PlayerSystem;
 import application.runtime.postprocessing.PostProcessingManager;
 import application.runtime.recording.RecordingInputSystem;
+import application.runtime.sky.SkySystem;
 import application.runtime.weather.PrecipitationSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;

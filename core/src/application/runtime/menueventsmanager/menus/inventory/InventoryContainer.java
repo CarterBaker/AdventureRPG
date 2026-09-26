@@ -9,5 +9,8 @@ public enum InventoryContainer {
      */
 
     BACKPACK,
-    CHEST
+    CHEST;
+
+    // Values
+    public static final InventoryContainer[] VALUES = values();
 }

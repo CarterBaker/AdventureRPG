@@ -6,15 +6,10 @@ import engine.root.StructPackage;
 public class BiomeBlendStruct extends StructPackage {
 
     /*
-     * One world position's resolved biome influence — the distinct biomes
-     * reaching that position and the normalized weight each one contributes.
-     * Filled in place by BiomeManager.sampleBiomeField() and consumed by
-     * TerrainShapeUtility, so a full chunk's worth of field sampling never
-     * allocates. Contributions beyond BIOME_FIELD_MAX_CONTRIBUTORS displace
-     * the smallest weight currently held, which is deterministic because the
-     * accumulation order is fixed by the sampling kernels themselves. Weight
-     * moved into a shore buffer biome is tallied separately, so the share of
-     * a position the ocean and its beaches hold together stays readable.
+     * One position's resolved biome influence: the distinct biomes reaching it
+     * and their normalized weights, filled in place so field sampling never
+     * allocates. Past BIOME_FIELD_MAX_CONTRIBUTORS the smallest weight is
+     * displaced, and weight moved into shore buffers is tallied separately.
      */
 
     private static final int CAPACITY = EngineSetting.BIOME_FIELD_MAX_CONTRIBUTORS;
@@ -145,13 +140,6 @@ public class BiomeBlendStruct extends StructPackage {
         return oceanWeight;
     }
 
-    /*
-     * Share of this position held by the ocean together with the shore
-     * buffers inserted against it. WorldGenerationManager thresholds this per
-     * block column rather than reading one biome's flag, so the reach of the
-     * tide follows the blended coastline instead of snapping to whichever
-     * biome happened to win the chunk.
-     */
     public float getCoastalWeight() {
         return getOceanWeight() + bufferWeight;
     }

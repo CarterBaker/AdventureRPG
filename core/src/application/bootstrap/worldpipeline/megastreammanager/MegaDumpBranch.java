@@ -12,15 +12,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MegaDumpBranch extends BranchPackage {
 
     /*
-     * Fires when a mega's slot transitions to IMMEDIATE — chunks are close
-     * enough to render individually. Removes the mega from the GPU and calls
-     * mega.reset() to fully clear its batch registry and its own
-     * BATCH_DATA/RENDER_DATA flags. Every covered chunk's own BATCH_DATA is
-     * cleared here too, reliably — nothing else in the engine ever sets that
-     * flag except MegaRenderBranch after a confirmed upload, so a chunk this
-     * loop failed to reach would keep reporting itself as already batched
-     * into a mega that no longer has any record of it, and would never be
-     * re-queued to rejoin it once the slot returns to NEAR.
+     * Fires when a mega's slot becomes IMMEDIATE and its chunks render
+     * individually. Removes the mega from the GPU, resets it, and clears
+     * BATCH_DATA on every covered chunk so each can rejoin a mega once the slot
+     * returns to NEAR.
      */
 
     // Internal

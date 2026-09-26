@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 public class MaterialManager extends ManagerPackage {
 
     /*
-     * Owns all material handles. Drives loading via InternalLoader and exposes
+     * Owns all material handles. Drives loading via MaterialLoader and exposes
      * cloneMaterial() for runtime instance creation. Handles are persistent —
      * instances are cloned on demand and discarded by the caller.
      */

@@ -3,50 +3,28 @@ package editor.bootstrap.tabpipeline.tab;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.runtime.EditorSetting;
 import engine.root.ContextPackage;
-import engine.root.EngineSetting;
 
 public class TabContext extends ContextPackage {
 
     /*
-     * Owns the chrome window, chrome menu, and the content context that lives
-     * inside the tab's canvas area. A "tab" is really this one object wrapping
-     * two windows — nothing outside TabContext ever touches the content window
-     * directly.
-     *
-     * The chrome menu renders through MenuManager like every other menu, and
-     * each window keeps its own FBOs sized and bound to the right GL context,
-     * so this context has no render or resize work of its own.
-     *
-     * placeAt() positions the chrome window. TabManager calls syncContent()
-     * each frame after the chrome menu has written fresh canvas bounds — that
-     * is the only place the content window's composite rect is set.
-     *
-     * moveTo() reparents both windows to a new OS window. No destroy, no rebuild.
-     *
-     * bringToFront() elevates chrome and content together, content directly
-     * above chrome — the only place either window's zOrder is ever assigned.
-     *
-     * dispose() is the single teardown path for a tab, regardless of what
-     * triggered it — TabManager.closeTab() disposing this tab specifically,
-     * the OS window it lives on being disposed (which cascades into every
-     * window composited onto it, this one included), or the whole engine
-     * shutting down. It removes this tab from the dock tree, disposes the
-     * content window (which cascades into the content context, its VAOs,
-     * and its render resources exactly like any other window teardown),
-     * closes the chrome menu, and deregisters from TabManager's bookkeeping.
+     * One editor tab: a chrome window with its menu, plus the content context
+     * living in its canvas. Placement, content sync, reparenting and z-ordering
+     * all go through here, and dispose() is the single teardown path however
+     * the tab closes.
      */
 
     // Internal
     private MenuManager menuManager;
-    private FboManager fboManager;
+    private FBOManager fboManager;
     private WindowManager windowManager;
     private InputManager inputManager;
     private DockLayoutSystem dockLayoutSystem;
@@ -68,7 +46,7 @@ public class TabContext extends ContextPackage {
     @Override
     protected void get() {
         menuManager = get(MenuManager.class);
-        fboManager = get(FboManager.class);
+        fboManager = get(FBOManager.class);
         windowManager = get(WindowManager.class);
         inputManager = get(InputManager.class);
         dockLayoutSystem = get(DockLayoutSystem.class);
@@ -78,7 +56,7 @@ public class TabContext extends ContextPackage {
     @Override
     protected void awake() {
         menuManager.setMenuTargetFbo(getWindow(), fboManager.cloneFbo(RuntimeSetting.FBO_UI, getWindow()));
-        chromeMenu = menuManager.openMenu(EngineSetting.MENU_TAB_SHELL, getWindow());
+        chromeMenu = menuManager.openMenu(EditorSetting.MENU_TAB_SHELL, getWindow());
     }
 
     // Dispose \\
@@ -106,10 +84,6 @@ public class TabContext extends ContextPackage {
 
     // Management \\
 
-    /*
-     * Pairs this tab to its content context. Called once after both contexts are
-     * created. Wires the input lock release listener to the content window.
-     */
     public void linkContent(ContextPackage contentContext) {
 
         this.contentContext = contentContext;
@@ -118,24 +92,11 @@ public class TabContext extends ContextPackage {
                 () -> inputManager.onInputLockReleased(contentContext.getWindow()));
     }
 
-    /*
-     * Wires this context back to the TabHandle that owns it. Called once,
-     * immediately after both are constructed, alongside linkContent(). The
-     * chrome header shows the owner's title from then on.
-     */
     public void setOwnerHandle(TabHandle handle) {
         this.ownerHandle = handle;
         showTitle(handle.getTabTitle());
     }
 
-    /*
-     * Elevates this tab — chrome and content together — strictly above
-     * everything else currently open. Called once when the tab is opened,
-     * and again whenever it needs to float above everything else (e.g. the
-     * start of a drag). Both windows take consecutive values from the single
-     * zOrder counter, so content always sits directly above its own chrome
-     * and never shares a zOrder with any other window.
-     */
     public void bringToFront() {
 
         if (contentContext == null)
@@ -145,11 +106,6 @@ public class TabContext extends ContextPackage {
         windowManager.bringToFront(contentContext.getWindow());
     }
 
-    /*
-     * Positions the chrome window. Called by pushRects() and drag tracking.
-     * Content placement is handled separately by syncContent() each frame after
-     * the chrome menu has written fresh canvas bounds.
-     */
     public void placeAt(float x, float y, float w, float h) {
 
         if (w <= 0 || h <= 0)
@@ -158,15 +114,6 @@ public class TabContext extends ContextPackage {
         getWindow().place(x, y, w, h);
     }
 
-    /*
-     * Pushes the current canvas bounds to the content window. This is the only
-     * place the content window's composite rect is written. Nothing is pushed
-     * until the chrome itself has been placed.
-     *
-     * Canvas coords are in chrome-local pixel space (origin at the chrome
-     * window's composite origin). Adding the chrome composite origin gives
-     * OS-window space.
-     */
     public void syncContent() {
 
         if (contentContext == null || chromeMenu == null || chromeMenu.getCanvas() == null)
@@ -197,12 +144,6 @@ public class TabContext extends ContextPackage {
         contentWindow.place(cx, cy, cw, ch);
     }
 
-    /*
-     * Reparents both the chrome window and the content window to a different OS
-     * window. Both contexts stay alive — no rebuild, no lifecycle gap. Their
-     * render resources follow them into the target window's GL context as part
-     * of WindowManager.reparentWindow().
-     */
     public void moveTo(WindowInstance targetOsWindow) {
         windowManager.reparentWindow(getWindow(), targetOsWindow);
         windowManager.reparentWindow(contentContext.getWindow(), targetOsWindow);
@@ -212,7 +153,7 @@ public class TabContext extends ContextPackage {
 
     private void showTitle(String title) {
 
-        ElementInstance titleLabel = chromeMenu.getEntryPoint(EngineSetting.TAB_ENTRY_TITLE);
+        ElementInstance titleLabel = chromeMenu.getEntryPoint(EditorSetting.TAB_ENTRY_TITLE);
 
         if (titleLabel != null)
             titleLabel.setFontText(title);

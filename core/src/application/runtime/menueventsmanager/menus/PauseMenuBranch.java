@@ -13,15 +13,10 @@ import engine.settings.KeyBindings;
 public class PauseMenuBranch extends BranchPackage {
 
     /*
-     * Runs the in-game pause menu for this context's window. Pause opens it
-     * while a player is in the world and no other menu holds input; Pause or
-     * Continue closes it and play resumes. Options opens the settings menu
-     * over it, which returns to it on close. Quit ends the play session —
-     * the character is saved and released through SaveManager — and brings
-     * the main menu back up over the world, with the player and camera left
-     * where they stood. Pause only closes the menu once it has been on show a
-     * whole frame, so the key that backs out of Settings never also resumes
-     * play, whichever branch reads it first.
+     * Runs the pause menu for this context's window. Opens on Pause while
+     * playing, closes on Pause or Continue, opens Settings over itself, and on
+     * Quit saves and releases the character and returns to the main menu. Pause
+     * closes it only after it has shown a full frame.
      */
 
     // Internal

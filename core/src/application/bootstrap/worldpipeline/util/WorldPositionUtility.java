@@ -15,6 +15,11 @@ import engine.util.mathematics.vectors.Vector2Int;
 
 public class WorldPositionUtility extends EngineUtility {
 
+    /*
+     * Spawn helpers: picks a random chunk inside a world and finds the nearest
+     * safe standing height in a column.
+     */
+
     public static long getRandomChunk(WorldHandle worldHandle) {
 
         Vector2Int scale = worldHandle.getWorldScale();

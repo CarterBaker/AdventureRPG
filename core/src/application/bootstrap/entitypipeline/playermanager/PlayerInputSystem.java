@@ -1,6 +1,6 @@
 package application.bootstrap.entitypipeline.playermanager;
 
-import application.bootstrap.entitypipeline.util.EntityInputHandle;
+import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import engine.root.SystemPackage;
 import engine.settings.KeyBindings;
@@ -8,12 +8,10 @@ import engine.settings.KeyBindings;
 class PlayerInputSystem extends SystemPackage {
 
     /*
-     * Translates raw hardware state into game-semantic entity input.
-     * Called by PlayerManager once per player per frame, before movement runs.
-     * The only place in the codebase that maps physical bindings to game actions.
-     * When input is locked, the entity handle is explicitly cleared to neutral
-     * so all downstream consumers — movement, placement, state — see no input.
-     * The lock flag is driven externally by PlayerManager on behalf of LockSystem.
+     * Translates raw hardware state into game-semantic entity input once per
+     * player per frame, before movement. The only place physical bindings map
+     * to game actions; while input is locked the entity input is cleared to
+     * neutral.
      */
 
     // Lock

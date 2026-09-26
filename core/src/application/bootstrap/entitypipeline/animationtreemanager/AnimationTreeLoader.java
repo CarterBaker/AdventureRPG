@@ -1,9 +1,6 @@
 package application.bootstrap.entitypipeline.animationtreemanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
 import engine.root.EngineSetting;
@@ -38,18 +35,10 @@ class AnimationTreeLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Animation tree JSON directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String treeName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        treeName2File.put(treeName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk animation tree directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String treeName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            treeName2File.put(treeName, file);
+            queueFile(file);
         }
     }
 

@@ -21,7 +21,7 @@ public class VAOManager extends ManagerPackage {
 
     /*
      * Owns the VAO layout palette for the engine lifetime. Handles bootstrap
-     * registration via InternalBuilder and drives VAOInstance creation and
+     * registration via VAOBuilder and drives VAOInstance creation and
      * deletion. Auto-triggers a mesh load on miss for external callers. The
      * per-window clone cache is keyed by source VAO first specifically so
      * removing every clone of one mesh's VAO — which happens on every chunk
@@ -94,10 +94,6 @@ public class VAOManager extends ManagerPackage {
         return getVAOHandleFromVAOID(getVAOIDFromVAOName(vaoName));
     }
 
-    /*
-     * Direct registry lookup — no load trigger. Safe to call from inside any
-     * builder that is already executing within a load() call.
-     */
     public VAOHandle getVAOHandleDirect(String vaoName) {
         return vaoName2VAOHandle.get(vaoName);
     }
@@ -109,24 +105,11 @@ public class VAOManager extends ManagerPackage {
     }
 
     public int getVAOForWindow(MeshData meshData, int windowID) {
+
         int sourceVAO = meshData.getAttributeHandle();
 
-        /*
-         * VAOs are context-local and cannot be shared, even when contexts are created
-         * with resource sharing enabled. Always resolve through the per-window clone
-         * cache so each window draws with a VAO created inside its own current context.
-         */
-        /*
-         * A zero source VAO means this mesh has no canonical VAO handle yet.
-         * Treat it as a transient edge case: create a one-off clone and skip
-         * cache insertion so we don't collide all zero-handle meshes onto one
-         * cache key or leak entries that cannot be reclaimed by source VAO.
-         */
         if (sourceVAO == 0)
-            return VAOGLSLUtility.cloneVAO(
-                    meshData.getVAOData().getAttrSizes(),
-                    meshData.getVertexHandle(),
-                    meshData.getIndexHandle());
+            throwException("Mesh drawn without a source VAO. Upload the mesh before submitting it for render.");
 
         Int2IntOpenHashMap windowClones = sourceVAO2WindowClones.get(sourceVAO);
 
@@ -180,12 +163,6 @@ public class VAOManager extends ManagerPackage {
         }
     }
 
-    /*
-     * Removes every window's clone of one source VAO — called whenever that
-     * mesh is disposed (chunk unload, or a render bucket rebuild that ends
-     * up with fewer buckets than before). Only the handful of windows that
-     * actually cloned this specific source are ever touched.
-     */
     public void removeSourceVAOClones(int sourceVAO) {
 
         if (sourceVAO == 0)

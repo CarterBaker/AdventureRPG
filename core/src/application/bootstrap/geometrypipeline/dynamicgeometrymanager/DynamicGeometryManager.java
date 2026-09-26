@@ -9,10 +9,9 @@ import engine.root.ManagerPackage;
 public class DynamicGeometryManager extends ManagerPackage {
 
     /*
-     * Entry point for all dynamic geometry assembly. Delegates chunk and
-     * subchunk geometry to InternalBuildManager and exposes font glyph
-     * assembly for the menu pipeline. Owns the shared async scratch container
-     * used during synchronous build calls.
+     * Entry point for dynamic geometry assembly. Delegates chunk and subchunk
+     * builds to GeometryBuildManager, exposes font glyph assembly to the menu
+     * pipeline, and owns the shared async scratch used by synchronous builds.
      */
 
     // Internal

@@ -1,0 +1,80 @@
+package application.bootstrap.shaderpipeline.uniforms.matrixarrays;
+
+import java.nio.FloatBuffer;
+
+import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
+import application.bootstrap.shaderpipeline.uniforms.UniformType;
+import engine.root.EngineContext;
+import engine.root.EngineSetting;
+import engine.util.mathematics.matrices.Matrix3;
+import engine.util.memory.BufferUtility;
+
+public final class Matrix3ArrayUniform extends UniformAttributeStruct<Object[]> {
+
+    /*
+     * GLSL mat3 array uniform. Elements are packed into a preallocated
+     * direct buffer on push, so uploads never allocate.
+     */
+
+    // Internal
+    private final int elementCount;
+    private final FloatBuffer uniformBuffer;
+
+    // Constructor \\
+
+    public Matrix3ArrayUniform(int elementCount) {
+
+        super(UniformType.MATRIX3, elementCount, new Matrix3[elementCount]);
+
+        this.elementCount = elementCount;
+        this.uniformBuffer = BufferUtility.newFloatBuffer(elementCount * EngineSetting.MATRIX3_ELEMENT_COUNT);
+
+        for (int i = 0; i < elementCount; i++)
+            ((Matrix3[]) value)[i] = new Matrix3();
+    }
+
+    @Override
+    public UniformAttributeStruct<?> createDefault() {
+        return new Matrix3ArrayUniform(elementCount);
+    }
+
+    // Push \\
+
+    @Override
+    protected void push(int handle, Object[] value) {
+
+        uniformBuffer.clear();
+
+        for (int i = 0; i < elementCount; i++) {
+            Matrix3 matrix = (Matrix3) value[i];
+            uniformBuffer.put(matrix.val, 0, EngineSetting.MATRIX3_ELEMENT_COUNT);
+        }
+
+        uniformBuffer.flip();
+        EngineContext.gl20.glUniformMatrix3fv(handle, elementCount, false, uniformBuffer);
+    }
+
+    // Accessible \\
+
+    @Override
+    protected void applyValue(Object[] value) {
+
+        Matrix3[] target = (Matrix3[]) this.value;
+
+        for (int i = 0; i < Math.min(value.length, elementCount); i++)
+            target[i].set((Matrix3) value[i]);
+    }
+
+    @Override
+    protected void applyObject(Object value) {
+
+        if (value instanceof Matrix3[] matrices)
+            applyValue(matrices);
+        else
+            throwException("Matrix3ArrayUniform expects Matrix3[], got " + value.getClass().getSimpleName());
+    }
+
+    public int elementCount() {
+        return elementCount;
+    }
+}

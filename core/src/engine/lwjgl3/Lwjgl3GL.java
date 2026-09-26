@@ -4,6 +4,7 @@ import org.lwjgl.opengl.*;
 
 import engine.graphics.gl.GL40;
 import engine.root.EngineUtility;
+import org.lwjgl.system.MemoryStack;
 
 import java.nio.*;
 
@@ -173,51 +174,39 @@ class Lwjgl3GL implements GL40 {
 
     // Uniforms — Arrays \\
 
-    public void glUniform1iv(int l, int c, int[] v, int o) {
-        GL20C.glUniform1iv(l, IntBuffer.wrap(v, o, c));
+    public void glUniform1iv(int l, IntBuffer v) {
+        GL20C.glUniform1iv(l, v);
     }
 
-    public void glUniform1fv(int l, int c, float[] v, int o) {
-        GL20C.glUniform1fv(l, FloatBuffer.wrap(v, o, c));
+    public void glUniform1fv(int l, FloatBuffer v) {
+        GL20C.glUniform1fv(l, v);
     }
 
-    public void glUniform2iv(int l, int c, int[] v, int o) {
-        GL20C.glUniform2iv(l, IntBuffer.wrap(v, o, c * 2));
+    public void glUniform2iv(int l, IntBuffer v) {
+        GL20C.glUniform2iv(l, v);
     }
 
-    public void glUniform2fv(int l, int c, float[] v, int o) {
-        GL20C.glUniform2fv(l, FloatBuffer.wrap(v, o, c * 2));
+    public void glUniform2fv(int l, FloatBuffer v) {
+        GL20C.glUniform2fv(l, v);
     }
 
-    public void glUniform3iv(int l, int c, int[] v, int o) {
-        GL20C.glUniform3iv(l, IntBuffer.wrap(v, o, c * 3));
+    public void glUniform3iv(int l, IntBuffer v) {
+        GL20C.glUniform3iv(l, v);
     }
 
-    public void glUniform3fv(int l, int c, float[] v, int o) {
-        GL20C.glUniform3fv(l, FloatBuffer.wrap(v, o, c * 3));
+    public void glUniform3fv(int l, FloatBuffer v) {
+        GL20C.glUniform3fv(l, v);
     }
 
-    public void glUniform4iv(int l, int c, int[] v, int o) {
-        GL20C.glUniform4iv(l, IntBuffer.wrap(v, o, c * 4));
+    public void glUniform4iv(int l, IntBuffer v) {
+        GL20C.glUniform4iv(l, v);
     }
 
-    public void glUniform4fv(int l, int c, float[] v, int o) {
-        GL20C.glUniform4fv(l, FloatBuffer.wrap(v, o, c * 4));
+    public void glUniform4fv(int l, FloatBuffer v) {
+        GL20C.glUniform4fv(l, v);
     }
 
     // Uniforms — Matrices \\
-
-    public void glUniformMatrix2fv(int l, int c, boolean t, float[] v, int o) {
-        GL20C.glUniformMatrix2fv(l, t, FloatBuffer.wrap(v, o, c * 4));
-    }
-
-    public void glUniformMatrix3fv(int l, int c, boolean t, float[] v, int o) {
-        GL20C.glUniformMatrix3fv(l, t, FloatBuffer.wrap(v, o, c * 9));
-    }
-
-    public void glUniformMatrix4fv(int l, int c, boolean t, float[] v, int o) {
-        GL20C.glUniformMatrix4fv(l, t, FloatBuffer.wrap(v, o, c * 16));
-    }
 
     public void glUniformMatrix2fv(int l, int c, boolean t, FloatBuffer v) {
         GL20C.glUniformMatrix2fv(l, t, v);
@@ -364,16 +353,16 @@ class Lwjgl3GL implements GL40 {
 
     // Vertex Arrays \\
 
-    public void glGenVertexArrays(int n, IntBuffer arrays) {
-        GL30C.glGenVertexArrays(arrays);
+    public int glGenVertexArray() {
+        return GL30C.glGenVertexArrays();
     }
 
     public void glBindVertexArray(int array) {
         GL30C.glBindVertexArray(array);
     }
 
-    public void glDeleteVertexArrays(int n, IntBuffer arrays) {
-        GL30C.glDeleteVertexArrays(arrays);
+    public void glDeleteVertexArray(int array) {
+        GL30C.glDeleteVertexArrays(array);
     }
 
     // Framebuffers \\
@@ -473,7 +462,7 @@ class Lwjgl3GL implements GL40 {
     // GBuffer \\
 
     public void glDrawBuffers(int[] buffers) {
-        org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush();
+        MemoryStack stack = MemoryStack.stackPush();
         IntBuffer buf = stack.mallocInt(buffers.length);
         buf.put(buffers).flip();
         GL30C.glDrawBuffers(buf);

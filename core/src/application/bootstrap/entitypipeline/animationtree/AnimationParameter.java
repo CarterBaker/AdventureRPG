@@ -16,5 +16,8 @@ public enum AnimationParameter {
     VERTICAL_SPEED,
     TURN_RATE,
     LOOK_PITCH,
-    LOOK_YAW
+    LOOK_YAW;
+
+    // Values
+    public static final AnimationParameter[] VALUES = values();
 }

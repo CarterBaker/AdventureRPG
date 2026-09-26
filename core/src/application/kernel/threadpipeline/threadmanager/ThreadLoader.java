@@ -1,9 +1,6 @@
 package application.kernel.threadpipeline.threadmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -19,19 +16,10 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class ThreadLoader extends LoaderPackage {
 
     /*
-     * Loads named thread pool definitions from JSON. "size" may be a fixed
-     * integer or the literal string "auto", which resolves against
-     * Runtime.getRuntime().availableProcessors() at load time — see
-     * resolveThreadSize(). A copy-pasted fixed integer is either wasteful on
-     * a big machine or actively harmful on a small one: for CPU-bound work
-     * like chunk geometry building, threads past the core count add nothing
-     * but context-switch overhead, and — combined with this engine's
-     * tryAcquire-based chunk locking — a sharp rise in lock-contention
-     * retries as concurrency increases. An optional "maxInFlight" caps how
-     * many tasks may be queued-or-running on the pool at once; if omitted,
-     * it defaults to a small multiple of the resolved thread count so the
-     * pipeline can overlap without letting the executor's internal queue
-     * grow without bound — see ThreadHandle.hasCapacity().
+     * Loads named thread pool definitions from JSON. "size" is a fixed count or
+     * "auto", resolved against the processor count, and the optional
+     * "maxInFlight" caps queued and running tasks, defaulting to a small
+     * multiple of the thread count.
      */
 
     // Internal
@@ -54,19 +42,11 @@ class ThreadLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "[ThreadManager] The root folder could not be verified");
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> FileUtility.hasExtension(f, EngineSetting.JSON_FILE_EXTENSIONS))
-                    .forEach(file -> {
-                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        resourceName2File.put(resourceName, file);
-                        preRegisterThreadNames(file, resourceName);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("[ThreadManager] Failed to walk thread definitions directory: ", e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            resourceName2File.put(resourceName, file);
+            preRegisterThreadNames(file, resourceName);
+            queueFile(file);
         }
     }
 

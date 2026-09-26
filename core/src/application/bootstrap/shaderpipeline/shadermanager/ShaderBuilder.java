@@ -19,7 +19,7 @@ class ShaderBuilder extends BuilderPackage {
     /*
      * Populates ShaderSourceStructs during scan and assembles program-level
      * ShaderSourceStructs from JSON descriptors. Everything produced here is
-     * bootstrap-only and GCs when InternalLoader self-destructs.
+     * bootstrap-only and GCs when ShaderLoader self-destructs.
      */
 
     // Internal

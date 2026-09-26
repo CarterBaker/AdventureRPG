@@ -6,6 +6,13 @@ import engine.root.InstancePackage;
 
 public class WorldItemInstance extends InstancePackage {
 
+    /*
+     * One placed world item at runtime: its definition, chunk, block and packed
+     * sub-voxel position, and its slot in the item type's composite buffer. The
+     * WorldItemStruct it was built from keeps the real item across palette
+     * rebuilds.
+     */
+
     // The subchunk struct this instance was built from — it outlives the
     // instance across palette rebuilds, so the real item is kept on it.
     private WorldItemStruct worldItemStruct;

@@ -6,7 +6,7 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.util.ItemEditorTool;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

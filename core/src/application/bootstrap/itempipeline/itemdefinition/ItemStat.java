@@ -21,6 +21,9 @@ public enum ItemStat {
     WISDOM(EngineSetting.ITEM_STAT_TITLE_WISDOM),
     CHARISMA(EngineSetting.ITEM_STAT_TITLE_CHARISMA);
 
+    // Values
+    public static final ItemStat[] VALUES = values();
+
     // Internal
     private final String title;
 

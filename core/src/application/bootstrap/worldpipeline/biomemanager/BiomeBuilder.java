@@ -23,27 +23,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class BiomeBuilder extends BuilderPackage {
 
     /*
-     * Parses biome JSON into a BiomeData and wraps it in a BiomeHandle. Reads the
-     * "display_name" — the name players see for this biome, kept apart from
-     * the registry name its file path produces, required on every biome
-     * painted on the world map and omitted by the unnamed variants a parent
-     * links through "probable_biomes" — the
-     * optional "weathers"
-     * block, "map_color", "probable_biomes", surface/subsurface/underwater block
-     * names, the boolean "ocean_water" flag that gates whether this biome's
-     * below-sea-level terrain is flooded at all (see WorldGenerationManager),
-     * the optional "beach_biome" BiomeManager inserts wherever this biome
-     * borders an ocean, and the terrain
-     * shape controls — "continentalness_spline", "erosion_spline",
-     * "peaks_valleys_spline",
-     * "detail_amplitude_blocks", "detail_wavelength_blocks", and
-     * "terrain_height_scale" — each falling
-     * back to TerrainShapeUtility's global default when omitted, so an unmodified
-     * biome file generates
-     * exactly the terrain it always has while a fully-authored one can sculpt its
-     * own distinct shape,
-     * all validated at load time so a malformed biome file fails at boot rather
-     * than mid-game.
+     * Parses biome JSON into BiomeData wrapped in a BiomeHandle: display name,
+     * weathers, map color, probable variants, surface blocks, ocean and beach
+     * settings, and the optional terrain shape splines and detail controls,
+     * each falling back to TerrainShapeUtility's defaults. Everything is
+     * validated at load, so a malformed biome fails at boot.
      */
 
     // Build \\

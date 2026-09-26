@@ -5,7 +5,7 @@ import java.util.Arrays;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.oceanpipeline.turbulencemanager.TurbulenceManager;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
@@ -92,7 +92,7 @@ class GridBuildSystem extends SystemPackage {
 
     // Build \\
 
-    GridInstance buildGrid(EntityInstance focalEntity, WindowInstance windowInstance, FboInstance renderTargetFbo) {
+    GridInstance buildGrid(EntityInstance focalEntity, WindowInstance windowInstance, FBOInstance renderTargetFbo) {
 
         float radius = calculateRadius();
         float radiusSquared = radius * radius;
@@ -180,13 +180,6 @@ class GridBuildSystem extends SystemPackage {
 
     // Load Order \\
 
-    /*
-     * Builds every grid coordinate within radius, sorted nearest-first, using
-     * a single packed long[] (distance in the high bits, coordinate index in
-     * the low bits) instead of a boxed Integer[] with a comparator — avoids
-     * one allocation per slot and a virtual-dispatch sort on what can be a
-     * five-figure slot count at high render distances.
-     */
     private long[] assignLoadOrder(float radius) {
 
         int maxRenderDistance = settings.maxRenderDistance;
@@ -269,8 +262,8 @@ class GridBuildSystem extends SystemPackage {
             float megaDistanceFromCenter = mcx * mcx + mcy * mcy;
             float megaAngleFromCenter = (float) Math.atan2(mcy, mcx);
 
-            slotUBO.updateUniform("u_gridPosition", new Vector2(gridX, gridY));
-            slotUBO.updateUniform("u_distanceFromCenter", chunkDistanceFromCenter);
+            slotUBO.updateUniform(EngineSetting.UNIFORM_GRID_POSITION, new Vector2(gridX, gridY));
+            slotUBO.updateUniform(EngineSetting.UNIFORM_DISTANCE_FROM_CENTER, chunkDistanceFromCenter);
             uboManager.push(slotUBO);
 
             gridSlots.putIfAbsent(
@@ -340,12 +333,6 @@ class GridBuildSystem extends SystemPackage {
 
     // Immediate Range \\
 
-    /*
-     * loadOrder is sorted nearest-first and detail level only ever increases
-     * with distance, so the IMMEDIATE-tier slots are always exactly the
-     * leading prefix of loadOrder. Physics-adjacent systems use this count to
-     * walk a fixed-size range instead of the entire grid.
-     */
     private int countImmediateSlots(long[] loadOrder, Long2ObjectOpenHashMap<GridSlotHandle> gridSlots) {
 
         int count = 0;

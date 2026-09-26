@@ -6,15 +6,16 @@ import application.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.util.memory.BufferUtils;
+import engine.util.memory.BufferUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * GL20/GL30 wrapper for shader program construction, source preprocessing,
- * uniform location queries, UBO block binding, and program deletion.
- * Stateless — all methods are package-private statics.
- */
 class ShaderGLSLUtility extends EngineUtility {
+
+    /*
+     * GL20/GL30 wrapper for shader program construction, source preprocessing,
+     * uniform location queries, UBO block binding, and program deletion.
+     * Stateless — all methods are package-private statics.
+     */
 
     // Shader Program Construction \\
 
@@ -66,7 +67,7 @@ class ShaderGLSLUtility extends EngineUtility {
 
         EngineContext.gl20.glLinkProgram(program);
 
-        IntBuffer statusBuf = BufferUtils.newIntBuffer(1);
+        IntBuffer statusBuf = BufferUtility.newIntBuffer(1);
         EngineContext.gl20.glGetProgramiv(program, EngineSetting.GL_LINK_STATUS, statusBuf);
         statusBuf.rewind();
 
@@ -113,7 +114,7 @@ class ShaderGLSLUtility extends EngineUtility {
         EngineContext.gl20.glShaderSource(shaderID, source);
         EngineContext.gl20.glCompileShader(shaderID);
 
-        IntBuffer compiled = BufferUtils.newIntBuffer(1);
+        IntBuffer compiled = BufferUtility.newIntBuffer(1);
         EngineContext.gl20.glGetShaderiv(shaderID, EngineSetting.GL_COMPILE_STATUS, compiled);
         compiled.rewind();
 
@@ -162,10 +163,6 @@ class ShaderGLSLUtility extends EngineUtility {
 
     // Uniform Location \\
 
-    /*
-     * Returns -1 if the driver removed the uniform as unused — not an error.
-     * Callers store -1 and no-op on upload when location is -1.
-     */
     static int getUniformLocation(int programHandle, String uniformName) {
         return EngineContext.gl20.glGetUniformLocation(programHandle, uniformName);
     }

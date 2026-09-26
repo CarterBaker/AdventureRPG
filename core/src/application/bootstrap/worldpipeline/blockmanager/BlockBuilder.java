@@ -1,8 +1,8 @@
 package application.bootstrap.worldpipeline.blockmanager;
 
-import java.io.File;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
@@ -20,6 +20,12 @@ import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class BlockBuilder extends BuilderPackage {
+
+    /*
+     * Parses block JSON into BlockData wrapped in a BlockHandle, validating
+     * geometry type, textures, durability, tooling and, for liquids, viscosity.
+     * Bootstrap only.
+     */
 
     // Internal
     private TextureManager textureManager;

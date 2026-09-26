@@ -8,7 +8,7 @@ import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
-import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -20,16 +20,10 @@ import engine.util.mathematics.vectors.Vector3;
 class ItemBranch extends BranchPackage {
 
     /*
-     * Handles world item placement and pickup for PlacementManager. Placement
-     * sets down whatever the entity holds in its main hand: it resolves the
-     * target block face, computes sub-voxel placement position, determines
-     * item orientation from camera direction, and delegates to
-     * WorldItemPlacementSystem. The face hit is the face of the sub-block the
-     * ray met, so an item set on a half-block slab rests on the slab rather
-     * than on the empty half above it, which stays in the same cell. Pickup
-     * hands the world item's real item — a chest with everything in it — to
-     * the entity's inventory, and only takes it out of the world once the
-     * inventory has made room for it.
+     * World item placement and pickup for PlacementManager. Placement sets the
+     * main-hand item on the sub-block face the ray met, oriented by the camera;
+     * pickup hands the world item's real item, contents included, to the entity
+     * and removes it from the world only once it fits.
      */
 
     // Internal

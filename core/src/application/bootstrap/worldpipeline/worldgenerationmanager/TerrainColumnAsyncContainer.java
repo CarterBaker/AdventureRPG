@@ -8,24 +8,11 @@ import engine.root.EngineSetting;
 public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
 
     /*
-     * Thread-local scratch holding one fully-resolved chunk column. The macro
-     * grid is the unit of biome work: the biome field is evaluated once per
-     * macro grid point at that point's true world position — never once per
-     * chunk — and everything that depends on biome is derived there, so a
-     * grid point shared with the neighboring chunk resolves identically from
-     * either side. Shape, detail amplitude and wavelength, coastal share, and
-     * the dominant biome's dressing blocks are all carried per grid point and
-     * interpolated down to the 256 block columns, which is what lets a single
-     * chunk hold both sides of a coastline or a biome border without a step
-     * anywhere in it. WorldGenerationManager.computeColumn() fills this once
-     * per chunk, together with the tide surface that chunk generates its
-     * ocean against; every generateSubChunk() call for that chunk reads from
-     * it instead of re-running the terrain noise stack. The corner grid holds
-     * the continuous ground height at every block corner of the chunk, its
-     * outermost corners lying on the chunk boundary, and drives sub-block
-     * edge smoothing: each block column carries the octants of its ground
-     * cell that survive a lowered quadrant and the octants of the cap cell
-     * above it that a raised quadrant adds.
+     * Thread-local scratch holding one resolved chunk column. Biome-dependent
+     * values are evaluated per macro grid point and interpolated to all block
+     * columns, with the tide surface and the corner height grid that drives
+     * sub-block edge smoothing. Filled once per chunk by computeColumn() and
+     * read by every generateSubChunk() call.
      */
 
     static final int COLUMN_COUNT = EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;

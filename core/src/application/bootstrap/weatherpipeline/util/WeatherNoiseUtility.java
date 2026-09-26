@@ -15,10 +15,6 @@ public final class WeatherNoiseUtility extends EngineUtility {
      * scrolls this image across the world by offsetting where it is read.
      */
 
-    private WeatherNoiseUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
-
     // Sample \\
 
     public static float sample(
@@ -31,7 +27,9 @@ public final class WeatherNoiseUtility extends EngineUtility {
 
         double effectiveWavelength = Math.min(
                 wavelengthChunks,
-                Math.max(worldWidthChunks / EngineSetting.WEATHER_NOISE_MIN_CYCLES_AROUND_WORLD, 0.001));
+                Math.max(
+                        worldWidthChunks / EngineSetting.WEATHER_NOISE_MIN_CYCLES_AROUND_WORLD,
+                        EngineSetting.DIVISION_EPSILON));
 
         double angle = (noiseChunkX / worldWidthChunks) * (Math.PI * 2.0);
         double embeddingRadius = worldWidthChunks / (Math.PI * 2.0 * effectiveWavelength);

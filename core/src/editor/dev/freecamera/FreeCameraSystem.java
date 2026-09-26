@@ -2,7 +2,7 @@ package editor.dev.freecamera;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.kernel.windowpipeline.window.WindowInstance;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 
 public class FreeCameraSystem extends SystemPackage {

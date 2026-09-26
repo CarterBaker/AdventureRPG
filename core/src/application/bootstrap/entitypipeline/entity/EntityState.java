@@ -27,5 +27,8 @@ public enum EntityState {
     SHALLOW_WADING_IDLE,
     SHALLOW_WADING_RUNNING,
     WATER_JUMPING,
-    WATER_LEAPING
+    WATER_LEAPING;
+
+    // Values
+    public static final EntityState[] VALUES = values();
 }

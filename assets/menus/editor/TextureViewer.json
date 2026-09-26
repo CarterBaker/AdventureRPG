@@ -56,7 +56,7 @@
               "color": "control",
               "hover_color": "control_hover",
               "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                 "method": "clearBrush"
               },
               "elements": [

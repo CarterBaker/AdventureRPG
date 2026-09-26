@@ -6,15 +6,9 @@ import engine.root.DataPackage;
 public class ClockData extends DataPackage {
 
     /*
-     * Mutable runtime clock state for one world. Holds the epoch anchor used
-     * to derive all time values, a reference to the active world's calendar
-     * (source of the current season and the world's starting point), plus
-     * all calculated current time fields updated each frame by the clock
-     * branches. The epoch is the only field persisted to disk — it lives in
-     * the world's companion JSON — and every other value here is re-derived
-     * from it and the system clock. This is global, location-independent
-     * state — visual time of day for a specific place on the world's Y axis
-     * lives in each grid's ClockInstance instead.
+     * Global clock state for one world: the persisted epoch, the active
+     * calendar, and every current time value derived from them each frame.
+     * Location-specific time of day lives in each grid's ClockInstance.
      */
 
     // Epoch

@@ -13,10 +13,6 @@ public final class SkyColorUtility extends EngineUtility {
      * operation writes in place so nothing allocates per frame.
      */
 
-    private SkyColorUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
-
     // Scalar \\
 
     public static float lerp(float from, float to, float t) {

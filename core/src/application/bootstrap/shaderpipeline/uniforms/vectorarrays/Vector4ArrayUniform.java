@@ -1,19 +1,34 @@
 package application.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import org.lwjgl.opengl.GL20C;
-import org.lwjgl.system.MemoryStack;
+import java.nio.FloatBuffer;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
+import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector4;
+import engine.util.memory.BufferUtility;
 
 public final class Vector4ArrayUniform extends UniformAttributeStruct<Object[]> {
 
+    /*
+     * GLSL vec4 array uniform. Elements are packed into a preallocated
+     * direct buffer on push, so uploads never allocate.
+     */
+
+    // Internal
     private final int elementCount;
+    private final FloatBuffer uniformBuffer;
+
+    // Constructor \\
 
     public Vector4ArrayUniform(int elementCount) {
+
         super(UniformType.VECTOR4, elementCount, new Vector4[elementCount]);
+
         this.elementCount = elementCount;
+        this.uniformBuffer = BufferUtility.newFloatBuffer(elementCount * EngineSetting.VECTOR4_COMPONENT_COUNT);
+
         for (int i = 0; i < elementCount; i++)
             ((Vector4[]) value)[i] = new Vector4();
     }
@@ -23,44 +38,43 @@ public final class Vector4ArrayUniform extends UniformAttributeStruct<Object[]> 
         return new Vector4ArrayUniform(elementCount);
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Object[] value) {
-        float[] flat = new float[elementCount * 4];
+
+        uniformBuffer.clear();
+
         for (int i = 0; i < elementCount; i++) {
-            Vector4 v = (Vector4) value[i];
-            flat[i * 4] = v.x;
-            flat[i * 4 + 1] = v.y;
-            flat[i * 4 + 2] = v.z;
-            flat[i * 4 + 3] = v.w;
+            Vector4 vector = (Vector4) value[i];
+            uniformBuffer.put(vector.x);
+            uniformBuffer.put(vector.y);
+            uniformBuffer.put(vector.z);
+            uniformBuffer.put(vector.w);
         }
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            java.nio.FloatBuffer buf = stack.mallocFloat(elementCount * 4);
-            buf.put(flat).flip();
-            GL20C.glUniform4fv(handle, buf);
-        }
+
+        uniformBuffer.flip();
+        EngineContext.gl20.glUniform4fv(handle, uniformBuffer);
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Object[] value) {
-        Vector4[] dst = (Vector4[]) this.value;
+
+        Vector4[] target = (Vector4[]) this.value;
+
         for (int i = 0; i < Math.min(value.length, elementCount); i++)
-            dst[i].set((Vector4) value[i]);
+            target[i].set((Vector4) value[i]);
     }
 
     @Override
     protected void applyObject(Object value) {
-        if (value instanceof Vector4[] v)
-            applyValue(v);
-        else if (value instanceof engine.util.mathematics.vectors.Vector4[] vectors) {
-            Vector4[] dst = (Vector4[]) this.value;
-            for (int i = 0; i < Math.min(vectors.length, elementCount); i++) {
-                dst[i].x = vectors[i].x;
-                dst[i].y = vectors[i].y;
-                dst[i].z = vectors[i].z;
-                dst[i].w = vectors[i].w;
-            }
-        } else
-            throw new IllegalArgumentException("applyObject(Vector4Array): got " + value.getClass());
+
+        if (value instanceof Vector4[] vectors)
+            applyValue(vectors);
+        else
+            throwException("Vector4ArrayUniform expects Vector4[], got " + value.getClass().getSimpleName());
     }
 
     public int elementCount() {

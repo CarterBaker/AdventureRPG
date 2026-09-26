@@ -1,11 +1,8 @@
 package application.bootstrap.worldpipeline.blockmanager;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import engine.root.EngineSetting;
@@ -16,6 +13,12 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class BlockLoader extends LoaderPackage {
+
+    /*
+     * Scans the block JSON directory, pre-registers every block name so blocks
+     * can reference each other, and loads each definition into BlockManager, on
+     * demand when requested early.
+     */
 
     // Internal
     private File root;
@@ -47,30 +50,16 @@ class BlockLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Block root directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> FileUtility.hasExtension(f, EngineSetting.JSON_FILE_EXTENSIONS))
-                    .forEach(file -> {
-                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        resourceName2File.put(resourceName, file);
-                        preRegisterBlockNames(file, resourceName);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk block directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            resourceName2File.put(resourceName, file);
+            preRegisterBlockNames(file, resourceName);
+            queueFile(file);
         }
     }
 
     // Pre-Registration \\
 
-    /*
-     * Peeks the JSON during scan to extract block names and build the reverse
-     * lookup before any load() fires. This is what allows on-demand requests
-     * from awake() to resolve correctly — the name → file mapping must be
-     * complete before the batch phase begins.
-     */
     private void preRegisterBlockNames(File file, String resourceName) {
 
         try {

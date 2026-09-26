@@ -9,15 +9,10 @@ import engine.root.SystemPackage;
 class TemperatureSystem extends SystemPackage {
 
     /*
-     * Computes ambient temperature from the season-blended base and
-     * variance, shaped by a diurnal curve, a slow shared drift, and a daily
-     * swing drawn from the day's own seed so some days run cold and others
-     * warm, then cooled by local precipitation and offset by the local
-     * weather's modifier. The result is scaled in absolute terms by the
-     * star the calendar's world orbits, so a closer or brighter star runs
-     * the whole climate hotter. The season values ease across the year and
-     * the drift runs on the world's own clock, so temperature carries on
-     * from wherever it left off between sessions instead of restarting.
+     * Computes ambient temperature from the season-blended base and variance, a
+     * diurnal curve, a slow shared drift and a seeded daily swing, cooled by
+     * precipitation and offset by local weather, then scaled by the calendar's
+     * star. Driven by the world clock, so it carries on between sessions.
      */
 
     // Internal

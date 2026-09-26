@@ -1,5 +1,6 @@
 package application.bootstrap.shaderpipeline.uniforms;
 
+import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
 public class UniformStruct<T> extends StructPackage {
@@ -33,7 +34,7 @@ public class UniformStruct<T> extends StructPackage {
     // Utility \\
 
     public final void push() {
-        if (uniformHandle == -1)
+        if (uniformHandle == EngineSetting.GL_INVALID_LOCATION)
             return;
         attribute.push(uniformHandle);
     }

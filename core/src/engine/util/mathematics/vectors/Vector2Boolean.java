@@ -4,6 +4,10 @@ import engine.root.EngineUtility;
 
 public class Vector2Boolean extends EngineUtility {
 
+    /*
+     * Mutable two-component boolean vector.
+     */
+
     // Data
     public boolean x, y;
 

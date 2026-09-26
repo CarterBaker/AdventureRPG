@@ -1,9 +1,6 @@
 package application.bootstrap.calendarpipeline.calendarmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import engine.root.EngineSetting;
@@ -35,21 +32,12 @@ class CalendarLoader extends LoaderPackage {
         this.root = new File(EngineSetting.CALENDAR_JSON_PATH);
         this.calendarName2File = new Object2ObjectOpenHashMap<>();
 
-        if (!root.exists() || !root.isDirectory())
-            throwException("Calendar directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Calendar directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> FileUtility.getExtension(f).equals("json"))
-                    .forEach(file -> {
-                        String calendarName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        calendarName2File.put(calendarName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk calendar directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String calendarName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            calendarName2File.put(calendarName, file);
+            queueFile(file);
         }
     }
 

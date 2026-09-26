@@ -8,17 +8,10 @@ import engine.root.InstancePackage;
 public class TurbulenceInstance extends InstancePackage {
 
     /*
-     * One grid's resolved ocean turbulence field. A baseline strength from the
-     * grid's own local weather sits under up to
-     * OCEAN_TURBULENCE_UBO_MAX_ENTRIES cells, one per nearby weather cell,
-     * each centered in blocks relative to the grid's reference chunk exactly
-     * as the shader sees its fragments. A position's strength is the weighted
-     * mean of the baseline and every cell reaching it, so storms raise the
-     * sea inside their own footprint and fade smoothly into calmer water
-     * around them. Also holds this grid's current phase for every wave
-     * component. TurbulenceManager rewrites all of it every frame and
-     * TurbulenceBufferSystem mirrors it into the grid's OceanData UBO, so the
-     * CPU and the GPU always read the same field.
+     * One grid's ocean turbulence field: a baseline strength from local weather
+     * plus nearby weather cells, blended by weighted mean, and the grid's
+     * current wave phases. Rewritten by TurbulenceManager each frame and
+     * mirrored into the grid's OceanData UBO.
      */
 
     // Baseline

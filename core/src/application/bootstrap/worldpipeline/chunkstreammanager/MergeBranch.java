@@ -5,6 +5,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 
 public class MergeBranch extends BranchPackage {
 
@@ -25,7 +26,7 @@ public class MergeBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
+        this.threadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
 
         // Settings
         this.mergeIndex = ChunkData.MERGE_DATA.index;

@@ -4,6 +4,10 @@ import engine.root.HandlePackage;
 
 public class QueueItemHandle extends HandlePackage {
 
+    /*
+     * One named slot of a QueueInstance, cycled in turn by the queue's owner.
+     */
+
     // Internal
     private String queueItemName;
     private int queueItemID;

@@ -6,6 +6,7 @@ import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.input.Binding;
+import engine.input.Buttons;
 import engine.input.Input;
 import engine.root.EngineContext;
 import engine.root.EngineUtility;
@@ -15,37 +16,11 @@ import engine.util.mathematics.vectors.Vector2;
 public class InputManager extends ManagerPackage {
 
     /*
-     * Thin bridge between the engine input backend and bootstrap systems.
-     *
-     * Every per-window query resolves its own raw Input via getRawInput(window),
-     * which always asks the platform for the Input backing that window's own
-     * OS window (WindowInstance.getGLWindow()). Nothing here reads
-     * EngineContext.input as a source of truth, and nothing but
-     * publishActiveInput() ever assigns it. That global exists purely as a
-     * convenience for code elsewhere that doesn't carry a WindowInstance
-     * around (gameplay bindings); anything that has a WindowInstance in hand
-     * — which is everything in the editor — must use getRawInput(window) or
-     * one of the window-scoped methods below.
-     *
-     * syncFocus() and publishActiveInput() run in that order, once per frame.
-     * syncFocus() is the single authority for what a click does to focus —
-     * nothing else in the engine may reassign focusedWindow or trigger
-     * capture. publishActiveInput() then commits EngineContext.input to
-     * reflect whatever focus/capture resolved to, exactly once, so every
-     * consumer sees a value that's correct for the rest of the frame.
-     *
-     * resolveInputAuthority() maps a focused window to the window that
-     * actually owns lock state, pushed in by the editor layer so the kernel
-     * never names an editor type. captureEligible blocks editor chrome from
-     * ever capturing the cursor regardless of lock state.
-     *
-     * onInputLockReleased() is called by the editor layer when a lock_input
-     * menu closes on a content window, restoring capture without a re-click.
-     *
-     * getGlobalMouseX/Y(window) and getRawInput(window) exist for gestures
-     * that must track hardware state across multiple frames independent of
-     * hover/focus — e.g. tab dragging — so a gesture never has to reason
-     * about which window happens to be focused elsewhere while it runs.
+     * Bridge between the input backend and the engine. Per-window queries
+     * always read the Input of that window's own OS window. syncFocus() is the
+     * single authority for focus and capture, and publishActiveInput() then
+     * commits EngineContext.input once per frame for code that has no window in
+     * hand.
      */
 
     private CursorSystem cursorSystem;
@@ -92,24 +67,12 @@ public class InputManager extends ManagerPackage {
 
     // Raw Input Access \\
 
-    /*
-     * Returns the Input backing the given window's own OS window. The one
-     * correct way to poll hardware state for a specific window — never
-     * through EngineContext.input.
-     */
     public Input getRawInput(WindowInstance window) {
         return internal.windowPlatform.getInputForWindow(window.getGLWindow());
     }
 
     // Focus \\
 
-    /*
-     * The single authority for what a click does to focus. Reads the click
-     * state from the hovered window's own OS window directly, not from
-     * EngineContext.input — on the frame focus changes to a not-yet-focused
-     * OS window, EngineContext.input still reflects last frame's focus and
-     * would never see the click meant to change it.
-     */
     private void syncFocus() {
 
         WindowInstance hovered = windowManager.getHoveredWindow();
@@ -122,7 +85,7 @@ public class InputManager extends ManagerPackage {
 
         Input rawInput = getRawInput(hovered);
 
-        if (!rawInput.isMouseClicked(0) && !rawInput.isMouseClicked(1))
+        if (!rawInput.isMouseClicked(Buttons.LEFT) && !rawInput.isMouseClicked(Buttons.RIGHT))
             return;
 
         if (hovered != windowManager.getFocusedWindow()) {
@@ -135,13 +98,6 @@ public class InputManager extends ManagerPackage {
             onWindowFocused(hovered);
     }
 
-    /*
-     * Commits EngineContext.input for the rest of the frame. Runs after
-     * syncFocus() so any focus change made this frame is already reflected.
-     * Captured window wins outright; otherwise the focused window;
-     * otherwise the main window. The ONLY assignment to EngineContext.input
-     * anywhere in the engine.
-     */
     private void publishActiveInput() {
 
         WindowInstance active = windowManager.getCapturedWindow();
@@ -280,12 +236,6 @@ public class InputManager extends ManagerPackage {
         return mouseDelta;
     }
 
-    /*
-     * Raw cursor X/Y for the OS window backing the given window. No
-     * composite-rect subtraction, no hover/focus gating. Use this when a
-     * coordinate must be compared against OS window screen positions (e.g.
-     * TabDragManager resolving a drop target).
-     */
     public float getGlobalMouseX(WindowInstance window) {
         return getRawInput(window).getMouseX();
     }

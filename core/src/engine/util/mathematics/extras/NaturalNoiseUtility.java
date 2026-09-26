@@ -7,21 +7,11 @@ import engine.util.mathematics.vectors.Vector3;
 public final class NaturalNoiseUtility extends EngineUtility {
 
     /*
-     * CPU mirror of the near-terrain surface jitter StandardSurfaceShader.tes
-     * bevels natural-looking terrain with, reproducing the exact hash formula
-     * the shader evaluates so the GPU (via NaturalNoiseData) and every method
-     * below always read the same values. sampleAxisJitter() and
-     * sampleAxisJitterGradient() are the primitives BlockCollisionBranch
-     * builds a natural block's collision wobble and wall-hug deflection from,
-     * so a wall's visual bulge and its collision boundary can never drift
-     * apart. getTier0MaxSqDistChunks()/getTier1MaxSqDistChunks() mirror
-     * surface/includes/SurfaceTessellationTier.glsl so a caller can tell
-     * whether a chunk offset falls inside the ring jitter is scoped to.
+     * CPU mirror of the natural terrain jitter StandardSurfaceShader applies,
+     * using the same hash so collision and visuals agree. Provides the axis
+     * jitter and gradient BlockCollisionBranch builds natural collision from,
+     * and the tessellation tier distances the shader scopes jitter to.
      */
-
-    private NaturalNoiseUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
 
     // Lattice \\
 
@@ -101,7 +91,7 @@ public final class NaturalNoiseUtility extends EngineUtility {
                     seedZ + EngineSetting.NATURAL_NOISE_OFFSET_Z_Z, lattice) - 0.5f)
                     * EngineSetting.NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS;
 
-        throw new IllegalArgumentException("axis must be AXIS_X, AXIS_Y, or AXIS_Z: " + axis);
+        return throwException("axis must be AXIS_X, AXIS_Y, or AXIS_Z: " + axis);
     }
 
     public static void sampleJitter(double worldX, double worldZ, float[] lattice, Vector3 out) {
@@ -120,7 +110,7 @@ public final class NaturalNoiseUtility extends EngineUtility {
         double probeZ = tangentAxis == EngineSetting.AXIS_Z ? probe : 0.0;
 
         if (probeX == 0.0 && probeZ == 0.0)
-            throw new IllegalArgumentException("tangentAxis must be AXIS_X or AXIS_Z: " + tangentAxis);
+            throwException("tangentAxis must be AXIS_X or AXIS_Z: " + tangentAxis);
 
         float back = sampleAxisJitter(worldX - probeX, worldZ - probeZ, lattice, axis);
         float forward = sampleAxisJitter(worldX + probeX, worldZ + probeZ, lattice, axis);

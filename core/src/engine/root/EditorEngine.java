@@ -1,34 +1,28 @@
 package engine.root;
 
+import application.bootstrap.ApplicationBootstrapAssembly;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.screencapturepipeline.screencapturemanager.ScreenCaptureManager;
+import application.kernel.ApplicationKernelAssembly;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import engine.editor.EditorMainWindowContext;
+import editor.bootstrap.EditorBootstrapAssembly;
+import editor.runtime.EditorMainWindowContext;
 
 public class EditorEngine extends EnginePackage {
 
     /*
-     * EditorEngine defines the concrete editor engine instance. Registers
-     * kernel infrastructure via KernelAssembly, bootstraps both the shared
-     * game pipeline and the editor-specific pipeline via their respective
-     * BootstrapAssemblies, then pairs the main window with
-     * EditorMainWindowContext in awake().
-     * draw() flushes the main window only — detached windows flush themselves
-     * in their own ApplicationListener.render() callback after the engine's
-     * full push phase is complete — and is also the engine's sole authority
-     * over end-of-frame GPU work: it is the only place
-     * ScreenCaptureManager.flush() is ever called, after the frame's own
-     * render pass has fully drawn and presented, so screen capture never
-     * touches the GPU from anywhere else in the frame.
+     * The editor engine. Registers the application kernel and the application
+     * and editor bootstrap assemblies, pairs the main window with
+     * EditorMainWindowContext, and in draw() flushes the main window and runs
+     * the frame's screen capture, the only end-of-frame GPU work.
      */
 
     // Kernel
-    private application.kernel.ApplicationKernelAssembly kernelAssembly;
-    private editor.kernel.EditorKernelAssembly editorKernelAssembly;
+    private ApplicationKernelAssembly kernelAssembly;
 
     // Bootstrap
-    private application.bootstrap.ApplicationBootstrapAssembly bootstrapAssembly;
-    private editor.bootstrap.EditorBootstrapAssembly editorBootstrapAssembly;
+    private ApplicationBootstrapAssembly bootstrapAssembly;
+    private EditorBootstrapAssembly editorBootstrapAssembly;
 
     // Runtime
     private EditorMainWindowContext editorMainWindowContext;
@@ -42,8 +36,7 @@ public class EditorEngine extends EnginePackage {
 
     @Override
     protected void kernel() {
-        this.kernelAssembly = create(application.kernel.ApplicationKernelAssembly.class);
-        this.editorKernelAssembly = create(editor.kernel.EditorKernelAssembly.class);
+        this.kernelAssembly = create(ApplicationKernelAssembly.class);
     }
 
     // Bootstrap \\
@@ -52,8 +45,8 @@ public class EditorEngine extends EnginePackage {
     protected void bootstrap() {
 
         // Bootstrap
-        this.bootstrapAssembly = create(application.bootstrap.ApplicationBootstrapAssembly.class);
-        this.editorBootstrapAssembly = create(editor.bootstrap.EditorBootstrapAssembly.class);
+        this.bootstrapAssembly = create(ApplicationBootstrapAssembly.class);
+        this.editorBootstrapAssembly = create(EditorBootstrapAssembly.class);
     }
 
     // Get \\

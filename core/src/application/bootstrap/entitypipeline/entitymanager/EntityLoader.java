@@ -1,9 +1,6 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.entitypipeline.entity.EntityHandle;
 import engine.root.EngineSetting;
@@ -35,21 +32,12 @@ class EntityLoader extends LoaderPackage {
         this.root = new File(EngineSetting.ENTITY_JSON_PATH);
         this.templateName2File = new Object2ObjectOpenHashMap<>();
 
-        if (!root.exists() || !root.isDirectory())
-            throwException("Entity template directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Entity template directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String templateName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        templateName2File.put(templateName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk entity directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String templateName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            templateName2File.put(templateName, file);
+            queueFile(file);
         }
     }
 

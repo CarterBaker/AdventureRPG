@@ -35,10 +35,7 @@ public class WorldData extends DataPackage {
     // Rotation
     private final float rotationSpeed;
 
-    // Tilt — drives the seasonal north-south drift of the global weather
-    // noise field in GlobalNoiseBranch. Zero means a perfectly upright
-    // world: storm tracks never migrate north/south, only the steady
-    // east-west rotation scroll applies.
+    // Tilt — seasonal north-south drift of the weather flow, zero for an upright world
     private final float axialTilt;
 
     // Planetary Offset — fractional position (0-1) along this world's Y span

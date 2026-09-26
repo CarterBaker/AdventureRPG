@@ -9,15 +9,10 @@ import engine.root.DataPackage;
 public class AppearanceData extends DataPackage {
 
     /*
-     * Immutable appearance template for one entity type, loaded from the
-     * "appearance" block of its entity JSON: default skin and hair colors,
-     * the skin and hair palettes a character creator offers, the default
-     * feature per slot (null for an empty optional slot), the
-     * head bone head-shape proportions apply to, and the build curve that
-     * widens each bone between thin and heavy. isCompatible() is the one
-     * rule for whether a feature can be worn — its meshes must use this rig
-     * and its textures must sit in the default head's face-tile array, the
-     * single array the character material samples every overlay from.
+     * Immutable appearance template for one entity type: default colors and
+     * palettes, default feature per slot, the head-shape bone and the build
+     * curve. isCompatible() is the one rule for whether a feature can be worn
+     * on this rig and texture array.
      */
 
     // Rig

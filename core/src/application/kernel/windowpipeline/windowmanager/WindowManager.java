@@ -11,23 +11,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WindowManager extends ManagerPackage {
 
     /*
-     * Owns all engine windows. Each frame rebuilds hoveredWindows — every
-     * window the cursor is currently inside, sorted by zOrder descending,
-     * area ascending on ties. OS windows are zOrder 0; logical windows
-     * (tabs, composited panels) get a unique zOrder via bringToFront().
-     *
-     * Phase 1 — every OS window is queried and synced unconditionally,
-     * regardless of OS focus (GLFW only calls back into the focused window).
-     * Phase 2 — each hit OS window's own Input (fetched directly, never
-     * through a shared global) locates logical windows composited onto it.
-     *
-     * This method never assigns EngineContext.input. That happens exactly
-     * once, in InputManager.publishActiveInput(), after focus is resolved
-     * for the frame.
-     *
-     * focusedWindow may only be changed via setFocusedWindow, called
-     * exclusively from InputManager's click resolution. WindowManager makes
-     * no focus decisions of its own.
+     * Owns every engine window and rebuilds the hovered window list each frame,
+     * sorted by zOrder then area, locating logical windows through their OS
+     * window's own input. Focus changes only through setFocusedWindow() from
+     * InputManager.
      */
 
     private ObjectArrayList<WindowInstance> windows;
@@ -203,24 +190,10 @@ public class WindowManager extends ManagerPackage {
 
     // Z-Order \\
 
-    /*
-     * Assigns the given window a zOrder strictly higher than every zOrder
-     * ever handed out before it — guaranteeing it renders above and wins
-     * hit-test priority over anything currently open. There is exactly one
-     * counter, so there is exactly one way for a window to become "the
-     * topmost thing right now," and no fixed per-role constant can ever
-     * collide with another. OS windows never call this and stay at their
-     * default zOrder of 0, which is intentionally always the lowest.
-     */
     public void bringToFront(WindowInstance window) {
         window.setZOrder(nextZOrder++);
     }
 
-    /*
-     * True when no other window composited onto the same OS window sits above
-     * the given one. Lets persistent chrome re-raise itself only when something
-     * has actually been brought up over it.
-     */
     public boolean isFrontmost(WindowInstance window) {
 
         WindowInstance glWindow = window.getGLWindow();
@@ -304,10 +277,6 @@ public class WindowManager extends ManagerPackage {
         return mainWindow != null;
     }
 
-    /*
-     * The one way a logical window changes OS windows. Render resources bound
-     * to the previous OS window's GL context are migrated in the same call.
-     */
     public void reparentWindow(WindowInstance window, WindowInstance newParent) {
         WindowInstance previousGLWindow = window.getGLWindow();
         window.setCompositeTarget(newParent);
@@ -341,11 +310,6 @@ public class WindowManager extends ManagerPackage {
         return false;
     }
 
-    /*
-     * The one teardown path for an OS window — explicit close requests, the
-     * platform close button, and engine shutdown all route through here, so
-     * the main GL context is always restored after the window is gone.
-     */
     public void destroyOsWindow(WindowInstance window) {
         if (window == null || window == mainWindow || !window.hasNativeHandle())
             return;

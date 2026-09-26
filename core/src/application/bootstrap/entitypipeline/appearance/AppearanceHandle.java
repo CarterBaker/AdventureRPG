@@ -1,6 +1,6 @@
 package application.bootstrap.entitypipeline.appearance;
 
-import application.bootstrap.entitypipeline.animation.AnimationStateHandle;
+import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
@@ -12,18 +12,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class AppearanceHandle extends HandlePackage {
 
     /*
-     * Per-entity runtime appearance — skin and hair color, the feature worn
-     * in every slot, the body build derived from the entity's weight, and
-     * the head-shape proportion. Seeded from the template's AppearanceData
-     * and edited in place by whatever customizes a character; rendering
-     * reads it every frame through EntityRenderSystem. Every proportion
-     * change routes through applyProportions(), the one place bone
-     * proportions are written to the entity's AnimationStateHandle and its
-     * pose re-evaluated, so edits show immediately even while the entity's
-     * animation is paused. resetToDefaults() is the one path that returns
-     * every customizable value to the template, used both on construction
-     * and when a fresh character is rolled. No manager owns this — it lives
-     * directly on EntityInstance, same as AnimationStateHandle.
+     * Per-entity appearance: skin and hair color, worn features, body build and
+     * head shape. Seeded from the template and edited in place;
+     * applyProportions() is the one path that writes bone proportions and
+     * re-poses the entity, and resetToDefaults() returns everything to the
+     * template. Lives on EntityInstance.
      */
 
     // Internal
@@ -57,7 +50,7 @@ public class AppearanceHandle extends HandlePackage {
         this.hairColor = new Color();
 
         // Features
-        this.features = new FeatureHandle[FeatureSlot.values().length];
+        this.features = new FeatureHandle[FeatureSlot.VALUES.length];
 
         // Proportions
         this.weightRatio = weightRatio;
@@ -73,7 +66,7 @@ public class AppearanceHandle extends HandlePackage {
         skinColor.set(appearanceData.getSkinColor());
         hairColor.set(appearanceData.getHairColor());
 
-        for (FeatureSlot featureSlot : FeatureSlot.values())
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             features[featureSlot.ordinal()] = appearanceData.getDefaultFeature(featureSlot);
 
         headProportion.set(1f, 1f, 1f);

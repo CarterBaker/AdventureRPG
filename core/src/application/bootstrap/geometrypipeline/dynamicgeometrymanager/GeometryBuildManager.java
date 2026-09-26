@@ -12,7 +12,7 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
@@ -24,34 +24,10 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 class GeometryBuildManager extends ManagerPackage {
 
     /*
-     * Routes per-block geometry assembly to the correct branch based on block
-     * geometry type. Drives the full subchunk build loop, tallies which
-     * DynamicGeometryTypes the subchunk actually contains (see
-     * SubChunkInstance), and delegates font glyph assembly to
-     * FontGeometryBranch. A subchunk proven empty by WorldGenerationManager
-     * skips the block walk entirely, since air never contributes a face —
-     * in a tall world this is the majority of subchunks in any column. A
-     * subchunk proven uniformly filled (deep stone, deep water) additionally
-     * skips the walk whenever every one of its 6 neighbors is provably the
-     * same geometry, since two identical-geometry neighbors never expose a
-     * face between them — this is what keeps a mountain's buried interior
-     * from paying the per-block cost. A subchunk proven opaque interior —
-     * every cell FULL geometry, zero air or liquid, but not necessarily one
-     * block ID — gets the same skip whenever its neighbors are equally
-     * solid, since a stone/ore mix or a buried dirt/stone transition band
-     * never exposes a face either; this is what keeps buried, non-uniform
-     * terrain (the common case under any real surface) from paying the
-     * per-block cost just because it isn't a single block ID. build() is
-     * only ever called by a caller already holding the owning chunk's own
-     * sync lock (BuildBranch, LiquidTickBranch, BlockPlacementSystem),
-     * so the packet's GENERATING/READY status is never used as an entry
-     * gate here — it's set purely so anything downstream can observe it.
-     * A block subdivided into sub-blocks is PARTIAL geometry here whatever
-     * its material, tallied as such and routed to PartialGeometryBranch; a
-     * whole FULL block's face goes to FullGeometryBranch only when
-     * SubCellSampleBranch proves it block-simple, and to the sub-block pass
-     * otherwise, so both resolutions share one classification and meet
-     * seamlessly wherever a step has been smoothed.
+     * Drives a chunk's geometry build subchunk by subchunk and routes each
+     * block to its geometry branch. Empty subchunks, and uniform or opaque ones
+     * enclosed by equally solid neighbors, skip the block walk entirely.
+     * Callers already hold the chunk's lock, so no gating happens here.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -86,7 +62,7 @@ class GeometryBuildManager extends ManagerPackage {
         this.liquidGeometryBranch = create(LiquidGeometryBranch.class);
 
         // Settings
-        this.BLOCK_COORDINATE_COUNT = ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT;
+        this.BLOCK_COORDINATE_COUNT = ChunkCoordinateUtility.BLOCK_COORDINATE_COUNT;
         this.worldHeight = EngineSetting.WORLD_HEIGHT;
     }
 
@@ -145,7 +121,7 @@ class GeometryBuildManager extends ManagerPackage {
 
         for (int i = 0; i < BLOCK_COORDINATE_COUNT; i++) {
 
-            int xyz = ChunkCoordinate3Int.getBlockCoordinate(i);
+            int xyz = ChunkCoordinateUtility.getBlockCoordinate(i);
             short biomeID = biomePaletteHandle.getBlock(xyz);
             BiomeHandle biomeHandle = biomeManager.getBiomeHandleFromBiomeID(biomeID);
             short blockID = blockPaletteHandle.getBlock(xyz);

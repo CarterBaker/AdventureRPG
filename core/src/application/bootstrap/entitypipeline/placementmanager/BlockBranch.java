@@ -4,7 +4,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
-import application.bootstrap.worldpipeline.blockplacementsystem.BlockPlacementSystem;
+import application.bootstrap.worldpipeline.blockmanager.BlockPlacementSystem;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;

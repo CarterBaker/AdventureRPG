@@ -7,11 +7,12 @@ import java.nio.file.Files;
 import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Stateless text-parsing helpers for reading and pre-processing GLSL source
- * files. Handles comment stripping, line conversion, and token extraction.
- */
 class ShaderParserUtility extends EngineUtility {
+
+    /*
+     * Stateless text-parsing helpers for reading and pre-processing GLSL source
+     * files. Handles comment stripping, line conversion, and token extraction.
+     */
 
     // File Reading \\
 
@@ -98,29 +99,6 @@ class ShaderParserUtility extends EngineUtility {
             if (c == target)
                 count++;
         return count;
-    }
-
-    static int extractBufferBinding(String line) {
-
-        try {
-
-            int bindingStart = line.indexOf("binding");
-
-            if (bindingStart == -1)
-                return -1;
-
-            int equalSign = line.indexOf("=", bindingStart);
-            int closeParen = line.indexOf(")", equalSign);
-
-            if (equalSign != -1 && closeParen != -1) {
-                String bindingStr = line.substring(equalSign + 1, closeParen).trim();
-                return Integer.parseInt(bindingStr);
-            }
-        } catch (Exception e) {
-            // Best-effort parse — malformed binding returns not-found
-        }
-
-        return -1;
     }
 
     static int findLastTypeDelimiter(String declaration) {

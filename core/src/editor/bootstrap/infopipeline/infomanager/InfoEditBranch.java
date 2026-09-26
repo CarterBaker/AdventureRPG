@@ -13,7 +13,7 @@ import com.google.gson.JsonPrimitive;
 import editor.bootstrap.infopipeline.infoschema.InfoFieldStruct;
 import editor.bootstrap.infopipeline.infotarget.InfoTargetStruct;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 

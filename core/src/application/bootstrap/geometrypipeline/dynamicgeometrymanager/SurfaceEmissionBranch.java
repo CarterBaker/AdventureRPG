@@ -20,23 +20,10 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 class SurfaceEmissionBranch extends BranchPackage {
 
     /*
-     * Turns one merged solid quad into its four patch vertices, whichever
-     * resolution it was merged at. A quad arrives in sub-cell units: the
-     * sub-cell behind its first corner, its extent along each tangent, and
-     * how many sub-cells each entry of its edge data covers — two for a
-     * block-resolution quad, one for a sub-block one. Each edge carries one
-     * four-bit column code (see SubCellSampleBranch.classifyColumn()) per
-     * entry across the run plus one padding entry at either end, where the
-     * padding describes the column diagonally beyond the quad's corner.
-     * Together the four edges describe every column touching the quad from
-     * outside, so the surface shader can rebuild the eight sub-cells around
-     * any lattice vertex on the quad exactly as any other quad touching that
-     * vertex does. Codes split across a low word of six entries and a high
-     * word of the rest, and the meta word packs the face, encoded face, both
-     * extents in sub-cells, the natural flag and the edge resolution into 21
-     * bits, so every packed value is exact in a float32 mantissa. Vertex
-     * tint on a half-block corner is the mean of the block corners
-     * bracketing it, so tint stays linear across any mix of quad sizes.
+     * Turns one merged solid quad into its four patch vertices at either
+     * resolution. Packs the column codes along each edge and the face, extents
+     * and flags into float-exact words, so the surface shader can rebuild the
+     * sub-cells around any vertex exactly as neighboring quads do.
      */
 
     // Internal
@@ -189,12 +176,6 @@ class SurfaceEmissionBranch extends BranchPackage {
 
     // Edge Classification \\
 
-    /*
-     * Column codes for one edge, entry by entry from the low padding to the
-     * high padding, packed four bits apiece into one long. An entry
-     * classifies the column beside the first sub-cell it covers, and a
-     * padding entry the column beside the sub-cell just past the quad's end.
-     */
     private long buildEdgeCodes(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
@@ -282,13 +263,6 @@ class SurfaceEmissionBranch extends BranchPackage {
 
     // Vertex Color \\
 
-    /*
-     * Mean biome tint of the blocks around a corner given in sub-cell units.
-     * A corner on the block lattice averages the eight blocks touching it; a
-     * corner halfway along a block averages every block-lattice corner
-     * bracketing it, which is exactly the linear interpolation a larger quad
-     * spanning that corner would produce there.
-     */
     private float resolveVertColor(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,

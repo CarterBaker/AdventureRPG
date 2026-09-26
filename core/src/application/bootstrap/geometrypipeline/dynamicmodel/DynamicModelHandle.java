@@ -73,12 +73,6 @@ public class DynamicModelHandle extends HandlePackage {
         appendQuadIndices(startVertex, quadCount);
     }
 
-    /*
-     * Merges all quads from source into this model, applying per-vertex offsets
-     * at the specified attribute indices before writing. Used by the font system
-     * to position per-glyph origin-space quads at cursor positions within a
-     * label's merged model. offsetIndices and offsets must be the same length.
-     */
     public void mergeWithOffset(DynamicModelHandle source, int[] offsetIndices, float[] offsets) {
 
         if (source == null || source.isEmpty())

@@ -1,11 +1,11 @@
 package application.bootstrap.entitypipeline.playermanager;
 
+import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
-import application.bootstrap.entitypipeline.util.EntityInputHandle;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
@@ -29,81 +29,12 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 public class PlayerManager extends ManagerPackage {
 
     /*
-     * Owns and drives the player entity and its camera. spawnPlayer() takes the
-     * window the player renders into and the context's RawInputHandle —
-     * caller decides both, no internal lookups.
-     *
-     * The camera trails the player's eye position each frame at an adjustable
-     * third-person distance behind it along the view direction. Scroll wheel
-     * (raw.getScrollY()) moves the target distance continuously. F5 toggles
-     * first person: the first press snapshots whatever third-person distance
-     * the scroll wheel had already settled on into
-     * windowID2PreFirstPersonZoomTarget and snaps the target straight to
-     * EngineSetting.CAMERA_ZOOM_MIN; the second press restores that exact
-     * snapshotted distance rather than re-deriving one, so the camera comes
-     * back out to precisely where it was before going first person. The
-     * actual distance smoothly lerps toward that target every frame rather
-     * than snapping, so scroll zoom and the F5 toggle both feel continuous
-     * instead of stepping. Gameplay logic (raycasts, placement) always reads
-     * from the eye position, never the visual camera position, so aiming
-     * stays correct regardless of zoom.
-     *
-     * isFirstPerson(windowID) exposes whether the current distance is at/below
-     * the first-person threshold — consumed by the render side (via
-     * EntityRenderSystem.pushCharacter()'s hideHead) to decide whether to
-     * hide the character's head, and by movement, which holds the body to
-     * the camera in first person by asking the input to strafe. In third
-     * person the body turns toward wherever the player heads, so the
-     * character runs toward the camera rather than backpedalling. This is a
-     * live distance check, not the F5 toggle state directly, so the head
-     * fades out/in exactly as the lerp crosses the threshold regardless of
-     * whether zero was reached by scrolling or by F5.
-     *
-     * Camera rotation is driven externally by the runtime context.
-     *
-     * Only the hovered window's player is updated each frame — WindowManager is
-     * the single authority on which window is active. All other players freeze.
-     * Movement is additionally gated on the window's menu lock state so that
-     * open menus suppress input without any external coordination.
-     *
-     * The player's animation is advanced here too, right after
-     * MovementManager.move() each frame, so its animation tree reads the
-     * final movement state, speed, and facing — including the jumping,
-     * falling, wading, and swimming states only movement can resolve.
-     * EntityInstance.updateAnimation() is the one path that feeds them in;
-     * entities with no character model skip it entirely.
-     *
-     * Character rendering itself — model matrix, entity-size scale, and the
-     * actual skinned draw submission — lives entirely in the engine-side
-     * EntityRenderSystem.pushCharacter(), shared with every NPC. This class
-     * owns only the state that entry point needs: which entity, which
-     * camera, and (via isFirstPerson()) which bone to hide.
-     *
-     * setFreeCameraForWindow() switches a window's player to free flying and
-     * back. While flying, the entity is only an anchor the world streams
-     * around — it is never drawn or animated and never places or breaks
-     * blocks. Each frame it is flown through MovementManager.fly() instead of
-     * moved, and the camera sits directly at its eye position with no zoom.
-     * Switching back settles the character on safe ground beneath wherever
-     * the anchor flew.
-     *
-     * rerollPlayerForWindow() turns a window's player into a fresh character
-     * in place, and verifyPlayerPositionForWindow() holds a player that has
-     * just been moved until its new chunk has generated, then settles it on
-     * safe ground. A position that is already safe is kept exactly, so a
-     * restored save lands where it was left.
-     *
-     * beginCharacterPreview() turns a window's player into the subject of a
-     * character creator: it stands idle, animating, while the camera frames
-     * it from the front, offset so the character sits clear of the creator's
-     * panels. The preview faces the body by strafing toward the preview
-     * direction, so rotateCharacterPreview() turns it smoothly on the spot.
-     * endCharacterPreview() hands the camera back looking the way the
-     * character faces. frameCharacterPreview() places the previewed
-     * character on an exact spot of the screen instead — its middle on a
-     * point in normalized device coordinates, its height a share of the
-     * screen's — so a menu can show it through a window in a panel; the
-     * framing lasts until the preview ends.
+     * Owns and drives each window's player entity and camera. The camera trails
+     * the eye at a smoothed third-person distance that scroll and the
+     * first-person toggle adjust; gameplay always aims from the eye. Only the
+     * hovered window's player updates, gated on its menu lock. Also handles
+     * free-camera flight, rerolls, spawn verification, and character-creator
+     * previews, and advances the player's animation after movement each frame.
      */
 
     // Internal
@@ -434,12 +365,6 @@ public class PlayerManager extends ManagerPackage {
         internalBufferSystem.updatePlayerPosition(player.getWorldPositionStruct());
     }
 
-    /*
-     * The camera sits along the facing at the distance that makes the body
-     * fill the framed height, and aims past the body's middle by exactly the
-     * lateral and vertical offsets that land that middle on the framed
-     * screen point. Its right axis along -facing is (facing.z, 0, -facing.x).
-     */
     private void placeFramedPreviewCamera(
             EntityInstance player,
             CameraInstance camera,
@@ -509,14 +434,6 @@ public class PlayerManager extends ManagerPackage {
 
     // Zoom \\
 
-    /*
-     * Scroll adjusts the target distance continuously; F5 toggles first
-     * person via toggleFirstPerson() below. The actual distance smoothly
-     * lerps toward whatever the target is every frame — this is what
-     * produces the "camera eases toward the new distance" feel rather than
-     * an instant jump, and also means scroll and F5 read/write the same
-     * target rather than fighting over two different values.
-     */
     private float updateZoom(int windowID, RawInputHandle raw) {
 
         float target = windowID2ZoomTarget.get(windowID);
@@ -538,18 +455,6 @@ public class PlayerManager extends ManagerPackage {
         return current;
     }
 
-    /*
-     * First press: snapshots whatever third-person target distance the
-     * scroll wheel had already settled on for this window, marks this
-     * window as toggled into first person, and returns
-     * EngineSetting.CAMERA_ZOOM_MIN as the new target.
-     *
-     * Second press: clears the toggle and returns the snapshotted distance,
-     * so the camera target jumps straight back to (and then smoothly lerps
-     * toward, same as any other target change) exactly the third-person
-     * distance it was at before the first press — never re-derived from a
-     * fixed default.
-     */
     private float toggleFirstPerson(int windowID, float currentTarget) {
 
         boolean firstPersonToggled = windowID2FirstPersonToggled.get(windowID);

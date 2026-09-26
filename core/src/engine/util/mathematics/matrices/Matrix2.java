@@ -4,6 +4,10 @@ import engine.root.EngineUtility;
 
 public class Matrix2 extends EngineUtility {
 
+    /*
+     * Mutable 2x2 float matrix with in-place operations.
+     */
+
     // Data
     public final float[] val = new float[4];
 

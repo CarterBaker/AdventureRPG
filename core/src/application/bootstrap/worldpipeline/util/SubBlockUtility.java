@@ -24,16 +24,6 @@ public class SubBlockUtility extends EngineUtility {
     public static final int MASK_FULL = EngineSetting.SUB_BLOCK_MASK_FULL;
     public static final float SIZE = EngineSetting.SUB_BLOCK_SIZE;
 
-    private static final int AXIS_BIT_X = 1;
-    private static final int AXIS_BIT_Z = 2;
-    private static final int AXIS_BIT_Y = 4;
-
-    // Internal \\
-
-    private SubBlockUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
-
     // Octant \\
 
     public static int getOctant(int octantX, int octantY, int octantZ) {
@@ -41,15 +31,15 @@ public class SubBlockUtility extends EngineUtility {
     }
 
     public static int getOctantX(int octant) {
-        return octant & AXIS_BIT_X;
+        return octant & EngineSetting.SUB_BLOCK_AXIS_BIT_X;
     }
 
     public static int getOctantY(int octant) {
-        return (octant & AXIS_BIT_Y) >> 2;
+        return (octant & EngineSetting.SUB_BLOCK_AXIS_BIT_Y) >> 2;
     }
 
     public static int getOctantZ(int octant) {
-        return (octant & AXIS_BIT_Z) >> 1;
+        return (octant & EngineSetting.SUB_BLOCK_AXIS_BIT_Z) >> 1;
     }
 
     public static int getOctantBit(int octant) {
@@ -61,12 +51,12 @@ public class SubBlockUtility extends EngineUtility {
     private static int getAxisBit(Direction3Vector direction) {
 
         if (direction.x != 0)
-            return AXIS_BIT_X;
+            return EngineSetting.SUB_BLOCK_AXIS_BIT_X;
 
         if (direction.y != 0)
-            return AXIS_BIT_Y;
+            return EngineSetting.SUB_BLOCK_AXIS_BIT_Y;
 
-        return AXIS_BIT_Z;
+        return EngineSetting.SUB_BLOCK_AXIS_BIT_Z;
     }
 
     // Whether stepping this octant one sub-block along a direction leaves its cell

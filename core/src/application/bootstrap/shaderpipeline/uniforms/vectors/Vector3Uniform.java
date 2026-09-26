@@ -5,7 +5,14 @@ import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import engine.root.EngineContext;
 import engine.util.mathematics.vectors.Vector3;
 
-public final class Vector3Uniform extends UniformAttributeStruct<Object> {
+public final class Vector3Uniform extends UniformAttributeStruct<Vector3> {
+
+    /*
+     * GLSL vec3 uniform. Holds its own vector and copies incoming values
+     * into it, so setting it never allocates.
+     */
+
+    // Constructor \\
 
     public Vector3Uniform() {
         super(UniformType.VECTOR3, new Vector3());
@@ -16,19 +23,26 @@ public final class Vector3Uniform extends UniformAttributeStruct<Object> {
         return new Vector3Uniform();
     }
 
+    // Push \\
+
     @Override
-    protected void push(int handle, Object value) {
-        if (value instanceof Vector3 vector)
-            EngineContext.gl20.glUniform3f(handle, vector.x, vector.y, vector.z);
-        else
-            throw new IllegalArgumentException("push(int, Vector3): got " + value.getClass());
+    protected void push(int handle, Vector3 value) {
+        EngineContext.gl20.glUniform3f(handle, value.x, value.y, value.z);
+    }
+
+    // Accessible \\
+
+    @Override
+    protected void applyValue(Vector3 value) {
+        this.value.set(value);
     }
 
     @Override
-    protected void applyValue(Object value) {
+    protected void applyObject(Object value) {
+
         if (value instanceof Vector3 vector)
-            ((Vector3) this.value).set(vector);
+            applyValue(vector);
         else
-            throw new IllegalArgumentException("applyValue(Vector3): got " + value.getClass());
+            throwException("Vector3Uniform expects Vector3, got " + value.getClass().getSimpleName());
     }
 }

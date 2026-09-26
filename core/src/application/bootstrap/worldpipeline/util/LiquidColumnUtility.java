@@ -49,15 +49,6 @@ public class LiquidColumnUtility extends EngineUtility {
 
     // Surface \\
 
-    /*
-     * Walks upward from fromTotalY through consecutive blocks of the same
-     * liquid type, returning where the fluid actually ends: either the
-     * fractional fill height of the first partially-filled block found
-     * (LiquidManager only ever settles a partial level at a true surface —
-     * everything below is packed to LIQUID_LEVEL_MAX), or the integer top
-     * of the last full block if the column runs straight into air. Returns
-     * NO_SURFACE if fromTotalY itself isn't inside liquid at all.
-     */
     public static float findSurfaceHeight(
             ChunkInstance chunkInstance,
             BlockManager blockManager,

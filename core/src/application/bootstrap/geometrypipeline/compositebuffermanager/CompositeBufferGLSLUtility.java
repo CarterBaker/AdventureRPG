@@ -1,16 +1,12 @@
 package application.bootstrap.geometrypipeline.compositebuffermanager;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
-
 import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
-import engine.root.UtilityPackage;
+import engine.root.EngineUtility;
 
-class CompositeBufferGLSLUtility extends UtilityPackage {
+class CompositeBufferGLSLUtility extends EngineUtility {
 
     /*
      * GL creation and disposal operations for CompositeBufferManager.
@@ -44,10 +40,7 @@ class CompositeBufferGLSLUtility extends UtilityPackage {
         GL30 gl30 = EngineContext.gl30;
         GL20 gl20 = EngineContext.gl20;
 
-        IntBuffer idBuf = ByteBuffer.allocateDirect(Integer.BYTES)
-                .order(ByteOrder.nativeOrder()).asIntBuffer();
-        gl30.glGenVertexArrays(1, idBuf);
-        int vao = idBuf.get(0);
+        int vao = gl30.glGenVertexArray();
 
         gl30.glBindVertexArray(vao);
 
@@ -99,10 +92,6 @@ class CompositeBufferGLSLUtility extends UtilityPackage {
 
     static void deleteVAO(int handle) {
 
-        IntBuffer buf = ByteBuffer.allocateDirect(Integer.BYTES)
-                .order(ByteOrder.nativeOrder()).asIntBuffer();
-        buf.put(handle).flip();
-
-        EngineContext.gl30.glDeleteVertexArrays(1, buf);
+        EngineContext.gl30.glDeleteVertexArray(handle);
     }
 }

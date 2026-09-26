@@ -13,15 +13,10 @@ import engine.util.mathematics.vectors.Vector3;
 public class InventoryViewUtility extends EngineUtility {
 
     /*
-     * The inventory's one set of view transforms, shared by the branches that
-     * pick with the cursor and the render system that draws. Everything is
-     * drawn in window pixels, y up, with depth growing toward the viewer, so
-     * a view matrix places a container's sub-voxel box inside a menu element
-     * turned about its vertical axis and tipped toward the viewer, and its
-     * inverse turns a cursor point back into a ray into that box. Items are
-     * one-block meshes, so an item's cube is scaled into sub-voxels before
-     * its shape is placed. The shell is the floor and walls of a container
-     * drawn from one unit quad; only walls behind the contents are shown.
+     * The inventory's single set of view transforms, shared by picking and
+     * rendering. Places a container's sub-voxel box inside its menu element,
+     * turned and tipped toward the viewer, and inverts that to turn a cursor
+     * point into a ray.
      */
 
     // Shell faces — origin, u edge, v edge, and inward normal, each scaled by the container size

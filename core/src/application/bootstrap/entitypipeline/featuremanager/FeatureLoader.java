@@ -1,9 +1,6 @@
 package application.bootstrap.entitypipeline.featuremanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import engine.root.EngineSetting;
@@ -38,18 +35,10 @@ class FeatureLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Feature JSON directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String featureName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        featureName2File.put(featureName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk feature directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String featureName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            featureName2File.put(featureName, file);
+            queueFile(file);
         }
     }
 

@@ -2,17 +2,19 @@ package application.bootstrap.worldpipeline.blockmanager;
 
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.vectors.Vector2;
 
-/*
- * Seeds GPU-side UBOs with data that cannot be expressed statically in JSON.
- * Atlas layer indices and UV scale are declared via companion ubo.json files
- * inside the texture directory and are handled by TextureManager directly.
- * This system is responsible only for procedurally computed orientation data.
- */
 public class BlockBufferSystem extends SystemPackage {
+
+    /*
+     * Seeds GPU-side UBOs with data that cannot be expressed statically in JSON.
+     * Atlas layer indices and UV scale are declared via companion ubo.json files
+     * inside the texture directory and are handled by TextureManager directly.
+     * This system is responsible only for procedurally computed orientation data.
+     */
 
     // Internal
     private UBOManager uboManager;
@@ -33,7 +35,7 @@ public class BlockBufferSystem extends SystemPackage {
 
     private void pushBlockOrientationMap() {
 
-        UBOHandle ubo = uboManager.getUBOHandleFromUBOName("BlockOrientationMapData");
+        UBOHandle ubo = uboManager.getUBOHandleFromUBOName(EngineSetting.BLOCK_ORIENTATION_MAP_DATA_UBO);
 
         Vector2[] faceOrientations = new Vector2[24];
 
@@ -53,7 +55,7 @@ public class BlockBufferSystem extends SystemPackage {
             }
         }
 
-        ubo.updateUniform("u_faceOrientations", faceOrientations);
+        ubo.updateUniform(EngineSetting.UNIFORM_FACE_ORIENTATIONS, faceOrientations);
         uboManager.push(ubo);
     }
 }

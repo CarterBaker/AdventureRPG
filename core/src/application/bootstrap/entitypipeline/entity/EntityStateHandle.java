@@ -7,17 +7,10 @@ import engine.util.mathematics.vectors.Vector3;
 public class EntityStateHandle extends HandlePackage {
 
     /*
-     * Per-entity runtime movement state. Holds current movement state, gravity
-     * and horizontal velocity accumulators, jump start time, whether the entity
-     * was touching liquid last frame, and the smoothed cosmetic vertical ground
-     * offset NaturalGroundOffsetBranch derives from whichever natural block
-     * currently sits beneath this entity's feet. horizontalSpeed and
-     * verticalSpeed are the displacement MovementManager actually applied
-     * last frame, after collision, in blocks per second. bodyYaw is the
-     * smoothed way the body faces, in degrees, and bodyYawRate how fast it
-     * is turning; lookPitch and lookYaw are where the entity looks relative
-     * to that body — all written by FacingBranch. No manager owns this — it
-     * lives directly on EntityInstance.
+     * Per-entity movement state: movement state, gravity and horizontal
+     * velocity, jump start, liquid contact, cosmetic ground offset, the speeds
+     * actually travelled last frame, and body yaw and look angles written by
+     * FacingBranch. Lives on EntityInstance.
      */
 
     // State

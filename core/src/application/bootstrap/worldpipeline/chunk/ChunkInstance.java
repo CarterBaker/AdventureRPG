@@ -17,21 +17,11 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 public class ChunkInstance extends WorldRenderInstance {
 
     /*
-     * A single 16x16 column of subchunks representing one loaded world chunk.
-     * Owns its subchunks permanently — they are never pooled separately.
-     * Pooled and reused by ChunkQueueManager. Must be reset via reset() before
-     * reuse. Geometry is assembled by merging all subchunk packets into one packet.
-     * mergeVersion is a globally unique, monotonically increasing sequence number
-     * bumped every time merge() actually rebuilds this chunk's CPU geometry — it
-     * never resets, even across pooling reuse, so a mega's per-chunk merge
-     * bookkeeping (see MegaBatchHandle) can never collide with a stale entry left
-     * by a previous occupant of the same chunk coordinate. chunkNeighbors is
-     * allocated once in create() and reconfigured in place on every reuse rather
-     * than reallocated, since a chunk streams in and out of view far too often
-     * to pay for a fresh allocation and wrap computation each time.
-     * tideSurfaceLevels is the tide surface this chunk's ocean water was last
-     * written against, so the tide pass only revisits a chunk the tide has
-     * actually moved away from.
+     * One loaded chunk column owning its subchunks. Pooled by ChunkQueueManager
+     * and reset before reuse. merge() combines subchunk packets and bumps a
+     * globally unique mergeVersion so megas never confuse occupants; neighbors
+     * are reconfigured in place, and tideSurfaceLevels records the tide the
+     * ocean was last written against.
      */
 
     // Internal
@@ -129,14 +119,6 @@ public class ChunkInstance extends WorldRenderInstance {
 
     // Geometry \\
 
-    /*
-     * Merges every subchunk's packet into this chunk's single packet. Geometry
-     * state is always resolved from the final hasModels() check regardless of
-     * whether every subchunk merged cleanly — a partial merge failure must
-     * still surface whatever geometry DID make it in rather than silently
-     * leaving the packet EMPTY (and therefore permanently unrenderable) while
-     * `success` independently reports whether a retry is warranted.
-     */
     public boolean merge() {
 
         boolean success = true;

@@ -5,6 +5,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldItemPaletteHandle extends HandlePackage {
 
+    /*
+     * A subchunk's persistent list of world item structs, the source every
+     * runtime item palette is rebuilt from.
+     */
+
     private ObjectArrayList<WorldItemStruct> items;
 
     // Constructor \\

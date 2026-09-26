@@ -15,7 +15,6 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.assets.image.Pixmap;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
@@ -109,12 +108,6 @@ class WorldBuilder extends BuilderPackage {
 
     // Seed \\
 
-    /*
-     * Reads "seed" from the companion JSON if present. If it's missing —
-     * either the field or the whole file — a new seed is rolled once and
-     * persisted immediately, so this is the only moment a world's seed is
-     * ever chosen. Every subsequent load reads the same value back.
-     */
     private long resolveWorldSeed(JsonObject json, File jsonFile, String worldName) {
 
         if (json.has("seed"))
@@ -129,13 +122,6 @@ class WorldBuilder extends BuilderPackage {
 
     // Epoch \\
 
-    /*
-     * Reads "epoch_start" from the companion JSON if present — the real
-     * instant, in epoch milliseconds, at which this world's calendar sat on
-     * its own start date and start time. If it's missing the world begins
-     * now, and that instant is persisted immediately so the clock carries on
-     * from it across every future session.
-     */
     private long resolveWorldEpochStart(JsonObject json, File jsonFile, String worldName) {
 
         if (json.has("epoch_start"))

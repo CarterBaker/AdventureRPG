@@ -7,7 +7,15 @@ import engine.root.EngineSetting;
 
 public final class SampleImage2DArrayUniform extends UniformAttributeStruct<Integer> {
 
-    private int textureUnit = 0;
+    /*
+     * GLSL sampler2DArray uniform. Holds a texture array handle, binds it to
+     * the unit the render pass assigns, and uploads that unit.
+     */
+
+    // Internal
+    private int textureUnit;
+
+    // Constructor \\
 
     public SampleImage2DArrayUniform() {
         super(UniformType.SAMPLE_IMAGE_2D_ARRAY, 0);
@@ -17,6 +25,8 @@ public final class SampleImage2DArrayUniform extends UniformAttributeStruct<Inte
     public UniformAttributeStruct<?> createDefault() {
         return new SampleImage2DArrayUniform();
     }
+
+    // Sampler \\
 
     @Override
     public boolean isSampler() {
@@ -30,10 +40,14 @@ public final class SampleImage2DArrayUniform extends UniformAttributeStruct<Inte
         EngineContext.gl30.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, value);
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Integer value) {
         EngineContext.gl20.glUniform1i(handle, textureUnit);
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Integer value) {

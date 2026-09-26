@@ -23,18 +23,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class WeatherMapBufferSystem extends SystemPackage {
 
     /*
-     * Packs each grid's weather window into its own WeatherMapData UBO every
-     * frame. The cloud archetypes present anywhere in the window become the
-     * frame's layers, ordered by altitude, and each layer's archetype
-     * settings are written once into a small table — its real-world
-     * kilometres converted into blocks through the world's own scale, its
-     * base placed at an absolute world height above sea level, so the clouds
-     * belong to the world rather than to the viewer. Every cell is then a
-     * single ivec4: one byte of coverage and one byte of density scale per
-     * layer, cross-faded across the cell's own weather transition, so the
-     * shader reads the whole sky with one fetch per cell and interpolates
-     * between cells itself. Runs in LATE_UPDATE so the window is placed
-     * against the reference chunk physics settled on this frame.
+     * Packs each grid's weather window into its WeatherMapData UBO in
+     * LATE_UPDATE. Cloud archetypes in the window become altitude-ordered
+     * layers with their settings in world blocks, and every cell packs
+     * per-layer coverage and density into one ivec4.
      */
 
     // Internal
@@ -135,14 +127,14 @@ class WeatherMapBufferSystem extends SystemPackage {
 
         UBOInstance weatherMapUBO = grid.getWeatherMapUBO();
 
-        weatherMapUBO.updateUniform("u_weatherCells", cells);
-        weatherMapUBO.updateUniform("u_weatherLayerColor", layerColor);
-        weatherMapUBO.updateUniform("u_weatherLayerShape", layerShape);
-        weatherMapUBO.updateUniform("u_weatherLayerNoise", layerNoise);
-        weatherMapUBO.updateUniform("u_weatherLayerSurface", layerSurface);
-        weatherMapUBO.updateUniform("u_weatherMapOrigin", mapOrigin);
-        weatherMapUBO.updateUniform("u_weatherPlanet", planet);
-        weatherMapUBO.updateUniform("u_weatherLayerCount", layerCount);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_CELLS, cells);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_COLOR, layerColor);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_SHAPE, layerShape);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_NOISE, layerNoise);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_SURFACE, layerSurface);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_MAP_ORIGIN, mapOrigin);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_PLANET, planet);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_COUNT, layerCount);
 
         uboManager.push(weatherMapUBO);
     }

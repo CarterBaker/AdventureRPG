@@ -4,7 +4,7 @@ import java.io.File;
 
 import com.google.gson.JsonObject;
 
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.io.FileUtility;

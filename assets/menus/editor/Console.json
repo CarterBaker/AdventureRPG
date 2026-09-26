@@ -81,7 +81,7 @@
               "color": "control",
               "hover_color": "control_hover",
               "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.ConsoleBranch",
+                "class": "editor.runtime.menueventsmanager.menus.ConsoleBranch",
                 "method": "clear"
               },
               "elements": [

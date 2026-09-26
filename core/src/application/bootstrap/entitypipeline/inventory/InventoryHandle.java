@@ -8,15 +8,10 @@ import engine.root.HandlePackage;
 public class InventoryHandle extends HandlePackage {
 
     /*
-     * Per-entity inventory state: the item in every equipment slot, and which
-     * hideable slots are left off the character's look. The backpack is just
-     * the item in the backpack slot — its container travels with it. A
-     * two-handed item is held in the main hand and keeps the off hand empty.
-     * give() is the one path an item is handed to an entity: it is packed
-     * into the backpack when one is worn and has room, and otherwise carried
-     * in a free hand. The revision counts every change to what is worn or
-     * shown, so a view of the inventory knows when to redraw. No manager owns
-     * this — it lives directly on EntityInstance.
+     * Per-entity inventory: the item in every equipment slot and which slots
+     * are hidden. give() is the one path an item is handed over, into the
+     * backpack if it fits and otherwise a free hand. The revision counts every
+     * change so views know when to redraw. Lives on EntityInstance.
      */
 
     // Equipment
@@ -32,8 +27,8 @@ public class InventoryHandle extends HandlePackage {
     protected void create() {
 
         // Equipment
-        this.slot2Item = new ItemInstance[EquipmentSlot.values().length];
-        this.slot2Hidden = new boolean[EquipmentSlot.values().length];
+        this.slot2Item = new ItemInstance[EquipmentSlot.VALUES.length];
+        this.slot2Hidden = new boolean[EquipmentSlot.VALUES.length];
     }
 
     // Equipment \\
@@ -73,7 +68,7 @@ public class InventoryHandle extends HandlePackage {
 
     public EquipmentSlot findSlot(ItemInstance itemInstance) {
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.values())
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
             if (slot2Item[equipmentSlot.ordinal()] == itemInstance)
                 return equipmentSlot;
 

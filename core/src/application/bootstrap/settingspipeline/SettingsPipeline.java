@@ -1,12 +1,16 @@
 package application.bootstrap.settingspipeline;
 
 import application.bootstrap.settingspipeline.settingssystem.SettingsSystem;
-import engine.root.AssemblyPackage;
+import engine.root.PipelinePackage;
 
-public class SettingsPipeline extends AssemblyPackage {
+public class SettingsPipeline extends PipelinePackage {
+
+    /*
+     * Registers SettingsSystem, which applies and persists user settings.
+     */
 
     @Override
-    public void create() {
+    protected void create() {
         create(SettingsSystem.class);
     }
 }

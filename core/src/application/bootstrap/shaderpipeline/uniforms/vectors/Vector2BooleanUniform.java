@@ -7,6 +7,13 @@ import engine.util.mathematics.vectors.Vector2Boolean;
 
 public final class Vector2BooleanUniform extends UniformAttributeStruct<Vector2Boolean> {
 
+    /*
+     * GLSL bvec2 uniform. Holds its own vector and copies incoming values
+     * into it, so setting it never allocates.
+     */
+
+    // Constructor \\
+
     public Vector2BooleanUniform() {
         super(UniformType.VECTOR2_BOOLEAN, new Vector2Boolean());
     }
@@ -16,13 +23,26 @@ public final class Vector2BooleanUniform extends UniformAttributeStruct<Vector2B
         return new Vector2BooleanUniform();
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Vector2Boolean value) {
         EngineContext.gl20.glUniform2i(handle, value.x ? 1 : 0, value.y ? 1 : 0);
     }
 
+    // Accessible \\
+
     @Override
     protected void applyValue(Vector2Boolean value) {
         this.value.set(value);
+    }
+
+    @Override
+    protected void applyObject(Object value) {
+
+        if (value instanceof Vector2Boolean vector)
+            applyValue(vector);
+        else
+            throwException("Vector2BooleanUniform expects Vector2Boolean, got " + value.getClass().getSimpleName());
     }
 }

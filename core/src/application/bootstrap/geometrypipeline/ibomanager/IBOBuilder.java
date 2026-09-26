@@ -1,15 +1,15 @@
 package application.bootstrap.geometrypipeline.ibomanager;
 
-import java.io.File;
-import java.util.Map;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import engine.root.BuilderPackage;
 import engine.util.io.JsonUtility;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class IBOBuilder extends BuilderPackage {
 
@@ -34,15 +34,10 @@ public class IBOBuilder extends BuilderPackage {
 
     // Build \\
 
-    /*
-     * VAOInstance is provided by InternalLoader — the same instance that will
-     * be stored in the MeshHandle. IBO binding is recorded in the VAO state,
-     * so this must be the exact same VAOInstance the mesh assembler uses.
-     */
     public void build(
             String resourceName,
             File file,
-            Map<String, File> registry,
+            Object2ObjectOpenHashMap<String, File> registry,
             VAOInstance vaoInstance) {
 
         if (iboManager.hasIBO(resourceName))
@@ -79,7 +74,7 @@ public class IBOBuilder extends BuilderPackage {
             String refName,
             String sourceResourceName,
             File sourceFile,
-            Map<String, File> registry,
+            Object2ObjectOpenHashMap<String, File> registry,
             VAOInstance vaoInstance) {
 
         if (iboManager.hasIBO(refName))

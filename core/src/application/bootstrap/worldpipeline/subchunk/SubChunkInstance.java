@@ -20,30 +20,11 @@ import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 public class SubChunkInstance extends WorldRenderInstance {
 
     /*
-     * One vertical slice of a chunk covering CHUNK_SIZE^3 blocks. A subchunk
-     * carries real per-block palette storage (biome, block, rotation) only
-     * once something genuinely needs cell-by-cell data — pure air
-     * (knownEmpty) and single-block-type regions (uniformFill) are tracked as
-     * scalars and never allocate a palette at all. Storage is realized on
-     * first real need: a block edit, or a geometry build that finds the
-     * subchunk not fully enclosed by identical neighbors and so must walk it
-     * cell by cell. Since most subchunks in a tall world are either open sky
-     * or buried deep underground, this keeps memory and generation cost
-     * proportional to the terrain surface rather than to total world volume,
-     * and releases storage back to virtual on reset() so a pooled chunk
-     * reused at a new location starts free again. containedBlockTypes is the
-     * set of DynamicGeometryTypes this subchunk's most recent geometry build
-     * (or uniform-fill classification) actually contains, tallied so systems
-     * like liquid ticking can skip subchunks that never need them. Tally
-     * writes only ever happen while the owning chunk's ChunkDataSyncContainer
-     * is held; readers off the build thread must acquire that lock first.
-     * Liquid state lives per cell in the block palette's liquid child, so a
-     * subchunk is liquid-stable exactly when none of its liquid cells are
-     * active, and value reads answer for a virtual subchunk without ever
-     * realizing storage. A cell subdivided into sub-blocks keeps its material
-     * as its block and its octants in the block palette's partial child, and
-     * setSubBlocks() is the single write path that subdivides, collapses, or
-     * clears one.
+     * One vertical slice of a chunk. Pure air and single-block regions stay
+     * virtual; per-block palettes are only realized when an edit or a geometry
+     * build needs them, and released again on reset(). Tracks the geometry
+     * types its last build contained, and setSubBlocks() is the single write
+     * path for sub-block cells. Writes happen under the chunk's lock.
      */
 
     // Internal
@@ -76,16 +57,7 @@ public class SubChunkInstance extends WorldRenderInstance {
     private DynamicGeometryType uniformGeometryType;
     private short uniformBlockID;
 
-    // Opaque Interior Fast Path — set only by WorldGenerationManager when a
-    // subchunk's entire volume resolved to solid FULL-geometry blocks with
-    // zero air or liquid, even though the exact block IDs are not uniform
-    // (e.g. a stone subchunk shot through with ore, or a buried dirt/stone
-    // transition band that never breaks the surface anywhere in its
-    // footprint). Two adjacent FULL blocks never expose a face regardless of
-    // their exact IDs, so GeometryBuildManager treats this exactly like
-    // isUniformFill() when deciding whether a fully-enclosed subchunk can
-    // skip geometry entirely — without releasing the real per-block storage
-    // those varying IDs still require for mining and other block queries.
+    // Opaque Interior — every cell a FULL block with no air or liquid, whatever the IDs
     private boolean opaqueInterior;
 
     // Internal \\
@@ -157,12 +129,6 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     // Lazy Storage \\
 
-    /*
-     * Realizes real per-block storage on first genuine need, backfilling it
-     * to whatever this subchunk currently virtually represents (air, or a
-     * single uniform block) so the caller that triggered this doesn't see a
-     * spurious reset. Idempotent.
-     */
     private void ensurePopulated() {
 
         if (populated)
@@ -204,12 +170,6 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     // Generation \\
 
-    /*
-     * Called once by WorldGenerationManager before each generation pass.
-     * Drops any previously realized storage — this instance may be pooled
-     * and reused for a different location — and records the column's biome
-     * as a scalar; a palette is only ever built once something needs one.
-     */
     public void beginGeneration(short columnBiomeID) {
         releaseStorageIfPopulated();
         this.columnBiomeID = columnBiomeID;
@@ -218,12 +178,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.opaqueInterior = false;
     }
 
-    /*
-     * Hollows the interior of a subchunk that has real storage, dropping it
-     * toward a shell. A subchunk that never realized storage is already
-     * maximally compact — nothing to hollow — so its uniformFill
-     * classification is left intact and it stays free.
-     */
     public void dumpInteriorToAir() {
 
         if (!populated)
@@ -306,13 +260,6 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     // Uniform Fill Fast Path \\
 
-    /*
-     * A subchunk uniformly filled with one liquid is a single contiguous body
-     * spanning its entire volume, so it reads as permanent and settled
-     * without ever realizing storage — deep open water never costs a tick of
-     * simulation unless a direct edit breaks its uniformity. Only ocean
-     * generation ever produces one, so it also reads as tidal.
-     */
     public void markUniformFill(DynamicGeometryType geometryType, short blockID) {
         this.uniformFill = true;
         this.uniformGeometryType = geometryType;
@@ -335,18 +282,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         return uniformBlockID;
     }
 
-    /*
-     * Called by world generation immediately after the real per-block loop
-     * finishes, only when every cell it just wrote (or left at default air)
-     * turned out to share one block ID — the common outcome for a subchunk
-     * whose whole-chunk-footprint bounds were too rough to prove it air or
-     * uniform fill in advance, but which is still buried entirely under one
-     * material once actually resolved. Drops straight back to whichever
-     * scalar fast path matches and frees the palette storage that was only
-     * ever needed to discover this, so the subchunk gets identical treatment
-     * — skipped by geometry building, no lingering memory — to one that was
-     * classified uniform before a single block was ever written.
-     */
     public void collapseGeneratedUniform(short resultBlockID, DynamicGeometryType resultGeometryType) {
         if (resultBlockID == airBlockId)
             markKnownEmpty();
@@ -367,12 +302,6 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     // Block Writes \\
 
-    /*
-     * Every write realizes storage first, so an edit to a single cell of a
-     * uniform or empty subchunk correctly backfills the other 4095 cells to
-     * their prior value before applying.
-     */
-
     public void setBlock(int x, int y, int z, short blockID) {
         setBlock(Coordinate3Int.pack(x, y, z), blockID);
     }
@@ -385,11 +314,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         opaqueInterior = false;
     }
 
-    /*
-     * The single write path for a cell's sub-blocks. The mask names which
-     * octants of blockID are present: every octant writes the whole block,
-     * none writes air, and anything between subdivides the cell.
-     */
     public void setSubBlocks(int packedXYZ, short blockID, int mask) {
 
         if (mask == SubBlockUtility.MASK_EMPTY) {
@@ -427,12 +351,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         blockPaletteHandle.setLiquidPermanent(packedXYZ, permanent);
     }
 
-    /*
-     * The single write path for ocean water. Places the liquid if the cell
-     * does not already hold it and marks it permanent and tidal at the given
-     * level, without waking anything — the tide owns this cell's level, not
-     * the flow simulation, which only takes it over once an edit wakes it.
-     */
     public void writeTidalLiquid(int packedXYZ, short liquidBlockID, short level) {
 
         ensurePopulated();
@@ -501,11 +419,6 @@ public class SubChunkInstance extends WorldRenderInstance {
         return worldItemPaletteHandle;
     }
 
-    /*
-     * Value-only reads never realize storage — a virtual subchunk answers
-     * directly from its scalar state, exactly as if a real palette had been
-     * filled uniformly.
-     */
     public short getBlock(int x, int y, int z) {
         return getBlock(Coordinate3Int.pack(x, y, z));
     }

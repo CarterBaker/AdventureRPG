@@ -13,18 +13,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class MovementManager extends ManagerPackage {
 
     /*
-     * Drives the full movement pipeline for any entity each frame in a fixed
-     * order: liquid contact, water leaps, horizontal movement, swimming or
-     * gravity, collision, post-collision correction, the water movement
-     * state, position application, the cosmetic ground offset, and the
-     * body's facing. SwimBranch resolves water depth first and decides
-     * whether the entity wades (gravity owns Y with a depth-nerfed jump) or
-     * swims (SwimBranch owns Y); any leap hands Y back to gravity until it
-     * falls again; a swimmer blocked above or below stops moving that way.
-     * fly() is the physics-free counterpart used by free cameras, and both
-     * paths share applyMovement(), which also records the speed actually
-     * travelled. face() turns an entity's body on its own, for entities
-     * posed without being moved.
+     * Drives the full movement pipeline for any entity in a fixed order: liquid
+     * contact, leaps, horizontal movement, swimming or gravity, collision,
+     * correction, water state, position, ground offset and facing. fly() is the
+     * physics-free path for free cameras, and face() turns a body without
+     * moving it.
      */
 
     // Internal

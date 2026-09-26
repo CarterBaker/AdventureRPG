@@ -54,7 +54,7 @@ class NaturalNoiseSystem extends SystemPackage {
                     latticeValueOrZero(base + 3));
         }
 
-        ubo.updateUniform("u_naturalNoiseLattice", packedLattice);
+        ubo.updateUniform(EngineSetting.UNIFORM_NATURAL_NOISE_LATTICE, packedLattice);
         uboManager.push(ubo);
     }
 

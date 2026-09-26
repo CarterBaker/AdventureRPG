@@ -13,16 +13,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MegaRenderBranch extends BranchPackage {
 
     /*
-     * Uploads merged mega geometry to the GPU then clears the CPU-side
-     * buffer. Sets BATCH_DATA on every batched chunk only after confirmed
-     * GPU upload — the signal that individual chunk RENDER_DATA is safe to
-     * dump — and does so from inside the same mega lock that guards the
-     * batch registry, blocking on each chunk's own lock in turn rather than
-     * skipping it on contention: a chunk this loop failed to reach would
-     * otherwise keep BATCH_DATA clear forever, since nothing else ever sets
-     * it, and would re-enter the batch pipeline on every future assessment
-     * for no reason. The batched-chunk list itself is only ever read here
-     * while the mega lock is held, matching every writer of that same list.
+     * Uploads merged mega geometry and clears the CPU copy, then sets
+     * BATCH_DATA on every batched chunk under the mega lock, blocking on each
+     * chunk's lock so none is missed. The batched list is only read while the
+     * mega lock is held.
      */
 
     // Internal

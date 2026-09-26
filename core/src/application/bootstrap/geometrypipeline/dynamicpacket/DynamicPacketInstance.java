@@ -12,22 +12,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class DynamicPacketInstance extends InstancePackage {
 
     /*
-     * Thread-safe geometry packet for one sub-chunk, chunk, or mega chunk.
-     * Accumulates dynamic quad geometry into per-material DynamicModelHandle
-     * buckets during a build pass. Every builder of a packet already runs
-     * under its owning chunk or mega's own sync lock, so EMPTY/GENERATING/
-     * READY is pure status, never an entry gate — beginGenerating() marks a
-     * pass starting, clearModels() lets that pass discard stale geometry
-     * from its previous run without ever leaving GENERATING, and
-     * setReady()/unlock() mark how it finished. clear() is the full reset
-     * used by pooling, dumping, and forced external rebuilds, which need
-     * the state forced back to EMPTY regardless of what it currently holds.
-     * The state reference and the material bucket map are allocated once in
-     * create() and reused for the pooled object's whole lifetime — buckets
-     * are never discarded even at zero vertices, since the same small
-     * material palette is reused everywhere a pooled chunk gets reassigned,
-     * and WorldRenderManager.updateEntries() already trims empty buckets
-     * downstream.
+     * Geometry packet for one subchunk, chunk or mega, bucketed per material.
+     * Builders already hold the owner's lock, so its state is status only.
+     * clear() is the full reset used by pooling and dumps, and buckets are
+     * reused for the pooled object's lifetime.
      */
 
     // Internal

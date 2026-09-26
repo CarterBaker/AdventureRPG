@@ -5,6 +5,10 @@ import engine.util.mathematics.extras.Direction2Vector;
 
 public class Vector2 extends EngineUtility {
 
+    /*
+     * Mutable two-component float vector with in-place arithmetic.
+     */
+
     // Data
     public float x, y;
 

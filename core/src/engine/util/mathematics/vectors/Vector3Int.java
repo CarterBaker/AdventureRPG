@@ -6,6 +6,10 @@ import engine.util.mathematics.extras.Direction3Vector;
 
 public class Vector3Int extends EngineUtility {
 
+    /*
+     * Mutable three-component int vector with in-place arithmetic.
+     */
+
     // Data
     public int x, y, z;
 

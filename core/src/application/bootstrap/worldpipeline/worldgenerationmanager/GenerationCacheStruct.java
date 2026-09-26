@@ -3,21 +3,14 @@ package application.bootstrap.worldpipeline.worldgenerationmanager;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
-/**
- * Per-chunk-column memo of WorldGenerationManager.computeColumn()'s output —
- * the chunk's identity biome, and per block column its ground height, its
- * dressing blocks, whether the ocean reaches it, and the sub-block octants of
- * its smoothed ground and cap cells. computeColumn() is a
- * pure function of (seed, coordinate), so a cache hit and a fresh recompute
- * always produce identical results; this exists purely to skip the noise and
- * biome field work on a GENERATION_DATA reload, never to preserve player-edited
- * state — it never observes a block write, so it carries none. Heights are
- * stored as short rather than int: TERRAIN_MIN/MAX_HEIGHT_BLOCKS bound every
- * value to [24, 900], comfortably inside a short, halving that array's
- * footprint for free. The tide pass reads the per-column ground height and
- * ocean reach straight from here, which is why they are exposed per column.
- */
 public class GenerationCacheStruct extends StructPackage {
+
+    /*
+     * Per-chunk memo of computeColumn(): the identity biome and, per block
+     * column, ground height, dressing blocks, ocean reach and smoothing
+     * octants. Output is a pure function of seed and coordinate, so this only
+     * skips recomputation on a reload; heights are stored as shorts.
+     */
 
     private static final int COLUMN_COUNT = EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
 
@@ -99,11 +92,6 @@ public class GenerationCacheStruct extends StructPackage {
         return biomeID;
     }
 
-    /*
-     * Widens the cached shorts directly into the caller's own int[] scratch
-     * buffer — no intermediate array is ever materialized here, so this costs
-     * nothing beyond the copy WorldGenerationManager already needed to do.
-     */
     public void copyGroundHeightsInto(int[] destination) {
         for (int i = 0; i < COLUMN_COUNT; i++)
             destination[i] = groundHeightBlocks[i];

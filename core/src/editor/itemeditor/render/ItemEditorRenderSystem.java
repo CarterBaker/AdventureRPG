@@ -6,9 +6,9 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelHitStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -17,7 +17,7 @@ import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
 import editor.itemeditor.ItemEditorSetting;
 import editor.itemeditor.tool.ItemEditorToolSystem;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -37,12 +37,12 @@ public class ItemEditorRenderSystem extends SystemPackage {
     private ModelManager modelManager;
     private MaterialManager materialManager;
     private RenderManager renderManager;
-    private FboManager fboManager;
-    private FboRenderSystem fboRenderSystem;
+    private FBOManager fboManager;
+    private FBORenderSystem fboRenderSystem;
     private ItemEditorToolSystem itemEditorToolSystem;
 
     // Render Target
-    private FboInstance sceneFbo;
+    private FBOInstance sceneFbo;
 
     // Models
     private MeshInstance itemMesh;
@@ -72,8 +72,8 @@ public class ItemEditorRenderSystem extends SystemPackage {
         this.modelManager = get(ModelManager.class);
         this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
-        this.fboManager = get(FboManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
+        this.fboManager = get(FBOManager.class);
+        this.fboRenderSystem = get(FBORenderSystem.class);
         this.itemEditorToolSystem = get(ItemEditorToolSystem.class);
     }
 

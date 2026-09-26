@@ -12,7 +12,7 @@ public class AnimationTreeManager extends ManagerPackage {
      * — which node each state enters, how nodes blend, and which bones each
      * layer touches. Runtime playback lives on each entity's
      * AnimationStateHandle, never here. Auto-triggers an on-demand load via
-     * InternalLoader on a name-based cache miss.
+     * AnimationTreeLoader on a name-based cache miss.
      */
 
     // Palette

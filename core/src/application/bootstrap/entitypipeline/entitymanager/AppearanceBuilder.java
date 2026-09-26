@@ -1,8 +1,8 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
-import java.io.File;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
@@ -78,9 +78,9 @@ class AppearanceBuilder extends BuilderPackage {
 
     private FeatureHandle[] parseFeatures(JsonObject featuresJson, File file) {
 
-        FeatureHandle[] features = new FeatureHandle[FeatureSlot.values().length];
+        FeatureHandle[] features = new FeatureHandle[FeatureSlot.VALUES.length];
 
-        for (FeatureSlot featureSlot : FeatureSlot.values()) {
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
             String key = featureSlot.name().toLowerCase();
 
@@ -112,7 +112,7 @@ class AppearanceBuilder extends BuilderPackage {
 
     private boolean isSlotName(String key) {
 
-        for (FeatureSlot featureSlot : FeatureSlot.values())
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (featureSlot.name().equalsIgnoreCase(key))
                 return true;
 

@@ -8,7 +8,7 @@ import application.bootstrap.shaderpipeline.uniforms.UniformData;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
-import engine.util.memory.BufferUtils;
+import engine.util.memory.BufferUtility;
 
 public class UBOData extends DataPackage {
 
@@ -57,7 +57,7 @@ public class UBOData extends DataPackage {
         this.gpuHandle = newGpuHandle;
         this.bindingPoint = source.bindingPoint;
         this.totalSizeBytes = source.totalSizeBytes;
-        this.stagingBuffer = BufferUtils.newByteBuffer(source.totalSizeBytes);
+        this.stagingBuffer = BufferUtility.newByteBuffer(source.totalSizeBytes);
         this.compiledUniforms = new Object2ObjectOpenHashMap<>();
         this.uniformKeys = new ObjectArrayList<>(source.uniformKeys);
     }
@@ -75,7 +75,7 @@ public class UBOData extends DataPackage {
         this.gpuHandle = gpuHandle;
         this.bindingPoint = bindingPoint;
         this.totalSizeBytes = totalSizeBytes;
-        this.stagingBuffer = BufferUtils.newByteBuffer(totalSizeBytes);
+        this.stagingBuffer = BufferUtility.newByteBuffer(totalSizeBytes);
     }
 
     void addCompiledUniform(String name, UniformStruct<?> uniform) {

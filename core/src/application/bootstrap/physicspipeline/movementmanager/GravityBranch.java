@@ -1,10 +1,10 @@
 package application.bootstrap.physicspipeline.movementmanager;
 
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
+import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
-import application.bootstrap.entitypipeline.util.EntityInputHandle;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -13,17 +13,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class GravityBranch extends BranchPackage {
 
     /*
-     * Applies gravity and jump force along all three axes based on the world
-     * gravity direction each frame, writing displacement into the shared
-     * movement vector passed by MovementManager. The jump height arrives
-     * already resolved by SwimBranch, so water depth nerfs it without this
-     * branch knowing about liquid; jump() is the single place a jump impulse
-     * is applied, shared by grounded jumps and every water leap, and the jump
-     * state it starts with is kept until the entity begins to fall. Landing
-     * settles an airborne entity to IDLE, while an entity already on the
-     * ground keeps the grounded state it was given. A grounded entity that
-     * is not held up by the ground only turns FALLING once it drops faster
-     * than GROUNDED_FALL_SPEED, so stepping down a block keeps its stride.
+     * Applies gravity and jump force along the world's gravity direction.
+     * jump() is the single place a jump impulse starts, with the height already
+     * adjusted for water by SwimBranch. Landing settles to IDLE, and a grounded
+     * entity only turns FALLING past GROUNDED_FALL_SPEED so stepping down keeps
+     * its stride.
      */
 
     // Settings
@@ -67,7 +61,7 @@ public class GravityBranch extends BranchPackage {
         // Hold force — fraction of impulse applied opposite to gravity while held
         // within cap
         if (verticalInput == 1 && !state.isGrounded()) {
-            float elapsed = (internal.getTime() - state.getJumpStartTime()) / 1000f;
+            float elapsed = (internal.getTime() - state.getJumpStartTime()) / EngineSetting.MILLIS_PER_SECOND_FLOAT;
             if (elapsed < behavior.getJumpDuration()) {
                 float holdForce = (jumpImpulse * jumpHoldFraction) * delta;
                 gravVel.x += (-gravDir.x / gravLen) * holdForce;
@@ -107,19 +101,25 @@ public class GravityBranch extends BranchPackage {
         boolean blocked = false;
         boolean movingWithGravity = false;
 
-        if (gravDir.x != 0f && Math.abs(pre.x) > 0.0001f && Math.abs(post.x) < 0.0001f) {
+        if (gravDir.x != 0f
+                && Math.abs(pre.x) > EngineSetting.GRAVITY_BLOCK_EPSILON
+                && Math.abs(post.x) < EngineSetting.GRAVITY_BLOCK_EPSILON) {
             blocked = true;
             movingWithGravity = gravVel.x * gravDir.x > 0f;
             gravVel.x = 0f;
         }
 
-        if (gravDir.y != 0f && Math.abs(pre.y) > 0.0001f && Math.abs(post.y) < 0.0001f) {
+        if (gravDir.y != 0f
+                && Math.abs(pre.y) > EngineSetting.GRAVITY_BLOCK_EPSILON
+                && Math.abs(post.y) < EngineSetting.GRAVITY_BLOCK_EPSILON) {
             blocked = true;
             movingWithGravity = gravVel.y * gravDir.y > 0f;
             gravVel.y = 0f;
         }
 
-        if (gravDir.z != 0f && Math.abs(pre.z) > 0.0001f && Math.abs(post.z) < 0.0001f) {
+        if (gravDir.z != 0f
+                && Math.abs(pre.z) > EngineSetting.GRAVITY_BLOCK_EPSILON
+                && Math.abs(post.z) < EngineSetting.GRAVITY_BLOCK_EPSILON) {
             blocked = true;
             movingWithGravity = gravVel.z * gravDir.z > 0f;
             gravVel.z = 0f;

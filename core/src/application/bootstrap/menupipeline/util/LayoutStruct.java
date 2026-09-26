@@ -17,10 +17,10 @@ public class LayoutStruct extends StructPackage {
     // Internal
     private final Vector2 anchor;
     private final Vector2 pivot;
-    private final DimensionVector2 position;
-    private final DimensionVector2 size;
-    private final DimensionVector2 minSize;
-    private final DimensionVector2 maxSize;
+    private final DimensionVector2Struct position;
+    private final DimensionVector2Struct size;
+    private final DimensionVector2Struct minSize;
+    private final DimensionVector2Struct maxSize;
     private final float aspect;
 
     // Constructor \\
@@ -28,10 +28,10 @@ public class LayoutStruct extends StructPackage {
     public LayoutStruct(
             Vector2 anchor,
             Vector2 pivot,
-            DimensionVector2 position,
-            DimensionVector2 size,
-            DimensionVector2 minSize,
-            DimensionVector2 maxSize,
+            DimensionVector2Struct position,
+            DimensionVector2Struct size,
+            DimensionVector2Struct minSize,
+            DimensionVector2Struct maxSize,
             float aspect) {
 
         this.anchor = anchor;
@@ -112,19 +112,19 @@ public class LayoutStruct extends StructPackage {
         return pivot;
     }
 
-    public DimensionVector2 getPosition() {
+    public DimensionVector2Struct getPosition() {
         return position;
     }
 
-    public DimensionVector2 getSize() {
+    public DimensionVector2Struct getSize() {
         return size;
     }
 
-    public DimensionVector2 getMinSize() {
+    public DimensionVector2Struct getMinSize() {
         return minSize;
     }
 
-    public DimensionVector2 getMaxSize() {
+    public DimensionVector2Struct getMaxSize() {
         return maxSize;
     }
 

@@ -8,7 +8,7 @@ public abstract class AtlasTileData extends DataPackage {
      * Abstract base for any bootstrap-only tile container that feeds into
      * AtlasUtility. Carries the tile's pixel dimensions and receives its
      * packed pixel-space atlas position back from the packer. Extended by
-     * TextureTileData and FontTileData — AtlasUtility sees only this type,
+     * TextureTileStruct and FontTileData — AtlasUtility sees only this type,
      * keeping the texture and font pipelines fully decoupled from each other.
      * Must not be held after bootstrap completes.
      */

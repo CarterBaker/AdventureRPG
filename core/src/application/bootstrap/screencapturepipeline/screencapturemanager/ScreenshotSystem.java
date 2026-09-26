@@ -14,8 +14,8 @@ import java.util.concurrent.Future;
 
 import javax.imageio.ImageIO;
 
-import application.bootstrap.renderpipeline.pbo.PboInstance;
-import application.bootstrap.renderpipeline.pbomanager.PboManager;
+import application.bootstrap.renderpipeline.pbo.PBOInstance;
+import application.bootstrap.renderpipeline.pbomanager.PBOManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
@@ -24,22 +24,10 @@ import engine.root.SystemPackage;
 class ScreenshotSystem extends SystemPackage {
 
     /*
-     * Captures a single still frame from a window's front buffer on demand.
-     * capture() only records intent — it never touches GL, so it is safe to
-     * call from any phase of any frame — and is ignored while a capture is
-     * already in flight or its previous write hasn't finished, matching a
-     * physical shutter: one press, one photo. All GPU work happens inside
-     * flush(), called exactly once per frame by ScreenCaptureManager from
-     * the engine's own draw() authority: one call queues the GPU readback
-     * through a PboInstance, created once and reused for every future
-     * screenshot, and a later call polls it once the queued read is ready
-     * (by construction, at least one frame later) before dispatching the
-     * TGA and PNG writes to the single-threaded ScreenCapture pool — every
-     * step is a non-blocking poll, so a slow disk can never stall a frame.
-     * The pixel buffer and PNG image are allocated once and only
-     * reallocated if the target window resizes. dispose() awaits any
-     * write still in flight so the engine shutting down can never leave a
-     * half-written screenshot file on disk.
+     * Captures one still frame of a window on demand. capture() only records
+     * intent; flush(), called once per frame from the engine's draw, queues a
+     * PBO readback and later writes TGA and PNG on the ScreenCapture thread, so
+     * a slow disk never stalls a frame. dispose() waits for a write in flight.
      */
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter
@@ -47,8 +35,8 @@ class ScreenshotSystem extends SystemPackage {
 
     private File screenshotDirectory;
     private ThreadHandle encodingThread;
-    private PboManager pboManager;
-    private PboInstance pboInstance;
+    private PBOManager pboManager;
+    private PBOInstance pboInstance;
     private Future<?> pendingWrite;
 
     private ByteBuffer pixelBuffer;
@@ -74,7 +62,7 @@ class ScreenshotSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.pboManager = get(PboManager.class);
+        this.pboManager = get(PBOManager.class);
     }
 
     // Capture Request \\
@@ -197,11 +185,6 @@ class ScreenshotSystem extends SystemPackage {
 
     // TGA \\
 
-    /*
-     * FileChannel.write(ByteBuffer) is not guaranteed to drain a large
-     * buffer in a single call, so the write is looped until the pixel
-     * buffer is fully consumed rather than trusting one call to finish it.
-     */
     private void writeTga(File file, int width, int height) {
 
         try (FileOutputStream stream = new FileOutputStream(file)) {
@@ -221,7 +204,6 @@ class ScreenshotSystem extends SystemPackage {
             FileChannel channel = stream.getChannel();
             while (pixelBuffer.hasRemaining())
                 channel.write(pixelBuffer);
-
         } catch (IOException e) {
             throwException("Failed to write screenshot TGA file: " + file.getAbsolutePath(), e);
         }

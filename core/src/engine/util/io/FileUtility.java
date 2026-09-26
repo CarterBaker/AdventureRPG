@@ -4,19 +4,20 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import engine.root.EngineUtility;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 
-/*
- * Filesystem helpers shared across all bootstrap loading paths. Covers
- * directory validation, filtered file collection at varying depths, extension
- * inspection, path-relative name resolution, name validation, and name format
- * conversion.
- */
 public class FileUtility extends EngineUtility {
+
+    /*
+     * Filesystem helpers shared across all bootstrap loading paths. Covers
+     * directory validation, filtered file collection at varying depths,
+     * extension inspection, path-relative name resolution, name validation,
+     * and name format conversion.
+     */
 
     // Directory Validation \\
 
@@ -27,51 +28,61 @@ public class FileUtility extends EngineUtility {
 
     // File Collection \\
 
-    public static List<File> collectFiles(File root, ObjectArraySet<String> extensions) {
-        try (var stream = Files.walk(root.toPath())) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> hasExtension(f, extensions))
-                    .collect(Collectors.toList());
+    public static ObjectArrayList<File> collectFiles(File root) {
+        return collectFiles(root, null);
+    }
+
+    public static ObjectArrayList<File> collectFiles(File root, ObjectArraySet<String> extensions) {
+
+        try (Stream<Path> stream = Files.walk(root.toPath())) {
+            return collectRegularFiles(stream, extensions);
         } catch (IOException e) {
             return throwException("Failed to walk directory: " + root.getAbsolutePath(), e);
         }
     }
 
-    public static List<File> collectFilesShallow(File root, ObjectArraySet<String> extensions) {
-        try (var stream = Files.list(root.toPath())) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> hasExtension(f, extensions))
-                    .collect(Collectors.toList());
+    public static ObjectArrayList<File> collectFilesShallow(File root, ObjectArraySet<String> extensions) {
+
+        try (Stream<Path> stream = Files.list(root.toPath())) {
+            return collectRegularFiles(stream, extensions);
         } catch (IOException e) {
             return throwException("Failed to list directory: " + root.getAbsolutePath(), e);
         }
     }
 
-    public static List<File> collectSubdirectories(File root) {
-        try (var stream = Files.list(root.toPath())) {
-            return stream
-                    .filter(Files::isDirectory)
-                    .map(Path::toFile)
-                    .collect(Collectors.toList());
+    public static ObjectArrayList<File> collectAllSubdirectories(File root) {
+
+        Path rootPath = root.toPath();
+        ObjectArrayList<File> directories = new ObjectArrayList<>();
+
+        try (Stream<Path> stream = Files.walk(rootPath)) {
+            stream.forEach(path -> {
+                if (Files.isDirectory(path) && !path.equals(rootPath))
+                    directories.add(path.toFile());
+            });
         } catch (IOException e) {
-            return throwException("Failed to list subdirectories: " + root.getAbsolutePath(), e);
+            throwException("Failed to walk subdirectories: " + root.getAbsolutePath(), e);
         }
+
+        return directories;
     }
 
-    public static List<File> collectAllSubdirectories(File root) {
-        try (var stream = Files.walk(root.toPath())) {
-            return stream
-                    .filter(Files::isDirectory)
-                    .filter(p -> !p.equals(root.toPath()))
-                    .map(Path::toFile)
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            return throwException("Failed to walk subdirectories: " + root.getAbsolutePath(), e);
-        }
+    private static ObjectArrayList<File> collectRegularFiles(Stream<Path> stream, ObjectArraySet<String> extensions) {
+
+        ObjectArrayList<File> files = new ObjectArrayList<>();
+
+        stream.forEach(path -> {
+
+            if (!Files.isRegularFile(path))
+                return;
+
+            File file = path.toFile();
+
+            if (extensions == null || hasExtension(file, extensions))
+                files.add(file);
+        });
+
+        return files;
     }
 
     // File Name \\
@@ -160,13 +171,13 @@ public class FileUtility extends EngineUtility {
 
     public static String[] splitFileNameByUnderscore(String fileName) {
         if (fileName == null || fileName.isEmpty())
-            throw new IllegalArgumentException("File name cannot be null or empty");
+            throwException("File name cannot be null or empty");
         int firstUnderscore = fileName.indexOf('_');
         int lastUnderscore = fileName.lastIndexOf('_');
         if (firstUnderscore == -1 || firstUnderscore != lastUnderscore)
-            throw new IllegalArgumentException("File name must contain exactly one underscore");
+            throwException("File name must contain exactly one underscore: " + fileName);
         if (firstUnderscore == 0 || firstUnderscore == fileName.length() - 1)
-            throw new IllegalArgumentException("Underscore cannot be at the start or end of the file name");
+            throwException("Underscore cannot be at the start or end of the file name: " + fileName);
         return new String[] {
                 fileName.substring(0, firstUnderscore),
                 fileName.substring(firstUnderscore + 1)
@@ -197,16 +208,6 @@ public class FileUtility extends EngineUtility {
 
     // Name Format Conversion \\
 
-    /*
-     * Converts a slash-delimited resource path into PascalCase.
-     * Each segment's first character is uppercased and the segments are joined
-     * without a separator.
-     *
-     * Examples:
-     * "blocks/stone" → "BlocksStone"
-     * "world/blocks/dirt" → "WorldBlocksDirt"
-     * "Blocks" → "Blocks"
-     */
     public static String toPascalCase(String path) {
         if (path == null || path.isEmpty())
             return "";

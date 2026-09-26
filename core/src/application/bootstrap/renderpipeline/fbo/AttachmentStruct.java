@@ -6,7 +6,7 @@ public class AttachmentStruct extends StructPackage {
 
     /*
      * Describes a single FBO attachment — color or depth — parsed from JSON
-     * during bootstrap. Passed to InternalBuilder to drive GL texture allocation
+     * during bootstrap. Passed to FBOBuilder to drive GL texture allocation
      * and draw buffer list construction for multi-render-target framebuffers.
      */
 

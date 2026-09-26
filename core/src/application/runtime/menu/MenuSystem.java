@@ -1,8 +1,8 @@
 package application.runtime.menu;
 
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.runtime.RuntimeSetting;
 import engine.root.SystemPackage;
 
@@ -16,17 +16,17 @@ public class MenuSystem extends SystemPackage {
 
     // Internal
     private MenuManager menuManager;
-    private FboManager fboManager;
+    private FBOManager fboManager;
 
     // Render Target
-    private FboInstance uiFbo;
+    private FBOInstance uiFbo;
 
     @Override
     protected void get() {
 
         // Internal
         this.menuManager = get(MenuManager.class);
-        this.fboManager = get(FboManager.class);
+        this.fboManager = get(FBOManager.class);
     }
 
     @Override
@@ -37,7 +37,7 @@ public class MenuSystem extends SystemPackage {
 
     // Accessible \\
 
-    public FboInstance getUiFbo() {
+    public FBOInstance getUiFbo() {
         return uiFbo;
     }
 }

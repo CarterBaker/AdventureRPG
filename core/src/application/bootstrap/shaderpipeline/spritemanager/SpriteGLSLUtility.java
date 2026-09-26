@@ -8,11 +8,12 @@ import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
-/*
- * GL20 wrapper for individual sprite texture operations. Handles upload
- * and deletion only — format conversion is delegated to PixmapUtility.
- */
 class SpriteGLSLUtility extends EngineUtility {
+
+    /*
+     * GL20 wrapper for individual sprite texture operations. Handles upload
+     * and deletion only — format conversion is delegated to PixmapUtility.
+     */
 
     // GPU Upload \\
 

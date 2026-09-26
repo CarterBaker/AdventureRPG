@@ -11,21 +11,10 @@ import engine.root.SystemPackage;
 public class CursorSystem extends SystemPackage {
 
     /*
-     * Owns all cursor state: capture routing and cursor shape.
-     *
-     * Capture methods are package-private — driven exclusively by InputManager,
-     * which remains the single authority over when capture is granted or released.
-     * CursorSystem only executes the platform calls on its behalf.
-     *
-     * Shape is either the OS default (clearCursor) or a custom sprite texture.
-     * Both public overloads funnel through applySpriteData() which pulls identity
-     * and GPU info from the wrapped SpriteData — SpriteHandle and SpriteInstance
-     * are never distinguished below the entry points.
-     *
-     * Pixel readback and GLFW cursor handle caching are owned by Lwjgl3Input.
-     * setCursorFromSprite triggers a glGetTexImage on first use per GPU handle;
-     * subsequent calls with the same handle hit the cache and cost only a
-     * glfwSetCursor call.
+     * Owns cursor capture and cursor shape. Capture is driven only by
+     * InputManager, which decides when it is granted or released. Shape is
+     * either the OS default or a sprite; Lwjgl3Input reads back and caches the
+     * sprite's cursor per GPU handle.
      */
 
     // Internal

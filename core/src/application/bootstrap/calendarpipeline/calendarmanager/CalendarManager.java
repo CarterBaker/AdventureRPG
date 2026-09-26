@@ -10,7 +10,7 @@ public class CalendarManager extends ManagerPackage {
 
     /*
      * Owns the calendar palette for the engine lifetime. Supports on-demand
-     * loading via InternalLoader on a cache miss. Keyed by full calendar name
+     * loading via CalendarLoader on a cache miss. Keyed by full calendar name
      * e.g. "standard/Overworld".
      */
 

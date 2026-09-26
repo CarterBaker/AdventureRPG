@@ -1,6 +1,7 @@
 package application.kernel.threadpipeline.thread;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import engine.root.HandlePackage;
@@ -8,16 +9,10 @@ import engine.root.HandlePackage;
 public class ThreadHandle extends HandlePackage {
 
     /*
-     * Wraps a named ExecutorService along with an in-flight task budget used
-     * for pool-wide backpressure. inFlightCapacity bounds how many tasks may
-     * be queued-or-running on this executor at once — callers are expected
-     * to check hasCapacity() before submitting new async work through
-     * ThreadManager.executeAsync, so the submitting side (typically the main
-     * thread's per-frame streaming loop) naturally stalls new dispatch once
-     * the pool is saturated instead of piling an unbounded backlog onto the
-     * executor's own internal queue. A capacity of 0 or less disables the
-     * check entirely (unbounded) — correct for pools never fed from a tight
-     * per-frame loop.
+     * Wraps a named ExecutorService with an in-flight task budget. Callers
+     * check hasCapacity() before dispatching per-frame work so a saturated pool
+     * stalls new dispatch instead of growing an unbounded backlog; a capacity
+     * of zero or less disables the check.
      */
 
     // Internal
@@ -53,7 +48,7 @@ public class ThreadHandle extends HandlePackage {
             executor.shutdown();
 
             try {
-                if (!executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS))
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS))
                     executor.shutdownNow();
             }
 

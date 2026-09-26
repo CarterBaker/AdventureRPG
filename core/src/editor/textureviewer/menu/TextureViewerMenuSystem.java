@@ -3,14 +3,14 @@ package editor.textureviewer.menu;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
+import editor.runtime.EditorSetting;
 import editor.textureviewer.TextureViewerSetting;
 import editor.textureviewer.atlas.TextureViewerAtlasSystem;
 import editor.textureviewer.select.TextureViewerSelectSystem;
-import engine.editor.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
@@ -23,7 +23,7 @@ public class TextureViewerMenuSystem extends SystemPackage {
 
     // Internal
     private MenuManager menuManager;
-    private FboManager fboManager;
+    private FBOManager fboManager;
     private ItemEditorManager itemEditorManager;
     private TextureViewerAtlasSystem textureViewerAtlasSystem;
     private TextureViewerSelectSystem textureViewerSelectSystem;
@@ -39,7 +39,7 @@ public class TextureViewerMenuSystem extends SystemPackage {
     @Override
     protected void get() {
         this.menuManager = get(MenuManager.class);
-        this.fboManager = get(FboManager.class);
+        this.fboManager = get(FBOManager.class);
         this.itemEditorManager = get(ItemEditorManager.class);
         this.textureViewerAtlasSystem = get(TextureViewerAtlasSystem.class);
         this.textureViewerSelectSystem = get(TextureViewerSelectSystem.class);

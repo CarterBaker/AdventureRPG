@@ -4,6 +4,11 @@ import engine.root.EngineUtility;
 
 public class Matrix4Double extends EngineUtility {
 
+    /*
+     * Mutable 4x4 double matrix, column-major like OpenGL, with in-place
+     * transform operations.
+     */
+
     // Data
     public final double[] val = new double[16];
 

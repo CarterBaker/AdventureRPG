@@ -1,19 +1,34 @@
 package application.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import org.lwjgl.opengl.GL20C;
-import org.lwjgl.system.MemoryStack;
+import java.nio.FloatBuffer;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
+import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector2;
+import engine.util.memory.BufferUtility;
 
 public final class Vector2ArrayUniform extends UniformAttributeStruct<Object[]> {
 
+    /*
+     * GLSL vec2 array uniform. Elements are packed into a preallocated
+     * direct buffer on push, so uploads never allocate.
+     */
+
+    // Internal
     private final int elementCount;
+    private final FloatBuffer uniformBuffer;
+
+    // Constructor \\
 
     public Vector2ArrayUniform(int elementCount) {
+
         super(UniformType.VECTOR2, elementCount, new Vector2[elementCount]);
+
         this.elementCount = elementCount;
+        this.uniformBuffer = BufferUtility.newFloatBuffer(elementCount * EngineSetting.VECTOR2_COMPONENT_COUNT);
+
         for (int i = 0; i < elementCount; i++)
             ((Vector2[]) value)[i] = new Vector2();
     }
@@ -23,40 +38,41 @@ public final class Vector2ArrayUniform extends UniformAttributeStruct<Object[]> 
         return new Vector2ArrayUniform(elementCount);
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Object[] value) {
-        float[] flat = new float[elementCount * 2];
+
+        uniformBuffer.clear();
+
         for (int i = 0; i < elementCount; i++) {
-            Vector2 v = (Vector2) value[i];
-            flat[i * 2] = v.x;
-            flat[i * 2 + 1] = v.y;
+            Vector2 vector = (Vector2) value[i];
+            uniformBuffer.put(vector.x);
+            uniformBuffer.put(vector.y);
         }
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            java.nio.FloatBuffer buf = stack.mallocFloat(elementCount * 2);
-            buf.put(flat).flip();
-            GL20C.glUniform2fv(handle, buf);
-        }
+
+        uniformBuffer.flip();
+        EngineContext.gl20.glUniform2fv(handle, uniformBuffer);
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Object[] value) {
-        Vector2[] dst = (Vector2[]) this.value;
+
+        Vector2[] target = (Vector2[]) this.value;
+
         for (int i = 0; i < Math.min(value.length, elementCount); i++)
-            dst[i].set((Vector2) value[i]);
+            target[i].set((Vector2) value[i]);
     }
 
     @Override
     protected void applyObject(Object value) {
-        if (value instanceof Vector2[] v)
-            applyValue(v);
-        else if (value instanceof engine.util.mathematics.vectors.Vector2[] vectors) {
-            Vector2[] dst = (Vector2[]) this.value;
-            for (int i = 0; i < Math.min(vectors.length, elementCount); i++) {
-                dst[i].x = vectors[i].x;
-                dst[i].y = vectors[i].y;
-            }
-        } else
-            throw new IllegalArgumentException("applyObject(Vector2Array): got " + value.getClass());
+
+        if (value instanceof Vector2[] vectors)
+            applyValue(vectors);
+        else
+            throwException("Vector2ArrayUniform expects Vector2[], got " + value.getClass().getSimpleName());
     }
 
     public int elementCount() {

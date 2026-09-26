@@ -23,21 +23,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class TurbulenceManager extends ManagerPackage {
 
     /*
-     * Owns ocean turbulence — how rough the sea is at any point of the world
-     * — and the wave set that turbulence drives. Strength comes from weather:
-     * each weather's blended wind speed, wind turbulence, and precipitation,
-     * swung over time by per-cell gust noise so no two storms breathe in
-     * step. Every frame each grid's TurbulenceInstance is rebuilt from its own
-     * local weather as a baseline plus one cell per nearby weather-map cell
-     * whose weather differs from it, nearest first, so a storm drifting in
-     * roughens the sea ahead of it while the water underfoot stays calm. The
-     * wave set is a few directional components travelling with the
-     * prevailing wind, each wave vector snapped to the world's wrap period so
-     * the sea tiles across the world seam, and each grid's phase for them is
-     * folded from its reference chunk and the elapsed time in double
-     * precision. The sampling methods here are the CPU side of exactly what
-     * WaterShader evaluates, so gameplay can ask how high the sea stands at
-     * any position.
+     * Owns ocean turbulence and the wave set it drives. Each frame rebuilds
+     * every grid's TurbulenceInstance from its local weather plus nearby
+     * differing weather cells, so an approaching storm roughens the sea ahead
+     * of it. Waves follow the prevailing wind, snap to the world's wrap period,
+     * and are sampled on the CPU exactly as WaterShader evaluates them.
      */
 
     // Internal
@@ -135,13 +125,6 @@ public class TurbulenceManager extends ManagerPackage {
 
     // Cells \\
 
-    /*
-     * Every weather cell near the grid whose weather stirs the sea differently
-     * from the grid's own ambient weather becomes one turbulence cell, nearest
-     * first, its influence faded out toward the edge of
-     * OCEAN_TURBULENCE_WEATHER_RANGE_CELLS so a cell sliding out of reach
-     * never drops out abruptly.
-     */
     private void resolveCells(TurbulenceInstance turbulence, GridInstance grid, float ambientWeatherStrength) {
 
         if (!weatherPatternManager.hasActiveMap())

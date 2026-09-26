@@ -20,44 +20,17 @@ import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
+import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class WorldGenerationManager extends ManagerPackage {
 
     /*
-     * Drives per-chunk-column terrain generation. computeColumn() evaluates
-     * the biome field once per macro grid point at that point's own world
-     * position, derives ground height, detail response, coastal share, and
-     * dressing blocks from the field there, and interpolates all of it down
-     * to the chunk's 256 block columns — so biome influence varies inside a
-     * chunk instead of being chosen for the whole chunk at its center, and a
-     * grid point on a chunk edge resolves identically from either neighbor.
-     * Whether the ocean reaches a column is likewise a per-column decision,
-     * thresholded against the blended share of ocean and shore buffer rather
-     * than read off one biome's flag and lowered by OCEAN_SPILL_CHUNKS so the
-     * sea laps a little past its beaches, which is what lets a shoreline cut
-     * diagonally across a chunk and lets a dry biome keep a below-sea-level
-     * valley. A reached column floods up to the live tide surface captured
-     * for the chunk when its column is computed, and every ocean cell is
-     * written tidal so the tide pass can raise and lower it afterwards.
-     * generateSubChunk() then classifies each subchunk against that data
-     * before any storage is realized, so a subchunk entirely above every
-     * column's terrain stays knownEmpty and one entirely below the surface
-     * layer stays uniformFill — neither ever allocates a palette — and only a
-     * subchunk actually straddling a surface, coastline, or cliff realizes
-     * real per-block storage. Every output is a pure function of (seed,
-     * coordinate), so the whole pass is skipped when the caller's
-     * GenerationCacheStruct already holds a result for this exact coordinate.
-     * Chunks generate concurrently on separate worker threads, so the
-     * surface-profile cache below is a ConcurrentHashMap rather than a locked
-     * map. The probe resolves ground height and flooding for any single world
-     * column through that column's own chunk grids on a separate thread-local
-     * container, so structure placement can anchor across chunk borders and
-     * always agree exactly with the terrain the neighbor generates. Terrain
-     * is whole blocks everywhere but along a step, where sub-blocks smooth
-     * the edge (see resolveColumnSmoothing()); grid interpolation lands
-     * exactly on a grid sample at either end of its cell, so a block corner
-     * on a chunk border resolves bit-identically from both chunks and the
-     * smoothing along that border agrees from either side.
+     * Generates terrain per chunk column. computeColumn() samples the biome
+     * field on a macro grid and interpolates height, flooding and dressing
+     * blocks to every block column, and generateSubChunk() fills subchunks,
+     * leaving fully empty or uniform ones unrealized. Output is a pure function
+     * of seed and coordinate, so it is cached per chunk and agrees across chunk
+     * borders.
      */
 
     // Internal
@@ -67,7 +40,8 @@ public class WorldGenerationManager extends ManagerPackage {
 
     private TerrainColumnAsyncContainer terrainColumnContainer;
     private TerrainColumnAsyncContainer probeColumnContainer;
-    private final ConcurrentHashMap<Short, TerrainSurfaceProfile> surfaceProfileCache = new ConcurrentHashMap<>();
+    private volatile Short2ObjectOpenHashMap<TerrainSurfaceProfile> biomeID2SurfaceProfile =
+            new Short2ObjectOpenHashMap<>();
 
     private int CHUNK_SIZE;
 
@@ -151,12 +125,6 @@ public class WorldGenerationManager extends ManagerPackage {
                 column.allFillBlocksFullGeometry);
     }
 
-    /*
-     * One biome field evaluation per macro grid point, and every biome-derived
-     * value for that point taken from it. The grid is world-aligned and its
-     * outermost samples sit exactly on the chunk boundary, so the neighboring
-     * chunk evaluates the same world position and lands on the same result.
-     */
     private void sampleMacroGrid(
             WorldHandle worldHandle,
             TerrainColumnAsyncContainer column,
@@ -197,13 +165,6 @@ public class WorldGenerationManager extends ManagerPackage {
         }
     }
 
-    /*
-     * Detail roughness on its own finer grid, sampled with the amplitude and
-     * wavelength interpolated out of the macro grid rather than re-evaluating
-     * the biome field at detail resolution — the field is expensive and its
-     * influence on a few blocks of roughness is smooth enough that
-     * interpolating the two scalars is indistinguishable from resolving them.
-     */
     private void sampleDetailGrid(
             TerrainColumnAsyncContainer column,
             long seed,
@@ -229,11 +190,6 @@ public class WorldGenerationManager extends ManagerPackage {
         }
     }
 
-    /*
-     * The continuous ground height at every block corner of the chunk, from
-     * the same two grids block columns interpolate, so the comparison against
-     * a column's rounded height is always made in one consistent field.
-     */
     private void resolveCornerHeights(TerrainColumnAsyncContainer column) {
 
         int cornersPerAxis = TerrainColumnAsyncContainer.CORNERS_PER_AXIS;
@@ -250,16 +206,6 @@ public class WorldGenerationManager extends ManagerPackage {
         }
     }
 
-    /*
-     * Interpolates the grids down to the chunk's 256 block columns. Height and
-     * coastal share interpolate as scalars so both stay smooth; dressing blocks
-     * cannot interpolate, so each column draws its profile from one of the
-     * four surrounding grid points chosen by a position-hashed roll against
-     * their bilinear weights. Where those four agree — everywhere but within
-     * one macro cell of a material border — the roll is a no-op, and where
-     * they disagree it dithers the border into an interlocking edge instead
-     * of a drawn line.
-     */
     private void resolveBlockColumns(
             TerrainColumnAsyncContainer column,
             long seed,
@@ -316,19 +262,6 @@ public class WorldGenerationManager extends ManagerPackage {
         column.hasTidalColumns = hasTidalColumns;
     }
 
-    /*
-     * Sub-block edge smoothing. Each quadrant of a block column sits against
-     * one block corner, and the continuous ground height there decides it: a
-     * corner at least SUB_BLOCK_SMOOTHING_THRESHOLD_BLOCKS above the column's
-     * rounded ground raises that quadrant one sub-block into the cap cell
-     * above, and a corner at least that far below lowers it one sub-block,
-     * emptying the quadrant's upper octant of the ground cell. Flat ground
-     * never crosses the threshold, so the world stays whole blocks and
-     * sub-blocks appear only along a step, filling its foot and rounding its
-     * lip into half-block stairs. A column whose ground lies within reach
-     * of the tide keeps whole blocks, since a subdivided cell there would
-     * open an air pocket beside or beneath the sea.
-     */
     private void resolveColumnSmoothing(
             TerrainColumnAsyncContainer column,
             int localX, int localZ,
@@ -492,14 +425,6 @@ public class WorldGenerationManager extends ManagerPackage {
                 TerrainColumnAsyncContainer.DETAIL_SAMPLES_PER_AXIS);
     }
 
-    /*
-     * Cell index is clamped one short of the last sample so a coordinate
-     * landing exactly on the far edge of the grid — which every grid does at
-     * local 16 — interpolates against the final pair rather than reading
-     * past the end. Each lerp weights both ends rather than adding a scaled
-     * difference, so a coordinate on a grid sample returns that sample
-     * exactly, whichever cell it was resolved from.
-     */
     private float sampleGridBilinear(float[] grid, int localX, int localZ, int stride, int samplesPerAxis) {
 
         int maxCell = samplesPerAxis - 2;
@@ -564,22 +489,34 @@ public class WorldGenerationManager extends ManagerPackage {
     }
 
     private TerrainSurfaceProfile resolveSurfaceProfile(BiomeHandle biomeHandle) {
-        return surfaceProfileCache.computeIfAbsent(biomeHandle.getBiomeID(), id -> new TerrainSurfaceProfile(
-                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSurfaceBlockName()),
-                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSubsurfaceBlockName()),
-                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getUnderwaterBlockName())));
+
+        TerrainSurfaceProfile profile = biomeID2SurfaceProfile.get(biomeHandle.getBiomeID());
+
+        if (profile != null)
+            return profile;
+
+        return createSurfaceProfile(biomeHandle);
     }
 
-    /*
-     * Confirms every solid fill block any column of this chunk can possibly
-     * have written — every macro grid point's surface, subsurface, and
-     * underwater block, plus stone — is FULL geometry before a subchunk with
-     * no air or liquid is allowed to skip geometry building as opaque
-     * interior. Almost always true; only a biome authored with a non-FULL
-     * surface block (a decorative slab-shaped ground cover, say) would fail
-     * it, in which case the subchunk simply falls back to the general
-     * per-block walk like it always has.
-     */
+    private synchronized TerrainSurfaceProfile createSurfaceProfile(BiomeHandle biomeHandle) {
+
+        TerrainSurfaceProfile profile = biomeID2SurfaceProfile.get(biomeHandle.getBiomeID());
+
+        if (profile != null)
+            return profile;
+
+        profile = new TerrainSurfaceProfile(
+                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSurfaceBlockName()),
+                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSubsurfaceBlockName()),
+                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getUnderwaterBlockName()));
+
+        Short2ObjectOpenHashMap<TerrainSurfaceProfile> next = new Short2ObjectOpenHashMap<>(biomeID2SurfaceProfile);
+        next.put(biomeHandle.getBiomeID(), profile);
+        biomeID2SurfaceProfile = next;
+
+        return profile;
+    }
+
     private boolean resolveFillGeometryUniformity(TerrainColumnAsyncContainer column) {
 
         if (!isFullGeometry(stoneBlockId))

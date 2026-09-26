@@ -4,6 +4,11 @@ import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 
 public enum MegaData {
 
+    /*
+     * The stages a mega chunk moves through, batching then rendering, with the
+     * same requires, leads-to and detail level rules as ChunkData.
+     */
+
     BATCH_DATA(
             false, null,
             new String[] {},
@@ -12,21 +17,6 @@ public enum MegaData {
             true, GridSlotDetailLevel.NEAR,
             new String[] { "BATCH_DATA" },
             new String[] {});
-
-    /*
-     * BATCH_DATA — never dumps automatically. Marks that chunks are registered
-     * in this mega. Cleared per-chunk by MegaDumpBranch when RENDER_DATA dumps
-     * and by invalidation when a block changes. Forces re-contribution when the
-     * mega next enters NEAR range.
-     *
-     * RENDER_DATA — dumps at IMMEDIATE so the mega goes dormant and chunks
-     * render individually at close range. Rebuilt when the slot returns to NEAR
-     * and all chunks re-contribute.
-     *
-     * maximumLevel — the most detailed level at which this stage must remain.
-     * Dump when slotLevel.level < maximumLevel.level (slot became more detailed).
-     * null = never dump automatically.
-     */
 
     public final int index;
     public final boolean dumpable;

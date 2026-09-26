@@ -41,9 +41,9 @@ class PlayerBufferSystem extends SystemPackage {
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
 
-        playerChunkUBO.updateUniform("u_playerChunkX", chunkX);
-        playerChunkUBO.updateUniform("u_playerChunkZ", chunkZ);
-        playerChunkUBO.updateUniform("u_playerPosition", playerPosition.getPosition());
+        playerChunkUBO.updateUniform(EngineSetting.UNIFORM_PLAYER_CHUNK_X, chunkX);
+        playerChunkUBO.updateUniform(EngineSetting.UNIFORM_PLAYER_CHUNK_Z, chunkZ);
+        playerChunkUBO.updateUniform(EngineSetting.UNIFORM_PLAYER_POSITION, playerPosition.getPosition());
 
         uboManager.push(playerChunkUBO);
     }
