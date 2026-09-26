@@ -5,8 +5,6 @@ import application.bootstrap.menupipeline.menumanager.ElementHitSystem;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import editor.runtime.EditorDockSystem;
-import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 
 public class EditorToolbarSystem extends SystemPackage {

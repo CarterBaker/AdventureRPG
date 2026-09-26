@@ -2,10 +2,6 @@ package application.bootstrap.entitypipeline.animationtree;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.animationpipeline.animation.AnimationKeyframeStruct;
-import application.bootstrap.entitypipeline.animationtree.AnimationLayerStruct;
-import application.bootstrap.entitypipeline.animationtree.AnimationNodeStruct;
-import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
-import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;

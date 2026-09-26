@@ -5,7 +5,6 @@ import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.renderpipeline.fbo.FBODestinationStruct;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
-import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;

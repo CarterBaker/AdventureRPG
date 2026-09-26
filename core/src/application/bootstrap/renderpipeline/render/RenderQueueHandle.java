@@ -1,8 +1,6 @@
 package application.bootstrap.renderpipeline.render;
 
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
-import application.bootstrap.renderpipeline.render.RenderBatchStruct;
-import application.bootstrap.renderpipeline.render.RenderCallStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;

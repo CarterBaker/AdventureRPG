@@ -4,7 +4,6 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
-import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;

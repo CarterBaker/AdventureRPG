@@ -2,7 +2,6 @@ package application.bootstrap.renderpipeline.rendermanager;
 
 import java.nio.FloatBuffer;
 
-import application.bootstrap.renderpipeline.rendermanager.CompositeRenderSystem;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
