@@ -9,8 +9,8 @@ public class DevContext extends RuntimeContext {
 
     /*
      * Dev mode entry point for testing. Runs every system RuntimeContext runs,
-     * exactly as the game does, and adds only what the editor console drives:
-     * a command system that receives what is typed or picked in the console,
+     * exactly as the game does, and adds only what the command console
+     * drives: a command system that receives what is typed or picked in it,
      * and the free camera its fly command switches on. The editor pairs it
      * with a Dev Mode tab exactly as it does a preview. Dev-only systems live
      * beside it in the editor, never in runtime.

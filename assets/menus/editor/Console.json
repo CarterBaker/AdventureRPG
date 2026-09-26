@@ -23,95 +23,6 @@
       "text": "",
       "font_size": "60%",
       "color": "danger"
-    },
-    {
-      "id": "console_command_group",
-      "type": "button",
-      "sprite": "menus/Button",
-      "size": {
-        "x": "100%",
-        "y": "22px"
-      },
-      "color": {
-        "theme": "control_hover",
-        "alpha": 0
-      },
-      "hover_color": "control_hover",
-      "on_click": {
-        "class": "engine.editor.menueventsmanager.menus.ConsoleBranch",
-        "method": "toggleCommandGroup"
-      },
-      "elements": [
-        {
-          "id": "console_group_marker",
-          "type": "label",
-          "anchor": "bottom_left",
-          "pivot": "top_left",
-          "size": {
-            "x": "16px",
-            "y": "100%"
-          },
-          "text": "",
-          "font_size": "66%",
-          "color": "text"
-        },
-        {
-          "id": "console_group_label",
-          "type": "label",
-          "anchor": "bottom_left",
-          "pivot": "top_left",
-          "position": {
-            "x": "16px",
-            "y": "0px"
-          },
-          "size": {
-            "x": "calc(100% - 16px)",
-            "y": "100%"
-          },
-          "align": "left",
-          "text": "",
-          "font_size": "60%",
-          "color": "text_muted"
-        }
-      ]
-    },
-    {
-      "id": "console_command_entry",
-      "type": "button",
-      "sprite": "menus/Button",
-      "size": {
-        "x": "100%",
-        "y": "22px"
-      },
-      "color": {
-        "theme": "control_hover",
-        "alpha": 0
-      },
-      "hover_color": "control_hover",
-      "on_click": {
-        "class": "engine.editor.menueventsmanager.menus.ConsoleBranch",
-        "method": "runCommand"
-      },
-      "elements": [
-        {
-          "id": "console_command_entry_label",
-          "type": "label",
-          "anchor": "bottom_left",
-          "pivot": "top_left",
-          "position": {
-            "x": "30px",
-            "y": "0px"
-          },
-          "size": {
-            "x": "calc(100% - 30px)",
-            "y": "100%"
-          },
-          "align": "left",
-          "text": "",
-          "font_size": "60%",
-          "color": "text"
-        }
-      ]
     }
   ],
   "menus": [
@@ -120,9 +31,7 @@
       "raycast_input": true,
       "lock_input": false,
       "entry_points": [
-        "console_lines",
-        "console_command_label",
-        "console_command_rows"
+        "console_lines"
       ],
       "elements": [
         {
@@ -188,153 +97,20 @@
           ]
         },
         {
-          "id": "console_commands_panel",
-          "type": "sprite",
-          "sprite": "menus/Panel",
-          "anchor": "top_left",
-          "pivot": "bottom_left",
-          "position": {
-            "x": "4px",
-            "y": "-34px"
-          },
-          "size": {
-            "x": "180px",
-            "y": "calc(100% - 64px)"
-          },
-          "color": "panel",
-          "elements": [
-            {
-              "id": "console_commands_header",
-              "type": "sprite",
-              "sprite": "menus/PanelHeader",
-              "anchor": "top_left",
-              "pivot": "bottom_left",
-              "size": {
-                "x": "100%",
-                "y": "24px"
-              },
-              "color": "header",
-              "elements": [
-                {
-                  "id": "console_commands_accent",
-                  "type": "sprite",
-                  "sprite": "util/Default",
-                  "anchor": "left",
-                  "pivot": "left",
-                  "position": {
-                    "x": "8px",
-                    "y": "0px"
-                  },
-                  "size": {
-                    "x": "3px",
-                    "y": "12px"
-                  },
-                  "color": "accent"
-                },
-                {
-                  "id": "console_commands_title",
-                  "type": "label",
-                  "anchor": "left",
-                  "pivot": "left",
-                  "position": {
-                    "x": "16px",
-                    "y": "0px"
-                  },
-                  "size": {
-                    "x": "calc(100% - 24px)",
-                    "y": "100%"
-                  },
-                  "align": "left",
-                  "text": "Commands",
-                  "font_size": "56%",
-                  "color": "text"
-                }
-              ]
-            },
-            {
-              "id": "console_command_rows",
-              "type": "container",
-              "anchor": "bottom_left",
-              "pivot": "top_left",
-              "position": {
-                "x": "4px",
-                "y": "4px"
-              },
-              "size": {
-                "x": "calc(100% - 8px)",
-                "y": "calc(100% - 32px)"
-              },
-              "stack": "vertical",
-              "spacing": "1px",
-              "mask": true
-            }
-          ]
-        },
-        {
           "id": "console_lines",
           "type": "container",
           "anchor": "bottom_left",
           "pivot": "top_left",
           "position": {
-            "x": "192px",
-            "y": "30px"
+            "x": "4px",
+            "y": "4px"
           },
           "size": {
-            "x": "calc(100% - 196px)",
-            "y": "calc(100% - 64px)"
+            "x": "calc(100% - 8px)",
+            "y": "calc(100% - 38px)"
           },
           "stack": "vertical",
           "mask": true
-        },
-        {
-          "id": "console_command_bar",
-          "type": "sprite",
-          "sprite": "menus/StatusBar",
-          "anchor": "bottom_left",
-          "pivot": "top_left",
-          "size": {
-            "x": "100%",
-            "y": "26px"
-          },
-          "color": "header",
-          "elements": [
-            {
-              "id": "console_command_prompt",
-              "type": "label",
-              "anchor": "left",
-              "pivot": "left",
-              "position": {
-                "x": "8px",
-                "y": "0px"
-              },
-              "size": {
-                "x": "12px",
-                "y": "100%"
-              },
-              "align": "left",
-              "text": ">",
-              "font_size": "60%",
-              "color": "accent"
-            },
-            {
-              "id": "console_command_label",
-              "type": "label",
-              "anchor": "left",
-              "pivot": "left",
-              "position": {
-                "x": "24px",
-                "y": "0px"
-              },
-              "size": {
-                "x": "calc(100% - 32px)",
-                "y": "100%"
-              },
-              "align": "left",
-              "text": "",
-              "font_size": "60%",
-              "color": "text"
-            }
-          ]
         }
       ]
     }

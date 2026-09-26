@@ -12,7 +12,7 @@ public class FreeCameraSystem extends SystemPackage {
      * DevContext counterpart of PlayerSystem. While free flying, the window
      * streams the world around a camera that flies with no physics and no
      * character; switching back lands the character on safe ground beneath
-     * wherever the camera flew. Driven by the console's fly command.
+     * wherever the camera flew. Driven by the command console's fly command.
      */
 
     // Internal

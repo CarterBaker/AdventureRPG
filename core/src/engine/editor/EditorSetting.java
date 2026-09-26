@@ -66,6 +66,7 @@ public class EditorSetting {
 
     // Tabs \\
     public static final String TAB_TITLE_CONSOLE = "Console";
+    public static final String TAB_TITLE_COMMAND_CONSOLE = "Command Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";

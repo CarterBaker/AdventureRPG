@@ -6,7 +6,7 @@ public class CommandData extends DataPackage {
 
     /*
      * Immutable definition of one console command: the name typed to run it,
-     * the label the console's command tree shows for it, the group it is
+     * the label the command console's tree shows for it, the group it is
      * listed under, the names of the arguments it takes, and the usage line
      * reported when it is typed with the wrong number of them.
      */

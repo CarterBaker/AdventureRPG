@@ -1,0 +1,205 @@
+{
+  "elements": [
+    {
+      "id": "command_group",
+      "type": "button",
+      "sprite": "menus/Button",
+      "size": {
+        "x": "100%",
+        "y": "22px"
+      },
+      "color": {
+        "theme": "control_hover",
+        "alpha": 0
+      },
+      "hover_color": "control_hover",
+      "on_click": {
+        "class": "engine.editor.menueventsmanager.menus.CommandConsoleBranch",
+        "method": "toggleCommandGroup"
+      },
+      "elements": [
+        {
+          "id": "command_group_marker",
+          "type": "label",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "16px",
+            "y": "100%"
+          },
+          "text": "",
+          "font_size": "66%",
+          "color": "text"
+        },
+        {
+          "id": "command_group_label",
+          "type": "label",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "position": {
+            "x": "16px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(100% - 16px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": "text_muted"
+        }
+      ]
+    },
+    {
+      "id": "command_entry",
+      "type": "button",
+      "sprite": "menus/Button",
+      "size": {
+        "x": "100%",
+        "y": "22px"
+      },
+      "color": {
+        "theme": "control_hover",
+        "alpha": 0
+      },
+      "hover_color": "control_hover",
+      "on_click": {
+        "class": "engine.editor.menueventsmanager.menus.CommandConsoleBranch",
+        "method": "runCommand"
+      },
+      "elements": [
+        {
+          "id": "command_entry_label",
+          "type": "label",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "position": {
+            "x": "30px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(100% - 30px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": "text"
+        }
+      ]
+    }
+  ],
+  "menus": [
+    {
+      "id": "CommandConsole",
+      "raycast_input": true,
+      "lock_input": false,
+      "entry_points": [
+        "command_console_label",
+        "command_rows"
+      ],
+      "elements": [
+        {
+          "id": "command_console_tool_bar",
+          "type": "sprite",
+          "sprite": "menus/ToolBar",
+          "anchor": "top_left",
+          "pivot": "bottom_left",
+          "size": {
+            "x": "100%",
+            "y": "30px"
+          },
+          "color": "panel",
+          "elements": [
+            {
+              "id": "command_console_title_label",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "8px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "calc(100% - 16px)",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "Command Console",
+              "font_size": "50%",
+              "color": "text_muted"
+            }
+          ]
+        },
+        {
+          "id": "command_rows",
+          "type": "container",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "position": {
+            "x": "4px",
+            "y": "30px"
+          },
+          "size": {
+            "x": "calc(100% - 8px)",
+            "y": "calc(100% - 64px)"
+          },
+          "stack": "vertical",
+          "spacing": "1px",
+          "mask": true
+        },
+        {
+          "id": "command_console_command_bar",
+          "type": "sprite",
+          "sprite": "menus/StatusBar",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "100%",
+            "y": "26px"
+          },
+          "color": "header",
+          "elements": [
+            {
+              "id": "command_console_prompt",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "8px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "12px",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": ">",
+              "font_size": "60%",
+              "color": "accent"
+            },
+            {
+              "id": "command_console_label",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "24px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "calc(100% - 32px)",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "",
+              "font_size": "60%",
+              "color": "text"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

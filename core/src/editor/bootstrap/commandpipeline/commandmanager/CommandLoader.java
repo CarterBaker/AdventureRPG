@@ -14,9 +14,9 @@ class CommandLoader extends LoaderPackage {
 
     /*
      * Scans the command directory and builds every command file into
-     * CommandManager. Each file is one group of the console's command tree,
+     * CommandManager. Each file is one group of the command console's tree,
      * named by its path. The manager requests them all at once before any
-     * console opens, so every console lists every command.
+     * command console opens, so every one lists every command.
      */
 
     // Internal

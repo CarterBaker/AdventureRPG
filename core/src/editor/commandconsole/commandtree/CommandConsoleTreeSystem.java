@@ -1,21 +1,21 @@
-package editor.console.commandtree;
+package editor.commandconsole.commandtree;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
-import editor.console.ConsoleSetting;
-import editor.console.panel.ConsolePanelSystem;
+import editor.commandconsole.CommandConsoleSetting;
+import editor.commandconsole.panel.CommandConsolePanelSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
-public class ConsoleCommandTreeSystem extends SystemPackage {
+public class CommandConsoleTreeSystem extends SystemPackage {
 
     /*
-     * Lists every command that takes no arguments in the console's command
+     * Lists every command that takes no arguments in the command console's
      * tree, under the group that defines it, so each one runs with a single
      * click. A group with no such command is left out. Groups start expanded
      * and collapse on click; the tree is laid out on the first frame and again
@@ -25,7 +25,7 @@ public class ConsoleCommandTreeSystem extends SystemPackage {
     // Internal
     private MenuManager menuManager;
     private CommandManager commandManager;
-    private ConsolePanelSystem consolePanelSystem;
+    private CommandConsolePanelSystem commandConsolePanelSystem;
 
     // Tree
     private ObjectArrayList<ElementInstance> treeElements;
@@ -47,7 +47,7 @@ public class ConsoleCommandTreeSystem extends SystemPackage {
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.commandManager = get(CommandManager.class);
-        this.consolePanelSystem = get(ConsolePanelSystem.class);
+        this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
     }
 
     // Update \\
@@ -66,19 +66,19 @@ public class ConsoleCommandTreeSystem extends SystemPackage {
 
     private void layoutTree() {
 
-        MenuInstance consoleMenu = consolePanelSystem.getConsoleMenu();
+        MenuInstance commandConsoleMenu = commandConsolePanelSystem.getCommandConsoleMenu();
         ObjectArrayList<String> groupNames = commandManager.getGroupNames();
 
         for (int i = 0; i < treeElements.size(); i++)
-            menuManager.eject(consoleMenu, ConsoleSetting.ENTRY_COMMAND_TREE, treeElements.get(i));
+            menuManager.eject(commandConsoleMenu, CommandConsoleSetting.ENTRY_COMMAND_TREE, treeElements.get(i));
 
         treeElements.clear();
 
         for (int i = 0; i < groupNames.size(); i++)
-            injectGroup(consoleMenu, groupNames.get(i));
+            injectGroup(commandConsoleMenu, groupNames.get(i));
     }
 
-    private void injectGroup(MenuInstance consoleMenu, String groupName) {
+    private void injectGroup(MenuInstance commandConsoleMenu, String groupName) {
 
         ObjectArrayList<CommandHandle> commandHandles = commandManager.getCommandHandles(groupName);
 
@@ -88,15 +88,15 @@ public class ConsoleCommandTreeSystem extends SystemPackage {
         boolean expanded = !collapsedGroupNames.contains(groupName);
 
         treeElements.add(menuManager.inject(
-                consoleMenu,
-                ConsoleSetting.ENTRY_COMMAND_TREE,
-                ConsoleSetting.MENU_COMMAND_GROUP,
+                commandConsoleMenu,
+                CommandConsoleSetting.ENTRY_COMMAND_TREE,
+                CommandConsoleSetting.MENU_COMMAND_GROUP,
                 element -> {
                     element.setActionArgOverride(groupName);
-                    setChildText(element, ConsoleSetting.ELEMENT_GROUP_MARKER, expanded
+                    setChildText(element, CommandConsoleSetting.ELEMENT_GROUP_MARKER, expanded
                             ? EngineSetting.HIERARCHY_EXPANDED_MARKER
                             : EngineSetting.HIERARCHY_COLLAPSED_MARKER);
-                    setChildText(element, ConsoleSetting.ELEMENT_GROUP_LABEL, groupName);
+                    setChildText(element, CommandConsoleSetting.ELEMENT_GROUP_LABEL, groupName);
                 }));
 
         if (!expanded)
@@ -104,17 +104,17 @@ public class ConsoleCommandTreeSystem extends SystemPackage {
 
         for (int i = 0; i < commandHandles.size(); i++)
             if (commandHandles.get(i).isArgumentFree())
-                injectCommand(consoleMenu, commandHandles.get(i));
+                injectCommand(commandConsoleMenu, commandHandles.get(i));
     }
 
-    private void injectCommand(MenuInstance consoleMenu, CommandHandle commandHandle) {
+    private void injectCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
         treeElements.add(menuManager.inject(
-                consoleMenu,
-                ConsoleSetting.ENTRY_COMMAND_TREE,
-                ConsoleSetting.MENU_COMMAND_ENTRY,
+                commandConsoleMenu,
+                CommandConsoleSetting.ENTRY_COMMAND_TREE,
+                CommandConsoleSetting.MENU_COMMAND_ENTRY,
                 element -> {
                     element.setActionArgOverride(commandHandle.getCommandName());
-                    setChildText(element, ConsoleSetting.ELEMENT_COMMAND_LABEL, commandHandle.getLabel());
+                    setChildText(element, CommandConsoleSetting.ELEMENT_COMMAND_LABEL, commandHandle.getLabel());
                 }));
     }
 

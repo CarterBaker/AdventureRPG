@@ -12,7 +12,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class DevCommandSystem extends SystemPackage {
 
     /*
-     * Receives the commands the editor console routes to this Dev window and
+     * Receives the commands the command console routes to this Dev window and
      * runs them during this window's own update, inside its crash boundary.
      * Every command this window can act on is mapped to its action once;
      * a command it has no action for is reported against the window.

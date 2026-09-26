@@ -143,6 +143,13 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_CONSOLE, editor.console.ConsoleContext.class, osWindow);
     }
 
+    public TabHandle openCommandConsole(WindowInstance osWindow) {
+        return openTab(
+                EditorSetting.TAB_TITLE_COMMAND_CONSOLE,
+                editor.commandconsole.CommandConsoleContext.class,
+                osWindow);
+    }
+
     /*
      * Registers a new tab on the given OS window. Creates chrome and content
      * windows composited onto it, pairs them, adds the tab to that window's

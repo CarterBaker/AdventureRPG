@@ -1,11 +1,11 @@
-package editor.console.input;
+package editor.commandconsole.input;
 
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
-import editor.console.ConsoleSetting;
-import editor.console.panel.ConsolePanelSystem;
+import editor.commandconsole.CommandConsoleSetting;
+import editor.commandconsole.panel.CommandConsolePanelSystem;
 import engine.editor.EditorInputSystem;
 import engine.editor.EditorSetting;
 import engine.input.Input;
@@ -13,16 +13,16 @@ import engine.input.InputListener;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
-public class ConsoleInputSystem extends SystemPackage implements InputListener {
+public class CommandConsoleInputSystem extends SystemPackage implements InputListener {
 
     /*
-     * The console's command line. While the console window holds focus it
+     * The command console's command line. While its window holds focus it
      * takes every character the editor font can draw, Backspace removes the
      * last one, Escape clears the line, and Enter hands it to CommandManager,
      * which routes it to every open Dev window. Typed characters are read from
      * whichever OS window the console currently lives in, so the line keeps
      * working after its tab is moved, and a caret blinks at its end while the
-     * console is focused.
+     * window is focused.
      */
 
     // Internal
@@ -30,7 +30,7 @@ public class ConsoleInputSystem extends SystemPackage implements InputListener {
     private WindowManager windowManager;
     private CommandManager commandManager;
     private EditorInputSystem editorInputSystem;
-    private ConsolePanelSystem consolePanelSystem;
+    private CommandConsolePanelSystem commandConsolePanelSystem;
 
     // Text Input
     private Input textInput;
@@ -55,7 +55,7 @@ public class ConsoleInputSystem extends SystemPackage implements InputListener {
         this.windowManager = get(WindowManager.class);
         this.commandManager = get(CommandManager.class);
         this.editorInputSystem = get(EditorInputSystem.class);
-        this.consolePanelSystem = get(ConsolePanelSystem.class);
+        this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
     }
 
     @Override
@@ -96,7 +96,7 @@ public class ConsoleInputSystem extends SystemPackage implements InputListener {
         boolean focused = isFocused();
 
         this.caretElapsed = focused ? caretElapsed + internal.getDeltaTime() : 0f;
-        boolean visible = focused && (int) (caretElapsed / ConsoleSetting.COMMAND_CARET_BLINK_SECONDS) % 2 == 0;
+        boolean visible = focused && (int) (caretElapsed / CommandConsoleSetting.COMMAND_CARET_BLINK_SECONDS) % 2 == 0;
 
         if (visible == caretVisible)
             return;
@@ -155,7 +155,7 @@ public class ConsoleInputSystem extends SystemPackage implements InputListener {
 
     private void appendCommandCharacter(char character) {
 
-        if (commandBuffer.length() >= ConsoleSetting.COMMAND_MAX_LENGTH)
+        if (commandBuffer.length() >= CommandConsoleSetting.COMMAND_MAX_LENGTH)
             return;
 
         commandBuffer.append(character);
@@ -179,8 +179,8 @@ public class ConsoleInputSystem extends SystemPackage implements InputListener {
     }
 
     private void refreshCommandLabel() {
-        consolePanelSystem.setCommandText(caretVisible
-                ? commandBuffer + ConsoleSetting.COMMAND_CARET
+        commandConsolePanelSystem.setCommandText(caretVisible
+                ? commandBuffer + CommandConsoleSetting.COMMAND_CARET
                 : commandBuffer.toString());
     }
 

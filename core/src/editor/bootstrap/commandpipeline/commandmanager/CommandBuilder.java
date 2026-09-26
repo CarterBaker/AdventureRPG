@@ -19,7 +19,7 @@ class CommandBuilder extends BuilderPackage {
      * "commands". Every command needs a name, which must be a single word so
      * it can be typed; the label defaults to the name, and "arguments" lists
      * the argument names in the order they are typed. A command that takes
-     * no arguments runs with one click from the console's command tree.
+     * no arguments runs with one click from the command console's tree.
      */
 
     // Build \\

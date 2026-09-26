@@ -15,10 +15,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class CommandManager extends ManagerPackage {
 
     /*
-     * Owns every console command and is the one route from the editor console
-     * to every open Dev window. Commands load from JSON, one group per file,
-     * and groups are listed in name order. A submitted line is echoed to the
-     * log, parsed once into a CommandStruct, checked against its command's
+     * Owns every console command and is the one route from the command
+     * console to every open Dev window. Commands load from JSON, one group per
+     * file, and groups are listed in name order. A submitted line is echoed to
+     * the log, parsed once into a CommandStruct, checked against its command's
      * definition, and queued on every Dev window that has not crashed, each of
      * which runs it inside its own frame. TabManager's open tabs are the only
      * record of which Dev windows exist, so nothing registers here.
