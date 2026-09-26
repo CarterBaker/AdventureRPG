@@ -19,7 +19,8 @@ public class ConsolePanelSystem extends SystemPackage {
      * Binds this window to a UI render target and mirrors the session log into
      * the console menu. Each frame it injects the lines written since the last
      * one, keeps the newest lines on screen up to the console's limit, and
-     * follows the newest line until the list is scrolled up.
+     * follows the newest line until the list is scrolled up. The command line
+     * shows whatever text ConsoleInputSystem hands it.
      */
 
     // Internal
@@ -29,6 +30,7 @@ public class ConsolePanelSystem extends SystemPackage {
     // Menus
     private MenuInstance consoleMenu;
     private ElementInstance lineList;
+    private ElementInstance commandLabel;
 
     // Lines
     private ObjectArrayList<LogLineStruct> pendingLines;
@@ -66,9 +68,13 @@ public class ConsolePanelSystem extends SystemPackage {
         menuManager.setMenuTargetFbo(window, fboManager.cloneFbo(RuntimeSetting.FBO_UI, window));
         this.consoleMenu = menuManager.openMenu(ConsoleSetting.MENU_CONSOLE, window);
         this.lineList = consoleMenu.getEntryPoint(ConsoleSetting.ENTRY_LINES);
+        this.commandLabel = consoleMenu.getEntryPoint(ConsoleSetting.ENTRY_COMMAND);
 
         if (lineList == null)
             throwException("Console menu '" + ConsoleSetting.MENU_CONSOLE + "' has no line list entry point.");
+
+        if (commandLabel == null)
+            throwException("Console menu '" + ConsoleSetting.MENU_CONSOLE + "' has no command line entry point.");
     }
 
     @Override
@@ -137,5 +143,9 @@ public class ConsolePanelSystem extends SystemPackage {
 
         lineElements.clear();
         this.following = true;
+    }
+
+    public void setCommandText(String text) {
+        commandLabel.setFontText(text);
     }
 }

@@ -31,7 +31,8 @@
       "raycast_input": true,
       "lock_input": false,
       "entry_points": [
-        "console_lines"
+        "console_lines",
+        "console_command_label"
       ],
       "elements": [
         {
@@ -103,14 +104,64 @@
           "pivot": "top_left",
           "position": {
             "x": "4px",
-            "y": "4px"
+            "y": "30px"
           },
           "size": {
             "x": "calc(100% - 8px)",
-            "y": "calc(100% - 38px)"
+            "y": "calc(100% - 64px)"
           },
           "stack": "vertical",
           "mask": true
+        },
+        {
+          "id": "console_command_bar",
+          "type": "sprite",
+          "sprite": "menus/StatusBar",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "size": {
+            "x": "100%",
+            "y": "26px"
+          },
+          "color": "header",
+          "elements": [
+            {
+              "id": "console_command_prompt",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "8px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "12px",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": ">",
+              "font_size": "60%",
+              "color": "accent"
+            },
+            {
+              "id": "console_command_label",
+              "type": "label",
+              "anchor": "left",
+              "pivot": "left",
+              "position": {
+                "x": "24px",
+                "y": "0px"
+              },
+              "size": {
+                "x": "calc(100% - 32px)",
+                "y": "100%"
+              },
+              "align": "left",
+              "text": "",
+              "font_size": "60%",
+              "color": "text"
+            }
+          ]
         }
       ]
     }

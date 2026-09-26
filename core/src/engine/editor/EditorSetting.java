@@ -5,8 +5,8 @@ public class EditorSetting {
     /*
      * Editor-only constants — chrome menus, cursors, input keys, menu entry
      * point indices, layout persistence, tool tabs, the name dialog, the info
-     * pipeline's schemas, hierarchy keys, and status text, and the item
-     * editor's library and status text.
+     * pipeline's schemas, hierarchy keys, and status text, the item editor's
+     * library and status text, and the console commands sent to Dev windows.
      */
 
     // Cursors \\
@@ -70,6 +70,12 @@ public class EditorSetting {
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
+
+    // Commands \\
+    public static final String COMMAND_ECHO_PREFIX = "> ";
+    public static final String COMMAND_TOKEN_SEPARATOR_PATTERN = "\\s+";
+    public static final String COMMAND_MESSAGE_NO_DEV_WINDOWS = "No Dev Mode window is open to receive the command";
+    public static final String COMMAND_MESSAGE_RECEIVED = " received ";
 
     // Viewports \\
     public static final String FBO_EDITOR_SCENE = "EditorScene";
