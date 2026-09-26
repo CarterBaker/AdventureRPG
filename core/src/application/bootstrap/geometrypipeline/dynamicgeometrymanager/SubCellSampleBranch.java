@@ -78,8 +78,14 @@ class SubCellSampleBranch extends BranchPackage {
         this.biomeManager = get(BiomeManager.class);
     }
 
+    /*
+     * Air is resolved at start rather than awake: during awake the asset
+     * loaders are still parsing, and a by-name block lookup there would pull
+     * the block, its material and its shader in on demand before the shader
+     * sources exist.
+     */
     @Override
-    protected void awake() {
+    protected void start() {
 
         // Internal
         this.airBlockHandle = blockManager.getBlockHandleFromBlockName(EngineSetting.AIR_BLOCK_NAME);
