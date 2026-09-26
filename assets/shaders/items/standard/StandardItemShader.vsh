@@ -15,13 +15,13 @@ const vec3 NORMALS[6] = vec3[](
     vec3(0, 0, 1), vec3(1, 0, 0), vec3(0, 0,-1),
     vec3(-1, 0, 0), vec3(0, 1, 0), vec3(0,-1, 0));
 
-out vec3 vNormal;
+out vec3 vNormalView;
 out vec2 vUV;
 
 void main() {
     mat4 R      = u_rotations[int(aInstance1.y)];
     vec3 rotPos = (R * vec4(aPos - vec3(0.5), 1.0)).xyz + vec3(0.5);
-    vNormal     = normalize(mat3(R) * NORMALS[int(aNorIndex)]);
+    vNormalView = normalize(mat3(u_view) * (mat3(R) * NORMALS[int(aNorIndex)]));
     vUV         = aUV;
 
     int chunkX = floatBitsToInt(aInstance0.x);

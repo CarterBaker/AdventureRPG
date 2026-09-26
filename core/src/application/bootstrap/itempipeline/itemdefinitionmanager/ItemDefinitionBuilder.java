@@ -29,9 +29,10 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * Parses item definition JSON files and builds ItemDefinitionHandle instances.
      * Each JSON file may contain multiple item entries under an 'items' array.
      * Resolves mesh and material references from their respective managers,
-     * and reads the item's mesh file as sub-voxels through SubVoxelManager to
-     * find the shape it fills inside a container. An item without a display
-     * name is titled from its local name split into words. Bootstrap-only.
+     * and reads the item's mesh file through SubVoxelManager to find the shape
+     * it fills inside a container — every item mesh must be a sub-voxel model.
+     * An item without a display name is titled from its local name split into
+     * words. Bootstrap-only.
      */
 
     // Internal
@@ -154,11 +155,15 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private ItemShapeStruct parseShape(String meshPath, String itemName) {
 
         File meshFile = new File(meshRoot, meshPath + "." + EngineSetting.MESH_FILE_EXTENSION);
-        SubVoxelModelStruct model = subVoxelManager.resolveModel(
-                JsonUtility.loadJsonObject(meshFile),
-                EngineSetting.ITEM_SHAPE_FALLBACK_TEXTURE);
+        JsonObject meshJson = JsonUtility.loadJsonObject(meshFile);
 
-        if (model == null || model.isEmpty())
+        if (!subVoxelManager.hasSubVoxels(meshJson))
+            return throwException("Item '" + itemName + "' uses mesh '" + meshPath
+                    + "', which is not a sub-voxel model. Every item is built from sub-voxels.");
+
+        SubVoxelModelStruct model = subVoxelManager.parseModel(meshJson);
+
+        if (model.isEmpty())
             return throwException("Item '" + itemName + "' uses mesh '" + meshPath
                     + "', which fills no sub-voxel cells, so it cannot take up space in a container.");
 

@@ -862,7 +862,6 @@ public class EngineSetting {
         public static final String ITEM_NAME_WORD_BOUNDARY_PATTERN = "(?<=[a-z])(?=[A-Z])";
         public static final String ITEM_NAME_WORD_SEPARATOR = " ";
         public static final int ITEM_ROTATION_COUNT = 4;
-        public static final String ITEM_SHAPE_FALLBACK_TEXTURE = "items/standard/Apple";
         public static final short TOOL_NONE = 0;
 
         // Item Categories \\

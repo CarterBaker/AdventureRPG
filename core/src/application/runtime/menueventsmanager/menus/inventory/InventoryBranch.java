@@ -12,6 +12,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import engine.root.BranchPackage;
 import engine.settings.KeyBindings;
+import engine.util.mathematics.vectors.Vector3;
 
 public class InventoryBranch extends BranchPackage {
 
@@ -19,8 +20,10 @@ public class InventoryBranch extends BranchPackage {
      * Runs the inventory for this context's window. The inventory key opens
      * it while a player is in the world and no other menu holds input; using
      * a chest in the world opens it with that chest shown too. The equipment
-     * panel is always shown, with the player standing in its preview window,
-     * framed there through the character preview, and turned by dragging.
+     * panels are always shown, with the player standing in the open preview
+     * window between them — the character is drawn in the world behind the
+     * menus and framed there through the character preview, filling the
+     * window as far as its own proportions allow — and turned by dragging.
      * The inventory key or Pause closes it once it has been on show a whole
      * frame, handing any carried item back to where it came from and the
      * camera back to the way it looked; a context torn down with the
@@ -166,22 +169,27 @@ public class InventoryBranch extends BranchPackage {
                 inputManager.getRawInput(window).getDeltaX() * RuntimeSetting.INVENTORY_ROTATE_DEGREES_PER_PIXEL);
     }
 
-    // Centres the character in the preview window, filling most of its height
+    // Centres the character in the preview window at the largest scale its own proportions fit
     private void framePreview(InventorySessionStruct session) {
 
         WindowInstance window = session.getWindow();
         ElementInstance preview = session.getEquipmentMenu().getEntryPoint(RuntimeSetting.ENTRY_INVENTORY_PREVIEW);
+        Vector3 size = session.getPlayer().getSize();
         float width = Math.max(1f, window.getWidth());
         float height = Math.max(1f, window.getHeight());
 
-        if (preview.getComputedH() <= 0f)
+        if (preview.getComputedW() <= 0f || preview.getComputedH() <= 0f)
             return;
+
+        float characterHeight = Math.min(
+                preview.getComputedH(),
+                preview.getComputedW() * size.y / Math.max(size.x, size.z)) * RuntimeSetting.INVENTORY_PREVIEW_FILL;
 
         playerManager.frameCharacterPreview(
                 window.getWindowID(),
                 (preview.getComputedLeft() + preview.getComputedW() * 0.5f) / width * 2f - 1f,
                 (preview.getComputedTop() + preview.getComputedH() * 0.5f) / height * 2f - 1f,
-                preview.getComputedH() * RuntimeSetting.INVENTORY_PREVIEW_FILL / height);
+                characterHeight / height);
     }
 
     // Accessible \\

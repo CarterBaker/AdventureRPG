@@ -7,8 +7,7 @@
             "anchor":   "left",
             "pivot":    "left",
             "position": { "x": "1%", "y": "0%" },
-            "size":     { "x": "21%", "y": "94%" },
-            "min_size": { "x": "260px", "y": "240px" },
+            "size":     { "x": "14.5%", "y": "94%" },
             "animation": {
                 "keyframes": [
                     { "time": 0.0,  "offset": { "x": -0.06 }, "alpha": 0 },
@@ -71,9 +70,8 @@
             "sprite":   "menus/inventory/ViewFrame",
             "anchor":   "left",
             "pivot":    "left",
-            "position": { "x": "23%", "y": "0%" },
-            "size":     { "x": "25%", "y": "94%" },
-            "min_size": { "x": "240px", "y": "200px" },
+            "position": { "x": "16.5%", "y": "0%" },
+            "size":     { "x": "19%", "y": "94%" },
             "animation": {
                 "keyframes": [
                     { "time": 0.0,  "offset": { "y": -0.04 }, "alpha": 0 },
@@ -230,7 +228,7 @@
             "id":          "ring_slot",
             "type":        "button",
             "sprite":      "menus/inventory/Slot",
-            "size":        { "x": "100%", "y": "9.3%" },
+            "size":        { "x": "100%", "y": "9%" },
             "aspect":      1.0,
             "color":       [0.9, 0.9, 0.9, 1],
             "hover_color": [1, 0.96, 0.84, 1],
@@ -326,43 +324,29 @@
             ],
             "elements": [
                 {
-                    "id":       "equipment_panel",
+                    "id":       "gear_panel_a",
                     "type":     "sprite",
                     "sprite":   "menus/wood/WoodPanel",
-                    "anchor":   "right",
-                    "pivot":    "right",
-                    "position": { "x": "-1%", "y": "0%" },
-                    "size":     { "x": "50%", "y": "94%" },
-                    "min_size": { "x": "600px", "y": "420px" },
+                    "anchor":   "left",
+                    "pivot":    "left",
+                    "position": { "x": "36.5%", "y": "0%" },
+                    "size":     { "x": "7%", "y": "94%" },
                     "animation": {
                         "keyframes": [
-                            { "time": 0.0,  "offset": { "x": 0.06 }, "alpha": 0 },
+                            { "time": 0.0,  "offset": { "y": -0.04 }, "alpha": 0 },
                             { "time": 0.3, "ease": "out" }
                         ]
                     },
                     "elements": [
                         {
-                            "id":       "equipment_title_note",
-                            "type":     "sprite",
-                            "sprite":   "menus/paper/PaperScrap",
-                            "anchor":   "top",
-                            "pivot":    "bottom",
-                            "position": { "x": "-7%", "y": "-12px" },
-                            "size":     { "x": "30%", "y": "7%" },
-                            "aspect":   3.6111,
-                            "elements": [
-                                {
-                                    "id":       "equipment_title",
-                                    "type":     "label",
-                                    "font":     "IMFellEnglish",
-                                    "text":     "Equipment",
-                                    "color":    [0.16, 0.1, 0.06, 1],
-                                    "anchor":   "center",
-                                    "pivot":    "center",
-                                    "position": { "x": "0%", "y": "2%" },
-                                    "size":     { "x": "72%", "y": "70%" }
-                                }
-                            ]
+                            "id":       "slot_column_a",
+                            "type":     "container",
+                            "stack":    "vertical",
+                            "spacing":  "6px",
+                            "anchor":   "top_left",
+                            "pivot":    "bottom_left",
+                            "position": { "x": "14%", "y": "-3%" },
+                            "size":     { "x": "76%", "y": "78%" }
                         },
                         {
                             "id":       "backpack_caption",
@@ -373,56 +357,81 @@
                             "color":    [1, 0.84, 0.52, 1],
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "13%", "y": "-6%" },
-                            "size":     { "x": "12%", "y": "3%" },
-                            "align":    "left"
+                            "position": { "x": "4%", "y": "-82%" },
+                            "size":     { "x": "92%", "y": "3%" }
                         },
                         {
                             "id":       "backpack_holder",
                             "type":     "container",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "3%", "y": "-3%" },
-                            "size":     { "x": "9%", "y": "9.5%" },
+                            "position": { "x": "14%", "y": "-86%" },
+                            "size":     { "x": "76%", "y": "10%" },
                             "aspect":   1.0
+                        }
+                    ]
+                },
+                {
+                    "id":       "preview_window",
+                    "type":     "sprite",
+                    "sprite":   "menus/inventory/ViewFrame",
+                    "anchor":   "left",
+                    "pivot":    "left",
+                    "position": { "x": "44%", "y": "0%" },
+                    "size":     { "x": "20.5%", "y": "94%" },
+                    "aspect":   0.46,
+                    "on_drag": {
+                        "class":  "application.runtime.menueventsmanager.menus.inventory.InventoryBranch",
+                        "method": "rotatePreview"
+                    },
+                    "animation": {
+                        "keyframes": [
+                            { "time": 0.0,  "alpha": 0 },
+                            { "time": 0.3, "ease": "out" }
+                        ]
+                    },
+                    "elements": [
+                        {
+                            "id":       "preview_hint",
+                            "type":     "label",
+                            "font":     "IMFellEnglish",
+                            "font_size": "64%",
+                            "text":     "Drag to turn",
+                            "color":    [1, 0.96, 0.88, 0.8],
+                            "anchor":   "bottom",
+                            "pivot":    "top",
+                            "position": { "x": "0%", "y": "44px" },
+                            "size":     { "x": "80%", "y": "22px" }
                         },
                         {
-                            "id":       "slot_column_a",
-                            "type":     "container",
-                            "stack":    "vertical",
-                            "spacing":  "6px",
-                            "anchor":   "top_left",
-                            "pivot":    "bottom_left",
-                            "position": { "x": "3%", "y": "-15%" },
-                            "size":     { "x": "9%", "y": "82%" }
-                        },
-                        {
-                            "id":       "preview_window",
-                            "type":     "sprite",
-                            "sprite":   "menus/inventory/ViewFrame",
-                            "anchor":   "top_left",
-                            "pivot":    "bottom_left",
-                            "position": { "x": "13.5%", "y": "-15%" },
-                            "size":     { "x": "27%", "y": "82%" },
-                            "on_drag": {
-                                "class":  "application.runtime.menueventsmanager.menus.inventory.InventoryBranch",
-                                "method": "rotatePreview"
-                            },
-                            "elements": [
-                                {
-                                    "id":       "preview_hint",
-                                    "type":     "label",
-                                    "font":     "IMFellEnglish",
-                                    "font_size": "64%",
-                                    "text":     "Drag to turn",
-                                    "color":    [1, 0.96, 0.88, 0.8],
-                                    "anchor":   "bottom",
-                                    "pivot":    "top",
-                                    "position": { "x": "0%", "y": "26px" },
-                                    "size":     { "x": "80%", "y": "22px" }
-                                }
-                            ]
-                        },
+                            "id":       "close_hint",
+                            "type":     "label",
+                            "font":     "IMFellEnglish",
+                            "font_size": "62%",
+                            "text":     "",
+                            "color":    [1, 0.96, 0.88, 0.75],
+                            "anchor":   "bottom",
+                            "pivot":    "top",
+                            "position": { "x": "0%", "y": "20px" },
+                            "size":     { "x": "80%", "y": "22px" }
+                        }
+                    ]
+                },
+                {
+                    "id":       "gear_panel_b",
+                    "type":     "sprite",
+                    "sprite":   "menus/wood/WoodPanel",
+                    "anchor":   "left",
+                    "pivot":    "left",
+                    "position": { "x": "65%", "y": "0%" },
+                    "size":     { "x": "34%", "y": "94%" },
+                    "animation": {
+                        "keyframes": [
+                            { "time": 0.0,  "offset": { "x": 0.06 }, "alpha": 0 },
+                            { "time": 0.3, "ease": "out" }
+                        ]
+                    },
+                    "elements": [
                         {
                             "id":       "slot_column_b",
                             "type":     "container",
@@ -430,8 +439,8 @@
                             "spacing":  "6px",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "42%", "y": "-15%" },
-                            "size":     { "x": "9%", "y": "82%" }
+                            "position": { "x": "3%", "y": "-3%" },
+                            "size":     { "x": "16%", "y": "78%" }
                         },
                         {
                             "id":       "rings_caption",
@@ -442,8 +451,8 @@
                             "color":    [1, 0.84, 0.52, 1],
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "52.5%", "y": "-11%" },
-                            "size":     { "x": "8%", "y": "3%" }
+                            "position": { "x": "21%", "y": "-3%" },
+                            "size":     { "x": "15%", "y": "3%" }
                         },
                         {
                             "id":       "ring_column",
@@ -452,8 +461,8 @@
                             "spacing":  "6px",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "53%", "y": "-15%" },
-                            "size":     { "x": "7%", "y": "82%" }
+                            "position": { "x": "23%", "y": "-7%" },
+                            "size":     { "x": "13%", "y": "90%" }
                         },
                         {
                             "id":       "stats_box",
@@ -461,8 +470,8 @@
                             "sprite":   "menus/inventory/Inset",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "62%", "y": "-9%" },
-                            "size":     { "x": "35%", "y": "88%" },
+                            "position": { "x": "39%", "y": "-3%" },
+                            "size":     { "x": "58%", "y": "94%" },
                             "elements": [
                                 {
                                     "id":       "stats_title",
@@ -498,18 +507,6 @@
                                     "size":     { "x": "86%", "y": "calc(36% - 16px)" }
                                 }
                             ]
-                        },
-                        {
-                            "id":       "close_hint",
-                            "type":     "label",
-                            "font":     "IMFellEnglish",
-                            "font_size": "62%",
-                            "text":     "",
-                            "color":    [1, 0.96, 0.88, 0.75],
-                            "anchor":   "bottom",
-                            "pivot":    "top",
-                            "position": { "x": "-19%", "y": "8px" },
-                            "size":     { "x": "40%", "y": "3%" }
                         }
                     ]
                 }
@@ -535,13 +532,13 @@
                     "id":       "panel",
                     "use":      "Inventory/container_panel",
                     "position": { "x": "1%", "y": "23.75%" },
-                    "size":     { "x": "21%", "y": "45.5%" }
+                    "size":     { "x": "14.5%", "y": "45.5%" }
                 },
                 {
                     "id":       "frame",
                     "use":      "Inventory/container_frame",
-                    "position": { "x": "23%", "y": "23.75%" },
-                    "size":     { "x": "25%", "y": "45.5%" }
+                    "position": { "x": "16.5%", "y": "23.75%" },
+                    "size":     { "x": "19%", "y": "45.5%" }
                 }
             ]
         },
@@ -555,13 +552,13 @@
                     "id":       "panel",
                     "use":      "Inventory/container_panel",
                     "position": { "x": "1%", "y": "-23.75%" },
-                    "size":     { "x": "21%", "y": "45.5%" }
+                    "size":     { "x": "14.5%", "y": "45.5%" }
                 },
                 {
                     "id":       "frame",
                     "use":      "Inventory/container_frame",
-                    "position": { "x": "23%", "y": "-23.75%" },
-                    "size":     { "x": "25%", "y": "45.5%" }
+                    "position": { "x": "16.5%", "y": "-23.75%" },
+                    "size":     { "x": "19%", "y": "45.5%" }
                 }
             ]
         }

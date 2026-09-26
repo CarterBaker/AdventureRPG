@@ -25,9 +25,9 @@ import engine.settings.KeyBindings;
 public class InventoryEquipmentBranch extends BranchPackage {
 
     /*
-     * Fills and keeps the equipment panel: the backpack slot in its upper
-     * left, a column of slots down each side of the preview window, the ten
-     * ring slots beside them, and the statistics box. The character faces out
+     * Fills and keeps the equipment panels: a column of slots down each side
+     * of the preview window with the backpack slot at the foot of the first,
+     * then the ten ring slots and the statistics box. The character faces out
      * of its preview, so the slots for its right side stand in the screen's
      * left column. Every slot but a ring carries an eye that shows or hides
      * its item on the character. Slots and statistics are redrawn only when
