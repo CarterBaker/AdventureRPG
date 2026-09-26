@@ -2,6 +2,7 @@ package application.bootstrap.itempipeline.itemdefinition;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import engine.root.HandlePackage;
+import engine.util.mathematics.vectors.Vector3Int;
 
 public class ItemDefinitionHandle extends HandlePackage {
 
@@ -32,6 +33,10 @@ public class ItemDefinitionHandle extends HandlePackage {
         return itemDefinitionData.getItemName();
     }
 
+    public String getLocalName() {
+        return itemDefinitionData.getLocalName();
+    }
+
     public int getItemID() {
         return itemDefinitionData.getItemID();
     }
@@ -44,6 +49,18 @@ public class ItemDefinitionHandle extends HandlePackage {
         return (short) (itemDefinitionData.getItemID() & 0xFFFF);
     }
 
+    public String getDisplayName() {
+        return itemDefinitionData.getDisplayName();
+    }
+
+    public String getDescription() {
+        return itemDefinitionData.getDescription();
+    }
+
+    public ItemCategory getCategory() {
+        return itemDefinitionData.getCategory();
+    }
+
     public float getWeight() {
         return itemDefinitionData.getWeight();
     }
@@ -52,8 +69,24 @@ public class ItemDefinitionHandle extends HandlePackage {
         return itemDefinitionData.isTwoHanded();
     }
 
-    public boolean isBackpack() {
-        return itemDefinitionData.isBackpack();
+    public EquipmentType getEquipmentType() {
+        return itemDefinitionData.getEquipmentType();
+    }
+
+    public float getStat(ItemStat itemStat) {
+        return itemDefinitionData.getStat(itemStat);
+    }
+
+    public ItemShapeStruct getShape() {
+        return itemDefinitionData.getShape();
+    }
+
+    public boolean isContainer() {
+        return itemDefinitionData.isContainer();
+    }
+
+    public Vector3Int getContainerSize() {
+        return itemDefinitionData.getContainerSize();
     }
 
     public MeshHandle getMeshHandle() {

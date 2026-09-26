@@ -149,4 +149,16 @@ public class SubVoxelManager extends ManagerPackage {
     public SubVoxelModelStruct importQuadMesh(JsonObject meshJson, String fallbackTextureName) {
         return SubVoxelImportUtility.importQuads(meshJson, fallbackTextureName);
     }
+
+    // Either format as sub-voxels — null when the mesh holds neither cubes nor quads
+    public SubVoxelModelStruct resolveModel(JsonObject meshJson, String fallbackTextureName) {
+
+        if (hasSubVoxels(meshJson))
+            return parseModel(meshJson);
+
+        if (hasQuads(meshJson))
+            return importQuadMesh(meshJson, fallbackTextureName);
+
+        return null;
+    }
 }

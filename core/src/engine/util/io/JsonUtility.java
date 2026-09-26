@@ -122,6 +122,25 @@ public class JsonUtility extends EngineUtility {
         return json.has(key) ? json.get(key).getAsFloat() : defaultValue;
     }
 
+    public static <E extends Enum<E>> E getEnum(JsonObject json, String key, Class<E> enumClass, E defaultValue) {
+        return json.has(key) ? toEnum(json.get(key).getAsString(), enumClass) : defaultValue;
+    }
+
+    // Enum names — matched ignoring case, so JSON may spell constants in lower case \\
+
+    public static <E extends Enum<E>> E toEnum(String name, Class<E> enumClass) {
+
+        for (E constant : enumClass.getEnumConstants())
+            if (constant.name().equalsIgnoreCase(name))
+                return constant;
+
+        return throwException("Unknown " + enumClass.getSimpleName() + " value: '" + name + "'");
+    }
+
+    public static <E extends Enum<E>> String toEnumName(E constant) {
+        return constant.name().toLowerCase();
+    }
+
     // Type checks — never throw \\
 
     public static boolean hasString(JsonObject json, String key) {

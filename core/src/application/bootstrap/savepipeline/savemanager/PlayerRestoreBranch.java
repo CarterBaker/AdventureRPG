@@ -1,5 +1,7 @@
 package application.bootstrap.savepipeline.savemanager;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
@@ -8,6 +10,12 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
+import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
+import application.bootstrap.entitypipeline.inventory.InventoryHandle;
+import application.bootstrap.itempipeline.container.ContainerInstance;
+import application.bootstrap.itempipeline.item.ItemInstance;
+import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
+import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import engine.root.BranchPackage;
 import engine.util.io.JsonUtility;
@@ -22,17 +30,24 @@ class PlayerRestoreBranch extends BranchPackage {
      * player lives in and every feature must still exist and fit the
      * character — so a stale or malformed save leaves the player untouched.
      * The location is wrapped back into chunk and world bounds the same way
-     * movement wraps it.
+     * movement wraps it. The inventory is restored leniently instead: an item
+     * the game no longer has, or one that no longer fits where it was kept,
+     * is logged and left out rather than costing the character its save, and
+     * a save written before inventories existed restores an empty one.
      */
 
     // Internal
     private FeatureManager featureManager;
+    private ItemDefinitionManager itemDefinitionManager;
+    private ItemManager itemManager;
 
     // Base \\
 
     @Override
     protected void get() {
         this.featureManager = get(FeatureManager.class);
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
+        this.itemManager = get(ItemManager.class);
     }
 
     // Management \\
@@ -44,6 +59,7 @@ class PlayerRestoreBranch extends BranchPackage {
 
         restoreLocation(JsonUtility.validateObject(playerJson, "location"), player);
         restoreCharacter(JsonUtility.validateObject(playerJson, "character"), player);
+        restoreInventory(playerJson, player.getInventoryHandle());
 
         return true;
     }
@@ -104,6 +120,125 @@ class PlayerRestoreBranch extends BranchPackage {
             else
                 appearanceHandle.clearFeature(featureSlot);
         }
+    }
+
+    // Inventory \\
+
+    private void restoreInventory(JsonObject playerJson, InventoryHandle inventoryHandle) {
+
+        inventoryHandle.clear();
+
+        if (!JsonUtility.hasObject(playerJson, "inventory"))
+            return;
+
+        JsonObject inventoryJson = playerJson.getAsJsonObject("inventory");
+
+        if (JsonUtility.hasObject(inventoryJson, "equipment"))
+            restoreEquipment(inventoryJson.getAsJsonObject("equipment"), inventoryHandle);
+
+        if (JsonUtility.hasArray(inventoryJson, "hidden"))
+            restoreHidden(inventoryJson.getAsJsonArray("hidden"), inventoryHandle);
+    }
+
+    private void restoreEquipment(JsonObject equipmentJson, InventoryHandle inventoryHandle) {
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
+
+            String key = JsonUtility.toEnumName(equipmentSlot);
+
+            if (!JsonUtility.hasObject(equipmentJson, key))
+                continue;
+
+            ItemInstance itemInstance = restoreItem(equipmentJson.getAsJsonObject(key));
+
+            if (itemInstance == null)
+                continue;
+
+            if (inventoryHandle.canEquip(equipmentSlot, itemInstance))
+                inventoryHandle.equip(equipmentSlot, itemInstance);
+            else
+                errorLog("Saved item '" + itemInstance.getItemDefinitionHandle().getItemName()
+                        + "' no longer fits equipment slot '" + key + "' and was left out.");
+        }
+    }
+
+    private void restoreHidden(JsonArray hiddenJson, InventoryHandle inventoryHandle) {
+
+        for (int i = 0; i < hiddenJson.size(); i++) {
+
+            JsonElement slotJson = hiddenJson.get(i);
+
+            for (EquipmentSlot equipmentSlot : EquipmentSlot.values())
+                if (slotJson.isJsonPrimitive()
+                        && JsonUtility.toEnumName(equipmentSlot).equals(slotJson.getAsString()))
+                    inventoryHandle.setHidden(equipmentSlot, true);
+        }
+    }
+
+    private ItemInstance restoreItem(JsonObject itemJson) {
+
+        if (!JsonUtility.hasString(itemJson, "item"))
+            return null;
+
+        String itemName = itemJson.get("item").getAsString();
+
+        if (!itemDefinitionManager.hasItem(itemName)) {
+            errorLog("Saved item '" + itemName + "' no longer exists and was left out.");
+            return null;
+        }
+
+        ItemInstance itemInstance = itemManager.createItem(itemName);
+
+        if (itemInstance.hasContainer() && JsonUtility.hasArray(itemJson, "contents"))
+            restoreContents(itemJson.getAsJsonArray("contents"), itemInstance.getContainerInstance());
+
+        return itemInstance;
+    }
+
+    private void restoreContents(JsonArray contentsJson, ContainerInstance containerInstance) {
+
+        for (int i = 0; i < contentsJson.size(); i++) {
+
+            if (!contentsJson.get(i).isJsonObject())
+                continue;
+
+            JsonObject slotJson = contentsJson.get(i).getAsJsonObject();
+            ItemInstance itemInstance = restoreItem(slotJson);
+
+            if (itemInstance == null)
+                continue;
+
+            if (isPlacementValid(slotJson, itemInstance, containerInstance)) {
+                containerInstance.place(
+                        itemInstance,
+                        slotJson.get("x").getAsInt(),
+                        slotJson.get("y").getAsInt(),
+                        slotJson.get("z").getAsInt(),
+                        slotJson.get("rotation").getAsInt());
+                continue;
+            }
+
+            if (containerInstance.autoPlace(itemInstance) == null)
+                errorLog("Saved item '" + itemInstance.getItemDefinitionHandle().getItemName()
+                        + "' no longer fits its container and was left out.");
+        }
+    }
+
+    private boolean isPlacementValid(
+            JsonObject slotJson,
+            ItemInstance itemInstance,
+            ContainerInstance containerInstance) {
+        return JsonUtility.hasNumber(slotJson, "x")
+                && JsonUtility.hasNumber(slotJson, "y")
+                && JsonUtility.hasNumber(slotJson, "z")
+                && JsonUtility.hasNumber(slotJson, "rotation")
+                && containerInstance.accepts(itemInstance)
+                && containerInstance.fits(
+                        itemInstance,
+                        slotJson.get("x").getAsInt(),
+                        slotJson.get("y").getAsInt(),
+                        slotJson.get("z").getAsInt(),
+                        slotJson.get("rotation").getAsInt());
     }
 
     // Utility \\

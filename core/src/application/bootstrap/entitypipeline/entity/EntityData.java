@@ -2,12 +2,14 @@ package application.bootstrap.entitypipeline.entity;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
+import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EntityData extends DataPackage {
 
@@ -28,7 +30,9 @@ public class EntityData extends DataPackage {
      * row instead (see AppearanceHandle). appearanceData is null unless the
      * "model" block also declares an "appearance". modelHeight is the full
      * authored height of the character — body plus default head — that an
-     * entity's size.y is divided by to scale the model.
+     * entity's size.y is divided by to scale the model. equipmentAnchors
+     * places worn items on the model and is empty for an entity with no
+     * "equipment" block.
      */
 
     // Size
@@ -53,6 +57,9 @@ public class EntityData extends DataPackage {
     // Appearance — optional
     private final AppearanceData appearanceData;
 
+    // Equipment
+    private final ObjectArrayList<EquipmentAnchorStruct> equipmentAnchors;
+
     // Constructor \\
 
     public EntityData(
@@ -66,7 +73,8 @@ public class EntityData extends DataPackage {
             MaterialInstance characterMaterial,
             AnimationTreeHandle animationTreeHandle,
             float modelHeight,
-            AppearanceData appearanceData) {
+            AppearanceData appearanceData,
+            ObjectArrayList<EquipmentAnchorStruct> equipmentAnchors) {
 
         // Size
         this.sizeMin = sizeMin;
@@ -89,6 +97,9 @@ public class EntityData extends DataPackage {
 
         // Appearance
         this.appearanceData = appearanceData;
+
+        // Equipment
+        this.equipmentAnchors = equipmentAnchors;
     }
 
     // Accessible \\
@@ -147,6 +158,10 @@ public class EntityData extends DataPackage {
 
     public AppearanceData getAppearanceData() {
         return appearanceData;
+    }
+
+    public ObjectArrayList<EquipmentAnchorStruct> getEquipmentAnchors() {
+        return equipmentAnchors;
     }
 
     // Utility \\

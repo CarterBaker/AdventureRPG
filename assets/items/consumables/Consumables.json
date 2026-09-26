@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "name": "breadLoaf",
+      "display_name": "Bread Loaf",
+      "mesh": "items/consumables/BreadLoaf",
+      "category": "consumable",
+      "weight": 0.5,
+      "description": "Fresh from the oven."
+    },
+    {
+      "name": "healthPotion",
+      "display_name": "Health Potion",
+      "mesh": "items/consumables/HealthPotion",
+      "category": "consumable",
+      "weight": 0.3,
+      "description": "A stoppered flask of red tonic."
+    }
+  ]
+}

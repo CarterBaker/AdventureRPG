@@ -1,14 +1,17 @@
 package application.bootstrap.entitypipeline.statistics;
 
+import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 
 public class StatisticsHandle extends HandlePackage {
 
     /*
-     * Per-entity runtime statistics. Holds movement speeds, jump height, and
-     * reach. No manager owns this — it lives directly on EntityInstance and
-     * is initialized to engine defaults on creation.
+     * Per-entity runtime statistics. Holds movement speeds, jump height,
+     * reach, and the entity's own base value for every item statistic —
+     * what it has before anything it wears is counted. No manager owns this —
+     * it lives directly on EntityInstance and is initialized to engine
+     * defaults on creation.
      */
 
     // Movement
@@ -22,6 +25,9 @@ public class StatisticsHandle extends HandlePackage {
 
     // Interaction
     private float reach;
+
+    // Attributes
+    private float[] baseStats;
 
     // Internal \\
 
@@ -39,6 +45,31 @@ public class StatisticsHandle extends HandlePackage {
 
         // Interaction
         this.reach = EngineSetting.DEFAULT_REACH;
+
+        // Attributes
+        this.baseStats = new float[ItemStat.values().length];
+        resetBaseStats();
+    }
+
+    // Attributes \\
+
+    public void resetBaseStats() {
+
+        for (ItemStat itemStat : ItemStat.values())
+            baseStats[itemStat.ordinal()] = EngineSetting.DEFAULT_ATTRIBUTE_VALUE;
+
+        baseStats[ItemStat.ARMOR.ordinal()] = EngineSetting.DEFAULT_ARMOR;
+        baseStats[ItemStat.DAMAGE.ordinal()] = EngineSetting.DEFAULT_DAMAGE;
+        baseStats[ItemStat.HEALTH.ordinal()] = EngineSetting.DEFAULT_HEALTH;
+        baseStats[ItemStat.STAMINA.ordinal()] = EngineSetting.DEFAULT_STAMINA;
+    }
+
+    public float getBaseStat(ItemStat itemStat) {
+        return baseStats[itemStat.ordinal()];
+    }
+
+    public void setBaseStat(ItemStat itemStat, float value) {
+        baseStats[itemStat.ordinal()] = value;
     }
 
     // Accessible \\

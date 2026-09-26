@@ -46,24 +46,17 @@ class ItemLibraryBranch extends BranchPackage {
 
     SubVoxelModelStruct loadModel(ItemEntryStruct entry, String fallbackTextureName) {
 
-        JsonObject meshJson = loadMeshJson(entry);
+        SubVoxelModelStruct model = subVoxelManager.resolveModel(loadMeshJson(entry), fallbackTextureName);
 
-        if (subVoxelManager.hasSubVoxels(meshJson)) {
+        if (model == null)
+            return throwException("Item '" + entry.getItemName() + "' uses mesh '" + entry.getMeshName()
+                    + "', which holds neither sub-voxels nor quads.");
 
-            SubVoxelModelStruct model = subVoxelManager.parseModel(meshJson);
+        if (model.getPartCount() == 0)
+            throwException("Item '" + entry.getItemName() + "' declares no parts in mesh '"
+                    + entry.getMeshName() + "'.");
 
-            if (model.getPartCount() == 0)
-                throwException("Item '" + entry.getItemName() + "' declares no parts in mesh '"
-                        + entry.getMeshName() + "'.");
-
-            return model;
-        }
-
-        if (subVoxelManager.hasQuads(meshJson))
-            return subVoxelManager.importQuadMesh(meshJson, fallbackTextureName);
-
-        return throwException("Item '" + entry.getItemName() + "' uses mesh '" + entry.getMeshName()
-                + "', which holds neither sub-voxels nor quads.");
+        return model;
     }
 
     boolean requiresConversion(ItemEntryStruct entry) {

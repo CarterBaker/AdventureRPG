@@ -1,0 +1,29 @@
+{
+  "vao": "util/vao/ItemVAO",
+  "subvoxels": {
+    "resolution": 16,
+    "parts": [
+      {
+        "name": "Tonic",
+        "texture": "items/standard/Potion",
+        "cubes": [
+          [7,0,7], [8,0,7], [7,1,7], [8,1,7], [7,0,8], [8,0,8], [7,1,8], [8,1,8]
+        ]
+      },
+      {
+        "name": "Glass",
+        "texture": "items/standard/Glass",
+        "cubes": [
+          [7,2,7]
+        ]
+      },
+      {
+        "name": "Cork",
+        "texture": "items/standard/Oak",
+        "cubes": [
+          [7,3,7]
+        ]
+      }
+    ]
+  }
+}

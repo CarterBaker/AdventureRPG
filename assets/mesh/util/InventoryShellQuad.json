@@ -1,0 +1,6 @@
+{
+  "vao": "util/vao/ItemVAO",
+  "vbo": [
+    { "quad": [[0,0,0,4],[1,0,0,4],[1,0,1,4],[0,0,1,4]], "texture": "items/standard/Table" }
+  ]
+}

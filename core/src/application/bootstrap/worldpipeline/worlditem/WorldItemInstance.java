@@ -1,9 +1,14 @@
 package application.bootstrap.worldpipeline.worlditem;
 
+import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import engine.root.InstancePackage;
 
 public class WorldItemInstance extends InstancePackage {
+
+    // The subchunk struct this instance was built from — it outlives the
+    // instance across palette rebuilds, so the real item is kept on it.
+    private WorldItemStruct worldItemStruct;
 
     private ItemDefinitionHandle itemDefinitionHandle;
     private long chunkCoordinate;
@@ -18,11 +23,13 @@ public class WorldItemInstance extends InstancePackage {
     // Constructor \\
 
     public void constructor(
+            WorldItemStruct worldItemStruct,
             ItemDefinitionHandle itemDefinitionHandle,
             long chunkCoordinate,
             int packedBlockCoordinate,
             long packedPosition,
             int packedItem) {
+        this.worldItemStruct = worldItemStruct;
         this.itemDefinitionHandle = itemDefinitionHandle;
         this.chunkCoordinate = chunkCoordinate;
         this.packedBlockCoordinate = packedBlockCoordinate;
@@ -32,6 +39,18 @@ public class WorldItemInstance extends InstancePackage {
     }
 
     // Accessible \\
+
+    public boolean hasItemInstance() {
+        return worldItemStruct.itemInstance != null;
+    }
+
+    public ItemInstance getItemInstance() {
+        return worldItemStruct.itemInstance;
+    }
+
+    public void setItemInstance(ItemInstance itemInstance) {
+        worldItemStruct.itemInstance = itemInstance;
+    }
 
     public ItemDefinitionHandle getItemDefinitionHandle() {
         return itemDefinitionHandle;

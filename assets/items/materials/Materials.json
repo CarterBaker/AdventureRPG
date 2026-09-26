@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "name": "ironIngot",
+      "display_name": "Iron Ingot",
+      "mesh": "items/materials/IronIngot",
+      "category": "material",
+      "weight": 1.0,
+      "description": "Ready for the forge."
+    },
+    {
+      "name": "leatherHide",
+      "display_name": "Leather Hide",
+      "mesh": "items/materials/LeatherHide",
+      "category": "material",
+      "weight": 0.8,
+      "description": "Tanned and ready to cut."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "vao": "util/vao/ItemVAO",
+  "subvoxels": {
+    "resolution": 16,
+    "parts": [
+      {
+        "name": "Band",
+        "texture": "items/standard/Gold",
+        "cubes": [
+          [7,0,7]
+        ]
+      }
+    ]
+  }
+}

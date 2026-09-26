@@ -11,6 +11,34 @@
     { "key": "material", "type": "string", "default": "items/StandardItemMaterial" },
     { "key": "weight", "type": "float", "default": 1.0 },
     { "key": "two_handed", "type": "boolean", "default": false },
-    { "key": "is_backpack", "type": "boolean", "default": false }
+    { "key": "display_name", "type": "string", "default": "" },
+    { "key": "description", "type": "string", "default": "" },
+    { "key": "category", "type": "enum", "values": [ "weapon", "armor", "clothing", "jewelry", "container", "consumable", "material", "misc" ], "default": "misc" },
+    { "key": "equip", "type": "enum", "values": [ "none", "head", "cloak", "chest", "shirt", "belt", "pants", "shoulder", "arm", "glove", "leg", "foot", "ring", "backpack", "weapon", "shield" ], "default": "none" },
+    {
+      "key": "stats",
+      "type": "object",
+      "fields": [
+        { "key": "armor", "type": "float", "default": 0.0 },
+        { "key": "damage", "type": "float", "default": 0.0 },
+        { "key": "health", "type": "float", "default": 0.0 },
+        { "key": "stamina", "type": "float", "default": 0.0 },
+        { "key": "strength", "type": "float", "default": 0.0 },
+        { "key": "dexterity", "type": "float", "default": 0.0 },
+        { "key": "constitution", "type": "float", "default": 0.0 },
+        { "key": "intelligence", "type": "float", "default": 0.0 },
+        { "key": "wisdom", "type": "float", "default": 0.0 },
+        { "key": "charisma", "type": "float", "default": 0.0 }
+      ]
+    },
+    {
+      "key": "container",
+      "type": "object",
+      "fields": [
+        { "key": "x", "type": "int", "required": true, "default": 16 },
+        { "key": "y", "type": "int", "required": true, "default": 16 },
+        { "key": "z", "type": "int", "required": true, "default": 16 }
+      ]
+    }
   ]
 }

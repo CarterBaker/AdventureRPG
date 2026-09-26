@@ -1,0 +1,104 @@
+{
+  "items": [
+    {
+      "name": "ironHelm",
+      "display_name": "Iron Helm",
+      "mesh": "items/armor/IronHelm",
+      "category": "armor",
+      "weight": 2.5,
+      "equip": "head",
+      "stats": {
+        "armor": 4
+      },
+      "description": "A plain helm of hammered iron."
+    },
+    {
+      "name": "ironBreastplate",
+      "display_name": "Iron Breastplate",
+      "mesh": "items/armor/IronBreastplate",
+      "category": "armor",
+      "weight": 9.0,
+      "equip": "chest",
+      "stats": {
+        "armor": 10,
+        "constitution": 1
+      },
+      "description": "Heavy plate for the chest and back."
+    },
+    {
+      "name": "ironPauldron",
+      "display_name": "Iron Pauldron",
+      "mesh": "items/armor/IronPauldron",
+      "category": "armor",
+      "weight": 1.5,
+      "equip": "shoulder",
+      "stats": {
+        "armor": 2
+      },
+      "description": "Fits either shoulder."
+    },
+    {
+      "name": "leatherBracer",
+      "display_name": "Leather Bracer",
+      "mesh": "items/armor/LeatherBracer",
+      "category": "armor",
+      "weight": 0.4,
+      "equip": "arm",
+      "stats": {
+        "armor": 1,
+        "dexterity": 1
+      },
+      "description": "Laced hide for the forearm."
+    },
+    {
+      "name": "ironGauntlet",
+      "display_name": "Iron Gauntlet",
+      "mesh": "items/armor/IronGauntlet",
+      "category": "armor",
+      "weight": 0.9,
+      "equip": "glove",
+      "stats": {
+        "armor": 2,
+        "strength": 1
+      },
+      "description": "Fits either hand."
+    },
+    {
+      "name": "ironGreave",
+      "display_name": "Iron Greave",
+      "mesh": "items/armor/IronGreave",
+      "category": "armor",
+      "weight": 2.2,
+      "equip": "leg",
+      "stats": {
+        "armor": 3
+      },
+      "description": "Guards one leg from hip to ankle."
+    },
+    {
+      "name": "leatherBoot",
+      "display_name": "Leather Boot",
+      "mesh": "items/armor/LeatherBoot",
+      "category": "armor",
+      "weight": 0.8,
+      "equip": "foot",
+      "stats": {
+        "armor": 1,
+        "dexterity": 1
+      },
+      "description": "Fits either foot."
+    },
+    {
+      "name": "leatherBelt",
+      "display_name": "Leather Belt",
+      "mesh": "items/armor/LeatherBelt",
+      "category": "armor",
+      "weight": 0.4,
+      "equip": "belt",
+      "stats": {
+        "stamina": 5
+      },
+      "description": "A wide belt with a brass buckle."
+    }
+  ]
+}

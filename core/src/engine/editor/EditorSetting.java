@@ -53,6 +53,7 @@ public class EditorSetting {
     // Name Dialog \\
     public static final int NAME_INPUT_MAX_LENGTH = 32;
     public static final int TEXT_INPUT_MAX_LENGTH = 256;
+    public static final String TEXT_INPUT_EMPTY = "";
     public static final String DIALOG_TITLE_CREATE_LAYOUT = "New Layout";
     public static final String DIALOG_TITLE_NEW_ITEM = "New Item";
     public static final String DIALOG_TITLE_NEW_PART = "New Part";
@@ -63,6 +64,12 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_EDIT_PREFIX = "Edit ";
     public static final String DIALOG_TITLE_DELETE_PREFIX = "Type ";
     public static final String DIALOG_TITLE_DELETE_SUFFIX = " to delete it";
+    public static final String DIALOG_TITLE_GIVE_PLAYER = "Give Player - item name";
+
+    // Console Give
+    public static final String CONSOLE_GIVE_PACKED = "Gave %s to the player of window %d";
+    public static final String CONSOLE_GIVE_NO_ROOM = "The player of window %d has no room for %s";
+    public static final String CONSOLE_GIVE_NO_PLAYER = "No player is in the world to give %s to";
 
     // Tabs \\
     public static final String TAB_TITLE_CONSOLE = "Console";

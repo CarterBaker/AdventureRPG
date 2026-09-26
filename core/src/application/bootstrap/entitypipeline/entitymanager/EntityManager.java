@@ -21,8 +21,9 @@ public class EntityManager extends ManagerPackage {
      * Handles on-demand template loading and provides the spawnEntity() factory
      * for creating runtime EntityInstances from template handles. rerollEntity()
      * rolls an existing instance again in place — a new random chunk, size,
-     * weight, and the template's default appearance — for anything that holds
-     * the instance by reference and cannot swap in a new one.
+     * weight, base statistics, an empty inventory, and the template's default
+     * appearance — for anything that holds the instance by reference and
+     * cannot swap in a new one.
      */
 
     // Internal
@@ -123,6 +124,9 @@ public class EntityManager extends ManagerPackage {
         entityInstance.setLocation(new Vector3(), randomChunk);
         entityInstance.setSize(entityData.getRandomSize());
         entityInstance.setWeight(entityData.getRandomWeight());
+
+        entityInstance.getStatisticsHandle().resetBaseStats();
+        entityInstance.getInventoryHandle().clear();
 
         if (entityInstance.hasAppearance())
             entityInstance.getAppearanceHandle().resetToDefaults();

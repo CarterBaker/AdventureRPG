@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "name": "leatherSatchel",
+      "display_name": "Leather Satchel",
+      "mesh": "items/containers/LeatherSatchel",
+      "category": "container",
+      "weight": 1.2,
+      "equip": "backpack",
+      "container": {
+        "x": 10,
+        "y": 8,
+        "z": 7
+      },
+      "description": "A small pack for a few things."
+    },
+    {
+      "name": "travelersPack",
+      "display_name": "Traveler's Pack",
+      "mesh": "items/containers/TravelersPack",
+      "category": "container",
+      "weight": 2.4,
+      "equip": "backpack",
+      "container": {
+        "x": 16,
+        "y": 12,
+        "z": 9
+      },
+      "description": "Room enough for a long road."
+    },
+    {
+      "name": "oakChest",
+      "display_name": "Oak Chest",
+      "mesh": "items/containers/OakChest",
+      "category": "container",
+      "weight": 15.0,
+      "two_handed": true,
+      "container": {
+        "x": 18,
+        "y": 12,
+        "z": 14
+      },
+      "description": "Set it down to use it."
+    },
+    {
+      "name": "coinPouch",
+      "display_name": "Coin Pouch",
+      "mesh": "items/containers/CoinPouch",
+      "category": "container",
+      "weight": 0.2,
+      "container": {
+        "x": 4,
+        "y": 4,
+        "z": 4
+      },
+      "description": "Holds rings and trinkets."
+    }
+  ]
+}

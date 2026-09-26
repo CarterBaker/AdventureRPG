@@ -1,6 +1,7 @@
 package application.runtime;
 
 import application.runtime.input.InputSystem;
+import application.runtime.inventory.InventoryRenderSystem;
 import application.runtime.lighting.SkySystem;
 import application.runtime.menu.MainMenuSystem;
 import application.runtime.menu.MenuSystem;
@@ -38,6 +39,7 @@ public class RuntimeContext extends ContextPackage {
     private PlayerRenderSystem playerRenderSystem;
     private WeatherSystem weatherSystem;
     private PrecipitationSystem precipitationSystem;
+    private InventoryRenderSystem inventoryRenderSystem;
 
     // Internal \\
 
@@ -57,5 +59,6 @@ public class RuntimeContext extends ContextPackage {
         this.playerRenderSystem = create(PlayerRenderSystem.class);
         this.weatherSystem = create(WeatherSystem.class);
         this.precipitationSystem = create(PrecipitationSystem.class);
+        this.inventoryRenderSystem = create(InventoryRenderSystem.class);
     }
 }

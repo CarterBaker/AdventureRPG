@@ -1,0 +1,4 @@
+{
+    "vert": "items/inventory/InventoryShellShader.vsh",
+    "frag": "items/inventory/InventoryShellShader.fsh"
+}

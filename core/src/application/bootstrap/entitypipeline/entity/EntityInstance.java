@@ -7,8 +7,10 @@ import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.entitypipeline.util.EntityInputHandle;
+import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -21,7 +23,9 @@ public class EntityInstance extends InstancePackage {
      * Weight also drives the body build of an entity with an appearance, so
      * setWeight() is the one path that keeps the two in step. updateAnimation()
      * is the one path that feeds the entity's movement and facing into its
-     * animation tree as parameters and advances it a frame.
+     * animation tree as parameters and advances it a frame. getStat() is the
+     * one place an item statistic is totalled — the entity's own base value
+     * plus whatever everything it wears and holds adds.
      */
 
     // Internal
@@ -122,6 +126,17 @@ public class EntityInstance extends InstancePackage {
         animationStateHandle.setParameter(AnimationParameter.LOOK_PITCH, entityStateHandle.getLookPitch());
         animationStateHandle.setParameter(AnimationParameter.LOOK_YAW, entityStateHandle.getLookYaw());
         animationStateHandle.update(entityStateHandle.getMovementState(), deltaTime);
+    }
+
+    // Statistics \\
+
+    public float getStat(ItemStat itemStat) {
+        return statisticsHandle.getBaseStat(itemStat) + inventoryHandle.getStatBonus(itemStat);
+    }
+
+    public float getCarryCapacity() {
+        return EngineSetting.DEFAULT_CARRY_CAPACITY
+                + getStat(ItemStat.STRENGTH) * EngineSetting.CARRY_CAPACITY_PER_STRENGTH;
     }
 
     // Accessible \\

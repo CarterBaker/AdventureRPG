@@ -1,0 +1,56 @@
+{
+  "items": [
+    {
+      "name": "ironSword",
+      "display_name": "Iron Sword",
+      "mesh": "items/weapons/IronSword",
+      "category": "weapon",
+      "weight": 2.8,
+      "equip": "weapon",
+      "stats": {
+        "damage": 8,
+        "strength": 1
+      },
+      "description": "A dependable arming sword."
+    },
+    {
+      "name": "ironDagger",
+      "display_name": "Iron Dagger",
+      "mesh": "items/weapons/IronDagger",
+      "category": "weapon",
+      "weight": 0.6,
+      "equip": "weapon",
+      "stats": {
+        "damage": 4,
+        "dexterity": 2
+      },
+      "description": "Quick and easy to hide."
+    },
+    {
+      "name": "battleAxe",
+      "display_name": "Battle Axe",
+      "mesh": "items/weapons/BattleAxe",
+      "category": "weapon",
+      "weight": 5.5,
+      "equip": "weapon",
+      "two_handed": true,
+      "stats": {
+        "damage": 14,
+        "strength": 2
+      },
+      "description": "Takes both hands to swing."
+    },
+    {
+      "name": "oakShield",
+      "display_name": "Oak Shield",
+      "mesh": "items/weapons/OakShield",
+      "category": "armor",
+      "weight": 3.5,
+      "equip": "shield",
+      "stats": {
+        "armor": 5
+      },
+      "description": "Oak boards bound in iron."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "name": "oldKey",
+      "display_name": "Old Key",
+      "mesh": "items/misc/OldKey",
+      "category": "misc",
+      "weight": 0.1,
+      "description": "It must open something."
+    }
+  ]
+}

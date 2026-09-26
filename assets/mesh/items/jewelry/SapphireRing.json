@@ -1,0 +1,22 @@
+{
+  "vao": "util/vao/ItemVAO",
+  "subvoxels": {
+    "resolution": 16,
+    "parts": [
+      {
+        "name": "Band",
+        "texture": "items/standard/Silver",
+        "cubes": [
+          [7,0,7]
+        ]
+      },
+      {
+        "name": "Stone",
+        "texture": "items/standard/Sapphire",
+        "cubes": [
+          [7,1,7]
+        ]
+      }
+    ]
+  }
+}

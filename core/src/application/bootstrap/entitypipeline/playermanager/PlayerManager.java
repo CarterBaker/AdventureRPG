@@ -12,6 +12,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
+import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -24,6 +25,7 @@ import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntSet;
 
 public class PlayerManager extends ManagerPackage {
 
@@ -96,7 +98,11 @@ public class PlayerManager extends ManagerPackage {
      * panels. The preview faces the body by strafing toward the preview
      * direction, so rotateCharacterPreview() turns it smoothly on the spot.
      * endCharacterPreview() hands the camera back looking the way the
-     * character faces.
+     * character faces. frameCharacterPreview() places the previewed
+     * character on an exact spot of the screen instead — its middle on a
+     * point in normalized device coordinates, its height a share of the
+     * screen's — so a menu can show it through a window in a panel; the
+     * framing lasts until the preview ends.
      */
 
     // Internal
@@ -132,6 +138,10 @@ public class PlayerManager extends ManagerPackage {
     private Int2BooleanOpenHashMap windowID2CharacterPreview;
     private Int2FloatOpenHashMap windowID2CharacterPreviewYaw;
 
+    // Per-window preview framing — x, y: the screen point in NDC the character centres on;
+    // z: the share of the screen height the character fills
+    private Int2ObjectOpenHashMap<Vector3> windowID2PreviewFraming;
+
     // Scratch
     private Vector3 cameraPosition;
     private Vector3 cameraOffset;
@@ -162,6 +172,7 @@ public class PlayerManager extends ManagerPackage {
 
         this.windowID2CharacterPreview = new Int2BooleanOpenHashMap();
         this.windowID2CharacterPreviewYaw = new Int2FloatOpenHashMap();
+        this.windowID2PreviewFraming = new Int2ObjectOpenHashMap<>();
 
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
@@ -343,7 +354,24 @@ public class PlayerManager extends ManagerPackage {
             return;
 
         windowID2CharacterPreview.put(windowID, false);
+        windowID2PreviewFraming.remove(windowID);
         windowID2Camera.get(windowID).setDirection(resolvePreviewFacing(windowID));
+    }
+
+    public void frameCharacterPreview(int windowID, float centerX, float centerY, float heightShare) {
+
+        Vector3 framing = windowID2PreviewFraming.get(windowID);
+
+        if (framing == null) {
+            framing = new Vector3();
+            windowID2PreviewFraming.put(windowID, framing);
+        }
+
+        framing.set(centerX, centerY, heightShare);
+    }
+
+    public boolean isCharacterPreview(int windowID) {
+        return windowID2CharacterPreview.get(windowID);
     }
 
     public void rotateCharacterPreview(int windowID, float degrees) {
@@ -374,6 +402,14 @@ public class PlayerManager extends ManagerPackage {
         movementManager.face(player);
         player.updateAnimation(internal.getDeltaTime());
 
+        Vector3 framing = windowID2PreviewFraming.get(windowID);
+
+        if (framing != null) {
+            placeFramedPreviewCamera(player, camera, facing, framing);
+            internalBufferSystem.updatePlayerPosition(player.getWorldPositionStruct());
+            return;
+        }
+
         Vector3 size = player.getSize();
         float lateral = EngineSetting.CHARACTER_PREVIEW_LATERAL_OFFSET;
         float distance = EngineSetting.CHARACTER_PREVIEW_DISTANCE;
@@ -392,6 +428,38 @@ public class PlayerManager extends ManagerPackage {
         camera.setDirection(cameraOffset);
 
         internalBufferSystem.updatePlayerPosition(player.getWorldPositionStruct());
+    }
+
+    /*
+     * The camera sits along the facing at the distance that makes the body
+     * fill the framed height, and aims past the body's middle by exactly the
+     * lateral and vertical offsets that land that middle on the framed
+     * screen point. Its right axis along -facing is (facing.z, 0, -facing.x).
+     */
+    private void placeFramedPreviewCamera(
+            EntityInstance player,
+            CameraInstance camera,
+            Vector3 facing,
+            Vector3 framing) {
+
+        Vector3 size = player.getSize();
+        float tanHalfFov = (float) Math.tan(Math.toRadians(camera.getFOV()) * 0.5);
+        float aspect = camera.getViewport().x / Math.max(1f, camera.getViewport().y);
+        float distance = size.y / (framing.z * 2f * tanHalfFov);
+        float lateral = framing.x * distance * tanHalfFov * aspect;
+        float vertical = framing.y * distance * tanHalfFov;
+
+        cameraPosition.set(player.getWorldPositionStruct().getPosition());
+        cameraPosition.add(
+                size.x * 0.5f - facing.z * lateral,
+                size.y * EngineSetting.CHARACTER_PREVIEW_CENTER_HEIGHT - vertical,
+                size.z * 0.5f + facing.x * lateral);
+        cameraPosition.add(facing.x * distance, 0f, facing.z * distance);
+
+        cameraOffset.set(-facing.x, 0f, -facing.z);
+
+        camera.setPosition(cameraPosition);
+        camera.setDirection(cameraOffset);
     }
 
     // Placement \\
@@ -420,6 +488,19 @@ public class PlayerManager extends ManagerPackage {
         resolveEyePosition(player);
 
         return placementManager.placeSubBlock(player, eyePosition, camera.getDirection(), blockID);
+    }
+
+    public WorldItemInstance getTargetItemForWindow(int windowID) {
+
+        EntityInstance player = windowID2Player.get(windowID);
+        CameraInstance camera = windowID2Camera.get(windowID);
+
+        if (player == null || camera == null)
+            return null;
+
+        resolveEyePosition(player);
+
+        return placementManager.findTargetItem(player, eyePosition, camera.getDirection());
     }
 
     // Zoom \\
@@ -547,6 +628,14 @@ public class PlayerManager extends ManagerPackage {
 
     public boolean hasPlayerForWindow(int windowID) {
         return windowID2Player.containsKey(windowID);
+    }
+
+    public IntSet getPlayerWindowIDs() {
+        return windowID2Player.keySet();
+    }
+
+    public boolean isFreeCameraForWindow(int windowID) {
+        return windowID2FreeCamera.get(windowID);
     }
 
     public CameraInstance getCameraForWindow(int windowID) {

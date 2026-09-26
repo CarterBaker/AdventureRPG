@@ -32,6 +32,10 @@ public final class KeyBindings {
     // Menu
     public static Binding PAUSE = new Binding(InputCode.key(Keys.ESCAPE));
 
+    // Inventory
+    public static Binding INVENTORY = new Binding(InputCode.key(Keys.I));
+    public static Binding ROTATE_ITEM = new Binding(InputCode.key(Keys.R));
+
     // Screen Capture
     public static Binding SCREENSHOT = new Binding(InputCode.key(Keys.F12));
     public static Binding RECORD_VIDEO = new Binding(InputCode.key(Keys.F9));

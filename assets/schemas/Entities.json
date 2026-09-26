@@ -89,6 +89,80 @@
           "default": ""
         },
         {
+          "key": "equipment",
+          "type": "array",
+          "element": {
+            "type": "object",
+            "fields": [
+              {
+                "key": "slot",
+                "type": "enum",
+                "required": true,
+                "values": [
+                  "backpack",
+                  "head",
+                  "cloak",
+                  "chest",
+                  "shirt",
+                  "belt",
+                  "pants",
+                  "right_shoulder",
+                  "left_shoulder",
+                  "right_arm",
+                  "left_arm",
+                  "right_glove",
+                  "left_glove",
+                  "right_leg",
+                  "left_leg",
+                  "right_foot",
+                  "left_foot",
+                  "main_hand",
+                  "off_hand"
+                ],
+                "default": "head"
+              },
+              {
+                "key": "bone",
+                "type": "string",
+                "required": true,
+                "default": ""
+              },
+              {
+                "key": "position",
+                "type": "array",
+                "length": 3,
+                "element": {
+                  "type": "float",
+                  "default": 0.0
+                }
+              },
+              {
+                "key": "rotation",
+                "type": "array",
+                "length": 3,
+                "element": {
+                  "type": "float",
+                  "default": 0.0
+                }
+              },
+              {
+                "key": "size",
+                "type": "array",
+                "length": 3,
+                "element": {
+                  "type": "float",
+                  "default": 1.0
+                }
+              },
+              {
+                "key": "hold",
+                "type": "boolean",
+                "default": false
+              }
+            ]
+          }
+        },
+        {
           "key": "appearance",
           "type": "object",
           "fields": [

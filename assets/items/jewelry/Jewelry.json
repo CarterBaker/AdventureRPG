@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "name": "goldRing",
+      "display_name": "Gold Ring",
+      "mesh": "items/jewelry/GoldRing",
+      "category": "jewelry",
+      "weight": 0.05,
+      "equip": "ring",
+      "stats": {
+        "charisma": 2
+      }
+    },
+    {
+      "name": "silverRing",
+      "display_name": "Silver Ring",
+      "mesh": "items/jewelry/SilverRing",
+      "category": "jewelry",
+      "weight": 0.05,
+      "equip": "ring",
+      "stats": {
+        "wisdom": 2
+      }
+    },
+    {
+      "name": "rubyRing",
+      "display_name": "Ruby Ring",
+      "mesh": "items/jewelry/RubyRing",
+      "category": "jewelry",
+      "weight": 0.05,
+      "equip": "ring",
+      "stats": {
+        "strength": 2,
+        "health": 10
+      }
+    },
+    {
+      "name": "sapphireRing",
+      "display_name": "Sapphire Ring",
+      "mesh": "items/jewelry/SapphireRing",
+      "category": "jewelry",
+      "weight": 0.05,
+      "equip": "ring",
+      "stats": {
+        "intelligence": 3
+      }
+    }
+  ]
+}

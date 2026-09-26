@@ -60,6 +60,8 @@ public class Settings {
 
     // Bindings — Game Actions
     public int[] bindSecondary = { InputCode.storedMouseCode(Buttons.RIGHT) };
+    public int[] bindInventory = { Keys.I };
+    public int[] bindRotateItem = { Keys.R };
 
     // Bindings — Screen Capture
     public int[] bindScreenshot = { Keys.F12 };

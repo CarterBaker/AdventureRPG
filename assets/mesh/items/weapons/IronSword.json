@@ -1,0 +1,29 @@
+{
+  "vao": "util/vao/ItemVAO",
+  "subvoxels": {
+    "resolution": 16,
+    "parts": [
+      {
+        "name": "Blade",
+        "texture": "items/standard/Iron",
+        "cubes": [
+          [7,0,5], [7,0,6], [7,0,7], [7,0,8], [7,0,9], [7,0,10], [7,0,11], [7,0,12], [7,0,13], [7,0,14]
+        ]
+      },
+      {
+        "name": "Guard",
+        "texture": "items/standard/Gold",
+        "cubes": [
+          [5,0,4], [6,0,4], [7,0,4], [8,0,4], [9,0,4]
+        ]
+      },
+      {
+        "name": "Grip",
+        "texture": "items/standard/Leather",
+        "cubes": [
+          [7,0,1], [7,0,2], [7,0,3]
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+{
+    "vert": "items/equipment/EquipmentItemShader.vsh",
+    "frag": "items/equipment/EquipmentItemShader.fsh"
+}

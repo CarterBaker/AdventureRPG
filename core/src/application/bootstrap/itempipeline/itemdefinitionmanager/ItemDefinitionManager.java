@@ -5,18 +5,22 @@ import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ItemDefinitionManager extends ManagerPackage {
 
     /*
      * Owns the item definition palette for the engine lifetime. Detects and
      * rejects ID collisions on registration. Supports on-demand loading via
-     * InternalLoader for items not yet in the palette at runtime.
+     * InternalLoader for items not yet in the palette at runtime. findItemHandle()
+     * resolves what a person types — a full item name, or a local or display
+     * name that only one item carries — ignoring case.
      */
 
     // Palette
     private Object2IntOpenHashMap<String> itemName2ItemID;
     private Int2ObjectOpenHashMap<ItemDefinitionHandle> itemID2ItemHandle;
+    private ObjectArrayList<ItemDefinitionHandle> itemHandles;
 
     // Base \\
 
@@ -26,6 +30,7 @@ public class ItemDefinitionManager extends ManagerPackage {
         // Palette
         this.itemName2ItemID = new Object2IntOpenHashMap<>();
         this.itemID2ItemHandle = new Int2ObjectOpenHashMap<>();
+        this.itemHandles = new ObjectArrayList<>();
         create(ItemDefinitionLoader.class);
     }
 
@@ -46,6 +51,7 @@ public class ItemDefinitionManager extends ManagerPackage {
 
         itemName2ItemID.put(item.getItemName(), id);
         itemID2ItemHandle.put(id, item);
+        itemHandles.add(item);
     }
 
     // Accessible \\
@@ -77,6 +83,33 @@ public class ItemDefinitionManager extends ManagerPackage {
 
     public ItemDefinitionHandle getItemHandleFromItemName(String itemName) {
         return getItemHandleFromItemID(getItemIDFromItemName(itemName));
+    }
+
+    public ItemDefinitionHandle findItemHandle(String query) {
+
+        ItemDefinitionHandle match = null;
+
+        for (int i = 0; i < itemHandles.size(); i++) {
+
+            ItemDefinitionHandle item = itemHandles.get(i);
+
+            if (item.getItemName().equalsIgnoreCase(query))
+                return item;
+
+            if (!item.getLocalName().equalsIgnoreCase(query) && !item.getDisplayName().equalsIgnoreCase(query))
+                continue;
+
+            if (match != null && match != item)
+                return null;
+
+            match = item;
+        }
+
+        return match;
+    }
+
+    public ObjectArrayList<ItemDefinitionHandle> getItemHandles() {
+        return itemHandles;
     }
 
     public void request(String itemName) {

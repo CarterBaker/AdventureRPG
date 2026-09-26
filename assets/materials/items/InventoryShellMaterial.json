@@ -1,0 +1,8 @@
+{
+    "shader": "items/inventory/InventoryShellShader",
+    "uniforms": {
+        "u_color": { "value": [0.23, 0.15, 0.09, 1.0] },
+        "u_lineColor": { "value": [0.4, 0.27, 0.16, 1.0] },
+        "u_lineWidth": { "value": 0.05 }
+    }
+}

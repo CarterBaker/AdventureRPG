@@ -5,17 +5,25 @@ import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
+import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
+import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
 import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EntityRenderSystem extends SystemPackage {
 
@@ -55,10 +63,24 @@ public class EntityRenderSystem extends SystemPackage {
      * Runtime code never builds this matrix or that row, and never touches
      * SkinnedBufferManager or RenderManager's skinned entry points directly
      * — it only ever calls pushCharacter().
+     *
+     * 3. Worn equipment — every shown item in an equipment slot is drawn as
+     * a rigid item model at each of that slot's anchors: a worn item's shape
+     * stretched to fill the anchor's bind-pose box, a held item at its
+     * natural size gripped at the anchor, then carried by the anchor bone's
+     * skinning matrix and the character's model matrix, so gear follows the
+     * pose exactly like the skin it covers. Gear on the hidden head bone is
+     * hidden with it.
      */
 
     // Internal
     private RenderManager renderManager;
+    private MaterialManager materialManager;
+    private ItemModelManager itemModelManager;
+
+    // Equipment
+    private int equipmentMaterialID;
+    private Vector3 unitScale;
 
     // Scratch — reused every pushCharacter() call, never reallocated
     private Vector3 positionScratch;
@@ -68,6 +90,8 @@ public class EntityRenderSystem extends SystemPackage {
     private Matrix4 matrixScratchA;
     private Matrix4 matrixScratchB;
     private SkinnedAppearanceStruct appearanceScratch;
+    private Matrix4 anchorScratch;
+    private Matrix4 equipmentScratch;
 
     // Internal \\
 
@@ -82,11 +106,24 @@ public class EntityRenderSystem extends SystemPackage {
         this.matrixScratchA = new Matrix4();
         this.matrixScratchB = new Matrix4();
         this.appearanceScratch = new SkinnedAppearanceStruct();
+        this.anchorScratch = new Matrix4();
+        this.equipmentScratch = new Matrix4();
+
+        // Equipment
+        this.unitScale = new Vector3(1f, 1f, 1f);
     }
 
     @Override
     protected void get() {
         this.renderManager = get(RenderManager.class);
+        this.materialManager = get(MaterialManager.class);
+        this.itemModelManager = get(ItemModelManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        this.equipmentMaterialID = materialManager.getMaterialIDFromMaterialName(
+                EngineSetting.EQUIPMENT_ITEM_MATERIAL);
     }
 
     @Override
@@ -130,6 +167,7 @@ public class EntityRenderSystem extends SystemPackage {
 
         if (!entity.hasAppearance()) {
             pushCharacterPart(entityData.getCharacterMesh(), material, skinningMatrices, targetFbo, window);
+            pushEquipment(entity, hideHead, skinningMatrices, targetFbo, window);
             return;
         }
 
@@ -142,6 +180,8 @@ public class EntityRenderSystem extends SystemPackage {
 
         appearanceScratch.setTint(appearance.getHairColor());
         pushFeaturePart(appearance, FeatureSlot.HAIR, material, skinningMatrices, targetFbo, window);
+
+        pushEquipment(entity, hideHead, skinningMatrices, targetFbo, window);
     }
 
     private void pushFeaturePart(
@@ -178,6 +218,86 @@ public class EntityRenderSystem extends SystemPackage {
                 skinningMatrices,
                 targetFbo,
                 window);
+    }
+
+    // Equipment \\
+
+    private void pushEquipment(
+            EntityInstance entity,
+            boolean hideHead,
+            Matrix4[] skinningMatrices,
+            FboInstance targetFbo,
+            WindowInstance window) {
+
+        ObjectArrayList<EquipmentAnchorStruct> anchors = entity.getEntityData().getEquipmentAnchors();
+        InventoryHandle inventory = entity.getInventoryHandle();
+        int hiddenBone = hideHead && entity.hasAppearance()
+                ? entity.getEntityData().getAppearanceData().getHeadBoneIndex()
+                : EngineSetting.INDEX_NOT_FOUND;
+
+        for (int i = 0; i < anchors.size(); i++) {
+
+            EquipmentAnchorStruct anchor = anchors.get(i);
+
+            if (!inventory.isShown(anchor.getEquipmentSlot()) || anchor.getBoneIndex() == hiddenBone)
+                continue;
+
+            ItemDefinitionHandle item = inventory.getItem(anchor.getEquipmentSlot()).getItemDefinitionHandle();
+            ModelInstance model = itemModelManager.acquireModel(item.getMeshHandle(), equipmentMaterialID);
+
+            composeAnchorMatrix(anchor, item.getShape(), skinningMatrices[anchor.getBoneIndex()]);
+            model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, equipmentScratch);
+
+            renderManager.pushRenderCall(model, targetFbo, EngineSetting.EQUIPMENT_RENDER_DEPTH, window);
+        }
+    }
+
+    // model * skinning * T(anchor) * R(anchor) * S(anchor) * shape placement
+    private void composeAnchorMatrix(
+            EquipmentAnchorStruct anchor,
+            ItemShapeStruct shape,
+            Matrix4 skinningMatrix) {
+
+        RigMathUtility.composeLocal(
+                anchor.getPosition(), anchor.getRotation(), anchor.isHeld() ? unitScale : anchor.getSize(),
+                anchorScratch, matrixScratchA, matrixScratchB);
+
+        if (anchor.isHeld())
+            multiplyGripPlacement(anchorScratch, shape);
+        else
+            multiplyFitPlacement(anchorScratch, shape);
+
+        equipmentScratch
+                .set(modelMatrixScratch)
+                .multiply(skinningMatrix)
+                .multiply(anchorScratch);
+    }
+
+    // Moves the grip — the shape's near end, centred across it — onto the anchor, at natural size
+    private void multiplyGripPlacement(Matrix4 out, ItemShapeStruct shape) {
+
+        float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+
+        out.multiply(
+                1, 0, 0, -(shape.getOffsetX() + shape.getSizeX() * 0.5f) / resolution,
+                0, 1, 0, -(shape.getOffsetY() + shape.getSizeY() * 0.5f) / resolution,
+                0, 0, 1, -shape.getOffsetZ() / resolution,
+                0, 0, 0, 1);
+    }
+
+    // Maps the shape's bounds onto the unit cube centred on the anchor
+    private void multiplyFitPlacement(Matrix4 out, ItemShapeStruct shape) {
+
+        float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        float scaleX = resolution / shape.getSizeX();
+        float scaleY = resolution / shape.getSizeY();
+        float scaleZ = resolution / shape.getSizeZ();
+
+        out.multiply(
+                scaleX, 0, 0, -(shape.getOffsetX() + shape.getSizeX() * 0.5f) / shape.getSizeX(),
+                0, scaleY, 0, -(shape.getOffsetY() + shape.getSizeY() * 0.5f) / shape.getSizeY(),
+                0, 0, scaleZ, -(shape.getOffsetZ() + shape.getSizeZ() * 0.5f) / shape.getSizeZ(),
+                0, 0, 0, 1);
     }
 
     // Model Matrix \\

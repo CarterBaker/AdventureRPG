@@ -1,0 +1,38 @@
+{
+  "items": [
+    {
+      "name": "crimsonCloak",
+      "display_name": "Crimson Cloak",
+      "mesh": "items/clothing/CrimsonCloak",
+      "category": "clothing",
+      "weight": 1.2,
+      "equip": "cloak",
+      "stats": {
+        "charisma": 2,
+        "wisdom": 1
+      },
+      "description": "Dyed wool with a gold clasp."
+    },
+    {
+      "name": "linenShirt",
+      "display_name": "Linen Shirt",
+      "mesh": "items/clothing/LinenShirt",
+      "category": "clothing",
+      "weight": 0.3,
+      "equip": "shirt",
+      "stats": {
+        "charisma": 1
+      },
+      "description": "Worn under the chest armor."
+    },
+    {
+      "name": "linenPants",
+      "display_name": "Linen Pants",
+      "mesh": "items/clothing/LinenPants",
+      "category": "clothing",
+      "weight": 0.5,
+      "equip": "pants",
+      "description": "Worn under the leg armor."
+    }
+  ]
+}

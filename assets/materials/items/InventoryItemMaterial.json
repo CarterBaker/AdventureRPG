@@ -1,0 +1,12 @@
+{
+    "shader": "items/inventory/InventoryItemShader",
+    "uniforms": {
+        "u_textureArray": {
+            "type": "SAMPLE_IMAGE_2D_ARRAY",
+            "value": "items/standard"
+        },
+        "u_lightDirection": { "value": [0.35, -0.6, -0.7] },
+        "u_ambient": { "value": 0.42 },
+        "u_tint": { "value": [1.0, 1.0, 1.0, 0.0] }
+    }
+}

@@ -1,6 +1,7 @@
 package application.runtime;
 
 import engine.graphics.color.Color;
+import engine.util.mathematics.vectors.Vector4;
 
 public class RuntimeSetting {
 
@@ -8,8 +9,8 @@ public class RuntimeSetting {
      * Compile-time constants for the runtime layer. FBO target keys mirror
      * EngineSetting so runtime code has a single import. Composite layers
      * control blit order — lower renders first, higher composites on top.
-     * The character creator's and settings menu's menus, text, ranges, and
-     * colors live here too.
+     * The character creator's, settings menu's, and inventory's menus, text,
+     * ranges, and colors live here too.
      */
 
     // Full Screen Passes
@@ -27,6 +28,7 @@ public class RuntimeSetting {
     public static final String FBO_UI = "UIScene";
     public static final String FBO_WEATHER = "WeatherScene";
     public static final String FBO_PRECIPITATION = "PrecipitationScene";
+    public static final String FBO_INVENTORY = "InventoryScene";
 
     // Composite Layers
     public static final int LAYER_SKY = -10;
@@ -34,6 +36,7 @@ public class RuntimeSetting {
     public static final int LAYER_WORLD = 0;
     public static final int LAYER_PRECIPITATION = 5;
     public static final int LAYER_UI = 10;
+    public static final int LAYER_INVENTORY = 15;
 
     // Pass Uniforms
     public static final String UNIFORM_SCENE_DEPTH = "u_sceneDepth";
@@ -225,6 +228,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_BINDING_WALK = "Walk";
     public static final String SETTINGS_BINDING_SPRINT = "Sprint";
     public static final String SETTINGS_BINDING_USE = "Use";
+    public static final String SETTINGS_BINDING_INVENTORY = "Inventory";
+    public static final String SETTINGS_BINDING_ROTATE_ITEM = "Rotate Item";
     public static final String SETTINGS_BINDING_SCREENSHOT = "Screenshot";
     public static final String SETTINGS_BINDING_RECORD_VIDEO = "Record Video";
     public static final String SETTINGS_BINDING_CAPTURE_PROMPT = "Press a key";
@@ -234,4 +239,124 @@ public class RuntimeSetting {
     public static final Color SETTINGS_TAB_ACTIVE_COLOR = new Color(1f, 1f, 1f, 1f);
     public static final Color SETTINGS_TAB_ACTIVE_LABEL_COLOR = new Color(0.463f, 0.086f, 0.071f, 1f);
     public static final Color SETTINGS_BINDING_CAPTURE_COLOR = new Color(1f, 0.84f, 0.42f, 1f);
+
+    // Inventory Menus
+    public static final String MENU_INVENTORY_EQUIPMENT = "Inventory/Equipment";
+    public static final String MENU_INVENTORY_CONTAINER = "Inventory/Container";
+    public static final String MENU_INVENTORY_CONTAINER_UPPER = "Inventory/ContainerUpper";
+    public static final String MENU_INVENTORY_CONTAINER_LOWER = "Inventory/ContainerLower";
+    public static final String MENU_INVENTORY_EQUIPMENT_SLOT = "Inventory/equipment_slot";
+    public static final String MENU_INVENTORY_RING_SLOT = "Inventory/ring_slot";
+    public static final String MENU_INVENTORY_LIST_HEADER = "Inventory/list_header";
+    public static final String MENU_INVENTORY_LIST_ROW = "Inventory/list_row";
+    public static final String MENU_INVENTORY_LIST_EMPTY = "Inventory/list_empty";
+    public static final String MENU_INVENTORY_STAT_HEADER = "Inventory/stat_header";
+    public static final String MENU_INVENTORY_STAT_ROW = "Inventory/stat_row";
+    public static final String MENU_INVENTORY_DETAIL_TITLE = "Inventory/detail_title";
+    public static final String MENU_INVENTORY_DETAIL_LINE = "Inventory/detail_line";
+
+    // Inventory Entry Points — Equipment
+    public static final int ENTRY_INVENTORY_BACKPACK_SLOT = 0;
+    public static final int ENTRY_INVENTORY_SLOT_COLUMN_A = 1;
+    public static final int ENTRY_INVENTORY_SLOT_COLUMN_B = 2;
+    public static final int ENTRY_INVENTORY_RING_COLUMN = 3;
+    public static final int ENTRY_INVENTORY_STATS = 4;
+    public static final int ENTRY_INVENTORY_DETAILS = 5;
+    public static final int ENTRY_INVENTORY_PREVIEW = 6;
+    public static final int ENTRY_INVENTORY_CLOSE_HINT = 7;
+
+    // Inventory Entry Points — Container
+    public static final int ENTRY_CONTAINER_TITLE = 0;
+    public static final int ENTRY_CONTAINER_WEIGHT = 1;
+    public static final int ENTRY_CONTAINER_LIST = 2;
+    public static final int ENTRY_CONTAINER_VIEW = 3;
+    public static final int ENTRY_CONTAINER_HINT = 4;
+
+    // Inventory Elements
+    public static final String ELEMENT_INVENTORY_SLOT_LABEL = "slot_label";
+    public static final String ELEMENT_INVENTORY_SLOT_EYE = "slot_eye";
+    public static final String ELEMENT_INVENTORY_EYE_OPEN = "eye_open";
+    public static final String ELEMENT_INVENTORY_EYE_CLOSED = "eye_closed";
+    public static final String ELEMENT_INVENTORY_ROW_NAME = "row_name";
+    public static final String ELEMENT_INVENTORY_ROW_WEIGHT = "row_weight";
+    public static final String ELEMENT_INVENTORY_STAT_NAME = "stat_name";
+    public static final String ELEMENT_INVENTORY_STAT_VALUE = "stat_value";
+
+    // Inventory Slot Titles
+    public static final String INVENTORY_SLOT_BACKPACK = "Pack";
+    public static final String INVENTORY_SLOT_HEAD = "Head";
+    public static final String INVENTORY_SLOT_CLOAK = "Cloak";
+    public static final String INVENTORY_SLOT_CHEST = "Chest";
+    public static final String INVENTORY_SLOT_SHIRT = "Shirt";
+    public static final String INVENTORY_SLOT_BELT = "Belt";
+    public static final String INVENTORY_SLOT_PANTS = "Pants";
+    public static final String INVENTORY_SLOT_RIGHT_SHOULDER = "R. Shoulder";
+    public static final String INVENTORY_SLOT_LEFT_SHOULDER = "L. Shoulder";
+    public static final String INVENTORY_SLOT_RIGHT_ARM = "R. Arm";
+    public static final String INVENTORY_SLOT_LEFT_ARM = "L. Arm";
+    public static final String INVENTORY_SLOT_RIGHT_GLOVE = "R. Glove";
+    public static final String INVENTORY_SLOT_LEFT_GLOVE = "L. Glove";
+    public static final String INVENTORY_SLOT_RIGHT_LEG = "R. Leg";
+    public static final String INVENTORY_SLOT_LEFT_LEG = "L. Leg";
+    public static final String INVENTORY_SLOT_RIGHT_FOOT = "R. Boot";
+    public static final String INVENTORY_SLOT_LEFT_FOOT = "L. Boot";
+    public static final String INVENTORY_SLOT_MAIN_HAND = "Main Hand";
+    public static final String INVENTORY_SLOT_OFF_HAND = "Off Hand";
+    public static final String INVENTORY_SLOT_RING = "Ring";
+
+    // Inventory Text
+    public static final String INVENTORY_ARGUMENT_SEPARATOR = ":";
+    public static final String INVENTORY_FORMAT_WEIGHT = "%.1f kg";
+    public static final String INVENTORY_FORMAT_HOLDING = "Holding %.1f kg";
+    public static final String INVENTORY_FORMAT_LOAD = "%.1f / %.0f kg";
+    public static final String INVENTORY_FORMAT_STAT = "%.0f";
+    public static final String INVENTORY_FORMAT_STAT_BONUS = "%.0f (%+.0f)";
+    public static final String INVENTORY_FORMAT_ITEM_STAT = "%s %+.0f";
+    public static final String INVENTORY_FORMAT_ITEM_KIND = "%s  -  %s";
+    public static final String INVENTORY_FORMAT_ITEM_SPACE = "Holds %d x %d x %d";
+    public static final String INVENTORY_FORMAT_ITEM_SIZE = "Size %d x %d x %d";
+    public static final String INVENTORY_FORMAT_ITEM_WEIGHT = "Weight %.1f kg";
+    public static final String INVENTORY_TEXT_NONE = "";
+    public static final String INVENTORY_FORMAT_CLOSE_HINT = "%s or %s to close";
+    public static final String INVENTORY_FORMAT_VIEW_HINT = "Drag items to move them  -  %s turns a held item"
+            + "  -  drag empty space to look around";
+    public static final String INVENTORY_TEXT_TWO_HANDED = "Two-handed";
+    public static final String INVENTORY_TEXT_NO_SELECTION = "Point at an item to see it.";
+    public static final String INVENTORY_STAT_SECTION_ATTRIBUTES = "Attributes";
+    public static final String INVENTORY_STAT_SECTION_COMBAT = "Combat";
+    public static final String INVENTORY_STAT_SECTION_LOAD = "Load";
+    public static final String INVENTORY_STAT_CARRIED = "Carried";
+    public static final String INVENTORY_STAT_ITEMS_WORN = "Items Worn";
+
+    // Inventory View
+    public static final float INVENTORY_VIEW_DEFAULT_YAW_DEGREES = -30f;
+    public static final float INVENTORY_VIEW_PITCH_DEGREES = 36f;
+    public static final float INVENTORY_VIEW_FILL = 0.84f;
+    public static final float INVENTORY_VIEW_TURN_DEGREES_PER_PIXEL = 0.5f;
+    public static final float INVENTORY_ICON_FILL = 0.74f;
+    public static final float INVENTORY_ICON_PITCH_DEGREES = 22f;
+    public static final float INVENTORY_ICON_YAW_DEGREES = -34f;
+    public static final float INVENTORY_HELD_ICON_SIZE = 72f;
+    public static final float INVENTORY_DEPTH_RANGE = 8192f;
+    public static final float INVENTORY_GRID_STEP = 4f;
+    public static final float INVENTORY_PREVIEW_FILL = 0.82f;
+    public static final float INVENTORY_ROTATE_DEGREES_PER_PIXEL = 0.6f;
+    public static final int INVENTORY_DRAW_DEPTH = 0;
+
+    // Inventory Render
+    public static final String MATERIAL_INVENTORY_ITEM = "items/InventoryItemMaterial";
+    public static final String MATERIAL_INVENTORY_SHELL = "items/InventoryShellMaterial";
+    public static final String MESH_INVENTORY_SHELL = "util/InventoryShellQuad";
+    public static final String UNIFORM_INVENTORY_PROJECTION = "u_projection";
+    public static final String UNIFORM_INVENTORY_MODEL = "u_model";
+    public static final String UNIFORM_INVENTORY_TINT = "u_tint";
+    public static final String UNIFORM_INVENTORY_CELLS = "u_cells";
+
+    // Inventory Colors
+    public static final Color INVENTORY_EYE_SHOWN_COLOR = new Color(1f, 1f, 1f, 1f);
+    public static final Color INVENTORY_EYE_HIDDEN_COLOR = new Color(1f, 1f, 1f, 0f);
+    public static final Vector4 INVENTORY_TINT_NONE = new Vector4(1f, 1f, 1f, 0f);
+    public static final Vector4 INVENTORY_TINT_HIDDEN = new Vector4(0.35f, 0.35f, 0.35f, 0.55f);
+    public static final Vector4 INVENTORY_TINT_VALID = new Vector4(0.45f, 1f, 0.5f, 0.45f);
+    public static final Vector4 INVENTORY_TINT_INVALID = new Vector4(1f, 0.35f, 0.3f, 0.55f);
 }

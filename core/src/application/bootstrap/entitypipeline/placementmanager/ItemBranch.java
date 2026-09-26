@@ -1,10 +1,13 @@
 package application.bootstrap.entitypipeline.placementmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
-import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
+import application.bootstrap.entitypipeline.inventory.InventoryHandle;
+import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
@@ -17,12 +20,16 @@ import engine.util.mathematics.vectors.Vector3;
 class ItemBranch extends BranchPackage {
 
     /*
-     * Handles world item placement for PlacementManager. Resolves the target
-     * block face, computes sub-voxel placement position, determines item
-     * orientation from camera direction, and delegates to WorldItemPlacementSystem.
-     * The face hit is the face of the sub-block the ray met, so an item set on
-     * a half-block slab rests on the slab rather than on the empty half above
-     * it, which stays in the same cell.
+     * Handles world item placement and pickup for PlacementManager. Placement
+     * sets down whatever the entity holds in its main hand: it resolves the
+     * target block face, computes sub-voxel placement position, determines
+     * item orientation from camera direction, and delegates to
+     * WorldItemPlacementSystem. The face hit is the face of the sub-block the
+     * ray met, so an item set on a half-block slab rests on the slab rather
+     * than on the empty half above it, which stays in the same cell. Pickup
+     * hands the world item's real item — a chest with everything in it — to
+     * the entity's inventory, and only takes it out of the world once the
+     * inventory has made room for it.
      */
 
     // Internal
@@ -57,7 +64,9 @@ class ItemBranch extends BranchPackage {
 
     boolean place(EntityInstance entity, Vector3 direction, BlockCastStruct castStruct) {
 
-        if (entity.getInventoryHandle().getBackpack().isEmpty())
+        InventoryHandle inventoryHandle = entity.getInventoryHandle();
+
+        if (!inventoryHandle.hasMainHand())
             return false;
 
         Direction3Vector hitFace = castStruct.getHitFace();
@@ -117,11 +126,29 @@ class ItemBranch extends BranchPackage {
                 ? resolveFaceSubVoxel(SubBlockUtility.getOctantZ(targetOctant), hitFace.z)
                 : castStruct.getHitSubZ());
 
-        ItemDefinitionHandle def = entity.getInventoryHandle().getBackpack().getItems().get(0);
-        int packedItem = def.getItemID();
         long packedPosition = Coordinate4Long.pack(subX, subY, subZ, rotation);
+        ItemInstance itemInstance = inventoryHandle.unequip(EquipmentSlot.MAIN_HAND);
 
-        worldItemPlacementSystem.placeItem(placeChunk, placeSubChunkY, packedPosition, packedItem, def);
+        worldItemPlacementSystem.placeItem(placeChunk, placeSubChunkY, packedPosition, itemInstance);
+
+        return true;
+    }
+
+    // Pick Up \\
+
+    boolean pickUp(EntityInstance entity, WorldItemInstance worldItemInstance) {
+
+        ChunkInstance chunk = worldStreamManager.getChunkInstance(worldItemInstance.getChunkCoordinate());
+
+        if (chunk == null)
+            return false;
+
+        ItemInstance itemInstance = worldItemPlacementSystem.resolveItemInstance(worldItemInstance);
+
+        if (!entity.getInventoryHandle().give(itemInstance))
+            return false;
+
+        worldItemPlacementSystem.removeItem(chunk, worldItemInstance);
 
         return true;
     }

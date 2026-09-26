@@ -1,0 +1,15 @@
+{
+  "vao": "util/vao/ItemVAO",
+  "subvoxels": {
+    "resolution": 16,
+    "parts": [
+      {
+        "name": "Key",
+        "texture": "items/standard/Iron",
+        "cubes": [
+          [6,0,5], [7,0,5], [8,0,5], [6,0,6], [7,0,6], [8,0,6], [7,0,7], [7,0,8], [7,0,9]
+        ]
+      }
+    ]
+  }
+}

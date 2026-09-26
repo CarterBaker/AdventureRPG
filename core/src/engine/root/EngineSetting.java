@@ -143,6 +143,7 @@ public class EngineSetting {
         public static final String MATERIAL_JSON_PATH = "materials";
         public static final String MENU_JSON_PATH = "menus";
         public static final String MESH_JSON_PATH = "mesh";
+        public static final String MESH_FILE_EXTENSION = "json";
         public static final String PASS_JSON_PATH = "processingpasses";
         public static final String RIG_JSON_PATH = "rigs";
         public static final String SEASON_JSON_PATH = "seasons";
@@ -294,6 +295,7 @@ public class EngineSetting {
         public static final float CAMERA_ZOOM_MIN = 0f;
         public static final float CAMERA_ZOOM_SCROLL_SPEED = 0.75f;
         public static final float CAMERA_ZOOM_SMOOTHING = 10f;
+        public static final float CHARACTER_PREVIEW_CENTER_HEIGHT = 0.5f;
         public static final float CHARACTER_PREVIEW_DISTANCE = 2.1f;
         public static final float CHARACTER_PREVIEW_FOCUS_HEIGHT = 0.55f;
         public static final float CHARACTER_PREVIEW_LATERAL_OFFSET = 0.26f;
@@ -822,6 +824,22 @@ public class EngineSetting {
         public static final int SKINNED_INSTANCE_FLOATS = SKINNED_INSTANCE_MODEL_FLOATS
                         + SKINNED_INSTANCE_APPEARANCE_FLOATS;
 
+        // Attributes & Carrying \\
+
+        public static final float CARRY_CAPACITY_PER_STRENGTH = 2f;
+        public static final float DEFAULT_ARMOR = 0f;
+        public static final float DEFAULT_ATTRIBUTE_VALUE = 10f;
+        public static final float DEFAULT_CARRY_CAPACITY = 30f;
+        public static final float DEFAULT_DAMAGE = 1f;
+        public static final float DEFAULT_HEALTH = 100f;
+        public static final float DEFAULT_STAMINA = 100f;
+
+        // Equipment \\
+
+        public static final String EQUIPMENT_ITEM_MATERIAL = "items/EquipmentItemMaterial";
+        public static final int EQUIPMENT_RENDER_DEPTH = 0;
+        public static final String UNIFORM_ITEM_MODEL = "u_model";
+
         // Animation \\
 
         public static final float ANIMATION_BLEND_SECONDS = 0.22f;
@@ -839,7 +857,42 @@ public class EngineSetting {
         // Item \\
 
         public static final String DEFAULT_ITEM_MATERIAL = "items/StandardItemMaterial";
+        public static final String ITEM_DESCRIPTION_NONE = "";
+        public static final String ITEM_DISPLAY_NAME_NONE = "";
+        public static final String ITEM_NAME_WORD_BOUNDARY_PATTERN = "(?<=[a-z])(?=[A-Z])";
+        public static final String ITEM_NAME_WORD_SEPARATOR = " ";
+        public static final int ITEM_ROTATION_COUNT = 4;
+        public static final String ITEM_SHAPE_FALLBACK_TEXTURE = "items/standard/Apple";
         public static final short TOOL_NONE = 0;
+
+        // Item Categories \\
+
+        public static final String ITEM_CATEGORY_TITLE_ARMOR = "Armor";
+        public static final String ITEM_CATEGORY_TITLE_CLOTHING = "Clothing";
+        public static final String ITEM_CATEGORY_TITLE_CONSUMABLE = "Consumables";
+        public static final String ITEM_CATEGORY_TITLE_CONTAINER = "Containers";
+        public static final String ITEM_CATEGORY_TITLE_JEWELRY = "Jewelry";
+        public static final String ITEM_CATEGORY_TITLE_MATERIAL = "Materials";
+        public static final String ITEM_CATEGORY_TITLE_MISC = "Miscellaneous";
+        public static final String ITEM_CATEGORY_TITLE_WEAPON = "Weapons";
+
+        // Item Stats \\
+
+        public static final String ITEM_STAT_TITLE_ARMOR = "Armor";
+        public static final String ITEM_STAT_TITLE_CHARISMA = "Charisma";
+        public static final String ITEM_STAT_TITLE_CONSTITUTION = "Constitution";
+        public static final String ITEM_STAT_TITLE_DAMAGE = "Damage";
+        public static final String ITEM_STAT_TITLE_DEXTERITY = "Dexterity";
+        public static final String ITEM_STAT_TITLE_HEALTH = "Health";
+        public static final String ITEM_STAT_TITLE_INTELLIGENCE = "Intelligence";
+        public static final String ITEM_STAT_TITLE_STAMINA = "Stamina";
+        public static final String ITEM_STAT_TITLE_STRENGTH = "Strength";
+        public static final String ITEM_STAT_TITLE_WISDOM = "Wisdom";
+
+        // Container \\
+
+        public static final int CONTAINER_MAX_CELLS = 65536;
+        public static final float CONTAINER_RAY_EPSILON = 1e-4f;
 
         // Sub-Voxel Model \\
 

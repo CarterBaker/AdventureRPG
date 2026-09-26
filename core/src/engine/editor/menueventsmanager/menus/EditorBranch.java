@@ -66,6 +66,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openConsole(window.getGLWindow());
     }
 
+    public void openCommandConsole(WindowInstance window) {
+        tabManager.openCommandConsole(window.getGLWindow());
+    }
+
     // Layout Dropdown \\
 
     public void refreshLayoutList(MenuInstance menu) {

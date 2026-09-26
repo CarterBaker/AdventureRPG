@@ -204,6 +204,17 @@ public class MenuManager extends ManagerPackage {
         menu.removeFromEntryPoint(entryPoint, instance);
     }
 
+    public void ejectAll(MenuInstance menu, int entryPoint) {
+
+        ElementInstance container = menu.getEntryPoint(entryPoint);
+
+        if (container == null)
+            return;
+
+        while (!container.getChildren().isEmpty())
+            eject(menu, entryPoint, container.getChildren().get(0));
+    }
+
     // Management \\
 
     void addMenu(String menuName, MenuHandle menuHandle) {
