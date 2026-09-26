@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.block;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 import engine.util.mathematics.extras.Coordinate3Int;
@@ -24,6 +25,10 @@ public final class BlockPaletteHandle extends HandlePackage {
      * palette constructed with a BlockManager is partitioned: it also owns one
      * child palette per geometry type, routes every write through them, and
      * answers type and liquid queries by dipping into the matching child.
+     * Its PARTIAL child is the sub-block palette: a cell subdivided into
+     * sub-blocks keeps its material as the block ID here and moves out of its
+     * material's geometry child into the partial one, which owns its octant
+     * mask, so every type query sees a subdivided cell as PARTIAL.
      */
 
     // Palette Config
@@ -47,7 +52,7 @@ public final class BlockPaletteHandle extends HandlePackage {
     // Children — realized only by a partitioned block palette
     private BlockManager blockManager;
     private BlockTypePaletteHandle fullPaletteHandle;
-    private BlockTypePaletteHandle partialPaletteHandle;
+    private SubBlockPaletteHandle subBlockPaletteHandle;
     private BlockTypePaletteHandle complexPaletteHandle;
     private LiquidBlockPaletteHandle liquidPaletteHandle;
     private BlockTypePaletteHandle[] geometryType2TypePalette;
@@ -107,13 +112,13 @@ public final class BlockPaletteHandle extends HandlePackage {
     private void createTypePalettes() {
 
         this.fullPaletteHandle = create(BlockTypePaletteHandle.class);
-        this.partialPaletteHandle = create(BlockTypePaletteHandle.class);
+        this.subBlockPaletteHandle = create(SubBlockPaletteHandle.class);
         this.complexPaletteHandle = create(BlockTypePaletteHandle.class);
         this.liquidPaletteHandle = create(LiquidBlockPaletteHandle.class);
 
         this.geometryType2TypePalette = new BlockTypePaletteHandle[DynamicGeometryType.LENGTH];
         this.geometryType2TypePalette[DynamicGeometryType.FULL.ordinal()] = fullPaletteHandle;
-        this.geometryType2TypePalette[DynamicGeometryType.PARTIAL.ordinal()] = partialPaletteHandle;
+        this.geometryType2TypePalette[DynamicGeometryType.PARTIAL.ordinal()] = subBlockPaletteHandle;
         this.geometryType2TypePalette[DynamicGeometryType.COMPLEX.ordinal()] = complexPaletteHandle;
         this.geometryType2TypePalette[DynamicGeometryType.LIQUID.ordinal()] = liquidPaletteHandle;
     }
@@ -382,6 +387,14 @@ public final class BlockPaletteHandle extends HandlePackage {
         return geometryType2TypePalette[blockManager.getGeometryFromBlockID(blockId).ordinal()];
     }
 
+    private BlockTypePaletteHandle resolveCellTypePalette(int index, short blockId) {
+
+        if (subBlockPaletteHandle.contains(index))
+            return subBlockPaletteHandle;
+
+        return resolveTypePalette(blockId);
+    }
+
     private void fillTypePalettes(short blockId) {
 
         for (BlockTypePaletteHandle typePalette : geometryType2TypePalette)
@@ -396,10 +409,10 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     private void routeTypePalettes(int index, short oldBlockId, short newBlockId) {
 
-        if (oldBlockId == newBlockId)
+        if (oldBlockId == newBlockId && !subBlockPaletteHandle.contains(index))
             return;
 
-        BlockTypePaletteHandle oldTypePalette = resolveTypePalette(oldBlockId);
+        BlockTypePaletteHandle oldTypePalette = resolveCellTypePalette(index, oldBlockId);
         BlockTypePaletteHandle newTypePalette = resolveTypePalette(newBlockId);
 
         if (oldTypePalette != null)
@@ -480,6 +493,60 @@ public final class BlockPaletteHandle extends HandlePackage {
 
     public int collectActiveLiquid(int[] target) {
         return requireLiquidPalette().collectActive(target);
+    }
+
+    // Sub-Blocks \\
+
+    /*
+     * The octants of this cell's block that are present. A cell that is not
+     * subdivided answers MASK_FULL whatever its block — air included — so a
+     * caller always pairs the mask with the block's own geometry.
+     */
+    public int getSubBlockMask(int packedXYZ) {
+
+        if (!isPartitioned())
+            return SubBlockUtility.MASK_FULL;
+
+        return subBlockPaletteHandle.getMask(getCellIndex(packedXYZ));
+    }
+
+    /*
+     * Subdivides the cell's current block down to the given octants, or
+     * collapses it back to a whole block when every octant is present. An
+     * empty mask is not a subdivision — the caller writes air through
+     * setBlock() instead — and only a FULL-geometry block can be subdivided.
+     */
+    public void setSubBlockMask(int packedXYZ, int mask) {
+
+        if (!isPartitioned())
+            throwException("Sub-block writes require a palette constructed with a BlockManager");
+
+        if (mask == SubBlockUtility.MASK_EMPTY)
+            throwException("An empty sub-block mask is air — write the cell through setBlock() instead");
+
+        int index = getCellIndex(packedXYZ);
+        short blockId = readBlock(index);
+        BlockTypePaletteHandle wholeTypePalette = resolveTypePalette(blockId);
+
+        if (mask == SubBlockUtility.MASK_FULL) {
+
+            if (!subBlockPaletteHandle.contains(index))
+                return;
+
+            subBlockPaletteHandle.remove(index);
+            wholeTypePalette.add(index);
+            return;
+        }
+
+        if (blockManager.getGeometryFromBlockID(blockId) != DynamicGeometryType.FULL)
+            throwException("Only a FULL-geometry block can be subdivided into sub-blocks, block ID: " + blockId);
+
+        if (!subBlockPaletteHandle.contains(index)) {
+            wholeTypePalette.remove(index);
+            subBlockPaletteHandle.add(index);
+        }
+
+        subBlockPaletteHandle.setMask(index, mask);
     }
 
     // Accessible \\

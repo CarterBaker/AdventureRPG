@@ -409,6 +409,19 @@ public class PlayerManager extends ManagerPackage {
         return placementManager.placeBlock(player, eyePosition, camera.getDirection(), blockID);
     }
 
+    public boolean placeSubBlockForWindow(int windowID, short blockID) {
+
+        EntityInstance player = windowID2Player.get(windowID);
+        CameraInstance camera = windowID2Camera.get(windowID);
+
+        if (player == null || camera == null)
+            return false;
+
+        resolveEyePosition(player);
+
+        return placementManager.placeSubBlock(player, eyePosition, camera.getDirection(), blockID);
+    }
+
     // Zoom \\
 
     /*

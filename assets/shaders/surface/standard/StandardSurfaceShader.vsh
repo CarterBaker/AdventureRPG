@@ -3,13 +3,12 @@ layout (location = 0) in vec3  aPos;
 layout (location = 1) in vec2  aUVOrigin;
 layout (location = 2) in float aMeta;
 layout (location = 3) in float aColor;
-layout (location = 4) in float aEdgeA0;
-layout (location = 5) in float aEdgeA1;
-layout (location = 6) in float aEdgeB0;
-layout (location = 7) in float aEdgeB1;
+layout (location = 4) in vec4  aEdgeLow;
+layout (location = 5) in vec4  aEdgeHigh;
 
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
+#include "surface/includes/SurfaceTessellationTier.glsl"
 
 const vec3 NORMALS[6] = vec3[](
     vec3(0, 0, 1),
@@ -27,14 +26,19 @@ out vec3  tcColor;
 out float tcSizeA;
 out float tcSizeB;
 out float tcNatural;
-out vec4  tcEdge;
+out float tcEdgeCells;
+out vec4  tcEdgeLow;
+out vec4  tcEdgeHigh;
 
-// Places raw block-face geometry in world space and unpacks the two integer-packed vertex attributes.
-// Face index, encoded face orientation, both merged quad extents and the natural-block flag share one
-// 18-bit word, vertex tint is an exact 24-bit RGB triple, and each of the four per-edge state words packs
-// two bits per unit cell across a quad capped at ten cells plus one padding cell at either end, which is
-// twenty-four bits and therefore exact in a float32 mantissa. Per-vertex displacement still happens after
-// tessellation, since tessellation only ever sees a merged quad's four real corners.
+// Places raw block-face geometry in world space and unpacks the integer-packed vertex attributes. Face
+// index, encoded face orientation, both merged quad extents in sub-blocks, the natural-block flag and the
+// edge resolution share one 21-bit word and vertex tint is an exact 24-bit RGB triple. Each edge (A0, A1, B0,
+// B1 in xyzw) carries four-bit column codes, one per entry across a run capped at ten entries plus one padding
+// entry at either end, split into a low word of six entries and a high word of the rest — twenty-four bits
+// each and therefore exact in a float32 mantissa. An entry covers two sub-blocks on a block-resolution quad and
+// one on a sub-block quad. Extents leave here in blocks. Per-vertex displacement still happens after
+// tessellation, since tessellation only ever sees a merged quad's four real corners. The layout must match
+// the one SurfaceEmissionBranch writes.
 
 void main() {
     vec3 worldPos  = aPos;
@@ -49,11 +53,13 @@ void main() {
     tcNormal    = NORMALS[meta & 7];
     tcUVOrigin  = aUVOrigin;
     tcOrient    = float((meta >> 3) & 63);
-    tcSizeA     = float(((meta >>  9) & 15) + 1);
-    tcSizeB     = float(((meta >> 13) & 15) + 1);
-    tcNatural   = float((meta >> 17) & 1);
+    tcSizeA     = float(((meta >>  9) & 31) + 1) * SUB_BLOCK_SIZE;
+    tcSizeB     = float(((meta >> 14) & 31) + 1) * SUB_BLOCK_SIZE;
+    tcNatural   = float((meta >> 19) & 1);
+    tcEdgeCells = float(((meta >> 20) & 1) + 1);
     tcColor     = vec3(float((col >> 16) & 255),
         float((col >>  8) & 255),
         float(col        & 255)) * (1.0 / 255.0);
-    tcEdge      = vec4(aEdgeA0, aEdgeA1, aEdgeB0, aEdgeB1);
+    tcEdgeLow   = aEdgeLow;
+    tcEdgeHigh  = aEdgeHigh;
 }

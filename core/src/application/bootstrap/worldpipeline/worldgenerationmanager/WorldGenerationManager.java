@@ -11,6 +11,7 @@ import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
@@ -51,7 +52,12 @@ public class WorldGenerationManager extends ManagerPackage {
      * map. The probe resolves ground height and flooding for any single world
      * column through that column's own chunk grids on a separate thread-local
      * container, so structure placement can anchor across chunk borders and
-     * always agree exactly with the terrain the neighbor generates.
+     * always agree exactly with the terrain the neighbor generates. Terrain
+     * is whole blocks everywhere but along a step, where sub-blocks smooth
+     * the edge (see resolveColumnSmoothing()); grid interpolation lands
+     * exactly on a grid sample at either end of its cell, so a block corner
+     * on a chunk border resolves bit-identically from both chunks and the
+     * smoothing along that border agrees from either side.
      */
 
     // Internal
@@ -117,6 +123,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
         sampleMacroGrid(worldHandle, column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
         sampleDetailGrid(column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
+        resolveCornerHeights(column);
         resolveBlockColumns(column, seed, worldOffsetX, worldOffsetZ);
 
         column.biomeID = column.macroBiomeIDGrid[TerrainColumnAsyncContainer.MACRO_CENTER_INDEX];
@@ -134,6 +141,8 @@ public class WorldGenerationManager extends ManagerPackage {
                 column.columnSubsurfaceBlockID,
                 column.columnUnderwaterBlockID,
                 column.columnOceanWater,
+                column.columnGroundMask,
+                column.columnCapMask,
                 column.columnMinGroundHeightBlocks,
                 column.columnMaxGroundHeightBlocks,
                 column.columnTopBlocks,
@@ -221,6 +230,27 @@ public class WorldGenerationManager extends ManagerPackage {
     }
 
     /*
+     * The continuous ground height at every block corner of the chunk, from
+     * the same two grids block columns interpolate, so the comparison against
+     * a column's rounded height is always made in one consistent field.
+     */
+    private void resolveCornerHeights(TerrainColumnAsyncContainer column) {
+
+        int cornersPerAxis = TerrainColumnAsyncContainer.CORNERS_PER_AXIS;
+
+        for (int cornerZ = 0; cornerZ < cornersPerAxis; cornerZ++) {
+            for (int cornerX = 0; cornerX < cornersPerAxis; cornerX++) {
+
+                float macroShape = sampleMacroBilinear(column.macroShapeGridBlocks, cornerX, cornerZ);
+                float detail = sampleDetailBilinear(column.detailGridBlocks, cornerX, cornerZ);
+
+                column.cornerHeightBlocks[cornerZ * cornersPerAxis + cornerX] = TerrainShapeUtility
+                        .clampGroundHeightBlocks(macroShape, detail);
+            }
+        }
+    }
+
+    /*
      * Interpolates the grids down to the chunk's 256 block columns. Height and
      * coastal share interpolate as scalars so both stay smooth; dressing blocks
      * cannot interpolate, so each column draws its profile from one of the
@@ -259,7 +289,9 @@ public class WorldGenerationManager extends ManagerPackage {
                 column.columnSubsurfaceBlockID[columnIndex] = column.macroSubsurfaceBlockIDGrid[cornerIndex];
                 column.columnUnderwaterBlockID[columnIndex] = column.macroUnderwaterBlockIDGrid[cornerIndex];
 
-                int top = oceanWater ? Math.max(groundHeight, TideUtility.BAND_MAX_Y) : groundHeight;
+                resolveColumnSmoothing(column, localX, localZ, columnIndex);
+
+                int top = resolveColumnTop(column, columnIndex, TideUtility.BAND_MAX_Y);
 
                 if (groundHeight > maxGroundHeight)
                     maxGroundHeight = groundHeight;
@@ -282,6 +314,68 @@ public class WorldGenerationManager extends ManagerPackage {
         column.columnTopBlocks = columnTop;
         column.allOceanWater = allOceanWater;
         column.hasTidalColumns = hasTidalColumns;
+    }
+
+    /*
+     * Sub-block edge smoothing. Each quadrant of a block column sits against
+     * one block corner, and the continuous ground height there decides it: a
+     * corner at least SUB_BLOCK_SMOOTHING_THRESHOLD_BLOCKS above the column's
+     * rounded ground raises that quadrant one sub-block into the cap cell
+     * above, and a corner at least that far below lowers it one sub-block,
+     * emptying the quadrant's upper octant of the ground cell. Flat ground
+     * never crosses the threshold, so the world stays whole blocks and
+     * sub-blocks appear only along a step, filling its foot and rounding its
+     * lip into half-block stairs. A column whose ground lies within reach
+     * of the tide keeps whole blocks, since a subdivided cell there would
+     * open an air pocket beside or beneath the sea.
+     */
+    private void resolveColumnSmoothing(
+            TerrainColumnAsyncContainer column,
+            int localX, int localZ,
+            int columnIndex) {
+
+        int groundHeight = column.groundHeightBlocks[columnIndex];
+        int groundMask = SubBlockUtility.MASK_FULL;
+        int capMask = SubBlockUtility.MASK_EMPTY;
+
+        if (groundHeight > TideUtility.BAND_MAX_Y) {
+
+            int cornersPerAxis = TerrainColumnAsyncContainer.CORNERS_PER_AXIS;
+            float threshold = EngineSetting.SUB_BLOCK_SMOOTHING_THRESHOLD_BLOCKS;
+
+            for (int quadrantZ = 0; quadrantZ < SubBlockUtility.DIVISIONS; quadrantZ++) {
+                for (int quadrantX = 0; quadrantX < SubBlockUtility.DIVISIONS; quadrantX++) {
+
+                    int cornerIndex = (localZ + quadrantZ) * cornersPerAxis + (localX + quadrantX);
+                    float rise = column.cornerHeightBlocks[cornerIndex] - groundHeight;
+
+                    if (rise >= threshold)
+                        capMask |= SubBlockUtility.getOctantBit(
+                                SubBlockUtility.getOctant(quadrantX, 0, quadrantZ));
+                    else if (-rise >= threshold)
+                        groundMask &= ~SubBlockUtility.getOctantBit(
+                                SubBlockUtility.getOctant(quadrantX, 1, quadrantZ));
+                }
+            }
+        }
+
+        column.columnGroundMask[columnIndex] = (byte) groundMask;
+        column.columnCapMask[columnIndex] = (byte) capMask;
+    }
+
+    private int resolveColumnTop(TerrainColumnAsyncContainer column, int columnIndex, int topWaterY) {
+
+        int groundHeight = column.groundHeightBlocks[columnIndex];
+        int top = column.columnOceanWater[columnIndex] ? Math.max(groundHeight, topWaterY) : groundHeight;
+
+        if (readMask(column.columnCapMask, columnIndex) != SubBlockUtility.MASK_EMPTY)
+            top = Math.max(top, groundHeight + 1);
+
+        return top;
+    }
+
+    private int readMask(byte[] masks, int columnIndex) {
+        return masks[columnIndex] & SubBlockUtility.MASK_FULL;
     }
 
     private int resolveGroundHeight(TerrainColumnAsyncContainer column, int localX, int localZ) {
@@ -310,6 +404,8 @@ public class WorldGenerationManager extends ManagerPackage {
         terrainCache.copySubsurfaceBlockIDsInto(column.columnSubsurfaceBlockID);
         terrainCache.copyUnderwaterBlockIDsInto(column.columnUnderwaterBlockID);
         terrainCache.copyOceanWaterInto(column.columnOceanWater);
+        terrainCache.copyGroundMasksInto(column.columnGroundMask);
+        terrainCache.copyCapMasksInto(column.columnCapMask);
 
         column.columnMinGroundHeightBlocks = terrainCache.getColumnMinGroundHeightBlocks();
         column.columnMaxGroundHeightBlocks = terrainCache.getColumnMaxGroundHeightBlocks();
@@ -398,9 +494,11 @@ public class WorldGenerationManager extends ManagerPackage {
 
     /*
      * Cell index is clamped one short of the last sample so a coordinate
-     * landing exactly on the far edge of the grid — which the detail grid does
-     * at local 16 — interpolates against the final pair rather than reading
-     * past the end.
+     * landing exactly on the far edge of the grid — which every grid does at
+     * local 16 — interpolates against the final pair rather than reading
+     * past the end. Each lerp weights both ends rather than adding a scaled
+     * difference, so a coordinate on a grid sample returns that sample
+     * exactly, whichever cell it was resolved from.
      */
     private float sampleGridBilinear(float[] grid, int localX, int localZ, int stride, int samplesPerAxis) {
 
@@ -417,10 +515,10 @@ public class WorldGenerationManager extends ManagerPackage {
         float v01 = grid[(cellZ + 1) * samplesPerAxis + cellX];
         float v11 = grid[(cellZ + 1) * samplesPerAxis + (cellX + 1)];
 
-        float top = v00 + (v10 - v00) * tx;
-        float bottom = v01 + (v11 - v01) * tx;
+        float top = v00 * (1f - tx) + v10 * tx;
+        float bottom = v01 * (1f - tx) + v11 * tx;
 
-        return top + (bottom - top) * tz;
+        return top * (1f - tz) + bottom * tz;
     }
 
     private int pickMacroCorner(long seed, long worldX, long worldZ, int localX, int localZ) {
@@ -549,7 +647,9 @@ public class WorldGenerationManager extends ManagerPackage {
 
                 int groundHeight = column.groundHeightBlocks[columnIndex];
                 boolean oceanWater = column.columnOceanWater[columnIndex];
-                int columnTop = oceanWater ? Math.max(groundHeight, topWaterY) : groundHeight;
+                int columnTop = resolveColumnTop(column, columnIndex, topWaterY);
+                int groundMask = readMask(column.columnGroundMask, columnIndex);
+                int capMask = readMask(column.columnCapMask, columnIndex);
 
                 if (offsetY > columnTop) {
                     hasAirOrWater = true;
@@ -582,6 +682,12 @@ public class WorldGenerationManager extends ManagerPackage {
                     if (worldY > columnTop) {
                         resultBlockID = airBlockId;
                         hasAirOrWater = true;
+                    } else if (worldY == groundHeight + 1 && capMask != SubBlockUtility.MASK_EMPTY) {
+                        resultBlockID = topBlockID;
+                        hasAirOrWater = true;
+                        isUniform = false;
+                        subChunkInstance.setSubBlocks(
+                                Coordinate3Int.pack(localX, localY, localZ), topBlockID, capMask);
                     } else if (worldY > groundHeight) {
                         short level = TideUtility.getFillLevel(tideSurfaceLevels, worldY);
                         resultBlockID = waterBlockId;
@@ -590,6 +696,12 @@ public class WorldGenerationManager extends ManagerPackage {
                                 Coordinate3Int.pack(localX, localY, localZ), waterBlockId, level);
                         if (level < EngineSetting.LIQUID_LEVEL_MAX)
                             isUniform = false;
+                    } else if (worldY == groundHeight && groundMask != SubBlockUtility.MASK_FULL) {
+                        resultBlockID = topBlockID;
+                        hasAirOrWater = true;
+                        isUniform = false;
+                        subChunkInstance.setSubBlocks(
+                                Coordinate3Int.pack(localX, localY, localZ), topBlockID, groundMask);
                     } else if (worldY == groundHeight) {
                         resultBlockID = topBlockID;
                         blocks.setBlock(localX, localY, localZ, topBlockID);

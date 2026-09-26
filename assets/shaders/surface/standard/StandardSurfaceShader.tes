@@ -9,7 +9,9 @@ in vec3  teColor[];
 in float teSizeA[];
 in float teSizeB[];
 in float teNatural[];
-in vec4  teEdge[];
+in float teEdgeCells[];
+in vec4  teEdgeLow[];
+in vec4  teEdgeHigh[];
 
 out vec3 vLocalPos;
 out vec3 vUVLocalPos;
@@ -22,7 +24,6 @@ out vec3 vColor;
 #include "includes/SettingsData.glsl"
 #include "includes/PlayerPositionData.glsl"
 #include "includes/WorldCurvature.glsl"
-#include "includes/WorldDistantRise.glsl"
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
@@ -31,60 +32,47 @@ out vec3 vColor;
 #include "surface/includes/Bevel.glsl"
 #include "surface/includes/HeightDisplacement.glsl"
 
-// Terrain tessellation evaluation. The order is what makes a seam close: natural distortion and height
-// relief are scaled by a weight that reaches exactly zero on any edge cell where the surface ends, so at
-// such an edge the only surviving displacement is the bevel, and the bevel solver is symmetric across the
-// two faces that meet there. Edge state is interpolated between cell centers rather than stepped per cell,
-// which both removes the clamp that made two faces read different cells at a quad's end and lets a
-// non-natural surface follow a natural neighbour's bevel across one cell. Distant rise is applied
-// unconditionally rather than behind a per-vertex distance test, because that test stepped a 64-block
-// displacement on and off inside a single patch; the function's own clamp already zeroes it for near
-// terrain. Geometric normals come from finite differences in block units, taken only where displacement
-// actually runs, so a ten-block quad and a one-block quad shade to the same gradient.
+// Terrain tessellation evaluation. What closes every seam is that nothing here depends on which patch is
+// evaluating a vertex. The tessellated position is snapped to the quarter-block lattice every vertex ideally
+// lies on, so a vertex shared by two patches of different sizes starts from bit-identical input; the patch's
+// tangents are exact axis signs, so its local coordinates are exact too; and the bevel and the weight of every
+// detail layer come from the window of sub-blocks around the vertex (see Bevel.glsl), which every patch
+// touching it rebuilds identically from its own edge columns. Natural distortion and height relief therefore
+// fade to exactly zero wherever two surfaces meet, and the only displacement surviving there is the bevel,
+// itself a pure function of the vertex. An artificial patch is never displaced, and every natural neighbour
+// fades flat against it. World curvature bends the finished position once, after everything else, so normals
+// and every lookup keep using the flat position. Geometric normals come from finite differences in block
+// units, taken only where displacement actually runs, so a ten-block quad and a half-block quad shade to the
+// same gradient.
 
 const float HEIGHT_FD_EPSILON_BLOCKS = 0.02;
 
 vec3 evalDisplacedSurface(
-    float u, float v, vec3 baseWorldPos,
-    float sizeA, float sizeB, float natural,
+    vec3 baseWorldPos,
     vec3 tangentA, vec3 tangentB, vec3 normal,
+    int sizeASub, int sizeBSub, int cellsPerEntry,
     float nearStrength) {
 
-    vec3 worldPos = baseWorldPos;
+    if (nearStrength <= 0.001 || teNatural[0] < 0.5)
+    return baseWorldPos;
 
-    if (nearStrength > 0.001) {
+    SurfaceWindow window = buildSurfaceWindow(
+        baseWorldPos, teWorldPos[0],
+        tangentA, tangentB, normal,
+        sizeASub, sizeBSub, cellsPerEntry,
+        teEdgeLow[0], teEdgeHigh[0]);
 
-        float posA = u * sizeA;
-        float posB = v * sizeB;
+    vec3  bevelOffset;
+    float detailWeight;
+    resolveSurfaceShape(window, baseWorldPos, bevelOffset, detailWeight);
 
-        float distA, distB;
-        float signedA, signedB;
-        float fadeFlagA, fadeFlagB;
-        vec3  outwardA, outwardB;
+    float weight   = detailWeight * nearStrength;
+    vec3  worldPos = applyNaturalSurfaceNoise(baseWorldPos, baseWorldPos, normal, weight);
 
-        resolveAxis(posA, sizeA, posB, sizeB, teEdge[0].x, teEdge[0].y, tangentA,
-                    distA, signedA, fadeFlagA, outwardA);
-        resolveAxis(posB, sizeB, posA, sizeA, teEdge[0].z, teEdge[0].w, tangentB,
-                    distB, signedB, fadeFlagB, outwardB);
+    vec2 tiledUV = tileUV(baseWorldPos, teUVOrigin[0], normal, teOrient[0]);
+    worldPos = applyHeightDisplacement(worldPos, baseWorldPos, normal, tiledUV, weight);
 
-        float boundary     = max(edgeFade(distA, fadeFlagA), edgeFade(distB, fadeFlagB));
-        float detailWeight = natural * (1.0 - boundary) * nearStrength;
-
-        worldPos = applyNaturalSurfaceNoise(worldPos, baseWorldPos, normal, detailWeight);
-
-        vec2 tiledUV = tileUV(baseWorldPos, teUVOrigin[0], normal, teOrient[0]);
-        worldPos = applyHeightDisplacement(worldPos, baseWorldPos, normal, tiledUV, detailWeight);
-
-        worldPos = applyBevel(worldPos, normal,
-                              outwardA, distA, signedA,
-                              outwardB, distB, signedB,
-                              nearStrength);
-    }
-
-    worldPos = applyDistantRise(worldPos);
-    worldPos = applyWorldCurvature(worldPos);
-
-    return worldPos;
+    return worldPos + bevelOffset * nearStrength;
 }
 
 void main() {
@@ -92,50 +80,55 @@ void main() {
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
-    float sizeA   = teSizeA[0];
-    float sizeB   = teSizeB[0];
-    float natural = teNatural[0];
+    float sizeA = teSizeA[0];
+    float sizeB = teSizeB[0];
 
+    int sizeASub      = int(round(sizeA / SUB_BLOCK_SIZE));
+    int sizeBSub      = int(round(sizeB / SUB_BLOCK_SIZE));
+    int cellsPerEntry = int(round(teEdgeCells[0]));
+
+    vec3 origin   = teWorldPos[0];
     vec3 normal   = teNormal[0];
-    vec3 tangentA = normalize(teWorldPos[1] - teWorldPos[0]);
-    vec3 tangentB = normalize(teWorldPos[3] - teWorldPos[0]);
+    vec3 tangentA = sign(teWorldPos[1] - origin);
+    vec3 tangentB = sign(teWorldPos[3] - origin);
+
+    vec3 baseWorldPos = snapToTessellationLattice(
+        mix(mix(teWorldPos[0], teWorldPos[1], u),
+            mix(teWorldPos[3], teWorldPos[2], u), v));
 
     float tier0MaxSqDist = getTier0MaxSqDist();
-
-    vec3 baseWorldPos = mix(mix(teWorldPos[0], teWorldPos[1], u),
-                            mix(teWorldPos[3], teWorldPos[2], u), v);
-
-    float nearStrength = getNearStrength(computeDistanceFromCenterSq(baseWorldPos), tier0MaxSqDist);
+    float nearStrength   = getNearStrength(computeDistanceFromCenterSq(baseWorldPos), tier0MaxSqDist);
 
     vec3 worldPos = evalDisplacedSurface(
-        u, v, baseWorldPos, sizeA, sizeB, natural, tangentA, tangentB, normal, nearStrength);
+        baseWorldPos, tangentA, tangentB, normal, sizeASub, sizeBSub, cellsPerEntry, nearStrength);
 
-    if (nearStrength > 0.001) {
+    if (nearStrength > 0.001 && teNatural[0] >= 0.5) {
 
-        float uStep = HEIGHT_FD_EPSILON_BLOCKS / sizeA;
-        float vStep = HEIGHT_FD_EPSILON_BLOCKS / sizeB;
+        float posA = dot(baseWorldPos - origin, tangentA);
+        float posB = dot(baseWorldPos - origin, tangentB);
 
-        uStep = (u + uStep <= 1.0) ?  uStep : -uStep;
-        vStep = (v + vStep <= 1.0) ?  vStep : -vStep;
+        float stepA = HEIGHT_FD_EPSILON_BLOCKS;
+        float stepB = HEIGHT_FD_EPSILON_BLOCKS;
 
-        vec3 baseU = mix(mix(teWorldPos[0], teWorldPos[1], u + uStep),
-                         mix(teWorldPos[3], teWorldPos[2], u + uStep), v);
-        vec3 baseV = mix(mix(teWorldPos[0], teWorldPos[1], u),
-                         mix(teWorldPos[3], teWorldPos[2], u), v + vStep);
+        stepA = (posA + stepA <= sizeA) ? stepA : -stepA;
+        stepB = (posB + stepB <= sizeB) ? stepB : -stepB;
 
-        float nsU = getNearStrength(computeDistanceFromCenterSq(baseU), tier0MaxSqDist);
-        float nsV = getNearStrength(computeDistanceFromCenterSq(baseV), tier0MaxSqDist);
+        vec3 baseA = baseWorldPos + tangentA * stepA;
+        vec3 baseB = baseWorldPos + tangentB * stepB;
 
-        vec3 posU = evalDisplacedSurface(
-            u + uStep, v, baseU, sizeA, sizeB, natural, tangentA, tangentB, normal, nsU);
-        vec3 posV = evalDisplacedSurface(
-            u, v + vStep, baseV, sizeA, sizeB, natural, tangentA, tangentB, normal, nsV);
+        float nearStrengthA = getNearStrength(computeDistanceFromCenterSq(baseA), tier0MaxSqDist);
+        float nearStrengthB = getNearStrength(computeDistanceFromCenterSq(baseB), tier0MaxSqDist);
 
-        vec3 tangentU = (posU - worldPos) / uStep;
-        vec3 tangentV = (posV - worldPos) / vStep;
+        vec3 posAlongA = evalDisplacedSurface(
+            baseA, tangentA, tangentB, normal, sizeASub, sizeBSub, cellsPerEntry, nearStrengthA);
+        vec3 posAlongB = evalDisplacedSurface(
+            baseB, tangentA, tangentB, normal, sizeASub, sizeBSub, cellsPerEntry, nearStrengthB);
 
-        if (length(tangentU) > 1e-6 && length(tangentV) > 1e-6) {
-            vec3 fdNormal = normalize(cross(tangentU, tangentV));
+        vec3 derivativeA = (posAlongA - worldPos) / stepA;
+        vec3 derivativeB = (posAlongB - worldPos) / stepB;
+
+        if (length(derivativeA) > 1e-6 && length(derivativeB) > 1e-6) {
+            vec3 fdNormal = normalize(cross(derivativeA, derivativeB));
             if (dot(fdNormal, normal) < 0.0)
             fdNormal = -fdNormal;
             normal = fdNormal;
@@ -150,5 +143,5 @@ void main() {
     vColor      = mix(mix(teColor[0], teColor[1], u),
                       mix(teColor[3], teColor[2], u), v);
 
-    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+    gl_Position = u_viewProjection * vec4(applyWorldCurvature(worldPos), 1.0);
 }

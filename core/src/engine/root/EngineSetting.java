@@ -68,9 +68,11 @@ public class EngineSetting {
 
         // Sentinel & Utility Values \\
 
+        public static final int AXIS_COUNT = 3;
         public static final int AXIS_X = 0;
         public static final int AXIS_Y = 1;
         public static final int AXIS_Z = 2;
+        public static final float COLOR_CHANNEL_BYTE_MAX = 255f;
         public static final int COLOR_CHANNEL_COUNT = 4;
         public static final float COLOR_CHANNEL_MAX = 1.0f;
         public static final float COLOR_CHANNEL_MIN = 0.0f;
@@ -211,6 +213,7 @@ public class EngineSetting {
         public static final int CHUNKS_PER_PIXEL = 32;
         public static final int CHUNK_SIZE = 16;
         public static final int MEGA_CHUNK_SIZE = 4;
+        public static final int SUB_BLOCK_DIVISIONS = 2;
         public static final int SUB_VOXEL_RESOLUTION = 16;
         public static final int WORLD_HEIGHT = 64;
 
@@ -218,12 +221,12 @@ public class EngineSetting {
 
         public static final float NATURAL_GROUND_OFFSET_SMOOTHING = 10.0f;
         public static final float NATURAL_NOISE_COLLISION_GRADIENT_PROBE_BLOCKS = 0.05f;
-        public static final float NATURAL_NOISE_DISTANT_RISE_MARGIN_BLOCKS = 512.0f;
         public static final float NATURAL_NOISE_HASH_DOT_X = 127.1f;
         public static final float NATURAL_NOISE_HASH_DOT_Z = 311.7f;
         public static final float NATURAL_NOISE_HASH_SCALE = 43758.5453f;
         public static final float NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS = 0.4f;
         public static final float NATURAL_NOISE_JITTER_VERTICAL_BLOCKS = 0.08f;
+        public static final float NATURAL_NOISE_MID_TIER_MARGIN_BLOCKS = 512.0f;
         public static final float NATURAL_NOISE_SEED_SCALE = 0.5f;
         public static final int NATURAL_NOISE_LATTICE_PERIOD = (int) (CHUNK_SIZE * NATURAL_NOISE_SEED_SCALE);
         public static final int NATURAL_NOISE_LATTICE_SIZE = NATURAL_NOISE_LATTICE_PERIOD * NATURAL_NOISE_LATTICE_PERIOD;
@@ -350,6 +353,7 @@ public class EngineSetting {
         public static final float DEFAULT_PLANETARY_OFFSET = 0.0f;
         public static final float DEFAULT_WORLD_ROTATION_SPEED = 1.0f;
         public static final int ENCODED_FACE_NATURAL_FULL_OFFSET = 24;
+        public static final int ENCODED_FACE_SPIN_COUNT = 4;
         public static final int FULL_TICK_INTERVAL_FRAMES = 60;
         public static final int FULL_TICK_PHASE_FRAMES = 0;
         public static final int GRID_SLOTS_SCAN_PER_FRAME = 32;
@@ -365,6 +369,22 @@ public class EngineSetting {
         public static final int PARTIAL_TICK_INTERVAL_FRAMES = 60;
         public static final int PARTIAL_TICK_PHASE_FRAMES = 15;
         public static final String STARTING_WORLD = "TerraArcana";
+
+        // Sub-Block \\
+
+        public static final int CHUNK_VERTEX_FLOAT_COUNT = 15;
+        public static final int GEOMETRY_EDGE_BITS_PER_CELL = 4;
+        public static final int GEOMETRY_EDGE_CELLS_PER_WORD = 6;
+        public static final int GEOMETRY_MAX_MERGE_EXTENT = 10;
+        public static final int GEOMETRY_META_ENCODED_FACE_BITS = 6;
+        public static final int GEOMETRY_META_FACE_BITS = 3;
+        public static final int GEOMETRY_META_SIZE_BITS = 5;
+        public static final int SUB_BLOCK_MASK_EMPTY = 0;
+        public static final int SUB_BLOCK_OCTANT_COUNT = SUB_BLOCK_DIVISIONS * SUB_BLOCK_DIVISIONS
+                        * SUB_BLOCK_DIVISIONS;
+        public static final int SUB_BLOCK_MASK_FULL = (1 << SUB_BLOCK_OCTANT_COUNT) - 1;
+        public static final float SUB_BLOCK_SIZE = BLOCK_SIZE / SUB_BLOCK_DIVISIONS;
+        public static final float SUB_BLOCK_SMOOTHING_THRESHOLD_BLOCKS = 0.5f;
 
         // Liquid & Swimming \\
 
@@ -760,6 +780,7 @@ public class EngineSetting {
 
         // Physics & Movement \\
 
+        public static final float COLLISION_SKIN_BLOCKS = 0.001f;
         public static final float FIXED_TIME_STEP = 0.02f;
         public static final float GRAVITY_FORCE = 9.8f;
         public static final float GROUNDED_FALL_SPEED = 5.0f;
@@ -768,6 +789,7 @@ public class EngineSetting {
         public static final float MOVEMENT_ACCELERATION = 8.0f;
         public static final float MOVEMENT_SCALE = 1.5f;
         public static final float REACH_SCALE = 4.0f;
+        public static final float STEP_UP_HEIGHT_BLOCKS = SUB_BLOCK_SIZE;
 
         // Entity, Rig & Player \\
 

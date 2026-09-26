@@ -37,7 +37,7 @@ class ComplexGeometryBranch extends BranchPackage {
             Int2ObjectOpenHashMap<FloatArrayList> verts,
             BitSet accumulatedBatch,
             BitSet batchReturn,
-            Color[] vertColors) {
+            Color vertColorAccumulator) {
         return false;
     }
 }

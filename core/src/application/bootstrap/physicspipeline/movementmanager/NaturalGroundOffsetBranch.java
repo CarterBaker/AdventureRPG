@@ -4,10 +4,10 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.physicspipeline.physicsnoisemanager.PhysicsNoiseManager;
+import application.bootstrap.physicspipeline.util.SubBlockSampleUtility;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
-import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.util.LiquidColumnUtility;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -23,6 +23,10 @@ public class NaturalGroundOffsetBranch extends BranchPackage {
      * composition keep operating on the flat, jitter-free position exactly
      * as before, so this can never reopen a tunneling path. Consumers such
      * as the camera add the result on top of the flat position themselves.
+     * The block read is the sub-block directly beneath the footprint center,
+     * so a half-block slab under the feet answers for itself. Every other
+     * change to the offset — a stair step handing over its lift — eases out
+     * through the same smoothing.
      */
 
     // Internal
@@ -59,23 +63,20 @@ public class NaturalGroundOffsetBranch extends BranchPackage {
         Vector3 position = entity.getWorldPositionStruct().getPosition();
         long chunkCoordinate = entity.getWorldPositionStruct().getChunkCoordinate();
 
-        ChunkInstance chunk = worldStreamManager.getChunkInstance(chunkCoordinate);
-
-        if (chunk == null)
-            return 0f;
-
-        int blockX = (int) Math.floor(position.x);
-        int blockZ = (int) Math.floor(position.z);
-        int belowTotalY = (int) Math.floor(position.y) - 1;
-
-        BlockHandle below = LiquidColumnUtility.getBlockAt(chunk, blockManager, blockX, belowTotalY, blockZ);
-
-        if (below == null || !below.isNatural() || below.getGeometry() != DynamicGeometryType.FULL)
-            return 0f;
-
         Vector3 size = entity.getSize();
         float centerX = position.x + size.x * 0.5f;
         float centerZ = position.z + size.z * 0.5f;
+
+        BlockHandle below = SubBlockSampleUtility.getSubBlockAt(
+                worldStreamManager,
+                blockManager,
+                chunkCoordinate,
+                SubBlockSampleUtility.toSub(centerX),
+                SubBlockSampleUtility.toSub(position.y - SubBlockUtility.SIZE * 0.5f),
+                SubBlockSampleUtility.toSub(centerZ));
+
+        if (below == null || !below.isNatural() || below.getGeometry() != DynamicGeometryType.FULL)
+            return 0f;
 
         return physicsNoiseManager.sampleAxisJitter(centerX, centerZ, EngineSetting.AXIS_Y);
     }

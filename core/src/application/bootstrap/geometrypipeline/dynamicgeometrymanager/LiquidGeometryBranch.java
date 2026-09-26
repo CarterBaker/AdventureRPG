@@ -12,6 +12,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -87,7 +88,7 @@ class LiquidGeometryBranch extends BranchPackage {
             Int2ObjectOpenHashMap<FloatArrayList> verts,
             BitSet accumulatedBatch,
             BitSet batchReturn,
-            Color[] vertColors) {
+            Color vertColorAccumulator) {
 
         // Settled water is assumed fully contained by basin walls or other
         // settled water on every side but its top. Gating here — before any
@@ -266,8 +267,13 @@ class LiquidGeometryBranch extends BranchPackage {
         // Anything else exposes the face UNLESS that neighbor is an opaque
         // full cube — a solid block covers this entire face from every angle
         // a camera could ever reach, so the liquid's own copy of it can never
-        // be seen. Air, other liquids, and any non-FULL geometry still expose.
+        // be seen. Air, other liquids, any non-FULL geometry, and a block
+        // subdivided into sub-blocks — whose missing octants open onto this
+        // face — still expose.
         BlockHandle comparativeBlockHandle = blockManager.getBlockHandleFromBlockID(comparativeBlockID);
+
+        if (SubBlockUtility.isSubdivided(comparativeSubChunkInstance.getSubBlockMask(comparativeXYZ)))
+            return true;
 
         return comparativeBlockHandle.getGeometry() != DynamicGeometryType.FULL;
     }
@@ -415,6 +421,10 @@ class LiquidGeometryBranch extends BranchPackage {
         buffer.add(level); // edge A0 slot: fluid level, 0..LIQUID_LEVEL_MAX
         buffer.add(isSurface); // edge A1 slot: 1 = pull to fluid surface height
         buffer.add(isTidalSurface); // edge B0 slot: 1 = ride the live tide and ocean waves
+        buffer.add(0f);
+        buffer.add(0f); // high edge slots — solid geometry only
+        buffer.add(0f);
+        buffer.add(0f);
         buffer.add(0f);
     }
 }

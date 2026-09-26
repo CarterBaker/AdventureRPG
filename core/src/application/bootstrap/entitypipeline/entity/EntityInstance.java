@@ -7,12 +7,10 @@ import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.entitypipeline.util.EntityInputHandle;
-import application.bootstrap.physicspipeline.util.BlockCompositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.InstancePackage;
 import engine.util.mathematics.vectors.Vector3;
-import engine.util.mathematics.vectors.Vector3Int;
 
 public class EntityInstance extends InstancePackage {
 
@@ -47,8 +45,6 @@ public class EntityInstance extends InstancePackage {
 
     // Physics
     private WorldPositionStruct worldPositionStruct;
-    private Vector3Int blockComposition;
-    private BlockCompositionStruct blockCompositionStruct;
 
     // Runtime
     private Vector3 size;
@@ -69,8 +65,6 @@ public class EntityInstance extends InstancePackage {
 
         // Physics
         this.worldPositionStruct = new WorldPositionStruct();
-        this.blockComposition = new Vector3Int();
-        this.blockCompositionStruct = new BlockCompositionStruct();
     }
 
     // Constructor \\
@@ -94,7 +88,7 @@ public class EntityInstance extends InstancePackage {
         this.worldPositionStruct.setChunkCoordinate(chunkCoordinate);
 
         // Runtime
-        setEntitySize(size);
+        this.size = size;
         this.weight = weight;
 
         // Animation
@@ -128,25 +122,6 @@ public class EntityInstance extends InstancePackage {
         animationStateHandle.setParameter(AnimationParameter.LOOK_PITCH, entityStateHandle.getLookPitch());
         animationStateHandle.setParameter(AnimationParameter.LOOK_YAW, entityStateHandle.getLookYaw());
         animationStateHandle.update(entityStateHandle.getMovementState(), deltaTime);
-    }
-
-    // Utility \\
-
-    private void setEntitySize(Vector3 size) {
-
-        this.blockComposition.x = (int) Math.ceil(size.x);
-        this.blockComposition.y = (int) Math.ceil(size.y);
-        this.blockComposition.z = (int) Math.ceil(size.z);
-        this.size = size;
-
-        updateBlockComposition();
-    }
-
-    public void updateBlockComposition() {
-        this.blockCompositionStruct.updateBlockComposition(
-                blockComposition,
-                worldPositionStruct.getPosition(),
-                worldPositionStruct.getChunkCoordinate());
     }
 
     // Accessible \\
@@ -207,16 +182,6 @@ public class EntityInstance extends InstancePackage {
 
         worldPositionStruct.setPosition(position);
         worldPositionStruct.setChunkCoordinate(chunkCoordinate);
-
-        updateBlockComposition();
-    }
-
-    public Vector3Int getBlockComposition() {
-        return blockComposition;
-    }
-
-    public BlockCompositionStruct getBlockCompositionStruct() {
-        return blockCompositionStruct;
     }
 
     public Vector3 getSize() {
@@ -224,7 +189,7 @@ public class EntityInstance extends InstancePackage {
     }
 
     public void setSize(Vector3 size) {
-        setEntitySize(size);
+        this.size = size;
     }
 
     public float getWeight() {

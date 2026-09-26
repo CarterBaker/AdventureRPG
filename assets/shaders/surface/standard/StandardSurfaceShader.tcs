@@ -9,7 +9,9 @@ in  vec3  tcColor[];
 in  float tcSizeA[];
 in  float tcSizeB[];
 in  float tcNatural[];
-in  vec4  tcEdge[];
+in  float tcEdgeCells[];
+in  vec4  tcEdgeLow[];
+in  vec4  tcEdgeHigh[];
 
 out vec3  teWorldPos[];
 out vec3  teNormal[];
@@ -19,30 +21,34 @@ out vec3  teColor[];
 out float teSizeA[];
 out float teSizeB[];
 out float teNatural[];
-out vec4  teEdge[];
+out float teEdgeCells[];
+out vec4  teEdgeLow[];
+out vec4  teEdgeHigh[];
 
 #include "includes/SettingsData.glsl"
 #include "includes/PlayerPositionData.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
 // Tessellation-level control point. The tier is resolved once per patch from the chunk that owns the
-// patch's origin block, so every patch of a chunk agrees and the two perpendicular faces of one block can
-// no longer land in different chunks and pick different densities along the edge they share. Level scales
-// with the edge's block length in every tier, which fixes vertex spacing at 0.25 blocks near and 1.0
-// blocks beyond; with merges capped at ten blocks the near level tops out at 40 and never approaches the
-// hardware clamp.
+// patch's origin sub-block, so every patch of a chunk agrees and the two perpendicular faces of one block
+// can never land in different chunks and pick different densities along the edge they share. Near levels
+// place a vertex every quarter block and far levels one per edge-word entry, so every level is a whole
+// number and every vertex falls on the quarter-block lattice; with merges capped at ten blocks the near
+// level tops out at 40 and never approaches the hardware clamp.
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
-    teWorldPos[gl_InvocationID] = tcWorldPos[gl_InvocationID];
-    teNormal  [gl_InvocationID] = tcNormal  [gl_InvocationID];
-    teUVOrigin[gl_InvocationID] = tcUVOrigin[gl_InvocationID];
-    teOrient  [gl_InvocationID] = tcOrient  [gl_InvocationID];
-    teColor   [gl_InvocationID] = tcColor   [gl_InvocationID];
-    teSizeA   [gl_InvocationID] = tcSizeA   [gl_InvocationID];
-    teSizeB   [gl_InvocationID] = tcSizeB   [gl_InvocationID];
-    teNatural [gl_InvocationID] = tcNatural [gl_InvocationID];
-    teEdge    [gl_InvocationID] = tcEdge    [gl_InvocationID];
+    teWorldPos [gl_InvocationID] = tcWorldPos [gl_InvocationID];
+    teNormal   [gl_InvocationID] = tcNormal   [gl_InvocationID];
+    teUVOrigin [gl_InvocationID] = tcUVOrigin [gl_InvocationID];
+    teOrient   [gl_InvocationID] = tcOrient   [gl_InvocationID];
+    teColor    [gl_InvocationID] = tcColor    [gl_InvocationID];
+    teSizeA    [gl_InvocationID] = tcSizeA    [gl_InvocationID];
+    teSizeB    [gl_InvocationID] = tcSizeB    [gl_InvocationID];
+    teNatural  [gl_InvocationID] = tcNatural  [gl_InvocationID];
+    teEdgeCells[gl_InvocationID] = tcEdgeCells[gl_InvocationID];
+    teEdgeLow  [gl_InvocationID] = tcEdgeLow  [gl_InvocationID];
+    teEdgeHigh [gl_InvocationID] = tcEdgeHigh [gl_InvocationID];
 
     if (gl_InvocationID == 0) {
 
@@ -53,9 +59,10 @@ void main() {
             tcWorldPos[0], tcWorldPos[1], tcWorldPos[3], tcNormal[0]);
 
         float chunkDistSq = computeDistanceFromCenterSq(chunkCenter);
+        float entryBlocks = tcEdgeCells[0] * SUB_BLOCK_SIZE;
 
-        float levelA = getEdgeTessLevel(chunkDistSq, tcSizeA[0], tier0MaxSqDist, tier1MaxSqDist);
-        float levelB = getEdgeTessLevel(chunkDistSq, tcSizeB[0], tier0MaxSqDist, tier1MaxSqDist);
+        float levelA = getEdgeTessLevel(chunkDistSq, tcSizeA[0], entryBlocks, tier0MaxSqDist, tier1MaxSqDist);
+        float levelB = getEdgeTessLevel(chunkDistSq, tcSizeB[0], entryBlocks, tier0MaxSqDist, tier1MaxSqDist);
 
         gl_TessLevelOuter[0] = levelB;
         gl_TessLevelOuter[1] = levelA;

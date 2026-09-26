@@ -8,7 +8,8 @@ public class BlockCastStruct extends StructPackage {
 
     /*
      * Output container for a single block raycast result. Passed into cast
-     * methods and written in place — never allocated per cast.
+     * methods and written in place — never allocated per cast. hitOctant is
+     * the octant of the hit block the ray actually met (see SubBlockUtility).
      */
 
     // Internal
@@ -24,6 +25,7 @@ public class BlockCastStruct extends StructPackage {
     private int hitSubX;
     private int hitSubY;
     private int hitSubZ;
+    private int hitOctant;
 
     // Accessible \\
 
@@ -121,5 +123,13 @@ public class BlockCastStruct extends StructPackage {
 
     public void setHitSubZ(int hitSubZ) {
         this.hitSubZ = hitSubZ;
+    }
+
+    public int getHitOctant() {
+        return hitOctant;
+    }
+
+    public void setHitOctant(int hitOctant) {
+        this.hitOctant = hitOctant;
     }
 }

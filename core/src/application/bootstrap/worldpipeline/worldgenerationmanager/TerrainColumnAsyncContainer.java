@@ -20,7 +20,12 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
      * anywhere in it. WorldGenerationManager.computeColumn() fills this once
      * per chunk, together with the tide surface that chunk generates its
      * ocean against; every generateSubChunk() call for that chunk reads from
-     * it instead of re-running the terrain noise stack.
+     * it instead of re-running the terrain noise stack. The corner grid holds
+     * the continuous ground height at every block corner of the chunk, its
+     * outermost corners lying on the chunk boundary, and drives sub-block
+     * edge smoothing: each block column carries the octants of its ground
+     * cell that survive a lowered quadrant and the octants of the cap cell
+     * above it that a raised quadrant adds.
      */
 
     static final int COLUMN_COUNT = EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
@@ -34,6 +39,9 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     static final int DETAIL_SAMPLE_STRIDE = EngineSetting.TERRAIN_DETAIL_SAMPLE_STRIDE_BLOCKS;
     static final int DETAIL_SAMPLES_PER_AXIS = (EngineSetting.CHUNK_SIZE / DETAIL_SAMPLE_STRIDE) + 1;
     static final int DETAIL_SAMPLE_COUNT = DETAIL_SAMPLES_PER_AXIS * DETAIL_SAMPLES_PER_AXIS;
+
+    static final int CORNERS_PER_AXIS = EngineSetting.CHUNK_SIZE + 1;
+    static final int CORNER_COUNT = CORNERS_PER_AXIS * CORNERS_PER_AXIS;
 
     boolean hasComputedColumn;
     WorldHandle computedWorldHandle;
@@ -53,12 +61,17 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     // Detail Grid
     float[] detailGridBlocks;
 
+    // Corner Grid
+    float[] cornerHeightBlocks;
+
     // Per Block Column
     int[] groundHeightBlocks;
     short[] columnSurfaceBlockID;
     short[] columnSubsurfaceBlockID;
     short[] columnUnderwaterBlockID;
     boolean[] columnOceanWater;
+    byte[] columnGroundMask;
+    byte[] columnCapMask;
 
     // Whole Column
     int columnTopBlocks;
@@ -92,11 +105,15 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
 
         this.detailGridBlocks = new float[DETAIL_SAMPLE_COUNT];
 
+        this.cornerHeightBlocks = new float[CORNER_COUNT];
+
         this.groundHeightBlocks = new int[COLUMN_COUNT];
         this.columnSurfaceBlockID = new short[COLUMN_COUNT];
         this.columnSubsurfaceBlockID = new short[COLUMN_COUNT];
         this.columnUnderwaterBlockID = new short[COLUMN_COUNT];
         this.columnOceanWater = new boolean[COLUMN_COUNT];
+        this.columnGroundMask = new byte[COLUMN_COUNT];
+        this.columnCapMask = new byte[COLUMN_COUNT];
 
         this.hasComputedColumn = false;
     }
