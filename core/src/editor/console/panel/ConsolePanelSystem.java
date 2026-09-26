@@ -20,7 +20,8 @@ public class ConsolePanelSystem extends SystemPackage {
      * the console menu. Each frame it injects the lines written since the last
      * one, keeps the newest lines on screen up to the console's limit, and
      * follows the newest line until the list is scrolled up. The command line
-     * shows whatever text ConsoleInputSystem hands it.
+     * shows whatever text ConsoleInputSystem hands it, and the menu itself is
+     * shared with ConsoleCommandTreeSystem, which fills the command tree.
      */
 
     // Internal
@@ -147,5 +148,11 @@ public class ConsolePanelSystem extends SystemPackage {
 
     public void setCommandText(String text) {
         commandLabel.setFontText(text);
+    }
+
+    // Accessible \\
+
+    public MenuInstance getConsoleMenu() {
+        return consoleMenu;
     }
 }

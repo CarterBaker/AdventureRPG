@@ -72,10 +72,18 @@ public class EditorSetting {
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
 
     // Commands \\
+    public static final String COMMAND_JSON_PATH = "commands";
     public static final String COMMAND_ECHO_PREFIX = "> ";
     public static final String COMMAND_TOKEN_SEPARATOR_PATTERN = "\\s+";
+    public static final String COMMAND_ARGUMENT_OPEN = " <";
+    public static final String COMMAND_ARGUMENT_CLOSE = ">";
+    public static final String COMMAND_FLY = "fly";
+    public static final String COMMAND_MESSAGE_UNKNOWN = "Unknown command: ";
+    public static final String COMMAND_MESSAGE_USAGE = "Usage: ";
     public static final String COMMAND_MESSAGE_NO_DEV_WINDOWS = "No Dev Mode window is open to receive the command";
-    public static final String COMMAND_MESSAGE_RECEIVED = " received ";
+    public static final String COMMAND_MESSAGE_NO_ACTION = " has no action for ";
+    public static final String COMMAND_MESSAGE_FREE_CAMERA_ON = ": free flying on";
+    public static final String COMMAND_MESSAGE_FREE_CAMERA_OFF = ": free flying off";
 
     // Viewports \\
     public static final String FBO_EDITOR_SCENE = "EditorScene";

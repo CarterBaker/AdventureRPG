@@ -20,7 +20,8 @@ public class PlayerRenderSystem extends SystemPackage {
      * WorldItemPlacementSystem/WorldItemRenderSystem keep all composite-item
      * logic in bootstrap and runtime only ever calls the entry points.
      * The body faces its own smoothed heading, and the head it hides in
-     * first person is the one its appearance JSON names.
+     * first person is the one its appearance JSON names. A player turned into
+     * a free camera is not drawn.
      */
 
     // Internal
@@ -44,7 +45,7 @@ public class PlayerRenderSystem extends SystemPackage {
 
         int windowID = context.getWindow().getWindowID();
 
-        if (!playerManager.hasPlayerForWindow(windowID))
+        if (!playerManager.hasPlayerForWindow(windowID) || playerManager.isFreeCameraForWindow(windowID))
             return;
 
         EntityInstance player = playerManager.getPlayerForWindow(windowID);

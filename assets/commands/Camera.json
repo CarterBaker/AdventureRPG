@@ -1,0 +1,8 @@
+{
+  "commands": [
+    {
+      "name": "fly",
+      "label": "Toggle Free Flying"
+    }
+  ]
+}

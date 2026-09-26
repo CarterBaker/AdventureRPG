@@ -78,11 +78,13 @@ public class PlayerManager extends ManagerPackage {
      * owns only the state that entry point needs: which entity, which
      * camera, and (via isFirstPerson()) which bone to hide.
      *
-     * spawnFreeCamera() registers a window exactly like spawnPlayer(), but
-     * the entity is only an anchor the world streams around — it is never
-     * drawn or animated and never places or breaks blocks. Each frame it is
-     * flown through MovementManager.fly() instead of moved, and the camera
-     * sits directly at its eye position with no zoom.
+     * setFreeCameraForWindow() turns a window's player into a free camera and
+     * back. While it is one, the entity is only an anchor the world streams
+     * around — it is never drawn or animated and never places or breaks
+     * blocks. Each frame it is flown through MovementManager.fly() instead of
+     * moved, and the camera sits directly at its eye position with no zoom.
+     * Turning it off settles the player on safe ground beneath where it flew,
+     * exactly as a moved player is.
      *
      * rerollPlayerForWindow() turns a window's player into a fresh character
      * in place, and verifyPlayerPositionForWindow() holds a player that has
@@ -203,14 +205,6 @@ public class PlayerManager extends ManagerPackage {
     // Spawn \\
 
     public EntityInstance spawnPlayer(WindowInstance window, RawInputHandle rawInput) {
-        return registerPlayer(window, rawInput, false);
-    }
-
-    public EntityInstance spawnFreeCamera(WindowInstance window, RawInputHandle rawInput) {
-        return registerPlayer(window, rawInput, true);
-    }
-
-    private EntityInstance registerPlayer(WindowInstance window, RawInputHandle rawInput, boolean freeCamera) {
         EntityInstance player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
         int windowID = window.getWindowID();
         windowID2Player.put(windowID, player);
@@ -218,7 +212,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2RawInput.put(windowID, rawInput);
         windowID2Window.put(windowID, window);
         windowID2VerifyPlayerPosition.put(windowID, true);
-        windowID2FreeCamera.put(windowID, freeCamera);
+        windowID2FreeCamera.put(windowID, false);
         windowID2ZoomDistance.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2ZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2FirstPersonToggled.put(windowID, false);
@@ -237,6 +231,23 @@ public class PlayerManager extends ManagerPackage {
 
     public void verifyPlayerPositionForWindow(int windowID) {
         windowID2VerifyPlayerPosition.put(windowID, true);
+    }
+
+    // Free Camera \\
+
+    public void setFreeCameraForWindow(int windowID, boolean freeCamera) {
+
+        if (windowID2FreeCamera.get(windowID) == freeCamera)
+            return;
+
+        windowID2FreeCamera.put(windowID, freeCamera);
+
+        if (!freeCamera)
+            verifyPlayerPositionForWindow(windowID);
+    }
+
+    public boolean isFreeCameraForWindow(int windowID) {
+        return windowID2FreeCamera.get(windowID);
     }
 
     // Player \\
