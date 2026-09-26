@@ -5,6 +5,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 class NamedThreadFactory implements ThreadFactory {
 
+    /*
+     * Thread factory naming each pool thread after its pool with a running
+     * index, so thread dumps and logs show which pool a thread serves.
+     */
+
     private final String baseName;
     private final AtomicInteger count = new AtomicInteger(1);
 

@@ -19,6 +19,9 @@ public enum ItemCategory {
     MATERIAL(EngineSetting.ITEM_CATEGORY_TITLE_MATERIAL),
     MISC(EngineSetting.ITEM_CATEGORY_TITLE_MISC);
 
+    // Values
+    public static final ItemCategory[] VALUES = values();
+
     // Internal
     private final String title;
 

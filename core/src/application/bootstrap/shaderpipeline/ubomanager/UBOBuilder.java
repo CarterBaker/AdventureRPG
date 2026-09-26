@@ -12,12 +12,13 @@ import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import engine.root.BuilderPackage;
 import engine.util.io.JsonUtility;
 
-/*
- * Parses UBO JSON descriptors into UBOHandles during bootstrap. Checks the
- * manager palette before creating anything — if the block is already registered
- * the existing handle is returned immediately and nothing is allocated.
- */
 class UBOBuilder extends BuilderPackage {
+
+    /*
+     * Parses UBO JSON descriptors into UBOHandles during bootstrap. Checks the
+     * manager palette before creating anything — if the block is already registered
+     * the existing handle is returned immediately and nothing is allocated.
+     */
 
     // Internal
     private UBOManager uboManager;

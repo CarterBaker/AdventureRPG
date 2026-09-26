@@ -14,20 +14,11 @@ import engine.root.EngineSetting;
 public class GenerationBranch extends BranchPackage {
 
     /*
-     * Async — attempts to load the chunk from disk/cache first, then falls back
-     * to procedural generation. computeColumn() resolves this chunk's biome and
-     * every one of its ground heights exactly once before the WORLD_HEIGHT
-     * subchunk generation calls that follow, reusing the chunk's own
-     * ChunkTerrainCache instead of rederiving them whenever that cache is
-     * already valid for this exact coordinate — the expensive noise/biome work
-     * only ever needs to happen once per chunk for the life of the world, not
-     * once per GENERATION_DATA reload. Once every subchunk has generated,
-     * StructureManager stamps every structure reaching this chunk into it,
-     * so terrain and structures always publish together, and the tide surface
-     * the ocean was generated against is recorded on the chunk for the tide
-     * pass. Sets LOAD_DATA,
-     * ESSENTIAL_DATA, and GENERATION_DATA on the sync container once the
-     * chunk is fully populated. Runs on the WorldStreaming thread.
+     * Async — generates a chunk on the WorldStreaming thread. computeColumn()
+     * resolves the column once and caches it per chunk, every subchunk then
+     * generates from it, StructureManager stamps overlapping structures, and
+     * the tide surface is recorded. Sets LOAD_DATA, ESSENTIAL_DATA and
+     * GENERATION_DATA once the chunk is populated.
      */
 
     // Internal
@@ -46,7 +37,7 @@ public class GenerationBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
+        this.threadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
         this.worldGenerationManager = get(WorldGenerationManager.class);
         this.structureManager = get(StructureManager.class);
 
@@ -67,28 +58,13 @@ public class GenerationBranch extends BranchPackage {
                 () -> {
                     try {
                         syncContainer.acquire();
-                        boolean[] data = syncContainer.getData();
-
-                        boolean loaded = false;
-
-                        if (!data[loadIndex]) {
-                            loaded = loadChunk(chunkInstance, syncContainer);
-                            data[loadIndex] = true;
-                        }
-
-                        if (!loaded)
-                            generateChunk(chunkInstance, syncContainer);
+                        syncContainer.getData()[loadIndex] = true;
+                        generateChunk(chunkInstance, syncContainer);
                     } finally {
                         syncContainer.release();
                         syncContainer.endWork(ChunkDataSyncContainer.WORK_LOAD);
                     }
                 });
-    }
-
-    private boolean loadChunk(
-            ChunkInstance chunkInstance,
-            ChunkDataSyncContainer container) {
-        return false; // TODO: Implement loading from disk/cache
     }
 
     private void generateChunk(

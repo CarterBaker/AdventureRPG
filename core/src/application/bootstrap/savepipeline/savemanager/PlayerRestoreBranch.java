@@ -25,15 +25,10 @@ import engine.util.mathematics.vectors.Vector3;
 class PlayerRestoreBranch extends BranchPackage {
 
     /*
-     * Applies a character save to a window's player in place. The whole save
-     * is validated before anything changes — its world must be the one the
-     * player lives in and every feature must still exist and fit the
-     * character — so a stale or malformed save leaves the player untouched.
-     * The location is wrapped back into chunk and world bounds the same way
-     * movement wraps it. The inventory is restored leniently instead: an item
-     * the game no longer has, or one that no longer fits where it was kept,
-     * is logged and left out rather than costing the character its save, and
-     * a save written before inventories existed restores an empty one.
+     * Applies a character save to a window's player in place. The save is fully
+     * validated first, so a stale one changes nothing; the location is wrapped
+     * into world bounds; inventory restores leniently, logging and skipping
+     * items that no longer exist or fit.
      */
 
     // Internal
@@ -110,7 +105,7 @@ class PlayerRestoreBranch extends BranchPackage {
 
     private void restoreFeatures(JsonObject featuresJson, AppearanceHandle appearanceHandle) {
 
-        for (FeatureSlot featureSlot : FeatureSlot.values()) {
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
             String key = featureSlot.name().toLowerCase();
 
@@ -142,7 +137,7 @@ class PlayerRestoreBranch extends BranchPackage {
 
     private void restoreEquipment(JsonObject equipmentJson, InventoryHandle inventoryHandle) {
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
 
             String key = JsonUtility.toEnumName(equipmentSlot);
 
@@ -168,7 +163,7 @@ class PlayerRestoreBranch extends BranchPackage {
 
             JsonElement slotJson = hiddenJson.get(i);
 
-            for (EquipmentSlot equipmentSlot : EquipmentSlot.values())
+            for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
                 if (slotJson.isJsonPrimitive()
                         && JsonUtility.toEnumName(equipmentSlot).equals(slotJson.getAsString()))
                     inventoryHandle.setHidden(equipmentSlot, true);
@@ -305,7 +300,7 @@ class PlayerRestoreBranch extends BranchPackage {
 
         int filledSlotCount = 0;
 
-        for (FeatureSlot featureSlot : FeatureSlot.values()) {
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
             String key = featureSlot.name().toLowerCase();
 

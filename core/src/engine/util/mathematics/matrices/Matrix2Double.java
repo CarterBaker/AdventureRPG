@@ -4,6 +4,10 @@ import engine.root.EngineUtility;
 
 public class Matrix2Double extends EngineUtility {
 
+    /*
+     * Mutable 2x2 double matrix with in-place operations.
+     */
+
     // Data
     public final double[] val = new double[4];
 

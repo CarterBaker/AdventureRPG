@@ -1,8 +1,8 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
-import java.io.File;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
 import application.bootstrap.entitypipeline.animationtreemanager.AnimationTreeManager;
@@ -26,16 +26,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class EntityBuilder extends BuilderPackage {
 
     /*
-     * Parses entity template JSON into an EntityData and wraps it in an
-     * EntityHandle. All size, weight, and eye level fields fall back to
-     * engine defaults if not specified. The optional "model" block resolves
-     * a character mesh, a single shared material clone, and a rig, plus the
-     * animation tree that drives it, which must be built on that same rig,
-     * and — through AppearanceBuilder — the optional "appearance" block of
-     * swappable features. The model's full height is read off the body
-     * mesh and, when present, the default head together. The model's optional
-     * "equipment" array anchors each equipment slot's worn item to a bone of
-     * that rig. Bootstrap-only.
+     * Parses entity template JSON into EntityData wrapped in an EntityHandle,
+     * defaulting size, weight and eye level. The optional model block resolves
+     * mesh, shared material, rig and animation tree, plus appearance and
+     * equipment anchors. Bootstrap only.
      */
 
     // Internal

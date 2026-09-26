@@ -1,8 +1,8 @@
 package application.runtime.weather;
 
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
@@ -26,13 +26,13 @@ public class WeatherSystem extends SystemPackage {
     // Internal
     private PassManager passManager;
     private RenderManager renderManager;
-    private FboManager fboManager;
-    private FboRenderSystem fboRenderSystem;
+    private FBOManager fboManager;
+    private FBORenderSystem fboRenderSystem;
     private WorldSystem worldSystem;
 
     // Render Target
     private PassHandle weatherPass;
-    private FboInstance weatherFbo;
+    private FBOInstance weatherFbo;
 
     // Internal \\
 
@@ -40,8 +40,8 @@ public class WeatherSystem extends SystemPackage {
     protected void get() {
         this.passManager = get(PassManager.class);
         this.renderManager = get(RenderManager.class);
-        this.fboManager = get(FboManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
+        this.fboManager = get(FBOManager.class);
+        this.fboRenderSystem = get(FBORenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
     }
 
@@ -58,7 +58,11 @@ public class WeatherSystem extends SystemPackage {
 
         bindGridLightingData(grid);
 
-        renderManager.pushRenderCall(weatherPass.getModelInstance(), weatherFbo, 0, context.getWindow());
+        renderManager.pushRenderCall(
+                weatherPass.getModelInstance(),
+                weatherFbo,
+                RuntimeSetting.PASS_DRAW_DEPTH,
+                context.getWindow());
         fboRenderSystem.pushFbo(weatherFbo, RuntimeSetting.LAYER_WEATHER, context.getWindow());
     }
 
@@ -79,7 +83,7 @@ public class WeatherSystem extends SystemPackage {
 
     // Accessible \\
 
-    public FboInstance getWeatherFbo() {
+    public FBOInstance getWeatherFbo() {
         return weatherFbo;
     }
 }

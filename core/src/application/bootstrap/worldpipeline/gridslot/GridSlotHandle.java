@@ -58,12 +58,6 @@ public class GridSlotHandle extends HandlePackage {
 
     // Computed Coordinate Lookups \\
 
-    /*
-     * Wrapped exactly like GridInstance.getChunkCoordinateForSlot() — a slot
-     * near a world seam must resolve to the same absolute chunk coordinate
-     * both here and in the render queue, or a lookup keyed by one and probed
-     * by the other silently misses and the chunk never finds its own entry.
-     */
     public long getChunkCoordinate() {
         long raw = Coordinate2Long.add(gridInstance.getActiveChunkCoordinate(), gridCoordinate);
         return WorldWrapUtility.wrapAroundWorld(gridInstance.getWorldHandle(), raw);

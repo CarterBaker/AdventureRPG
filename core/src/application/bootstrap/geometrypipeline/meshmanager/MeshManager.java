@@ -22,7 +22,7 @@ public class MeshManager extends ManagerPackage {
     /*
      * Central registry for all GPU-resident mesh data. Owns the name-to-ID
      * and ID-to-handle palettes for static bootstrap meshes, drives the mesh
-     * load pipeline via InternalLoader, and handles runtime mesh creation,
+     * load pipeline via MeshLoader, and handles runtime mesh creation,
      * in-place updating, and removal by delegating buffer operations to
      * VAOManager, VBOManager, and IBOManager.
      */
@@ -109,13 +109,6 @@ public class MeshManager extends ManagerPackage {
         return meshInstance;
     }
 
-    /*
-     * Reuploads vertex and index data into an EXISTING MeshInstance's GPU
-     * buffers, keeping the same VAO/VBO/IBO handles. Used for geometry that
-     * changes shape but not identity — a streamed chunk's merged packet
-     * being rebuilt after a block edit or liquid flow — so repeated updates
-     * never pay for GL object allocation or per-window VAO clone rebuilding.
-     */
     public void updateMesh(MeshInstance meshInstance, FloatArrayList vertices, ShortArrayList indices) {
 
         VAOInstance vaoInstance = meshInstance.getVAOInstance();

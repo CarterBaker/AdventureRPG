@@ -1,8 +1,14 @@
 package engine.graphics.color;
 
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
 public class Color extends EngineUtility {
+
+    /*
+     * Mutable RGBA color with float channels, named constants, and packing to
+     * and from integer formats.
+     */
 
     // Static Colors \\
 
@@ -168,20 +174,20 @@ public class Color extends EngineUtility {
     // Packed Color \\
 
     public float toPackedFloat() {
-        int r = (int) (this.r * 255.0f);
-        int g = (int) (this.g * 255.0f);
-        int b = (int) (this.b * 255.0f);
-        int a = (int) (this.a * 255.0f);
+        int r = (int) (this.r * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
+        int g = (int) (this.g * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
+        int b = (int) (this.b * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
+        int a = (int) (this.a * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
         int packed = (a << 24) | (b << 16) | (g << 8) | r;
         return Float.intBitsToFloat(packed & 0xfeffffff);
     }
 
     public Color fromPackedFloat(float packed) {
         int intBits = Float.floatToRawIntBits(packed);
-        this.r = (intBits & 0xff) / 255.0f;
-        this.g = ((intBits >>> 8) & 0xff) / 255.0f;
-        this.b = ((intBits >>> 16) & 0xff) / 255.0f;
-        this.a = ((intBits >>> 24) & 0xff) / 255.0f;
+        this.r = (intBits & 0xff) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
+        this.g = ((intBits >>> 8) & 0xff) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
+        this.b = ((intBits >>> 16) & 0xff) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
+        this.a = ((intBits >>> 24) & 0xff) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
         return this;
     }
 
@@ -192,10 +198,10 @@ public class Color extends EngineUtility {
     }
 
     public static float rgba8888(float r, float g, float b, float a) {
-        int ri = (int) (r * 255.0f);
-        int gi = (int) (g * 255.0f);
-        int bi = (int) (b * 255.0f);
-        int ai = (int) (a * 255.0f);
+        int ri = (int) (r * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
+        int gi = (int) (g * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
+        int bi = (int) (b * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
+        int ai = (int) (a * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
         int packed = (ai << 24) | (bi << 16) | (gi << 8) | ri;
         return Float.intBitsToFloat(packed & 0xfeffffff);
     }

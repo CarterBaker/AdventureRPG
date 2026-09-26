@@ -1,13 +1,13 @@
 package application.bootstrap.worldpipeline.worldstreammanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
 import application.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -15,18 +15,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WorldStreamManager extends ManagerPackage {
 
     /*
-     * Single public entry point for all world streaming. Owns the grid registry
-     * and drives grid lifecycle — create, remove, rebuild. Each grid is tied to
-     * a WindowInstance so frustum culling and rendering operate per-window
-     * independently. A rebuild flushes the grid's chunks and megas, then
-     * re-lays its slots in place, so every holder of the grid stays valid.
-     * update() drives coordinate tracking across all grids — each grid owns
-     * its own render queue rebuild on boundary crossing, and that rebuild is
-     * where a grid's slots get re-wrapped around the player's new position,
-     * so this manager also raises wrappingPlayer for that one frame —
-     * WorldTickManager reads it to hold its tick cycle rather than compete
-     * with the rebuild for the same frame. ChunkStreamManager and
-     * MegaStreamManager are internal.
+     * Single public entry point for world streaming. Owns the grid registry and
+     * grid lifecycle, one grid per window, and drives coordinate tracking each
+     * frame. A rebuild re-lays a grid's slots in place, and the frame a grid
+     * wraps around the player raises wrappingPlayer so WorldTickManager holds
+     * off.
      */
 
     // Internal
@@ -72,7 +65,7 @@ public class WorldStreamManager extends ManagerPackage {
     // Grid Lifecycle \\
 
     public GridInstance createGrid(EntityInstance focalEntity, WindowInstance windowInstance,
-            FboInstance renderTargetFbo) {
+            FBOInstance renderTargetFbo) {
         GridInstance grid = gridManager.buildGrid(focalEntity, windowInstance, renderTargetFbo);
         grids.add(grid);
         return grid;

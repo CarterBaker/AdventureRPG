@@ -4,10 +4,8 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import javax.imageio.ImageIO;
 
 import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
@@ -19,16 +17,13 @@ import engine.util.io.FileUtility;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Constructs TextureArrayStructs from raw image files. Handles tile creation,
- * atlas packing via AtlasUtility, and layer compositing per alias. All produced
- * objects are StructPackage types and GC with the loader after bootstrap.
- *
- * Only alias IDs actually encountered in source files are registered on the
- * resulting TextureArrayStruct — seedUBO uses this to write only the uniforms
- * this atlas provides.
- */
 class TextureBuilder extends BuilderPackage {
+
+    /*
+     * Builds TextureArrayStructs from image files: creates tiles, packs the
+     * atlas and composites one layer per alias. Only aliases found in the
+     * sources are registered, so UBO seeding writes exactly those.
+     */
 
     // Internal
     private AliasLibrarySystem aliasLibrarySystem;
@@ -42,9 +37,9 @@ class TextureBuilder extends BuilderPackage {
 
     // Build \\
 
-    TextureArrayStruct build(List<File> imageFiles, File sourceDirectory, String arrayName) {
+    TextureArrayStruct build(ObjectArrayList<File> imageFiles, File sourceDirectory, String arrayName) {
 
-        LinkedHashMap<String, TextureTileStruct> tileMap = createTextureTiles(
+        Object2ObjectLinkedOpenHashMap<String, TextureTileStruct> tileMap = createTextureTiles(
                 imageFiles, sourceDirectory, arrayName);
 
         if (tileMap.isEmpty())
@@ -59,12 +54,12 @@ class TextureBuilder extends BuilderPackage {
 
     // Texture Tiles \\
 
-    private LinkedHashMap<String, TextureTileStruct> createTextureTiles(
-            List<File> imageFiles,
+    private Object2ObjectLinkedOpenHashMap<String, TextureTileStruct> createTextureTiles(
+            ObjectArrayList<File> imageFiles,
             File sourceDirectory,
             String arrayName) {
 
-        LinkedHashMap<String, TextureTileStruct> tileMap = new LinkedHashMap<>();
+        Object2ObjectLinkedOpenHashMap<String, TextureTileStruct> tileMap = new Object2ObjectLinkedOpenHashMap<>();
         String atlasName = sourceDirectory.getName();
         int aliasCount = aliasLibrarySystem.getAliasCount();
 
@@ -104,13 +99,17 @@ class TextureBuilder extends BuilderPackage {
         return organizeTextureTiles(tileMap);
     }
 
-    private LinkedHashMap<String, TextureTileStruct> organizeTextureTiles(
-            LinkedHashMap<String, TextureTileStruct> tileMap) {
+    private Object2ObjectLinkedOpenHashMap<String, TextureTileStruct> organizeTextureTiles(
+            Object2ObjectLinkedOpenHashMap<String, TextureTileStruct> tileMap) {
 
-        LinkedHashMap<String, TextureTileStruct> sorted = new LinkedHashMap<>();
-        tileMap.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue((a, b) -> Integer.compare(a.getID(), b.getID())))
-                .forEachOrdered(e -> sorted.put(e.getKey(), e.getValue()));
+        ObjectArrayList<String> tileNames = new ObjectArrayList<>(tileMap.keySet());
+        tileNames.sort((a, b) -> Integer.compare(tileMap.get(a).getID(), tileMap.get(b).getID()));
+
+        Object2ObjectLinkedOpenHashMap<String, TextureTileStruct> sorted = new Object2ObjectLinkedOpenHashMap<>();
+
+        for (int i = 0; i < tileNames.size(); i++)
+            sorted.put(tileNames.get(i), tileMap.get(tileNames.get(i)));
+
         return sorted;
     }
 
@@ -162,7 +161,7 @@ class TextureBuilder extends BuilderPackage {
     // Texture Array \\
 
     private TextureArrayStruct createTextureArray(
-            LinkedHashMap<String, TextureTileStruct> tileMap,
+            Object2ObjectLinkedOpenHashMap<String, TextureTileStruct> tileMap,
             String arrayName,
             int atlasPixelSize,
             TextureAtlasStruct[] atlasLayers) {

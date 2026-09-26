@@ -9,12 +9,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MenuNodeStruct extends StructPackage {
 
     /*
-     * One node in a resolved menu element tree. References a master ElementHandle,
-     * carries optional per-placement overrides for on_click and on_drag (method
-     * callbacks only), sprite, text, color, layout, and owns an ordered child list.
-     *
-     * Hover states are not overridable at the node level — they are defined on
-     * the master ElementHandle and apply uniformly wherever it is placed.
+     * One node of a resolved menu tree: its master ElementHandle, per-placement
+     * overrides for callbacks, sprite, text, color and layout, and its ordered
+     * children. Hover states are defined on the master only.
      */
 
     // Master

@@ -3,12 +3,7 @@ package engine.root;
 public class HandlePackage extends InstancePackage {
 
     /*
-     * HandlePackages are intended to be held indefinitely during
-     * game creation and may be duplicated during runtime when
-     * required.
-     *
-     * Primarily used as persistent data containers for long-lived
-     * references, including (but not limited to) GPU-side resources
-     * and engine-managed handles.
+     * Long-lived engine-managed container, typically wrapping a Data object and
+     * GPU resources for the whole session.
      */
 }

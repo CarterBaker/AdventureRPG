@@ -1,15 +1,15 @@
 package application.bootstrap.geometrypipeline.vbomanager;
 
-import java.io.File;
-import java.util.Map;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.bootstrap.geometrypipeline.vbo.VBOHandle;
 import engine.root.BuilderPackage;
 import engine.util.io.JsonUtility;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class VBOBuilder extends BuilderPackage {
 
@@ -34,16 +34,10 @@ public class VBOBuilder extends BuilderPackage {
 
     // Build \\
 
-    /*
-     * VAOInstance is provided by InternalLoader — the same instance that will
-     * be stored in the MeshHandle. GL attribute pointers are baked into the VAO
-     * when glVertexAttribPointer is called during upload, so this must be the
-     * exact same VAOInstance the mesh assembler uses or nothing draws.
-     */
     public void build(
             String resourceName,
             File file,
-            Map<String, File> registry,
+            Object2ObjectOpenHashMap<String, File> registry,
             VAOInstance vaoInstance) {
 
         if (vboManager.hasVBO(resourceName))
@@ -80,7 +74,7 @@ public class VBOBuilder extends BuilderPackage {
             String refName,
             String sourceResourceName,
             File sourceFile,
-            Map<String, File> registry,
+            Object2ObjectOpenHashMap<String, File> registry,
             VAOInstance vaoInstance) {
 
         if (vboManager.hasVBO(refName))

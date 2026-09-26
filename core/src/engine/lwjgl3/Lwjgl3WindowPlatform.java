@@ -1,5 +1,6 @@
 package engine.lwjgl3;
 
+import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -21,29 +22,16 @@ import java.nio.IntBuffer;
 public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     /*
-     * Bridges the engine WindowPlatform contract to raw GLFW. Maps engine window
-     * IDs to native handles. All windows — main and secondary — share identical
-     * open, draw, swap, and destroy paths with no special casing.
-     *
-     * GL context switching and input context switching are intentionally
-     * decoupled. bindContext only makes a GL context current and ensures its
-     * GLCapabilities are loaded — it never touches EngineContext.input.
-     * syncInputForCurrentContext is called exclusively from syncInputForWindow,
-     * which WindowManager drives once per frame after resolving the hovered OS
-     * window. This ensures that render-loop context switches (makeContextCurrent
-     * on secondary windows) cannot corrupt the input context that was established
-     * by syncHoveredWindow earlier in the same frame.
-     *
-     * Display mode changes act on the main window only. Vsync is a per-context
-     * swap interval, so changing it re-applies the interval to every open OS
-     * window and restores whichever context was current before.
+     * Implements the WindowPlatform contract on GLFW for every window alike. GL
+     * context binding is kept apart from input: only syncInputForWindow()
+     * touches EngineContext.input. Display mode acts on the main window; vsync
+     * is reapplied to every OS window.
      */
 
     // Application
     private Lwjgl3Application application;
 
     // Window Registry
-    private static final int MAIN_WINDOW_ID = 0;
     private static final int UNKNOWN_WINDOW_ID = -1;
     private final Int2LongOpenHashMap windowID2Handle = new Int2LongOpenHashMap();
     private final Int2ObjectOpenHashMap<GLCapabilities> windowID2Capabilities = new Int2ObjectOpenHashMap<>();
@@ -140,12 +128,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (!window.hasNativeHandle())
             return;
 
-        // Refreshes this window's own Input object from a direct platform query
-        // so getMouseX/Y() is current even on windows that never received a
-        // cursor-move callback. Does NOT touch EngineContext.input — ownership
-        // of that reference belongs exclusively to InputManager, decided once
-        // per frame after focus is resolved, never as a side effect of syncing
-        // every window in a loop.
+        // Refreshes this window's own cursor without touching EngineContext.input
         cursorScratchX.clear();
         cursorScratchY.clear();
         GLFW.glfwGetCursorPos(window.getNativeHandle(), cursorScratchX, cursorScratchY);
@@ -176,7 +159,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (!(EngineContext.display instanceof Lwjgl3Display display))
             return;
 
-        bindContext(MAIN_WINDOW_ID, display.getMainHandle());
+        bindContext(EngineSetting.MAIN_WINDOW_ID, display.getMainHandle());
     }
 
     @Override
@@ -190,7 +173,7 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
     @Override
     public void exit() {
 
-        long mainHandle = windowID2Handle.get(MAIN_WINDOW_ID);
+        long mainHandle = windowID2Handle.get(EngineSetting.MAIN_WINDOW_ID);
 
         if (mainHandle != 0L)
             GLFW.glfwSetWindowShouldClose(mainHandle, true);
@@ -215,14 +198,6 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     // Placement — OS-level window bounds \\
 
-    /*
-     * Moves and resizes an OS window. Width and height arrive in framebuffer
-     * pixels, the same units getWidth() and getHeight() report, and are
-     * converted to the screen units GLFW sizes windows in. A position that
-     * would leave the window on no connected monitor is ignored, so a layout
-     * saved with a monitor that is no longer attached never strands a window
-     * off-screen.
-     */
     @Override
     public void placeWindow(WindowInstance window, int screenX, int screenY, int width, int height) {
 
@@ -275,13 +250,6 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     // Cursor position — window-local, no context switch \\
 
-    /*
-     * Returns the cursor X position relative to the given OS window's client
-     * area. glfwGetCursorPos does not require the window to be the current
-     * GL context, so this is safe to call for any native window at any time
-     * without disturbing the input-sync state. Used by InputManager to serve
-     * TabDragManager during cross-window drag resolution.
-     */
     @Override
     public float getCursorX(WindowInstance window) {
 
@@ -306,13 +274,6 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         return (float) cursorScratchY.get(0);
     }
 
-    /*
-     * Fills out[0]/out[1] with cursor X/Y in a single glfwGetCursorPos call.
-     * Use this instead of getCursorX + getCursorY when both values are needed
-     * together — avoids a redundant platform round-trip per window per frame.
-     * Called from resolveHoveredOsWindow which queries every registered OS
-     * window every frame.
-     */
     @Override
     public void getCursorPos(WindowInstance window, float[] out) {
 
@@ -331,13 +292,6 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     // Screen position — OS-level window origin \\
 
-    /*
-     * Returns the screen X/Y of the window's top-left corner as reported by
-     * the OS. Written into WindowInstance.screenX/Y so TabDragManager can test
-     * whether the global cursor falls within a specific OS window's bounds
-     * during drag resolution. Also called from openWindow and the
-     * glfwSetWindowPosCallback installed there.
-     */
     @Override
     public float getScreenX(WindowInstance window) {
 
@@ -364,12 +318,6 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
     // Internal \\
 
-    /*
-     * Queries glfwGetWindowPos and writes the result into WindowInstance so
-     * the engine-side screen position stays in sync with the OS. Called from
-     * openWindow after the handle is live, and automatically kept current by
-     * the glfwSetWindowPosCallback installed in openWindow.
-     */
     private void syncScreenPosition(WindowInstance window) {
 
         if (!window.hasNativeHandle())
@@ -424,7 +372,8 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         if (handle != 0L)
             return handle;
 
-        if (window.getWindowID() == MAIN_WINDOW_ID && EngineContext.display instanceof Lwjgl3Display display)
+        if (window.getWindowID() == EngineSetting.MAIN_WINDOW_ID
+                && EngineContext.display instanceof Lwjgl3Display display)
             return display.getMainHandle();
 
         return application.newWindow(window.getTitle(), window.getWidth(), window.getHeight());
@@ -460,12 +409,6 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
         bindContext(windowID, windowHandle);
     }
 
-    /*
-     * Makes the given GL context current and ensures its GLCapabilities are
-     * loaded. Does NOT touch EngineContext.input — input context is owned
-     * exclusively by syncInputForWindow and must not be reassigned as a side
-     * effect of GL context switches during rendering or window initialisation.
-     */
     private void bindContext(int windowID, long windowHandle) {
         GLFW.glfwMakeContextCurrent(windowHandle);
         ensureCapabilitiesForCurrentContext(windowID);

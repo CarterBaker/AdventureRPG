@@ -8,15 +8,9 @@ import engine.util.registry.RegistryUtility;
 public class TabHandle extends HandlePackage {
 
     /*
-     * Runtime handle for one registered open tab. Wraps immutable TabData and
-     * carries the live TabContext, which owns both chrome and content.
-     *
-     * All access to content goes through getTabContext().getContentContext()
-     * so the tab remains the single unit of ownership. getWindow() is a
-     * convenience shortcut to the content window for InputSystem's authority
-     * resolver — the only place direct content window access is appropriate.
-     *
-     * isOpen() gates all close-path logic in TabManager.
+     * Handle for one open tab. Wraps TabData and the live TabContext that owns
+     * chrome and content; content is reached through the tab context, and
+     * getWindow() is the input-authority shortcut to the content window.
      */
 
     // Data
@@ -47,18 +41,6 @@ public class TabHandle extends HandlePackage {
         return tabData.getTabTitle();
     }
 
-    /*
-     * Stable numeric identity for this tab, derived from its title. Titles
-     * are guaranteed unique among currently open tabs — TabManager.hasTab()
-     * enforces this at open time — and never change afterward, so this
-     * value is stable for the tab's entire lifetime with no extra state:
-     * it's the exact same identity TabManager's own tabName2TabID table
-     * already keys on internally, just exposed here as a formula instead
-     * of a second cached copy. LayoutManager persists this so a BSP leaf
-     * can reference a specific tab directly, independent of array position
-     * — the one thing that actually needs to survive a restore where some
-     * other tab among several might fail to reopen.
-     */
     public int getTabId() {
         return RegistryUtility.toIntID(getTabTitle());
     }
@@ -71,10 +53,6 @@ public class TabHandle extends HandlePackage {
         return tabContext;
     }
 
-    /*
-     * Convenience for InputSystem's authority resolver. Content window is the
-     * input authority — accessed through the TabContext ownership chain.
-     */
     public WindowInstance getWindow() {
 
         if (tabContext == null)

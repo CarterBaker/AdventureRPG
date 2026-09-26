@@ -6,7 +6,7 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
-import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -17,20 +17,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class InventoryBranch extends BranchPackage {
 
     /*
-     * Runs the inventory for this context's window. The inventory key opens
-     * it while a player is in the world and no other menu holds input; using
-     * a chest in the world opens it with that chest shown too. The equipment
-     * panels are always shown, with the player standing in the open preview
-     * window between them — the character is drawn in the world behind the
-     * menus and framed there through the character preview, filling the
-     * window as far as its own proportions allow — and turned by dragging.
-     * The inventory key or Pause closes it once it has been on show a whole
-     * frame, handing any carried item back to where it came from and the
-     * camera back to the way it looked; a context torn down with the
-     * inventory open still hands back whatever the cursor carried. Each
-     * frame the drag branch settles what the cursor carries, the container
-     * branch keeps the backpack and chest panels in step with what is worn,
-     * and the equipment branch redraws whatever changed.
+     * Runs the inventory for this context's window. Opens on the inventory key
+     * or when a chest is used, shows the equipment panels around the framed
+     * character preview, and closes on the key or Pause, returning any carried
+     * item and the camera. Each frame the drag, container and equipment
+     * branches settle and redraw what changed.
      */
 
     // Internal

@@ -4,7 +4,7 @@ import editor.itemeditor.camera.ItemEditorCameraSystem;
 import editor.itemeditor.menu.ItemEditorMenuSystem;
 import editor.itemeditor.render.ItemEditorRenderSystem;
 import editor.itemeditor.tool.ItemEditorToolSystem;
-import engine.editor.EditorInputSystem;
+import editor.runtime.EditorInputSystem;
 import engine.root.ContextPackage;
 
 public class ItemEditorContext extends ContextPackage {

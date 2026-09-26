@@ -15,18 +15,9 @@ import engine.root.PipelinePackage;
 public class GeometryPipeline extends PipelinePackage {
 
     /*
-     * Registers all geometry pipeline managers in dependency order. VAO,
-     * VBO, and IBO managers are registered before MeshManager since mesh
-     * assembly depends on all three buffer systems being available.
-     * RigManager is registered before MeshManager since rig-declaring
-     * meshes resolve bone names against it during quad expansion.
-     * SkinnedBufferManager has no load-time dependency on any of these — it
-     * only builds GPU buffers on demand, later, when EntityRenderSystem
-     * first requests one for a given rigged MeshHandle — but is registered
-     * last here since every buffer it manages is created from a mesh this
-     * pipeline already owns. SubVoxelManager has no load-time ordering
-     * requirement either — MeshBuilder resolves it during get() and only
-     * calls into it while meshes load, after every manager exists.
+     * Registers the geometry managers in dependency order: VAO, VBO and IBO
+     * before MeshManager, RigManager before MeshManager for rigged meshes, then
+     * SkinnedBufferManager and SubVoxelManager, which only build on demand.
      */
 
     @Override

@@ -5,6 +5,10 @@ import engine.util.mathematics.extras.Direction3Vector;
 
 public class Vector3 extends EngineUtility {
 
+    /*
+     * Mutable three-component float vector with in-place arithmetic.
+     */
+
     // Data
     public float x, y, z;
 
@@ -26,16 +30,6 @@ public class Vector3 extends EngineUtility {
 
     public Vector3(Vector3 other) {
         this(other.x, other.y, other.z);
-    }
-
-    // Conversion \\
-
-    public engine.util.mathematics.vectors.Vector3 toNative() {
-        return new engine.util.mathematics.vectors.Vector3(x, y, z);
-    }
-
-    public Vector3 fromNative(engine.util.mathematics.vectors.Vector3 other) {
-        return set(other.x, other.y, other.z);
     }
 
     // Set \\

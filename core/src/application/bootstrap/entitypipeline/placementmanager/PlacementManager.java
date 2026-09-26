@@ -5,7 +5,7 @@ import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
-import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -100,7 +100,6 @@ public class PlacementManager extends ManagerPackage {
         }
 
         if (breakAction) {
-            blockBranch.resetBreakTarget();
             if (handleBreakAction(entity, castStruct))
                 timeSinceLastPlacement = 0;
             return;
@@ -172,10 +171,8 @@ public class PlacementManager extends ManagerPackage {
 
     // Routing \\
 
-    // TODO: route based on main hand contents
     private boolean handleBreakAction(EntityInstance entity, BlockCastStruct castStruct) {
-        // TODO: check main hand — tool routes to BlockBranch, etc.
-        return false;
+        return blockBranch.tryBreak(entity, castStruct);
     }
 
     private boolean handlePlaceAction(EntityInstance entity, Vector3 direction, BlockCastStruct castStruct) {

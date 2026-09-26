@@ -17,7 +17,7 @@ public class ShaderHandle extends HandlePackage {
     // Internal
     private ShaderData shaderData;
 
-    // Internal \\
+    // Constructor \\
 
     public void constructor(ShaderData shaderData) {
         this.shaderData = shaderData;
@@ -31,6 +31,10 @@ public class ShaderHandle extends HandlePackage {
 
     public void addCompiledUBOBlockName(String blockName) {
         shaderData.addCompiledUBOBlockName(blockName);
+    }
+
+    public boolean claimBlockBinding(int bindingPoint) {
+        return shaderData.claimBlockBinding(bindingPoint);
     }
 
     // Accessible \\

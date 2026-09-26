@@ -3,7 +3,7 @@ package editor.console.panel;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.console.ConsoleSetting;
@@ -24,7 +24,7 @@ public class ConsolePanelSystem extends SystemPackage {
 
     // Internal
     private MenuManager menuManager;
-    private FboManager fboManager;
+    private FBOManager fboManager;
 
     // Menus
     private MenuInstance consoleMenu;
@@ -55,7 +55,7 @@ public class ConsolePanelSystem extends SystemPackage {
     @Override
     protected void get() {
         this.menuManager = get(MenuManager.class);
-        this.fboManager = get(FboManager.class);
+        this.fboManager = get(FBOManager.class);
     }
 
     @Override

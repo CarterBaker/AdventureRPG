@@ -23,15 +23,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class FontBuilder extends BuilderPackage {
 
     /*
-     * Builds FontHandles directly from TTF/OTF files. No JSON config — all
-     * parameters fall back to EngineSetting defaults. Pipeline:
-     * 1. Rasterize TTF glyphs into FontTileData list
-     * 2. Wrap each glyph as a TextureTileStruct (aliasCount=1, layer 0 = albedo)
-     * 3. Pack tiles into atlas via AtlasUtility
-     * 4. Composite single-layer atlas image
-     * 5. Wrap in TextureArrayStruct, push to GPU via pushTextureArray
-     * 6. Register with TextureManager — glyphs appear as fontName/glyph tiles
-     * 7. Retrieve TextureHandles per glyph, build metric table, return FontHandle
+     * Builds FontHandles straight from TTF and OTF files using EngineSetting
+     * defaults: rasterizes glyphs, packs them into an atlas, uploads it as a
+     * single-layer texture array registered with TextureManager, and builds the
+     * glyph metric table.
      */
 
     // Internal

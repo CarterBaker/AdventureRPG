@@ -7,7 +7,7 @@ import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -22,26 +22,19 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 public class WorldRenderManager extends ManagerPackage {
 
     /*
-     * Owns the GPU-resident render representation of every rendered chunk and
-     * mega chunk. A geometry rebuild (block edit, liquid flow, streaming) no
-     * longer tears down and recreates GL buffers — updateEntries() reconciles
-     * the new packet against the previous one bucket-by-bucket, reuploading
-     * data into the SAME VBO/IBO handles wherever a bucket already exists and
-     * only allocating or freeing GL objects when the bucket count for a
-     * material actually grows or shrinks. This keeps per-window VAO clones
-     * (see VAOManager) valid across updates, since they reference these same
-     * handles, and eliminates the GL object churn that made frequent updates
-     * — liquid ticks especially — extremely expensive. An entry whose shader
-     * declares the OceanData block also has the drawing grid's own ocean UBO
-     * bound on every push, so each window's water rides its own tide and
-     * turbulence.
+     * Owns the GPU representation of every rendered chunk and mega.
+     * updateEntries() reconciles a rebuilt packet bucket by bucket, reuploading
+     * into the same buffers so per-window VAO clones stay valid, and pushes
+     * each visible entry with its slot UBO, plus the grid's ocean UBO for
+     * water.
      */
 
     private MaterialManager materialManager;
@@ -92,7 +85,7 @@ public class WorldRenderManager extends ManagerPackage {
             GridInstance grid = (GridInstance) gridElements[g];
 
             WindowInstance window = grid.getWindowInstance();
-            FboInstance worldFbo = grid.getRenderTargetFbo();
+            FBOInstance worldFbo = grid.getRenderTargetFbo();
 
             if (window == null || worldFbo == null)
                 continue;
@@ -104,15 +97,16 @@ public class WorldRenderManager extends ManagerPackage {
         }
     }
 
-    private void renderGridMegas(GridInstance grid, WindowInstance window, FboInstance worldFbo) {
+    private void renderGridMegas(GridInstance grid, WindowInstance window, FBOInstance worldFbo) {
 
         Long2ObjectLinkedOpenHashMap<GridSlotHandle> megaQueue = grid.getMegaRenderQueue();
-        LongIterator it = megaQueue.keySet().iterator();
+        ObjectIterator<Long2ObjectMap.Entry<GridSlotHandle>> iterator = megaQueue.long2ObjectEntrySet().fastIterator();
 
-        while (it.hasNext()) {
+        while (iterator.hasNext()) {
 
-            long coordinate = it.nextLong();
-            GridSlotHandle slot = megaQueue.get(coordinate);
+            Long2ObjectMap.Entry<GridSlotHandle> queued = iterator.next();
+            long coordinate = queued.getLongKey();
+            GridSlotHandle slot = queued.getValue();
 
             if (!frustumCullingSystem.isMegaVisible(slot))
                 continue;
@@ -128,22 +122,11 @@ public class WorldRenderManager extends ManagerPackage {
         }
     }
 
-    /*
-     * A mega's coverage is assigned the moment its 4x4 block is geometrically
-     * complete, which says nothing about whether it has actually finished
-     * merging all sixteen chunks and landed on the GPU — that's asynchronous
-     * and budget-throttled, and can take many frames or fail to ever finish
-     * at a render-distance boundary. This draws whichever covered chunks
-     * already have their own ready geometry so the block is never simply
-     * dark while the batch catches up; it's superseded automatically the
-     * instant the mega itself produces entries, since this only runs when it
-     * hasn't.
-     */
     private void renderCoveredChunksIndividually(
             GridSlotHandle megaSlot,
             GridInstance grid,
             WindowInstance window,
-            FboInstance worldFbo) {
+            FBOInstance worldFbo) {
 
         ObjectArrayList<GridSlotHandle> coveredSlots = megaSlot.getCoveredSlots();
 
@@ -164,16 +147,17 @@ public class WorldRenderManager extends ManagerPackage {
         }
     }
 
-    private void renderGridChunks(GridInstance grid, WindowInstance window, FboInstance worldFbo) {
+    private void renderGridChunks(GridInstance grid, WindowInstance window, FBOInstance worldFbo) {
 
         Long2ObjectLinkedOpenHashMap<GridSlotHandle> chunkQueue = grid.getChunkRenderQueue();
         Long2ObjectLinkedOpenHashMap<GridSlotHandle> megaQueue = grid.getMegaRenderQueue();
-        LongIterator it = chunkQueue.keySet().iterator();
+        ObjectIterator<Long2ObjectMap.Entry<GridSlotHandle>> iterator = chunkQueue.long2ObjectEntrySet().fastIterator();
 
-        while (it.hasNext()) {
+        while (iterator.hasNext()) {
 
-            long coordinate = it.nextLong();
-            GridSlotHandle slot = chunkQueue.get(coordinate);
+            Long2ObjectMap.Entry<GridSlotHandle> queued = iterator.next();
+            long coordinate = queued.getLongKey();
+            GridSlotHandle slot = queued.getValue();
 
             if (megaQueue.containsKey(slot.getMegaCoordinate()))
                 continue;
@@ -194,10 +178,17 @@ public class WorldRenderManager extends ManagerPackage {
             Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries,
             UBOInstance slotUBO,
             GridInstance grid,
-            FboInstance worldFbo,
+            FBOInstance worldFbo,
             WindowInstance window) {
 
-        for (ObjectArrayList<RenderEntry> bucketList : materialEntries.values()) {
+        ObjectIterator<Int2ObjectMap.Entry<ObjectArrayList<RenderEntry>>> iterator = materialEntries
+                .int2ObjectEntrySet()
+                .fastIterator();
+
+        while (iterator.hasNext()) {
+
+            ObjectArrayList<RenderEntry> bucketList = iterator.next().getValue();
+
             for (int i = 0; i < bucketList.size(); i++) {
 
                 RenderEntry entry = bucketList.get(i);
@@ -208,7 +199,7 @@ public class WorldRenderManager extends ManagerPackage {
                 if (entry.usesOceanData)
                     material.setUBO(grid.getOceanDataUBO());
 
-                renderManager.pushRenderCall(entry.modelInstance, worldFbo, 0, window);
+                renderManager.pushRenderCall(entry.modelInstance, worldFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
             }
         }
     }
@@ -225,13 +216,6 @@ public class WorldRenderManager extends ManagerPackage {
 
     // Mega Readiness \\
 
-    /*
-     * True once this mega coordinate has produced GPU-ready render entries —
-     * every one of its sixteen covered chunks has merged in at least once
-     * and the result has been uploaded. Used by the chunk streaming pipeline
-     * (see ChunkQueueManager) to keep a covered chunk's own individual
-     * render data alive for exactly as long as its mega isn't ready yet.
-     */
     public boolean isMegaRendered(long megaCoordinate) {
         return megaEntries.containsKey(megaCoordinate);
     }

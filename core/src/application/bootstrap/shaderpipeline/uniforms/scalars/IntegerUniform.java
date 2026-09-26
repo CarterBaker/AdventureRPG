@@ -6,6 +6,12 @@ import engine.root.EngineContext;
 
 public final class IntegerUniform extends UniformAttributeStruct<Integer> {
 
+    /*
+     * GLSL int uniform.
+     */
+
+    // Constructor \\
+
     public IntegerUniform() {
         super(UniformType.INT, 0);
     }
@@ -15,10 +21,14 @@ public final class IntegerUniform extends UniformAttributeStruct<Integer> {
         return new IntegerUniform();
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Integer value) {
         EngineContext.gl20.glUniform1i(handle, value);
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Integer value) {

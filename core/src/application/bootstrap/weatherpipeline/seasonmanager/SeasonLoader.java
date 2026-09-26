@@ -1,9 +1,6 @@
 package application.bootstrap.weatherpipeline.seasonmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.weatherpipeline.season.SeasonHandle;
 import engine.root.EngineSetting;
@@ -48,18 +45,10 @@ class SeasonLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Season root directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> FileUtility.hasExtension(f, EngineSetting.JSON_FILE_EXTENSIONS))
-                    .forEach(file -> {
-                        String seasonName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        seasonName2File.put(seasonName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk season directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String seasonName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            seasonName2File.put(seasonName, file);
+            queueFile(file);
         }
     }
 

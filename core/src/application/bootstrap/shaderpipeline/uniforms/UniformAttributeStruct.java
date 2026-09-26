@@ -2,8 +2,9 @@ package application.bootstrap.shaderpipeline.uniforms;
 
 import java.nio.ByteBuffer;
 
+import engine.root.EngineSetting;
 import engine.root.StructPackage;
-import engine.util.memory.BufferUtils;
+import engine.util.memory.BufferUtility;
 
 public abstract class UniformAttributeStruct<T> extends StructPackage {
 
@@ -31,13 +32,14 @@ public abstract class UniformAttributeStruct<T> extends StructPackage {
         this.type = type;
         this.count = count;
         this.value = defaultValue;
-        this.uboBuffer = BufferUtils.newByteBuffer(computeUBOBufferSize(type, count));
+        this.uboBuffer = BufferUtility.newByteBuffer(computeUBOBufferSize(type, count));
     }
 
     private static int computeUBOBufferSize(UniformType type, int count) {
+
         if (count <= 1)
             return type.getStd140Size();
-        return UniformUtility.align(type.getStd140Size(), 16) * count;
+        return UniformUtility.align(type.getStd140Size(), EngineSetting.STD140_ARRAY_STRIDE_ALIGNMENT) * count;
     }
 
     // UBO \\
@@ -55,12 +57,14 @@ public abstract class UniformAttributeStruct<T> extends StructPackage {
             type.writeElement(buffer, value);
         } else {
             Object[] elements = (Object[]) value;
-            int stride = UniformUtility.align(type.getStd140Size(), 16);
-            for (Object el : elements) {
+            int stride = UniformUtility.align(type.getStd140Size(), EngineSetting.STD140_ARRAY_STRIDE_ALIGNMENT);
+
+            for (Object element : elements) {
+
                 int start = buffer.position();
-                type.writeElement(buffer, el);
-                int written = buffer.position() - start;
-                int padding = stride - written;
+                type.writeElement(buffer, element);
+                int padding = stride - (buffer.position() - start);
+
                 for (int i = 0; i < padding; i++)
                     buffer.put((byte) 0);
             }
@@ -86,7 +90,6 @@ public abstract class UniformAttributeStruct<T> extends StructPackage {
 
     // Clone \\
 
-    // Clone \\
     public abstract UniformAttributeStruct<?> createDefault();
 
     @SuppressWarnings("unchecked")

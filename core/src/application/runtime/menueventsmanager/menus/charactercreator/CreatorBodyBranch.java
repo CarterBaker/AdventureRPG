@@ -5,8 +5,8 @@ import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.DimensionValue;
-import application.bootstrap.menupipeline.util.DimensionVector2;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -85,9 +85,9 @@ public class CreatorBodyBranch extends BranchPackage {
 
         float fraction = resolveFraction(slider, player);
 
-        track.findChildById(RuntimeSetting.ELEMENT_CREATOR_SLIDER_KNOB).setPositionOverride(new DimensionVector2(
-                DimensionValue.ofPercent(fraction * RuntimeSetting.CREATOR_PERCENT_SCALE),
-                DimensionValue.ofAbsolute(0f)));
+        track.findChildById(RuntimeSetting.ELEMENT_CREATOR_SLIDER_KNOB).setPositionOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofPercent(fraction * RuntimeSetting.CREATOR_PERCENT_SCALE),
+                DimensionValueStruct.ofAbsolute(0f)));
         track.findChildById(RuntimeSetting.ELEMENT_CREATOR_SLIDER_VALUE).setFontText(formatValue(slider, player));
     }
 

@@ -116,8 +116,10 @@ class LocalWindBranch extends BranchPackage {
             float weatherSpeedScale,
             ClockInstance clockInstance) {
 
-        float speedGust = (float) (Math.sin(elapsedTime * EngineSetting.WIND_GUST_SPEED_FREQUENCY) * 0.6
-                + Math.sin(elapsedTime * EngineSetting.WIND_GUST_SPEED_FREQUENCY_SECONDARY + 1.7) * 0.4)
+        float speedGust = (float) (Math.sin(elapsedTime * EngineSetting.WIND_GUST_SPEED_FREQUENCY)
+                * EngineSetting.WIND_GUST_PRIMARY_WEIGHT
+                + Math.sin(elapsedTime * EngineSetting.WIND_GUST_SPEED_FREQUENCY_SECONDARY
+                        + EngineSetting.WIND_GUST_SECONDARY_PHASE) * EngineSetting.WIND_GUST_SECONDARY_WEIGHT)
                 * weatherTurbulence;
 
         float seasonalSpeed = baseWindSpeed + speedGust * windVariance;

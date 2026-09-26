@@ -6,7 +6,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -18,18 +18,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class LiquidManager extends ManagerPackage {
 
     /*
-     * Owns the liquid simulation. LiquidTickBranch opens a chunk tick for the
-     * chunk it holds, runs flow() on each of its subchunks, rebuilds whatever
-     * was touched, and closes the tick; any neighboring chunk the flow reaches
-     * is claimed under its own lock for the rest of that tick, so a write
-     * never lands in a chunk the streaming pool is working on. Every liquid
-     * write goes through writeLiquid()/clearLiquid(), which wake the cells
-     * that could now move into the changed one; a wake that cannot claim its
-     * chunk is deferred and retried on the next firing instead of being lost.
-     * The ocean is the one exception: tide() re-levels a chunk's tidal cells
-     * to the live tide through writeTidalLiquid()/clearTidalLiquid(), which
-     * mark the subchunk for rebuild but wake nothing, since the tide moves the
-     * whole body at once rather than flowing from cell to cell.
+     * Owns the liquid simulation. A chunk tick runs flow() on each subchunk,
+     * claims any neighbor chunk it reaches under that chunk's lock, and
+     * rebuilds what changed. writeLiquid() and clearLiquid() wake the cells
+     * that can now move, deferring wakes that cannot claim their chunk; tidal
+     * writes re-level the ocean without waking anything.
      */
 
     private static final Direction3Vector[] WAKE_DIRECTIONS = {
@@ -193,9 +186,9 @@ public class LiquidManager extends ManagerPackage {
         ChunkInstance chunkInstance = from.getChunkInstance();
         SubChunkInstance subChunkInstance = from.getSubChunkInstance();
         int packedXYZ = from.getPackedXYZ();
-        int neighborPackedXYZ = ChunkCoordinate3Int.getNeighborAndWrap(packedXYZ, direction);
+        int neighborPackedXYZ = ChunkCoordinateUtility.getNeighborAndWrap(packedXYZ, direction);
 
-        if (!ChunkCoordinate3Int.isAtEdge(packedXYZ, direction)) {
+        if (!ChunkCoordinateUtility.isAtEdge(packedXYZ, direction)) {
             out.set(chunkInstance, subChunkInstance, neighborPackedXYZ);
             return true;
         }

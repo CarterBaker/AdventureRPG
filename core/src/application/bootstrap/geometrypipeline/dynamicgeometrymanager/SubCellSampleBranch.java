@@ -18,25 +18,11 @@ import engine.util.mathematics.extras.Direction3Vector;
 class SubCellSampleBranch extends BranchPackage {
 
     /*
-     * Read-only sampling shared by every solid geometry branch. The world is
-     * addressed here as sub-cells — one octant of one block — in sub-block
-     * units measured from the corner of the subchunk being built, so a
-     * coordinate a cell or two outside that subchunk resolves through the
-     * owning chunk's neighbors on any axis, diagonals included. A whole block
-     * answers for all eight of its sub-cells and an absent octant of a
-     * subdivided block reads as air, which makes face presence and column
-     * classification one rule at one resolution. Space above or below the
-     * world reads as air and an unloaded neighbor chunk reads as null, so
-     * every result is a pure function of what is loaded around a position,
-     * never of which face asked. classifyColumn() describes one column of
-     * two sub-cells beside a quad edge — the sub-cell beside the edge and
-     * the one in front of it — by what it intrinsically is rather than by
-     * how it relates to the quad's own row, so the surface shader can
-     * rebuild the exact eight sub-cells around any lattice vertex from
-     * whichever quad touches it. isBlockSimple() decides whether a whole
-     * block's face can be meshed at block resolution: only when nothing it
-     * or its edges consult is subdivided, since then both sub-columns of
-     * every block along its edges classify identically.
+     * Read-only sub-cell sampling shared by the solid geometry branches.
+     * Resolves any sub-block coordinate around a subchunk through its
+     * neighbors, treats unloaded space as null and out-of-world space as air,
+     * classifies the columns beside a quad edge for the surface shader, and
+     * decides when a block face can mesh at block resolution.
      */
 
     // Column Codes — must match surface/includes/Bevel.glsl
@@ -78,12 +64,6 @@ class SubCellSampleBranch extends BranchPackage {
         this.biomeManager = get(BiomeManager.class);
     }
 
-    /*
-     * Air is resolved at start rather than awake: during awake the asset
-     * loaders are still parsing, and a by-name block lookup there would pull
-     * the block, its material and its shader in on demand before the shader
-     * sources exist.
-     */
     @Override
     protected void start() {
 
@@ -93,11 +73,6 @@ class SubCellSampleBranch extends BranchPackage {
 
     // Lookup \\
 
-    /*
-     * The block occupying a sub-cell: its block when the octant is present,
-     * air when it is absent or lies above or below the world, and null when
-     * it lies in a neighbor chunk that is not loaded.
-     */
     BlockHandle sampleSubCell(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
@@ -227,14 +202,6 @@ class SubCellSampleBranch extends BranchPackage {
         return comparativeBlockHandle.getGeometry() != blockHandle.getGeometry();
     }
 
-    /*
-     * A whole block's face meshes at block resolution only when the block in
-     * front of it and, along each of its four edges, the side block and the
-     * block diagonally in front of that side are all whole too — the only
-     * blocks edge classification ever consults. A face hidden behind a whole
-     * block of its own geometry has nothing to split and answers at once,
-     * which is what keeps buried blocks from paying for the edge lookups.
-     */
     boolean isBlockSimple(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
@@ -288,18 +255,6 @@ class SubCellSampleBranch extends BranchPackage {
 
     // Column Classification \\
 
-    /*
-     * Classifies the column beside a quad edge: the sub-cell one step along
-     * the edge's side from a sub-cell of the quad's row, and the sub-cell in
-     * front of that one, each as empty, natural or artificial solid, the
-     * sub-cell beside the edge additionally as SAME when it is the quad's own
-     * block in the quad's own orientation. Solid means the quad's own
-     * geometry. Every sub-cell's naturalness is carried exactly, so any quad
-     * touching a lattice vertex rebuilds the same window around it. An
-     * unloaded neighbor reads as an exposed artificial sub-cell, so the
-     * surface stays flat against it until the neighbor streams in and this
-     * is rebuilt.
-     */
     int classifyColumn(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,

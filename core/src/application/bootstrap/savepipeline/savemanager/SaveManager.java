@@ -16,22 +16,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class SaveManager extends ManagerPackage {
 
     /*
-     * Owns character saves. The world is persistent on disk and never saved
-     * here — every character is its own save file that loads into that same
-     * world. closeCharacter() writes and releases whatever character the
-     * window was playing, leaving the player where it stands with no active
-     * save; newCharacter() does the same and rolls a fresh body for the
-     * character creator to shape; createCharacter() names that body and makes
-     * it the active character, as continuing the most recently played one or
-     * loading a chosen one also do. Continuing only succeeds when a character save exists and loads, and
-     * a name is only taken by one save. Becoming a character writes it at once,
-     * and the active character is written again before it is replaced and when
-     * its context tears down.
-     * Only the main window — the one the standalone game pairs its
-     * RuntimeContext with — writes saves; editor previews may load a character
-     * but never write one. PlayerSaveBranch captures a character,
-     * PlayerRestoreBranch applies one, and a save that cannot be read is
-     * logged and left on disk untouched.
+     * Owns character saves; the world itself persists on disk. Creates,
+     * continues, loads and closes characters, writing the active one when it is
+     * created, replaced or its context tears down. Only the main window writes
+     * saves, and an unreadable save is logged and left untouched.
      */
 
     // Internal

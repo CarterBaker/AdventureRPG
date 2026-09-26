@@ -19,18 +19,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherPatternManager extends ManagerPackage {
 
     /*
-     * Owns the live weather pattern — the pixels of the static weather image
-     * that any grid can currently see. The image is divided into cells a
-     * whole number of world-map pixels wide, fixed in noise space, and
-     * WeatherManager's flow
-     * slides the whole image across the world every frame, so a storm keeps
-     * its shape and reaches every player beneath its path in turn. Each grid
-     * reads a square window of cells centred above it; cells enter the pool
-     * as a window reaches them, leave once no window holds them, and are
-     * re-resolved a few per frame so a cell whose biome changes beneath it
-     * cross-fades to its new weather. Each grid also keeps one local
-     * WeatherInstance that follows the cell overhead, feeding wind,
-     * temperature, and ocean turbulence.
+     * Owns the live weather pattern. The weather image, divided into cells
+     * fixed in noise space, slides across the world with WeatherManager's flow.
+     * Each grid reads a window of cells above it, cells are pooled as windows
+     * reach them and cross-fade when their biome changes, and each grid keeps a
+     * local WeatherInstance following the cell overhead.
      */
 
     // Internal

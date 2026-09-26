@@ -4,6 +4,10 @@ import engine.root.EngineUtility;
 
 public class Vector3Boolean extends EngineUtility {
 
+    /*
+     * Mutable three-component boolean vector.
+     */
+
     // Data
     public boolean x, y, z;
 

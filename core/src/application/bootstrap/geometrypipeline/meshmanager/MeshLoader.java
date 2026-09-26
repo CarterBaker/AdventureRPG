@@ -1,14 +1,14 @@
 package application.bootstrap.geometrypipeline.meshmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
+import application.bootstrap.geometrypipeline.ibomanager.IBOBuilder;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
+import application.bootstrap.geometrypipeline.vaomanager.VAOBuilder;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
+import application.bootstrap.geometrypipeline.vbomanager.VBOBuilder;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
@@ -19,7 +19,7 @@ class MeshLoader extends LoaderPackage {
     /*
      * Drives the full mesh bootstrap pipeline per file. Creates a shared
      * VAOInstance per mesh, then delegates to the VAO, VBO, and IBO builders
-     * before assembling the final MeshHandle via InternalBuilder. IDs are
+     * before assembling the final MeshHandle via MeshBuilder. IDs are
      * derived from resource names via RegistryUtility. Supports on-demand
      * loading for meshes not yet in the palette at runtime.
      */
@@ -31,9 +31,9 @@ class MeshLoader extends LoaderPackage {
 
     // Builders
     private MeshBuilder internalBuilder;
-    private application.bootstrap.geometrypipeline.vaomanager.VAOBuilder vaoBuildSystem;
-    private application.bootstrap.geometrypipeline.vbomanager.VBOBuilder vboBuildSystem;
-    private application.bootstrap.geometrypipeline.ibomanager.IBOBuilder iboBuildSystem;
+    private VAOBuilder vaoBuildSystem;
+    private VBOBuilder vboBuildSystem;
+    private IBOBuilder iboBuildSystem;
 
     // File Registry
     private Object2ObjectOpenHashMap<String, File> resourceName2File;
@@ -46,21 +46,12 @@ class MeshLoader extends LoaderPackage {
         this.root = new File(EngineSetting.MESH_JSON_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
 
-        if (!root.exists() || !root.isDirectory())
-            throwException("Mesh JSON directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Mesh JSON directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        resourceName2File.put(resourceName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to list mesh files in directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            resourceName2File.put(resourceName, file);
+            queueFile(file);
         }
     }
 
@@ -68,11 +59,11 @@ class MeshLoader extends LoaderPackage {
     protected void create() {
 
         this.vaoBuildSystem = create(
-                application.bootstrap.geometrypipeline.vaomanager.VAOBuilder.class);
+                VAOBuilder.class);
         this.vboBuildSystem = create(
-                application.bootstrap.geometrypipeline.vbomanager.VBOBuilder.class);
+                VBOBuilder.class);
         this.iboBuildSystem = create(
-                application.bootstrap.geometrypipeline.ibomanager.IBOBuilder.class);
+                IBOBuilder.class);
         this.internalBuilder = create(MeshBuilder.class);
     }
 

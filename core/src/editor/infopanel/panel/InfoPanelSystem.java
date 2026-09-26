@@ -3,9 +3,9 @@ package editor.infopanel.panel;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.DimensionValue;
-import application.bootstrap.menupipeline.util.DimensionVector2;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
@@ -27,7 +27,7 @@ public class InfoPanelSystem extends SystemPackage {
 
     // Internal
     private MenuManager menuManager;
-    private FboManager fboManager;
+    private FBOManager fboManager;
     private InfoManager infoManager;
 
     // Menus
@@ -52,7 +52,7 @@ public class InfoPanelSystem extends SystemPackage {
     @Override
     protected void get() {
         this.menuManager = get(MenuManager.class);
-        this.fboManager = get(FboManager.class);
+        this.fboManager = get(FBOManager.class);
         this.infoManager = get(InfoManager.class);
     }
 
@@ -195,7 +195,7 @@ public class InfoPanelSystem extends SystemPackage {
         return InfoPanelSetting.ROW_OFFSET_PIXELS + row.getDepth() * InfoPanelSetting.INDENT_PIXELS;
     }
 
-    private DimensionVector2 toOffset(float x) {
-        return new DimensionVector2(DimensionValue.ofAbsolute(x), DimensionValue.ofAbsolute(0f));
+    private DimensionVector2Struct toOffset(float x) {
+        return new DimensionVector2Struct(DimensionValueStruct.ofAbsolute(x), DimensionValueStruct.ofAbsolute(0f));
     }
 }

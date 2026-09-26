@@ -1,6 +1,7 @@
 package engine.input;
 
 public final class Binding {
+
     /*
      * Represents a single bindable action. Holds one or more InputCodes that
      * must all be held simultaneously for the binding to be active. For combos

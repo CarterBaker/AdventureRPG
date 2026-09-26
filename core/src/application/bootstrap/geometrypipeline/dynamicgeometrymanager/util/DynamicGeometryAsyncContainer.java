@@ -2,7 +2,7 @@ package application.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 
 import java.util.BitSet;
 
-import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import engine.graphics.color.Color;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
@@ -39,7 +39,7 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
             directionalBatches[i] = new BitSet();
         this.batchReturn = new BitSet();
 
-        int subCellCount = ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT * EngineSetting.SUB_BLOCK_OCTANT_COUNT;
+        int subCellCount = ChunkCoordinateUtility.BLOCK_COORDINATE_COUNT * EngineSetting.SUB_BLOCK_OCTANT_COUNT;
 
         this.subDirectionalBatches = new BitSet[Direction3Vector.LENGTH];
         for (int i = 0; i < Direction3Vector.LENGTH; i++)

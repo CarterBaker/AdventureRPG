@@ -2,8 +2,8 @@ package application.kernel.windowpipeline.window;
 
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
+import application.bootstrap.renderpipeline.render.RenderQueueHandle;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
-import application.bootstrap.renderpipeline.renderqueue.RenderQueueHandle;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.assets.camera.CameraInstance;
 import engine.assets.camera.OrthographicCameraInstance;
@@ -14,54 +14,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WindowInstance extends InstancePackage {
 
     /*
-     * Runtime window wrapper. Pairs with a context and owns the render queue
-     * and menu list. Logical windows (tabs) have no native handle — they carry
-     * a composite target and rect so FboRenderSystem can transparently redirect
-     * their pushFbo calls to the correct OS window and screen region.
-     *
-     * zOrder controls both draw order during the screen pass and hit-test
-     * priority when windows overlap — higher always wins both. See
-     * WindowManager.bringToFront().
-     *
-     * children is the reverse of compositeTarget — every window whose
-     * compositeTarget is this one. Maintained automatically by
-     * setCompositeTarget() so it can never drift out of sync with the
-     * forward reference. dispose() walks it to guarantee that tearing down
-     * a window always tears down everything visually composited onto it —
-     * every tab, every dialog, every drag ghost — with no separate manual
-     * scan anywhere else in the engine responsible for remembering to do so.
-     *
-     * Render resources follow a logical window through its whole life via
-     * RenderManager: place() keeps its tracked FBOs sized to it, reparenting
-     * migrates them into the new OS window's GL context, and dispose() releases
-     * them. Nothing outside this class has to remember any of the three. OS
-     * windows are resized by the platform and RenderManager's draw pass.
-     *
-     * disposeListener is an optional hook fired once, after this window is
-     * fully torn down, regardless of what triggered the teardown — an
-     * explicit close request, the platform's own window-close button, or
-     * engine shutdown. Editor-layer code (TabManager) uses this to keep its
-     * own per-window bookkeeping in sync without WindowInstance or
-     * WindowManager needing to know anything about tabs or docking.
-     *
-     * Input is hover-driven — no active or focus concept exists at this level.
-     * A logical window receives hover and clicks across its whole composite
-     * rect unless an input rect narrows that region; drawing is unaffected.
-     *
-     * captureEligible gates whether InputSystem may capture this window.
-     * focusIndependent marks windows that must receive hover-driven input
-     * regardless of which window owns focus. Editor chrome windows (e.g. the
-     * toolbar) set both flags: captureEligible false so the cursor is never
-     * pinned to them, focusIndependent true so menus and hit testing work
-     * without requiring a prior click.
-     *
-     * screenX/screenY holds the OS-level screen position of this window as
-     * reported by the platform (e.g. glfwGetWindowPos). Set by the platform
-     * layer on window creation and on any window-moved callback. Only
-     * meaningful for OS windows (hasNativeHandle() == true); logical windows
-     * are positioned via compositeRect instead. Used by TabDragManager to
-     * convert global screen cursor coordinates into window-local coordinates
-     * for BSP drop-target resolution.
+     * Runtime window wrapper. Pairs with a context and owns its render queue
+     * and menu list. Logical windows (tabs) have no native handle and composite
+     * onto an OS window through a target and rect. zOrder decides both draw
+     * order and hit priority, and dispose() tears down every window composited
+     * onto this one along with its render resources before firing the dispose
+     * listener.
      */
 
     // Data
@@ -184,14 +142,6 @@ public class WindowInstance extends InstancePackage {
         return compositeTarget;
     }
 
-    /*
-     * Sets which window this one composites onto, keeping that window's
-     * children list in sync automatically — detaching from the previous
-     * target and attaching to the new one in the same call. This is the
-     * only place either side of that relationship is ever touched, so the
-     * forward reference (compositeTarget) and the reverse reference
-     * (children) can never disagree with each other.
-     */
     public void setCompositeTarget(WindowInstance compositeTarget) {
         if (this.compositeTarget != null)
             this.compositeTarget.children.remove(this);
@@ -204,11 +154,6 @@ public class WindowInstance extends InstancePackage {
         return compositeTarget != null;
     }
 
-    /*
-     * Positions and sizes a logical window on its composite target in one
-     * call — the composite rect, the window's own dimensions, and the FBOs
-     * tracked against it always move together.
-     */
     public void place(float x, float y, float w, float h) {
         setCompositeRect(x, y, w, h);
         resize((int) w, (int) h);
@@ -257,11 +202,6 @@ public class WindowInstance extends InstancePackage {
         this.inputRect = true;
     }
 
-    /*
-     * True when the given OS-window point falls inside the region this logical
-     * window receives input in — its input rect when one is set, otherwise its
-     * whole composite rect.
-     */
     public boolean acceptsInputAt(float x, float y) {
 
         if (inputRect)
@@ -321,13 +261,6 @@ public class WindowInstance extends InstancePackage {
 
     // Disposal \\
 
-    /*
-     * Registers a callback fired once dispose() has fully torn this window
-     * down — resources released, context destroyed, removed from
-     * WindowManager. Fires no matter which of the (identical) code paths
-     * triggered that teardown. One listener per window is sufficient for
-     * every current use; nothing has needed more than one reason to care.
-     */
     public void setDisposeListener(Runnable listener) {
         this.disposeListener = listener;
     }
@@ -366,31 +299,10 @@ public class WindowInstance extends InstancePackage {
             context.onResize(width, height);
     }
 
-    /*
-     * Moves render resources that belong to a single GL context over to the
-     * context of the OS window this window now composites onto. Called by
-     * WindowManager.reparentWindow() right after the composite target changes.
-     */
     public void migrateRenderResources(WindowInstance previousGLWindow) {
         renderManager.migrateWindowResources(this, previousGLWindow);
     }
 
-    /*
-     * Tears this window down completely and unconditionally cascades to
-     * every window composited onto it first — so closing an OS window
-     * always closes every tab, dialog, and drag ghost living on it, with
-     * no separate manual cleanup required anywhere else. Iterates a
-     * snapshot of children since each child's own dispose() mutates this
-     * window's live children list via setCompositeTarget(null).
-     *
-     * Safe to call more than once on the same instance — every step here
-     * is a no-op the second time (empty children, context already
-     * detached, compositeTarget already cleared, already removed from
-     * WindowManager), which is what lets ownership-level teardown code
-     * (e.g. TabContext explicitly disposing its content window) and this
-     * generic composite-cascade both reach the same window without either
-     * needing to coordinate who goes first.
-     */
     public void dispose() {
 
         for (WindowInstance child : new ObjectArrayList<>(children))

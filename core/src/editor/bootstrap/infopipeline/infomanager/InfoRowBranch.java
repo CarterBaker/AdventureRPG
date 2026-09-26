@@ -8,7 +8,7 @@ import editor.bootstrap.infopipeline.inforow.InfoRowStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoFieldStruct;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
 import editor.bootstrap.infopipeline.util.InfoRowKind;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

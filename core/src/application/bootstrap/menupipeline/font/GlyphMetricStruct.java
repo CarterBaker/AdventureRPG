@@ -1,6 +1,8 @@
 package application.bootstrap.menupipeline.font;
 
-public class GlyphMetricStruct {
+import engine.root.StructPackage;
+
+public class GlyphMetricStruct extends StructPackage {
 
     /*
      * Immutable glyph layout record. Carries only the metrics needed to

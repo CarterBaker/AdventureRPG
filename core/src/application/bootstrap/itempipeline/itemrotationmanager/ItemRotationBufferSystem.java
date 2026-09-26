@@ -2,6 +2,7 @@ package application.bootstrap.itempipeline.itemrotationmanager;
 
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.matrices.Matrix4;
@@ -32,7 +33,7 @@ public class ItemRotationBufferSystem extends SystemPackage {
 
     private void pushItemRotationData() {
 
-        UBOHandle ubo = uboManager.getUBOHandleFromUBOName("ItemRotationData");
+        UBOHandle ubo = uboManager.getUBOHandleFromUBOName(EngineSetting.ITEM_ROTATION_DATA_UBO);
 
         Matrix4[] rotations = new Matrix4[24];
 
@@ -43,13 +44,13 @@ public class ItemRotationBufferSystem extends SystemPackage {
             }
         }
 
-        ubo.updateUniform("u_rotations", rotations);
+        ubo.updateUniform(EngineSetting.UNIFORM_ROTATIONS, rotations);
         uboManager.push(ubo);
     }
 
     private Matrix4 buildRotation(Direction3Vector face, int spin) {
         Matrix4 faceRot = faceRotation(face);
-        Matrix4 spinRot = axisRotation(face.x, face.y, face.z, spin * 90f);
+        Matrix4 spinRot = axisRotation(face.x, face.y, face.z, spin * EngineSetting.QUARTER_TURN_DEGREES);
         return spinRot.multiply(faceRot);
     }
 
@@ -58,15 +59,15 @@ public class ItemRotationBufferSystem extends SystemPackage {
             case UP:
                 return new Matrix4();
             case DOWN:
-                return rotX(180f);
+                return rotX(EngineSetting.HALF_TURN_DEGREES);
             case NORTH:
-                return rotX(90f);
+                return rotX(EngineSetting.QUARTER_TURN_DEGREES);
             case SOUTH:
-                return rotX(-90f);
+                return rotX(-EngineSetting.QUARTER_TURN_DEGREES);
             case EAST:
-                return rotZ(-90f);
+                return rotZ(-EngineSetting.QUARTER_TURN_DEGREES);
             case WEST:
-                return rotZ(90f);
+                return rotZ(EngineSetting.QUARTER_TURN_DEGREES);
             default:
                 return new Matrix4();
         }

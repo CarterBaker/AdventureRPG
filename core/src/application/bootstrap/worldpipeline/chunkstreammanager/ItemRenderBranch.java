@@ -3,7 +3,7 @@ package application.bootstrap.worldpipeline.chunkstreammanager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import engine.root.BranchPackage;
 
 public class ItemRenderBranch extends BranchPackage {

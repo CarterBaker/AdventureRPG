@@ -3,9 +3,10 @@ package application.bootstrap.worldpipeline.chunkstreammanager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 
 public class ItemLoadBranch extends BranchPackage {
 
@@ -28,7 +29,7 @@ public class ItemLoadBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
+        this.threadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
 
         // Settings

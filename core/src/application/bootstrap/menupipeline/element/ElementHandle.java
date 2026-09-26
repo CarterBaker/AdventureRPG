@@ -1,7 +1,7 @@
 package application.bootstrap.menupipeline.element;
 
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
-import application.bootstrap.menupipeline.util.DimensionValue;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
@@ -12,18 +12,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ElementHandle extends HandlePackage {
 
     /*
-     * Persistent template for a single UI element. Owns the default child tree
-     * and all state overrides. Instances are cloned from this handle at menu
-     * open time and are safe to mutate independently.
-     *
-     * Four state blocks are supported:
-     * on_hover_enter — fires once when hover begins, swaps element
-     * on_hover — fires every frame while hovered, swaps element
-     * on_hover_exit — fires once when hover ends, swaps element
-     * click_state — active while click-expanded
-     *
-     * on_drag is a method-only callback stored as plain strings — no element swap.
-     * All three hover states are identical in capability to click_state.
+     * Persistent template for one UI element: its default child tree, the four
+     * state blocks (hover enter, hover, hover exit, click) and its drag
+     * callback. Instances are cloned from it when a menu opens.
      */
 
     // Data
@@ -125,7 +116,7 @@ public class ElementHandle extends HandlePackage {
         return elementData.getMaterialName();
     }
 
-    public DimensionValue getFontSize() {
+    public DimensionValueStruct getFontSize() {
         return elementData.getFontSize();
     }
 
@@ -157,7 +148,7 @@ public class ElementHandle extends HandlePackage {
         return elementData.getStackDirection();
     }
 
-    public DimensionValue getSpacing() {
+    public DimensionValueStruct getSpacing() {
         return elementData.getSpacing();
     }
 

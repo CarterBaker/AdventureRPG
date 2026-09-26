@@ -7,15 +7,10 @@ import application.bootstrap.worldpipeline.util.SubBlockUtility;
 class SubBlockPaletteHandle extends BlockTypePaletteHandle {
 
     /*
-     * Partial child of BlockPaletteHandle. A cell is a member exactly while
-     * its block is subdivided into sub-blocks, and on top of membership this
-     * child owns that cell's octant mask (see SubBlockUtility) — the parent's
-     * block ID is the material every present octant is made of. A member is
-     * always genuinely partial: the parent collapses a mask that fills back
-     * up to a whole block out of this child, and a mask that empties out is
-     * written as air instead, so the geometry palettes and this one never
-     * both claim a cell. Masks are realized on the first subdivided cell, so
-     * a palette that never holds a sub-block never pays for them.
+     * Partial child of BlockPaletteHandle. A cell belongs here exactly while
+     * its block is subdivided, and this child owns its octant mask. Full masks
+     * collapse back to a whole block and empty ones become air, so no cell is
+     * claimed twice. Masks are realized on the first subdivided cell.
      */
 
     // Masks

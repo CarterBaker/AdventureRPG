@@ -3,7 +3,7 @@ package application.bootstrap.worldpipeline.grid;
 import application.bootstrap.calendarpipeline.clock.ClockInstance;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.oceanpipeline.turbulence.TurbulenceInstance;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.weatherpipeline.precipitation.PrecipitationInstance;
 import application.bootstrap.weatherpipeline.temperature.TemperatureInstance;
@@ -28,16 +28,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class GridInstance extends InstancePackage {
 
     /*
-     * The active spatial grid for a single focal entity — one per window.
-     * Owns the load order, slot handles, active chunks/megas, pending
-     * load/unload requests, this grid's render queues, and this window's own
-     * cloned location state (clock, weather, wind, precipitation, ocean
-     * turbulence, and the Time/Sun/Moon/Sky/Weather-Map/Wind/Precipitation/
-     * Ocean UBO instances) handed to it by GridBuildSystem.
-     *
-     * A render distance change swaps only the slot layout in place through
-     * rebuildSlots(), so every system holding this grid keeps a live
-     * reference and the window's clock and weather carry on uninterrupted.
+     * The streaming grid around one window's focal entity. Owns load order,
+     * slots, active chunks and megas, pending requests, render queues, and the
+     * window's own location state and UBO instances. rebuildSlots() swaps the
+     * layout in place so holders stay valid.
      */
 
     // Focal
@@ -45,7 +39,7 @@ public class GridInstance extends InstancePackage {
 
     // Window
     private WindowInstance windowInstance;
-    private FboInstance renderTargetFbo;
+    private FBOInstance renderTargetFbo;
 
     // Grid
     private int totalSlots;
@@ -107,7 +101,7 @@ public class GridInstance extends InstancePackage {
     public void constructor(
             EntityInstance focalEntity,
             WindowInstance windowInstance,
-            FboInstance renderTargetFbo,
+            FBOInstance renderTargetFbo,
             int totalSlots,
             long[] loadOrder,
             int immediateSlotCount,
@@ -336,7 +330,7 @@ public class GridInstance extends InstancePackage {
         return windowInstance;
     }
 
-    public FboInstance getRenderTargetFbo() {
+    public FBOInstance getRenderTargetFbo() {
         return renderTargetFbo;
     }
 
@@ -352,14 +346,6 @@ public class GridInstance extends InstancePackage {
         return loadOrder;
     }
 
-    /*
-     * Count of leading loadOrder entries whose slot resolves to
-     * GridSlotDetailLevel.IMMEDIATE. Valid because loadOrder is sorted
-     * nearest-first and detail level is monotonically non-decreasing with
-     * distance — the immediate slots are always exactly this prefix. Lets
-     * physics-adjacent systems (liquid simulation, future rigid-body work)
-     * walk a fixed-size range instead of the full grid.
-     */
     public int getImmediateSlotCount() {
         return immediateSlotCount;
     }

@@ -4,92 +4,93 @@ import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 
 public enum ChunkData {
 
-        LOAD_DATA(
-                        false, null,
-                        new String[] {},
-                        new String[] { "ESSENTIAL_DATA" }),
-        ESSENTIAL_DATA(
-                        false, null,
-                        new String[] { "LOAD_DATA" },
-                        new String[] { "GENERATION_DATA" }),
-        GENERATION_DATA(
-                        true, GridSlotDetailLevel.NEAR,
-                        new String[] { "LOAD_DATA", "ESSENTIAL_DATA" },
-                        new String[] { "NEIGHBOR_DATA", "ITEM_DATA" }),
-        NEIGHBOR_DATA(
-                        false, null,
-                        new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA" },
-                        new String[] { "BUILD_DATA" }),
-        BUILD_DATA(
-                        true, GridSlotDetailLevel.NEAR,
-                        new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA" },
-                        new String[] { "MERGE_DATA" }),
-        MERGE_DATA(
-                        true, GridSlotDetailLevel.IMMEDIATE,
-                        new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA",
-                                        "BUILD_DATA" },
-                        new String[] { "RENDER_DATA" }),
-        // RENDER_DATA is no longer a prerequisite of BATCH_DATA — a mega merges
-        // straight from a chunk's own MERGE_DATA output and never reads anything
-        // RENDER_DATA would produce, so requiring it forced every mega-bound
-        // chunk through a wasted individual GPU upload and teardown. RENDER_DATA
-        // now loads only when a live check shows this specific chunk will
-        // actually be drawn individually — see ChunkDataUtility.isDirectlyRequired
-        // and ChunkQueueManager.determineQueueOperation.
-        RENDER_DATA(
-                        true, null,
-                        new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA", "BUILD_DATA",
-                                        "MERGE_DATA" },
-                        new String[] { "BATCH_DATA" }),
-        BATCH_DATA(
-                        false, null,
-                        new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA", "BUILD_DATA",
-                                        "MERGE_DATA" },
-                        new String[] {}),
-        ITEM_DATA(
-                        true, GridSlotDetailLevel.NEAR,
-                        new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA" },
-                        new String[] { "ITEM_RENDER_DATA" }),
-        ITEM_RENDER_DATA(
-                        true, GridSlotDetailLevel.IMMEDIATE,
-                        new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "ITEM_DATA" },
-                        new String[] {});
+    /*
+     * The stages a chunk moves through, from loading and generation to
+     * geometry, merging, rendering, batching and items. Each stage names the
+     * stages it requires and leads to, whether it may be dumped, and the detail
+     * level it is kept up to.
+     */
 
-        public final int index;
-        public final boolean dumpable;
-        public final GridSlotDetailLevel minimumLevel;
-        public ChunkData[] requires;
-        public ChunkData[] leadsTo;
+    LOAD_DATA(
+            false, null,
+            new String[] {},
+            new String[] { "ESSENTIAL_DATA" }),
+    ESSENTIAL_DATA(
+            false, null,
+            new String[] { "LOAD_DATA" },
+            new String[] { "GENERATION_DATA" }),
+    GENERATION_DATA(
+            true, GridSlotDetailLevel.NEAR,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA" },
+            new String[] { "NEIGHBOR_DATA", "ITEM_DATA" }),
+    NEIGHBOR_DATA(
+            false, null,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA" },
+            new String[] { "BUILD_DATA" }),
+    BUILD_DATA(
+            true, GridSlotDetailLevel.NEAR,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA" },
+            new String[] { "MERGE_DATA" }),
+    MERGE_DATA(
+            true, GridSlotDetailLevel.IMMEDIATE,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA",
+                    "BUILD_DATA" },
+            new String[] { "RENDER_DATA" }),
+    // A mega merges from MERGE_DATA directly, so BATCH_DATA never requires RENDER_DATA
+    RENDER_DATA(
+            true, null,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA", "BUILD_DATA",
+                    "MERGE_DATA" },
+            new String[] { "BATCH_DATA" }),
+    BATCH_DATA(
+            false, null,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA", "BUILD_DATA",
+                    "MERGE_DATA" },
+            new String[] {}),
+    ITEM_DATA(
+            true, GridSlotDetailLevel.NEAR,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA" },
+            new String[] { "ITEM_RENDER_DATA" }),
+    ITEM_RENDER_DATA(
+            true, GridSlotDetailLevel.IMMEDIATE,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "ITEM_DATA" },
+            new String[] {});
 
-        private final String[] requiresNames;
-        private final String[] leadsToNames;
+    public final int index;
+    public final boolean dumpable;
+    public final GridSlotDetailLevel minimumLevel;
+    public ChunkData[] requires;
+    public ChunkData[] leadsTo;
 
-        public static final ChunkData[] VALUES = values();
-        public static final int LENGTH = VALUES.length;
+    private final String[] requiresNames;
+    private final String[] leadsToNames;
 
-        static {
-                for (ChunkData stage : VALUES)
-                        stage.link();
-        }
+    public static final ChunkData[] VALUES = values();
+    public static final int LENGTH = VALUES.length;
 
-        ChunkData(
-                        boolean dumpable,
-                        GridSlotDetailLevel minimumLevel,
-                        String[] requiresNames,
-                        String[] leadsToNames) {
-                this.index = this.ordinal();
-                this.dumpable = dumpable;
-                this.minimumLevel = minimumLevel;
-                this.requiresNames = requiresNames;
-                this.leadsToNames = leadsToNames;
-        }
+    static {
+        for (ChunkData stage : VALUES)
+            stage.link();
+    }
 
-        private void link() {
-                this.requires = new ChunkData[requiresNames.length];
-                for (int i = 0; i < requiresNames.length; i++)
-                        this.requires[i] = ChunkData.valueOf(requiresNames[i]);
-                this.leadsTo = new ChunkData[leadsToNames.length];
-                for (int i = 0; i < leadsToNames.length; i++)
-                        this.leadsTo[i] = ChunkData.valueOf(leadsToNames[i]);
-        }
+    ChunkData(
+            boolean dumpable,
+            GridSlotDetailLevel minimumLevel,
+            String[] requiresNames,
+            String[] leadsToNames) {
+        this.index = this.ordinal();
+        this.dumpable = dumpable;
+        this.minimumLevel = minimumLevel;
+        this.requiresNames = requiresNames;
+        this.leadsToNames = leadsToNames;
+    }
+
+    private void link() {
+        this.requires = new ChunkData[requiresNames.length];
+        for (int i = 0; i < requiresNames.length; i++)
+            this.requires[i] = ChunkData.valueOf(requiresNames[i]);
+        this.leadsTo = new ChunkData[leadsToNames.length];
+        for (int i = 0; i < leadsToNames.length; i++)
+            this.leadsTo[i] = ChunkData.valueOf(leadsToNames[i]);
+    }
 }

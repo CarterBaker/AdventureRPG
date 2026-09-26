@@ -5,13 +5,13 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
 import editor.itemeditor.ItemEditorSetting;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -27,7 +27,7 @@ public class ItemEditorMenuSystem extends SystemPackage {
 
     // Internal
     private MenuManager menuManager;
-    private FboManager fboManager;
+    private FBOManager fboManager;
     private ItemEditorManager itemEditorManager;
 
     // Menus
@@ -54,7 +54,7 @@ public class ItemEditorMenuSystem extends SystemPackage {
     @Override
     protected void get() {
         this.menuManager = get(MenuManager.class);
-        this.fboManager = get(FboManager.class);
+        this.fboManager = get(FBOManager.class);
         this.itemEditorManager = get(ItemEditorManager.class);
     }
 

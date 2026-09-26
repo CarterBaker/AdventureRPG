@@ -17,18 +17,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class SkyColorSystem extends SystemPackage {
 
     /*
-     * The single authoritative source of every sky and cloud color. Each
-     * frame the season-blended palette is resolved once, then for every
-     * active grid it is placed at that grid's own solar elevation, pushed
-     * cooler and pinker by cold air or warmer and hazier by heat, greyed by
-     * overcast and humid local weather, and given its own character for the
-     * day from that day's seed: hue turns, saturation, glow and belt
-     * strength, and dusty or crisp air, each leaning with temperature and
-     * scaled by the season's variety so no two days share a sky. Every daily
-     * value eases into the next day's, so the sky never pops. The result —
-     * dome gradient, sun-side glow,
-     * anti-solar belt, three cloud tints, fog, and the blend strengths the
-     * shaders scale them by — goes into that grid's SkyColorData UBO.
+     * The single source of sky and cloud color. Each frame resolves the season
+     * palette, then per grid places it at the grid's solar elevation, tints it
+     * by temperature and local weather, and gives each day a seeded character
+     * that eases into the next. Writes the result to the grid's SkyColorData
+     * UBO.
      */
 
     // Temperature Accents
@@ -139,12 +132,6 @@ class SkyColorSystem extends SystemPackage {
 
     // Cycle \\
 
-    /*
-     * Glow peaks with the sun just below the horizon and lingers into
-     * golden hour; the anti-solar belt lives only in the short band either
-     * side of sunset and sunrise. Both are scaled by the season's own
-     * strengths, and daylight ramps from late twilight to full day.
-     */
     private void resolveCycle(float solarElevation) {
 
         this.glowStrength = skyPaletteBranch.getGlowStrength() * SkyColorUtility.bell(
@@ -167,12 +154,6 @@ class SkyColorSystem extends SystemPackage {
 
     // Temperature \\
 
-    /*
-     * Cold air pulls the glow, belt, and sunlit cloud edges toward a pastel
-     * pink, strengthens the belt, and clears the zenith to a deeper blue —
-     * the cotton-candy winter sky. Heat pulls them toward amber, strengthens
-     * the glow, and washes the horizon into a pale haze.
-     */
     private void applyTemperature(float temperature) {
 
         this.cold = 1f - SkyColorUtility.remapClamped(
@@ -202,11 +183,6 @@ class SkyColorSystem extends SystemPackage {
 
     // Weather \\
 
-    /*
-     * Cloud cover and precipitation grey and dim the dome, damp the
-     * twilight colors, and deepen cloud shade; humidity hazes the horizon.
-     * A grid whose local weather has not been placed yet reads as clear.
-     */
     private void applyWeather(WeatherInstance weather) {
 
         if (!weather.isConfigured()) {
@@ -242,10 +218,6 @@ class SkyColorSystem extends SystemPackage {
 
     // Daily Character \\
 
-    /*
-     * Draws today's sky character from the day's seed, one independent
-     * stream per trait. Shared by every grid, so it is resolved once a frame.
-     */
     private void resolveDailyCharacter() {
 
         this.dailyGlowHue = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_GLOW_HUE);
@@ -258,13 +230,6 @@ class SkyColorSystem extends SystemPackage {
         this.dailyAir = clockManager.getDailyRandom(EngineSetting.SKY_DAILY_STREAM_AIR);
     }
 
-    /*
-     * Applies today's character to one grid's palette. Every random trait
-     * is scaled by the season's variety; temperature then leans it — cold
-     * turns the glow and belt toward pink and violet and favours crisp,
-     * clear air, heat turns the glow toward deep red and favours dusty air
-     * that hazes the day and fires up the sunset.
-     */
     private void applyDailyCharacter() {
 
         float variety = skyPaletteBranch.getVariety();

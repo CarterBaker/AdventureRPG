@@ -12,7 +12,7 @@ public class ItemDefinitionManager extends ManagerPackage {
     /*
      * Owns the item definition palette for the engine lifetime. Detects and
      * rejects ID collisions on registration. Supports on-demand loading via
-     * InternalLoader for items not yet in the palette at runtime. findItemHandle()
+     * ItemDefinitionLoader for items not yet in the palette at runtime. findItemHandle()
      * resolves what a person types — a full item name, or a local or display
      * name that only one item carries — ignoring case.
      */

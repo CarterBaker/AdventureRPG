@@ -8,5 +8,8 @@ public enum CreatorPalette {
      */
 
     SKIN,
-    HAIR
+    HAIR;
+
+    // Values
+    public static final CreatorPalette[] VALUES = values();
 }

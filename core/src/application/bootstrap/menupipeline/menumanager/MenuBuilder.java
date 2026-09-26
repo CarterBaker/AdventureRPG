@@ -1,19 +1,18 @@
 package application.bootstrap.menupipeline.menumanager;
 
-import java.io.File;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.menupipeline.element.ElementAnimationStruct;
 import application.bootstrap.menupipeline.element.ElementData;
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementStateStruct;
 import application.bootstrap.menupipeline.element.ElementType;
-import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.menu.MenuData;
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
-import application.bootstrap.menupipeline.util.DimensionValue;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
@@ -28,21 +27,10 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 class MenuBuilder extends BuilderPackage {
 
     /*
-     * Parses menu JSON files into MenuHandles and ElementHandles during bootstrap.
-     *
-     * Four state blocks are parsed per element: on_hover_enter, on_hover,
-     * on_hover_exit, click_state. All four go through parseStateBlock which
-     * handles use/inline element, sprite, layout, color, text, children, and
-     * optional method callback identically.
-     *
-     * on_drag is parsed as a plain method callback — no state block, no element
-     * swap. on_click is unchanged. animation is parsed onto the master's data,
-     * so every placement of an element shares its timeline.
-     *
-     * Inline masters are registered under the scope they are declared in: a
-     * top-level element under its file, a menu's elements under that menu, and
-     * every child under its parent's key. Two templates can therefore share a
-     * child id — the id code finds elements by — without sharing its master.
+     * Parses menu JSON into MenuHandles and ElementHandles at bootstrap: the
+     * four state blocks, click and drag callbacks, and animation timelines.
+     * Inline masters are registered under the scope they are declared in, so
+     * two templates can share a child id.
      */
 
     private static final String PARENT_ARG = "$parent";
@@ -125,7 +113,7 @@ class MenuBuilder extends BuilderPackage {
 
         ObjectArrayList<MenuNodeStruct> nodes = buildNodes(
                 filePath + "/" + id, menuJson, null,
-                DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true);
+                DimensionValueStruct.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true);
 
         MenuData data = new MenuData(
                 filePath + "/" + id, lockInput, raycastInput, hasCanvasArea, entryPoints);
@@ -175,7 +163,7 @@ class MenuBuilder extends BuilderPackage {
             if (!elementSystem.hasMaster(key))
                 elementSystem.registerMaster(key,
                         buildMasterFromJson(filePath, id, el, null,
-                                DimensionValue.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true));
+                                DimensionValueStruct.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true));
         }
     }
 
@@ -185,7 +173,7 @@ class MenuBuilder extends BuilderPackage {
             String scope,
             JsonObject parent,
             String inheritedFontName,
-            DimensionValue inheritedFontSize,
+            DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         if (!parent.has("elements"))
@@ -205,7 +193,7 @@ class MenuBuilder extends BuilderPackage {
             String scope,
             JsonObject json,
             String inheritedFontName,
-            DimensionValue inheritedFontSize,
+            DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         String id = JsonUtility.validateString(json, "id");
@@ -226,7 +214,7 @@ class MenuBuilder extends BuilderPackage {
             String id,
             JsonObject json,
             String inheritedFontName,
-            DimensionValue inheritedFontSize,
+            DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         String key = scope + "/" + id;
@@ -246,7 +234,7 @@ class MenuBuilder extends BuilderPackage {
             String id,
             JsonObject json,
             String inheritedFontName,
-            DimensionValue inheritedFontSize,
+            DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         String usePath = json.get("use").getAsString();
@@ -254,8 +242,8 @@ class MenuBuilder extends BuilderPackage {
 
         boolean explicitFontSize = json.has("font_size") || template.hasExplicitFontSize();
         String resolvedFontName = JsonUtility.getString(json, "font", template.getFontName());
-        DimensionValue resolvedFontSize = json.has("font_size")
-                ? DimensionValue.parse(json.get("font_size").getAsString())
+        DimensionValueStruct resolvedFontSize = json.has("font_size")
+                ? DimensionValueStruct.parse(json.get("font_size").getAsString())
                 : template.getFontSize();
 
         ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(
@@ -348,7 +336,7 @@ class MenuBuilder extends BuilderPackage {
             String id,
             JsonObject json,
             String inheritedFontName,
-            DimensionValue inheritedFontSize,
+            DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         ElementType type = MenuFileParserUtility.parseElementType(
@@ -358,8 +346,8 @@ class MenuBuilder extends BuilderPackage {
         String fontName = JsonUtility.getString(json, "font", inheritedFontName);
         String materialName = JsonUtility.getString(json, "material", null);
         boolean explicitFontSize = json.has("font_size") || inheritedExplicitFontSize;
-        DimensionValue fontSize = json.has("font_size")
-                ? DimensionValue.parse(json.get("font_size").getAsString())
+        DimensionValueStruct fontSize = json.has("font_size")
+                ? DimensionValueStruct.parse(json.get("font_size").getAsString())
                 : inheritedFontSize;
         MenuColorStruct color = MenuFileParserUtility.parseColor(json);
         MenuColorStruct hoverColor = MenuFileParserUtility.parseHoverColor(json);
@@ -369,8 +357,8 @@ class MenuBuilder extends BuilderPackage {
         StackDirection stackDirection = json.has("stack")
                 ? StackDirection.fromString(json.get("stack").getAsString())
                 : StackDirection.NONE;
-        DimensionValue spacing = json.has("spacing")
-                ? DimensionValue.parse(json.get("spacing").getAsString())
+        DimensionValueStruct spacing = json.has("spacing")
+                ? DimensionValueStruct.parse(json.get("spacing").getAsString())
                 : null;
         TextAlign textAlign = json.has("align")
                 ? TextAlign.fromString(json.get("align").getAsString())
@@ -419,7 +407,7 @@ class MenuBuilder extends BuilderPackage {
             JsonObject json,
             String stateKey,
             String inheritedFontName,
-            DimensionValue inheritedFontSize,
+            DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         if (!json.has(stateKey))
@@ -440,8 +428,8 @@ class MenuBuilder extends BuilderPackage {
                         : inheritedExplicitFontSize);
         String fontName = JsonUtility.getString(stateJson, "font",
                 baseMaster != null ? baseMaster.getFontName() : inheritedFontName);
-        DimensionValue fontSize = stateJson.has("font_size")
-                ? DimensionValue.parse(stateJson.get("font_size").getAsString())
+        DimensionValueStruct fontSize = stateJson.has("font_size")
+                ? DimensionValueStruct.parse(stateJson.get("font_size").getAsString())
                 : (baseMaster != null ? baseMaster.getFontSize() : inheritedFontSize);
 
         ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(

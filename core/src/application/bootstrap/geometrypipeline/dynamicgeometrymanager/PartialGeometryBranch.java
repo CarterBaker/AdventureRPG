@@ -21,19 +21,11 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 class PartialGeometryBranch extends BranchPackage {
 
     /*
-     * Sub-block-resolution pass. Owns every face of a block subdivided into
-     * sub-blocks, and every face of a whole block that is not block-simple —
-     * one whose front block, or a block its edges consult, is subdivided —
-     * since those faces are only partly exposed or bevel differently along
-     * their length. Each present octant's face seeds a greedy merge across
-     * sub-cells of the same block, biome and orientation, bounded by the
-     * subchunk and by GEOMETRY_MAX_MERGE_EXTENT sub-blocks so a quad's edge
-     * words carry one entry per sub-block. A whole block's sub-faces only
-     * merge here when its face really does belong to this pass, so nothing
-     * FullGeometryBranch emits is ever emitted twice.
+     * Sub-block resolution pass. Owns every face of a subdivided block and
+     * every whole-block face that is not block-simple, greedily merging
+     * sub-faces of matching block, biome and orientation within the subchunk
+     * and the merge extent limit.
      */
-
-    private static final int CELLS_PER_EDGE_ENTRY = 1;
 
     // Internal
     private BiomeManager biomeManager;
@@ -217,7 +209,7 @@ class PartialGeometryBranch extends BranchPackage {
                 subX, subY, subZ,
                 sizeA,
                 sizeB,
-                CELLS_PER_EDGE_ENTRY,
+                EngineSetting.PARTIAL_CELLS_PER_EDGE_ENTRY,
                 direction3Vector,
                 biomeHandle,
                 blockHandle);

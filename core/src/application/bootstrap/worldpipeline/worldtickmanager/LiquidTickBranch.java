@@ -27,20 +27,10 @@ import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 public class LiquidTickBranch extends BranchPackage {
 
     /*
-     * Schedules liquid flow over each grid's IMMEDIATE range, quadrant-cycled
-     * so a full sweep takes four firings. Only subchunks holding active liquid
-     * cells are visited, so settled water and permanent bodies such as oceans
-     * cost nothing until something disturbs them. Each chunk is ticked under
-     * its own lock inside a LiquidManager chunk tick; every subchunk the flow
-     * touched is rebuilt inline and its chunk's MERGE_DATA cascade-cleared so
-     * the async, GPU-upload-budgeted streaming pipeline re-merges it.
-     * Every firing also assesses the ocean against the live tide: loaded
-     * chunks within OCEAN_TIDE_RANGE_CHUNKS whose water was last written
-     * against a different tide surface are re-levelled nearest-first, at
-     * most OCEAN_TIDE_CHUNKS_PER_TICK of them, through the same lock,
-     * rebuild, and re-merge path the flow uses. Chunks past that range keep
-     * the tide they were written with until the player nears them; the
-     * water shader draws every ocean surface at the live tide regardless.
+     * Schedules liquid flow over each grid's IMMEDIATE range in quadrant
+     * cycles, visiting only subchunks with active liquid. Each chunk ticks
+     * under its own lock and touched subchunks are rebuilt and re-merged. Each
+     * firing also re-levels nearby ocean chunks whose water lags the live tide.
      */
 
     // Internal
@@ -123,7 +113,7 @@ public class LiquidTickBranch extends BranchPackage {
         if (lastTick == 0L)
             return;
 
-        float delta = (now - lastTick) / 1000f;
+        float delta = (now - lastTick) / EngineSetting.MILLIS_PER_SECOND_FLOAT;
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
         Object[] elements = grids.elements();
@@ -290,12 +280,6 @@ public class LiquidTickBranch extends BranchPackage {
         dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, targetChunk, subChunkY);
     }
 
-    /*
-     * Converts each contained liquid's own viscosity (Pa·s) into the
-     * real-seconds interval its geometry is allowed to redraw at, clamped
-     * between LIQUID_FLOW_INTERVAL_MIN_SECONDS and _MAX_SECONDS. Returns the
-     * fastest interval among every liquid this subchunk contains.
-     */
     private float resolveFlowInterval(SubChunkInstance subChunk) {
 
         ShortOpenHashSet liquidBlockIDs = subChunk.getContainedLiquidBlockIDs();

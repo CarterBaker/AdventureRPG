@@ -27,10 +27,6 @@ public final class TideUtility extends EngineUtility {
     public static final int BAND_MIN_Y = MIN_SURFACE_LEVELS / EngineSetting.LIQUID_LEVEL_MAX;
     public static final int BAND_MAX_Y = getTopWaterY(MAX_SURFACE_LEVELS);
 
-    private TideUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
-
     // Surface \\
 
     public static int toSurfaceLevels(double surfaceHeightBlocks) {

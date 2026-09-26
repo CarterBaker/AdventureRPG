@@ -8,6 +8,11 @@ import engine.root.BuilderPackage;
 
 class ThreadBuilder extends BuilderPackage {
 
+    /*
+     * Builds a ThreadHandle for one pool definition: a fixed-size executor with
+     * named threads and its in-flight capacity.
+     */
+
     // Build \\
 
     ThreadHandle build(String threadName, int threadSize, int inFlightCapacity) {

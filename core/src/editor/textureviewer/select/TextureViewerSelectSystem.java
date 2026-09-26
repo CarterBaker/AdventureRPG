@@ -2,9 +2,9 @@ package editor.textureviewer.select;
 
 import application.kernel.inputpipeline.input.RawInputHandle;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
+import editor.runtime.EditorInputSystem;
 import editor.textureviewer.TextureViewerSetting;
 import editor.textureviewer.atlas.TextureViewerAtlasSystem;
-import engine.editor.EditorInputSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 

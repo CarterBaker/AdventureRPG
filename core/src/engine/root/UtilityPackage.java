@@ -8,16 +8,9 @@ import engine.util.log.LogUtility;
 public abstract class UtilityPackage {
 
     /*
-     * Base utility class shared by all engine-level systems.
-     *
-     * Provides:
-     * - Standardized debug and logging output, routed into the session log
-     * - Centralized fatal exception handling, contained to the failing
-     *   context while it runs inside an isolation boundary
-     * - Common timing utilities
-     *
-     * Intended to enforce consistent diagnostics and failure
-     * behavior across the engine.
+     * Root of every engine class. Provides session-log debug and log output and
+     * throwException(), which is fatal by design outside an isolated context
+     * and contained to the failing context inside one.
      */
 
     // Internal

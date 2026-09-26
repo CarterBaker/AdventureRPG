@@ -2,21 +2,23 @@ package application.bootstrap.shaderpipeline.texturemanager;
 
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 
 import engine.assets.image.Pixmap;
 import engine.assets.image.PixmapUtility;
-import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
+import engine.util.memory.BufferUtility;
 
-/*
- * GL30 wrapper for texture array operations. Handles upload and deletion only.
- * Pixel conversion is delegated to PixmapUtility. Atlas images are already
- * flipped at composite time — no flip applied here.
- */
 class TextureGLSLUtility extends EngineUtility {
+
+    /*
+     * GL30 wrapper for texture array operations. Handles upload and deletion only.
+     * Pixel conversion is delegated to PixmapUtility. Atlas images are already
+     * flipped at composite time — no flip applied here.
+     */
 
     // GPU Upload \\
 
@@ -88,7 +90,7 @@ class TextureGLSLUtility extends EngineUtility {
     }
 
     static int createFloatTexture2D(float[] pixels, int width, int height, int wrapMode, int filterMode) {
-        java.nio.FloatBuffer buffer = engine.util.memory.BufferUtils.newFloatBuffer(pixels.length);
+        FloatBuffer buffer = BufferUtility.newFloatBuffer(pixels.length);
         buffer.put(pixels).flip();
 
         int handle = EngineContext.gl20.glGenTexture();
@@ -108,6 +110,15 @@ class TextureGLSLUtility extends EngineUtility {
     }
 
     // GPU Disposal \\
+
+    static void deleteTexture2D(int handle) {
+
+        if (handle == 0)
+            return;
+
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
+        EngineContext.gl20.glDeleteTexture(handle);
+    }
 
     static void deleteTextureArray(int handle) {
 

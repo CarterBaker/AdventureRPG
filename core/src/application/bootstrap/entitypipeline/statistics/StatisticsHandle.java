@@ -47,7 +47,7 @@ public class StatisticsHandle extends HandlePackage {
         this.reach = EngineSetting.DEFAULT_REACH;
 
         // Attributes
-        this.baseStats = new float[ItemStat.values().length];
+        this.baseStats = new float[ItemStat.VALUES.length];
         resetBaseStats();
     }
 
@@ -55,7 +55,7 @@ public class StatisticsHandle extends HandlePackage {
 
     public void resetBaseStats() {
 
-        for (ItemStat itemStat : ItemStat.values())
+        for (ItemStat itemStat : ItemStat.VALUES)
             baseStats[itemStat.ordinal()] = EngineSetting.DEFAULT_ATTRIBUTE_VALUE;
 
         baseStats[ItemStat.ARMOR.ordinal()] = EngineSetting.DEFAULT_ARMOR;

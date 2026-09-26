@@ -1,16 +1,11 @@
 package engine.root;
 
 import java.io.File;
-import java.time.Instant;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
 import com.google.gson.Gson;
 
-import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
-import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
-import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
-import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -23,12 +18,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class EnginePackage extends ManagerPackage {
 
     /*
-     * Root of the system hierarchy. Drives the core game loop, global state
-     * machine, and master system registry. Owns bootstrap, context management,
-     * frame timing, and lifecycle propagation to all registered systems.
-     * Contexts created with a crash listener run inside an isolation boundary:
-     * a failure marks only that context crashed, and its listener closes it at
-     * the start of the next frame while the engine keeps running.
+     * Root of the system hierarchy. Drives the game loop, the engine state
+     * machine and the engine registry, and propagates every lifecycle phase to
+     * its systems and to each active context. Contexts created with a crash
+     * listener run inside an isolation boundary, so a failure stops only that
+     * context while the engine keeps running.
      */
 
     // Core
@@ -91,14 +85,14 @@ public class EnginePackage extends ManagerPackage {
 
         // Timing
         this.fixedInterval = EngineSetting.FIXED_TIME_STEP;
-        this.maxSteps = 5;
+        this.maxSteps = EngineSetting.MAX_FIXED_STEPS_PER_FRAME;
     }
 
     static final class EngineStruct extends StructPackage {
 
         /*
-         * Carries all root references through to EnginePackage during
-         * construction. Bypasses constructor timing issues in one shot.
+         * Carries the root references through to EnginePackage during
+         * reflective construction.
          */
 
         // Internal
@@ -143,10 +137,6 @@ public class EnginePackage extends ManagerPackage {
 
     // Engine State \\
 
-    final EngineState getEngineState() {
-        return this.engineState;
-    }
-
     final void setInternalState(EngineState target) {
         this.engineState = target;
     }
@@ -162,32 +152,6 @@ public class EnginePackage extends ManagerPackage {
     boolean verifyContext(SystemContext targetContext) {
         this.setContext(targetContext);
         return true;
-    }
-
-    // System Registry \\
-
-    protected <T extends SystemPackage> T registerSystem(T systemPackage) {
-        this.internalRegistry.put(systemPackage.getClass(), systemPackage);
-        this.systemCollection.add(systemPackage);
-        return systemPackage;
-    }
-
-    // System Release \\
-
-    @Override
-    final void clearGarbage() {
-
-        if (this.garbageCollection.isEmpty())
-            return;
-
-        for (Class<?> systemClass : garbageCollection) {
-            SystemPackage systemPackage = this.internal.internalRegistry.get(systemClass);
-            this.internalRegistry.remove(systemClass);
-            this.systemCollection.remove(systemPackage);
-        }
-
-        this.garbageCollection.clear();
-        this.cacheSubSystems();
     }
 
     // System Retrieval \\
@@ -213,6 +177,19 @@ public class EnginePackage extends ManagerPackage {
     }
 
     public final <T> T getUnchecked(Class<T> type) {
+        return get(true, type);
+    }
+
+    public final <T> T getUnchecked(ContextPackage context, Class<T> type) {
+
+        if (context != null) {
+
+            T local = context.getLocal(type);
+
+            if (local != null)
+                return local;
+        }
+
         return get(true, type);
     }
 
@@ -248,59 +225,12 @@ public class EnginePackage extends ManagerPackage {
             window.setContext(context);
 
             this.pendingContextList.add(context);
-            this.windowPlatform.makeContextCurrent(window);
 
             primeContextLifecycle(context);
 
             return context;
         } catch (Exception e) {
             throw new InternalException("Failed to create context: " + contextClass.getSimpleName(), e);
-        } finally {
-            this.windowPlatform.restoreMainContext();
-            SystemPackage.SYSTEM_STRUCT.remove();
-        }
-    }
-
-    public <T extends ContextPackage> T createChildContext(
-            ContextPackage parent,
-            Class<T> childClass) {
-        return createChildContext(parent, childClass, parent.getWindow());
-    }
-
-    public <T extends ContextPackage> T createChildContext(
-            ContextPackage parent,
-            Class<T> childClass,
-            WindowInstance window) {
-
-        try {
-            SystemPackage.setupConstructor(this.settings, this, this);
-
-            var constructor = childClass.getDeclaredConstructor();
-            T context = constructor.newInstance();
-
-            context.pendingStart = false;
-            context.setWindow(window);
-
-            this.windowPlatform.makeContextCurrent(window.getGLWindow());
-
-            primeContextLifecycle(context);
-
-            EngineUtility.windowManager.beginContextWindow(window);
-
-            try {
-                context.internalStart();
-            }
-
-            finally {
-                EngineUtility.windowManager.endContextWindow();
-            }
-
-            this.activeContextList.add(context);
-            this.cacheContextArray();
-
-            return context;
-        } catch (Exception e) {
-            throw new InternalException("Failed to create child context: " + childClass.getSimpleName(), e);
         } finally {
             this.windowPlatform.restoreMainContext();
             SystemPackage.SYSTEM_STRUCT.remove();
@@ -392,6 +322,26 @@ public class EnginePackage extends ManagerPackage {
         this.contextArray = this.activeContextList.toArray(new ContextPackage[0]);
     }
 
+    private void runActiveContexts(Consumer<ContextPackage> phase) {
+
+        ContextPackage[] contexts = this.contextArray;
+
+        for (int i = 0; i < contexts.length; i++) {
+
+            EngineUtility.windowManager.beginContextWindow(contexts[i].getWindow());
+
+            try {
+                runContextPhase(contexts[i], phase);
+            }
+
+            finally {
+                EngineUtility.windowManager.endContextWindow();
+            }
+        }
+
+        this.windowPlatform.restoreMainContext();
+    }
+
     // Isolation \\
 
     public final void isolate(ContextPackage context, Runnable work) {
@@ -455,39 +405,6 @@ public class EnginePackage extends ManagerPackage {
     @Override
     protected final Future<?> executeAsync(ThreadHandle handle, Runnable task) {
         return EngineUtility.executeAsync(handle, task);
-    }
-
-    @Override
-    protected final <T extends AsyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T asyncStruct,
-            AsyncStructConsumer<T> consumer) {
-        return EngineUtility.executeAsync(handle, asyncStruct, consumer);
-    }
-
-    @Override
-    protected final Future<?> executeAsync(
-            ThreadHandle handle,
-            AsyncStructConsumerMulti consumer,
-            AsyncContainerPackage... asyncStructs) {
-        return EngineUtility.executeAsync(handle, consumer, asyncStructs);
-    }
-
-    @Override
-    protected final <T extends SyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T syncStruct,
-            SyncStructConsumer<T> consumer) {
-        return EngineUtility.executeAsync(handle, syncStruct, consumer);
-    }
-
-    @Override
-    protected final <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T asyncStruct,
-            S syncStruct,
-            BiSyncAsyncConsumer<T, S> consumer) {
-        return EngineUtility.executeAsync(handle, asyncStruct, syncStruct, consumer);
     }
 
     // Game State \\
@@ -639,7 +556,7 @@ public class EnginePackage extends ManagerPackage {
     // Frame Time \\
 
     private final void stampFrameTime() {
-        this.frameTimeMillis = Instant.now().toEpochMilli();
+        this.frameTimeMillis = System.currentTimeMillis();
     }
 
     // Release \\
@@ -679,13 +596,7 @@ public class EnginePackage extends ManagerPackage {
 
         super.internalUpdate();
 
-        for (int i = 0; i < this.contextArray.length; i++) {
-            EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-            runContextPhase(this.contextArray[i], ContextPackage::internalUpdate);
-            EngineUtility.windowManager.endContextWindow();
-        }
-
-        this.windowPlatform.restoreMainContext();
+        this.runActiveContexts(ContextPackage::internalUpdate);
     }
 
     // Fixed Update \\
@@ -705,13 +616,7 @@ public class EnginePackage extends ManagerPackage {
 
             super.internalFixedUpdate();
 
-            for (int i = 0; i < this.contextArray.length; i++) {
-                EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-                runContextPhase(this.contextArray[i], ContextPackage::internalFixedUpdate);
-                EngineUtility.windowManager.endContextWindow();
-            }
-
-            this.windowPlatform.restoreMainContext();
+            this.runActiveContexts(ContextPackage::internalFixedUpdate);
         }
     }
 
@@ -724,13 +629,7 @@ public class EnginePackage extends ManagerPackage {
 
         super.internalLateUpdate();
 
-        for (int i = 0; i < this.contextArray.length; i++) {
-            EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-            runContextPhase(this.contextArray[i], ContextPackage::internalLateUpdate);
-            EngineUtility.windowManager.endContextWindow();
-        }
-
-        this.windowPlatform.restoreMainContext();
+        this.runActiveContexts(ContextPackage::internalLateUpdate);
     }
 
     // Render \\
@@ -742,13 +641,7 @@ public class EnginePackage extends ManagerPackage {
 
         super.internalRender();
 
-        for (int i = 0; i < this.contextArray.length; i++) {
-            EngineUtility.windowManager.beginContextWindow(this.contextArray[i].getWindow());
-            runContextPhase(this.contextArray[i], ContextPackage::internalRender);
-            EngineUtility.windowManager.endContextWindow();
-        }
-
-        this.windowPlatform.restoreMainContext();
+        this.runActiveContexts(ContextPackage::internalRender);
     }
 
     // Draw \\

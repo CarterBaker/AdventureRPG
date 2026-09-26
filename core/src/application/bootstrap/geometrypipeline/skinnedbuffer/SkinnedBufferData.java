@@ -8,18 +8,10 @@ import engine.root.EngineSetting;
 public class SkinnedBufferData extends DataPackage {
 
     /*
-     * Holds all mutable state for one instanced skinned draw — GPU handles,
-     * the rigged mesh it draws, CPU-side per-instance rows (model matrix
-     * followed by the SkinnedAppearanceStruct row), per-instance bone
-     * palettes, and the realloc flag. All mutation is
-     * driven by SkinnedBufferInstance. boneCapacity is fixed to this mesh's
-     * own rig's exact bone count — not a shared global maximum — so no
-     * skinned buffer ever wastes a single float on bones it doesn't have.
-     * Unlike CompositeBufferData, there is no cpu/uploaded version pair —
-     * every instance here is re-submitted in full every single frame by
-     * EntityRenderSystem (an animated pose is never the same twice), so "is
-     * this stale" is never a meaningful question; upload happens
-     * unconditionally whenever instanceCount > 0.
+     * Mutable state for one instanced skinned draw: GPU handles, the rigged
+     * mesh, per-instance rows and bone palettes, and the realloc flag. Bone
+     * capacity matches the mesh's own rig. Every instance is resubmitted each
+     * frame, so it uploads whenever it has instances.
      */
 
     // GPU Handles

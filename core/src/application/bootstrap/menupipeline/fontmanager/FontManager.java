@@ -4,6 +4,7 @@ import application.bootstrap.menupipeline.font.FontHandle;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -13,7 +14,7 @@ public class FontManager extends ManagerPackage {
 
     /*
      * Owns the font palette for the engine lifetime. Drives font rasterization
-     * and atlas registration via InternalLoader. GPU resources are owned and
+     * and atlas registration via FontLoader. GPU resources are owned and
      * disposed by TextureManager — FontManager holds no GPU state directly.
      */
 
@@ -97,8 +98,8 @@ public class FontManager extends ManagerPackage {
 
         MaterialInstance material = materialManager.cloneMaterial(materialID);
 
-        if (material.getUniform("u_fontAtlas") != null)
-            material.setUniform("u_fontAtlas", handle.getAtlasHandle().getGpuHandle());
+        if (material.getUniform(EngineSetting.UNIFORM_FONT_ATLAS) != null)
+            material.setUniform(EngineSetting.UNIFORM_FONT_ATLAS, handle.getAtlasHandle().getGpuHandle());
 
         FontInstance instance = create(FontInstance.class);
         instance.constructor(handle, material);

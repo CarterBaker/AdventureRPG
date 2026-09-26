@@ -2,9 +2,6 @@ package application.bootstrap.shaderpipeline.spritemanager;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
@@ -19,12 +16,13 @@ import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-/*
- * Discovers sprite image files in scan(), processes one file per load() call,
- * and self-releases when the queue empties. Default mesh and material are
- * resolved in awake() before batching begins.
- */
 class SpriteLoader extends LoaderPackage {
+
+    /*
+     * Discovers sprite image files in scan(), processes one file per load() call,
+     * and self-releases when the queue empties. Default mesh and material are
+     * resolved in awake() before batching begins.
+     */
 
     // Internal
     private File root;
@@ -51,18 +49,10 @@ class SpriteLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Sprite directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.TEXTURE_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        spriteName2File.put(resourceName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk sprite directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.TEXTURE_FILE_EXTENSIONS)) {
+            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            spriteName2File.put(resourceName, file);
+            queueFile(file);
         }
     }
 
@@ -108,7 +98,7 @@ class SpriteLoader extends LoaderPackage {
             boolean stretch = internalBuilder.parseCompanionStretch(file);
 
             MaterialInstance material = materialManager.cloneMaterial(defaultMaterialID);
-            material.setUniform("u_sprite", gpuHandle);
+            material.setUniform(EngineSetting.UNIFORM_SPRITE, gpuHandle);
 
             ModelInstance modelInstance = modelManager.createModel(defaultMeshHandle, material);
 

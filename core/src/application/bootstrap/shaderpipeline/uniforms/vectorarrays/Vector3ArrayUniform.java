@@ -1,19 +1,34 @@
 package application.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import org.lwjgl.opengl.GL20C;
-import org.lwjgl.system.MemoryStack;
+import java.nio.FloatBuffer;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
+import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
+import engine.util.memory.BufferUtility;
 
 public final class Vector3ArrayUniform extends UniformAttributeStruct<Object[]> {
 
+    /*
+     * GLSL vec3 array uniform. Elements are packed into a preallocated
+     * direct buffer on push, so uploads never allocate.
+     */
+
+    // Internal
     private final int elementCount;
+    private final FloatBuffer uniformBuffer;
+
+    // Constructor \\
 
     public Vector3ArrayUniform(int elementCount) {
+
         super(UniformType.VECTOR3, elementCount, new Vector3[elementCount]);
+
         this.elementCount = elementCount;
+        this.uniformBuffer = BufferUtility.newFloatBuffer(elementCount * EngineSetting.VECTOR3_COMPONENT_COUNT);
+
         for (int i = 0; i < elementCount; i++)
             ((Vector3[]) value)[i] = new Vector3();
     }
@@ -23,42 +38,42 @@ public final class Vector3ArrayUniform extends UniformAttributeStruct<Object[]> 
         return new Vector3ArrayUniform(elementCount);
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Object[] value) {
-        float[] flat = new float[elementCount * 3];
+
+        uniformBuffer.clear();
+
         for (int i = 0; i < elementCount; i++) {
-            Vector3 v = (Vector3) value[i];
-            flat[i * 3] = v.x;
-            flat[i * 3 + 1] = v.y;
-            flat[i * 3 + 2] = v.z;
+            Vector3 vector = (Vector3) value[i];
+            uniformBuffer.put(vector.x);
+            uniformBuffer.put(vector.y);
+            uniformBuffer.put(vector.z);
         }
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            java.nio.FloatBuffer buf = stack.mallocFloat(elementCount * 3);
-            buf.put(flat).flip();
-            GL20C.glUniform3fv(handle, buf);
-        }
+
+        uniformBuffer.flip();
+        EngineContext.gl20.glUniform3fv(handle, uniformBuffer);
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Object[] value) {
-        Vector3[] dst = (Vector3[]) this.value;
+
+        Vector3[] target = (Vector3[]) this.value;
+
         for (int i = 0; i < Math.min(value.length, elementCount); i++)
-            dst[i].set((Vector3) value[i]);
+            target[i].set((Vector3) value[i]);
     }
 
     @Override
     protected void applyObject(Object value) {
-        if (value instanceof Vector3[] v)
-            applyValue(v);
-        else if (value instanceof engine.util.mathematics.vectors.Vector3[] vectors) {
-            Vector3[] dst = (Vector3[]) this.value;
-            for (int i = 0; i < Math.min(vectors.length, elementCount); i++) {
-                dst[i].x = vectors[i].x;
-                dst[i].y = vectors[i].y;
-                dst[i].z = vectors[i].z;
-            }
-        } else
-            throw new IllegalArgumentException("applyObject(Vector3Array): got " + value.getClass());
+
+        if (value instanceof Vector3[] vectors)
+            applyValue(vectors);
+        else
+            throwException("Vector3ArrayUniform expects Vector3[], got " + value.getClass().getSimpleName());
     }
 
     public int elementCount() {

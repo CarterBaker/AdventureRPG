@@ -60,7 +60,9 @@ public class ShaderManager extends ManagerPackage {
 
     void bindShaderToUBO(ShaderHandle shader, String blockName) {
         UBOHandle ubo = uboManager.getUBOHandleFromUBOName(blockName);
-        ShaderGLSLUtility.bindUniformBlock(shader.getGpuHandle(), blockName, ubo.getBindingPoint());
+
+        if (shader.claimBlockBinding(ubo.getBindingPoint()))
+            ShaderGLSLUtility.bindUniformBlock(shader.getGpuHandle(), blockName, ubo.getBindingPoint());
     }
 
     // Accessible \\

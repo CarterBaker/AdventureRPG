@@ -118,7 +118,7 @@ public class CharacterCreatorBranch extends BranchPackage {
 
         creatorProgressionBranch.populateStats(session);
         creatorNameBranch.refreshName(session);
-        showTab(session, CreatorTab.values()[0]);
+        showTab(session, CreatorTab.VALUES[0]);
     }
 
     public void closeMenu(WindowInstance window) {
@@ -211,7 +211,7 @@ public class CharacterCreatorBranch extends BranchPackage {
 
         clearEntryPoint(session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_TABS);
 
-        for (CreatorTab tab : CreatorTab.values())
+        for (CreatorTab tab : CreatorTab.VALUES)
             menuManager.inject(
                     session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_TABS, RuntimeSetting.MENU_CREATOR_TAB,
                     button -> {

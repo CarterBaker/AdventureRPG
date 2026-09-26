@@ -14,19 +14,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MegaChunkInstance extends WorldRenderInstance {
 
     /*
-     * A merged geometry batch composed of MEGA_CHUNK_SIZE^2 adjacent
-     * ChunkInstances. batchAndMergeSingle() appends one chunk's own geometry
-     * to the packet the first time that chunk joins the mega — safe with
-     * only that chunk's own lock held, since no other member is touched.
-     * batchAndMergeAll() instead rebuilds the whole packet from every
-     * registered chunk's current geometry, since a chunk's prior
-     * contribution can't be surgically removed from the shared vertex
-     * buffer; this is only ever called by MegaMergeBranch once it holds
-     * every registered chunk's own ChunkDataSyncContainer lock, since each
-     * one's DynamicPacketInstance is otherwise mutated independently by its
-     * own streaming and liquid-tick pipelines. Once all chunks are present,
-     * finalizeGeometry() marks the packet ready for GPU upload. Threading
-     * for the mega's own bookkeeping is governed by MegaDataSyncContainer.
+     * A merged geometry batch of MEGA_CHUNK_SIZE² chunks. A chunk joining for
+     * the first time is appended; a chunk contributing again forces a full
+     * rebuild from every member, which MegaMergeBranch runs only while holding
+     * all their locks. finalizeGeometry() marks the packet ready once every
+     * chunk is present.
      */
 
     // Internal

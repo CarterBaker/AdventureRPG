@@ -1,9 +1,6 @@
 package application.bootstrap.worldpipeline.structuremanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.worldpipeline.structure.StructureHandle;
 import engine.root.EngineSetting;
@@ -48,18 +45,10 @@ class StructureLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Structure root directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> FileUtility.hasExtension(f, EngineSetting.JSON_FILE_EXTENSIONS))
-                    .forEach(file -> {
-                        String structureName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        structureName2File.put(structureName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk structure directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String structureName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            structureName2File.put(structureName, file);
+            queueFile(file);
         }
     }
 
@@ -90,10 +79,5 @@ class StructureLoader extends LoaderPackage {
             throwException("On-demand structure load failed — no file found for: \"" + structureName + "\"");
 
         request(file);
-    }
-
-    void requestAll() {
-        for (String structureName : structureName2File.keySet())
-            request(structureName);
     }
 }

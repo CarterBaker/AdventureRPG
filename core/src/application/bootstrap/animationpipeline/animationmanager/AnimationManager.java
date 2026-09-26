@@ -12,7 +12,7 @@ public class AnimationManager extends ManagerPackage {
      * Owns the animation clip palette for the engine lifetime. A clip is a
      * self-contained, rig-bound track set — runtime playback position lives
      * on each entity's AnimationStateHandle, never here. Auto-triggers an
-     * on-demand load via InternalLoader on a name-based cache miss.
+     * on-demand load via AnimationLoader on a name-based cache miss.
      */
 
     // Palette

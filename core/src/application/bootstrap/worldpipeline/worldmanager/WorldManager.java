@@ -10,7 +10,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 public class WorldManager extends ManagerPackage {
 
     /*
-     * Owns the world palette and drives world loading via InternalLoader.
+     * Owns the world palette and drives world loading via WorldLoader.
      * Tracks the active world and exposes the standard registry API. The active
      * world defaults to the starting world on first access if not yet set.
      */

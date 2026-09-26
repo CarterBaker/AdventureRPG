@@ -5,12 +5,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import application.bootstrap.shaderpipeline.uniforms.matrices.*;
-import application.bootstrap.shaderpipeline.uniforms.matrixArrays.*;
+import application.bootstrap.shaderpipeline.uniforms.matrixarrays.*;
 import application.bootstrap.shaderpipeline.uniforms.samplers.*;
-import application.bootstrap.shaderpipeline.uniforms.scalarArrays.*;
+import application.bootstrap.shaderpipeline.uniforms.scalararrays.*;
 import application.bootstrap.shaderpipeline.uniforms.scalars.*;
 import application.bootstrap.shaderpipeline.uniforms.vectorarrays.*;
 import application.bootstrap.shaderpipeline.uniforms.vectors.*;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.mathematics.matrices.*;
 import engine.util.mathematics.vectors.*;
@@ -21,9 +22,6 @@ public final class UniformUtility extends EngineUtility {
      * Stateless helpers for std140 layout calculation, UniformAttributeStruct
      * construction, and JSON value parsing. Never instantiated.
      */
-
-    private UniformUtility() {
-    }
 
     // Std140 Layout \\
 
@@ -40,7 +38,7 @@ public final class UniformUtility extends EngineUtility {
     public static int getStd140Size(UniformData ud) {
         int base = ud.getUniformType().getStd140Size();
         if (ud.getCount() > 1)
-            return align(base, 16) * ud.getCount();
+            return align(base, EngineSetting.STD140_ARRAY_STRIDE_ALIGNMENT) * ud.getCount();
         return base;
     }
 

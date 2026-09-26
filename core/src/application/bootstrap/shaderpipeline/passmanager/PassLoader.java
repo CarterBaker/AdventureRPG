@@ -1,21 +1,18 @@
 package application.bootstrap.shaderpipeline.passmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
-import application.bootstrap.shaderpipeline.pass.PassHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-/*
- * Drives the pass bootstrap sequence: directory walked in scan(), one pass
- * assembled per load() call, self-releases when the queue empties.
- */
 class PassLoader extends LoaderPackage {
+
+    /*
+     * Drives the pass bootstrap sequence: directory walked in scan(), one pass
+     * assembled per load() call, self-releases when the queue empties.
+     */
 
     // Internal
     private File root;
@@ -35,18 +32,10 @@ class PassLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Pass directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        passName2File.put(resourceName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk pass directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            passName2File.put(resourceName, file);
+            queueFile(file);
         }
     }
 

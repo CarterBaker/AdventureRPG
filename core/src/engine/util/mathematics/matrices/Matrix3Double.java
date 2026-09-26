@@ -4,6 +4,10 @@ import engine.root.EngineUtility;
 
 public class Matrix3Double extends EngineUtility {
 
+    /*
+     * Mutable 3x3 double matrix with in-place operations.
+     */
+
     // Data
     public final double[] val = new double[9];
 

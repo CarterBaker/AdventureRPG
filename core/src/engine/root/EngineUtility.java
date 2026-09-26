@@ -3,12 +3,7 @@ package engine.root;
 import java.util.concurrent.Future;
 
 import application.kernel.frameratepipeline.frameratemanager.FrameRateManager;
-import application.kernel.inputpipeline.InputPipeline;
 import application.kernel.inputpipeline.inputmanager.InputManager;
-import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
-import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
-import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
-import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.threadpipeline.threadmanager.ThreadManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -20,12 +15,10 @@ import engine.assets.camera.OrthographicCameraInstance;
 public abstract class EngineUtility {
 
     /*
-     * EngineUtility provides engine-level diagnostics, exception handling,
-     * and convenience access to static utility classes.
-     *
-     * Core kernel references are assigned during their respective awake()
-     * phases, making thread submission and camera creation available globally
-     * without passing engine references through call chains.
+     * Static base for every *Utility class. Provides engine-wide logging and
+     * throwException(), and holds the kernel managers assigned during their
+     * awake() so thread submission and camera creation are reachable without
+     * passing the engine around.
      */
 
     // Internal \\
@@ -79,35 +72,6 @@ public abstract class EngineUtility {
 
     static Future<?> executeAsync(ThreadHandle handle, Runnable task) {
         return threadManager.executeAsync(handle, task);
-    }
-
-    static <T extends AsyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T asyncStruct,
-            AsyncStructConsumer<T> consumer) {
-        return threadManager.executeAsync(handle, asyncStruct, consumer);
-    }
-
-    static Future<?> executeAsync(
-            ThreadHandle handle,
-            AsyncStructConsumerMulti consumer,
-            AsyncContainerPackage... asyncStructs) {
-        return threadManager.executeAsync(handle, consumer, asyncStructs);
-    }
-
-    static <T extends SyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T syncStruct,
-            SyncStructConsumer<T> consumer) {
-        return threadManager.executeAsync(handle, syncStruct, consumer);
-    }
-
-    static <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T asyncStruct,
-            S syncStruct,
-            BiSyncAsyncConsumer<T, S> consumer) {
-        return threadManager.executeAsync(handle, asyncStruct, syncStruct, consumer);
     }
 
     // Camera \\

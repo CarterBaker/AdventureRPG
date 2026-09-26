@@ -5,7 +5,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.kernel.windowpipeline.window.WindowInstance;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 
 public class DevItemSystem extends SystemPackage {

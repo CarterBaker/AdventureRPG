@@ -7,27 +7,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class RigMathUtility extends EngineUtility {
 
     /*
-     * Stateless bone-transform composition shared by RigData's bind-pose
-     * bake and AnimationStateHandle's per-frame pose evaluation. Public
-     * rather than package-private, unlike the standard GLSLUtility pattern
-     * — this is genuinely needed from both the rig package and the
-     * entity-side animation package, and duplicating it would break the
-     * "one true composition function" both the bind bake and the runtime
-     * pose depend on producing identical results from.
-     *
-     * Rotation is composed in XYZ order — a vertex rotates about its local
-     * X axis first, then Y, then Z — matching standard Blockbench-style
-     * cuboid rig authoring. All angles are degrees in, matching the JSON
-     * schema.
-     *
-     * composeLocal writes into caller-supplied output and scratch matrices
-     * instead of allocating — this runs once per bone per entity per
-     * frame, a genuine hot path. Callers own three pre-allocated Matrix4
-     * instances (out, scratchA, scratchB) and reuse them forever.
-     *
-     * setScale is public as well — AnimationStateHandle applies a bone's
-     * non-inherited proportion scale with it between the bone's current
-     * world matrix and its bind inverse.
+     * Stateless bone-transform composition shared by the rig's bind-pose bake
+     * and AnimationStateHandle's per-frame pose, so both always agree. Rotation
+     * composes in XYZ order from degrees, and composeLocal() writes into
+     * caller-owned output and scratch matrices so the per-bone hot path never
+     * allocates.
      */
 
     // Compose \\

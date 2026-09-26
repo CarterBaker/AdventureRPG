@@ -1,9 +1,6 @@
 package application.bootstrap.worldpipeline.biomemanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import com.google.gson.JsonObject;
 
@@ -19,18 +16,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class BiomeLoader extends LoaderPackage {
 
     /*
-     * Scans the biome JSON directory and loads every biome definition into
-     * BiomeManager. Each file's "map_color" is peeked during scan() — before
-     * this loader even has a reference to BiomeManager, since scan() runs
-     * during CREATE and get() hasn't fired yet — so it's buffered locally
-     * and handed off to BiomeManager's own color index the moment get()
-     * wires the two together. On-demand requests resolve and register a
-     * biome directly, without touching the shared file queue, since that
-     * queue can also be drained by the normal per-frame batch on the main
-     * thread while an on-demand request arrives from a world-generation
-     * worker thread — biomes are the one registry resolved from off the
-     * main thread, so this loader is the one place that has to account
-     * for it.
+     * Scans and loads every biome definition into BiomeManager. Map colors are
+     * read during scan() and handed to BiomeManager once get() wires it in.
+     * On-demand requests register a biome directly without touching the file
+     * queue, since they can arrive from world generation workers.
      */
 
     // Internal
@@ -68,19 +57,11 @@ class BiomeLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Biome root directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> FileUtility.hasExtension(f, EngineSetting.JSON_FILE_EXTENSIONS))
-                    .forEach(file -> {
-                        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        resourceName2File.put(resourceName, file);
-                        scanMapColor(file, resourceName);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk biome directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            resourceName2File.put(resourceName, file);
+            scanMapColor(file, resourceName);
+            queueFile(file);
         }
     }
 
@@ -96,7 +77,6 @@ class BiomeLoader extends LoaderPackage {
 
             scannedMapColors.add(parseMapColorHex(json.get("map_color").getAsString(), resourceName));
             scannedMapColorNames.add(resourceName);
-
         } catch (Exception e) {
             throwException("Failed to pre-register map color from: " + file.getPath(), e);
         }
@@ -113,7 +93,8 @@ class BiomeLoader extends LoaderPackage {
         try {
             return Integer.parseInt(hex, 16);
         } catch (NumberFormatException e) {
-            throwException("Biome \"" + resourceName + "\" has invalid map_color \"" + raw + "\" — not valid hex.", e);
+            throwException(
+                    "Biome \"" + resourceName + "\" has invalid map_color \"" + raw + "\" — not valid hex.", e);
             return 0;
         }
     }
@@ -140,17 +121,6 @@ class BiomeLoader extends LoaderPackage {
 
     // On-Demand \\
 
-    /*
-     * Resolves and registers a single biome by name directly, bypassing the
-     * base loader's file-queue request path. That path removes the file
-     * from fileQueue, a plain LinkedList also drained every frame by the
-     * main thread's batch loop — safe for every other on-demand registry in
-     * this engine, since none of them are ever queried off the main thread,
-     * but biomes are resolved from the WorldStreaming thread during chunk
-     * generation. Leaving the file in the queue is harmless: addBiome() is
-     * idempotent, so if the batch loop reaches the same file later it just
-     * re-parses and overwrites the same entry.
-     */
     void request(String biomeName) {
 
         if (biomeManager.hasBiome(biomeName))

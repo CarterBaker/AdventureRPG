@@ -13,18 +13,11 @@ import engine.util.mathematics.vectors.Vector3;
 public class BlockCollisionBranch extends BranchPackage {
 
     /*
-     * Sweeps the entity's box through the sub-block grid one axis at a time —
-     * vertical first, then X, then Z — and clamps each axis to the first
-     * solid sub-block face it would cross, keeping a thin skin of clearance,
-     * so an entity rests exactly on a whole block, a half-block slab or a
-     * single sub-block and slides along any wall. A sub-block the box
-     * already overlaps never blocks it, so nothing can wedge an entity in
-     * place. A grounded entity whose horizontal move is cut short tries a
-     * stair step: lift up to STEP_UP_HEIGHT_BLOCKS, make the move, settle
-     * back down. When that carries it further the lift is kept and handed to
-     * the cosmetic ground offset as an equal drop, so the body eases up the
-     * step instead of snapping. A sub-block is exactly one step high, so
-     * terrain smoothed with sub-blocks walks like stairs.
+     * Sweeps an entity's box through the sub-block grid one axis at a time and
+     * clamps each axis at the first solid face, keeping a thin skin. Sub-blocks
+     * already overlapped never block. A grounded entity cut short tries a stair
+     * step and eases the lift into the cosmetic ground offset, so sub-block
+     * terrain walks like stairs.
      */
 
     // Internal
@@ -105,13 +98,6 @@ public class BlockCollisionBranch extends BranchPackage {
 
     // Step \\
 
-    /*
-     * Replays the horizontal move from the settled height lifted by up to one
-     * step, then settles back onto whatever it stepped onto. The step is only
-     * taken when it carries the entity further than the flat move did, which
-     * is exactly when the obstacle was low enough to climb and the space
-     * above it clear.
-     */
     private void stepUp(
             long chunkCoordinate,
             Vector3 movement,
@@ -156,13 +142,6 @@ public class BlockCollisionBranch extends BranchPackage {
 
     // Sweep \\
 
-    /*
-     * How far the box can travel along one axis before its leading face
-     * meets a solid sub-block, never further than asked. Layers of
-     * sub-blocks are walked outward from the leading face; a layer whose
-     * face lies behind the leading face is one the box already overlaps and
-     * is passed over.
-     */
     private float sweep(long chunkCoordinate, int axis, float distance) {
 
         if (distance == 0f)

@@ -1,6 +1,6 @@
 package application.bootstrap.menupipeline.element;
 
-import application.bootstrap.menupipeline.util.DimensionValue;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
@@ -10,25 +10,10 @@ import engine.root.DataPackage;
 public class ElementData extends DataPackage {
 
     /*
-     * Persistent element definition. Holds all immutable visual and layout
-     * fields shared across every instance of this element. Owned by ElementHandle,
-     * created with new during bootstrap.
-     *
-     * on_click fires once on primary press — method only, no element swap.
-     * on_drag fires every frame while primary held — method only, no element swap.
-     * Visual hover behavior is handled by ElementStateStruct blocks on
-     * ElementHandle. hover_color is the lightweight alternative: the element's
-     * sprite and text take that color while the cursor is over it, including
-     * inside an open hover dropdown. parent_hover_color is its counterpart for
-     * content inside a control: the element takes that color while any
-     * ancestor is hovered, without becoming hoverable itself — a button's
-     * label lights up with the button and never steals its hover or click.
-     *
-     * animation is an optional keyframe timeline sampled against the owning
-     * menu's clock every frame — null when the element is static.
-     *
-     * A masked, stacked container is scrollable: content that overflows it
-     * scrolls along the stack direction under the mouse wheel.
+     * Persistent element definition shared by every instance: layout, visuals,
+     * click and drag callbacks, hover and parent hover colors, and an optional
+     * animation timeline sampled against the menu's clock. Masked stacked
+     * containers scroll along their stack direction.
      */
 
     // Identity
@@ -40,7 +25,7 @@ public class ElementData extends DataPackage {
     private final String text;
     private final String fontName;
     private final String materialName;
-    private final DimensionValue fontSize;
+    private final DimensionValueStruct fontSize;
     private final boolean explicitFontSize;
     private final MenuColorStruct color;
     private final MenuColorStruct hoverColor;
@@ -50,7 +35,7 @@ public class ElementData extends DataPackage {
     private final LayoutStruct layout;
     private final boolean mask;
     private final StackDirection stackDirection;
-    private final DimensionValue spacing;
+    private final DimensionValueStruct spacing;
     private final TextAlign textAlign;
 
     // Expansion
@@ -78,7 +63,7 @@ public class ElementData extends DataPackage {
             String text,
             String fontName,
             String materialName,
-            DimensionValue fontSize,
+            DimensionValueStruct fontSize,
             boolean explicitFontSize,
             MenuColorStruct color,
             MenuColorStruct hoverColor,
@@ -86,7 +71,7 @@ public class ElementData extends DataPackage {
             LayoutStruct layout,
             boolean mask,
             StackDirection stackDirection,
-            DimensionValue spacing,
+            DimensionValueStruct spacing,
             TextAlign textAlign,
             boolean startExpanded,
             ElementAnimationStruct animation,
@@ -149,7 +134,7 @@ public class ElementData extends DataPackage {
         return materialName;
     }
 
-    public DimensionValue getFontSize() {
+    public DimensionValueStruct getFontSize() {
         return fontSize;
     }
 
@@ -181,7 +166,7 @@ public class ElementData extends DataPackage {
         return stackDirection;
     }
 
-    public DimensionValue getSpacing() {
+    public DimensionValueStruct getSpacing() {
         return spacing;
     }
 

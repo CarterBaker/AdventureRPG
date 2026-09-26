@@ -2,7 +2,7 @@ package application.bootstrap.shaderpipeline.texturemanager;
 
 import java.awt.Color;
 import java.io.File;
-import java.util.List;
+import java.util.Arrays;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -12,14 +12,16 @@ import engine.root.SystemPackage;
 import engine.util.io.FileUtility;
 import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Loads alias definitions from JSON files in the alias directory. Populated
- * once in awake() before any texture load fires. Read-only for the remainder
- * of the TextureManager lifetime. AliasStructs are plain bootstrap containers
- * held in a plain array — no engine lifecycle needed.
- */
 public class AliasLibrarySystem extends SystemPackage {
+
+    /*
+     * Loads alias definitions from JSON files in the alias directory. Populated
+     * once in awake() before any texture load fires. Read-only for the remainder
+     * of the TextureManager lifetime. AliasStructs are plain bootstrap containers
+     * held in a plain array — no engine lifecycle needed.
+     */
 
     // Internal
     private AliasStruct[] aliases;
@@ -44,7 +46,7 @@ public class AliasLibrarySystem extends SystemPackage {
 
         FileUtility.verifyDirectory(root, "Alias root directory not found: " + root.getAbsolutePath());
 
-        List<File> aliasFiles = FileUtility.collectFilesShallow(root, EngineSetting.JSON_FILE_EXTENSIONS);
+        ObjectArrayList<File> aliasFiles = FileUtility.collectFilesShallow(root, EngineSetting.JSON_FILE_EXTENSIONS);
 
         for (File file : aliasFiles)
             loadAliasFile(file);
@@ -93,7 +95,7 @@ public class AliasLibrarySystem extends SystemPackage {
         while (newCapacity < requiredCapacity)
             newCapacity *= EngineSetting.SHADER_ALIAS_LIBRARY_GROWTH_FACTOR;
 
-        aliases = java.util.Arrays.copyOf(aliases, newCapacity);
+        aliases = Arrays.copyOf(aliases, newCapacity);
     }
 
     // Accessible \\

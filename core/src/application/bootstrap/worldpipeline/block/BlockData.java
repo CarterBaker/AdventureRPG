@@ -8,15 +8,9 @@ import engine.util.mathematics.extras.Direction3Vector;
 public class BlockData extends DataPackage {
 
     /*
-     * Persistent block definition record. All fields are immutable after
-     * construction — block definitions never change at runtime. Owned by
-     * BlockHandle for the full engine session. viscosity is required (Pa·s)
-     * for any LIQUID-geometry block — see BlockBuilder — and unused/optional
-     * for every other geometry type. natural marks a block as eligible for
-     * the edge bevel and vertex jitter FullGeometryBranch/StandardSurfaceShader
-     * apply to soften and distort naturally-formed terrain — an artificial
-     * block never bevels or jitters and always meets a natural neighbor at a
-     * flat, seamless shared face.
+     * Immutable block definition. Viscosity is required for liquid blocks, and
+     * natural marks blocks that receive the edge bevel and vertex jitter;
+     * artificial blocks always meet their neighbors flat.
      */
 
     // Identity

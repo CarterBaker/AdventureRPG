@@ -1,18 +1,29 @@
 package application.bootstrap.shaderpipeline.uniforms.matrices;
 
+import java.nio.FloatBuffer;
+
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import engine.root.EngineContext;
-import engine.util.mathematics.matrices.Matrix3;
+import engine.root.EngineSetting;
 import engine.util.mathematics.matrices.Matrix3Double;
+import engine.util.memory.BufferUtility;
 
 public final class Matrix3DoubleUniform extends UniformAttributeStruct<Matrix3Double> {
 
-    private final Matrix3 uniformBuffer;
+    /*
+     * GLSL dmat3 uniform. Uploaded through a preallocated direct buffer,
+     * so pushes never allocate.
+     */
+
+    // Internal
+    private final FloatBuffer uniformBuffer;
+
+    // Constructor \\
 
     public Matrix3DoubleUniform() {
         super(UniformType.MATRIX3_DOUBLE, new Matrix3Double());
-        this.uniformBuffer = new Matrix3();
+        this.uniformBuffer = BufferUtility.newFloatBuffer(EngineSetting.MATRIX3_ELEMENT_COUNT);
     }
 
     @Override
@@ -20,19 +31,32 @@ public final class Matrix3DoubleUniform extends UniformAttributeStruct<Matrix3Do
         return new Matrix3DoubleUniform();
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Matrix3Double value) {
-        for (int i = 0; i < 9; i++)
-            uniformBuffer.val[i] = (float) value.val[i];
-        try (org.lwjgl.system.MemoryStack stack = org.lwjgl.system.MemoryStack.stackPush()) {
-            java.nio.FloatBuffer buf = stack.mallocFloat(9);
-            buf.put(uniformBuffer.val).flip();
-            EngineContext.gl20.glUniformMatrix3fv(handle, 1, false, buf);
-        }
+
+        uniformBuffer.clear();
+        for (int i = 0; i < EngineSetting.MATRIX3_ELEMENT_COUNT; i++)
+            uniformBuffer.put((float) value.val[i]);
+        uniformBuffer.flip();
+
+        EngineContext.gl20.glUniformMatrix3fv(handle, 1, false, uniformBuffer);
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Matrix3Double value) {
         this.value.set(value);
+    }
+
+    @Override
+    protected void applyObject(Object value) {
+
+        if (value instanceof Matrix3Double matrix)
+            applyValue(matrix);
+        else
+            throwException("Matrix3DoubleUniform expects Matrix3Double, got " + value.getClass().getSimpleName());
     }
 }

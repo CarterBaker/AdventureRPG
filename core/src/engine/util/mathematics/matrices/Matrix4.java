@@ -4,6 +4,11 @@ import engine.root.EngineUtility;
 
 public class Matrix4 extends EngineUtility {
 
+    /*
+     * Mutable 4x4 float matrix, column-major like OpenGL, with in-place
+     * transform operations.
+     */
+
     // Data
     public final float[] val = new float[16];
 
@@ -69,13 +74,6 @@ public class Matrix4 extends EngineUtility {
         val[13] = array[7];
         val[14] = array[11];
         val[15] = array[15];
-    }
-
-    // Conversion \\
-
-    public Matrix4 fromNative(engine.util.mathematics.matrices.Matrix4 other) {
-        System.arraycopy(other.val, 0, val, 0, 16);
-        return this;
     }
 
     // Accessors \\

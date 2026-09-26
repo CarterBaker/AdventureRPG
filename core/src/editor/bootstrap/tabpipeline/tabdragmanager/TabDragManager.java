@@ -12,34 +12,19 @@ import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.bootstrap.tabpipeline.util.DropTargetStruct;
 import editor.bootstrap.tabpipeline.util.DropZone;
 import editor.bootstrap.tabpipeline.util.TabDragLayoutStruct;
-import engine.root.EngineSetting;
+import editor.runtime.EditorSetting;
+import engine.input.Buttons;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TabDragManager extends ManagerPackage {
+
     /*
-     * Owns the full tab drag lifecycle. Never touches composite rects directly —
-     * all positioning goes through TabContext.placeAt() so chrome and content
-     * always move together.
-     *
-     * On latch: the handle is removed from the BSP so remaining tabs reflow,
-     * and TabContext.bringToFront() floats it above everything open.
-     *
-     * Each frame the dragged tab follows the cursor, and the drop target is
-     * resolved from WindowManager's hovered windows — the same per-frame
-     * hover list every menu uses — taking the first OS window under the
-     * cursor. The cursor position in that window comes from its own synced
-     * Input, the same y-up window-local space the dock tree is laid out in,
-     * so leaf and zone resolution always agree with what is on screen.
-     *
-     * zoneGhost — half-panel drop preview opened through
-     * MenuManager.openMenuWindow() on the target OS window. Moved on zone
-     * change, reopened on OS window change, closed before drop.
-     *
-     * On drop, every case goes through TabManager: a resolved target docks
-     * via dockTab() (into a leaf, or into an empty window), no target opens a
-     * new window via openSecondaryWindowForTab(). TabManager closes the source
-     * window if that left it empty, pushes rects, and persists the layout.
+     * Owns the tab drag lifecycle. On latch the tab leaves the BSP and floats
+     * to the front; each frame it follows the cursor while the drop target and
+     * zone resolve from the hovered OS window, previewed by a zone ghost. Every
+     * drop routes through TabManager, docking into a leaf or opening a new
+     * window.
      */
     // Internal
     private WindowManager windowManager;
@@ -82,7 +67,7 @@ public class TabDragManager extends ManagerPackage {
 
         WindowInstance sourceOsWindow = draggedHandle.getTabContext().getWindow().getGLWindow();
 
-        if (inputManager.getRawInput(sourceOsWindow).isMouseReleased(0)) {
+        if (inputManager.getRawInput(sourceOsWindow).isMouseReleased(Buttons.LEFT)) {
             executeDrop();
             return;
         }
@@ -100,7 +85,7 @@ public class TabDragManager extends ManagerPackage {
         if (draggedHandle != null)
             return;
 
-        if (inputManager.getRawInput(chromeWindow).isMouseReleased(0))
+        if (inputManager.getRawInput(chromeWindow).isMouseReleased(Buttons.LEFT))
             return;
 
         latchDrag(chromeWindow);
@@ -128,8 +113,8 @@ public class TabDragManager extends ManagerPackage {
         draggedHandle.getTabContext().placeAt(
                 inputManager.getGlobalMouseX(osWindow),
                 inputManager.getGlobalMouseY(osWindow),
-                EngineSetting.TAB_DRAG_PREVIEW_W,
-                EngineSetting.TAB_DRAG_PREVIEW_H);
+                EditorSetting.TAB_DRAG_PREVIEW_W,
+                EditorSetting.TAB_DRAG_PREVIEW_H);
     }
 
     // Zone Ghost \\
@@ -147,7 +132,7 @@ public class TabDragManager extends ManagerPackage {
             return;
 
         if (zoneGhost == null)
-            zoneGhost = menuManager.openMenuWindow(EngineSetting.MENU_TAB_GHOST, target.getWindow());
+            zoneGhost = menuManager.openMenuWindow(EditorSetting.MENU_TAB_GHOST, target.getWindow());
 
         DropZone zone = target.getZone();
         zoneGhost.getWindow().place(
@@ -178,11 +163,6 @@ public class TabDragManager extends ManagerPackage {
         return new DropTargetStruct(osWindow, leaf, zone);
     }
 
-    /*
-     * Hovered windows are sorted by zOrder then area, and every OS window sits
-     * at zOrder 0 — so the first OS window in the list is the smallest one
-     * under the cursor.
-     */
     private WindowInstance resolveHoveredOsWindow() {
 
         ObjectArrayList<WindowInstance> hoveredWindows = windowManager.getHoveredWindows();
@@ -199,7 +179,7 @@ public class TabDragManager extends ManagerPackage {
     private DropZone classifyZone(DockNodeStruct leaf, float localX, float localY) {
         float relX = (localX - leaf.getX()) / leaf.getW();
         float relY = (localY - leaf.getY()) / leaf.getH();
-        float edge = EngineSetting.TAB_DRAG_EDGE_FRACTION;
+        float edge = EditorSetting.TAB_DRAG_EDGE_FRACTION;
         if (relX < edge)
             return DropZone.LEFT;
         if (relX > 1f - edge)

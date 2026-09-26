@@ -5,25 +5,11 @@ import engine.root.EngineUtility;
 public final class SeamlessAxisNoiseUtility extends EngineUtility {
 
     /*
-     * Shared seamless axis-wrap helper for any 3D noise field that needs to
-     * tile cleanly across one linear axis (world Z for terrain, the
-     * cross-stream axis for weather) while a second axis is already wrapped
-     * exactly via circular embedding. Rather than blending the direct
-     * sample against the "one period back" sample across the entire axis
-     * range — which pays for two full noise evaluations everywhere and
-     * bleeds two unrelated samples together across the whole map, not just
-     * at the seam — this only blends within a thin margin approaching the
-     * true wrap point, sized in multiples of the sampled wavelength so the
-     * transition itself reads as more noise rather than a visible seam.
-     * Everywhere else, a single direct sample is used at full speed with no
-     * quality tradeoff versus a plain non-wrapping sample. sample3D() inlines
-     * that same blend for the noise3_ImproveXY case without an AxisSampler
-     * closure, since terrain rides this path thousands of times per column.
+     * Wraps a 3D noise field seamlessly along one linear axis by blending
+     * toward the one-period-back sample only within a thin margin of the seam,
+     * so everywhere else costs a single sample. sample3D() inlines the blend
+     * for the terrain hot path.
      */
-
-    private SeamlessAxisNoiseUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
 
     @FunctionalInterface
     public interface AxisSampler {

@@ -12,8 +12,8 @@ import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.DimensionValue;
-import application.bootstrap.menupipeline.util.DimensionVector2;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -62,7 +62,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
     private MenuColorStruct eyeHiddenColor;
 
     // Layout
-    private DimensionVector2 fillSize;
+    private DimensionVector2Struct fillSize;
 
     // Base \\
 
@@ -74,7 +74,9 @@ public class InventoryEquipmentBranch extends BranchPackage {
         this.eyeHiddenColor = new MenuColorStruct(RuntimeSetting.INVENTORY_EYE_HIDDEN_COLOR);
 
         // Layout
-        this.fillSize = new DimensionVector2(DimensionValue.ofPercent(100f), DimensionValue.ofPercent(100f));
+        this.fillSize = new DimensionVector2Struct(
+                DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX),
+                DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX));
     }
 
     @Override
@@ -104,7 +106,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
             injectSlot(session, RuntimeSetting.ENTRY_INVENTORY_SLOT_COLUMN_B,
                     RuntimeSetting.MENU_INVENTORY_EQUIPMENT_SLOT, equipmentSlot);
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.values())
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
             if (equipmentSlot.getEquipmentType() == EquipmentType.RING)
                 injectSlot(session, RuntimeSetting.ENTRY_INVENTORY_RING_COLUMN,
                         RuntimeSetting.MENU_INVENTORY_RING_SLOT, equipmentSlot);
@@ -160,7 +162,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
 
         InventoryHandle inventory = session.getInventory();
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
 
             ElementInstance slotElement = session.getSlotElement(equipmentSlot);
 
@@ -257,7 +259,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
 
         int count = 0;
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.values())
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
             if (inventory.hasItem(equipmentSlot))
                 count++;
 
@@ -296,7 +298,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
         if (item.isTwoHanded())
             injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, RuntimeSetting.INVENTORY_TEXT_TWO_HANDED);
 
-        for (ItemStat itemStat : ItemStat.values())
+        for (ItemStat itemStat : ItemStat.VALUES)
             if (item.getStat(itemStat) != 0f)
                 injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
                         RuntimeSetting.INVENTORY_FORMAT_ITEM_STAT, itemStat.getTitle(), item.getStat(itemStat)));

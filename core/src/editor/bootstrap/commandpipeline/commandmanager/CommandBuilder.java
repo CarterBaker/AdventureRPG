@@ -7,7 +7,7 @@ import com.google.gson.JsonObject;
 
 import editor.bootstrap.commandpipeline.command.CommandData;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.BuilderPackage;
 import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

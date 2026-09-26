@@ -1,9 +1,6 @@
 package application.bootstrap.shaderpipeline.materialmanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
@@ -14,7 +11,7 @@ class MaterialLoader extends LoaderPackage {
 
     /*
      * Scans the material directory, populates the file queue, and drives
-     * InternalBuilder one file per load() call. Self-destructs when the
+     * MaterialBuilder one file per load() call. Self-destructs when the
      * queue is exhausted.
      */
 
@@ -37,18 +34,10 @@ class MaterialLoader extends LoaderPackage {
         FileUtility.verifyDirectory(root,
                 "Material JSON directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String materialName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        materialName2File.put(materialName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk material directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String materialName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            materialName2File.put(materialName, file);
+            queueFile(file);
         }
     }
 

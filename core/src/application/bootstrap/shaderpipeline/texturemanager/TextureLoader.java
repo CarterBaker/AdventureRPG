@@ -1,10 +1,6 @@
 package application.bootstrap.shaderpipeline.texturemanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
 
 import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
 import application.bootstrap.shaderpipeline.texture.TextureTileStruct;
@@ -16,18 +12,15 @@ import engine.util.io.FileUtility;
 import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Orchestrates the full texture-array loading pipeline. Discovers atlas
- * directories in scan(), processes one directory per load() call — building
- * the atlas, seeding any companion UBO, pushing to GPU, and clearing heap
- * images — then self-releases when the queue empties.
- *
- * UBO seeding is optional — gated by whether a UBO handle exists under the
- * PascalCase form of the array name. Only alias IDs present in atlas source
- * files are written.
- */
 class TextureLoader extends LoaderPackage {
+
+    /*
+     * Discovers atlas directories and loads one per load() call: builds the
+     * atlas, seeds its optional companion UBO with the aliases present, uploads
+     * it, and frees the heap images.
+     */
 
     // Internal
     private File root;
@@ -50,17 +43,10 @@ class TextureLoader extends LoaderPackage {
         FileUtility.verifyDirectory(root,
                 "Texture root directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(p -> Files.isDirectory(p) && !p.equals(root.toPath()))
-                    .map(Path::toFile)
-                    .forEach(directory -> {
-                        String arrayName = FileUtility.getPathWithFileNameWithoutExtension(root, directory);
-                        arrayName2File.put(arrayName, directory);
-                        fileQueue.offer(directory);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk texture directory: " + root.getAbsolutePath(), e);
+        for (File directory : FileUtility.collectAllSubdirectories(root)) {
+            String arrayName = FileUtility.getPathWithFileNameWithoutExtension(root, directory);
+            arrayName2File.put(arrayName, directory);
+            queueFile(directory);
         }
     }
 
@@ -86,7 +72,7 @@ class TextureLoader extends LoaderPackage {
     @Override
     protected void load(File directory) {
 
-        List<File> imageFiles = FileUtility.collectFilesShallow(
+        ObjectArrayList<File> imageFiles = FileUtility.collectFilesShallow(
                 directory, EngineSetting.TEXTURE_FILE_EXTENSIONS);
 
         if (imageFiles.isEmpty())

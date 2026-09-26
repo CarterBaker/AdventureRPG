@@ -46,6 +46,5 @@ public class FullTickBranch extends BranchPackage {
     // Tick \\
 
     public void tick() {
-
     }
 }

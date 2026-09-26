@@ -21,7 +21,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 public class SpriteManager extends ManagerPackage {
 
     /*
-     * Owns all loaded SpriteHandles. Drives loading via InternalLoader and
+     * Owns all loaded SpriteHandles. Drives loading via SpriteLoader and
      * exposes cloneSprite() for runtime instance creation. On palette miss,
      * triggers an immediate on-demand load. GPU textures are released on dispose.
      */
@@ -114,17 +114,17 @@ public class SpriteManager extends ManagerPackage {
         SpriteLoader loader = (SpriteLoader) internalLoader;
 
         MaterialInstance material = materialManager.cloneMaterial(loader.getDefaultMaterialID());
-        material.setUniform("u_sprite", handle.getGpuHandle());
+        material.setUniform(EngineSetting.UNIFORM_SPRITE, handle.getGpuHandle());
 
-        UBOHandle sliceHandle = uboManager.getUBOHandleFromUBOName("SliceData");
+        UBOHandle sliceHandle = uboManager.getUBOHandleFromUBOName(EngineSetting.SLICE_DATA_UBO);
         UBOInstance sliceData = uboManager.createUBOInstance(sliceHandle);
 
-        sliceData.updateUniform("u_border", new Vector4(
+        sliceData.updateUniform(EngineSetting.UNIFORM_BORDER, new Vector4(
                 handle.getBorderLeft(),
                 handle.getBorderBottom(),
                 handle.getBorderRight(),
                 handle.getBorderTop()));
-        sliceData.updateUniform("u_texSize", new Vector2(
+        sliceData.updateUniform(EngineSetting.UNIFORM_TEX_SIZE, new Vector2(
                 (float) handle.getWidth(),
                 (float) handle.getHeight()));
         sliceData.updateUniform(EngineSetting.SPRITE_STRETCH_UNIFORM, handle.isStretch() ? 1f : 0f);

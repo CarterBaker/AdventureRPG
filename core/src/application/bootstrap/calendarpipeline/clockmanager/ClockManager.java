@@ -116,12 +116,6 @@ public class ClockManager extends ManagerPackage {
         updateLocationTimes();
     }
 
-    /*
-     * Recomputes visual time of day for every active grid independently.
-     * Each grid tracks a different player's position along the world's Y
-     * axis, so each can sit at a different, correctly season-and-latitude
-     * bent point of the day/night cycle at the same real-world instant.
-     */
     private void updateLocationTimes() {
 
         WorldHandle locationWorld = resolveLocationWorld();
@@ -158,22 +152,12 @@ public class ClockManager extends ManagerPackage {
 
     // World Switch \\
 
-    /*
-     * Call when the player travels to a different world. Swaps calendar,
-     * axial tilt, and epoch anchor and re-solves the clock immediately.
-     * Season-driven systems follow the new calendar on their own.
-     */
     public void switchWorld(WorldHandle newWorld) {
         wireData(newWorld);
     }
 
     // Location Clocks \\
 
-    /*
-     * Hands out a fresh ClockInstance for a caller to own — one per grid,
-     * created here rather than by the grid itself, so ClockManager stays
-     * the single owner of ClockInstance creation.
-     */
     public ClockInstance createClockInstance() {
         return create(ClockInstance.class);
     }
@@ -188,33 +172,14 @@ public class ClockManager extends ManagerPackage {
         return calendarHandle;
     }
 
-    /*
-     * A signed [-1, 1] random value for one named stream of today's seed,
-     * easing into that stream of tomorrow's seed across the day. Each
-     * caller passes its own stream constant, so every system gets
-     * independent values from the same day seed, and every day differs.
-     */
     public float getDailyRandom(long stream) {
         return dayTracker.resolveDailyRandom(stream);
     }
 
-    /*
-     * Day length for the active calendar at the given point in the year —
-     * backed by CalendarHandle.getDayLengthForYearProgress(). Exposed here
-     * so any pipeline needing it (weather included) reads it directly
-     * rather than plumbing a CalendarHandle reference through itself.
-     */
     public float getDayLengthForYearProgress(double yearProgress) {
         return calendarHandle.getDayLengthForYearProgress(yearProgress);
     }
 
-    /*
-     * Shared reference location used only by the weather system's diurnal
-     * wind/temperature curves, which remain a single simulation for the
-     * whole world rather than per-window. Lighting, sky color, and the
-     * time UBO are resolved per-window directly through each GridInstance
-     * now — see GridInstance's own UBO instances.
-     */
     public ClockInstance getPrimaryLocationTime() {
 
         if (!worldStreamManager.hasGrids())

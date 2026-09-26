@@ -6,9 +6,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import application.bootstrap.renderpipeline.fbo.AttachmentStruct;
-import application.bootstrap.renderpipeline.fbo.FboData;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbo.FboSizingStrategy;
+import application.bootstrap.renderpipeline.fbo.FBOData;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbo.FBOSizingStrategy;
 import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
@@ -16,24 +16,25 @@ import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Parses FBO JSON descriptors into FboData during bootstrap, and constructs
- * GL-backed FboInstances on demand when getFbo() resolves a name for the
- * first time. GL allocation and framebuffer completeness checks happen here
- * so FboManager stays free of raw GL calls.
- */
 class FBOBuilder extends BuilderPackage {
+
+    /*
+     * Parses FBO JSON descriptors into FBOData during bootstrap, and constructs
+     * GL-backed FBOInstances on demand when getFbo() resolves a name for the
+     * first time. GL allocation and framebuffer completeness checks happen here
+     * so FBOManager stays free of raw GL calls.
+     */
 
     // Build \\
 
-    ObjectArrayList<FboData> buildData(File file) {
+    ObjectArrayList<FBOData> buildData(File file) {
         JsonObject root = JsonUtility.loadJsonObject(file);
         JsonArray list = root.has("fbos") ? JsonUtility.validateArray(root, "fbos") : new JsonArray();
 
         if (list.size() == 0 && root.has("name"))
             list.add(root);
 
-        ObjectArrayList<FboData> dataList = new ObjectArrayList<>();
+        ObjectArrayList<FBOData> dataList = new ObjectArrayList<>();
 
         for (int i = 0; i < list.size(); i++)
             dataList.add(buildDataEntry(list.get(i).getAsJsonObject()));
@@ -41,11 +42,11 @@ class FBOBuilder extends BuilderPackage {
         return dataList;
     }
 
-    FboInstance buildInstance(FboData data) {
-        int width = data.getSizingStrategy() == FboSizingStrategy.FIXED
+    FBOInstance buildInstance(FBOData data) {
+        int width = data.getSizingStrategy() == FBOSizingStrategy.FIXED
                 ? data.getWidth()
                 : data.scaleWindowDimension(settings.windowWidth);
-        int height = data.getSizingStrategy() == FboSizingStrategy.FIXED
+        int height = data.getSizingStrategy() == FBOSizingStrategy.FIXED
                 ? data.getHeight()
                 : data.scaleWindowDimension(settings.windowHeight);
 
@@ -75,19 +76,13 @@ class FBOBuilder extends BuilderPackage {
 
         framebuffers.add(buildFramebuffer(data, textures, depthTextures));
 
-        FboInstance instance = create(FboInstance.class);
+        FBOInstance instance = create(FBOInstance.class);
         instance.constructor(data, framebuffers, textures, depthTextures, width, height);
 
         return instance;
     }
 
-    /*
-     * Creates a framebuffer object in the current GL context and attaches the
-     * given textures to it. Textures are shared across every context in the
-     * share group but framebuffer objects are not, so this is the one step
-     * repeated whenever an FboInstance has to be bound from a different context.
-     */
-    int buildFramebuffer(FboData data, IntArrayList textures, IntArrayList depthTextures) {
+    int buildFramebuffer(FBOData data, IntArrayList textures, IntArrayList depthTextures) {
 
         int fbo = FBOGLSLUtility.genFramebuffer();
         FBOGLSLUtility.bindFramebuffer(fbo);
@@ -120,9 +115,9 @@ class FBOBuilder extends BuilderPackage {
 
     // Internal \\
 
-    private FboData buildDataEntry(JsonObject json) {
+    private FBOData buildDataEntry(JsonObject json) {
         String name = JsonUtility.validateString(json, "name");
-        FboSizingStrategy strategy = FboSizingStrategy
+        FBOSizingStrategy strategy = FBOSizingStrategy
                 .valueOf(JsonUtility.getString(json, "sizingStrategy", "WINDOW_RELATIVE"));
         int width = JsonUtility.getInt(json, "width", settings.windowWidth);
         int height = JsonUtility.getInt(json, "height", settings.windowHeight);
@@ -148,7 +143,7 @@ class FBOBuilder extends BuilderPackage {
             attachments.add(new AttachmentStruct(attName, isDepth, resolveInternalFormat(formatName)));
         }
 
-        return new FboData(name, attachments, strategy, width, height, premultipliedBlend, premultipliedBlit,
+        return new FBOData(name, attachments, strategy, width, height, premultipliedBlend, premultipliedBlit,
                 resolveBlit, clearColor, resolutionScale);
     }
 

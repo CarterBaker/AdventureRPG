@@ -1,13 +1,13 @@
 package editor.bootstrap.infopipeline.infomanager;
 
 import java.io.File;
-import java.util.List;
 
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InfoSchemaLoader extends LoaderPackage {
 
@@ -31,10 +31,10 @@ class InfoSchemaLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Info schema directory not found: " + root.getAbsolutePath());
 
-        List<File> schemaFiles = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
+        ObjectArrayList<File> schemaFiles = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
 
         for (int i = 0; i < schemaFiles.size(); i++)
-            fileQueue.offer(schemaFiles.get(i));
+            queueFile(schemaFiles.get(i));
     }
 
     @Override
@@ -59,12 +59,4 @@ class InfoSchemaLoader extends LoaderPackage {
     }
 
     // On-Demand \\
-
-    void requestAll() {
-
-        File[] pendingFiles = fileQueue.toArray(new File[0]);
-
-        for (int i = 0; i < pendingFiles.length; i++)
-            request(pendingFiles[i]);
-    }
 }

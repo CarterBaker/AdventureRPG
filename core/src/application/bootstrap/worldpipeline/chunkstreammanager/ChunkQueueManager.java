@@ -4,7 +4,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.ArrayDeque;
 
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
@@ -27,62 +26,12 @@ import engine.util.queue.QueueItemHandle;
 class ChunkQueueManager extends ManagerPackage {
 
     /*
-     * Drives the per-frame chunk queue across all active grids. Each grid owns
-     * its own active chunks, load requests, and unload requests. The chunk pool
-     * is shared across all grids for efficiency. All branch dispatch is
-     * per-grid — branches own the implementation. Both loadQueue() and
-     * assessActiveChunks() advance up to their own per-frame budget rather than
-     * one, so a full render distance worth of chunks can actually stream in at
-     * a playable rate instead of one chunk per pass. RENDER dispatch inside
-     * assessActiveChunks() is bounded separately by chunkGpuUploadBudget —
-     * glBufferData/VAO creation is a synchronous driver call, so letting
-     * maxChunkStreamPerBatch alone govern it let two dozen uploads land in a
-     * single frame during heavy streaming, which is what actually produced the
-     * visible stutter. Chunks that miss the upload budget simply retry next
-     * frame — nothing downstream depends on RENDER_DATA landing this frame
-     * specifically. LOAD/BUILD/MERGE/ITEM_LOAD/BATCH dispatch is additionally
-     * gated on the WorldStreaming pool's own in-flight capacity (see
-     * ThreadHandle.hasCapacity()) — this is what keeps the executor's internal
-     * task queue from growing without bound under sustained load; a chunk that
-     * misses this gate is simply reassessed next frame, same as one that
-     * misses the GPU upload budget.
-     *
-     * Admission is gated by the exact same signal as dispatch. scanGridSlots()
-     * stops discovering new load candidates once loadRequests already holds
-     * maxQueuedLoadRequests pending coordinates, and loadQueue() refuses to
-     * pull new coordinates out of that set at all while the WorldStreaming
-     * pool reports itself saturated — previously scanning and loading ran
-     * unconditionally every frame regardless of how far behind the async
-     * pipeline already was, which meant a fresh session (empty chunk pool, so
-     * every admission is a brand-new ChunkInstance — 64 SubChunkInstances plus
-     * their handles) could allocate its entire render distance's worth of
-     * chunk object graphs within the first few seconds, long before dispatch
-     * could ever start processing more than 48 of them at once. That spike is
-     * pure waste — it grows the heap and working set far past what the
-     * pipeline can use, and the JVM does not give that memory back — which is
-     * why performance degraded a few seconds in and then stayed degraded.
-     * Neither maxChunkAdmissionsPerFrame nor maxQueuedLoadRequests caps the
-     * eventual size of activeChunks itself — that would permanently starve
-     * distant chunks once total slot count exceeds the cap. They only pace
-     * how fast new chunk graphs get allocated, tied to how fast the pipeline
-     * can actually retire the ones already admitted.
-     *
-     * Reusing a pooled ChunkInstance for a new coordinate reassigns its
-     * fields via constructor() — this must happen under that instance's own
-     * ChunkDataSyncContainer lock. A build or merge task dispatched against
-     * this exact object as someone else's neighbor may still be sitting
-     * queued on the WorldStreaming pool at the moment it gets pooled and
-     * reused; without the lock here, that task's later tryAcquire() would
-     * race this reassignment on the very same fields. A failed acquire means
-     * such a task currently holds it — every remaining coordinate this frame
-     * is left queued rather than reused unlocked, and admission simply
-     * retries next frame.
-     *
-     * Unloading a chunk also invalidates whatever mega it may have contributed
-     * to (invalidateMegaForChunk is a no-op if it wasn't part of one) — a
-     * pooled ChunkInstance is handed back out for a completely different
-     * coordinate later, and a mega still holding a stale reference to it would
-     * merge the wrong location's geometry on its next re-merge.
+     * Drives the per-frame chunk queue for every grid: scan, load, assess.
+     * Admission and dispatch are both paced by the WorldStreaming pool's
+     * capacity and per-frame budgets, and GPU uploads by their own budget, so
+     * streaming never outruns the pipeline or stalls a frame. Pooled chunks are
+     * reused only under their own lock, and unloading a chunk invalidates any
+     * mega it fed.
      */
 
     // Internal
@@ -111,7 +60,7 @@ class ChunkQueueManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<ChunkQueueItem> id2QueueItem;
 
     // Pool — shared across all grids
-    private ArrayDeque<ChunkInstance> chunkPool;
+    private ObjectArrayList<ChunkInstance> chunkPool;
     private int chunkPoolMaxOverflow;
 
     // Streaming
@@ -146,13 +95,13 @@ class ChunkQueueManager extends ManagerPackage {
         this.chunkQueue = create(QueueInstance.class);
         this.id2QueueItem = new Int2ObjectOpenHashMap<>();
 
-        for (ChunkQueueItem item : ChunkQueueItem.values()) {
+        for (ChunkQueueItem item : ChunkQueueItem.VALUES) {
             QueueItemHandle handle = chunkQueue.addQueueItem(item.name());
             id2QueueItem.put(handle.getQueueItemID(), item);
         }
 
         // Pool
-        this.chunkPool = new ArrayDeque<>();
+        this.chunkPool = new ObjectArrayList<>();
         this.chunkPoolMaxOverflow = EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
 
         // Streaming
@@ -174,7 +123,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.worldRenderManager = get(WorldRenderManager.class);
-        this.worldStreamingThreadHandle = getThreadHandleFromThreadName("WorldStreaming");
+        this.worldStreamingThreadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
     }
 
     @Override
@@ -236,15 +185,6 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Grid Scan \\
 
-    /*
-     * Stops discovering new load candidates once loadRequests already holds
-     * maxQueuedLoadRequests pending coordinates. Without this, the scan
-     * cursor sweeps the entire grid in totalSlots / GRID_SLOTS_SCAN_PER_FRAME
-     * frames regardless of whether anything downstream could ever act on the
-     * result, front-loading a huge, useless backlog. The cursor simply
-     * pauses here and resumes exactly where it left off once loadQueue()
-     * drains enough of the backlog to make room again.
-     */
     private void scanGridSlots(GridInstance grid) {
 
         Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
@@ -263,22 +203,6 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Load \\
 
-    /*
-     * Admits pending load requests into activeChunks, allocating or pooling
-     * a ChunkInstance for each. Gated on the WorldStreaming pool's own
-     * hasCapacity() — the same signal reserveAsyncWork already trusts for
-     * dispatch — so admission can never outpace what the pipeline can
-     * actually process. When the pool is saturated this is a no-op for the
-     * frame; the requests stay queued and are picked up the moment capacity
-     * frees up. maxChunkAdmissionsPerFrame caps the burst size once capacity
-     * is available, distinct from the heavier per-frame dispatch budget used
-     * in assessActiveChunks().
-     *
-     * A brand-new instance (create()) has never been handed out to any
-     * coordinate before, so nothing can hold a stale reference to it and it
-     * is safe to construct unlocked. A pooled instance is reused under its
-     * own lock — see the class-level note on why this matters.
-     */
     private void loadQueue(GridInstance grid) {
 
         if (!worldStreamingThreadHandle.hasCapacity())
@@ -313,14 +237,14 @@ class ChunkQueueManager extends ManagerPackage {
                 continue;
             }
 
-            ChunkInstance pooledInstance = chunkPool.peek();
+            ChunkInstance pooledInstance = chunkPool.top();
             ChunkDataSyncContainer syncContainer = pooledInstance.getChunkDataSyncContainer();
 
             if (!syncContainer.tryAcquire())
                 break;
 
             try {
-                chunkPool.poll();
+                chunkPool.pop();
                 iterator.remove();
 
                 pooledInstance.constructor(
@@ -479,25 +403,13 @@ class ChunkQueueManager extends ManagerPackage {
         try {
             GridSlotDetailLevel slotLevel = gridSlotHandle.getDetailLevel();
 
-            // coveredByMega: this exact chunk was swept out of the grid's
-            // individual-render queue because it belongs to a mega block
-            // whose covered slots are all NEAR/DISTANT — see
-            // GridInstance.queueMega. needsIndividualRender additionally
-            // stays true until that mega has actually finished merging every
-            // covered chunk and landed on the GPU, so a chunk freshly swept
-            // into coverage never goes dark waiting for the mega to catch
-            // up — see WorldRenderManager.isMegaRendered and
-            // WorldRenderManager.renderGridMegas' per-chunk fallback.
+            // A chunk covered by a mega keeps rendering on its own until that mega is on the GPU
             long chunkCoordinate = chunkInstance.getCoordinate();
             boolean coveredByMega = !grid.getChunkRenderQueue().containsKey(chunkCoordinate);
             boolean needsIndividualRender = !coveredByMega
                     || !worldRenderManager.isMegaRendered(Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate));
 
-            // partOfMegaBlock: whether this chunk should keep contributing
-            // its geometry to its mega. Deliberately independent of whether
-            // that mega has rendered yet — BATCH_DATA is what PRODUCES the
-            // mega's render-ready state, so gating it on the mega already
-            // being rendered would make that merge impossible to dispatch.
+            // Contribution to the mega never waits on the mega being rendered, since it produces that state
             boolean partOfMegaBlock = coveredByMega && slotLevel.renderMode == RenderType.BATCHED;
 
             ChunkData toDump = ChunkDataUtility.nextToDump(
@@ -513,11 +425,7 @@ class ChunkQueueManager extends ManagerPackage {
 
                 QueueOperation operation = toOperation(toLoad);
 
-                // Pool-wide backpressure. Checked before reserving this chunk's
-                // per-stage work flag so a saturated pool never marks a stage
-                // in-progress with nothing actually dispatched to run it — the
-                // chunk just gets reassessed next frame, same as a RENDER that
-                // misses the GPU upload budget above.
+                // A saturated pool leaves the chunk for next frame before any work flag is reserved
                 if (isAsyncOperation(operation) && !worldStreamingThreadHandle.hasCapacity())
                     return QueueOperation.SKIP;
 

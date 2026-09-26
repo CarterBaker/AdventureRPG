@@ -6,6 +6,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldItemInstancePaletteHandle extends HandlePackage {
 
+    /*
+     * A chunk's runtime world items, kept as a flat list for rendering and
+     * indexed by block coordinate for placement checks and pickup.
+     */
+
     // Flat list for render iteration
     private ObjectArrayList<WorldItemInstance> items;
 

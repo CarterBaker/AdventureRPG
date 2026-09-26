@@ -7,9 +7,10 @@ public abstract class ContextPackage extends ManagerPackage {
 
     /*
      * Attaches a set of systems to a window and runs them through the engine
-     * lifecycle. A context given a crash listener is isolated: the engine runs
-     * it inside a crash boundary, a failure is recorded here instead of ending
-     * the process, and the listener is told once per frame until it closes it.
+     * lifecycle. Every system created beneath a context, at any depth, lives
+     * in its local registry, so two contexts never share or overwrite each
+     * other's systems. A context given a crash listener is isolated: a failure
+     * is recorded here instead of ending the process, and the listener closes it.
      */
 
     // Window
@@ -25,29 +26,60 @@ public abstract class ContextPackage extends ManagerPackage {
     private Runnable crashListener;
     private volatile Throwable crashCause;
 
+    // Internal \\
+
     protected ContextPackage() {
+
         super();
+
+        // Local Registry
         this.localRegistry = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
     boolean verifyContext(SystemContext targetContext) {
+
         if (!targetContext.canEnterFrom(this.internalContext.order))
             return false;
+
         this.internalContext = targetContext;
         return true;
     }
 
+    // Local Registry \\
+
     @Override
     protected <T extends SystemPackage> T registerSystem(T systemPackage) {
+
+        this.registerLocal(systemPackage);
+        this.systemCollection.add(systemPackage);
+        systemPackage.context = this;
+
+        return systemPackage;
+    }
+
+    @Override
+    SystemPackage lookupRegistered(Class<?> systemClass) {
+        return this.localRegistry.get(systemClass);
+    }
+
+    @Override
+    void unregister(Class<?> systemClass) {
+        this.unregisterLocal(systemClass);
+    }
+
+    void registerLocal(SystemPackage systemPackage) {
+
         if (this.localRegistry.containsKey(systemPackage.getClass()))
             throwException(
                     "System already registered in this context.\n" +
                             "System: " + systemPackage.getClass().getSimpleName());
+
         this.localRegistry.put(systemPackage.getClass(), systemPackage);
-        this.systemCollection.add(systemPackage);
-        systemPackage.context = this;
-        return systemPackage;
+    }
+
+    void unregisterLocal(Class<?> systemClass) {
+        this.localRegistry.remove(systemClass);
     }
 
     @SuppressWarnings("unchecked")

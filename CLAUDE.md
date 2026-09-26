@@ -40,7 +40,7 @@ When in doubt, find the closest existing system and mirror it exactly.
   `*Pipeline` (PipelinePackage), `*Manager` (ManagerPackage), `*Branch` (BranchPackage), `*System`
   (SystemPackage), `*Context` (ContextPackage), `*Loader` (LoaderPackage), `*Builder` (BuilderPackage),
   `*Handle` (HandlePackage), `*Instance` (InstancePackage), `*Data` (DataPackage), `*Struct` (StructPackage),
-  `*Utility` (UtilityPackage), `*Assembly` (AssemblyPackage), `*Setting` (plain constants class).
+  `*Utility` (EngineUtility, all static), `*Assembly` (AssemblyPackage), `*Setting` (plain constants class).
 - **Folder layout mirrors the pipeline.** `xpipeline/XPipeline.java`, `xpipeline/xmanager/` (manager, loader,
   builder, branches, systems), `xpipeline/x/` (handle, data, instance, structs).
 - **Lifecycle is enforced.** Register systems in `create()`, resolve dependencies in `get()`. Never construct

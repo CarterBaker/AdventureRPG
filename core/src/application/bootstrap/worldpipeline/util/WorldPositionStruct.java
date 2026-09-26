@@ -6,6 +6,11 @@ import engine.util.mathematics.vectors.Vector3;
 
 public class WorldPositionStruct extends StructPackage {
 
+    /*
+     * An entity's world position: its chunk coordinate and the chunk-local
+     * position within it.
+     */
+
     // Internal
     private Vector3 position = new Vector3();
     private long chunkCoordinate = Coordinate2Long.pack(0, 0);

@@ -2,8 +2,8 @@ package application.runtime.menueventsmanager.menus.settings;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.DimensionValue;
-import application.bootstrap.menupipeline.util.DimensionVector2;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.settingspipeline.settingssystem.SettingsSystem;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -180,9 +180,9 @@ public class SettingsOptionBranch extends BranchPackage {
         float range = resolveMax(slider) - min;
         float fraction = range > 0f ? (resolveValue(slider) - min) / range : 0f;
 
-        track.findChildById(RuntimeSetting.ELEMENT_SETTINGS_SLIDER_KNOB).setPositionOverride(new DimensionVector2(
-                DimensionValue.ofPercent(fraction * RuntimeSetting.SETTINGS_SLIDER_PERCENT_SCALE),
-                DimensionValue.ofAbsolute(0f)));
+        track.findChildById(RuntimeSetting.ELEMENT_SETTINGS_SLIDER_KNOB).setPositionOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofPercent(fraction * RuntimeSetting.SETTINGS_SLIDER_PERCENT_SCALE),
+                DimensionValueStruct.ofAbsolute(0f)));
         track.findChildById(RuntimeSetting.ELEMENT_SETTINGS_SLIDER_VALUE).setFontText(formatSlider(slider));
     }
 

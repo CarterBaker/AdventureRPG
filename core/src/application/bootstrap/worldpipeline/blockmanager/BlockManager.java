@@ -10,6 +10,12 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 public class BlockManager extends ManagerPackage {
 
+    /*
+     * Owns the block palette by name and ID with a per-ID geometry type table,
+     * the block orientation buffer, and BlockPlacementSystem, the single entry
+     * point for world block edits.
+     */
+
     // Internal
     private BlockBufferSystem internalBufferSystem;
 
@@ -30,6 +36,7 @@ public class BlockManager extends ManagerPackage {
         this.blockID2GeometryType = new DynamicGeometryType[EngineSetting.REGISTRY_SHORT_ID_COUNT];
 
         this.internalBufferSystem = create(BlockBufferSystem.class);
+        create(BlockPlacementSystem.class);
 
         create(BlockLoader.class);
     }

@@ -1,5 +1,7 @@
 package application.kernel.inputpipeline.input;
 
+import java.util.Arrays;
+
 import engine.input.Binding;
 import engine.input.BindingType;
 import engine.input.InputCode;
@@ -59,12 +61,12 @@ public class RawInputHandle extends HandlePackage {
     }
 
     public void clear() {
-        java.util.Arrays.fill(keysClicked, false);
-        java.util.Arrays.fill(keysHeld, false);
-        java.util.Arrays.fill(keysReleased, false);
-        java.util.Arrays.fill(buttonsClicked, false);
-        java.util.Arrays.fill(buttonsHeld, false);
-        java.util.Arrays.fill(buttonsReleased, false);
+        Arrays.fill(keysClicked, false);
+        Arrays.fill(keysHeld, false);
+        Arrays.fill(keysReleased, false);
+        Arrays.fill(buttonsClicked, false);
+        Arrays.fill(buttonsHeld, false);
+        Arrays.fill(buttonsReleased, false);
         mouseX = mouseY = deltaX = deltaY = 0f;
         scrollX = scrollY = 0f;
     }

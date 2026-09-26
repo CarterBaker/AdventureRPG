@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.biomemanager;
 
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
@@ -13,43 +14,26 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class BiomeManager extends ManagerPackage {
 
     /*
-     * Owns the biome palette, the indexes that resolve a name, ID, or world
-     * PNG pixel color to a biome, and the biome field itself — the
-     * continuous, position-addressed function that answers "how much of each
-     * biome is present here" for any world position. The field is what world
-     * generation shapes terrain against: it treats the PNG as a suggestion
-     * reconstructed through a warped, band-limited kernel rather than as a
-     * per-chunk lookup, so a border between two painted regions resolves as
-     * a gradient of both biomes' authored values instead of a hard switch,
-     * and a biome's probable variants appear as soft-edged patches inside
-     * it. Wherever the field puts a land biome against an ocean, the land
-     * biome's declared beach takes over its share across the shore band, so
-     * a coast always lands on sand, cliff, or whatever the land authored —
-     * a land biome with no beach simply blends straight into the ocean.
-     * Every variant belongs to exactly one parent, recorded as the parent
-     * registers, and an unnamed variant is known by its parent's name.
-     * Every read path is lock-free: both registries and the color
-     * resolution memo are ConcurrentHashMaps, and the map-color index is an
-     * immutable snapshot published through a volatile reference. Only the
-     * rare mutation paths take a lock, and that lock never blocks a reader.
+     * Owns the biome palette and the biome field, the continuous function
+     * giving each biome's share at any world position. The world map is
+     * reconstructed through a warped kernel so painted borders blend, probable
+     * variants appear as soft patches, and land meets ocean through its
+     * declared beach. Reads are lock-free: registries are copy-on-write
+     * snapshots and each worker memoizes map colors in its own scratch.
      */
 
     // Palette
     private final ConcurrentHashMap<String, BiomeHandle> biomeName2BiomeHandle = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Short, BiomeHandle> biomeID2BiomeHandle = new ConcurrentHashMap<>();
+    private volatile Short2ObjectOpenHashMap<BiomeHandle> biomeID2BiomeHandle = new Short2ObjectOpenHashMap<>();
     private final ConcurrentHashMap<String, String> variantName2ParentName = new ConcurrentHashMap<>();
 
-    // Map Color Index — an immutable snapshot swapped in on every
-    // registration, so getNearestBiomeNameForColor() never locks against it.
+    // Map Color Index
     private volatile ColorIndex colorIndex = ColorIndex.EMPTY;
-
-    // Memo of the nearest-color search, which the field would otherwise
-    // repeat for every map sample of every column of every chunk.
-    private final ConcurrentHashMap<Integer, BiomeHandle> color2BiomeHandle = new ConcurrentHashMap<>();
 
     // Internal
     private BiomeFieldAsyncContainer fieldContainer;
@@ -94,8 +78,11 @@ public class BiomeManager extends ManagerPackage {
                     + existing.getBiomeName() + "' (ID " + biomeHandle.getBiomeID()
                     + ") — rename one biome to resolve");
 
+        Short2ObjectOpenHashMap<BiomeHandle> nextID2BiomeHandle = new Short2ObjectOpenHashMap<>(biomeID2BiomeHandle);
+        nextID2BiomeHandle.put(biomeHandle.getBiomeID(), biomeHandle);
+
         biomeName2BiomeHandle.put(biomeHandle.getBiomeName(), biomeHandle);
-        biomeID2BiomeHandle.put(biomeHandle.getBiomeID(), biomeHandle);
+        biomeID2BiomeHandle = nextID2BiomeHandle;
 
         for (String variantName : biomeHandle.getProbableBiomeNames())
             linkVariant(variantName, biomeHandle.getBiomeName());
@@ -116,15 +103,13 @@ public class BiomeManager extends ManagerPackage {
         ColorIndex current = colorIndex;
         int size = current.colors.length;
 
-        int[] colors = java.util.Arrays.copyOf(current.colors, size + 1);
-        String[] names = java.util.Arrays.copyOf(current.names, size + 1);
+        int[] colors = Arrays.copyOf(current.colors, size + 1);
+        String[] names = Arrays.copyOf(current.names, size + 1);
 
         colors[size] = mapColor;
         names[size] = biomeName;
 
         colorIndex = new ColorIndex(colors, names);
-
-        color2BiomeHandle.clear();
     }
 
     // On-Demand \\
@@ -135,17 +120,6 @@ public class BiomeManager extends ManagerPackage {
 
     // Biome Field \\
 
-    /*
-     * Resolves the biome influence present at one world position into the
-     * caller's blend, normalized to sum to 1.0. The position is converted to
-     * continuous map-pixel space, domain-warped so painted borders bend and
-     * roughen, reconstructed against the four surrounding pixels with a
-     * smooth band-limited kernel, and — for any contributing biome that
-     * declares probable variants — split across the patch cells reaching
-     * that position. Nothing in the path is aligned to the chunk grid, so
-     * two chunks evaluating a shared position produce identical weights and
-     * terrain crosses a chunk boundary without a seam.
-     */
     public void sampleBiomeField(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
 
         outBlend.reset();
@@ -182,6 +156,7 @@ public class BiomeManager extends ManagerPackage {
                 continue;
 
             BiomeHandle mapBiome = getBiomeHandleForColor(
+                    scratch,
                     map.getPixelRGB(scratch.mapPixelX[i], scratch.mapPixelZ[i]));
 
             if (patchCount == 0 || mapBiome.getProbableBiomeNames().isEmpty()) {
@@ -222,13 +197,6 @@ public class BiomeManager extends ManagerPackage {
         blend.normalize();
     }
 
-    /*
-     * Which variant a single patch cell rolled for this base biome. The roll
-     * is hashed against the base biome's own ID as well as the cell, so two
-     * biomes sharing the patch lattice do not place their variants in
-     * lockstep. Chances are validated at load time to sum to no more than
-     * 1.0, and whatever remains is the base biome keeping the cell.
-     */
     private BiomeHandle resolveProbableBiome(BiomeHandle baseBiome, long cellHash) {
 
         ObjectArrayList<String> probableNames = baseBiome.getProbableBiomeNames();
@@ -252,12 +220,6 @@ public class BiomeManager extends ManagerPackage {
 
     // World Map Resolution \\
 
-    /*
-     * Chunk-granularity biome identity, for consumers that key off one biome
-     * per chunk rather than shaping terrain — weather, primarily. This is the
-     * dominant biome of the field sampled at the chunk's center block, so it
-     * always agrees with the field the terrain under it was built from.
-     */
     public BiomeHandle getBiome(WorldHandle worldHandle, long chunkCoordinate) {
 
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
@@ -277,14 +239,26 @@ public class BiomeManager extends ManagerPackage {
         return getBiome(worldHandle, chunkCoordinate).getBiomeID();
     }
 
-    private BiomeHandle getBiomeHandleForColor(int color) {
-        return color2BiomeHandle.computeIfAbsent(
-                color, key -> getBiomeHandleFromBiomeName(getNearestBiomeNameForColor(key)));
-    }
-
-    private String getNearestBiomeNameForColor(int color) {
+    private BiomeHandle getBiomeHandleForColor(BiomeFieldAsyncContainer scratch, int color) {
 
         ColorIndex index = colorIndex;
+
+        if (scratch.colorIndexStamp != index) {
+            scratch.color2BiomeHandle.clear();
+            scratch.colorIndexStamp = index;
+        }
+
+        BiomeHandle handle = scratch.color2BiomeHandle.get(color);
+
+        if (handle == null) {
+            handle = getBiomeHandleFromBiomeName(getNearestBiomeNameForColor(index, color));
+            scratch.color2BiomeHandle.put(color, handle);
+        }
+
+        return handle;
+    }
+
+    private String getNearestBiomeNameForColor(ColorIndex index, int color) {
 
         if (index.colors.length == 0)
             throwException(
@@ -337,10 +311,6 @@ public class BiomeManager extends ManagerPackage {
         return handle;
     }
 
-    /*
-     * The name players see for a biome. An unnamed variant resolves through
-     * the parent that links it, climbing until a named biome is reached.
-     */
     public String getDisplayName(BiomeHandle biomeHandle) {
 
         if (biomeHandle.hasDisplayName())
@@ -350,7 +320,8 @@ public class BiomeManager extends ManagerPackage {
 
         if (parentName == null)
             throwException("Biome \"" + biomeHandle.getBiomeName() + "\" declares no \"display_name\" and no "
-                    + "registered biome lists it in \"probable_biomes\" — an unnamed biome must be a linked variant.");
+                    + "registered biome lists it in \"probable_biomes\" — "
+                    + "an unnamed biome must be a linked variant.");
 
         return getDisplayName(getBiomeHandleFromBiomeName(parentName));
     }

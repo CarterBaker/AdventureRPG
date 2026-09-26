@@ -7,33 +7,17 @@ import engine.util.mathematics.extras.NoiseUtility;
 public final class BiomeFieldUtility extends EngineUtility {
 
     /*
-     * Pure geometry behind the biome field: the domain warp that breaks the
-     * world PNG's straight pixel edges, the smooth four-tap reconstruction
-     * kernel that turns a continuous pixel coordinate into weighted map
-     * samples, and the jittered-cell kernel that scatters a biome's probable
-     * variants into soft-edged patches. Every function here is a pure
-     * function of (seed, position) with no chunk or lattice alignment
-     * anywhere in it, which is what lets two adjacent chunks evaluate the
-     * same world position and get bit-identical weights — the property the
-     * old per-chunk 3x3 kernel did not have, and the reason biome borders
-     * used to land as a cliff on the chunk grid.
+     * Pure geometry behind the biome field: the domain warp that breaks map
+     * pixel edges, the four-tap reconstruction kernel, and the jittered-cell
+     * kernel for probable variant patches. Everything depends only on seed and
+     * position, so neighboring chunks agree exactly.
      */
 
     public static final int MAP_SAMPLE_COUNT = EngineSetting.BIOME_MAP_SAMPLE_COUNT;
     public static final int PATCH_SAMPLE_COUNT = EngineSetting.BIOME_PATCH_SAMPLE_COUNT;
 
-    private BiomeFieldUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
-
     // Border Warp \\
 
-    /*
-     * Offset in map pixels applied to a pixel coordinate before it is
-     * sampled. Two octaves: a broad one that bends a biome border into
-     * peninsulas and bays, and a fine one that roughens the edge so the
-     * border never reads as a drawn line.
-     */
     public static double computeBorderWarpOffset(long seed, double pixelX, double pixelZ) {
 
         float broad = NoiseUtility.noise2(
@@ -52,17 +36,6 @@ public final class BiomeFieldUtility extends EngineUtility {
 
     // Map Reconstruction \\
 
-    /*
-     * Resolves a continuous pixel coordinate into the four map pixels
-     * surrounding it and the weight each one holds there. Weights come from
-     * a contrast-compressed smoothstep rather than raw bilinear: the middle
-     * BIOME_BLEND_BAND_PIXELS of the span between two pixel centers carries
-     * the entire transition and everything outside it reads as one pure
-     * biome, so a hand-painted region stays exactly the biome it was painted
-     * while its border dissolves over a band the author controls in pixels.
-     * The curve has zero derivative at both ends of that band, so height
-     * built on these weights has no crease where the blend begins or ends.
-     */
     public static void computeMapSamples(
             double pixelX, double pixelZ,
             int mapWidth, int mapHeight,
@@ -101,16 +74,6 @@ public final class BiomeFieldUtility extends EngineUtility {
 
     // Probable Variant Patches \\
 
-    /*
-     * Scatters a biome's probable variants into coherent patches instead of
-     * rolling them per chunk. The patch lattice is an integer subdivision of
-     * the map pixel grid, so it wraps exactly where the world wraps, and each
-     * cell's center is jittered off-grid so patches never read as squares.
-     * Returned weights are normalized and every cell whose kernel reaches
-     * this position contributes, so a patch boundary is a gradient between
-     * two rolled variants rather than an edge — the same reason the map
-     * samples above are blended rather than selected.
-     */
     public static int computePatchSamples(
             long seed,
             double pixelX, double pixelZ,
@@ -178,13 +141,6 @@ public final class BiomeFieldUtility extends EngineUtility {
 
     // Shore Buffer \\
 
-    /*
-     * Share of a land biome's weight handed to its beach at a position the
-     * ocean holds oceanWeight of. Zero where no ocean reaches, rising along a
-     * smooth curve to the whole share once the ocean holds
-     * BIOME_SHORE_BUFFER_FULL_OCEAN_SHARE, so a beach grows out of the land
-     * edge of the blend band and meets the sea floor without a crease.
-     */
     public static float computeShoreBufferFraction(float oceanWeight) {
 
         float t = oceanWeight / EngineSetting.BIOME_SHORE_BUFFER_FULL_OCEAN_SHARE;

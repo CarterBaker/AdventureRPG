@@ -9,7 +9,7 @@ import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
 import editor.bootstrap.itemeditorpipeline.util.ItemEditorTool;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.io.FileUtility;

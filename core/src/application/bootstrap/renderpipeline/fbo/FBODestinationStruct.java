@@ -21,5 +21,4 @@ public class FBODestinationStruct extends StructPackage {
         this.width = width;
         this.height = height;
     }
-
 }

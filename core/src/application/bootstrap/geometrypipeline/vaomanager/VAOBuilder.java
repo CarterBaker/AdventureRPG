@@ -1,15 +1,15 @@
 package application.bootstrap.geometrypipeline.vaomanager;
 
-import java.io.File;
-import java.util.Map;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.io.JsonUtility;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class VAOBuilder extends BuilderPackage {
 
@@ -39,7 +39,7 @@ public class VAOBuilder extends BuilderPackage {
     public void build(
             String resourceName,
             File file,
-            Map<String, File> registry) {
+            Object2ObjectOpenHashMap<String, File> registry) {
 
         if (vaoManager.hasVAO(resourceName))
             return;
@@ -78,7 +78,7 @@ public class VAOBuilder extends BuilderPackage {
     private void resolveRef(
             String refName,
             File sourceFile,
-            Map<String, File> registry) {
+            Object2ObjectOpenHashMap<String, File> registry) {
 
         if (vaoManager.hasVAO(refName))
             return;

@@ -4,6 +4,10 @@ import org.lwjgl.glfw.GLFW;
 
 public final class Keys {
 
+    /*
+     * Keyboard key codes, mirrored from GLFW.
+     */
+
     // Letters
     public static final int A = GLFW.GLFW_KEY_A;
     public static final int B = GLFW.GLFW_KEY_B;

@@ -1,19 +1,34 @@
 package application.bootstrap.shaderpipeline.uniforms.vectorarrays;
 
-import org.lwjgl.opengl.GL20C;
-import org.lwjgl.system.MemoryStack;
+import java.nio.FloatBuffer;
 
 import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
+import engine.root.EngineContext;
+import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector2Double;
+import engine.util.memory.BufferUtility;
 
 public final class Vector2DoubleArrayUniform extends UniformAttributeStruct<Object[]> {
 
+    /*
+     * GLSL dvec2 array uniform. Elements are packed into a preallocated
+     * direct buffer on push, so uploads never allocate.
+     */
+
+    // Internal
     private final int elementCount;
+    private final FloatBuffer uniformBuffer;
+
+    // Constructor \\
 
     public Vector2DoubleArrayUniform(int elementCount) {
+
         super(UniformType.VECTOR2_DOUBLE, elementCount, new Vector2Double[elementCount]);
+
         this.elementCount = elementCount;
+        this.uniformBuffer = BufferUtility.newFloatBuffer(elementCount * EngineSetting.VECTOR2_COMPONENT_COUNT);
+
         for (int i = 0; i < elementCount; i++)
             ((Vector2Double[]) value)[i] = new Vector2Double();
     }
@@ -23,26 +38,32 @@ public final class Vector2DoubleArrayUniform extends UniformAttributeStruct<Obje
         return new Vector2DoubleArrayUniform(elementCount);
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Object[] value) {
-        float[] flat = new float[elementCount * 2];
+
+        uniformBuffer.clear();
+
         for (int i = 0; i < elementCount; i++) {
-            Vector2Double v = (Vector2Double) value[i];
-            flat[i * 2] = (float) v.x;
-            flat[i * 2 + 1] = (float) v.y;
+            Vector2Double vector = (Vector2Double) value[i];
+            uniformBuffer.put((float) vector.x);
+            uniformBuffer.put((float) vector.y);
         }
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            java.nio.FloatBuffer buf = stack.mallocFloat(elementCount * 2);
-            buf.put(flat).flip();
-            GL20C.glUniform2fv(handle, buf);
-        }
+
+        uniformBuffer.flip();
+        EngineContext.gl20.glUniform2fv(handle, uniformBuffer);
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Object[] value) {
-        Vector2Double[] dst = (Vector2Double[]) this.value;
+
+        Vector2Double[] target = (Vector2Double[]) this.value;
+
         for (int i = 0; i < Math.min(value.length, elementCount); i++)
-            dst[i].set((Vector2Double) value[i]);
+            target[i].set((Vector2Double) value[i]);
     }
 
     public int elementCount() {

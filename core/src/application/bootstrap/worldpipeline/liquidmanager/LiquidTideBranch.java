@@ -12,18 +12,10 @@ import engine.util.mathematics.extras.Coordinate3Int;
 class LiquidTideBranch extends BranchPackage {
 
     /*
-     * Re-levels one chunk's ocean to a new tide surface. Only columns world
-     * generation marked as reached by the ocean are visited, and only through
-     * the tide band — beneath it the sea is full at every tide, above it no
-     * tide ever reaches — so re-tiding a chunk touches a few cells per column
-     * rather than its whole water volume. Within the band, tidal cells are
-     * re-levelled or emptied and air is flooded, but only while nothing but
-     * water lies between it and the sea floor: a floor, roof, or any other
-     * block closes the column, so the tide rises around a structure instead
-     * of filling it. Water the flow simulation owns is never
-     * touched. Nothing is woken — the tide moves the whole ocean together,
-     * and waking the permanent cells beside a lowered one would pour them
-     * straight back in.
+     * Re-levels one chunk's ocean to a new tide surface. Visits only
+     * ocean-reached columns within the tide band, filling or draining tidal
+     * cells while open water connects them to the sea floor, so the tide rises
+     * around structures. Flow-owned water is untouched and nothing is woken.
      */
 
     // Internal

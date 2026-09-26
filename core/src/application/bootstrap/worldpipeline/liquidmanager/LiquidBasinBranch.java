@@ -7,20 +7,11 @@ import engine.util.mathematics.extras.Direction3Vector;
 class LiquidBasinBranch extends BranchPackage {
 
     /*
-     * Decides whether slowing water holds enough volume to fill the basin it
-     * is spreading across. A basin is the layer of open cells laterally
-     * connected to a thin or settling cell, and it only counts when every one
-     * of them rests on a sealed floor and walls close it within
-     * LIQUID_BASIN_SCAN_LIMIT cells. A permanent body the scan meets is a
-     * boundary rather than part of the basin: a basin walled in by solids
-     * and permanent liquid is fed by that body, fills to its level, and
-     * joins it. Otherwise a basin holding LIQUID_BASIN_MIN_DEPTH per cell is
-     * levelled out and settled at once. A basin still short of water
-     * but poured into from above is marked fed for the pass, so its thin rim
-     * holds instead of evaporating while it fills. A pooled body reaching
-     * LIQUID_PERMANENCE_THRESHOLD cells turns permanent, so it stays until
-     * blocks replace it and pours forever once its edge is broken. A basin
-     * is resolved at most once per flow pass.
+     * Decides whether slowing water can fill the sealed basin it spreads
+     * across. A basin fed by a permanent body joins it; one holding enough
+     * volume per cell is levelled and settled; one being poured into holds its
+     * rim while filling. Large pooled bodies turn permanent. Each basin
+     * resolves at most once per flow pass.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {

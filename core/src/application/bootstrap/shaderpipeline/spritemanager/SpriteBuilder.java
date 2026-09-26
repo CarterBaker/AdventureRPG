@@ -10,14 +10,15 @@ import com.google.gson.JsonObject;
 import engine.root.BuilderPackage;
 import engine.util.io.JsonUtility;
 
-/*
- * Loads raw images from disk and parses companion border JSON files.
- * Image loading and border parsing are separated so InternalLoader owns
- * the full SpriteData construction with all fields available. A companion
- * may set "stretch": true so the sliced center scales instead of tiling —
- * for artwork with gradients that must span the whole element.
- */
 class SpriteBuilder extends BuilderPackage {
+
+    /*
+     * Loads raw images from disk and parses companion border JSON files.
+     * Image loading and border parsing are separated so SpriteLoader owns
+     * the full SpriteData construction with all fields available. A companion
+     * may set "stretch": true so the sliced center scales instead of tiling —
+     * for artwork with gradients that must span the whole element.
+     */
 
     // Load \\
 

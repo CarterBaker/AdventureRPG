@@ -5,6 +5,12 @@ import engine.input.Input;
 
 public interface WindowPlatform {
 
+    /*
+     * The platform contract the engine drives windows through: opening and
+     * destroying windows, GL context switching, input lookup per OS window,
+     * cursor, placement, display mode and vsync.
+     */
+
     void openWindow(WindowInstance window);
 
     void destroyWindow(WindowInstance window);
@@ -33,16 +39,6 @@ public interface WindowPlatform {
 
     void exit();
 
-    /*
-     * Returns the Input object backing the given OS window, queried directly
-     * from the platform. Pure lookup — never assigns any shared/global input
-     * state. This is the only correct way to obtain "the" input for a
-     * specific window; EngineContext.input is scoped to "whatever currently
-     * owns focus" and is not guaranteed to be this window.
-     *
-     * Callers must pass a window with a native handle. Results for logical
-     * windows are undefined — resolve via WindowInstance.getGLWindow() first.
-     */
     Input getInputForWindow(WindowInstance window);
 
     float getCursorX(WindowInstance window);

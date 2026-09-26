@@ -3,8 +3,7 @@ package engine.root;
 public class PipelinePackage extends ManagerPackage {
 
     /*
-     * PipelineFrame is a specialized ManagerPackage.
-     * It groups related managers and systems into a single pipeline,
-     * allowing higher-level organization of the engine hierarchy.
+     * Groups the managers and systems of one pipeline and registers them in
+     * dependency order.
      */
 }

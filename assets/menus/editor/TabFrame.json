@@ -18,18 +18,18 @@
             "y": "100%"
           },
           "on_drag": {
-            "class": "engine.editor.menueventsmanager.menus.TabBranch",
+            "class": "editor.runtime.menueventsmanager.menus.TabBranch",
             "method": "onTabFrameDrag"
           },
           "on_hover": {
             "on_click": {
-              "class": "engine.editor.menueventsmanager.menus.TabBranch",
+              "class": "editor.runtime.menueventsmanager.menus.TabBranch",
               "method": "onTabFrameHover"
             }
           },
           "on_hover_exit": {
             "on_click": {
-              "class": "engine.editor.menueventsmanager.menus.TabBranch",
+              "class": "editor.runtime.menueventsmanager.menus.TabBranch",
               "method": "onTabFrameHoverExit"
             }
           },
@@ -64,7 +64,7 @@
           },
           "color": "header",
           "on_drag": {
-            "class": "engine.editor.menueventsmanager.menus.TabBranch",
+            "class": "editor.runtime.menueventsmanager.menus.TabBranch",
             "method": "onTabToolbarDrag"
           },
           "elements": [
@@ -122,7 +122,7 @@
               },
               "hover_color": "danger",
               "on_click": {
-                "class": "engine.editor.menueventsmanager.menus.TabBranch",
+                "class": "editor.runtime.menueventsmanager.menus.TabBranch",
                 "method": "closeTab"
               },
               "elements": [

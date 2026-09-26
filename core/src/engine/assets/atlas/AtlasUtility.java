@@ -1,25 +1,16 @@
 package engine.assets.atlas;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-/*
- * Stateless atlas packing utility shared across any pipeline that needs to
- * build a GPU-ready texture atlas from a set of source images.
- *
- * Accepts a flat list of AtlasTileData — the shared base type extended by
- * both TextureTileData and FontTileData — runs MaxRects Best Short Side Fit
- * to find the tightest square power-of-2 canvas, then writes the resulting
- * pixel-space atlas position back onto each tile. Returns the final atlas
- * pixel size for use in UV calculation and GPU upload.
- *
- * Compositing is handled separately by each pipeline's builder since alias
- * layer structure differs between systems.
- */
 public class AtlasUtility extends EngineUtility {
+
+    /*
+     * Stateless atlas packing. Runs MaxRects best short side fit over
+     * AtlasTileData to find the smallest square power-of-two canvas, writes
+     * each tile's position back, and returns the atlas size. Compositing stays
+     * with each pipeline's builder.
+     */
 
     // Entry Point \\
 
@@ -66,16 +57,10 @@ public class AtlasUtility extends EngineUtility {
 
     // Packing \\
 
-    /*
-     * Attempts to fit all tiles onto a canvas of the given pixel size using
-     * MaxRects BSSF. Writes pixel-space atlas positions directly onto each tile
-     * only on full success. Returns false if any tile cannot be placed — caller
-     * grows the canvas and retries.
-     */
     private static boolean tryPack(
             ObjectArrayList<? extends AtlasTileData> tiles, int canvasSize) {
 
-        List<int[]> free = new ArrayList<>();
+        ObjectArrayList<int[]> free = new ObjectArrayList<>();
         free.add(new int[] { 0, 0, canvasSize, canvasSize });
 
         int[] px = new int[tiles.size()];
@@ -98,12 +83,7 @@ public class AtlasUtility extends EngineUtility {
         return true;
     }
 
-    /*
-     * Finds the free rect that wastes the fewest pixels on its shorter leftover
-     * side after placing (w, h). Ties broken by the longer side. Returns [x, y]
-     * of placement or null if no rect is large enough.
-     */
-    private static int[] bestShortSideFit(List<int[]> free, int w, int h) {
+    private static int[] bestShortSideFit(ObjectArrayList<int[]> free, int w, int h) {
         int[] best = null;
         int bestShort = Integer.MAX_VALUE;
         int bestLong = Integer.MAX_VALUE;
@@ -126,14 +106,10 @@ public class AtlasUtility extends EngineUtility {
 
     // Free Rect Maintenance \\
 
-    /*
-     * Splits every free rect that overlaps the newly placed tile into up to four
-     * non-overlapping sub-rects, then discards the original overlapping rect.
-     */
-    private static void splitFreeRects(List<int[]> free, int px, int py, int pw, int ph) {
+    private static void splitFreeRects(ObjectArrayList<int[]> free, int px, int py, int pw, int ph) {
 
-        List<int[]> toRemove = new ArrayList<>();
-        List<int[]> toAdd = new ArrayList<>();
+        ObjectArrayList<int[]> toRemove = new ObjectArrayList<>();
+        ObjectArrayList<int[]> toAdd = new ObjectArrayList<>();
 
         for (int i = 0; i < free.size(); i++) {
             int[] r = free.get(i);
@@ -154,13 +130,9 @@ public class AtlasUtility extends EngineUtility {
         free.addAll(toAdd);
     }
 
-    /*
-     * Removes any free rect fully contained within another. Redundant rects
-     * degrade BSSF scoring over time if left in the list.
-     */
-    private static void pruneContained(List<int[]> rects) {
+    private static void pruneContained(ObjectArrayList<int[]> rects) {
 
-        List<int[]> toRemove = new ArrayList<>();
+        ObjectArrayList<int[]> toRemove = new ObjectArrayList<>();
 
         for (int i = 0; i < rects.size(); i++) {
             if (toRemove.contains(rects.get(i)))

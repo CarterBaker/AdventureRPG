@@ -7,16 +7,14 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
-import application.bootstrap.renderpipeline.compositerendersystem.CompositeRenderSystem;
-import application.bootstrap.renderpipeline.entityrendersystem.EntityRenderSystem;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
-import application.bootstrap.renderpipeline.util.MaskStruct;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.renderpipeline.render.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -34,8 +32,8 @@ public class RenderManager extends ManagerPackage {
     private WindowManager windowManager;
     private PlayerManager playerManager;
     private UBOManager uboManager;
-    private FboManager fboManager;
-    private FboRenderSystem fboRenderSystem;
+    private FBOManager fboManager;
+    private FBORenderSystem fboRenderSystem;
     private SkinnedBufferManager skinnedBufferManager;
 
     private RenderSystem renderSystem;
@@ -53,8 +51,8 @@ public class RenderManager extends ManagerPackage {
         this.windowManager = get(WindowManager.class);
         this.playerManager = get(PlayerManager.class);
         this.uboManager = get(UBOManager.class);
-        this.fboManager = get(FboManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
+        this.fboManager = get(FBOManager.class);
+        this.fboRenderSystem = get(FBORenderSystem.class);
         this.skinnedBufferManager = get(SkinnedBufferManager.class);
     }
 
@@ -100,7 +98,7 @@ public class RenderManager extends ManagerPackage {
         drawFinal(window);
     }
 
-    public void draw(FboInstance target) {
+    public void draw(FBOInstance target) {
         WindowInstance window = resolveDefaultWindow();
         if (window == null)
             return;
@@ -126,21 +124,21 @@ public class RenderManager extends ManagerPackage {
 
     // Render Calls \\
 
-    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth) {
+    public void pushRenderCall(ModelInstance modelInstance, FBOInstance fbo, int depth) {
         renderSystem.pushRenderCall(modelInstance, fbo, depth, null, resolveDefaultWindow());
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, MaskStruct mask) {
+    public void pushRenderCall(ModelInstance modelInstance, FBOInstance fbo, int depth, MaskStruct mask) {
         renderSystem.pushRenderCall(modelInstance, fbo, depth, mask, resolveDefaultWindow());
     }
 
-    public void pushRenderCall(ModelInstance modelInstance, FboInstance fbo, int depth, WindowInstance window) {
+    public void pushRenderCall(ModelInstance modelInstance, FBOInstance fbo, int depth, WindowInstance window) {
         renderSystem.pushRenderCall(modelInstance, fbo, depth, null, window);
     }
 
     public void pushRenderCall(
             ModelInstance modelInstance,
-            FboInstance fbo,
+            FBOInstance fbo,
             int depth,
             MaskStruct mask,
             WindowInstance window) {
@@ -148,19 +146,19 @@ public class RenderManager extends ManagerPackage {
     }
 
     public void pushScreenCall(ModelInstance modelInstance) {
-        renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow(), 0);
+        renderSystem.pushScreenCall(modelInstance, null, resolveDefaultWindow(), EngineSetting.SCREEN_ORDER_BACKGROUND);
     }
 
     public void pushScreenCall(ModelInstance modelInstance, WindowInstance window) {
-        renderSystem.pushScreenCall(modelInstance, null, window, 0);
+        renderSystem.pushScreenCall(modelInstance, null, window, EngineSetting.SCREEN_ORDER_BACKGROUND);
     }
 
     public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask) {
-        renderSystem.pushScreenCall(modelInstance, mask, resolveDefaultWindow(), 0);
+        renderSystem.pushScreenCall(modelInstance, mask, resolveDefaultWindow(), EngineSetting.SCREEN_ORDER_BACKGROUND);
     }
 
     public void pushScreenCall(ModelInstance modelInstance, MaskStruct mask, WindowInstance window) {
-        renderSystem.pushScreenCall(modelInstance, mask, window, 0);
+        renderSystem.pushScreenCall(modelInstance, mask, window, EngineSetting.SCREEN_ORDER_BACKGROUND);
     }
 
     public void pushScreenCall(ModelInstance modelInstance, int order) {
@@ -179,14 +177,14 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushScreenCall(modelInstance, mask, window, order);
     }
 
-    public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, FboInstance fbo) {
+    public void pushCompositeCall(MaterialInstance material, CompositeBufferInstance buffer, FBOInstance fbo) {
         renderSystem.pushCompositeCall(material, buffer, null, fbo, resolveDefaultWindow());
     }
 
     public void pushCompositeCall(
             MaterialInstance material,
             CompositeBufferInstance buffer,
-            FboInstance fbo,
+            FBOInstance fbo,
             WindowInstance window) {
         renderSystem.pushCompositeCall(material, buffer, null, fbo, window);
     }
@@ -195,20 +193,12 @@ public class RenderManager extends ManagerPackage {
             MaterialInstance material,
             CompositeBufferInstance buffer,
             MaskStruct mask,
-            FboInstance fbo,
+            FBOInstance fbo,
             WindowInstance window) {
         renderSystem.pushCompositeCall(material, buffer, mask, fbo, window);
     }
 
-    /*
-     * Guarantees the given FBO is registered as a render target for this
-     * window this frame — bound, cleared, and processed by
-     * drawToMappedTargets() — even if no draw calls are ever queued into
-     * it this frame. Overhead weather needs this: a clear-sky frame pushes
-     * zero cloud draws, but the FBO still has to come back transparent
-     * rather than showing whatever it last held.
-     */
-    public void ensureFboRendered(FboInstance fbo, WindowInstance window) {
+    public void ensureFboRendered(FBOInstance fbo, WindowInstance window) {
         renderSystem.ensureTargetQueued(fbo, window);
     }
 
@@ -224,7 +214,7 @@ public class RenderManager extends ManagerPackage {
             Matrix4 modelMatrix,
             SkinnedAppearanceStruct appearance,
             Matrix4[] skinningMatrices,
-            FboInstance fbo) {
+            FBOInstance fbo) {
         renderSystem.pushSkinnedCall(
                 meshHandle, material, modelMatrix, appearance, skinningMatrices, fbo, resolveDefaultWindow());
     }
@@ -235,7 +225,7 @@ public class RenderManager extends ManagerPackage {
             Matrix4 modelMatrix,
             SkinnedAppearanceStruct appearance,
             Matrix4[] skinningMatrices,
-            FboInstance fbo,
+            FBOInstance fbo,
             WindowInstance window) {
         renderSystem.pushSkinnedCall(meshHandle, material, modelMatrix, appearance, skinningMatrices, fbo, window);
     }

@@ -14,10 +14,6 @@ public final class WeatherScaleUtility extends EngineUtility {
      * way, and the sky curves with the planet's own radius.
      */
 
-    private WeatherScaleUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
-
     // Scale \\
 
     public static double resolveWorldScaleRatio(WorldHandle worldHandle) {

@@ -10,6 +10,11 @@ import engine.root.PipelinePackage;
 
 public class ShaderPipeline extends PipelinePackage {
 
+    /*
+     * Registers the shader managers: shaders, UBOs and textures first, then the
+     * materials, sprites and full-screen passes built on them.
+     */
+
     @Override
     protected void create() {
 

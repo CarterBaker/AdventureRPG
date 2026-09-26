@@ -1,9 +1,7 @@
 package application.bootstrap.renderpipeline.rendermanager;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 
 import org.lwjgl.glfw.GLFW;
 
@@ -59,10 +57,6 @@ class RenderGLSLUtility extends EngineUtility {
     }
 
     // Toggles depth writes only, leaving the depth test/func untouched.
-    static void setDepthMask(boolean enabled) {
-        EngineContext.gl20.glDepthMask(enabled);
-    }
-
     // Blending \\
 
     static void enableBlending() {
@@ -70,29 +64,12 @@ class RenderGLSLUtility extends EngineUtility {
         EngineContext.gl20.glBlendFunc(EngineSetting.GL_SRC_ALPHA, EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
     }
 
-    /*
-     * For targets that receive premultiplied-alpha shader output (volumetric/
-     * raymarched passes such as weather) — GL_ONE as the source factor stores
-     * exactly what the shader wrote instead of multiplying its color by alpha
-     * a second time, which is what GL_SRC_ALPHA does and is only correct for
-     * straight (non-premultiplied) alpha sources.
-     */
     static void enablePremultipliedBlending() {
         EngineContext.gl20.glEnable(EngineSetting.GL_BLEND);
         EngineContext.gl20.glBlendFunc(EngineSetting.GL_ONE, EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
     }
 
-    static void disableBlending() {
-        EngineContext.gl20.glDisable(EngineSetting.GL_BLEND);
-    }
-
     // Culling \\
-
-    static void enableCulling() {
-        EngineContext.gl20.glEnable(EngineSetting.GL_CULL_FACE);
-        EngineContext.gl20.glCullFace(EngineSetting.GL_BACK);
-        EngineContext.gl20.glFrontFace(EngineSetting.GL_CCW);
-    }
 
     static void disableCulling() {
         EngineContext.gl20.glDisable(EngineSetting.GL_CULL_FACE);
@@ -148,7 +125,7 @@ class RenderGLSLUtility extends EngineUtility {
             EngineContext.gl30.glUniformBlockBinding(shaderProgram, blockIndex, bindingPoint);
     }
 
-    static void updateUniformBuffer(int gpuHandle, int offset, java.nio.ByteBuffer data) {
+    static void updateUniformBuffer(int gpuHandle, int offset, ByteBuffer data) {
         EngineContext.gl30.glBindBuffer(EngineSetting.GL_UNIFORM_BUFFER, gpuHandle);
         EngineContext.gl30.glBufferSubData(EngineSetting.GL_UNIFORM_BUFFER, offset, data.remaining(), data);
         EngineContext.gl30.glBindBuffer(EngineSetting.GL_UNIFORM_BUFFER, EngineSetting.GL_HANDLE_NONE);
@@ -174,14 +151,6 @@ class RenderGLSLUtility extends EngineUtility {
 
     // Instanced VAO \\
 
-    /*
-     * Builds a VAO combining a mesh's own vertex attributes (as laid out by
-     * meshAttrSizes) with a per-instance attribute set sourced from
-     * instanceVBOHandle, one attribute location per entry in
-     * instanceAttrSizes, each with a vertex attrib divisor of 1. Shared by
-     * the skinned character path and the generic world-space instanced
-     * (cloud) path.
-     */
     static int createInstancedVAO(
             int meshVBOHandle,
             int[] meshAttrSizes,
@@ -189,10 +158,7 @@ class RenderGLSLUtility extends EngineUtility {
             int instanceVBOHandle,
             int[] instanceAttrSizes) {
 
-        IntBuffer idBuffer = ByteBuffer.allocateDirect(Integer.BYTES)
-                .order(ByteOrder.nativeOrder()).asIntBuffer();
-        EngineContext.gl30.glGenVertexArrays(1, idBuffer);
-        int vao = idBuffer.get(0);
+        int vao = EngineContext.gl30.glGenVertexArray();
 
         EngineContext.gl30.glBindVertexArray(vao);
         EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, meshVBOHandle);
@@ -240,11 +206,7 @@ class RenderGLSLUtility extends EngineUtility {
         if (handle == 0)
             return;
 
-        IntBuffer idBuffer = ByteBuffer.allocateDirect(Integer.BYTES)
-                .order(ByteOrder.nativeOrder()).asIntBuffer();
-        idBuffer.put(handle).flip();
-
-        EngineContext.gl30.glDeleteVertexArrays(1, idBuffer);
+        EngineContext.gl30.glDeleteVertexArray(handle);
     }
 
     static void drawElementsInstanced(int indexCount, int instanceCount) {
@@ -255,13 +217,6 @@ class RenderGLSLUtility extends EngineUtility {
 
     // Instance Buffers \\
 
-    /*
-     * Creates a dynamic instance VBO sized for maxInstances rows of
-     * floatsPerInstance floats each. Shared by the skinned model-matrix
-     * buffer and the generic per-instance float buffer
-     * (CompositeBufferInstance) used for world-space instanced draws such
-     * as physical weather clouds.
-     */
     static int createDynamicInstanceVBO(int maxInstances, int floatsPerInstance) {
 
         int size = maxInstances * floatsPerInstance * Float.BYTES;

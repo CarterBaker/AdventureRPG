@@ -2,6 +2,11 @@ package engine.util.mathematics.extras;
 
 public final class Coordinate3Long {
 
+    /*
+     * Packs a signed x, y, z coordinate into one long with fixed bit widths per
+     * axis.
+     */
+
     // Bit sizes (must sum to 64)
     private static final int X_BITS = 26;
     private static final int Y_BITS = 12;

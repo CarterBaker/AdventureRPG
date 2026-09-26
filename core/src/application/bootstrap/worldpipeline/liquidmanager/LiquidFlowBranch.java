@@ -3,7 +3,7 @@ package application.bootstrap.worldpipeline.liquidmanager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
-import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Direction3Vector;
@@ -51,7 +51,7 @@ class LiquidFlowBranch extends BranchPackage {
     protected void create() {
 
         // Scratch — step snapshot
-        this.activeCells = new int[ChunkCoordinate3Int.BLOCK_COORDINATE_COUNT];
+        this.activeCells = new int[ChunkCoordinateUtility.BLOCK_COORDINATE_COUNT];
         this.cell = new LiquidCellStruct();
         this.below = new LiquidCellStruct();
         this.probe = new LiquidCellStruct();
@@ -87,7 +87,7 @@ class LiquidFlowBranch extends BranchPackage {
 
             int cellIndex = activeCells[reverseOrder ? activeCount - 1 - i : i];
 
-            cell.set(chunkInstance, subChunkInstance, ChunkCoordinate3Int.getBlockCoordinate(cellIndex));
+            cell.set(chunkInstance, subChunkInstance, ChunkCoordinateUtility.getBlockCoordinate(cellIndex));
             stepCell();
         }
 
@@ -352,7 +352,7 @@ class LiquidFlowBranch extends BranchPackage {
 
         long cellHash = BiomeFieldUtility.hashCell(
                 passCount,
-                ChunkCoordinate3Int.getIndex(cell.getPackedXYZ()),
+                ChunkCoordinateUtility.getIndex(cell.getPackedXYZ()),
                 (int) cell.getSubChunkInstance().getCoordinate());
 
         if (BiomeFieldUtility.hash01(cellHash) >= EngineSetting.LIQUID_EVAPORATION_CHANCE)

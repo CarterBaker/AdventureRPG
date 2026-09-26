@@ -73,7 +73,7 @@ class PlayerSaveBranch extends BranchPackage {
 
         JsonObject featuresJson = new JsonObject();
 
-        for (FeatureSlot featureSlot : FeatureSlot.values())
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (appearanceHandle.hasFeature(featureSlot))
                 featuresJson.addProperty(
                         featureSlot.name().toLowerCase(),
@@ -87,7 +87,7 @@ class PlayerSaveBranch extends BranchPackage {
         JsonObject equipmentJson = new JsonObject();
         JsonArray hiddenJson = new JsonArray();
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
 
             if (inventoryHandle.hasItem(equipmentSlot))
                 equipmentJson.add(

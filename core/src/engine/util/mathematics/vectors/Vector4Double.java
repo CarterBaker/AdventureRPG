@@ -4,6 +4,10 @@ import engine.root.EngineUtility;
 
 public class Vector4Double extends EngineUtility {
 
+    /*
+     * Mutable four-component double vector with in-place arithmetic.
+     */
+
     // Data
     public double x, y, z, w;
 

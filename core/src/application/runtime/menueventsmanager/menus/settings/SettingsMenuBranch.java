@@ -102,7 +102,7 @@ public class SettingsMenuBranch extends BranchPackage {
 
         windowID2Session.put(windowID, session);
 
-        showTab(session, SettingsTab.values()[0]);
+        showTab(session, SettingsTab.VALUES[0]);
     }
 
     public void closeMenu(WindowInstance window) {
@@ -149,7 +149,7 @@ public class SettingsMenuBranch extends BranchPackage {
 
         clearEntryPoint(session.getSettingsMenu(), RuntimeSetting.ENTRY_SETTINGS_TABS);
 
-        for (SettingsTab tab : SettingsTab.values())
+        for (SettingsTab tab : SettingsTab.VALUES)
             menuManager.inject(
                     session.getSettingsMenu(), RuntimeSetting.ENTRY_SETTINGS_TABS, RuntimeSetting.MENU_SETTINGS_TAB,
                     button -> {

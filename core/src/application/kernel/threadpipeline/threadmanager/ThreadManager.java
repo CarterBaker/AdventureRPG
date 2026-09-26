@@ -2,18 +2,18 @@ package application.kernel.threadpipeline.threadmanager;
 
 import java.util.concurrent.Future;
 
-import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
-import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
-import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
-import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
 import application.kernel.threadpipeline.thread.ThreadHandle;
-import engine.root.AsyncContainerPackage;
 import engine.root.EngineUtility;
 import engine.root.ManagerPackage;
-import engine.root.SyncContainerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class ThreadManager extends ManagerPackage {
+
+    /*
+     * Owns every named thread pool and is the single dispatch point for async
+     * work. executeAsync() tracks each task in flight for backpressure and
+     * carries the submitting context's crash boundary onto the worker.
+     */
 
     // Retrieval Mapping
     private Object2ObjectOpenHashMap<String, ThreadHandle> threadName2ThreadHandle;
@@ -68,15 +68,6 @@ public class ThreadManager extends ManagerPackage {
         return handle;
     }
 
-    /*
-     * Single true dispatch point — every other executeAsync overload below
-     * delegates here, so in-flight tracking only needs to live in one place
-     * to cover every caller in the engine. beginTask()/endTask() bracket the
-     * ACTUAL execution, not the submission, so hasCapacity() reflects real
-     * pool saturation (queued + running), not just queue depth. Work
-     * submitted from inside an isolated context carries that context's crash
-     * boundary onto the worker thread.
-     */
     public Future<?> executeAsync(ThreadHandle handle, Runnable task) {
         Runnable isolatedTask = internal.isolateAsync(task);
         handle.beginTask();
@@ -85,73 +76,6 @@ public class ThreadManager extends ManagerPackage {
                 isolatedTask.run();
             } finally {
                 handle.endTask();
-            }
-        });
-    }
-
-    public <T extends AsyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T asyncStruct,
-            AsyncStructConsumer<T> consumer) {
-        return executeAsync(handle, () -> {
-            T instance = asyncStruct.getInstance();
-            try {
-                consumer.accept(instance);
-            } finally {
-                instance.reset();
-            }
-        });
-    }
-
-    public Future<?> executeAsync(
-            ThreadHandle handle,
-            AsyncStructConsumerMulti consumer,
-            AsyncContainerPackage... asyncStructs) {
-        return executeAsync(handle, () -> {
-            AsyncContainerPackage[] instances = new AsyncContainerPackage[asyncStructs.length];
-            for (int i = 0; i < asyncStructs.length; i++)
-                instances[i] = asyncStructs[i].getInstance();
-            try {
-                consumer.accept(instances);
-            } finally {
-                for (int i = 0; i < instances.length; i++)
-                    instances[i].reset();
-            }
-        });
-    }
-
-    public <T extends SyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T syncStruct,
-            SyncStructConsumer<T> consumer) {
-        return executeAsync(handle, () -> {
-            if (syncStruct.tryAcquire()) {
-                try {
-                    consumer.accept(syncStruct.getInstance());
-                } finally {
-                    syncStruct.release();
-                }
-            }
-        });
-    }
-
-    public <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T asyncStruct,
-            S syncStruct,
-            BiSyncAsyncConsumer<T, S> consumer) {
-        return executeAsync(handle, () -> {
-            T asyncInstance = asyncStruct.getInstance();
-            try {
-                if (syncStruct.tryAcquire()) {
-                    try {
-                        consumer.accept(asyncInstance, syncStruct.getInstance());
-                    } finally {
-                        syncStruct.release();
-                    }
-                }
-            } finally {
-                asyncInstance.reset();
             }
         });
     }

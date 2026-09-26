@@ -11,7 +11,7 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
@@ -25,30 +25,10 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 class LiquidGeometryBranch extends BranchPackage {
 
     /*
-     * Geometry branch for liquid blocks. Settled water (isLiquidStable() true)
-     * only ever assembles its UP face — the one face a still body can actually
-     * show a camera, since every other side is by design either basin wall or
-     * more of the same settled liquid — while a subchunk mid-flow still emits
-     * one unit quad per exposed face every rebuild, since its levels change
-     * tick to tick and merging that work would be thrown away almost
-     * immediately. hasExposedFace() also now occludes correctly against solid
-     * neighbors: a liquid face touching an opaque FULL block can never be seen
-     * from any camera angle and is dropped, exactly like two touching solids
-     * already drop their shared face in FullGeometryBranch — previously this
-     * only compared raw block IDs, so every water block against stone/dirt/etc.
-     * wastefully emitted a hidden quad. Once a subchunk settles, its UP faces
-     * greedily expand across matching biome, block, and fill level exactly
-     * like FullGeometryBranch, so a still lake collapses to a handful of quads
-     * instead of one per block. Fill level and "does this vertex sit at the
-     * fluid surface" are always written per vertex regardless of stability,
-     * in the ChunkVAO's exact layout — face, orientation, and merged size in
-     * the meta word like FullGeometryBranch, with level and surface flag in
-     * the first two edge-state slots liquid never uses — letting WaterShader
-     * pull each vertex down toward the true fluid surface. A surface vertex
-     * of tidal ocean water is also flagged in the third slot, and tidal and
-     * non-tidal water never merge into one quad, so WaterShader can lift
-     * exactly the ocean to the live tide and roll its waves while lakes and
-     * streams keep the level their cells hold.
+     * Geometry branch for liquid blocks. Settled water emits only greedily
+     * merged UP faces; flowing water emits one quad per exposed face. Faces
+     * against opaque blocks are dropped, and each vertex carries its fill level
+     * plus surface and tidal flags for the water shader.
      */
 
     // Internal
@@ -90,11 +70,7 @@ class LiquidGeometryBranch extends BranchPackage {
             BitSet batchReturn,
             Color vertColorAccumulator) {
 
-        // Settled water is assumed fully contained by basin walls or other
-        // settled water on every side but its top. Gating here — before any
-        // exposure check or greedy-merge walk runs — removes the single
-        // largest source of wasted liquid geometry: a still lake used to pay
-        // for invisible wall and floor quads on every one of its blocks.
+        // Settled water only ever shows its top face
         if (subChunkInstance.isLiquidStable() && direction3Vector != Direction3Vector.UP)
             return false;
 
@@ -199,14 +175,14 @@ class LiquidGeometryBranch extends BranchPackage {
         if (currentSize >= CHUNK_SIZE)
             return false;
 
-        int nextXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, expandDirection, currentSize);
+        int nextXYZ = ChunkCoordinateUtility.getNeighborWithOffset(xyz, expandDirection, currentSize);
 
         if (nextXYZ == -1)
             return false;
 
         for (int i = 0; i < tangentSize; i++) {
 
-            int checkXYZ = ChunkCoordinate3Int.getNeighborWithOffset(nextXYZ, tangentDirection, i);
+            int checkXYZ = ChunkCoordinateUtility.getNeighborWithOffset(nextXYZ, tangentDirection, i);
 
             if (checkXYZ == -1)
                 return false;
@@ -220,13 +196,13 @@ class LiquidGeometryBranch extends BranchPackage {
                     comparativeBiomeHandle != biomeHandle ||
                     comparativeLevel != level ||
                     subChunkInstance.isLiquidTidal(checkXYZ) != tidal ||
-                    accumulatedBatch.get(ChunkCoordinate3Int.getIndex(checkXYZ)) ||
+                    accumulatedBatch.get(ChunkCoordinateUtility.getIndex(checkXYZ)) ||
                     !hasExposedFace(chunkInstance, subChunkInstance, checkXYZ, direction3Vector, blockHandle)) {
                 batchReturn.clear();
                 return false;
             }
 
-            batchReturn.set(ChunkCoordinate3Int.getIndex(checkXYZ));
+            batchReturn.set(ChunkCoordinateUtility.getIndex(checkXYZ));
         }
 
         return true;
@@ -253,7 +229,7 @@ class LiquidGeometryBranch extends BranchPackage {
                     || (direction3Vector == Direction3Vector.UP && subY == WORLD_HEIGHT - 1);
         }
 
-        int comparativeXYZ = ChunkCoordinate3Int.getNeighborAndWrap(xyz, direction3Vector);
+        int comparativeXYZ = ChunkCoordinateUtility.getNeighborAndWrap(xyz, direction3Vector);
         short comparativeBlockID = comparativeSubChunkInstance.getBlockPaletteHandle().getBlock(comparativeXYZ);
 
         // Same liquid on the other side is an internal boundary, except
@@ -264,12 +240,7 @@ class LiquidGeometryBranch extends BranchPackage {
                     && comparativeSubChunkInstance.getLiquidLevel(comparativeXYZ)
                             < subChunkInstance.getLiquidLevel(xyz);
 
-        // Anything else exposes the face UNLESS that neighbor is an opaque
-        // full cube — a solid block covers this entire face from every angle
-        // a camera could ever reach, so the liquid's own copy of it can never
-        // be seen. Air, other liquids, any non-FULL geometry, and a block
-        // subdivided into sub-blocks — whose missing octants open onto this
-        // face — still expose.
+        // Any neighbor but a whole opaque cube exposes the face
         BlockHandle comparativeBlockHandle = blockManager.getBlockHandleFromBlockID(comparativeBlockID);
 
         if (SubBlockUtility.isSubdivided(comparativeSubChunkInstance.getSubBlockMask(comparativeXYZ)))
@@ -290,7 +261,7 @@ class LiquidGeometryBranch extends BranchPackage {
         if (aboveSubChunkInstance == null)
             return true;
 
-        int aboveXYZ = ChunkCoordinate3Int.getNeighborAndWrap(xyz, Direction3Vector.UP);
+        int aboveXYZ = ChunkCoordinateUtility.getNeighborAndWrap(xyz, Direction3Vector.UP);
 
         return aboveSubChunkInstance.getBlock(aboveXYZ) != blockHandle.getBlockID();
     }
@@ -305,7 +276,7 @@ class LiquidGeometryBranch extends BranchPackage {
             int xyz,
             Direction3Vector direction3Vector) {
 
-        if (!ChunkCoordinate3Int.isAtEdge(xyz, direction3Vector))
+        if (!ChunkCoordinateUtility.isAtEdge(xyz, direction3Vector))
             return subChunkInstance;
 
         byte subChunkCoordinate = (byte) subChunkInstance.getCoordinate();
@@ -349,10 +320,10 @@ class LiquidGeometryBranch extends BranchPackage {
         Direction3Vector tangentA = Direction3Vector.getTangentA(direction3Vector);
         Direction3Vector tangentB = Direction3Vector.getTangentB(direction3Vector);
 
-        int vert0XYZ = ChunkCoordinate3Int.convertToVertSpace(xyz, direction3Vector);
-        int vert1XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert0XYZ, tangentA, sizeA);
-        int vert2XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert1XYZ, tangentB, sizeB);
-        int vert3XYZ = ChunkCoordinate3Int.getVertCoordinateFromOffset(vert0XYZ, tangentB, sizeB);
+        int vert0XYZ = ChunkCoordinateUtility.convertToVertSpace(xyz, direction3Vector);
+        int vert1XYZ = ChunkCoordinateUtility.getVertCoordinateFromOffset(vert0XYZ, tangentA, sizeA);
+        int vert2XYZ = ChunkCoordinateUtility.getVertCoordinateFromOffset(vert1XYZ, tangentB, sizeB);
+        int vert3XYZ = ChunkCoordinateUtility.getVertCoordinateFromOffset(vert0XYZ, tangentB, sizeB);
 
         // Whichever corners sit at the greatest Y are this face's "surface"
         // vertices — always all 4 for UP, none for DOWN, and the top pair

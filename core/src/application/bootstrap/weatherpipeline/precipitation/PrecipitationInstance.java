@@ -8,15 +8,10 @@ import engine.util.mathematics.vectors.Vector4Int;
 public class PrecipitationInstance extends InstancePackage {
 
     /*
-     * One grid's precipitation state: how hard it is falling, how much of
-     * it falls as snow, the wind it drifts on, and a square map of column
-     * tops around the focal entity so rain and snow stop at the first block
-     * above them. The map is a ring buffer addressed by absolute block
-     * column, so moving only invalidates the row or column that scrolled
-     * into view; every slot remembers which column it holds. Heights are
-     * packed two per int, four ints per vector, exactly as the
-     * PrecipitationData UBO reads them. A slot whose column is not known yet
-     * reads as fully sheltered, so nothing falls through missing data.
+     * One grid's precipitation: intensity, snow share, drift wind, and a ring
+     * buffer of column tops around the focal entity so rain and snow stop at
+     * the first block. Heights pack exactly as the PrecipitationData UBO reads
+     * them, and unknown columns read as sheltered.
      */
 
     // Map

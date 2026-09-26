@@ -1,12 +1,11 @@
 package application.bootstrap.entitypipeline.entity;
 
-import application.bootstrap.entitypipeline.animation.AnimationStateHandle;
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
+import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
-import application.bootstrap.entitypipeline.util.EntityInputHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -17,15 +16,10 @@ import engine.util.mathematics.vectors.Vector3;
 public class EntityInstance extends InstancePackage {
 
     /*
-     * Runtime entity handed out by EntityManager.spawnEntity(). Holds a
-     * reference to its template EntityData plus all per-instance runtime
-     * state — position, physics, statistics, inventory, movement state, and input.
-     * Weight also drives the body build of an entity with an appearance, so
-     * setWeight() is the one path that keeps the two in step. updateAnimation()
-     * is the one path that feeds the entity's movement and facing into its
-     * animation tree as parameters and advances it a frame. getStat() is the
-     * one place an item statistic is totalled — the entity's own base value
-     * plus whatever everything it wears and holds adds.
+     * Runtime entity spawned by EntityManager, holding its template and all
+     * per-instance state. setWeight() keeps weight and body build in step,
+     * updateAnimation() is the one path that advances its animation tree, and
+     * getStat() totals a statistic from base value and gear.
      */
 
     // Internal

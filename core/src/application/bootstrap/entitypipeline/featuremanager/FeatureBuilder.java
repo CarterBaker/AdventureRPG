@@ -1,7 +1,7 @@
 package application.bootstrap.entitypipeline.featuremanager;
 
-import java.io.File;
 import com.google.gson.JsonObject;
+import java.io.File;
 
 import application.bootstrap.entitypipeline.feature.FeatureData;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
@@ -69,7 +69,7 @@ class FeatureBuilder extends BuilderPackage {
 
         String slotName = JsonUtility.validateString(json, "slot");
 
-        for (FeatureSlot featureSlot : FeatureSlot.values())
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (featureSlot.name().equalsIgnoreCase(slotName))
                 return featureSlot;
 

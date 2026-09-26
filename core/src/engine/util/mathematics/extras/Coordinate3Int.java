@@ -4,11 +4,9 @@ import engine.root.EngineUtility;
 
 public final class Coordinate3Int extends EngineUtility {
 
-    // Internal \\
-
-    private Coordinate3Int() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
+    /*
+     * Packs a signed 10-bit x, y, z coordinate into one int in Y-Z-X order.
+     */
 
     // Accessible \\
 

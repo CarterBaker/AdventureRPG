@@ -78,7 +78,7 @@ class FrustumCullingSystem extends SystemPackage {
         float distance = (float) Math.sqrt(distanceSq);
         float bleed = Math.max(
                 EngineSetting.FRUSTUM_MIN_BLEED,
-                EngineSetting.FRUSTUM_CHUNK_BLEED_SCALE / Math.max(distance, 0.001f));
+                EngineSetting.FRUSTUM_CHUNK_BLEED_SCALE / Math.max(distance, EngineSetting.DIVISION_EPSILON));
 
         return isWithinAngle(slot.getChunkAngleFromCenter(), effectiveAngle + bleed);
     }
@@ -93,7 +93,7 @@ class FrustumCullingSystem extends SystemPackage {
         float distance = (float) Math.sqrt(distanceSq);
         float megaBleed = Math.max(
                 EngineSetting.FRUSTUM_MIN_BLEED,
-                (float) Math.atan(megaAngularBleedBase / Math.max(distance, 0.001f)));
+                (float) Math.atan(megaAngularBleedBase / Math.max(distance, EngineSetting.DIVISION_EPSILON)));
 
         return isWithinAngle(slot.getMegaAngleFromCenter(), effectiveAngle + megaBleed);
     }

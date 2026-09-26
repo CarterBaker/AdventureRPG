@@ -4,6 +4,10 @@ import engine.root.EngineUtility;
 
 public class Vector4 extends EngineUtility {
 
+    /*
+     * Mutable four-component float vector with in-place arithmetic.
+     */
+
     // Data
     public float x, y, z, w;
 

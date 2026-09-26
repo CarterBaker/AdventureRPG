@@ -1,9 +1,6 @@
 package application.bootstrap.entitypipeline.behaviormanager;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import engine.root.EngineSetting;
@@ -35,21 +32,12 @@ class BehaviorLoader extends LoaderPackage {
         this.root = new File(EngineSetting.BEHAVIOR_JSON_PATH);
         this.behaviorName2File = new Object2ObjectOpenHashMap<>();
 
-        if (!root.exists() || !root.isDirectory())
-            throwException("Behavior directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Behavior directory not found: " + root.getAbsolutePath());
 
-        try (var stream = Files.walk(root.toPath())) {
-            stream
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .filter(f -> EngineSetting.JSON_FILE_EXTENSIONS.contains(FileUtility.getExtension(f)))
-                    .forEach(file -> {
-                        String behaviorName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-                        behaviorName2File.put(behaviorName, file);
-                        fileQueue.offer(file);
-                    });
-        } catch (IOException e) {
-            throwException("Failed to walk behavior directory: " + root.getAbsolutePath(), e);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+            String behaviorName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            behaviorName2File.put(behaviorName, file);
+            queueFile(file);
         }
     }
 

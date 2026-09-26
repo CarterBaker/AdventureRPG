@@ -3,7 +3,7 @@ package editor.bootstrap.infopipeline.infomanager;
 import application.bootstrap.menupipeline.hierarchy.HierarchyNodeStruct;
 import editor.bootstrap.infopipeline.infodocument.InfoDocumentInstance;
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;

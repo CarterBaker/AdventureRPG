@@ -15,7 +15,7 @@ public class IBOManager extends ManagerPackage {
 
     /*
      * Owns the IBO palette for the engine lifetime. Handles bootstrap
-     * registration via InternalBuilder, runtime IBOInstance creation, in-place
+     * registration via IBOBuilder, runtime IBOInstance creation, in-place
      * updates, and deletion. Auto-triggers a mesh load on miss for external
      * callers.
      */
@@ -54,10 +54,6 @@ public class IBOManager extends ManagerPackage {
         iboID2IBOHandle.put(id, handle);
     }
 
-    /*
-     * Bypasses JSON parsing — used when index data was assembled by quad
-     * expansion inside the mesh builder.
-     */
     public IBOHandle addIBOFromData(
             String resourceName,
             short[] indices,
@@ -95,10 +91,6 @@ public class IBOManager extends ManagerPackage {
         return getIBOHandleFromIBOID(getIBOIDFromIBOName(iboName));
     }
 
-    /*
-     * Direct registry lookup — no load trigger. Safe to call from inside any
-     * builder that is already executing within a load() call.
-     */
     public IBOHandle getIBOHandleDirect(String iboName) {
         return iboName2IBOHandle.get(iboName);
     }
@@ -112,11 +104,6 @@ public class IBOManager extends ManagerPackage {
                 indices.toShortArray());
     }
 
-    /*
-     * Reuploads index data into an EXISTING IBOInstance's GL buffer, keeping
-     * the same handle. Any VAO already referencing this handle — including
-     * per-window clones — sees the new data with no further action needed.
-     */
     public IBOInstance updateIBOInstance(IBOInstance iboInstance, ShortArrayList indices) {
         return IBOGLSLUtility.updateIndexData(iboInstance, indices.toShortArray());
     }

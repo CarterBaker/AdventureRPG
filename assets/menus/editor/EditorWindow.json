@@ -64,7 +64,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                     "method": "openPreview"
                   },
                   "elements": [
@@ -97,7 +97,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                     "method": "openDev"
                   },
                   "elements": [
@@ -198,7 +198,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                     "method": "openHierarchy"
                   },
                   "elements": [
@@ -231,7 +231,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                     "method": "openInfoPanel"
                   },
                   "elements": [
@@ -264,7 +264,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                     "method": "openItemEditor"
                   },
                   "elements": [
@@ -297,7 +297,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                     "method": "openTextureViewer"
                   },
                   "elements": [
@@ -330,7 +330,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                     "method": "openConsole"
                   },
                   "elements": [
@@ -363,7 +363,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                     "method": "openCommandConsole"
                   },
                   "elements": [
@@ -464,7 +464,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                     "method": "openCreateLayoutDialog"
                   },
                   "elements": [
@@ -547,7 +547,7 @@
       },
       "hover_color": "control_hover",
       "on_click": {
-        "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+        "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
         "method": "loadLayout"
       },
       "elements": [
@@ -765,7 +765,7 @@
                   "on_hover_enter": {
                     "use": "editor/EditorWindow/layouts_dropdown_panel",
                     "on_click": {
-                      "class": "engine.editor.menueventsmanager.menus.EditorBranch",
+                      "class": "editor.runtime.menueventsmanager.menus.EditorBranch",
                       "method": "refreshLayoutList"
                     }
                   },
@@ -924,7 +924,7 @@
                   },
                   "hover_color": "danger",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.NameDialogBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.NameDialogBranch",
                     "method": "cancel"
                   },
                   "elements": [
@@ -1009,7 +1009,7 @@
                   "color": "accent",
                   "hover_color": "accent_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.NameDialogBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.NameDialogBranch",
                     "method": "confirm"
                   },
                   "elements": [

@@ -4,13 +4,14 @@ import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferIns
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import engine.root.InstancePackage;
 
-/*
- * Pairs a cloned MaterialInstance with a CompositeBufferInstance for a single
- * item definition. One instance per distinct item type, owned by
- * WorldItemRenderSystem. Render concern only — lives in worlditemrendersystem,
- * not worlditem.
- */
 public class WorldItemCompositeInstance extends InstancePackage {
+
+    /*
+     * Pairs a cloned MaterialInstance with a CompositeBufferInstance for a single
+     * item definition. One instance per distinct item type, owned by
+     * WorldItemRenderSystem. Render concern only — lives in worlditemrendersystem,
+     * not worlditem.
+     */
 
     private MaterialInstance material;
     private CompositeBufferInstance compositeBuffer;

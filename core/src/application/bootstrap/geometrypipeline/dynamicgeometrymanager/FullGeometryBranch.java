@@ -9,7 +9,7 @@ import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.bootstrap.worldpipeline.util.ChunkCoordinate3Int;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
@@ -151,7 +151,7 @@ class FullGeometryBranch extends BranchPackage {
 
         short baseOrientation = rotationPaletteHandle.getBlock(xyz);
 
-        accumulatedBatch.set(ChunkCoordinate3Int.getIndex(xyz));
+        accumulatedBatch.set(ChunkCoordinateUtility.getIndex(xyz));
 
         do {
 
@@ -244,7 +244,7 @@ class FullGeometryBranch extends BranchPackage {
         if (currentSize >= maxMergeExtent)
             return false;
 
-        int nextXYZ = ChunkCoordinate3Int.getNeighborWithOffset(xyz, expandDirection, currentSize);
+        int nextXYZ = ChunkCoordinateUtility.getNeighborWithOffset(xyz, expandDirection, currentSize);
 
         if (nextXYZ == -1)
             return false;
@@ -253,7 +253,7 @@ class FullGeometryBranch extends BranchPackage {
 
         for (int i = 0; i < tangentSize; i++) {
 
-            int checkXYZ = ChunkCoordinate3Int.getNeighborWithOffset(nextXYZ, tangentDirection, i);
+            int checkXYZ = ChunkCoordinateUtility.getNeighborWithOffset(nextXYZ, tangentDirection, i);
 
             if (checkXYZ == -1 || !canMerge(
                     chunkInstance,
@@ -272,7 +272,7 @@ class FullGeometryBranch extends BranchPackage {
                 return false;
             }
 
-            batchReturn.set(ChunkCoordinate3Int.getIndex(checkXYZ));
+            batchReturn.set(ChunkCoordinateUtility.getIndex(checkXYZ));
         }
 
         return true;
@@ -292,7 +292,7 @@ class FullGeometryBranch extends BranchPackage {
             short baseOrientation,
             BitSet accumulatedBatch) {
 
-        if (accumulatedBatch.get(ChunkCoordinate3Int.getIndex(checkXYZ)))
+        if (accumulatedBatch.get(ChunkCoordinateUtility.getIndex(checkXYZ)))
             return false;
 
         if (biomeManager.getBiomeHandleFromBiomeID(biomePaletteHandle.getBlock(checkXYZ)) != biomeHandle)

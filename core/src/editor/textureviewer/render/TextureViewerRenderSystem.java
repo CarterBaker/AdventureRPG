@@ -3,19 +3,19 @@ package editor.textureviewer.render;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
+import editor.runtime.EditorSetting;
 import editor.textureviewer.TextureViewerSetting;
 import editor.textureviewer.atlas.TextureViewerAtlasSystem;
 import editor.textureviewer.select.TextureViewerSelectSystem;
-import engine.editor.EditorSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector4;
 
@@ -32,14 +32,14 @@ public class TextureViewerRenderSystem extends SystemPackage {
     private ModelManager modelManager;
     private MaterialManager materialManager;
     private RenderManager renderManager;
-    private FboManager fboManager;
-    private FboRenderSystem fboRenderSystem;
+    private FBOManager fboManager;
+    private FBORenderSystem fboRenderSystem;
     private ItemEditorManager itemEditorManager;
     private TextureViewerAtlasSystem textureViewerAtlasSystem;
     private TextureViewerSelectSystem textureViewerSelectSystem;
 
     // Render Target
-    private FboInstance sceneFbo;
+    private FBOInstance sceneFbo;
 
     // Models
     private ModelInstance atlasModel;
@@ -60,8 +60,8 @@ public class TextureViewerRenderSystem extends SystemPackage {
         this.modelManager = get(ModelManager.class);
         this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
-        this.fboManager = get(FboManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
+        this.fboManager = get(FBOManager.class);
+        this.fboRenderSystem = get(FBORenderSystem.class);
         this.itemEditorManager = get(ItemEditorManager.class);
         this.textureViewerAtlasSystem = get(TextureViewerAtlasSystem.class);
         this.textureViewerSelectSystem = get(TextureViewerSelectSystem.class);

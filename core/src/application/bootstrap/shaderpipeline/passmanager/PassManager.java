@@ -12,6 +12,11 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 public class PassManager extends ManagerPackage {
 
+    /*
+     * Owns the full-screen pass palette. Each pass pairs a quad model with its
+     * material, loaded on demand on a miss.
+     */
+
     private MaterialManager materialManager;
 
     private Object2IntOpenHashMap<String> passName2PassID;

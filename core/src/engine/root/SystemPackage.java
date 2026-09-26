@@ -2,27 +2,16 @@ package engine.root;
 
 import java.util.concurrent.Future;
 
-import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumer;
-import application.kernel.threadpipeline.syncconsumer.AsyncStructConsumerMulti;
-import application.kernel.threadpipeline.syncconsumer.BiSyncAsyncConsumer;
-import application.kernel.threadpipeline.syncconsumer.SyncStructConsumer;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.settings.Settings;
 
 public abstract class SystemPackage extends UtilityPackage {
 
     /*
-     * This is the base class for all systems within the engine.
-     * SystemPackages follow a strict lifecycle with automatic phase
-     * verification to ensure proper execution order. Each phase can
-     * be overridden by child classes to implement custom behavior.
-     *
-     * Lifecycle order:
-     * CREATE → GET → AWAKE → RELEASE → START →
-     * UPDATE → FIXED_UPDATE → LATE_UPDATE → RENDER → DISPOSE
-     *
-     * Systems must be created through a ManagerPackage or
-     * EnginePackage to function properly.
+     * Base class for every system in the engine. Runs the strict lifecycle
+     * CREATE, GET, AWAKE, RELEASE, START, then UPDATE, FIXED_UPDATE,
+     * LATE_UPDATE and RENDER each frame, and DISPOSE at shutdown, verifying
+     * each phase transition. Systems are only ever created through a manager.
      */
 
     // Core
@@ -34,10 +23,6 @@ public abstract class SystemPackage extends UtilityPackage {
     public final ManagerPackage local;
 
     // Context
-    //
-    // Automatically assigned when this system is created under a ContextPackage,
-    // or inherited from the owning manager when nested deeper in the hierarchy.
-    // Access via context.getWindow() — never reach for WindowManager directly.
     protected ContextPackage context;
 
     // Internal
@@ -46,6 +31,7 @@ public abstract class SystemPackage extends UtilityPackage {
     // Internal \\
 
     protected SystemPackage(Settings settings) {
+
         // Main
         this.settings = settings;
         this.internal = (EnginePackage) this;
@@ -56,10 +42,13 @@ public abstract class SystemPackage extends UtilityPackage {
     }
 
     protected SystemPackage() {
+
         // Core
         SystemStruct data = SYSTEM_STRUCT.get();
+
         if (data == null)
             throwException("Systems must be created via internal engine `create` method");
+
         if (data.settings == null || data.internal == null || data.local == null)
             throwException("SystemData was incomplete during system creation");
 
@@ -75,9 +64,8 @@ public abstract class SystemPackage extends UtilityPackage {
     static final class SystemStruct extends StructPackage {
 
         /*
-         * A container used to ensure proper system creation during the creation
-         * phase of the internal engines lifecycle. Mainly serves as a temporary data
-         * transfer mechanism.
+         * Carries the settings, engine and owning manager through reflective
+         * construction so every system is wired before its constructor returns.
          */
 
         // Internal
@@ -113,6 +101,7 @@ public abstract class SystemPackage extends UtilityPackage {
     }
 
     void setContext(SystemContext targetContext) {
+
         if (!targetContext.canEnterFrom(this.internalContext.order))
             throwException("Firing order issue. Internal engine attempted to perform an illegal context set.");
         this.internalContext = targetContext;
@@ -120,8 +109,6 @@ public abstract class SystemPackage extends UtilityPackage {
 
     boolean verifyContext(SystemContext targetContext) {
 
-        // Systems inside a context answer to the context, not the engine.
-        // Systems outside a context answer to the engine as before.
         SystemPackage authority = (this.context != null)
                 ? (SystemPackage) this.context
                 : this.internal;
@@ -138,6 +125,7 @@ public abstract class SystemPackage extends UtilityPackage {
 
     @SuppressWarnings("unchecked")
     protected <T extends UtilityPackage> T create(Class<T> targetClass) {
+
         if (InstancePackage.class.isAssignableFrom(targetClass))
             return (T) this.createInstance((Class<? extends InstancePackage>) targetClass);
         return throwException(
@@ -145,6 +133,7 @@ public abstract class SystemPackage extends UtilityPackage {
     }
 
     final <T extends InstancePackage> T createInstance(Class<T> instanceClass) {
+
         try {
             InstancePackage.setupConstructor(this.internal, this);
             var constructor = instanceClass.getDeclaredConstructor();
@@ -155,8 +144,7 @@ public abstract class SystemPackage extends UtilityPackage {
             instance.internalAwake();
             return instance;
         } catch (Exception e) {
-            throwException("Failed to create instance: " + e.getMessage());
-            return null;
+            return throwException("Failed to create instance: " + instanceClass.getSimpleName(), e);
         } finally {
             InstancePackage.CREATION_STRUCT.remove();
         }
@@ -164,16 +152,8 @@ public abstract class SystemPackage extends UtilityPackage {
 
     // System Retrieval \\
 
-    @SuppressWarnings("unchecked")
     protected <T> T get(Class<T> type) {
-
-        if (this.context != null) {
-            T local = this.context.getLocal(type);
-            if (local != null)
-                return local;
-        }
-
-        return this.internal.get(true, type);
+        return this.internal.getUnchecked(this.context, type);
     }
 
     // Thread Management \\
@@ -184,35 +164,6 @@ public abstract class SystemPackage extends UtilityPackage {
 
     protected Future<?> executeAsync(ThreadHandle handle, Runnable task) {
         return internal.executeAsync(handle, task);
-    }
-
-    protected <T extends AsyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T asyncStruct,
-            AsyncStructConsumer<T> consumer) {
-        return internal.executeAsync(handle, asyncStruct, consumer);
-    }
-
-    protected Future<?> executeAsync(
-            ThreadHandle handle,
-            AsyncStructConsumerMulti consumer,
-            AsyncContainerPackage... asyncStructs) {
-        return internal.executeAsync(handle, consumer, asyncStructs);
-    }
-
-    protected <T extends SyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T syncStruct,
-            SyncStructConsumer<T> consumer) {
-        return internal.executeAsync(handle, syncStruct, consumer);
-    }
-
-    protected <T extends AsyncContainerPackage, S extends SyncContainerPackage> Future<?> executeAsync(
-            ThreadHandle handle,
-            T asyncStruct,
-            S syncStruct,
-            BiSyncAsyncConsumer<T, S> consumer) {
-        return internal.executeAsync(handle, asyncStruct, syncStruct, consumer);
     }
 
     // Create \\

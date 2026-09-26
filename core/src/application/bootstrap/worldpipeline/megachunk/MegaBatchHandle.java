@@ -11,18 +11,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MegaBatchHandle extends HandlePackage {
 
     /*
-     * Tracks which chunks are registered, which have been merged into the
-     * mega's geometry, and — via mergedChunkVersions — the exact content
-     * version of each chunk's contribution currently reflected in that
-     * geometry. The version map is what lets needsMerge() tell a genuine
-     * content change apart from a chunk being redispatched for reasons
-     * unrelated to its own geometry (its mega still waiting on GPU upload,
-     * for instance), so the expensive full mega remerge only ever runs when
-     * something actually changed. mergedCoordinates still drives readiness —
-     * when its size reaches megaScale all contributions are present — and is
-     * cleared and rebuilt alongside the version map on any full re-merge so
-     * both stay in lockstep. Owned by its MegaChunkInstance for the pooled
-     * object's whole lifetime — constructor() only resets it on reuse.
+     * Tracks a mega's registered and merged chunks and the content version of
+     * each chunk's contribution, so needsMerge() only triggers a full re-merge
+     * when a chunk's geometry actually changed. Owned for the pooled mega's
+     * lifetime and reset on reuse.
      */
 
     // Internal

@@ -14,7 +14,7 @@ import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
 import editor.bootstrap.infopipeline.infotab.InfoTabInstance;
 import editor.bootstrap.infopipeline.infotarget.InfoTargetStruct;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.io.FileUtility;
@@ -25,15 +25,10 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 public class InfoManager extends ManagerPackage {
 
     /*
-     * Owns the editor's JSON content — every schema, every file opened under
-     * it, and the one shared selection the hierarchy and every info panel
-     * work on. Each schema becomes a hierarchy tab, the first one active until
-     * another is picked. Files load the first time their tab is shown and keep
-     * their edits until saved or reverted. A selection is a folder, a file, or
-     * an entry; creating, deleting, saving, and every field edit act on it,
-     * and listeners registered for a schema hear each entry selected or edited
-     * in it. Disk access, JSON edits, panel rows, and hierarchy nodes each
-     * live in their own branch.
+     * Owns the editor's JSON content: every schema, the files opened under it,
+     * and the single selection shared by the hierarchy and info panels. Files
+     * load on first view and keep edits until saved or reverted; disk access,
+     * edits, rows and hierarchy nodes each live in their own branch.
      */
 
     // Internal
@@ -91,7 +86,7 @@ public class InfoManager extends ManagerPackage {
     @Override
     protected void awake() {
 
-        ((InfoSchemaLoader) internalLoader).requestAll();
+        internalLoader.requestAll();
         registerTabs();
     }
 

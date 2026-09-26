@@ -8,7 +8,7 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import engine.root.BranchPackage;
@@ -17,17 +17,10 @@ import engine.util.mathematics.extras.Coordinate2Long;
 public class DumpBranch extends BranchPackage {
 
     /*
-     * Executes a single dump step per call. ChunkDataUtility determines which
-     * stage to shed based on the requires graph, the slot detail level, and
-     * the same two live signals ChunkQueueManager uses to decide whether to
-     * dump in the first place — needsIndividualRender and partOfMegaBlock —
-     * recomputed here identically so this branch can never dump RENDER_DATA
-     * out from under a chunk that is only rendering because its mega hasn't
-     * confirmed on GPU yet. The selected stage's flag is cleared directly;
-     * nothing downstream needs a forced cascade, since nextToDump already
-     * only ever selects a stage nothing still-pending depends on. Item
-     * structs survive a GENERATION dump so ITEM_DATA can rebuild without a
-     * full re-generation.
+     * Sheds one chunk stage per call, chosen by ChunkDataUtility from the
+     * dependency graph, the slot's detail level and the same live signals
+     * ChunkQueueManager uses, so a chunk still rendering for its unconfirmed
+     * mega keeps RENDER_DATA. Item structs survive a GENERATION dump.
      */
 
     // Internal
@@ -88,12 +81,6 @@ public class DumpBranch extends BranchPackage {
         }
     }
 
-    /*
-     * Hollows the interior of any subchunk that has real per-block storage.
-     * A subchunk still in its virtual (empty or uniform) representation has
-     * nothing to hollow and is left alone — it's already as compact as it
-     * can be.
-     */
     private void dumpGenerationData(ChunkInstance chunkInstance) {
 
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
@@ -116,11 +103,6 @@ public class DumpBranch extends BranchPackage {
         worldRenderManager.removeChunkInstance(chunkInstance.getCoordinate());
     }
 
-    /*
-     * Clears both the chunk instance palette and the subchunk struct palette.
-     * These are one logical unit — struct palette only exists to rebuild the
-     * instance palette, so both go together.
-     */
     private void dumpItemData(ChunkInstance chunkInstance) {
         chunkInstance.getWorldItemInstancePaletteHandle().clear();
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();

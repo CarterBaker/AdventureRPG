@@ -229,7 +229,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
         AppearanceHandle appearance = player.getAppearanceHandle();
         AppearanceData appearanceData = player.getEntityData().getAppearanceData();
 
-        for (FeatureSlot featureSlot : FeatureSlot.values()) {
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
             ObjectArrayList<FeatureHandle> options = resolveOptions(appearanceData, featureSlot, false);
 
@@ -237,7 +237,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
                 appearance.setFeature(options.get(randomIndex(options.size())));
         }
 
-        for (CreatorPalette palette : CreatorPalette.values()) {
+        for (CreatorPalette palette : CreatorPalette.VALUES) {
             Color[] colors = resolvePalette(appearanceData, palette);
             applyColor(appearance, palette, colors[randomIndex(colors.length)]);
         }

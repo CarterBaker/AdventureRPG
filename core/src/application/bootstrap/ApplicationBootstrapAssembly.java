@@ -26,7 +26,7 @@ public class ApplicationBootstrapAssembly extends AssemblyPackage {
      */
 
     @Override
-    public void create() {
+    protected void create() {
         create(GeometryPipeline.class);
         create(AnimationPipeline.class);
         create(ShaderPipeline.class);

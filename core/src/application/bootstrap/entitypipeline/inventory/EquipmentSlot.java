@@ -44,6 +44,9 @@ public enum EquipmentSlot {
     RING_9(EquipmentType.RING, false, false),
     RING_10(EquipmentType.RING, false, false);
 
+    // Values
+    public static final EquipmentSlot[] VALUES = values();
+
     // Internal
     private final EquipmentType equipmentType;
     private final boolean hand;

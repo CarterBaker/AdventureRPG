@@ -10,24 +10,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MenuInstance extends InstancePackage {
 
     /*
-     * Runtime menu created by MenuManager.openMenu(). Holds the shared MenuData
-     * definition, the live element tree for this session, and the window it was
-     * opened in.
-     *
-     * Canvas: if this menu declared a canvas_area in JSON, a CanvasInstance is
-     * created here at construction time. MenuRenderSystem writes computed OpenGL-
-     * space bounds into it every frame. Null means no canvas. Callers null-check
-     * getCanvas() directly.
-     *
-     * Entry points resolve anywhere in the live element tree, including the
-     * overlay roots an element shows while hovered, so content injected into a
-     * hover dropdown lands in the same instance the renderer draws.
-     *
-     * Clock: elapsed counts seconds since the menu opened and drives every
-     * element animation in it. MenuManager advances it once per rendered frame;
-     * each step is capped so a load hitch never skips an intro animation.
-     *
-     * Visible by default.
+     * Runtime menu opened by MenuManager. Holds the shared MenuData, the live
+     * element tree, its window, an optional canvas, and a capped clock that
+     * drives element animation. Entry points resolve anywhere in the tree,
+     * including hover overlay roots.
      */
 
     // Internal

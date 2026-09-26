@@ -59,7 +59,6 @@ public class LayoutRestoreBranch extends BranchPackage {
 
             for (int i = 0; i < windowsJson.size(); i++)
                 restoreWindow(windowsJson.get(i).getAsJsonObject(), tabId2TabJson);
-
         } finally {
             tabManager.endBatch();
         }

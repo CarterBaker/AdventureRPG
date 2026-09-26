@@ -3,15 +3,10 @@ package engine.root;
 public abstract class InstancePackage extends UtilityPackage {
 
     /*
-     * InstancePackages are lightweight, engine-managed objects. They are
-     * intended as small, general-purpose data containers and helpers used
-     * by SystemPackages and their extensions, without owning lifecycle or
-     * global state.
-     *
-     * By design, InstancePackages may only be instantiated via the engine
-     * `create` method, either here or in SystemPackage. Any attempt to
-     * construct an InstancePackage outside of this mechanism will result
-     * in an immediate exception.
+     * Lightweight engine-managed object owned by a system. Runs a short
+     * CREATE, GET, AWAKE lifecycle and resolves dependencies through its
+     * owner's context. Only ever instantiated through create(); direct
+     * construction throws immediately.
      */
 
     // Internal
@@ -22,7 +17,7 @@ public abstract class InstancePackage extends UtilityPackage {
 
     SystemContext systemContext;
 
-    // Internal //
+    // Internal \\
 
     public InstancePackage() {
 
@@ -44,9 +39,7 @@ public abstract class InstancePackage extends UtilityPackage {
     static final class CreationStruct extends StructPackage {
 
         /*
-         * A container used to ensure proper instance creation at any point in the
-         * internal engines lifecycle. Mainly serves as a temporary data transfer
-         * mechanism.
+         * Carries the engine and owning system through reflective construction.
          */
 
         // Internal
@@ -97,13 +90,11 @@ public abstract class InstancePackage extends UtilityPackage {
     // System Registry \\
 
     protected final <T extends InstancePackage> T create(Class<T> instanceClass) {
-
-        return internal.createInstance(instanceClass);
+        return owner.createInstance(instanceClass);
     }
 
     // System Retrieval \\
 
-    @SuppressWarnings("unchecked")
     protected final <T> T get(Class<T> instanceClass) {
 
         if (this.systemContext != SystemContext.GET)
@@ -112,7 +103,7 @@ public abstract class InstancePackage extends UtilityPackage {
                             "Requested: " + instanceClass.getSimpleName() + "\n" +
                             "Current process: " + getContext());
 
-        return internal.get(true, instanceClass);
+        return internal.getUnchecked(owner.context, instanceClass);
     }
 
     // Create \\

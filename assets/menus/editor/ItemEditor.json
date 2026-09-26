@@ -14,7 +14,7 @@
       },
       "hover_color": "control_hover",
       "on_click": {
-        "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+        "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
         "method": "selectPart"
       },
       "elements": [
@@ -55,7 +55,7 @@
         "alpha": 0.45
       },
       "on_click": {
-        "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+        "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
         "method": "selectPart"
       },
       "elements": [
@@ -134,7 +134,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "newItem"
                   },
                   "elements": [
@@ -161,7 +161,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "saveItem"
                   },
                   "elements": [
@@ -188,7 +188,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "reloadItem"
                   },
                   "elements": [
@@ -215,7 +215,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "deleteItem"
                   },
                   "elements": [
@@ -264,7 +264,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "selectPlaceTool"
                   },
                   "elements": [
@@ -291,7 +291,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "selectEraseTool"
                   },
                   "elements": [
@@ -318,7 +318,7 @@
                   },
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "selectPaintTool"
                   },
                   "elements": [
@@ -427,7 +427,7 @@
                   "color": "control",
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "addPart"
                   },
                   "elements": [
@@ -451,7 +451,7 @@
                   "color": "control",
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "renamePart"
                   },
                   "elements": [
@@ -475,7 +475,7 @@
                   "color": "control",
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "removePart"
                   },
                   "elements": [
@@ -517,7 +517,7 @@
                   "color": "control",
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "previousTexture"
                   },
                   "elements": [
@@ -541,7 +541,7 @@
                   "color": "control",
                   "hover_color": "control_hover",
                   "on_click": {
-                    "class": "engine.editor.menueventsmanager.menus.ItemEditorBranch",
+                    "class": "editor.runtime.menueventsmanager.menus.ItemEditorBranch",
                     "method": "nextTexture"
                   },
                   "elements": [

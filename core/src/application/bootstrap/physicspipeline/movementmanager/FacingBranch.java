@@ -1,8 +1,8 @@
 package application.bootstrap.physicspipeline.movementmanager;
 
+import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
-import application.bootstrap.entitypipeline.util.EntityInputHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector2;
@@ -11,18 +11,10 @@ import engine.util.mathematics.vectors.Vector3;
 public class FacingBranch extends BranchPackage {
 
     /*
-     * Turns an entity's body smoothly each frame and resolves where it looks
-     * relative to it. The body heads toward the way the entity is actually
-     * travelling while it has horizontal input, holds its heading while it
-     * has none, and follows the facing direction instead whenever the input
-     * asks to strafe. It closes on that heading exponentially at the
-     * behavior's turn responsiveness, and the turn rate it records is how far
-     * that step moved per second, eased by TURN_RATE_SMOOTHING so a sudden
-     * change of heading never snaps anything that leans on it. Look pitch
-     * and yaw are the facing direction measured against the body, in
-     * degrees, the yaw wrapped to half a turn either way. Yaw follows the
-     * render convention — degrees of atan2(x, z), increasing as the body
-     * turns left.
+     * Turns an entity's body smoothly toward its travel direction, or its
+     * facing while strafing, at the behavior's turn responsiveness, and records
+     * a smoothed turn rate. Resolves look pitch and yaw relative to the body in
+     * degrees, using the render yaw convention.
      */
 
     // Update \\

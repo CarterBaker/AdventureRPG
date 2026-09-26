@@ -6,6 +6,12 @@ import engine.root.EngineContext;
 
 public final class DoubleUniform extends UniformAttributeStruct<Double> {
 
+    /*
+     * GLSL double uniform, uploaded at float precision.
+     */
+
+    // Constructor \\
+
     public DoubleUniform() {
         super(UniformType.DOUBLE, 0.0);
     }
@@ -15,10 +21,14 @@ public final class DoubleUniform extends UniformAttributeStruct<Double> {
         return new DoubleUniform();
     }
 
+    // Push \\
+
     @Override
     protected void push(int handle, Double value) {
         EngineContext.gl20.glUniform1f(handle, value.floatValue());
     }
+
+    // Accessible \\
 
     @Override
     protected void applyValue(Double value) {

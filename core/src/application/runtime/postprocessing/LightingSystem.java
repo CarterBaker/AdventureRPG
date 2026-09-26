@@ -1,8 +1,8 @@
 package application.runtime.postprocessing;
 
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
@@ -15,38 +15,32 @@ import engine.root.SystemPackage;
 public class LightingSystem extends SystemPackage {
 
     /*
-     * Deferred lighting pass. Reads the full G-buffer and SSAO result,
-     * computes final lit color, and writes into LitScene. Cloud shadowing
-     * is resolved upstream by StandardSurfaceShader and baked into
-     * gMaterial.r as a sun-visibility factor. Clouds standing between the
-     * camera and a fragment — a peak wrapped in cloud, or the camera inside
-     * a cloud itself — are integrated here against the grid's WeatherMapData
-     * so terrain fogs exactly as the sky's clouds are drawn. Binds this
-     * window's own grid's Sun/Moon, sky color, and weather map UBO instances
-     * onto the lighting pass material each frame so the result reflects the
-     * correct location.
+     * Deferred lighting pass. Reads the G-buffer and SSAO result, integrates
+     * clouds between camera and fragment against the grid's weather map, and
+     * writes LitScene. Binds this window's grid UBOs — sun, moon, sky color and
+     * weather map — onto the pass each frame.
      */
 
     // Internal
     private PassManager passManager;
     private RenderManager renderManager;
-    private FboManager fboManager;
-    private FboRenderSystem fboRenderSystem;
+    private FBOManager fboManager;
+    private FBORenderSystem fboRenderSystem;
     private WorldSystem worldSystem;
     private SSAOSystem ssaoSystem;
 
     // Render Target
     private PassHandle lightingPass;
-    private FboInstance litFbo;
+    private FBOInstance litFbo;
 
-    // Internal \\
+    // Base \\
 
     @Override
     protected void get() {
         this.passManager = get(PassManager.class);
         this.renderManager = get(RenderManager.class);
-        this.fboManager = get(FboManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
+        this.fboManager = get(FBOManager.class);
+        this.fboRenderSystem = get(FBORenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
         this.ssaoSystem = get(SSAOSystem.class);
     }
@@ -56,15 +50,15 @@ public class LightingSystem extends SystemPackage {
         this.lightingPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_LIGHTING);
         this.litFbo = fboManager.cloneFbo(RuntimeSetting.FBO_LIT, context.getWindow());
 
-        FboInstance worldFbo = worldSystem.getWorldFbo();
-        FboInstance ssaoFbo = ssaoSystem.getSsaoFbo();
+        FBOInstance worldFbo = worldSystem.getWorldFbo();
+        FBOInstance ssaoFbo = ssaoSystem.getSsaoFbo();
         MaterialInstance mat = lightingPass.getModelInstance().getMaterial();
 
-        mat.setUniform("u_gAlbedo", worldFbo.getColorTexture("albedo"));
-        mat.setUniform("u_gNormal", worldFbo.getColorTexture("normal"));
-        mat.setUniform("u_gMaterial", worldFbo.getColorTexture("material"));
-        mat.setUniform("u_gDepth", worldFbo.getDepthTexture());
-        mat.setUniform("u_ssaoTex", ssaoFbo.getColorTexture("ao"));
+        mat.setUniform(RuntimeSetting.UNIFORM_G_ALBEDO, worldFbo.getColorTexture(RuntimeSetting.ATTACHMENT_ALBEDO));
+        mat.setUniform(RuntimeSetting.UNIFORM_G_NORMAL, worldFbo.getColorTexture(RuntimeSetting.ATTACHMENT_NORMAL));
+        mat.setUniform(RuntimeSetting.UNIFORM_G_MATERIAL, worldFbo.getColorTexture(RuntimeSetting.ATTACHMENT_MATERIAL));
+        mat.setUniform(RuntimeSetting.UNIFORM_G_DEPTH, worldFbo.getDepthTexture());
+        mat.setUniform(RuntimeSetting.UNIFORM_SSAO_TEXTURE, ssaoFbo.getColorTexture(RuntimeSetting.ATTACHMENT_AO));
     }
 
     @Override
@@ -72,7 +66,11 @@ public class LightingSystem extends SystemPackage {
 
         bindGridLightingData();
 
-        renderManager.pushRenderCall(lightingPass.getModelInstance(), litFbo, 0, context.getWindow());
+        renderManager.pushRenderCall(
+                lightingPass.getModelInstance(),
+                litFbo,
+                RuntimeSetting.PASS_DRAW_DEPTH,
+                context.getWindow());
         fboRenderSystem.pushFbo(litFbo, RuntimeSetting.LAYER_WORLD, context.getWindow());
     }
 

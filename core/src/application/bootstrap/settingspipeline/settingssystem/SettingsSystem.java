@@ -56,36 +56,23 @@ public class SettingsSystem extends SystemPackage {
 
     // Settings \\
 
-    /*
-     * Writes compile-time engine constants into the UBO buffer once on awake.
-     * These values never change at runtime so they are never re-written.
-     * No GPU flush here — the following pushRenderSettings() call uploads
-     * the full buffer, carrying these values along with it.
-     */
     private void pushEngineSettings() {
 
         // Source: EngineSetting.CHUNK_SIZE — compile-time constant (16).
         // Cast to float so the shader can use it in division without a cast.
-        renderSettingsData.updateUniform("u_chunkSize", (float) EngineSetting.CHUNK_SIZE);
+        renderSettingsData.updateUniform(EngineSetting.UNIFORM_CHUNK_SIZE, (float) EngineSetting.CHUNK_SIZE);
     }
 
-    /*
-     * The only method that flushes RenderSettingsData to the GPU.
-     * Add every new runtime render setting uniform here and nowhere else.
-     */
     private void pushRenderSettings() {
 
         // Source: application Settings — runtime, user-configurable
-        renderSettingsData.updateUniform("u_renderDistance", (float) settings.maxRenderDistance);
-        renderSettingsData.updateUniform("u_nearTessellationRadius", (float) settings.nearTessellationRadius);
+        renderSettingsData.updateUniform(EngineSetting.UNIFORM_RENDER_DISTANCE, (float) settings.maxRenderDistance);
+        renderSettingsData.updateUniform(
+                EngineSetting.UNIFORM_NEAR_TESSELLATION_RADIUS,
+                (float) settings.nearTessellationRadius);
         uboManager.push(renderSettingsData);
     }
 
-    /*
-     * Call this whenever render settings change at runtime.
-     * Rebuilds the grid first so slot distances are correct,
-     * then pushes the UBO so the shader denominator matches.
-     */
     public void onRenderSettingsChanged() {
 
         if (settings.maxRenderDistance != appliedRenderDistance)

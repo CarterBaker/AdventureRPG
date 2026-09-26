@@ -105,11 +105,6 @@ public class ClockHandle extends HandlePackage {
         clockData.setVisualYearProgress(visualYearProgress);
     }
 
-    /*
-     * Resolves the current season's name from the active calendar and the
-     * current month. Returns null if no calendar has been assigned yet, or
-     * if the active calendar defines no seasons.
-     */
     public String getCurrentSeason() {
 
         CalendarHandle calendarHandle = clockData.getCalendarHandle();

@@ -10,7 +10,7 @@ public class ShaderSourceStruct extends StructPackage {
 
     /*
      * Bootstrap-only container for a single parsed GLSL source file. Holds all
-     * parse and assembly phase fields. Lives in InternalLoader's lists during
+     * parse and assembly phase fields. Lives in ShaderLoader's lists during
      * bootstrap and GCs with the loader when the queue empties. Nothing here
      * survives past compilation.
      */

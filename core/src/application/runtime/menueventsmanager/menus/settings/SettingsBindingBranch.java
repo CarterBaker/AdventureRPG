@@ -56,7 +56,7 @@ public class SettingsBindingBranch extends BranchPackage {
 
         String section = null;
 
-        for (SettingsBinding settingsBinding : SettingsBinding.values()) {
+        for (SettingsBinding settingsBinding : SettingsBinding.VALUES) {
 
             if (!settingsBinding.getSection().equals(section)) {
                 section = settingsBinding.getSection();
@@ -184,7 +184,7 @@ public class SettingsBindingBranch extends BranchPackage {
 
         InputCode[] previousCodes = target.getBinding().getCodes();
 
-        for (SettingsBinding settingsBinding : SettingsBinding.values())
+        for (SettingsBinding settingsBinding : SettingsBinding.VALUES)
             if (settingsBinding != target && isBoundTo(settingsBinding.getBinding(), inputCode))
                 settingsBinding.getBinding().set(previousCodes);
 

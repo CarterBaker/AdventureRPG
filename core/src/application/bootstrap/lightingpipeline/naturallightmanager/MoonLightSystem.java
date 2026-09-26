@@ -8,14 +8,9 @@ import engine.util.mathematics.vectors.Vector3;
 public class MoonLightSystem extends SystemPackage {
 
     /*
-     * Computes moon direction, color, and intensity each frame from the current
-     * visual time of day and lunar phase. Moon is offset half a cycle from the
-     * sun. Intensity and color tint scale with the current lunar phase.
-     *
-     * Lunar cycle length is calendar data now (it can differ per world), so it
-     * is read live off the active CalendarHandle via ClockManager each time the
-     * phase is computed, rather than cached once at create() — this keeps it
-     * correct across a switchWorld() calendar swap too.
+     * Computes moon direction, color and intensity each frame from time of day
+     * and lunar phase, half a cycle from the sun. The lunar cycle is read live
+     * from the active calendar so it follows world switches.
      */
 
     // Output

@@ -231,11 +231,6 @@ public class WeatherManager extends ManagerPackage {
         return regionSampleSystem.samplePercentile(noiseChunkX, noiseChunkZ);
     }
 
-    /*
-     * Resolves the single weather a pixel of the weather image produces at a
-     * world chunk: that chunk's biome pool for the active season, read at
-     * the pixel's percentile.
-     */
     public WeatherHandle resolveWeather(long worldChunkCoordinate, float noisePercentile) {
 
         if (!hasActiveWeatherPool())

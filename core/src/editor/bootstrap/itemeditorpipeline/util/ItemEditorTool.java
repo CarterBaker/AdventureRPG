@@ -1,6 +1,6 @@
 package editor.bootstrap.itemeditorpipeline.util;
 
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 
 public enum ItemEditorTool {
 

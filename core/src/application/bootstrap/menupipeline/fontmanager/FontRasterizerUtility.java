@@ -1,9 +1,11 @@
 package application.bootstrap.menupipeline.fontmanager;
 
+import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
@@ -17,7 +19,7 @@ class FontRasterizerUtility extends EngineUtility {
      * Rasterizes a TTF/OTF font file into a list of per-glyph FontTileData
      * instances using AWT. Each tile holds the rendered glyph image and the
      * metrics needed to build the GlyphMetricStruct table after atlas packing.
-     * Package-private — only InternalBuilder may call these.
+     * Package-private — only FontBuilder may call these.
      */
 
     static ObjectArrayList<FontTileData> rasterize(
@@ -40,7 +42,7 @@ class FontRasterizerUtility extends EngineUtility {
             int cp = (int) c;
             int advance = metrics.charWidth(c);
             int bearingY = metrics.getAscent();
-            java.awt.geom.Rectangle2D bounds = metrics.getStringBounds(String.valueOf(c), scratchG);
+            Rectangle2D bounds = metrics.getStringBounds(String.valueOf(c), scratchG);
             int gw = Math.max(1, (int) Math.ceil(bounds.getWidth()));
             int gh = Math.max(1, metrics.getAscent() + metrics.getDescent());
 
@@ -49,7 +51,7 @@ class FontRasterizerUtility extends EngineUtility {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             g.setFont(awtFont);
-            g.setColor(java.awt.Color.WHITE);
+            g.setColor(Color.WHITE);
             g.drawString(String.valueOf(c), 0, metrics.getAscent());
             g.dispose();
 

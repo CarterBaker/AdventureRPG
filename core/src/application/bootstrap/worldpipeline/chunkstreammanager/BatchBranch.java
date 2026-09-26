@@ -8,28 +8,16 @@ import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import application.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 
 public class BatchBranch extends BranchPackage {
 
     /*
-     * Resolves the target mega for a chunk on the main thread — the only part
-     * that touches the grid's shared, non-thread-safe mega registry and pool —
-     * then dispatches the CPU-side vertex merge onto the WorldStreaming pool,
-     * since merging is pure vertex math with no GL dependency. The chunk's own
-     * lock is held for the async task's duration, exactly like every other
-     * async stage, so a chunk can never be unloaded and pooled out from under
-     * an in-flight merge. BATCH_DATA is cleared before dispatch and stays false
-     * until MegaRenderBranch confirms the mega on GPU; the async
-     * work-in-progress flag is what stops this chunk from being redispatched
-     * every single frame while that upload is pending, and MegaMergeBranch's
-     * own version check is what stops that redispatch from ever doing real
-     * work again until this chunk's geometry actually changes.
-     *
-     * The mega itself is resolved once, here, on the main thread — but it is
-     * a pooled object that can be reassigned to a different coordinate before
-     * the async merge below actually runs. Its coordinate at resolution time
-     * is captured and carried through so the merge can refuse to run against
-     * a mega that no longer represents it.
+     * Resolves a chunk's target mega on the main thread, then merges its
+     * vertices into the mega on the WorldStreaming pool under the chunk's lock.
+     * The mega's coordinate is captured at resolution so the merge refuses a
+     * pooled mega that has since moved; BATCH_DATA stays clear until the mega
+     * reaches the GPU.
      */
 
     // Internal
@@ -42,7 +30,7 @@ public class BatchBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.threadHandle = getThreadHandleFromThreadName("WorldStreaming");
+        this.threadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
         this.megaStreamManager = get(MegaStreamManager.class);
     }
 

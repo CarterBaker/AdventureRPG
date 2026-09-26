@@ -8,7 +8,7 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.io.JsonUtility;

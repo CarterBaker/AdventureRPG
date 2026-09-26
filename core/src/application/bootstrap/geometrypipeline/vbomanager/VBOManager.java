@@ -15,7 +15,7 @@ public class VBOManager extends ManagerPackage {
 
     /*
      * Owns the VBO palette for the engine lifetime. Handles bootstrap
-     * registration via InternalBuilder, runtime VBOInstance creation, in-place
+     * registration via VBOBuilder, runtime VBOInstance creation, in-place
      * updates, and deletion. Auto-triggers a mesh load on miss for external
      * callers.
      */
@@ -54,10 +54,6 @@ public class VBOManager extends ManagerPackage {
         vboID2VBOHandle.put(id, handle);
     }
 
-    /*
-     * Bypasses JSON parsing — used when vertex data was assembled by quad
-     * expansion inside the mesh builder.
-     */
     public VBOHandle addVBOFromData(
             String resourceName,
             float[] vertices,
@@ -95,10 +91,6 @@ public class VBOManager extends ManagerPackage {
         return getVBOHandleFromVBOID(getVBOIDFromVBOName(vboName));
     }
 
-    /*
-     * Direct registry lookup — no load trigger. Safe to call from inside any
-     * builder that is already executing within a load() call.
-     */
     public VBOHandle getVBOHandleDirect(String vboName) {
         return vboName2VBOHandle.get(vboName);
     }
@@ -112,11 +104,6 @@ public class VBOManager extends ManagerPackage {
                 vertices.toFloatArray());
     }
 
-    /*
-     * Reuploads vertex data into an EXISTING VBOInstance's GL buffer, keeping
-     * the same handle. Any VAO already referencing this handle — including
-     * per-window clones — sees the new data with no further action needed.
-     */
     public VBOInstance updateVBOInstance(VAOInstance vaoInstance, VBOInstance vboInstance, FloatArrayList vertices) {
         return VBOGLSLUtility.updateVertexData(vaoInstance, vboInstance, vertices.toFloatArray());
     }

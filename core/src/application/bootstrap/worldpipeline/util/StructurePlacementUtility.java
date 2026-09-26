@@ -15,10 +15,6 @@ public final class StructurePlacementUtility extends EngineUtility {
      * every chunk a structure touches agrees on it independently.
      */
 
-    private StructurePlacementUtility() {
-        throw new AssertionError("Utility class cannot be instantiated");
-    }
-
     // Placement Cells \\
 
     public static void collectCells(

@@ -11,7 +11,7 @@ public class BehaviorManager extends ManagerPackage {
     /*
      * Owns the behavior palette for the engine lifetime. Supports lookup by
      * both name and short ID. Auto-triggers an on-demand load via
-     * InternalLoader on a name-based cache miss.
+     * BehaviorLoader on a name-based cache miss.
      */
 
     // Palette

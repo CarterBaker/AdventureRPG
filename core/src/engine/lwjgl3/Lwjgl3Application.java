@@ -20,16 +20,11 @@ import java.util.function.BooleanSupplier;
 public class Lwjgl3Application {
 
     /*
-     * Entry point for the LWJGL3 backend. Owns the main GLFW window and primary
-     * GL context. The loop advances the engine tick and pumps input — all context
-     * switching, drawing, and buffer swapping are driven by RenderManager uniformly
-     * across every window, main and secondary alike.
-     *
-     * The main window is created hidden and fitted inside the work area of the
-     * monitor it was saved on before it is shown, so a stale, oversized, or
-     * off-screen saved placement never leaves its title bar out of reach.
-     * Fullscreen and vsync can be switched at runtime; leaving fullscreen
-     * restores the last windowed bounds through that same placement path.
+     * LWJGL3 backend entry point. Owns the main GLFW window and primary GL
+     * context and runs the loop that pumps input and ticks the engine;
+     * rendering and swapping are driven by RenderManager for every window
+     * alike. The main window is fitted to its saved monitor's work area before
+     * it is shown, and fullscreen and vsync switch at runtime.
      */
 
     // Internal
@@ -185,7 +180,7 @@ public class Lwjgl3Application {
         while (running && !GLFW.glfwWindowShouldClose(mainHandle)) {
 
             long now = System.nanoTime();
-            float delta = (now - last) / 1_000_000_000f;
+            float delta = (float) (now - last) / EngineSetting.NANOS_PER_SECOND;
             display.setDelta(delta);
             last = now;
 
@@ -342,12 +337,6 @@ public class Lwjgl3Application {
 
     // Display Mode \\
 
-    /*
-     * Moves the main window onto or off a monitor at runtime. Entering takes
-     * the video mode of the monitor the restored bounds overlap most; leaving
-     * restores those bounds, fitted back inside a monitor's work area, and
-     * re-maximizes a window that was maximized before it went fullscreen.
-     */
     void setFullscreen(boolean fullscreen) {
 
         if (display.isFullscreen() == fullscreen)

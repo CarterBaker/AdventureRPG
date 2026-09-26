@@ -10,15 +10,10 @@ import engine.util.mathematics.vectors.Vector3;
 public class MeshHandle extends HandlePackage {
 
     /*
-     * A fully GPU-resident static mesh assembled from JSON at bootstrap. Owned
-     * exclusively by MeshManager for the engine lifetime. External systems receive
-     * a ModelInstance built from this handle's MeshData — never the handle itself.
-     * rigHandle is null for ordinary static meshes and non-null only for meshes
-     * whose JSON declared a "rig" — the source of truth for whether this mesh's
-     * vertex data carries bone index/weight attributes at all. A rigged mesh's
-     * width/height/length (see MeshData) are its own raw, unscaled model-space
-     * extent — divide an entity's actual size by these to get the per-axis
-     * ratio that stretches this mesh onto that entity's bounding box exactly.
+     * A GPU-resident static mesh assembled from JSON, owned by MeshManager;
+     * callers receive ModelInstances built from its MeshData. A non-null rig
+     * marks meshes that carry bone attributes, whose raw extent scales them
+     * onto an entity's size.
      */
 
     // Internal

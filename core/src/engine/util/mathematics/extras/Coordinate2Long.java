@@ -3,6 +3,12 @@ package engine.util.mathematics.extras;
 import engine.root.EngineSetting;
 
 public final class Coordinate2Long {
+
+    /*
+     * Packs two signed ints into one long, x in the high half and y in the low,
+     * with packed arithmetic and neighbor helpers.
+     */
+
     private static final int MEGA_SHIFT = Integer.numberOfTrailingZeros(EngineSetting.MEGA_CHUNK_SIZE);
 
     // Internal \\

@@ -6,7 +6,7 @@ import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
 import editor.itemeditor.ItemEditorSetting;
-import engine.editor.EditorInputSystem;
+import editor.runtime.EditorInputSystem;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
 

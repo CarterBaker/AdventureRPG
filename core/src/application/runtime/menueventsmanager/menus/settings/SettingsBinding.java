@@ -38,6 +38,9 @@ public enum SettingsBinding {
     RECORD_VIDEO(RuntimeSetting.SETTINGS_SECTION_CAPTURE, RuntimeSetting.SETTINGS_BINDING_RECORD_VIDEO,
             KeyBindings.RECORD_VIDEO);
 
+    // Values
+    public static final SettingsBinding[] VALUES = values();
+
     // Internal
     private final String section;
     private final String label;

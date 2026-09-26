@@ -10,16 +10,9 @@ import engine.util.mathematics.vectors.Vector4;
 public class FontInstance extends InstancePackage {
 
     /*
-     * Per-label runtime font state. Owns a MaterialInstance (color), a glyph
-     * layout buffer in atlas-pixel space rebuilt on setText, and a screen-space
-     * instance data buffer rebuilt by prepareComposite when scale or position
-     * changes. UV coordinates are sourced from each glyph's TextureHandle at
-     * setText time — no atlas pixel math here.
-     *
-     * Two-stage update contract:
-     * 1. setText — rebuilds glyphLayout. O(n glyphs).
-     * 2. prepareComposite — transforms glyphLayout to screen-pixel instanceData.
-     * Skipped entirely if scale and screen position are unchanged since last call.
+     * Per-label font state: its color material, a glyph layout rebuilt by
+     * setText(), and screen-space instance data rebuilt by prepareComposite()
+     * only when scale or position change.
      */
 
     static final int FLOATS_PER_GLYPH = 8; // screenX,Y,W,H, u0,v0,uw,vh
@@ -62,7 +55,7 @@ public class FontInstance extends InstancePackage {
         this.material = material;
         this.fontSize = EngineSetting.FONT_RASTER_SIZE;
 
-        UniformStruct<?> colorUniform = material.getUniform("u_color");
+        UniformStruct<?> colorUniform = material.getUniform(EngineSetting.SPRITE_COLOR_UNIFORM);
 
         if (colorUniform != null) {
             Object val = colorUniform.attribute().getValue();
@@ -178,7 +171,7 @@ public class FontInstance extends InstancePackage {
 
     public void setColor(float r, float g, float b, float a) {
         color.set(r, g, b, a);
-        material.setUniform("u_color", color);
+        material.setUniform(EngineSetting.SPRITE_COLOR_UNIFORM, color);
     }
 
     public Vector4 getColor() {

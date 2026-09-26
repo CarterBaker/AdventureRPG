@@ -7,20 +7,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MenuListHandle extends HandlePackage {
 
     /*
-     * Per-window open menu list. Owned by WindowInstance exactly as
-     * RenderQueueHandle is — one per window, created in awake().
-     * MenuManager routes all open/close/query operations through the
-     * window's handle rather than a global active list.
-     *
-     * Lock state is derived live from the open menu list rather than
-     * maintained as a separate counter. No counter means no drift and
-     * no off-by-one on close — the answer is always exactly what is
-     * actually open in this window right now.
-     *
-     * lockReleaseListener fires once when a remove() call transitions
-     * the list from locked to unlocked. InputSystem registers a callback
-     * so capture is automatically restored when the inventory (or any
-     * lock_input menu) closes — no click required.
+     * Per-window list of open menus, owned by WindowInstance. Lock state is
+     * derived live from what is open, and the lock release listener fires once
+     * when the last lock_input menu closes so capture can be restored without a
+     * click.
      */
 
     private ObjectArrayList<MenuInstance> openMenus;

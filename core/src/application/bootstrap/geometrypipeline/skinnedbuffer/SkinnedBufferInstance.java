@@ -9,16 +9,10 @@ import engine.util.mathematics.matrices.Matrix4;
 public class SkinnedBufferInstance extends InstancePackage {
 
     /*
-     * Runtime instanced skinned draw unit. One SkinnedBufferInstance exists
-     * per distinct rigged MeshHandle — every entity sharing that mesh and
-     * rig is submitted into the same instance, drawn in a single
-     * glDrawElementsInstanced call. clear() is called once at the start of
-     * each frame's gather pass; addInstance() is then called once per
-     * visible entity using this mesh, carrying that entity's model matrix,
-     * appearance row, and skinning matrices. There is no updateInstance() or
-     * removeInstance() — unlike CompositeBufferInstance, nothing here
-     * persists across frames, since an animated pose is never stable
-     * between two frames. SkinnedBufferManager owns GPU upload and drawing.
+     * One instanced skinned draw per rigged mesh. Cleared at the start of each
+     * frame's gather, then addInstance() adds each visible entity's model
+     * matrix, appearance row and skinning matrices. Nothing persists across
+     * frames.
      */
 
     // Internal

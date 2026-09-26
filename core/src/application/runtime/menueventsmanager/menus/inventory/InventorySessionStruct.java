@@ -74,14 +74,14 @@ public class InventorySessionStruct extends StructPackage {
 
         // Equipment
         this.equipmentMenu = equipmentMenu;
-        this.slot2Element = new ElementInstance[EquipmentSlot.values().length];
+        this.slot2Element = new ElementInstance[EquipmentSlot.VALUES.length];
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
         this.shownContentRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Containers
-        this.views = new InventoryViewStruct[InventoryContainer.values().length];
+        this.views = new InventoryViewStruct[InventoryContainer.VALUES.length];
 
-        for (InventoryContainer inventoryContainer : InventoryContainer.values())
+        for (InventoryContainer inventoryContainer : InventoryContainer.VALUES)
             this.views[inventoryContainer.ordinal()] = new InventoryViewStruct(inventoryContainer);
 
         this.chestItem = chestItem;

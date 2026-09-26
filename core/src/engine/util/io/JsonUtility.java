@@ -15,6 +15,11 @@ import engine.root.EngineUtility;
 
 public class JsonUtility extends EngineUtility {
 
+    /*
+     * Loads and writes JSON files and validates required and optional fields
+     * with clear errors naming the missing or malformed key.
+     */
+
     // Loaders \\
 
     public static JsonObject loadJsonObject(File file) {

@@ -5,6 +5,10 @@ import engine.util.mathematics.vectors.Vector3;
 
 public class Quaternion extends EngineUtility {
 
+    /*
+     * Mutable float quaternion for rotations.
+     */
+
     // Data
     public final float[] val = new float[4];
 

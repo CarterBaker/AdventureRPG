@@ -14,21 +14,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WindManager extends ManagerPackage {
 
     /*
-     * Owns the world's global prevailing wind, resolved once by
-     * GlobalWindBranch. Local wind is computed every frame per grid by
-     * LocalWindBranch, blending that global airflow with each grid's own
-     * season and active weather, and lives on that grid's own WindInstance
-     * — never a single shared value — so every window's location tracks
-     * its own wind independently.
-     *
-     * Also pushes that same grid's current ambient temperature (see
-     * TemperatureInstance, computed by WeatherPatternManager's own
-     * TemperatureSystem) into the same per-grid WindData UBO — wind and
-     * temperature are both "weather + season, resolved per location"
-     * values with nowhere else to live yet, so they share one buffer
-     * rather than each getting a single-field UBO of their own. Relies on
-     * WeatherPipeline registering WeatherPatternManager before WindManager
-     * so both values are current for this frame, not one frame stale.
+     * Owns the global prevailing wind and each grid's local wind, blended per
+     * frame from its season and weather by LocalWindBranch. Also pushes the
+     * grid's ambient temperature into the same WindData UBO;
+     * WeatherPatternManager is registered first so both are current.
      */
 
     private UBOManager uboManager;

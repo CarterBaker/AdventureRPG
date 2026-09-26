@@ -2,8 +2,8 @@ package editor.itemeditor.camera;
 
 import application.kernel.inputpipeline.input.RawInputHandle;
 import editor.itemeditor.ItemEditorSetting;
+import editor.runtime.EditorInputSystem;
 import engine.assets.camera.CameraInstance;
-import engine.editor.EditorInputSystem;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;

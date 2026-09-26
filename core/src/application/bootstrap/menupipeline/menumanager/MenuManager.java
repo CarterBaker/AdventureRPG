@@ -4,15 +4,12 @@ import java.util.function.Consumer;
 
 import application.bootstrap.menupipeline.element.ElementHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.bootstrap.menupipeline.elementhitsystem.ElementHitSystem;
-import application.bootstrap.menupipeline.elementsystem.ElementSystem;
 import application.bootstrap.menupipeline.menu.MenuHandle;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
-import application.bootstrap.menupipeline.menurendersystem.MenuRenderSystem;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -27,34 +24,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MenuManager extends ManagerPackage {
 
     /*
-     * Owns the menu palette and drives the menu lifecycle.
-     *
-     * Open menu state is per-window. Each WindowInstance owns a MenuListHandle —
-     * the single source of truth for which menus are active in that window.
-     * MenuManager holds no global active list; it iterates WindowManager's window
-     * list each frame and renders each window's menus against its FBO.
-     *
-     * Input routing delegates entirely to ElementHitSystem, which receives the
-     * full hoveredWindows list from WindowManager. The hit system iterates windows
-     * in priority order (index 0 first) and dispatches to the highest hit.
-     *
-     * Focus-on-click is wired here via hitSystem.setFocusCallback. When a click
-     * is consumed by a capture-eligible, non-focus-independent window, that window
-     * becomes the focused window. This is what allows logical content windows (e.g.
-     * a RuntimeContext running inside an editor tab) to acquire cursor capture —
-     * without this, flushPendingClosedMenus would never see window == focusedWindow
-     * and captureCursor would never fire for logical windows.
-     *
-     * openMenuWindow() / closeMenuWindow() are the single pair for a menu that
-     * lives in its own logical window over an OS window — toolbars, dialogs,
-     * drag previews. Opening creates the window, its FBO, and its routing;
-     * closing tears all three down through the window's own dispose().
-     *
-     * Cursor capture is driven here as a side effect of menu lock state
-     * transitions.
-     * openMenu releases capture when a lock_input menu opens on the focused window.
-     * flushPendingClosedMenus reclaims it when the last lock_input menu closes on
-     * the focused window. Only the focused window may acquire or release capture.
+     * Owns the menu palette and the menu lifecycle. Open menus live per window
+     * in its MenuListHandle. Input routes through ElementHitSystem; opening and
+     * closing lock_input menus releases and reclaims cursor capture on the
+     * focused window. openMenuWindow() and closeMenuWindow() are the single
+     * pair for menus that live in their own logical window.
      */
 
     // Internal
@@ -63,7 +37,7 @@ public class MenuManager extends ManagerPackage {
     private ElementHitSystem hitSystem;
     private WindowManager windowManager;
     private InputManager inputManager;
-    private FboManager fboManager;
+    private FBOManager fboManager;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -73,7 +47,7 @@ public class MenuManager extends ManagerPackage {
     private ObjectArrayList<MenuInstance> pendingCloseMenus;
 
     // FBO routing
-    private Object2ObjectOpenHashMap<WindowInstance, FboInstance> window2MenuTargetFbo;
+    private Object2ObjectOpenHashMap<WindowInstance, FBOInstance> window2MenuTargetFbo;
 
     // Internal \\
 
@@ -94,7 +68,7 @@ public class MenuManager extends ManagerPackage {
         this.hitSystem = get(ElementHitSystem.class);
         this.windowManager = get(WindowManager.class);
         this.inputManager = get(InputManager.class);
-        this.fboManager = get(FboManager.class);
+        this.fboManager = get(FBOManager.class);
     }
 
     @Override
@@ -111,7 +85,7 @@ public class MenuManager extends ManagerPackage {
             MenuListHandle menuList = window.getMenuListHandle();
             if (menuList.isEmpty())
                 continue;
-            FboInstance menuTargetFbo = window2MenuTargetFbo.get(window);
+            FBOInstance menuTargetFbo = window2MenuTargetFbo.get(window);
             if (menuTargetFbo == null)
                 continue;
             ObjectArrayList<MenuInstance> menus = menuList.getMenus();
@@ -285,11 +259,6 @@ public class MenuManager extends ManagerPackage {
 
     // Menu Windows \\
 
-    /*
-     * Opens a menu in its own logical window composited over the given OS
-     * window, sized to fill it and brought above everything already open.
-     * The window never pins the cursor and always receives hover input.
-     */
     public MenuInstance openMenuWindow(String menuName, WindowInstance osWindow) {
 
         WindowInstance window = windowManager.createLogicalWindow(menuName, osWindow);
@@ -326,7 +295,7 @@ public class MenuManager extends ManagerPackage {
         ((MenuLoader) internalLoader).request(menuName);
     }
 
-    public void setMenuTargetFbo(WindowInstance window, FboInstance menuTargetFbo) {
+    public void setMenuTargetFbo(WindowInstance window, FBOInstance menuTargetFbo) {
         if (window == null)
             return;
         if (menuTargetFbo == null) {

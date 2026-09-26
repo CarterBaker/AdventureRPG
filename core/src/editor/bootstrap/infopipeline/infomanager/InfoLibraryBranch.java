@@ -1,13 +1,12 @@
 package editor.bootstrap.infopipeline.infomanager;
 
 import java.io.File;
-import java.util.List;
 
 import com.google.gson.JsonObject;
 
 import editor.bootstrap.infopipeline.infodocument.InfoDocumentInstance;
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
@@ -33,7 +32,7 @@ class InfoLibraryBranch extends BranchPackage {
         if (!root.isDirectory())
             return definitionNames;
 
-        List<File> files = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
+        ObjectArrayList<File> files = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
 
         for (int i = 0; i < files.size(); i++)
             definitionNames.add(FileUtility.getPathWithFileNameWithoutExtension(root, files.get(i)));

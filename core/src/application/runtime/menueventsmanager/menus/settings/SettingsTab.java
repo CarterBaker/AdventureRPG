@@ -17,6 +17,9 @@ public enum SettingsTab {
     GAMEPLAY(RuntimeSetting.SETTINGS_TAB_GAMEPLAY, RuntimeSetting.SETTINGS_PLACEHOLDER_GAMEPLAY),
     ACCESSIBILITY(RuntimeSetting.SETTINGS_TAB_ACCESSIBILITY, RuntimeSetting.SETTINGS_PLACEHOLDER_ACCESSIBILITY);
 
+    // Values
+    public static final SettingsTab[] VALUES = values();
+
     // Internal
     private final String title;
     private final String placeholderText;
