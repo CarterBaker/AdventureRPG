@@ -1,8 +1,0 @@
-{
-    "blockName": "PlayerPositionData",
-    "uniforms": [
-        { "name": "u_playerPosition", "type": "VECTOR3" },
-        { "name": "u_playerChunkX", "type": "INT" },
-        { "name": "u_playerChunkZ", "type": "INT" }
-    ]
-}

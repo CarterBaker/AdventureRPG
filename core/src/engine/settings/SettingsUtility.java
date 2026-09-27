@@ -1,72 +1,55 @@
 package engine.settings;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonParseException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 import engine.input.Binding;
 import engine.input.InputCode;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
+import engine.util.arpg.ArpgValueStruct;
 
 public class SettingsUtility extends EngineUtility {
 
     /*
      * Handles all Settings I/O and bridges Settings to KeyBindings. Single
      * point of contact for loading, saving, applying, flushing, and resetting
-     * bindings. Loaded values are clamped to the ranges the settings menu
-     * offers, so a hand-edited file can never push the engine out of bounds.
-     * Never held — all methods static.
+     * bindings. Every public field of Settings is stored under its own name,
+     * so a new field persists without further work; a field missing from the
+     * file keeps its default. Loaded values are clamped to the ranges the
+     * settings menu offers, so a malformed file can never push the engine out
+     * of bounds. Never held — all methods static.
      */
 
     // Settings \\
 
-    public static Settings load(File file, Gson gson) {
+    public static Settings load(File file) {
 
         if (!file.exists()) {
             Settings defaults = new Settings();
-            save(file, defaults, gson);
+            save(file, defaults);
             return defaults;
         }
 
-        try (Reader reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
+        ArpgObjectStruct settingsArpg = ArpgUtility.tryLoadObject(file);
+        Settings loaded = settingsArpg != null ? readSettings(settingsArpg) : null;
 
-            Settings loaded = gson.fromJson(reader, Settings.class);
-
-            if (loaded == null)
-                return new Settings();
-
-            sanitize(loaded);
-            return loaded;
-        } catch (IOException | JsonParseException e) {
+        if (loaded == null) {
             errorLog("Settings could not be read, defaults applied: " + file.getAbsolutePath());
             return new Settings();
         }
+
+        sanitize(loaded);
+        return loaded;
     }
 
-    public static void save(File file, Settings settings, Gson gson) {
-
-        File temporary = new File(file.getParentFile(), file.getName() + EngineSetting.TEMPORARY_FILE_SUFFIX);
-
-        try (Writer writer = Files.newBufferedWriter(temporary.toPath(), StandardCharsets.UTF_8)) {
-            gson.toJson(settings, writer);
-        } catch (IOException e) {
-            errorLog("Settings could not be written: " + file.getAbsolutePath());
-            return;
-        }
-
-        try {
-            Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            errorLog("Settings could not be replaced: " + file.getAbsolutePath());
-        }
+    public static void save(File file, Settings settings) {
+        ArpgUtility.tryWriteObject(file, writeSettings(settings));
     }
 
     private static void sanitize(Settings settings) {
@@ -126,6 +109,124 @@ public class SettingsUtility extends EngineUtility {
                     Math.min(EngineSetting.COLOR_CHANNEL_MAX, color[i]));
 
         return color;
+    }
+
+    // Fields \\
+
+    private static Settings readSettings(ArpgObjectStruct settingsArpg) {
+
+        Settings settings = new Settings();
+
+        try {
+
+            for (Field field : Settings.class.getFields())
+                if (isStoredField(field) && settingsArpg.has(field.getName()))
+                    field.set(settings, readValue(field.getType(), settingsArpg.get(field.getName())));
+
+            return settings;
+        } catch (IllegalAccessException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static ArpgObjectStruct writeSettings(Settings settings) {
+
+        ArpgObjectStruct settingsArpg = new ArpgObjectStruct();
+
+        try {
+
+            for (Field field : Settings.class.getFields())
+                if (isStoredField(field))
+                    settingsArpg.add(field.getName(), writeValue(field.get(settings)));
+        } catch (IllegalAccessException e) {
+            throwException("Settings could not be captured for saving", e);
+        }
+
+        return settingsArpg;
+    }
+
+    private static boolean isStoredField(Field field) {
+        return !Modifier.isStatic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers());
+    }
+
+    private static Object readValue(Class<?> type, ArpgElementStruct element) {
+
+        if (type == boolean.class)
+            return element.getAsBoolean();
+
+        if (type == int.class)
+            return element.getAsInt();
+
+        if (type == float.class)
+            return element.getAsFloat();
+
+        if (type == int[].class)
+            return readIntArray(element.getAsArray());
+
+        if (type == float[].class)
+            return readFloatArray(element.getAsArray());
+
+        return throwException("Settings field type is not supported: " + type.getSimpleName());
+    }
+
+    private static ArpgElementStruct writeValue(Object value) {
+
+        if (value instanceof Boolean booleanValue)
+            return new ArpgValueStruct(booleanValue);
+
+        if (value instanceof Integer intValue)
+            return new ArpgValueStruct(intValue);
+
+        if (value instanceof Float floatValue)
+            return new ArpgValueStruct(floatValue);
+
+        if (value instanceof int[] intArray)
+            return writeIntArray(intArray);
+
+        if (value instanceof float[] floatArray)
+            return writeFloatArray(floatArray);
+
+        return throwException("Settings field type is not supported: " + value.getClass().getSimpleName());
+    }
+
+    private static int[] readIntArray(ArpgArrayStruct array) {
+
+        int[] values = new int[array.size()];
+
+        for (int i = 0; i < values.length; i++)
+            values[i] = array.get(i).getAsInt();
+
+        return values;
+    }
+
+    private static float[] readFloatArray(ArpgArrayStruct array) {
+
+        float[] values = new float[array.size()];
+
+        for (int i = 0; i < values.length; i++)
+            values[i] = array.get(i).getAsFloat();
+
+        return values;
+    }
+
+    private static ArpgArrayStruct writeIntArray(int[] values) {
+
+        ArpgArrayStruct array = new ArpgArrayStruct();
+
+        for (int value : values)
+            array.add(value);
+
+        return array;
+    }
+
+    private static ArpgArrayStruct writeFloatArray(float[] values) {
+
+        ArpgArrayStruct array = new ArpgArrayStruct();
+
+        for (float value : values)
+            array.add(value);
+
+        return array;
     }
 
     // KeyBindings \\

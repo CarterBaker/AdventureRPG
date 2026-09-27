@@ -1,7 +1,5 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
@@ -19,14 +17,16 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class EntityBuilder extends BuilderPackage {
 
     /*
-     * Parses entity template JSON into EntityData wrapped in an EntityHandle,
+     * Parses entity template ARPG into EntityData wrapped in an EntityHandle,
      * defaulting size, weight and eye level. The optional model block resolves
      * mesh, shared material, rig and animation tree, plus appearance and
      * equipment anchors. Bootstrap only.
@@ -54,14 +54,14 @@ class EntityBuilder extends BuilderPackage {
 
     EntityHandle build(File file) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
-        Vector3 sizeMin = parseSizeMin(json);
-        Vector3 sizeMax = parseSizeMax(json);
-        float weightMin = parseWeightMin(json);
-        float weightMax = parseWeightMax(json);
-        float eyeLevel = parseEyeLevel(json);
-        String behaviorName = parseBehaviorName(json, file);
+        Vector3 sizeMin = parseSizeMin(arpg);
+        Vector3 sizeMax = parseSizeMax(arpg);
+        float weightMin = parseWeightMin(arpg);
+        float weightMax = parseWeightMax(arpg);
+        float eyeLevel = parseEyeLevel(arpg);
+        String behaviorName = parseBehaviorName(arpg, file);
 
         MeshHandle characterMesh = null;
         MaterialInstance characterMaterial = null;
@@ -70,11 +70,11 @@ class EntityBuilder extends BuilderPackage {
         AppearanceData appearanceData = null;
         ObjectArrayList<EquipmentAnchorStruct> equipmentAnchors = new ObjectArrayList<>();
 
-        if (json.has("model") && !json.get("model").isJsonNull()) {
+        if (arpg.has("model") && !arpg.get("model").isNull()) {
 
-            JsonObject modelJson = json.getAsJsonObject("model");
-            String meshName = JsonUtility.validateString(modelJson, "mesh");
-            String materialName = JsonUtility.validateString(modelJson, "material");
+            ArpgObjectStruct modelArpg = arpg.getAsObject("model");
+            String meshName = ArpgUtility.validateString(modelArpg, "mesh");
+            String materialName = ArpgUtility.validateString(modelArpg, "material");
 
             characterMesh = meshManager.getMeshHandleFromMeshName(meshName);
 
@@ -83,19 +83,19 @@ class EntityBuilder extends BuilderPackage {
                         + "\" has no rig — cannot be used as a character model. File: " + file.getName());
 
             characterMaterial = materialManager.cloneMaterial(materialName);
-            animationTreeHandle = parseAnimationTree(modelJson, characterMesh, file);
+            animationTreeHandle = parseAnimationTree(modelArpg, characterMesh, file);
 
-            if (JsonUtility.hasObject(modelJson, "appearance"))
+            if (ArpgUtility.hasObject(modelArpg, "appearance"))
                 appearanceData = appearanceBuilder.build(
-                        modelJson.getAsJsonObject("appearance"),
+                        modelArpg.getAsObject("appearance"),
                         characterMesh.getRigHandle(),
                         file);
 
             modelHeight = resolveModelHeight(characterMesh, appearanceData);
 
-            if (JsonUtility.hasArray(modelJson, "equipment"))
+            if (ArpgUtility.hasArray(modelArpg, "equipment"))
                 parseEquipmentAnchors(
-                        modelJson.getAsJsonArray("equipment"),
+                        modelArpg.getAsArray("equipment"),
                         characterMesh.getRigHandle(),
                         equipmentAnchors,
                         file);
@@ -114,9 +114,9 @@ class EntityBuilder extends BuilderPackage {
 
     // Model Parsing \\
 
-    private AnimationTreeHandle parseAnimationTree(JsonObject modelJson, MeshHandle characterMesh, File file) {
+    private AnimationTreeHandle parseAnimationTree(ArpgObjectStruct modelArpg, MeshHandle characterMesh, File file) {
 
-        String treeName = JsonUtility.validateString(modelJson, "animation_tree");
+        String treeName = ArpgUtility.validateString(modelArpg, "animation_tree");
         AnimationTreeHandle animationTreeHandle = animationTreeManager.getAnimationTreeHandleFromTreeName(treeName);
 
         if (animationTreeHandle.getRigHandle() != characterMesh.getRigHandle())
@@ -127,17 +127,17 @@ class EntityBuilder extends BuilderPackage {
     }
 
     private void parseEquipmentAnchors(
-            JsonArray anchorsJson,
+            ArpgArrayStruct anchorsArpg,
             RigHandle rigHandle,
             ObjectArrayList<EquipmentAnchorStruct> equipmentAnchors,
             File file) {
 
-        for (int i = 0; i < anchorsJson.size(); i++) {
+        for (int i = 0; i < anchorsArpg.size(); i++) {
 
-            JsonObject anchorJson = anchorsJson.get(i).getAsJsonObject();
-            EquipmentSlot equipmentSlot = JsonUtility.toEnum(
-                    JsonUtility.validateString(anchorJson, "slot"), EquipmentSlot.class);
-            String boneName = JsonUtility.validateString(anchorJson, "bone");
+            ArpgObjectStruct anchorArpg = anchorsArpg.get(i).getAsObject();
+            EquipmentSlot equipmentSlot = ArpgUtility.toEnum(
+                    ArpgUtility.validateString(anchorArpg, "slot"), EquipmentSlot.class);
+            String boneName = ArpgUtility.validateString(anchorArpg, "bone");
 
             if (!rigHandle.hasBone(boneName))
                 throwException("Entity equipment anchor for slot \"" + equipmentSlot
@@ -146,24 +146,24 @@ class EntityBuilder extends BuilderPackage {
             equipmentAnchors.add(new EquipmentAnchorStruct(
                     equipmentSlot,
                     rigHandle.getBoneIndex(boneName),
-                    parseAnchorVector(anchorJson, "position", 0f),
-                    parseAnchorVector(anchorJson, "rotation", 0f),
-                    parseAnchorVector(anchorJson, "size", EngineSetting.DEFAULT_ENTITY_SIZE),
-                    JsonUtility.getBoolean(anchorJson, "hold", false)));
+                    parseAnchorVector(anchorArpg, "position", 0f),
+                    parseAnchorVector(anchorArpg, "rotation", 0f),
+                    parseAnchorVector(anchorArpg, "size", EngineSetting.DEFAULT_ENTITY_SIZE),
+                    ArpgUtility.getBoolean(anchorArpg, "hold", false)));
         }
     }
 
-    private Vector3 parseAnchorVector(JsonObject anchorJson, String key, float defaultValue) {
+    private Vector3 parseAnchorVector(ArpgObjectStruct anchorArpg, String key, float defaultValue) {
 
-        if (!JsonUtility.hasArray(anchorJson, key))
+        if (!ArpgUtility.hasArray(anchorArpg, key))
             return new Vector3(defaultValue);
 
-        JsonArray vectorJson = JsonUtility.validateArray(anchorJson, key, 3);
+        ArpgArrayStruct vectorArpg = ArpgUtility.validateArray(anchorArpg, key, 3);
 
         return new Vector3(
-                vectorJson.get(0).getAsFloat(),
-                vectorJson.get(1).getAsFloat(),
-                vectorJson.get(2).getAsFloat());
+                vectorArpg.get(0).getAsFloat(),
+                vectorArpg.get(1).getAsFloat(),
+                vectorArpg.get(2).getAsFloat());
     }
 
     private float resolveModelHeight(MeshHandle characterMesh, AppearanceData appearanceData) {
@@ -180,15 +180,15 @@ class EntityBuilder extends BuilderPackage {
 
     // Parse \\
 
-    private Vector3 parseSizeMin(JsonObject json) {
+    private Vector3 parseSizeMin(ArpgObjectStruct arpg) {
 
-        if (!json.has("size_min"))
+        if (!arpg.has("size_min"))
             return new Vector3(
                     EngineSetting.DEFAULT_ENTITY_SIZE,
                     EngineSetting.DEFAULT_ENTITY_SIZE,
                     EngineSetting.DEFAULT_ENTITY_SIZE);
 
-        JsonObject o = json.getAsJsonObject("size_min");
+        ArpgObjectStruct o = arpg.getAsObject("size_min");
 
         return new Vector3(
                 o.has("x") ? o.get("x").getAsFloat() : EngineSetting.DEFAULT_ENTITY_SIZE,
@@ -196,15 +196,15 @@ class EntityBuilder extends BuilderPackage {
                 o.has("z") ? o.get("z").getAsFloat() : EngineSetting.DEFAULT_ENTITY_SIZE);
     }
 
-    private Vector3 parseSizeMax(JsonObject json) {
+    private Vector3 parseSizeMax(ArpgObjectStruct arpg) {
 
-        if (!json.has("size_max"))
+        if (!arpg.has("size_max"))
             return new Vector3(
                     EngineSetting.DEFAULT_ENTITY_SIZE,
                     EngineSetting.DEFAULT_ENTITY_SIZE,
                     EngineSetting.DEFAULT_ENTITY_SIZE);
 
-        JsonObject o = json.getAsJsonObject("size_max");
+        ArpgObjectStruct o = arpg.getAsObject("size_max");
 
         return new Vector3(
                 o.has("x") ? o.get("x").getAsFloat() : EngineSetting.DEFAULT_ENTITY_SIZE,
@@ -212,29 +212,29 @@ class EntityBuilder extends BuilderPackage {
                 o.has("z") ? o.get("z").getAsFloat() : EngineSetting.DEFAULT_ENTITY_SIZE);
     }
 
-    private float parseWeightMin(JsonObject json) {
-        return json.has("weight_min")
-                ? json.get("weight_min").getAsFloat()
+    private float parseWeightMin(ArpgObjectStruct arpg) {
+        return arpg.has("weight_min")
+                ? arpg.get("weight_min").getAsFloat()
                 : EngineSetting.DEFAULT_ENTITY_WEIGHT;
     }
 
-    private float parseWeightMax(JsonObject json) {
-        return json.has("weight_max")
-                ? json.get("weight_max").getAsFloat()
+    private float parseWeightMax(ArpgObjectStruct arpg) {
+        return arpg.has("weight_max")
+                ? arpg.get("weight_max").getAsFloat()
                 : EngineSetting.DEFAULT_ENTITY_WEIGHT;
     }
 
-    private float parseEyeLevel(JsonObject json) {
-        return json.has("eye_level")
-                ? json.get("eye_level").getAsFloat()
+    private float parseEyeLevel(ArpgObjectStruct arpg) {
+        return arpg.has("eye_level")
+                ? arpg.get("eye_level").getAsFloat()
                 : EngineSetting.DEFAULT_EYE_LEVEL;
     }
 
-    private String parseBehaviorName(JsonObject json, File file) {
+    private String parseBehaviorName(ArpgObjectStruct arpg, File file) {
 
-        if (!json.has("behavior"))
-            throwException("Entity JSON missing 'behavior' field: " + file.getAbsolutePath());
+        if (!arpg.has("behavior"))
+            throwException("Entity ARPG missing 'behavior' field: " + file.getAbsolutePath());
 
-        return json.get("behavior").getAsString();
+        return arpg.get("behavior").getAsString();
     }
 }

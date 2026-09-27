@@ -8,7 +8,7 @@ public class AnimationTreeManager extends ManagerPackage {
 
     /*
      * Owns the animation tree palette for the engine lifetime. A tree is the
-     * JSON graph between an entity's movement state and the clips it plays
+     * ARPG graph between an entity's movement state and the clips it plays
      * — which node each state enters, how nodes blend, and which bones each
      * layer touches. Runtime playback lives on each entity's
      * AnimationStateHandle, never here. Auto-triggers an on-demand load via

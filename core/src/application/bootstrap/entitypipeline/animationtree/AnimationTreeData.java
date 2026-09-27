@@ -6,7 +6,7 @@ import engine.root.DataPackage;
 public class AnimationTreeData extends DataPackage {
 
     /*
-     * Immutable animation tree definition — the JSON graph that decides
+     * Immutable animation tree definition — the ARPG graph that decides
      * which clips an entity plays for each movement state and how they mix.
      * Layers evaluate in order on one rig: the first is a full-body OVERRIDE
      * layer that covers every EntityState, and each layer after it blends

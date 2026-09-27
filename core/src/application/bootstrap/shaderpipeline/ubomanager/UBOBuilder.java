@@ -2,20 +2,19 @@ package application.bootstrap.shaderpipeline.ubomanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.shaderpipeline.ubo.UBOData;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.uniforms.UniformData;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 
 class UBOBuilder extends BuilderPackage {
 
     /*
-     * Parses UBO JSON descriptors into UBOHandles during bootstrap. Checks the
+     * Parses UBO ARPG descriptors into UBOHandles during bootstrap. Checks the
      * manager palette before creating anything — if the block is already registered
      * the existing handle is returned immediately and nothing is allocated.
      */
@@ -34,35 +33,35 @@ class UBOBuilder extends BuilderPackage {
 
     UBOHandle parse(File file) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
-        String blockName = JsonUtility.validateString(json, "blockName");
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+        String blockName = ArpgUtility.validateString(arpg, "blockName");
 
         if (uboManager.hasUBO(blockName))
             return uboManager.getUBOHandleFromUBOName(blockName);
 
-        int binding = json.has("binding")
-                ? json.get("binding").getAsInt()
+        int binding = arpg.has("binding")
+                ? arpg.get("binding").getAsInt()
                 : UBOData.UNSPECIFIED_BINDING;
 
         UBOData data = new UBOData(blockName, binding);
         UBOHandle handle = create(UBOHandle.class);
         handle.constructor(data);
 
-        parseUniforms(json, handle, blockName);
+        parseUniforms(arpg, handle, blockName);
 
         return handle;
     }
 
-    private void parseUniforms(JsonObject json, UBOHandle handle, String blockName) {
+    private void parseUniforms(ArpgObjectStruct arpg, UBOHandle handle, String blockName) {
 
-        if (!json.has("uniforms"))
-            throwException("UBO '" + blockName + "' JSON is missing required 'uniforms' array");
+        if (!arpg.has("uniforms"))
+            throwException("UBO '" + blockName + "' ARPG is missing required 'uniforms' array");
 
-        JsonArray array = json.getAsJsonArray("uniforms");
+        ArpgArrayStruct array = arpg.getAsArray("uniforms");
 
         for (int i = 0; i < array.size(); i++) {
 
-            JsonObject entry = array.get(i).getAsJsonObject();
+            ArpgObjectStruct entry = array.get(i).getAsObject();
 
             if (!entry.has("name"))
                 throwException("UBO '" + blockName + "' uniform entry [" + i + "] missing 'name'");

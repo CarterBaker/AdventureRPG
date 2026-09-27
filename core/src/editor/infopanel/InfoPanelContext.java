@@ -6,7 +6,7 @@ import engine.root.ContextPackage;
 public class InfoPanelContext extends ContextPackage {
 
     /*
-     * Editor tab showing the JSON entry selected in the Hierarchy. The editor's
+     * Editor tab showing the ARPG entry selected in the Hierarchy. The editor's
      * InfoManager holds the content and performs every edit; this context only
      * hosts the panel that lists and routes them.
      */

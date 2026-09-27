@@ -1,20 +1,20 @@
 package application.bootstrap.geometrypipeline.vbomanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.bootstrap.geometrypipeline.vbo.VBOHandle;
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class VBOBuilder extends BuilderPackage {
 
     /*
-     * Parses the 'vbo' field from mesh JSON and uploads vertex data into a
+     * Parses the 'vbo' field from mesh ARPG and uploads vertex data into a
      * VBOHandle. Supports direct vertex arrays and string references to other
      * registered meshes. Skips files whose VBO contains quad objects — those
      * are handled by quad expansion in the mesh builder. Bootstrap-only.
@@ -43,25 +43,25 @@ public class VBOBuilder extends BuilderPackage {
         if (vboManager.hasVBO(resourceName))
             return;
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
-        if (!json.has("vbo") || json.get("vbo").isJsonNull())
+        if (!arpg.has("vbo") || arpg.get("vbo").isNull())
             return;
 
-        JsonElement vboEl = json.get("vbo");
+        ArpgElementStruct vboEl = arpg.get("vbo");
 
-        if (vboEl.isJsonArray() && containsQuadObjects(vboEl.getAsJsonArray()))
+        if (vboEl.isArray() && containsQuadObjects(vboEl.getAsArray()))
             return;
 
-        if (vboEl.isJsonPrimitive() && vboEl.getAsJsonPrimitive().isString()) {
+        if (vboEl.isValue() && vboEl.getAsValue().isString()) {
             String refName = vboEl.getAsString();
             resolveRef(refName, resourceName, file, registry, vaoInstance);
             vboManager.registerVBO(resourceName, vboManager.getVBOHandleDirect(refName));
             return;
         }
 
-        if (vboEl.isJsonArray()) {
-            vboManager.registerVBO(resourceName, buildFromData(vboEl.getAsJsonArray(), vaoInstance, file));
+        if (vboEl.isArray()) {
+            vboManager.registerVBO(resourceName, buildFromData(vboEl.getAsArray(), vaoInstance, file));
             return;
         }
 
@@ -85,23 +85,23 @@ public class VBOBuilder extends BuilderPackage {
         if (refFile == null)
             throwException("Referenced VBO '" + refName + "' not found. Source: " + sourceFile.getName());
 
-        JsonObject refJson = JsonUtility.loadJsonObject(refFile);
+        ArpgObjectStruct refArpg = ArpgUtility.loadObject(refFile);
 
-        if (!refJson.has("vbo") || refJson.get("vbo").isJsonNull())
+        if (!refArpg.has("vbo") || refArpg.get("vbo").isNull())
             throwException("Referenced VBO file '" + refName + "' has no 'vbo' field.");
 
-        JsonElement refEl = refJson.get("vbo");
+        ArpgElementStruct refEl = refArpg.get("vbo");
 
-        if (!refEl.isJsonArray())
+        if (!refEl.isArray())
             throwException("Referenced VBO '" + refName + "' must contain a vertex array.");
 
-        vboManager.registerVBO(refName, buildFromData(refEl.getAsJsonArray(), vaoInstance, refFile));
+        vboManager.registerVBO(refName, buildFromData(refEl.getAsArray(), vaoInstance, refFile));
     }
 
     // Creation \\
 
     private VBOHandle buildFromData(
-            JsonArray verticesArray,
+            ArpgArrayStruct verticesArray,
             VAOInstance vaoInstance,
             File file) {
 
@@ -112,12 +112,12 @@ public class VBOBuilder extends BuilderPackage {
         float[] vertices = new float[verticesArray.size() * floatsPerVertex];
         int index = 0;
 
-        for (JsonElement vertexEl : verticesArray) {
-            JsonArray vertex = vertexEl.getAsJsonArray();
+        for (ArpgElementStruct vertexEl : verticesArray) {
+            ArpgArrayStruct vertex = vertexEl.getAsArray();
             if (vertex.size() != floatsPerVertex)
                 throwException("Vertex attribute count mismatch. Expected " + floatsPerVertex
                         + " floats but got " + vertex.size() + " in file: " + file.getName());
-            for (JsonElement val : vertex)
+            for (ArpgElementStruct val : vertex)
                 vertices[index++] = val.getAsFloat();
         }
 
@@ -126,9 +126,9 @@ public class VBOBuilder extends BuilderPackage {
 
     // Utility \\
 
-    private boolean containsQuadObjects(JsonArray array) {
-        for (JsonElement el : array)
-            if (el.isJsonObject())
+    private boolean containsQuadObjects(ArpgArrayStruct array) {
+        for (ArpgElementStruct el : array)
+            if (el.isObject())
                 return true;
         return false;
     }

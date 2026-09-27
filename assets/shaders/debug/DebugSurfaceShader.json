@@ -1,4 +1,0 @@
-{
-    "vert": "debug/DebugSurfaceShader.vsh",
-    "frag": "debug/DebugSurfaceShader.fsh"
-}

@@ -1,9 +1,8 @@
 package editor.bootstrap.infopipeline.infoschema;
 
-import com.google.gson.JsonElement;
-
 import editor.bootstrap.infopipeline.util.InfoFieldType;
 import engine.root.StructPackage;
+import engine.util.arpg.ArpgElementStruct;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InfoFieldStruct extends StructPackage {
@@ -23,7 +22,7 @@ public class InfoFieldStruct extends StructPackage {
     private final boolean required;
 
     // Value
-    private final JsonElement defaultValue;
+    private final ArpgElementStruct defaultValue;
     private final ObjectArrayList<String> values;
 
     // Structure
@@ -37,7 +36,7 @@ public class InfoFieldStruct extends StructPackage {
             String key,
             InfoFieldType type,
             boolean required,
-            JsonElement defaultValue,
+            ArpgElementStruct defaultValue,
             ObjectArrayList<String> values,
             ObjectArrayList<InfoFieldStruct> fields,
             InfoFieldStruct element,
@@ -87,7 +86,7 @@ public class InfoFieldStruct extends StructPackage {
         return required;
     }
 
-    public JsonElement getDefaultValue() {
+    public ArpgElementStruct getDefaultValue() {
         return defaultValue;
     }
 

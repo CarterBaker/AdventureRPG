@@ -2,21 +2,20 @@ package application.kernel.threadpipeline.threadmanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class ThreadLoader extends LoaderPackage {
 
     /*
-     * Loads named thread pool definitions from JSON. "size" is a fixed count or
+     * Loads named thread pool definitions from ARPG. "size" is a fixed count or
      * "auto", resolved against the processor count, and the optional
      * "maxInFlight" caps queued and running tasks, defaulting to a small
      * multiple of the thread count.
@@ -42,7 +41,7 @@ class ThreadLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "[ThreadManager] The root folder could not be verified");
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             resourceName2File.put(resourceName, file);
             preRegisterThreadNames(file, resourceName);
@@ -64,12 +63,12 @@ class ThreadLoader extends LoaderPackage {
 
     private void preRegisterThreadNames(File file, String resourceName) {
         try {
-            JsonObject json = JsonUtility.loadJsonObject(file);
-            JsonArray threads = json.getAsJsonArray("threads");
+            ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+            ArpgArrayStruct threads = arpg.getAsArray("threads");
             if (threads == null)
                 return;
             for (int i = 0; i < threads.size(); i++) {
-                JsonObject threadDef = threads.get(i).getAsJsonObject();
+                ArpgObjectStruct threadDef = threads.get(i).getAsObject();
                 if (!threadDef.has("name"))
                     continue;
                 String threadName = threadDef.get("name").getAsString();
@@ -85,15 +84,15 @@ class ThreadLoader extends LoaderPackage {
     @Override
     protected void load(File file) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
-        if (!json.has("threads"))
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+        if (!arpg.has("threads"))
             return;
 
-        JsonArray threads = JsonUtility.validateArray(json, "threads");
+        ArpgArrayStruct threads = ArpgUtility.validateArray(arpg, "threads");
 
         for (int i = 0; i < threads.size(); i++) {
-            JsonObject threadDef = threads.get(i).getAsJsonObject();
-            String threadName = JsonUtility.validateString(threadDef, "name");
+            ArpgObjectStruct threadDef = threads.get(i).getAsObject();
+            String threadName = ArpgUtility.validateString(threadDef, "name");
             int threadSize = resolveThreadSize(threadDef, threadName);
             int inFlightCapacity = resolveInFlightCapacity(threadDef, threadSize);
             ThreadHandle handle = internalBuilder.build(threadName, threadSize, inFlightCapacity);
@@ -103,15 +102,15 @@ class ThreadLoader extends LoaderPackage {
 
     // Sizing \\
 
-    private int resolveThreadSize(JsonObject threadDef, String threadName) {
+    private int resolveThreadSize(ArpgObjectStruct threadDef, String threadName) {
 
         if (!threadDef.has("size"))
             throwException("Thread '" + threadName + "' is missing required \"size\" field.");
 
-        JsonElement sizeEl = threadDef.get("size");
+        ArpgElementStruct sizeEl = threadDef.get("size");
         int resolved;
 
-        if (sizeEl.isJsonPrimitive() && sizeEl.getAsJsonPrimitive().isString()) {
+        if (sizeEl.isValue() && sizeEl.getAsValue().isString()) {
 
             String mode = sizeEl.getAsString();
 
@@ -142,7 +141,7 @@ class ThreadLoader extends LoaderPackage {
         return resolved;
     }
 
-    private int resolveInFlightCapacity(JsonObject threadDef, int threadSize) {
+    private int resolveInFlightCapacity(ArpgObjectStruct threadDef, int threadSize) {
 
         if (threadDef.has("maxInFlight"))
             return threadDef.get("maxInFlight").getAsInt();

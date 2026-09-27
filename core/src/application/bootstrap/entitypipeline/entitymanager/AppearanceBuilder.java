@@ -1,7 +1,5 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
@@ -12,7 +10,9 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 
 class AppearanceBuilder extends BuilderPackage {
 
@@ -38,32 +38,32 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Build \\
 
-    AppearanceData build(JsonObject appearanceJson, RigHandle rigHandle, File file) {
+    AppearanceData build(ArpgObjectStruct appearanceArpg, RigHandle rigHandle, File file) {
 
-        String headBoneName = JsonUtility.validateString(appearanceJson, "head_bone");
+        String headBoneName = ArpgUtility.validateString(appearanceArpg, "head_bone");
 
         if (!rigHandle.hasBone(headBoneName))
             throwException("Appearance \"head_bone\" \"" + headBoneName
                     + "\" is not a bone of the character rig. File: " + file.getName());
 
-        FeatureHandle[] defaultFeatures = parseFeatures(JsonUtility.validateObject(appearanceJson, "features"), file);
-        Color skinColor = parseColor(appearanceJson, "skin_color");
-        Color hairColor = parseColor(appearanceJson, "hair_color");
-        JsonObject buildJson = JsonUtility.hasObject(appearanceJson, "build")
-                ? appearanceJson.getAsJsonObject("build")
-                : new JsonObject();
+        FeatureHandle[] defaultFeatures = parseFeatures(ArpgUtility.validateObject(appearanceArpg, "features"), file);
+        Color skinColor = parseColor(appearanceArpg, "skin_color");
+        Color hairColor = parseColor(appearanceArpg, "hair_color");
+        ArpgObjectStruct buildArpg = ArpgUtility.hasObject(appearanceArpg, "build")
+                ? appearanceArpg.getAsObject("build")
+                : new ArpgObjectStruct();
 
         AppearanceData appearanceData = new AppearanceData(
                 rigHandle,
                 rigHandle.getBoneIndex(headBoneName),
                 skinColor,
                 hairColor,
-                parsePalette(appearanceJson, "skin_palette", skinColor, file),
-                parsePalette(appearanceJson, "hair_palette", hairColor, file),
+                parsePalette(appearanceArpg, "skin_palette", skinColor, file),
+                parsePalette(appearanceArpg, "hair_palette", hairColor, file),
                 defaultFeatures,
-                JsonUtility.getFloat(buildJson, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
-                JsonUtility.getFloat(buildJson, "heavy", EngineSetting.DEFAULT_BUILD_FACTOR),
-                parseGirthInfluence(buildJson, rigHandle, file));
+                ArpgUtility.getFloat(buildArpg, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
+                ArpgUtility.getFloat(buildArpg, "heavy", EngineSetting.DEFAULT_BUILD_FACTOR),
+                parseGirthInfluence(buildArpg, rigHandle, file));
 
         for (FeatureHandle featureHandle : defaultFeatures)
             if (featureHandle != null && !appearanceData.isCompatible(featureHandle))
@@ -76,7 +76,7 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Features \\
 
-    private FeatureHandle[] parseFeatures(JsonObject featuresJson, File file) {
+    private FeatureHandle[] parseFeatures(ArpgObjectStruct featuresArpg, File file) {
 
         FeatureHandle[] features = new FeatureHandle[FeatureSlot.VALUES.length];
 
@@ -84,7 +84,7 @@ class AppearanceBuilder extends BuilderPackage {
 
             String key = featureSlot.name().toLowerCase();
 
-            if (!JsonUtility.hasString(featuresJson, key)) {
+            if (!ArpgUtility.hasString(featuresArpg, key)) {
 
                 if (featureSlot.isRequired())
                     throwException("Appearance is missing required feature \"" + key + "\". File: " + file.getName());
@@ -93,7 +93,7 @@ class AppearanceBuilder extends BuilderPackage {
             }
 
             FeatureHandle featureHandle = featureManager.getFeatureHandleFromFeatureName(
-                    featuresJson.get(key).getAsString());
+                    featuresArpg.get(key).getAsString());
 
             if (featureHandle.getFeatureSlot() != featureSlot)
                 throwException("Feature \"" + featureHandle.getFeatureName() + "\" is a "
@@ -103,7 +103,7 @@ class AppearanceBuilder extends BuilderPackage {
             features[featureSlot.ordinal()] = featureHandle;
         }
 
-        for (String key : featuresJson.keySet())
+        for (String key : featuresArpg.keySet())
             if (!isSlotName(key))
                 throwException("Appearance declares unknown feature slot \"" + key + "\". File: " + file.getName());
 
@@ -121,22 +121,22 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Build Curve \\
 
-    private float[] parseGirthInfluence(JsonObject buildJson, RigHandle rigHandle, File file) {
+    private float[] parseGirthInfluence(ArpgObjectStruct buildArpg, RigHandle rigHandle, File file) {
 
         float[] girthInfluence = new float[rigHandle.getBoneCount()];
 
-        if (!JsonUtility.hasObject(buildJson, "bones"))
+        if (!ArpgUtility.hasObject(buildArpg, "bones"))
             return girthInfluence;
 
-        JsonObject bonesJson = buildJson.getAsJsonObject("bones");
+        ArpgObjectStruct bonesArpg = buildArpg.getAsObject("bones");
 
-        for (String boneName : bonesJson.keySet()) {
+        for (String boneName : bonesArpg.keySet()) {
 
             if (!rigHandle.hasBone(boneName))
                 throwException("Appearance build references unknown bone \"" + boneName + "\". File: "
                         + file.getName());
 
-            girthInfluence[rigHandle.getBoneIndex(boneName)] = bonesJson.get(boneName).getAsFloat();
+            girthInfluence[rigHandle.getBoneIndex(boneName)] = bonesArpg.get(boneName).getAsFloat();
         }
 
         return girthInfluence;
@@ -144,29 +144,29 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Color \\
 
-    private Color parseColor(JsonObject json, String key) {
+    private Color parseColor(ArpgObjectStruct arpg, String key) {
 
-        if (!JsonUtility.hasArray(json, key))
+        if (!ArpgUtility.hasArray(arpg, key))
             return new Color(Color.WHITE);
 
-        return toColor(JsonUtility.validateArray(json, key, 3));
+        return toColor(ArpgUtility.validateArray(arpg, key, 3));
     }
 
-    private Color[] parsePalette(JsonObject json, String key, Color defaultColor, File file) {
+    private Color[] parsePalette(ArpgObjectStruct arpg, String key, Color defaultColor, File file) {
 
-        if (!JsonUtility.hasArray(json, key))
+        if (!ArpgUtility.hasArray(arpg, key))
             return new Color[] { new Color(defaultColor) };
 
-        JsonArray paletteJson = json.getAsJsonArray(key);
+        ArpgArrayStruct paletteArpg = arpg.getAsArray(key);
 
-        if (paletteJson.size() == 0)
+        if (paletteArpg.size() == 0)
             throwException("Appearance \"" + key + "\" must list at least one color. File: " + file.getName());
 
-        Color[] palette = new Color[paletteJson.size()];
+        Color[] palette = new Color[paletteArpg.size()];
 
         for (int i = 0; i < palette.length; i++) {
 
-            JsonArray color = paletteJson.get(i).getAsJsonArray();
+            ArpgArrayStruct color = paletteArpg.get(i).getAsArray();
 
             if (color.size() != 3)
                 throwException("Appearance \"" + key + "\" entry " + i + " must be [r, g, b]. File: " + file.getName());
@@ -177,7 +177,7 @@ class AppearanceBuilder extends BuilderPackage {
         return palette;
     }
 
-    private Color toColor(JsonArray color) {
+    private Color toColor(ArpgArrayStruct color) {
         return new Color(
                 color.get(0).getAsFloat(),
                 color.get(1).getAsFloat(),

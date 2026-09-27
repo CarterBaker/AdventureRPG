@@ -1,7 +1,5 @@
 package application.bootstrap.worldpipeline.blockmanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
@@ -13,8 +11,10 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -22,7 +22,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class BlockBuilder extends BuilderPackage {
 
     /*
-     * Parses block JSON into BlockData wrapped in a BlockHandle, validating
+     * Parses block ARPG into BlockData wrapped in a BlockHandle, validating
      * geometry type, textures, durability, tooling and, for liquids, viscosity.
      * Bootstrap only.
      */
@@ -46,14 +46,14 @@ class BlockBuilder extends BuilderPackage {
     ObjectArrayList<BlockHandle> build(File file, File root) {
 
         String pathPrefix = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-        JsonObject rootJson = JsonUtility.loadJsonObject(file);
-        JsonArray blockArray = JsonUtility.validateArray(rootJson, "blocks");
+        ArpgObjectStruct rootArpg = ArpgUtility.loadObject(file);
+        ArpgArrayStruct blockArray = ArpgUtility.validateArray(rootArpg, "blocks");
 
         ObjectArrayList<BlockHandle> blocks = new ObjectArrayList<>();
 
         for (int i = 0; i < blockArray.size(); i++) {
-            JsonObject blockJson = blockArray.get(i).getAsJsonObject();
-            BlockHandle block = parseBlock(blockJson, pathPrefix);
+            ArpgObjectStruct blockArpg = blockArray.get(i).getAsObject();
+            BlockHandle block = parseBlock(blockArpg, pathPrefix);
             if (block != null)
                 blocks.add(block);
         }
@@ -63,35 +63,35 @@ class BlockBuilder extends BuilderPackage {
 
     // Parse \\
 
-    private BlockHandle parseBlock(JsonObject blockJson, String pathPrefix) {
+    private BlockHandle parseBlock(ArpgObjectStruct blockArpg, String pathPrefix) {
 
         // Identity
-        String localName = JsonUtility.validateString(blockJson, "name");
+        String localName = ArpgUtility.validateString(blockArpg, "name");
         String blockName = pathPrefix + "/" + localName;
         short blockID = RegistryUtility.toShortID(blockName);
 
         // Geometry
-        String typeStr = JsonUtility.getString(blockJson, "type", "FULL");
+        String typeStr = ArpgUtility.getString(blockArpg, "type", "FULL");
         DynamicGeometryType blockType = parseBlockType(typeStr);
 
         // Rotation
         BlockRotationType rotationType = BlockRotationType.NONE;
-        if (blockJson.has("rotation")) {
+        if (blockArpg.has("rotation")) {
             try {
                 rotationType = BlockRotationType.valueOf(
-                        blockJson.get("rotation").getAsString().toUpperCase());
+                        blockArpg.get("rotation").getAsString().toUpperCase());
             } catch (IllegalArgumentException e) {
                 throwException("Invalid rotation type in block: " + blockName);
             }
         }
 
         // Natural
-        boolean natural = JsonUtility.getBoolean(blockJson, "natural", false);
+        boolean natural = ArpgUtility.getBoolean(blockArpg, "natural", false);
 
         // Material
         int materialID = -1;
-        if (blockJson.has("material")) {
-            String materialPath = blockJson.get("material").getAsString();
+        if (blockArpg.has("material")) {
+            String materialPath = blockArpg.get("material").getAsString();
             materialID = materialManager.getMaterialIDFromMaterialName(materialPath);
         }
 
@@ -100,18 +100,18 @@ class BlockBuilder extends BuilderPackage {
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             textures[i] = -1;
 
-        if (blockJson.has("texture")) {
+        if (blockArpg.has("texture")) {
             int textureID = textureManager.getTextureHandleFromTextureName(
-                    blockJson.get("texture").getAsString()).getTileID();
+                    blockArpg.get("texture").getAsString()).getTileID();
             for (int i = 0; i < Direction3Vector.LENGTH; i++)
                 textures[i] = textureID;
         }
 
         for (Direction3Vector dir : Direction3Vector.VALUES) {
             String key = dir.name().toLowerCase() + "Tex";
-            if (blockJson.has(key))
+            if (blockArpg.has(key))
                 textures[dir.ordinal()] = textureManager.getTextureHandleFromTextureName(
-                        blockJson.get(key).getAsString()).getTileID();
+                        blockArpg.get(key).getAsString()).getTileID();
         }
 
         int lastDefined = -1;
@@ -130,12 +130,12 @@ class BlockBuilder extends BuilderPackage {
             }
 
         // Breaking
-        int breakTier = JsonUtility.getInt(blockJson, "break_tier", 0);
-        int durability = JsonUtility.getInt(blockJson, "durability", 1);
+        int breakTier = ArpgUtility.getInt(blockArpg, "break_tier", 0);
+        int durability = ArpgUtility.getInt(blockArpg, "durability", 1);
 
         short requiredToolTypeID = EngineSetting.TOOL_NONE;
-        if (blockJson.has("required_tool")) {
-            String toolPath = blockJson.get("required_tool").getAsString();
+        if (blockArpg.has("required_tool")) {
+            String toolPath = blockArpg.get("required_tool").getAsString();
             requiredToolTypeID = toolTypeManager.getToolTypeIDFromToolTypeName(toolPath);
         }
 
@@ -145,11 +145,11 @@ class BlockBuilder extends BuilderPackage {
         float viscosity = EngineSetting.BLOCK_VISCOSITY_UNDEFINED;
 
         if (blockType == DynamicGeometryType.LIQUID) {
-            if (!blockJson.has("viscosity"))
+            if (!blockArpg.has("viscosity"))
                 throwException("Liquid block \"" + blockName + "\" is missing required \"viscosity\" (Pa\u00b7s).");
-            viscosity = blockJson.get("viscosity").getAsFloat();
-        } else if (blockJson.has("viscosity")) {
-            viscosity = blockJson.get("viscosity").getAsFloat();
+            viscosity = blockArpg.get("viscosity").getAsFloat();
+        } else if (blockArpg.has("viscosity")) {
+            viscosity = blockArpg.get("viscosity").getAsFloat();
         }
 
         // Construct

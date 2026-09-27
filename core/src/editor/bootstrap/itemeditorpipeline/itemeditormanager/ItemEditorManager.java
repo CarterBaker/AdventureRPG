@@ -12,8 +12,8 @@ import editor.bootstrap.itemeditorpipeline.util.ItemEditorTool;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -21,7 +21,7 @@ public class ItemEditorManager extends ManagerPackage {
 
     /*
      * Owns the item editor's shared state — open item meshes, the active item,
-     * tool, and brush texture, and the status line. Items themselves are JSON
+     * tool, and brush texture, and the status line. Items themselves are ARPG
      * entries owned by InfoManager: selecting one there opens the mesh it
      * names here, starting a fresh model when that mesh has no file yet, and
      * new and deleted items go through it. Meshes stay open with their edits
@@ -127,7 +127,7 @@ public class ItemEditorManager extends ManagerPackage {
                 EditorSetting.INFO_SCHEMA_ITEMS,
                 entry.getDefinitionName(),
                 localName,
-                itemJson -> itemJson.addProperty(EditorSetting.INFO_ITEM_MESH_FIELD, entry.getMeshName()));
+                itemArpg -> itemArpg.addProperty(EditorSetting.INFO_ITEM_MESH_FIELD, entry.getMeshName()));
         setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_CREATED + localName);
     }
 
@@ -269,8 +269,8 @@ public class ItemEditorManager extends ManagerPackage {
 
     private String toMeshName(InfoEntryStruct itemEntry) {
 
-        return JsonUtility.hasString(itemEntry.getJson(), EditorSetting.INFO_ITEM_MESH_FIELD)
-                ? itemEntry.getJson().get(EditorSetting.INFO_ITEM_MESH_FIELD).getAsString()
+        return ArpgUtility.hasString(itemEntry.getArpg(), EditorSetting.INFO_ITEM_MESH_FIELD)
+                ? itemEntry.getArpg().get(EditorSetting.INFO_ITEM_MESH_FIELD).getAsString()
                 : "";
     }
 

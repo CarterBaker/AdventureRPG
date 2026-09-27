@@ -5,7 +5,7 @@ import engine.root.EngineSetting;
 public enum ItemStat {
 
     /*
-     * Statistics an item adds to whoever wears or wields it. An item's JSON
+     * Statistics an item adds to whoever wears or wields it. An item's ARPG
      * "stats" block names each by its lower-case constant name; anything left
      * out adds nothing.
      */

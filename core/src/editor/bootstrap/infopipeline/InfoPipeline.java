@@ -6,7 +6,7 @@ import engine.root.PipelinePackage;
 public class InfoPipeline extends PipelinePackage {
 
     /*
-     * Registers the editor's shared JSON content state, so every hierarchy
+     * Registers the editor's shared ARPG content state, so every hierarchy
      * tab, info panel, and tool that reads content works on the same files.
      */
 

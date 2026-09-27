@@ -1,21 +1,16 @@
 package application.bootstrap.worldpipeline.worldmanager;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 
 import application.bootstrap.worldpipeline.world.WorldData;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.assets.image.Pixmap;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
@@ -23,17 +18,15 @@ import engine.util.registry.RegistryUtility;
 class WorldBuilder extends BuilderPackage {
 
     /*
-     * Parses a world PNG map and optional companion JSON into a WorldHandle.
+     * Parses a world PNG map and optional companion ARPG file into a WorldHandle.
      * All fields are resolved before WorldData construction — the handle is
      * never mutated after constructor() is called. Bootstrap-only. The
-     * companion JSON is also the durable home for the world's generation
+     * companion file is also the durable home for the world's generation
      * seed and its epoch start: once assigned, each is written back to disk
      * immediately so every future load reproduces the same terrain and the
      * same clock — the world keeps time from its epoch whether or not the
      * game is running.
      */
-
-    private static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().create();
 
     // Build \\
 
@@ -53,38 +46,38 @@ class WorldBuilder extends BuilderPackage {
         float axialTilt = EngineSetting.DEFAULT_AXIAL_TILT_DEGREES;
         float planetaryOffset = EngineSetting.DEFAULT_PLANETARY_OFFSET;
 
-        File jsonFile = resolveCompanionJson(file);
-        boolean jsonExisted = jsonFile.exists();
-        JsonObject json = jsonExisted ? JsonUtility.loadJsonObject(jsonFile) : new JsonObject();
+        File arpgFile = ArpgUtility.resolveCompanionFile(file);
+        boolean arpgExisted = arpgFile.exists();
+        ArpgObjectStruct arpg = arpgExisted ? ArpgUtility.loadObject(arpgFile) : new ArpgObjectStruct();
 
-        if (jsonExisted) {
+        if (arpgExisted) {
 
-            if (json.has("gravity_multiplier"))
-                gravityMultiplier = json.get("gravity_multiplier").getAsFloat();
+            if (arpg.has("gravity_multiplier"))
+                gravityMultiplier = arpg.get("gravity_multiplier").getAsFloat();
 
-            if (json.has("gravity_direction")) {
-                JsonArray dir = json.getAsJsonArray("gravity_direction");
+            if (arpg.has("gravity_direction")) {
+                ArpgArrayStruct dir = arpg.getAsArray("gravity_direction");
                 gravityDirection = new Vector3(
                         dir.get(0).getAsFloat(),
                         dir.get(1).getAsFloat(),
                         dir.get(2).getAsFloat());
             }
 
-            if (json.has("calendar"))
-                calendarName = json.get("calendar").getAsString();
+            if (arpg.has("calendar"))
+                calendarName = arpg.get("calendar").getAsString();
 
-            if (json.has("rotation"))
-                rotationSpeed = json.get("rotation").getAsFloat();
+            if (arpg.has("rotation"))
+                rotationSpeed = arpg.get("rotation").getAsFloat();
 
-            if (json.has("axial_tilt"))
-                axialTilt = json.get("axial_tilt").getAsFloat();
+            if (arpg.has("axial_tilt"))
+                axialTilt = arpg.get("axial_tilt").getAsFloat();
 
-            if (json.has("planetary_offset"))
-                planetaryOffset = wrapUnitFraction(json.get("planetary_offset").getAsFloat());
+            if (arpg.has("planetary_offset"))
+                planetaryOffset = wrapUnitFraction(arpg.get("planetary_offset").getAsFloat());
         }
 
-        long seed = resolveWorldSeed(json, jsonFile, worldName);
-        long worldEpochStart = resolveWorldEpochStart(json, jsonFile, worldName);
+        long seed = resolveWorldSeed(arpg, arpgFile);
+        long worldEpochStart = resolveWorldEpochStart(arpg, arpgFile);
 
         WorldData data = new WorldData(
                 worldName,
@@ -108,53 +101,33 @@ class WorldBuilder extends BuilderPackage {
 
     // Seed \\
 
-    private long resolveWorldSeed(JsonObject json, File jsonFile, String worldName) {
+    private long resolveWorldSeed(ArpgObjectStruct arpg, File arpgFile) {
 
-        if (json.has("seed"))
-            return json.get("seed").getAsLong();
+        if (arpg.has("seed"))
+            return arpg.get("seed").getAsLong();
 
         long seed = ThreadLocalRandom.current().nextLong();
-        json.addProperty("seed", seed);
-        persistCompanionJson(json, jsonFile, worldName);
+        arpg.addProperty("seed", seed);
+        ArpgUtility.writeObject(arpgFile, arpg);
 
         return seed;
     }
 
     // Epoch \\
 
-    private long resolveWorldEpochStart(JsonObject json, File jsonFile, String worldName) {
+    private long resolveWorldEpochStart(ArpgObjectStruct arpg, File arpgFile) {
 
-        if (json.has("epoch_start"))
-            return json.get("epoch_start").getAsLong();
+        if (arpg.has("epoch_start"))
+            return arpg.get("epoch_start").getAsLong();
 
         long worldEpochStart = System.currentTimeMillis();
-        json.addProperty("epoch_start", worldEpochStart);
-        persistCompanionJson(json, jsonFile, worldName);
+        arpg.addProperty("epoch_start", worldEpochStart);
+        ArpgUtility.writeObject(arpgFile, arpg);
 
         return worldEpochStart;
     }
 
-    // Persistence \\
-
-    private void persistCompanionJson(JsonObject json, File jsonFile, String worldName) {
-
-        try (FileWriter writer = new FileWriter(jsonFile)) {
-            PRETTY_GSON.toJson(json, writer);
-        } catch (IOException e) {
-            throwException("Failed to persist companion JSON for world: \"" + worldName + "\"", e);
-        }
-    }
-
     // Helpers \\
-
-    private File resolveCompanionJson(File pngFile) {
-
-        String path = pngFile.getPath();
-        int dot = path.lastIndexOf('.');
-        String jsonPath = (dot >= 0 ? path.substring(0, dot) : path) + ".json";
-
-        return new File(jsonPath);
-    }
 
     private Vector2Int calculateWorldScale(Pixmap pixmap) {
 

@@ -1,6 +1,0 @@
-{
-    "shader": "characters/standard/StandardcharacterShader",
-    "uniforms": {
-        "u_texture": { "value": "characters/standard" }
-    }
-}

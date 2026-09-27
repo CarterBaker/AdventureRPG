@@ -10,7 +10,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class UBOLoader extends LoaderPackage {
 
     /*
-     * Drives the UBO bootstrap sequence: walks the JSON directory in scan(),
+     * Drives the UBO bootstrap sequence: walks the ARPG directory in scan(),
      * assembles one UBO per load() call, and self-releases when the queue empties.
      */
 
@@ -27,12 +27,12 @@ class UBOLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.UBO_JSON_PATH);
+        this.root = new File(EngineSetting.UBO_PATH);
         this.uboName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "UBO directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             uboName2File.put(resourceName, file);
             queueFile(file);

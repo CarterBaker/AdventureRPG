@@ -1,9 +1,0 @@
-{
-  "commands": [
-    {
-      "name": "give",
-      "label": "Give Item",
-      "arguments": ["item"]
-    }
-  ]
-}

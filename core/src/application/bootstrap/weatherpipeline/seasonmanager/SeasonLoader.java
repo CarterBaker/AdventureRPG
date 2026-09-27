@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class SeasonLoader extends LoaderPackage {
 
     /*
-     * Scans the season JSON directory and loads every named season climate
+     * Scans the season ARPG directory and loads every named season climate
      * definition found there into SeasonManager. No fixed set is required —
      * the active calendar decides which season names actually get used.
      * Supports on-demand loading for a season not yet in the palette.
@@ -40,12 +40,12 @@ class SeasonLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.SEASON_JSON_PATH);
+        this.root = new File(EngineSetting.SEASON_PATH);
         this.seasonName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Season root directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String seasonName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             seasonName2File.put(seasonName, file);
             queueFile(file);

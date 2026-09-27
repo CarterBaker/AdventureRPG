@@ -1,9 +1,5 @@
 package application.bootstrap.savepipeline.savemanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
@@ -18,7 +14,10 @@ import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionMa
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import engine.root.BranchPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -47,71 +46,71 @@ class PlayerRestoreBranch extends BranchPackage {
 
     // Management \\
 
-    boolean restore(JsonObject playerJson, EntityInstance player) {
+    boolean restore(ArpgObjectStruct playerArpg, EntityInstance player) {
 
-        if (!isPlayerValid(playerJson, player))
+        if (!isPlayerValid(playerArpg, player))
             return false;
 
-        restoreLocation(JsonUtility.validateObject(playerJson, "location"), player);
-        restoreCharacter(JsonUtility.validateObject(playerJson, "character"), player);
-        restoreInventory(playerJson, player.getInventoryHandle());
+        restoreLocation(ArpgUtility.validateObject(playerArpg, "location"), player);
+        restoreCharacter(ArpgUtility.validateObject(playerArpg, "character"), player);
+        restoreInventory(playerArpg, player.getInventoryHandle());
 
         return true;
     }
 
     // Location \\
 
-    private void restoreLocation(JsonObject locationJson, EntityInstance player) {
+    private void restoreLocation(ArpgObjectStruct locationArpg, EntityInstance player) {
 
-        JsonObject chunkJson = JsonUtility.validateObject(locationJson, "chunk");
+        ArpgObjectStruct chunkArpg = ArpgUtility.validateObject(locationArpg, "chunk");
         long chunkCoordinate = Coordinate2Long.pack(
-                JsonUtility.validateInt(chunkJson, "x"),
-                JsonUtility.validateInt(chunkJson, "z"));
+                ArpgUtility.validateInt(chunkArpg, "x"),
+                ArpgUtility.validateInt(chunkArpg, "z"));
 
         player.setLocation(
-                WorldWrapUtility.wrapAroundChunk(parseVector(locationJson, "position")),
+                WorldWrapUtility.wrapAroundChunk(parseVector(locationArpg, "position")),
                 WorldWrapUtility.wrapAroundWorld(player.getWorldHandle(), chunkCoordinate));
     }
 
     // Character \\
 
-    private void restoreCharacter(JsonObject characterJson, EntityInstance player) {
+    private void restoreCharacter(ArpgObjectStruct characterArpg, EntityInstance player) {
 
-        player.setSize(parseVector(characterJson, "size"));
-        player.setWeight(JsonUtility.validateFloat(characterJson, "weight"));
+        player.setSize(parseVector(characterArpg, "size"));
+        player.setWeight(ArpgUtility.validateFloat(characterArpg, "weight"));
 
         if (player.hasAppearance())
-            restoreAppearance(JsonUtility.validateObject(characterJson, "appearance"), player.getAppearanceHandle());
+            restoreAppearance(ArpgUtility.validateObject(characterArpg, "appearance"), player.getAppearanceHandle());
     }
 
-    private void restoreAppearance(JsonObject appearanceJson, AppearanceHandle appearanceHandle) {
+    private void restoreAppearance(ArpgObjectStruct appearanceArpg, AppearanceHandle appearanceHandle) {
 
-        JsonObject skinColorJson = JsonUtility.validateObject(appearanceJson, "skin_color");
-        JsonObject hairColorJson = JsonUtility.validateObject(appearanceJson, "hair_color");
-        Vector3 headProportion = parseVector(appearanceJson, "head_proportion");
+        ArpgObjectStruct skinColorArpg = ArpgUtility.validateObject(appearanceArpg, "skin_color");
+        ArpgObjectStruct hairColorArpg = ArpgUtility.validateObject(appearanceArpg, "hair_color");
+        Vector3 headProportion = parseVector(appearanceArpg, "head_proportion");
 
         appearanceHandle.setSkinColor(
-                JsonUtility.validateFloat(skinColorJson, "r"),
-                JsonUtility.validateFloat(skinColorJson, "g"),
-                JsonUtility.validateFloat(skinColorJson, "b"));
+                ArpgUtility.validateFloat(skinColorArpg, "r"),
+                ArpgUtility.validateFloat(skinColorArpg, "g"),
+                ArpgUtility.validateFloat(skinColorArpg, "b"));
         appearanceHandle.setHairColor(
-                JsonUtility.validateFloat(hairColorJson, "r"),
-                JsonUtility.validateFloat(hairColorJson, "g"),
-                JsonUtility.validateFloat(hairColorJson, "b"));
+                ArpgUtility.validateFloat(hairColorArpg, "r"),
+                ArpgUtility.validateFloat(hairColorArpg, "g"),
+                ArpgUtility.validateFloat(hairColorArpg, "b"));
         appearanceHandle.setHeadProportion(headProportion.x, headProportion.y, headProportion.z);
 
-        restoreFeatures(JsonUtility.validateObject(appearanceJson, "features"), appearanceHandle);
+        restoreFeatures(ArpgUtility.validateObject(appearanceArpg, "features"), appearanceHandle);
     }
 
-    private void restoreFeatures(JsonObject featuresJson, AppearanceHandle appearanceHandle) {
+    private void restoreFeatures(ArpgObjectStruct featuresArpg, AppearanceHandle appearanceHandle) {
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
             String key = featureSlot.name().toLowerCase();
 
-            if (featuresJson.has(key))
+            if (featuresArpg.has(key))
                 appearanceHandle.setFeature(featureManager.getFeatureHandleFromFeatureName(
-                        JsonUtility.validateString(featuresJson, key)));
+                        ArpgUtility.validateString(featuresArpg, key)));
             else
                 appearanceHandle.clearFeature(featureSlot);
         }
@@ -119,32 +118,32 @@ class PlayerRestoreBranch extends BranchPackage {
 
     // Inventory \\
 
-    private void restoreInventory(JsonObject playerJson, InventoryHandle inventoryHandle) {
+    private void restoreInventory(ArpgObjectStruct playerArpg, InventoryHandle inventoryHandle) {
 
         inventoryHandle.clear();
 
-        if (!JsonUtility.hasObject(playerJson, "inventory"))
+        if (!ArpgUtility.hasObject(playerArpg, "inventory"))
             return;
 
-        JsonObject inventoryJson = playerJson.getAsJsonObject("inventory");
+        ArpgObjectStruct inventoryArpg = playerArpg.getAsObject("inventory");
 
-        if (JsonUtility.hasObject(inventoryJson, "equipment"))
-            restoreEquipment(inventoryJson.getAsJsonObject("equipment"), inventoryHandle);
+        if (ArpgUtility.hasObject(inventoryArpg, "equipment"))
+            restoreEquipment(inventoryArpg.getAsObject("equipment"), inventoryHandle);
 
-        if (JsonUtility.hasArray(inventoryJson, "hidden"))
-            restoreHidden(inventoryJson.getAsJsonArray("hidden"), inventoryHandle);
+        if (ArpgUtility.hasArray(inventoryArpg, "hidden"))
+            restoreHidden(inventoryArpg.getAsArray("hidden"), inventoryHandle);
     }
 
-    private void restoreEquipment(JsonObject equipmentJson, InventoryHandle inventoryHandle) {
+    private void restoreEquipment(ArpgObjectStruct equipmentArpg, InventoryHandle inventoryHandle) {
 
         for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
 
-            String key = JsonUtility.toEnumName(equipmentSlot);
+            String key = ArpgUtility.toEnumName(equipmentSlot);
 
-            if (!JsonUtility.hasObject(equipmentJson, key))
+            if (!ArpgUtility.hasObject(equipmentArpg, key))
                 continue;
 
-            ItemInstance itemInstance = restoreItem(equipmentJson.getAsJsonObject(key));
+            ItemInstance itemInstance = restoreItem(equipmentArpg.getAsObject(key));
 
             if (itemInstance == null)
                 continue;
@@ -157,25 +156,25 @@ class PlayerRestoreBranch extends BranchPackage {
         }
     }
 
-    private void restoreHidden(JsonArray hiddenJson, InventoryHandle inventoryHandle) {
+    private void restoreHidden(ArpgArrayStruct hiddenArpg, InventoryHandle inventoryHandle) {
 
-        for (int i = 0; i < hiddenJson.size(); i++) {
+        for (int i = 0; i < hiddenArpg.size(); i++) {
 
-            JsonElement slotJson = hiddenJson.get(i);
+            ArpgElementStruct slotArpg = hiddenArpg.get(i);
 
             for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
-                if (slotJson.isJsonPrimitive()
-                        && JsonUtility.toEnumName(equipmentSlot).equals(slotJson.getAsString()))
+                if (slotArpg.isValue()
+                        && ArpgUtility.toEnumName(equipmentSlot).equals(slotArpg.getAsString()))
                     inventoryHandle.setHidden(equipmentSlot, true);
         }
     }
 
-    private ItemInstance restoreItem(JsonObject itemJson) {
+    private ItemInstance restoreItem(ArpgObjectStruct itemArpg) {
 
-        if (!JsonUtility.hasString(itemJson, "item"))
+        if (!ArpgUtility.hasString(itemArpg, "item"))
             return null;
 
-        String itemName = itemJson.get("item").getAsString();
+        String itemName = itemArpg.get("item").getAsString();
 
         if (!itemDefinitionManager.hasItem(itemName)) {
             errorLog("Saved item '" + itemName + "' no longer exists and was left out.");
@@ -184,32 +183,32 @@ class PlayerRestoreBranch extends BranchPackage {
 
         ItemInstance itemInstance = itemManager.createItem(itemName);
 
-        if (itemInstance.hasContainer() && JsonUtility.hasArray(itemJson, "contents"))
-            restoreContents(itemJson.getAsJsonArray("contents"), itemInstance.getContainerInstance());
+        if (itemInstance.hasContainer() && ArpgUtility.hasArray(itemArpg, "contents"))
+            restoreContents(itemArpg.getAsArray("contents"), itemInstance.getContainerInstance());
 
         return itemInstance;
     }
 
-    private void restoreContents(JsonArray contentsJson, ContainerInstance containerInstance) {
+    private void restoreContents(ArpgArrayStruct contentsArpg, ContainerInstance containerInstance) {
 
-        for (int i = 0; i < contentsJson.size(); i++) {
+        for (int i = 0; i < contentsArpg.size(); i++) {
 
-            if (!contentsJson.get(i).isJsonObject())
+            if (!contentsArpg.get(i).isObject())
                 continue;
 
-            JsonObject slotJson = contentsJson.get(i).getAsJsonObject();
-            ItemInstance itemInstance = restoreItem(slotJson);
+            ArpgObjectStruct slotArpg = contentsArpg.get(i).getAsObject();
+            ItemInstance itemInstance = restoreItem(slotArpg);
 
             if (itemInstance == null)
                 continue;
 
-            if (isPlacementValid(slotJson, itemInstance, containerInstance)) {
+            if (isPlacementValid(slotArpg, itemInstance, containerInstance)) {
                 containerInstance.place(
                         itemInstance,
-                        slotJson.get("x").getAsInt(),
-                        slotJson.get("y").getAsInt(),
-                        slotJson.get("z").getAsInt(),
-                        slotJson.get("rotation").getAsInt());
+                        slotArpg.get("x").getAsInt(),
+                        slotArpg.get("y").getAsInt(),
+                        slotArpg.get("z").getAsInt(),
+                        slotArpg.get("rotation").getAsInt());
                 continue;
             }
 
@@ -220,83 +219,83 @@ class PlayerRestoreBranch extends BranchPackage {
     }
 
     private boolean isPlacementValid(
-            JsonObject slotJson,
+            ArpgObjectStruct slotArpg,
             ItemInstance itemInstance,
             ContainerInstance containerInstance) {
-        return JsonUtility.hasNumber(slotJson, "x")
-                && JsonUtility.hasNumber(slotJson, "y")
-                && JsonUtility.hasNumber(slotJson, "z")
-                && JsonUtility.hasNumber(slotJson, "rotation")
+        return ArpgUtility.hasNumber(slotArpg, "x")
+                && ArpgUtility.hasNumber(slotArpg, "y")
+                && ArpgUtility.hasNumber(slotArpg, "z")
+                && ArpgUtility.hasNumber(slotArpg, "rotation")
                 && containerInstance.accepts(itemInstance)
                 && containerInstance.fits(
                         itemInstance,
-                        slotJson.get("x").getAsInt(),
-                        slotJson.get("y").getAsInt(),
-                        slotJson.get("z").getAsInt(),
-                        slotJson.get("rotation").getAsInt());
+                        slotArpg.get("x").getAsInt(),
+                        slotArpg.get("y").getAsInt(),
+                        slotArpg.get("z").getAsInt(),
+                        slotArpg.get("rotation").getAsInt());
     }
 
     // Utility \\
 
-    private Vector3 parseVector(JsonObject json, String key) {
+    private Vector3 parseVector(ArpgObjectStruct arpg, String key) {
 
-        JsonObject vectorJson = JsonUtility.validateObject(json, key);
+        ArpgObjectStruct vectorArpg = ArpgUtility.validateObject(arpg, key);
 
         return new Vector3(
-                JsonUtility.validateFloat(vectorJson, "x"),
-                JsonUtility.validateFloat(vectorJson, "y"),
-                JsonUtility.validateFloat(vectorJson, "z"));
+                ArpgUtility.validateFloat(vectorArpg, "x"),
+                ArpgUtility.validateFloat(vectorArpg, "y"),
+                ArpgUtility.validateFloat(vectorArpg, "z"));
     }
 
     // Validation \\
 
-    private boolean isPlayerValid(JsonObject playerJson, EntityInstance player) {
-        return JsonUtility.hasObject(playerJson, "location")
-                && JsonUtility.hasObject(playerJson, "character")
-                && isLocationValid(playerJson.getAsJsonObject("location"), player)
-                && isCharacterValid(playerJson.getAsJsonObject("character"), player);
+    private boolean isPlayerValid(ArpgObjectStruct playerArpg, EntityInstance player) {
+        return ArpgUtility.hasObject(playerArpg, "location")
+                && ArpgUtility.hasObject(playerArpg, "character")
+                && isLocationValid(playerArpg.getAsObject("location"), player)
+                && isCharacterValid(playerArpg.getAsObject("character"), player);
     }
 
-    private boolean isLocationValid(JsonObject locationJson, EntityInstance player) {
+    private boolean isLocationValid(ArpgObjectStruct locationArpg, EntityInstance player) {
 
-        if (!JsonUtility.hasString(locationJson, "world") || !JsonUtility.hasObject(locationJson, "chunk"))
+        if (!ArpgUtility.hasString(locationArpg, "world") || !ArpgUtility.hasObject(locationArpg, "chunk"))
             return false;
 
-        JsonObject chunkJson = locationJson.getAsJsonObject("chunk");
+        ArpgObjectStruct chunkArpg = locationArpg.getAsObject("chunk");
 
-        return locationJson.get("world").getAsString().equals(player.getWorldHandle().getWorldName())
-                && JsonUtility.hasNumber(chunkJson, "x")
-                && JsonUtility.hasNumber(chunkJson, "z")
-                && isVectorValid(locationJson, "position");
+        return locationArpg.get("world").getAsString().equals(player.getWorldHandle().getWorldName())
+                && ArpgUtility.hasNumber(chunkArpg, "x")
+                && ArpgUtility.hasNumber(chunkArpg, "z")
+                && isVectorValid(locationArpg, "position");
     }
 
-    private boolean isCharacterValid(JsonObject characterJson, EntityInstance player) {
+    private boolean isCharacterValid(ArpgObjectStruct characterArpg, EntityInstance player) {
 
-        if (!isVectorValid(characterJson, "size") || !JsonUtility.hasNumber(characterJson, "weight"))
+        if (!isVectorValid(characterArpg, "size") || !ArpgUtility.hasNumber(characterArpg, "weight"))
             return false;
 
-        if (!isVectorPositive(characterJson.getAsJsonObject("size")) || characterJson.get("weight").getAsFloat() <= 0f)
+        if (!isVectorPositive(characterArpg.getAsObject("size")) || characterArpg.get("weight").getAsFloat() <= 0f)
             return false;
 
         if (!player.hasAppearance())
-            return !JsonUtility.hasObject(characterJson, "appearance");
+            return !ArpgUtility.hasObject(characterArpg, "appearance");
 
-        return JsonUtility.hasObject(characterJson, "appearance")
+        return ArpgUtility.hasObject(characterArpg, "appearance")
                 && isAppearanceValid(
-                        characterJson.getAsJsonObject("appearance"),
+                        characterArpg.getAsObject("appearance"),
                         player.getEntityData().getAppearanceData());
     }
 
-    private boolean isAppearanceValid(JsonObject appearanceJson, AppearanceData appearanceData) {
-        return isColorValid(appearanceJson, "skin_color")
-                && isColorValid(appearanceJson, "hair_color")
-                && isVectorValid(appearanceJson, "head_proportion")
-                && isVectorPositive(appearanceJson.getAsJsonObject("head_proportion"))
-                && JsonUtility.hasObject(appearanceJson, "features")
-                && areFeaturesValid(appearanceJson.getAsJsonObject("features"), appearanceData);
+    private boolean isAppearanceValid(ArpgObjectStruct appearanceArpg, AppearanceData appearanceData) {
+        return isColorValid(appearanceArpg, "skin_color")
+                && isColorValid(appearanceArpg, "hair_color")
+                && isVectorValid(appearanceArpg, "head_proportion")
+                && isVectorPositive(appearanceArpg.getAsObject("head_proportion"))
+                && ArpgUtility.hasObject(appearanceArpg, "features")
+                && areFeaturesValid(appearanceArpg.getAsObject("features"), appearanceData);
     }
 
-    private boolean areFeaturesValid(JsonObject featuresJson, AppearanceData appearanceData) {
+    private boolean areFeaturesValid(ArpgObjectStruct featuresArpg, AppearanceData appearanceData) {
 
         int filledSlotCount = 0;
 
@@ -304,7 +303,7 @@ class PlayerRestoreBranch extends BranchPackage {
 
             String key = featureSlot.name().toLowerCase();
 
-            if (!featuresJson.has(key)) {
+            if (!featuresArpg.has(key)) {
 
                 if (featureSlot.isRequired())
                     return false;
@@ -312,25 +311,25 @@ class PlayerRestoreBranch extends BranchPackage {
                 continue;
             }
 
-            if (!isFeatureValid(featuresJson, key, featureSlot, appearanceData))
+            if (!isFeatureValid(featuresArpg, key, featureSlot, appearanceData))
                 return false;
 
             filledSlotCount++;
         }
 
-        return filledSlotCount == featuresJson.size();
+        return filledSlotCount == featuresArpg.size();
     }
 
     private boolean isFeatureValid(
-            JsonObject featuresJson,
+            ArpgObjectStruct featuresArpg,
             String key,
             FeatureSlot featureSlot,
             AppearanceData appearanceData) {
 
-        if (!JsonUtility.hasString(featuresJson, key))
+        if (!ArpgUtility.hasString(featuresArpg, key))
             return false;
 
-        String featureName = featuresJson.get(key).getAsString();
+        String featureName = featuresArpg.get(key).getAsString();
 
         if (!featureManager.isFeatureAvailable(featureName))
             return false;
@@ -340,33 +339,33 @@ class PlayerRestoreBranch extends BranchPackage {
         return featureHandle.getFeatureSlot() == featureSlot && appearanceData.isCompatible(featureHandle);
     }
 
-    private boolean isVectorValid(JsonObject json, String key) {
+    private boolean isVectorValid(ArpgObjectStruct arpg, String key) {
 
-        if (!JsonUtility.hasObject(json, key))
+        if (!ArpgUtility.hasObject(arpg, key))
             return false;
 
-        JsonObject vectorJson = json.getAsJsonObject(key);
+        ArpgObjectStruct vectorArpg = arpg.getAsObject(key);
 
-        return JsonUtility.hasNumber(vectorJson, "x")
-                && JsonUtility.hasNumber(vectorJson, "y")
-                && JsonUtility.hasNumber(vectorJson, "z");
+        return ArpgUtility.hasNumber(vectorArpg, "x")
+                && ArpgUtility.hasNumber(vectorArpg, "y")
+                && ArpgUtility.hasNumber(vectorArpg, "z");
     }
 
-    private boolean isVectorPositive(JsonObject vectorJson) {
-        return vectorJson.get("x").getAsFloat() > 0f
-                && vectorJson.get("y").getAsFloat() > 0f
-                && vectorJson.get("z").getAsFloat() > 0f;
+    private boolean isVectorPositive(ArpgObjectStruct vectorArpg) {
+        return vectorArpg.get("x").getAsFloat() > 0f
+                && vectorArpg.get("y").getAsFloat() > 0f
+                && vectorArpg.get("z").getAsFloat() > 0f;
     }
 
-    private boolean isColorValid(JsonObject json, String key) {
+    private boolean isColorValid(ArpgObjectStruct arpg, String key) {
 
-        if (!JsonUtility.hasObject(json, key))
+        if (!ArpgUtility.hasObject(arpg, key))
             return false;
 
-        JsonObject colorJson = json.getAsJsonObject(key);
+        ArpgObjectStruct colorArpg = arpg.getAsObject(key);
 
-        return JsonUtility.hasNumber(colorJson, "r")
-                && JsonUtility.hasNumber(colorJson, "g")
-                && JsonUtility.hasNumber(colorJson, "b");
+        return ArpgUtility.hasNumber(colorArpg, "r")
+                && ArpgUtility.hasNumber(colorArpg, "g")
+                && ArpgUtility.hasNumber(colorArpg, "b");
     }
 }

@@ -2,8 +2,6 @@ package application.bootstrap.animationpipeline.animationmanager;
 
 import java.io.File;
 import java.util.Set;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipData;
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
@@ -12,13 +10,15 @@ import application.bootstrap.animationpipeline.animation.BoneTrackStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector3;
 
 class AnimationBuilder extends BuilderPackage {
 
     /*
-     * Parses one animation clip JSON file into an AnimationClipData and
+     * Parses one animation clip ARPG file into an AnimationClipData and
      * wraps it in an AnimationClipHandle. Every clip declares the rig its
      * bone names are validated against — track keys are resolved to bone
      * indices at build time, never by name at runtime. Keyframes within a
@@ -42,18 +42,18 @@ class AnimationBuilder extends BuilderPackage {
 
     AnimationClipHandle build(File file, String clipName) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
-        String rigName = JsonUtility.validateString(json, "rig");
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+        String rigName = ArpgUtility.validateString(arpg, "rig");
         RigHandle rigHandle = rigManager.getRigHandleFromRigName(rigName);
-        boolean looping = json.has("loop") && json.get("loop").getAsBoolean();
+        boolean looping = arpg.has("loop") && arpg.get("loop").getAsBoolean();
 
         BoneTrackStruct[] boneTracks = new BoneTrackStruct[rigHandle.getBoneCount()];
         float duration = 0f;
 
-        if (json.has("tracks") && !json.get("tracks").isJsonNull()) {
+        if (arpg.has("tracks") && !arpg.get("tracks").isNull()) {
 
-            JsonObject tracksJson = json.getAsJsonObject("tracks");
-            Set<String> boneNames = tracksJson.keySet();
+            ArpgObjectStruct tracksArpg = arpg.getAsObject("tracks");
+            Set<String> boneNames = tracksArpg.keySet();
 
             for (String boneName : boneNames) {
 
@@ -62,8 +62,8 @@ class AnimationBuilder extends BuilderPackage {
                             + "\" for rig \"" + rigName + "\" in file: " + file.getName());
 
                 int boneIndex = rigHandle.getBoneIndex(boneName);
-                JsonArray keyframesJson = tracksJson.getAsJsonArray(boneName);
-                BoneTrackStruct track = parseTrack(keyframesJson, boneName, file);
+                ArpgArrayStruct keyframesArpg = tracksArpg.getAsArray(boneName);
+                BoneTrackStruct track = parseTrack(keyframesArpg, boneName, file);
 
                 boneTracks[boneIndex] = track;
                 duration = Math.max(duration, track.getKeyframe(track.getKeyframeCount() - 1).getTime());
@@ -88,23 +88,23 @@ class AnimationBuilder extends BuilderPackage {
 
     // Track Parsing \\
 
-    private BoneTrackStruct parseTrack(JsonArray keyframesJson, String boneName, File file) {
+    private BoneTrackStruct parseTrack(ArpgArrayStruct keyframesArpg, String boneName, File file) {
 
-        if (keyframesJson.size() == 0)
+        if (keyframesArpg.size() == 0)
             throwException("Bone track \"" + boneName + "\" has no keyframes in file: " + file.getName());
 
-        AnimationKeyframeStruct[] keyframes = new AnimationKeyframeStruct[keyframesJson.size()];
+        AnimationKeyframeStruct[] keyframes = new AnimationKeyframeStruct[keyframesArpg.size()];
         float previousTime = -1f;
 
-        for (int i = 0; i < keyframesJson.size(); i++) {
+        for (int i = 0; i < keyframesArpg.size(); i++) {
 
-            JsonObject keyframeJson = keyframesJson.get(i).getAsJsonObject();
+            ArpgObjectStruct keyframeArpg = keyframesArpg.get(i).getAsObject();
 
-            if (!keyframeJson.has("time"))
+            if (!keyframeArpg.has("time"))
                 throwException("Keyframe " + i + " on bone \"" + boneName
                         + "\" missing \"time\" in file: " + file.getName());
 
-            float time = keyframeJson.get("time").getAsFloat();
+            float time = keyframeArpg.get("time").getAsFloat();
 
             if (time <= previousTime)
                 throwException("Keyframe " + i + " on bone \"" + boneName
@@ -115,9 +115,9 @@ class AnimationBuilder extends BuilderPackage {
 
             keyframes[i] = new AnimationKeyframeStruct(
                     time,
-                    parseVector3(keyframeJson, "rotation", 0f, file),
-                    parseVector3(keyframeJson, "position", 0f, file),
-                    parseVector3(keyframeJson, "scale", 1f, file));
+                    parseVector3(keyframeArpg, "rotation", 0f, file),
+                    parseVector3(keyframeArpg, "position", 0f, file),
+                    parseVector3(keyframeArpg, "scale", 1f, file));
         }
 
         return new BoneTrackStruct(keyframes);
@@ -125,12 +125,12 @@ class AnimationBuilder extends BuilderPackage {
 
     // Vector Parsing \\
 
-    private Vector3 parseVector3(JsonObject json, String key, float defaultValue, File file) {
+    private Vector3 parseVector3(ArpgObjectStruct arpg, String key, float defaultValue, File file) {
 
-        if (!json.has(key) || json.get(key).isJsonNull())
+        if (!arpg.has(key) || arpg.get(key).isNull())
             return new Vector3(defaultValue, defaultValue, defaultValue);
 
-        JsonObject vector = json.getAsJsonObject(key);
+        ArpgObjectStruct vector = arpg.getAsObject(key);
 
         return new Vector3(
                 vector.has("x") ? vector.get("x").getAsFloat() : defaultValue,

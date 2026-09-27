@@ -1,4 +1,0 @@
-{
-    "vert": "editor/itemeditor/ItemEditorGridShader.vsh",
-    "frag": "editor/itemeditor/ItemEditorGridShader.fsh"
-}

@@ -5,7 +5,7 @@ import engine.root.StructPackage;
 public class AttachmentStruct extends StructPackage {
 
     /*
-     * Describes a single FBO attachment — color or depth — parsed from JSON
+     * Describes a single FBO attachment — color or depth — parsed from ARPG
      * during bootstrap. Passed to FBOBuilder to drive GL texture allocation
      * and draw buffer list construction for multi-render-target framebuffers.
      */

@@ -14,7 +14,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class EntityData extends DataPackage {
 
     /*
-     * Immutable entity template loaded from JSON: size, weight and eye level
+     * Immutable entity template loaded from ARPG: size, weight and eye level
      * ranges, behavior, and the optional character model with its material,
      * animation tree, appearance, authored height and equipment anchors. The
      * material is resolved once per template and shared by every instance so

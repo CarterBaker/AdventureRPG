@@ -1,7 +1,6 @@
 package application.bootstrap.shaderpipeline.materialmanager;
 
 import java.io.File;
-import com.google.gson.JsonObject;
 
 import application.bootstrap.shaderpipeline.material.MaterialData;
 import application.bootstrap.shaderpipeline.material.MaterialHandle;
@@ -15,14 +14,15 @@ import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import application.bootstrap.shaderpipeline.uniforms.UniformUtility;
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class MaterialBuilder extends BuilderPackage {
 
     /*
-     * Parses material JSON files into MaterialHandles during bootstrap.
+     * Parses material ARPG files into MaterialHandles during bootstrap.
      * Uniforms are cloned from the compiled shader — the optional "uniforms"
      * block applies default values to named uniforms. Sampler uniforms with
      * string values are resolved through TextureManager to GPU handles.
@@ -53,31 +53,31 @@ class MaterialBuilder extends BuilderPackage {
         if (materialManager.hasMaterial(materialName))
             return;
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
-        String shaderName = JsonUtility.validateString(json, "shader");
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+        String shaderName = ArpgUtility.validateString(arpg, "shader");
         ShaderHandle shaderHandle = shaderManager.getShaderHandleFromShaderName(shaderName);
 
         // UBOs
         Object2ObjectOpenHashMap<String, UBOHandle> sourceUBOs = new Object2ObjectOpenHashMap<>();
 
-        if (json.has("ubos")) {
-            JsonObject ubosJson = json.getAsJsonObject("ubos");
-            for (String uboName : ubosJson.keySet())
+        if (arpg.has("ubos")) {
+            ArpgObjectStruct ubosArpg = arpg.getAsObject("ubos");
+            for (String uboName : ubosArpg.keySet())
                 sourceUBOs.put(uboName, uboManager.getUBOHandleFromUBOName(uboName));
         }
 
-        // Uniforms — clone all from shader, apply JSON overrides where declared
+        // Uniforms — clone all from shader, apply ARPG overrides where declared
         Object2ObjectOpenHashMap<String, UniformStruct<?>> shaderUniforms = shaderHandle.getCompiledUniforms();
         Object2ObjectOpenHashMap<String, UniformStruct<?>> uniforms = new Object2ObjectOpenHashMap<>();
 
         for (String uniformName : shaderUniforms.keySet())
             uniforms.put(uniformName, shaderUniforms.get(uniformName).clone());
 
-        if (json.has("uniforms")) {
+        if (arpg.has("uniforms")) {
 
-            JsonObject uniformsJson = json.getAsJsonObject("uniforms");
+            ArpgObjectStruct uniformsArpg = arpg.getAsObject("uniforms");
 
-            for (String uniformName : uniformsJson.keySet()) {
+            for (String uniformName : uniformsArpg.keySet()) {
 
                 UniformStruct<?> uniform = uniforms.get(uniformName);
 
@@ -85,22 +85,22 @@ class MaterialBuilder extends BuilderPackage {
                     throwException("Material '" + materialName
                             + "' references unknown uniform: " + uniformName);
 
-                JsonObject uniformJson = uniformsJson.getAsJsonObject(uniformName);
+                ArpgObjectStruct uniformArpg = uniformsArpg.getAsObject(uniformName);
                 UniformAttributeStruct<?> attribute = uniform.attribute();
 
                 if (isSamplerType(attribute.getUniformType())
-                        && uniformJson.has("value")
-                        && uniformJson.get("value").isJsonPrimitive()
-                        && !uniformJson.get("value").getAsJsonPrimitive().isNumber()) {
+                        && uniformArpg.has("value")
+                        && uniformArpg.get("value").isValue()
+                        && !uniformArpg.get("value").getAsValue().isNumber()) {
 
-                    String textureName = uniformJson.get("value").getAsString();
+                    String textureName = uniformArpg.get("value").getAsString();
                     int gpuHandle = resolveTextureHandle(textureName, uniformName, materialName);
 
                     @SuppressWarnings("unchecked")
                     UniformAttributeStruct<Integer> samplerAttr = (UniformAttributeStruct<Integer>) attribute;
                     samplerAttr.set(gpuHandle);
                 } else {
-                    UniformUtility.applyFromJsonObject(attribute, uniformName, uniformJson);
+                    UniformUtility.applyFromArpgObject(attribute, uniformName, uniformArpg);
                 }
             }
         }

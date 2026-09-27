@@ -1,5 +1,0 @@
-{
-    "defaultColor": [0.5, 0.5, 1.0],
-    "uniformName": "u_layer_normal",
-    "aliases": ["bump", "n", "nmap", "normal", "normals"]
-}

@@ -46,8 +46,6 @@ dependencies {
   runtimeOnly "org.lwjgl:lwjgl-glfw::natives-macos"
   runtimeOnly "org.lwjgl:lwjgl-opengl::natives-macos"
 
-  implementation 'com.google.code.gson:gson:2.10.1'
-
   implementation project(':core')
 }
 
@@ -70,6 +68,20 @@ tasks.create('runEditor', JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'lwjgl3.Lwjgl3LauncherEditor'
   jvmArgs += editorJvmArgs
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+
+// Runs the ARPG data tool from the project root, so every path it is given is
+// relative to the root. Pass the command and paths through --args, for example
+// gradlew lwjgl3:arpg --args="decode assets/blocks/TerraArcanaBlocks.arpg".
+tasks.register('arpg', JavaExec) {
+  group = 'application'
+  description = 'Encodes, decodes, converts, exports or verifies .arpg data files.'
+  workingDir = rootProject.projectDir
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'lwjgl3.Lwjgl3LauncherArpg'
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(21)
   }

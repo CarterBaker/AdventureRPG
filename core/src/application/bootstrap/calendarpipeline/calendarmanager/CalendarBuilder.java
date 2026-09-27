@@ -1,9 +1,6 @@
 package application.bootstrap.calendarpipeline.calendarmanager;
 
 import java.io.File;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarData;
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
@@ -12,14 +9,17 @@ import application.bootstrap.calendarpipeline.calendar.CalendarStartStruct;
 import application.bootstrap.calendarpipeline.calendar.CalendarTimeStruct;
 import application.bootstrap.calendarpipeline.calendar.SeasonRangeStruct;
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CalendarBuilder extends BuilderPackage {
 
     /*
-     * Parses calendar JSON into a CalendarData/CalendarHandle: the day-of-
+     * Parses calendar ARPG into a CalendarData/CalendarHandle: the day-of-
      * week and month layout, this calendar's own day/year shape, its
      * starting point, the star its world orbits, and its named seasons —
      * each anchoring a name to a
@@ -32,16 +32,16 @@ class CalendarBuilder extends BuilderPackage {
 
     CalendarHandle build(File file, String calendarName) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
-        ObjectArrayList<String> daysOfWeek = parseDaysOfWeek(json);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+        ObjectArrayList<String> daysOfWeek = parseDaysOfWeek(arpg);
         ObjectArrayList<String> monthNames = new ObjectArrayList<>();
-        Object2ByteOpenHashMap<String> monthDays = parseMonths(json, monthNames);
+        Object2ByteOpenHashMap<String> monthDays = parseMonths(arpg, monthNames);
         int totalDaysInYear = calculateTotalDaysInYear(monthDays);
 
-        CalendarTimeStruct time = parseTime(json, calendarName);
-        CalendarStartStruct start = parseStart(json, calendarName, monthNames, monthDays, time);
-        CalendarStarStruct star = parseStar(json, calendarName);
-        ObjectArrayList<SeasonRangeStruct> seasons = parseSeasons(json, calendarName, monthNames, monthDays);
+        CalendarTimeStruct time = parseTime(arpg, calendarName);
+        CalendarStartStruct start = parseStart(arpg, calendarName, monthNames, monthDays, time);
+        CalendarStarStruct star = parseStar(arpg, calendarName);
+        ObjectArrayList<SeasonRangeStruct> seasons = parseSeasons(arpg, calendarName, monthNames, monthDays);
 
         CalendarData calendarData = new CalendarData(
                 calendarName, daysOfWeek, monthNames, monthDays, totalDaysInYear,
@@ -55,33 +55,33 @@ class CalendarBuilder extends BuilderPackage {
 
     // Parsing \\
 
-    private ObjectArrayList<String> parseDaysOfWeek(JsonObject json) {
+    private ObjectArrayList<String> parseDaysOfWeek(ArpgObjectStruct arpg) {
 
-        if (!json.has("daysOfWeek"))
-            throwException("Calendar JSON missing 'daysOfWeek' field");
+        if (!arpg.has("daysOfWeek"))
+            throwException("Calendar ARPG missing 'daysOfWeek' field");
 
-        JsonArray daysArray = json.getAsJsonArray("daysOfWeek");
+        ArpgArrayStruct daysArray = arpg.getAsArray("daysOfWeek");
         ObjectArrayList<String> daysOfWeek = new ObjectArrayList<>(daysArray.size());
 
-        for (JsonElement element : daysArray)
+        for (ArpgElementStruct element : daysArray)
             daysOfWeek.add(element.getAsString());
 
         return daysOfWeek;
     }
 
     private Object2ByteOpenHashMap<String> parseMonths(
-            JsonObject json,
+            ArpgObjectStruct arpg,
             ObjectArrayList<String> monthNames) {
 
-        if (!json.has("months"))
-            throwException("Calendar JSON missing 'months' field");
+        if (!arpg.has("months"))
+            throwException("Calendar ARPG missing 'months' field");
 
-        JsonArray monthsArray = json.getAsJsonArray("months");
+        ArpgArrayStruct monthsArray = arpg.getAsArray("months");
         Object2ByteOpenHashMap<String> monthDays = new Object2ByteOpenHashMap<>(monthsArray.size());
 
-        for (JsonElement element : monthsArray) {
+        for (ArpgElementStruct element : monthsArray) {
 
-            JsonObject monthObject = element.getAsJsonObject();
+            ArpgObjectStruct monthObject = element.getAsObject();
             String name = monthObject.get("name").getAsString();
             byte days = (byte) monthObject.get("days").getAsInt();
 
@@ -92,14 +92,14 @@ class CalendarBuilder extends BuilderPackage {
         return monthDays;
     }
 
-    private CalendarTimeStruct parseTime(JsonObject json, String calendarName) {
+    private CalendarTimeStruct parseTime(ArpgObjectStruct arpg, String calendarName) {
 
-        int daysPerDay = JsonUtility.validateInt(json, "daysPerDay");
-        int hoursPerDay = JsonUtility.validateInt(json, "hoursPerDay");
-        int minutesPerHour = JsonUtility.validateInt(json, "minutesPerHour");
-        int lunarCycleDays = JsonUtility.validateInt(json, "lunarCycleDays");
-        float middayOffset = JsonUtility.validateFloat(json, "middayOffset");
-        int yearsPerAge = JsonUtility.validateInt(json, "yearsPerAge");
+        int daysPerDay = ArpgUtility.validateInt(arpg, "daysPerDay");
+        int hoursPerDay = ArpgUtility.validateInt(arpg, "hoursPerDay");
+        int minutesPerHour = ArpgUtility.validateInt(arpg, "minutesPerHour");
+        int lunarCycleDays = ArpgUtility.validateInt(arpg, "lunarCycleDays");
+        float middayOffset = ArpgUtility.validateFloat(arpg, "middayOffset");
+        int yearsPerAge = ArpgUtility.validateInt(arpg, "yearsPerAge");
 
         validateTime(calendarName, daysPerDay, hoursPerDay, minutesPerHour, lunarCycleDays, middayOffset,
                 yearsPerAge);
@@ -109,23 +109,23 @@ class CalendarBuilder extends BuilderPackage {
     }
 
     private CalendarStartStruct parseStart(
-            JsonObject json,
+            ArpgObjectStruct arpg,
             String calendarName,
             ObjectArrayList<String> monthNames,
             Object2ByteOpenHashMap<String> monthDays,
             CalendarTimeStruct time) {
 
-        if (!json.has("start"))
-            throwException("Calendar \"" + calendarName + "\" JSON missing 'start' block");
+        if (!arpg.has("start"))
+            throwException("Calendar \"" + calendarName + "\" ARPG missing 'start' block");
 
-        JsonObject startObject = json.getAsJsonObject("start");
+        ArpgObjectStruct startObject = arpg.getAsObject("start");
 
-        int year = JsonUtility.validateInt(startObject, "year");
-        int age = JsonUtility.validateInt(startObject, "age");
-        int month = JsonUtility.validateInt(startObject, "month");
-        int dayOfMonth = JsonUtility.validateInt(startObject, "dayOfMonth");
-        int hour = JsonUtility.validateInt(startObject, "hour");
-        int minute = JsonUtility.validateInt(startObject, "minute");
+        int year = ArpgUtility.validateInt(startObject, "year");
+        int age = ArpgUtility.validateInt(startObject, "age");
+        int month = ArpgUtility.validateInt(startObject, "month");
+        int dayOfMonth = ArpgUtility.validateInt(startObject, "dayOfMonth");
+        int hour = ArpgUtility.validateInt(startObject, "hour");
+        int minute = ArpgUtility.validateInt(startObject, "minute");
 
         validateStartDate(calendarName, month, dayOfMonth, monthNames, monthDays);
         validateStartTime(calendarName, hour, minute, time);
@@ -133,12 +133,12 @@ class CalendarBuilder extends BuilderPackage {
         return new CalendarStartStruct(year, age, month, dayOfMonth, hour, minute);
     }
 
-    private CalendarStarStruct parseStar(JsonObject json, String calendarName) {
+    private CalendarStarStruct parseStar(ArpgObjectStruct arpg, String calendarName) {
 
-        JsonObject starObject = JsonUtility.validateObject(json, "star");
+        ArpgObjectStruct starObject = ArpgUtility.validateObject(arpg, "star");
 
-        float distance = JsonUtility.validateFloat(starObject, "distance");
-        float luminosity = JsonUtility.validateFloat(starObject, "luminosity");
+        float distance = ArpgUtility.validateFloat(starObject, "distance");
+        float luminosity = ArpgUtility.validateFloat(starObject, "luminosity");
 
         if (distance <= 0f)
             throwException("Calendar \"" + calendarName + "\" star.distance " + distance +
@@ -152,12 +152,12 @@ class CalendarBuilder extends BuilderPackage {
     }
 
     private ObjectArrayList<SeasonRangeStruct> parseSeasons(
-            JsonObject json,
+            ArpgObjectStruct arpg,
             String calendarName,
             ObjectArrayList<String> monthNames,
             Object2ByteOpenHashMap<String> monthDays) {
 
-        JsonArray seasonsArray = JsonUtility.validateArray(json, "seasons");
+        ArpgArrayStruct seasonsArray = ArpgUtility.validateArray(arpg, "seasons");
 
         if (seasonsArray.isEmpty())
             throwException("Calendar \"" + calendarName + "\" 'seasons' array must define at least one season");
@@ -166,13 +166,13 @@ class CalendarBuilder extends BuilderPackage {
         int lastStartMonth = -1;
         int lastStartDay = -1;
 
-        for (JsonElement element : seasonsArray) {
+        for (ArpgElementStruct element : seasonsArray) {
 
-            JsonObject seasonObject = element.getAsJsonObject();
-            String name = JsonUtility.validateString(seasonObject, "name");
-            int startMonth = JsonUtility.validateInt(seasonObject, "startMonth");
-            int startDayOfMonth = JsonUtility.getInt(seasonObject, "startDayOfMonth", 1);
-            float dayLength = JsonUtility.validateFloat(seasonObject, "dayLength");
+            ArpgObjectStruct seasonObject = element.getAsObject();
+            String name = ArpgUtility.validateString(seasonObject, "name");
+            int startMonth = ArpgUtility.validateInt(seasonObject, "startMonth");
+            int startDayOfMonth = ArpgUtility.getInt(seasonObject, "startDayOfMonth", 1);
+            float dayLength = ArpgUtility.validateFloat(seasonObject, "dayLength");
 
             if (startMonth < 0 || startMonth >= monthNames.size())
                 throwException("Calendar \"" + calendarName + "\" season \"" + name + "\" startMonth " + startMonth +

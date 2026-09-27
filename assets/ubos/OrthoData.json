@@ -1,7 +1,0 @@
-{
-    "blockName": "OrthoData",
-    "uniforms": [
-        { "name": "u_orthoProjection", "type": "MATRIX4" },
-        { "name": "u_screenSize",      "type": "VECTOR2" }
-    ]
-}

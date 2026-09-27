@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class FeatureLoader extends LoaderPackage {
 
     /*
-     * Scans the feature JSON directory and loads every appearance option
+     * Scans the feature ARPG directory and loads every appearance option
      * into FeatureManager. Supports on-demand loading for features not yet
      * in the palette — entity templates resolve their default features
      * through that path while they load.
@@ -30,12 +30,12 @@ class FeatureLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.FEATURE_JSON_PATH);
+        this.root = new File(EngineSetting.FEATURE_PATH);
         this.featureName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root, "Feature JSON directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Feature ARPG directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String featureName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             featureName2File.put(featureName, file);
             queueFile(file);

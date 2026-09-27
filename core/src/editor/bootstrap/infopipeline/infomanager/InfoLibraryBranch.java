@@ -2,23 +2,21 @@ package editor.bootstrap.infopipeline.infomanager;
 
 import java.io.File;
 
-import com.google.gson.JsonObject;
-
 import editor.bootstrap.infopipeline.infodocument.InfoDocumentInstance;
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
-import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InfoLibraryBranch extends BranchPackage {
 
     /*
-     * Reads and writes info content on disk. A schema's files are every JSON
+     * Reads and writes info content on disk. A schema's files are every ARPG
      * file under its directory, named by their path relative to it — the same
-     * names the game loads them under. A file that is not a JSON object is
+     * names the game loads them under. A file that is not an ARPG object is
      * reported and left out rather than opened.
      */
 
@@ -32,7 +30,7 @@ class InfoLibraryBranch extends BranchPackage {
         if (!root.isDirectory())
             return definitionNames;
 
-        ObjectArrayList<File> files = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
+        ObjectArrayList<File> files = FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS);
 
         for (int i = 0; i < files.size(); i++)
             definitionNames.add(FileUtility.getPathWithFileNameWithoutExtension(root, files.get(i)));
@@ -43,13 +41,13 @@ class InfoLibraryBranch extends BranchPackage {
 
     // Load \\
 
-    JsonObject load(InfoSchemaHandle schema, String definitionName) {
+    ArpgObjectStruct load(InfoSchemaHandle schema, String definitionName) {
 
         File file = getFile(schema, definitionName);
-        JsonObject root = JsonUtility.tryLoadJsonObject(file);
+        ArpgObjectStruct root = ArpgUtility.tryLoadObject(file);
 
         if (root == null)
-            errorLog("Info schema '" + schema.getSchemaName() + "' skipped a file that is not a JSON object: "
+            errorLog("Info schema '" + schema.getSchemaName() + "' skipped a file that is not an ARPG object: "
                     + file.getAbsolutePath());
 
         return root;
@@ -58,10 +56,9 @@ class InfoLibraryBranch extends BranchPackage {
     // Save \\
 
     void save(InfoDocumentInstance document) {
-        JsonUtility.writeJsonObject(
+        ArpgUtility.writeObject(
                 getFile(document.getSchema(), document.getDefinitionName()),
-                document.getRoot(),
-                internal.gson);
+                document.getRoot());
     }
 
     // Delete \\
@@ -81,6 +78,6 @@ class InfoLibraryBranch extends BranchPackage {
     }
 
     private File getFile(InfoSchemaHandle schema, String definitionName) {
-        return new File(schema.getDirectory(), definitionName + "." + EditorSetting.INFO_FILE_EXTENSION);
+        return ArpgUtility.resolveFile(new File(schema.getDirectory()), definitionName);
     }
 }

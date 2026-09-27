@@ -4,7 +4,7 @@ public enum FBOSizingStrategy {
 
     /*
      * How an FBO is sized: relative to the window it renders for, or at the
-     * fixed size its JSON declares.
+     * fixed size its ARPG declares.
      */
 
     WINDOW_RELATIVE,

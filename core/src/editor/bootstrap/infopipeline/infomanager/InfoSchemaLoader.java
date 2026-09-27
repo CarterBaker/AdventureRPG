@@ -31,7 +31,7 @@ class InfoSchemaLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Info schema directory not found: " + root.getAbsolutePath());
 
-        ObjectArrayList<File> schemaFiles = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
+        ObjectArrayList<File> schemaFiles = FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS);
 
         for (int i = 0; i < schemaFiles.size(); i++)
             queueFile(schemaFiles.get(i));

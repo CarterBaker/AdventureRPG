@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class AnimationLoader extends LoaderPackage {
 
     /*
-     * Scans the animation JSON directory and loads every clip into
+     * Scans the animation ARPG directory and loads every clip into
      * AnimationManager. Supports on-demand loading for clips not yet in
      * the palette at runtime.
      */
@@ -29,12 +29,12 @@ class AnimationLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.ANIMATION_JSON_PATH);
+        this.root = new File(EngineSetting.ANIMATION_PATH);
         this.clipName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root, "Animation JSON directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Animation ARPG directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String clipName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             clipName2File.put(clipName, file);
             queueFile(file);

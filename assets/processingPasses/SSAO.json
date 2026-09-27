@@ -1,4 +1,0 @@
-{
-    "material": "postprocessing/SSAOMaterial",
-    "mesh": "util/PlanarPass"
-}

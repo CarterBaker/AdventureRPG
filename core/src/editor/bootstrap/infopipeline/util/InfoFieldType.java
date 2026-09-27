@@ -1,13 +1,13 @@
 package editor.bootstrap.infopipeline.util;
 
-import com.google.gson.JsonElement;
+import engine.util.arpg.ArpgElementStruct;
 
 public enum InfoFieldType {
 
     /*
      * The kind of value a schema field holds. Primitive kinds are edited in
      * place; OBJECT, ARRAY, and MAP are groups whose children are listed
-     * beneath them. JSON accepts any value and is edited as raw JSON text,
+     * beneath them. RAW accepts any value and is edited as raw ARPG text,
      * which is also how any value that does not match its schema is shown.
      */
 
@@ -19,7 +19,7 @@ public enum InfoFieldType {
     OBJECT("object"),
     ARRAY("array"),
     MAP("map"),
-    JSON("json");
+    RAW("raw");
 
     // Internal
     private final String schemaName;
@@ -41,15 +41,15 @@ public enum InfoFieldType {
         return null;
     }
 
-    public boolean accepts(JsonElement value) {
+    public boolean accepts(ArpgElementStruct value) {
 
         return switch (this) {
-            case STRING, ENUM -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isString();
-            case INT, FLOAT -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber();
-            case BOOLEAN -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean();
-            case OBJECT, MAP -> value.isJsonObject();
-            case ARRAY -> value.isJsonArray();
-            case JSON -> true;
+            case STRING, ENUM -> value.isValue() && value.getAsValue().isString();
+            case INT, FLOAT -> value.isValue() && value.getAsValue().isNumber();
+            case BOOLEAN -> value.isValue() && value.getAsValue().isBoolean();
+            case OBJECT, MAP -> value.isObject();
+            case ARRAY -> value.isArray();
+            case RAW -> true;
         };
     }
 

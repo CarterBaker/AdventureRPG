@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class MenuLoader extends LoaderPackage {
 
     /*
-     * Discovers menu JSON files in scan(), processes one file per load() call —
+     * Discovers menu ARPG files in scan(), processes one file per load() call —
      * each file may produce multiple MenuHandles — then resolves all deferred
      * element refs in onComplete() once every file has been processed.
      * On-demand: resolves the owning file from the menu name, loads it immediately,
@@ -32,14 +32,14 @@ class MenuLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.MENU_JSON_PATH);
+        this.root = new File(EngineSetting.MENU_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
         this.menuName2ResourceName = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root,
-                "Menu JSON directory not found: " + root.getAbsolutePath());
+                "Menu ARPG directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             resourceName2File.put(resourceName, file);
             queueFile(file);

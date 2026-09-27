@@ -12,7 +12,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class ItemDefinitionLoader extends LoaderPackage {
 
     /*
-     * Scans the item JSON directory and loads all item definitions into
+     * Scans the item ARPG directory and loads all item definitions into
      * ItemDefinitionManager. Maintains a reverse mapping from item name to
      * resource name to support on-demand loading at runtime.
      */
@@ -31,13 +31,13 @@ class ItemDefinitionLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.ITEM_JSON_PATH);
+        this.root = new File(EngineSetting.ITEM_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
         this.itemName2ResourceName = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Item directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             resourceName2File.put(resourceName, file);
             queueFile(file);

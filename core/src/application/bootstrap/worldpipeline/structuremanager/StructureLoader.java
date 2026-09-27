@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class StructureLoader extends LoaderPackage {
 
     /*
-     * Scans the structure JSON directory and loads every structure definition
+     * Scans the structure ARPG directory and loads every structure definition
      * into StructureManager. Supports on-demand loading by structure name, and
      * requestAll() so StructureManager can complete its palette before the
      * first chunk generates.
@@ -40,12 +40,12 @@ class StructureLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.STRUCTURE_JSON_PATH);
+        this.root = new File(EngineSetting.STRUCTURE_PATH);
         this.structureName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Structure root directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String structureName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             structureName2File.put(structureName, file);
             queueFile(file);

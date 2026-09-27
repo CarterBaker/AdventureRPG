@@ -2,9 +2,6 @@ package editor.bootstrap.infopipeline.infomanager;
 
 import java.util.function.Consumer;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.menupipeline.hierarchy.HierarchyNodeStruct;
 import application.bootstrap.menupipeline.hierarchymanager.HierarchyManager;
 import editor.bootstrap.infopipeline.infodocument.InfoDocumentInstance;
@@ -17,6 +14,9 @@ import editor.bootstrap.infopipeline.util.InfoFieldType;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -25,7 +25,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 public class InfoManager extends ManagerPackage {
 
     /*
-     * Owns the editor's JSON content: every schema, the files opened under it,
+     * Owns the editor's ARPG content: every schema, the files opened under it,
      * and the single selection shared by the hierarchy and info panels. Files
      * load on first view and keep edits until saved or reverted; disk access,
      * edits, rows and hierarchy nodes each live in their own branch.
@@ -140,7 +140,7 @@ public class InfoManager extends ManagerPackage {
 
         for (int i = 0; i < definitionNames.size(); i++) {
 
-            JsonObject root = infoLibraryBranch.load(schema, definitionNames.get(i));
+            ArpgObjectStruct root = infoLibraryBranch.load(schema, definitionNames.get(i));
 
             if (root != null)
                 documents.add(createDocument(schema, definitionNames.get(i), root, true));
@@ -152,7 +152,7 @@ public class InfoManager extends ManagerPackage {
     private InfoDocumentInstance createDocument(
             InfoSchemaHandle schema,
             String definitionName,
-            JsonObject root,
+            ArpgObjectStruct root,
             boolean onDisk) {
 
         InfoDocumentInstance document = create(InfoDocumentInstance.class);
@@ -160,7 +160,10 @@ public class InfoManager extends ManagerPackage {
         return document;
     }
 
-    private InfoDocumentInstance openNewDocument(InfoSchemaHandle schema, String definitionName, JsonObject root) {
+    private InfoDocumentInstance openNewDocument(
+            InfoSchemaHandle schema,
+            String definitionName,
+            ArpgObjectStruct root) {
 
         ObjectArrayList<InfoDocumentInstance> documents = getDocuments(schema);
         InfoDocumentInstance document = createDocument(schema, definitionName, root, false);
@@ -259,9 +262,9 @@ public class InfoManager extends ManagerPackage {
 
     private InfoEntryStruct getSelectedEntry() {
 
-        JsonObject entryJson = getSelectedEntryJson();
+        ArpgObjectStruct entryArpg = getSelectedEntryArpg();
 
-        if (entryJson == null)
+        if (entryArpg == null)
             return null;
 
         String entryName = activeSchema.isArrayLayout() ? selectedEntryName : selectedDocument.getDefinitionName();
@@ -270,10 +273,10 @@ public class InfoManager extends ManagerPackage {
                 activeSchema.getSchemaName(),
                 selectedDocument.getDefinitionName(),
                 entryName,
-                entryJson);
+                entryArpg);
     }
 
-    private JsonObject getSelectedEntryJson() {
+    private ArpgObjectStruct getSelectedEntryArpg() {
 
         if (selectedDocument == null)
             return null;
@@ -323,7 +326,7 @@ public class InfoManager extends ManagerPackage {
             String schemaName,
             String definitionName,
             String entryName,
-            Consumer<JsonObject> customizer) {
+            Consumer<ArpgObjectStruct> customizer) {
 
         InfoSchemaHandle schema = getSchema(schemaName);
 
@@ -333,18 +336,18 @@ public class InfoManager extends ManagerPackage {
         InfoDocumentInstance document = findDocument(schema, definitionName);
 
         if (document == null)
-            document = openNewDocument(schema, definitionName, new JsonObject());
+            document = openNewDocument(schema, definitionName, new ArpgObjectStruct());
 
         if (document.findEntryIndex(entryName) != EngineSetting.INDEX_NOT_FOUND)
             throwException("Info file '" + definitionName + "' already holds an entry named '" + entryName + "'.");
 
-        JsonObject entryJson = infoEditBranch.createDefault(schema.getRootField()).getAsJsonObject();
-        entryJson.addProperty(schema.getNameField(), entryName);
+        ArpgObjectStruct entryArpg = infoEditBranch.createDefault(schema.getRootField()).getAsObject();
+        entryArpg.addProperty(schema.getNameField(), entryName);
 
         if (customizer != null)
-            customizer.accept(entryJson);
+            customizer.accept(entryArpg);
 
-        document.requireEntryArray().add(entryJson);
+        document.requireEntryArray().add(entryArpg);
         document.markEdited();
 
         select(schema, document, entryName, null);
@@ -357,9 +360,9 @@ public class InfoManager extends ManagerPackage {
             return;
 
         String definitionName = resolveFolderPrefix() + fileName;
-        JsonObject root = activeSchema.isArrayLayout()
-                ? new JsonObject()
-                : infoEditBranch.createDefault(activeSchema.getRootField()).getAsJsonObject();
+        ArpgObjectStruct root = activeSchema.isArrayLayout()
+                ? new ArpgObjectStruct()
+                : infoEditBranch.createDefault(activeSchema.getRootField()).getAsObject();
         InfoDocumentInstance document = openNewDocument(activeSchema, definitionName, root);
 
         if (activeSchema.isArrayLayout())
@@ -492,7 +495,7 @@ public class InfoManager extends ManagerPackage {
             return;
         }
 
-        JsonObject root = infoLibraryBranch.load(activeSchema, document.getDefinitionName());
+        ArpgObjectStruct root = infoLibraryBranch.load(activeSchema, document.getDefinitionName());
 
         if (root == null)
             return;
@@ -532,7 +535,7 @@ public class InfoManager extends ManagerPackage {
         if (target == null || !target.hasValue())
             return false;
 
-        JsonElement value = infoEditBranch.parse(target, text);
+        ArpgElementStruct value = infoEditBranch.parse(target, text);
         return value != null && isNameValueValid(path, value);
     }
 
@@ -542,7 +545,7 @@ public class InfoManager extends ManagerPackage {
             return;
 
         InfoTargetStruct target = resolveSelected(path);
-        JsonElement value = infoEditBranch.parse(target, text);
+        ArpgElementStruct value = infoEditBranch.parse(target, text);
 
         target.write(value);
 
@@ -644,20 +647,20 @@ public class InfoManager extends ManagerPackage {
 
     private InfoTargetStruct resolveSelected(String path) {
 
-        JsonObject entryJson = getSelectedEntryJson();
-        return entryJson != null ? infoEditBranch.resolve(entryJson, activeSchema.getRootField(), path) : null;
+        ArpgObjectStruct entryArpg = getSelectedEntryArpg();
+        return entryArpg != null ? infoEditBranch.resolve(entryArpg, activeSchema.getRootField(), path) : null;
     }
 
     private boolean isNamePath(String path) {
         return activeSchema.isArrayLayout() && path.equals(activeSchema.getNameField());
     }
 
-    private boolean isNameValueValid(String path, JsonElement value) {
+    private boolean isNameValueValid(String path, ArpgElementStruct value) {
 
         if (!isNamePath(path))
             return true;
 
-        if (!value.isJsonPrimitive())
+        if (!value.isValue())
             return false;
 
         String entryName = value.getAsString();
@@ -682,7 +685,7 @@ public class InfoManager extends ManagerPackage {
 
     public void toggleExpanded(String path) {
 
-        if (getSelectedEntryJson() == null)
+        if (getSelectedEntryArpg() == null)
             return;
 
         String expansionKey = toExpansionKey(path);
@@ -712,10 +715,10 @@ public class InfoManager extends ManagerPackage {
 
     public void buildRows(ObjectArrayList<InfoRowStruct> rows) {
 
-        JsonObject entryJson = getSelectedEntryJson();
+        ArpgObjectStruct entryArpg = getSelectedEntryArpg();
 
-        if (entryJson != null)
-            infoRowBranch.buildRows(entryJson, activeSchema.getRootField(), rows);
+        if (entryArpg != null)
+            infoRowBranch.buildRows(entryArpg, activeSchema.getRootField(), rows);
     }
 
     // Status \\
@@ -765,11 +768,11 @@ public class InfoManager extends ManagerPackage {
         if (selectedDocument == null)
             return EditorSetting.INFO_STATUS_NO_SELECTION;
 
-        if (getSelectedEntryJson() == null)
+        if (getSelectedEntryArpg() == null)
             return EditorSetting.INFO_STATUS_FILE_SELECTED;
 
         return activeSchema.getDirectory() + EditorSetting.INFO_FOLDER_SEPARATOR
-                + selectedDocument.getDefinitionName() + "." + EditorSetting.INFO_FILE_EXTENSION;
+                + ArpgUtility.toFileName(selectedDocument.getDefinitionName());
     }
 
     // Utility \\

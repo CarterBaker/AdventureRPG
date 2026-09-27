@@ -2,31 +2,29 @@ package editor.bootstrap.infopipeline.infomanager;
 
 import java.util.regex.Pattern;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
-
 import editor.bootstrap.infopipeline.infoschema.InfoFieldStruct;
 import editor.bootstrap.infopipeline.infotarget.InfoTargetStruct;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgNullStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
+import engine.util.arpg.ArpgValueStruct;
 
 class InfoEditBranch extends BranchPackage {
 
     /*
-     * Performs every change to an entry's JSON. A row path is resolved against
-     * the entry and its schema into an InfoTargetStruct; typed text is parsed
-     * by the type the value actually holds, so anything that does not match
-     * its schema is shown and edited as raw JSON. New values are built from the schema:
-     * objects with their required fields, fixed-length arrays filled, and
-     * primitives from their default. The same removal rule decides both what
-     * the panel offers and what is allowed.
+     * Performs every change to an entry's ARPG tree. A row path is resolved
+     * against the entry and its schema into an InfoTargetStruct; typed text is
+     * parsed by the type the value actually holds, so anything that does not
+     * match its schema is shown and edited as raw ARPG text. New values are
+     * built from the schema: objects with their required fields, fixed-length
+     * arrays filled, and primitives from their default. The same removal rule
+     * decides both what the panel offers and what is allowed.
      */
 
     // Internal
@@ -41,26 +39,26 @@ class InfoEditBranch extends BranchPackage {
 
     // Resolve \\
 
-    InfoTargetStruct resolve(JsonObject entryJson, InfoFieldStruct rootField, String path) {
+    InfoTargetStruct resolve(ArpgObjectStruct entryArpg, InfoFieldStruct rootField, String path) {
 
         String[] segments = pathPattern.split(path);
-        JsonElement container = entryJson;
+        ArpgElementStruct container = entryArpg;
         InfoFieldStruct containerField = rootField;
 
         for (int i = 0; i < segments.length; i++) {
 
-            if (!container.isJsonArray() && !container.isJsonObject())
+            if (!container.isArray() && !container.isObject())
                 return null;
 
             String segment = segments[i];
             String key = null;
             int index = EngineSetting.INDEX_NOT_FOUND;
             InfoFieldStruct field;
-            JsonElement value;
+            ArpgElementStruct value;
 
-            if (container.isJsonArray()) {
+            if (container.isArray()) {
 
-                JsonArray array = container.getAsJsonArray();
+                ArpgArrayStruct array = container.getAsArray();
                 index = parseIndex(segment);
 
                 if (index < 0 || index >= array.size())
@@ -74,7 +72,7 @@ class InfoEditBranch extends BranchPackage {
 
                 key = segment;
                 field = findChildField(containerField, key);
-                value = container.getAsJsonObject().get(key);
+                value = container.getAsObject().get(key);
             }
 
             if (i == segments.length - 1)
@@ -113,73 +111,64 @@ class InfoEditBranch extends BranchPackage {
 
     // Parse \\
 
-    JsonElement parse(InfoTargetStruct target, String text) {
+    ArpgElementStruct parse(InfoTargetStruct target, String text) {
 
         return switch (target.resolveType()) {
-            case STRING -> new JsonPrimitive(text);
+            case STRING -> new ArpgValueStruct(text);
             case INT -> parseInt(text);
             case FLOAT -> parseFloat(text);
             case BOOLEAN -> parseBoolean(text);
             case ENUM -> parseEnum(target.getField(), text);
-            case JSON -> parseJson(text);
+            case RAW -> ArpgUtility.tryParseText(text);
             default -> null;
         };
     }
 
-    private JsonElement parseInt(String text) {
+    private ArpgElementStruct parseInt(String text) {
 
         try {
-            return new JsonPrimitive(Long.parseLong(text.trim()));
+            return new ArpgValueStruct(Long.parseLong(text.trim()));
         } catch (NumberFormatException e) {
             return null;
         }
     }
 
-    private JsonElement parseFloat(String text) {
+    private ArpgElementStruct parseFloat(String text) {
 
         try {
             double value = Double.parseDouble(text.trim());
-            return Double.isFinite(value) ? new JsonPrimitive(value) : null;
+            return Double.isFinite(value) ? new ArpgValueStruct(value) : null;
         } catch (NumberFormatException e) {
             return null;
         }
     }
 
-    private JsonElement parseBoolean(String text) {
+    private ArpgElementStruct parseBoolean(String text) {
 
         String trimmed = text.trim();
 
         if (trimmed.equalsIgnoreCase(Boolean.TRUE.toString()))
-            return new JsonPrimitive(true);
+            return new ArpgValueStruct(true);
 
         if (trimmed.equalsIgnoreCase(Boolean.FALSE.toString()))
-            return new JsonPrimitive(false);
+            return new ArpgValueStruct(false);
 
         return null;
     }
 
-    private JsonElement parseEnum(InfoFieldStruct field, String text) {
+    private ArpgElementStruct parseEnum(InfoFieldStruct field, String text) {
 
         int valueIndex = findEnumIndex(field, text.trim());
 
         return valueIndex != EngineSetting.INDEX_NOT_FOUND
-                ? new JsonPrimitive(field.getValues().get(valueIndex))
+                ? new ArpgValueStruct(field.getValues().get(valueIndex))
                 : null;
-    }
-
-    private JsonElement parseJson(String text) {
-
-        try {
-            return JsonParser.parseString(text);
-        } catch (JsonParseException e) {
-            return null;
-        }
     }
 
     // Values \\
 
     void toggle(InfoTargetStruct target) {
-        target.write(new JsonPrimitive(!target.getValue().getAsBoolean()));
+        target.write(new ArpgValueStruct(!target.getValue().getAsBoolean()));
     }
 
     void cycle(InfoTargetStruct target) {
@@ -188,7 +177,7 @@ class InfoEditBranch extends BranchPackage {
         int current = findEnumIndex(field, target.getValue().getAsString());
         int next = (current + 1) % field.getValues().size();
 
-        target.write(new JsonPrimitive(field.getValues().get(next)));
+        target.write(new ArpgValueStruct(field.getValues().get(next)));
     }
 
     private int findEnumIndex(InfoFieldStruct field, String value) {
@@ -200,25 +189,25 @@ class InfoEditBranch extends BranchPackage {
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
-    String formatValue(JsonElement value, InfoFieldType type) {
-        return type != InfoFieldType.JSON && value.isJsonPrimitive() ? value.getAsString() : value.toString();
+    String formatValue(ArpgElementStruct value, InfoFieldType type) {
+        return type != InfoFieldType.RAW && value.isValue() ? value.getAsString() : value.toString();
     }
 
     // Structure \\
 
-    JsonElement createDefault(InfoFieldStruct field) {
+    ArpgElementStruct createDefault(InfoFieldStruct field) {
 
         return switch (field.getType()) {
             case OBJECT -> createDefaultObject(field);
             case ARRAY -> createDefaultArray(field);
-            case MAP -> new JsonObject();
+            case MAP -> new ArpgObjectStruct();
             default -> field.getDefaultValue().deepCopy();
         };
     }
 
-    private JsonObject createDefaultObject(InfoFieldStruct field) {
+    private ArpgObjectStruct createDefaultObject(InfoFieldStruct field) {
 
-        JsonObject object = new JsonObject();
+        ArpgObjectStruct object = new ArpgObjectStruct();
 
         for (int i = 0; i < field.getFields().size(); i++) {
 
@@ -231,9 +220,9 @@ class InfoEditBranch extends BranchPackage {
         return object;
     }
 
-    private JsonArray createDefaultArray(InfoFieldStruct field) {
+    private ArpgArrayStruct createDefaultArray(InfoFieldStruct field) {
 
-        JsonArray array = new JsonArray();
+        ArpgArrayStruct array = new ArpgArrayStruct();
 
         for (int i = 0; i < field.getLength(); i++)
             array.add(createDefault(field.getElement()));
@@ -247,7 +236,7 @@ class InfoEditBranch extends BranchPackage {
 
     void addElement(InfoTargetStruct target) {
 
-        JsonArray array = target.getValue().getAsJsonArray();
+        ArpgArrayStruct array = target.getValue().getAsArray();
         InfoFieldStruct elementField = target.resolveType() == InfoFieldType.ARRAY
                 ? target.getField().getElement()
                 : null;
@@ -255,19 +244,19 @@ class InfoEditBranch extends BranchPackage {
         if (elementField != null)
             array.add(createDefault(elementField));
         else
-            array.add(array.isEmpty() ? JsonNull.INSTANCE : array.get(array.size() - 1).deepCopy());
+            array.add(array.isEmpty() ? ArpgNullStruct.INSTANCE : array.get(array.size() - 1).deepCopy());
     }
 
     void addMapEntry(InfoTargetStruct target, String key) {
 
         InfoFieldStruct elementField = target.getField().getElement();
-        target.getValue().getAsJsonObject().add(key, createDefault(elementField));
+        target.getValue().getAsObject().add(key, createDefault(elementField));
     }
 
     boolean isMapKeyAvailable(InfoTargetStruct target, String key) {
         return !key.isEmpty()
                 && !key.contains(EditorSetting.INFO_PATH_SEPARATOR)
-                && !target.getValue().getAsJsonObject().has(key);
+                && !target.getValue().getAsObject().has(key);
     }
 
     // Rules \\
@@ -281,7 +270,7 @@ class InfoEditBranch extends BranchPackage {
     }
 
     boolean isRemovable(InfoTargetStruct target) {
-        return isRemovable(target.getContainerField(), target.getField(), target.getContainer().isJsonArray());
+        return isRemovable(target.getContainerField(), target.getField(), target.getContainer().isArray());
     }
 
     boolean isRemovable(InfoFieldStruct containerField, InfoFieldStruct field, boolean inArray) {

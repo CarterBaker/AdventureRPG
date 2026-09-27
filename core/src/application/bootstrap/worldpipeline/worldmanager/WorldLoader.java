@@ -13,7 +13,7 @@ class WorldLoader extends LoaderPackage {
     /*
      * Scans the world map directory for PNG files and loads each one into
      * WorldManager via WorldBuilder. World name is derived from the file
-     * stem. Companion JSON is resolved by WorldBuilder if present.
+     * stem. Companion ARPG is resolved by WorldBuilder if present.
      */
 
     // Internal

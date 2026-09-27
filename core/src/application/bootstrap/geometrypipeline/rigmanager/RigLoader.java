@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class RigLoader extends LoaderPackage {
 
     /*
-     * Scans the rig JSON directory and loads every rig template into
+     * Scans the rig ARPG directory and loads every rig template into
      * RigManager. Supports on-demand loading for rigs not yet in the
      * palette at runtime.
      */
@@ -29,12 +29,12 @@ class RigLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.RIG_JSON_PATH);
+        this.root = new File(EngineSetting.RIG_PATH);
         this.rigName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root, "Rig JSON directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Rig ARPG directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String rigName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             rigName2File.put(rigName, file);
             queueFile(file);

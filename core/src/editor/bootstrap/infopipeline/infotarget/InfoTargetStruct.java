@@ -1,10 +1,9 @@
 package editor.bootstrap.infopipeline.infotarget;
 
-import com.google.gson.JsonElement;
-
 import editor.bootstrap.infopipeline.infoschema.InfoFieldStruct;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
 import engine.root.StructPackage;
+import engine.util.arpg.ArpgElementStruct;
 
 public class InfoTargetStruct extends StructPackage {
 
@@ -17,7 +16,7 @@ public class InfoTargetStruct extends StructPackage {
      */
 
     // Container
-    private final JsonElement container;
+    private final ArpgElementStruct container;
     private final InfoFieldStruct containerField;
 
     // Slot
@@ -26,17 +25,17 @@ public class InfoTargetStruct extends StructPackage {
 
     // Value
     private final InfoFieldStruct field;
-    private final JsonElement value;
+    private final ArpgElementStruct value;
 
     // Constructor \\
 
     public InfoTargetStruct(
-            JsonElement container,
+            ArpgElementStruct container,
             InfoFieldStruct containerField,
             String key,
             int index,
             InfoFieldStruct field,
-            JsonElement value) {
+            ArpgElementStruct value) {
 
         // Container
         this.container = container;
@@ -56,38 +55,38 @@ public class InfoTargetStruct extends StructPackage {
     public InfoFieldType resolveType() {
 
         if (field == null)
-            return InfoFieldType.JSON;
+            return InfoFieldType.RAW;
 
         if (value != null && !field.getType().accepts(value))
-            return InfoFieldType.JSON;
+            return InfoFieldType.RAW;
 
         return field.getType();
     }
 
-    public void write(JsonElement newValue) {
+    public void write(ArpgElementStruct newValue) {
 
-        if (container.isJsonArray())
-            container.getAsJsonArray().set(index, newValue);
+        if (container.isArray())
+            container.getAsArray().set(index, newValue);
         else
-            container.getAsJsonObject().add(key, newValue);
+            container.getAsObject().add(key, newValue);
     }
 
     public void remove() {
 
-        if (container.isJsonArray())
-            container.getAsJsonArray().remove(index);
+        if (container.isArray())
+            container.getAsArray().remove(index);
         else
-            container.getAsJsonObject().remove(key);
+            container.getAsObject().remove(key);
     }
 
     // Accessible \\
 
-    public JsonElement getContainer() {
+    public ArpgElementStruct getContainer() {
         return container;
     }
 
     public boolean isInArray() {
-        return container.isJsonArray();
+        return container.isArray();
     }
 
     public InfoFieldStruct getContainerField() {
@@ -106,7 +105,7 @@ public class InfoTargetStruct extends StructPackage {
         return field;
     }
 
-    public JsonElement getValue() {
+    public ArpgElementStruct getValue() {
         return value;
     }
 

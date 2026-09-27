@@ -1,6 +1,5 @@
 package application.bootstrap.entitypipeline.featuremanager;
 
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.entitypipeline.feature.FeatureData;
@@ -11,13 +10,14 @@ import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.registry.RegistryUtility;
 
 class FeatureBuilder extends BuilderPackage {
 
     /*
-     * Parses one feature JSON file into a FeatureData and wraps it in a
+     * Parses one feature ARPG file into a FeatureData and wraps it in a
      * FeatureHandle. "slot" decides what the file must declare: mesh slots
      * a rigged "mesh", texture slots a "texture" tile, and the head also a
      * "face" tile its front face is mapped to. Compatibility with any one
@@ -41,13 +41,13 @@ class FeatureBuilder extends BuilderPackage {
 
     FeatureHandle build(File file, String featureName) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
         short featureID = RegistryUtility.toShortID(featureName);
-        FeatureSlot featureSlot = parseSlot(json, file);
+        FeatureSlot featureSlot = parseSlot(arpg, file);
 
-        MeshHandle meshHandle = featureSlot.isMeshSlot() ? parseMesh(json, file) : null;
-        TextureHandle textureHandle = featureSlot.isMeshSlot() ? null : parseTexture(json, "texture");
-        TextureHandle faceTextureHandle = featureSlot.isFaceSlot() ? parseTexture(json, "face") : null;
+        MeshHandle meshHandle = featureSlot.isMeshSlot() ? parseMesh(arpg, file) : null;
+        TextureHandle textureHandle = featureSlot.isMeshSlot() ? null : parseTexture(arpg, "texture");
+        TextureHandle faceTextureHandle = featureSlot.isFaceSlot() ? parseTexture(arpg, "face") : null;
 
         FeatureData featureData = new FeatureData(
                 featureName,
@@ -65,9 +65,9 @@ class FeatureBuilder extends BuilderPackage {
 
     // Parse \\
 
-    private FeatureSlot parseSlot(JsonObject json, File file) {
+    private FeatureSlot parseSlot(ArpgObjectStruct arpg, File file) {
 
-        String slotName = JsonUtility.validateString(json, "slot");
+        String slotName = ArpgUtility.validateString(arpg, "slot");
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (featureSlot.name().equalsIgnoreCase(slotName))
@@ -76,9 +76,9 @@ class FeatureBuilder extends BuilderPackage {
         return throwException("Unknown feature slot \"" + slotName + "\" in file: " + file.getName());
     }
 
-    private MeshHandle parseMesh(JsonObject json, File file) {
+    private MeshHandle parseMesh(ArpgObjectStruct arpg, File file) {
 
-        String meshName = JsonUtility.validateString(json, "mesh");
+        String meshName = ArpgUtility.validateString(arpg, "mesh");
         MeshHandle meshHandle = meshManager.getMeshHandleFromMeshName(meshName);
 
         if (!meshHandle.hasRig())
@@ -88,7 +88,7 @@ class FeatureBuilder extends BuilderPackage {
         return meshHandle;
     }
 
-    private TextureHandle parseTexture(JsonObject json, String key) {
-        return textureManager.getTextureHandleFromTextureName(JsonUtility.validateString(json, key));
+    private TextureHandle parseTexture(ArpgObjectStruct arpg, String key) {
+        return textureManager.getTextureHandleFromTextureName(ArpgUtility.validateString(arpg, key));
     }
 }

@@ -1,20 +1,20 @@
 package application.bootstrap.geometrypipeline.ibomanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class IBOBuilder extends BuilderPackage {
 
     /*
-     * Parses the 'ibo' field from mesh JSON and uploads index data into an
+     * Parses the 'ibo' field from mesh ARPG and uploads index data into an
      * IBOHandle. Supports direct index arrays and string references to other
      * registered meshes. Skips files that contain quad objects — those are
      * handled by quad expansion in the mesh builder. Bootstrap-only.
@@ -43,25 +43,25 @@ public class IBOBuilder extends BuilderPackage {
         if (iboManager.hasIBO(resourceName))
             return;
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
-        if (hasQuadEntries(json))
+        if (hasQuadEntries(arpg))
             return;
 
-        if (!json.has("ibo") || json.get("ibo").isJsonNull())
+        if (!arpg.has("ibo") || arpg.get("ibo").isNull())
             return;
 
-        JsonElement iboEl = json.get("ibo");
+        ArpgElementStruct iboEl = arpg.get("ibo");
 
-        if (iboEl.isJsonPrimitive() && iboEl.getAsJsonPrimitive().isString()) {
+        if (iboEl.isValue() && iboEl.getAsValue().isString()) {
             String refName = iboEl.getAsString();
             resolveRef(refName, resourceName, file, registry, vaoInstance);
             iboManager.registerIBO(resourceName, iboManager.getIBOHandleDirect(refName));
             return;
         }
 
-        if (iboEl.isJsonArray()) {
-            iboManager.registerIBO(resourceName, buildFromData(iboEl.getAsJsonArray(), vaoInstance, file));
+        if (iboEl.isArray()) {
+            iboManager.registerIBO(resourceName, buildFromData(iboEl.getAsArray(), vaoInstance, file));
             return;
         }
 
@@ -85,23 +85,23 @@ public class IBOBuilder extends BuilderPackage {
         if (refFile == null)
             throwException("Referenced IBO '" + refName + "' not found. Source: " + sourceFile.getName());
 
-        JsonObject refJson = JsonUtility.loadJsonObject(refFile);
+        ArpgObjectStruct refArpg = ArpgUtility.loadObject(refFile);
 
-        if (!refJson.has("ibo") || refJson.get("ibo").isJsonNull())
+        if (!refArpg.has("ibo") || refArpg.get("ibo").isNull())
             throwException("Referenced IBO file '" + refName + "' has no 'ibo' field.");
 
-        JsonElement refEl = refJson.get("ibo");
+        ArpgElementStruct refEl = refArpg.get("ibo");
 
-        if (!refEl.isJsonArray())
+        if (!refEl.isArray())
             throwException("Referenced IBO '" + refName + "' must contain an index array.");
 
-        iboManager.registerIBO(refName, buildFromData(refEl.getAsJsonArray(), vaoInstance, refFile));
+        iboManager.registerIBO(refName, buildFromData(refEl.getAsArray(), vaoInstance, refFile));
     }
 
     // Creation \\
 
     private IBOHandle buildFromData(
-            JsonArray indicesArray,
+            ArpgArrayStruct indicesArray,
             VAOInstance vaoInstance,
             File file) {
 
@@ -111,7 +111,7 @@ public class IBOBuilder extends BuilderPackage {
         short[] indices = new short[indicesArray.size()];
         int index = 0;
 
-        for (JsonElement indexEl : indicesArray) {
+        for (ArpgElementStruct indexEl : indicesArray) {
             int value = indexEl.getAsInt();
             if (value < 0 || value > 0xFFFF)
                 throwException("Index out of 16-bit range: " + value + " in file: " + file.getName());
@@ -126,18 +126,18 @@ public class IBOBuilder extends BuilderPackage {
 
     // Utility \\
 
-    private boolean hasQuadEntries(JsonObject json) {
+    private boolean hasQuadEntries(ArpgObjectStruct arpg) {
 
-        if (!json.has("vbo") || json.get("vbo").isJsonNull())
+        if (!arpg.has("vbo") || arpg.get("vbo").isNull())
             return false;
 
-        JsonElement vboEl = json.get("vbo");
+        ArpgElementStruct vboEl = arpg.get("vbo");
 
-        if (!vboEl.isJsonArray())
+        if (!vboEl.isArray())
             return false;
 
-        for (JsonElement el : vboEl.getAsJsonArray())
-            if (el.isJsonObject())
+        for (ArpgElementStruct el : vboEl.getAsArray())
+            if (el.isObject())
                 return true;
 
         return false;

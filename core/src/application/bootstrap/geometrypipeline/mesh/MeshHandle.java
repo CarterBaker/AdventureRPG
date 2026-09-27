@@ -10,7 +10,7 @@ import engine.util.mathematics.vectors.Vector3;
 public class MeshHandle extends HandlePackage {
 
     /*
-     * A GPU-resident static mesh assembled from JSON, owned by MeshManager;
+     * A GPU-resident static mesh assembled from ARPG, owned by MeshManager;
      * callers receive ModelInstances built from its MeshData. A non-null rig
      * marks meshes that carry bone attributes, whose raw extent scales them
      * onto an entity's size.

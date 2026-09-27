@@ -7,7 +7,7 @@ import engine.util.mathematics.vectors.Vector3Int;
 public class ItemDefinitionData extends DataPackage {
 
     /*
-     * Immutable item definition payload loaded from JSON. Holds identity,
+     * Immutable item definition payload loaded from ARPG. Holds identity,
      * presentation, physical properties, the body slot it is worn in, the
      * statistics it grants, the sub-voxel shape it takes up in a container,
      * and render references for one item type. An item with a container size

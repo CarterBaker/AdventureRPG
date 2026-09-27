@@ -2,10 +2,6 @@ package application.bootstrap.worldpipeline.structuremanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
@@ -20,7 +16,10 @@ import application.bootstrap.worldpipeline.structure.StructureSurfaceType;
 import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.extras.Coordinate3Long;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.registry.RegistryUtility;
@@ -33,7 +32,7 @@ import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 class StructureBuilder extends BuilderPackage {
 
     /*
-     * Parses structure JSON into a StructureData and wraps it in a
+     * Parses structure ARPG into a StructureData and wraps it in a
      * StructureHandle. Block entries are single "position"s or inclusive
      * "from"/"to" boxes applied in order, so a later entry overwrites an
      * earlier one at the same cell. Every block, biome, and value is resolved
@@ -80,12 +79,12 @@ class StructureBuilder extends BuilderPackage {
     StructureHandle build(File file, String structureName) {
 
         short structureID = RegistryUtility.toShortID(structureName);
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
-        int[] origin = parseOrigin(json);
+        int[] origin = parseOrigin(arpg);
 
         clearBlocks();
-        parseBlocks(json, structureName, origin);
+        parseBlocks(arpg, structureName, origin);
 
         int minOffsetX = min(offsetX);
         int maxOffsetX = max(offsetX);
@@ -95,17 +94,17 @@ class StructureBuilder extends BuilderPackage {
                 Math.max(-minOffsetX, maxOffsetX),
                 Math.max(-minOffsetZ, maxOffsetZ));
 
-        int yOffsetBlocks = JsonUtility.getInt(
-                json, "y_offset_blocks", EngineSetting.DEFAULT_STRUCTURE_Y_OFFSET_BLOCKS);
+        int yOffsetBlocks = ArpgUtility.getInt(
+                arpg, "y_offset_blocks", EngineSetting.DEFAULT_STRUCTURE_Y_OFFSET_BLOCKS);
 
-        boolean foundation = json.has("foundation_block");
+        boolean foundation = arpg.has("foundation_block");
         short foundationBlockID = foundation
-                ? parseFoundationBlockID(json, structureName)
+                ? parseFoundationBlockID(arpg, structureName)
                 : EngineSetting.REGISTRY_RESERVED_ID;
 
-        StructureRulesStruct rules = parseRules(json, structureName);
-        StructureFrequencyStruct frequency = parseFrequency(json, structureName);
-        ObjectArrayList<StructureFixedPlacementStruct> fixedPlacements = parseFixedPlacements(json, structureName);
+        StructureRulesStruct rules = parseRules(arpg, structureName);
+        StructureFrequencyStruct frequency = parseFrequency(arpg, structureName);
+        ObjectArrayList<StructureFixedPlacementStruct> fixedPlacements = parseFixedPlacements(arpg, structureName);
 
         StructureData structureData = new StructureData(
                 structureName, structureID,
@@ -124,12 +123,12 @@ class StructureBuilder extends BuilderPackage {
 
     // Origin Parsing \\
 
-    private int[] parseOrigin(JsonObject json) {
+    private int[] parseOrigin(ArpgObjectStruct arpg) {
 
-        if (!json.has("origin"))
+        if (!arpg.has("origin"))
             return new int[3];
 
-        return parseVector(json, "origin");
+        return parseVector(arpg, "origin");
     }
 
     // Block Parsing \\
@@ -145,20 +144,20 @@ class StructureBuilder extends BuilderPackage {
         position2BlockIndex.clear();
     }
 
-    private void parseBlocks(JsonObject json, String structureName, int[] origin) {
+    private void parseBlocks(ArpgObjectStruct arpg, String structureName, int[] origin) {
 
-        JsonArray blockArray = JsonUtility.validateArray(json, "blocks");
+        ArpgArrayStruct blockArray = ArpgUtility.validateArray(arpg, "blocks");
 
-        for (JsonElement element : blockArray)
-            parseBlockEntry(element.getAsJsonObject(), structureName, origin);
+        for (ArpgElementStruct element : blockArray)
+            parseBlockEntry(element.getAsObject(), structureName, origin);
 
         if (blockIDs.isEmpty())
             throwException("Structure \"" + structureName + "\" \"blocks\" must declare at least one block.");
     }
 
-    private void parseBlockEntry(JsonObject entry, String structureName, int[] origin) {
+    private void parseBlockEntry(ArpgObjectStruct entry, String structureName, int[] origin) {
 
-        String blockName = JsonUtility.validateString(entry, "block");
+        String blockName = ArpgUtility.validateString(entry, "block");
         BlockHandle blockHandle = blockManager.getBlockHandleFromBlockName(blockName);
         short orientation = parseOrientation(entry, blockHandle, structureName);
 
@@ -256,7 +255,7 @@ class StructureBuilder extends BuilderPackage {
 
     // Orientation Parsing \\
 
-    private short parseOrientation(JsonObject entry, BlockHandle blockHandle, String structureName) {
+    private short parseOrientation(ArpgObjectStruct entry, BlockHandle blockHandle, String structureName) {
 
         int spinCount = EngineSetting.STRUCTURE_ORIENTATION_SPIN_COUNT;
 
@@ -267,7 +266,7 @@ class StructureBuilder extends BuilderPackage {
                 ? parseFacing(entry.get("facing").getAsString(), structureName)
                 : Direction3Vector.VALUES[EngineSetting.DEFAULT_BLOCK_ORIENTATION / spinCount];
 
-        int spin = JsonUtility.getInt(entry, "spin", EngineSetting.DEFAULT_BLOCK_ORIENTATION % spinCount);
+        int spin = ArpgUtility.getInt(entry, "spin", EngineSetting.DEFAULT_BLOCK_ORIENTATION % spinCount);
 
         if (spin < 0 || spin >= spinCount)
             throwException("Structure \"" + structureName + "\" block \"" + blockHandle.getBlockName()
@@ -288,10 +287,10 @@ class StructureBuilder extends BuilderPackage {
 
     // Foundation Parsing \\
 
-    private short parseFoundationBlockID(JsonObject json, String structureName) {
+    private short parseFoundationBlockID(ArpgObjectStruct arpg, String structureName) {
 
         BlockHandle blockHandle = blockManager.getBlockHandleFromBlockName(
-                json.get("foundation_block").getAsString());
+                arpg.get("foundation_block").getAsString());
         DynamicGeometryType geometry = blockHandle.getGeometry();
 
         if (geometry == DynamicGeometryType.NONE || geometry == DynamicGeometryType.LIQUID)
@@ -303,26 +302,26 @@ class StructureBuilder extends BuilderPackage {
 
     // Rules Parsing \\
 
-    private StructureRulesStruct parseRules(JsonObject json, String structureName) {
+    private StructureRulesStruct parseRules(ArpgObjectStruct arpg, String structureName) {
 
-        JsonObject rulesJson = json.has("rules") ? json.getAsJsonObject("rules") : new JsonObject();
+        ArpgObjectStruct rulesArpg = arpg.has("rules") ? arpg.getAsObject("rules") : new ArpgObjectStruct();
 
-        ShortOpenHashSet biomeIDs = parseBiomes(rulesJson);
-        StructureSurfaceType surfaceType = parseSurfaceType(rulesJson, structureName);
+        ShortOpenHashSet biomeIDs = parseBiomes(rulesArpg);
+        StructureSurfaceType surfaceType = parseSurfaceType(rulesArpg, structureName);
 
-        int minGroundHeightBlocks = JsonUtility.getInt(
-                rulesJson, "min_ground_height_blocks", EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS);
-        int maxGroundHeightBlocks = JsonUtility.getInt(
-                rulesJson, "max_ground_height_blocks", EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS);
+        int minGroundHeightBlocks = ArpgUtility.getInt(
+                rulesArpg, "min_ground_height_blocks", EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS);
+        int maxGroundHeightBlocks = ArpgUtility.getInt(
+                rulesArpg, "max_ground_height_blocks", EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS);
 
         if (minGroundHeightBlocks > maxGroundHeightBlocks)
             throwException("Structure \"" + structureName + "\" \"min_ground_height_blocks\" ("
                     + minGroundHeightBlocks + ") exceeds \"max_ground_height_blocks\" ("
                     + maxGroundHeightBlocks + ").");
 
-        boolean slopeLimited = rulesJson.has("max_slope_blocks");
+        boolean slopeLimited = rulesArpg.has("max_slope_blocks");
         int maxSlopeBlocks = slopeLimited
-                ? rulesJson.get("max_slope_blocks").getAsInt()
+                ? rulesArpg.get("max_slope_blocks").getAsInt()
                 : EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS - EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS;
 
         if (maxSlopeBlocks < 0)
@@ -334,25 +333,25 @@ class StructureBuilder extends BuilderPackage {
                 maxSlopeBlocks, slopeLimited);
     }
 
-    private ShortOpenHashSet parseBiomes(JsonObject rulesJson) {
+    private ShortOpenHashSet parseBiomes(ArpgObjectStruct rulesArpg) {
 
         ShortOpenHashSet biomeIDs = new ShortOpenHashSet();
 
-        if (!rulesJson.has("biomes"))
+        if (!rulesArpg.has("biomes"))
             return biomeIDs;
 
-        for (JsonElement element : rulesJson.getAsJsonArray("biomes"))
+        for (ArpgElementStruct element : rulesArpg.getAsArray("biomes"))
             biomeIDs.add(biomeManager.getBiomeIDFromBiomeName(element.getAsString()));
 
         return biomeIDs;
     }
 
-    private StructureSurfaceType parseSurfaceType(JsonObject rulesJson, String structureName) {
+    private StructureSurfaceType parseSurfaceType(ArpgObjectStruct rulesArpg, String structureName) {
 
-        if (!rulesJson.has("surface"))
+        if (!rulesArpg.has("surface"))
             return StructureSurfaceType.ANY;
 
-        String raw = rulesJson.get("surface").getAsString();
+        String raw = rulesArpg.get("surface").getAsString();
 
         try {
             return StructureSurfaceType.valueOf(raw.toUpperCase());
@@ -364,18 +363,18 @@ class StructureBuilder extends BuilderPackage {
 
     // Frequency Parsing \\
 
-    private StructureFrequencyStruct parseFrequency(JsonObject json, String structureName) {
+    private StructureFrequencyStruct parseFrequency(ArpgObjectStruct arpg, String structureName) {
 
-        if (!json.has("frequency"))
+        if (!arpg.has("frequency"))
             return null;
 
-        JsonObject frequencyJson = json.getAsJsonObject("frequency");
+        ArpgObjectStruct frequencyArpg = arpg.getAsObject("frequency");
 
-        float chance = JsonUtility.validateFloat(frequencyJson, "chance");
-        int spacingBlocks = JsonUtility.validateInt(frequencyJson, "spacing_blocks");
-        int separationBlocks = JsonUtility.getInt(
-                frequencyJson, "separation_blocks", EngineSetting.DEFAULT_STRUCTURE_SEPARATION_BLOCKS);
-        boolean randomRotation = JsonUtility.getBoolean(frequencyJson, "random_rotation", false);
+        float chance = ArpgUtility.validateFloat(frequencyArpg, "chance");
+        int spacingBlocks = ArpgUtility.validateInt(frequencyArpg, "spacing_blocks");
+        int separationBlocks = ArpgUtility.getInt(
+                frequencyArpg, "separation_blocks", EngineSetting.DEFAULT_STRUCTURE_SEPARATION_BLOCKS);
+        boolean randomRotation = ArpgUtility.getBoolean(frequencyArpg, "random_rotation", false);
 
         if (chance <= 0f || chance > 1f)
             throwException("Structure \"" + structureName + "\" frequency \"chance\" " + chance
@@ -393,27 +392,29 @@ class StructureBuilder extends BuilderPackage {
 
     // Fixed Placement Parsing \\
 
-    private ObjectArrayList<StructureFixedPlacementStruct> parseFixedPlacements(JsonObject json, String structureName) {
+    private ObjectArrayList<StructureFixedPlacementStruct> parseFixedPlacements(
+            ArpgObjectStruct arpg,
+            String structureName) {
 
         ObjectArrayList<StructureFixedPlacementStruct> fixedPlacements = new ObjectArrayList<>();
 
-        if (!json.has("fixed_placements"))
+        if (!arpg.has("fixed_placements"))
             return fixedPlacements;
 
-        for (JsonElement element : json.getAsJsonArray("fixed_placements"))
-            fixedPlacements.add(parseFixedPlacement(element.getAsJsonObject(), structureName));
+        for (ArpgElementStruct element : arpg.getAsArray("fixed_placements"))
+            fixedPlacements.add(parseFixedPlacement(element.getAsObject(), structureName));
 
         return fixedPlacements;
     }
 
-    private StructureFixedPlacementStruct parseFixedPlacement(JsonObject entry, String structureName) {
+    private StructureFixedPlacementStruct parseFixedPlacement(ArpgObjectStruct entry, String structureName) {
 
-        int worldX = JsonUtility.validateInt(entry, "x");
-        int worldZ = JsonUtility.validateInt(entry, "z");
+        int worldX = ArpgUtility.validateInt(entry, "x");
+        int worldZ = ArpgUtility.validateInt(entry, "z");
         boolean hasWorldY = entry.has("y");
         int worldY = hasWorldY ? entry.get("y").getAsInt() : 0;
-        int quarterTurns = JsonUtility.getInt(entry, "rotation", 0);
-        boolean enforceRules = JsonUtility.getBoolean(entry, "enforce_rules", false);
+        int quarterTurns = ArpgUtility.getInt(entry, "rotation", 0);
+        boolean enforceRules = ArpgUtility.getBoolean(entry, "enforce_rules", false);
 
         int worldHeightBlocks = EngineSetting.WORLD_HEIGHT * EngineSetting.CHUNK_SIZE;
 
@@ -431,9 +432,9 @@ class StructureBuilder extends BuilderPackage {
 
     // Vector Parsing \\
 
-    private int[] parseVector(JsonObject json, String field) {
+    private int[] parseVector(ArpgObjectStruct arpg, String field) {
 
-        JsonArray array = JsonUtility.validateArray(json, field, 3);
+        ArpgArrayStruct array = ArpgUtility.validateArray(arpg, field, 3);
         return new int[] { array.get(0).getAsInt(), array.get(1).getAsInt(), array.get(2).getAsInt() };
     }
 

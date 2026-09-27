@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class CalendarLoader extends LoaderPackage {
 
     /*
-     * Scans the calendar JSON directory and loads all calendar definitions into
+     * Scans the calendar ARPG directory and loads all calendar definitions into
      * CalendarManager. Supports on-demand loading for calendars not yet in the
      * palette at runtime.
      */
@@ -29,12 +29,12 @@ class CalendarLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.CALENDAR_JSON_PATH);
+        this.root = new File(EngineSetting.CALENDAR_PATH);
         this.calendarName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Calendar directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String calendarName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             calendarName2File.put(calendarName, file);
             queueFile(file);

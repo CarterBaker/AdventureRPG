@@ -1,4 +1,0 @@
-{
-    "vert": "sky/standard/StandardSkyShader.vsh",
-    "frag": "sky/standard/StandardSkyShader.fsh"
-}

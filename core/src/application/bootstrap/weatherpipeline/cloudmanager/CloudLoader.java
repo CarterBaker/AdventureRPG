@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class CloudLoader extends LoaderPackage {
 
     /*
-     * Scans the cloud JSON directory and loads all cloud archetype
+     * Scans the cloud ARPG directory and loads all cloud archetype
      * definitions into CloudManager. Supports on-demand loading for clouds
      * not yet in the palette at runtime.
      */
@@ -39,12 +39,12 @@ class CloudLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.CLOUD_JSON_PATH);
+        this.root = new File(EngineSetting.CLOUD_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Cloud root directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             resourceName2File.put(resourceName, file);
             queueFile(file);

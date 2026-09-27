@@ -4,16 +4,15 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import javax.imageio.ImageIO;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 
 class SpriteBuilder extends BuilderPackage {
 
     /*
-     * Loads raw images from disk and parses companion border JSON files.
+     * Loads raw images from disk and parses companion border ARPG files.
      * Image loading and border parsing are separated so SpriteLoader owns
      * the full SpriteData construction with all fields available. A companion
      * may set "stretch": true so the sliced center scales instead of tiling —
@@ -37,12 +36,12 @@ class SpriteBuilder extends BuilderPackage {
 
     float[] parseCompanionBorder(File imageFile) {
 
-        JsonObject json = loadCompanionJson(imageFile);
+        ArpgObjectStruct arpg = loadCompanionArpg(imageFile);
 
-        if (json == null || !json.has("border"))
+        if (arpg == null || !arpg.has("border"))
             return new float[] { 0, 0, 0, 0 };
 
-        JsonArray b = json.getAsJsonArray("border");
+        ArpgArrayStruct b = arpg.getAsArray("border");
 
         return new float[] {
                 b.get(0).getAsFloat(),
@@ -54,21 +53,15 @@ class SpriteBuilder extends BuilderPackage {
 
     boolean parseCompanionStretch(File imageFile) {
 
-        JsonObject json = loadCompanionJson(imageFile);
+        ArpgObjectStruct arpg = loadCompanionArpg(imageFile);
 
-        return json != null && JsonUtility.getBoolean(json, "stretch", false);
+        return arpg != null && ArpgUtility.getBoolean(arpg, "stretch", false);
     }
 
-    private JsonObject loadCompanionJson(File imageFile) {
+    private ArpgObjectStruct loadCompanionArpg(File imageFile) {
 
-        File jsonFile = getCompanionJson(imageFile);
+        File arpgFile = ArpgUtility.resolveCompanionFile(imageFile);
 
-        return jsonFile.exists() ? JsonUtility.loadJsonObject(jsonFile) : null;
-    }
-
-    private File getCompanionJson(File imageFile) {
-        String path = imageFile.getPath();
-        int dot = path.lastIndexOf('.');
-        return new File((dot >= 0 ? path.substring(0, dot) : path) + ".json");
+        return arpgFile.exists() ? ArpgUtility.loadObject(arpgFile) : null;
     }
 }

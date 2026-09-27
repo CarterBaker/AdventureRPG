@@ -2,9 +2,6 @@ package application.bootstrap.renderpipeline.fbomanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.renderpipeline.fbo.AttachmentStruct;
 import application.bootstrap.renderpipeline.fbo.FBOData;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
@@ -12,14 +9,16 @@ import application.bootstrap.renderpipeline.fbo.FBOSizingStrategy;
 import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class FBOBuilder extends BuilderPackage {
 
     /*
-     * Parses FBO JSON descriptors into FBOData during bootstrap, and constructs
+     * Parses FBO ARPG descriptors into FBOData during bootstrap, and constructs
      * GL-backed FBOInstances on demand when getFbo() resolves a name for the
      * first time. GL allocation and framebuffer completeness checks happen here
      * so FBOManager stays free of raw GL calls.
@@ -28,8 +27,8 @@ class FBOBuilder extends BuilderPackage {
     // Build \\
 
     ObjectArrayList<FBOData> buildData(File file) {
-        JsonObject root = JsonUtility.loadJsonObject(file);
-        JsonArray list = root.has("fbos") ? JsonUtility.validateArray(root, "fbos") : new JsonArray();
+        ArpgObjectStruct root = ArpgUtility.loadObject(file);
+        ArpgArrayStruct list = root.has("fbos") ? ArpgUtility.validateArray(root, "fbos") : new ArpgArrayStruct();
 
         if (list.size() == 0 && root.has("name"))
             list.add(root);
@@ -37,7 +36,7 @@ class FBOBuilder extends BuilderPackage {
         ObjectArrayList<FBOData> dataList = new ObjectArrayList<>();
 
         for (int i = 0; i < list.size(); i++)
-            dataList.add(buildDataEntry(list.get(i).getAsJsonObject()));
+            dataList.add(buildDataEntry(list.get(i).getAsObject()));
 
         return dataList;
     }
@@ -115,31 +114,31 @@ class FBOBuilder extends BuilderPackage {
 
     // Internal \\
 
-    private FBOData buildDataEntry(JsonObject json) {
-        String name = JsonUtility.validateString(json, "name");
+    private FBOData buildDataEntry(ArpgObjectStruct arpg) {
+        String name = ArpgUtility.validateString(arpg, "name");
         FBOSizingStrategy strategy = FBOSizingStrategy
-                .valueOf(JsonUtility.getString(json, "sizingStrategy", "WINDOW_RELATIVE"));
-        int width = JsonUtility.getInt(json, "width", settings.windowWidth);
-        int height = JsonUtility.getInt(json, "height", settings.windowHeight);
-        boolean premultipliedBlend = json.has("premultipliedBlend") && json.get("premultipliedBlend").getAsBoolean();
-        boolean premultipliedBlit = JsonUtility.getBoolean(json, "premultipliedBlit", false);
-        boolean resolveBlit = JsonUtility.getBoolean(json, "resolveBlit", false);
-        Color clearColor = parseClearColor(json);
-        float resolutionScale = JsonUtility.getFloat(
-                json, "resolutionScale", EngineSetting.DEFAULT_FBO_RESOLUTION_SCALE);
+                .valueOf(ArpgUtility.getString(arpg, "sizingStrategy", "WINDOW_RELATIVE"));
+        int width = ArpgUtility.getInt(arpg, "width", settings.windowWidth);
+        int height = ArpgUtility.getInt(arpg, "height", settings.windowHeight);
+        boolean premultipliedBlend = arpg.has("premultipliedBlend") && arpg.get("premultipliedBlend").getAsBoolean();
+        boolean premultipliedBlit = ArpgUtility.getBoolean(arpg, "premultipliedBlit", false);
+        boolean resolveBlit = ArpgUtility.getBoolean(arpg, "resolveBlit", false);
+        Color clearColor = parseClearColor(arpg);
+        float resolutionScale = ArpgUtility.getFloat(
+                arpg, "resolutionScale", EngineSetting.DEFAULT_FBO_RESOLUTION_SCALE);
 
         if (resolutionScale <= 0f || resolutionScale > 1f)
             throwException("FBO \"" + name + "\" resolutionScale must be greater than 0.0 and at most 1.0, got: "
                     + resolutionScale);
 
         ObjectArrayList<AttachmentStruct> attachments = new ObjectArrayList<>();
-        JsonArray attArray = JsonUtility.validateArray(json, "attachments");
+        ArpgArrayStruct attArray = ArpgUtility.validateArray(arpg, "attachments");
 
         for (int i = 0; i < attArray.size(); i++) {
-            JsonObject att = attArray.get(i).getAsJsonObject();
-            boolean isDepth = JsonUtility.getString(att, "type", "color").equals("depth");
-            String formatName = JsonUtility.getString(att, "format", isDepth ? "DEPTH24" : "RGBA8");
-            String attName = JsonUtility.getString(att, "name", "");
+            ArpgObjectStruct att = attArray.get(i).getAsObject();
+            boolean isDepth = ArpgUtility.getString(att, "type", "color").equals("depth");
+            String formatName = ArpgUtility.getString(att, "format", isDepth ? "DEPTH24" : "RGBA8");
+            String attName = ArpgUtility.getString(att, "name", "");
             attachments.add(new AttachmentStruct(attName, isDepth, resolveInternalFormat(formatName)));
         }
 
@@ -147,12 +146,12 @@ class FBOBuilder extends BuilderPackage {
                 resolveBlit, clearColor, resolutionScale);
     }
 
-    private Color parseClearColor(JsonObject json) {
+    private Color parseClearColor(ArpgObjectStruct arpg) {
 
-        if (!json.has("clearColor"))
+        if (!arpg.has("clearColor"))
             return new Color(Color.CLEAR);
 
-        JsonArray clearColor = JsonUtility.validateArray(json, "clearColor", 4);
+        ArpgArrayStruct clearColor = ArpgUtility.validateArray(arpg, "clearColor", 4);
 
         return new Color(
                 clearColor.get(0).getAsFloat(),

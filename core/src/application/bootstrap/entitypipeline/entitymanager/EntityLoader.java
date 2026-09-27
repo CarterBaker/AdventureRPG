@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class EntityLoader extends LoaderPackage {
 
     /*
-     * Scans the entity template JSON directory and loads all definitions into
+     * Scans the entity template ARPG directory and loads all definitions into
      * EntityManager. IDs are derived from template names via RegistryUtility.
      * Supports on-demand loading for templates not yet in the palette at runtime.
      */
@@ -29,12 +29,12 @@ class EntityLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.ENTITY_JSON_PATH);
+        this.root = new File(EngineSetting.ENTITY_PATH);
         this.templateName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Entity template directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String templateName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             templateName2File.put(templateName, file);
             queueFile(file);

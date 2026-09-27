@@ -4,20 +4,19 @@ import java.awt.Color;
 import java.io.File;
 import java.util.Arrays;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class AliasLibrarySystem extends SystemPackage {
 
     /*
-     * Loads alias definitions from JSON files in the alias directory. Populated
+     * Loads alias definitions from ARPG files in the alias directory. Populated
      * once in awake() before any texture load fires. Read-only for the remainder
      * of the TextureManager lifetime. AliasStructs are plain bootstrap containers
      * held in a plain array — no engine lifecycle needed.
@@ -46,7 +45,7 @@ public class AliasLibrarySystem extends SystemPackage {
 
         FileUtility.verifyDirectory(root, "Alias root directory not found: " + root.getAbsolutePath());
 
-        ObjectArrayList<File> aliasFiles = FileUtility.collectFilesShallow(root, EngineSetting.JSON_FILE_EXTENSIONS);
+        ObjectArrayList<File> aliasFiles = FileUtility.collectFilesShallow(root, EngineSetting.ARPG_FILE_EXTENSIONS);
 
         for (File file : aliasFiles)
             loadAliasFile(file);
@@ -57,17 +56,17 @@ public class AliasLibrarySystem extends SystemPackage {
         try {
 
             String aliasType = FileUtility.getFileName(file);
-            JsonObject json = JsonUtility.loadJsonObject(file);
-            JsonArray colorArray = JsonUtility.validateArray(json, "defaultColor", 3);
-            JsonArray aliasesArray = JsonUtility.validateArray(json, "aliases");
+            ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+            ArpgArrayStruct colorArray = ArpgUtility.validateArray(arpg, "defaultColor", 3);
+            ArpgArrayStruct aliasesArray = ArpgUtility.validateArray(arpg, "aliases");
 
             float r = colorArray.get(0).getAsFloat();
             float g = colorArray.get(1).getAsFloat();
             float b = colorArray.get(2).getAsFloat();
             Color defaultColor = new Color(r, g, b, EngineSetting.SHADER_ALIAS_DEFAULT_ALPHA);
 
-            String uniformName = json.has("uniformName")
-                    ? json.get("uniformName").getAsString()
+            String uniformName = arpg.has("uniformName")
+                    ? arpg.get("uniformName").getAsString()
                     : null;
 
             int aliasId = aliasCount;
@@ -81,7 +80,7 @@ public class AliasLibrarySystem extends SystemPackage {
 
             aliasLookup.put(aliasType.toLowerCase(), aliasId);
         } catch (Exception e) {
-            throwException("One or more JSON alias definitions could not be loaded", e);
+            throwException("One or more ARPG alias definitions could not be loaded", e);
         }
     }
 

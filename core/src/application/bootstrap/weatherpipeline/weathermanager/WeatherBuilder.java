@@ -2,18 +2,17 @@ package application.bootstrap.weatherpipeline.weathermanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
 import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
 import application.bootstrap.weatherpipeline.weather.WeatherData;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -21,7 +20,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class WeatherBuilder extends BuilderPackage {
 
     /*
-     * Parses weather JSON into a WeatherData and wraps it in a WeatherHandle.
+     * Parses weather ARPG into a WeatherData and wraps it in a WeatherHandle.
      * "clouds" is optional. Each entry's chance shares the weather's
      * cloudCoverage out between its archetypes — the most likely entry
      * covers the full cloudCoverage and the rest scale down with their
@@ -48,21 +47,21 @@ class WeatherBuilder extends BuilderPackage {
         String weatherName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
         short weatherID = RegistryUtility.toShortID(weatherName);
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
-        float cloudCoverage = parseFloat(json, "cloudCoverage", EngineSetting.DEFAULT_WEATHER_CLOUD_COVERAGE);
+        float cloudCoverage = parseFloat(arpg, "cloudCoverage", EngineSetting.DEFAULT_WEATHER_CLOUD_COVERAGE);
         float cloudDensityMultiplier = parseFloat(
-                json, "cloudDensityMultiplier", EngineSetting.DEFAULT_WEATHER_CLOUD_DENSITY_MULTIPLIER);
+                arpg, "cloudDensityMultiplier", EngineSetting.DEFAULT_WEATHER_CLOUD_DENSITY_MULTIPLIER);
         float precipitationIntensity = parseFloat(
-                json, "precipitationIntensity", EngineSetting.DEFAULT_WEATHER_PRECIPITATION_INTENSITY);
-        float windSpeedScale = parseFloat(json, "windSpeedScale", EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE);
+                arpg, "precipitationIntensity", EngineSetting.DEFAULT_WEATHER_PRECIPITATION_INTENSITY);
+        float windSpeedScale = parseFloat(arpg, "windSpeedScale", EngineSetting.DEFAULT_WEATHER_WIND_SPEED_SCALE);
         float windTurbulenceScale = parseFloat(
-                json, "windTurbulenceScale", EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE);
-        float fogDensityScale = parseFloat(json, "fogDensityScale", EngineSetting.DEFAULT_WEATHER_FOG_DENSITY_SCALE);
-        float humidity = parseFloat(json, "humidity", EngineSetting.DEFAULT_WEATHER_HUMIDITY);
-        float visibility = parseFloat(json, "visibility", EngineSetting.DEFAULT_WEATHER_VISIBILITY);
+                arpg, "windTurbulenceScale", EngineSetting.DEFAULT_WEATHER_WIND_TURBULENCE_SCALE);
+        float fogDensityScale = parseFloat(arpg, "fogDensityScale", EngineSetting.DEFAULT_WEATHER_FOG_DENSITY_SCALE);
+        float humidity = parseFloat(arpg, "humidity", EngineSetting.DEFAULT_WEATHER_HUMIDITY);
+        float visibility = parseFloat(arpg, "visibility", EngineSetting.DEFAULT_WEATHER_VISIBILITY);
         float temperatureModifier = parseFloat(
-                json, "temperatureModifier", EngineSetting.DEFAULT_WEATHER_TEMPERATURE_MODIFIER);
+                arpg, "temperatureModifier", EngineSetting.DEFAULT_WEATHER_TEMPERATURE_MODIFIER);
 
         if (cloudCoverage < 0f || cloudCoverage > 1f)
             throwException("Weather \"" + weatherName + "\" cloudCoverage must be between 0.0 and 1.0, got: "
@@ -71,7 +70,7 @@ class WeatherBuilder extends BuilderPackage {
         ObjectArrayList<CloudHandle> cloudHandles = new ObjectArrayList<>();
         FloatArrayList cloudChances = new FloatArrayList();
         FloatArrayList cloudDensityScales = new FloatArrayList();
-        parseClouds(json, weatherName, cloudDensityMultiplier, cloudHandles, cloudChances, cloudDensityScales);
+        parseClouds(arpg, weatherName, cloudDensityMultiplier, cloudHandles, cloudChances, cloudDensityScales);
 
         FloatArrayList cloudCoverages = resolveCloudCoverages(cloudChances, cloudCoverage);
 
@@ -100,36 +99,36 @@ class WeatherBuilder extends BuilderPackage {
     // Clouds \\
 
     private void parseClouds(
-            JsonObject json,
+            ArpgObjectStruct arpg,
             String weatherName,
             float cloudDensityMultiplier,
             ObjectArrayList<CloudHandle> outHandles,
             FloatArrayList outChances,
             FloatArrayList outDensityScales) {
 
-        if (!json.has("clouds"))
+        if (!arpg.has("clouds"))
             return;
 
-        JsonArray cloudsArray = json.getAsJsonArray("clouds");
+        ArpgArrayStruct cloudsArray = arpg.getAsArray("clouds");
 
         if (cloudsArray.size() > EngineSetting.MAX_CLOUDS_PER_WEATHER)
             throwException("Weather \"" + weatherName + "\" defines " + cloudsArray.size()
                     + " clouds — exceeds the maximum of " + EngineSetting.MAX_CLOUDS_PER_WEATHER
                     + " clouds per weather");
 
-        for (JsonElement element : cloudsArray)
-            parseCloudEntry(element.getAsJsonObject(), cloudDensityMultiplier, outHandles, outChances,
+        for (ArpgElementStruct element : cloudsArray)
+            parseCloudEntry(element.getAsObject(), cloudDensityMultiplier, outHandles, outChances,
                     outDensityScales);
     }
 
     private void parseCloudEntry(
-            JsonObject entryObject,
+            ArpgObjectStruct entryObject,
             float cloudDensityMultiplier,
             ObjectArrayList<CloudHandle> outHandles,
             FloatArrayList outChances,
             FloatArrayList outDensityScales) {
 
-        String cloudName = JsonUtility.validateString(entryObject, "name");
+        String cloudName = ArpgUtility.validateString(entryObject, "name");
         CloudHandle cloudHandle = cloudManager.getCloudHandleFromCloudName(cloudName);
 
         float chance = parseFloat(entryObject, "chance", EngineSetting.DEFAULT_CLOUD_ENTRY_CHANCE);
@@ -164,11 +163,11 @@ class WeatherBuilder extends BuilderPackage {
 
     // Utility \\
 
-    private float parseFloat(JsonObject json, String field, float fallback) {
+    private float parseFloat(ArpgObjectStruct arpg, String field, float fallback) {
 
-        if (!json.has(field))
+        if (!arpg.has(field))
             return fallback;
 
-        return json.get(field).getAsFloat();
+        return arpg.get(field).getAsFloat();
     }
 }

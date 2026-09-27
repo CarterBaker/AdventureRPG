@@ -24,7 +24,7 @@ public class ElementHitSystem extends SystemPackage {
     /*
      * Hover, click, drag and scroll dispatch across the hovered windows in
      * priority order; the first hit wins. Callbacks name a class and method in
-     * menu JSON and are resolved once, then invoked on the instance registered
+     * menu ARPG and are resolved once, then invoked on the instance registered
      * in the clicked window's context, inside that context's crash boundary. A
      * method receives whichever of String, MenuInstance, WindowInstance and
      * ElementInstance it declares.

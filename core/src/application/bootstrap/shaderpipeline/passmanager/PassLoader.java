@@ -27,12 +27,12 @@ class PassLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.PASS_JSON_PATH);
+        this.root = new File(EngineSetting.PASS_PATH);
         this.passName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Pass directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             passName2File.put(resourceName, file);
             queueFile(file);

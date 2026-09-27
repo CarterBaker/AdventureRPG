@@ -5,7 +5,7 @@ import engine.root.DataPackage;
 public class ToolTypeData extends DataPackage {
 
     /*
-     * Immutable tool type definition loaded from JSON. Holds identity and
+     * Immutable tool type definition loaded from ARPG. Holds identity and
      * default model path for one tool type. Owned by ToolTypeHandle for
      * the engine lifetime.
      */

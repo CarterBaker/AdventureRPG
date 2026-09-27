@@ -3,9 +3,6 @@ package lwjgl3;
 import java.io.File;
 import java.util.function.Supplier;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 import engine.lwjgl3.Lwjgl3Application;
 import engine.lwjgl3.Lwjgl3Configuration;
 import engine.lwjgl3.Lwjgl3Display;
@@ -26,11 +23,6 @@ class Lwjgl3LauncherUtility extends EngineUtility {
      * window configuration, and runs the engine the launcher supplies until
      * the application exits, saving window placement on close.
      */
-
-    // Internal
-    private static final Gson ENGINE_GSON = new GsonBuilder()
-            .setPrettyPrinting()
-            .create();
 
     // Launch \\
 
@@ -56,7 +48,7 @@ class Lwjgl3LauncherUtility extends EngineUtility {
             resolveDirectory(baseGameDir, directory);
 
         File settingsFile = new File(baseGameDir, settingsFileName);
-        Settings settings = SettingsUtility.load(settingsFile, ENGINE_GSON);
+        Settings settings = SettingsUtility.load(settingsFile);
         SettingsUtility.applyBindings(settings);
 
         Lwjgl3Configuration config = buildConfig(settings, title);
@@ -68,7 +60,7 @@ class Lwjgl3LauncherUtility extends EngineUtility {
             return true;
         });
 
-        EnginePackage.setupConstructor(settings, settingsFile, baseGameDir, ENGINE_GSON, platform);
+        EnginePackage.setupConstructor(settings, settingsFile, baseGameDir, platform);
         new Lwjgl3Application(engineFactory.get(), config, platform);
         LogUtility.closeSession();
     }
@@ -117,6 +109,6 @@ class Lwjgl3LauncherUtility extends EngineUtility {
         settings.windowMaximized = display.isMaximized();
 
         SettingsUtility.flushBindings(settings);
-        SettingsUtility.save(file, settings, ENGINE_GSON);
+        SettingsUtility.save(file, settings);
     }
 }

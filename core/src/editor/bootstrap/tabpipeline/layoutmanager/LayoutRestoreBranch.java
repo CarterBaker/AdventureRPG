@@ -1,9 +1,5 @@
 package editor.bootstrap.tabpipeline.layoutmanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
@@ -12,7 +8,10 @@ import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.BranchPackage;
 import engine.root.ContextPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class LayoutRestoreBranch extends BranchPackage {
@@ -42,13 +41,13 @@ public class LayoutRestoreBranch extends BranchPackage {
 
     // Management \\
 
-    boolean restore(JsonObject layoutJson) {
+    boolean restore(ArpgObjectStruct layoutArpg) {
 
-        if (!isLayoutValid(layoutJson))
+        if (!isLayoutValid(layoutArpg))
             return false;
 
-        Int2ObjectOpenHashMap<JsonObject> tabId2TabJson = mapTabs(JsonUtility.validateArray(layoutJson, "tabs"));
-        JsonArray windowsJson = JsonUtility.validateArray(layoutJson, "windows");
+        Int2ObjectOpenHashMap<ArpgObjectStruct> tabId2TabArpg = mapTabs(ArpgUtility.validateArray(layoutArpg, "tabs"));
+        ArpgArrayStruct windowsArpg = ArpgUtility.validateArray(layoutArpg, "windows");
 
         tabManager.beginBatch();
 
@@ -57,8 +56,8 @@ public class LayoutRestoreBranch extends BranchPackage {
             tabManager.closeAll();
             tabManager.resetCounters();
 
-            for (int i = 0; i < windowsJson.size(); i++)
-                restoreWindow(windowsJson.get(i).getAsJsonObject(), tabId2TabJson);
+            for (int i = 0; i < windowsArpg.size(); i++)
+                restoreWindow(windowsArpg.get(i).getAsObject(), tabId2TabArpg);
         } finally {
             tabManager.endBatch();
         }
@@ -68,75 +67,75 @@ public class LayoutRestoreBranch extends BranchPackage {
 
     // Window \\
 
-    private void restoreWindow(JsonObject windowJson, Int2ObjectOpenHashMap<JsonObject> tabId2TabJson) {
+    private void restoreWindow(ArpgObjectStruct windowArpg, Int2ObjectOpenHashMap<ArpgObjectStruct> tabId2TabArpg) {
 
-        WindowInstance osWindow = openWindow(windowJson);
-        JsonObject nodeJson = JsonUtility.validateObject(windowJson, "node");
+        WindowInstance osWindow = openWindow(windowArpg);
+        ArpgObjectStruct nodeArpg = ArpgUtility.validateObject(windowArpg, "node");
         Int2ObjectOpenHashMap<TabHandle> tabId2TabHandle = new Int2ObjectOpenHashMap<>();
 
-        openTabs(nodeJson, tabId2TabJson, osWindow, tabId2TabHandle);
-        dockLayoutSystem.restoreRoot(osWindow, buildNode(nodeJson, tabId2TabHandle));
+        openTabs(nodeArpg, tabId2TabArpg, osWindow, tabId2TabHandle);
+        dockLayoutSystem.restoreRoot(osWindow, buildNode(nodeArpg, tabId2TabHandle));
         tabManager.closeOsWindowIfEmpty(osWindow);
     }
 
-    private WindowInstance openWindow(JsonObject windowJson) {
+    private WindowInstance openWindow(ArpgObjectStruct windowArpg) {
 
-        if (JsonUtility.validateBoolean(windowJson, "isMain"))
+        if (ArpgUtility.validateBoolean(windowArpg, "isMain"))
             return windowManager.getMainWindow();
 
         WindowInstance osWindow = tabManager.openSecondaryOsWindow();
         windowManager.placeOsWindow(
                 osWindow,
-                JsonUtility.validateInt(windowJson, "screenX"),
-                JsonUtility.validateInt(windowJson, "screenY"),
-                JsonUtility.validateInt(windowJson, "width"),
-                JsonUtility.validateInt(windowJson, "height"));
+                ArpgUtility.validateInt(windowArpg, "screenX"),
+                ArpgUtility.validateInt(windowArpg, "screenY"),
+                ArpgUtility.validateInt(windowArpg, "width"),
+                ArpgUtility.validateInt(windowArpg, "height"));
 
         return osWindow;
     }
 
     // Tabs \\
 
-    private Int2ObjectOpenHashMap<JsonObject> mapTabs(JsonArray tabsJson) {
+    private Int2ObjectOpenHashMap<ArpgObjectStruct> mapTabs(ArpgArrayStruct tabsArpg) {
 
-        Int2ObjectOpenHashMap<JsonObject> tabId2TabJson = new Int2ObjectOpenHashMap<>();
+        Int2ObjectOpenHashMap<ArpgObjectStruct> tabId2TabArpg = new Int2ObjectOpenHashMap<>();
 
-        for (int i = 0; i < tabsJson.size(); i++) {
-            JsonObject tabJson = tabsJson.get(i).getAsJsonObject();
-            tabId2TabJson.put(JsonUtility.validateInt(tabJson, "id"), tabJson);
+        for (int i = 0; i < tabsArpg.size(); i++) {
+            ArpgObjectStruct tabArpg = tabsArpg.get(i).getAsObject();
+            tabId2TabArpg.put(ArpgUtility.validateInt(tabArpg, "id"), tabArpg);
         }
 
-        return tabId2TabJson;
+        return tabId2TabArpg;
     }
 
     private void openTabs(
-            JsonObject nodeJson,
-            Int2ObjectOpenHashMap<JsonObject> tabId2TabJson,
+            ArpgObjectStruct nodeArpg,
+            Int2ObjectOpenHashMap<ArpgObjectStruct> tabId2TabArpg,
             WindowInstance osWindow,
             Int2ObjectOpenHashMap<TabHandle> tabId2TabHandle) {
 
-        if (JsonUtility.validateBoolean(nodeJson, "split")) {
-            openTabs(JsonUtility.validateObject(nodeJson, "first"), tabId2TabJson, osWindow, tabId2TabHandle);
-            openTabs(JsonUtility.validateObject(nodeJson, "second"), tabId2TabJson, osWindow, tabId2TabHandle);
+        if (ArpgUtility.validateBoolean(nodeArpg, "split")) {
+            openTabs(ArpgUtility.validateObject(nodeArpg, "first"), tabId2TabArpg, osWindow, tabId2TabHandle);
+            openTabs(ArpgUtility.validateObject(nodeArpg, "second"), tabId2TabArpg, osWindow, tabId2TabHandle);
             return;
         }
 
-        int tabId = JsonUtility.validateInt(nodeJson, "tab");
-        JsonObject tabJson = tabId2TabJson.get(tabId);
+        int tabId = ArpgUtility.validateInt(nodeArpg, "tab");
+        ArpgObjectStruct tabArpg = tabId2TabArpg.get(tabId);
 
-        if (tabJson == null)
+        if (tabArpg == null)
             return;
 
-        TabHandle tabHandle = openTab(tabJson, osWindow);
+        TabHandle tabHandle = openTab(tabArpg, osWindow);
 
         if (tabHandle != null)
             tabId2TabHandle.put(tabId, tabHandle);
     }
 
-    private TabHandle openTab(JsonObject tabJson, WindowInstance osWindow) {
+    private TabHandle openTab(ArpgObjectStruct tabArpg, WindowInstance osWindow) {
 
-        String baseTitle = JsonUtility.validateString(tabJson, "baseTitle");
-        String contentClassName = JsonUtility.validateString(tabJson, "contentClass");
+        String baseTitle = ArpgUtility.validateString(tabArpg, "baseTitle");
+        String contentClassName = ArpgUtility.validateString(tabArpg, "contentClass");
         Class<? extends ContextPackage> contentClass = resolveContentClass(contentClassName);
 
         if (contentClass == null) {
@@ -162,71 +161,71 @@ public class LayoutRestoreBranch extends BranchPackage {
 
     // Build \\
 
-    private DockNodeStruct buildNode(JsonObject nodeJson, Int2ObjectOpenHashMap<TabHandle> tabId2TabHandle) {
+    private DockNodeStruct buildNode(ArpgObjectStruct nodeArpg, Int2ObjectOpenHashMap<TabHandle> tabId2TabHandle) {
 
-        if (!JsonUtility.validateBoolean(nodeJson, "split")) {
-            TabHandle tabHandle = tabId2TabHandle.get(JsonUtility.validateInt(nodeJson, "tab"));
+        if (!ArpgUtility.validateBoolean(nodeArpg, "split")) {
+            TabHandle tabHandle = tabId2TabHandle.get(ArpgUtility.validateInt(nodeArpg, "tab"));
             return tabHandle != null ? dockLayoutSystem.createLeaf(tabHandle) : null;
         }
 
         return dockLayoutSystem.createSplit(
-                buildNode(JsonUtility.validateObject(nodeJson, "first"), tabId2TabHandle),
-                buildNode(JsonUtility.validateObject(nodeJson, "second"), tabId2TabHandle),
-                JsonUtility.validateBoolean(nodeJson, "splitHorizontal"),
-                JsonUtility.validateFloat(nodeJson, "ratio"));
+                buildNode(ArpgUtility.validateObject(nodeArpg, "first"), tabId2TabHandle),
+                buildNode(ArpgUtility.validateObject(nodeArpg, "second"), tabId2TabHandle),
+                ArpgUtility.validateBoolean(nodeArpg, "splitHorizontal"),
+                ArpgUtility.validateFloat(nodeArpg, "ratio"));
     }
 
     // Validation \\
 
-    private boolean isLayoutValid(JsonObject layoutJson) {
+    private boolean isLayoutValid(ArpgObjectStruct layoutArpg) {
 
-        if (!JsonUtility.hasArray(layoutJson, "tabs") || !JsonUtility.hasArray(layoutJson, "windows"))
+        if (!ArpgUtility.hasArray(layoutArpg, "tabs") || !ArpgUtility.hasArray(layoutArpg, "windows"))
             return false;
 
-        for (JsonElement tabElement : layoutJson.getAsJsonArray("tabs"))
-            if (!tabElement.isJsonObject() || !isTabValid(tabElement.getAsJsonObject()))
+        for (ArpgElementStruct tabElement : layoutArpg.getAsArray("tabs"))
+            if (!tabElement.isObject() || !isTabValid(tabElement.getAsObject()))
                 return false;
 
-        for (JsonElement windowElement : layoutJson.getAsJsonArray("windows"))
-            if (!windowElement.isJsonObject() || !isWindowValid(windowElement.getAsJsonObject()))
+        for (ArpgElementStruct windowElement : layoutArpg.getAsArray("windows"))
+            if (!windowElement.isObject() || !isWindowValid(windowElement.getAsObject()))
                 return false;
 
         return true;
     }
 
-    private boolean isTabValid(JsonObject tabJson) {
-        return JsonUtility.hasNumber(tabJson, "id")
-                && JsonUtility.hasString(tabJson, "baseTitle")
-                && JsonUtility.hasString(tabJson, "contentClass");
+    private boolean isTabValid(ArpgObjectStruct tabArpg) {
+        return ArpgUtility.hasNumber(tabArpg, "id")
+                && ArpgUtility.hasString(tabArpg, "baseTitle")
+                && ArpgUtility.hasString(tabArpg, "contentClass");
     }
 
-    private boolean isWindowValid(JsonObject windowJson) {
+    private boolean isWindowValid(ArpgObjectStruct windowArpg) {
 
-        if (!JsonUtility.hasBoolean(windowJson, "isMain") || !JsonUtility.hasObject(windowJson, "node"))
+        if (!ArpgUtility.hasBoolean(windowArpg, "isMain") || !ArpgUtility.hasObject(windowArpg, "node"))
             return false;
 
-        boolean hasBounds = windowJson.get("isMain").getAsBoolean()
-                || (JsonUtility.hasNumber(windowJson, "screenX")
-                        && JsonUtility.hasNumber(windowJson, "screenY")
-                        && JsonUtility.hasNumber(windowJson, "width")
-                        && JsonUtility.hasNumber(windowJson, "height"));
+        boolean hasBounds = windowArpg.get("isMain").getAsBoolean()
+                || (ArpgUtility.hasNumber(windowArpg, "screenX")
+                        && ArpgUtility.hasNumber(windowArpg, "screenY")
+                        && ArpgUtility.hasNumber(windowArpg, "width")
+                        && ArpgUtility.hasNumber(windowArpg, "height"));
 
-        return hasBounds && isNodeValid(windowJson.getAsJsonObject("node"));
+        return hasBounds && isNodeValid(windowArpg.getAsObject("node"));
     }
 
-    private boolean isNodeValid(JsonObject nodeJson) {
+    private boolean isNodeValid(ArpgObjectStruct nodeArpg) {
 
-        if (!JsonUtility.hasBoolean(nodeJson, "split"))
+        if (!ArpgUtility.hasBoolean(nodeArpg, "split"))
             return false;
 
-        if (!nodeJson.get("split").getAsBoolean())
-            return JsonUtility.hasNumber(nodeJson, "tab");
+        if (!nodeArpg.get("split").getAsBoolean())
+            return ArpgUtility.hasNumber(nodeArpg, "tab");
 
-        return JsonUtility.hasBoolean(nodeJson, "splitHorizontal")
-                && JsonUtility.hasNumber(nodeJson, "ratio")
-                && JsonUtility.hasObject(nodeJson, "first")
-                && JsonUtility.hasObject(nodeJson, "second")
-                && isNodeValid(nodeJson.getAsJsonObject("first"))
-                && isNodeValid(nodeJson.getAsJsonObject("second"));
+        return ArpgUtility.hasBoolean(nodeArpg, "splitHorizontal")
+                && ArpgUtility.hasNumber(nodeArpg, "ratio")
+                && ArpgUtility.hasObject(nodeArpg, "first")
+                && ArpgUtility.hasObject(nodeArpg, "second")
+                && isNodeValid(nodeArpg.getAsObject("first"))
+                && isNodeValid(nodeArpg.getAsObject("second"));
     }
 }

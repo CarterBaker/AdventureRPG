@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class BehaviorLoader extends LoaderPackage {
 
     /*
-     * Scans the behavior JSON directory and loads all behavior definitions into
+     * Scans the behavior ARPG directory and loads all behavior definitions into
      * BehaviorManager. Supports on-demand loading for behaviors not yet in the
      * palette at runtime.
      */
@@ -29,12 +29,12 @@ class BehaviorLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.BEHAVIOR_JSON_PATH);
+        this.root = new File(EngineSetting.BEHAVIOR_PATH);
         this.behaviorName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Behavior directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String behaviorName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             behaviorName2File.put(behaviorName, file);
             queueFile(file);

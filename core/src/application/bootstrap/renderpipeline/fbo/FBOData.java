@@ -8,7 +8,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class FBOData extends DataPackage {
 
     /*
-     * Immutable FBO descriptor loaded from JSON. Holds the ordered attachments,
+     * Immutable FBO descriptor loaded from ARPG. Holds the ordered attachments,
      * sizing strategy, clear color, and the blend and blit flags for
      * premultiplied, jitter-resolved and reduced-resolution targets.
      */

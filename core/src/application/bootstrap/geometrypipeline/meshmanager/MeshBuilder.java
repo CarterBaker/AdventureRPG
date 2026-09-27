@@ -1,8 +1,5 @@
 package application.bootstrap.geometrypipeline.meshmanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.geometrypipeline.ibo.IBOHandle;
@@ -18,8 +15,11 @@ import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
@@ -58,11 +58,11 @@ class MeshBuilder extends BuilderPackage {
             File file,
             VAOInstance vaoInstance) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-        RigHandle rigHandle = resolveRig(json);
-        boolean hasQuads = hasQuadEntries(json);
-        boolean hasSubVoxels = subVoxelManager.hasSubVoxels(json);
+        RigHandle rigHandle = resolveRig(arpg);
+        boolean hasQuads = hasQuadEntries(arpg);
+        boolean hasSubVoxels = subVoxelManager.hasSubVoxels(arpg);
 
         if (hasSubVoxels && (rigHandle != null || hasQuads))
             throwException("Sub-voxel mesh \"" + resourceName + "\" cannot also declare a rig or quad entries — "
@@ -80,7 +80,7 @@ class MeshBuilder extends BuilderPackage {
 
         if (hasQuads) {
 
-            QuadExpansionStruct expansion = expandVBO(json, vaoInstance, rigHandle, file);
+            QuadExpansionStruct expansion = expandVBO(arpg, vaoInstance, rigHandle, file);
             vboHandle = vboManager.addVBOFromData(resourceName, expansion.vertices, vaoInstance);
             iboHandle = iboManager.addIBOFromData(resourceName, expansion.indices, vaoInstance);
             boundsMin = expansion.boundsMin;
@@ -92,7 +92,7 @@ class MeshBuilder extends BuilderPackage {
                         + "cannot derive an entity-scale ratio from a mesh with no size. File: " + file.getName());
         } else if (hasSubVoxels) {
 
-            QuadExpansionStruct expansion = expandSubVoxels(json, vaoInstance, file);
+            QuadExpansionStruct expansion = expandSubVoxels(arpg, vaoInstance, file);
             vboHandle = vboManager.addVBOFromData(resourceName, expansion.vertices, vaoInstance);
             iboHandle = iboManager.addIBOFromData(resourceName, expansion.indices, vaoInstance);
             boundsMin = expansion.boundsMin;
@@ -115,28 +115,28 @@ class MeshBuilder extends BuilderPackage {
 
     // Rig Resolution \\
 
-    private RigHandle resolveRig(JsonObject json) {
+    private RigHandle resolveRig(ArpgObjectStruct arpg) {
 
-        if (!hasValidElement(json, "rig"))
+        if (!hasValidElement(arpg, "rig"))
             return null;
 
-        return rigManager.getRigHandleFromRigName(json.get("rig").getAsString());
+        return rigManager.getRigHandleFromRigName(arpg.get("rig").getAsString());
     }
 
     // Quad Detection \\
 
-    private boolean hasQuadEntries(JsonObject json) {
+    private boolean hasQuadEntries(ArpgObjectStruct arpg) {
 
-        if (!hasValidElement(json, "vbo"))
+        if (!hasValidElement(arpg, "vbo"))
             return false;
 
-        JsonElement vboEl = json.get("vbo");
+        ArpgElementStruct vboEl = arpg.get("vbo");
 
-        if (!vboEl.isJsonArray())
+        if (!vboEl.isArray())
             return false;
 
-        for (JsonElement el : vboEl.getAsJsonArray())
-            if (el.isJsonObject())
+        for (ArpgElementStruct el : vboEl.getAsArray())
+            if (el.isObject())
                 return true;
 
         return false;
@@ -145,7 +145,7 @@ class MeshBuilder extends BuilderPackage {
     // Quad Expansion \\
 
     private QuadExpansionStruct expandVBO(
-            JsonObject json,
+            ArpgObjectStruct arpg,
             VAOInstance vaoInstance,
             RigHandle rigHandle,
             File file) {
@@ -155,24 +155,24 @@ class MeshBuilder extends BuilderPackage {
         ShortArrayList quadIndices = new ShortArrayList();
         int currentVertex = 0;
 
-        for (JsonElement element : json.getAsJsonArray("vbo")) {
+        for (ArpgElementStruct element : arpg.getAsArray("vbo")) {
 
-            if (element.isJsonArray()) {
+            if (element.isArray()) {
 
-                JsonArray vertex = element.getAsJsonArray();
+                ArpgArrayStruct vertex = element.getAsArray();
 
                 if (vertex.size() != vertStride)
                     throwException("Vertex attribute count mismatch. Expected "
                             + vertStride + " floats but got " + vertex.size()
                             + " in file: " + file.getName());
 
-                for (JsonElement val : vertex)
+                for (ArpgElementStruct val : vertex)
                     vertices.add(val.getAsFloat());
 
                 currentVertex++;
-            } else if (element.isJsonObject()) {
+            } else if (element.isObject()) {
                 expandQuad(
-                        element.getAsJsonObject(),
+                        element.getAsObject(),
                         vertices,
                         quadIndices,
                         currentVertex,
@@ -188,8 +188,8 @@ class MeshBuilder extends BuilderPackage {
 
         ShortArrayList allIndices = new ShortArrayList();
 
-        if (hasValidElement(json, "ibo"))
-            for (JsonElement idx : json.getAsJsonArray("ibo")) {
+        if (hasValidElement(arpg, "ibo"))
+            for (ArpgElementStruct idx : arpg.getAsArray("ibo")) {
 
                 int value = idx.getAsInt();
 
@@ -215,7 +215,7 @@ class MeshBuilder extends BuilderPackage {
 
     // Sub-Voxel Expansion \\
 
-    private QuadExpansionStruct expandSubVoxels(JsonObject json, VAOInstance vaoInstance, File file) {
+    private QuadExpansionStruct expandSubVoxels(ArpgObjectStruct arpg, VAOInstance vaoInstance, File file) {
 
         int vertStride = vaoInstance.getVAOData().getVertStride();
 
@@ -226,7 +226,7 @@ class MeshBuilder extends BuilderPackage {
 
         FloatArrayList vertices = new FloatArrayList();
         ShortArrayList indices = new ShortArrayList();
-        subVoxelManager.buildGeometry(subVoxelManager.parseModel(json), vertices, indices);
+        subVoxelManager.buildGeometry(subVoxelManager.parseModel(arpg), vertices, indices);
 
         if (indices.isEmpty())
             throwException("Sub-voxel mesh has no filled cells in file: " + file.getName());
@@ -282,7 +282,7 @@ class MeshBuilder extends BuilderPackage {
     };
 
     private void expandQuad(
-            JsonObject quadObj,
+            ArpgObjectStruct quadObj,
             FloatArrayList vertices,
             ShortArrayList quadIndices,
             int baseVertex,
@@ -291,15 +291,15 @@ class MeshBuilder extends BuilderPackage {
             RigHandle rigHandle,
             File file) {
 
-        if (!quadObj.has("quad") || quadObj.get("quad").isJsonNull())
+        if (!quadObj.has("quad") || quadObj.get("quad").isNull())
             throwException("Quad object missing 'quad' array in file: " + file.getName());
 
-        JsonArray positions = quadObj.getAsJsonArray("quad");
+        ArpgArrayStruct positions = quadObj.getAsArray("quad");
 
         if (positions.size() != 4)
             throwException("Quad 'quad' array must have exactly 4 corners in file: " + file.getName());
 
-        boolean hasTexture = quadObj.has("texture") && !quadObj.get("texture").isJsonNull();
+        boolean hasTexture = quadObj.has("texture") && !quadObj.get("texture").isNull();
         int boneFloatCount = rigHandle != null ? EngineSetting.MAX_BONE_INFLUENCES * 2 : 0;
         float[][] boneData = rigHandle != null
                 ? resolveCornerBoneWeights(quadObj, rigHandle, file)
@@ -322,13 +322,13 @@ class MeshBuilder extends BuilderPackage {
 
             for (int i = 0; i < 4; i++) {
 
-                JsonArray pos = positions.get(i).getAsJsonArray();
+                ArpgArrayStruct pos = positions.get(i).getAsArray();
 
                 if (pos.size() != posStride)
                     throwException("Textured quad corner " + i + " has " + pos.size()
                             + " floats, expected " + posStride + " in file: " + file.getName());
 
-                for (JsonElement val : pos)
+                for (ArpgElementStruct val : pos)
                     vertices.add(val.getAsFloat());
 
                 vertices.add(snapUV(localUVs[i][0], u0, u1, tileWidth));
@@ -344,13 +344,13 @@ class MeshBuilder extends BuilderPackage {
 
             for (int i = 0; i < 4; i++) {
 
-                JsonArray corner = positions.get(i).getAsJsonArray();
+                ArpgArrayStruct corner = positions.get(i).getAsArray();
 
                 if (corner.size() != posStride)
                     throwException("Untextured quad corner " + i + " has " + corner.size()
                             + " floats, expected " + posStride + " in file: " + file.getName());
 
-                for (JsonElement val : corner)
+                for (ArpgElementStruct val : corner)
                     vertices.add(val.getAsFloat());
 
                 if (boneData != null)
@@ -369,15 +369,15 @@ class MeshBuilder extends BuilderPackage {
 
     // Bone Weights \\
 
-    private float[][] resolveCornerBoneWeights(JsonObject quadObj, RigHandle rigHandle, File file) {
+    private float[][] resolveCornerBoneWeights(ArpgObjectStruct quadObj, RigHandle rigHandle, File file) {
 
         if (!hasValidElement(quadObj, "bones"))
             throwException("Quad is missing \"bones\" in a rig-declaring mesh. Every quad must "
                     + "specify at least one bone. File: " + file.getName());
 
-        JsonArray bonesArray = quadObj.getAsJsonArray("bones");
+        ArpgArrayStruct bonesArray = quadObj.getAsArray("bones");
         float[][] cornerBoneData = new float[EngineSetting.QUAD_VERTEX_COUNT][];
-        boolean perCorner = bonesArray.size() > 0 && bonesArray.get(0).isJsonArray();
+        boolean perCorner = bonesArray.size() > 0 && bonesArray.get(0).isArray();
 
         if (perCorner && bonesArray.size() != EngineSetting.QUAD_VERTEX_COUNT)
             throwException("Per-corner quad \"bones\" must declare exactly " + EngineSetting.QUAD_VERTEX_COUNT
@@ -385,13 +385,13 @@ class MeshBuilder extends BuilderPackage {
 
         for (int corner = 0; corner < EngineSetting.QUAD_VERTEX_COUNT; corner++)
             cornerBoneData[corner] = perCorner
-                    ? resolveBoneWeights(bonesArray.get(corner).getAsJsonArray(), rigHandle, file)
+                    ? resolveBoneWeights(bonesArray.get(corner).getAsArray(), rigHandle, file)
                     : resolveBoneWeights(bonesArray, rigHandle, file);
 
         return cornerBoneData;
     }
 
-    private float[] resolveBoneWeights(JsonArray bonesArray, RigHandle rigHandle, File file) {
+    private float[] resolveBoneWeights(ArpgArrayStruct bonesArray, RigHandle rigHandle, File file) {
 
         int influenceCount = bonesArray.size();
 
@@ -405,8 +405,8 @@ class MeshBuilder extends BuilderPackage {
 
         for (int i = 0; i < influenceCount; i++) {
 
-            JsonObject entry = bonesArray.get(i).getAsJsonObject();
-            String boneName = JsonUtility.validateString(entry, "bone");
+            ArpgObjectStruct entry = bonesArray.get(i).getAsObject();
+            String boneName = ArpgUtility.validateString(entry, "bone");
             float weight = entry.has("weight") ? entry.get("weight").getAsFloat() : 1f;
 
             if (!rigHandle.hasBone(boneName))
@@ -448,12 +448,12 @@ class MeshBuilder extends BuilderPackage {
 
     // UV Snapping \\
 
-    private float[][] resolveLocalUVs(JsonObject quadObj, File file) {
+    private float[][] resolveLocalUVs(ArpgObjectStruct quadObj, File file) {
 
-        if (!quadObj.has("uvs") || quadObj.get("uvs").isJsonNull())
+        if (!quadObj.has("uvs") || quadObj.get("uvs").isNull())
             return DEFAULT_CORNER_LOCAL_UVS;
 
-        JsonArray uvsArray = quadObj.getAsJsonArray("uvs");
+        ArpgArrayStruct uvsArray = quadObj.getAsArray("uvs");
 
         if (uvsArray.size() != 4)
             throwException("Quad 'uvs' must have exactly 4 entries in file: " + file.getName());
@@ -461,7 +461,7 @@ class MeshBuilder extends BuilderPackage {
         float[][] localUVs = new float[4][2];
 
         for (int i = 0; i < 4; i++) {
-            JsonArray pair = uvsArray.get(i).getAsJsonArray();
+            ArpgArrayStruct pair = uvsArray.get(i).getAsArray();
             if (pair.size() != 2)
                 throwException("Quad 'uvs' entry " + i + " must have 2 values in file: " + file.getName());
             localUVs[i][0] = pair.get(0).getAsFloat();
@@ -479,7 +479,7 @@ class MeshBuilder extends BuilderPackage {
 
     // Utility \\
 
-    private boolean hasValidElement(JsonObject json, String key) {
-        return json.has(key) && !json.get(key).isJsonNull();
+    private boolean hasValidElement(ArpgObjectStruct arpg, String key) {
+        return arpg.has(key) && !arpg.get(key).isNull();
     }
 }

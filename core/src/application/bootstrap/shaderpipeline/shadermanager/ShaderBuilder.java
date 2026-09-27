@@ -3,22 +3,21 @@ package application.bootstrap.shaderpipeline.shadermanager;
 import java.io.File;
 import java.nio.file.Path;
 
-import com.google.gson.JsonObject;
-
 import application.bootstrap.shaderpipeline.shader.ShaderSourceStruct;
 import application.bootstrap.shaderpipeline.shader.ShaderType;
 import application.bootstrap.shaderpipeline.uniforms.UniformData;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class ShaderBuilder extends BuilderPackage {
 
     /*
      * Populates ShaderSourceStructs during scan and assembles program-level
-     * ShaderSourceStructs from JSON descriptors. Everything produced here is
+     * ShaderSourceStructs from ARPG descriptors. Everything produced here is
      * bootstrap-only and GCs when ShaderLoader self-destructs.
      */
 
@@ -244,37 +243,38 @@ class ShaderBuilder extends BuilderPackage {
 
     // Build Assembly \\
 
-    ShaderSourceStruct buildAssembly(File jsonFile) {
+    ShaderSourceStruct buildAssembly(File arpgFile) {
 
         Path rootPath = root.toPath();
-        String relativePath = rootPath.relativize(jsonFile.toPath()).toString().replace("\\", "/");
-        String shaderName = relativePath.endsWith(".json")
-                ? relativePath.substring(0, relativePath.length() - 5)
+        String relativePath = rootPath.relativize(arpgFile.toPath()).toString().replace("\\", "/");
+        String extension = "." + EngineSetting.ARPG_FILE_EXTENSION;
+        String shaderName = relativePath.endsWith(extension)
+                ? relativePath.substring(0, relativePath.length() - extension.length())
                 : relativePath;
 
-        JsonObject obj = JsonUtility.loadJsonObject(jsonFile);
+        ArpgObjectStruct obj = ArpgUtility.loadObject(arpgFile);
         ShaderSourceStruct vertSource = internalLoader.getSourceStruct(obj.get("vert").getAsString());
         ShaderSourceStruct fragSource = internalLoader.getSourceStruct(obj.get("frag").getAsString());
         ShaderSourceStruct tcsSource = null, tesSource = null;
 
         if (vertSource == null || fragSource == null)
-            throwException("JSON error: " + jsonFile.getName() + " — vert or frag file not found.");
+            throwException("ARPG error: " + arpgFile.getName() + " — vert or frag file not found.");
 
         if (vertSource.getShaderType() != ShaderType.VERT || fragSource.getShaderType() != ShaderType.FRAG)
-            throwException("JSON error: " + jsonFile.getName() + " — vert/frag type mismatch.");
+            throwException("ARPG error: " + arpgFile.getName() + " — vert/frag type mismatch.");
 
         if (obj.has("tcs")) {
 
             tcsSource = internalLoader.getSourceStruct(obj.get("tcs").getAsString());
             if (tcsSource == null || tcsSource.getShaderType() != ShaderType.TCS)
-                throwException("JSON error: " + jsonFile.getName() + " — invalid tcs.");
+                throwException("ARPG error: " + arpgFile.getName() + " — invalid tcs.");
         }
 
         if (obj.has("tes")) {
 
             tesSource = internalLoader.getSourceStruct(obj.get("tes").getAsString());
             if (tesSource == null || tesSource.getShaderType() != ShaderType.TES)
-                throwException("JSON error: " + jsonFile.getName() + " — invalid tes.");
+                throwException("ARPG error: " + arpgFile.getName() + " — invalid tes.");
         }
 
         ShaderSourceStruct assembly = new ShaderSourceStruct(ShaderType.PROGRAM, shaderName, null);

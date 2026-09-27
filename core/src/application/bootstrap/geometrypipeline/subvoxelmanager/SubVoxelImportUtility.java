@@ -2,13 +2,12 @@ package application.bootstrap.geometrypipeline.subvoxelmanager;
 
 import java.util.Arrays;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -26,13 +25,13 @@ class SubVoxelImportUtility extends EngineUtility {
 
     // Detection \\
 
-    static boolean hasQuads(JsonObject meshJson) {
+    static boolean hasQuads(ArpgObjectStruct meshArpg) {
 
-        if (!meshJson.has("vbo") || !meshJson.get("vbo").isJsonArray())
+        if (!meshArpg.has("vbo") || !meshArpg.get("vbo").isArray())
             return false;
 
-        for (JsonElement element : meshJson.getAsJsonArray("vbo"))
-            if (element.isJsonObject())
+        for (ArpgElementStruct element : meshArpg.getAsArray("vbo"))
+            if (element.isObject())
                 return true;
 
         return false;
@@ -40,13 +39,13 @@ class SubVoxelImportUtility extends EngineUtility {
 
     // Import \\
 
-    static SubVoxelModelStruct importQuads(JsonObject meshJson, String fallbackTextureName) {
+    static SubVoxelModelStruct importQuads(ArpgObjectStruct meshArpg, String fallbackTextureName) {
 
         FloatArrayList triangles = new FloatArrayList();
         IntArrayList triangleTextures = new IntArrayList();
         ObjectArrayList<String> textureNames = new ObjectArrayList<>();
 
-        collectTriangles(meshJson, fallbackTextureName, triangles, triangleTextures, textureNames);
+        collectTriangles(meshArpg, fallbackTextureName, triangles, triangleTextures, textureNames);
 
         SubVoxelModelStruct model = new SubVoxelModelStruct();
         int[] texture2Part = new int[textureNames.size()];
@@ -84,25 +83,25 @@ class SubVoxelImportUtility extends EngineUtility {
     // Triangles \\
 
     private static void collectTriangles(
-            JsonObject meshJson,
+            ArpgObjectStruct meshArpg,
             String fallbackTextureName,
             FloatArrayList triangles,
             IntArrayList triangleTextures,
             ObjectArrayList<String> textureNames) {
 
-        for (JsonElement element : meshJson.getAsJsonArray("vbo")) {
+        for (ArpgElementStruct element : meshArpg.getAsArray("vbo")) {
 
-            if (!element.isJsonObject() || !element.getAsJsonObject().has("quad"))
+            if (!element.isObject() || !element.getAsObject().has("quad"))
                 continue;
 
-            JsonObject quadJson = element.getAsJsonObject();
-            JsonArray corners = quadJson.getAsJsonArray("quad");
+            ArpgObjectStruct quadArpg = element.getAsObject();
+            ArpgArrayStruct corners = quadArpg.getAsArray("quad");
 
             if (corners.size() != EngineSetting.QUAD_VERTEX_COUNT)
                 throwException("Quad must have exactly " + EngineSetting.QUAD_VERTEX_COUNT + " corners.");
 
-            String textureName = quadJson.has("texture") && !quadJson.get("texture").isJsonNull()
-                    ? quadJson.get("texture").getAsString()
+            String textureName = quadArpg.has("texture") && !quadArpg.get("texture").isNull()
+                    ? quadArpg.get("texture").getAsString()
                     : fallbackTextureName;
             int textureIndex = textureNames.indexOf(textureName);
 
@@ -118,12 +117,12 @@ class SubVoxelImportUtility extends EngineUtility {
         }
     }
 
-    private static void addTriangle(JsonArray corners, int a, int b, int c, FloatArrayList triangles) {
+    private static void addTriangle(ArpgArrayStruct corners, int a, int b, int c, FloatArrayList triangles) {
 
         int[] order = { a, b, c };
 
         for (int i = 0; i < order.length; i++) {
-            JsonArray corner = corners.get(order[i]).getAsJsonArray();
+            ArpgArrayStruct corner = corners.get(order[i]).getAsArray();
             triangles.add(corner.get(0).getAsFloat());
             triangles.add(corner.get(1).getAsFloat());
             triangles.add(corner.get(2).getAsFloat());

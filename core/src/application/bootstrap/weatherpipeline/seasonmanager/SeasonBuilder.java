@@ -2,23 +2,22 @@ package application.bootstrap.weatherpipeline.seasonmanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.weatherpipeline.season.SeasonData;
 import application.bootstrap.weatherpipeline.season.SeasonHandle;
 import application.bootstrap.weatherpipeline.season.SkyPaletteStruct;
 import application.bootstrap.weatherpipeline.season.SkyPhaseStruct;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import engine.util.mathematics.vectors.Vector3;
 
 class SeasonBuilder extends BuilderPackage {
 
     /*
-     * Parses season JSON into a SeasonData and wraps it in a SeasonHandle.
+     * Parses season ARPG into a SeasonData and wraps it in a SeasonHandle.
      * The season's name is taken directly from the file name — whatever
      * named seasons the active calendar defines is whatever files should
      * exist here. Every fallback below when a climate field is omitted
@@ -33,19 +32,19 @@ class SeasonBuilder extends BuilderPackage {
 
         String seasonName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
-        float baseWindSpeed = parseFloat(json, "baseWindSpeed", EngineSetting.DEFAULT_SEASON_BASE_WIND_SPEED);
-        float windVariance = parseFloat(json, "windVariance", EngineSetting.DEFAULT_SEASON_WIND_VARIANCE);
+        float baseWindSpeed = parseFloat(arpg, "baseWindSpeed", EngineSetting.DEFAULT_SEASON_BASE_WIND_SPEED);
+        float windVariance = parseFloat(arpg, "windVariance", EngineSetting.DEFAULT_SEASON_WIND_VARIANCE);
         float prevailingWindDirectionDegrees = parseFloat(
-                json, "prevailingWindDirectionDegrees",
+                arpg, "prevailingWindDirectionDegrees",
                 EngineSetting.DEFAULT_SEASON_PREVAILING_WIND_DIRECTION_DEGREES);
-        float baseTemperature = parseFloat(json, "baseTemperature", EngineSetting.DEFAULT_BASE_TEMPERATURE);
+        float baseTemperature = parseFloat(arpg, "baseTemperature", EngineSetting.DEFAULT_BASE_TEMPERATURE);
         float temperatureVariance = parseFloat(
-                json, "temperatureVariance", EngineSetting.DEFAULT_SEASON_TEMPERATURE_VARIANCE);
+                arpg, "temperatureVariance", EngineSetting.DEFAULT_SEASON_TEMPERATURE_VARIANCE);
         float precipitationChanceScale = parseFloat(
-                json, "precipitationChanceScale", EngineSetting.DEFAULT_SEASON_PRECIPITATION_CHANCE_SCALE);
-        SkyPaletteStruct skyPalette = parseSkyPalette(json, seasonName);
+                arpg, "precipitationChanceScale", EngineSetting.DEFAULT_SEASON_PRECIPITATION_CHANCE_SCALE);
+        SkyPaletteStruct skyPalette = parseSkyPalette(arpg, seasonName);
 
         SeasonData seasonData = new SeasonData(
                 seasonName,
@@ -65,24 +64,24 @@ class SeasonBuilder extends BuilderPackage {
 
     // Parsing \\
 
-    private float parseFloat(JsonObject json, String field, float fallback) {
+    private float parseFloat(ArpgObjectStruct arpg, String field, float fallback) {
 
-        if (!json.has(field))
+        if (!arpg.has(field))
             return fallback;
 
-        return json.get(field).getAsFloat();
+        return arpg.get(field).getAsFloat();
     }
 
-    private SkyPaletteStruct parseSkyPalette(JsonObject json, String seasonName) {
+    private SkyPaletteStruct parseSkyPalette(ArpgObjectStruct arpg, String seasonName) {
 
-        JsonObject skyObject = JsonUtility.validateObject(json, "sky");
-        JsonObject phasesObject = JsonUtility.validateObject(skyObject, "phases");
+        ArpgObjectStruct skyObject = ArpgUtility.validateObject(arpg, "sky");
+        ArpgObjectStruct phasesObject = ArpgUtility.validateObject(skyObject, "phases");
 
         String[] phaseNames = EngineSetting.SKY_PHASE_NAMES;
         SkyPhaseStruct[] phases = new SkyPhaseStruct[phaseNames.length];
 
         for (int i = 0; i < phaseNames.length; i++)
-            phases[i] = parseSkyPhase(JsonUtility.validateObject(phasesObject, phaseNames[i]), seasonName);
+            phases[i] = parseSkyPhase(ArpgUtility.validateObject(phasesObject, phaseNames[i]), seasonName);
 
         float glowStrength = parseStrength(skyObject, "glowStrength", seasonName);
         float beltStrength = parseStrength(skyObject, "beltStrength", seasonName);
@@ -91,7 +90,7 @@ class SeasonBuilder extends BuilderPackage {
         return new SkyPaletteStruct(phases, glowStrength, beltStrength, variety);
     }
 
-    private SkyPhaseStruct parseSkyPhase(JsonObject phaseObject, String seasonName) {
+    private SkyPhaseStruct parseSkyPhase(ArpgObjectStruct phaseObject, String seasonName) {
         return new SkyPhaseStruct(
                 parseColor(phaseObject, "zenith", seasonName),
                 parseColor(phaseObject, "horizon", seasonName),
@@ -102,9 +101,9 @@ class SeasonBuilder extends BuilderPackage {
                 parseColor(phaseObject, "cloudShadow", seasonName));
     }
 
-    private float parseStrength(JsonObject json, String field, String seasonName) {
+    private float parseStrength(ArpgObjectStruct arpg, String field, String seasonName) {
 
-        float strength = JsonUtility.validateFloat(json, field);
+        float strength = ArpgUtility.validateFloat(arpg, field);
 
         if (strength < 0f)
             throwException("Season \"" + seasonName + "\" sky " + field + " " + strength +
@@ -113,9 +112,9 @@ class SeasonBuilder extends BuilderPackage {
         return strength;
     }
 
-    private Vector3 parseColor(JsonObject json, String field, String seasonName) {
+    private Vector3 parseColor(ArpgObjectStruct arpg, String field, String seasonName) {
 
-        JsonArray array = JsonUtility.validateArray(json, field, 3);
+        ArpgArrayStruct array = ArpgUtility.validateArray(arpg, field, 3);
         Vector3 color = new Vector3(
                 array.get(0).getAsFloat(),
                 array.get(1).getAsFloat(),

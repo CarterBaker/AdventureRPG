@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class AnimationTreeLoader extends LoaderPackage {
 
     /*
-     * Scans the animation tree JSON directory and loads every tree into
+     * Scans the animation tree ARPG directory and loads every tree into
      * AnimationTreeManager. Supports on-demand loading for trees not yet in
      * the palette — entity templates resolve their tree through that path
      * while they load.
@@ -30,12 +30,12 @@ class AnimationTreeLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.ANIMATION_TREE_JSON_PATH);
+        this.root = new File(EngineSetting.ANIMATION_TREE_PATH);
         this.treeName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root, "Animation tree JSON directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Animation tree ARPG directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String treeName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             treeName2File.put(treeName, file);
             queueFile(file);

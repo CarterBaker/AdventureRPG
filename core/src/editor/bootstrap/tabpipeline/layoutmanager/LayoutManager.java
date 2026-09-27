@@ -2,13 +2,12 @@ package editor.bootstrap.tabpipeline.layoutmanager;
 
 import java.io.File;
 
-import com.google.gson.JsonObject;
-
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class LayoutManager extends ManagerPackage {
@@ -99,9 +98,9 @@ public class LayoutManager extends ManagerPackage {
 
     private boolean restore(File layoutFile) {
 
-        JsonObject layoutJson = JsonUtility.tryLoadJsonObject(layoutFile);
+        ArpgObjectStruct layoutArpg = ArpgUtility.tryLoadObject(layoutFile);
 
-        if (layoutJson != null && layoutRestoreBranch.restore(layoutJson))
+        if (layoutArpg != null && layoutRestoreBranch.restore(layoutArpg))
             return true;
 
         errorLog("Layout '" + FileUtility.getFileName(layoutFile) + "' is unreadable or malformed and was skipped: "
@@ -112,7 +111,7 @@ public class LayoutManager extends ManagerPackage {
     // Utility \\
 
     private File getLayoutFile(String layoutName) {
-        return new File(layoutDirectory, layoutName + "." + EditorSetting.LAYOUT_FILE_EXTENSION);
+        return ArpgUtility.resolveFile(layoutDirectory, layoutName);
     }
 
     private boolean isSessionName(String layoutName) {
@@ -136,7 +135,7 @@ public class LayoutManager extends ManagerPackage {
 
         for (File layoutFile : layoutFiles) {
 
-            if (!layoutFile.isFile() || !FileUtility.hasExtension(layoutFile, EditorSetting.LAYOUT_FILE_EXTENSION))
+            if (!ArpgUtility.isArpgFile(layoutFile))
                 continue;
 
             String layoutName = FileUtility.getFileName(layoutFile);

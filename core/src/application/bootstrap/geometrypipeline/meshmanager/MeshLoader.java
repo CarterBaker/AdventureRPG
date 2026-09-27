@@ -43,12 +43,12 @@ class MeshLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.MESH_JSON_PATH);
+        this.root = new File(EngineSetting.MESH_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root, "Mesh JSON directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Mesh ARPG directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             resourceName2File.put(resourceName, file);
             queueFile(file);

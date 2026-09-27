@@ -1,6 +1,0 @@
-{
-    "blockName": "BlockOrientationMapData",
-    "uniforms": [
-        { "name": "u_faceOrientations", "type": "VECTOR2", "count": 24 }
-    ]
-}

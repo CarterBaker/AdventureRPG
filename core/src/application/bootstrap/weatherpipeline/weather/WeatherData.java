@@ -8,7 +8,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WeatherData extends DataPackage {
 
     /*
-     * Immutable weather definition loaded from JSON — the condition-level
+     * Immutable weather definition loaded from ARPG — the condition-level
      * atmosphere values for one named weather and the cloud archetypes it
      * fills the sky with. Cloud entries are parallel fastutil lists: each
      * entry's resolved coverage (the weather's cloudCoverage shared out by

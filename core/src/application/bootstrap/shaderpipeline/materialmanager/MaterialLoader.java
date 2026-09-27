@@ -28,13 +28,13 @@ class MaterialLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.MATERIAL_JSON_PATH);
+        this.root = new File(EngineSetting.MATERIAL_PATH);
         this.materialName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root,
-                "Material JSON directory not found: " + root.getAbsolutePath());
+                "Material ARPG directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String materialName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             materialName2File.put(materialName, file);
             queueFile(file);

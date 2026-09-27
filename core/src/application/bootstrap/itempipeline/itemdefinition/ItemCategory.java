@@ -6,7 +6,7 @@ public enum ItemCategory {
 
     /*
      * The kind of thing an item is. A container's contents are listed grouped
-     * under these headers, in this order, and an item's JSON names its
+     * under these headers, in this order, and an item's ARPG names its
      * category by the lower-case constant name.
      */
 

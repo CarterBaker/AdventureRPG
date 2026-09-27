@@ -1,20 +1,19 @@
 package editor.bootstrap.infopipeline.infodocument;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InfoDocumentInstance extends InstancePackage {
 
     /*
      * One content file held in the editor: the schema it follows, its name
-     * relative to the schema's directory, and the JSON being edited. Edits stay
+     * relative to the schema's directory, and the ARPG tree being edited. Edits stay
      * in memory until saved; dirty marks changes not yet written and onDisk
      * whether the file exists at all. In an array layout the named entries
      * are the objects of the schema's entries array, found by their name field.
@@ -24,8 +23,8 @@ public class InfoDocumentInstance extends InstancePackage {
     private InfoSchemaHandle schema;
     private String definitionName;
 
-    // Json
-    private JsonObject root;
+    // Arpg
+    private ArpgObjectStruct root;
 
     // State
     private boolean dirty;
@@ -33,13 +32,13 @@ public class InfoDocumentInstance extends InstancePackage {
 
     // Constructor \\
 
-    public void constructor(InfoSchemaHandle schema, String definitionName, JsonObject root, boolean onDisk) {
+    public void constructor(InfoSchemaHandle schema, String definitionName, ArpgObjectStruct root, boolean onDisk) {
 
         // Identity
         this.schema = schema;
         this.definitionName = definitionName;
 
-        // Json
+        // Arpg
         this.root = root;
 
         // State
@@ -59,7 +58,7 @@ public class InfoDocumentInstance extends InstancePackage {
         this.onDisk = true;
     }
 
-    public void replaceRoot(JsonObject root) {
+    public void replaceRoot(ArpgObjectStruct root) {
 
         this.root = root;
         this.dirty = false;
@@ -67,25 +66,25 @@ public class InfoDocumentInstance extends InstancePackage {
 
     // Entries \\
 
-    public JsonArray getEntryArray() {
+    public ArpgArrayStruct getEntryArray() {
 
-        JsonElement entries = root.get(schema.getEntriesKey());
-        return entries != null && entries.isJsonArray() ? entries.getAsJsonArray() : new JsonArray();
+        ArpgElementStruct entries = root.get(schema.getEntriesKey());
+        return entries != null && entries.isArray() ? entries.getAsArray() : new ArpgArrayStruct();
     }
 
-    public JsonArray requireEntryArray() {
+    public ArpgArrayStruct requireEntryArray() {
 
-        JsonElement entries = root.get(schema.getEntriesKey());
+        ArpgElementStruct entries = root.get(schema.getEntriesKey());
 
-        if (entries == null || !entries.isJsonArray())
-            root.add(schema.getEntriesKey(), new JsonArray());
+        if (entries == null || !entries.isArray())
+            root.add(schema.getEntriesKey(), new ArpgArrayStruct());
 
-        return root.getAsJsonArray(schema.getEntriesKey());
+        return root.getAsArray(schema.getEntriesKey());
     }
 
     public int findEntryIndex(String entryName) {
 
-        JsonArray entries = getEntryArray();
+        ArpgArrayStruct entries = getEntryArray();
 
         for (int i = 0; i < entries.size(); i++)
             if (entryName.equals(getEntryName(entries.get(i))))
@@ -94,18 +93,18 @@ public class InfoDocumentInstance extends InstancePackage {
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
-    public JsonObject findEntry(String entryName) {
+    public ArpgObjectStruct findEntry(String entryName) {
 
         int entryIndex = findEntryIndex(entryName);
 
         return entryIndex != EngineSetting.INDEX_NOT_FOUND
-                ? getEntryArray().get(entryIndex).getAsJsonObject()
+                ? getEntryArray().get(entryIndex).getAsObject()
                 : null;
     }
 
     public ObjectArrayList<String> getEntryNames() {
 
-        JsonArray entries = getEntryArray();
+        ArpgArrayStruct entries = getEntryArray();
         ObjectArrayList<String> entryNames = new ObjectArrayList<>(entries.size());
 
         for (int i = 0; i < entries.size(); i++) {
@@ -119,14 +118,14 @@ public class InfoDocumentInstance extends InstancePackage {
         return entryNames;
     }
 
-    private String getEntryName(JsonElement entry) {
+    private String getEntryName(ArpgElementStruct entry) {
 
-        if (!entry.isJsonObject())
+        if (!entry.isObject())
             return null;
 
-        JsonElement name = entry.getAsJsonObject().get(schema.getNameField());
+        ArpgElementStruct name = entry.getAsObject().get(schema.getNameField());
 
-        return name != null && name.isJsonPrimitive() ? name.getAsString() : null;
+        return name != null && name.isValue() ? name.getAsString() : null;
     }
 
     // Accessible \\
@@ -151,7 +150,7 @@ public class InfoDocumentInstance extends InstancePackage {
         return separator != EngineSetting.INDEX_NOT_FOUND ? definitionName.substring(separator + 1) : definitionName;
     }
 
-    public JsonObject getRoot() {
+    public ArpgObjectStruct getRoot() {
         return root;
     }
 

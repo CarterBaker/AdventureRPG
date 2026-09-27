@@ -1,8 +1,7 @@
 package application.bootstrap.menupipeline.util;
 
-import com.google.gson.JsonObject;
-
 import engine.root.StructPackage;
+import engine.util.arpg.ArpgObjectStruct;
 
 public class DimensionVector2Struct extends StructPackage {
 
@@ -25,17 +24,17 @@ public class DimensionVector2Struct extends StructPackage {
     // Factory \\
 
     public static DimensionVector2Struct parse(
-            JsonObject json,
+            ArpgObjectStruct arpg,
             String key,
             String defaultX,
             String defaultY) {
 
-        if (!json.has(key))
+        if (!arpg.has(key))
             return new DimensionVector2Struct(
                     DimensionValueStruct.parse(defaultX),
                     DimensionValueStruct.parse(defaultY));
 
-        JsonObject obj = json.getAsJsonObject(key);
+        ArpgObjectStruct obj = arpg.getAsObject(key);
 
         DimensionValueStruct x = obj.has("x")
                 ? DimensionValueStruct.parse(obj.get("x").getAsString())

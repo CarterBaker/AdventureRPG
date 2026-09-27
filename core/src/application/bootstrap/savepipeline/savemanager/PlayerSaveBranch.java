@@ -2,9 +2,6 @@ package application.bootstrap.savepipeline.savemanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
@@ -16,14 +13,16 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 
 class PlayerSaveBranch extends BranchPackage {
 
     /*
-     * Captures a window's player as character save JSON and writes it to
+     * Captures a window's player as an ARPG character save and writes it to
      * disk. The character records its body size, its weight and, when it has
      * one, its appearance — skin and hair color, head proportion, and the
      * feature worn in every filled slot. The location records the world, the
@@ -37,135 +36,135 @@ class PlayerSaveBranch extends BranchPackage {
 
     void save(File characterFile, EntityInstance player) {
 
-        JsonObject playerJson = new JsonObject();
-        playerJson.add("character", buildCharacter(player));
-        playerJson.add("location", buildLocation(player));
-        playerJson.add("inventory", buildInventory(player.getInventoryHandle()));
+        ArpgObjectStruct playerArpg = new ArpgObjectStruct();
+        playerArpg.add("character", buildCharacter(player));
+        playerArpg.add("location", buildLocation(player));
+        playerArpg.add("inventory", buildInventory(player.getInventoryHandle()));
 
-        JsonUtility.writeJsonObject(characterFile, playerJson, internal.gson);
+        ArpgUtility.writeObject(characterFile, playerArpg);
     }
 
     // Build \\
 
-    private JsonObject buildCharacter(EntityInstance player) {
+    private ArpgObjectStruct buildCharacter(EntityInstance player) {
 
-        JsonObject characterJson = new JsonObject();
-        characterJson.add("size", buildVector(player.getSize()));
-        characterJson.addProperty("weight", player.getWeight());
+        ArpgObjectStruct characterArpg = new ArpgObjectStruct();
+        characterArpg.add("size", buildVector(player.getSize()));
+        characterArpg.addProperty("weight", player.getWeight());
 
         if (player.hasAppearance())
-            characterJson.add("appearance", buildAppearance(player.getAppearanceHandle()));
+            characterArpg.add("appearance", buildAppearance(player.getAppearanceHandle()));
 
-        return characterJson;
+        return characterArpg;
     }
 
-    private JsonObject buildAppearance(AppearanceHandle appearanceHandle) {
+    private ArpgObjectStruct buildAppearance(AppearanceHandle appearanceHandle) {
 
-        JsonObject appearanceJson = new JsonObject();
-        appearanceJson.add("skin_color", buildColor(appearanceHandle.getSkinColor()));
-        appearanceJson.add("hair_color", buildColor(appearanceHandle.getHairColor()));
-        appearanceJson.add("head_proportion", buildVector(appearanceHandle.getHeadProportion()));
-        appearanceJson.add("features", buildFeatures(appearanceHandle));
-        return appearanceJson;
+        ArpgObjectStruct appearanceArpg = new ArpgObjectStruct();
+        appearanceArpg.add("skin_color", buildColor(appearanceHandle.getSkinColor()));
+        appearanceArpg.add("hair_color", buildColor(appearanceHandle.getHairColor()));
+        appearanceArpg.add("head_proportion", buildVector(appearanceHandle.getHeadProportion()));
+        appearanceArpg.add("features", buildFeatures(appearanceHandle));
+        return appearanceArpg;
     }
 
-    private JsonObject buildFeatures(AppearanceHandle appearanceHandle) {
+    private ArpgObjectStruct buildFeatures(AppearanceHandle appearanceHandle) {
 
-        JsonObject featuresJson = new JsonObject();
+        ArpgObjectStruct featuresArpg = new ArpgObjectStruct();
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (appearanceHandle.hasFeature(featureSlot))
-                featuresJson.addProperty(
+                featuresArpg.addProperty(
                         featureSlot.name().toLowerCase(),
                         appearanceHandle.getFeature(featureSlot).getFeatureName());
 
-        return featuresJson;
+        return featuresArpg;
     }
 
-    private JsonObject buildInventory(InventoryHandle inventoryHandle) {
+    private ArpgObjectStruct buildInventory(InventoryHandle inventoryHandle) {
 
-        JsonObject equipmentJson = new JsonObject();
-        JsonArray hiddenJson = new JsonArray();
+        ArpgObjectStruct equipmentArpg = new ArpgObjectStruct();
+        ArpgArrayStruct hiddenArpg = new ArpgArrayStruct();
 
         for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
 
             if (inventoryHandle.hasItem(equipmentSlot))
-                equipmentJson.add(
-                        JsonUtility.toEnumName(equipmentSlot),
+                equipmentArpg.add(
+                        ArpgUtility.toEnumName(equipmentSlot),
                         buildItem(inventoryHandle.getItem(equipmentSlot)));
 
             if (inventoryHandle.isHidden(equipmentSlot))
-                hiddenJson.add(JsonUtility.toEnumName(equipmentSlot));
+                hiddenArpg.add(ArpgUtility.toEnumName(equipmentSlot));
         }
 
-        JsonObject inventoryJson = new JsonObject();
-        inventoryJson.add("equipment", equipmentJson);
-        inventoryJson.add("hidden", hiddenJson);
-        return inventoryJson;
+        ArpgObjectStruct inventoryArpg = new ArpgObjectStruct();
+        inventoryArpg.add("equipment", equipmentArpg);
+        inventoryArpg.add("hidden", hiddenArpg);
+        return inventoryArpg;
     }
 
-    private JsonObject buildItem(ItemInstance itemInstance) {
+    private ArpgObjectStruct buildItem(ItemInstance itemInstance) {
 
-        JsonObject itemJson = new JsonObject();
-        itemJson.addProperty("item", itemInstance.getItemDefinitionHandle().getItemName());
+        ArpgObjectStruct itemArpg = new ArpgObjectStruct();
+        itemArpg.addProperty("item", itemInstance.getItemDefinitionHandle().getItemName());
 
         if (itemInstance.hasContainer())
-            itemJson.add("contents", buildContents(itemInstance.getContainerInstance()));
+            itemArpg.add("contents", buildContents(itemInstance.getContainerInstance()));
 
-        return itemJson;
+        return itemArpg;
     }
 
-    private JsonArray buildContents(ContainerInstance containerInstance) {
+    private ArpgArrayStruct buildContents(ContainerInstance containerInstance) {
 
-        JsonArray contentsJson = new JsonArray();
+        ArpgArrayStruct contentsArpg = new ArpgArrayStruct();
 
         for (int i = 0; i < containerInstance.getSlots().size(); i++) {
 
             ContainerSlotStruct slot = containerInstance.getSlots().get(i);
-            JsonObject slotJson = buildItem(slot.getItemInstance());
-            slotJson.addProperty("x", slot.getX());
-            slotJson.addProperty("y", slot.getY());
-            slotJson.addProperty("z", slot.getZ());
-            slotJson.addProperty("rotation", slot.getRotation());
-            contentsJson.add(slotJson);
+            ArpgObjectStruct slotArpg = buildItem(slot.getItemInstance());
+            slotArpg.addProperty("x", slot.getX());
+            slotArpg.addProperty("y", slot.getY());
+            slotArpg.addProperty("z", slot.getZ());
+            slotArpg.addProperty("rotation", slot.getRotation());
+            contentsArpg.add(slotArpg);
         }
 
-        return contentsJson;
+        return contentsArpg;
     }
 
-    private JsonObject buildLocation(EntityInstance player) {
+    private ArpgObjectStruct buildLocation(EntityInstance player) {
 
         WorldPositionStruct worldPositionStruct = player.getWorldPositionStruct();
         long chunkCoordinate = worldPositionStruct.getChunkCoordinate();
 
-        JsonObject chunkJson = new JsonObject();
-        chunkJson.addProperty("x", Coordinate2Long.unpackX(chunkCoordinate));
-        chunkJson.addProperty("z", Coordinate2Long.unpackY(chunkCoordinate));
+        ArpgObjectStruct chunkArpg = new ArpgObjectStruct();
+        chunkArpg.addProperty("x", Coordinate2Long.unpackX(chunkCoordinate));
+        chunkArpg.addProperty("z", Coordinate2Long.unpackY(chunkCoordinate));
 
-        JsonObject locationJson = new JsonObject();
-        locationJson.addProperty("world", player.getWorldHandle().getWorldName());
-        locationJson.add("chunk", chunkJson);
-        locationJson.add("position", buildVector(worldPositionStruct.getPosition()));
-        return locationJson;
+        ArpgObjectStruct locationArpg = new ArpgObjectStruct();
+        locationArpg.addProperty("world", player.getWorldHandle().getWorldName());
+        locationArpg.add("chunk", chunkArpg);
+        locationArpg.add("position", buildVector(worldPositionStruct.getPosition()));
+        return locationArpg;
     }
 
     // Utility \\
 
-    private JsonObject buildVector(Vector3 vector) {
+    private ArpgObjectStruct buildVector(Vector3 vector) {
 
-        JsonObject vectorJson = new JsonObject();
-        vectorJson.addProperty("x", vector.x);
-        vectorJson.addProperty("y", vector.y);
-        vectorJson.addProperty("z", vector.z);
-        return vectorJson;
+        ArpgObjectStruct vectorArpg = new ArpgObjectStruct();
+        vectorArpg.addProperty("x", vector.x);
+        vectorArpg.addProperty("y", vector.y);
+        vectorArpg.addProperty("z", vector.z);
+        return vectorArpg;
     }
 
-    private JsonObject buildColor(Color color) {
+    private ArpgObjectStruct buildColor(Color color) {
 
-        JsonObject colorJson = new JsonObject();
-        colorJson.addProperty("r", color.r);
-        colorJson.addProperty("g", color.g);
-        colorJson.addProperty("b", color.b);
-        return colorJson;
+        ArpgObjectStruct colorArpg = new ArpgObjectStruct();
+        colorArpg.addProperty("r", color.r);
+        colorArpg.addProperty("g", color.g);
+        colorArpg.addProperty("b", color.b);
+        return colorArpg;
     }
 }

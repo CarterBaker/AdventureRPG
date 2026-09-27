@@ -10,15 +10,10 @@ public abstract class UtilityPackage {
     /*
      * Root of every engine class. Provides session-log debug and log output and
      * throwException(), which is fatal by design outside an isolated context
-     * and contained to the failing context inside one.
+     * and contained to the failing context inside one. The package and system
+     * names are resolved only when a message needs them, so constructing an
+     * engine object costs nothing extra.
      */
-
-    // Internal
-    protected final String packageName = getClass().getPackage() != null
-            ? getClass().getPackage().getName()
-            : "<default>";
-
-    protected final String systemName = getClass().getSimpleName();
 
     // Debug \\
 
@@ -27,8 +22,8 @@ public abstract class UtilityPackage {
     }
 
     protected final void debug(Object input) {
-        LogUtility.info("(" + packageName + ")");
-        LogUtility.info("[" + systemName + "] " + String.valueOf(input));
+        LogUtility.info("(" + getPackageName() + ")");
+        LogUtility.info("[" + getSystemName() + "] " + String.valueOf(input));
     }
 
     protected final void timeStampDebug(Object input) {
@@ -69,7 +64,7 @@ public abstract class UtilityPackage {
     }
 
     protected final <T> T throwException(String message, Throwable cause) {
-        InternalException exception = new InternalException("[" + systemName + "] " + message, cause);
+        InternalException exception = new InternalException("[" + getSystemName() + "] " + message, cause);
 
         if (EnginePackage.ISOLATION_BOUNDARY.get() != null)
             throw exception;
@@ -94,6 +89,15 @@ public abstract class UtilityPackage {
         return LocalTime.now().format(TIME_FORMAT);
     }
 
+    private String getPackageName() {
+        Package owningPackage = getClass().getPackage();
+        return owningPackage != null ? owningPackage.getName() : "<default>";
+    }
+
+    private String getSystemName() {
+        return getClass().getSimpleName();
+    }
+
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static class InternalException extends RuntimeException {
@@ -113,8 +117,8 @@ public abstract class UtilityPackage {
 
         log("");
 
-        log("Package   : " + packageName);
-        log("System    : " + systemName);
+        log("Package   : " + getPackageName());
+        log("System    : " + getSystemName());
         log("Time      : " + timeStamp());
         errorLog("Message   : " + message);
 

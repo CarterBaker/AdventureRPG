@@ -10,7 +10,7 @@ import engine.util.mathematics.vectors.Vector2;
 public class BlockBufferSystem extends SystemPackage {
 
     /*
-     * Seeds GPU-side UBOs with data that cannot be expressed statically in JSON.
+     * Seeds GPU-side UBOs with data that cannot be expressed statically in ARPG.
      * Atlas layer indices and UV scale are declared via companion ubo.json files
      * inside the texture directory and are handled by TextureManager directly.
      * This system is responsible only for procedurally computed orientation data.

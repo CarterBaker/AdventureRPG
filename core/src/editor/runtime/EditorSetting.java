@@ -17,7 +17,6 @@ public class EditorSetting {
     public static final String CURSOR_RESIZE_V = "menus/CursorStretchIconVertical";
 
     // Layouts
-    public static final String LAYOUT_FILE_EXTENSION = "json";
     public static final int LAYOUT_NAME_MAX_LENGTH = 32;
     public static final String LAYOUT_SESSION_NAME = "LastSession";
 
@@ -76,7 +75,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
 
     // Commands
-    public static final String COMMAND_JSON_PATH = "commands";
+    public static final String COMMAND_PATH = "commands";
     public static final String COMMAND_TOKEN_SEPARATOR_PATTERN = "\\s+";
     public static final String COMMAND_TOKEN_SEPARATOR = " ";
     public static final String COMMAND_ARGUMENT_OPEN = " <";
@@ -117,7 +116,6 @@ public class EditorSetting {
     public static final String TEXTURE_VIEWER_STATUS_NO_BRUSH = "No brush. Click a texture to paint items with it.";
 
     // Item Library
-    public static final String ITEM_EDITOR_FILE_EXTENSION = "json";
     public static final String ITEM_EDITOR_MESH_DIRECTORY = "items";
     public static final String ITEM_EDITOR_DEFINITION_FILE = "EditorItems";
     public static final String ITEM_EDITOR_TEXTURE_ARRAY = "items/standard";
@@ -125,7 +123,6 @@ public class EditorSetting {
 
     // Info Schemas
     public static final String INFO_SCHEMA_PATH = "schemas";
-    public static final String INFO_FILE_EXTENSION = "json";
     public static final String INFO_SCHEMA_ITEMS = "Items";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";

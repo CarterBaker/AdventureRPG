@@ -21,7 +21,7 @@ class ShaderLoader extends LoaderPackage {
 
     /*
      * Scans the shader directory, builds ShaderSourceStructs for all GLSL files,
-     * parses their content, then batch-assembles compiled ShaderHandles from JSON
+     * parses their content, then batch-assembles compiled ShaderHandles from ARPG
      * definitions each frame. ShaderSourceStructs GC with this loader when the
      * queue empties — nothing from the parse phase survives bootstrap.
      */
@@ -79,7 +79,7 @@ class ShaderLoader extends LoaderPackage {
         if (extension == null || extension.isEmpty())
             return;
 
-        if (EngineSetting.JSON_FILE_EXTENSIONS.contains(extension)) {
+        if (EngineSetting.ARPG_FILE_EXTENSIONS.contains(extension)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             shaderName2File.put(resourceName, file);
             queueFile(file);

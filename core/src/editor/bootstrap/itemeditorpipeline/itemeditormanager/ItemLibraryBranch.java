@@ -2,16 +2,14 @@ package editor.bootstrap.itemeditorpipeline.itemeditormanager;
 
 import java.io.File;
 
-import com.google.gson.JsonObject;
-
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
-import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 
 class ItemLibraryBranch extends BranchPackage {
 
@@ -34,7 +32,7 @@ class ItemLibraryBranch extends BranchPackage {
     protected void create() {
 
         // Directory
-        this.meshRoot = new File(EngineSetting.MESH_JSON_PATH);
+        this.meshRoot = new File(EngineSetting.MESH_PATH);
     }
 
     @Override
@@ -46,7 +44,7 @@ class ItemLibraryBranch extends BranchPackage {
 
     SubVoxelModelStruct loadModel(ItemEntryStruct entry, String fallbackTextureName) {
 
-        SubVoxelModelStruct model = subVoxelManager.resolveModel(loadMeshJson(entry), fallbackTextureName);
+        SubVoxelModelStruct model = subVoxelManager.resolveModel(loadMeshArpg(entry), fallbackTextureName);
 
         if (model == null)
             return throwException("Item '" + entry.getItemName() + "' uses mesh '" + entry.getMeshName()
@@ -60,26 +58,25 @@ class ItemLibraryBranch extends BranchPackage {
     }
 
     boolean requiresConversion(ItemEntryStruct entry) {
-        return !subVoxelManager.hasSubVoxels(loadMeshJson(entry));
+        return !subVoxelManager.hasSubVoxels(loadMeshArpg(entry));
     }
 
-    private JsonObject loadMeshJson(ItemEntryStruct entry) {
+    private ArpgObjectStruct loadMeshArpg(ItemEntryStruct entry) {
 
         File meshFile = getMeshFile(entry.getMeshName());
 
         if (!meshFile.isFile())
             throwException("Item '" + entry.getItemName() + "' has no mesh file: " + meshFile.getAbsolutePath());
 
-        return JsonUtility.loadJsonObject(meshFile);
+        return ArpgUtility.loadObject(meshFile);
     }
 
     // Save \\
 
     void save(ItemDocumentInstance document) {
-        JsonUtility.writeJsonObject(
+        ArpgUtility.writeObject(
                 getMeshFile(document.getEntry().getMeshName()),
-                subVoxelManager.toMeshJson(document.getModel()),
-                internal.gson);
+                subVoxelManager.toMeshArpg(document.getModel()));
     }
 
     // Delete \\
@@ -95,7 +92,7 @@ class ItemLibraryBranch extends BranchPackage {
     // Utility \\
 
     private File getMeshFile(String meshName) {
-        return new File(meshRoot, meshName + "." + EditorSetting.ITEM_EDITOR_FILE_EXTENSION);
+        return ArpgUtility.resolveFile(meshRoot, meshName);
     }
 
     // Accessible \\

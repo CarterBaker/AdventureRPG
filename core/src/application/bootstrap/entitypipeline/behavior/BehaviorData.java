@@ -5,7 +5,7 @@ import engine.root.DataPackage;
 public class BehaviorData extends DataPackage {
 
     /*
-     * Immutable behavior definition loaded from JSON. Holds the identity and
+     * Immutable behavior definition loaded from ARPG. Holds the identity and
      * movement rules for one named behavior type. Owned by BehaviorHandle
      * for the engine lifetime. turnResponsiveness is how quickly the body
      * swings round to face where the entity is heading, per second.

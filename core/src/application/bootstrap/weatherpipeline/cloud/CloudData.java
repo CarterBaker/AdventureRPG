@@ -7,7 +7,7 @@ public class CloudData extends DataPackage {
 
     /*
      * Immutable "Cloud Settings" for one named cloud archetype, loaded from
-     * JSON. Every value the weather shader needs to draw this archetype as a
+     * ARPG. Every value the weather shader needs to draw this archetype as a
      * layer of the sky — tint, shape, noise, placement, and motion — lives
      * here and only here. Sizes and elevations are real-world kilometres,
      * converted into blocks through the active world's own scale when the

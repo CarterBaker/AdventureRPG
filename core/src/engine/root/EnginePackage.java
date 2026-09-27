@@ -4,8 +4,6 @@ import java.io.File;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
-import com.google.gson.Gson;
-
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -32,7 +30,6 @@ public class EnginePackage extends ManagerPackage {
     // Root
     public final File path;
     public final File settingsFile;
-    public final Gson gson;
     public final WindowPlatform windowPlatform;
 
     // Internal
@@ -68,7 +65,6 @@ public class EnginePackage extends ManagerPackage {
         // Root
         this.path = data.path;
         this.settingsFile = data.settingsFile;
-        this.gson = data.gson;
         this.windowPlatform = data.windowPlatform;
 
         // Internal
@@ -99,7 +95,6 @@ public class EnginePackage extends ManagerPackage {
         final Settings settings;
         final File settingsFile;
         final File path;
-        final Gson gson;
         final WindowPlatform windowPlatform;
 
         // Internal \\
@@ -108,14 +103,12 @@ public class EnginePackage extends ManagerPackage {
                 Settings settings,
                 File settingsFile,
                 File path,
-                Gson gson,
                 WindowPlatform windowPlatform) {
 
             // Identity
             this.settings = settings;
             this.settingsFile = settingsFile;
             this.path = path;
-            this.gson = gson;
             this.windowPlatform = windowPlatform;
         }
     }
@@ -124,14 +117,12 @@ public class EnginePackage extends ManagerPackage {
             Settings settings,
             File settingsFile,
             File path,
-            Gson gson,
             WindowPlatform windowPlatform) {
         ENGINE_STRUCT.set(
                 new EngineStruct(
                         settings,
                         settingsFile,
                         path,
-                        gson,
                         windowPlatform));
     }
 

@@ -1,5 +1,0 @@
-{
-    "defaultColor": [0.04, 0.04, 0.04],
-    "uniformName": "u_layer_specular",
-    "aliases": ["s", "spec", "specular", "specularity", "spc"]
-}

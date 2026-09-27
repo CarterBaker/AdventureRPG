@@ -1,4 +1,0 @@
-{
-    "material": "postprocessing/LightingMaterial",
-    "mesh": "util/PlanarPass"
-}

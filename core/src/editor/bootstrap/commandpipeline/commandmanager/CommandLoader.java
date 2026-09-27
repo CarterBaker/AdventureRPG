@@ -28,11 +28,11 @@ class CommandLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EditorSetting.COMMAND_JSON_PATH);
+        this.root = new File(EditorSetting.COMMAND_PATH);
 
         FileUtility.verifyDirectory(root, "Command directory not found: " + root.getAbsolutePath());
 
-        ObjectArrayList<File> commandFiles = FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS);
+        ObjectArrayList<File> commandFiles = FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS);
 
         for (int i = 0; i < commandFiles.size(); i++)
             queueFile(commandFiles.get(i));

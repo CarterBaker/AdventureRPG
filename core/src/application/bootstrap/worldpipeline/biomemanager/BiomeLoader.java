@@ -2,13 +2,12 @@ package application.bootstrap.worldpipeline.biomemanager;
 
 import java.io.File;
 
-import com.google.gson.JsonObject;
-
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -50,14 +49,14 @@ class BiomeLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.BIOME_JSON_PATH);
+        this.root = new File(EngineSetting.BIOME_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
         this.scannedMapColors = new IntArrayList();
         this.scannedMapColorNames = new ObjectArrayList<>();
 
         FileUtility.verifyDirectory(root, "Biome root directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             resourceName2File.put(resourceName, file);
             scanMapColor(file, resourceName);
@@ -70,12 +69,12 @@ class BiomeLoader extends LoaderPackage {
     private void scanMapColor(File file, String resourceName) {
 
         try {
-            JsonObject json = JsonUtility.loadJsonObject(file);
+            ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
-            if (!json.has("map_color"))
+            if (!arpg.has("map_color"))
                 return;
 
-            scannedMapColors.add(parseMapColorHex(json.get("map_color").getAsString(), resourceName));
+            scannedMapColors.add(parseMapColorHex(arpg.get("map_color").getAsString(), resourceName));
             scannedMapColorNames.add(resourceName);
         } catch (Exception e) {
             throwException("Failed to pre-register map color from: " + file.getPath(), e);

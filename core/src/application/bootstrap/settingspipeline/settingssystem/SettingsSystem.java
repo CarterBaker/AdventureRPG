@@ -121,6 +121,6 @@ public class SettingsSystem extends SystemPackage {
 
     public void saveSettings() {
         SettingsUtility.flushBindings(settings);
-        SettingsUtility.save(internal.settingsFile, settings, internal.gson);
+        SettingsUtility.save(internal.settingsFile, settings);
     }
 }

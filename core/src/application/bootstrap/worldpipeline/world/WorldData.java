@@ -9,13 +9,13 @@ public class WorldData extends DataPackage {
 
     /*
      * Immutable world definition loaded from a PNG map and optional companion
-     * JSON. Holds identity, pixel map, scale, gravity, rotation, tilt, the
+     * ARPG. Holds identity, pixel map, scale, gravity, rotation, tilt, the
      * planetary offset used to phase the day/night gradient across the
      * world's Y axis, and the generation seed. calendarName points to the
      * per-world calendar definition, which owns daysPerDay and every other
      * day/year shape setting. worldEpochStart is the real instant the
      * world's calendar sat on its own start date and time, persisted in the
-     * companion JSON so the world's clock carries on between sessions.
+     * companion ARPG so the world's clock carries on between sessions.
      */
 
     // Identity
@@ -43,7 +43,7 @@ public class WorldData extends DataPackage {
     // noon. See WorldWrapUtility.wrappedPlanetaryOffset.
     private final float planetaryOffset;
 
-    // Generation — locked in from the companion JSON at first load. Every
+    // Generation — locked in from the companion ARPG at first load. Every
     // terrain, biome, and feature decision for this world must derive from
     // this value plus a deterministic position, never from mutable state.
     private final long seed;

@@ -1,6 +1,0 @@
-{
-    "shader": "sprites/standard/StandardSpriteShader",
-    "uniforms": {
-        "u_color": { "value": [1.0, 1.0, 1.0, 1.0] }
-    }
-}

@@ -9,7 +9,7 @@ public class DimensionValueStruct extends StructPackage {
     /*
      * A single resolved dimension — either a percentage of the parent
      * dimension or an absolute pixel value, with an optional pixel offset.
-     * Created via parse() from JSON string values like "50%", "100px", "32",
+     * Created via parse() from ARPG string values like "50%", "100px", "32",
      * or "calc(100% - 24px)".
      */
 

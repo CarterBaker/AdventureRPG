@@ -1,7 +1,5 @@
 package application.bootstrap.menupipeline.menumanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.menupipeline.element.ElementAnimationStruct;
@@ -20,14 +18,16 @@ import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 class MenuBuilder extends BuilderPackage {
 
     /*
-     * Parses menu JSON into MenuHandles and ElementHandles at bootstrap: the
+     * Parses menu ARPG into MenuHandles and ElementHandles at bootstrap: the
      * four state blocks, click and drag callbacks, and animation timelines.
      * Inline masters are registered under the scope they are declared in, so
      * two templates can share a child id.
@@ -58,7 +58,7 @@ class MenuBuilder extends BuilderPackage {
 
     ObjectArrayList<MenuHandle> processFile(File file, String filePath) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
         if (!registeredFiles.contains(filePath)) {
 
@@ -69,7 +69,7 @@ class MenuBuilder extends BuilderPackage {
             registeredFiles.add(filePath);
 
             try {
-                registerTopLevelMasters(filePath, json);
+                registerTopLevelMasters(filePath, arpg);
             } finally {
                 elementSystem.endFileLoad(filePath);
             }
@@ -77,13 +77,13 @@ class MenuBuilder extends BuilderPackage {
 
         ObjectArrayList<MenuHandle> handles = new ObjectArrayList<>();
 
-        if (!json.has("menus"))
+        if (!arpg.has("menus"))
             return handles;
 
-        JsonArray menuArray = json.getAsJsonArray("menus");
+        ArpgArrayStruct menuArray = arpg.getAsArray("menus");
 
         for (int i = 0; i < menuArray.size(); i++)
-            handles.add(buildMenuHandle(filePath, menuArray.get(i).getAsJsonObject()));
+            handles.add(buildMenuHandle(filePath, menuArray.get(i).getAsObject()));
 
         return handles;
     }
@@ -96,23 +96,23 @@ class MenuBuilder extends BuilderPackage {
 
     // Menu Building \\
 
-    private MenuHandle buildMenuHandle(String filePath, JsonObject menuJson) {
+    private MenuHandle buildMenuHandle(String filePath, ArpgObjectStruct menuArpg) {
 
-        String id = JsonUtility.validateString(menuJson, "id");
-        boolean lockInput = JsonUtility.getBoolean(menuJson, "lock_input", false);
-        boolean raycastInput = JsonUtility.getBoolean(menuJson, "raycast_input", false);
-        boolean hasCanvasArea = scanForCanvasArea(menuJson);
+        String id = ArpgUtility.validateString(menuArpg, "id");
+        boolean lockInput = ArpgUtility.getBoolean(menuArpg, "lock_input", false);
+        boolean raycastInput = ArpgUtility.getBoolean(menuArpg, "raycast_input", false);
+        boolean hasCanvasArea = scanForCanvasArea(menuArpg);
 
         ObjectArrayList<String> entryPoints = new ObjectArrayList<>();
 
-        if (menuJson.has("entry_points")) {
-            JsonArray eps = menuJson.getAsJsonArray("entry_points");
+        if (menuArpg.has("entry_points")) {
+            ArpgArrayStruct eps = menuArpg.getAsArray("entry_points");
             for (int i = 0; i < eps.size(); i++)
                 entryPoints.add(eps.get(i).getAsString());
         }
 
         ObjectArrayList<MenuNodeStruct> nodes = buildNodes(
-                filePath + "/" + id, menuJson, null,
+                filePath + "/" + id, menuArpg, null,
                 DimensionValueStruct.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true);
 
         MenuData data = new MenuData(
@@ -123,15 +123,15 @@ class MenuBuilder extends BuilderPackage {
         return handle;
     }
 
-    private boolean scanForCanvasArea(JsonObject json) {
+    private boolean scanForCanvasArea(ArpgObjectStruct arpg) {
 
-        if (!json.has("elements"))
+        if (!arpg.has("elements"))
             return false;
 
-        JsonArray elements = json.getAsJsonArray("elements");
+        ArpgArrayStruct elements = arpg.getAsArray("elements");
 
         for (int i = 0; i < elements.size(); i++) {
-            JsonObject el = elements.get(i).getAsJsonObject();
+            ArpgObjectStruct el = elements.get(i).getAsObject();
             if (el.has("type") && el.get("type").getAsString().equalsIgnoreCase("canvas_area"))
                 return true;
             if (scanForCanvasArea(el))
@@ -143,26 +143,26 @@ class MenuBuilder extends BuilderPackage {
 
     // Top-Level Master Registration \\
 
-    private void registerTopLevelMasters(String filePath, JsonObject json) {
+    private void registerTopLevelMasters(String filePath, ArpgObjectStruct arpg) {
 
-        if (!json.has("elements"))
+        if (!arpg.has("elements"))
             return;
 
-        JsonArray elements = json.getAsJsonArray("elements");
+        ArpgArrayStruct elements = arpg.getAsArray("elements");
 
         for (int i = 0; i < elements.size(); i++) {
 
-            JsonObject el = elements.get(i).getAsJsonObject();
+            ArpgObjectStruct el = elements.get(i).getAsObject();
 
             if (el.has("ref") || el.has("use"))
                 continue;
 
-            String id = JsonUtility.validateString(el, "id");
+            String id = ArpgUtility.validateString(el, "id");
             String key = filePath + "/" + id;
 
             if (!elementSystem.hasMaster(key))
                 elementSystem.registerMaster(key,
-                        buildMasterFromJson(filePath, id, el, null,
+                        buildMasterFromArpg(filePath, id, el, null,
                                 DimensionValueStruct.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true));
         }
     }
@@ -171,7 +171,7 @@ class MenuBuilder extends BuilderPackage {
 
     private ObjectArrayList<MenuNodeStruct> buildNodes(
             String scope,
-            JsonObject parent,
+            ArpgObjectStruct parent,
             String inheritedFontName,
             DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
@@ -179,11 +179,11 @@ class MenuBuilder extends BuilderPackage {
         if (!parent.has("elements"))
             return new ObjectArrayList<>();
 
-        JsonArray array = parent.getAsJsonArray("elements");
+        ArpgArrayStruct array = parent.getAsArray("elements");
         ObjectArrayList<MenuNodeStruct> nodes = new ObjectArrayList<>(array.size());
 
         for (int i = 0; i < array.size(); i++)
-            nodes.add(buildNode(scope, array.get(i).getAsJsonObject(),
+            nodes.add(buildNode(scope, array.get(i).getAsObject(),
                     inheritedFontName, inheritedFontSize, inheritedExplicitFontSize));
 
         return nodes;
@@ -191,28 +191,28 @@ class MenuBuilder extends BuilderPackage {
 
     private MenuNodeStruct buildNode(
             String scope,
-            JsonObject json,
+            ArpgObjectStruct arpg,
             String inheritedFontName,
             DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
-        String id = JsonUtility.validateString(json, "id");
+        String id = ArpgUtility.validateString(arpg, "id");
 
-        if (json.has("ref"))
-            return buildRefNode(scope, id, json);
+        if (arpg.has("ref"))
+            return buildRefNode(scope, id, arpg);
 
-        if (json.has("use"))
-            return buildUseNode(scope, id, json, inheritedFontName, inheritedFontSize,
+        if (arpg.has("use"))
+            return buildUseNode(scope, id, arpg, inheritedFontName, inheritedFontSize,
                     inheritedExplicitFontSize);
 
-        return buildInlineNode(scope, id, json, inheritedFontName, inheritedFontSize,
+        return buildInlineNode(scope, id, arpg, inheritedFontName, inheritedFontSize,
                 inheritedExplicitFontSize);
     }
 
     private MenuNodeStruct buildInlineNode(
             String scope,
             String id,
-            JsonObject json,
+            ArpgObjectStruct arpg,
             String inheritedFontName,
             DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
@@ -221,7 +221,7 @@ class MenuBuilder extends BuilderPackage {
         ElementHandle master = elementSystem.getMaster(key);
 
         if (master == null) {
-            master = buildMasterFromJson(scope, id, json, inheritedFontName,
+            master = buildMasterFromArpg(scope, id, arpg, inheritedFontName,
                     inheritedFontSize, inheritedExplicitFontSize);
             elementSystem.registerMaster(key, master);
         }
@@ -232,37 +232,37 @@ class MenuBuilder extends BuilderPackage {
     private MenuNodeStruct buildUseNode(
             String scope,
             String id,
-            JsonObject json,
+            ArpgObjectStruct arpg,
             String inheritedFontName,
             DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
-        String usePath = json.get("use").getAsString();
+        String usePath = arpg.get("use").getAsString();
         ElementHandle template = resolveTemplate(usePath, id);
 
-        boolean explicitFontSize = json.has("font_size") || template.hasExplicitFontSize();
-        String resolvedFontName = JsonUtility.getString(json, "font", template.getFontName());
-        DimensionValueStruct resolvedFontSize = json.has("font_size")
-                ? DimensionValueStruct.parse(json.get("font_size").getAsString())
+        boolean explicitFontSize = arpg.has("font_size") || template.hasExplicitFontSize();
+        String resolvedFontName = ArpgUtility.getString(arpg, "font", template.getFontName());
+        DimensionValueStruct resolvedFontSize = arpg.has("font_size")
+                ? DimensionValueStruct.parse(arpg.get("font_size").getAsString())
                 : template.getFontSize();
 
-        ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(
-                scope + "/" + id, json, resolvedFontName, resolvedFontSize, explicitFontSize);
-        ObjectArrayList<MenuNodeStruct> children = !jsonChildren.isEmpty()
-                ? jsonChildren
+        ObjectArrayList<MenuNodeStruct> arpgChildren = buildNodes(
+                scope + "/" + id, arpg, resolvedFontName, resolvedFontSize, explicitFontSize);
+        ObjectArrayList<MenuNodeStruct> children = !arpgChildren.isEmpty()
+                ? arpgChildren
                 : template.getChildren();
 
-        LayoutStruct partialOverride = MenuFileParserUtility.parseLayoutOverride(json);
+        LayoutStruct partialOverride = MenuFileParserUtility.parseLayoutOverride(arpg);
         LayoutStruct layoutOverride = partialOverride != null
                 ? LayoutStruct.merge(template.getLayout(), partialOverride)
                 : null;
 
-        String spritePath = JsonUtility.getString(json, "sprite", null);
+        String spritePath = ArpgUtility.getString(arpg, "sprite", null);
         String spriteNameOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
-        String textOverride = JsonUtility.getString(json, "text", null);
-        MenuColorStruct colorOverride = MenuFileParserUtility.parseColor(json);
-        String[] onClick = MenuFileParserUtility.parseOnClick(json);
-        String[] onDrag = MenuFileParserUtility.parseOnDrag(json);
+        String textOverride = ArpgUtility.getString(arpg, "text", null);
+        MenuColorStruct colorOverride = MenuFileParserUtility.parseColor(arpg);
+        String[] onClick = MenuFileParserUtility.parseOnClick(arpg);
+        String[] onDrag = MenuFileParserUtility.parseOnDrag(arpg);
 
         boolean hasOverride = layoutOverride != null || spriteNameOverride != null
                 || textOverride != null || colorOverride != null
@@ -286,10 +286,10 @@ class MenuBuilder extends BuilderPackage {
                 children);
     }
 
-    private MenuNodeStruct buildRefNode(String scope, String id, JsonObject json) {
+    private MenuNodeStruct buildRefNode(String scope, String id, ArpgObjectStruct arpg) {
 
-        String refKey = json.get("ref").getAsString();
-        LayoutStruct partialOverride = MenuFileParserUtility.parseLayoutOverride(json);
+        String refKey = arpg.get("ref").getAsString();
+        LayoutStruct partialOverride = MenuFileParserUtility.parseLayoutOverride(arpg);
         ElementHandle resolved = resolveRefKey(refKey);
 
         if (resolved != null) {
@@ -331,47 +331,47 @@ class MenuBuilder extends BuilderPackage {
 
     // Master Building \\
 
-    private ElementHandle buildMasterFromJson(
+    private ElementHandle buildMasterFromArpg(
             String scope,
             String id,
-            JsonObject json,
+            ArpgObjectStruct arpg,
             String inheritedFontName,
             DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
         ElementType type = MenuFileParserUtility.parseElementType(
-                JsonUtility.validateString(json, "type"), id);
-        String spritePath = JsonUtility.getString(json, "sprite", null);
-        String text = JsonUtility.getString(json, "text", null);
-        String fontName = JsonUtility.getString(json, "font", inheritedFontName);
-        String materialName = JsonUtility.getString(json, "material", null);
-        boolean explicitFontSize = json.has("font_size") || inheritedExplicitFontSize;
-        DimensionValueStruct fontSize = json.has("font_size")
-                ? DimensionValueStruct.parse(json.get("font_size").getAsString())
+                ArpgUtility.validateString(arpg, "type"), id);
+        String spritePath = ArpgUtility.getString(arpg, "sprite", null);
+        String text = ArpgUtility.getString(arpg, "text", null);
+        String fontName = ArpgUtility.getString(arpg, "font", inheritedFontName);
+        String materialName = ArpgUtility.getString(arpg, "material", null);
+        boolean explicitFontSize = arpg.has("font_size") || inheritedExplicitFontSize;
+        DimensionValueStruct fontSize = arpg.has("font_size")
+                ? DimensionValueStruct.parse(arpg.get("font_size").getAsString())
                 : inheritedFontSize;
-        MenuColorStruct color = MenuFileParserUtility.parseColor(json);
-        MenuColorStruct hoverColor = MenuFileParserUtility.parseHoverColor(json);
-        MenuColorStruct parentHoverColor = MenuFileParserUtility.parseParentHoverColor(json);
-        LayoutStruct layout = MenuFileParserUtility.parseLayout(json);
-        boolean mask = JsonUtility.getBoolean(json, "mask", false);
-        StackDirection stackDirection = json.has("stack")
-                ? StackDirection.fromString(json.get("stack").getAsString())
+        MenuColorStruct color = MenuFileParserUtility.parseColor(arpg);
+        MenuColorStruct hoverColor = MenuFileParserUtility.parseHoverColor(arpg);
+        MenuColorStruct parentHoverColor = MenuFileParserUtility.parseParentHoverColor(arpg);
+        LayoutStruct layout = MenuFileParserUtility.parseLayout(arpg);
+        boolean mask = ArpgUtility.getBoolean(arpg, "mask", false);
+        StackDirection stackDirection = arpg.has("stack")
+                ? StackDirection.fromString(arpg.get("stack").getAsString())
                 : StackDirection.NONE;
-        DimensionValueStruct spacing = json.has("spacing")
-                ? DimensionValueStruct.parse(json.get("spacing").getAsString())
+        DimensionValueStruct spacing = arpg.has("spacing")
+                ? DimensionValueStruct.parse(arpg.get("spacing").getAsString())
                 : null;
-        TextAlign textAlign = json.has("align")
-                ? TextAlign.fromString(json.get("align").getAsString())
+        TextAlign textAlign = arpg.has("align")
+                ? TextAlign.fromString(arpg.get("align").getAsString())
                 : TextAlign.CENTER;
-        boolean startExpanded = JsonUtility.getBoolean(json, "start_expanded", false);
-        ElementAnimationStruct animation = MenuFileParserUtility.parseAnimation(json);
+        boolean startExpanded = ArpgUtility.getBoolean(arpg, "start_expanded", false);
+        ElementAnimationStruct animation = MenuFileParserUtility.parseAnimation(arpg);
         String spriteName = resolveSpriteName(id, spritePath);
 
-        String[] onClick = MenuFileParserUtility.parseOnClick(json);
-        String[] onDrag = MenuFileParserUtility.parseOnDrag(json);
+        String[] onClick = MenuFileParserUtility.parseOnClick(arpg);
+        String[] onDrag = MenuFileParserUtility.parseOnDrag(arpg);
 
         ObjectArrayList<MenuNodeStruct> defaultChildren = buildNodes(
-                scope + "/" + id, json, fontName, fontSize, explicitFontSize);
+                scope + "/" + id, arpg, fontName, fontSize, explicitFontSize);
 
         ElementData data = new ElementData(
                 id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize,
@@ -385,13 +385,13 @@ class MenuBuilder extends BuilderPackage {
                 onDrag != null ? onDrag[2] : null);
 
         ElementStateStruct hoverEnterState = parseStateBlock(
-                scope, id, json, "on_hover_enter", fontName, fontSize, explicitFontSize);
+                scope, id, arpg, "on_hover_enter", fontName, fontSize, explicitFontSize);
         ElementStateStruct hoverState = parseStateBlock(
-                scope, id, json, "on_hover", fontName, fontSize, explicitFontSize);
+                scope, id, arpg, "on_hover", fontName, fontSize, explicitFontSize);
         ElementStateStruct hoverExitState = parseStateBlock(
-                scope, id, json, "on_hover_exit", fontName, fontSize, explicitFontSize);
+                scope, id, arpg, "on_hover_exit", fontName, fontSize, explicitFontSize);
         ElementStateStruct clickState = parseStateBlock(
-                scope, id, json, "click_state", fontName, fontSize, explicitFontSize);
+                scope, id, arpg, "click_state", fontName, fontSize, explicitFontSize);
 
         ElementHandle master = create(ElementHandle.class);
         master.constructor(data, defaultChildren, hoverEnterState, hoverState, hoverExitState, clickState);
@@ -404,41 +404,41 @@ class MenuBuilder extends BuilderPackage {
     private ElementStateStruct parseStateBlock(
             String scope,
             String id,
-            JsonObject json,
+            ArpgObjectStruct arpg,
             String stateKey,
             String inheritedFontName,
             DimensionValueStruct inheritedFontSize,
             boolean inheritedExplicitFontSize) {
 
-        if (!json.has(stateKey))
+        if (!arpg.has(stateKey))
             return null;
 
-        JsonObject stateJson = json.getAsJsonObject(stateKey);
+        ArpgObjectStruct stateArpg = arpg.getAsObject(stateKey);
 
         ElementHandle baseMaster = null;
 
-        if (stateJson.has("use")) {
-            String usePath = stateJson.get("use").getAsString();
+        if (stateArpg.has("use")) {
+            String usePath = stateArpg.get("use").getAsString();
             baseMaster = resolveTemplate(usePath, id);
         }
 
-        boolean explicitFontSize = stateJson.has("font_size")
+        boolean explicitFontSize = stateArpg.has("font_size")
                 || (baseMaster != null
                         ? baseMaster.hasExplicitFontSize()
                         : inheritedExplicitFontSize);
-        String fontName = JsonUtility.getString(stateJson, "font",
+        String fontName = ArpgUtility.getString(stateArpg, "font",
                 baseMaster != null ? baseMaster.getFontName() : inheritedFontName);
-        DimensionValueStruct fontSize = stateJson.has("font_size")
-                ? DimensionValueStruct.parse(stateJson.get("font_size").getAsString())
+        DimensionValueStruct fontSize = stateArpg.has("font_size")
+                ? DimensionValueStruct.parse(stateArpg.get("font_size").getAsString())
                 : (baseMaster != null ? baseMaster.getFontSize() : inheritedFontSize);
 
-        ObjectArrayList<MenuNodeStruct> jsonChildren = buildNodes(
-                scope + "/" + id + "/" + stateKey, stateJson, fontName, fontSize, explicitFontSize);
-        ObjectArrayList<MenuNodeStruct> children = !jsonChildren.isEmpty()
-                ? jsonChildren
+        ObjectArrayList<MenuNodeStruct> arpgChildren = buildNodes(
+                scope + "/" + id + "/" + stateKey, stateArpg, fontName, fontSize, explicitFontSize);
+        ObjectArrayList<MenuNodeStruct> children = !arpgChildren.isEmpty()
+                ? arpgChildren
                 : baseMaster != null ? baseMaster.getChildren() : new ObjectArrayList<>();
 
-        LayoutStruct partialLayout = MenuFileParserUtility.parseLayoutOverride(stateJson);
+        LayoutStruct partialLayout = MenuFileParserUtility.parseLayoutOverride(stateArpg);
         LayoutStruct layoutOverride = null;
 
         if (partialLayout != null)
@@ -446,12 +446,12 @@ class MenuBuilder extends BuilderPackage {
                     ? LayoutStruct.merge(baseMaster.getLayout(), partialLayout)
                     : partialLayout;
 
-        String spritePath = JsonUtility.getString(stateJson, "sprite", null);
+        String spritePath = ArpgUtility.getString(stateArpg, "sprite", null);
         String spriteOverride = spritePath != null ? resolveSpriteName(id, spritePath) : null;
-        String textOverride = JsonUtility.getString(stateJson, "text", null);
-        MenuColorStruct colorOverride = MenuFileParserUtility.parseColor(stateJson);
+        String textOverride = ArpgUtility.getString(stateArpg, "text", null);
+        MenuColorStruct colorOverride = MenuFileParserUtility.parseColor(stateArpg);
 
-        String[] callback = MenuFileParserUtility.parseOnClick(stateJson);
+        String[] callback = MenuFileParserUtility.parseOnClick(stateArpg);
         String actionClass = callback != null ? callback[0] : null;
         String actionMethod = callback != null ? callback[1] : null;
         String actionArg = callback != null ? callback[2] : null;
@@ -526,7 +526,7 @@ class MenuBuilder extends BuilderPackage {
     }
 
     private File tryResolveFile(String filePath) {
-        for (String ext : EngineSetting.JSON_FILE_EXTENSIONS) {
+        for (String ext : EngineSetting.ARPG_FILE_EXTENSIONS) {
             File f = new File(root, filePath + (ext.startsWith(".") ? "" : ".") + ext);
             if (f.exists())
                 return f;

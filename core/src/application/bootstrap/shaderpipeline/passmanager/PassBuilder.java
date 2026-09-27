@@ -2,8 +2,6 @@ package application.bootstrap.shaderpipeline.passmanager;
 
 import java.io.File;
 
-import com.google.gson.JsonObject;
-
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
@@ -12,13 +10,14 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.pass.PassData;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.registry.RegistryUtility;
 
 class PassBuilder extends BuilderPackage {
 
     /*
-     * Constructs PassHandles from JSON descriptors during bootstrap. Resolves
+     * Constructs PassHandles from ARPG descriptors during bootstrap. Resolves
      * material and mesh references by name, clones the material, and builds
      * the PassData and ModelInstance before wrapping in a handle.
      */
@@ -39,13 +38,13 @@ class PassBuilder extends BuilderPackage {
 
     PassHandle build(File file, String passName) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
         int materialID = materialManager.getMaterialIDFromMaterialName(
-                JsonUtility.validateString(json, "material"));
+                ArpgUtility.validateString(arpg, "material"));
         MaterialInstance material = materialManager.cloneMaterial(materialID);
 
-        MeshHandle meshHandle = getMeshHandleFromJson(json);
+        MeshHandle meshHandle = getMeshHandleFromArpg(arpg);
 
         int passID = RegistryUtility.toIntID(passName);
 
@@ -59,8 +58,8 @@ class PassBuilder extends BuilderPackage {
         return handle;
     }
 
-    private MeshHandle getMeshHandleFromJson(JsonObject json) {
-        String meshName = JsonUtility.getString(json, "mesh", "util/PlanarPass");
+    private MeshHandle getMeshHandleFromArpg(ArpgObjectStruct arpg) {
+        String meshName = ArpgUtility.getString(arpg, "mesh", "util/PlanarPass");
         return meshManager.getMeshHandleFromMeshName(meshName);
     }
 }

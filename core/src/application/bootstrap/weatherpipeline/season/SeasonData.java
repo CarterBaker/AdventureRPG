@@ -6,7 +6,7 @@ public class SeasonData extends DataPackage {
 
     /*
      * Immutable climate and sky-color definition for one named season,
-     * loaded from JSON. Wind and temperature values drive WindManager and
+     * loaded from ARPG. Wind and temperature values drive WindManager and
      * WeatherManager; skyPalette is the season's own sky and cloud colors
      * for every phase of the day, blended across the year by the weather
      * pipeline's sky system. Season identity and calendar

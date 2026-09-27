@@ -2,20 +2,19 @@ package editor.bootstrap.commandpipeline.commandmanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import editor.bootstrap.commandpipeline.command.CommandData;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.runtime.EditorSetting;
 import engine.root.BuilderPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CommandBuilder extends BuilderPackage {
 
     /*
-     * Parses one command group JSON file into a CommandHandle per entry of its
+     * Parses one command group ARPG file into a CommandHandle per entry of its
      * "commands". Every command needs a name, which must be a single word so
      * it can be typed; the label defaults to the name, and "arguments" lists
      * the argument names in the order they are typed. A command that takes
@@ -26,26 +25,26 @@ class CommandBuilder extends BuilderPackage {
 
     ObjectArrayList<CommandHandle> build(File file, String groupName) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
-        JsonArray commandsJson = JsonUtility.validateArray(json, "commands");
-        ObjectArrayList<CommandHandle> commandHandles = new ObjectArrayList<>(commandsJson.size());
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+        ArpgArrayStruct commandsArpg = ArpgUtility.validateArray(arpg, "commands");
+        ObjectArrayList<CommandHandle> commandHandles = new ObjectArrayList<>(commandsArpg.size());
 
-        for (int i = 0; i < commandsJson.size(); i++)
-            commandHandles.add(buildCommand(commandsJson.get(i).getAsJsonObject(), groupName));
+        for (int i = 0; i < commandsArpg.size(); i++)
+            commandHandles.add(buildCommand(commandsArpg.get(i).getAsObject(), groupName));
 
         return commandHandles;
     }
 
-    private CommandHandle buildCommand(JsonObject commandJson, String groupName) {
+    private CommandHandle buildCommand(ArpgObjectStruct commandArpg, String groupName) {
 
-        String commandName = JsonUtility.validateString(commandJson, "name");
+        String commandName = ArpgUtility.validateString(commandArpg, "name");
 
         if (!isSingleWord(commandName))
             throwException("Command group '" + groupName + "' declares command '" + commandName
                     + "', but a command name must be a single word.");
 
-        String label = JsonUtility.getString(commandJson, "label", commandName);
-        String[] argumentNames = parseArgumentNames(commandJson, commandName, groupName);
+        String label = ArpgUtility.getString(commandArpg, "label", commandName);
+        String[] argumentNames = parseArgumentNames(commandArpg, commandName, groupName);
 
         CommandData commandData = new CommandData(
                 commandName,
@@ -62,17 +61,17 @@ class CommandBuilder extends BuilderPackage {
 
     // Parse \\
 
-    private String[] parseArgumentNames(JsonObject commandJson, String commandName, String groupName) {
+    private String[] parseArgumentNames(ArpgObjectStruct commandArpg, String commandName, String groupName) {
 
-        if (!JsonUtility.hasArray(commandJson, "arguments"))
+        if (!ArpgUtility.hasArray(commandArpg, "arguments"))
             return new String[0];
 
-        JsonArray argumentsJson = JsonUtility.validateArray(commandJson, "arguments");
-        String[] argumentNames = new String[argumentsJson.size()];
+        ArpgArrayStruct argumentsArpg = ArpgUtility.validateArray(commandArpg, "arguments");
+        String[] argumentNames = new String[argumentsArpg.size()];
 
         for (int i = 0; i < argumentNames.length; i++) {
 
-            argumentNames[i] = argumentsJson.get(i).getAsString();
+            argumentNames[i] = argumentsArpg.get(i).getAsString();
 
             if (!isSingleWord(argumentNames[i]))
                 throwException("Command '" + commandName + "' in group '" + groupName + "' declares argument '"

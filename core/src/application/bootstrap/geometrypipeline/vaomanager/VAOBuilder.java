@@ -1,22 +1,22 @@
 package application.bootstrap.geometrypipeline.vaomanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class VAOBuilder extends BuilderPackage {
 
     /*
-     * Parses the 'vao' field from mesh JSON and constructs a VAOHandle layout
+     * Parses the 'vao' field from mesh ARPG and constructs a VAOHandle layout
      * template. Supports direct attribute size arrays and string references to
-     * other registered VAOs. When the mesh JSON declares a "rig", two extra
+     * other registered VAOs. When the mesh ARPG declares a "rig", two extra
      * trailing attributes — bone indices and bone weights, each
      * EngineSetting.MAX_BONE_INFLUENCES floats wide — are appended after the
      * declared attributes. Bootstrap-only.
@@ -44,15 +44,15 @@ public class VAOBuilder extends BuilderPackage {
         if (vaoManager.hasVAO(resourceName))
             return;
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
-        if (!json.has("vao") || json.get("vao").isJsonNull())
+        if (!arpg.has("vao") || arpg.get("vao").isNull())
             return;
 
-        JsonElement vaoEl = json.get("vao");
-        boolean hasBones = hasRig(json);
+        ArpgElementStruct vaoEl = arpg.get("vao");
+        boolean hasBones = hasRig(arpg);
 
-        if (vaoEl.isJsonPrimitive() && vaoEl.getAsJsonPrimitive().isString()) {
+        if (vaoEl.isValue() && vaoEl.getAsValue().isString()) {
 
             if (hasBones)
                 throwException("Bone-weighted mesh must declare its own inline \"vao\" array — "
@@ -65,8 +65,8 @@ public class VAOBuilder extends BuilderPackage {
             return;
         }
 
-        if (vaoEl.isJsonArray()) {
-            vaoManager.registerVAO(resourceName, buildLayout(vaoEl.getAsJsonArray(), file, hasBones));
+        if (vaoEl.isArray()) {
+            vaoManager.registerVAO(resourceName, buildLayout(vaoEl.getAsArray(), file, hasBones));
             return;
         }
 
@@ -88,32 +88,32 @@ public class VAOBuilder extends BuilderPackage {
         if (refFile == null)
             throwException("Referenced VAO '" + refName + "' not found. Source: " + sourceFile.getName());
 
-        JsonObject refJson = JsonUtility.loadJsonObject(refFile);
+        ArpgObjectStruct refArpg = ArpgUtility.loadObject(refFile);
 
-        if (!refJson.has("vao") || refJson.get("vao").isJsonNull())
+        if (!refArpg.has("vao") || refArpg.get("vao").isNull())
             throwException("Referenced VAO file '" + refName + "' has no 'vao' field.");
 
-        JsonElement refEl = refJson.get("vao");
+        ArpgElementStruct refEl = refArpg.get("vao");
 
-        if (!refEl.isJsonArray())
+        if (!refEl.isArray())
             throwException("Referenced VAO '" + refName + "' must contain an int array.");
 
-        vaoManager.registerVAO(refName, buildLayout(refEl.getAsJsonArray(), refFile, hasRig(refJson)));
+        vaoManager.registerVAO(refName, buildLayout(refEl.getAsArray(), refFile, hasRig(refArpg)));
     }
 
     // Creation \\
 
-    private VAOHandle buildLayout(JsonArray jsonArray, File file, boolean hasBones) {
+    private VAOHandle buildLayout(ArpgArrayStruct arpgArray, File file, boolean hasBones) {
 
-        if (jsonArray.size() == 0)
+        if (arpgArray.size() == 0)
             throwException("VAO attribute size array must not be empty in file: " + file.getName());
 
-        int declaredCount = jsonArray.size();
+        int declaredCount = arpgArray.size();
         int totalCount = hasBones ? declaredCount + 2 : declaredCount;
         int[] attrSizes = new int[totalCount];
 
         for (int i = 0; i < declaredCount; i++) {
-            attrSizes[i] = jsonArray.get(i).getAsInt();
+            attrSizes[i] = arpgArray.get(i).getAsInt();
             if (attrSizes[i] <= 0)
                 throwException("VAO attribute size must be positive in file: " + file.getName());
         }
@@ -131,7 +131,7 @@ public class VAOBuilder extends BuilderPackage {
 
     // Utility \\
 
-    private boolean hasRig(JsonObject json) {
-        return json.has("rig") && !json.get("rig").isJsonNull();
+    private boolean hasRig(ArpgObjectStruct arpg) {
+        return arpg.has("rig") && !arpg.get("rig").isNull();
     }
 }

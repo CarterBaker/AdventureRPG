@@ -1,9 +1,5 @@
 package application.bootstrap.menupipeline.menumanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.menupipeline.element.ElementAnimationStruct;
 import application.bootstrap.menupipeline.element.ElementKeyframeStruct;
 import application.bootstrap.menupipeline.element.ElementType;
@@ -15,38 +11,41 @@ import application.bootstrap.menupipeline.util.ThemeColor;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class MenuFileParserUtility extends EngineUtility {
 
     /*
-     * Stateless JSON parsing for MenuBuilder: state blocks, click and drag
+     * Stateless ARPG parsing for MenuBuilder: state blocks, click and drag
      * callbacks, literal or themed colors, and element animation timelines.
      */
 
     // Callbacks — method only \\
 
-    static String[] parseOnClick(JsonObject json) {
-        return parseCallback(json, "on_click");
+    static String[] parseOnClick(ArpgObjectStruct arpg) {
+        return parseCallback(arpg, "on_click");
     }
 
-    static String[] parseOnDrag(JsonObject json) {
-        return parseCallback(json, "on_drag");
+    static String[] parseOnDrag(ArpgObjectStruct arpg) {
+        return parseCallback(arpg, "on_drag");
     }
 
-    private static String[] parseCallback(JsonObject json, String key) {
+    private static String[] parseCallback(ArpgObjectStruct arpg, String key) {
 
-        if (!json.has(key))
+        if (!arpg.has(key))
             return null;
 
-        JsonObject obj = json.getAsJsonObject(key);
+        ArpgObjectStruct obj = arpg.getAsObject(key);
 
         return new String[] {
-                JsonUtility.validateString(obj, "class"),
-                JsonUtility.validateString(obj, "method"),
-                JsonUtility.getString(obj, "arg", null)
+                ArpgUtility.validateString(obj, "class"),
+                ArpgUtility.validateString(obj, "method"),
+                ArpgUtility.getString(obj, "arg", null)
         };
     }
 
@@ -72,38 +71,38 @@ class MenuFileParserUtility extends EngineUtility {
 
     // Color \\
 
-    static MenuColorStruct parseColor(JsonObject json) {
-        return parseColor(json, "color");
+    static MenuColorStruct parseColor(ArpgObjectStruct arpg) {
+        return parseColor(arpg, "color");
     }
 
-    static MenuColorStruct parseHoverColor(JsonObject json) {
-        return parseColor(json, "hover_color");
+    static MenuColorStruct parseHoverColor(ArpgObjectStruct arpg) {
+        return parseColor(arpg, "hover_color");
     }
 
-    static MenuColorStruct parseParentHoverColor(JsonObject json) {
-        return parseColor(json, "parent_hover_color");
+    static MenuColorStruct parseParentHoverColor(ArpgObjectStruct arpg) {
+        return parseColor(arpg, "parent_hover_color");
     }
 
-    private static MenuColorStruct parseColor(JsonObject json, String key) {
+    private static MenuColorStruct parseColor(ArpgObjectStruct arpg, String key) {
 
-        if (!json.has(key))
+        if (!arpg.has(key))
             return null;
 
-        JsonElement el = json.get(key);
+        ArpgElementStruct el = arpg.get(key);
 
-        if (el.isJsonPrimitive())
+        if (el.isValue())
             return new MenuColorStruct(
                     parseThemeColor(el.getAsString(), key),
                     EngineSetting.MENU_THEME_ALPHA_DEFAULT);
 
-        if (el.isJsonObject()) {
-            JsonObject obj = el.getAsJsonObject();
+        if (el.isObject()) {
+            ArpgObjectStruct obj = el.getAsObject();
             return new MenuColorStruct(
-                    parseThemeColor(JsonUtility.validateString(obj, "theme"), key),
-                    JsonUtility.getFloat(obj, "alpha", EngineSetting.MENU_THEME_ALPHA_DEFAULT));
+                    parseThemeColor(ArpgUtility.validateString(obj, "theme"), key),
+                    ArpgUtility.getFloat(obj, "alpha", EngineSetting.MENU_THEME_ALPHA_DEFAULT));
         }
 
-        JsonArray arr = el.getAsJsonArray();
+        ArpgArrayStruct arr = el.getAsArray();
 
         if (arr.size() != EngineSetting.COLOR_CHANNEL_COUNT)
             throwException("'" + key + "' must be exactly 4 floats [r, g, b, a], a theme name, "
@@ -128,13 +127,13 @@ class MenuFileParserUtility extends EngineUtility {
 
     // Animation \\
 
-    static ElementAnimationStruct parseAnimation(JsonObject json) {
+    static ElementAnimationStruct parseAnimation(ArpgObjectStruct arpg) {
 
-        if (!json.has("animation"))
+        if (!arpg.has("animation"))
             return null;
 
-        JsonObject animationJson = json.getAsJsonObject("animation");
-        JsonArray keyframeArray = JsonUtility.validateArray(animationJson, "keyframes");
+        ArpgObjectStruct animationArpg = arpg.getAsObject("animation");
+        ArpgArrayStruct keyframeArray = ArpgUtility.validateArray(animationArpg, "keyframes");
 
         if (keyframeArray.isEmpty())
             throwException("'animation' must define at least one keyframe");
@@ -144,7 +143,7 @@ class MenuFileParserUtility extends EngineUtility {
 
         for (int i = 0; i < keyframeArray.size(); i++) {
 
-            ElementKeyframeStruct keyframe = parseKeyframe(keyframeArray.get(i).getAsJsonObject());
+            ElementKeyframeStruct keyframe = parseKeyframe(keyframeArray.get(i).getAsObject());
 
             if (keyframe.getTime() < previousTime)
                 throwException("Animation keyframes must ascend in time — "
@@ -155,41 +154,41 @@ class MenuFileParserUtility extends EngineUtility {
         }
 
         return new ElementAnimationStruct(
-                JsonUtility.getFloat(animationJson, "delay", 0f),
-                JsonUtility.getBoolean(animationJson, "loop", false),
-                JsonUtility.getFloat(animationJson, "repeat_delay", 0f),
+                ArpgUtility.getFloat(animationArpg, "delay", 0f),
+                ArpgUtility.getBoolean(animationArpg, "loop", false),
+                ArpgUtility.getFloat(animationArpg, "repeat_delay", 0f),
                 keyframes);
     }
 
-    private static ElementKeyframeStruct parseKeyframe(JsonObject json) {
+    private static ElementKeyframeStruct parseKeyframe(ArpgObjectStruct arpg) {
 
-        JsonObject offset = json.has("offset") ? json.getAsJsonObject("offset") : new JsonObject();
+        ArpgObjectStruct offset = arpg.has("offset") ? arpg.getAsObject("offset") : new ArpgObjectStruct();
         float scaleX = 1f;
         float scaleY = 1f;
 
-        if (json.has("scale")) {
+        if (arpg.has("scale")) {
 
-            JsonElement scale = json.get("scale");
+            ArpgElementStruct scale = arpg.get("scale");
 
-            if (scale.isJsonPrimitive()) {
+            if (scale.isValue()) {
                 scaleX = scale.getAsFloat();
                 scaleY = scaleX;
             } else {
-                JsonObject scaleJson = scale.getAsJsonObject();
-                scaleX = JsonUtility.getFloat(scaleJson, "x", 1f);
-                scaleY = JsonUtility.getFloat(scaleJson, "y", 1f);
+                ArpgObjectStruct scaleArpg = scale.getAsObject();
+                scaleX = ArpgUtility.getFloat(scaleArpg, "x", 1f);
+                scaleY = ArpgUtility.getFloat(scaleArpg, "y", 1f);
             }
         }
 
         return new ElementKeyframeStruct(
-                JsonUtility.validateFloat(json, "time"),
-                json.has("ease") ? parseEase(json.get("ease").getAsString()) : MenuEase.LINEAR,
-                JsonUtility.getFloat(offset, "x", 0f),
-                JsonUtility.getFloat(offset, "y", 0f),
+                ArpgUtility.validateFloat(arpg, "time"),
+                arpg.has("ease") ? parseEase(arpg.get("ease").getAsString()) : MenuEase.LINEAR,
+                ArpgUtility.getFloat(offset, "x", 0f),
+                ArpgUtility.getFloat(offset, "y", 0f),
                 scaleX,
                 scaleY,
-                JsonUtility.getFloat(json, "rotation", 0f),
-                JsonUtility.getFloat(json, "alpha", 1f));
+                ArpgUtility.getFloat(arpg, "rotation", 0f),
+                ArpgUtility.getFloat(arpg, "alpha", 1f));
     }
 
     private static MenuEase parseEase(String name) {
@@ -204,59 +203,59 @@ class MenuFileParserUtility extends EngineUtility {
 
     // Layout — full parse, absent fields get defaults \\
 
-    static LayoutStruct parseLayout(JsonObject json) {
+    static LayoutStruct parseLayout(ArpgObjectStruct arpg) {
         return new LayoutStruct(
-                parseOriginField(json, "anchor"),
-                parseOriginField(json, "pivot"),
-                DimensionVector2Struct.parse(json, "position",
+                parseOriginField(arpg, "anchor"),
+                parseOriginField(arpg, "pivot"),
+                DimensionVector2Struct.parse(arpg, "position",
                         EngineSetting.ELEMENT_DEFAULT_POSITION,
                         EngineSetting.ELEMENT_DEFAULT_POSITION),
-                DimensionVector2Struct.parse(json, "size",
+                DimensionVector2Struct.parse(arpg, "size",
                         EngineSetting.ELEMENT_DEFAULT_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_SIZE),
-                json.has("min_size") ? DimensionVector2Struct.parse(json, "min_size",
+                arpg.has("min_size") ? DimensionVector2Struct.parse(arpg, "min_size",
                         EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
-                json.has("max_size") ? DimensionVector2Struct.parse(json, "max_size",
+                arpg.has("max_size") ? DimensionVector2Struct.parse(arpg, "max_size",
                         EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null,
-                parseAspect(json));
+                parseAspect(arpg));
     }
 
     // Layout Override — absent fields null, preserved from template \\
 
-    static LayoutStruct parseLayoutOverride(JsonObject json) {
+    static LayoutStruct parseLayoutOverride(ArpgObjectStruct arpg) {
 
-        boolean hasAny = json.has("anchor") || json.has("pivot") || json.has("position")
-                || json.has("size") || json.has("min_size") || json.has("max_size")
-                || json.has("aspect");
+        boolean hasAny = arpg.has("anchor") || arpg.has("pivot") || arpg.has("position")
+                || arpg.has("size") || arpg.has("min_size") || arpg.has("max_size")
+                || arpg.has("aspect");
 
         if (!hasAny)
             return null;
 
         return new LayoutStruct(
-                json.has("anchor") ? parseOriginField(json, "anchor") : null,
-                json.has("pivot") ? parseOriginField(json, "pivot") : null,
-                json.has("position") ? DimensionVector2Struct.parse(json, "position",
+                arpg.has("anchor") ? parseOriginField(arpg, "anchor") : null,
+                arpg.has("pivot") ? parseOriginField(arpg, "pivot") : null,
+                arpg.has("position") ? DimensionVector2Struct.parse(arpg, "position",
                         EngineSetting.ELEMENT_DEFAULT_POSITION,
                         EngineSetting.ELEMENT_DEFAULT_POSITION) : null,
-                json.has("size") ? DimensionVector2Struct.parse(json, "size",
+                arpg.has("size") ? DimensionVector2Struct.parse(arpg, "size",
                         EngineSetting.ELEMENT_DEFAULT_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_SIZE) : null,
-                json.has("min_size") ? DimensionVector2Struct.parse(json, "min_size",
+                arpg.has("min_size") ? DimensionVector2Struct.parse(arpg, "min_size",
                         EngineSetting.ELEMENT_DEFAULT_MIN_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_MIN_SIZE) : null,
-                json.has("max_size") ? DimensionVector2Struct.parse(json, "max_size",
+                arpg.has("max_size") ? DimensionVector2Struct.parse(arpg, "max_size",
                         EngineSetting.ELEMENT_DEFAULT_MAX_SIZE,
                         EngineSetting.ELEMENT_DEFAULT_MAX_SIZE) : null,
-                parseAspect(json));
+                parseAspect(arpg));
     }
 
     // Aspect — width over height, zero when free \\
 
-    private static float parseAspect(JsonObject json) {
+    private static float parseAspect(ArpgObjectStruct arpg) {
 
-        float aspect = JsonUtility.getFloat(json, "aspect", 0f);
+        float aspect = ArpgUtility.getFloat(arpg, "aspect", 0f);
 
         if (aspect < 0f)
             throwException("'aspect' must be a positive width-over-height ratio, got " + aspect);
@@ -285,21 +284,21 @@ class MenuFileParserUtility extends EngineUtility {
         return new Vector2(x, y);
     }
 
-    static Vector2 parseOriginField(JsonObject json, String key) {
+    static Vector2 parseOriginField(ArpgObjectStruct arpg, String key) {
 
-        if (!json.has(key))
+        if (!arpg.has(key))
             return new Vector2(0.5f, 0.5f);
 
-        JsonElement el = json.get(key);
+        ArpgElementStruct el = arpg.get(key);
 
-        if (el.isJsonPrimitive())
+        if (el.isValue())
             return parseOriginName(el.getAsString());
 
-        if (el.isJsonObject()) {
-            JsonObject obj = el.getAsJsonObject();
+        if (el.isObject()) {
+            ArpgObjectStruct obj = el.getAsObject();
             return new Vector2(
-                    JsonUtility.getFloat(obj, "x", 0.5f),
-                    JsonUtility.getFloat(obj, "y", 0.5f));
+                    ArpgUtility.getFloat(obj, "x", 0.5f),
+                    ArpgUtility.getFloat(obj, "y", 0.5f));
         }
 
         return new Vector2(0.5f, 0.5f);

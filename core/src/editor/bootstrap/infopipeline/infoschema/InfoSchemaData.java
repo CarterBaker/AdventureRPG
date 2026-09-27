@@ -5,7 +5,7 @@ import engine.root.DataPackage;
 public class InfoSchemaData extends DataPackage {
 
     /*
-     * Immutable description of one kind of JSON content: the hierarchy tab it
+     * Immutable description of one kind of ARPG content: the hierarchy tab it
      * appears under, the asset directory its files live in, and the fields an
      * entry allows. With an entries key every file holds many named entries in
      * that array, and new entries land in the default file when none is

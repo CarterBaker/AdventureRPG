@@ -1,7 +1,5 @@
 package application.bootstrap.entitypipeline.animationtreemanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.io.File;
 import java.util.Arrays;
 
@@ -18,13 +16,15 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 class AnimationTreeBuilder extends BuilderPackage {
 
     /*
-     * Parses one animation tree JSON file into an AnimationTreeData and
+     * Parses one animation tree ARPG file into an AnimationTreeData and
      * wraps it in an AnimationTreeHandle. Every name in the file — rig,
      * clips, bones, movement states, parameters, and blend modes — is
      * resolved and validated here, so the runtime only ever walks indices.
@@ -52,17 +52,17 @@ class AnimationTreeBuilder extends BuilderPackage {
 
     AnimationTreeHandle build(File file, String treeName) {
 
-        JsonObject json = JsonUtility.loadJsonObject(file);
-        RigHandle rigHandle = rigManager.getRigHandleFromRigName(JsonUtility.validateString(json, "rig"));
-        JsonArray layersJson = JsonUtility.validateArray(json, "layers");
+        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+        RigHandle rigHandle = rigManager.getRigHandleFromRigName(ArpgUtility.validateString(arpg, "rig"));
+        ArpgArrayStruct layersArpg = ArpgUtility.validateArray(arpg, "layers");
 
-        if (layersJson.size() == 0)
+        if (layersArpg.size() == 0)
             throwException("Animation tree \"" + treeName + "\" declares no layers. File: " + file.getName());
 
-        AnimationLayerStruct[] layers = new AnimationLayerStruct[layersJson.size()];
+        AnimationLayerStruct[] layers = new AnimationLayerStruct[layersArpg.size()];
 
         for (int i = 0; i < layers.length; i++)
-            layers[i] = parseLayer(layersJson.get(i).getAsJsonObject(), i == 0, rigHandle, file);
+            layers[i] = parseLayer(layersArpg.get(i).getAsObject(), i == 0, rigHandle, file);
 
         AnimationTreeData animationTreeData = new AnimationTreeData(treeName, rigHandle, layers);
 
@@ -74,14 +74,14 @@ class AnimationTreeBuilder extends BuilderPackage {
 
     // Layer Parsing \\
 
-    private AnimationLayerStruct parseLayer(JsonObject layerJson, boolean base, RigHandle rigHandle, File file) {
+    private AnimationLayerStruct parseLayer(ArpgObjectStruct layerArpg, boolean base, RigHandle rigHandle, File file) {
 
-        String layerName = JsonUtility.validateString(layerJson, "name");
-        AnimationBlendMode blendMode = JsonUtility.hasString(layerJson, "mode")
-                ? parseEnum(AnimationBlendMode.class, layerJson.get("mode").getAsString(), layerName, file)
+        String layerName = ArpgUtility.validateString(layerArpg, "name");
+        AnimationBlendMode blendMode = ArpgUtility.hasString(layerArpg, "mode")
+                ? parseEnum(AnimationBlendMode.class, layerArpg.get("mode").getAsString(), layerName, file)
                 : AnimationBlendMode.OVERRIDE;
-        float weight = JsonUtility.getFloat(layerJson, "weight", EngineSetting.DEFAULT_ANIMATION_LAYER_WEIGHT);
-        float blendDuration = JsonUtility.getFloat(layerJson, "blend", EngineSetting.ANIMATION_BLEND_SECONDS);
+        float weight = ArpgUtility.getFloat(layerArpg, "weight", EngineSetting.DEFAULT_ANIMATION_LAYER_WEIGHT);
+        float blendDuration = ArpgUtility.getFloat(layerArpg, "blend", EngineSetting.ANIMATION_BLEND_SECONDS);
 
         if (weight < 0f || weight > 1f)
             throwException("Layer \"" + layerName + "\" weight must be between 0 and 1. File: " + file.getName());
@@ -90,24 +90,24 @@ class AnimationTreeBuilder extends BuilderPackage {
             throwException("Layer \"" + layerName + "\" has a negative \"blend\". File: " + file.getName());
 
         if (base)
-            validateBaseLayer(layerJson, layerName, blendMode, weight, file);
+            validateBaseLayer(layerArpg, layerName, blendMode, weight, file);
 
-        JsonObject nodesJson = JsonUtility.validateObject(layerJson, "nodes");
+        ArpgObjectStruct nodesArpg = ArpgUtility.validateObject(layerArpg, "nodes");
 
-        if (nodesJson.size() == 0)
+        if (nodesArpg.size() == 0)
             throwException("Layer \"" + layerName + "\" declares no nodes. File: " + file.getName());
 
-        AnimationNodeStruct[] nodes = new AnimationNodeStruct[nodesJson.size()];
+        AnimationNodeStruct[] nodes = new AnimationNodeStruct[nodesArpg.size()];
         Object2IntOpenHashMap<String> nodeName2NodeIndex = new Object2IntOpenHashMap<>();
         nodeName2NodeIndex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
 
-        for (String nodeName : nodesJson.keySet()) {
+        for (String nodeName : nodesArpg.keySet()) {
 
             int nodeIndex = nodeName2NodeIndex.size();
 
             nodes[nodeIndex] = parseNode(
                     nodeName,
-                    JsonUtility.validateObject(nodesJson, nodeName),
+                    ArpgUtility.validateObject(nodesArpg, nodeName),
                     blendDuration,
                     rigHandle,
                     file);
@@ -119,14 +119,14 @@ class AnimationTreeBuilder extends BuilderPackage {
                 blendMode,
                 weight,
                 blendDuration,
-                parseBoneMask(layerJson, layerName, rigHandle, file),
+                parseBoneMask(layerArpg, layerName, rigHandle, file),
                 nodes,
-                parseStateNodes(layerJson, layerName, nodeName2NodeIndex, base, file),
-                parseTransitionBlends(layerJson, layerName, nodes, nodeName2NodeIndex, file));
+                parseStateNodes(layerArpg, layerName, nodeName2NodeIndex, base, file),
+                parseTransitionBlends(layerArpg, layerName, nodes, nodeName2NodeIndex, file));
     }
 
     private void validateBaseLayer(
-            JsonObject layerJson,
+            ArpgObjectStruct layerArpg,
             String layerName,
             AnimationBlendMode blendMode,
             float weight,
@@ -135,7 +135,7 @@ class AnimationTreeBuilder extends BuilderPackage {
         if (blendMode != AnimationBlendMode.OVERRIDE)
             throwException("Base layer \"" + layerName + "\" must use the override mode. File: " + file.getName());
 
-        if (layerJson.has("mask"))
+        if (layerArpg.has("mask"))
             throwException("Base layer \"" + layerName + "\" cannot declare a \"mask\". File: " + file.getName());
 
         if (weight != EngineSetting.DEFAULT_ANIMATION_LAYER_WEIGHT)
@@ -144,27 +144,27 @@ class AnimationTreeBuilder extends BuilderPackage {
 
     // Mask Parsing \\
 
-    private float[] parseBoneMask(JsonObject layerJson, String layerName, RigHandle rigHandle, File file) {
+    private float[] parseBoneMask(ArpgObjectStruct layerArpg, String layerName, RigHandle rigHandle, File file) {
 
         float[] boneMask = new float[rigHandle.getBoneCount()];
 
-        if (!JsonUtility.hasObject(layerJson, "mask")) {
+        if (!ArpgUtility.hasObject(layerArpg, "mask")) {
             Arrays.fill(boneMask, EngineSetting.DEFAULT_ANIMATION_LAYER_WEIGHT);
             return boneMask;
         }
 
-        JsonObject maskJson = layerJson.getAsJsonObject("mask");
+        ArpgObjectStruct maskArpg = layerArpg.getAsObject("mask");
 
-        if (maskJson.size() == 0)
+        if (maskArpg.size() == 0)
             throwException("Layer \"" + layerName + "\" declares an empty \"mask\". File: " + file.getName());
 
-        for (String boneName : maskJson.keySet()) {
+        for (String boneName : maskArpg.keySet()) {
 
             if (!rigHandle.hasBone(boneName))
                 throwException("Layer \"" + layerName + "\" masks unknown bone \"" + boneName
                         + "\". File: " + file.getName());
 
-            float boneWeight = maskJson.get(boneName).getAsFloat();
+            float boneWeight = maskArpg.get(boneName).getAsFloat();
 
             if (boneWeight < 0f || boneWeight > 1f)
                 throwException("Layer \"" + layerName + "\" mask weight for bone \"" + boneName
@@ -180,20 +180,20 @@ class AnimationTreeBuilder extends BuilderPackage {
 
     private AnimationNodeStruct parseNode(
             String nodeName,
-            JsonObject nodeJson,
+            ArpgObjectStruct nodeArpg,
             float layerBlendDuration,
             RigHandle rigHandle,
             File file) {
 
-        boolean single = JsonUtility.hasString(nodeJson, "clip");
-        JsonArray clipsJson = single ? null : JsonUtility.validateArray(nodeJson, "clips");
-        int clipCount = single ? 1 : clipsJson.size();
+        boolean single = ArpgUtility.hasString(nodeArpg, "clip");
+        ArpgArrayStruct clipsArpg = single ? null : ArpgUtility.validateArray(nodeArpg, "clips");
+        int clipCount = single ? 1 : clipsArpg.size();
 
         if (clipCount == 0)
             throwException("Node \"" + nodeName + "\" lists no clips. File: " + file.getName());
 
-        AnimationParameter parameter = JsonUtility.hasString(nodeJson, "parameter")
-                ? parseEnum(AnimationParameter.class, nodeJson.get("parameter").getAsString(), nodeName, file)
+        AnimationParameter parameter = ArpgUtility.hasString(nodeArpg, "parameter")
+                ? parseEnum(AnimationParameter.class, nodeArpg.get("parameter").getAsString(), nodeName, file)
                 : null;
 
         if (!single && parameter == null)
@@ -204,15 +204,15 @@ class AnimationTreeBuilder extends BuilderPackage {
         float[] values = new float[clipCount];
 
         if (single)
-            clips[0] = resolveClip(nodeJson.get("clip").getAsString(), nodeName, rigHandle, file);
+            clips[0] = resolveClip(nodeArpg.get("clip").getAsString(), nodeName, rigHandle, file);
         else
-            parseBlendSpace(clipsJson, clips, values, nodeName, rigHandle, file);
+            parseBlendSpace(clipsArpg, clips, values, nodeName, rigHandle, file);
 
         boolean looping = resolveLooping(clips, nodeName, file);
-        float rate = JsonUtility.getFloat(nodeJson, "rate", EngineSetting.DEFAULT_ANIMATION_NODE_RATE);
-        boolean rateScale = JsonUtility.getBoolean(nodeJson, "rate_scale", false);
-        float blendDuration = JsonUtility.getFloat(nodeJson, "blend", layerBlendDuration);
-        float delay = JsonUtility.getFloat(nodeJson, "delay", EngineSetting.DEFAULT_ANIMATION_NODE_DELAY);
+        float rate = ArpgUtility.getFloat(nodeArpg, "rate", EngineSetting.DEFAULT_ANIMATION_NODE_RATE);
+        boolean rateScale = ArpgUtility.getBoolean(nodeArpg, "rate_scale", false);
+        float blendDuration = ArpgUtility.getFloat(nodeArpg, "blend", layerBlendDuration);
+        float delay = ArpgUtility.getFloat(nodeArpg, "delay", EngineSetting.DEFAULT_ANIMATION_NODE_DELAY);
 
         if (rate <= 0f)
             throwException("Node \"" + nodeName + "\" must have a positive \"rate\". File: " + file.getName());
@@ -238,7 +238,7 @@ class AnimationTreeBuilder extends BuilderPackage {
     }
 
     private void parseBlendSpace(
-            JsonArray clipsJson,
+            ArpgArrayStruct clipsArpg,
             AnimationClipHandle[] clips,
             float[] values,
             String nodeName,
@@ -247,10 +247,10 @@ class AnimationTreeBuilder extends BuilderPackage {
 
         for (int i = 0; i < clips.length; i++) {
 
-            JsonObject entryJson = clipsJson.get(i).getAsJsonObject();
+            ArpgObjectStruct entryArpg = clipsArpg.get(i).getAsObject();
 
-            clips[i] = resolveClip(JsonUtility.validateString(entryJson, "clip"), nodeName, rigHandle, file);
-            values[i] = JsonUtility.validateFloat(entryJson, "value");
+            clips[i] = resolveClip(ArpgUtility.validateString(entryArpg, "clip"), nodeName, rigHandle, file);
+            values[i] = ArpgUtility.validateFloat(entryArpg, "value");
 
             if (i > 0 && values[i] <= values[i - 1])
                 throwException("Node \"" + nodeName + "\" clip " + i
@@ -284,29 +284,29 @@ class AnimationTreeBuilder extends BuilderPackage {
     // State Parsing \\
 
     private int[] parseStateNodes(
-            JsonObject layerJson,
+            ArpgObjectStruct layerArpg,
             String layerName,
             Object2IntOpenHashMap<String> nodeName2NodeIndex,
             boolean base,
             File file) {
 
         int[] stateNodes = new int[EntityState.VALUES.length];
-        int defaultNode = JsonUtility.hasString(layerJson, "default")
-                ? resolveNodeIndex(layerJson.get("default").getAsString(), layerName, nodeName2NodeIndex, file)
+        int defaultNode = ArpgUtility.hasString(layerArpg, "default")
+                ? resolveNodeIndex(layerArpg.get("default").getAsString(), layerName, nodeName2NodeIndex, file)
                 : EngineSetting.INDEX_NOT_FOUND;
 
         Arrays.fill(stateNodes, defaultNode);
 
-        if (JsonUtility.hasObject(layerJson, "states")) {
+        if (ArpgUtility.hasObject(layerArpg, "states")) {
 
-            JsonObject statesJson = layerJson.getAsJsonObject("states");
+            ArpgObjectStruct statesArpg = layerArpg.getAsObject("states");
 
-            for (String stateName : statesJson.keySet()) {
+            for (String stateName : statesArpg.keySet()) {
 
                 EntityState state = parseEnum(EntityState.class, stateName, layerName, file);
 
                 stateNodes[state.ordinal()] = resolveNodeIndex(
-                        statesJson.get(stateName).getAsString(),
+                        statesArpg.get(stateName).getAsString(),
                         layerName,
                         nodeName2NodeIndex,
                         file);
@@ -325,7 +325,7 @@ class AnimationTreeBuilder extends BuilderPackage {
     // Transition Parsing \\
 
     private float[][] parseTransitionBlends(
-            JsonObject layerJson,
+            ArpgObjectStruct layerArpg,
             String layerName,
             AnimationNodeStruct[] nodes,
             Object2IntOpenHashMap<String> nodeName2NodeIndex,
@@ -337,19 +337,19 @@ class AnimationTreeBuilder extends BuilderPackage {
             for (int to = 0; to < nodes.length; to++)
                 transitionBlends[from][to] = nodes[to].getBlendDuration();
 
-        if (!JsonUtility.hasArray(layerJson, "transitions"))
+        if (!ArpgUtility.hasArray(layerArpg, "transitions"))
             return transitionBlends;
 
-        JsonArray transitionsJson = layerJson.getAsJsonArray("transitions");
+        ArpgArrayStruct transitionsArpg = layerArpg.getAsArray("transitions");
 
-        for (int i = 0; i < transitionsJson.size(); i++) {
+        for (int i = 0; i < transitionsArpg.size(); i++) {
 
-            JsonObject transitionJson = transitionsJson.get(i).getAsJsonObject();
+            ArpgObjectStruct transitionArpg = transitionsArpg.get(i).getAsObject();
             int from = resolveNodeIndex(
-                    JsonUtility.validateString(transitionJson, "from"), layerName, nodeName2NodeIndex, file);
+                    ArpgUtility.validateString(transitionArpg, "from"), layerName, nodeName2NodeIndex, file);
             int to = resolveNodeIndex(
-                    JsonUtility.validateString(transitionJson, "to"), layerName, nodeName2NodeIndex, file);
-            float blendDuration = JsonUtility.validateFloat(transitionJson, "blend");
+                    ArpgUtility.validateString(transitionArpg, "to"), layerName, nodeName2NodeIndex, file);
+            float blendDuration = ArpgUtility.validateFloat(transitionArpg, "blend");
 
             if (blendDuration < 0f)
                 throwException("Layer \"" + layerName + "\" transition " + i

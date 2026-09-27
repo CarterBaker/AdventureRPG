@@ -1,21 +1,21 @@
 package application.bootstrap.itempipeline.tooltypemanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.io.File;
 
 import application.bootstrap.itempipeline.tooltype.ToolTypeHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class ToolTypeLoader extends LoaderPackage {
 
     /*
-     * Scans the tool type JSON directory and loads all tool type definitions
+     * Scans the tool type ARPG directory and loads all tool type definitions
      * into ToolTypeManager. Pre-registers tool type names during scan so that
      * on-demand loading can resolve names to files before full load completes.
      */
@@ -34,13 +34,13 @@ class ToolTypeLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.TOOL_TYPE_JSON_PATH);
+        this.root = new File(EngineSetting.TOOL_TYPE_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
         this.toolTypeName2ResourceName = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Tool type directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             resourceName2File.put(resourceName, file);
             preRegisterToolTypeNames(file, resourceName);
@@ -63,17 +63,17 @@ class ToolTypeLoader extends LoaderPackage {
     private void preRegisterToolTypeNames(File file, String resourceName) {
 
         try {
-            JsonObject json = JsonUtility.loadJsonObject(file);
-            JsonArray toolArray = json.getAsJsonArray("tools");
+            ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+            ArpgArrayStruct toolArray = arpg.getAsArray("tools");
 
             if (toolArray == null)
                 return;
 
             for (int i = 0; i < toolArray.size(); i++) {
-                JsonObject toolJson = toolArray.get(i).getAsJsonObject();
-                if (!toolJson.has("name"))
+                ArpgObjectStruct toolArpg = toolArray.get(i).getAsObject();
+                if (!toolArpg.has("name"))
                     continue;
-                String localName = toolJson.get("name").getAsString();
+                String localName = toolArpg.get("name").getAsString();
                 String toolTypeName = resourceName + "/" + localName;
                 toolTypeName2ResourceName.put(toolTypeName, resourceName);
             }

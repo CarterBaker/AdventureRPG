@@ -13,7 +13,7 @@ class FontLoader extends LoaderPackage {
     /*
      * Scans the fonts directory for TTF/OTF files and loads each one into
      * FontManager via FontBuilder. Font name is derived from the file stem.
-     * No JSON config — size, material, and charset fall back to EngineSetting
+     * No ARPG config — size, material, and charset fall back to EngineSetting
      * defaults. Supports on-demand loading by font name to file resolution.
      */
 

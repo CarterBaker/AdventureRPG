@@ -111,18 +111,17 @@ public class EngineSetting {
 
     // Engine & Application
     public static final String BIN_DIRECTORY = "bin";
-    public static final String CHARACTER_FILE_EXTENSION = "json";
     public static final int CHARACTER_NAME_FIRST_NUMBER = 1;
     public static final String CHARACTER_NAME_PREFIX = "Character ";
     public static final String CHARACTER_SAVE_DIRECTORY = "Characters";
     public static final String EDITOR_LAYOUT_DIRECTORY = "editorLayout";
-    public static final String EDITOR_SETTINGS_FILE_NAME = "EditorSettings.json";
+    public static final String EDITOR_SETTINGS_FILE_NAME = "EditorSettings.arpg";
     public static final String GAME_DIRECTORY = "AdventureRPG";
     public static final String GAME_DOCUMENTS_SUBPATH = "Documents/My Games";
     public static final String TEMPORARY_FILE_SUFFIX = ".tmp";
     public static final int LOADER_BATCH_SIZE = 32;
     public static final String SAVE_DIRECTORY = "Saves";
-    public static final String SETTINGS_FILE_NAME = "Settings.json";
+    public static final String SETTINGS_FILE_NAME = "Settings.arpg";
     public static final String SETTINGS_UBO = "SettingsData";
     public static final String VERSION = "0.0.0.1a";
 
@@ -139,18 +138,18 @@ public class EngineSetting {
     public static final String LOG_TIME_PATTERN = "HH:mm:ss.SSS";
 
     // File Paths & Extensions
-    public static final String ANIMATION_JSON_PATH = "animations";
-    public static final String ANIMATION_TREE_JSON_PATH = "animationtrees";
-    public static final String BEHAVIOR_JSON_PATH = "behaviors";
-    public static final String BIOME_JSON_PATH = "biomes";
-    public static final String BLOCK_JSON_PATH = "blocks";
+    public static final String ANIMATION_PATH = "animations";
+    public static final String ANIMATION_TREE_PATH = "animationtrees";
+    public static final String BEHAVIOR_PATH = "behaviors";
+    public static final String BIOME_PATH = "biomes";
+    public static final String BLOCK_PATH = "blocks";
     public static final String BLOCK_TEXTURE_ALIAS_PATH = "texturealiases";
     public static final String BLOCK_TEXTURE_PATH = "textures";
-    public static final String CALENDAR_JSON_PATH = "calendars";
-    public static final String CLOUD_JSON_PATH = "clouds";
-    public static final String ENTITY_JSON_PATH = "entities";
-    public static final String FEATURE_JSON_PATH = "features";
-    public static final String FBO_CATALOG_JSON_PATH = "application/fbos";
+    public static final String CALENDAR_PATH = "calendars";
+    public static final String CLOUD_PATH = "clouds";
+    public static final String ENTITY_PATH = "entities";
+    public static final String FEATURE_PATH = "features";
+    public static final String FBO_CATALOG_PATH = "application/fbos";
     public static final ObjectArraySet<String> FONT_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "ttf",
         "otf" });
     public static final String FONT_PATH = "fonts";
@@ -158,18 +157,16 @@ public class EngineSetting {
         "frag", "fs", "fragment", "pixel" });
     public static final ObjectArraySet<String> INCLUDE_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "glsl",
         "inc", "glslinc" });
-    public static final String ITEM_JSON_PATH = "items";
-    public static final ObjectArraySet<String> JSON_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "json" });
-    public static final String MATERIAL_JSON_PATH = "materials";
-    public static final String MENU_JSON_PATH = "menus";
-    public static final String MESH_JSON_PATH = "mesh";
-    public static final String MESH_FILE_EXTENSION = "json";
-    public static final String PASS_JSON_PATH = "processingpasses";
-    public static final String RIG_JSON_PATH = "rigs";
-    public static final String SEASON_JSON_PATH = "seasons";
+    public static final String ITEM_PATH = "items";
+    public static final String MATERIAL_PATH = "materials";
+    public static final String MENU_PATH = "menus";
+    public static final String MESH_PATH = "mesh";
+    public static final String PASS_PATH = "processingpasses";
+    public static final String RIG_PATH = "rigs";
+    public static final String SEASON_PATH = "seasons";
     public static final String SHADER_PATH = "shaders";
     public static final String SPRITE_PATH = "sprites";
-    public static final String STRUCTURE_JSON_PATH = "structures";
+    public static final String STRUCTURE_PATH = "structures";
     public static final ObjectArraySet<String> TCS_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tcs",
         "tesc" });
     public static final ObjectArraySet<String> TES_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tes",
@@ -177,12 +174,64 @@ public class EngineSetting {
     public static final ObjectArraySet<String> TEXTURE_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "png",
         "jpg", "jpeg", "tga", "bmp" });
     public static final String THREAD_CATALOG_PATH = "application/threads";
-    public static final String TOOL_TYPE_JSON_PATH = "tools";
-    public static final String UBO_JSON_PATH = "ubos";
+    public static final String TOOL_TYPE_PATH = "tools";
+    public static final String UBO_PATH = "ubos";
     public static final ObjectArraySet<String> VERT_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "vsh",
         "vert", "vs", "vertex" });
-    public static final String WEATHER_JSON_PATH = "weathers";
+    public static final String WEATHER_PATH = "weathers";
     public static final String WORLD_TEXTURE_PATH = "worlds";
+
+    // ARPG Files
+    public static final String ARPG_FILE_EXTENSION = "arpg";
+    public static final ObjectArraySet<String> ARPG_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "arpg" });
+    public static final String ARPG_FILE_MAGIC = "ARPG";
+    public static final int ARPG_FORMAT_VERSION = 2;
+    public static final String ARPG_TEXT_FILE_EXTENSION = "json";
+
+    // ARPG Binary
+    public static final int ARPG_TAG_NULL = 0;
+    public static final int ARPG_TAG_FALSE = 1;
+    public static final int ARPG_TAG_TRUE = 2;
+    public static final int ARPG_TAG_INTEGER = 3;
+    public static final int ARPG_TAG_DECIMAL = 4;
+    public static final int ARPG_TAG_DOUBLE = 5;
+    public static final int ARPG_TAG_STRING = 6;
+    public static final int ARPG_TAG_ARRAY = 7;
+    public static final int ARPG_TAG_OBJECT = 8;
+    public static final int ARPG_BYTE_MASK = 0xFF;
+    public static final int ARPG_BYTE_BITS = 8;
+    public static final int ARPG_VARINT_PAYLOAD_MASK = 0x7F;
+    public static final int ARPG_VARINT_CONTINUE_BIT = 0x80;
+    public static final int ARPG_VARINT_SHIFT = 7;
+    public static final int ARPG_VARINT_MAX_SHIFT = 63;
+    public static final int ARPG_DECIMAL_MAX_SCALE = 22;
+    public static final long ARPG_DECIMAL_MAX_MANTISSA = 1L << 53;
+    public static final int ARPG_DECIMAL_BASE = 10;
+    public static final int ARPG_BUFFER_INITIAL_CAPACITY = 256;
+
+    // ARPG Text
+    public static final String ARPG_TEXT_INDENT = "  ";
+    public static final String ARPG_TEXT_NULL_LITERAL = "null";
+    public static final char ARPG_TEXT_BYTE_ORDER_MARK = '\uFEFF';
+    public static final char ARPG_TEXT_ESCAPE_LIMIT = 0x20;
+    public static final int ARPG_TEXT_UNICODE_DIGITS = 4;
+    public static final int ARPG_TEXT_HEX_RADIX = 16;
+
+    // ARPG Tool
+    public static final String ARPG_TOOL_COMMAND_ENCODE = "encode";
+    public static final String ARPG_TOOL_COMMAND_DECODE = "decode";
+    public static final String ARPG_TOOL_COMMAND_CONVERT = "convert";
+    public static final String ARPG_TOOL_COMMAND_EXPORT = "export";
+    public static final String ARPG_TOOL_COMMAND_VERIFY = "verify";
+    public static final int ARPG_TOOL_EXIT_SUCCESS = 0;
+    public static final int ARPG_TOOL_EXIT_FAILURE = 1;
+    public static final String ARPG_TOOL_USAGE = String.join("\n",
+            "ARPG data tool. Every path is relative to the project root.",
+            "  encode <text.json> [file.arpg]  Seal one text file (default target: same name, .arpg).",
+            "  decode <file.arpg> [text.json]  Open one sealed file as text (default: print it).",
+            "  convert <directory>             Seal every .json below the directory and delete the .json.",
+            "  export <directory>              Write a .json text copy beside every .arpg below the directory.",
+            "  verify <file-or-directory>      Open every .arpg and report any that fail.");
 
     // Threading & Frame Rate
     public static final int AUTO_THREAD_POOL_RESERVED_CORES = 2;

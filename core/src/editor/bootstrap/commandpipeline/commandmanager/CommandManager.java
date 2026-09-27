@@ -18,7 +18,7 @@ public class CommandManager extends ManagerPackage {
 
     /*
      * Owns every console command and is the one route from the command
-     * console to every open Dev window. Commands load from JSON, one group per
+     * console to every open Dev window. Commands load from ARPG, one group per
      * file, and groups are listed in name order. A submitted line is echoed to
      * the log, parsed once into a CommandStruct, checked against its command's
      * definition, and queued on every Dev window that has not crashed, each of

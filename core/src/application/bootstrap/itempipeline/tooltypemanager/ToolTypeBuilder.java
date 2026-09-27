@@ -1,37 +1,37 @@
 package application.bootstrap.itempipeline.tooltypemanager;
 
 import java.io.File;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 
 import application.bootstrap.itempipeline.tooltype.ToolTypeData;
 import application.bootstrap.itempipeline.tooltype.ToolTypeHandle;
 import engine.root.BuilderPackage;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class ToolTypeBuilder extends BuilderPackage {
 
     /*
-     * Parses tool type JSON files and builds ToolTypeHandle instances. Each
-     * JSON file may contain multiple tool entries under a 'tools' array.
+     * Parses tool type ARPG files and builds ToolTypeHandle instances. Each
+     * ARPG file may contain multiple tool entries under a 'tools' array.
      * Bootstrap-only.
      */
 
     // Build \\
 
-    ObjectArrayList<ToolTypeHandle> build(File jsonFile, File root) {
+    ObjectArrayList<ToolTypeHandle> build(File arpgFile, File root) {
 
-        String pathPrefix = FileUtility.getPathWithFileNameWithoutExtension(root, jsonFile);
-        JsonObject rootJson = JsonUtility.loadJsonObject(jsonFile);
-        JsonArray toolArray = JsonUtility.validateArray(rootJson, "tools");
+        String pathPrefix = FileUtility.getPathWithFileNameWithoutExtension(root, arpgFile);
+        ArpgObjectStruct rootArpg = ArpgUtility.loadObject(arpgFile);
+        ArpgArrayStruct toolArray = ArpgUtility.validateArray(rootArpg, "tools");
         ObjectArrayList<ToolTypeHandle> tools = new ObjectArrayList<>();
 
         for (int i = 0; i < toolArray.size(); i++) {
-            JsonObject toolJson = toolArray.get(i).getAsJsonObject();
-            ToolTypeHandle tool = parseTool(toolJson, pathPrefix);
+            ArpgObjectStruct toolArpg = toolArray.get(i).getAsObject();
+            ToolTypeHandle tool = parseTool(toolArpg, pathPrefix);
             if (tool != null)
                 tools.add(tool);
         }
@@ -41,12 +41,12 @@ class ToolTypeBuilder extends BuilderPackage {
 
     // Parse \\
 
-    private ToolTypeHandle parseTool(JsonObject toolJson, String pathPrefix) {
+    private ToolTypeHandle parseTool(ArpgObjectStruct toolArpg, String pathPrefix) {
 
-        String localName = JsonUtility.validateString(toolJson, "name");
+        String localName = ArpgUtility.validateString(toolArpg, "name");
         String toolTypeName = pathPrefix + "/" + localName;
         short toolTypeID = RegistryUtility.toShortID(toolTypeName);
-        String defaultModelPath = JsonUtility.getString(toolJson, "model", "");
+        String defaultModelPath = ArpgUtility.getString(toolArpg, "model", "");
 
         ToolTypeData toolTypeData = new ToolTypeData(toolTypeName, toolTypeID, defaultModelPath);
 

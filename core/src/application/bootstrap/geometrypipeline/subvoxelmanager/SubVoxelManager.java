@@ -1,7 +1,5 @@
 package application.bootstrap.geometrypipeline.subvoxelmanager;
 
-import com.google.gson.JsonObject;
-
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelHitStruct;
@@ -12,6 +10,7 @@ import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
@@ -118,16 +117,16 @@ public class SubVoxelManager extends ManagerPackage {
 
     // Format \\
 
-    public boolean hasSubVoxels(JsonObject meshJson) {
-        return SubVoxelJsonUtility.hasSubVoxels(meshJson);
+    public boolean hasSubVoxels(ArpgObjectStruct meshArpg) {
+        return SubVoxelArpgUtility.hasSubVoxels(meshArpg);
     }
 
-    public SubVoxelModelStruct parseModel(JsonObject meshJson) {
-        return SubVoxelJsonUtility.parse(meshJson);
+    public SubVoxelModelStruct parseModel(ArpgObjectStruct meshArpg) {
+        return SubVoxelArpgUtility.parse(meshArpg);
     }
 
-    public JsonObject toMeshJson(SubVoxelModelStruct model) {
-        return SubVoxelJsonUtility.toMeshJson(model);
+    public ArpgObjectStruct toMeshArpg(SubVoxelModelStruct model) {
+        return SubVoxelArpgUtility.toMeshArpg(model);
     }
 
     // Parts \\
@@ -142,22 +141,22 @@ public class SubVoxelManager extends ManagerPackage {
 
     // Import \\
 
-    public boolean hasQuads(JsonObject meshJson) {
-        return SubVoxelImportUtility.hasQuads(meshJson);
+    public boolean hasQuads(ArpgObjectStruct meshArpg) {
+        return SubVoxelImportUtility.hasQuads(meshArpg);
     }
 
-    public SubVoxelModelStruct importQuadMesh(JsonObject meshJson, String fallbackTextureName) {
-        return SubVoxelImportUtility.importQuads(meshJson, fallbackTextureName);
+    public SubVoxelModelStruct importQuadMesh(ArpgObjectStruct meshArpg, String fallbackTextureName) {
+        return SubVoxelImportUtility.importQuads(meshArpg, fallbackTextureName);
     }
 
     // Either format as sub-voxels — null when the mesh holds neither cubes nor quads
-    public SubVoxelModelStruct resolveModel(JsonObject meshJson, String fallbackTextureName) {
+    public SubVoxelModelStruct resolveModel(ArpgObjectStruct meshArpg, String fallbackTextureName) {
 
-        if (hasSubVoxels(meshJson))
-            return parseModel(meshJson);
+        if (hasSubVoxels(meshArpg))
+            return parseModel(meshArpg);
 
-        if (hasQuads(meshJson))
-            return importQuadMesh(meshJson, fallbackTextureName);
+        if (hasQuads(meshArpg))
+            return importQuadMesh(meshArpg, fallbackTextureName);
 
         return null;
     }

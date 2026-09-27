@@ -2,15 +2,14 @@ package application.bootstrap.savepipeline.savemanager;
 
 import java.io.File;
 
-import com.google.gson.JsonObject;
-
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class SaveManager extends ManagerPackage {
@@ -129,10 +128,10 @@ public class SaveManager extends ManagerPackage {
     private boolean restore(WindowInstance window, File characterFile) {
 
         int windowID = window.getWindowID();
-        JsonObject characterJson = JsonUtility.tryLoadJsonObject(characterFile);
+        ArpgObjectStruct characterArpg = ArpgUtility.tryLoadObject(characterFile);
 
-        if (characterJson != null
-                && playerRestoreBranch.restore(characterJson, playerManager.getPlayerForWindow(windowID))) {
+        if (characterArpg != null
+                && playerRestoreBranch.restore(characterArpg, playerManager.getPlayerForWindow(windowID))) {
             playerManager.verifyPlayerPositionForWindow(windowID);
             return true;
         }
@@ -146,7 +145,7 @@ public class SaveManager extends ManagerPackage {
     // Utility \\
 
     private File getCharacterFile(String characterName) {
-        return new File(characterDirectory, characterName + "." + EngineSetting.CHARACTER_FILE_EXTENSION);
+        return ArpgUtility.resolveFile(characterDirectory, characterName);
     }
 
     private String createCharacterName() {
@@ -187,7 +186,7 @@ public class SaveManager extends ManagerPackage {
 
         if (files != null)
             for (File file : files)
-                if (file.isFile() && FileUtility.hasExtension(file, EngineSetting.CHARACTER_FILE_EXTENSION))
+                if (ArpgUtility.isArpgFile(file))
                     characterFiles.add(file);
 
         characterFiles.sort((first, second) -> Long.compare(second.lastModified(), first.lastModified()));

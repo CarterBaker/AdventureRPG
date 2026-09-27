@@ -10,7 +10,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class CalendarData extends DataPackage {
 
     /*
-     * Immutable calendar definition loaded from JSON. Holds the day and
+     * Immutable calendar definition loaded from ARPG. Holds the day and
      * month layout for one named calendar, the exact starting point in the
      * calendar's own units of time, the shape of its day and year, the star
      * its world orbits, and the named seasons that divide its year. Owned by

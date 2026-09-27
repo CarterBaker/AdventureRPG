@@ -2,21 +2,20 @@ package application.bootstrap.renderpipeline.fbomanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import application.bootstrap.renderpipeline.fbo.FBOData;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.io.JsonUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class FBOLoader extends LoaderPackage {
 
     /*
-     * Drives the FBO bootstrap sequence: directory walked in scan(), all JSON
+     * Drives the FBO bootstrap sequence: directory walked in scan(), all ARPG
      * descriptors queued, data registered per load() call, self-releases when
      * the queue empties.
      */
@@ -43,19 +42,19 @@ class FBOLoader extends LoaderPackage {
 
     @Override
     protected void scan() {
-        this.root = new File(EngineSetting.FBO_CATALOG_JSON_PATH);
+        this.root = new File(EngineSetting.FBO_CATALOG_PATH);
         this.fboName2File = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "FBO directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.JSON_FILE_EXTENSIONS)) {
-            JsonObject jsonRoot = JsonUtility.loadJsonObject(file);
-            JsonArray list = jsonRoot.has("fbos") ? JsonUtility.validateArray(jsonRoot, "fbos")
-                    : new JsonArray();
-            if (list.size() == 0 && jsonRoot.has("name"))
-                list.add(jsonRoot);
+        for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
+            ArpgObjectStruct arpgRoot = ArpgUtility.loadObject(file);
+            ArpgArrayStruct list = arpgRoot.has("fbos") ? ArpgUtility.validateArray(arpgRoot, "fbos")
+                    : new ArpgArrayStruct();
+            if (list.size() == 0 && arpgRoot.has("name"))
+                list.add(arpgRoot);
             for (int i = 0; i < list.size(); i++) {
-                String name = JsonUtility.validateString(list.get(i).getAsJsonObject(), "name");
+                String name = ArpgUtility.validateString(list.get(i).getAsObject(), "name");
                 fboName2File.put(name, file);
             }
             queueFile(file);

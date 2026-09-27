@@ -1,6 +1,0 @@
-{
-    "vert": "surface/standard/StandardSurfaceShader.vsh",
-    "tcs":  "surface/standard/StandardSurfaceShader.tcs",
-    "tes":  "surface/standard/StandardSurfaceShader.tes",
-    "frag": "surface/standard/StandardSurfaceShader.fsh"
-}

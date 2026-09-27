@@ -11,7 +11,7 @@ public class SkyPhaseStruct extends StructPackage {
      * golden hour, or day: zenith and horizon for the dome gradient, the
      * sun-side glow and the anti-solar belt that sit on top of it, and the
      * cloud albedo tint, sunlit tint, and shaded tint that let clouds carry
-     * the same palette. Loaded per season from JSON; the sky system also
+     * the same palette. Loaded per season from ARPG; the sky system also
      * keeps its own instances as working buffers and fills them with blend().
      */
 

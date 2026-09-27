@@ -1,15 +1,14 @@
 package editor.bootstrap.infopipeline.infomanager;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import editor.bootstrap.infopipeline.inforow.InfoRowStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoFieldStruct;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
 import editor.bootstrap.infopipeline.util.InfoRowKind;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
+import engine.util.arpg.ArpgObjectStruct;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InfoRowBranch extends BranchPackage {
@@ -36,12 +35,12 @@ class InfoRowBranch extends BranchPackage {
 
     // Rows \\
 
-    void buildRows(JsonObject entryJson, InfoFieldStruct rootField, ObjectArrayList<InfoRowStruct> rows) {
-        addObjectRows(entryJson, rootField, "", 0, rows);
+    void buildRows(ArpgObjectStruct entryArpg, InfoFieldStruct rootField, ObjectArrayList<InfoRowStruct> rows) {
+        addObjectRows(entryArpg, rootField, "", 0, rows);
     }
 
     private void addObjectRows(
-            JsonObject json,
+            ArpgObjectStruct arpg,
             InfoFieldStruct objectField,
             String prefix,
             int depth,
@@ -50,15 +49,15 @@ class InfoRowBranch extends BranchPackage {
         ObjectArrayList<InfoFieldStruct> fields = objectField.getFields();
 
         for (int i = 0; i < fields.size(); i++)
-            addFieldRows(json, objectField, fields.get(i), prefix, depth, rows);
+            addFieldRows(arpg, objectField, fields.get(i), prefix, depth, rows);
 
-        for (String key : json.keySet())
+        for (String key : arpg.keySet())
             if (objectField.findField(key) == null)
-                addValueRows(json.get(key), objectField, null, false, joinPath(prefix, key), key, depth, rows);
+                addValueRows(arpg.get(key), objectField, null, false, joinPath(prefix, key), key, depth, rows);
     }
 
     private void addFieldRows(
-            JsonObject json,
+            ArpgObjectStruct arpg,
             InfoFieldStruct objectField,
             InfoFieldStruct field,
             String prefix,
@@ -66,7 +65,7 @@ class InfoRowBranch extends BranchPackage {
             ObjectArrayList<InfoRowStruct> rows) {
 
         String path = joinPath(prefix, field.getKey());
-        JsonElement value = json.get(field.getKey());
+        ArpgElementStruct value = arpg.get(field.getKey());
 
         if (value == null) {
             rows.add(new InfoRowStruct(path, field.getKey(), depth, InfoRowKind.MISSING, "", false, false, false));
@@ -77,7 +76,7 @@ class InfoRowBranch extends BranchPackage {
     }
 
     private void addValueRows(
-            JsonElement value,
+            ArpgElementStruct value,
             InfoFieldStruct containerField,
             InfoFieldStruct field,
             boolean inArray,
@@ -86,7 +85,7 @@ class InfoRowBranch extends BranchPackage {
             int depth,
             ObjectArrayList<InfoRowStruct> rows) {
 
-        InfoFieldType type = field != null && field.getType().accepts(value) ? field.getType() : InfoFieldType.JSON;
+        InfoFieldType type = field != null && field.getType().accepts(value) ? field.getType() : InfoFieldType.RAW;
         boolean removable = infoEditBranch.isRemovable(containerField, field, inArray);
 
         if (!type.isGroup()) {
@@ -107,7 +106,7 @@ class InfoRowBranch extends BranchPackage {
     }
 
     private void addGroupChildren(
-            JsonElement value,
+            ArpgElementStruct value,
             InfoFieldStruct field,
             InfoFieldType type,
             String path,
@@ -115,13 +114,13 @@ class InfoRowBranch extends BranchPackage {
             ObjectArrayList<InfoRowStruct> rows) {
 
         if (type == InfoFieldType.OBJECT) {
-            addObjectRows(value.getAsJsonObject(), field, path, depth, rows);
+            addObjectRows(value.getAsObject(), field, path, depth, rows);
             return;
         }
 
         if (type == InfoFieldType.ARRAY) {
 
-            JsonArray array = value.getAsJsonArray();
+            ArpgArrayStruct array = value.getAsArray();
 
             for (int i = 0; i < array.size(); i++)
                 addValueRows(
@@ -131,7 +130,7 @@ class InfoRowBranch extends BranchPackage {
             return;
         }
 
-        JsonObject map = value.getAsJsonObject();
+        ArpgObjectStruct map = value.getAsObject();
 
         for (String key : map.keySet())
             addValueRows(map.get(key), field, field.getElement(), false, joinPath(path, key), key, depth, rows);
@@ -139,34 +138,34 @@ class InfoRowBranch extends BranchPackage {
 
     // Labels \\
 
-    private String toIndexLabel(int index, JsonElement element) {
+    private String toIndexLabel(int index, ArpgElementStruct element) {
 
         String label = EditorSetting.INFO_INDEX_OPEN + index + EditorSetting.INFO_INDEX_CLOSE;
 
-        if (!element.isJsonObject())
+        if (!element.isObject())
             return label;
 
-        JsonObject object = element.getAsJsonObject();
+        ArpgObjectStruct object = element.getAsObject();
 
         for (String summaryField : EditorSetting.INFO_SUMMARY_FIELDS)
-            if (object.has(summaryField) && object.get(summaryField).isJsonPrimitive())
+            if (object.has(summaryField) && object.get(summaryField).isValue())
                 return label + EditorSetting.INFO_SUMMARY_SEPARATOR + object.get(summaryField).getAsString();
 
         return label;
     }
 
-    private String toGroupSuffix(InfoFieldType type, JsonElement value) {
+    private String toGroupSuffix(InfoFieldType type, ArpgElementStruct value) {
 
         return switch (type) {
-            case ARRAY -> EditorSetting.INFO_GROUP_ARRAY_OPEN + value.getAsJsonArray().size()
+            case ARRAY -> EditorSetting.INFO_GROUP_ARRAY_OPEN + value.getAsArray().size()
                     + EditorSetting.INFO_GROUP_ARRAY_CLOSE;
-            case MAP -> EditorSetting.INFO_GROUP_MAP_OPEN + value.getAsJsonObject().size()
+            case MAP -> EditorSetting.INFO_GROUP_MAP_OPEN + value.getAsObject().size()
                     + EditorSetting.INFO_GROUP_MAP_CLOSE;
             default -> EditorSetting.INFO_GROUP_OBJECT_SUFFIX;
         };
     }
 
-    private String toPreview(JsonElement value, InfoFieldType type) {
+    private String toPreview(ArpgElementStruct value, InfoFieldType type) {
 
         String text = infoEditBranch.formatValue(value, type);
 

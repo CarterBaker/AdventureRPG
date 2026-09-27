@@ -1,4 +1,0 @@
-{
-    "vert": "characters/standard/StandardcharacterShader.vsh",
-    "frag": "characters/standard/StandardcharacterShader.fsh"
-}

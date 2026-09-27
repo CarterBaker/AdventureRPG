@@ -2,9 +2,6 @@ package editor.bootstrap.tabpipeline.layoutmanager;
 
 import java.io.File;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
@@ -12,14 +9,16 @@ import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import engine.root.BranchPackage;
-import engine.util.io.JsonUtility;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class LayoutSaveBranch extends BranchPackage {
 
     /*
-     * Captures the editor's current arrangement as layout JSON and writes it to
+     * Captures the editor's current arrangement as an ARPG layout and writes it to
      * disk. Every open tab is listed once by id, every OS window records its
      * dock tree with leaves referencing those ids, and secondary windows also
      * record their screen position and size.
@@ -43,37 +42,37 @@ public class LayoutSaveBranch extends BranchPackage {
 
     void save(File layoutFile) {
 
-        JsonObject layoutJson = new JsonObject();
-        layoutJson.add("tabs", buildTabs());
-        layoutJson.add("windows", buildWindows());
+        ArpgObjectStruct layoutArpg = new ArpgObjectStruct();
+        layoutArpg.add("tabs", buildTabs());
+        layoutArpg.add("windows", buildWindows());
 
-        JsonUtility.writeJsonObject(layoutFile, layoutJson, internal.gson);
+        ArpgUtility.writeObject(layoutFile, layoutArpg);
     }
 
     // Build \\
 
-    private JsonArray buildTabs() {
+    private ArpgArrayStruct buildTabs() {
 
-        JsonArray tabsJson = new JsonArray();
+        ArpgArrayStruct tabsArpg = new ArpgArrayStruct();
         ObjectArrayList<TabHandle> openTabs = tabManager.getOpenTabs();
 
         for (int i = 0; i < openTabs.size(); i++) {
 
             TabHandle tabHandle = openTabs.get(i);
-            JsonObject tabJson = new JsonObject();
+            ArpgObjectStruct tabArpg = new ArpgObjectStruct();
 
-            tabJson.addProperty("id", tabHandle.getTabId());
-            tabJson.addProperty("baseTitle", tabHandle.getTabData().getBaseTitle());
-            tabJson.addProperty("contentClass", tabHandle.getContentContextClass().getName());
-            tabsJson.add(tabJson);
+            tabArpg.addProperty("id", tabHandle.getTabId());
+            tabArpg.addProperty("baseTitle", tabHandle.getTabData().getBaseTitle());
+            tabArpg.addProperty("contentClass", tabHandle.getContentContextClass().getName());
+            tabsArpg.add(tabArpg);
         }
 
-        return tabsJson;
+        return tabsArpg;
     }
 
-    private JsonArray buildWindows() {
+    private ArpgArrayStruct buildWindows() {
 
-        JsonArray windowsJson = new JsonArray();
+        ArpgArrayStruct windowsArpg = new ArpgArrayStruct();
 
         for (Object2ObjectMap.Entry<WindowInstance, DockNodeStruct> entry : dockLayoutSystem.getRoots()
                 .object2ObjectEntrySet()) {
@@ -81,44 +80,44 @@ public class LayoutSaveBranch extends BranchPackage {
             if (entry.getValue() == null)
                 continue;
 
-            windowsJson.add(buildWindow(entry.getKey(), entry.getValue()));
+            windowsArpg.add(buildWindow(entry.getKey(), entry.getValue()));
         }
 
-        return windowsJson;
+        return windowsArpg;
     }
 
-    private JsonObject buildWindow(WindowInstance osWindow, DockNodeStruct root) {
+    private ArpgObjectStruct buildWindow(WindowInstance osWindow, DockNodeStruct root) {
 
-        JsonObject windowJson = new JsonObject();
+        ArpgObjectStruct windowArpg = new ArpgObjectStruct();
         boolean isMain = osWindow == windowManager.getMainWindow();
 
-        windowJson.addProperty("isMain", isMain);
+        windowArpg.addProperty("isMain", isMain);
 
         if (!isMain) {
-            windowJson.addProperty("screenX", (int) osWindow.getScreenX());
-            windowJson.addProperty("screenY", (int) osWindow.getScreenY());
-            windowJson.addProperty("width", osWindow.getWidth());
-            windowJson.addProperty("height", osWindow.getHeight());
+            windowArpg.addProperty("screenX", (int) osWindow.getScreenX());
+            windowArpg.addProperty("screenY", (int) osWindow.getScreenY());
+            windowArpg.addProperty("width", osWindow.getWidth());
+            windowArpg.addProperty("height", osWindow.getHeight());
         }
 
-        windowJson.add("node", buildNode(root));
-        return windowJson;
+        windowArpg.add("node", buildNode(root));
+        return windowArpg;
     }
 
-    private JsonObject buildNode(DockNodeStruct node) {
+    private ArpgObjectStruct buildNode(DockNodeStruct node) {
 
-        JsonObject nodeJson = new JsonObject();
-        nodeJson.addProperty("split", node.isSplit());
+        ArpgObjectStruct nodeArpg = new ArpgObjectStruct();
+        nodeArpg.addProperty("split", node.isSplit());
 
         if (!node.isSplit()) {
-            nodeJson.addProperty("tab", node.getTab().getTabId());
-            return nodeJson;
+            nodeArpg.addProperty("tab", node.getTab().getTabId());
+            return nodeArpg;
         }
 
-        nodeJson.addProperty("splitHorizontal", node.isSplitHorizontal());
-        nodeJson.addProperty("ratio", node.getRatio());
-        nodeJson.add("first", buildNode(node.getFirst()));
-        nodeJson.add("second", buildNode(node.getSecond()));
-        return nodeJson;
+        nodeArpg.addProperty("splitHorizontal", node.isSplitHorizontal());
+        nodeArpg.addProperty("ratio", node.getRatio());
+        nodeArpg.add("first", buildNode(node.getFirst()));
+        nodeArpg.add("second", buildNode(node.getSecond()));
+        return nodeArpg;
     }
 }
