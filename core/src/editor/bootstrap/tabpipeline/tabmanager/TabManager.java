@@ -17,6 +17,7 @@ import editor.dev.DevContext;
 import editor.hierarchy.HierarchyContext;
 import editor.infopanel.InfoPanelContext;
 import editor.itemeditor.ItemEditorContext;
+import editor.profiler.ProfilerContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
 import editor.textureviewer.TextureViewerContext;
@@ -132,6 +133,10 @@ public class TabManager extends ManagerPackage {
                 EditorSetting.TAB_TITLE_COMMAND_CONSOLE,
                 CommandConsoleContext.class,
                 osWindow);
+    }
+
+    public TabHandle openProfiler(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_PROFILER, ProfilerContext.class, osWindow);
     }
 
     public TabHandle openTab(

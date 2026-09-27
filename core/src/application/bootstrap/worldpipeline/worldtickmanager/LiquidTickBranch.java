@@ -31,6 +31,9 @@ public class LiquidTickBranch extends BranchPackage {
      * cycles, visiting only subchunks with active liquid. Each chunk ticks
      * under its own lock and touched subchunks are rebuilt and re-merged. Each
      * firing also re-levels nearby ocean chunks whose water lags the live tide.
+     * Only a touched chunk that has already been built, and so has every
+     * neighbor generated, is rebuilt in place; any other picks the new water
+     * up when the stream first builds it.
      */
 
     // Internal
@@ -44,6 +47,8 @@ public class LiquidTickBranch extends BranchPackage {
     // Settings
     private int intervalFrames;
     private float tideRangeSquared;
+    private int neighborDataIndex;
+    private int buildDataIndex;
 
     // State
     private int frameCounter;
@@ -61,6 +66,8 @@ public class LiquidTickBranch extends BranchPackage {
         // Settings
         this.intervalFrames = EngineSetting.LIQUID_TICK_INTERVAL_FRAMES;
         this.tideRangeSquared = EngineSetting.OCEAN_TIDE_RANGE_CHUNKS * EngineSetting.OCEAN_TIDE_RANGE_CHUNKS;
+        this.neighborDataIndex = ChunkData.NEIGHBOR_DATA.index;
+        this.buildDataIndex = ChunkData.BUILD_DATA.index;
 
         // State
         this.frameCounter = EngineSetting.LIQUID_TICK_PHASE_FRAMES;
@@ -257,6 +264,10 @@ public class LiquidTickBranch extends BranchPackage {
         for (int i = 0; i < touchedChunks.size(); i++) {
 
             ChunkInstance touchedChunk = touchedChunks.get(i);
+
+            if (!isBuilt(touchedChunk))
+                continue;
+
             rebuildSubChunkGeometry(touchedChunk, touchedSubChunkY.getInt(i));
 
             if (touchedChunkCoordinates.contains(touchedChunk.getCoordinate()))
@@ -265,6 +276,14 @@ public class LiquidTickBranch extends BranchPackage {
             ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, touchedChunk.getChunkDataSyncContainer().getData());
             touchedChunkCoordinates.add(touchedChunk.getCoordinate());
         }
+    }
+
+    // Touched chunks are claimed, so their lock is held while their stage flags are read
+    private boolean isBuilt(ChunkInstance chunkInstance) {
+
+        boolean[] data = chunkInstance.getChunkDataSyncContainer().getData();
+
+        return data[neighborDataIndex] && data[buildDataIndex];
     }
 
     private void invalidateTouchedMegas() {

@@ -12,6 +12,7 @@ import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.render.MaskStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import application.kernel.profilerpipeline.profilermanager.ProfilerManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
@@ -25,7 +26,7 @@ public class RenderManager extends ManagerPackage {
      * Drives the draw phase across all registered windows — logical windows
      * queue into their OS window's blit queue, OS windows flush their full
      * queue and swap buffers. Screen pass order 0 draws before FBO composite,
-     * order 1 after.
+     * order 1 after. Each OS window's full draw is one profiler GPU frame.
      */
 
     private CameraManager cameraManager;
@@ -35,6 +36,7 @@ public class RenderManager extends ManagerPackage {
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
     private SkinnedBufferManager skinnedBufferManager;
+    private ProfilerManager profilerManager;
 
     private RenderSystem renderSystem;
 
@@ -54,6 +56,7 @@ public class RenderManager extends ManagerPackage {
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
         this.skinnedBufferManager = get(SkinnedBufferManager.class);
+        this.profilerManager = get(ProfilerManager.class);
     }
 
     // Draw \\
@@ -89,6 +92,7 @@ public class RenderManager extends ManagerPackage {
     }
 
     public void draw(WindowInstance window) {
+        profilerManager.beginGpuFrame(window);
         uboManager.bindBuffersForCurrentContext();
         playerManager.pushPlayerPositionForWindow(window.getWindowID());
         cameraManager.pushCamera(window);
@@ -96,6 +100,7 @@ public class RenderManager extends ManagerPackage {
         renderSystem.drawToMappedTargets(window);
         fboRenderSystem.pushBlits(window);
         drawFinal(window);
+        profilerManager.endGpuScope(window);
     }
 
     public void draw(FBOInstance target) {
@@ -241,9 +246,19 @@ public class RenderManager extends ManagerPackage {
     }
 
     public void removeWindowResources(WindowInstance window) {
+
         renderSystem.removeWindowResources(window);
         fboRenderSystem.removeWindowResources(window);
         fboManager.releaseWindowFbos(window);
+
+        if (window.hasNativeHandle())
+            removeProfilerResources(window);
+    }
+
+    private void removeProfilerResources(WindowInstance window) {
+        internal.windowPlatform.makeContextCurrent(window);
+        profilerManager.removeGpuWindow(window);
+        internal.windowPlatform.restoreMainContext();
     }
 
     // Internal \\

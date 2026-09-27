@@ -18,7 +18,9 @@
  * resolution: it refines finely where the ray meets cloud and resolves full
  * detail. The fog march runs per terrain fragment in the lighting pass, only
  * where cloud stands between the camera and the fragment, with a few fixed
- * steps and no detail. The first step is offset per pixel by the caller's
+ * steps and no detail. The sky march is tuned for a slightly stylized, softer
+ * cloud: three octaves at most, at most 32 coarse steps, and fine steps a
+ * third of a coarse step. The first step is offset per pixel by the caller's
  * jitter, so neighbouring rows never sample identical depths — at grazing
  * angles identical depths slice distant cloud into horizontal stripes. Light
  * reaching a sample is attenuated through the layer above it along the
@@ -37,7 +39,7 @@ struct CloudMarchQuality {
     bool detail;
 };
 
-const CloudMarchQuality CLOUD_MARCH_SKY = CloudMarchQuality(8, 48, 96, 4, true, true);
+const CloudMarchQuality CLOUD_MARCH_SKY = CloudMarchQuality(8, 32, 64, 3, true, true);
 const CloudMarchQuality CLOUD_MARCH_FOG = CloudMarchQuality(4, 8, 8, 2, false, false);
 
 const float CLOUD_MARCH_EPSILON              = 0.001;
@@ -45,7 +47,7 @@ const float CLOUD_MARCH_TRANSMITTANCE_CUTOFF = 0.02;
 const float CLOUD_MARCH_MIN_THICKNESS_BLOCKS = 1.0;
 const float CLOUD_MARCH_STEP_THICKNESS_RATIO = 0.2;
 const float CLOUD_MARCH_STEP_FEATURE_RATIO   = 0.6;
-const float CLOUD_MARCH_REFINE_RATIO         = 0.25;
+const float CLOUD_MARCH_REFINE_RATIO         = 0.35;
 const float CLOUD_MARCH_CENTERED_OFFSET      = 0.5;
 const float CLOUD_MARCH_UNBOUNDED_DISTANCE   = 1.0e30;
 const float CLOUD_MARCH_LIGHT_REACH_RATIO    = 1.0;

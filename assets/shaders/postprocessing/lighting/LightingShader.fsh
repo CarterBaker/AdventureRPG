@@ -19,7 +19,9 @@ out vec4 fragColor;
 
 // FOG_SHADOW_SCALE / FOG_LIT_SCALE re-weight computeFogAmount()'s result by
 // how directly lit the fragment is, since fog should read stronger on
-// sunlit distant terrain and weaker in shadow — not the reverse.
+// sunlit distant terrain and weaker in shadow — not the reverse. Toward the
+// rim of the visible world both converge on total fog, so the edge always
+// dissolves into the sky.
 const float FOG_SHADOW_SCALE = 0.35;
 const float FOG_LIT_SCALE    = 1.6;
 
@@ -77,18 +79,20 @@ void main() {
 
     vec3 lit = albedo * skyAmbient + sunContrib + moonContrib;
 
-    float litAmount = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
-    float fogT      = computeFogAmount(fragPosWorld);
-    float fogBlend  = clamp(fogT * mix(FOG_SHADOW_SCALE, FOG_LIT_SCALE, litAmount), 0.0, 1.0);
+    vec3  toFragment   = fragPosWorld - u_cameraPosition;
+    float fragDistance = length(toFragment);
+    vec3  fragDir      = toFragment / max(fragDistance, CLOUD_MARCH_EPSILON);
 
-    lit = mix(lit, u_skyFogColor, fogBlend);
+    float litAmount       = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
+    float horizonFraction = computeHorizonFraction(fragPosWorld);
+    float fogT            = computeFogAmount(horizonFraction);
+    float fogBlend        = resolveFogEdge(fogT * mix(FOG_SHADOW_SCALE, FOG_LIT_SCALE, litAmount), horizonFraction);
+
+    lit = mix(lit, resolveFogColor(fragDir, horizonFraction), fogBlend);
 
     // Cloud between the camera and this fragment — a peak wrapped in cloud,
     // or terrain seen from inside a cloud — fogs it with the same clouds the
     // weather pass draws in the sky.
-    vec3  toFragment   = fragPosWorld - u_cameraPosition;
-    float fragDistance = length(toFragment);
-    vec3  fragDir      = toFragment / max(fragDistance, CLOUD_MARCH_EPSILON);
     vec3  cloudColor   = vec3(0.0);
     float cloudVisible = 1.0;
 

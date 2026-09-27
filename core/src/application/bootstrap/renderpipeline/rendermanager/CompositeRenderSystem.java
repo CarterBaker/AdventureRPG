@@ -15,6 +15,7 @@ import application.bootstrap.renderpipeline.render.RenderQueueHandle;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
+import application.kernel.profilerpipeline.profilermanager.ProfilerManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -26,8 +27,11 @@ public class CompositeRenderSystem extends SystemPackage {
      * data, and draws every batch after the depth-sorted pass. Into targets
      * with depth it depth-tests like scene geometry; elsewhere it draws on top
      * with blending, scissored to any mask. Iteration is index-based over
-     * reused arrays.
+     * reused arrays. Each batch is a profiler GPU scope.
      */
+
+    // Internal
+    private ProfilerManager profilerManager;
 
     // Per Window GPU Cache
     private Int2ObjectOpenHashMap<Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState>> //
@@ -41,6 +45,11 @@ public class CompositeRenderSystem extends SystemPackage {
     @Override
     protected void create() {
         this.windowID2BufferGpuState = new Int2ObjectOpenHashMap<>();
+    }
+
+    @Override
+    protected void get() {
+        this.profilerManager = get(ProfilerManager.class);
     }
 
     // Submit \\
@@ -118,6 +127,7 @@ public class CompositeRenderSystem extends SystemPackage {
             if (batch.isEmpty())
                 continue;
 
+            profilerManager.beginGpuBatch(window, batch.getMaterial().getShaderHandle().getShaderName());
             bindMaterial(batch);
 
             ObjectArrayList<CompositeBufferInstance> buffers = batch.getBuffers();
@@ -137,10 +147,11 @@ public class CompositeRenderSystem extends SystemPackage {
                 }
 
                 activeMask = applyMask((MaskStruct) maskElements[j], activeMask);
-                drawBuffer((CompositeBufferInstance) bufferElements[j], window.getWindowID());
+                drawBuffer((CompositeBufferInstance) bufferElements[j], window);
             }
 
             batch.clear();
+            profilerManager.endGpuScope(window);
         }
 
         if (activeMask != null)
@@ -168,12 +179,12 @@ public class CompositeRenderSystem extends SystemPackage {
 
     // Upload and Draw \\
 
-    private void drawBuffer(CompositeBufferInstance buffer, int windowID) {
+    private void drawBuffer(CompositeBufferInstance buffer, WindowInstance window) {
 
         if (buffer.isEmpty())
             return;
 
-        WindowBufferGpuState gpuState = getOrCreateGpuState(buffer, windowID);
+        WindowBufferGpuState gpuState = getOrCreateGpuState(buffer, window.getWindowID());
 
         if (gpuState.maxInstances < buffer.getMaxInstances()) {
             CompositeRenderGLSLUtility.deleteBuffer(gpuState.instanceVBO);
@@ -190,6 +201,10 @@ public class CompositeRenderSystem extends SystemPackage {
                 gpuState.compositeVAO,
                 buffer.getIndexCount(),
                 buffer.getInstanceCount());
+
+        profilerManager.recordDraw(
+                window,
+                buffer.getIndexCount() / EngineSetting.TRIANGLE_VERTEX_COUNT * buffer.getInstanceCount());
     }
 
     private void upload(CompositeBufferInstance buffer, WindowBufferGpuState gpuState) {

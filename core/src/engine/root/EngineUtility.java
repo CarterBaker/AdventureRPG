@@ -4,6 +4,7 @@ import java.util.concurrent.Future;
 
 import application.kernel.frameratepipeline.frameratemanager.FrameRateManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
+import application.kernel.profilerpipeline.profilermanager.ProfilerManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.threadpipeline.threadmanager.ThreadManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -31,6 +32,7 @@ public abstract class EngineUtility {
     static ThreadManager threadManager;
     static WindowManager windowManager;
     static FrameRateManager frameRateManager;
+    static ProfilerManager profilerManager;
 
     public static void assignInputManager(InputManager input) {
 
@@ -62,6 +64,14 @@ public abstract class EngineUtility {
             throwException("Illegal reassignment of frame rate manager attempted during runtime");
 
         frameRateManager = input;
+    }
+
+    public static void assignProfilerManager(ProfilerManager input) {
+
+        if (profilerManager != null)
+            throwException("Illegal reassignment of profiler manager attempted during runtime");
+
+        profilerManager = input;
     }
 
     // Thread \\

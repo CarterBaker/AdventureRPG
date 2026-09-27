@@ -16,6 +16,7 @@ import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroDataSyncContainer;
+import application.bootstrap.worldpipeline.util.MacroTerrainUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
@@ -31,9 +32,11 @@ class MacroRenderSystem extends SystemPackage {
     /*
      * Owns the GPU side of every macro chunk: the position UBO placing it
      * against its grid's active chunk, its one mesh and model, and its draw
-     * submission. A reupload writes into the macro's existing buffers, a
-     * hidden macro keeps them for its next tenant, and only disposal frees
-     * them, so streaming macros in and out never churns GPU objects.
+     * submission. A tile is drawn only while its highest ground still clears
+     * the horizon from the current eye height and it faces the camera. A
+     * reupload writes into the macro's existing buffers, a hidden macro keeps
+     * them for its next tenant, and only disposal frees them, so streaming
+     * macros in and out never churns GPU objects.
      */
 
     // Internal
@@ -133,6 +136,12 @@ class MacroRenderSystem extends SystemPackage {
         MacroDataSyncContainer sync = macro.getMacroDataSyncContainer();
         MeshInstance meshInstance = macro.getMeshInstance();
 
+        macro.setRendered(true);
+        macro.setHasGeometry(!sync.getIndices().isEmpty());
+
+        if (!macro.hasGeometry())
+            return;
+
         if (meshInstance == null) {
 
             meshInstance = meshManager.createMesh(macroVAO, sync.getVertices(), sync.getIndices());
@@ -145,14 +154,13 @@ class MacroRenderSystem extends SystemPackage {
             meshManager.updateMesh(meshInstance, sync.getVertices(), sync.getIndices());
             macro.getModelInstance().updateMeshData(meshInstance.getMeshData());
         }
-
-        macro.setRendered(true);
     }
 
     // Removal \\
 
     void hideMacro(MacroChunkInstance macro) {
         macro.setRendered(false);
+        macro.setHasGeometry(false);
     }
 
     void disposeMacro(MacroChunkInstance macro) {
@@ -172,6 +180,7 @@ class MacroRenderSystem extends SystemPackage {
         }
 
         macro.setRendered(false);
+        macro.setHasGeometry(false);
     }
 
     // Render \\
@@ -183,11 +192,16 @@ class MacroRenderSystem extends SystemPackage {
                 .long2ObjectEntrySet()
                 .fastIterator();
 
+        float eyeReachBlocks = MacroTerrainUtility.resolveEyeReachBlocks(grid);
+
         while (iterator.hasNext()) {
 
             MacroChunkInstance macro = iterator.next().getValue();
 
-            if (!macro.isRendered())
+            if (!macro.hasGeometry())
+                continue;
+
+            if (macro.getNearestDistanceBlocks() > eyeReachBlocks + macro.getHorizonReachBlocks())
                 continue;
 
             if (!frustumCullingSystem.isMacroVisible(macro.getAngleFromCenter(), macro.getAngularRadius()))

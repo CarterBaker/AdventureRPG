@@ -19,11 +19,13 @@ class MacroQueueManager extends ManagerPackage {
 
     /*
      * Drives the per-frame macro pipeline for every grid: re-anchor, admit,
-     * assess. A macro tile is world-aligned, so walking only re-places the
-     * resident tiles and streams the ring's edge; nothing is rebuilt. Builds
-     * are paced by the MacroStreaming pool's capacity and uploads by their own
-     * budget, and a macro with a build reserved is never recycled, so a pooled
-     * macro never has work in flight.
+     * assess. A macro tile is world-aligned, so walking re-places the resident
+     * tiles and streams the ring's edge, and only a tile whose target moved,
+     * its resolution band or its overlap with the chunk grid, is rebuilt,
+     * drawing its old mesh until the new one lands. Builds are paced by the
+     * MacroStreaming pool's capacity and uploads by their own budget, and a
+     * macro with a build reserved is never recycled, so a pooled macro never
+     * has work in flight.
      */
 
     // Internal
@@ -121,7 +123,12 @@ class MacroQueueManager extends ManagerPackage {
                 .fastIterator();
 
         while (iterator.hasNext())
-            worldRenderManager.placeMacroInstance(iterator.next().getValue(), grid);
+            placeMacro(grid, iterator.next().getValue());
+    }
+
+    private void placeMacro(GridInstance grid, MacroChunkInstance macro) {
+        ringBranch.resolveTarget(grid, macro);
+        worldRenderManager.placeMacroInstance(macro, grid);
     }
 
     // Admission \\
@@ -144,7 +151,7 @@ class MacroQueueManager extends ManagerPackage {
 
             MacroChunkInstance macro = macroPool.isEmpty() ? create(MacroChunkInstance.class) : macroPool.pop();
             macro.constructor(grid.getWorldHandle(), macroCoordinate);
-            worldRenderManager.placeMacroInstance(macro, grid);
+            placeMacro(grid, macro);
 
             activeMacroChunks.put(macroCoordinate, macro);
             admitted++;
@@ -212,7 +219,7 @@ class MacroQueueManager extends ManagerPackage {
             if (sync.isBuilt())
                 return MacroQueueOperation.RENDER;
 
-            if (macro.isRendered())
+            if (macro.isRendered() && !macro.needsRebuild())
                 return MacroQueueOperation.SKIP;
 
             // A saturated pool leaves the macro for a later pass before its build is reserved

@@ -9,15 +9,19 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
     /*
      * Lock guarding one macro chunk's CPU geometry between its build and its
      * upload. A reserved build keeps the macro from being uploaded or recycled
-     * until endWork() clears it, and built marks geometry waiting for the GPU.
-     * The lists are reused for the pooled macro's lifetime — callers must hold
-     * the lock.
+     * until endWork() clears it, and built marks geometry waiting for the GPU
+     * together with the resolution it was built at and its highest ground. The lists are reused for the pooled macro's
+     * lifetime — callers must hold the lock.
      */
 
     // Geometry
     private FloatArrayList vertices;
     private ShortArrayList indices;
     private boolean built;
+
+    // Build Record
+    private int builtCellsPerSide;
+    private float builtMaxHeightBlocks;
 
     // Work
     private boolean building;
@@ -69,8 +73,10 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
 
     // Geometry \\
 
-    public void markBuilt() {
+    public void markBuilt(int cellsPerSide, float maxHeightBlocks) {
         this.built = true;
+        this.builtCellsPerSide = cellsPerSide;
+        this.builtMaxHeightBlocks = maxHeightBlocks;
     }
 
     public void clearGeometry() {
@@ -95,5 +101,13 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
 
     public boolean isBuilding() {
         return building;
+    }
+
+    public int getBuiltCellsPerSide() {
+        return builtCellsPerSide;
+    }
+
+    public float getBuiltMaxHeightBlocks() {
+        return builtMaxHeightBlocks;
     }
 }

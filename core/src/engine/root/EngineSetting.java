@@ -45,6 +45,8 @@ public class EngineSetting {
     public static final int GL_PATCHES = 0x000E;
     public static final int GL_PATCH_VERTICES = 0x8E72;
     public static final int GL_PIXEL_PACK_BUFFER = 0x88EB;
+    public static final int GL_QUERY_RESULT = 0x8866;
+    public static final int GL_QUERY_RESULT_AVAILABLE = 0x8867;
     public static final int GL_RENDERBUFFER = 0x8D41;
     public static final int GL_REPEAT = 0x2901;
     public static final int GL_RGB = 0x1907;
@@ -66,6 +68,7 @@ public class EngineSetting {
     public static final int GL_TEXTURE_MIN_FILTER = 0x2801;
     public static final int GL_TEXTURE_WRAP_S = 0x2802;
     public static final int GL_TEXTURE_WRAP_T = 0x2803;
+    public static final int GL_TIMESTAMP = 0x8E28;
     public static final int GL_TRIANGLES = 0x0004;
     public static final int GL_UNIFORM_BUFFER = 0x8A11;
     public static final int GL_UNSIGNED_BYTE = 0x1401;
@@ -245,6 +248,30 @@ public class EngineSetting {
     public static final long NANOS_PER_SECOND = 1_000_000_000L;
     public static final int TARGET_FRAME_RATE = 60;
 
+    // Profiler
+    public static final float BYTES_PER_MEGABYTE = 1024f * 1024f;
+    public static final int PROFILER_CAPTURE_FRAMES = 600;
+    public static final String PROFILER_COUNTER_DRAW_CALLS = "Draw Calls";
+    public static final String PROFILER_COUNTER_TRIANGLES = "Triangles";
+    public static final String PROFILER_DIRECTORY = "Profiler";
+    public static final String PROFILER_GPU_FRAME_LABEL = "GPU Frame";
+    public static final String PROFILER_GPU_PASS_PREFIX = "Pass: ";
+    public static final int PROFILER_GPU_QUERY_GROWTH = 32;
+    public static final String PROFILER_GPU_SCREEN_PASS = "Screen";
+    public static final int PROFILER_GPU_SLOT_COUNT = 4;
+    public static final String PROFILER_GROUP_ENGINE = "Engine";
+    public static final String PROFILER_MEMORY_GC_COLLECTIONS = "GC Collections";
+    public static final String PROFILER_MEMORY_GC_MILLIS = "GC Time (ms)";
+    public static final String PROFILER_MEMORY_HEAP_COMMITTED = "Heap Committed (MB)";
+    public static final String PROFILER_MEMORY_HEAP_USED = "Heap Used (MB)";
+    public static final String PROFILER_FRAME_LABEL = "Frame";
+    public static final int PROFILER_HISTORY_FRAMES = 240;
+    public static final float[] PROFILER_PERCENTILES = { 0.5f, 0.95f, 0.99f };
+    public static final String PROFILER_REPORT_PREFIX = "Report_";
+    public static final String PROFILER_REPORT_TIMESTAMP_PATTERN = "yyyy-MM-dd_HH-mm-ss";
+    public static final int PROFILER_REPORT_TOP_ENTRIES = 80;
+    public static final long PROFILER_UNSTAMPED = Long.MIN_VALUE;
+
     // Window & Display
     public static final int CURSOR_RESIZE_H = 1;
     public static final int CURSOR_RESIZE_V = 2;
@@ -294,6 +321,7 @@ public class EngineSetting {
     public static final int SUB_BLOCK_DIVISIONS = 2;
     public static final int SUB_VOXEL_RESOLUTION = 16;
     public static final int WORLD_HEIGHT = 64;
+    public static final float WORLD_CURVATURE_STRENGTH = 0.00016f;
 
     // Natural Noise
     public static final float NATURAL_GROUND_OFFSET_SMOOTHING = 10.0f;
@@ -356,6 +384,7 @@ public class EngineSetting {
     public static final String SPRITE_STRETCH_UNIFORM = "u_stretch";
     public static final String SUN_LIGHT_UBO = "SunLightData";
     public static final String TEXTURE_UV_SCALE_UNIFORM = "u_uvPerBlock";
+    public static final int TRIANGLE_VERTEX_COUNT = 3;
     public static final String UBO_TIME_DATA_NAME = "TimeData";
 
     // Camera
@@ -486,10 +515,15 @@ public class EngineSetting {
     public static final int MACRO_ADMISSIONS_PER_FRAME = 8;
     public static final float MACRO_ANCHOR_CENTER_CHUNKS = 0.5f;
     public static final int MACRO_ASSESS_PER_FRAME = 64;
-    public static final int MACRO_CELLS_PER_SIDE = 16;
+    public static final float MACRO_CELL_ANGLE_RADIANS = 0.04f;
+    public static final int MACRO_CELLS_PER_SIDE_MAX = 8;
+    public static final int MACRO_CELLS_PER_SIDE_MIN = 1;
+    public static final float MACRO_HORIZON_EYE_MARGIN_BLOCKS = 8f;
+    public static final int MACRO_HORIZON_SHRINK_TILES = 2;
     public static final String MACRO_MATERIAL = "surface/MacroTerrainMaterial";
     public static final int MACRO_POOL_MAX_OVERFLOW = 16;
     public static final float MACRO_RENDER_DISTANCE_BLOCKS = 4096f;
+    public static final float MACRO_SKIRT_DEPTH_CELLS = 1f;
     public static final String MACRO_STREAMING_THREAD_NAME = "MacroStreaming";
     public static final float MACRO_SURFACE_OFFSET_BLOCKS = BLOCK_SIZE;
     public static final String MACRO_VAO = "util/vao/MacroVAO";

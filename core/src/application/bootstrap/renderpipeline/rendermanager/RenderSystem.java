@@ -20,6 +20,7 @@ import application.bootstrap.shaderpipeline.shader.ShaderHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
+import application.kernel.profilerpipeline.profilermanager.ProfilerManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
@@ -35,7 +36,9 @@ class RenderSystem extends SystemPackage {
 
     /*
      * Drives all draw submission and flushing for a window's render queue —
-     * depth-sorted batches, screen passes, and skinned characters.
+     * depth-sorted batches, screen passes, and skinned characters. Each render
+     * target pass and each shader batch inside it is a profiler GPU scope,
+     * and every draw is counted against it.
      */
 
     // Internal
@@ -43,6 +46,7 @@ class RenderSystem extends SystemPackage {
     private VAOManager vaoManager;
     private CameraManager cameraManager;
     private SkinnedBufferManager skinnedBufferManager;
+    private ProfilerManager profilerManager;
 
     // Skinned VAO Cache
     private Int2ObjectOpenHashMap<Object2IntOpenHashMap<SkinnedBufferInstance>> windowID2SkinnedVAOCache;
@@ -60,6 +64,7 @@ class RenderSystem extends SystemPackage {
         this.vaoManager = get(VAOManager.class);
         this.cameraManager = get(CameraManager.class);
         this.skinnedBufferManager = get(SkinnedBufferManager.class);
+        this.profilerManager = get(ProfilerManager.class);
     }
 
     // Draw \\
@@ -83,6 +88,7 @@ class RenderSystem extends SystemPackage {
             if (fboWindow != null)
                 cameraManager.pushCamera(fboWindow);
 
+            profilerManager.beginGpuPass(window, target.getFboData().getName());
             bindTarget(window, target);
             RenderGLSLUtility.enableDepth();
 
@@ -101,6 +107,7 @@ class RenderSystem extends SystemPackage {
 
             compositeRenderSystem.draw(queue, target, window);
             target.unbind();
+            profilerManager.endGpuScope(window);
         }
 
         queue.rewindFrame();
@@ -113,6 +120,7 @@ class RenderSystem extends SystemPackage {
         if (queue == null)
             return;
 
+        profilerManager.beginGpuPass(window, EngineSetting.PROFILER_GPU_SCREEN_PASS);
         bindTarget(window, target);
         RenderGLSLUtility.enableDepth();
         RenderGLSLUtility.enableBlending();
@@ -128,6 +136,8 @@ class RenderSystem extends SystemPackage {
 
         if (target != null)
             target.unbind();
+
+        profilerManager.endGpuScope(window);
     }
 
     private void drawDepthSortedBatches(RenderQueueHandle queue, FBOInstance fbo, WindowInstance window) {
@@ -170,6 +180,7 @@ class RenderSystem extends SystemPackage {
                 continue;
 
             MaterialInstance representative = batch.getRepresentativeMaterial();
+            profilerManager.beginGpuBatch(window, representative.getShaderHandle().getShaderName());
             bindMaterial(representative);
             bindSourceUBOs(batch);
 
@@ -202,6 +213,7 @@ class RenderSystem extends SystemPackage {
             }
 
             batch.clear();
+            profilerManager.endGpuScope(window);
         }
 
         if (activeMask != null)
@@ -288,6 +300,7 @@ class RenderSystem extends SystemPackage {
             RenderGLSLUtility.drawElements(model.getIndexCount());
 
         RenderGLSLUtility.unbindVAO();
+        profilerManager.recordDraw(window, model.getIndexCount() / EngineSetting.TRIANGLE_VERTEX_COUNT);
     }
 
     // Submit \\
@@ -499,6 +512,7 @@ class RenderSystem extends SystemPackage {
             MaterialInstance material = batch.getMaterial();
             material.setUniform(EngineSetting.UNIFORM_BONE_PALETTE, skinnedBuffer.getBonePaletteTexture());
 
+            profilerManager.beginGpuBatch(window, material.getShaderHandle().getShaderName());
             bindSkinnedMaterial(batch, material);
 
             int vao = getOrCreateSkinnedVAO(skinnedBuffer, window);
@@ -508,6 +522,10 @@ class RenderSystem extends SystemPackage {
                     skinnedBuffer.getMeshHandle().getIndexCount(),
                     skinnedBuffer.getInstanceCount());
             RenderGLSLUtility.unbindVAO();
+
+            profilerManager.recordDraw(window, skinnedBuffer.getMeshHandle().getIndexCount()
+                    / EngineSetting.TRIANGLE_VERTEX_COUNT * skinnedBuffer.getInstanceCount());
+            profilerManager.endGpuScope(window);
         }
     }
 

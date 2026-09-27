@@ -2,6 +2,7 @@ package engine.root;
 
 import java.util.concurrent.Future;
 
+import application.kernel.profilerpipeline.profiler.ProfilerPhase;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.settings.Settings;
 
@@ -11,7 +12,9 @@ public abstract class SystemPackage extends UtilityPackage {
      * Base class for every system in the engine. Runs the strict lifecycle
      * CREATE, GET, AWAKE, RELEASE, START, then UPDATE, FIXED_UPDATE,
      * LATE_UPDATE and RENDER each frame, and DISPOSE at shutdown, verifying
-     * each phase transition. Systems are only ever created through a manager.
+     * each phase transition. While the profiler samples, each per-frame phase
+     * is timed and recorded as this system's own time. Systems are only ever
+     * created through a manager.
      */
 
     // Core
@@ -224,9 +227,13 @@ public abstract class SystemPackage extends UtilityPackage {
     // Update \\
 
     void internalUpdate() {
+
         if (!this.verifyContext(SystemContext.UPDATE))
             return;
+
+        long profileStart = beginProfile();
         this.update();
+        endProfile(ProfilerPhase.UPDATE, profileStart);
     }
 
     protected void update() {
@@ -235,9 +242,13 @@ public abstract class SystemPackage extends UtilityPackage {
     // Fixed Update \\
 
     void internalFixedUpdate() {
+
         if (!this.verifyContext(SystemContext.FIXED_UPDATE))
             return;
+
+        long profileStart = beginProfile();
         this.fixedUpdate();
+        endProfile(ProfilerPhase.FIXED_UPDATE, profileStart);
     }
 
     protected void fixedUpdate() {
@@ -246,9 +257,13 @@ public abstract class SystemPackage extends UtilityPackage {
     // Late Update \\
 
     void internalLateUpdate() {
+
         if (!this.verifyContext(SystemContext.LATE_UPDATE))
             return;
+
+        long profileStart = beginProfile();
         this.lateUpdate();
+        endProfile(ProfilerPhase.LATE_UPDATE, profileStart);
     }
 
     protected void lateUpdate() {
@@ -257,9 +272,13 @@ public abstract class SystemPackage extends UtilityPackage {
     // Render \\
 
     void internalRender() {
+
         if (!this.verifyContext(SystemContext.RENDER))
             return;
+
+        long profileStart = beginProfile();
         this.render();
+        endProfile(ProfilerPhase.RENDER, profileStart);
     }
 
     protected void render() {
@@ -274,6 +293,17 @@ public abstract class SystemPackage extends UtilityPackage {
     }
 
     protected void dispose() {
+    }
+
+    // Profile \\
+
+    private long beginProfile() {
+        return EngineUtility.profilerManager.isSampling() ? System.nanoTime() : EngineSetting.PROFILER_UNSTAMPED;
+    }
+
+    private void endProfile(ProfilerPhase phase, long profileStart) {
+        if (profileStart != EngineSetting.PROFILER_UNSTAMPED)
+            EngineUtility.profilerManager.recordSystem(this, phase, System.nanoTime() - profileStart);
     }
 
     // Accessible \\

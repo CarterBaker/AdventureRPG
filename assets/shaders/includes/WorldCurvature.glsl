@@ -20,6 +20,7 @@
  * function, so nothing ever drifts off the ground it stands on at range.
  */
 
+// Must match EngineSetting.WORLD_CURVATURE_STRENGTH, which culls macro terrain sunk below the horizon.
 const float WORLD_CURVATURE_STRENGTH = 0.00016;
 
 vec3 applyWorldCurvature(vec3 worldPos) {

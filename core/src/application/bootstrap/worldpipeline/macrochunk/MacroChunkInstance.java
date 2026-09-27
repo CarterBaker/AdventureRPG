@@ -10,10 +10,13 @@ public class MacroChunkInstance extends InstancePackage {
 
     /*
      * One distant, world-aligned tile of MACRO_CHUNK_SIZE² chunks drawn as a
-     * single coarse heightfield mesh. Pooled by MacroQueueManager. Geometry
-     * waits in the sync container between build and upload, while the mesh,
-     * model and position UBO are main-thread only and survive pooling, so a
-     * reused macro reuploads into the buffers it already owns.
+     * single coarse heightfield mesh. Pooled by MacroQueueManager. The ring
+     * sets the lattice resolution the tile should be built at and the upload
+     * records the one it was built at, so a tile whose resolution band moves
+     * is rebuilt while its old mesh keeps drawing. Geometry waits in the sync container between
+     * build and upload, while the mesh, model and position UBO are main-thread
+     * only and survive pooling, so a reused macro reuploads into the buffers
+     * it already owns.
      */
 
     // Internal
@@ -26,6 +29,15 @@ public class MacroChunkInstance extends InstancePackage {
     private ModelInstance modelInstance;
     private UBOInstance positionUBO;
     private boolean rendered;
+    private boolean hasGeometry;
+
+    // Target
+    private int targetCellsPerSide;
+    private float nearestDistanceBlocks;
+
+    // Built
+    private int builtCellsPerSide;
+    private float horizonReachBlocks;
 
     // Placement
     private float angleFromCenter;
@@ -53,6 +65,9 @@ public class MacroChunkInstance extends InstancePackage {
     public void reset() {
         macroDataSyncContainer.resetData();
         this.rendered = false;
+        this.hasGeometry = false;
+        this.builtCellsPerSide = 0;
+        this.horizonReachBlocks = 0f;
     }
 
     // GPU \\
@@ -73,6 +88,28 @@ public class MacroChunkInstance extends InstancePackage {
 
     public void setRendered(boolean rendered) {
         this.rendered = rendered;
+    }
+
+    public void setHasGeometry(boolean hasGeometry) {
+        this.hasGeometry = hasGeometry;
+    }
+
+    // Target \\
+
+    public void setTarget(int cellsPerSide, float nearestDistanceBlocks) {
+        this.targetCellsPerSide = cellsPerSide;
+        this.nearestDistanceBlocks = nearestDistanceBlocks;
+    }
+
+    public boolean needsRebuild() {
+        return builtCellsPerSide != targetCellsPerSide;
+    }
+
+    // Built \\
+
+    public void setBuilt(int cellsPerSide, float horizonReachBlocks) {
+        this.builtCellsPerSide = cellsPerSide;
+        this.horizonReachBlocks = horizonReachBlocks;
     }
 
     // Placement \\
@@ -110,6 +147,22 @@ public class MacroChunkInstance extends InstancePackage {
 
     public boolean isRendered() {
         return rendered;
+    }
+
+    public boolean hasGeometry() {
+        return hasGeometry;
+    }
+
+    public int getTargetCellsPerSide() {
+        return targetCellsPerSide;
+    }
+
+    public float getNearestDistanceBlocks() {
+        return nearestDistanceBlocks;
+    }
+
+    public float getHorizonReachBlocks() {
+        return horizonReachBlocks;
     }
 
     public float getAngleFromCenter() {

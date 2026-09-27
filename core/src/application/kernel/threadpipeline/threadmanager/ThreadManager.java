@@ -6,13 +6,15 @@ import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.EngineUtility;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectCollection;
 
 public class ThreadManager extends ManagerPackage {
 
     /*
      * Owns every named thread pool and is the single dispatch point for async
-     * work. executeAsync() tracks each task in flight for backpressure and
-     * carries the submitting context's crash boundary onto the worker.
+     * work. executeAsync() tracks each task in flight for backpressure, times
+     * it for the profiler, and carries the submitting context's crash boundary
+     * onto the worker.
      */
 
     // Retrieval Mapping
@@ -72,11 +74,16 @@ public class ThreadManager extends ManagerPackage {
         Runnable isolatedTask = internal.isolateAsync(task);
         handle.beginTask();
         return handle.getExecutor().submit(() -> {
+            long start = System.nanoTime();
             try {
                 isolatedTask.run();
             } finally {
-                handle.endTask();
+                handle.endTask(System.nanoTime() - start);
             }
         });
+    }
+
+    public ObjectCollection<ThreadHandle> getThreadHandles() {
+        return threadName2ThreadHandle.values();
     }
 }

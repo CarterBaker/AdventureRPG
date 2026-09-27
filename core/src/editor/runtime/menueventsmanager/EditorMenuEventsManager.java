@@ -6,6 +6,7 @@ import editor.runtime.menueventsmanager.menus.EditorBranch;
 import editor.runtime.menueventsmanager.menus.InfoPanelBranch;
 import editor.runtime.menueventsmanager.menus.ItemEditorBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
+import editor.runtime.menueventsmanager.menus.ProfilerBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
 import engine.root.ManagerPackage;
 
@@ -24,5 +25,6 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(InfoPanelBranch.class);
         create(ConsoleBranch.class);
         create(CommandConsoleBranch.class);
+        create(ProfilerBranch.class);
     }
 }

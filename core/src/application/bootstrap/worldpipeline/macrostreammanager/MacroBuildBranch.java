@@ -18,10 +18,12 @@ public class MacroBuildBranch extends BranchPackage {
     /*
      * Async — builds a macro's mesh on the MacroStreaming pool, away from
      * chunk streaming. The tile's lattice is sampled straight from the terrain
-     * noise, ground or sea surface only, and colored from the biome field's
-     * map colors, so no block, neighbor or chunk is ever touched. Sampling
-     * runs outside the macro's lock since a reserved build pins the macro;
-     * only the mesh assembly into its shared lists runs under it.
+     * noise, ground or sea surface only, at the resolution its distance calls
+     * for, and colored from the biome field's map colors, so no block,
+     * neighbor or chunk is ever touched. The target is read on the main
+     * thread when the build is reserved, sampling runs outside the macro's
+     * lock since a reserved build pins the macro, and only the mesh assembly
+     * into its shared lists runs under it.
      */
 
     // Internal
@@ -32,8 +34,7 @@ public class MacroBuildBranch extends BranchPackage {
     private MacroBuildAsyncContainer macroBuildAsyncContainer;
 
     // Settings
-    private int samplesPerSide;
-    private float cellSizeBlocks;
+    private float tileSizeBlocks;
     private float surfaceOffsetBlocks;
 
     // Base \\
@@ -45,9 +46,7 @@ public class MacroBuildBranch extends BranchPackage {
         this.macroBuildAsyncContainer = create(MacroBuildAsyncContainer.class);
 
         // Settings
-        this.samplesPerSide = MacroBuildAsyncContainer.SAMPLES_PER_SIDE;
-        this.cellSizeBlocks = (float) (EngineSetting.MACRO_CHUNK_SIZE * EngineSetting.CHUNK_SIZE)
-                / EngineSetting.MACRO_CELLS_PER_SIDE;
+        this.tileSizeBlocks = EngineSetting.MACRO_CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
         this.surfaceOffsetBlocks = EngineSetting.MACRO_SURFACE_OFFSET_BLOCKS;
     }
 
@@ -68,18 +67,20 @@ public class MacroBuildBranch extends BranchPackage {
         MacroDataSyncContainer sync = macro.getMacroDataSyncContainer();
         WorldHandle worldHandle = macro.getWorldHandle();
         long coordinate = macro.getCoordinate();
+        int cellsPerSide = macro.getTargetCellsPerSide();
 
         executeAsync(threadHandle, () -> {
 
             MacroBuildAsyncContainer scratch = macroBuildAsyncContainer.getInstance();
 
             try {
+                scratch.cellsPerSide = cellsPerSide;
                 sampleLattice(scratch, worldHandle, coordinate);
 
                 sync.acquire();
                 try {
                     macroMeshBranch.assembleMesh(scratch, sync.getVertices(), sync.getIndices());
-                    sync.markBuilt();
+                    sync.markBuilt(cellsPerSide, scratch.maxHeightBlocks);
                 } finally {
                     sync.release();
                 }
@@ -96,20 +97,27 @@ public class MacroBuildBranch extends BranchPackage {
 
         double originX = (double) Coordinate2Long.unpackX(coordinate) * EngineSetting.CHUNK_SIZE;
         double originZ = (double) Coordinate2Long.unpackY(coordinate) * EngineSetting.CHUNK_SIZE;
+        int samplesPerSide = scratch.getSamplesPerSide();
+        float cellSizeBlocks = tileSizeBlocks / scratch.cellsPerSide;
         BiomeBlendStruct blend = scratch.blend;
+
+        scratch.maxHeightBlocks = -Float.MAX_VALUE;
+        scratch.minHeightBlocks = Float.MAX_VALUE;
 
         for (int z = 0; z < samplesPerSide; z++) {
             for (int x = 0; x < samplesPerSide; x++) {
 
                 int index = z * samplesPerSide + x;
-
-                scratch.heightBlocks[index] = worldGenerationManager.sampleSurfaceHeight(
+                float height = worldGenerationManager.sampleSurfaceHeight(
                         worldHandle,
                         originX + x * cellSizeBlocks,
                         originZ + z * cellSizeBlocks,
                         blend) + surfaceOffsetBlocks;
 
+                scratch.heightBlocks[index] = height;
                 scratch.packedColors[index] = resolvePackedColor(blend);
+                scratch.maxHeightBlocks = Math.max(scratch.maxHeightBlocks, height);
+                scratch.minHeightBlocks = Math.min(scratch.minHeightBlocks, height);
             }
         }
     }

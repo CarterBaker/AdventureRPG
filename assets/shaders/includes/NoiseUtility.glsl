@@ -368,6 +368,37 @@ float periodicGradientNoise2D(vec2 p, vec2 period, uint seed) {
     return mix(mix(n00, n10, u.x), mix(n01, n11, u.x), u.y);
 }
 
+// Two independent periodic noise fields at the same point, one per seed, sharing a single walk of the
+// lattice: identical to two periodicGradientNoise2D calls, at the cost of one set of cell and fade math.
+vec2 periodicGradientNoise2DPair(vec2 p, vec2 period, uint seedA, uint seedB) {
+    vec2 cell = floor(p);
+    vec2 f = p - cell;
+    vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+    vec2 c0 = mod(cell, period);
+    vec2 c1 = mod(cell + 1.0, period);
+
+    vec2 d00 = f - vec2(0.0, 0.0);
+    vec2 d10 = f - vec2(1.0, 0.0);
+    vec2 d01 = f - vec2(0.0, 1.0);
+    vec2 d11 = f - vec2(1.0, 1.0);
+
+    vec2 n00 = vec2(
+        dot(periodicGradient2D(vec2(c0.x, c0.y), seedA), d00),
+        dot(periodicGradient2D(vec2(c0.x, c0.y), seedB), d00));
+    vec2 n10 = vec2(
+        dot(periodicGradient2D(vec2(c1.x, c0.y), seedA), d10),
+        dot(periodicGradient2D(vec2(c1.x, c0.y), seedB), d10));
+    vec2 n01 = vec2(
+        dot(periodicGradient2D(vec2(c0.x, c1.y), seedA), d01),
+        dot(periodicGradient2D(vec2(c0.x, c1.y), seedB), d01));
+    vec2 n11 = vec2(
+        dot(periodicGradient2D(vec2(c1.x, c1.y), seedA), d11),
+        dot(periodicGradient2D(vec2(c1.x, c1.y), seedB), d11));
+
+    return mix(mix(n00, n10, u.x), mix(n01, n11, u.x), u.y);
+}
+
 uvec3 pcgHash3D(uvec3 v) {
     v = v * 1664525u + 1013904223u;
     v.x += v.y * v.z;

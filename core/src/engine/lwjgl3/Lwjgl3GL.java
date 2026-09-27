@@ -459,6 +459,28 @@ class Lwjgl3GL implements GL40 {
         GL40C.glPatchParameteri(pname, value);
     }
 
+    // Timer Queries \\
+
+    public int glGenQuery() {
+        return GL15C.glGenQueries();
+    }
+
+    public void glDeleteQuery(int id) {
+        GL15C.glDeleteQueries(id);
+    }
+
+    public void glQueryCounter(int id, int target) {
+        GL33C.glQueryCounter(id, target);
+    }
+
+    public int glGetQueryObjecti(int id, int pname) {
+        return GL15C.glGetQueryObjecti(id, pname);
+    }
+
+    public long glGetQueryObjecti64(int id, int pname) {
+        return GL33C.glGetQueryObjecti64(id, pname);
+    }
+
     // GBuffer \\
 
     public void glDrawBuffers(int[] buffers) {

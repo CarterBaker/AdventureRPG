@@ -2,6 +2,7 @@ package application.kernel;
 
 import application.kernel.frameratepipeline.FrameRatePipeline;
 import application.kernel.inputpipeline.InputPipeline;
+import application.kernel.profilerpipeline.ProfilerPipeline;
 import application.kernel.threadpipeline.ThreadPipeline;
 import application.kernel.windowpipeline.WindowPipeline;
 import engine.root.AssemblyPackage;
@@ -11,7 +12,8 @@ public class ApplicationKernelAssembly extends AssemblyPackage {
     /*
      * Creates and owns all kernel pipelines in dependency order.
      * Thread infrastructure is registered before windowing since
-     * the window manager may depend on async execution.
+     * the window manager may depend on async execution, and the
+     * profiler last, since it reads the thread pools.
      */
     @Override
     protected void create() {
@@ -19,5 +21,6 @@ public class ApplicationKernelAssembly extends AssemblyPackage {
         create(WindowPipeline.class);
         create(InputPipeline.class);
         create(FrameRatePipeline.class);
+        create(ProfilerPipeline.class);
     }
 }

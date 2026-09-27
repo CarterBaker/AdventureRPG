@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
+import application.kernel.profilerpipeline.profiler.ProfilerPhase;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.windowpipeline.window.WindowData;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -449,14 +450,28 @@ public class EnginePackage extends ManagerPackage {
     }
 
     private final void updateCycle() {
+
         EngineUtility.frameRateManager.beginFrame();
+        EngineUtility.profilerManager.beginFrame();
+
         this.flushPendingContexts();
         this.flushCrashedContexts();
+
         this.internalUpdate();
+        EngineUtility.profilerManager.markPhase(ProfilerPhase.UPDATE);
+
         this.internalFixedUpdate();
+        EngineUtility.profilerManager.markPhase(ProfilerPhase.FIXED_UPDATE);
+
         this.internalLateUpdate();
+        EngineUtility.profilerManager.markPhase(ProfilerPhase.LATE_UPDATE);
+
         this.internalRender();
+        EngineUtility.profilerManager.markPhase(ProfilerPhase.RENDER);
+
         this.internalDraw();
+        EngineUtility.profilerManager.markPhase(ProfilerPhase.DRAW);
+
         EngineUtility.frameRateManager.capFrameRate();
     }
 

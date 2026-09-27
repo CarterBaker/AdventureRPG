@@ -4,43 +4,72 @@
 
 #include "includes/CameraData.glsl"
 #include "includes/SkyColorData.glsl"
-#include "includes/SettingsData.glsl"
+#include "includes/SunLightData.glsl"
+#include "includes/WorldCurvature.glsl"
+#include "sky/util/SkyColor.glsl"
 
 /*
-* Canonical fog distance curve, driven entirely by true per-fragment
- * world-space horizontal distance from the camera. Replaces the old
- * per-chunk u_distanceFromCenter approximation, which gave every
- * fragment of a chunk the exact same fogT — a hard, chunk-shaped tint
- * that seamed visibly at the near-tessellation-ring boundary and only
- * worsened with larger chunks. Every consumer, forward or deferred, now
- * calls the same function with the same two inputs (a world position and
- * the camera position), so there is nothing left to desync between
- * passes and no per-chunk value to smuggle through the G-buffer.
+ * Distance fog measured against the edge of the visible world. The shared
+ * world curvature bends ground down by k·d² from the player, so ground h
+ * blocks above sea level stays in view out to the eye's horizon reach plus
+ * its own, sqrt((h - sea) / k); a fragment's horizon fraction is its true
+ * horizontal distance over that limit. Fog rises along that fraction from
+ * clear at the player to total where the fragment is about to sink below the
+ * horizon, so every ridge fades by how close it stands to the world's edge
+ * and low ground melts away sooner than the peaks rising behind it.
  *
- * Fog COLOR (u_skyFogColor) is still never derived here — it's computed
- * once per frame by the weather pipeline's SkyColorBranch and read
- * straight from SkyColorData.
+ * Fog color follows the same fraction from the weather pipeline's fog tint
+ * (u_skyFogColor) near the player to the exact sky color along the view
+ * direction at the horizon, glow on the sun side, anti-solar belt opposite,
+ * so the world's rim dissolves seamlessly into the sky above it and
+ * horizons layer into the sky's own colors.
+ *
+ * Height is recovered from the curved position the depth buffer holds by
+ * undoing the bend, and every distance is taken from the player, the same
+ * origin the curvature uses. Reaches are measured above sea level, or above
+ * the player where the player stands lower, in a dry basin or underwater, so
+ * the horizon never collapses onto the eye.
  */
 
-const float FOG_NEAR_CURVE_WEIGHT = 0.45;
-const float FOG_FAR_CURVE_WEIGHT  = 0.35;
-const float FOG_MAX_AMOUNT        = 0.80;
+// Must match EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS and MACRO_HORIZON_EYE_MARGIN_BLOCKS.
+const float FOG_SEA_LEVEL_BLOCKS  = 160.0;
+const float FOG_EYE_MARGIN_BLOCKS = 8.0;
 
-float computeFogAmount(vec3 worldPos) {
-    float halfDWorld       = u_renderDistance * 0.5 - 0.5;
-    float maxDistanceWorld = max(halfDWorld * u_chunkSize * sqrt(2.0), 0.0001);
+const float FOG_EPSILON           = 0.0001;
+const float FOG_HORIZON_EXPONENT  = 1.5;
+const float FOG_EDGE_START        = 0.75;
 
-    float linearDist = clamp(distance(worldPos.xz, u_cameraPosition.xz) / maxDistanceWorld, 0.0, 1.0);
-
-    float rawFog = smoothstep(0.0, 0.5, linearDist) * FOG_NEAR_CURVE_WEIGHT
-    + smoothstep(0.5, 1.0, linearDist) * FOG_FAR_CURVE_WEIGHT;
-
-    return min(rawFog, FOG_MAX_AMOUNT);
+float resolveFogHorizonReach(float heightBlocks, float referenceBlocks) {
+    return sqrt(max(heightBlocks - referenceBlocks, 0.0) / WORLD_CURVATURE_STRENGTH);
 }
 
-vec3 applyAtmosphericFog(vec3 litColor, vec3 worldPos) {
-    float fogT = computeFogAmount(worldPos);
-    return mix(litColor, u_skyFogColor, fogT);
+// Distance from the player over the distance at which this fragment sinks below the horizon, 0 to 1.
+float computeHorizonFraction(vec3 curvedWorldPos) {
+    vec2  fromPlayer = curvedWorldPos.xz - u_playerPosition.xz;
+    float distSq     = dot(fromPlayer, fromPlayer);
+    float flatHeight = curvedWorldPos.y + distSq * WORLD_CURVATURE_STRENGTH;
+    float reference  = min(FOG_SEA_LEVEL_BLOCKS, u_playerPosition.y);
+
+    float limit = resolveFogHorizonReach(u_cameraPosition.y + FOG_EYE_MARGIN_BLOCKS, reference)
+    + resolveFogHorizonReach(flatHeight, reference);
+
+    return clamp(sqrt(distSq) / max(limit, FOG_EPSILON), 0.0, 1.0);
+}
+
+float computeFogAmount(float horizonFraction) {
+    return pow(horizonFraction, FOG_HORIZON_EXPONENT);
+}
+
+// Pulls an already light-weighted fog blend to total fog at the rim of the visible world.
+float resolveFogEdge(float fogBlend, float horizonFraction) {
+    return mix(clamp(fogBlend, 0.0, 1.0), 1.0, smoothstep(FOG_EDGE_START, 1.0, horizonFraction));
+}
+
+vec3 resolveFogColor(vec3 viewDir, float horizonFraction) {
+    vec3 skyDir = normalize(vec3(viewDir.x, max(viewDir.y, 0.0), viewDir.z) + vec3(0.0, FOG_EPSILON, 0.0));
+    vec3 sky    = resolveSkyColor(skyDir, normalize(u_sunDirection), 0.0);
+
+    return mix(u_skyFogColor, sky, horizonFraction);
 }
 
 #endif

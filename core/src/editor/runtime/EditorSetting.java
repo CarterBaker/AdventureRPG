@@ -72,6 +72,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
+    public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
 
     // Commands
