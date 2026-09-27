@@ -28,9 +28,10 @@ public class WorldGenerationManager extends ManagerPackage {
      * Generates terrain per chunk column. computeColumn() samples the biome
      * field on a macro grid and interpolates height, flooding and dressing
      * blocks to every block column, and generateSubChunk() fills subchunks,
-     * leaving fully empty or uniform ones unrealized. Output is a pure function
-     * of seed and coordinate, so it is cached per chunk and agrees across chunk
-     * borders.
+     * leaving fully empty or uniform ones unrealized. sampleSurfaceHeight()
+     * gives the coarse ground or sea surface at any point for distant macro
+     * terrain. Output is a pure function of seed and coordinate, so it is
+     * cached per chunk and agrees across chunk borders.
      */
 
     // Internal
@@ -407,6 +408,25 @@ public class WorldGenerationManager extends ManagerPackage {
         probe.hasComputedColumn = true;
 
         return probe;
+    }
+
+    // Surface — any single point, coarse \\
+
+    public float sampleSurfaceHeight(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
+
+        biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, outBlend);
+
+        float macroShape = TerrainShapeUtility.computeMacroShapeBlocks(
+                worldHandle.getSeed(), worldX, worldZ,
+                worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
+                outBlend);
+
+        float groundHeight = TerrainShapeUtility.clampGroundHeightBlocks(macroShape, 0f);
+
+        if (outBlend.getCoastalWeight() > EngineSetting.OCEAN_REACH_THRESHOLD)
+            return Math.max(groundHeight, EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
+
+        return groundHeight;
     }
 
     // Grid Interpolation \\

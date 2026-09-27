@@ -6,6 +6,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
+import application.bootstrap.worldpipeline.macrostreammanager.MacroStreamManager;
 import application.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -17,15 +18,17 @@ public class WorldStreamManager extends ManagerPackage {
     /*
      * Single public entry point for world streaming. Owns the grid registry and
      * grid lifecycle, one grid per window, and drives coordinate tracking each
-     * frame. A rebuild re-lays a grid's slots in place, and the frame a grid
-     * wraps around the player raises wrappingPlayer so WorldTickManager holds
-     * off.
+     * frame. Chunks, megas and the distant macro terrain beyond the grid each
+     * stream through their own manager. A rebuild re-lays a grid's slots in
+     * place, and the frame a grid wraps around the player raises
+     * wrappingPlayer so WorldTickManager holds off.
      */
 
     // Internal
     private GridManager gridManager;
     private ChunkStreamManager chunkStreamManager;
     private MegaStreamManager megaStreamManager;
+    private MacroStreamManager macroStreamManager;
 
     // Grids
     private ObjectArrayList<GridInstance> grids;
@@ -41,6 +44,7 @@ public class WorldStreamManager extends ManagerPackage {
         this.grids = new ObjectArrayList<>();
         this.chunkStreamManager = create(ChunkStreamManager.class);
         this.megaStreamManager = create(MegaStreamManager.class);
+        this.macroStreamManager = create(MacroStreamManager.class);
     }
 
     @Override
@@ -75,11 +79,13 @@ public class WorldStreamManager extends ManagerPackage {
         grids.remove(grid);
         chunkStreamManager.onGridRemoved(grid);
         megaStreamManager.onGridRemoved(grid);
+        macroStreamManager.onGridRemoved(grid);
     }
 
     public void rebuildGrid(GridInstance grid) {
         chunkStreamManager.onGridRebuilt(grid);
         megaStreamManager.onGridRebuilt(grid);
+        macroStreamManager.onGridRebuilt(grid);
         gridManager.rebuildGrid(grid);
     }
 

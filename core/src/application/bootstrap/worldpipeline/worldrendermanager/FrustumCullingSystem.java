@@ -10,10 +10,11 @@ import engine.root.SystemPackage;
 class FrustumCullingSystem extends SystemPackage {
 
     /*
-     * Per-frame frustum culling for world chunks and mega chunks. refresh() takes
-     * a GridInstance and reads the camera from its window — each grid culls
-     * against its own view independently. This enables the editor to run multiple
-     * grids with different windows simultaneously without interference.
+     * Per-frame frustum culling for world chunks, mega chunks and macro chunks,
+     * macros by angle alone since they lie beyond every distance cap. refresh()
+     * takes a GridInstance and reads the camera from its window — each grid
+     * culls against its own view independently. This enables the editor to run
+     * multiple grids with different windows simultaneously without interference.
      */
 
     // Cached per awake
@@ -96,6 +97,13 @@ class FrustumCullingSystem extends SystemPackage {
                 (float) Math.atan(megaAngularBleedBase / Math.max(distance, EngineSetting.DIVISION_EPSILON)));
 
         return isWithinAngle(slot.getMegaAngleFromCenter(), effectiveAngle + megaBleed);
+    }
+
+    boolean isMacroVisible(float angleFromCenter, float angularRadius) {
+
+        float bleed = Math.max(EngineSetting.FRUSTUM_MIN_BLEED, angularRadius);
+
+        return isWithinAngle(angleFromCenter, effectiveAngle + bleed);
     }
 
     private boolean isWithinAngle(float slotAngle, float tolerance) {

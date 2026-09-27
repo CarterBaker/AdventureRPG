@@ -326,6 +326,19 @@ public class BiomeManager extends ManagerPackage {
         return getDisplayName(getBiomeHandleFromBiomeName(parentName));
     }
 
+    public int getMapColor(BiomeHandle biomeHandle) {
+
+        if (biomeHandle.hasMapColor())
+            return biomeHandle.getMapColor();
+
+        String parentName = variantName2ParentName.get(biomeHandle.getBiomeName());
+
+        if (parentName == null)
+            return EngineSetting.BIOME_MAP_COLOR_UNDEFINED;
+
+        return getMapColor(getBiomeHandleFromBiomeName(parentName));
+    }
+
     public short getBiomeIDFromBiomeName(String biomeName) {
         return getBiomeHandleFromBiomeName(biomeName).getBiomeID();
     }

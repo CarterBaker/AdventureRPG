@@ -14,6 +14,7 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
+import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
@@ -30,11 +31,11 @@ import it.unimi.dsi.fastutil.objects.ObjectIterator;
 public class WorldRenderManager extends ManagerPackage {
 
     /*
-     * Owns the GPU representation of every rendered chunk and mega.
+     * Owns the GPU representation of every rendered chunk, mega and macro.
      * updateEntries() reconciles a rebuilt packet bucket by bucket, reuploading
      * into the same buffers so per-window VAO clones stay valid, and pushes
      * each visible entry with its slot UBO, plus the grid's ocean UBO for
-     * water.
+     * water. Distant macro terrain is delegated to MacroRenderSystem.
      */
 
     private MaterialManager materialManager;
@@ -43,6 +44,7 @@ public class WorldRenderManager extends ManagerPackage {
     private RenderManager renderManager;
     private WorldStreamManager worldStreamManager;
     private FrustumCullingSystem frustumCullingSystem;
+    private MacroRenderSystem macroRenderSystem;
 
     private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> chunkEntries;
     private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> megaEntries;
@@ -52,6 +54,7 @@ public class WorldRenderManager extends ManagerPackage {
     @Override
     protected void create() {
         this.frustumCullingSystem = create(FrustumCullingSystem.class);
+        this.macroRenderSystem = create(MacroRenderSystem.class);
         this.chunkEntries = new Long2ObjectOpenHashMap<>();
         this.megaEntries = new Long2ObjectOpenHashMap<>();
         this.batchedChunks = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
@@ -92,6 +95,7 @@ public class WorldRenderManager extends ManagerPackage {
 
             frustumCullingSystem.refresh(grid);
 
+            macroRenderSystem.renderGridMacros(grid, window, worldFbo);
             renderGridMegas(grid, window, worldFbo);
             renderGridChunks(grid, window, worldFbo);
         }
@@ -212,6 +216,24 @@ public class WorldRenderManager extends ManagerPackage {
 
     public boolean addMegaInstance(WorldRenderInstance worldRenderInstance) {
         return updateEntries(worldRenderInstance, megaEntries);
+    }
+
+    // Macro \\
+
+    public void placeMacroInstance(MacroChunkInstance macro, GridInstance grid) {
+        macroRenderSystem.placeMacro(macro, grid);
+    }
+
+    public void addMacroInstance(MacroChunkInstance macro) {
+        macroRenderSystem.uploadMacro(macro);
+    }
+
+    public void removeMacroInstance(MacroChunkInstance macro) {
+        macroRenderSystem.hideMacro(macro);
+    }
+
+    public void disposeMacroInstance(MacroChunkInstance macro) {
+        macroRenderSystem.disposeMacro(macro);
     }
 
     // Mega Readiness \\

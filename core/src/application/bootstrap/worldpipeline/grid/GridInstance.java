@@ -11,6 +11,7 @@ import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.weatherpipeline.wind.WindInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
+import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -21,6 +22,7 @@ import engine.root.InstancePackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -29,9 +31,10 @@ public class GridInstance extends InstancePackage {
 
     /*
      * The streaming grid around one window's focal entity. Owns load order,
-     * slots, active chunks and megas, pending requests, render queues, and the
-     * window's own location state and UBO instances. rebuildSlots() swaps the
-     * layout in place so holders stay valid.
+     * slots, active chunks, megas and macros, pending requests, render queues,
+     * the macro ring anchored to the active chunk, and the window's own
+     * location state and UBO instances. rebuildSlots() swaps the layout in
+     * place so holders stay valid.
      */
 
     // Focal
@@ -85,6 +88,13 @@ public class GridInstance extends InstancePackage {
     private Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks;
     private LongLinkedOpenHashSet loadRequests;
     private LongLinkedOpenHashSet unloadRequests;
+
+    // Macro State — wanted macro coordinates, near to far, for the anchor chunk
+    private Long2ObjectLinkedOpenHashMap<MacroChunkInstance> activeMacroChunks;
+    private LongArrayList macroLoadOrder;
+    private LongOpenHashSet macroCoordinates;
+    private long macroAnchorCoordinate;
+    private int macroAdmitCursor;
 
     // Render Queues — chunk/mega world coordinate → slot handle
     private Long2ObjectLinkedOpenHashMap<GridSlotHandle> chunkRenderQueue;
@@ -170,6 +180,12 @@ public class GridInstance extends InstancePackage {
         this.activeMegaChunks = new Long2ObjectLinkedOpenHashMap<>();
         this.loadRequests = new LongLinkedOpenHashSet();
         this.unloadRequests = new LongLinkedOpenHashSet();
+
+        // Macro State
+        this.activeMacroChunks = new Long2ObjectLinkedOpenHashMap<>();
+        this.macroLoadOrder = new LongArrayList();
+        this.macroCoordinates = new LongOpenHashSet();
+        resetMacroRing();
 
         // Render Queues
         this.chunkRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
@@ -284,6 +300,32 @@ public class GridInstance extends InstancePackage {
 
     public long getActiveChunkCoordinate() {
         return activeChunkCoordinate;
+    }
+
+    // Macro Ring \\
+
+    public void resetMacroRing() {
+        macroLoadOrder.clear();
+        macroCoordinates.clear();
+        this.macroAnchorCoordinate = Coordinate2Long.pack(-1, -1);
+        this.macroAdmitCursor = 0;
+    }
+
+    public void anchorMacroRing(long anchorCoordinate) {
+        this.macroAnchorCoordinate = anchorCoordinate;
+        this.macroAdmitCursor = 0;
+    }
+
+    public long getMacroAnchorCoordinate() {
+        return macroAnchorCoordinate;
+    }
+
+    public int getMacroAdmitCursor() {
+        return macroAdmitCursor;
+    }
+
+    public void setMacroAdmitCursor(int macroAdmitCursor) {
+        this.macroAdmitCursor = macroAdmitCursor;
     }
 
     // Scan Iteration \\
@@ -432,6 +474,18 @@ public class GridInstance extends InstancePackage {
 
     public Long2ObjectLinkedOpenHashMap<MegaChunkInstance> getActiveMegaChunks() {
         return activeMegaChunks;
+    }
+
+    public Long2ObjectLinkedOpenHashMap<MacroChunkInstance> getActiveMacroChunks() {
+        return activeMacroChunks;
+    }
+
+    public LongArrayList getMacroLoadOrder() {
+        return macroLoadOrder;
+    }
+
+    public LongOpenHashSet getMacroCoordinates() {
+        return macroCoordinates;
     }
 
     public LongLinkedOpenHashSet getLoadRequests() {
