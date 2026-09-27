@@ -51,6 +51,20 @@
         "armor": 5
       },
       "description": "Oak boards bound in iron."
+    },
+    {
+      "name": "oakStaff",
+      "display_name": "Oak Staff",
+      "mesh": "items/weapons/OakStaff",
+      "category": "weapon",
+      "weight": 1.9,
+      "equip": "weapon",
+      "two_handed": true,
+      "stats": {
+        "damage": 5,
+        "wisdom": 1
+      },
+      "description": "Long enough to test any pack."
     }
   ]
 }

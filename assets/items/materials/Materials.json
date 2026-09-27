@@ -15,6 +15,14 @@
       "category": "material",
       "weight": 0.8,
       "description": "Tanned and ready to cut."
+    },
+    {
+      "name": "oakPlank",
+      "display_name": "Oak Plank",
+      "mesh": "items/materials/OakPlank",
+      "category": "material",
+      "weight": 1.4,
+      "description": "Flat and long, awkward to pack."
     }
   ]
 }

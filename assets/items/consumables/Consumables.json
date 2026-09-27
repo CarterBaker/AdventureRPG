@@ -15,6 +15,14 @@
       "category": "consumable",
       "weight": 0.3,
       "description": "A stoppered flask of red tonic."
+    },
+    {
+      "name": "waterFlask",
+      "display_name": "Water Flask",
+      "mesh": "items/consumables/WaterFlask",
+      "category": "consumable",
+      "weight": 0.9,
+      "description": "Stitched leather, stoppered with oak."
     }
   ]
 }

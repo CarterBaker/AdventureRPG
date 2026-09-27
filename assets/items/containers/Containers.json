@@ -54,6 +54,34 @@
         "z": 4
       },
       "description": "Holds rings and trinkets."
+    },
+    {
+      "name": "canvasRucksack",
+      "display_name": "Canvas Rucksack",
+      "mesh": "items/containers/CanvasRucksack",
+      "category": "container",
+      "weight": 1.8,
+      "equip": "backpack",
+      "container": {
+        "x": 13,
+        "y": 10,
+        "z": 8
+      },
+      "description": "Sturdy canvas with a leather flap."
+    },
+    {
+      "name": "expeditionPack",
+      "display_name": "Expedition Pack",
+      "mesh": "items/containers/ExpeditionPack",
+      "category": "container",
+      "weight": 3.6,
+      "equip": "backpack",
+      "container": {
+        "x": 22,
+        "y": 16,
+        "z": 12
+      },
+      "description": "A framed pack with a bedroll strapped on top."
     }
   ]
 }

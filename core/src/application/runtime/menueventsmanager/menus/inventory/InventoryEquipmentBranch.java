@@ -12,8 +12,8 @@ import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.DimensionValueStruct;
-import application.bootstrap.menupipeline.util.DimensionVector2Struct;
+import application.bootstrap.menupipeline.util.DimensionValue;
+import application.bootstrap.menupipeline.util.DimensionVector2;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -27,7 +27,8 @@ public class InventoryEquipmentBranch extends BranchPackage {
     /*
      * Fills and keeps the equipment panels: a column of slots down each side
      * of the preview window with the backpack slot at the foot of the first,
-     * then the ten ring slots and the statistics box. The character faces out
+     * then the character sheet beside them — the ten ring slots in two rows of
+     * five above the statistics box. The character faces out
      * of its preview, so the slots for its right side stand in the screen's
      * left column. Every slot but a ring carries an eye that shows or hides
      * its item on the character. Slots and statistics are redrawn only when
@@ -62,7 +63,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
     private MenuColorStruct eyeHiddenColor;
 
     // Layout
-    private DimensionVector2Struct fillSize;
+    private DimensionVector2 fillSize;
 
     // Base \\
 
@@ -74,9 +75,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
         this.eyeHiddenColor = new MenuColorStruct(RuntimeSetting.INVENTORY_EYE_HIDDEN_COLOR);
 
         // Layout
-        this.fillSize = new DimensionVector2Struct(
-                DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX),
-                DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX));
+        this.fillSize = new DimensionVector2(DimensionValue.ofPercent(100f), DimensionValue.ofPercent(100f));
     }
 
     @Override
@@ -106,9 +105,13 @@ public class InventoryEquipmentBranch extends BranchPackage {
             injectSlot(session, RuntimeSetting.ENTRY_INVENTORY_SLOT_COLUMN_B,
                     RuntimeSetting.MENU_INVENTORY_EQUIPMENT_SLOT, equipmentSlot);
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
+        int ringCount = 0;
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.values())
             if (equipmentSlot.getEquipmentType() == EquipmentType.RING)
-                injectSlot(session, RuntimeSetting.ENTRY_INVENTORY_RING_COLUMN,
+                injectSlot(session, ringCount++ < RuntimeSetting.INVENTORY_RING_ROW_LENGTH
+                        ? RuntimeSetting.ENTRY_INVENTORY_RING_ROW_A
+                        : RuntimeSetting.ENTRY_INVENTORY_RING_ROW_B,
                         RuntimeSetting.MENU_INVENTORY_RING_SLOT, equipmentSlot);
     }
 
@@ -162,7 +165,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
 
         InventoryHandle inventory = session.getInventory();
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
 
             ElementInstance slotElement = session.getSlotElement(equipmentSlot);
 
@@ -259,7 +262,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
 
         int count = 0;
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.values())
             if (inventory.hasItem(equipmentSlot))
                 count++;
 
@@ -298,7 +301,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
         if (item.isTwoHanded())
             injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, RuntimeSetting.INVENTORY_TEXT_TWO_HANDED);
 
-        for (ItemStat itemStat : ItemStat.VALUES)
+        for (ItemStat itemStat : ItemStat.values())
             if (item.getStat(itemStat) != 0f)
                 injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
                         RuntimeSetting.INVENTORY_FORMAT_ITEM_STAT, itemStat.getTitle(), item.getStat(itemStat)));

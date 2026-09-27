@@ -14,7 +14,7 @@
       },
       "hover_color": "control_hover",
       "on_click": {
-        "class": "editor.runtime.menueventsmanager.menus.CommandConsoleBranch",
+        "class": "engine.editor.menueventsmanager.menus.CommandConsoleBranch",
         "method": "toggleCommandGroup"
       },
       "elements": [
@@ -65,7 +65,7 @@
       },
       "hover_color": "control_hover",
       "on_click": {
-        "class": "editor.runtime.menueventsmanager.menus.CommandConsoleBranch",
+        "class": "engine.editor.menueventsmanager.menus.CommandConsoleBranch",
         "method": "runCommand"
       },
       "elements": [
@@ -85,6 +85,121 @@
           "align": "left",
           "text": "",
           "font_size": "60%",
+          "color": "text"
+        }
+      ]
+    },
+    {
+      "id": "command_item_header",
+      "type": "container",
+      "size": {
+        "x": "100%",
+        "y": "22px"
+      },
+      "elements": [
+        {
+          "id": "command_item_header_label",
+          "type": "label",
+          "anchor": "bottom_left",
+          "pivot": "top_left",
+          "position": {
+            "x": "30px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(45% - 30px)",
+            "y": "100%"
+          },
+          "align": "left",
+          "text": "",
+          "font_size": "60%",
+          "color": "text"
+        },
+        {
+          "id": "command_item_header_hint",
+          "type": "label",
+          "anchor": "bottom_right",
+          "pivot": "top_right",
+          "position": {
+            "x": "-6px",
+            "y": "0px"
+          },
+          "size": {
+            "x": "calc(55% - 6px)",
+            "y": "100%"
+          },
+          "align": "right",
+          "text": "Click, or drag onto a Dev window",
+          "font_size": "50%",
+          "color": "text_muted"
+        }
+      ]
+    },
+    {
+      "id": "command_item_grid",
+      "type": "container",
+      "size": {
+        "x": "100%",
+        "y": "280px"
+      },
+      "stack": "vertical",
+      "spacing": "4px",
+      "mask": true
+    },
+    {
+      "id": "command_item_row",
+      "type": "container",
+      "size": {
+        "x": "100%",
+        "y": "92px"
+      },
+      "stack": "horizontal",
+      "spacing": "4px"
+    },
+    {
+      "id": "command_item_tile",
+      "type": "button",
+      "sprite": "menus/Button",
+      "size": {
+        "x": "76px",
+        "y": "100%"
+      },
+      "color": "control",
+      "hover_color": "control_hover",
+      "on_drag": {
+        "class": "engine.editor.menueventsmanager.menus.CommandConsoleBranch",
+        "method": "dragItemTile"
+      },
+      "elements": [
+        {
+          "id": "command_item_tile_icon",
+          "type": "container",
+          "anchor": "top",
+          "pivot": "bottom",
+          "position": {
+            "x": "0px",
+            "y": "-4px"
+          },
+          "size": {
+            "x": "calc(100% - 8px)",
+            "y": "calc(100% - 28px)"
+          }
+        },
+        {
+          "id": "command_item_tile_label",
+          "type": "label",
+          "anchor": "bottom",
+          "pivot": "top",
+          "position": {
+            "x": "0px",
+            "y": "3px"
+          },
+          "size": {
+            "x": "calc(100% - 6px)",
+            "y": "20px"
+          },
+          "text": "",
+          "font_size": "46%",
           "color": "text"
         }
       ]
@@ -198,6 +313,53 @@
               "color": "text"
             }
           ]
+        }
+      ]
+    },
+    {
+      "id": "DragGhost",
+      "raycast_input": false,
+      "lock_input": false,
+      "entry_points": [
+        "command_drag_ghost_label"
+      ],
+      "elements": [
+        {
+          "id": "command_drag_ghost_body",
+          "type": "sprite",
+          "sprite": "menus/Panel",
+          "anchor": "center",
+          "pivot": "center",
+          "size": {
+            "x": "100%",
+            "y": "100%"
+          },
+          "color": "panel"
+        },
+        {
+          "id": "command_drag_ghost_outline",
+          "type": "sprite",
+          "sprite": "menus/PanelOutline",
+          "anchor": "center",
+          "pivot": "center",
+          "size": {
+            "x": "100%",
+            "y": "100%"
+          },
+          "color": "accent"
+        },
+        {
+          "id": "command_drag_ghost_label",
+          "type": "label",
+          "anchor": "center",
+          "pivot": "center",
+          "size": {
+            "x": "calc(100% - 12px)",
+            "y": "100%"
+          },
+          "text": "",
+          "font_size": "60%",
+          "color": "text"
         }
       ]
     }

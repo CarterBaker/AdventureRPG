@@ -1,66 +1,67 @@
 {
     "elements": [
         {
-            "id":       "container_panel",
+            "id":       "container_title_note",
             "type":     "sprite",
-            "sprite":   "menus/wood/WoodPanel",
-            "anchor":   "left",
-            "pivot":    "left",
-            "position": { "x": "1%", "y": "0%" },
-            "size":     { "x": "14.5%", "y": "94%" },
-            "animation": {
-                "keyframes": [
-                    { "time": 0.0,  "offset": { "x": -0.06 }, "alpha": 0 },
-                    { "time": 0.3, "ease": "out" }
-                ]
+            "sprite":   "menus/paper/PaperScrap",
+            "anchor":   "top",
+            "pivot":    "bottom",
+            "position": { "x": "0%", "y": "-12px" },
+            "size":     { "x": "60%", "y": "52px" },
+            "aspect":   3.6111,
+            "elements": [
+                {
+                    "id":       "container_title",
+                    "type":     "label",
+                    "font":     "IMFellEnglish",
+                    "text":     "",
+                    "color":    [0.16, 0.1, 0.06, 1],
+                    "anchor":   "center",
+                    "pivot":    "center",
+                    "position": { "x": "0%", "y": "2%" },
+                    "size":     { "x": "76%", "y": "70%" }
+                }
+            ]
+        },
+        {
+            "id":       "container_weight",
+            "type":     "label",
+            "font":     "IMFellEnglish",
+            "font_size": "76%",
+            "text":     "",
+            "color":    [1, 0.84, 0.52, 1],
+            "align":    "left",
+            "anchor":   "top_left",
+            "pivot":    "bottom_left",
+            "position": { "x": "26px", "y": "-74px" },
+            "size":     { "x": "calc(62% - 26px)", "y": "28px" }
+        },
+        {
+            "id":          "container_toggle",
+            "type":        "button",
+            "sprite":      "menus/paper/PaperStrip",
+            "anchor":      "top_right",
+            "pivot":       "bottom_right",
+            "position":    { "x": "-22px", "y": "-72px" },
+            "size":        { "x": "30%", "y": "32px" },
+            "color":       [0.86, 0.86, 0.86, 1],
+            "hover_color": [1, 1, 1, 1],
+            "on_click": {
+                "class":  "application.runtime.menueventsmanager.menus.inventory.InventoryContainerBranch",
+                "method": "toggleList"
             },
             "elements": [
                 {
-                    "id":       "container_title_note",
-                    "type":     "sprite",
-                    "sprite":   "menus/paper/PaperScrap",
-                    "anchor":   "top",
-                    "pivot":    "bottom",
-                    "position": { "x": "0%", "y": "-12px" },
-                    "size":     { "x": "calc(100% - 50px)", "y": "52px" },
-                    "aspect":   3.6111,
-                    "elements": [
-                        {
-                            "id":       "container_title",
-                            "type":     "label",
-                            "font":     "IMFellEnglish",
-                            "text":     "",
-                            "color":    [0.16, 0.1, 0.06, 1],
-                            "anchor":   "center",
-                            "pivot":    "center",
-                            "position": { "x": "0%", "y": "2%" },
-                            "size":     { "x": "76%", "y": "70%" }
-                        }
-                    ]
-                },
-                {
-                    "id":       "container_weight",
+                    "id":       "container_toggle_label",
                     "type":     "label",
                     "font":     "IMFellEnglish",
-                    "font_size": "76%",
+                    "font_size": "70%",
                     "text":     "",
-                    "color":    [1, 0.84, 0.52, 1],
-                    "align":    "left",
-                    "anchor":   "top_left",
-                    "pivot":    "bottom_left",
-                    "position": { "x": "24px", "y": "-70px" },
-                    "size":     { "x": "calc(100% - 48px)", "y": "26px" }
-                },
-                {
-                    "id":       "container_list",
-                    "type":     "container",
-                    "mask":     true,
-                    "stack":    "vertical",
-                    "spacing":  "4px",
-                    "anchor":   "top_left",
-                    "pivot":    "bottom_left",
-                    "position": { "x": "22px", "y": "-102px" },
-                    "size":     { "x": "calc(100% - 44px)", "y": "calc(100% - 126px)" }
+                    "color":    [0.24, 0.15, 0.08, 1],
+                    "parent_hover_color": [0.463, 0.086, 0.071, 1],
+                    "anchor":   "center",
+                    "pivot":    "center",
+                    "size":     { "x": "84%", "y": "100%" }
                 }
             ]
         },
@@ -68,16 +69,10 @@
             "id":       "container_frame",
             "type":     "sprite",
             "sprite":   "menus/inventory/ViewFrame",
-            "anchor":   "left",
-            "pivot":    "left",
-            "position": { "x": "16.5%", "y": "0%" },
-            "size":     { "x": "19%", "y": "94%" },
-            "animation": {
-                "keyframes": [
-                    { "time": 0.0,  "offset": { "y": -0.04 }, "alpha": 0 },
-                    { "time": 0.3, "ease": "out" }
-                ]
-            },
+            "anchor":   "top_left",
+            "pivot":    "bottom_left",
+            "position": { "x": "18px", "y": "-112px" },
+            "size":     { "x": "calc(100% - 36px)", "y": "calc(100% - 152px)" },
             "elements": [
                 {
                     "id":       "container_view",
@@ -89,19 +84,89 @@
                         "class":  "application.runtime.menueventsmanager.menus.inventory.InventoryContainerBranch",
                         "method": "dragView"
                     }
-                },
-                {
-                    "id":       "container_hint",
-                    "type":     "label",
-                    "font":     "IMFellEnglish",
-                    "font_size": "62%",
-                    "text":     "",
-                    "color":    [1, 0.96, 0.88, 0.75],
-                    "anchor":   "bottom",
-                    "pivot":    "top",
-                    "position": { "x": "0%", "y": "20px" },
-                    "size":     { "x": "calc(100% - 40px)", "y": "22px" }
                 }
+            ]
+        },
+        {
+            "id":       "container_list_box",
+            "type":     "sprite",
+            "sprite":   "menus/inventory/Inset",
+            "anchor":   "top_right",
+            "pivot":    "bottom_right",
+            "position": { "x": "-18px", "y": "-112px" },
+            "size":     { "x": "calc(42% - 24px)", "y": "calc(100% - 152px)" },
+            "elements": [
+                {
+                    "id":       "container_list",
+                    "type":     "container",
+                    "mask":     true,
+                    "stack":    "vertical",
+                    "spacing":  "4px",
+                    "anchor":   "center",
+                    "pivot":    "center",
+                    "size":     { "x": "calc(100% - 24px)", "y": "calc(100% - 24px)" }
+                }
+            ]
+        },
+        {
+            "id":       "container_hint",
+            "type":     "label",
+            "font":     "IMFellEnglish",
+            "font_size": "62%",
+            "text":     "",
+            "color":    [1, 0.96, 0.88, 0.75],
+            "anchor":   "bottom",
+            "pivot":    "top",
+            "position": { "x": "0%", "y": "14px" },
+            "size":     { "x": "calc(100% - 40px)", "y": "22px" }
+        },
+        {
+            "id":       "container_panel",
+            "type":     "sprite",
+            "sprite":   "menus/wood/WoodPanel",
+            "anchor":   "left",
+            "pivot":    "left",
+            "position": { "x": "1%", "y": "0%" },
+            "size":     { "x": "35%", "y": "94%" },
+            "animation": {
+                "keyframes": [
+                    { "time": 0.0,  "offset": { "x": -0.06 }, "alpha": 0 },
+                    { "time": 0.3, "ease": "out" }
+                ]
+            },
+            "elements": [
+                { "id": "title_note", "use": "Inventory/container_title_note" },
+                { "id": "weight",     "use": "Inventory/container_weight" },
+                { "id": "toggle",     "use": "Inventory/container_toggle" },
+                { "id": "frame",      "use": "Inventory/container_frame" },
+                { "id": "hint",       "use": "Inventory/container_hint" }
+            ]
+        },
+        {
+            "id":       "container_panel_listed",
+            "type":     "sprite",
+            "sprite":   "menus/wood/WoodPanel",
+            "anchor":   "left",
+            "pivot":    "left",
+            "position": { "x": "1%", "y": "0%" },
+            "size":     { "x": "35%", "y": "94%" },
+            "animation": {
+                "keyframes": [
+                    { "time": 0.0,  "offset": { "x": -0.06 }, "alpha": 0 },
+                    { "time": 0.3, "ease": "out" }
+                ]
+            },
+            "elements": [
+                { "id": "title_note", "use": "Inventory/container_title_note" },
+                { "id": "weight",     "use": "Inventory/container_weight" },
+                { "id": "toggle",     "use": "Inventory/container_toggle" },
+                {
+                    "id":   "frame",
+                    "use":  "Inventory/container_frame",
+                    "size": { "x": "calc(58% - 24px)", "y": "calc(100% - 152px)" }
+                },
+                { "id": "list_box",   "use": "Inventory/container_list_box" },
+                { "id": "hint",       "use": "Inventory/container_hint" }
             ]
         },
         {
@@ -228,7 +293,7 @@
             "id":          "ring_slot",
             "type":        "button",
             "sprite":      "menus/inventory/Slot",
-            "size":        { "x": "100%", "y": "9%" },
+            "size":        { "x": "17.5%", "y": "100%" },
             "aspect":      1.0,
             "color":       [0.9, 0.9, 0.9, 1],
             "hover_color": [1, 0.96, 0.84, 1],
@@ -319,8 +384,8 @@
             "lock_input":    true,
             "raycast_input": true,
             "entry_points":  [
-                "backpack_holder", "slot_column_a", "slot_column_b", "ring_column",
-                "stat_list", "item_details", "preview_window", "close_hint"
+                "backpack_holder", "slot_column_a", "slot_column_b", "ring_row_a",
+                "stat_list", "item_details", "preview_window", "close_hint", "ring_row_b"
             ],
             "elements": [
                 {
@@ -329,7 +394,7 @@
                     "sprite":   "menus/wood/WoodPanel",
                     "anchor":   "left",
                     "pivot":    "left",
-                    "position": { "x": "36.5%", "y": "0%" },
+                    "position": { "x": "37%", "y": "0%" },
                     "size":     { "x": "7%", "y": "94%" },
                     "animation": {
                         "keyframes": [
@@ -345,7 +410,7 @@
                             "spacing":  "6px",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "14%", "y": "-3%" },
+                            "position": { "x": "12%", "y": "-3%" },
                             "size":     { "x": "76%", "y": "78%" }
                         },
                         {
@@ -365,7 +430,7 @@
                             "type":     "container",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "14%", "y": "-86%" },
+                            "position": { "x": "12%", "y": "-86%" },
                             "size":     { "x": "76%", "y": "10%" },
                             "aspect":   1.0
                         }
@@ -377,9 +442,8 @@
                     "sprite":   "menus/inventory/ViewFrame",
                     "anchor":   "left",
                     "pivot":    "left",
-                    "position": { "x": "44%", "y": "0%" },
-                    "size":     { "x": "20.5%", "y": "94%" },
-                    "aspect":   0.46,
+                    "position": { "x": "44.5%", "y": "0%" },
+                    "size":     { "x": "19%", "y": "94%" },
                     "on_drag": {
                         "class":  "application.runtime.menueventsmanager.menus.inventory.InventoryBranch",
                         "method": "rotatePreview"
@@ -423,11 +487,11 @@
                     "sprite":   "menus/wood/WoodPanel",
                     "anchor":   "left",
                     "pivot":    "left",
-                    "position": { "x": "65%", "y": "0%" },
-                    "size":     { "x": "34%", "y": "94%" },
+                    "position": { "x": "64%", "y": "0%" },
+                    "size":     { "x": "7%", "y": "94%" },
                     "animation": {
                         "keyframes": [
-                            { "time": 0.0,  "offset": { "x": 0.06 }, "alpha": 0 },
+                            { "time": 0.0,  "offset": { "y": -0.04 }, "alpha": 0 },
                             { "time": 0.3, "ease": "out" }
                         ]
                     },
@@ -439,9 +503,26 @@
                             "spacing":  "6px",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "3%", "y": "-3%" },
-                            "size":     { "x": "16%", "y": "78%" }
-                        },
+                            "position": { "x": "12%", "y": "-3%" },
+                            "size":     { "x": "76%", "y": "78%" }
+                        }
+                    ]
+                },
+                {
+                    "id":       "sheet_panel",
+                    "type":     "sprite",
+                    "sprite":   "menus/wood/WoodPanel",
+                    "anchor":   "left",
+                    "pivot":    "left",
+                    "position": { "x": "71.5%", "y": "0%" },
+                    "size":     { "x": "27.5%", "y": "94%" },
+                    "animation": {
+                        "keyframes": [
+                            { "time": 0.0,  "offset": { "x": 0.06 }, "alpha": 0 },
+                            { "time": 0.3, "ease": "out" }
+                        ]
+                    },
+                    "elements": [
                         {
                             "id":       "rings_caption",
                             "type":     "label",
@@ -449,20 +530,31 @@
                             "font_size": "64%",
                             "text":     "Rings",
                             "color":    [1, 0.84, 0.52, 1],
+                            "align":    "left",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "21%", "y": "-3%" },
-                            "size":     { "x": "15%", "y": "3%" }
+                            "position": { "x": "6%", "y": "-3%" },
+                            "size":     { "x": "88%", "y": "3%" }
                         },
                         {
-                            "id":       "ring_column",
+                            "id":       "ring_row_a",
                             "type":     "container",
-                            "stack":    "vertical",
-                            "spacing":  "6px",
+                            "stack":    "horizontal",
+                            "spacing":  "3%",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "23%", "y": "-7%" },
-                            "size":     { "x": "13%", "y": "90%" }
+                            "position": { "x": "6%", "y": "-7%" },
+                            "size":     { "x": "88%", "y": "9%" }
+                        },
+                        {
+                            "id":       "ring_row_b",
+                            "type":     "container",
+                            "stack":    "horizontal",
+                            "spacing":  "3%",
+                            "anchor":   "top_left",
+                            "pivot":    "bottom_left",
+                            "position": { "x": "6%", "y": "-17%" },
+                            "size":     { "x": "88%", "y": "9%" }
                         },
                         {
                             "id":       "stats_box",
@@ -470,8 +562,8 @@
                             "sprite":   "menus/inventory/Inset",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "39%", "y": "-3%" },
-                            "size":     { "x": "58%", "y": "94%" },
+                            "position": { "x": "4%", "y": "-28%" },
+                            "size":     { "x": "92%", "y": "69%" },
                             "elements": [
                                 {
                                     "id":       "stats_title",
@@ -493,7 +585,7 @@
                                     "anchor":   "top_left",
                                     "pivot":    "bottom_left",
                                     "position": { "x": "7%", "y": "-54px" },
-                                    "size":     { "x": "86%", "y": "calc(62% - 54px)" }
+                                    "size":     { "x": "86%", "y": "calc(58% - 54px)" }
                                 },
                                 {
                                     "id":       "item_details",
@@ -504,7 +596,7 @@
                                     "anchor":   "bottom_left",
                                     "pivot":    "top_left",
                                     "position": { "x": "7%", "y": "16px" },
-                                    "size":     { "x": "86%", "y": "calc(36% - 16px)" }
+                                    "size":     { "x": "86%", "y": "calc(40% - 16px)" }
                                 }
                             ]
                         }
@@ -516,29 +608,28 @@
             "id":            "Container",
             "lock_input":    true,
             "raycast_input": true,
-            "entry_points":  ["container_title", "container_weight", "container_list", "container_view", "container_hint"],
+            "entry_points":  [
+                "container_title", "container_weight", "container_list", "container_view", "container_hint",
+                "container_toggle_label"
+            ],
             "elements": [
-                { "id": "panel", "use": "Inventory/container_panel" },
-                { "id": "frame", "use": "Inventory/container_frame" }
+                { "id": "panel", "use": "Inventory/container_panel" }
             ]
         },
         {
             "id":            "ContainerUpper",
             "lock_input":    true,
             "raycast_input": true,
-            "entry_points":  ["container_title", "container_weight", "container_list", "container_view", "container_hint"],
+            "entry_points":  [
+                "container_title", "container_weight", "container_list", "container_view", "container_hint",
+                "container_toggle_label"
+            ],
             "elements": [
                 {
                     "id":       "panel",
                     "use":      "Inventory/container_panel",
                     "position": { "x": "1%", "y": "23.75%" },
-                    "size":     { "x": "14.5%", "y": "45.5%" }
-                },
-                {
-                    "id":       "frame",
-                    "use":      "Inventory/container_frame",
-                    "position": { "x": "16.5%", "y": "23.75%" },
-                    "size":     { "x": "19%", "y": "45.5%" }
+                    "size":     { "x": "35%", "y": "45.5%" }
                 }
             ]
         },
@@ -546,19 +637,62 @@
             "id":            "ContainerLower",
             "lock_input":    true,
             "raycast_input": true,
-            "entry_points":  ["container_title", "container_weight", "container_list", "container_view", "container_hint"],
+            "entry_points":  [
+                "container_title", "container_weight", "container_list", "container_view", "container_hint",
+                "container_toggle_label"
+            ],
             "elements": [
                 {
                     "id":       "panel",
                     "use":      "Inventory/container_panel",
                     "position": { "x": "1%", "y": "-23.75%" },
-                    "size":     { "x": "14.5%", "y": "45.5%" }
-                },
+                    "size":     { "x": "35%", "y": "45.5%" }
+                }
+            ]
+        },
+        {
+            "id":            "ContainerListed",
+            "lock_input":    true,
+            "raycast_input": true,
+            "entry_points":  [
+                "container_title", "container_weight", "container_list", "container_view", "container_hint",
+                "container_toggle_label"
+            ],
+            "elements": [
+                { "id": "panel", "use": "Inventory/container_panel_listed" }
+            ]
+        },
+        {
+            "id":            "ContainerListedUpper",
+            "lock_input":    true,
+            "raycast_input": true,
+            "entry_points":  [
+                "container_title", "container_weight", "container_list", "container_view", "container_hint",
+                "container_toggle_label"
+            ],
+            "elements": [
                 {
-                    "id":       "frame",
-                    "use":      "Inventory/container_frame",
-                    "position": { "x": "16.5%", "y": "-23.75%" },
-                    "size":     { "x": "19%", "y": "45.5%" }
+                    "id":       "panel",
+                    "use":      "Inventory/container_panel_listed",
+                    "position": { "x": "1%", "y": "23.75%" },
+                    "size":     { "x": "35%", "y": "45.5%" }
+                }
+            ]
+        },
+        {
+            "id":            "ContainerListedLower",
+            "lock_input":    true,
+            "raycast_input": true,
+            "entry_points":  [
+                "container_title", "container_weight", "container_list", "container_view", "container_hint",
+                "container_toggle_label"
+            ],
+            "elements": [
+                {
+                    "id":       "panel",
+                    "use":      "Inventory/container_panel_listed",
+                    "position": { "x": "1%", "y": "-23.75%" },
+                    "size":     { "x": "35%", "y": "45.5%" }
                 }
             ]
         }

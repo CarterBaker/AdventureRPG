@@ -12,12 +12,13 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class InventoryViewStruct extends StructPackage {
 
     /*
-     * One container shown in the inventory: the menu holding its item list
-     * and 3D view, the container item on show, the rows listed and the item
-     * behind each, and the view's turn. The view matrix carries container
-     * sub-voxel space onto the window's pixels and is recomputed every frame
-     * from the view element; its inverse turns the cursor back into a ray.
-     * The listed revision says which state of the container the list shows.
+     * One container shown in the inventory: the menu holding its 3D view and,
+     * while the list is shown, its item list, the container item on show, the
+     * rows listed and the item behind each, and the view's turn. The view
+     * matrix carries container sub-voxel space onto the window's pixels and
+     * is recomputed every frame from the view element; its inverse turns the
+     * cursor back into a ray. The listed revision says which state of the
+     * container the list and its weight show.
      */
 
     // Identity
@@ -138,6 +139,10 @@ public class InventoryViewStruct extends StructPackage {
 
     public ElementInstance getListElement() {
         return menu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_LIST);
+    }
+
+    public boolean hasList() {
+        return getListElement() != null;
     }
 
     public float getYaw() {

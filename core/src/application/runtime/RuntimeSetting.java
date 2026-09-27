@@ -40,34 +40,6 @@ public class RuntimeSetting {
 
     // Pass Uniforms
     public static final String UNIFORM_SCENE_DEPTH = "u_sceneDepth";
-    public static final int PASS_DRAW_DEPTH = 0;
-
-    // Deferred Attachments
-    public static final String ATTACHMENT_ALBEDO = "albedo";
-    public static final String ATTACHMENT_NORMAL = "normal";
-    public static final String ATTACHMENT_MATERIAL = "material";
-    public static final String ATTACHMENT_AO = "ao";
-
-    // Deferred Uniforms
-    public static final String UNIFORM_G_ALBEDO = "u_gAlbedo";
-    public static final String UNIFORM_G_NORMAL = "u_gNormal";
-    public static final String UNIFORM_G_MATERIAL = "u_gMaterial";
-    public static final String UNIFORM_G_DEPTH = "u_gDepth";
-    public static final String UNIFORM_SSAO_TEXTURE = "u_ssaoTex";
-
-    // SSAO
-    public static final String SSAO_DATA_UBO = "SSAOData";
-    public static final String UNIFORM_SSAO_NOISE = "u_texNoise";
-    public static final String UNIFORM_SSAO_SAMPLES = "u_samples";
-    public static final String UNIFORM_SSAO_KERNEL_SIZE = "u_kernelSize";
-    public static final String UNIFORM_SSAO_RADIUS = "u_radius";
-    public static final String UNIFORM_SSAO_BIAS = "u_bias";
-    public static final int SSAO_KERNEL_SIZE = 64;
-    public static final float SSAO_KERNEL_MIN_SCALE = 0.1f;
-    public static final float SSAO_RADIUS = 0.3f;
-    public static final float SSAO_BIAS = 0.025f;
-    public static final int SSAO_NOISE_SIZE = 4;
-    public static final int SSAO_NOISE_CHANNELS = 3;
 
     // Load Menu
     public static final String MENU_LOAD = "MainMenu/Load";
@@ -273,6 +245,9 @@ public class RuntimeSetting {
     public static final String MENU_INVENTORY_CONTAINER = "Inventory/Container";
     public static final String MENU_INVENTORY_CONTAINER_UPPER = "Inventory/ContainerUpper";
     public static final String MENU_INVENTORY_CONTAINER_LOWER = "Inventory/ContainerLower";
+    public static final String MENU_INVENTORY_CONTAINER_LISTED = "Inventory/ContainerListed";
+    public static final String MENU_INVENTORY_CONTAINER_LISTED_UPPER = "Inventory/ContainerListedUpper";
+    public static final String MENU_INVENTORY_CONTAINER_LISTED_LOWER = "Inventory/ContainerListedLower";
     public static final String MENU_INVENTORY_EQUIPMENT_SLOT = "Inventory/equipment_slot";
     public static final String MENU_INVENTORY_RING_SLOT = "Inventory/ring_slot";
     public static final String MENU_INVENTORY_LIST_HEADER = "Inventory/list_header";
@@ -287,11 +262,12 @@ public class RuntimeSetting {
     public static final int ENTRY_INVENTORY_BACKPACK_SLOT = 0;
     public static final int ENTRY_INVENTORY_SLOT_COLUMN_A = 1;
     public static final int ENTRY_INVENTORY_SLOT_COLUMN_B = 2;
-    public static final int ENTRY_INVENTORY_RING_COLUMN = 3;
+    public static final int ENTRY_INVENTORY_RING_ROW_A = 3;
     public static final int ENTRY_INVENTORY_STATS = 4;
     public static final int ENTRY_INVENTORY_DETAILS = 5;
     public static final int ENTRY_INVENTORY_PREVIEW = 6;
     public static final int ENTRY_INVENTORY_CLOSE_HINT = 7;
+    public static final int ENTRY_INVENTORY_RING_ROW_B = 8;
 
     // Inventory Entry Points — Container
     public static final int ENTRY_CONTAINER_TITLE = 0;
@@ -299,6 +275,7 @@ public class RuntimeSetting {
     public static final int ENTRY_CONTAINER_LIST = 2;
     public static final int ENTRY_CONTAINER_VIEW = 3;
     public static final int ENTRY_CONTAINER_HINT = 4;
+    public static final int ENTRY_CONTAINER_TOGGLE_LABEL = 5;
 
     // Inventory Elements
     public static final String ELEMENT_INVENTORY_SLOT_LABEL = "slot_label";
@@ -350,6 +327,8 @@ public class RuntimeSetting {
             + "  -  drag empty space to look around";
     public static final String INVENTORY_TEXT_TWO_HANDED = "Two-handed";
     public static final String INVENTORY_TEXT_NO_SELECTION = "Point at an item to see it.";
+    public static final String INVENTORY_TEXT_SHOW_LIST = "Show List";
+    public static final String INVENTORY_TEXT_HIDE_LIST = "Hide List";
     public static final String INVENTORY_STAT_SECTION_ATTRIBUTES = "Attributes";
     public static final String INVENTORY_STAT_SECTION_COMBAT = "Combat";
     public static final String INVENTORY_STAT_SECTION_LOAD = "Load";
@@ -370,6 +349,7 @@ public class RuntimeSetting {
     public static final float INVENTORY_PREVIEW_FILL = 0.84f;
     public static final float INVENTORY_ROTATE_DEGREES_PER_PIXEL = 0.6f;
     public static final int INVENTORY_DRAW_DEPTH = 0;
+    public static final int INVENTORY_RING_ROW_LENGTH = 5;
 
     // Inventory Render
     public static final String MATERIAL_INVENTORY_ITEM = "items/InventoryItemMaterial";

@@ -1,5 +1,6 @@
 package editor.bootstrap.commandpipeline.command;
 
+import engine.editor.EditorSetting;
 import engine.root.HandlePackage;
 
 public class CommandHandle extends HandlePackage {
@@ -7,6 +8,8 @@ public class CommandHandle extends HandlePackage {
     /*
      * Persistent reference to one loaded console command. Registered and
      * owned by CommandManager. Delegates all accessors through CommandData.
+     * A command whose one argument is an item is picked from the command
+     * console's item tiles.
      */
 
     // Internal
@@ -52,5 +55,10 @@ public class CommandHandle extends HandlePackage {
 
     public boolean isArgumentFree() {
         return commandData.getArgumentCount() == 0;
+    }
+
+    public boolean takesItem() {
+        return commandData.getArgumentCount() == 1
+                && commandData.getArgumentName(0).equals(EditorSetting.COMMAND_ARGUMENT_ITEM);
     }
 }

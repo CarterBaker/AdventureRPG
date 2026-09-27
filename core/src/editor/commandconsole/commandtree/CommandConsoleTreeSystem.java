@@ -6,6 +6,7 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
 import editor.commandconsole.CommandConsoleSetting;
+import editor.commandconsole.itemgrid.CommandConsoleItemGridSystem;
 import editor.commandconsole.panel.CommandConsolePanelSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -17,15 +18,18 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     /*
      * Lists every command that takes no arguments in the command console's
      * tree, under the group that defines it, so each one runs with a single
-     * click. A group with no such command is left out. Groups start expanded
-     * and collapse on click; the tree is laid out on the first frame and again
-     * only when a group is toggled.
+     * click, and gives every command that takes an item a scrolling grid of
+     * item tiles, filled by the item grid system, to pick that item from. A
+     * group with neither is left out. Groups start expanded and collapse on
+     * click; the tree is laid out on the first frame and again only when a
+     * group is toggled.
      */
 
     // Internal
     private MenuManager menuManager;
     private CommandManager commandManager;
     private CommandConsolePanelSystem commandConsolePanelSystem;
+    private CommandConsoleItemGridSystem commandConsoleItemGridSystem;
 
     // Tree
     private ObjectArrayList<ElementInstance> treeElements;
@@ -48,6 +52,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.commandManager = get(CommandManager.class);
         this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
+        this.commandConsoleItemGridSystem = get(CommandConsoleItemGridSystem.class);
     }
 
     // Update \\
@@ -69,6 +74,8 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         MenuInstance commandConsoleMenu = commandConsolePanelSystem.getCommandConsoleMenu();
         ObjectArrayList<String> groupNames = commandManager.getGroupNames();
 
+        commandConsoleItemGridSystem.clearGrids();
+
         for (int i = 0; i < treeElements.size(); i++)
             menuManager.eject(commandConsoleMenu, CommandConsoleSetting.ENTRY_COMMAND_TREE, treeElements.get(i));
 
@@ -82,7 +89,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
         ObjectArrayList<CommandHandle> commandHandles = commandManager.getCommandHandles(groupName);
 
-        if (!hasArgumentFreeCommand(commandHandles))
+        if (!hasListedCommand(commandHandles))
             return;
 
         boolean expanded = !collapsedGroupNames.contains(groupName);
@@ -102,9 +109,15 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         if (!expanded)
             return;
 
-        for (int i = 0; i < commandHandles.size(); i++)
-            if (commandHandles.get(i).isArgumentFree())
-                injectCommand(commandConsoleMenu, commandHandles.get(i));
+        for (int i = 0; i < commandHandles.size(); i++) {
+
+            CommandHandle commandHandle = commandHandles.get(i);
+
+            if (commandHandle.isArgumentFree())
+                injectCommand(commandConsoleMenu, commandHandle);
+            else if (commandHandle.takesItem())
+                injectItemCommand(commandConsoleMenu, commandHandle);
+        }
     }
 
     private void injectCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
@@ -116,6 +129,24 @@ public class CommandConsoleTreeSystem extends SystemPackage {
                     element.setActionArgOverride(commandHandle.getCommandName());
                     setChildText(element, CommandConsoleSetting.ELEMENT_COMMAND_LABEL, commandHandle.getLabel());
                 }));
+    }
+
+    private void injectItemCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
+
+        treeElements.add(menuManager.inject(
+                commandConsoleMenu,
+                CommandConsoleSetting.ENTRY_COMMAND_TREE,
+                CommandConsoleSetting.MENU_ITEM_HEADER,
+                element -> setChildText(element, CommandConsoleSetting.ELEMENT_ITEM_HEADER_LABEL,
+                        commandHandle.getLabel())));
+
+        ElementInstance grid = menuManager.inject(
+                commandConsoleMenu,
+                CommandConsoleSetting.ENTRY_COMMAND_TREE,
+                CommandConsoleSetting.MENU_ITEM_GRID);
+
+        treeElements.add(grid);
+        commandConsoleItemGridSystem.addGrid(grid, commandHandle);
     }
 
     // Management \\
@@ -130,10 +161,10 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
     // Utility \\
 
-    private boolean hasArgumentFreeCommand(ObjectArrayList<CommandHandle> commandHandles) {
+    private boolean hasListedCommand(ObjectArrayList<CommandHandle> commandHandles) {
 
         for (int i = 0; i < commandHandles.size(); i++)
-            if (commandHandles.get(i).isArgumentFree())
+            if (commandHandles.get(i).isArgumentFree() || commandHandles.get(i).takesItem())
                 return true;
 
         return false;

@@ -11,7 +11,8 @@ public class InventoryHeldStruct extends StructPackage {
      * The item a player is carrying under the cursor, and where it came from
      * — an equipment slot, or a container and the exact place it rested — so
      * a drop that lands nowhere puts it back. The item has already left its
-     * source, so the space it took is free while it is carried. A grab
+     * source, so the space it took is free while it is carried. A new item
+     * handed in from outside the inventory has no source at all. A grab
      * offset keeps an item picked out of a container view under the same
      * point of the cursor while it moves, until it is turned.
      */
@@ -34,6 +35,20 @@ public class InventoryHeldStruct extends StructPackage {
     private float grabOffsetZ;
 
     // Constructor \\
+
+    public InventoryHeldStruct(ItemInstance itemInstance) {
+
+        // Item
+        this.itemInstance = itemInstance;
+
+        // Source
+        this.sourceSlot = null;
+        this.sourceContainer = null;
+        this.sourceX = 0;
+        this.sourceY = 0;
+        this.sourceZ = 0;
+        this.sourceRotation = 0;
+    }
 
     public InventoryHeldStruct(ItemInstance itemInstance, EquipmentSlot sourceSlot) {
 
@@ -93,6 +108,10 @@ public class InventoryHeldStruct extends StructPackage {
 
     public int getRotation() {
         return rotation;
+    }
+
+    public boolean hasSource() {
+        return sourceSlot != null || sourceContainer != null;
     }
 
     public boolean isFromSlot() {

@@ -21,10 +21,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class InventoryContainerBranch extends BranchPackage {
 
     /*
-     * Shows the worn backpack and an opened chest beside the equipment panel,
-     * each as a categorized list plus a 3D view. Panels follow what is worn and
-     * lists rebuild only when their container changes. Pressing an item picks
-     * it up; pressing empty view space turns the view.
+     * Shows the worn backpack and the opened chest in the bag column at the
+     * left of the screen. Each takes the full height alone; together the
+     * chest's panel sits directly above the backpack's. A container's panel
+     * is a 3D view of the bag with every item standing where it rests, and —
+     * while the list toggle is on — its contents listed beside the view under
+     * a header for each category. The toggle holds for every container and
+     * every time the inventory opens in this window. Panels open, move, and
+     * close with what is worn and with the toggle, and a list is rebuilt only
+     * when its container changes. Pressing on an item in a view or a list
+     * picks it up; pressing on empty space in a view turns the view instead.
+     * The view matrices are recomputed every frame from their elements, so
+     * the cursor always picks what is drawn.
      */
 
     // Internal
@@ -32,6 +40,9 @@ public class InventoryContainerBranch extends BranchPackage {
     private InputManager inputManager;
     private InventoryBranch inventoryBranch;
     private InventoryDragBranch inventoryDragBranch;
+
+    // State
+    private boolean listShown;
 
     // Scratch
     private Vector3 rayOrigin;
@@ -65,10 +76,8 @@ public class InventoryContainerBranch extends BranchPackage {
         ItemInstance chestItem = session.getChestItem();
         boolean stacked = backpackItem != null && chestItem != null;
 
-        syncView(session, session.getView(InventoryContainer.CHEST), chestItem,
-                stacked ? RuntimeSetting.MENU_INVENTORY_CONTAINER_UPPER : RuntimeSetting.MENU_INVENTORY_CONTAINER);
-        syncView(session, session.getView(InventoryContainer.BACKPACK), backpackItem,
-                stacked ? RuntimeSetting.MENU_INVENTORY_CONTAINER_LOWER : RuntimeSetting.MENU_INVENTORY_CONTAINER);
+        syncView(session, session.getView(InventoryContainer.CHEST), chestItem, resolveMenuName(stacked, true));
+        syncView(session, session.getView(InventoryContainer.BACKPACK), backpackItem, resolveMenuName(stacked, false));
 
         for (InventoryViewStruct view : session.getViews()) {
 
@@ -105,7 +114,27 @@ public class InventoryContainerBranch extends BranchPackage {
                 .setFontText(containerItem.getItemDefinitionHandle().getDisplayName());
         menu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_HINT).setFontText(String.format(
                 RuntimeSetting.INVENTORY_FORMAT_VIEW_HINT, InputNameUtility.getName(KeyBindings.ROTATE_ITEM)));
+        menu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_TOGGLE_LABEL).setFontText(
+                listShown ? RuntimeSetting.INVENTORY_TEXT_HIDE_LIST : RuntimeSetting.INVENTORY_TEXT_SHOW_LIST);
         view.getViewElement().setOnDragArgOverride(view.getInventoryContainer().name());
+    }
+
+    // The panel a container opens in: the full column alone or one half of it when stacked, listed or not
+    private String resolveMenuName(boolean stacked, boolean upper) {
+
+        if (!stacked)
+            return listShown
+                    ? RuntimeSetting.MENU_INVENTORY_CONTAINER_LISTED
+                    : RuntimeSetting.MENU_INVENTORY_CONTAINER;
+
+        if (upper)
+            return listShown
+                    ? RuntimeSetting.MENU_INVENTORY_CONTAINER_LISTED_UPPER
+                    : RuntimeSetting.MENU_INVENTORY_CONTAINER_UPPER;
+
+        return listShown
+                ? RuntimeSetting.MENU_INVENTORY_CONTAINER_LISTED_LOWER
+                : RuntimeSetting.MENU_INVENTORY_CONTAINER_LOWER;
     }
 
     private void closeView(InventoryViewStruct view) {
@@ -146,19 +175,22 @@ public class InventoryContainerBranch extends BranchPackage {
 
         MenuInstance menu = view.getMenu();
 
-        menuManager.ejectAll(menu, RuntimeSetting.ENTRY_CONTAINER_LIST);
-        view.clearRows();
         view.setListedRevision(containerInstance.getRevision());
-
         menu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_WEIGHT).setFontText(
                 String.format(RuntimeSetting.INVENTORY_FORMAT_HOLDING, containerInstance.getContentWeight()));
+
+        if (!view.hasList())
+            return;
+
+        menuManager.ejectAll(menu, RuntimeSetting.ENTRY_CONTAINER_LIST);
+        view.clearRows();
 
         if (containerInstance.isEmpty()) {
             menuManager.inject(menu, RuntimeSetting.ENTRY_CONTAINER_LIST, RuntimeSetting.MENU_INVENTORY_LIST_EMPTY);
             return;
         }
 
-        for (ItemCategory itemCategory : ItemCategory.VALUES)
+        for (ItemCategory itemCategory : ItemCategory.values())
             injectCategory(view, itemCategory);
     }
 
@@ -203,6 +235,16 @@ public class InventoryContainerBranch extends BranchPackage {
                 });
 
         view.addRow(itemInstance, row);
+    }
+
+    // Toggle \\
+
+    public void toggleList(WindowInstance window) {
+
+        if (inventoryBranch.getSession(window) == null)
+            return;
+
+        this.listShown = !listShown;
     }
 
     // Drag \\

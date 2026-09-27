@@ -10,7 +10,6 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.inventory.InventoryViewUtility;
-import engine.input.Buttons;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.settings.KeyBindings;
@@ -19,11 +18,19 @@ import engine.util.mathematics.vectors.Vector3;
 public class InventoryDragBranch extends BranchPackage {
 
     /*
-     * Carries items under the cursor. A picked item leaves its place at once;
-     * over a container view it previews where it would land and can be turned a
-     * quarter; dropping over a slot, view or list places it, trading with an
-     * item that fits the vacated place, and anything that cannot land goes
-     * back. Also finds the item under the cursor for the details panel.
+     * Carries items under the cursor. Picking an item up takes it out of its
+     * slot or container at once, so the space it filled is free while it
+     * moves. Over a container view the carried item shows where it would
+     * land: it is dropped in from the top at the cursor's point on the floor
+     * and falls until it rests, and the Rotate Item key turns it a quarter.
+     * Letting go over a slot wears or holds it — trading places with an item
+     * already there when that item fits where the carried one came from —
+     * over a view drops it where shown, over a list packs it wherever it
+     * fits, and anywhere else returns it. An item is never lost: whatever
+     * cannot land goes back where it came from. A new item handed in from
+     * outside — the editor's give command — lands exactly as if it had been
+     * carried to the cursor and let go. The item under the cursor is found
+     * here too, for the details panel.
      */
 
     // Internal
@@ -61,7 +68,7 @@ public class InventoryDragBranch extends BranchPackage {
 
         resolveDrop(session, x, y);
 
-        if (!inputManager.getRawInput(window).isMouseDown(Buttons.LEFT)) {
+        if (!inputManager.getRawInput(window).isMouseDown(0)) {
 
             if (session.isHolding())
                 drop(session, x, y);
@@ -176,35 +183,57 @@ public class InventoryDragBranch extends BranchPackage {
         InventoryHeldStruct held = session.getHeld();
         session.setHeld(null);
 
+        if (!land(session, held, x, y))
+            returnToSource(session, held);
+    }
+
+    // Puts the carried item wherever the cursor lets go of it, false when it lands nowhere
+    private boolean land(InventorySessionStruct session, InventoryHeldStruct held, float x, float y) {
+
         EquipmentSlot equipmentSlot = findSlotAt(session, x, y);
 
-        if (equipmentSlot != null) {
-
-            if (!equipInto(session, held, equipmentSlot))
-                returnToSource(session, held);
-
-            return;
-        }
+        if (equipmentSlot != null)
+            return equipInto(session, held, equipmentSlot);
 
         if (session.hasDrop()) {
 
-            if (session.isDropValid())
-                session.getDropView().getContainerInstance().place(
-                        held.getItemInstance(),
-                        session.getDropX(),
-                        session.getDropY(),
-                        session.getDropZ(),
-                        held.getRotation());
-            else
-                returnToSource(session, held);
+            if (!session.isDropValid())
+                return false;
 
-            return;
+            session.getDropView().getContainerInstance().place(
+                    held.getItemInstance(),
+                    session.getDropX(),
+                    session.getDropY(),
+                    session.getDropZ(),
+                    held.getRotation());
+
+            return true;
         }
 
         InventoryViewStruct listView = findListAt(session, x, y);
 
-        if (listView == null || listView.getContainerInstance().autoPlace(held.getItemInstance()) == null)
-            returnToSource(session, held);
+        return listView != null && listView.getContainerInstance().autoPlace(held.getItemInstance()) != null;
+    }
+
+    // Receive \\
+
+    // A new item lands where the cursor points as if carried there and let go, false when it lands nowhere
+    boolean receive(InventorySessionStruct session, ItemInstance itemInstance, float x, float y) {
+
+        if (session.isHolding())
+            return false;
+
+        InventoryHeldStruct held = new InventoryHeldStruct(itemInstance);
+
+        session.setHeld(held);
+        resolveDrop(session, x, y);
+        session.setHeld(null);
+
+        boolean landed = land(session, held, x, y);
+
+        session.clearDrop();
+
+        return landed;
     }
 
     // Wears the carried item, trading places with an item already worn there when it fits where this one came from
@@ -242,6 +271,13 @@ public class InventoryDragBranch extends BranchPackage {
             InventorySessionStruct session,
             InventoryHeldStruct held,
             ItemInstance itemInstance) {
+
+        if (!held.hasSource()) {
+
+            ContainerInstance backpack = session.getInventory().getBackpackContainer();
+
+            return backpack != null && backpack.autoPlace(itemInstance) != null;
+        }
 
         if (held.isFromSlot()) {
 
@@ -292,7 +328,7 @@ public class InventoryDragBranch extends BranchPackage {
 
     private EquipmentSlot findSlotAt(InventorySessionStruct session, float x, float y) {
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.values())
             if (InventoryViewUtility.isInside(session.getSlotElement(equipmentSlot), x, y))
                 return equipmentSlot;
 
@@ -302,7 +338,7 @@ public class InventoryDragBranch extends BranchPackage {
     private InventoryViewStruct findListAt(InventorySessionStruct session, float x, float y) {
 
         for (InventoryViewStruct view : session.getViews())
-            if (view.isOpen() && InventoryViewUtility.isInside(view.getListElement(), x, y))
+            if (view.isOpen() && view.hasList() && InventoryViewUtility.isInside(view.getListElement(), x, y))
                 return view;
 
         return null;
@@ -323,7 +359,7 @@ public class InventoryDragBranch extends BranchPackage {
             if (!view.isOpen())
                 continue;
 
-            if (InventoryViewUtility.isInside(view.getListElement(), x, y))
+            if (view.hasList() && InventoryViewUtility.isInside(view.getListElement(), x, y))
                 return findRowItemAt(view, x, y);
 
             ContainerSlotStruct slot = inventoryContainerBranch.pickSlot(view, x, y);
