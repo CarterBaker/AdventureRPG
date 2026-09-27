@@ -7,6 +7,7 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
+import application.runtime.RuntimeSetting;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -20,8 +21,10 @@ public class InventorySessionStruct extends StructPackage {
      * item carried under the cursor, the drop that item would make where the
      * cursor is, the item under the cursor, and the item whose details are
      * on show. The shown revisions say which state of the inventory and the
-     * backpack's contents the slots and statistics show. The camera
-     * direction the inventory opened with is handed back when it closes.
+     * backpack's contents the slots and statistics show, and the preview's
+     * zoom and focus say how close and where the character is framed. The
+     * camera direction the inventory opened with is handed back when it
+     * closes.
      */
 
     // Window
@@ -54,6 +57,10 @@ public class InventorySessionStruct extends StructPackage {
     private ItemInstance hoveredItem;
     private ItemInstance detailedItem;
     private boolean detailsShown;
+
+    // Preview — how far the character is zoomed in and the share of its height framed at the centre
+    private float previewZoom;
+    private float previewFocus;
 
     // Close
     private boolean closeArmed;
@@ -88,6 +95,10 @@ public class InventorySessionStruct extends StructPackage {
 
         // Drag
         this.dragMode = InventoryDragMode.NONE;
+
+        // Preview
+        this.previewZoom = RuntimeSetting.INVENTORY_PREVIEW_ZOOM_MIN;
+        this.previewFocus = EngineSetting.CHARACTER_PREVIEW_CENTER_HEIGHT;
     }
 
     // Drop \\
@@ -234,6 +245,22 @@ public class InventorySessionStruct extends StructPackage {
 
     public void invalidateDetails() {
         this.detailsShown = false;
+    }
+
+    public float getPreviewZoom() {
+        return previewZoom;
+    }
+
+    public void setPreviewZoom(float previewZoom) {
+        this.previewZoom = previewZoom;
+    }
+
+    public float getPreviewFocus() {
+        return previewFocus;
+    }
+
+    public void setPreviewFocus(float previewFocus) {
+        this.previewFocus = previewFocus;
     }
 
     public boolean isCloseArmed() {

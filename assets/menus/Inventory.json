@@ -127,7 +127,7 @@
             "anchor":   "left",
             "pivot":    "left",
             "position": { "x": "1%", "y": "0%" },
-            "size":     { "x": "35%", "y": "94%" },
+            "size":     { "x": "35%", "y": "100%" },
             "animation": {
                 "keyframes": [
                     { "time": 0.0,  "offset": { "x": -0.06 }, "alpha": 0 },
@@ -149,7 +149,7 @@
             "anchor":   "left",
             "pivot":    "left",
             "position": { "x": "1%", "y": "0%" },
-            "size":     { "x": "35%", "y": "94%" },
+            "size":     { "x": "35%", "y": "100%" },
             "animation": {
                 "keyframes": [
                     { "time": 0.0,  "offset": { "x": -0.06 }, "alpha": 0 },
@@ -389,20 +389,92 @@
             ],
             "elements": [
                 {
-                    "id":       "gear_panel_a",
-                    "type":     "sprite",
-                    "sprite":   "menus/wood/WoodPanel",
+                    "id":       "equipment_board",
+                    "type":     "container",
                     "anchor":   "left",
                     "pivot":    "left",
                     "position": { "x": "37%", "y": "0%" },
-                    "size":     { "x": "7%", "y": "94%" },
+                    "size":     { "x": "62%", "y": "100%" },
                     "animation": {
                         "keyframes": [
-                            { "time": 0.0,  "offset": { "y": -0.04 }, "alpha": 0 },
+                            { "time": 0.0,  "offset": { "x": 0.04 }, "alpha": 0 },
                             { "time": 0.3, "ease": "out" }
                         ]
                     },
                     "elements": [
+                        {
+                            "id":       "board_left",
+                            "type":     "sprite",
+                            "sprite":   "menus/wood/WoodPanel",
+                            "anchor":   "top_left",
+                            "pivot":    "bottom_left",
+                            "position": { "x": "0%", "y": "-4%" },
+                            "size":     { "x": "14%", "y": "70%" }
+                        },
+                        {
+                            "id":       "board_right",
+                            "type":     "sprite",
+                            "sprite":   "menus/wood/WoodPanel",
+                            "anchor":   "top_right",
+                            "pivot":    "bottom_right",
+                            "position": { "x": "0%", "y": "-4%" },
+                            "size":     { "x": "52%", "y": "70%" }
+                        },
+                        {
+                            "id":       "board_top",
+                            "type":     "sprite",
+                            "sprite":   "menus/wood/WoodPanel",
+                            "anchor":   "top_left",
+                            "pivot":    "bottom_left",
+                            "size":     { "x": "100%", "y": "5%" }
+                        },
+                        {
+                            "id":       "board_bottom",
+                            "type":     "sprite",
+                            "sprite":   "menus/wood/WoodPanel",
+                            "anchor":   "bottom_left",
+                            "pivot":    "top_left",
+                            "size":     { "x": "100%", "y": "27%" }
+                        },
+                        {
+                            "id":       "preview_window",
+                            "type":     "sprite",
+                            "sprite":   "menus/inventory/ViewFrame",
+                            "anchor":   "top_left",
+                            "pivot":    "bottom_left",
+                            "position": { "x": "13%", "y": "-4%" },
+                            "size":     { "x": "36%", "y": "70%" },
+                            "on_drag": {
+                                "class":  "application.runtime.menueventsmanager.menus.inventory.InventoryBranch",
+                                "method": "rotatePreview"
+                            },
+                            "elements": [
+                                {
+                                    "id":       "preview_hint",
+                                    "type":     "label",
+                                    "font":     "IMFellEnglish",
+                                    "font_size": "64%",
+                                    "text":     "Drag to turn  -  scroll to zoom",
+                                    "color":    [1, 0.96, 0.88, 0.8],
+                                    "anchor":   "bottom",
+                                    "pivot":    "top",
+                                    "position": { "x": "0%", "y": "44px" },
+                                    "size":     { "x": "86%", "y": "22px" }
+                                },
+                                {
+                                    "id":       "close_hint",
+                                    "type":     "label",
+                                    "font":     "IMFellEnglish",
+                                    "font_size": "62%",
+                                    "text":     "",
+                                    "color":    [1, 0.96, 0.88, 0.75],
+                                    "anchor":   "bottom",
+                                    "pivot":    "top",
+                                    "position": { "x": "0%", "y": "20px" },
+                                    "size":     { "x": "86%", "y": "22px" }
+                                }
+                            ]
+                        },
                         {
                             "id":       "slot_column_a",
                             "type":     "container",
@@ -410,8 +482,18 @@
                             "spacing":  "6px",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "12%", "y": "-3%" },
-                            "size":     { "x": "76%", "y": "78%" }
+                            "position": { "x": "2%", "y": "-6%" },
+                            "size":     { "x": "9%", "y": "66%" }
+                        },
+                        {
+                            "id":       "slot_column_b",
+                            "type":     "container",
+                            "stack":    "vertical",
+                            "spacing":  "6px",
+                            "anchor":   "top_left",
+                            "pivot":    "bottom_left",
+                            "position": { "x": "51%", "y": "-6%" },
+                            "size":     { "x": "9%", "y": "66%" }
                         },
                         {
                             "id":       "backpack_caption",
@@ -422,107 +504,18 @@
                             "color":    [1, 0.84, 0.52, 1],
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "4%", "y": "-82%" },
-                            "size":     { "x": "92%", "y": "3%" }
+                            "position": { "x": "1%", "y": "-76%" },
+                            "size":     { "x": "11%", "y": "3%" }
                         },
                         {
                             "id":       "backpack_holder",
                             "type":     "container",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "12%", "y": "-86%" },
-                            "size":     { "x": "76%", "y": "10%" },
+                            "position": { "x": "2%", "y": "-80%" },
+                            "size":     { "x": "9%", "y": "15%" },
                             "aspect":   1.0
-                        }
-                    ]
-                },
-                {
-                    "id":       "preview_window",
-                    "type":     "sprite",
-                    "sprite":   "menus/inventory/ViewFrame",
-                    "anchor":   "left",
-                    "pivot":    "left",
-                    "position": { "x": "44.5%", "y": "0%" },
-                    "size":     { "x": "19%", "y": "94%" },
-                    "on_drag": {
-                        "class":  "application.runtime.menueventsmanager.menus.inventory.InventoryBranch",
-                        "method": "rotatePreview"
-                    },
-                    "animation": {
-                        "keyframes": [
-                            { "time": 0.0,  "alpha": 0 },
-                            { "time": 0.3, "ease": "out" }
-                        ]
-                    },
-                    "elements": [
-                        {
-                            "id":       "preview_hint",
-                            "type":     "label",
-                            "font":     "IMFellEnglish",
-                            "font_size": "64%",
-                            "text":     "Drag to turn",
-                            "color":    [1, 0.96, 0.88, 0.8],
-                            "anchor":   "bottom",
-                            "pivot":    "top",
-                            "position": { "x": "0%", "y": "44px" },
-                            "size":     { "x": "80%", "y": "22px" }
                         },
-                        {
-                            "id":       "close_hint",
-                            "type":     "label",
-                            "font":     "IMFellEnglish",
-                            "font_size": "62%",
-                            "text":     "",
-                            "color":    [1, 0.96, 0.88, 0.75],
-                            "anchor":   "bottom",
-                            "pivot":    "top",
-                            "position": { "x": "0%", "y": "20px" },
-                            "size":     { "x": "80%", "y": "22px" }
-                        }
-                    ]
-                },
-                {
-                    "id":       "gear_panel_b",
-                    "type":     "sprite",
-                    "sprite":   "menus/wood/WoodPanel",
-                    "anchor":   "left",
-                    "pivot":    "left",
-                    "position": { "x": "64%", "y": "0%" },
-                    "size":     { "x": "7%", "y": "94%" },
-                    "animation": {
-                        "keyframes": [
-                            { "time": 0.0,  "offset": { "y": -0.04 }, "alpha": 0 },
-                            { "time": 0.3, "ease": "out" }
-                        ]
-                    },
-                    "elements": [
-                        {
-                            "id":       "slot_column_b",
-                            "type":     "container",
-                            "stack":    "vertical",
-                            "spacing":  "6px",
-                            "anchor":   "top_left",
-                            "pivot":    "bottom_left",
-                            "position": { "x": "12%", "y": "-3%" },
-                            "size":     { "x": "76%", "y": "78%" }
-                        }
-                    ]
-                },
-                {
-                    "id":       "sheet_panel",
-                    "type":     "sprite",
-                    "sprite":   "menus/wood/WoodPanel",
-                    "anchor":   "left",
-                    "pivot":    "left",
-                    "position": { "x": "71.5%", "y": "0%" },
-                    "size":     { "x": "27.5%", "y": "94%" },
-                    "animation": {
-                        "keyframes": [
-                            { "time": 0.0,  "offset": { "x": 0.06 }, "alpha": 0 },
-                            { "time": 0.3, "ease": "out" }
-                        ]
-                    },
-                    "elements": [
                         {
                             "id":       "rings_caption",
                             "type":     "label",
@@ -530,11 +523,10 @@
                             "font_size": "64%",
                             "text":     "Rings",
                             "color":    [1, 0.84, 0.52, 1],
-                            "align":    "left",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "6%", "y": "-3%" },
-                            "size":     { "x": "88%", "y": "3%" }
+                            "position": { "x": "13%", "y": "-76%" },
+                            "size":     { "x": "36%", "y": "3%" }
                         },
                         {
                             "id":       "ring_row_a",
@@ -543,8 +535,8 @@
                             "spacing":  "3%",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "6%", "y": "-7%" },
-                            "size":     { "x": "88%", "y": "9%" }
+                            "position": { "x": "14%", "y": "-80%" },
+                            "size":     { "x": "34%", "y": "7.5%" }
                         },
                         {
                             "id":       "ring_row_b",
@@ -553,17 +545,17 @@
                             "spacing":  "3%",
                             "anchor":   "top_left",
                             "pivot":    "bottom_left",
-                            "position": { "x": "6%", "y": "-17%" },
-                            "size":     { "x": "88%", "y": "9%" }
+                            "position": { "x": "14%", "y": "-88.5%" },
+                            "size":     { "x": "34%", "y": "7.5%" }
                         },
                         {
                             "id":       "stats_box",
                             "type":     "sprite",
                             "sprite":   "menus/inventory/Inset",
-                            "anchor":   "top_left",
-                            "pivot":    "bottom_left",
-                            "position": { "x": "4%", "y": "-28%" },
-                            "size":     { "x": "92%", "y": "69%" },
+                            "anchor":   "top_right",
+                            "pivot":    "bottom_right",
+                            "position": { "x": "-2%", "y": "-6%" },
+                            "size":     { "x": "36%", "y": "88%" },
                             "elements": [
                                 {
                                     "id":       "stats_title",
@@ -628,8 +620,8 @@
                 {
                     "id":       "panel",
                     "use":      "Inventory/container_panel",
-                    "position": { "x": "1%", "y": "23.75%" },
-                    "size":     { "x": "35%", "y": "45.5%" }
+                    "position": { "x": "1%", "y": "25.25%" },
+                    "size":     { "x": "35%", "y": "49.5%" }
                 }
             ]
         },
@@ -645,8 +637,8 @@
                 {
                     "id":       "panel",
                     "use":      "Inventory/container_panel",
-                    "position": { "x": "1%", "y": "-23.75%" },
-                    "size":     { "x": "35%", "y": "45.5%" }
+                    "position": { "x": "1%", "y": "-25.25%" },
+                    "size":     { "x": "35%", "y": "49.5%" }
                 }
             ]
         },
@@ -674,8 +666,8 @@
                 {
                     "id":       "panel",
                     "use":      "Inventory/container_panel_listed",
-                    "position": { "x": "1%", "y": "23.75%" },
-                    "size":     { "x": "35%", "y": "45.5%" }
+                    "position": { "x": "1%", "y": "25.25%" },
+                    "size":     { "x": "35%", "y": "49.5%" }
                 }
             ]
         },
@@ -691,8 +683,8 @@
                 {
                     "id":       "panel",
                     "use":      "Inventory/container_panel_listed",
-                    "position": { "x": "1%", "y": "-23.75%" },
-                    "size":     { "x": "35%", "y": "45.5%" }
+                    "position": { "x": "1%", "y": "-25.25%" },
+                    "size":     { "x": "35%", "y": "49.5%" }
                 }
             ]
         }

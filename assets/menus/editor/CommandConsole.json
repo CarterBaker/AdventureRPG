@@ -14,7 +14,7 @@
       },
       "hover_color": "control_hover",
       "on_click": {
-        "class": "engine.editor.menueventsmanager.menus.CommandConsoleBranch",
+        "class": "editor.runtime.menueventsmanager.menus.CommandConsoleBranch",
         "method": "toggleCommandGroup"
       },
       "elements": [
@@ -65,7 +65,7 @@
       },
       "hover_color": "control_hover",
       "on_click": {
-        "class": "engine.editor.menueventsmanager.menus.CommandConsoleBranch",
+        "class": "editor.runtime.menueventsmanager.menus.CommandConsoleBranch",
         "method": "runCommand"
       },
       "elements": [
@@ -167,7 +167,7 @@
       "color": "control",
       "hover_color": "control_hover",
       "on_drag": {
-        "class": "engine.editor.menueventsmanager.menus.CommandConsoleBranch",
+        "class": "editor.runtime.menueventsmanager.menus.CommandConsoleBranch",
         "method": "dragItemTile"
       },
       "elements": [

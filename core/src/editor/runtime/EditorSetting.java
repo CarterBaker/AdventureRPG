@@ -1,12 +1,15 @@
 package editor.runtime;
 
+import engine.input.Buttons;
+
 public class EditorSetting {
 
     /*
      * Editor-only constants — chrome menus, cursors, input keys, menu entry
-     * point indices, layout persistence, tool tabs, the name dialog, the info
-     * pipeline's schemas, hierarchy keys, and status text, and the item
-     * editor's library and status text.
+     * point indices, layout persistence, tool tabs, the name dialog, console
+     * commands and the command drag between windows, the info pipeline's
+     * schemas, hierarchy keys, and status text, and the item editor's library
+     * and status text.
      */
 
     // Cursors
@@ -75,6 +78,7 @@ public class EditorSetting {
     // Commands
     public static final String COMMAND_JSON_PATH = "commands";
     public static final String COMMAND_TOKEN_SEPARATOR_PATTERN = "\\s+";
+    public static final String COMMAND_TOKEN_SEPARATOR = " ";
     public static final String COMMAND_ARGUMENT_OPEN = " <";
     public static final String COMMAND_ARGUMENT_CLOSE = ">";
     public static final String COMMAND_ECHO_PREFIX = "> ";
@@ -82,6 +86,15 @@ public class EditorSetting {
     public static final String COMMAND_MESSAGE_USAGE = "Usage: ";
     public static final String COMMAND_MESSAGE_NO_DEV_WINDOWS = "No Dev window is open to run the command";
     public static final String COMMAND_MESSAGE_NO_ACTION = " has no action for command: ";
+    public static final String COMMAND_MESSAGE_WINDOW_CRASHED = " has crashed and cannot run command: ";
+
+    // Commands — Drag
+    public static final int COMMAND_DRAG_BUTTON = Buttons.LEFT;
+    public static final String MENU_COMMAND_DRAG_GHOST = "editor/CommandConsole/DragGhost";
+    public static final int ENTRY_COMMAND_DRAG_GHOST_LABEL = 0;
+    public static final float COMMAND_DRAG_GHOST_W = 200f;
+    public static final float COMMAND_DRAG_GHOST_H = 26f;
+    public static final float COMMAND_DRAG_GHOST_OFFSET = 14f;
 
     // Commands — Camera
     public static final String COMMAND_FLY = "fly";
@@ -90,6 +103,7 @@ public class EditorSetting {
 
     // Commands — Items
     public static final String COMMAND_GIVE = "give";
+    public static final String COMMAND_ARGUMENT_ITEM = "item";
     public static final String COMMAND_MESSAGE_ITEM_UNKNOWN = ": no item is named ";
     public static final String COMMAND_MESSAGE_ITEM_GIVEN = ": given ";
     public static final String COMMAND_MESSAGE_ITEM_NO_ROOM = ": no room in the backpack or hands for ";

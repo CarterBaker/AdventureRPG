@@ -6,33 +6,28 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
-import application.bootstrap.worldpipeline.worlditemplacementsystem.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
+import application.runtime.inventory.InventoryViewUtility;
+import engine.input.Input;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 import engine.settings.KeyBindings;
 import engine.util.mathematics.vectors.Vector3;
 
 public class InventoryBranch extends BranchPackage {
 
     /*
-     * Runs the inventory for this context's window. The inventory key opens
-     * it while a player is in the world and no other menu holds input; using
-     * a chest in the world opens it with that chest shown too. The equipment
-     * panels are always shown, with the player standing in the open preview
-     * window between them — the character is drawn in the world behind the
-     * menus and framed there through the character preview, filling the
-     * window as far as its own proportions allow — and turned by dragging.
-     * The inventory key or Pause closes it once it has been on show a whole
-     * frame, handing any carried item back to where it came from and the
-     * camera back to the way it looked; a context torn down with the
-     * inventory open still hands back whatever the cursor carried. Each
-     * frame the drag branch settles what the cursor carries, the container
-     * branch keeps the backpack and chest panels in step with what is worn,
-     * and the equipment branch redraws whatever changed. A new item handed in
-     * while the cursor is over the open inventory lands where it points.
+     * Runs the inventory for this context's window. Opens on the inventory key
+     * or when a chest is used, shows the equipment board around the framed
+     * character preview — turned and panned by dragging, zoomed with the
+     * wheel — and closes on the key or Pause, returning any carried item and
+     * the camera. Each frame the drag, container and equipment branches
+     * settle and redraw what changed. A new item handed in while the cursor
+     * is over the open inventory lands where it points.
      */
 
     // Internal
@@ -83,6 +78,7 @@ public class InventoryBranch extends BranchPackage {
         inventoryDragBranch.update(session);
         inventoryContainerBranch.update(session);
         inventoryEquipmentBranch.update(session);
+        zoomPreview(session);
         framePreview(session);
 
         session.setCloseArmed(session.getEquipmentMenu().isVisible());
@@ -180,17 +176,52 @@ public class InventoryBranch extends BranchPackage {
 
     // Preview \\
 
+    // Dragging across the preview turns the character; dragging up or down pans while zoomed in
     public void rotatePreview(WindowInstance window) {
 
-        if (getSession(window) == null)
+        InventorySessionStruct session = getSession(window);
+
+        if (session == null)
             return;
+
+        Input rawInput = inputManager.getRawInput(window);
 
         playerManager.rotateCharacterPreview(
                 window.getWindowID(),
-                inputManager.getRawInput(window).getDeltaX() * RuntimeSetting.INVENTORY_ROTATE_DEGREES_PER_PIXEL);
+                rawInput.getDeltaX() * RuntimeSetting.INVENTORY_ROTATE_DEGREES_PER_PIXEL);
+        session.setPreviewFocus(clampFocus(session, session.getPreviewFocus()
+                + rawInput.getDeltaY() * RuntimeSetting.INVENTORY_PREVIEW_PAN_PER_PIXEL / session.getPreviewZoom()));
     }
 
-    // Centres the character in the preview window at the largest scale its own proportions fit
+    // The mouse wheel over the preview zooms in on the character
+    private void zoomPreview(InventorySessionStruct session) {
+
+        WindowInstance window = session.getWindow();
+        float wheel = inputManager.getRawInput(window).getScrollY();
+        ElementInstance preview = session.getEquipmentMenu().getEntryPoint(RuntimeSetting.ENTRY_INVENTORY_PREVIEW);
+
+        if (wheel == 0f || !InventoryViewUtility.isInside(
+                preview, inputManager.getHoverMouseX(window), inputManager.getHoverMouseY(window)))
+            return;
+
+        float zoom = session.getPreviewZoom() * (float) Math.pow(RuntimeSetting.INVENTORY_PREVIEW_ZOOM_STEP, wheel);
+
+        session.setPreviewZoom(Math.max(
+                RuntimeSetting.INVENTORY_PREVIEW_ZOOM_MIN,
+                Math.min(RuntimeSetting.INVENTORY_PREVIEW_ZOOM_MAX, zoom)));
+        session.setPreviewFocus(clampFocus(session, session.getPreviewFocus()));
+    }
+
+    // Keeps the framed share of the character on the character itself at the current zoom
+    private float clampFocus(InventorySessionStruct session, float focus) {
+
+        float center = EngineSetting.CHARACTER_PREVIEW_CENTER_HEIGHT;
+        float slack = 1f - 1f / session.getPreviewZoom();
+
+        return Math.max(center - slack * center, Math.min(center + slack * (1f - center), focus));
+    }
+
+    // Centres the character's focus in the preview window at the largest scale its proportions fit, times the zoom
     private void framePreview(InventorySessionStruct session) {
 
         WindowInstance window = session.getWindow();
@@ -204,12 +235,15 @@ public class InventoryBranch extends BranchPackage {
 
         float characterHeight = Math.min(
                 preview.getComputedH(),
-                preview.getComputedW() * size.y / Math.max(size.x, size.z)) * RuntimeSetting.INVENTORY_PREVIEW_FILL;
+                preview.getComputedW() * size.y / Math.max(size.x, size.z))
+                * RuntimeSetting.INVENTORY_PREVIEW_FILL * session.getPreviewZoom();
+        float centerY = preview.getComputedTop() + preview.getComputedH() * 0.5f
+                - (session.getPreviewFocus() - EngineSetting.CHARACTER_PREVIEW_CENTER_HEIGHT) * characterHeight;
 
         playerManager.frameCharacterPreview(
                 window.getWindowID(),
                 (preview.getComputedLeft() + preview.getComputedW() * 0.5f) / width * 2f - 1f,
-                (preview.getComputedTop() + preview.getComputedH() * 0.5f) / height * 2f - 1f,
+                centerY / height * 2f - 1f,
                 characterHeight / height);
     }
 

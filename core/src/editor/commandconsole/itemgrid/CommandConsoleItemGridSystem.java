@@ -4,12 +4,12 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.DimensionValue;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
 import editor.commandconsole.CommandConsoleSetting;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -125,7 +125,7 @@ public class CommandConsoleItemGridSystem extends SystemPackage {
             return grid.getColumns();
 
         ElementInstance row = gridElement.getChildren().get(0);
-        DimensionValue spacing = row.getElementData().getSpacing();
+        DimensionValueStruct spacing = row.getElementData().getSpacing();
         float spacingW = spacing != null ? spacing.resolve(gridW) : 0f;
         float tileW = grid.getTileElement(0).getElementData().getLayout().resolveWidth(gridW, row.getComputedH());
 

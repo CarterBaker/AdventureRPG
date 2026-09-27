@@ -4,11 +4,11 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.bootstrap.renderpipeline.fbo.FboInstance;
-import application.bootstrap.renderpipeline.fbomanager.FboManager;
-import application.bootstrap.renderpipeline.fborendersystem.FboRenderSystem;
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.renderpipeline.render.MaskStruct;
+import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
-import application.bootstrap.renderpipeline.util.MaskStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -34,13 +34,13 @@ public class CommandConsoleItemRenderSystem extends SystemPackage {
     private ItemModelManager itemModelManager;
     private MaterialManager materialManager;
     private RenderManager renderManager;
-    private FboManager fboManager;
-    private FboRenderSystem fboRenderSystem;
+    private FBOManager fboManager;
+    private FBORenderSystem fboRenderSystem;
     private CommandConsolePanelSystem commandConsolePanelSystem;
     private CommandConsoleItemGridSystem commandConsoleItemGridSystem;
 
     // Render Target
-    private FboInstance iconFbo;
+    private FBOInstance iconFbo;
 
     // Resources
     private int itemMaterialID;
@@ -66,8 +66,8 @@ public class CommandConsoleItemRenderSystem extends SystemPackage {
         this.itemModelManager = get(ItemModelManager.class);
         this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
-        this.fboManager = get(FboManager.class);
-        this.fboRenderSystem = get(FboRenderSystem.class);
+        this.fboManager = get(FBOManager.class);
+        this.fboRenderSystem = get(FBORenderSystem.class);
         this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
         this.commandConsoleItemGridSystem = get(CommandConsoleItemGridSystem.class);
     }

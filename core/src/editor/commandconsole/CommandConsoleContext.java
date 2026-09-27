@@ -7,7 +7,7 @@ import editor.commandconsole.input.CommandConsoleInputSystem;
 import editor.commandconsole.itemgrid.CommandConsoleItemGridSystem;
 import editor.commandconsole.itemgrid.CommandConsoleItemRenderSystem;
 import editor.commandconsole.panel.CommandConsolePanelSystem;
-import engine.editor.EditorInputSystem;
+import editor.runtime.EditorInputSystem;
 import engine.root.ContextPackage;
 
 public class CommandConsoleContext extends ContextPackage {

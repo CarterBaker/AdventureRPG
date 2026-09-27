@@ -1,6 +1,6 @@
 package editor.bootstrap.commandpipeline.command;
 
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.HandlePackage;
 
 public class CommandHandle extends HandlePackage {

@@ -8,7 +8,7 @@ import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionMa
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.menueventsmanager.menus.inventory.InventoryBranch;
-import engine.editor.EditorSetting;
+import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 
 public class DevItemSystem extends SystemPackage {

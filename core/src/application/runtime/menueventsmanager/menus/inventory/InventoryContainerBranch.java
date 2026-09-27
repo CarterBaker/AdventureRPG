@@ -21,18 +21,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class InventoryContainerBranch extends BranchPackage {
 
     /*
-     * Shows the worn backpack and the opened chest in the bag column at the
-     * left of the screen. Each takes the full height alone; together the
-     * chest's panel sits directly above the backpack's. A container's panel
-     * is a 3D view of the bag with every item standing where it rests, and —
-     * while the list toggle is on — its contents listed beside the view under
-     * a header for each category. The toggle holds for every container and
-     * every time the inventory opens in this window. Panels open, move, and
-     * close with what is worn and with the toggle, and a list is rebuilt only
-     * when its container changes. Pressing on an item in a view or a list
-     * picks it up; pressing on empty space in a view turns the view instead.
-     * The view matrices are recomputed every frame from their elements, so
-     * the cursor always picks what is drawn.
+     * Shows the worn backpack and an opened chest in the bag column at the
+     * left, each as a 3D view plus, while the list toggle is on, a categorized
+     * list beside it. Panels follow what is worn and the toggle, and lists
+     * rebuild only when their container changes. Pressing an item picks it up;
+     * pressing empty view space turns the view.
      */
 
     // Internal
@@ -190,7 +183,7 @@ public class InventoryContainerBranch extends BranchPackage {
             return;
         }
 
-        for (ItemCategory itemCategory : ItemCategory.values())
+        for (ItemCategory itemCategory : ItemCategory.VALUES)
             injectCategory(view, itemCategory);
     }
 
