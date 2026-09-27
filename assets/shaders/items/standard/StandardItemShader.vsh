@@ -16,6 +16,7 @@ const vec3 NORMALS[6] = vec3[](
     vec3(-1, 0, 0), vec3(0, 1, 0), vec3(0,-1, 0));
 
 out vec3 vNormalView;
+out vec3 vViewPosition;
 out vec2 vUV;
 
 void main() {
@@ -38,5 +39,6 @@ void main() {
 
     worldPos = applyWorldCurvature(worldPos);
 
-    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+    vViewPosition = (u_view * vec4(worldPos, 1.0)).xyz;
+    gl_Position   = u_viewProjection * vec4(worldPos, 1.0);
 }

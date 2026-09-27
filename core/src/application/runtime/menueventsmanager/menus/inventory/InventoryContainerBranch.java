@@ -1,17 +1,22 @@
 package application.runtime.menueventsmanager.menus.inventory;
 
+import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.container.ContainerSlotStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemCategory;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.inventory.InventoryViewUtility;
+import engine.input.Input;
 import engine.input.InputNameUtility;
 import engine.root.BranchPackage;
 import engine.settings.KeyBindings;
@@ -21,21 +26,27 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class InventoryContainerBranch extends BranchPackage {
 
     /*
-     * Shows the worn backpack and an opened chest in the bag column at the
-     * left, each as a 3D view plus, while the list toggle is on, a categorized
-     * list beside it. Panels follow what is worn and the toggle, and lists
-     * rebuild only when their container changes. Pressing an item picks it up;
-     * pressing empty view space turns the view.
+     * Opens containers, each in its own panel: the worn bag on the left and,
+     * on the right, a chest or bag opened where it lies. A panel shows its
+     * container from above through its own camera, so the whole inside is in
+     * reach — tilted and turned by dragging beside it, brought closer with
+     * the wheel — and a list of its contents, grouped by category, toggles
+     * over it. A container opened in the world is drawn open where it stands:
+     * its lid is left off, and only a space inside its own model is ever
+     * shown there, never a pocket. Every frame each open view is framed anew,
+     * and lists rebuild only when their container changes. Pressing an item
+     * in any panel picks it up.
      */
 
     // Internal
     private MenuManager menuManager;
     private InputManager inputManager;
+    private WorldItemPlacementSystem worldItemPlacementSystem;
     private InventoryBranch inventoryBranch;
     private InventoryDragBranch inventoryDragBranch;
 
     // State
-    private boolean listShown;
+    private boolean[] container2ListShown;
 
     // Scratch
     private Vector3 rayOrigin;
@@ -47,6 +58,9 @@ public class InventoryContainerBranch extends BranchPackage {
     @Override
     protected void create() {
 
+        // State
+        this.container2ListShown = new boolean[InventoryContainer.VALUES.length];
+
         // Scratch
         this.rayOrigin = new Vector3();
         this.rayDirection = new Vector3();
@@ -57,6 +71,7 @@ public class InventoryContainerBranch extends BranchPackage {
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.inputManager = get(InputManager.class);
+        this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.inventoryBranch = get(InventoryBranch.class);
         this.inventoryDragBranch = get(InventoryDragBranch.class);
     }
@@ -65,69 +80,77 @@ public class InventoryContainerBranch extends BranchPackage {
 
     void update(InventorySessionStruct session) {
 
-        ItemInstance backpackItem = session.getInventory().getItem(EquipmentSlot.BACKPACK);
-        ItemInstance chestItem = session.getChestItem();
-        boolean stacked = backpackItem != null && chestItem != null;
-
-        syncView(session, session.getView(InventoryContainer.CHEST), chestItem, resolveMenuName(stacked, true));
-        syncView(session, session.getView(InventoryContainer.BACKPACK), backpackItem, resolveMenuName(stacked, false));
-
         for (InventoryViewStruct view : session.getViews()) {
+
+            syncView(session, view);
 
             if (!view.isOpen())
                 continue;
 
-            refreshList(view);
-            updateViewMatrix(view);
+            syncList(session, view);
+            placeView(session, view);
+            refreshView(view);
+            zoomView(session, view);
         }
     }
 
     // Views \\
 
-    private void syncView(
-            InventorySessionStruct session,
-            InventoryViewStruct view,
-            ItemInstance containerItem,
-            String menuName) {
+    // Each view follows the container it should show: the worn bag, or the container opened in the world
+    private void syncView(InventorySessionStruct session, InventoryViewStruct view) {
 
-        if (containerItem == null) {
-            closeView(view);
-            return;
-        }
+        ItemInstance containerItem = resolveContainerItem(session, view.getInventoryContainer());
 
-        if (view.isOpen() && view.getContainerItem() == containerItem && view.getMenuName().equals(menuName))
+        if (view.getContainerItem() == containerItem)
             return;
 
         closeView(view);
 
-        MenuInstance menu = menuManager.openMenu(menuName, session.getWindow());
-        view.open(menu, menuName, containerItem);
-
-        menu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_TITLE)
-                .setFontText(containerItem.getItemDefinitionHandle().getDisplayName());
-        menu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_HINT).setFontText(String.format(
-                RuntimeSetting.INVENTORY_FORMAT_VIEW_HINT, InputNameUtility.getName(KeyBindings.ROTATE_ITEM)));
-        menu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_TOGGLE_LABEL).setFontText(
-                listShown ? RuntimeSetting.INVENTORY_TEXT_HIDE_LIST : RuntimeSetting.INVENTORY_TEXT_SHOW_LIST);
-        view.getViewElement().setOnDragArgOverride(view.getInventoryContainer().name());
+        if (containerItem != null)
+            openView(session, view, containerItem);
     }
 
-    // The panel a container opens in: the full column alone or one half of it when stacked, listed or not
-    private String resolveMenuName(boolean stacked, boolean upper) {
+    private ItemInstance resolveContainerItem(InventorySessionStruct session, InventoryContainer inventoryContainer) {
 
-        if (!stacked)
-            return listShown
-                    ? RuntimeSetting.MENU_INVENTORY_CONTAINER_LISTED
-                    : RuntimeSetting.MENU_INVENTORY_CONTAINER;
+        if (inventoryContainer == InventoryContainer.BACKPACK)
+            return session.getInventory().getItem(EquipmentSlot.BACKPACK);
 
-        if (upper)
-            return listShown
-                    ? RuntimeSetting.MENU_INVENTORY_CONTAINER_LISTED_UPPER
-                    : RuntimeSetting.MENU_INVENTORY_CONTAINER_UPPER;
+        return session.hasChest()
+                ? worldItemPlacementSystem.resolveItemInstance(session.getChestWorldItem())
+                : null;
+    }
 
-        return listShown
-                ? RuntimeSetting.MENU_INVENTORY_CONTAINER_LISTED_LOWER
-                : RuntimeSetting.MENU_INVENTORY_CONTAINER_LOWER;
+    private void openView(InventorySessionStruct session, InventoryViewStruct view, ItemInstance containerItem) {
+
+        InventoryContainer inventoryContainer = view.getInventoryContainer();
+        WorldItemInstance worldItem = inventoryContainer == InventoryContainer.CHEST
+                ? session.getChestWorldItem()
+                : null;
+        MenuInstance panelMenu = menuManager.openMenu(inventoryContainer.getPanelMenuName(), session.getWindow());
+
+        view.open(containerItem, worldItem, panelMenu);
+
+        panelMenu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_TITLE)
+                .setFontText(containerItem.getItemDefinitionHandle().getDisplayName());
+        panelMenu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_TOGGLE_LABEL)
+                .setFontText(RuntimeSetting.INVENTORY_TEXT_SHOW_LIST);
+        panelMenu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_HINT).setFontText(resolveHint(inventoryContainer));
+
+        if (worldItem != null && containerItem.getItemDefinitionHandle().hasOpenMesh())
+            worldItemPlacementSystem.setItemShown(worldItem, false);
+    }
+
+    private String resolveHint(InventoryContainer inventoryContainer) {
+
+        if (inventoryContainer == InventoryContainer.BACKPACK)
+            return String.format(
+                    RuntimeSetting.INVENTORY_FORMAT_VIEW_HINT, InputNameUtility.getName(KeyBindings.ROTATE_ITEM));
+
+        return String.format(
+                RuntimeSetting.INVENTORY_FORMAT_CHEST_HINT,
+                InputNameUtility.getName(KeyBindings.SECONDARY),
+                InputNameUtility.getName(KeyBindings.INVENTORY),
+                InputNameUtility.getName(KeyBindings.PAUSE));
     }
 
     private void closeView(InventoryViewStruct view) {
@@ -135,7 +158,12 @@ public class InventoryContainerBranch extends BranchPackage {
         if (!view.isOpen())
             return;
 
-        menuManager.closeMenu(view.getMenu());
+        closeList(view);
+        menuManager.closeMenu(view.getPanelMenu());
+
+        if (view.isInWorld())
+            worldItemPlacementSystem.setItemShown(view.getWorldItem(), true);
+
         view.close();
     }
 
@@ -145,41 +173,118 @@ public class InventoryContainerBranch extends BranchPackage {
             closeView(view);
     }
 
-    private void updateViewMatrix(InventoryViewStruct view) {
+    // Placement \\
 
-        ElementInstance viewElement = view.getViewElement();
+    // The space stands on its own floor under its panel's camera; a container in the world is placed there too
+    private void placeView(InventorySessionStruct session, InventoryViewStruct view) {
 
-        if (viewElement.getComputedW() <= 0f || viewElement.getComputedH() <= 0f)
+        WindowInstance window = session.getWindow();
+        ElementInstance area = view.getAreaElement();
+
+        if (view.isInWorld())
+            view.setWorldPlaced(placeInWorld(session, view));
+
+        view.setShown(!view.hasList() && area.getComputedW() > 0f && area.getComputedH() > 0f);
+
+        if (!view.isShown())
             return;
 
-        InventoryViewUtility.composeViewMatrix(
-                viewElement, view.getContainerInstance(), view.getYaw(), view.getViewMatrix());
-        view.getInverseViewMatrix().set(view.getViewMatrix()).inverse();
+        InventoryViewUtility.composeContainerMatrix(
+                view.getYaw(), view.getContainerInstance(), view.getContainerMatrix());
+        InventoryViewUtility.composePanelViewProjection(
+                area,
+                view.getContainerInstance(),
+                view.getPitch(),
+                view.getZoom(),
+                window.getWidth(),
+                window.getHeight(),
+                view.getViewProjection());
+        view.resolvePickMatrix();
+    }
+
+    private boolean placeInWorld(InventorySessionStruct session, InventoryViewStruct view) {
+
+        EntityInstance player = session.getPlayer();
+
+        return worldItemPlacementSystem.composeTransform(
+                view.getWorldItem(),
+                player.getWorldHandle(),
+                player.getWorldPositionStruct().getChunkCoordinate(),
+                view.getWorldItemMatrix());
+    }
+
+    // The wheel over a panel brings its container closer
+    private void zoomView(InventorySessionStruct session, InventoryViewStruct view) {
+
+        WindowInstance window = session.getWindow();
+        float wheel = inputManager.getRawInput(window).getScrollY();
+
+        if (wheel == 0f || !view.isShown() || !InventoryViewUtility.isInside(
+                view.getAreaElement(),
+                inputManager.getHoverMouseX(window),
+                inputManager.getHoverMouseY(window)))
+            return;
+
+        view.zoom((float) Math.pow(RuntimeSetting.INVENTORY_VIEW_ZOOM_STEP, wheel));
     }
 
     // List \\
 
-    private void refreshList(InventoryViewStruct view) {
+    private void syncList(InventorySessionStruct session, InventoryViewStruct view) {
+
+        boolean listShown = container2ListShown[view.getInventoryContainer().ordinal()];
+
+        if (listShown && !view.hasList())
+            view.setListMenu(openList(session, view));
+
+        if (!listShown)
+            closeList(view);
+    }
+
+    private MenuInstance openList(InventorySessionStruct session, InventoryViewStruct view) {
+
+        MenuInstance menu = menuManager.openMenu(
+                view.getInventoryContainer().getListMenuName(), session.getWindow());
+
+        menu.getEntryPoint(RuntimeSetting.ENTRY_LIST_TITLE)
+                .setFontText(view.getContainerItem().getItemDefinitionHandle().getDisplayName());
+        menu.getEntryPoint(RuntimeSetting.ENTRY_LIST_TOGGLE_LABEL).setFontText(RuntimeSetting.INVENTORY_TEXT_HIDE_LIST);
+
+        return menu;
+    }
+
+    private void closeList(InventoryViewStruct view) {
+
+        if (!view.hasList())
+            return;
+
+        menuManager.closeMenu(view.getListMenu());
+        view.setListMenu(null);
+    }
+
+    private void refreshView(InventoryViewStruct view) {
 
         ContainerInstance containerInstance = view.getContainerInstance();
 
         if (containerInstance.getRevision() == view.getListedRevision())
             return;
 
-        MenuInstance menu = view.getMenu();
+        String weight = String.format(RuntimeSetting.INVENTORY_FORMAT_HOLDING, containerInstance.getContentWeight());
 
         view.setListedRevision(containerInstance.getRevision());
-        menu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_WEIGHT).setFontText(
-                String.format(RuntimeSetting.INVENTORY_FORMAT_HOLDING, containerInstance.getContentWeight()));
+        view.getPanelMenu().getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_WEIGHT).setFontText(weight);
 
         if (!view.hasList())
             return;
 
-        menuManager.ejectAll(menu, RuntimeSetting.ENTRY_CONTAINER_LIST);
+        MenuInstance menu = view.getListMenu();
+
+        menu.getEntryPoint(RuntimeSetting.ENTRY_LIST_WEIGHT).setFontText(weight);
+        menuManager.ejectAll(menu, RuntimeSetting.ENTRY_LIST_ROWS);
         view.clearRows();
 
         if (containerInstance.isEmpty()) {
-            menuManager.inject(menu, RuntimeSetting.ENTRY_CONTAINER_LIST, RuntimeSetting.MENU_INVENTORY_LIST_EMPTY);
+            menuManager.inject(menu, RuntimeSetting.ENTRY_LIST_ROWS, RuntimeSetting.MENU_INVENTORY_LIST_EMPTY);
             return;
         }
 
@@ -204,7 +309,7 @@ public class InventoryContainerBranch extends BranchPackage {
                 .compareTo(second.getItemInstance().getItemDefinitionHandle().getDisplayName()));
 
         menuManager.inject(
-                view.getMenu(), RuntimeSetting.ENTRY_CONTAINER_LIST, RuntimeSetting.MENU_INVENTORY_LIST_HEADER,
+                view.getListMenu(), RuntimeSetting.ENTRY_LIST_ROWS, RuntimeSetting.MENU_INVENTORY_LIST_HEADER,
                 header -> header.setFontText(itemCategory.getTitle()));
 
         for (int i = 0; i < categorySlots.size(); i++)
@@ -213,16 +318,17 @@ public class InventoryContainerBranch extends BranchPackage {
 
     private void injectRow(InventoryViewStruct view, ItemInstance itemInstance) {
 
+        ItemDefinitionHandle item = itemInstance.getItemDefinitionHandle();
         String argument = view.getInventoryContainer().name()
                 + RuntimeSetting.INVENTORY_ARGUMENT_SEPARATOR
                 + view.getRowItems().size();
 
         ElementInstance row = menuManager.inject(
-                view.getMenu(), RuntimeSetting.ENTRY_CONTAINER_LIST, RuntimeSetting.MENU_INVENTORY_LIST_ROW,
+                view.getListMenu(), RuntimeSetting.ENTRY_LIST_ROWS, RuntimeSetting.MENU_INVENTORY_LIST_ROW,
                 element -> {
                     element.setOnDragArgOverride(argument);
                     element.findChildById(RuntimeSetting.ELEMENT_INVENTORY_ROW_NAME)
-                            .setFontText(itemInstance.getItemDefinitionHandle().getDisplayName());
+                            .setFontText(item.getDisplayName());
                     element.findChildById(RuntimeSetting.ELEMENT_INVENTORY_ROW_WEIGHT).setFontText(
                             String.format(RuntimeSetting.INVENTORY_FORMAT_WEIGHT, itemInstance.getTotalWeight()));
                 });
@@ -232,16 +338,19 @@ public class InventoryContainerBranch extends BranchPackage {
 
     // Toggle \\
 
-    public void toggleList(WindowInstance window) {
+    public void toggleList(String inventoryContainerName, WindowInstance window) {
 
         if (inventoryBranch.getSession(window) == null)
             return;
 
-        this.listShown = !listShown;
+        int index = InventoryContainer.valueOf(inventoryContainerName).ordinal();
+
+        container2ListShown[index] = !container2ListShown[index];
     }
 
     // Drag \\
 
+    // Pressing an item in any panel picks it up; pressing beside this panel's container turns it
     public void dragView(String inventoryContainerName, WindowInstance window) {
 
         InventorySessionStruct session = inventoryBranch.getSession(window);
@@ -251,30 +360,59 @@ public class InventoryContainerBranch extends BranchPackage {
 
         InventoryViewStruct view = session.getView(InventoryContainer.valueOf(inventoryContainerName));
 
-        if (!view.isOpen())
-            return;
-
         switch (session.getDragMode()) {
 
             case NONE -> {
 
-                float x = inputManager.getHoverMouseX(window);
-                float y = inputManager.getHoverMouseY(window);
-                ContainerSlotStruct slot = pickSlot(view, x, y);
+                if (pickUpAt(session, window))
+                    return;
 
-                if (slot != null)
-                    inventoryDragBranch.pickUpFromView(session, view, slot, x, y);
-                else
-                    session.setDragMode(InventoryDragMode.TURN_VIEW);
+                session.setDragMode(view.isShown() ? InventoryDragMode.TURN_VIEW : InventoryDragMode.SPENT);
             }
 
-            case TURN_VIEW -> view.turn(
-                    inputManager.getRawInput(window).getDeltaX()
-                            * RuntimeSetting.INVENTORY_VIEW_TURN_DEGREES_PER_PIXEL);
+            case TURN_VIEW -> {
+
+                Input rawInput = inputManager.getRawInput(window);
+
+                view.turn(
+                        rawInput.getDeltaX() * RuntimeSetting.INVENTORY_VIEW_TURN_DEGREES_PER_PIXEL,
+                        rawInput.getDeltaY() * RuntimeSetting.INVENTORY_VIEW_TURN_DEGREES_PER_PIXEL);
+            }
 
             default -> {
             }
         }
+    }
+
+    // Pressing outside every panel still picks up an item a zoomed container shows there
+    public void dragScene(WindowInstance window) {
+
+        InventorySessionStruct session = inventoryBranch.getSession(window);
+
+        if (session == null || session.getDragMode() != InventoryDragMode.NONE)
+            return;
+
+        if (!pickUpAt(session, window))
+            session.setDragMode(InventoryDragMode.SPENT);
+    }
+
+    private boolean pickUpAt(InventorySessionStruct session, WindowInstance window) {
+
+        float x = inputManager.getHoverMouseX(window);
+        float y = inputManager.getHoverMouseY(window);
+
+        for (InventoryViewStruct view : session.getViews()) {
+
+            ContainerSlotStruct slot = pickSlot(session, view, x, y);
+
+            if (slot == null)
+                continue;
+
+            inventoryDragBranch.pickUpFromView(session, view, slot, x, y);
+            return true;
+        }
+
+        return false;
     }
 
     public void dragRow(String argument, WindowInstance window) {
@@ -305,20 +443,46 @@ public class InventoryContainerBranch extends BranchPackage {
 
     // Picking \\
 
-    // The item drawn under a window point in this view, null over empty space
-    ContainerSlotStruct pickSlot(InventoryViewStruct view, float x, float y) {
+    // True when the cursor's ray passes through this shown view's space
+    boolean pointsInto(InventorySessionStruct session, InventoryViewStruct view, float x, float y) {
 
-        if (!InventoryViewUtility.isInside(view.getViewElement(), x, y))
+        if (!view.isShown())
+            return false;
+
+        castRay(session, view, x, y);
+
+        return view.getContainerInstance().intersects(rayOrigin, rayDirection);
+    }
+
+    // The item the cursor points at in this view, null over empty space
+    ContainerSlotStruct pickSlot(InventorySessionStruct session, InventoryViewStruct view, float x, float y) {
+
+        if (!pointsInto(session, view, x, y))
             return null;
-
-        InventoryViewUtility.castRay(view.getInverseViewMatrix(), x, y, rayOrigin, rayDirection);
 
         return view.getContainerInstance().raycast(rayOrigin, rayDirection);
     }
 
-    // Where a window point meets this view's floor, in sub-voxels — false when it misses
-    boolean pickFloor(InventoryViewStruct view, float x, float y, Vector3 out) {
-        InventoryViewUtility.castRay(view.getInverseViewMatrix(), x, y, rayOrigin, rayDirection);
-        return InventoryViewUtility.intersectFloor(rayOrigin, rayDirection, out);
+    // Where the cursor aims in this view, in sub-voxels: the first item surface its ray touches, else the floor
+    boolean pickPoint(InventorySessionStruct session, InventoryViewStruct view, float x, float y, Vector3 out) {
+
+        castRay(session, view, x, y);
+
+        return view.getContainerInstance().raycastPoint(rayOrigin, rayDirection, out)
+                || InventoryViewUtility.intersectFloor(rayOrigin, rayDirection, out);
+    }
+
+    private void castRay(InventorySessionStruct session, InventoryViewStruct view, float x, float y) {
+
+        WindowInstance window = session.getWindow();
+
+        InventoryViewUtility.castRay(
+                view.getInversePickMatrix(),
+                window.getWidth(),
+                window.getHeight(),
+                x,
+                y,
+                rayOrigin,
+                rayDirection);
     }
 }

@@ -4,6 +4,7 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
+import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
@@ -18,6 +19,7 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Coordinate4Long;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -28,12 +30,15 @@ public class WorldItemPlacementSystem extends SystemPackage {
      * Chunk loads build item palettes off the main thread and push them to
      * WorldItemRenderSystem on it; runtime placement and removal update the
      * subchunk, chunk palette and renderer together. resolveItemInstance()
-     * keeps an item's real contents on its subchunk struct.
+     * keeps an item's real contents on its subchunk struct. composeTransform()
+     * is the one CPU-side placement of a world item — its block-space model
+     * matrix relative to a chunk, turned exactly as the item shader turns it.
      */
 
     // Internal
     private ItemDefinitionManager itemDefinitionManager;
     private ItemManager itemManager;
+    private ItemRotationBufferSystem itemRotationBufferSystem;
     private WorldItemRenderSystem worldItemRenderSystem;
     private WorldStreamManager worldStreamManager;
 
@@ -43,6 +48,7 @@ public class WorldItemPlacementSystem extends SystemPackage {
     protected void get() {
         this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.itemManager = get(ItemManager.class);
+        this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
         this.worldItemRenderSystem = get(WorldItemRenderSystem.class);
         this.worldStreamManager = get(WorldStreamManager.class);
     }
@@ -207,6 +213,76 @@ public class WorldItemPlacementSystem extends SystemPackage {
 
         return near <= far ? near : Float.MAX_VALUE;
     }
+
+    // State \\
+
+    // True while the item still stands in its chunk's palette — a rebuilt palette holds new instances,
+    // and a palette being rebuilt on the streaming thread is judged on a later frame
+    public boolean isPlaced(WorldItemInstance instance) {
+
+        ChunkInstance chunk = worldStreamManager.getChunkInstance(instance.getChunkCoordinate());
+
+        if (chunk == null)
+            return false;
+
+        if (!chunk.getChunkDataSyncContainer().tryAcquire())
+            return true;
+
+        try {
+            return chunk.getWorldItemInstancePaletteHandle().getItems().contains(instance);
+        } finally {
+            chunk.getChunkDataSyncContainer().release();
+        }
+    }
+
+    public void setItemShown(WorldItemInstance instance, boolean shown) {
+
+        if (shown)
+            worldItemRenderSystem.showItem(instance);
+        else
+            worldItemRenderSystem.hideItem(instance);
+    }
+
+    // Transform \\
+
+    // T(chunk offset + position) * T(centre) * R(orientation) * T(-centre) — false unless the chunk borders this one
+    public boolean composeTransform(
+            WorldItemInstance instance,
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            Matrix4 out) {
+
+        float svr = EngineSetting.SUB_VOXEL_RESOLUTION;
+        long packed = instance.getPackedPosition();
+
+        for (int offsetZ = -1; offsetZ <= 1; offsetZ++)
+            for (int offsetX = -1; offsetX <= 1; offsetX++) {
+
+                long neighbourCoordinate = WorldWrapUtility.wrapAroundWorld(
+                        worldHandle, Coordinate2Long.add(chunkCoordinate, offsetX, offsetZ));
+
+                if (neighbourCoordinate != instance.getChunkCoordinate())
+                    continue;
+
+                out.set(
+                        1, 0, 0, offsetX * EngineSetting.CHUNK_SIZE + Coordinate4Long.unpackX(packed) / svr + 0.5f,
+                        0, 1, 0, Coordinate4Long.unpackY(packed) / svr + 0.5f,
+                        0, 0, 1, offsetZ * EngineSetting.CHUNK_SIZE + Coordinate4Long.unpackZ(packed) / svr + 0.5f,
+                        0, 0, 0, 1)
+                        .multiply(itemRotationBufferSystem.getRotation(Coordinate4Long.unpackW(packed)))
+                        .multiply(
+                                1, 0, 0, -0.5f,
+                                0, 1, 0, -0.5f,
+                                0, 0, 1, -0.5f,
+                                0, 0, 0, 1);
+
+                return true;
+            }
+
+        return false;
+    }
+
+    // Contents \\
 
     public ItemInstance resolveItemInstance(WorldItemInstance instance) {
 

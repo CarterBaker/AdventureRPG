@@ -1,32 +1,28 @@
 package application.runtime.inventory;
 
 import application.bootstrap.itempipeline.container.ContainerInstance;
+import application.bootstrap.itempipeline.itemdefinition.ContainerSpaceStruct;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.runtime.RuntimeSetting;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.mathematics.matrices.Matrix4;
-import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.vectors.Vector3Int;
 
 public class InventoryViewUtility extends EngineUtility {
 
     /*
-     * The inventory's single set of view transforms, shared by picking and
-     * rendering. Places a container's sub-voxel box inside its menu element,
-     * turned and tipped toward the viewer, and inverts that to turn a cursor
-     * point into a ray.
+     * The inventory's single set of transforms, shared by picking and
+     * rendering. In its panel every container stands on its own floor, seen
+     * through the panel's own camera looking down into it and framed to fill
+     * the panel; a window point is unprojected through the inverse of both
+     * into a container-space ray. A container opened where it lies is also
+     * placed in the world, where only a space inside its own model is ever
+     * drawn. Equipment icons still use a flat window projection.
      */
-
-    // Shell faces — origin, u edge, v edge, and inward normal, each scaled by the container size
-    private static final float[][] SHELL_FACES = {
-            { 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0 },
-            { 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1 },
-            { 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, -1 },
-            { 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0 },
-            { 1, 0, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0 }
-    };
 
     // Projection \\
 
@@ -38,46 +34,122 @@ public class InventoryViewUtility extends EngineUtility {
                 0, 0, 0, 1);
     }
 
-    // Container View \\
+    // Container Space \\
 
-    public static void composeViewMatrix(
-            ElementInstance viewElement,
-            ContainerInstance containerInstance,
-            float yawDegrees,
-            Matrix4 out) {
+    // Ry(yaw) * S(block per sub-voxel) * T(-half footprint) — the space's floor centred on the origin
+    public static void composeContainerMatrix(float yawDegrees, ContainerInstance containerInstance, Matrix4 out) {
 
-        float sizeX = containerInstance.getSizeX();
-        float sizeY = containerInstance.getSizeY();
-        float sizeZ = containerInstance.getSizeZ();
+        float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
         double yaw = Math.toRadians(yawDegrees);
-        double pitch = Math.toRadians(RuntimeSetting.INVENTORY_VIEW_PITCH_DEGREES);
+        float cosYaw = (float) Math.cos(yaw) * scale;
+        float sinYaw = (float) Math.sin(yaw) * scale;
 
-        float cosYaw = (float) Math.abs(Math.cos(yaw));
-        float sinYaw = (float) Math.abs(Math.sin(yaw));
-        float projectedWidth = sizeX * cosYaw + sizeZ * sinYaw;
-        float projectedDepth = sizeX * sinYaw + sizeZ * cosYaw;
-        float projectedHeight = (float) (sizeY * Math.cos(pitch) + projectedDepth * Math.sin(pitch));
-
-        float fill = RuntimeSetting.INVENTORY_VIEW_FILL;
-        float scale = Math.min(
-                viewElement.getComputedW() * fill / projectedWidth,
-                viewElement.getComputedH() * fill / projectedHeight);
-
-        composeTurn(
-                out,
-                RuntimeSetting.INVENTORY_VIEW_PITCH_DEGREES,
-                yawDegrees,
-                scale,
-                viewElement.getComputedLeft() + viewElement.getComputedW() * 0.5f,
-                viewElement.getComputedTop() + viewElement.getComputedH() * 0.5f,
-                sizeX * 0.5f,
-                sizeY * 0.5f,
-                sizeZ * 0.5f);
+        out.set(
+                cosYaw, 0, sinYaw, 0,
+                0, scale, 0, 0,
+                -sinYaw, 0, cosYaw, 0,
+                0, 0, 0, 1)
+                .multiply(
+                        1, 0, 0, -containerInstance.getSizeX() * 0.5f,
+                        0, 1, 0, 0,
+                        0, 0, 1, -containerInstance.getSizeZ() * 0.5f,
+                        0, 0, 0, 1);
     }
 
-    // view * T(place) * rotation * T(-shape offset) * S(sub-voxels per block)
+    // Shift(area centre) * Perspective * View — a camera pitched down at the space's centre, backed off until
+    // the space's bounding sphere fills the area, then closer by the zoom
+    public static void composePanelViewProjection(
+            ElementInstance area,
+            ContainerInstance containerInstance,
+            float pitchDegrees,
+            float zoom,
+            float width,
+            float height,
+            Matrix4 out) {
+
+        float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        float sizeX = containerInstance.getSizeX() / resolution;
+        float sizeY = containerInstance.getSizeY() / resolution;
+        float sizeZ = containerInstance.getSizeZ() / resolution;
+        float radius = (float) Math.sqrt(sizeX * sizeX + sizeY * sizeY + sizeZ * sizeZ) * 0.5f;
+        float centerY = sizeY * 0.5f;
+
+        float windowWidth = Math.max(1f, width);
+        float windowHeight = Math.max(1f, height);
+        float aspect = windowWidth / windowHeight;
+        float tanHalfFov = (float) Math.tan(Math.toRadians(RuntimeSetting.INVENTORY_VIEW_FOV_DEGREES) * 0.5);
+        float areaExtent = Math.min(area.getComputedH() / windowHeight, area.getComputedW() / windowWidth * aspect);
+        float distance = radius / (tanHalfFov * Math.max(areaExtent, Float.MIN_NORMAL)
+                * RuntimeSetting.INVENTORY_VIEW_FILL * zoom);
+
+        float near = Math.max(RuntimeSetting.INVENTORY_VIEW_NEAR_MIN,
+                distance - radius * RuntimeSetting.INVENTORY_VIEW_DEPTH_MARGIN);
+        float far = distance + radius * RuntimeSetting.INVENTORY_VIEW_DEPTH_MARGIN;
+        float focal = 1f / tanHalfFov;
+
+        double pitch = Math.toRadians(pitchDegrees);
+        float cosPitch = (float) Math.cos(pitch);
+        float sinPitch = (float) Math.sin(pitch);
+
+        float shiftX = (area.getComputedLeft() + area.getComputedW() * 0.5f) / windowWidth * 2f - 1f;
+        float shiftY = (area.getComputedTop() + area.getComputedH() * 0.5f) / windowHeight * 2f - 1f;
+
+        out.set(
+                1, 0, 0, shiftX,
+                0, 1, 0, shiftY,
+                0, 0, 1, 0,
+                0, 0, 0, 1)
+                .multiply(
+                        focal / aspect, 0, 0, 0,
+                        0, focal, 0, 0,
+                        0, 0, (far + near) / (near - far), 2f * far * near / (near - far),
+                        0, 0, -1, 0)
+                .multiply(
+                        1, 0, 0, 0,
+                        0, cosPitch, -sinPitch, -cosPitch * centerY,
+                        0, sinPitch, cosPitch, -sinPitch * centerY - distance,
+                        0, 0, 0, 1);
+    }
+
+    // item * S(block per sub-voxel) * T(space offset) — a space inside the item's own model, where it stands
+    public static void composeWorldContainerMatrix(Matrix4 itemMatrix, ItemDefinitionHandle item, Matrix4 out) {
+
+        float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
+        Vector3Int offset = item.getContainerSpace().getOffset();
+
+        out.set(itemMatrix).multiply(
+                scale, 0, 0, offset.x * scale,
+                0, scale, 0, offset.y * scale,
+                0, 0, scale, offset.z * scale,
+                0, 0, 0, 1);
+    }
+
+    // The shell around a space in its panel: a pocket's box, built in blocks from the space's corner, or the
+    // container's own model, whose block holds the space at its offset — scaled back up to sub-voxels
+    public static void composeShellMatrix(Matrix4 containerMatrix, ItemDefinitionHandle item, Matrix4 out) {
+
+        float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        ContainerSpaceStruct space = item.getContainerSpace();
+
+        out.set(containerMatrix);
+
+        if (!space.isPocket())
+            out.multiply(
+                    1, 0, 0, -space.getOffset().x,
+                    0, 1, 0, -space.getOffset().y,
+                    0, 0, 1, -space.getOffset().z,
+                    0, 0, 0, 1);
+
+        out.multiply(
+                resolution, 0, 0, 0,
+                0, resolution, 0, 0,
+                0, 0, resolution, 0,
+                0, 0, 0, 1);
+    }
+
+    // container * T(place) * rotation * T(-shape offset) * S(sub-voxels per block)
     public static void composeItemMatrix(
-            Matrix4 viewMatrix,
+            Matrix4 containerMatrix,
             ItemShapeStruct shape,
             int x,
             int y,
@@ -94,7 +166,7 @@ public class InventoryViewUtility extends EngineUtility {
                 0, 0, resolution, -shape.getOffsetZ(),
                 0, 0, 0, 1);
 
-        out.set(viewMatrix)
+        out.set(containerMatrix)
                 .multiply(
                         1, 0, 0, x,
                         0, 1, 0, y,
@@ -132,70 +204,36 @@ public class InventoryViewUtility extends EngineUtility {
                 (shape.getOffsetZ() + shape.getSizeZ() * 0.5f) / resolution);
     }
 
-    // Shell \\
-
-    public static int getShellFaceCount() {
-        return SHELL_FACES.length;
-    }
-
-    // A face is drawn only when its inward side turns toward the viewer, so no wall hides the contents
-    public static boolean isShellFaceVisible(Matrix4 viewMatrix, int face) {
-
-        float[] f = SHELL_FACES[face];
-
-        return viewMatrix.val[2] * f[9] + viewMatrix.val[6] * f[10] + viewMatrix.val[10] * f[11] > 0f;
-    }
-
-    public static void composeShellMatrix(
-            Matrix4 viewMatrix,
-            ContainerInstance containerInstance,
-            int face,
-            Matrix4 out) {
-
-        float[] f = SHELL_FACES[face];
-        float sizeX = containerInstance.getSizeX();
-        float sizeY = containerInstance.getSizeY();
-        float sizeZ = containerInstance.getSizeZ();
-
-        out.set(viewMatrix).multiply(
-                f[3] * sizeX, f[9], f[6] * sizeX, f[0] * sizeX,
-                f[4] * sizeY, f[10], f[7] * sizeY, f[1] * sizeY,
-                f[5] * sizeZ, f[11], f[8] * sizeZ, f[2] * sizeZ,
-                0, 0, 0, 1);
-    }
-
-    // How many grid cells the face shows along its u and v edges
-    public static Vector2 resolveShellCells(ContainerInstance containerInstance, int face, Vector2 out) {
-
-        float[] f = SHELL_FACES[face];
-        float step = RuntimeSetting.INVENTORY_GRID_STEP;
-        float lengthU = f[3] * containerInstance.getSizeX()
-                + f[4] * containerInstance.getSizeY()
-                + f[5] * containerInstance.getSizeZ();
-        float lengthV = f[6] * containerInstance.getSizeX()
-                + f[7] * containerInstance.getSizeY()
-                + f[8] * containerInstance.getSizeZ();
-
-        return out.set(lengthU / step, lengthV / step);
-    }
-
     // Picking \\
 
+    // The ray under a window point, unprojected through the inverse of view projection * container matrix
     public static void castRay(
-            Matrix4 inverseViewMatrix,
+            Matrix4 inversePickMatrix,
+            float width,
+            float height,
             float x,
             float y,
             Vector3 origin,
             Vector3 direction) {
 
-        float[] m = inverseViewMatrix.val;
-        float z = RuntimeSetting.INVENTORY_DEPTH_RANGE;
+        float ndcX = x / Math.max(1f, width) * 2f - 1f;
+        float ndcY = y / Math.max(1f, height) * 2f - 1f;
 
-        origin.set(
-                m[0] * x + m[4] * y + m[8] * z + m[12],
-                m[1] * x + m[5] * y + m[9] * z + m[13],
-                m[2] * x + m[6] * y + m[10] * z + m[14]);
-        direction.set(-m[8], -m[9], -m[10]).normalize();
+        unproject(inversePickMatrix, ndcX, ndcY, -1f, origin);
+        unproject(inversePickMatrix, ndcX, ndcY, 1f, direction);
+
+        direction.subtract(origin).normalize();
+    }
+
+    private static void unproject(Matrix4 inverse, float ndcX, float ndcY, float ndcZ, Vector3 out) {
+
+        float[] m = inverse.val;
+        float w = m[3] * ndcX + m[7] * ndcY + m[11] * ndcZ + m[15];
+
+        out.set(
+                (m[0] * ndcX + m[4] * ndcY + m[8] * ndcZ + m[12]) / w,
+                (m[1] * ndcX + m[5] * ndcY + m[9] * ndcZ + m[13]) / w,
+                (m[2] * ndcX + m[6] * ndcY + m[10] * ndcZ + m[14]) / w);
     }
 
     // Where a ray meets the container floor, false when it runs level or upward

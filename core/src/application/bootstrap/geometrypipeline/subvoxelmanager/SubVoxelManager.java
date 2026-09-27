@@ -12,6 +12,7 @@ import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.vectors.Vector3Int;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
@@ -21,7 +22,8 @@ public class SubVoxelManager extends ManagerPackage {
      * Engine entry point for sub-voxel models. Owns the one geometry path —
      * bootstrap meshes and live editor meshes are built identically here — and
      * is the single access point for sub-voxel raycasting, the mesh format,
-     * and converting authored quad meshes into sub-voxel models.
+     * and converting authored quad meshes into sub-voxel models. Also builds a
+     * pocket's open box of walls, which may span more than one block.
      */
 
     // Internal
@@ -69,19 +71,20 @@ public class SubVoxelManager extends ManagerPackage {
 
         float[] partUVBounds = new float[model.getPartCount() * 4];
 
-        for (int partIndex = 0; partIndex < model.getPartCount(); partIndex++) {
-
-            TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(
-                    model.getPart(partIndex).getTextureName());
-            int uvBase = partIndex * 4;
-
-            partUVBounds[uvBase] = textureHandle.getU0();
-            partUVBounds[uvBase + 1] = textureHandle.getV0();
-            partUVBounds[uvBase + 2] = textureHandle.getU1();
-            partUVBounds[uvBase + 3] = textureHandle.getV1();
-        }
+        for (int partIndex = 0; partIndex < model.getPartCount(); partIndex++)
+            writeUVBounds(model.getPart(partIndex).getTextureName(), partUVBounds, partIndex * 4);
 
         return partUVBounds;
+    }
+
+    private void writeUVBounds(String textureName, float[] uvBounds, int uvBase) {
+
+        TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(textureName);
+
+        uvBounds[uvBase] = textureHandle.getU0();
+        uvBounds[uvBase + 1] = textureHandle.getV0();
+        uvBounds[uvBase + 2] = textureHandle.getU1();
+        uvBounds[uvBase + 3] = textureHandle.getV1();
     }
 
     // Runtime Mesh \\
@@ -91,6 +94,20 @@ public class SubVoxelManager extends ManagerPackage {
         FloatArrayList vertices = new FloatArrayList();
         ShortArrayList indices = new ShortArrayList();
         buildGeometry(model, vertices, indices);
+
+        VAOHandle vaoTemplate = vaoManager.getVAOHandleFromVAOName(EngineSetting.SUB_VOXEL_VAO);
+        return meshManager.createMesh(vaoTemplate, vertices, indices);
+    }
+
+    // A pocket's open box around a space of the given size in sub-voxels, its corner at the origin
+    public MeshInstance createPocketMesh(Vector3Int size, String textureName) {
+
+        FloatArrayList vertices = new FloatArrayList();
+        ShortArrayList indices = new ShortArrayList();
+        float[] uvBounds = new float[4];
+
+        writeUVBounds(textureName, uvBounds, 0);
+        SubVoxelMeshUtility.buildPocket(size.x, size.y, size.z, uvBounds, vertices, indices);
 
         VAOHandle vaoTemplate = vaoManager.getVAOHandleFromVAOName(EngineSetting.SUB_VOXEL_VAO);
         return meshManager.createMesh(vaoTemplate, vertices, indices);

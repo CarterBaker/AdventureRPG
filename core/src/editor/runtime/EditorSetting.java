@@ -167,6 +167,7 @@ public class EditorSetting {
     public static final String ITEM_EDITOR_STATUS_NO_ITEM = "No item open. Pick one in the Hierarchy or press New.";
     public static final String ITEM_EDITOR_TEXTURE_SEPARATOR = "  :  ";
     public static final String ITEM_EDITOR_TOOL_PLACE = "Place";
+    public static final String ITEM_EDITOR_TOOL_WALL = "Wall";
     public static final String ITEM_EDITOR_TOOL_ERASE = "Erase";
     public static final String ITEM_EDITOR_TOOL_PAINT = "Paint";
     public static final String ITEM_EDITOR_MESSAGE_SAVED = "Saved ";
@@ -174,7 +175,7 @@ public class EditorSetting {
     public static final String ITEM_EDITOR_MESSAGE_CREATED = "Created ";
     public static final String ITEM_EDITOR_MESSAGE_DELETED = "Deleted ";
     public static final String ITEM_EDITOR_MESSAGE_CONVERTED = "Converted from a quad mesh: save to keep it";
-    public static final String ITEM_EDITOR_MESSAGE_EMPTY = "Nothing to save: the item has no cubes";
+    public static final String ITEM_EDITOR_MESSAGE_EMPTY = "Nothing to save: the item has no cubes or walls";
     public static final String ITEM_EDITOR_MESSAGE_NOT_SAVED = "Not saved yet: nothing to reload";
     public static final String ITEM_EDITOR_MESSAGE_NEW_MESH = "No mesh file yet: save to create it";
     public static final String ITEM_EDITOR_MESSAGE_NO_MESH = "This item names no mesh: set its mesh in the Info Panel";

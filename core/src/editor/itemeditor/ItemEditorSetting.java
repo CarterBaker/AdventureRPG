@@ -24,6 +24,7 @@ public class ItemEditorSetting {
     // Uniforms
     public static final String UNIFORM_RESOLUTION = "u_resolution";
     public static final String UNIFORM_CURSOR_CELL = "u_cursorCell";
+    public static final String UNIFORM_CURSOR_SIZE = "u_cursorSize";
 
     // Render Order
     public static final int DEPTH_MODEL = 0;

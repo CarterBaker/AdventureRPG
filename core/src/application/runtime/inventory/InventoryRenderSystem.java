@@ -2,10 +2,8 @@ package application.runtime.inventory;
 
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
-import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
+import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
-import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.container.ContainerSlotStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
@@ -23,44 +21,50 @@ import application.runtime.menueventsmanager.menus.inventory.InventoryBranch;
 import application.runtime.menueventsmanager.menus.inventory.InventoryHeldStruct;
 import application.runtime.menueventsmanager.menus.inventory.InventorySessionStruct;
 import application.runtime.menueventsmanager.menus.inventory.InventoryViewStruct;
+import application.runtime.world.WorldSystem;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
-import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InventoryRenderSystem extends SystemPackage {
 
     /*
-     * Draws the 3D half of this window's open inventory into its own target
-     * over the menus: each container's shell and resting items, a carried
-     * item's landing preview tinted by fit, equipment icons, and a carried item
-     * following the cursor. All transforms come from InventoryViewUtility.
+     * Draws the 3D half of this window's open inventory. Each open container
+     * is drawn in its panel through the panel's own camera, into the
+     * inventory's own target over the menus: its shell — a pocket's box of
+     * walls, or the container's own model — and what it holds. A container
+     * opened where it lies is also drawn in the world target with the
+     * terrain, open without its lid, showing what it holds only when the
+     * space is inside its own model; a pocket is never seen in the world. A
+     * carried item's landing preview, tinted by fit, goes over its panel, as
+     * do equipment icons and a carried item following the cursor. All
+     * transforms come from InventoryViewUtility.
      */
 
     // Internal
     private InventoryBranch inventoryBranch;
     private InputManager inputManager;
     private ItemModelManager itemModelManager;
-    private MeshManager meshManager;
     private MaterialManager materialManager;
     private RenderManager renderManager;
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
+    private WorldSystem worldSystem;
 
     // Render Target
     private FBOInstance inventoryFbo;
 
     // Resources
     private int itemMaterialID;
-    private int shellMaterialID;
-    private MeshHandle shellMesh;
+    private int worldMaterialID;
 
     // Scratch
-    private Matrix4 projection;
+    private Matrix4 iconProjection;
     private Matrix4 transform;
     private Matrix4 transformScratch;
-    private Vector2 cellsScratch;
+    private Matrix4 worldContainer;
 
     // Base \\
 
@@ -68,10 +72,10 @@ public class InventoryRenderSystem extends SystemPackage {
     protected void create() {
 
         // Scratch
-        this.projection = new Matrix4();
+        this.iconProjection = new Matrix4();
         this.transform = new Matrix4();
         this.transformScratch = new Matrix4();
-        this.cellsScratch = new Vector2();
+        this.worldContainer = new Matrix4();
     }
 
     @Override
@@ -79,11 +83,11 @@ public class InventoryRenderSystem extends SystemPackage {
         this.inventoryBranch = get(InventoryBranch.class);
         this.inputManager = get(InputManager.class);
         this.itemModelManager = get(ItemModelManager.class);
-        this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
+        this.worldSystem = get(WorldSystem.class);
     }
 
     @Override
@@ -94,8 +98,7 @@ public class InventoryRenderSystem extends SystemPackage {
 
         // Resources
         this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(RuntimeSetting.MATERIAL_INVENTORY_ITEM);
-        this.shellMaterialID = materialManager.getMaterialIDFromMaterialName(RuntimeSetting.MATERIAL_INVENTORY_SHELL);
-        this.shellMesh = meshManager.getMeshHandleFromMeshName(RuntimeSetting.MESH_INVENTORY_SHELL);
+        this.worldMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.EQUIPMENT_ITEM_MATERIAL);
     }
 
     // Render \\
@@ -109,12 +112,17 @@ public class InventoryRenderSystem extends SystemPackage {
         if (session == null)
             return;
 
-        InventoryViewUtility.composeProjection(window.getWidth(), window.getHeight(), projection);
+        InventoryViewUtility.composeProjection(window.getWidth(), window.getHeight(), iconProjection);
         renderManager.ensureFboRendered(inventoryFbo, window);
 
-        for (InventoryViewStruct view : session.getViews())
-            if (view.isOpen() && hasArea(view.getViewElement()))
-                pushView(session, view, window);
+        for (InventoryViewStruct view : session.getViews()) {
+
+            if (view.isShown())
+                pushPanel(session, view, window);
+
+            if (view.isInWorld() && view.isWorldPlaced())
+                pushWorld(view, window);
+        }
 
         pushSlots(session, window);
         pushHeld(session, window);
@@ -122,18 +130,19 @@ public class InventoryRenderSystem extends SystemPackage {
         fboRenderSystem.pushFbo(inventoryFbo, RuntimeSetting.LAYER_INVENTORY, window);
     }
 
-    // Views \\
+    // Panels \\
 
-    private void pushView(InventorySessionStruct session, InventoryViewStruct view, WindowInstance window) {
+    // The container through its panel's camera: its shell, what it holds, and where a carried item would land
+    private void pushPanel(InventorySessionStruct session, InventoryViewStruct view, WindowInstance window) {
 
-        ContainerInstance containerInstance = view.getContainerInstance();
-        Matrix4 viewMatrix = view.getViewMatrix();
+        Matrix4 containerMatrix = view.getContainerMatrix();
+        Matrix4 viewProjection = view.getViewProjection();
+        ItemDefinitionHandle containerItem = view.getContainerItem().getItemDefinitionHandle();
 
-        for (int face = 0; face < InventoryViewUtility.getShellFaceCount(); face++)
-            if (InventoryViewUtility.isShellFaceVisible(viewMatrix, face))
-                pushShellFace(containerInstance, viewMatrix, face, window);
+        InventoryViewUtility.composeShellMatrix(containerMatrix, containerItem, transform);
+        pushOverlayMesh(resolveShellMesh(containerItem), viewProjection, RuntimeSetting.INVENTORY_TINT_NONE, window);
 
-        ObjectArrayList<ContainerSlotStruct> slots = containerInstance.getSlots();
+        ObjectArrayList<ContainerSlotStruct> slots = view.getContainerInstance().getSlots();
 
         for (int i = 0; i < slots.size(); i++) {
 
@@ -141,9 +150,10 @@ public class InventoryRenderSystem extends SystemPackage {
             ItemDefinitionHandle item = slot.getItemInstance().getItemDefinitionHandle();
 
             InventoryViewUtility.composeItemMatrix(
-                    viewMatrix, item.getShape(), slot.getX(), slot.getY(), slot.getZ(), slot.getRotation(),
+                    containerMatrix, item.getShape(), slot.getX(), slot.getY(), slot.getZ(), slot.getRotation(),
                     transform, transformScratch);
-            pushItem(item, transform, RuntimeSetting.INVENTORY_TINT_NONE, window);
+            pushOverlayMesh(
+                    item.getMeshHandle().getMeshData(), viewProjection, RuntimeSetting.INVENTORY_TINT_NONE, window);
         }
 
         if (!session.isHolding() || session.getDropView() != view)
@@ -153,36 +163,71 @@ public class InventoryRenderSystem extends SystemPackage {
         ItemDefinitionHandle item = held.getItemInstance().getItemDefinitionHandle();
 
         InventoryViewUtility.composeItemMatrix(
-                viewMatrix, item.getShape(), session.getDropX(), session.getDropY(), session.getDropZ(),
+                containerMatrix, item.getShape(), session.getDropX(), session.getDropY(), session.getDropZ(),
                 held.getRotation(), transform, transformScratch);
-        pushItem(
-                item,
-                transform,
+        pushOverlayMesh(
+                item.getMeshHandle().getMeshData(),
+                viewProjection,
                 session.isDropValid() ? RuntimeSetting.INVENTORY_TINT_VALID : RuntimeSetting.INVENTORY_TINT_INVALID,
                 window);
     }
 
-    private void pushShellFace(
-            ContainerInstance containerInstance,
-            Matrix4 viewMatrix,
-            int face,
-            WindowInstance window) {
+    // A pocket shows its box of walls; a space inside the model shows the model, opened when it has a lid
+    private MeshData resolveShellMesh(ItemDefinitionHandle containerItem) {
 
-        ModelInstance model = itemModelManager.acquireModel(shellMesh, shellMaterialID);
+        if (containerItem.getContainerSpace().isPocket())
+            return containerItem.getPocketMeshData();
 
-        InventoryViewUtility.composeShellMatrix(viewMatrix, containerInstance, face, transform);
-        model.getMaterial().setUniform(RuntimeSetting.UNIFORM_INVENTORY_PROJECTION, projection);
-        model.getMaterial().setUniform(RuntimeSetting.UNIFORM_INVENTORY_MODEL, transform);
-        model.getMaterial().setUniform(
-                RuntimeSetting.UNIFORM_INVENTORY_CELLS,
-                InventoryViewUtility.resolveShellCells(containerInstance, face, cellsScratch));
+        return containerItem.hasOpenMesh()
+                ? containerItem.getOpenMeshData()
+                : containerItem.getMeshHandle().getMeshData();
+    }
 
-        renderManager.pushRenderCall(model, inventoryFbo, RuntimeSetting.INVENTORY_DRAW_DEPTH, window);
+    // World \\
+
+    // Where it stands, a container is drawn open, and a space inside its own model shows what it holds
+    private void pushWorld(InventoryViewStruct view, WindowInstance window) {
+
+        ItemDefinitionHandle containerItem = view.getContainerItem().getItemDefinitionHandle();
+
+        if (containerItem.hasOpenMesh()) {
+            transform.set(view.getWorldItemMatrix());
+            pushWorldMesh(containerItem.getOpenMeshData(), window);
+        }
+
+        if (containerItem.getContainerSpace().isPocket())
+            return;
+
+        InventoryViewUtility.composeWorldContainerMatrix(view.getWorldItemMatrix(), containerItem, worldContainer);
+
+        ObjectArrayList<ContainerSlotStruct> slots = view.getContainerInstance().getSlots();
+
+        for (int i = 0; i < slots.size(); i++) {
+
+            ContainerSlotStruct slot = slots.get(i);
+            ItemDefinitionHandle item = slot.getItemInstance().getItemDefinitionHandle();
+
+            InventoryViewUtility.composeItemMatrix(
+                    worldContainer, item.getShape(), slot.getX(), slot.getY(), slot.getZ(), slot.getRotation(),
+                    transform, transformScratch);
+            pushWorldMesh(item.getMeshHandle().getMeshData(), window);
+        }
+    }
+
+    private void pushWorldMesh(MeshData meshData, WindowInstance window) {
+
+        ModelInstance model = itemModelManager.acquireModel(meshData, worldMaterialID);
+
+        model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, transform);
+        renderManager.pushRenderCall(model, worldSystem.getWorldFbo(), EngineSetting.EQUIPMENT_RENDER_DEPTH, window);
     }
 
     // Slots \\
 
     private void pushSlots(InventorySessionStruct session, WindowInstance window) {
+
+        if (!session.hasEquipment())
+            return;
 
         InventoryHandle inventory = session.getInventory();
 
@@ -233,15 +278,15 @@ public class InventoryRenderSystem extends SystemPackage {
         ItemDefinitionHandle item = itemInstance.getItemDefinitionHandle();
 
         InventoryViewUtility.composeIconMatrix(centerX, centerY, size, item.getShape(), transform);
-        pushItem(item, transform, tint, window);
+        pushOverlayMesh(item.getMeshHandle().getMeshData(), iconProjection, tint, window);
     }
 
-    private void pushItem(ItemDefinitionHandle item, Matrix4 modelMatrix, Vector4 tint, WindowInstance window) {
+    private void pushOverlayMesh(MeshData meshData, Matrix4 projection, Vector4 tint, WindowInstance window) {
 
-        ModelInstance model = itemModelManager.acquireModel(item.getMeshHandle(), itemMaterialID);
+        ModelInstance model = itemModelManager.acquireModel(meshData, itemMaterialID);
 
         model.getMaterial().setUniform(RuntimeSetting.UNIFORM_INVENTORY_PROJECTION, projection);
-        model.getMaterial().setUniform(RuntimeSetting.UNIFORM_INVENTORY_MODEL, modelMatrix);
+        model.getMaterial().setUniform(RuntimeSetting.UNIFORM_INVENTORY_MODEL, transform);
         model.getMaterial().setUniform(RuntimeSetting.UNIFORM_INVENTORY_TINT, tint);
 
         renderManager.pushRenderCall(model, inventoryFbo, RuntimeSetting.INVENTORY_DRAW_DEPTH, window);

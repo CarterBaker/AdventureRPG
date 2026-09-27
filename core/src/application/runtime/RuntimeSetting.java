@@ -269,13 +269,12 @@ public class RuntimeSetting {
     public static final Color SETTINGS_BINDING_CAPTURE_COLOR = new Color(1f, 0.84f, 0.42f, 1f);
 
     // Inventory Menus
+    public static final String MENU_INVENTORY_SCENE = "Inventory/Scene";
     public static final String MENU_INVENTORY_EQUIPMENT = "Inventory/Equipment";
-    public static final String MENU_INVENTORY_CONTAINER = "Inventory/Container";
-    public static final String MENU_INVENTORY_CONTAINER_UPPER = "Inventory/ContainerUpper";
-    public static final String MENU_INVENTORY_CONTAINER_LOWER = "Inventory/ContainerLower";
-    public static final String MENU_INVENTORY_CONTAINER_LISTED = "Inventory/ContainerListed";
-    public static final String MENU_INVENTORY_CONTAINER_LISTED_UPPER = "Inventory/ContainerListedUpper";
-    public static final String MENU_INVENTORY_CONTAINER_LISTED_LOWER = "Inventory/ContainerListedLower";
+    public static final String MENU_INVENTORY_BAG = "Inventory/Bag";
+    public static final String MENU_INVENTORY_BAG_LIST = "Inventory/BagList";
+    public static final String MENU_INVENTORY_CHEST = "Inventory/Chest";
+    public static final String MENU_INVENTORY_CHEST_LIST = "Inventory/ChestList";
     public static final String MENU_INVENTORY_EQUIPMENT_SLOT = "Inventory/equipment_slot";
     public static final String MENU_INVENTORY_RING_SLOT = "Inventory/ring_slot";
     public static final String MENU_INVENTORY_LIST_HEADER = "Inventory/list_header";
@@ -297,13 +296,18 @@ public class RuntimeSetting {
     public static final int ENTRY_INVENTORY_CLOSE_HINT = 7;
     public static final int ENTRY_INVENTORY_RING_ROW_B = 8;
 
-    // Inventory Entry Points — Container
+    // Inventory Entry Points — Container panels, shared by the bag's and the chest's
     public static final int ENTRY_CONTAINER_TITLE = 0;
     public static final int ENTRY_CONTAINER_WEIGHT = 1;
-    public static final int ENTRY_CONTAINER_LIST = 2;
-    public static final int ENTRY_CONTAINER_VIEW = 3;
-    public static final int ENTRY_CONTAINER_HINT = 4;
-    public static final int ENTRY_CONTAINER_TOGGLE_LABEL = 5;
+    public static final int ENTRY_CONTAINER_TOGGLE_LABEL = 2;
+    public static final int ENTRY_CONTAINER_HINT = 3;
+    public static final int ENTRY_CONTAINER_AREA = 4;
+
+    // Inventory Entry Points — Lists, shared by the bag's and the chest's
+    public static final int ENTRY_LIST_TITLE = 0;
+    public static final int ENTRY_LIST_WEIGHT = 1;
+    public static final int ENTRY_LIST_ROWS = 2;
+    public static final int ENTRY_LIST_TOGGLE_LABEL = 3;
 
     // Inventory Elements
     public static final String ELEMENT_INVENTORY_SLOT_LABEL = "slot_label";
@@ -351,8 +355,10 @@ public class RuntimeSetting {
     public static final String INVENTORY_FORMAT_ITEM_WEIGHT = "Weight %.1f kg";
     public static final String INVENTORY_TEXT_NONE = "";
     public static final String INVENTORY_FORMAT_CLOSE_HINT = "%s or %s to close";
+    public static final String INVENTORY_FORMAT_CHEST_HINT = "Drag beside it to tilt and turn it  -  scroll to zoom"
+            + "  -  %s, %s or %s to close";
     public static final String INVENTORY_FORMAT_VIEW_HINT = "Drag items to move them  -  %s turns a held item"
-            + "  -  drag empty space to look around";
+            + "  -  drag beside the bag to tilt and turn it  -  scroll to zoom";
     public static final String INVENTORY_TEXT_TWO_HANDED = "Two-handed";
     public static final String INVENTORY_TEXT_NO_SELECTION = "Point at an item to see it.";
     public static final String INVENTORY_TEXT_SHOW_LIST = "Show List";
@@ -364,16 +370,23 @@ public class RuntimeSetting {
     public static final String INVENTORY_STAT_ITEMS_WORN = "Items Worn";
 
     // Inventory View
-    public static final float INVENTORY_VIEW_DEFAULT_YAW_DEGREES = -30f;
-    public static final float INVENTORY_VIEW_PITCH_DEGREES = 36f;
-    public static final float INVENTORY_VIEW_FILL = 0.84f;
+    public static final float INVENTORY_VIEW_DEFAULT_YAW_DEGREES = 0f;
     public static final float INVENTORY_VIEW_TURN_DEGREES_PER_PIXEL = 0.5f;
+    public static final float INVENTORY_VIEW_PITCH_DEFAULT_DEGREES = 62f;
+    public static final float INVENTORY_VIEW_PITCH_MIN_DEGREES = 30f;
+    public static final float INVENTORY_VIEW_PITCH_MAX_DEGREES = 89f;
+    public static final float INVENTORY_VIEW_FOV_DEGREES = 30f;
+    public static final float INVENTORY_VIEW_FILL = 1.15f;
+    public static final float INVENTORY_VIEW_DEPTH_MARGIN = 1.5f;
+    public static final float INVENTORY_VIEW_NEAR_MIN = 0.01f;
+    public static final float INVENTORY_VIEW_ZOOM_MIN = 1f;
+    public static final float INVENTORY_VIEW_ZOOM_MAX = 2f;
+    public static final float INVENTORY_VIEW_ZOOM_STEP = 1.15f;
     public static final float INVENTORY_ICON_FILL = 0.74f;
     public static final float INVENTORY_ICON_PITCH_DEGREES = 22f;
     public static final float INVENTORY_ICON_YAW_DEGREES = -34f;
     public static final float INVENTORY_HELD_ICON_SIZE = 72f;
     public static final float INVENTORY_DEPTH_RANGE = 8192f;
-    public static final float INVENTORY_GRID_STEP = 4f;
     public static final float INVENTORY_PREVIEW_FILL = 0.84f;
     public static final float INVENTORY_ROTATE_DEGREES_PER_PIXEL = 0.6f;
     public static final float INVENTORY_PREVIEW_ZOOM_MIN = 1f;
@@ -385,12 +398,9 @@ public class RuntimeSetting {
 
     // Inventory Render
     public static final String MATERIAL_INVENTORY_ITEM = "items/InventoryItemMaterial";
-    public static final String MATERIAL_INVENTORY_SHELL = "items/InventoryShellMaterial";
-    public static final String MESH_INVENTORY_SHELL = "util/InventoryShellQuad";
     public static final String UNIFORM_INVENTORY_PROJECTION = "u_projection";
     public static final String UNIFORM_INVENTORY_MODEL = "u_model";
     public static final String UNIFORM_INVENTORY_TINT = "u_tint";
-    public static final String UNIFORM_INVENTORY_CELLS = "u_cells";
 
     // Inventory Colors
     public static final Color INVENTORY_EYE_SHOWN_COLOR = new Color(1f, 1f, 1f, 1f);

@@ -11,11 +11,16 @@ public class ItemRotationBufferSystem extends SystemPackage {
 
     /*
      * Pushes the 24 item face-spin rotation matrices to the ItemRotationData
-     * UBO once at awake. Never updated again — rotation data is static.
+     * UBO once at awake. Never updated again — rotation data is static. The
+     * same matrices are kept for code that places world items on the CPU, so
+     * both sides always agree on how an item is turned.
      */
 
     // Internal
     private UBOManager uboManager;
+
+    // Rotations
+    private Matrix4[] rotations;
 
     // Internal \\
 
@@ -35,7 +40,7 @@ public class ItemRotationBufferSystem extends SystemPackage {
 
         UBOHandle ubo = uboManager.getUBOHandleFromUBOName(EngineSetting.ITEM_ROTATION_DATA_UBO);
 
-        Matrix4[] rotations = new Matrix4[24];
+        this.rotations = new Matrix4[24];
 
         for (Direction3Vector face : Direction3Vector.VALUES) {
             for (int spin = 0; spin < 4; spin++) {
@@ -47,6 +52,15 @@ public class ItemRotationBufferSystem extends SystemPackage {
         ubo.updateUniform(EngineSetting.UNIFORM_ROTATIONS, rotations);
         uboManager.push(ubo);
     }
+
+    // Accessible \\
+
+    // The rotation about the item's block centre for a packed orientation
+    public Matrix4 getRotation(int orientation) {
+        return rotations[orientation];
+    }
+
+    // Build \\
 
     private Matrix4 buildRotation(Direction3Vector face, int spin) {
         Matrix4 faceRot = faceRotation(face);

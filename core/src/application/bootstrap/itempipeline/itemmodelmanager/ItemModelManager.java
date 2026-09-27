@@ -1,5 +1,6 @@
 package application.bootstrap.itempipeline.itemmodelmanager;
 
+import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
@@ -49,6 +50,10 @@ public class ItemModelManager extends ManagerPackage {
     // Acquire \\
 
     public ModelInstance acquireModel(MeshHandle meshHandle, int materialID) {
+        return acquireModel(meshHandle.getMeshData(), materialID);
+    }
+
+    public ModelInstance acquireModel(MeshData meshData, int materialID) {
 
         ObjectArrayList<ModelInstance> models = materialID2Models.get(materialID);
 
@@ -60,10 +65,10 @@ public class ItemModelManager extends ManagerPackage {
         int cursor = materialID2Cursor.get(materialID);
 
         if (cursor == models.size())
-            models.add(modelManager.createModel(meshHandle, materialID));
+            models.add(modelManager.createModel(meshData, materialID));
 
         ModelInstance model = models.get(cursor);
-        model.updateMeshData(meshHandle.getMeshData());
+        model.updateMeshData(meshData);
         materialID2Cursor.put(materialID, cursor + 1);
 
         return model;

@@ -26,7 +26,9 @@ public class WorldItemRenderSystem extends SystemPackage {
      * Owns the composite buffers for world items. Chunks push and pull their
      * items in O(1) by coordinate, single items add and remove at runtime with
      * swap-remove fixups, and every frame each grid's buffers are pushed into
-     * its world target so items are depth tested and lit with the terrain.
+     * its world target so items are depth tested and lit with the terrain. An
+     * item can be hidden while it stays placed — an open chest is drawn open
+     * by whoever opened it — and is shown again from its chunk's list.
      */
 
     private static final int[] INSTANCE_ATTR_SIZES = { 4, 2 };
@@ -131,6 +133,26 @@ public class WorldItemRenderSystem extends SystemPackage {
         ObjectArrayList<WorldItemInstance> list = chunkCoord2Items.get(instance.getChunkCoordinate());
         if (list != null)
             list.remove(instance);
+    }
+
+    // Visibility \\
+
+    public void hideItem(WorldItemInstance instance) {
+        removeFromBuffer(instance);
+    }
+
+    // Returns the item to its buffer, unless its chunk has left the renderer meanwhile
+    public void showItem(WorldItemInstance instance) {
+
+        ObjectArrayList<WorldItemInstance> list = chunkCoord2Items.get(instance.getChunkCoordinate());
+
+        if (instance.getInstanceSlot() != -1 || list == null || !list.contains(instance))
+            return;
+
+        addToBuffer(
+                instance,
+                Coordinate2Long.unpackX(instance.getChunkCoordinate()),
+                Coordinate2Long.unpackY(instance.getChunkCoordinate()));
     }
 
     // Buffer \\

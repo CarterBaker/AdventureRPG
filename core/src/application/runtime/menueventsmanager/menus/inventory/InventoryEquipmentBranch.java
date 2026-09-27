@@ -21,6 +21,7 @@ import engine.input.InputNameUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.settings.KeyBindings;
+import engine.util.mathematics.vectors.Vector3Int;
 
 public class InventoryEquipmentBranch extends BranchPackage {
 
@@ -33,7 +34,8 @@ public class InventoryEquipmentBranch extends BranchPackage {
      * ring carries an eye that shows or hides its item on the character.
      * Slots and statistics are redrawn only when the inventory or the
      * backpack's contents change; the details under the statistics follow
-     * whatever item the cursor points at.
+     * whatever item the cursor points at. A container opened where it lies
+     * shows no board.
      */
 
     // Slot columns, top to bottom
@@ -143,6 +145,9 @@ public class InventoryEquipmentBranch extends BranchPackage {
 
     void update(InventorySessionStruct session) {
 
+        if (!session.hasEquipment())
+            return;
+
         InventoryHandle inventory = session.getInventory();
         ContainerInstance backpack = inventory.getBackpackContainer();
         int contentRevision = backpack != null ? backpack.getRevision() : EngineSetting.INDEX_NOT_FOUND;
@@ -190,7 +195,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
 
         InventorySessionStruct session = inventoryBranch.getSession(window);
 
-        if (session == null || session.getDragMode() != InventoryDragMode.NONE)
+        if (session == null || !session.hasEquipment() || session.getDragMode() != InventoryDragMode.NONE)
             return;
 
         inventoryDragBranch.pickUpFromSlot(session, EquipmentSlot.valueOf(equipmentSlotName));
@@ -200,7 +205,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
 
         InventorySessionStruct session = inventoryBranch.getSession(window);
 
-        if (session == null)
+        if (session == null || !session.hasEquipment())
             return;
 
         EquipmentSlot equipmentSlot = EquipmentSlot.valueOf(equipmentSlotName);
@@ -295,10 +300,13 @@ public class InventoryEquipmentBranch extends BranchPackage {
         injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
                 RuntimeSetting.INVENTORY_FORMAT_ITEM_SIZE, shape.getSizeX(), shape.getSizeY(), shape.getSizeZ()));
 
-        if (item.isContainer())
+        if (item.isContainer()) {
+
+            Vector3Int space = item.getContainerSpace().getSize();
+
             injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
-                    RuntimeSetting.INVENTORY_FORMAT_ITEM_SPACE,
-                    item.getContainerSize().x, item.getContainerSize().y, item.getContainerSize().z));
+                    RuntimeSetting.INVENTORY_FORMAT_ITEM_SPACE, space.x, space.y, space.z));
+        }
 
         if (item.isTwoHanded())
             injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, RuntimeSetting.INVENTORY_TEXT_TWO_HANDED);

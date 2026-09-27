@@ -66,6 +66,10 @@ public class ItemEditorBranch extends BranchPackage {
         itemEditorManager.setTool(ItemEditorTool.PLACE);
     }
 
+    public void selectWallTool() {
+        itemEditorManager.setTool(ItemEditorTool.WALL);
+    }
+
     public void selectEraseTool() {
         itemEditorManager.setTool(ItemEditorTool.ERASE);
     }

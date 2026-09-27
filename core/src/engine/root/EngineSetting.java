@@ -982,6 +982,7 @@ public class EngineSetting {
     // Container
     public static final int CONTAINER_MAX_CELLS = 65536;
     public static final float CONTAINER_RAY_EPSILON = 1e-4f;
+    public static final String CONTAINER_TEXTURE_NONE = "";
 
     // Sub-Voxel Model
     public static final int SUB_VOXEL_CELL_COUNT = SUB_VOXEL_RESOLUTION * SUB_VOXEL_RESOLUTION
@@ -994,6 +995,11 @@ public class EngineSetting {
     public static final int SUB_VOXEL_MAX_PARTS = 255;
     public static final String SUB_VOXEL_VAO = "util/vao/ItemVAO";
     public static final int SUB_VOXEL_VERTEX_STRIDE = 6;
+    public static final int SUB_VOXEL_AXIS_COUNT = 3;
+    public static final int SUB_VOXEL_WALL_COUNT = SUB_VOXEL_AXIS_COUNT * (SUB_VOXEL_RESOLUTION + 1)
+            * SUB_VOXEL_RESOLUTION * SUB_VOXEL_RESOLUTION;
+    public static final float SUB_VOXEL_WALL_EDGE_SNAP = 0.25f;
+    public static final String[] SUB_VOXEL_WALL_AXIS_KEYS = { "x", "y", "z" };
 
     // Font
     public static final String FONT_DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;'\"-+*/\\()[]{}@#$%^&=<>|~`_";

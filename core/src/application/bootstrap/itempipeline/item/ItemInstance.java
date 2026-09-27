@@ -31,7 +31,7 @@ public class ItemInstance extends InstancePackage {
             return;
 
         this.containerInstance = create(ContainerInstance.class);
-        this.containerInstance.constructor(itemDefinitionHandle.getContainerSize());
+        this.containerInstance.constructor(itemDefinitionHandle.getContainerSpace().getSize());
     }
 
     // Accessible \\

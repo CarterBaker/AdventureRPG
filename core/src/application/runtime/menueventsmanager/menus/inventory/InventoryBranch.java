@@ -21,13 +21,16 @@ import engine.util.mathematics.vectors.Vector3;
 public class InventoryBranch extends BranchPackage {
 
     /*
-     * Runs the inventory for this context's window. Opens on the inventory key
-     * or when a chest is used, shows the equipment board around the framed
-     * character preview — turned and panned by dragging, zoomed with the
-     * wheel — and closes on the key or Pause, returning any carried item and
-     * the camera. Each frame the drag, container and equipment branches
-     * settle and redraw what changed. A new item handed in while the cursor
-     * is over the open inventory lands where it points.
+     * Runs the inventory for this context's window. The inventory key shows
+     * the equipment board around the framed character preview — turned and
+     * panned by dragging, zoomed with the wheel — with the worn bag open in
+     * its panel beside it. Using a chest or bag that lies in the world opens
+     * it where it lies instead, the camera left where it was: its panel on the
+     * right, the worn bag's on the left. Either closes on the inventory key or Pause, and a
+     * container also on being used again or leaving the world, returning any
+     * carried item and the camera. Each frame the drag, container and
+     * equipment branches settle and redraw what changed. A new item handed in
+     * while the cursor is over the open inventory lands where it points.
      */
 
     // Internal
@@ -67,21 +70,30 @@ public class InventoryBranch extends BranchPackage {
             return;
         }
 
+        if (session.hasChest() && !worldItemPlacementSystem.isPlaced(session.getChestWorldItem())) {
+            closeMenu();
+            return;
+        }
+
         boolean closePressed = inputManager.bindingClicked(KeyBindings.INVENTORY, window)
-                || inputManager.bindingClicked(KeyBindings.PAUSE, window);
+                || inputManager.bindingClicked(KeyBindings.PAUSE, window)
+                || session.hasChest() && inputManager.bindingClicked(KeyBindings.SECONDARY, window);
 
         if (closePressed && session.isCloseArmed() && !session.isHolding()) {
             closeMenu();
             return;
         }
 
-        inventoryDragBranch.update(session);
         inventoryContainerBranch.update(session);
+        inventoryDragBranch.update(session);
         inventoryEquipmentBranch.update(session);
-        zoomPreview(session);
-        framePreview(session);
 
-        session.setCloseArmed(session.getEquipmentMenu().isVisible());
+        if (session.hasEquipment()) {
+            zoomPreview(session);
+            framePreview(session);
+        }
+
+        session.setCloseArmed(session.getSceneMenu().isVisible());
     }
 
     @Override
@@ -109,7 +121,7 @@ public class InventoryBranch extends BranchPackage {
         WorldItemInstance targetItem = playerManager.getTargetItemForWindow(window.getWindowID());
 
         if (targetItem != null && targetItem.getItemDefinitionHandle().isContainer())
-            openMenu(window, worldItemPlacementSystem.resolveItemInstance(targetItem));
+            openMenu(window, targetItem);
     }
 
     private boolean canOpen(WindowInstance window) {
@@ -122,21 +134,28 @@ public class InventoryBranch extends BranchPackage {
                 && !window.getMenuListHandle().isInputLocked();
     }
 
-    private void openMenu(WindowInstance window, ItemInstance chestItem) {
+    // The scene menu opens first, so its drag surface lies under every other inventory menu
+    private void openMenu(WindowInstance window, WorldItemInstance chestWorldItem) {
 
         int windowID = window.getWindowID();
-        MenuInstance equipmentMenu = menuManager.openMenu(RuntimeSetting.MENU_INVENTORY_EQUIPMENT, window);
+        MenuInstance sceneMenu = menuManager.openMenu(RuntimeSetting.MENU_INVENTORY_SCENE, window);
+        MenuInstance equipmentMenu = chestWorldItem == null
+                ? menuManager.openMenu(RuntimeSetting.MENU_INVENTORY_EQUIPMENT, window)
+                : null;
 
         this.session = new InventorySessionStruct(
                 window,
                 playerManager.getPlayerForWindow(windowID),
                 playerManager.getCameraForWindow(windowID).getDirection(),
+                sceneMenu,
                 equipmentMenu,
-                chestItem);
+                chestWorldItem);
 
-        playerManager.beginCharacterPreview(windowID);
+        if (session.hasEquipment()) {
+            playerManager.beginCharacterPreview(windowID);
+            inventoryEquipmentBranch.populate(session);
+        }
 
-        inventoryEquipmentBranch.populate(session);
         inventoryContainerBranch.update(session);
     }
 
@@ -149,10 +168,14 @@ public class InventoryBranch extends BranchPackage {
 
         inventoryDragBranch.cancel(session);
         inventoryContainerBranch.closeAll(session);
-        menuManager.closeMenu(session.getEquipmentMenu());
 
-        playerManager.endCharacterPreview(windowID);
-        playerManager.getCameraForWindow(windowID).setDirection(session.getCameraDirection());
+        if (session.hasEquipment()) {
+            menuManager.closeMenu(session.getEquipmentMenu());
+            playerManager.endCharacterPreview(windowID);
+            playerManager.getCameraForWindow(windowID).setDirection(session.getCameraDirection());
+        }
+
+        menuManager.closeMenu(session.getSceneMenu());
 
         this.session = null;
     }
@@ -181,7 +204,7 @@ public class InventoryBranch extends BranchPackage {
 
         InventorySessionStruct session = getSession(window);
 
-        if (session == null)
+        if (session == null || !session.hasEquipment())
             return;
 
         Input rawInput = inputManager.getRawInput(window);

@@ -1,8 +1,8 @@
 package application.bootstrap.itempipeline.itemdefinition;
 
+import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import engine.root.DataPackage;
-import engine.util.mathematics.vectors.Vector3Int;
 
 public class ItemDefinitionData extends DataPackage {
 
@@ -10,9 +10,12 @@ public class ItemDefinitionData extends DataPackage {
      * Immutable item definition payload loaded from ARPG. Holds identity,
      * presentation, physical properties, the body slot it is worn in, the
      * statistics it grants, the sub-voxel shape it takes up in a container,
-     * and render references for one item type. An item with a container size
-     * holds its own container of that many sub-voxels. Owned by
-     * ItemDefinitionHandle for the engine lifetime.
+     * and render references for one item type. An item with a container space
+     * holds its own container of that space. A container with a lid carries
+     * its model without the lid, drawn in the world while it stands open, and
+     * a pocket carries the box of walls its space is shown in, drawn only in
+     * the inventory's menus. Owned by ItemDefinitionHandle for the engine
+     * lifetime.
      */
 
     // Identity
@@ -35,10 +38,12 @@ public class ItemDefinitionData extends DataPackage {
 
     // Storage
     private final ItemShapeStruct shape;
-    private final Vector3Int containerSize;
+    private final ContainerSpaceStruct containerSpace;
 
     // Render
     private final MeshHandle meshHandle;
+    private final MeshData openMeshData;
+    private final MeshData pocketMeshData;
     private final int materialID;
 
     // Constructor \\
@@ -55,8 +60,10 @@ public class ItemDefinitionData extends DataPackage {
             EquipmentType equipmentType,
             float[] stats,
             ItemShapeStruct shape,
-            Vector3Int containerSize,
+            ContainerSpaceStruct containerSpace,
             MeshHandle meshHandle,
+            MeshData openMeshData,
+            MeshData pocketMeshData,
             int materialID) {
 
         // Identity
@@ -79,10 +86,12 @@ public class ItemDefinitionData extends DataPackage {
 
         // Storage
         this.shape = shape;
-        this.containerSize = containerSize;
+        this.containerSpace = containerSpace;
 
         // Render
         this.meshHandle = meshHandle;
+        this.openMeshData = openMeshData;
+        this.pocketMeshData = pocketMeshData;
         this.materialID = materialID;
     }
 
@@ -133,15 +142,27 @@ public class ItemDefinitionData extends DataPackage {
     }
 
     public boolean isContainer() {
-        return containerSize != null;
+        return containerSpace != null;
     }
 
-    public Vector3Int getContainerSize() {
-        return containerSize;
+    public ContainerSpaceStruct getContainerSpace() {
+        return containerSpace;
     }
 
     public MeshHandle getMeshHandle() {
         return meshHandle;
+    }
+
+    public boolean hasOpenMesh() {
+        return openMeshData != null;
+    }
+
+    public MeshData getOpenMeshData() {
+        return openMeshData;
+    }
+
+    public MeshData getPocketMeshData() {
+        return pocketMeshData;
     }
 
     public int getMaterialID() {

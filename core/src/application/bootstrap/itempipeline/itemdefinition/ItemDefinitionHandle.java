@@ -1,8 +1,8 @@
 package application.bootstrap.itempipeline.itemdefinition;
 
+import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import engine.root.HandlePackage;
-import engine.util.mathematics.vectors.Vector3Int;
 
 public class ItemDefinitionHandle extends HandlePackage {
 
@@ -85,12 +85,24 @@ public class ItemDefinitionHandle extends HandlePackage {
         return itemDefinitionData.isContainer();
     }
 
-    public Vector3Int getContainerSize() {
-        return itemDefinitionData.getContainerSize();
+    public ContainerSpaceStruct getContainerSpace() {
+        return itemDefinitionData.getContainerSpace();
     }
 
     public MeshHandle getMeshHandle() {
         return itemDefinitionData.getMeshHandle();
+    }
+
+    public boolean hasOpenMesh() {
+        return itemDefinitionData.hasOpenMesh();
+    }
+
+    public MeshData getOpenMeshData() {
+        return itemDefinitionData.getOpenMeshData();
+    }
+
+    public MeshData getPocketMeshData() {
+        return itemDefinitionData.getPocketMeshData();
     }
 
     public int getMaterialID() {

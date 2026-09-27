@@ -9,10 +9,12 @@ public class ItemShapeStruct extends StructPackage {
 
     /*
      * The sub-voxel cells an item fills, trimmed to their bounds. This is the
-     * volume the item takes up inside a container. A rotation is a number of
-     * quarter turns about the vertical axis; rotated cells and the rotated
-     * shape transform both keep the shape inside its own rotated bounds, so a
-     * placement is always the shape's minimum corner.
+     * volume the item takes up inside a container. A wall claims the cell on
+     * its far side, or the last cell where it closes the grid, so a flat item
+     * still takes up one layer. A rotation is a number of quarter turns about
+     * the vertical axis; rotated cells and the rotated shape transform both
+     * keep the shape inside its own rotated bounds, so a placement is always
+     * the shape's minimum corner.
      */
 
     // Offset — the trimmed shape's first cell inside the item's model grid
@@ -35,10 +37,8 @@ public class ItemShapeStruct extends StructPackage {
     public ItemShapeStruct(SubVoxelModelStruct model) {
 
         int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int cellCount = model.getFilledCellCount();
-
-        if (cellCount == 0)
-            throwException("An item shape needs at least one filled sub-voxel cell.");
+        boolean[] occupied = resolveOccupied(model);
+        int cellCount = 0;
 
         int minX = resolution, minY = resolution, minZ = resolution;
         int maxX = 0, maxY = 0, maxZ = 0;
@@ -47,9 +47,10 @@ public class ItemShapeStruct extends StructPackage {
             for (int y = 0; y < resolution; y++)
                 for (int x = 0; x < resolution; x++) {
 
-                    if (!model.isFilled(x, y, z))
+                    if (!occupied[toCellIndex(x, y, z)])
                         continue;
 
+                    cellCount++;
                     minX = Math.min(minX, x);
                     minY = Math.min(minY, y);
                     minZ = Math.min(minZ, z);
@@ -57,6 +58,9 @@ public class ItemShapeStruct extends StructPackage {
                     maxY = Math.max(maxY, y);
                     maxZ = Math.max(maxZ, z);
                 }
+
+        if (cellCount == 0)
+            throwException("An item shape needs at least one filled sub-voxel cell or wall.");
 
         // Offset
         this.offsetX = minX;
@@ -79,7 +83,7 @@ public class ItemShapeStruct extends StructPackage {
             for (int y = minY; y <= maxY; y++)
                 for (int x = minX; x <= maxX; x++) {
 
-                    if (!model.isFilled(x, y, z))
+                    if (!occupied[toCellIndex(x, y, z)])
                         continue;
 
                     cellX[index] = x - minX;
@@ -87,6 +91,36 @@ public class ItemShapeStruct extends StructPackage {
                     cellZ[index] = z - minZ;
                     index++;
                 }
+    }
+
+    // Every cell a cube fills or a wall claims
+    private static boolean[] resolveOccupied(SubVoxelModelStruct model) {
+
+        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        boolean[] occupied = new boolean[EngineSetting.SUB_VOXEL_CELL_COUNT];
+
+        for (int z = 0; z <= resolution; z++)
+            for (int y = 0; y <= resolution; y++)
+                for (int x = 0; x <= resolution; x++) {
+
+                    if (model.isFilled(x, y, z))
+                        occupied[toCellIndex(x, y, z)] = true;
+
+                    for (int axis = 0; axis < EngineSetting.SUB_VOXEL_AXIS_COUNT; axis++)
+                        if (model.hasWall(axis, x, y, z))
+                            occupied[toCellIndex(
+                                    axis == 0 ? Math.min(x, resolution - 1) : x,
+                                    axis == 1 ? Math.min(y, resolution - 1) : y,
+                                    axis == 2 ? Math.min(z, resolution - 1) : z)] = true;
+                }
+
+        return occupied;
+    }
+
+    private static int toCellIndex(int x, int y, int z) {
+
+        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        return x + resolution * (y + resolution * z);
     }
 
     // Rotation \\

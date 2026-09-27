@@ -26,7 +26,8 @@ public class ItemEditorRenderSystem extends SystemPackage {
 
     /*
      * Draws the active item, the sub-voxel floor grid, and the tool cursor into
-     * this window's scene target. The item mesh is rebuilt in place through
+     * this window's scene target. The cursor fills a cell for a cube and lies
+     * flat on its plane for a wall. The item mesh is rebuilt in place through
      * SubVoxelManager only when the item or its revision changes.
      */
 
@@ -56,12 +57,14 @@ public class ItemEditorRenderSystem extends SystemPackage {
     private ItemDocumentInstance renderedDocument;
     private int renderedRevision;
     private Vector3 cursorCell;
+    private Vector3 cursorSize;
 
     // Base \\
 
     @Override
     protected void create() {
         this.cursorCell = new Vector3();
+        this.cursorSize = new Vector3();
     }
 
     @Override
@@ -170,26 +173,55 @@ public class ItemEditorRenderSystem extends SystemPackage {
             case PLACE -> {
                 if (!hit.hasPlacement())
                     return;
-                cursorCell.set(hit.getPlaceX(), hit.getPlaceY(), hit.getPlaceZ());
+                setCubeCursor(hit.getPlaceX(), hit.getPlaceY(), hit.getPlaceZ());
+                cursorModel = placeCursorModel;
+            }
+
+            case WALL -> {
+                if (!hit.hasWallPlacement())
+                    return;
+                setWallCursor(hit.getWallPlaceAxis(), hit.getWallPlaceX(), hit.getWallPlaceY(), hit.getWallPlaceZ());
                 cursorModel = placeCursorModel;
             }
 
             case ERASE -> {
-                if (!hit.hasTarget())
+                if (!setTargetCursor(hit))
                     return;
-                cursorCell.set(hit.getTargetX(), hit.getTargetY(), hit.getTargetZ());
                 cursorModel = eraseCursorModel;
             }
 
             default -> {
-                if (!hit.hasTarget())
+                if (!setTargetCursor(hit))
                     return;
-                cursorCell.set(hit.getTargetX(), hit.getTargetY(), hit.getTargetZ());
                 cursorModel = paintCursorModel;
             }
         }
 
         cursorModel.getMaterial().setUniform(ItemEditorSetting.UNIFORM_CURSOR_CELL, cursorCell);
+        cursorModel.getMaterial().setUniform(ItemEditorSetting.UNIFORM_CURSOR_SIZE, cursorSize);
         renderManager.pushRenderCall(cursorModel, sceneFbo, ItemEditorSetting.DEPTH_CURSOR, window);
+    }
+
+    private boolean setTargetCursor(SubVoxelHitStruct hit) {
+
+        if (!hit.hasTarget())
+            return false;
+
+        if (hit.isTargetWall())
+            setWallCursor(hit.getTargetAxis(), hit.getTargetX(), hit.getTargetY(), hit.getTargetZ());
+        else
+            setCubeCursor(hit.getTargetX(), hit.getTargetY(), hit.getTargetZ());
+
+        return true;
+    }
+
+    private void setCubeCursor(int x, int y, int z) {
+        cursorCell.set(x, y, z);
+        cursorSize.set(1f, 1f, 1f);
+    }
+
+    private void setWallCursor(int axis, int x, int y, int z) {
+        cursorCell.set(x, y, z);
+        cursorSize.set(axis == 0 ? 0f : 1f, axis == 1 ? 0f : 1f, axis == 2 ? 0f : 1f);
     }
 }

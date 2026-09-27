@@ -164,6 +164,15 @@ public class ContainerInstance extends InstancePackage {
 
     // Walks the cells a ray crosses in container space and returns the first item it meets
     public ContainerSlotStruct raycast(Vector3 origin, Vector3 direction) {
+        return traverse(origin, direction, null);
+    }
+
+    // Where a ray first touches an item, just short of its surface — false when it meets none
+    public boolean raycastPoint(Vector3 origin, Vector3 direction, Vector3 out) {
+        return traverse(origin, direction, out) != null;
+    }
+
+    private ContainerSlotStruct traverse(Vector3 origin, Vector3 direction, Vector3 hitPoint) {
 
         float entry = resolveEntryDistance(origin, direction);
 
@@ -187,26 +196,46 @@ public class ContainerInstance extends InstancePackage {
         float deltaY = direction.y != 0f ? Math.abs(1f / direction.y) : Float.MAX_VALUE;
         float deltaZ = direction.z != 0f ? Math.abs(1f / direction.z) : Float.MAX_VALUE;
 
+        float entered = entry;
+
         while (isInside(x, y, z)) {
 
             ContainerSlotStruct slot = cells[toCellIndex(x, y, z)];
 
-            if (slot != null)
+            if (slot != null) {
+
+                if (hitPoint != null) {
+                    float distance = entered - EngineSetting.CONTAINER_RAY_EPSILON;
+                    hitPoint.set(
+                            origin.x + direction.x * distance,
+                            origin.y + direction.y * distance,
+                            origin.z + direction.z * distance);
+                }
+
                 return slot;
+            }
 
             if (nextX <= nextY && nextX <= nextZ) {
                 x += stepX;
+                entered = nextX;
                 nextX += deltaX;
             } else if (nextY <= nextZ) {
                 y += stepY;
+                entered = nextY;
                 nextY += deltaY;
             } else {
                 z += stepZ;
+                entered = nextZ;
                 nextZ += deltaZ;
             }
         }
 
         return null;
+    }
+
+    // True when a ray in container space passes through the container's box
+    public boolean intersects(Vector3 origin, Vector3 direction) {
+        return resolveEntryDistance(origin, direction) != Float.MAX_VALUE;
     }
 
     // Distance along the ray to where it enters the box, zero from inside, Float.MAX_VALUE on a miss

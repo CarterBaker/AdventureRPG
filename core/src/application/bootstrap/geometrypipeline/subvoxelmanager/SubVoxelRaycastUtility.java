@@ -9,9 +9,12 @@ import engine.util.mathematics.vectors.Vector3;
 class SubVoxelRaycastUtility extends EngineUtility {
 
     /*
-     * Walks a block-space ray through a sub-voxel grid cell by cell. The first
-     * filled cell is the target and the cell before it the placement; a ray
-     * leaving through the floor places onto the floor cell it left from.
+     * Walks a block-space ray through a sub-voxel grid cell by cell, checking
+     * each plane it crosses for a wall. The first filled cell or wall is the
+     * target and the cell before it the placement; a ray leaving through the
+     * floor places onto the floor cell it left from. A new wall covers the
+     * placement cell's struck face, or stands on that face's nearest edge when
+     * the ray lands within SUB_VOXEL_WALL_EDGE_SNAP of it.
      */
 
     // Raycast \\
@@ -30,6 +33,7 @@ class SubVoxelRaycastUtility extends EngineUtility {
 
         float tEnter = 0f;
         float tExit = Float.MAX_VALUE;
+        int entryAxis = EngineSetting.INDEX_NOT_FOUND;
 
         for (int axis = 0; axis < 3; axis++) {
 
@@ -44,14 +48,18 @@ class SubVoxelRaycastUtility extends EngineUtility {
             float t0 = (0f - rayOrigin[axis]) / rayDirection[axis];
             float t1 = (resolution - rayOrigin[axis]) / rayDirection[axis];
 
-            tEnter = Math.max(tEnter, Math.min(t0, t1));
+            if (Math.min(t0, t1) > tEnter) {
+                tEnter = Math.min(t0, t1);
+                entryAxis = axis;
+            }
+
             tExit = Math.min(tExit, Math.max(t0, t1));
         }
 
         if (tExit < tEnter)
             return false;
 
-        return traverse(model, rayOrigin, rayDirection, tEnter, hit);
+        return traverse(model, rayOrigin, rayDirection, tEnter, entryAxis, hit);
     }
 
     // Traversal \\
@@ -61,6 +69,7 @@ class SubVoxelRaycastUtility extends EngineUtility {
             float[] rayOrigin,
             float[] rayDirection,
             float tStart,
+            int entryAxis,
             SubVoxelHitStruct hit) {
 
         int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
@@ -89,9 +98,14 @@ class SubVoxelRaycastUtility extends EngineUtility {
             }
         }
 
-        int previousX = EngineSetting.INDEX_NOT_FOUND;
-        int previousY = EngineSetting.INDEX_NOT_FOUND;
-        int previousZ = EngineSetting.INDEX_NOT_FOUND;
+        if (entryAxis != EngineSetting.INDEX_NOT_FOUND
+                && hasWallOnPlane(model, cell, entryAxis, step[entryAxis] > 0 ? 0 : resolution, hit))
+            return true;
+
+        int[] previous = { EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
+                EngineSetting.INDEX_NOT_FOUND };
+        int struckAxis = entryAxis;
+        float tEntered = tStart;
 
         while (true) {
 
@@ -99,31 +113,106 @@ class SubVoxelRaycastUtility extends EngineUtility {
 
                 hit.setTarget(cell[0], cell[1], cell[2]);
 
-                if (model.isInside(previousX, previousY, previousZ))
-                    hit.setPlacement(previousX, previousY, previousZ);
+                if (model.isInside(previous[0], previous[1], previous[2]))
+                    place(hit, previous, struckAxis, step, rayOrigin, rayDirection, tEntered);
 
                 return true;
             }
 
             int axis = resolveNextAxis(tMax);
+            float tCross = tMax[axis];
+            int plane = step[axis] > 0 ? cell[axis] + 1 : cell[axis];
 
-            previousX = cell[0];
-            previousY = cell[1];
-            previousZ = cell[2];
+            if (hasWallOnPlane(model, cell, axis, plane, hit)) {
+                place(hit, cell, axis, step, rayOrigin, rayDirection, tCross);
+                return true;
+            }
+
+            previous[0] = cell[0];
+            previous[1] = cell[1];
+            previous[2] = cell[2];
 
             cell[axis] += step[axis];
             tMax[axis] += tDelta[axis];
+            struckAxis = axis;
+            tEntered = tCross;
 
             if (cell[axis] >= 0 && cell[axis] < resolution)
                 continue;
 
             if (axis == 1 && step[axis] < 0) {
-                hit.setPlacement(previousX, previousY, previousZ);
+                place(hit, previous, axis, step, rayOrigin, rayDirection, tCross);
                 return true;
             }
 
             return false;
         }
+    }
+
+    private static boolean hasWallOnPlane(
+            SubVoxelModelStruct model,
+            int[] cell,
+            int axis,
+            int plane,
+            SubVoxelHitStruct hit) {
+
+        int x = axis == 0 ? plane : cell[0];
+        int y = axis == 1 ? plane : cell[1];
+        int z = axis == 2 ? plane : cell[2];
+
+        if (!model.hasWall(axis, x, y, z))
+            return false;
+
+        hit.setWallTarget(axis, x, y, z);
+        return true;
+    }
+
+    // Placement \\
+
+    // The placement cell, and the wall covering the face the ray struck or standing on its nearest edge
+    private static void place(
+            SubVoxelHitStruct hit,
+            int[] cell,
+            int struckAxis,
+            int[] step,
+            float[] rayOrigin,
+            float[] rayDirection,
+            float t) {
+
+        hit.setPlacement(cell[0], cell[1], cell[2]);
+
+        if (struckAxis == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        int uAxis = (struckAxis + 1) % 3;
+        int vAxis = (struckAxis + 2) % 3;
+        float u = clampUnit(rayOrigin[uAxis] + rayDirection[uAxis] * t - cell[uAxis]);
+        float v = clampUnit(rayOrigin[vAxis] + rayDirection[vAxis] * t - cell[vAxis]);
+        float nearest = Math.min(Math.min(u, 1f - u), Math.min(v, 1f - v));
+
+        int wallAxis = struckAxis;
+        int plane = step[struckAxis] > 0 ? cell[struckAxis] + 1 : cell[struckAxis];
+
+        if (nearest < EngineSetting.SUB_VOXEL_WALL_EDGE_SNAP) {
+
+            boolean alongU = Math.min(u, 1f - u) <= Math.min(v, 1f - v);
+            float edge = alongU ? u : v;
+
+            wallAxis = alongU ? uAxis : vAxis;
+            plane = cell[wallAxis] + (edge < 0.5f ? 0 : 1);
+        }
+
+        hit.setWallPlacement(
+                wallAxis,
+                wallAxis == 0 ? plane : cell[0],
+                wallAxis == 1 ? plane : cell[1],
+                wallAxis == 2 ? plane : cell[2]);
+    }
+
+    // Utility \\
+
+    private static float clampUnit(float value) {
+        return Math.max(0f, Math.min(1f, value));
     }
 
     private static int resolveNextAxis(float[] tMax) {

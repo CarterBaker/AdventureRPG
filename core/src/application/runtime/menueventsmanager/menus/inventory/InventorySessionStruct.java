@@ -6,6 +6,7 @@ import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import engine.root.EngineSetting;
@@ -15,16 +16,18 @@ import engine.util.mathematics.vectors.Vector3;
 public class InventorySessionStruct extends StructPackage {
 
     /*
-     * One window's open inventory: the player it shows, the equipment menu
-     * and the slot element for every equipment slot, a view for each
-     * container that can be shown, the chest opened with it if any, the
-     * item carried under the cursor, the drop that item would make where the
-     * cursor is, the item under the cursor, and the item whose details are
-     * on show. The shown revisions say which state of the inventory and the
-     * backpack's contents the slots and statistics show, and the preview's
-     * zoom and focus say how close and where the character is framed. The
-     * camera direction the inventory opened with is handed back when it
-     * closes.
+     * One window's open inventory — the character's own, or a container
+     * opened where it lies in the world. Holds the player it belongs to, the
+     * scene menu whose surface lies under every other inventory menu, the
+     * equipment menu and the slot element for every equipment slot when the
+     * character is shown, a view for each container that can be open, the
+     * world item opened if any, the item carried under the cursor, the drop
+     * that item would make where the cursor is, the item under the cursor,
+     * and the item whose details are on show. The shown revisions say which
+     * state of the inventory and the backpack's contents the slots and
+     * statistics show, and the preview's zoom and focus say how close and
+     * where the character is framed. The camera direction the inventory
+     * opened with is handed back when it closes.
      */
 
     // Window
@@ -32,15 +35,18 @@ public class InventorySessionStruct extends StructPackage {
     private final EntityInstance player;
     private final Vector3 cameraDirection;
 
-    // Equipment
+    // Menus
+    private final MenuInstance sceneMenu;
     private final MenuInstance equipmentMenu;
+
+    // Equipment
     private final ElementInstance[] slot2Element;
     private int shownRevision;
     private int shownContentRevision;
 
     // Containers
     private final InventoryViewStruct[] views;
-    private final ItemInstance chestItem;
+    private final WorldItemInstance chestWorldItem;
 
     // Drag
     private InventoryDragMode dragMode;
@@ -71,16 +77,20 @@ public class InventorySessionStruct extends StructPackage {
             WindowInstance window,
             EntityInstance player,
             Vector3 cameraDirection,
+            MenuInstance sceneMenu,
             MenuInstance equipmentMenu,
-            ItemInstance chestItem) {
+            WorldItemInstance chestWorldItem) {
 
         // Window
         this.window = window;
         this.player = player;
         this.cameraDirection = new Vector3(cameraDirection);
 
-        // Equipment
+        // Menus
+        this.sceneMenu = sceneMenu;
         this.equipmentMenu = equipmentMenu;
+
+        // Equipment
         this.slot2Element = new ElementInstance[EquipmentSlot.VALUES.length];
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
         this.shownContentRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -91,7 +101,7 @@ public class InventorySessionStruct extends StructPackage {
         for (InventoryContainer inventoryContainer : InventoryContainer.VALUES)
             this.views[inventoryContainer.ordinal()] = new InventoryViewStruct(inventoryContainer);
 
-        this.chestItem = chestItem;
+        this.chestWorldItem = chestWorldItem;
 
         // Drag
         this.dragMode = InventoryDragMode.NONE;
@@ -134,6 +144,14 @@ public class InventorySessionStruct extends StructPackage {
         return cameraDirection;
     }
 
+    public MenuInstance getSceneMenu() {
+        return sceneMenu;
+    }
+
+    public boolean hasEquipment() {
+        return equipmentMenu != null;
+    }
+
     public MenuInstance getEquipmentMenu() {
         return equipmentMenu;
     }
@@ -171,11 +189,11 @@ public class InventorySessionStruct extends StructPackage {
     }
 
     public boolean hasChest() {
-        return chestItem != null;
+        return chestWorldItem != null;
     }
 
-    public ItemInstance getChestItem() {
-        return chestItem;
+    public WorldItemInstance getChestWorldItem() {
+        return chestWorldItem;
     }
 
     public InventoryDragMode getDragMode() {
