@@ -19,9 +19,10 @@ out vec4 fragColor;
 
 // FOG_SHADOW_SCALE / FOG_LIT_SCALE re-weight computeFogAmount()'s result by
 // how directly lit the fragment is, since fog should read stronger on
-// sunlit distant terrain and weaker in shadow — not the reverse. Toward the
-// rim of the visible world both converge on total fog, so the edge always
-// dissolves into the sky.
+// sunlit distant terrain and weaker in shadow — not the reverse. Across the
+// seam where chunks give way to macro terrain both ease to neutral, so the
+// two meet under identical fog, and toward the rim of the visible world the
+// blend converges on total fog, so the edge always dissolves into the sky.
 const float FOG_SHADOW_SCALE = 0.35;
 const float FOG_LIT_SCALE    = 1.6;
 
@@ -83,12 +84,15 @@ void main() {
     float fragDistance = length(toFragment);
     vec3  fragDir      = toFragment / max(fragDistance, CLOUD_MARCH_EPSILON);
 
-    float litAmount       = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
-    float horizonFraction = computeHorizonFraction(fragPosWorld);
-    float fogT            = computeFogAmount(horizonFraction);
-    float fogBlend        = resolveFogEdge(fogT * mix(FOG_SHADOW_SCALE, FOG_LIT_SCALE, litAmount), horizonFraction);
+    float litAmount   = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
+    float fogDistance = computeFogDistance(fragPosWorld);
+    float fogFraction = computeFogFraction(fogDistance);
+    float seamBlend   = computeFogSeamBlend(fogDistance);
+    float fogT        = computeFogAmount(fogFraction, seamBlend);
+    float fogWeight   = resolveFogWeight(mix(FOG_SHADOW_SCALE, FOG_LIT_SCALE, litAmount), seamBlend);
+    float fogBlend    = resolveFogEdge(fogT * fogWeight, fogFraction);
 
-    lit = mix(lit, resolveFogColor(fragDir, horizonFraction), fogBlend);
+    lit = mix(lit, resolveFogColor(fragDir, fogFraction), fogBlend);
 
     // Cloud between the camera and this fragment — a peak wrapped in cloud,
     // or terrain seen from inside a cloud — fogs it with the same clouds the

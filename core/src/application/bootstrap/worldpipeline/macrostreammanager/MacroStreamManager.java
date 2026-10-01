@@ -8,7 +8,9 @@ public class MacroStreamManager extends ManagerPackage {
     /*
      * Internal macro terrain streaming facade. Owned and created by
      * WorldStreamManager. Macro chunks are coarse heightfield tiles sampled
-     * straight from the terrain noise, filling the view beyond the chunk grid.
+     * straight from the terrain noise, filling the view wherever the chunk
+     * grid does not draw: beyond its footprint, along its streaming rim, and
+     * over any chunk not yet loaded.
      * Every grid owns its own activeMacroChunks map and macro ring; the pool
      * and all queue logic live in MacroQueueManager.
      */

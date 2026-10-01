@@ -1,56 +1,31 @@
 package application.bootstrap.worldpipeline.util;
 
-import application.bootstrap.entitypipeline.entity.EntityInstance;
-import application.bootstrap.worldpipeline.grid.GridInstance;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
 public final class MacroTerrainUtility extends EngineUtility {
 
     /*
-     * Stateless geometry of distant macro terrain against the shared world
-     * curvature. The curve bends height down by k times the squared distance
-     * from the player, so ground h blocks above sea level stays in view out to
-     * the square root of h over k past the sea-level horizon; the eye's reach
-     * plus the terrain's reach bounds everything the curve lets the eye see.
-     * Coverage mirrors the chunk grid's footprint exactly, so a tile wholly
-     * inside it is never built, and a tile's lattice resolution follows how
-     * wide one cell looks from where the player stands.
+     * Stateless geometry of distant macro terrain against the chunk grid. The
+     * world is flat, so the ring reaches a fixed distance in every direction.
+     * Coverage mirrors the chunk grid's footprint inset by the streaming
+     * margin, the rim band where chunks are still streaming in or never mesh
+     * for want of a neighbour, so a tile is left unbuilt only where chunks
+     * settle for certain, and a tile's lattice resolution follows how wide one
+     * cell looks from where the player stands.
      */
-
-    // Horizon \\
-
-    public static float resolveHorizonReachBlocks(float heightBlocks) {
-
-        float heightAboveSea = heightBlocks - EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
-
-        if (heightAboveSea <= 0f)
-            return 0f;
-
-        return (float) Math.sqrt(heightAboveSea / EngineSetting.WORLD_CURVATURE_STRENGTH);
-    }
-
-    public static float resolveEyeReachBlocks(GridInstance grid) {
-
-        EntityInstance focalEntity = grid.getFocalEntity();
-        float eyeHeightBlocks = focalEntity.getWorldPositionStruct().getPosition().y
-                + focalEntity.getEyeHeight()
-                + EngineSetting.MACRO_HORIZON_EYE_MARGIN_BLOCKS;
-
-        return resolveHorizonReachBlocks(eyeHeightBlocks);
-    }
 
     // Coverage — chunk units, relative to the active chunk's origin corner \\
 
-    public static int resolveGridHalf(int renderDistance) {
-        return renderDistance / 2;
+    public static int resolveSettledHalf(int renderDistance) {
+        return Math.max(renderDistance / 2 - EngineSetting.MACRO_STREAMING_MARGIN_CHUNKS, 0);
     }
 
-    public static float resolveGridRadiusSq(int renderDistance) {
+    public static float resolveSettledRadiusSq(int renderDistance) {
 
-        float gridRadius = renderDistance / 2f;
+        float settledRadius = Math.max(renderDistance / 2f - EngineSetting.MACRO_STREAMING_MARGIN_CHUNKS, 0f);
 
-        return gridRadius * gridRadius;
+        return settledRadius * settledRadius;
     }
 
     public static boolean isCoveredByChunkGrid(

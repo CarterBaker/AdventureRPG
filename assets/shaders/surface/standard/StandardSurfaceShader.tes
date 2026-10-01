@@ -23,7 +23,6 @@ out vec3 vColor;
 #include "includes/CameraData.glsl"
 #include "includes/SettingsData.glsl"
 #include "includes/PlayerPositionData.glsl"
-#include "includes/WorldCurvature.glsl"
 #include "surface/includes/SurfaceStandard.glsl"
 #include "includes/BlockOrientationMapData.glsl"
 #include "surface/includes/TiledSampling.glsl"
@@ -40,10 +39,8 @@ out vec3 vColor;
 // touching it rebuilds identically from its own edge columns. Natural distortion and height relief therefore
 // fade to exactly zero wherever two surfaces meet, and the only displacement surviving there is the bevel,
 // itself a pure function of the vertex. An artificial patch is never displaced, and every natural neighbour
-// fades flat against it. World curvature bends the finished position once, after everything else, so normals
-// and every lookup keep using the flat position. Geometric normals come from finite differences in block
-// units, taken only where displacement actually runs, so a ten-block quad and a half-block quad shade to the
-// same gradient.
+// fades flat against it. Geometric normals come from finite differences in block units, taken only where
+// displacement actually runs, so a ten-block quad and a half-block quad shade to the same gradient.
 
 const float HEIGHT_FD_EPSILON_BLOCKS = 0.02;
 
@@ -143,5 +140,5 @@ void main() {
     vColor      = mix(mix(teColor[0], teColor[1], u),
                       mix(teColor[3], teColor[2], u), v);
 
-    gl_Position = u_viewProjection * vec4(applyWorldCurvature(worldPos), 1.0);
+    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

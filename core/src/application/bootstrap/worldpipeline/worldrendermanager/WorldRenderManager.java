@@ -19,6 +19,7 @@ import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -35,7 +36,9 @@ public class WorldRenderManager extends ManagerPackage {
      * updateEntries() reconciles a rebuilt packet bucket by bucket, reuploading
      * into the same buffers so per-window VAO clones stay valid, and pushes
      * each visible entry with its slot UBO, plus the grid's ocean UBO for
-     * water. Distant macro terrain is delegated to MacroRenderSystem.
+     * water. Every change to the entries advances the drawn revision, so
+     * MacroRenderSystem, which owns distant macro terrain, re-resolves which
+     * chunks a grid draws only when that can have changed.
      */
 
     private MaterialManager materialManager;
@@ -50,6 +53,7 @@ public class WorldRenderManager extends ManagerPackage {
     private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> megaEntries;
 
     private int batchedChunks;
+    private int drawnRevision;
 
     @Override
     protected void create() {
@@ -242,6 +246,25 @@ public class WorldRenderManager extends ManagerPackage {
         return megaEntries.containsKey(megaCoordinate);
     }
 
+    // Drawn State \\
+
+    int getDrawnRevision() {
+        return drawnRevision;
+    }
+
+    boolean isChunkDrawn(GridInstance grid, long chunkCoordinate) {
+
+        if (grid.getGridSlotForChunk(chunkCoordinate) == null)
+            return false;
+
+        long megaCoordinate = Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate);
+
+        if (grid.getMegaRenderQueue().containsKey(megaCoordinate) && megaEntries.containsKey(megaCoordinate))
+            return true;
+
+        return chunkEntries.containsKey(chunkCoordinate);
+    }
+
     private boolean updateEntries(
             WorldRenderInstance worldRenderInstance,
             Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> entries) {
@@ -257,6 +280,8 @@ public class WorldRenderManager extends ManagerPackage {
 
         if (dynamicPacket.getState() != DynamicPacketState.READY)
             return false;
+
+        drawnRevision++;
 
         Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = entries.get(coordinate);
 
@@ -362,6 +387,8 @@ public class WorldRenderManager extends ManagerPackage {
 
         if (materialEntries == null)
             return;
+
+        drawnRevision++;
 
         for (ObjectArrayList<RenderEntry> list : materialEntries.values())
             disposeEntries(list);

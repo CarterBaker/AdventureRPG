@@ -9,7 +9,6 @@ layout(location = 4) in vec2  aInstance1; // localY, orientation
 #include "includes/PlayerPositionData.glsl"
 #include "includes/ItemRotationData.glsl"
 #include "includes/SettingsData.glsl"
-#include "includes/WorldCurvature.glsl"
 
 const vec3 NORMALS[6] = vec3[](
     vec3(0, 0, 1), vec3(1, 0, 0), vec3(0, 0,-1),
@@ -36,8 +35,6 @@ void main() {
         relChunkX * u_chunkSize + aInstance0.z + rotPos.x,
         aInstance1.x            + rotPos.y,
         relChunkZ * u_chunkSize + aInstance0.w + rotPos.z);
-
-    worldPos = applyWorldCurvature(worldPos);
 
     vViewPosition = (u_view * vec4(worldPos, 1.0)).xyz;
     gl_Position   = u_viewProjection * vec4(worldPos, 1.0);

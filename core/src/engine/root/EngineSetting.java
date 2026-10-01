@@ -321,7 +321,6 @@ public class EngineSetting {
     public static final int SUB_BLOCK_DIVISIONS = 2;
     public static final int SUB_VOXEL_RESOLUTION = 16;
     public static final int WORLD_HEIGHT = 64;
-    public static final float WORLD_CURVATURE_STRENGTH = 0.00016f;
 
     // Natural Noise
     public static final float NATURAL_GROUND_OFFSET_SMOOTHING = 10.0f;
@@ -388,7 +387,7 @@ public class EngineSetting {
     public static final String UBO_TIME_DATA_NAME = "TimeData";
 
     // Camera
-    public static final float CAMERA_FAR_PLANE = 6000f;
+    public static final float CAMERA_FAR_PLANE = 10000f;
     public static final float CAMERA_FIRST_PERSON_THRESHOLD = 0.1f;
     public static final float CAMERA_MAX_PITCH_DEGREES = 89f;
     public static final float CAMERA_MIN_FOV_DEGREES = 1f;
@@ -432,6 +431,7 @@ public class EngineSetting {
     public static final String UNIFORM_FACE_ORIENTATIONS = "u_faceOrientations";
     public static final String UNIFORM_FONT_ATLAS = "u_fontAtlas";
     public static final String UNIFORM_GRID_POSITION = "u_gridPosition";
+    public static final String UNIFORM_MACRO_COVERAGE = "u_macroCoverage";
     public static final String UNIFORM_NATURAL_NOISE_LATTICE = "u_naturalNoiseLattice";
     public static final String UNIFORM_NEAR_TESSELLATION_RADIUS = "u_nearTessellationRadius";
     public static final String UNIFORM_PLAYER_CHUNK_X = "u_playerChunkX";
@@ -512,23 +512,27 @@ public class EngineSetting {
     public static final String STARTING_WORLD = "TerraArcana";
 
     // Macro Terrain
-    public static final int MACRO_ADMISSIONS_PER_FRAME = 8;
+    public static final int MACRO_ADMISSIONS_PER_FRAME = 16;
     public static final float MACRO_ANCHOR_CENTER_CHUNKS = 0.5f;
-    public static final int MACRO_ASSESS_PER_FRAME = 64;
+    public static final int MACRO_ASSESS_PER_FRAME = 128;
     public static final float MACRO_CELL_ANGLE_RADIANS = 0.04f;
     public static final int MACRO_CELLS_PER_SIDE_MAX = 8;
     public static final int MACRO_CELLS_PER_SIDE_MIN = 1;
-    public static final float MACRO_HORIZON_EYE_MARGIN_BLOCKS = 8f;
-    public static final int MACRO_HORIZON_SHRINK_TILES = 2;
+    public static final int MACRO_COVERAGE_BITS_PER_WORD = Integer.SIZE;
+    public static final String MACRO_COVERAGE_UBO = "MacroCoverageData";
+    public static final int MACRO_COVERAGE_WORD_COUNT = MACRO_CHUNK_SIZE * MACRO_CHUNK_SIZE
+            / MACRO_COVERAGE_BITS_PER_WORD;
+    public static final int MACRO_COVERAGE_VECTOR_COUNT = MACRO_COVERAGE_WORD_COUNT / VECTOR4_COMPONENT_COUNT;
     public static final String MACRO_MATERIAL = "surface/MacroTerrainMaterial";
     public static final int MACRO_POOL_MAX_OVERFLOW = 16;
-    public static final float MACRO_RENDER_DISTANCE_BLOCKS = 4096f;
+    public static final float MACRO_RENDER_DISTANCE_BLOCKS = 8192f;
     public static final float MACRO_SKIRT_DEPTH_CELLS = 1f;
+    public static final int MACRO_STREAMING_MARGIN_CHUNKS = MACRO_CHUNK_SIZE;
     public static final String MACRO_STREAMING_THREAD_NAME = "MacroStreaming";
     public static final float MACRO_SURFACE_OFFSET_BLOCKS = BLOCK_SIZE;
     public static final String MACRO_VAO = "util/vao/MacroVAO";
     public static final int MACRO_VERTEX_FLOAT_COUNT = 4;
-    public static final int MAX_MACRO_GPU_UPLOADS_PER_FRAME = 8;
+    public static final int MAX_MACRO_GPU_UPLOADS_PER_FRAME = 16;
 
     // Sub-Block
     public static final int CHUNK_VERTEX_FLOAT_COUNT = 15;

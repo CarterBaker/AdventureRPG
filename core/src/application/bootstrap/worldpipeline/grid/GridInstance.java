@@ -32,9 +32,9 @@ public class GridInstance extends InstancePackage {
     /*
      * The streaming grid around one window's focal entity. Owns load order,
      * slots, active chunks, megas and macros, pending requests, render queues,
-     * the macro ring anchored to the active chunk and bounded by the horizon,
-     * and the window's own location state and UBO instances. rebuildSlots()
-     * swaps the layout in place so holders stay valid.
+     * the macro ring anchored to the active chunk, and the window's own
+     * location state and UBO instances. rebuildSlots() swaps the layout in
+     * place so holders stay valid.
      */
 
     // Focal
@@ -89,12 +89,11 @@ public class GridInstance extends InstancePackage {
     private LongLinkedOpenHashSet loadRequests;
     private LongLinkedOpenHashSet unloadRequests;
 
-    // Macro State — wanted macro coordinates, near to far, for the anchor chunk and horizon
+    // Macro State — wanted macro coordinates, near to far, for the anchor chunk
     private Long2ObjectLinkedOpenHashMap<MacroChunkInstance> activeMacroChunks;
     private LongArrayList macroLoadOrder;
     private LongOpenHashSet macroCoordinates;
     private long macroAnchorCoordinate;
-    private int macroHorizonTiles;
     private int macroAdmitCursor;
 
     // Render Queues — chunk/mega world coordinate → slot handle
@@ -309,22 +308,16 @@ public class GridInstance extends InstancePackage {
         macroLoadOrder.clear();
         macroCoordinates.clear();
         this.macroAnchorCoordinate = Coordinate2Long.pack(-1, -1);
-        this.macroHorizonTiles = 0;
         this.macroAdmitCursor = 0;
     }
 
-    public void anchorMacroRing(long anchorCoordinate, int horizonTiles) {
+    public void anchorMacroRing(long anchorCoordinate) {
         this.macroAnchorCoordinate = anchorCoordinate;
-        this.macroHorizonTiles = horizonTiles;
         this.macroAdmitCursor = 0;
     }
 
     public long getMacroAnchorCoordinate() {
         return macroAnchorCoordinate;
-    }
-
-    public int getMacroHorizonTiles() {
-        return macroHorizonTiles;
     }
 
     public int getMacroAdmitCursor() {

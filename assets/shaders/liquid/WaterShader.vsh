@@ -10,8 +10,6 @@ layout (location = 5) in vec4  aEdgeHigh;   // unused for liquid — solid geome
 
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
-#include "includes/PlayerPositionData.glsl"
-#include "includes/WorldCurvature.glsl"
 #include "liquid/includes/OceanSurface.glsl"
 
 const vec3 NORMALS[6] = vec3[](
@@ -54,11 +52,6 @@ void main() {
 
     vWorldNormal = NORMALS[int(aMeta) & 7];
     vOceanPos    = worldPos;
-
-    // The exact same world bend the terrain uses, measured from the
-    // player's true position, keeps a water surface glued to its bank at
-    // every range.
-    worldPos = applyWorldCurvature(worldPos);
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

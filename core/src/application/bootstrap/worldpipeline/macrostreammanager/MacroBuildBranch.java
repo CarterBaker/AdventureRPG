@@ -80,7 +80,7 @@ public class MacroBuildBranch extends BranchPackage {
                 sync.acquire();
                 try {
                     macroMeshBranch.assembleMesh(scratch, sync.getVertices(), sync.getIndices());
-                    sync.markBuilt(cellsPerSide, scratch.maxHeightBlocks);
+                    sync.markBuilt(cellsPerSide);
                 } finally {
                     sync.release();
                 }
@@ -101,7 +101,6 @@ public class MacroBuildBranch extends BranchPackage {
         float cellSizeBlocks = tileSizeBlocks / scratch.cellsPerSide;
         BiomeBlendStruct blend = scratch.blend;
 
-        scratch.maxHeightBlocks = -Float.MAX_VALUE;
         scratch.minHeightBlocks = Float.MAX_VALUE;
 
         for (int z = 0; z < samplesPerSide; z++) {
@@ -116,7 +115,6 @@ public class MacroBuildBranch extends BranchPackage {
 
                 scratch.heightBlocks[index] = height;
                 scratch.packedColors[index] = resolvePackedColor(blend);
-                scratch.maxHeightBlocks = Math.max(scratch.maxHeightBlocks, height);
                 scratch.minHeightBlocks = Math.min(scratch.minHeightBlocks, height);
             }
         }
