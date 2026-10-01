@@ -24,7 +24,9 @@ class BlockBuilder extends BuilderPackage {
     /*
      * Parses block ARPG into BlockData wrapped in a BlockHandle, validating
      * geometry type, textures, durability, tooling and, for liquids, viscosity.
-     * Bootstrap only.
+     * Every breakable solid block must name the tool that breaks it and the
+     * item texture its block piece is drawn with, since breaking it hands
+     * those pieces out. Bootstrap only.
      */
 
     // Internal
@@ -139,6 +141,14 @@ class BlockBuilder extends BuilderPackage {
             requiredToolTypeID = toolTypeManager.getToolTypeIDFromToolTypeName(toolPath);
         }
 
+        String itemTextureName = ArpgUtility.getString(
+                blockArpg, "item_texture", EngineSetting.BLOCK_ITEM_TEXTURE_NONE);
+
+        if (isBreakableSolid(blockType, breakTier))
+            validatePieceSource(blockName, requiredToolTypeID, itemTextureName);
+        else if (!itemTextureName.isEmpty())
+            throwException("Block \"" + blockName + "\" names an \"item_texture\" but cannot be broken into pieces.");
+
         // Physics — viscosity (Pa·s) is required for LIQUID blocks, since the
         // physics pipeline has no sane fallback for how fast an undefined
         // liquid should flow. Optional and stored as-is for anything else.
@@ -154,7 +164,7 @@ class BlockBuilder extends BuilderPackage {
 
         // Construct
         BlockData blockData = new BlockData(
-                blockName, blockID,
+                blockName, localName, blockID,
                 blockType, rotationType, natural,
                 materialID,
                 textures[Direction3Vector.NORTH.ordinal()],
@@ -164,12 +174,33 @@ class BlockBuilder extends BuilderPackage {
                 textures[Direction3Vector.UP.ordinal()],
                 textures[Direction3Vector.DOWN.ordinal()],
                 breakTier, requiredToolTypeID, durability,
+                itemTextureName,
                 viscosity);
 
         BlockHandle blockHandle = create(BlockHandle.class);
         blockHandle.constructor(blockData);
 
         return blockHandle;
+    }
+
+    // Breaking \\
+
+    private boolean isBreakableSolid(DynamicGeometryType blockType, int breakTier) {
+        return breakTier >= 0
+                && blockType != DynamicGeometryType.NONE
+                && blockType != DynamicGeometryType.LIQUID;
+    }
+
+    private void validatePieceSource(String blockName, short requiredToolTypeID, String itemTextureName) {
+
+        if (requiredToolTypeID == EngineSetting.TOOL_NONE)
+            throwException("Breakable block \"" + blockName + "\" must name the \"required_tool\" that breaks it.");
+
+        if (itemTextureName.isEmpty())
+            throwException("Breakable block \"" + blockName + "\" must name the \"item_texture\" its block piece "
+                    + "is drawn with — a texture from the item texture array.");
+
+        textureManager.getTileIDFromTextureName(itemTextureName);
     }
 
     // Utility \\

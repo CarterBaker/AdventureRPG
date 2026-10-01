@@ -48,7 +48,7 @@ class ToolTypeBuilder extends BuilderPackage {
         short toolTypeID = RegistryUtility.toShortID(toolTypeName);
         String defaultModelPath = ArpgUtility.getString(toolArpg, "model", "");
 
-        ToolTypeData toolTypeData = new ToolTypeData(toolTypeName, toolTypeID, defaultModelPath);
+        ToolTypeData toolTypeData = new ToolTypeData(toolTypeName, localName, toolTypeID, defaultModelPath);
 
         ToolTypeHandle tool = create(ToolTypeHandle.class);
         tool.constructor(toolTypeData);

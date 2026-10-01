@@ -3,6 +3,7 @@ package application.bootstrap.itempipeline.itemdefinition;
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import engine.root.DataPackage;
+import engine.root.EngineSetting;
 
 public class ItemDefinitionData extends DataPackage {
 
@@ -14,8 +15,10 @@ public class ItemDefinitionData extends DataPackage {
      * holds its own container of that space. A container with a lid carries
      * its model without the lid, drawn in the world while it stands open, and
      * a pocket carries the box of walls its space is shown in, drawn only in
-     * the inventory's menus. Owned by ItemDefinitionHandle for the engine
-     * lifetime.
+     * the inventory's menus. A tool names the tool type it is and the highest
+     * break tier it can break; a stackable item holds up to its stack size in
+     * one item; a block piece names the block it builds. Owned by
+     * ItemDefinitionHandle for the engine lifetime.
      */
 
     // Identity
@@ -46,6 +49,16 @@ public class ItemDefinitionData extends DataPackage {
     private final MeshData pocketMeshData;
     private final int materialID;
 
+    // Tool
+    private final short toolTypeID;
+    private final int toolTier;
+
+    // Stacking
+    private final int stackSize;
+
+    // Block — the block a block piece builds, BLOCK_PIECE_NONE for every other item
+    private final short blockID;
+
     // Constructor \\
 
     public ItemDefinitionData(
@@ -64,7 +77,11 @@ public class ItemDefinitionData extends DataPackage {
             MeshHandle meshHandle,
             MeshData openMeshData,
             MeshData pocketMeshData,
-            int materialID) {
+            int materialID,
+            short toolTypeID,
+            int toolTier,
+            int stackSize,
+            short blockID) {
 
         // Identity
         this.itemName = itemName;
@@ -93,6 +110,16 @@ public class ItemDefinitionData extends DataPackage {
         this.openMeshData = openMeshData;
         this.pocketMeshData = pocketMeshData;
         this.materialID = materialID;
+
+        // Tool
+        this.toolTypeID = toolTypeID;
+        this.toolTier = toolTier;
+
+        // Stacking
+        this.stackSize = stackSize;
+
+        // Block
+        this.blockID = blockID;
     }
 
     // Accessible \\
@@ -167,5 +194,33 @@ public class ItemDefinitionData extends DataPackage {
 
     public int getMaterialID() {
         return materialID;
+    }
+
+    public short getToolTypeID() {
+        return toolTypeID;
+    }
+
+    public boolean isTool() {
+        return toolTypeID != EngineSetting.TOOL_NONE;
+    }
+
+    public int getToolTier() {
+        return toolTier;
+    }
+
+    public int getStackSize() {
+        return stackSize;
+    }
+
+    public boolean isStackable() {
+        return stackSize > 1;
+    }
+
+    public short getBlockID() {
+        return blockID;
+    }
+
+    public boolean isBlockPiece() {
+        return blockID != EngineSetting.BLOCK_PIECE_NONE;
     }
 }

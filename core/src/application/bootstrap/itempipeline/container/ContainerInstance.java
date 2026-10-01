@@ -16,7 +16,8 @@ public class ContainerInstance extends InstancePackage {
      * can sit in the hollow of another. Items settle under gravity — a drop
      * enters from the top of the box and falls until it rests on the floor or
      * on something below. place() and remove() are the only paths that change
-     * which cells are taken. A container never holds itself, directly or
+     * which cells are taken, and mergeStack() the only one that tops up the
+     * stacks already inside. A container never holds itself, directly or
      * through a container packed inside it. The revision counts every change
      * to the contents, so a view of the container knows when to redraw.
      */
@@ -158,6 +159,34 @@ public class ContainerInstance extends InstancePackage {
             return null;
 
         return place(itemInstance, bestX, bestY, bestZ, bestRotation);
+    }
+
+    // Stacks \\
+
+    // How many more of an item the stacks already here can take
+    public int getStackRoom(ItemInstance itemInstance) {
+
+        int room = 0;
+
+        for (int i = 0; i < slots.size(); i++)
+            if (slots.get(i).getItemInstance().stacksWith(itemInstance))
+                room += slots.get(i).getItemInstance().getStackRoom();
+
+        return room;
+    }
+
+    // Moves an item's count into the stacks already here as far as they have room — true once it is spent
+    public boolean mergeStack(ItemInstance itemInstance) {
+
+        for (int i = 0; i < slots.size() && !itemInstance.isSpent(); i++) {
+
+            ItemInstance stack = slots.get(i).getItemInstance();
+
+            if (stack.stacksWith(itemInstance) && stack.absorb(itemInstance) > 0)
+                revision++;
+        }
+
+        return itemInstance.isSpent();
     }
 
     // Raycast \\

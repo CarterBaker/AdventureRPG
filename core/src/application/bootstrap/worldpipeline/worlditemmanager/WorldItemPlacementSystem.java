@@ -5,6 +5,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
+import application.bootstrap.physicspipeline.util.RayBoxUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
@@ -184,34 +185,11 @@ public class WorldItemPlacementSystem extends SystemPackage {
 
         float svr = EngineSetting.SUB_VOXEL_RESOLUTION;
         long packed = instance.getPackedPosition();
-        float[] mins = {
-                chunkOffsetX + Coordinate4Long.unpackX(packed) / svr,
-                Coordinate4Long.unpackY(packed) / svr,
-                chunkOffsetZ + Coordinate4Long.unpackZ(packed) / svr };
-        float[] origins = { origin.x, origin.y, origin.z };
-        float[] directions = { direction.x, direction.y, direction.z };
+        float minX = chunkOffsetX + Coordinate4Long.unpackX(packed) / svr;
+        float minY = Coordinate4Long.unpackY(packed) / svr;
+        float minZ = chunkOffsetZ + Coordinate4Long.unpackZ(packed) / svr;
 
-        float near = 0f;
-        float far = Float.MAX_VALUE;
-
-        for (int axis = 0; axis < 3; axis++) {
-
-            if (directions[axis] == 0f) {
-
-                if (origins[axis] < mins[axis] || origins[axis] > mins[axis] + 1f)
-                    return Float.MAX_VALUE;
-
-                continue;
-            }
-
-            float first = (mins[axis] - origins[axis]) / directions[axis];
-            float second = (mins[axis] + 1f - origins[axis]) / directions[axis];
-
-            near = Math.max(near, Math.min(first, second));
-            far = Math.min(far, Math.max(first, second));
-        }
-
-        return near <= far ? near : Float.MAX_VALUE;
+        return RayBoxUtility.intersect(origin, direction, minX, minY, minZ, minX + 1f, minY + 1f, minZ + 1f);
     }
 
     // State \\

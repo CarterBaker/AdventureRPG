@@ -29,6 +29,8 @@ public enum SettingsBinding {
             KeyBindings.SPRINT),
     USE(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_USE,
             KeyBindings.SECONDARY),
+    BLOCK(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_BLOCK,
+            KeyBindings.BLOCK),
     INVENTORY(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_INVENTORY,
             KeyBindings.INVENTORY),
     ROTATE_ITEM(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_ROTATE_ITEM,

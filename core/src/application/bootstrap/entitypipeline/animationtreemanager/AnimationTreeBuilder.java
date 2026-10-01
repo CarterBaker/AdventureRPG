@@ -11,6 +11,7 @@ import application.bootstrap.entitypipeline.animationtree.AnimationNodeStruct;
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeData;
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
+import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
@@ -30,8 +31,10 @@ class AnimationTreeBuilder extends BuilderPackage {
      * resolved and validated here, so the runtime only ever walks indices.
      * The first layer is the base: a full-body, unmasked OVERRIDE layer at
      * full weight that must reach a node from every EntityState, through
-     * "states" or its "default". A node's blend falls back to its layer's,
-     * and a layer's to the engine default. Bootstrap-only.
+     * "states" or its "default". Any later layer may map EntityActions to
+     * one-shot nodes through "actions"; such a node plays at the action's own
+     * progress while the action lasts. A node's blend falls back to its
+     * layer's, and a layer's to the engine default. Bootstrap-only.
      */
 
     // Internal
@@ -122,6 +125,7 @@ class AnimationTreeBuilder extends BuilderPackage {
                 parseBoneMask(layerArpg, layerName, rigHandle, file),
                 nodes,
                 parseStateNodes(layerArpg, layerName, nodeName2NodeIndex, base, file),
+                parseActionNodes(layerArpg, layerName, nodes, nodeName2NodeIndex, file),
                 parseTransitionBlends(layerArpg, layerName, nodes, nodeName2NodeIndex, file));
     }
 
@@ -140,6 +144,10 @@ class AnimationTreeBuilder extends BuilderPackage {
 
         if (weight != EngineSetting.DEFAULT_ANIMATION_LAYER_WEIGHT)
             throwException("Base layer \"" + layerName + "\" must play at full weight. File: " + file.getName());
+
+        if (layerArpg.has("actions"))
+            throwException("Base layer \"" + layerName + "\" cannot declare \"actions\" — play them on a layer "
+                    + "above it. File: " + file.getName());
     }
 
     // Mask Parsing \\
@@ -320,6 +328,47 @@ class AnimationTreeBuilder extends BuilderPackage {
                             + state.name().toLowerCase() + "\" and no \"default\". File: " + file.getName());
 
         return stateNodes;
+    }
+
+    // Action Parsing \\
+
+    private int[] parseActionNodes(
+            ArpgObjectStruct layerArpg,
+            String layerName,
+            AnimationNodeStruct[] nodes,
+            Object2IntOpenHashMap<String> nodeName2NodeIndex,
+            File file) {
+
+        int[] actionNodes = new int[EntityAction.VALUES.length];
+        Arrays.fill(actionNodes, EngineSetting.INDEX_NOT_FOUND);
+
+        if (!ArpgUtility.hasObject(layerArpg, "actions"))
+            return actionNodes;
+
+        ArpgObjectStruct actionsArpg = layerArpg.getAsObject("actions");
+
+        for (String actionName : actionsArpg.keySet()) {
+
+            EntityAction action = parseEnum(EntityAction.class, actionName, layerName, file);
+
+            if (action == EntityAction.NONE)
+                throwException("Layer \"" + layerName + "\" maps the \"none\" action — a layer falls back to "
+                        + "its states when no action plays. File: " + file.getName());
+
+            int nodeIndex = resolveNodeIndex(
+                    actionsArpg.get(actionName).getAsString(),
+                    layerName,
+                    nodeName2NodeIndex,
+                    file);
+
+            if (nodes[nodeIndex].isLooping())
+                throwException("Layer \"" + layerName + "\" plays action \"" + actionName
+                        + "\" with a looping node — an action plays once. File: " + file.getName());
+
+            actionNodes[action.ordinal()] = nodeIndex;
+        }
+
+        return actionNodes;
     }
 
     // Transition Parsing \\

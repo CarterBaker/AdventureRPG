@@ -6,12 +6,14 @@ public class ToolTypeData extends DataPackage {
 
     /*
      * Immutable tool type definition loaded from ARPG. Holds identity and
-     * default model path for one tool type. Owned by ToolTypeHandle for
-     * the engine lifetime.
+     * default model path for one tool type — the mesh a tool item of this
+     * type is drawn with unless it names its own. Owned by ToolTypeHandle
+     * for the engine lifetime.
      */
 
     // Identity
     private final String toolTypeName;
+    private final String localName;
     private final short toolTypeID;
 
     // Model
@@ -21,11 +23,13 @@ public class ToolTypeData extends DataPackage {
 
     public ToolTypeData(
             String toolTypeName,
+            String localName,
             short toolTypeID,
             String defaultModelPath) {
 
         // Identity
         this.toolTypeName = toolTypeName;
+        this.localName = localName;
         this.toolTypeID = toolTypeID;
 
         // Model
@@ -36,6 +40,10 @@ public class ToolTypeData extends DataPackage {
 
     public String getToolTypeName() {
         return toolTypeName;
+    }
+
+    public String getLocalName() {
+        return localName;
     }
 
     public short getToolTypeID() {

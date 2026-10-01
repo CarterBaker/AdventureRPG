@@ -18,8 +18,10 @@ public class EntityInstance extends InstancePackage {
     /*
      * Runtime entity spawned by EntityManager, holding its template and all
      * per-instance state. setWeight() keeps weight and body build in step,
-     * updateAnimation() is the one path that advances its animation tree, and
-     * getStat() totals a statistic from base value and gear.
+     * updateAnimation() is the one path that advances its animation tree,
+     * playing whatever action its hands are in over its movement, getStat()
+     * totals a statistic from base value and gear, and getEyePosition() is
+     * the one place its eye — where it aims from — is placed.
      */
 
     // Internal
@@ -29,6 +31,7 @@ public class EntityInstance extends InstancePackage {
 
     // State
     private EntityStateHandle entityStateHandle;
+    private EntityActionHandle entityActionHandle;
     private StatisticsHandle statisticsHandle;
     private InventoryHandle inventoryHandle;
 
@@ -55,6 +58,7 @@ public class EntityInstance extends InstancePackage {
 
         // State
         this.entityStateHandle = create(EntityStateHandle.class);
+        this.entityActionHandle = create(EntityActionHandle.class);
         this.statisticsHandle = create(StatisticsHandle.class);
         this.inventoryHandle = create(InventoryHandle.class);
 
@@ -119,13 +123,22 @@ public class EntityInstance extends InstancePackage {
         animationStateHandle.setParameter(AnimationParameter.TURN_RATE, entityStateHandle.getBodyYawRate());
         animationStateHandle.setParameter(AnimationParameter.LOOK_PITCH, entityStateHandle.getLookPitch());
         animationStateHandle.setParameter(AnimationParameter.LOOK_YAW, entityStateHandle.getLookYaw());
-        animationStateHandle.update(entityStateHandle.getMovementState(), deltaTime);
+        animationStateHandle.update(
+                entityStateHandle.getMovementState(),
+                entityActionHandle.getAction(),
+                entityActionHandle.getProgress(),
+                entityActionHandle.getSequence(),
+                deltaTime);
     }
 
     // Statistics \\
 
     public float getStat(ItemStat itemStat) {
         return statisticsHandle.getBaseStat(itemStat) + inventoryHandle.getStatBonus(itemStat);
+    }
+
+    public float getMaxHealth() {
+        return getStat(ItemStat.HEALTH);
     }
 
     public float getCarryCapacity() {
@@ -153,6 +166,10 @@ public class EntityInstance extends InstancePackage {
 
     public EntityStateHandle getEntityStateHandle() {
         return entityStateHandle;
+    }
+
+    public EntityActionHandle getEntityActionHandle() {
+        return entityActionHandle;
     }
 
     public StatisticsHandle getStatisticsHandle() {
@@ -215,5 +232,16 @@ public class EntityInstance extends InstancePackage {
 
     public float getEyeHeight() {
         return size.y * entityData.getEyeLevel();
+    }
+
+    // The chunk-local point the entity looks and aims from — the centre of its footprint, at eye height
+    public Vector3 getEyePosition(Vector3 out) {
+
+        Vector3 position = worldPositionStruct.getPosition();
+
+        return out.set(
+                position.x + size.x * 0.5f,
+                position.y + getEyeHeight(),
+                position.z + size.z * 0.5f);
     }
 }

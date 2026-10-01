@@ -9,6 +9,7 @@ import application.bootstrap.itempipeline.itemdefinition.EquipmentType;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemdefinition.ItemStat;
+import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
@@ -59,6 +60,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
     private MenuManager menuManager;
     private InventoryBranch inventoryBranch;
     private InventoryDragBranch inventoryDragBranch;
+    private ToolTypeManager toolTypeManager;
 
     // Colors
     private MenuColorStruct eyeShownColor;
@@ -87,6 +89,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
         this.menuManager = get(MenuManager.class);
         this.inventoryBranch = get(InventoryBranch.class);
         this.inventoryDragBranch = get(InventoryDragBranch.class);
+        this.toolTypeManager = get(ToolTypeManager.class);
     }
 
     // Populate \\
@@ -307,6 +310,16 @@ public class InventoryEquipmentBranch extends BranchPackage {
             injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
                     RuntimeSetting.INVENTORY_FORMAT_ITEM_SPACE, space.x, space.y, space.z));
         }
+
+        if (item.isStackable())
+            injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
+                    RuntimeSetting.INVENTORY_FORMAT_ITEM_STACK, itemInstance.getStackCount(), item.getStackSize()));
+
+        if (item.isTool())
+            injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
+                    RuntimeSetting.INVENTORY_FORMAT_ITEM_TOOL,
+                    toolTypeManager.getToolTypeHandleFromToolTypeID(item.getToolTypeID()).getLocalName(),
+                    item.getToolTier()));
 
         if (item.isTwoHanded())
             injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, RuntimeSetting.INVENTORY_TEXT_TWO_HANDED);

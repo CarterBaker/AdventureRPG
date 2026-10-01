@@ -32,6 +32,9 @@ public final class KeyBindings {
     // Menu
     public static Binding PAUSE = new Binding(InputCode.key(Keys.ESCAPE));
 
+    // Combat
+    public static Binding BLOCK = new Binding(InputCode.key(Keys.Q));
+
     // Inventory
     public static Binding INVENTORY = new Binding(InputCode.key(Keys.I));
     public static Binding ROTATE_ITEM = new Binding(InputCode.key(Keys.R));

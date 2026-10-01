@@ -1,6 +1,7 @@
 package engine.util.mathematics.quaternions;
 
 import engine.root.EngineUtility;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 
 public class Quaternion extends EngineUtility {
@@ -230,6 +231,30 @@ public class Quaternion extends EngineUtility {
         val[3] = sr * cp * cy - cr * sp * sy; // z
 
         return this;
+    }
+
+    public Quaternion setFromAxisAngle(float x, float y, float z, float radians) {
+
+        float length = (float) Math.sqrt(x * x + y * y + z * z);
+
+        if (length == 0f)
+            return set(1f, 0f, 0f, 0f);
+
+        float half = radians * 0.5f;
+        float scale = (float) Math.sin(half) / length;
+
+        return set((float) Math.cos(half), x * scale, y * scale, z * scale);
+    }
+
+    public Matrix4 toMatrix(Matrix4 out) {
+
+        float w = val[0], x = val[1], y = val[2], z = val[3];
+
+        return out.set(
+                1f - 2f * (y * y + z * z), 2f * (x * y - w * z), 2f * (x * z + w * y), 0f,
+                2f * (x * y + w * z), 1f - 2f * (x * x + z * z), 2f * (y * z - w * x), 0f,
+                2f * (x * z - w * y), 2f * (y * z + w * x), 1f - 2f * (x * x + y * y), 0f,
+                0f, 0f, 0f, 1f);
     }
 
     public Vector3 transform(Vector3 v) {

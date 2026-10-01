@@ -1,6 +1,12 @@
 package application.bootstrap.entitypipeline.placementmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
+import application.bootstrap.entitypipeline.inventory.InventoryHandle;
+import application.bootstrap.itempipeline.item.ItemInstance;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
+import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -14,17 +20,22 @@ class BlockBranch extends BranchPackage {
 
     /*
      * Handles block breaking and placement for PlacementManager. Tracks the
-     * current break target across frames and accumulates hits against block
-     * durability. A block subdivided into sub-blocks breaks one sub-block at
-     * a time — the one the ray met — each taking the block's full durability,
-     * while a whole block breaks whole. Every world edit it makes, a
-     * destroyed block or sub-block or a placed one, goes through
-     * BlockPlacementSystem.
+     * current break target across strikes and counts each strike against
+     * block durability. A block that names a tool only takes strikes from that
+     * tool held in the main hand, at a tier at least its own. A block
+     * subdivided into sub-blocks breaks one sub-block at a time — the one the
+     * strike met — each taking the block's full durability, and hands out one
+     * block piece; a whole block breaks whole and hands out a piece for each
+     * of its eight sub-blocks. The pieces must fit in the striker's inventory,
+     * or the block holds. A held piece is placed back as a sub-block of its
+     * block. Every world edit it makes goes through BlockPlacementSystem.
      */
 
     // Internal
     private BlockManager blockManager;
     private BlockPlacementSystem blockPlacementSystem;
+    private ItemDefinitionManager itemDefinitionManager;
+    private ItemManager itemManager;
 
     // Block IDs
     private short airBlockID;
@@ -49,6 +60,8 @@ class BlockBranch extends BranchPackage {
         // Internal
         this.blockManager = get(BlockManager.class);
         this.blockPlacementSystem = get(BlockPlacementSystem.class);
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
+        this.itemManager = get(ItemManager.class);
     }
 
     @Override
@@ -64,19 +77,8 @@ class BlockBranch extends BranchPackage {
 
         BlockHandle block = castStruct.getBlock();
 
-        if (block.isUnbreakable())
+        if (!canBreak(entity, block))
             return false;
-
-        int breakTier = getBreakTier(entity);
-
-        if (breakTier >= 0) {
-
-            if (breakTier < block.getBreakTier())
-                return false;
-
-            if (!isCorrectTool(entity, block))
-                return false;
-        }
 
         int packedTarget = Coordinate3Int.pack(
                 castStruct.getBlockX(),
@@ -104,6 +106,9 @@ class BlockBranch extends BranchPackage {
         if (currentHits < block.getDurability())
             return true;
 
+        if (!givePieces(entity, block, subdivided ? 1 : SubBlockUtility.OCTANT_COUNT))
+            return true;
+
         boolean broken = subdivided
                 ? blockPlacementSystem.removeSubBlock(castStruct)
                 : blockPlacementSystem.replaceBlock(castStruct, airBlockID);
@@ -116,6 +121,18 @@ class BlockBranch extends BranchPackage {
         return true;
     }
 
+    // Pieces \\
+
+    private boolean givePieces(EntityInstance entity, BlockHandle block, int count) {
+
+        if (!block.hasPiece())
+            return true;
+
+        ItemDefinitionHandle piece = itemDefinitionManager.getBlockPieceHandle(block.getBlockID());
+
+        return entity.getInventoryHandle().give(itemManager.createStack(piece, count));
+    }
+
     // Place \\
 
     boolean tryPlace(BlockCastStruct castStruct, short blockID) {
@@ -124,6 +141,20 @@ class BlockBranch extends BranchPackage {
 
     boolean tryPlaceSubBlock(BlockCastStruct castStruct, short blockID) {
         return blockPlacementSystem.placeSubBlockAgainstFace(castStruct, blockID);
+    }
+
+    // The block piece in the main hand, built back into the world as one sub-block on the face that was hit
+    boolean tryPlacePiece(EntityInstance entity, BlockCastStruct castStruct) {
+
+        InventoryHandle inventoryHandle = entity.getInventoryHandle();
+        ItemDefinitionHandle piece = inventoryHandle.getMainHand().getItemDefinitionHandle();
+
+        if (!blockPlacementSystem.placeSubBlockAgainstFace(castStruct, piece.getBlockID()))
+            return false;
+
+        inventoryHandle.takeOne(EquipmentSlot.MAIN_HAND);
+
+        return true;
     }
 
     // Break Target \\
@@ -138,11 +169,22 @@ class BlockBranch extends BranchPackage {
 
     // Tool Helpers \\
 
-    private int getBreakTier(EntityInstance entity) {
-        return 0;
-    }
+    private boolean canBreak(EntityInstance entity, BlockHandle block) {
 
-    private boolean isCorrectTool(EntityInstance entity, BlockHandle block) {
-        return block.getRequiredToolTypeID() == EngineSetting.TOOL_NONE;
+        if (block.isUnbreakable())
+            return false;
+
+        if (block.getRequiredToolTypeID() == EngineSetting.TOOL_NONE)
+            return true;
+
+        ItemInstance held = entity.getInventoryHandle().getMainHand();
+
+        if (held == null)
+            return false;
+
+        ItemDefinitionHandle tool = held.getItemDefinitionHandle();
+
+        return tool.getToolTypeID() == block.getRequiredToolTypeID()
+                && tool.getToolTier() >= block.getBreakTier();
     }
 }

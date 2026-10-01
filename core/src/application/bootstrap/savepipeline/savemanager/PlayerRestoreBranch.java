@@ -183,6 +183,10 @@ class PlayerRestoreBranch extends BranchPackage {
 
         ItemInstance itemInstance = itemManager.createItem(itemName);
 
+        if (ArpgUtility.hasNumber(itemArpg, "count"))
+            itemInstance.setStackCount(Math.clamp(
+                    itemArpg.get("count").getAsInt(), 1, itemInstance.getItemDefinitionHandle().getStackSize()));
+
         if (itemInstance.hasContainer() && ArpgUtility.hasArray(itemArpg, "contents"))
             restoreContents(itemArpg.getAsArray("contents"), itemInstance.getContainerInstance());
 

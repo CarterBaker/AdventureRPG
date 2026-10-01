@@ -6,9 +6,10 @@ import engine.root.StructPackage;
 public class AnimationLayerStruct extends StructPackage {
 
     /*
-     * Immutable layer of an animation tree: the node for each entity state, the
-     * per-bone mask weights, the cross-fade between each pair of nodes, and how
-     * long the whole layer fades in or out.
+     * Immutable layer of an animation tree: the node for each entity state and
+     * each entity action, the per-bone mask weights, the cross-fade between
+     * each pair of nodes, and how long the whole layer fades in or out. An
+     * action's node takes the layer over for as long as the action lasts.
      */
 
     // Identity
@@ -23,6 +24,7 @@ public class AnimationLayerStruct extends StructPackage {
     // Graph
     private final AnimationNodeStruct[] nodes;
     private final int[] stateNodes;
+    private final int[] actionNodes;
     private final float[][] transitionBlends;
 
     // Constructor \\
@@ -35,6 +37,7 @@ public class AnimationLayerStruct extends StructPackage {
             float[] boneMask,
             AnimationNodeStruct[] nodes,
             int[] stateNodes,
+            int[] actionNodes,
             float[][] transitionBlends) {
 
         // Identity
@@ -49,6 +52,7 @@ public class AnimationLayerStruct extends StructPackage {
         // Graph
         this.nodes = nodes;
         this.stateNodes = stateNodes;
+        this.actionNodes = actionNodes;
         this.transitionBlends = transitionBlends;
     }
 
@@ -92,6 +96,14 @@ public class AnimationLayerStruct extends StructPackage {
 
     public boolean hasStateNode(int stateOrdinal) {
         return stateNodes[stateOrdinal] != EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    public int getActionNode(int actionOrdinal) {
+        return actionNodes[actionOrdinal];
+    }
+
+    public boolean hasActionNode(int actionOrdinal) {
+        return actionNodes[actionOrdinal] != EngineSetting.INDEX_NOT_FOUND;
     }
 
     public float getTransitionBlend(int fromNode, int toNode) {

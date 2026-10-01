@@ -30,6 +30,10 @@ public class BlockHandle extends HandlePackage {
         return blockData.getBlockName();
     }
 
+    public String getLocalName() {
+        return blockData.getLocalName();
+    }
+
     public short getBlockID() {
         return blockData.getBlockID();
     }
@@ -68,6 +72,14 @@ public class BlockHandle extends HandlePackage {
 
     public boolean isUnbreakable() {
         return blockData.isUnbreakable();
+    }
+
+    public String getItemTextureName() {
+        return blockData.getItemTextureName();
+    }
+
+    public boolean hasPiece() {
+        return blockData.hasPiece();
     }
 
     public float getViscosity() {

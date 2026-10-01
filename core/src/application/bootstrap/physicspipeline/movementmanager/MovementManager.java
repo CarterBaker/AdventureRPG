@@ -4,10 +4,8 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
-import engine.root.EngineSetting;
+import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import engine.root.ManagerPackage;
-import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 
 public class MovementManager extends ManagerPackage {
@@ -33,9 +31,6 @@ public class MovementManager extends ManagerPackage {
     private Vector3 movement;
     private Vector3 preCollisionSnapshot;
 
-    // Settings
-    private int chunkSize;
-
     // Internal \\
 
     @Override
@@ -53,9 +48,6 @@ public class MovementManager extends ManagerPackage {
         // Cached Vectors
         this.movement = new Vector3();
         this.preCollisionSnapshot = new Vector3();
-
-        // Settings
-        this.chunkSize = EngineSetting.CHUNK_SIZE;
     }
 
     // Movement \\
@@ -137,28 +129,15 @@ public class MovementManager extends ManagerPackage {
     private void applyMovement(EntityInstance entity) {
 
         WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
-        Vector3 position = worldPosition.getPosition();
-        long chunkCoordinate = worldPosition.getChunkCoordinate();
-        int chunkCoordinateX = Coordinate2Long.unpackX(chunkCoordinate);
-        int chunkCoordinateY = Coordinate2Long.unpackY(chunkCoordinate);
 
         // Speed
         recordSpeed(entity);
 
         // Apply
-        position.x += movement.x;
-        position.y += movement.y;
-        position.z += movement.z;
+        worldPosition.getPosition().add(movement);
 
-        // Chunk update
-        chunkCoordinate = updateChunkCoordinateFrom(position, chunkCoordinateX, chunkCoordinateY);
-
-        // World wrap
-        WorldWrapUtility.wrapAroundChunk(position);
-        chunkCoordinate = WorldWrapUtility.wrapAroundWorld(entity.getWorldHandle(), chunkCoordinate);
-
-        worldPosition.setPosition(position);
-        worldPosition.setChunkCoordinate(chunkCoordinate);
+        // Chunk update and world wrap
+        WorldPositionUtility.settleChunk(entity.getWorldHandle(), worldPosition);
     }
 
     private void recordSpeed(EntityInstance entity) {
@@ -171,36 +150,5 @@ public class MovementManager extends ManagerPackage {
         float horizontal = (float) Math.sqrt(movement.x * movement.x + movement.z * movement.z);
 
         entity.getEntityStateHandle().setSpeed(horizontal / delta, movement.y / delta);
-    }
-
-    // Chunk \\
-
-    private long updateChunkCoordinateFrom(
-            Vector3 position,
-            int chunkCoordinateX,
-            int chunkCoordinateY) {
-
-        chunkCoordinateX += calculateChunkCoordinateAxisFrom(position.x);
-        chunkCoordinateY += calculateChunkCoordinateAxisFrom(position.z);
-
-        return Coordinate2Long.pack(chunkCoordinateX, chunkCoordinateY);
-    }
-
-    private int calculateChunkCoordinateAxisFrom(float axis) {
-
-        float axisInput = axis;
-        int newChunkAxis = 0;
-
-        while (axisInput < 0) {
-            axisInput += chunkSize;
-            newChunkAxis -= 1;
-        }
-
-        while (axisInput >= chunkSize) {
-            axisInput -= chunkSize;
-            newChunkAxis += 1;
-        }
-
-        return newChunkAxis;
     }
 }

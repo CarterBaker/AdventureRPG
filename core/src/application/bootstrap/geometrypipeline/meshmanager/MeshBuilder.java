@@ -34,6 +34,7 @@ class MeshBuilder extends BuilderPackage {
      */
 
     // Internal
+    private MeshManager meshManager;
     private VBOManager vboManager;
     private IBOManager iboManager;
     private TextureManager textureManager;
@@ -44,6 +45,7 @@ class MeshBuilder extends BuilderPackage {
 
     @Override
     protected void get() {
+        this.meshManager = get(MeshManager.class);
         this.vboManager = get(VBOManager.class);
         this.iboManager = get(IBOManager.class);
         this.textureManager = get(TextureManager.class);
@@ -208,7 +210,7 @@ class MeshBuilder extends BuilderPackage {
 
         Vector3 boundsMin = new Vector3();
         Vector3 boundsMax = new Vector3();
-        computeBounds(vertices, vertStride, boundsMin, boundsMax);
+        meshManager.computeBounds(vertices, vertStride, boundsMin, boundsMax);
 
         return new QuadExpansionStruct(vertices.toFloatArray(), allIndices.toShortArray(), boundsMin, boundsMax);
     }
@@ -233,48 +235,9 @@ class MeshBuilder extends BuilderPackage {
 
         Vector3 boundsMin = new Vector3();
         Vector3 boundsMax = new Vector3();
-        computeBounds(vertices, vertStride, boundsMin, boundsMax);
+        meshManager.computeBounds(vertices, vertStride, boundsMin, boundsMax);
 
         return new QuadExpansionStruct(vertices.toFloatArray(), indices.toShortArray(), boundsMin, boundsMax);
-    }
-
-    // Bounds \\
-
-    private void computeBounds(FloatArrayList vertices, int vertStride, Vector3 outMin, Vector3 outMax) {
-
-        int vertexCount = vertices.size() / vertStride;
-
-        float minX = Float.MAX_VALUE;
-        float minY = Float.MAX_VALUE;
-        float minZ = Float.MAX_VALUE;
-        float maxX = -Float.MAX_VALUE;
-        float maxY = -Float.MAX_VALUE;
-        float maxZ = -Float.MAX_VALUE;
-
-        for (int i = 0; i < vertexCount; i++) {
-
-            int base = i * vertStride;
-
-            float x = vertices.getFloat(base);
-            float y = vertices.getFloat(base + 1);
-            float z = vertices.getFloat(base + 2);
-
-            if (x < minX)
-                minX = x;
-            if (y < minY)
-                minY = y;
-            if (z < minZ)
-                minZ = z;
-            if (x > maxX)
-                maxX = x;
-            if (y > maxY)
-                maxY = y;
-            if (z > maxZ)
-                maxZ = z;
-        }
-
-        outMin.set(minX, minY, minZ);
-        outMax.set(maxX, maxY, maxZ);
     }
 
     private static final float[][] DEFAULT_CORNER_LOCAL_UVS = {

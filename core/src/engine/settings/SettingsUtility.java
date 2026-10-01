@@ -241,6 +241,7 @@ public class SettingsUtility extends EngineUtility {
         KeyBindings.WALK.set(toInputCodes(settings.bindWalk));
         KeyBindings.SPRINT.set(toInputCodes(settings.bindSprint));
         KeyBindings.SECONDARY.set(toInputCodes(settings.bindSecondary));
+        KeyBindings.BLOCK.set(toInputCodes(settings.bindBlock));
         KeyBindings.INVENTORY.set(toInputCodes(settings.bindInventory));
         KeyBindings.ROTATE_ITEM.set(toInputCodes(settings.bindRotateItem));
         KeyBindings.SCREENSHOT.set(toInputCodes(settings.bindScreenshot));
@@ -265,6 +266,7 @@ public class SettingsUtility extends EngineUtility {
         settings.bindWalk = toCodes(KeyBindings.WALK);
         settings.bindSprint = toCodes(KeyBindings.SPRINT);
         settings.bindSecondary = toCodes(KeyBindings.SECONDARY);
+        settings.bindBlock = toCodes(KeyBindings.BLOCK);
         settings.bindInventory = toCodes(KeyBindings.INVENTORY);
         settings.bindRotateItem = toCodes(KeyBindings.ROTATE_ITEM);
         settings.bindScreenshot = toCodes(KeyBindings.SCREENSHOT);

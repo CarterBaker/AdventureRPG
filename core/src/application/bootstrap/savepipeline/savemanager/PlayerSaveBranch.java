@@ -27,9 +27,10 @@ class PlayerSaveBranch extends BranchPackage {
      * one, its appearance — skin and hair color, head proportion, and the
      * feature worn in every filled slot. The location records the world, the
      * chunk coordinate, and the chunk-local position the player stands at.
-     * The inventory records the item in every filled equipment slot, the
-     * slots left hidden, and — for any container item — everything packed
-     * inside it with where it rests, however deeply nested.
+     * The inventory records the item in every filled equipment slot, how
+     * many a stack holds, the slots left hidden, and — for any container
+     * item — everything packed inside it with where it rests, however deeply
+     * nested.
      */
 
     // Management \\
@@ -107,6 +108,9 @@ class PlayerSaveBranch extends BranchPackage {
 
         ArpgObjectStruct itemArpg = new ArpgObjectStruct();
         itemArpg.addProperty("item", itemInstance.getItemDefinitionHandle().getItemName());
+
+        if (itemInstance.getStackCount() > 1)
+            itemArpg.addProperty("count", itemInstance.getStackCount());
 
         if (itemInstance.hasContainer())
             itemArpg.add("contents", buildContents(itemInstance.getContainerInstance()));

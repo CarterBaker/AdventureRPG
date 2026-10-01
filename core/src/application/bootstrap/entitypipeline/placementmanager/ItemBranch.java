@@ -21,9 +21,10 @@ class ItemBranch extends BranchPackage {
 
     /*
      * World item placement and pickup for PlacementManager. Placement sets the
-     * main-hand item on the sub-block face the ray met, oriented by the camera;
-     * pickup hands the world item's real item, contents included, to the entity
-     * and removes it from the world only once it fits.
+     * main-hand item on the sub-block face the ray met, oriented by the camera,
+     * one at a time from a stack; pickup hands the world item's real item,
+     * contents included, to the entity and removes it from the world only once
+     * it fits.
      */
 
     // Internal
@@ -121,7 +122,7 @@ class ItemBranch extends BranchPackage {
                 : castStruct.getHitSubZ());
 
         long packedPosition = Coordinate4Long.pack(subX, subY, subZ, rotation);
-        ItemInstance itemInstance = inventoryHandle.unequip(EquipmentSlot.MAIN_HAND);
+        ItemInstance itemInstance = inventoryHandle.takeOne(EquipmentSlot.MAIN_HAND);
 
         worldItemPlacementSystem.placeItem(placeChunk, placeSubChunkY, packedPosition, itemInstance);
 

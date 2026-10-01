@@ -25,7 +25,8 @@ public class BlockPlacementSystem extends SystemPackage {
      * building and pouring liquid, whole blocks or single sub-blocks.
      * editCell() writes the cell, wakes nearby liquid, and rebuilds every
      * subchunk the edit touched, diagonals included, each under its chunk's
-     * lock.
+     * lock. A cell whose eighth sub-block is filled in becomes a whole block
+     * again, so a cell built up from pieces stores like any other block.
      */
 
     // Internal
@@ -96,6 +97,11 @@ public class BlockPlacementSystem extends SystemPackage {
 
     public boolean placeSubBlockAgainstFace(BlockCastStruct castStruct, short blockID) {
         return placeAgainstFace(castStruct, blockID, true);
+    }
+
+    // One sub-block in a given octant of a cell — false when the cell holds another block or the octant is taken
+    public boolean placeSubBlock(ChunkInstance chunk, int subChunkY, int packedXYZ, int octant, short blockID) {
+        return placeInCell(chunk, subChunkY, packedXYZ, octant, blockID, true);
     }
 
     private boolean placeAgainstFace(BlockCastStruct castStruct, short blockID, boolean subBlock) {

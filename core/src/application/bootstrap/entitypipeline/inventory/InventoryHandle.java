@@ -3,16 +3,24 @@ package application.bootstrap.entitypipeline.inventory;
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemStat;
+import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import engine.root.HandlePackage;
 
 public class InventoryHandle extends HandlePackage {
 
     /*
      * Per-entity inventory: the item in every equipment slot and which slots
-     * are hidden. give() is the one path an item is handed over, into the
-     * backpack if it fits and otherwise a free hand. The revision counts every
-     * change so views know when to redraw. Lives on EntityInstance.
+     * are hidden. give() is the one path an item is handed over: a stack
+     * tops up the matching stacks already carried when they have room for all
+     * of it, and anything else goes into the backpack if it fits and otherwise
+     * a free hand — so a give either takes the whole item or nothing at all.
+     * takeOne() is the one path a single item leaves a slot, split off its
+     * stack through ItemManager. The revision counts every change so views
+     * know when to redraw. Lives on EntityInstance.
      */
+
+    // Internal
+    private ItemManager itemManager;
 
     // Equipment
     private ItemInstance[] slot2Item;
@@ -29,6 +37,13 @@ public class InventoryHandle extends HandlePackage {
         // Equipment
         this.slot2Item = new ItemInstance[EquipmentSlot.VALUES.length];
         this.slot2Hidden = new boolean[EquipmentSlot.VALUES.length];
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.itemManager = get(ItemManager.class);
     }
 
     // Equipment \\
@@ -66,6 +81,19 @@ public class InventoryHandle extends HandlePackage {
         return itemInstance;
     }
 
+    // Takes one item from a slot: the item itself when it is the last of its stack, otherwise one split off
+    public ItemInstance takeOne(EquipmentSlot equipmentSlot) {
+
+        ItemInstance itemInstance = getItem(equipmentSlot);
+
+        if (itemInstance == null || itemInstance.getStackCount() == 1)
+            return unequip(equipmentSlot);
+
+        revision++;
+
+        return itemManager.splitStack(itemInstance, 1);
+    }
+
     public EquipmentSlot findSlot(ItemInstance itemInstance) {
 
         for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
@@ -89,6 +117,11 @@ public class InventoryHandle extends HandlePackage {
 
     public boolean give(ItemInstance itemInstance) {
 
+        if (getStackRoom(itemInstance) >= itemInstance.getStackCount()) {
+            mergeStack(itemInstance);
+            return true;
+        }
+
         if (hasBackpack() && getBackpackContainer().autoPlace(itemInstance) != null)
             return true;
 
@@ -108,6 +141,45 @@ public class InventoryHandle extends HandlePackage {
         }
 
         return false;
+    }
+
+    // How many more of an item the stacks already carried, in hand or in the backpack, can take
+    private int getStackRoom(ItemInstance itemInstance) {
+
+        if (!itemInstance.getItemDefinitionHandle().isStackable())
+            return 0;
+
+        int room = hasBackpack() ? getBackpackContainer().getStackRoom(itemInstance) : 0;
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
+
+            ItemInstance carried = slot2Item[equipmentSlot.ordinal()];
+
+            if (equipmentSlot.isHand() && carried != null && carried.stacksWith(itemInstance))
+                room += carried.getStackRoom();
+        }
+
+        return room;
+    }
+
+    private void mergeStack(ItemInstance itemInstance) {
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
+
+            ItemInstance carried = slot2Item[equipmentSlot.ordinal()];
+
+            if (!equipmentSlot.isHand() || carried == null || !carried.stacksWith(itemInstance))
+                continue;
+
+            if (carried.absorb(itemInstance) > 0)
+                revision++;
+
+            if (itemInstance.isSpent())
+                return;
+        }
+
+        if (hasBackpack())
+            getBackpackContainer().mergeStack(itemInstance);
     }
 
     public boolean isHoldingTwoHanded() {

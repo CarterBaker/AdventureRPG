@@ -11,6 +11,7 @@ public enum ItemCategory {
      */
 
     WEAPON(EngineSetting.ITEM_CATEGORY_TITLE_WEAPON),
+    TOOL(EngineSetting.ITEM_CATEGORY_TITLE_TOOL),
     ARMOR(EngineSetting.ITEM_CATEGORY_TITLE_ARMOR),
     CLOTHING(EngineSetting.ITEM_CATEGORY_TITLE_CLOTHING),
     JEWELRY(EngineSetting.ITEM_CATEGORY_TITLE_JEWELRY),

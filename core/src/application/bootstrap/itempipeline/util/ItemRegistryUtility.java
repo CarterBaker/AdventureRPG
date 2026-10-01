@@ -6,9 +6,11 @@ import engine.root.EngineUtility;
 public class ItemRegistryUtility extends EngineUtility {
 
     /*
-     * Builds item IDs. The upper 16 bits hold the FNV-1a hash of the item name
-     * in [1, 65535]; the lower 16 bits are zero and reserved for enchantment
-     * values.
+     * Builds item names and IDs. The upper 16 bits of an ID hold the FNV-1a
+     * hash of the item name in [1, 65535]; the lower 16 bits are zero and
+     * reserved for enchantment values. A block piece is named after its block
+     * behind a reserved prefix no item file can produce, so its name alone
+     * says which block it builds.
      */
 
     // Internal
@@ -21,6 +23,18 @@ public class ItemRegistryUtility extends EngineUtility {
 
     public static String toItemName(String definitionName, String localName) {
         return definitionName + "/" + localName;
+    }
+
+    public static String toBlockPieceName(String blockName) {
+        return EngineSetting.BLOCK_PIECE_NAME_PREFIX + blockName;
+    }
+
+    public static boolean isBlockPieceName(String itemName) {
+        return itemName.startsWith(EngineSetting.BLOCK_PIECE_NAME_PREFIX);
+    }
+
+    public static String toBlockName(String blockPieceName) {
+        return blockPieceName.substring(EngineSetting.BLOCK_PIECE_NAME_PREFIX.length());
     }
 
     // Hashing \\

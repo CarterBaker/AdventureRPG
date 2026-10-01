@@ -2,6 +2,7 @@ package application.bootstrap.entitypipeline.animationtree;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.animationpipeline.animation.AnimationKeyframeStruct;
+import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
@@ -17,8 +18,12 @@ public class AnimationStateHandle extends HandlePackage {
      * Per-entity playback of an animation tree. Tracks each layer's node,
      * cross-fade and phase, blends clips with Hermite-sampled tracks as offsets
      * from the bind pose, stacks override and additive layers through bone
-     * masks, and writes the per-bone skinning matrices rendering consumes. All
-     * arrays are allocated once in constructor(), so updates never allocate.
+     * masks, and writes the per-bone skinning matrices rendering consumes. A
+     * layer with a node for the entity's current action plays it in place of
+     * its state node, its phase pinned to the action's progress so a swing's
+     * strike always lands on the strike frame; a new action on the node
+     * already playing fades in from the pose it left. All arrays are
+     * allocated once in constructor(), so updates never allocate.
      */
 
     // Rig
@@ -38,6 +43,11 @@ public class AnimationStateHandle extends HandlePackage {
     private float[] layerBlendDurations;
     private boolean[] layerCaptured;
     private float[][] layerNodePhases;
+
+    // Actions — per layer, whether its current node follows the action, and the action it last followed
+    private boolean[] layerActionDriven;
+    private int[] layerActionSequences;
+    private float actionProgress;
 
     // Layer Pose — the offsets each layer last produced, per bone
     private Vector3[][] layerPositions;
@@ -100,6 +110,10 @@ public class AnimationStateHandle extends HandlePackage {
         this.layerBlendDurations = new float[layerCount];
         this.layerCaptured = new boolean[layerCount];
         this.layerNodePhases = new float[layerCount][];
+
+        // Actions
+        this.layerActionDriven = new boolean[layerCount];
+        this.layerActionSequences = new int[layerCount];
 
         // Layer Pose and Capture
         this.layerPositions = new Vector3[layerCount][boneCount];
@@ -190,10 +204,25 @@ public class AnimationStateHandle extends HandlePackage {
 
     // Update \\
 
-    public void update(EntityState movementState, float deltaTime) {
+    public void update(
+            EntityState movementState,
+            EntityAction action,
+            float actionProgress,
+            int actionSequence,
+            float deltaTime) {
+
+        this.actionProgress = actionProgress;
 
         for (int l = 0; l < animationTreeHandle.getLayerCount(); l++) {
-            resolveLayerNode(l, movementState.ordinal(), deltaTime);
+
+            AnimationLayerStruct layer = animationTreeHandle.getLayer(l);
+            layerActionDriven[l] = layer.hasActionNode(action.ordinal());
+
+            if (layerActionDriven[l])
+                resolveActionNode(l, layer.getActionNode(action.ordinal()), actionSequence, deltaTime);
+            else
+                resolveLayerNode(l, movementState.ordinal(), deltaTime);
+
             advanceLayer(l, deltaTime);
         }
 
@@ -227,6 +256,34 @@ public class AnimationStateHandle extends HandlePackage {
             enterNode(layerIndex, targetNode, true);
 
         layerActivations[layerIndex] = Math.min(1f, layerActivations[layerIndex] + fadeStep);
+    }
+
+    // An action takes its node at once; a fresh action on the node already playing fades in from where it left
+    private void resolveActionNode(int layerIndex, int actionNode, int actionSequence, float deltaTime) {
+
+        AnimationLayerStruct layer = animationTreeHandle.getLayer(layerIndex);
+        float fadeStep = layer.getBlendDuration() > 0f ? deltaTime / layer.getBlendDuration() : 1f;
+
+        if (layerActivations[layerIndex] <= 0f)
+            enterNode(layerIndex, actionNode, false);
+        else if (actionNode != layerCurrentNodes[layerIndex])
+            enterNode(layerIndex, actionNode, true);
+        else if (actionSequence != layerActionSequences[layerIndex])
+            restartNode(layerIndex, actionNode);
+
+        layerActionSequences[layerIndex] = actionSequence;
+        layerPendingNodes[layerIndex] = EngineSetting.INDEX_NOT_FOUND;
+        layerActivations[layerIndex] = Math.min(1f, layerActivations[layerIndex] + fadeStep);
+    }
+
+    private void restartNode(int layerIndex, int nodeIndex) {
+
+        float blendDuration = animationTreeHandle.getLayer(layerIndex).getNode(nodeIndex).getBlendDuration();
+
+        captureLayer(layerIndex);
+        layerBlendElapsed[layerIndex] = 0f;
+        layerBlendDurations[layerIndex] = blendDuration;
+        layerCaptured[layerIndex] = blendDuration > 0f;
     }
 
     private boolean isPendingReady(int layerIndex, int targetNode, float deltaTime) {
@@ -300,7 +357,10 @@ public class AnimationStateHandle extends HandlePackage {
         if (layerActivations[layerIndex] <= 0f)
             return;
 
-        advanceNode(layerIndex, layerCurrentNodes[layerIndex], deltaTime);
+        if (layerActionDriven[layerIndex])
+            layerNodePhases[layerIndex][layerCurrentNodes[layerIndex]] = actionProgress;
+        else
+            advanceNode(layerIndex, layerCurrentNodes[layerIndex], deltaTime);
 
         if (!isLayerBlending(layerIndex))
             return;

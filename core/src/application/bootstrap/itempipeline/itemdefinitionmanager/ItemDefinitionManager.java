@@ -1,6 +1,9 @@
 package application.bootstrap.itempipeline.itemdefinitionmanager;
 
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.itempipeline.util.ItemRegistryUtility;
+import application.bootstrap.worldpipeline.block.BlockHandle;
+import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -14,13 +17,21 @@ public class ItemDefinitionManager extends ManagerPackage {
      * rejects ID collisions on registration. Supports on-demand loading via
      * ItemDefinitionLoader for items not yet in the palette at runtime. findItemHandle()
      * resolves what a person types — a full item name, or a local or display
-     * name that only one item carries — ignoring case.
+     * name that only one item carries — ignoring case. Block pieces are not
+     * loaded from files: getBlockPieceHandle() builds a block's piece through
+     * BlockPieceBranch the first time it is needed, and a piece's name
+     * resolves to its block the same way.
      */
+
+    // Internal
+    private BlockManager blockManager;
+    private BlockPieceBranch blockPieceBranch;
 
     // Palette
     private Object2IntOpenHashMap<String> itemName2ItemID;
     private Int2ObjectOpenHashMap<ItemDefinitionHandle> itemID2ItemHandle;
     private ObjectArrayList<ItemDefinitionHandle> itemHandles;
+    private Int2ObjectOpenHashMap<ItemDefinitionHandle> blockID2BlockPieceHandle;
 
     // Base \\
 
@@ -31,7 +42,14 @@ public class ItemDefinitionManager extends ManagerPackage {
         this.itemName2ItemID = new Object2IntOpenHashMap<>();
         this.itemID2ItemHandle = new Int2ObjectOpenHashMap<>();
         this.itemHandles = new ObjectArrayList<>();
+        this.blockID2BlockPieceHandle = new Int2ObjectOpenHashMap<>();
+        this.blockPieceBranch = create(BlockPieceBranch.class);
         create(ItemDefinitionLoader.class);
+    }
+
+    @Override
+    protected void get() {
+        this.blockManager = get(BlockManager.class);
     }
 
     // Management \\
@@ -54,9 +72,46 @@ public class ItemDefinitionManager extends ManagerPackage {
         itemHandles.add(item);
     }
 
+    // Block Pieces \\
+
+    public ItemDefinitionHandle getBlockPieceHandle(short blockID) {
+
+        ItemDefinitionHandle blockPiece = blockID2BlockPieceHandle.get(blockID);
+
+        if (blockPiece != null)
+            return blockPiece;
+
+        blockPiece = blockPieceBranch.build(blockManager.getBlockHandleFromBlockID(blockID));
+        blockID2BlockPieceHandle.put(blockID, blockPiece);
+        addItem(blockPiece);
+
+        return blockPiece;
+    }
+
+    // A piece's name names its block — false when that block is unknown or breaks into no pieces
+    private boolean requestBlockPiece(String itemName) {
+
+        String blockName = ItemRegistryUtility.toBlockName(itemName);
+
+        if (!blockManager.hasBlock(blockName))
+            return false;
+
+        BlockHandle blockHandle = blockManager.getBlockHandleFromBlockName(blockName);
+
+        if (!blockHandle.hasPiece())
+            return false;
+
+        getBlockPieceHandle(blockHandle.getBlockID());
+        return true;
+    }
+
     // Accessible \\
 
     public boolean hasItem(String itemName) {
+
+        if (!itemName2ItemID.containsKey(itemName) && ItemRegistryUtility.isBlockPieceName(itemName))
+            requestBlockPiece(itemName);
+
         return itemName2ItemID.containsKey(itemName);
     }
 
@@ -113,6 +168,15 @@ public class ItemDefinitionManager extends ManagerPackage {
     }
 
     public void request(String itemName) {
+
+        if (ItemRegistryUtility.isBlockPieceName(itemName)) {
+
+            if (!requestBlockPiece(itemName))
+                throwException("Block piece '" + itemName + "' names no breakable block.");
+
+            return;
+        }
+
         ((ItemDefinitionLoader) internalLoader).request(itemName);
     }
 }

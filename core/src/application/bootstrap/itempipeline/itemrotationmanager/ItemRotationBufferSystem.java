@@ -13,7 +13,8 @@ public class ItemRotationBufferSystem extends SystemPackage {
      * Pushes the 24 item face-spin rotation matrices to the ItemRotationData
      * UBO once at awake. Never updated again — rotation data is static. The
      * same matrices are kept for code that places world items on the CPU, so
-     * both sides always agree on how an item is turned.
+     * both sides always agree on how an item is turned, and
+     * findNearestOrientation() snaps any free rotation onto the closest one.
      */
 
     // Internal
@@ -58,6 +59,32 @@ public class ItemRotationBufferSystem extends SystemPackage {
     // The rotation about the item's block centre for a packed orientation
     public Matrix4 getRotation(int orientation) {
         return rotations[orientation];
+    }
+
+    // The packed orientation closest to a free rotation — the one sharing the most of its 3x3 rotation part
+    public int findNearestOrientation(Matrix4 rotation) {
+
+        int nearest = 0;
+        float bestAlignment = -Float.MAX_VALUE;
+
+        for (int orientation = 0; orientation < rotations.length; orientation++) {
+
+            float alignment = 0f;
+
+            for (int column = 0; column < EngineSetting.AXIS_COUNT; column++)
+                for (int row = 0; row < EngineSetting.AXIS_COUNT; row++) {
+                    int index = column * EngineSetting.VECTOR4_COMPONENT_COUNT + row;
+                    alignment += rotations[orientation].val[index] * rotation.val[index];
+                }
+
+            if (alignment <= bestAlignment)
+                continue;
+
+            bestAlignment = alignment;
+            nearest = orientation;
+        }
+
+        return nearest;
     }
 
     // Build \\

@@ -1,5 +1,7 @@
 package application.bootstrap.entitypipeline.playermanager;
 
+import application.bootstrap.combatpipeline.combatmanager.CombatManager;
+import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
@@ -35,6 +37,9 @@ public class PlayerManager extends ManagerPackage {
      * hovered window's player updates, gated on its menu lock. Also handles
      * free-camera flight, rerolls, spawn verification, and character-creator
      * previews, and advances the player's animation after movement each frame.
+     * After movement the player's input reaches the world through
+     * PlacementManager and its stances — aiming and blocking — through
+     * CombatManager; a raised guard holds the player to a walk.
      */
 
     // Internal
@@ -48,6 +53,7 @@ public class PlayerManager extends ManagerPackage {
     private PlayerInputSystem playerInputSystem;
     private PlayerBufferSystem internalBufferSystem;
     private PlacementManager placementManager;
+    private CombatManager combatManager;
 
     // Per-window
     private Int2ObjectOpenHashMap<EntityInstance> windowID2Player;
@@ -119,6 +125,7 @@ public class PlayerManager extends ManagerPackage {
         this.blockManager = get(BlockManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.windowManager = get(WindowManager.class);
+        this.combatManager = get(CombatManager.class);
     }
 
     @Override
@@ -248,6 +255,7 @@ public class PlayerManager extends ManagerPackage {
                 camera.getDirection(),
                 input.isPrimaryAction(),
                 input.isSecondaryAction());
+        combatManager.control(player);
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }
@@ -263,14 +271,7 @@ public class PlayerManager extends ManagerPackage {
     }
 
     private void resolveEyePosition(EntityInstance player) {
-
-        cameraOffset.set(
-                player.getSize().x / 2,
-                player.getEyeHeight(),
-                player.getSize().z / 2);
-
-        eyePosition.set(player.getWorldPositionStruct().getPosition());
-        eyePosition.add(cameraOffset);
+        player.getEyePosition(eyePosition);
     }
 
     // Character Preview \\
@@ -487,7 +488,7 @@ public class PlayerManager extends ManagerPackage {
             return;
         }
 
-        if (input.isWalk())
+        if (input.isWalk() || player.getEntityActionHandle().getAction() == EntityAction.BLOCK)
             state.setMovementState(EntityState.WALKING);
         else if (input.isSprint())
             state.setMovementState(EntityState.RUNNING);

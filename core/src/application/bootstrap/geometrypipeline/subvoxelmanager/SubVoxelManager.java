@@ -1,5 +1,6 @@
 package application.bootstrap.geometrypipeline.subvoxelmanager;
 
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelHitStruct;
@@ -23,7 +24,8 @@ public class SubVoxelManager extends ManagerPackage {
      * bootstrap meshes and live editor meshes are built identically here — and
      * is the single access point for sub-voxel raycasting, the mesh format,
      * and converting authored quad meshes into sub-voxel models. Also builds a
-     * pocket's open box of walls, which may span more than one block.
+     * pocket's open box of walls, which may span more than one block, and
+     * registers models generated at runtime as named meshes.
      */
 
     // Internal
@@ -97,6 +99,17 @@ public class SubVoxelManager extends ManagerPackage {
 
         VAOHandle vaoTemplate = vaoManager.getVAOHandleFromVAOName(EngineSetting.SUB_VOXEL_VAO);
         return meshManager.createMesh(vaoTemplate, vertices, indices);
+    }
+
+    // A generated model registered with MeshManager under its own name, drawn like any loaded mesh
+    public MeshHandle createMeshHandle(String meshName, SubVoxelModelStruct model) {
+
+        FloatArrayList vertices = new FloatArrayList();
+        ShortArrayList indices = new ShortArrayList();
+        buildGeometry(model, vertices, indices);
+
+        VAOHandle vaoTemplate = vaoManager.getVAOHandleFromVAOName(EngineSetting.SUB_VOXEL_VAO);
+        return meshManager.createMeshHandle(meshName, vaoTemplate, vertices, indices);
     }
 
     // A pocket's open box around a space of the given size in sub-voxels, its corner at the origin

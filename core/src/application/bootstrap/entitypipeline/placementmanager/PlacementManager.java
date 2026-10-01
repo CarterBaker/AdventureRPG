@@ -1,6 +1,9 @@
 package application.bootstrap.entitypipeline.placementmanager;
 
+import application.bootstrap.combatpipeline.combatmanager.CombatManager;
+import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
@@ -17,15 +20,20 @@ public class PlacementManager extends ManagerPackage {
      * cooldown, and routes to BlockBranch or ItemBranch based on the action.
      * Player passes mouse input. Enemies pass AI input. Same code path either way.
      * A world item in reach and nearer than any block takes the action first:
-     * the break action picks it up, and the use action is left to whoever
+     * the primary action picks it up, and the use action is left to whoever
      * handles using items — a chest opens in the runtime, never here.
-     * findTargetItem() is the one place that decides which world item an
-     * entity is aiming at.
+     * Otherwise the primary action swings whatever is held through
+     * CombatManager, whose strike lands back here on a block through
+     * strikeBlock(), and the use action places the held item — a block piece
+     * as a sub-block, anything else as a world item. Nothing is placed while
+     * a stance is held. findTargetItem() is the one place that decides which
+     * world item an entity is aiming at.
      */
 
     // Internal
     private RaycastManager raycastManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
+    private CombatManager combatManager;
 
     // Branches
     private BlockBranch blockBranch;
@@ -61,6 +69,7 @@ public class PlacementManager extends ManagerPackage {
         // Internal
         this.raycastManager = get(RaycastManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
+        this.combatManager = get(CombatManager.class);
     }
 
     // Update \\
@@ -69,15 +78,13 @@ public class PlacementManager extends ManagerPackage {
             EntityInstance entity,
             Vector3 origin,
             Vector3 direction,
-            boolean breakAction,
-            boolean placeAction) {
+            boolean primaryAction,
+            boolean secondaryAction) {
 
         timeSinceLastPlacement += internal.getDeltaTime();
 
-        if (!breakAction && !placeAction) {
-            blockBranch.resetBreakTarget();
+        if (!primaryAction && !secondaryAction)
             return;
-        }
 
         if (timeSinceLastPlacement < placementInterval)
             return;
@@ -86,30 +93,44 @@ public class PlacementManager extends ManagerPackage {
 
         if (targetItem != null) {
 
-            blockBranch.resetBreakTarget();
-
-            if (breakAction && itemBranch.pickUp(entity, targetItem))
+            if (primaryAction && itemBranch.pickUp(entity, targetItem)) {
                 timeSinceLastPlacement = 0;
+                combatManager.gesture(entity, EntityAction.PICK_UP);
+            }
 
             return;
         }
+
+        if (primaryAction) {
+            combatManager.swing(entity);
+            return;
+        }
+
+        if (entity.getEntityActionHandle().isHolding() || !castFrom(entity, origin, direction))
+            return;
+
+        if (handlePlaceAction(entity, direction, castStruct)) {
+            timeSinceLastPlacement = 0;
+            combatManager.gesture(entity, EntityAction.PLACE);
+        }
+    }
+
+    // Strike \\
+
+    // A landed swing against the block the entity aims at — true when the strike counted
+    public boolean strikeBlock(EntityInstance entity, Vector3 origin, Vector3 direction) {
 
         if (!castFrom(entity, origin, direction)) {
             blockBranch.resetBreakTarget();
-            return;
+            return false;
         }
 
-        if (breakAction) {
-            if (handleBreakAction(entity, castStruct))
-                timeSinceLastPlacement = 0;
-            return;
-        }
+        return blockBranch.tryBreak(entity, castStruct);
+    }
 
-        if (placeAction) {
-            blockBranch.resetBreakTarget();
-            if (handlePlaceAction(entity, direction, castStruct))
-                timeSinceLastPlacement = 0;
-        }
+    // How far the entity's reach meets a block, Float.MAX_VALUE when it meets none
+    public float findBlockDistance(EntityInstance entity, Vector3 origin, Vector3 direction) {
+        return castFrom(entity, origin, direction) ? castStruct.getDistance() : Float.MAX_VALUE;
     }
 
     // Placement \\
@@ -171,11 +192,16 @@ public class PlacementManager extends ManagerPackage {
 
     // Routing \\
 
-    private boolean handleBreakAction(EntityInstance entity, BlockCastStruct castStruct) {
-        return blockBranch.tryBreak(entity, castStruct);
-    }
-
     private boolean handlePlaceAction(EntityInstance entity, Vector3 direction, BlockCastStruct castStruct) {
+
+        ItemInstance held = entity.getInventoryHandle().getMainHand();
+
+        if (held == null)
+            return false;
+
+        if (held.getItemDefinitionHandle().isBlockPiece())
+            return blockBranch.tryPlacePiece(entity, castStruct);
+
         return itemBranch.place(entity, direction, castStruct);
     }
 }

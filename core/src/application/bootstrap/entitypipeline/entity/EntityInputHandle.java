@@ -13,7 +13,9 @@ public class EntityInputHandle extends HandlePackage {
      * Disconnected from RawInputHandle by design — the translation from raw
      * hardware state to game intent happens in PlayerManager. strafe holds
      * the body to the facing direction instead of letting it turn toward
-     * wherever the entity is heading.
+     * wherever the entity is heading. aimAction is the moment an aim is
+     * raised and throwAction the moment it is let go; blockAction is held for
+     * as long as the guard stays up.
      */
 
     // Movement
@@ -29,6 +31,9 @@ public class EntityInputHandle extends HandlePackage {
     // Actions
     private boolean primaryAction;
     private boolean secondaryAction;
+    private boolean aimAction;
+    private boolean throwAction;
+    private boolean blockAction;
 
     // Facing
     private Vector3 facingDirection;
@@ -122,6 +127,30 @@ public class EntityInputHandle extends HandlePackage {
         secondaryAction = v;
     }
 
+    public boolean isAimAction() {
+        return aimAction;
+    }
+
+    public void setAimAction(boolean v) {
+        aimAction = v;
+    }
+
+    public boolean isThrowAction() {
+        return throwAction;
+    }
+
+    public void setThrowAction(boolean v) {
+        throwAction = v;
+    }
+
+    public boolean isBlockAction() {
+        return blockAction;
+    }
+
+    public void setBlockAction(boolean v) {
+        blockAction = v;
+    }
+
     public Vector3 getFacingDirection() {
         return facingDirection;
     }
@@ -152,5 +181,6 @@ public class EntityInputHandle extends HandlePackage {
         forward = back = left = right = false;
         jump = walk = sprint = strafe = false;
         primaryAction = secondaryAction = false;
+        aimAction = throwAction = blockAction = false;
     }
 }

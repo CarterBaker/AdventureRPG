@@ -12,12 +12,15 @@ import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector2Int;
+import engine.util.mathematics.vectors.Vector3;
 
 public class WorldPositionUtility extends EngineUtility {
 
     /*
      * Spawn helpers: picks a random chunk inside a world and finds the nearest
-     * safe standing height in a column.
+     * safe standing height in a column. settleChunk() is the one place a
+     * chunk-local position that has moved past its chunk's edge is handed to
+     * the chunk it now lies in, wrapped around the world.
      */
 
     public static long getRandomChunk(WorldHandle worldHandle) {
@@ -31,6 +34,19 @@ public class WorldPositionUtility extends EngineUtility {
         int y = ThreadLocalRandom.current().nextInt(0, maxY);
 
         return Coordinate2Long.pack(x, y);
+    }
+
+    // Moves a position that left its chunk into the chunk it now lies in, wrapped around the world's edges
+    public static void settleChunk(WorldHandle worldHandle, WorldPositionStruct worldPositionStruct) {
+
+        Vector3 position = worldPositionStruct.getPosition();
+        int chunkOffsetX = Math.floorDiv((int) Math.floor(position.x), EngineSetting.CHUNK_SIZE);
+        int chunkOffsetZ = Math.floorDiv((int) Math.floor(position.z), EngineSetting.CHUNK_SIZE);
+        long chunkCoordinate = Coordinate2Long.add(
+                worldPositionStruct.getChunkCoordinate(), chunkOffsetX, chunkOffsetZ);
+
+        WorldWrapUtility.wrapAroundChunk(position);
+        worldPositionStruct.setChunkCoordinate(WorldWrapUtility.wrapAroundWorld(worldHandle, chunkCoordinate));
     }
 
     public static int findSafeSpawnHeight(

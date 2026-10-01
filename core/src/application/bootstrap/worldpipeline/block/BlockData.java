@@ -10,11 +10,14 @@ public class BlockData extends DataPackage {
     /*
      * Immutable block definition. Viscosity is required for liquid blocks, and
      * natural marks blocks that receive the edge bevel and vertex jitter;
-     * artificial blocks always meet their neighbors flat.
+     * artificial blocks always meet their neighbors flat. A breakable solid
+     * block names the tool that breaks it and the item texture its block
+     * piece is drawn with.
      */
 
     // Identity
     private final String blockName;
+    private final String localName;
     private final short blockID;
     private final DynamicGeometryType geometry;
     private final BlockRotationType rotationType;
@@ -29,6 +32,9 @@ public class BlockData extends DataPackage {
     private final short requiredToolTypeID;
     private final int durability;
 
+    // Piece — the item texture its block piece is drawn with, BLOCK_ITEM_TEXTURE_NONE for none
+    private final String itemTextureName;
+
     // Physics
     private final float viscosity;
 
@@ -36,6 +42,7 @@ public class BlockData extends DataPackage {
 
     public BlockData(
             String blockName,
+            String localName,
             short blockID,
             DynamicGeometryType geometry,
             BlockRotationType rotationType,
@@ -46,9 +53,11 @@ public class BlockData extends DataPackage {
             int breakTier,
             short requiredToolTypeID,
             int durability,
+            String itemTextureName,
             float viscosity) {
 
         this.blockName = blockName;
+        this.localName = localName;
         this.blockID = blockID;
         this.geometry = geometry;
         this.rotationType = rotationType;
@@ -67,6 +76,8 @@ public class BlockData extends DataPackage {
         this.requiredToolTypeID = requiredToolTypeID;
         this.durability = durability;
 
+        this.itemTextureName = itemTextureName;
+
         this.viscosity = viscosity;
     }
 
@@ -74,6 +85,10 @@ public class BlockData extends DataPackage {
 
     public String getBlockName() {
         return blockName;
+    }
+
+    public String getLocalName() {
+        return localName;
     }
 
     public short getBlockID() {
@@ -114,6 +129,14 @@ public class BlockData extends DataPackage {
 
     public boolean isUnbreakable() {
         return breakTier < 0;
+    }
+
+    public String getItemTextureName() {
+        return itemTextureName;
+    }
+
+    public boolean hasPiece() {
+        return !itemTextureName.isEmpty();
     }
 
     public float getViscosity() {

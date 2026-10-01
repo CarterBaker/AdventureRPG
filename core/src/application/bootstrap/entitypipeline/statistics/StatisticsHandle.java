@@ -8,8 +8,9 @@ public class StatisticsHandle extends HandlePackage {
 
     /*
      * Per-entity runtime statistics. Holds movement speeds, jump height,
-     * reach, and the entity's own base value for every item statistic —
-     * what it has before anything it wears is counted. No manager owns this —
+     * reach, the entity's own base value for every item statistic — what it
+     * has before anything it wears is counted — and the health it has left,
+     * which combat wears down. No manager owns this —
      * it lives directly on EntityInstance and is initialized to engine
      * defaults on creation.
      */
@@ -28,6 +29,9 @@ public class StatisticsHandle extends HandlePackage {
 
     // Attributes
     private float[] baseStats;
+
+    // Vitals
+    private float health;
 
     // Internal \\
 
@@ -62,6 +66,8 @@ public class StatisticsHandle extends HandlePackage {
         baseStats[ItemStat.DAMAGE.ordinal()] = EngineSetting.DEFAULT_DAMAGE;
         baseStats[ItemStat.HEALTH.ordinal()] = EngineSetting.DEFAULT_HEALTH;
         baseStats[ItemStat.STAMINA.ordinal()] = EngineSetting.DEFAULT_STAMINA;
+
+        health = EngineSetting.DEFAULT_HEALTH;
     }
 
     public float getBaseStat(ItemStat itemStat) {
@@ -70,6 +76,16 @@ public class StatisticsHandle extends HandlePackage {
 
     public void setBaseStat(ItemStat itemStat, float value) {
         baseStats[itemStat.ordinal()] = value;
+    }
+
+    // Vitals \\
+
+    public float getHealth() {
+        return health;
+    }
+
+    public void setHealth(float health) {
+        this.health = health;
     }
 
     // Accessible \\

@@ -1,5 +1,6 @@
 package application.bootstrap.physicspipeline.raycastmanager;
 
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.physicspipeline.util.SubBlockSampleUtility;
 import application.bootstrap.worldpipeline.block.BlockHandle;
@@ -20,7 +21,8 @@ class BlockCastBranch extends BranchPackage {
      * subdivided block and stops on the exact sub-block it meets. Writes the
      * hit block's cell, the octant hit within it and the face entered into
      * a caller-supplied BlockCastStruct — no allocation per cast. Crosses
-     * chunk boundaries transparently during traversal.
+     * chunk boundaries transparently during traversal. A solid-only cast
+     * passes through liquid blocks.
      */
 
     // Internal
@@ -60,6 +62,7 @@ class BlockCastBranch extends BranchPackage {
             Vector3 rayOrigin,
             Vector3 direction,
             float maxDistance,
+            boolean solidOnly,
             BlockCastStruct out) {
 
         out.setHit(false);
@@ -111,7 +114,7 @@ class BlockCastBranch extends BranchPackage {
             BlockHandle block = SubBlockSampleUtility.getSubBlockAt(
                     worldStreamManager, blockManager, chunkCoordinate, subX, subY, subZ);
 
-            if (block == null)
+            if (block == null || (solidOnly && block.getGeometry() == DynamicGeometryType.LIQUID))
                 continue;
 
             writeHit(out, chunkCoordinate, rayOrigin, direction, t, subX, subY, subZ, lastFace, block);

@@ -1,5 +1,6 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
+import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.behaviormanager.BehaviorManager;
 import application.bootstrap.entitypipeline.entity.EntityData;
@@ -19,7 +20,8 @@ public class EntityManager extends ManagerPackage {
     /*
      * Owns the entity template palette and drives the entity bootstrap pipeline.
      * Handles on-demand template loading and provides the spawnEntity() factory
-     * for creating runtime EntityInstances from template handles. rerollEntity()
+     * for creating runtime EntityInstances from template handles, each one
+     * entering combat as it spawns. rerollEntity()
      * rolls an existing instance again in place — a new random chunk, size,
      * weight, base statistics, an empty inventory, and the template's default
      * appearance — for anything that holds the instance by reference and
@@ -29,6 +31,7 @@ public class EntityManager extends ManagerPackage {
     // Internal
     private WorldManager worldManager;
     private BehaviorManager behaviorManager;
+    private CombatManager combatManager;
 
     // Palette
     private Object2IntOpenHashMap<String> templateName2TemplateID;
@@ -51,6 +54,7 @@ public class EntityManager extends ManagerPackage {
         // Internal
         this.worldManager = get(WorldManager.class);
         this.behaviorManager = get(BehaviorManager.class);
+        this.combatManager = get(CombatManager.class);
     }
 
     // Management \\
@@ -109,6 +113,8 @@ public class EntityManager extends ManagerPackage {
                 entityData.getRandomSize(),
                 entityData.getRandomWeight());
 
+        combatManager.addCombatant(entityInstance);
+
         return entityInstance;
     }
 
@@ -127,6 +133,7 @@ public class EntityManager extends ManagerPackage {
 
         entityInstance.getStatisticsHandle().resetBaseStats();
         entityInstance.getInventoryHandle().clear();
+        entityInstance.getEntityActionHandle().release();
 
         if (entityInstance.hasAppearance())
             entityInstance.getAppearanceHandle().resetToDefaults();

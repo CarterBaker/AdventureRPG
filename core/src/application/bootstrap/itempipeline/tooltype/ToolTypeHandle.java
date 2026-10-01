@@ -30,6 +30,10 @@ public class ToolTypeHandle extends HandlePackage {
         return toolTypeData.getToolTypeName();
     }
 
+    public String getLocalName() {
+        return toolTypeData.getLocalName();
+    }
+
     public short getToolTypeID() {
         return toolTypeData.getToolTypeID();
     }
