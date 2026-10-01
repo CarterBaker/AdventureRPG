@@ -5,24 +5,30 @@ import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.physicspipeline.util.SubBlockSampleUtility;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
 public class BlockCollisionBranch extends BranchPackage {
 
     /*
      * Sweeps an entity's box through the sub-block grid one axis at a time and
-     * clamps each axis at the first solid face, keeping a thin skin. Sub-blocks
-     * already overlapped never block. A grounded entity cut short tries a stair
-     * step and eases the lift into the cosmetic ground offset, so sub-block
-     * terrain walks like stairs.
+     * clamps each axis at the first solid face, keeping a thin skin. The rough
+     * boxes of solid world items near the move are gathered once and clamp
+     * the same sweep, so a pile stops an entity and items stack into walls and
+     * floors. Sub-blocks and item boxes already overlapped never block. A
+     * grounded entity cut short tries a stair step and eases the lift into the
+     * cosmetic ground offset, so sub-block terrain and low items walk like
+     * stairs.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
+    private WorldItemSpaceSystem worldItemSpaceSystem;
 
     // Settings
     private float skin;
@@ -38,6 +44,10 @@ public class BlockCollisionBranch extends BranchPackage {
 
     // Scratch — sub-block coordinate, indexed by axis
     private int[] subScratch;
+
+    // Item Boxes — min and max corner of each solid item box near the move, six floats each
+    private FloatArrayList itemBoxes;
+    private int boxStride;
 
     // Internal \\
 
@@ -58,6 +68,10 @@ public class BlockCollisionBranch extends BranchPackage {
 
         // Scratch
         this.subScratch = new int[EngineSetting.AXIS_COUNT];
+
+        // Item Boxes
+        this.itemBoxes = new FloatArrayList();
+        this.boxStride = EngineSetting.AXIS_COUNT * 2;
     }
 
     @Override
@@ -66,6 +80,7 @@ public class BlockCollisionBranch extends BranchPackage {
         // Internal
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
+        this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
     }
 
     // Collision \\
@@ -76,6 +91,7 @@ public class BlockCollisionBranch extends BranchPackage {
         Vector3 size = entity.getSize();
 
         setBox(position, size);
+        gatherItemBoxes(entity, chunkCoordinate, movement);
 
         float moveY = sweep(chunkCoordinate, axisY, movement.y);
         translate(axisY, moveY);
@@ -140,9 +156,72 @@ public class BlockCollisionBranch extends BranchPackage {
         return (float) Math.sqrt(x * x + z * z);
     }
 
+    // Item Boxes \\
+
+    // Every solid item box the move or a stair step could reach, gathered once for all its sweeps
+    private void gatherItemBoxes(EntityInstance entity, long chunkCoordinate, Vector3 movement) {
+
+        worldItemSpaceSystem.collectSolidBoxes(
+                entity.getWorldHandle(),
+                chunkCoordinate,
+                boxMin[axisX] + Math.min(movement.x, 0f) - skin,
+                boxMin[axisY] + Math.min(movement.y, 0f) - skin,
+                boxMin[axisZ] + Math.min(movement.z, 0f) - skin,
+                boxMax[axisX] + Math.max(movement.x, 0f) + skin,
+                boxMax[axisY] + Math.max(movement.y, 0f) + stepHeight + skin,
+                boxMax[axisZ] + Math.max(movement.z, 0f) + skin,
+                itemBoxes);
+    }
+
+    // The distance left once the first item box ahead along the axis stops it
+    private float sweepItems(int axis, float distance) {
+
+        if (distance == 0f || itemBoxes.isEmpty())
+            return distance;
+
+        int tangentA = (axis + 1) % EngineSetting.AXIS_COUNT;
+        int tangentB = (axis + 2) % EngineSetting.AXIS_COUNT;
+        float[] boxes = itemBoxes.elements();
+
+        for (int box = 0; box < itemBoxes.size(); box += boxStride) {
+
+            int min = box;
+            int max = box + EngineSetting.AXIS_COUNT;
+
+            if (boxes[max + tangentA] <= boxMin[tangentA] + skin || boxes[min + tangentA] >= boxMax[tangentA] - skin)
+                continue;
+
+            if (boxes[max + tangentB] <= boxMin[tangentB] + skin || boxes[min + tangentB] >= boxMax[tangentB] - skin)
+                continue;
+
+            if (distance > 0f) {
+
+                float face = boxes[min + axis];
+                float lead = boxMax[axis];
+
+                if (face >= lead - skin)
+                    distance = Math.min(distance, Math.max(face - lead - skin, 0f));
+
+                continue;
+            }
+
+            float face = boxes[max + axis];
+            float lead = boxMin[axis];
+
+            if (face <= lead + skin)
+                distance = Math.max(distance, -Math.max(lead - face - skin, 0f));
+        }
+
+        return distance;
+    }
+
     // Sweep \\
 
     private float sweep(long chunkCoordinate, int axis, float distance) {
+        return sweepItems(axis, sweepBlocks(chunkCoordinate, axis, distance));
+    }
+
+    private float sweepBlocks(long chunkCoordinate, int axis, float distance) {
 
         if (distance == 0f)
             return 0f;

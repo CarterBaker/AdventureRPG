@@ -91,8 +91,8 @@ float resolveSceneDistance(vec2 uv) {
 
 // ── Shelter ────────────────────────────────────────────────────────────────
 
-// Absolute block Y just above the highest block in the column under a point,
-// read from the ring-buffered column map.
+// Absolute sub-voxel Y just above the highest block or item in the column
+// under a point, read from the ring-buffered column map.
 int resolveColumnTop(vec2 positionXZ) {
     ivec2 column = u_precipitationWindow.zw + ivec2(floor(positionXZ));
     ivec2 local  = column - u_precipitationWindow.xy;
@@ -108,7 +108,7 @@ int resolveColumnTop(vec2 positionXZ) {
 }
 
 bool isSheltered(vec3 position) {
-    return position.y < float(resolveColumnTop(position.xz));
+    return position.y < float(resolveColumnTop(position.xz)) / PRECIPITATION_HEIGHTS_PER_BLOCK;
 }
 
 // ── Columns ────────────────────────────────────────────────────────────────

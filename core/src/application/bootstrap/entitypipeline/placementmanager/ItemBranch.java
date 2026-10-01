@@ -7,13 +7,12 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import application.bootstrap.worldpipeline.worlditem.WorldItemCastStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
-import engine.util.mathematics.extras.Coordinate2Long;
-import engine.util.mathematics.extras.Coordinate4Long;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -21,10 +20,11 @@ class ItemBranch extends BranchPackage {
 
     /*
      * World item placement and pickup for PlacementManager. Placement sets the
-     * main-hand item on the sub-block face the ray met, oriented by the camera,
-     * one at a time from a stack; pickup hands the world item's real item,
-     * contents included, to the entity and removes it from the world only once
-     * it fits.
+     * main-hand item against the face the ray met — a block's, a sub-block's
+     * or another item's, containers included — oriented by the camera, and
+     * leaves it in hand when no spot by that face is free; pickup hands the
+     * world item's real item, contents included, to the entity and removes it
+     * from the world only once it fits.
      */
 
     // Internal
@@ -59,74 +59,79 @@ class ItemBranch extends BranchPackage {
 
     boolean place(EntityInstance entity, Vector3 direction, BlockCastStruct castStruct) {
 
+        Direction3Vector hitFace = castStruct.getHitFace();
+        int hitOctant = castStruct.getHitOctant();
+        int cellY = castStruct.getSubChunkY() * chunkSize + castStruct.getBlockY();
+
+        return placeAgainst(
+                entity,
+                direction,
+                castStruct.getChunkCoordinate(),
+                resolveAnchor(castStruct.getBlockX(), SubBlockUtility.getOctantX(hitOctant),
+                        castStruct.getHitSubX(), hitFace.x),
+                resolveAnchor(cellY, SubBlockUtility.getOctantY(hitOctant),
+                        castStruct.getHitSubY(), hitFace.y),
+                resolveAnchor(castStruct.getBlockZ(), SubBlockUtility.getOctantZ(hitOctant),
+                        castStruct.getHitSubZ(), hitFace.z),
+                hitFace);
+    }
+
+    boolean placeOnItem(EntityInstance entity, Vector3 direction, WorldItemCastStruct itemCastStruct) {
+        return placeAgainst(
+                entity,
+                direction,
+                itemCastStruct.getChunkCoordinate(),
+                itemCastStruct.getAnchorX(),
+                itemCastStruct.getAnchorY(),
+                itemCastStruct.getAnchorZ(),
+                itemCastStruct.getHitFace());
+    }
+
+    // The main-hand item leaves the hand only once the world has taken it
+    private boolean placeAgainst(
+            EntityInstance entity,
+            Vector3 direction,
+            long frameChunk,
+            int anchorX,
+            int anchorY,
+            int anchorZ,
+            Direction3Vector hitFace) {
+
         InventoryHandle inventoryHandle = entity.getInventoryHandle();
 
         if (!inventoryHandle.hasMainHand())
             return false;
 
-        Direction3Vector hitFace = castStruct.getHitFace();
-        int hitOctant = castStruct.getHitOctant();
-        int targetOctant = SubBlockUtility.stepOctant(hitOctant, hitFace);
-        int cellStep = SubBlockUtility.leavesCell(hitOctant, hitFace) ? 1 : 0;
+        WorldItemInstance placed = worldItemPlacementSystem.placeItem(
+                entity.getWorldHandle(),
+                frameChunk,
+                anchorX,
+                anchorY,
+                anchorZ,
+                hitFace,
+                resolveItemOrientation(hitFace, direction),
+                inventoryHandle.getMainHand());
 
-        int placeX = castStruct.getBlockX() + hitFace.x * cellStep;
-        int placeY = castStruct.getBlockY() + hitFace.y * cellStep;
-        int placeZ = castStruct.getBlockZ() + hitFace.z * cellStep;
-        int placeSubChunkY = castStruct.getSubChunkY();
-
-        int placeChunkX = Coordinate2Long.unpackX(castStruct.getChunkCoordinate());
-        int placeChunkZ = Coordinate2Long.unpackY(castStruct.getChunkCoordinate());
-
-        if (placeX < 0) {
-            placeChunkX--;
-            placeX += chunkSize;
-        } else if (placeX >= chunkSize) {
-            placeChunkX++;
-            placeX -= chunkSize;
-        }
-
-        if (placeZ < 0) {
-            placeChunkZ--;
-            placeZ += chunkSize;
-        } else if (placeZ >= chunkSize) {
-            placeChunkZ++;
-            placeZ -= chunkSize;
-        }
-
-        if (placeY < 0) {
-            placeSubChunkY--;
-            placeY += chunkSize;
-        } else if (placeY >= chunkSize) {
-            placeSubChunkY++;
-            placeY -= chunkSize;
-        }
-
-        long placeChunkCoord = Coordinate2Long.pack(placeChunkX, placeChunkZ);
-        ChunkInstance placeChunk = worldStreamManager.getChunkInstance(placeChunkCoord);
-
-        if (placeChunk == null)
+        if (placed == null)
             return false;
 
-        Direction3Vector hitFaceDir = Direction3Vector.getDirection(hitFace.x, hitFace.y, hitFace.z);
-        int rotation = resolveItemOrientation(hitFaceDir, direction);
-        int chunkLocalY = placeSubChunkY * chunkSize + placeY;
-
-        int subX = placeX * subVoxelResolution + (hitFace.x != 0
-                ? resolveFaceSubVoxel(SubBlockUtility.getOctantX(targetOctant), hitFace.x)
-                : castStruct.getHitSubX());
-        int subY = chunkLocalY * subVoxelResolution + (hitFace.y != 0
-                ? resolveFaceSubVoxel(SubBlockUtility.getOctantY(targetOctant), hitFace.y)
-                : castStruct.getHitSubY());
-        int subZ = placeZ * subVoxelResolution + (hitFace.z != 0
-                ? resolveFaceSubVoxel(SubBlockUtility.getOctantZ(targetOctant), hitFace.z)
-                : castStruct.getHitSubZ());
-
-        long packedPosition = Coordinate4Long.pack(subX, subY, subZ, rotation);
-        ItemInstance itemInstance = inventoryHandle.takeOne(EquipmentSlot.MAIN_HAND);
-
-        worldItemPlacementSystem.placeItem(placeChunk, placeSubChunkY, packedPosition, itemInstance);
+        inventoryHandle.unequip(EquipmentSlot.MAIN_HAND);
 
         return true;
+    }
+
+    // The sub-voxel just outside the hit sub-block's face along that face's axis, or the hit sub-voxel across it
+    private int resolveAnchor(int cell, int octantAxis, int hitSub, int faceComponent) {
+
+        int cellStart = cell * subVoxelResolution;
+
+        if (faceComponent > 0)
+            return cellStart + (octantAxis + 1) * subVoxelsPerSubBlock;
+
+        if (faceComponent < 0)
+            return cellStart + octantAxis * subVoxelsPerSubBlock - 1;
+
+        return cellStart + hitSub;
     }
 
     // Pick Up \\
@@ -146,11 +151,6 @@ class ItemBranch extends BranchPackage {
         worldItemPlacementSystem.removeItem(chunk, worldItemInstance);
 
         return true;
-    }
-
-    // The sub-voxel of the target octant touching the face that was hit, along that face's axis
-    private int resolveFaceSubVoxel(int targetOctantAxis, int faceComponent) {
-        return targetOctantAxis * subVoxelsPerSubBlock + (faceComponent > 0 ? 0 : subVoxelsPerSubBlock - 1);
     }
 
     // Orientation \\

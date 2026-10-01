@@ -14,7 +14,7 @@ public class PrecipitationManager extends ManagerPackage {
      * resolves what is falling from that grid's local weather, temperature,
      * and wind, and PrecipitationOcclusionBranch keeps its map of column tops
      * current while anything is falling, so the precipitation pass can stop
-     * every drop at the first block above it. Relies on WeatherPipeline
+     * every drop at the first block or item above it. Relies on WeatherPipeline
      * registering this after WeatherPatternManager and WindManager so the
      * local weather, temperature, and wind it reads are this frame's.
      */

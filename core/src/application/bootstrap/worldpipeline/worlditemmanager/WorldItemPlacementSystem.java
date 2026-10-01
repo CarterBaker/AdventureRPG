@@ -5,7 +5,6 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
-import application.bootstrap.physicspipeline.util.RayBoxUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
@@ -13,6 +12,7 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstancePaletteHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemPaletteHandle;
+import application.bootstrap.worldpipeline.worlditem.WorldItemPlacementStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemStruct;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
@@ -20,20 +20,22 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Coordinate4Long;
+import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.matrices.Matrix4;
-import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldItemPlacementSystem extends SystemPackage {
 
     /*
-     * Single entry point for placing, removing and raycasting world items.
-     * Chunk loads build item palettes off the main thread and push them to
-     * WorldItemRenderSystem on it; runtime placement and removal update the
-     * subchunk, chunk palette and renderer together. resolveItemInstance()
-     * keeps an item's real contents on its subchunk struct. composeTransform()
-     * is the one CPU-side placement of a world item — its block-space model
-     * matrix relative to a chunk, turned exactly as the item shader turns it.
+     * Single entry point for placing and removing world items and opening
+     * them where they stand. Chunk loads stage item palettes off the main
+     * thread and commit them as they are pushed to WorldItemRenderSystem on
+     * it; runtime placement resolves a free spot through WorldItemSpaceSystem
+     * before it updates the subchunk, chunk palette and renderer together.
+     * resolveItemInstance() keeps an item's real contents on its subchunk
+     * struct. composeTransform() is the one CPU-side placement of a world
+     * item — its block-space model matrix relative to a chunk, turned exactly
+     * as the item shader turns it.
      */
 
     // Internal
@@ -41,9 +43,20 @@ public class WorldItemPlacementSystem extends SystemPackage {
     private ItemManager itemManager;
     private ItemRotationBufferSystem itemRotationBufferSystem;
     private WorldItemRenderSystem worldItemRenderSystem;
+    private WorldItemSpaceSystem worldItemSpaceSystem;
     private WorldStreamManager worldStreamManager;
 
+    // Scratch
+    private WorldItemPlacementStruct placementStruct;
+
     // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Scratch
+        this.placementStruct = new WorldItemPlacementStruct();
+    }
 
     @Override
     protected void get() {
@@ -51,14 +64,16 @@ public class WorldItemPlacementSystem extends SystemPackage {
         this.itemManager = get(ItemManager.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
         this.worldItemRenderSystem = get(WorldItemRenderSystem.class);
+        this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
         this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     // Chunk Load Flow \\
 
+    // Streaming thread, under the chunk's lock — the build is staged, never read until it is committed
     public void buildChunkInstances(ChunkInstance chunk, long chunkCoordinate) {
         WorldItemInstancePaletteHandle palette = chunk.getWorldItemInstancePaletteHandle();
-        palette.clear();
+        palette.beginStage();
         SubChunkInstance[] subChunks = chunk.getSubChunks();
         for (int i = 0; i < EngineSetting.WORLD_HEIGHT; i++) {
             WorldItemPaletteHandle structPalette = subChunks[i].getWorldItemPaletteHandle();
@@ -68,14 +83,16 @@ public class WorldItemPlacementSystem extends SystemPackage {
             for (int j = 0; j < structs.size(); j++) {
                 WorldItemInstance instance = buildInstance(structs.get(j), chunkCoordinate);
                 if (instance != null)
-                    palette.addItem(instance);
+                    palette.stageItem(instance);
             }
         }
     }
 
+    // Main thread, under the chunk's lock — a staged build goes live as it reaches the renderer
     public void pushChunkToRenderer(ChunkInstance chunk, long chunkCoordinate) {
-        worldItemRenderSystem.push(chunkCoordinate,
-                chunk.getWorldItemInstancePaletteHandle().getItems());
+        WorldItemInstancePaletteHandle palette = chunk.getWorldItemInstancePaletteHandle();
+        palette.commitStage();
+        worldItemRenderSystem.push(chunkCoordinate, palette.getItems());
     }
 
     public void pullChunkFromRenderer(long chunkCoordinate) {
@@ -84,13 +101,29 @@ public class WorldItemPlacementSystem extends SystemPackage {
 
     // Runtime Placement \\
 
+    // Sets the item against a face from the anchor cell outside it, in the frame chunk's sub-voxels —
+    // null when no spot within reach of the face is free, leaving the world untouched
     public WorldItemInstance placeItem(
-            ChunkInstance chunk,
-            int subChunkCoordinate,
-            long packedPosition,
+            WorldHandle worldHandle,
+            long frameChunk,
+            int anchorX,
+            int anchorY,
+            int anchorZ,
+            Direction3Vector face,
+            int orientation,
             ItemInstance itemInstance) {
 
         ItemDefinitionHandle def = itemInstance.getItemDefinitionHandle();
+
+        if (!worldItemSpaceSystem.resolvePlacement(
+                worldHandle, frameChunk, def, orientation, anchorX, anchorY, anchorZ, face, placementStruct))
+            return null;
+
+        long chunkCoordinate = placementStruct.getChunkCoordinate();
+        long packedPosition = placementStruct.getPackedPosition();
+        ChunkInstance chunk = worldStreamManager.getChunkInstance(chunkCoordinate);
+        int subChunkCoordinate = (Coordinate4Long.unpackY(packedPosition) / EngineSetting.SUB_VOXEL_RESOLUTION)
+                / EngineSetting.CHUNK_SIZE;
 
         // 1. SubChunk
         WorldItemStruct struct = new WorldItemStruct(packedPosition, def.getItemID(), itemInstance);
@@ -98,7 +131,6 @@ public class WorldItemPlacementSystem extends SystemPackage {
         subChunk.getWorldItemPaletteHandle().addItem(struct);
 
         // 2. Chunk
-        long chunkCoordinate = chunk.getCoordinate();
         WorldItemInstance instance = buildInstance(struct, chunkCoordinate, def);
         chunk.getWorldItemInstancePaletteHandle().addItem(instance);
 
@@ -125,100 +157,32 @@ public class WorldItemPlacementSystem extends SystemPackage {
         removeMatchingStruct(subChunk, instance.getPackedPosition(), instance.getPackedItem());
     }
 
-    // Runtime Pick \\
-
-    public WorldItemInstance raycastItem(
-            WorldHandle worldHandle,
-            long chunkCoordinate,
-            Vector3 origin,
-            Vector3 direction,
-            float maxDistance) {
-
-        WorldItemInstance nearest = null;
-        float nearestDistance = maxDistance;
-
-        for (int offsetZ = -1; offsetZ <= 1; offsetZ++)
-            for (int offsetX = -1; offsetX <= 1; offsetX++) {
-
-                long neighbourCoordinate = WorldWrapUtility.wrapAroundWorld(
-                        worldHandle, Coordinate2Long.add(chunkCoordinate, offsetX, offsetZ));
-                ChunkInstance chunk = worldStreamManager.getChunkInstance(neighbourCoordinate);
-
-                // A palette being rebuilt on the streaming thread is skipped for this frame
-                if (chunk == null || !chunk.getChunkDataSyncContainer().tryAcquire())
-                    continue;
-
-                try {
-
-                    ObjectArrayList<WorldItemInstance> items = chunk.getWorldItemInstancePaletteHandle().getItems();
-
-                    for (int i = 0; i < items.size(); i++) {
-
-                        float distance = intersectItemCube(
-                                items.get(i),
-                                offsetX * EngineSetting.CHUNK_SIZE,
-                                offsetZ * EngineSetting.CHUNK_SIZE,
-                                origin,
-                                direction);
-
-                        if (distance >= nearestDistance)
-                            continue;
-
-                        nearest = items.get(i);
-                        nearestDistance = distance;
-                    }
-                } finally {
-                    chunk.getChunkDataSyncContainer().release();
-                }
-            }
-
-        return nearest;
-    }
-
-    // Distance along the ray to the item's block cube, Float.MAX_VALUE on a miss
-    private float intersectItemCube(
-            WorldItemInstance instance,
-            float chunkOffsetX,
-            float chunkOffsetZ,
-            Vector3 origin,
-            Vector3 direction) {
-
-        float svr = EngineSetting.SUB_VOXEL_RESOLUTION;
-        long packed = instance.getPackedPosition();
-        float minX = chunkOffsetX + Coordinate4Long.unpackX(packed) / svr;
-        float minY = Coordinate4Long.unpackY(packed) / svr;
-        float minZ = chunkOffsetZ + Coordinate4Long.unpackZ(packed) / svr;
-
-        return RayBoxUtility.intersect(origin, direction, minX, minY, minZ, minX + 1f, minY + 1f, minZ + 1f);
-    }
-
     // State \\
 
-    // True while the item still stands in its chunk's palette — a rebuilt palette holds new instances,
-    // and a palette being rebuilt on the streaming thread is judged on a later frame
+    // True while the item still stands in its chunk's live palette — a rebuilt palette holds new instances
     public boolean isPlaced(WorldItemInstance instance) {
 
         ChunkInstance chunk = worldStreamManager.getChunkInstance(instance.getChunkCoordinate());
 
-        if (chunk == null)
-            return false;
-
-        if (!chunk.getChunkDataSyncContainer().tryAcquire())
-            return true;
-
-        try {
-            return chunk.getWorldItemInstancePaletteHandle().getItems().contains(instance);
-        } finally {
-            chunk.getChunkDataSyncContainer().release();
-        }
+        return chunk != null && chunk.getWorldItemInstancePaletteHandle().contains(instance);
     }
 
-    public void setItemShown(WorldItemInstance instance, boolean shown) {
+    // Open \\
 
-        if (shown)
-            worldItemRenderSystem.showItem(instance);
-        else
+    // True when the item is a container whose lid's clearance stands empty
+    public boolean canOpen(WorldItemInstance instance) {
+        return instance.getItemDefinitionHandle().isContainer() && worldItemSpaceSystem.isLidClear(instance);
+    }
+
+    // An open container claims its lid's clearance and is drawn open by whoever opened it
+    public void setItemOpen(WorldItemInstance instance, boolean open) {
+
+        worldItemSpaceSystem.setOpen(instance, open);
+
+        if (open)
             worldItemRenderSystem.hideItem(instance);
+        else
+            worldItemRenderSystem.showItem(instance);
     }
 
     // Transform \\
@@ -294,6 +258,7 @@ public class WorldItemPlacementSystem extends SystemPackage {
         WorldItemInstance instance = create(WorldItemInstance.class);
         instance.constructor(struct, def, chunkCoordinate, packedBlockCoordinate,
                 struct.packedPosition, struct.packedItem);
+        worldItemSpaceSystem.resolveBounds(instance);
         return instance;
     }
 

@@ -254,9 +254,9 @@ public class RuntimeSetting {
     public static final String SETTINGS_BINDING_MOVE_RIGHT = "Move Right";
     public static final String SETTINGS_BINDING_JUMP = "Jump";
     public static final String SETTINGS_BINDING_WALK = "Walk";
-    public static final String SETTINGS_BINDING_SPRINT = "Sprint / Throw";
-    public static final String SETTINGS_BINDING_USE = "Use";
-    public static final String SETTINGS_BINDING_BLOCK = "Block";
+    public static final String SETTINGS_BINDING_SPRINT = "Sprint";
+    public static final String SETTINGS_BINDING_PLACE = "Place";
+    public static final String SETTINGS_BINDING_ACTIVATE = "Activate";
     public static final String SETTINGS_BINDING_INVENTORY = "Inventory";
     public static final String SETTINGS_BINDING_ROTATE_ITEM = "Rotate Item";
     public static final String SETTINGS_BINDING_SCREENSHOT = "Screenshot";
@@ -345,7 +345,6 @@ public class RuntimeSetting {
     // Inventory Text
     public static final String INVENTORY_ARGUMENT_SEPARATOR = ":";
     public static final String INVENTORY_FORMAT_WEIGHT = "%.1f kg";
-    public static final String INVENTORY_FORMAT_STACK_NAME = "%s  x%d";
     public static final String INVENTORY_FORMAT_HOLDING = "Holding %.1f kg";
     public static final String INVENTORY_FORMAT_LOAD = "%.1f / %.0f kg";
     public static final String INVENTORY_FORMAT_STAT = "%.0f";
@@ -355,8 +354,6 @@ public class RuntimeSetting {
     public static final String INVENTORY_FORMAT_ITEM_SPACE = "Holds %d x %d x %d";
     public static final String INVENTORY_FORMAT_ITEM_SIZE = "Size %d x %d x %d";
     public static final String INVENTORY_FORMAT_ITEM_WEIGHT = "Weight %.1f kg";
-    public static final String INVENTORY_FORMAT_ITEM_STACK = "Stack %d / %d";
-    public static final String INVENTORY_FORMAT_ITEM_TOOL = "%s  -  tier %d";
     public static final String INVENTORY_TEXT_NONE = "";
     public static final String INVENTORY_FORMAT_CLOSE_HINT = "%s or %s to close";
     public static final String INVENTORY_FORMAT_CHEST_HINT = "Drag beside it to tilt and turn it  -  scroll to zoom"

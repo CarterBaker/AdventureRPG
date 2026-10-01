@@ -29,11 +29,11 @@ public final class KeyBindings {
     public static Binding SECONDARY = new Binding(InputCode.mouse(Buttons.RIGHT));
     public static Binding LOOK = new Binding(InputCode.mouse(Buttons.RIGHT));
 
+    // Interaction
+    public static Binding ACTIVATE = new Binding(InputCode.key(Keys.E));
+
     // Menu
     public static Binding PAUSE = new Binding(InputCode.key(Keys.ESCAPE));
-
-    // Combat
-    public static Binding BLOCK = new Binding(InputCode.key(Keys.Q));
 
     // Inventory
     public static Binding INVENTORY = new Binding(InputCode.key(Keys.I));

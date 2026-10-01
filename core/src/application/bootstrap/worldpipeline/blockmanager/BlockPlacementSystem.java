@@ -10,6 +10,7 @@ import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
@@ -22,11 +23,11 @@ public class BlockPlacementSystem extends SystemPackage {
 
     /*
      * Single entry point for editing blocks in the loaded world: breaking,
-     * building and pouring liquid, whole blocks or single sub-blocks.
+     * building and pouring liquid, whole blocks or single sub-blocks. A solid
+     * block or sub-block is never built into space a world item claims.
      * editCell() writes the cell, wakes nearby liquid, and rebuilds every
      * subchunk the edit touched, diagonals included, each under its chunk's
-     * lock. A cell whose eighth sub-block is filled in becomes a whole block
-     * again, so a cell built up from pieces stores like any other block.
+     * lock.
      */
 
     // Internal
@@ -36,9 +37,13 @@ public class BlockPlacementSystem extends SystemPackage {
     private DynamicGeometryManager dynamicGeometryManager;
     private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
     private WorldRenderManager worldRenderManager;
+    private WorldItemSpaceSystem worldItemSpaceSystem;
 
     // Settings
     private int worldHeight;
+    private int chunkSize;
+    private int subVoxelResolution;
+    private int subVoxelsPerSubBlock;
 
     // Base \\
 
@@ -47,6 +52,9 @@ public class BlockPlacementSystem extends SystemPackage {
 
         // Settings
         this.worldHeight = EngineSetting.WORLD_HEIGHT;
+        this.chunkSize = EngineSetting.CHUNK_SIZE;
+        this.subVoxelResolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        this.subVoxelsPerSubBlock = subVoxelResolution / SubBlockUtility.DIVISIONS;
     }
 
     @Override
@@ -59,6 +67,7 @@ public class BlockPlacementSystem extends SystemPackage {
         this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
         this.worldRenderManager = get(WorldRenderManager.class);
+        this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
     }
 
     // Placement \\
@@ -97,11 +106,6 @@ public class BlockPlacementSystem extends SystemPackage {
 
     public boolean placeSubBlockAgainstFace(BlockCastStruct castStruct, short blockID) {
         return placeAgainstFace(castStruct, blockID, true);
-    }
-
-    // One sub-block in a given octant of a cell — false when the cell holds another block or the octant is taken
-    public boolean placeSubBlock(ChunkInstance chunk, int subChunkY, int packedXYZ, int octant, short blockID) {
-        return placeInCell(chunk, subChunkY, packedXYZ, octant, blockID, true);
     }
 
     private boolean placeAgainstFace(BlockCastStruct castStruct, short blockID, boolean subBlock) {
@@ -160,6 +164,9 @@ public class BlockPlacementSystem extends SystemPackage {
             if (SubBlockUtility.isSubdivided(currentMask) && currentBlockID != blockID)
                 return false;
 
+            if (isClaimedByItems(chunk, subChunkY, packedXYZ, blockID, 0, 0, 0, subVoxelResolution))
+                return false;
+
             editCell(chunk, subChunkY, packedXYZ, blockID, SubBlockUtility.MASK_FULL);
             return true;
         }
@@ -179,8 +186,50 @@ public class BlockPlacementSystem extends SystemPackage {
         if (mask == currentMask)
             return false;
 
+        if (isClaimedByItems(
+                chunk,
+                subChunkY,
+                packedXYZ,
+                blockID,
+                SubBlockUtility.getOctantX(octant) * subVoxelsPerSubBlock,
+                SubBlockUtility.getOctantY(octant) * subVoxelsPerSubBlock,
+                SubBlockUtility.getOctantZ(octant) * subVoxelsPerSubBlock,
+                subVoxelsPerSubBlock))
+            return false;
+
         editCell(chunk, subChunkY, packedXYZ, blockID, mask);
         return true;
+    }
+
+    // True when a solid block would fill a cube of the cell, offset and sized in sub-voxels, that items claim
+    private boolean isClaimedByItems(
+            ChunkInstance chunk,
+            int subChunkY,
+            int packedXYZ,
+            short blockID,
+            int offsetX,
+            int offsetY,
+            int offsetZ,
+            int size) {
+
+        DynamicGeometryType geometry = blockManager.getGeometryFromBlockID(blockID);
+
+        if (geometry == DynamicGeometryType.NONE || geometry == DynamicGeometryType.LIQUID)
+            return false;
+
+        int minX = Coordinate3Int.unpackX(packedXYZ) * subVoxelResolution + offsetX;
+        int minY = (subChunkY * chunkSize + Coordinate3Int.unpackY(packedXYZ)) * subVoxelResolution + offsetY;
+        int minZ = Coordinate3Int.unpackZ(packedXYZ) * subVoxelResolution + offsetZ;
+
+        return worldItemSpaceSystem.isRegionClaimed(
+                chunk.getWorldHandle(),
+                chunk.getCoordinate(),
+                minX,
+                minY,
+                minZ,
+                minX + size,
+                minY + size,
+                minZ + size);
     }
 
     private int toHitXYZ(BlockCastStruct castStruct) {

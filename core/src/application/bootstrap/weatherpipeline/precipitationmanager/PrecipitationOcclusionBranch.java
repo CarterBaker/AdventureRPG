@@ -9,6 +9,7 @@ import application.bootstrap.worldpipeline.util.ColumnHeightUtility;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -21,15 +22,19 @@ class PrecipitationOcclusionBranch extends BranchPackage {
      * Keeps each grid's precipitation column map current around its focal
      * entity. The map window is centred on the entity's block, expressed in
      * absolute block columns and anchored to the entity's own chunk corner,
-     * which is the same frame the camera position is in. Columns that
-     * scrolled into the window are refreshed first, up to a budget, and a
-     * rolling cursor re-reads a slice of the whole map every frame so placed
-     * or broken blocks start or stop sheltering within a moment.
+     * which is the same frame the camera position is in. A column's top is
+     * kept in sub-voxels — the higher of its highest block and the highest
+     * world item box over it — so rain stops on a crate or a pile as it does
+     * on a roof. Columns that scrolled into the window are refreshed first, up
+     * to a budget, and a rolling cursor re-reads a slice of the whole map
+     * every frame so placed or broken blocks and items start or stop
+     * sheltering within a moment.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
+    private WorldItemSpaceSystem worldItemSpaceSystem;
 
     // Map
     private int mapSize;
@@ -49,6 +54,7 @@ class PrecipitationOcclusionBranch extends BranchPackage {
     protected void get() {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
+        this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
     }
 
     // Occlusion \\
@@ -135,13 +141,13 @@ class PrecipitationOcclusionBranch extends BranchPackage {
             return;
         }
 
-        int columnTop = ColumnHeightUtility.findColumnTop(
-                chunk,
-                blockManager,
-                Math.floorMod(columnX, EngineSetting.CHUNK_SIZE),
-                Math.floorMod(columnZ, EngineSetting.CHUNK_SIZE));
+        int blockX = Math.floorMod(columnX, EngineSetting.CHUNK_SIZE);
+        int blockZ = Math.floorMod(columnZ, EngineSetting.CHUNK_SIZE);
+        int blockTop = ColumnHeightUtility.findColumnTop(chunk, blockManager, blockX, blockZ)
+                * EngineSetting.PRECIPITATION_HEIGHTS_PER_BLOCK;
+        int itemTop = worldItemSpaceSystem.findColumnTop(world, chunkCoordinate, blockX, blockZ);
 
-        precipitation.setColumn(slot, columnX, columnZ, columnTop);
+        precipitation.setColumn(slot, columnX, columnZ, Math.max(blockTop, itemTop));
     }
 
     // Utility \\

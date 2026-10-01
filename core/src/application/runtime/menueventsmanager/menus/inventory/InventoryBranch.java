@@ -24,10 +24,11 @@ public class InventoryBranch extends BranchPackage {
      * Runs the inventory for this context's window. The inventory key shows
      * the equipment board around the framed character preview — turned and
      * panned by dragging, zoomed with the wheel — with the worn bag open in
-     * its panel beside it. Using a chest or bag that lies in the world opens
-     * it where it lies instead, the camera left where it was: its panel on the
-     * right, the worn bag's on the left. Either closes on the inventory key or Pause, and a
-     * container also on being used again or leaving the world, returning any
+     * its panel beside it. Activating a chest or bag that lies in the world
+     * opens it where it lies instead, once nothing rests in its lid's way, the
+     * camera left where it was: its panel on the right, the worn bag's on the
+     * left. Either closes on the inventory key or Pause, and a container also
+     * on being activated again or leaving the world, returning any
      * carried item and the camera. Each frame the drag, container and
      * equipment branches settle and redraw what changed. A new item handed in
      * while the cursor is over the open inventory lands where it points.
@@ -77,7 +78,7 @@ public class InventoryBranch extends BranchPackage {
 
         boolean closePressed = inputManager.bindingClicked(KeyBindings.INVENTORY, window)
                 || inputManager.bindingClicked(KeyBindings.PAUSE, window)
-                || session.hasChest() && inputManager.bindingClicked(KeyBindings.SECONDARY, window);
+                || session.hasChest() && inputManager.bindingClicked(KeyBindings.ACTIVATE, window);
 
         if (closePressed && session.isCloseArmed() && !session.isHolding()) {
             closeMenu();
@@ -115,12 +116,12 @@ public class InventoryBranch extends BranchPackage {
             return;
         }
 
-        if (!inputManager.bindingClicked(KeyBindings.SECONDARY, window))
+        if (!inputManager.bindingClicked(KeyBindings.ACTIVATE, window))
             return;
 
         WorldItemInstance targetItem = playerManager.getTargetItemForWindow(window.getWindowID());
 
-        if (targetItem != null && targetItem.getItemDefinitionHandle().isContainer())
+        if (targetItem != null && worldItemPlacementSystem.canOpen(targetItem))
             openMenu(window, targetItem);
     }
 

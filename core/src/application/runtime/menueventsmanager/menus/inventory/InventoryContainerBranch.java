@@ -136,8 +136,8 @@ public class InventoryContainerBranch extends BranchPackage {
                 .setFontText(RuntimeSetting.INVENTORY_TEXT_SHOW_LIST);
         panelMenu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_HINT).setFontText(resolveHint(inventoryContainer));
 
-        if (worldItem != null && containerItem.getItemDefinitionHandle().hasOpenMesh())
-            worldItemPlacementSystem.setItemShown(worldItem, false);
+        if (worldItem != null)
+            worldItemPlacementSystem.setItemOpen(worldItem, true);
     }
 
     private String resolveHint(InventoryContainer inventoryContainer) {
@@ -148,7 +148,7 @@ public class InventoryContainerBranch extends BranchPackage {
 
         return String.format(
                 RuntimeSetting.INVENTORY_FORMAT_CHEST_HINT,
-                InputNameUtility.getName(KeyBindings.SECONDARY),
+                InputNameUtility.getName(KeyBindings.ACTIVATE),
                 InputNameUtility.getName(KeyBindings.INVENTORY),
                 InputNameUtility.getName(KeyBindings.PAUSE));
     }
@@ -162,7 +162,7 @@ public class InventoryContainerBranch extends BranchPackage {
         menuManager.closeMenu(view.getPanelMenu());
 
         if (view.isInWorld())
-            worldItemPlacementSystem.setItemShown(view.getWorldItem(), true);
+            worldItemPlacementSystem.setItemOpen(view.getWorldItem(), false);
 
         view.close();
     }
@@ -328,22 +328,12 @@ public class InventoryContainerBranch extends BranchPackage {
                 element -> {
                     element.setOnDragArgOverride(argument);
                     element.findChildById(RuntimeSetting.ELEMENT_INVENTORY_ROW_NAME)
-                            .setFontText(toRowName(itemInstance));
+                            .setFontText(item.getDisplayName());
                     element.findChildById(RuntimeSetting.ELEMENT_INVENTORY_ROW_WEIGHT).setFontText(
                             String.format(RuntimeSetting.INVENTORY_FORMAT_WEIGHT, itemInstance.getTotalWeight()));
                 });
 
         view.addRow(itemInstance, row);
-    }
-
-    private String toRowName(ItemInstance itemInstance) {
-
-        String displayName = itemInstance.getItemDefinitionHandle().getDisplayName();
-
-        if (itemInstance.getStackCount() == 1)
-            return displayName;
-
-        return String.format(RuntimeSetting.INVENTORY_FORMAT_STACK_NAME, displayName, itemInstance.getStackCount());
     }
 
     // Toggle \\

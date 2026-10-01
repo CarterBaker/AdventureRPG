@@ -60,7 +60,7 @@ public class Settings {
 
     // Bindings — Game Actions
     public int[] bindSecondary = { InputCode.storedMouseCode(Buttons.RIGHT) };
-    public int[] bindBlock = { Keys.Q };
+    public int[] bindActivate = { Keys.E };
     public int[] bindInventory = { Keys.I };
     public int[] bindRotateItem = { Keys.R };
 

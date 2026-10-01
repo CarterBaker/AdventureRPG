@@ -11,7 +11,8 @@ public class ContainerSpaceStruct extends StructPackage {
      * chest's contents rest inside the chest itself. A space without one is a
      * pocket: it is bigger than the item looks, so it is only ever shown in
      * the inventory's menus, as its own open box of walls textured with the
-     * pocket texture.
+     * pocket texture. Every container carries the clearance its lid needs
+     * before it opens in the world.
      */
 
     // Size
@@ -23,9 +24,16 @@ public class ContainerSpaceStruct extends StructPackage {
     // Pocket
     private final String pocketTextureName;
 
+    // Lid
+    private final LidClearanceStruct lidClearance;
+
     // Constructor \\
 
-    public ContainerSpaceStruct(Vector3Int size, Vector3Int offset, String pocketTextureName) {
+    public ContainerSpaceStruct(
+            Vector3Int size,
+            Vector3Int offset,
+            String pocketTextureName,
+            LidClearanceStruct lidClearance) {
 
         // Size
         this.size = size;
@@ -35,6 +43,9 @@ public class ContainerSpaceStruct extends StructPackage {
 
         // Pocket
         this.pocketTextureName = pocketTextureName;
+
+        // Lid
+        this.lidClearance = lidClearance;
     }
 
     // Accessible \\
@@ -53,5 +64,9 @@ public class ContainerSpaceStruct extends StructPackage {
 
     public String getPocketTextureName() {
         return pocketTextureName;
+    }
+
+    public LidClearanceStruct getLidClearance() {
+        return lidClearance;
     }
 }

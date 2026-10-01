@@ -10,8 +10,9 @@ public class PrecipitationInstance extends InstancePackage {
     /*
      * One grid's precipitation: intensity, snow share, drift wind, and a ring
      * buffer of column tops around the focal entity so rain and snow stop at
-     * the first block. Heights pack exactly as the PrecipitationData UBO reads
-     * them, and unknown columns read as sheltered.
+     * the first block or item. Heights are sub-voxels, PRECIPITATION_HEIGHTS_PER_BLOCK
+     * to a block, packed exactly as the PrecipitationData UBO reads them, and
+     * unknown columns read as sheltered.
      */
 
     // Map

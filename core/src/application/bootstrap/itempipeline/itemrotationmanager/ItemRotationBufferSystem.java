@@ -10,11 +10,12 @@ import engine.util.mathematics.matrices.Matrix4;
 public class ItemRotationBufferSystem extends SystemPackage {
 
     /*
-     * Pushes the 24 item face-spin rotation matrices to the ItemRotationData
-     * UBO once at awake. Never updated again — rotation data is static. The
-     * same matrices are kept for code that places world items on the CPU, so
-     * both sides always agree on how an item is turned, and
-     * findNearestOrientation() snaps any free rotation onto the closest one.
+     * Builds the 24 item face-spin rotation matrices at create and pushes them
+     * to the ItemRotationData UBO once at awake. Never updated again — rotation
+     * data is static. The same matrices are kept for code that places world
+     * items on the CPU, and rounded into whole quarter turns for code that
+     * turns sub-voxel cells, so the shader, the transforms and every cell an
+     * item claims always agree on how an item is turned.
      */
 
     // Internal
@@ -23,7 +24,20 @@ public class ItemRotationBufferSystem extends SystemPackage {
     // Rotations
     private Matrix4[] rotations;
 
+    // Cell Rotations — each orientation's rounded 3x3 rotation, row by row
+    private int[] cellRotations;
+    private int cellRotationStride;
+
     // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Cell Rotations
+        this.cellRotationStride = EngineSetting.AXIS_COUNT * EngineSetting.AXIS_COUNT;
+
+        buildRotations();
+    }
 
     @Override
     protected void get() {
@@ -37,21 +51,41 @@ public class ItemRotationBufferSystem extends SystemPackage {
 
     // Buffer \\
 
-    private void pushItemRotationData() {
-
-        UBOHandle ubo = uboManager.getUBOHandleFromUBOName(EngineSetting.ITEM_ROTATION_DATA_UBO);
+    private void buildRotations() {
 
         this.rotations = new Matrix4[24];
+        this.cellRotations = new int[rotations.length * cellRotationStride];
 
         for (Direction3Vector face : Direction3Vector.VALUES) {
             for (int spin = 0; spin < 4; spin++) {
                 int index = face.ordinal() * 4 + spin;
                 rotations[index] = buildRotation(face, spin);
+                writeCellRotation(index, rotations[index]);
             }
         }
+    }
+
+    private void pushItemRotationData() {
+
+        UBOHandle ubo = uboManager.getUBOHandleFromUBOName(EngineSetting.ITEM_ROTATION_DATA_UBO);
 
         ubo.updateUniform(EngineSetting.UNIFORM_ROTATIONS, rotations);
         uboManager.push(ubo);
+    }
+
+    private void writeCellRotation(int orientation, Matrix4 rotation) {
+
+        int base = orientation * cellRotationStride;
+
+        cellRotations[base] = Math.round(rotation.getM00());
+        cellRotations[base + 1] = Math.round(rotation.getM01());
+        cellRotations[base + 2] = Math.round(rotation.getM02());
+        cellRotations[base + 3] = Math.round(rotation.getM10());
+        cellRotations[base + 4] = Math.round(rotation.getM11());
+        cellRotations[base + 5] = Math.round(rotation.getM12());
+        cellRotations[base + 6] = Math.round(rotation.getM20());
+        cellRotations[base + 7] = Math.round(rotation.getM21());
+        cellRotations[base + 8] = Math.round(rotation.getM22());
     }
 
     // Accessible \\
@@ -61,30 +95,33 @@ public class ItemRotationBufferSystem extends SystemPackage {
         return rotations[orientation];
     }
 
-    // The packed orientation closest to a free rotation — the one sharing the most of its 3x3 rotation part
-    public int findNearestOrientation(Matrix4 rotation) {
+    // One axis of the model-grid cell a cell turns into — its centre turned about the grid's centre
+    public int rotateCell(int orientation, int axis, int x, int y, int z) {
 
-        int nearest = 0;
-        float bestAlignment = -Float.MAX_VALUE;
+        int base = orientation * cellRotationStride + axis * EngineSetting.AXIS_COUNT;
 
-        for (int orientation = 0; orientation < rotations.length; orientation++) {
+        return toCell(cellRotations[base] * toCentre(x)
+                + cellRotations[base + 1] * toCentre(y)
+                + cellRotations[base + 2] * toCentre(z));
+    }
 
-            float alignment = 0f;
+    // One axis of the model-grid cell that turns into this one — the inverse of rotateCell()
+    public int unrotateCell(int orientation, int axis, int x, int y, int z) {
 
-            for (int column = 0; column < EngineSetting.AXIS_COUNT; column++)
-                for (int row = 0; row < EngineSetting.AXIS_COUNT; row++) {
-                    int index = column * EngineSetting.VECTOR4_COMPONENT_COUNT + row;
-                    alignment += rotations[orientation].val[index] * rotation.val[index];
-                }
+        int base = orientation * cellRotationStride + axis;
 
-            if (alignment <= bestAlignment)
-                continue;
+        return toCell(cellRotations[base] * toCentre(x)
+                + cellRotations[base + EngineSetting.AXIS_COUNT] * toCentre(y)
+                + cellRotations[base + 2 * EngineSetting.AXIS_COUNT] * toCentre(z));
+    }
 
-            bestAlignment = alignment;
-            nearest = orientation;
-        }
+    // A cell's centre as a doubled offset from the grid's centre, so a quarter turn stays whole
+    private static int toCentre(int cell) {
+        return 2 * cell + 1 - EngineSetting.SUB_VOXEL_RESOLUTION;
+    }
 
-        return nearest;
+    private static int toCell(int centre) {
+        return (centre + EngineSetting.SUB_VOXEL_RESOLUTION - 1) / 2;
     }
 
     // Build \\

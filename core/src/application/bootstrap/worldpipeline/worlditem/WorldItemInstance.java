@@ -8,7 +8,8 @@ public class WorldItemInstance extends InstancePackage {
 
     /*
      * One placed world item at runtime: its definition, chunk, block and packed
-     * sub-voxel position, and its slot in the item type's composite buffer. The
+     * sub-voxel position, the rough box around every cell its turned shape
+     * claims, and its slot in the item type's composite buffer. The
      * WorldItemStruct it was built from keeps the real item across palette
      * rebuilds.
      */
@@ -26,6 +27,17 @@ public class WorldItemInstance extends InstancePackage {
     // Render slot — index into the CompositeBufferInstance for this item's type.
     // -1 means not currently registered in any buffer.
     private int instanceSlot;
+
+    // Bounds — chunk-local sub-voxels, minimum inclusive and maximum exclusive
+    private int minX;
+    private int minY;
+    private int minZ;
+    private int maxX;
+    private int maxY;
+    private int maxZ;
+
+    // Query — the last space query that visited this item, so one query tests it once
+    private int queryStamp;
 
     // Constructor \\
 
@@ -89,5 +101,49 @@ public class WorldItemInstance extends InstancePackage {
 
     public void clearInstanceSlot() {
         this.instanceSlot = -1;
+    }
+
+    public void setBounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        this.minX = minX;
+        this.minY = minY;
+        this.minZ = minZ;
+        this.maxX = maxX;
+        this.maxY = maxY;
+        this.maxZ = maxZ;
+    }
+
+    public int getMinX() {
+        return minX;
+    }
+
+    public int getMinY() {
+        return minY;
+    }
+
+    public int getMinZ() {
+        return minZ;
+    }
+
+    public int getMaxX() {
+        return maxX;
+    }
+
+    public int getMaxY() {
+        return maxY;
+    }
+
+    public int getMaxZ() {
+        return maxZ;
+    }
+
+    // True the first time a query with this stamp visits the item
+    public boolean visit(int stamp) {
+
+        if (queryStamp == stamp)
+            return false;
+
+        queryStamp = stamp;
+
+        return true;
     }
 }
