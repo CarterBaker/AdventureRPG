@@ -29,6 +29,8 @@ public enum SettingsBinding {
             KeyBindings.SPRINT),
     PLACE(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_PLACE,
             KeyBindings.SECONDARY),
+    BLOCK(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_BLOCK,
+            KeyBindings.BLOCK),
     ACTIVATE(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_ACTIVATE,
             KeyBindings.ACTIVATE),
     INVENTORY(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_INVENTORY,

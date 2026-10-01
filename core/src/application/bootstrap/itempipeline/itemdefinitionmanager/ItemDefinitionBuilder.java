@@ -15,6 +15,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
+import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.BuilderPackage;
@@ -43,13 +44,17 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * cells that must be empty before it opens — is the boxes the container's
      * 'clearance' lists, or the cells resting on the lid's upper surface when
      * it lists none. An item without a display name is titled from its local
-     * name split into words. Bootstrap-only.
+     * name split into words. A tool names its tool type, whose model it is
+     * drawn with unless it names its own mesh, and the highest break tier it
+     * can break. A stackable item holds up to its stack size in one item,
+     * which a container cannot. Bootstrap-only.
      */
 
     // Internal
     private MeshManager meshManager;
     private MaterialManager materialManager;
     private SubVoxelManager subVoxelManager;
+    private ToolTypeManager toolTypeManager;
 
     // Directory
     private File meshRoot;
@@ -70,6 +75,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
         this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
+        this.toolTypeManager = get(ToolTypeManager.class);
     }
 
     // Build \\
@@ -114,7 +120,11 @@ class ItemDefinitionBuilder extends BuilderPackage {
         EquipmentType equipmentType = ArpgUtility.getEnum(itemArpg, "equip", EquipmentType.class, EquipmentType.NONE);
         float[] stats = parseStats(itemArpg);
 
-        String meshPath = ArpgUtility.validateString(itemArpg, "mesh");
+        short toolTypeID = parseToolType(itemArpg);
+        int toolTier = parseToolTier(itemArpg, toolTypeID, itemName);
+        int stackSize = parseStackSize(itemArpg, itemName);
+
+        String meshPath = resolveMeshPath(itemArpg, toolTypeID, itemName);
         int meshID = meshManager.getMeshIDFromMeshName(meshPath);
         MeshHandle meshHandle = meshManager.getMeshHandleFromMeshID(meshID);
         SubVoxelModelStruct model = parseModel(meshPath, itemName);
@@ -125,6 +135,9 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
         if (equipmentType == EquipmentType.BACKPACK && containerSpace == null)
             throwException("Item '" + itemName + "' is worn as a backpack but declares no container.");
+
+        if (stackSize > 1 && containerSpace != null)
+            throwException("Item '" + itemName + "' is a container and cannot stack — each one keeps its own contents.");
 
         String materialPath = ArpgUtility.getString(
                 itemArpg, "material", EngineSetting.DEFAULT_ITEM_MATERIAL);
@@ -147,7 +160,11 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 meshHandle,
                 openMeshData,
                 pocketMeshData,
-                materialID);
+                materialID,
+                toolTypeID,
+                toolTier,
+                stackSize,
+                EngineSetting.BLOCK_PIECE_NONE);
 
         ItemDefinitionHandle item = create(ItemDefinitionHandle.class);
         item.constructor(itemDefinitionData);
@@ -168,6 +185,65 @@ class ItemDefinitionBuilder extends BuilderPackage {
             stats[ArpgUtility.toEnum(statName, ItemStat.class).ordinal()] = statsArpg.get(statName).getAsFloat();
 
         return stats;
+    }
+
+    // Tool \\
+
+    private short parseToolType(ArpgObjectStruct itemArpg) {
+
+        String toolTypeName = ArpgUtility.getString(itemArpg, "tool", EngineSetting.ITEM_TOOL_NONE);
+
+        if (toolTypeName.isEmpty())
+            return EngineSetting.TOOL_NONE;
+
+        return toolTypeManager.getToolTypeIDFromToolTypeName(toolTypeName);
+    }
+
+    private int parseToolTier(ArpgObjectStruct itemArpg, short toolTypeID, String itemName) {
+
+        if (toolTypeID == EngineSetting.TOOL_NONE)
+            return EngineSetting.DEFAULT_TOOL_TIER;
+
+        int toolTier = ArpgUtility.getInt(itemArpg, "tool_tier", EngineSetting.DEFAULT_TOOL_TIER);
+
+        if (toolTier < 0)
+            throwException("Item '" + itemName + "' declares a negative \"tool_tier\".");
+
+        return toolTier;
+    }
+
+    // Stacking \\
+
+    private int parseStackSize(ArpgObjectStruct itemArpg, String itemName) {
+
+        int stackSize = ArpgUtility.getInt(itemArpg, "stack", EngineSetting.DEFAULT_ITEM_STACK_SIZE);
+
+        if (stackSize < 1 || stackSize > EngineSetting.MAX_ITEM_STACK_SIZE)
+            throwException("Item '" + itemName + "' declares a \"stack\" outside 1 to "
+                    + EngineSetting.MAX_ITEM_STACK_SIZE + ".");
+
+        return stackSize;
+    }
+
+    // Model \\
+
+    // A tool without a mesh of its own is drawn with its tool type's model
+    private String resolveMeshPath(ArpgObjectStruct itemArpg, short toolTypeID, String itemName) {
+
+        String meshPath = ArpgUtility.getString(itemArpg, "mesh", EngineSetting.ITEM_MESH_NONE);
+
+        if (!meshPath.isEmpty())
+            return meshPath;
+
+        if (toolTypeID == EngineSetting.TOOL_NONE)
+            return throwException("Item '" + itemName + "' names no \"mesh\".");
+
+        String modelPath = toolTypeManager.getToolTypeHandleFromToolTypeID(toolTypeID).getDefaultModelPath();
+
+        if (modelPath.isEmpty())
+            return throwException("Item '" + itemName + "' names no \"mesh\", and its tool type has no \"model\".");
+
+        return modelPath;
     }
 
     private SubVoxelModelStruct parseModel(String meshPath, String itemName) {

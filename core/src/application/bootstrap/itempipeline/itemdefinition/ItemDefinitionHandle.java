@@ -112,4 +112,32 @@ public class ItemDefinitionHandle extends HandlePackage {
     public int getMaterialID() {
         return itemDefinitionData.getMaterialID();
     }
+
+    public short getToolTypeID() {
+        return itemDefinitionData.getToolTypeID();
+    }
+
+    public boolean isTool() {
+        return itemDefinitionData.isTool();
+    }
+
+    public int getToolTier() {
+        return itemDefinitionData.getToolTier();
+    }
+
+    public int getStackSize() {
+        return itemDefinitionData.getStackSize();
+    }
+
+    public boolean isStackable() {
+        return itemDefinitionData.isStackable();
+    }
+
+    public short getBlockID() {
+        return itemDefinitionData.getBlockID();
+    }
+
+    public boolean isBlockPiece() {
+        return itemDefinitionData.isBlockPiece();
+    }
 }

@@ -328,12 +328,22 @@ public class InventoryContainerBranch extends BranchPackage {
                 element -> {
                     element.setOnDragArgOverride(argument);
                     element.findChildById(RuntimeSetting.ELEMENT_INVENTORY_ROW_NAME)
-                            .setFontText(item.getDisplayName());
+                            .setFontText(toRowName(itemInstance));
                     element.findChildById(RuntimeSetting.ELEMENT_INVENTORY_ROW_WEIGHT).setFontText(
                             String.format(RuntimeSetting.INVENTORY_FORMAT_WEIGHT, itemInstance.getTotalWeight()));
                 });
 
         view.addRow(itemInstance, row);
+    }
+
+    private String toRowName(ItemInstance itemInstance) {
+
+        String displayName = itemInstance.getItemDefinitionHandle().getDisplayName();
+
+        if (itemInstance.getStackCount() == 1)
+            return displayName;
+
+        return String.format(RuntimeSetting.INVENTORY_FORMAT_STACK_NAME, displayName, itemInstance.getStackCount());
     }
 
     // Toggle \\

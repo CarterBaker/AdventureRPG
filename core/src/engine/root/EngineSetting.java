@@ -91,6 +91,10 @@ public class EngineSetting {
     public static final int AXIS_X = 0;
     public static final int AXIS_Y = 1;
     public static final int AXIS_Z = 2;
+    public static final int BOX_CORNER_BIT_X = 1;
+    public static final int BOX_CORNER_BIT_Y = 2;
+    public static final int BOX_CORNER_BIT_Z = 4;
+    public static final int BOX_CORNER_COUNT = 8;
     public static final float COLOR_CHANNEL_BYTE_MAX = 255f;
     public static final int COLOR_CHANNEL_COUNT = 4;
     public static final float COLOR_CHANNEL_MAX = 1.0f;
@@ -1001,6 +1005,53 @@ public class EngineSetting {
     public static final float DEFAULT_ANIMATION_NODE_DELAY = 0f;
     public static final float DEFAULT_ANIMATION_NODE_RATE = 1f;
 
+    // Combat
+    public static final float AIM_RAISE_SECONDS = 0.3f;
+    public static final float ARMOR_MITIGATION_SCALE = 50f;
+    public static final float BLOCK_ARC_COSINE = 0.5f;
+    public static final float BLOCK_MITIGATION_BASE = 0.3f;
+    public static final float BLOCK_MITIGATION_MAX = 0.9f;
+    public static final float BLOCK_MITIGATION_PER_ARMOR = 0.05f;
+    public static final float BLOCK_MITIGATION_PER_WEIGHT = 0.06f;
+    public static final float BLOCK_RAISE_SECONDS = 0.2f;
+    public static final float GESTURE_IMPACT = 0.5f;
+    public static final float KNOCKBACK_SPEED = 4f;
+    public static final float PICK_UP_GESTURE_SECONDS = 0.4f;
+    public static final float PLACE_GESTURE_SECONDS = 0.3f;
+    public static final float SWING_BASE_SECONDS = 0.4f;
+    public static final float SWING_DAMAGE_PER_WEIGHT = 1.5f;
+    public static final float SWING_IMPACT = 0.45f;
+    public static final float SWING_MAX_SECONDS = 1f;
+    public static final float SWING_SECONDS_PER_WEIGHT = 0.06f;
+
+    // Throwing
+    public static final float THROW_ARM_MASS = 1.5f;
+    public static final float THROW_IMPULSE = 36f;
+    public static final float THROW_RELEASE = 0.3f;
+    public static final float THROW_RELEASE_DISTANCE = 0.6f;
+    public static final float THROW_RELEASE_MARGIN = 0.05f;
+    public static final float THROW_SECONDS = 0.35f;
+    public static final float THROW_SPIN_RATE = 18f;
+    public static final float THROW_STRENGTH_MIN_FACTOR = 0.5f;
+    public static final float THROW_STRENGTH_SCALE = 0.05f;
+    public static final float THROWN_DAMAGE_MIN = 1f;
+    public static final float THROWN_DAMAGE_PER_MOMENTUM = 0.35f;
+
+    // Projectiles
+    public static final float PROJECTILE_AIR_DRAG = 0.05f;
+    public static final float PROJECTILE_BOUNCE_FRICTION = 0.6f;
+    public static final float PROJECTILE_BOUNCE_RESTITUTION = 0.25f;
+    public static final float PROJECTILE_BOUNCE_SPIN_DAMPING = 0.5f;
+    public static final float PROJECTILE_LAND_SPEED = 2.5f;
+    public static final float PROJECTILE_LIQUID_DRAG = 3f;
+    public static final float PROJECTILE_MAX_FLIGHT_SECONDS = 20f;
+    public static final int PROJECTILE_PIECE_CLIMB_LIMIT = 8;
+    public static final int PROJECTILE_PIECE_RING_LIMIT = 2;
+    public static final int PROJECTILE_RENDER_CHUNK_RADIUS = 2;
+    public static final float PROJECTILE_SNAP_EPSILON = 0.001f;
+    public static final float PROJECTILE_STRIKE_REBOUND = 0.2f;
+    public static final float PROJECTILE_SURFACE_OFFSET = 0.001f;
+
     // Appearance
     public static final float DEFAULT_BUILD_FACTOR = 1f;
     public static final float DEFAULT_WEIGHT_RATIO = 0.5f;
@@ -1015,7 +1066,24 @@ public class EngineSetting {
     public static final int ITEM_PLACEMENT_PUSH_LIMIT = SUB_VOXEL_RESOLUTION;
     public static final float ITEM_RAY_EPSILON = 1e-4f;
     public static final int ITEM_ROTATION_COUNT = 4;
+    public static final int DEFAULT_ITEM_STACK_SIZE = 1;
+    public static final String ITEM_MESH_NONE = "";
+    public static final String ITEM_TOOL_NONE = "";
+    public static final int MAX_ITEM_STACK_SIZE = 512;
+
+    // Tools
+    public static final int DEFAULT_TOOL_TIER = 0;
     public static final short TOOL_NONE = 0;
+
+    // Block Pieces
+    public static final String BLOCK_ITEM_TEXTURE_NONE = "";
+    public static final String BLOCK_PIECE_DESCRIPTION = "A piece of a block, ready to build with.";
+    public static final String BLOCK_PIECE_NAME_PREFIX = "block:";
+    public static final short BLOCK_PIECE_NONE = -1;
+    public static final String BLOCK_PIECE_PART_NAME = "Piece";
+    public static final int BLOCK_PIECE_SIZE = 2;
+    public static final int BLOCK_PIECE_STACK_SIZE = MAX_ITEM_STACK_SIZE;
+    public static final float BLOCK_PIECE_WEIGHT = 0.1f;
 
     // Item Categories
     public static final String ITEM_CATEGORY_TITLE_ARMOR = "Armor";
@@ -1025,6 +1093,7 @@ public class EngineSetting {
     public static final String ITEM_CATEGORY_TITLE_JEWELRY = "Jewelry";
     public static final String ITEM_CATEGORY_TITLE_MATERIAL = "Materials";
     public static final String ITEM_CATEGORY_TITLE_MISC = "Miscellaneous";
+    public static final String ITEM_CATEGORY_TITLE_TOOL = "Tools";
     public static final String ITEM_CATEGORY_TITLE_WEAPON = "Weapons";
 
     // Item Stats

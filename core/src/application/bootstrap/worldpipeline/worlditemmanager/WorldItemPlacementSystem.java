@@ -20,7 +20,6 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Coordinate4Long;
-import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -30,8 +29,8 @@ public class WorldItemPlacementSystem extends SystemPackage {
      * Single entry point for placing and removing world items and opening
      * them where they stand. Chunk loads stage item palettes off the main
      * thread and commit them as they are pushed to WorldItemRenderSystem on
-     * it; runtime placement resolves a free spot through WorldItemSpaceSystem
-     * before it updates the subchunk, chunk palette and renderer together.
+     * it; runtime placement stands an item on a spot WorldItemSpaceSystem
+     * resolved, updating the subchunk, chunk palette and renderer together.
      * resolveItemInstance() keeps an item's real contents on its subchunk
      * struct. composeTransform() is the one CPU-side placement of a world
      * item — its block-space model matrix relative to a chunk, turned exactly
@@ -46,17 +45,7 @@ public class WorldItemPlacementSystem extends SystemPackage {
     private WorldItemSpaceSystem worldItemSpaceSystem;
     private WorldStreamManager worldStreamManager;
 
-    // Scratch
-    private WorldItemPlacementStruct placementStruct;
-
     // Internal \\
-
-    @Override
-    protected void create() {
-
-        // Scratch
-        this.placementStruct = new WorldItemPlacementStruct();
-    }
 
     @Override
     protected void get() {
@@ -101,24 +90,10 @@ public class WorldItemPlacementSystem extends SystemPackage {
 
     // Runtime Placement \\
 
-    // Sets the item against a face from the anchor cell outside it, in the frame chunk's sub-voxels —
-    // null when no spot within reach of the face is free, leaving the world untouched
-    public WorldItemInstance placeItem(
-            WorldHandle worldHandle,
-            long frameChunk,
-            int anchorX,
-            int anchorY,
-            int anchorZ,
-            Direction3Vector face,
-            int orientation,
-            ItemInstance itemInstance) {
+    // Stands the item on a spot WorldItemSpaceSystem resolved for its definition — the one way an item enters the world
+    public WorldItemInstance placeItem(WorldItemPlacementStruct placementStruct, ItemInstance itemInstance) {
 
         ItemDefinitionHandle def = itemInstance.getItemDefinitionHandle();
-
-        if (!worldItemSpaceSystem.resolvePlacement(
-                worldHandle, frameChunk, def, orientation, anchorX, anchorY, anchorZ, face, placementStruct))
-            return null;
-
         long chunkCoordinate = placementStruct.getChunkCoordinate();
         long packedPosition = placementStruct.getPackedPosition();
         ChunkInstance chunk = worldStreamManager.getChunkInstance(chunkCoordinate);

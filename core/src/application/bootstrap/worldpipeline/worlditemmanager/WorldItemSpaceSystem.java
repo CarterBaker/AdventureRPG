@@ -31,18 +31,19 @@ public class WorldItemSpaceSystem extends SystemPackage {
      * The one place world item space is queried. A placed item claims the
      * sub-voxel cells of its shape, turned by its orientation inside the
      * one-block model grid cornered at its packed position, and carries the
-     * rough box around them; an open container also claims its lid's
-     * clearance. fits() decides whether a shape may stand somewhere — inside
-     * the world, clear of solid blocks and sub-blocks and of every claimed
-     * cell — and resolvePlacement() sets a shape flush on a face and pushes it
-     * out until it fits. isRegionClaimed() keeps blocks out of items,
-     * isLidClear() decides whether a container may open, collectSolidBoxes()
-     * hands movement the rough boxes near an entity, cast() finds the first
-     * claimed cell a ray meets, and findColumnTop() tells precipitation where
-     * the highest item over a block column ends. Queries read committed live
-     * palettes on the main thread only, visit each candidate once by stamp,
-     * and allocate nothing; resolveBounds() alone also runs on the streaming
-     * thread and touches no shared state.
+     * rough box around them; an open container also claims its lid's clearance.
+     * fits() decides whether a shape may stand somewhere — inside the world,
+     * clear of solid blocks and sub-blocks and of every claimed cell — and
+     * resolvePlacement() sets a shape flush on a face and pushes it out until
+     * it fits, as resolveCornerPlacement() does from a given corner.
+     * isRegionClaimed() keeps blocks out of items, isLidClear() decides whether
+     * a container may open, collectSolidBoxes() hands movement the rough boxes
+     * near an entity, cast() finds the first claimed cell a ray meets, and
+     * findColumnTop() tells precipitation where the highest item over a block
+     * column ends. Queries read committed live palettes on the main thread
+     * only, visit each candidate once by stamp, and allocate nothing;
+     * resolveBounds() alone also runs on the streaming thread and touches no
+     * shared state.
      */
 
     // Internal
@@ -304,15 +305,35 @@ public class WorldItemSpaceSystem extends SystemPackage {
                 cornerScratch[axis] = anchorScratch[axis] - (low + high) / 2;
         }
 
-        int baseX = cornerScratch[axisX];
-        int baseY = cornerScratch[axisY];
-        int baseZ = cornerScratch[axisZ];
+        return resolveCornerPlacement(
+                world,
+                frameChunk,
+                itemDefinitionHandle,
+                orientation,
+                cornerScratch[axisX],
+                cornerScratch[axisY],
+                cornerScratch[axisZ],
+                face,
+                out);
+    }
 
-        for (int push = 0; push <= placementPushLimit; push++) {
+    // The model grid cornered here, pushed out along a direction until the shape fits
+    public boolean resolveCornerPlacement(
+            WorldHandle world,
+            long frameChunk,
+            ItemDefinitionHandle itemDefinitionHandle,
+            int orientation,
+            int baseX,
+            int baseY,
+            int baseZ,
+            Direction3Vector push,
+            WorldItemPlacementStruct out) {
 
-            int cornerX = baseX + face.x * push;
-            int cornerY = baseY + face.y * push;
-            int cornerZ = baseZ + face.z * push;
+        for (int step = 0; step <= placementPushLimit; step++) {
+
+            int cornerX = baseX + push.x * step;
+            int cornerY = baseY + push.y * step;
+            int cornerZ = baseZ + push.z * step;
 
             if (!fits(world, frameChunk, itemDefinitionHandle, orientation, cornerX, cornerY, cornerZ))
                 continue;

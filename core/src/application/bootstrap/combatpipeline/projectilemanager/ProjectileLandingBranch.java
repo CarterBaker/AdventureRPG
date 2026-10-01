@@ -11,13 +11,15 @@ import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worlditem.WorldItemPlacementStruct;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
-import engine.util.mathematics.extras.Coordinate4Long;
+import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -30,7 +32,8 @@ class ProjectileLandingBranch extends BranchPackage {
      * climbing a layer at a time — so it only ever exists as a sub-block in
      * the world. Any other item becomes a world item turned to the orientation
      * nearest its tumble, its shape centred where it came to rest and its
-     * lowest point set on the ground. settle() is false while there is
+     * lowest point set on the ground, raised onto whatever items already lie
+     * there so it never sinks into a pile. settle() is false while there is
      * nowhere to put it yet.
      */
 
@@ -38,17 +41,18 @@ class ProjectileLandingBranch extends BranchPackage {
     private WorldStreamManager worldStreamManager;
     private BlockPlacementSystem blockPlacementSystem;
     private WorldItemPlacementSystem worldItemPlacementSystem;
+    private WorldItemSpaceSystem worldItemSpaceSystem;
     private ItemRotationBufferSystem itemRotationBufferSystem;
 
     // Settings
     private int chunkSize;
     private int subVoxelResolution;
-    private int subVoxelsPerChunk;
     private int worldTopCell;
 
     // Scratch
     private Matrix4 rotationScratch;
     private Vector3 cornerScratch;
+    private WorldItemPlacementStruct placementStruct;
 
     // Internal \\
 
@@ -58,12 +62,12 @@ class ProjectileLandingBranch extends BranchPackage {
         // Settings
         this.chunkSize = EngineSetting.CHUNK_SIZE;
         this.subVoxelResolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        this.subVoxelsPerChunk = subVoxelResolution * chunkSize;
         this.worldTopCell = EngineSetting.WORLD_HEIGHT * chunkSize;
 
         // Scratch
         this.rotationScratch = new Matrix4();
         this.cornerScratch = new Vector3();
+        this.placementStruct = new WorldItemPlacementStruct();
     }
 
     @Override
@@ -73,6 +77,7 @@ class ProjectileLandingBranch extends BranchPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockPlacementSystem = get(BlockPlacementSystem.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
+        this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
     }
 
@@ -176,28 +181,21 @@ class ProjectileLandingBranch extends BranchPackage {
         int subY = (int) Math.ceil((projectile.getGroundY() - resolveLowestPoint(rotation, shape))
                 * subVoxelResolution - EngineSetting.PROJECTILE_SNAP_EPSILON);
 
-        if (subY < 0 || subY / subVoxelResolution >= worldTopCell)
-            return false;
-
-        ChunkInstance chunk = resolveChunk(
-                projectile,
-                Math.floorDiv(subX, subVoxelsPerChunk),
-                Math.floorDiv(subZ, subVoxelsPerChunk));
-
-        if (chunk == null)
-            return false;
-
-        long packedPosition = Coordinate4Long.pack(
-                Math.floorMod(subX, subVoxelsPerChunk),
+        boolean resolved = worldItemSpaceSystem.resolveCornerPlacement(
+                projectile.getWorldHandle(),
+                projectile.getWorldPositionStruct().getChunkCoordinate(),
+                itemInstance.getItemDefinitionHandle(),
+                orientation,
+                subX,
                 subY,
-                Math.floorMod(subZ, subVoxelsPerChunk),
-                orientation);
+                subZ,
+                Direction3Vector.UP,
+                placementStruct);
 
-        worldItemPlacementSystem.placeItem(
-                chunk,
-                subY / subVoxelResolution / chunkSize,
-                packedPosition,
-                itemInstance);
+        if (!resolved)
+            return false;
+
+        worldItemPlacementSystem.placeItem(placementStruct, itemInstance);
 
         return true;
     }

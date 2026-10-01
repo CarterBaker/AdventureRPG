@@ -63,6 +63,7 @@ class BlockPieceBranch extends BranchPackage {
                 ItemCategory.MATERIAL,
                 EngineSetting.BLOCK_PIECE_WEIGHT,
                 false,
+                true,
                 EquipmentType.NONE,
                 new float[ItemStat.VALUES.length],
                 new ItemShapeStruct(model),

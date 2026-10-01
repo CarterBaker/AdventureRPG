@@ -9,7 +9,9 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.worlditem.WorldItemCastStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
+import application.bootstrap.worldpipeline.worlditem.WorldItemPlacementStruct;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -21,20 +23,24 @@ class ItemBranch extends BranchPackage {
     /*
      * World item placement and pickup for PlacementManager. Placement sets the
      * main-hand item against the face the ray met — a block's, a sub-block's
-     * or another item's, containers included — oriented by the camera, and
-     * leaves it in hand when no spot by that face is free; pickup hands the
-     * world item's real item, contents included, to the entity and removes it
-     * from the world only once it fits.
+     * or another item's, containers included — oriented by the camera, one at
+     * a time from a stack, and leaves it in hand when no spot by that face is
+     * free; pickup hands the world item's real item, contents included, to the
+     * entity and removes it from the world only once it fits.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
+    private WorldItemSpaceSystem worldItemSpaceSystem;
 
     // Settings
     private int chunkSize;
     private int subVoxelResolution;
     private int subVoxelsPerSubBlock;
+
+    // Scratch
+    private WorldItemPlacementStruct placementStruct;
 
     // Internal \\
 
@@ -45,6 +51,9 @@ class ItemBranch extends BranchPackage {
         this.chunkSize = EngineSetting.CHUNK_SIZE;
         this.subVoxelResolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         this.subVoxelsPerSubBlock = subVoxelResolution / SubBlockUtility.DIVISIONS;
+
+        // Scratch
+        this.placementStruct = new WorldItemPlacementStruct();
     }
 
     @Override
@@ -53,6 +62,7 @@ class ItemBranch extends BranchPackage {
         // Internal
         this.worldStreamManager = get(WorldStreamManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
+        this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
     }
 
     // Place \\
@@ -87,7 +97,7 @@ class ItemBranch extends BranchPackage {
                 itemCastStruct.getHitFace());
     }
 
-    // The main-hand item leaves the hand only once the world has taken it
+    // One item leaves the main hand only once the world has a spot for it
     private boolean placeAgainst(
             EntityInstance entity,
             Vector3 direction,
@@ -102,20 +112,21 @@ class ItemBranch extends BranchPackage {
         if (!inventoryHandle.hasMainHand())
             return false;
 
-        WorldItemInstance placed = worldItemPlacementSystem.placeItem(
+        boolean resolved = worldItemSpaceSystem.resolvePlacement(
                 entity.getWorldHandle(),
                 frameChunk,
+                inventoryHandle.getMainHand().getItemDefinitionHandle(),
+                resolveItemOrientation(hitFace, direction),
                 anchorX,
                 anchorY,
                 anchorZ,
                 hitFace,
-                resolveItemOrientation(hitFace, direction),
-                inventoryHandle.getMainHand());
+                placementStruct);
 
-        if (placed == null)
+        if (!resolved)
             return false;
 
-        inventoryHandle.unequip(EquipmentSlot.MAIN_HAND);
+        worldItemPlacementSystem.placeItem(placementStruct, inventoryHandle.takeOne(EquipmentSlot.MAIN_HAND));
 
         return true;
     }
