@@ -11,12 +11,16 @@ class WeatherFlowSystem extends SystemPackage {
 
     /*
      * Scrolls the static weather image across the world. The offset is a
-     * closed-form function of the world's shared epoch time, so every player
-     * and every window reads the same weather at the same moment, and it
-     * advances smoothly every frame. Prevailing speed is a real-world kph
-     * figure converted through the world's own scale (WeatherScaleUtility)
-     * and its rotation, and a two-wave cross-stream meander swings the
-     * heading so storms do not always arrive from the same bearing.
+     * closed-form function of the world's shared time in game seconds, so the
+     * prevailing kph runs on the same clock as the sun and every player reads
+     * the same weather at the same moment. The shared clock only moves when
+     * the system clock ticks, so the flow keeps its own clock, advanced every
+     * frame by the frame's delta in game seconds and steered gently onto the
+     * shared one; a world switch or a stall past the resync limit snaps it
+     * straight back. Prevailing speed is a real-world kph figure converted
+     * through the world's own scale (WeatherScaleUtility) and its rotation,
+     * and a two-wave cross-stream meander swings the heading so storms do not
+     * always arrive from the same bearing.
      */
 
     // Internal
@@ -24,6 +28,7 @@ class WeatherFlowSystem extends SystemPackage {
     private ClockManager clockManager;
 
     // Flow
+    private boolean flowSynced;
     private double flowSeconds;
     private double offsetXBlocks;
     private double offsetZBlocks;
@@ -48,7 +53,7 @@ class WeatherFlowSystem extends SystemPackage {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
 
-        this.flowSeconds = clockManager.getClockHandle().getWorldSecondsElapsed();
+        advanceFlowSeconds();
 
         double prevailingSpeed = resolvePrevailingSpeedBlocksPerSecond(activeWorld);
         double lateralSpeed = Math.abs(prevailingSpeed)
@@ -56,6 +61,27 @@ class WeatherFlowSystem extends SystemPackage {
 
         this.offsetXBlocks = prevailingSpeed * flowSeconds;
         this.offsetZBlocks = lateralSpeed * resolveMeanderDisplacementSeconds();
+    }
+
+    // Flow Clock \\
+
+    private void advanceFlowSeconds() {
+
+        double sharedSeconds = clockManager.getClockHandle().getGameSecondsElapsed();
+        double timeScale = clockManager.getCalendarHandle().getDaysPerDay();
+        double deltaSeconds = internal.getDeltaTime();
+
+        this.flowSeconds += deltaSeconds * timeScale;
+
+        double drift = sharedSeconds - flowSeconds;
+
+        if (!flowSynced || Math.abs(drift) > EngineSetting.WEATHER_FLOW_RESYNC_SECONDS * timeScale) {
+            this.flowSeconds = sharedSeconds;
+            this.flowSynced = true;
+            return;
+        }
+
+        this.flowSeconds += drift * Math.min(1.0, deltaSeconds * EngineSetting.WEATHER_FLOW_SYNC_RATE);
     }
 
     // Speed \\

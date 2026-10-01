@@ -492,4 +492,29 @@ vec2 periodicFbmBillow3D(vec3 p, vec2 periodXZ, int octaves, uint seed) {
         clamp(billowSum / max(norm, 0.0001), 0.0, 1.0));
 }
 
+// Union of jittered spheres, one per lattice cell, read as a height: 1 on a
+// sphere's crown, falling round toward 0 at its rim, with a sharp crease
+// wherever two spheres meet — the scalloped, cauliflower edge of a painted
+// cumulus. Periodic like the gradient fields above.
+const float SPHERE_BUMP_JITTER = 0.6;
+const float SPHERE_BUMP_RADIUS = 0.72;
+
+float periodicSphereBumps2D(vec2 p, vec2 period, uint seed) {
+    vec2  cell  = floor(p);
+    vec2  f     = p - cell;
+    float crown = 0.0;
+
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 offset = vec2(float(x), float(y));
+            vec2 jitter = periodicGradient2D(mod(cell + offset, period), seed) * 0.5 * SPHERE_BUMP_JITTER;
+            vec2 toward = offset + 0.5 + jitter - f;
+
+            crown = max(crown, 1.0 - dot(toward, toward) / (SPHERE_BUMP_RADIUS * SPHERE_BUMP_RADIUS));
+        }
+    }
+
+    return sqrt(clamp(crown, 0.0, 1.0));
+}
+
 #endif

@@ -28,7 +28,7 @@
 //                      blocks, z = density, w = fullness (0 = sheet, 1 = puffy)
 // weatherLayerNoise:   x = shape lattice cells across the shape period on X
 //                      (elongated along the flow), y = the same on Z,
-//                      z = detail lattice multiplier, w = domain warp strength
+//                      z = bump lattice multiplier, w = domain warp strength
 // weatherLayerSurface: xy = shape noise origin in blocks, already carried by
 //                      the flow and wrapped into the shape period,
 //                      z = coverage bias, w = silhouette softness

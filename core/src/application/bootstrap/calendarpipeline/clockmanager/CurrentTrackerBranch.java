@@ -12,10 +12,12 @@ class CurrentTrackerBranch extends BranchPackage {
      * The world's epoch is the real instant its calendar's start date and
      * start time were reached, so the start time is folded into the elapsed
      * value once and totalDaysElapsed, dayProgress, hour, and minute all fall
-     * out of that single number. The date rolls over at exactly the instant
-     * dayProgress wraps to midnight, and any gap since the last session
-     * resolves in one step. computeVisualTimeOfDay() then localizes the
-     * shared solar time per grid, bending it by season and latitude.
+     * out of that single number, alongside the elapsed real seconds and the
+     * same span in game seconds, which run daysPerDay times faster. The date
+     * rolls over at exactly the instant dayProgress wraps to midnight, and
+     * any gap since the last session resolves in one step.
+     * computeVisualTimeOfDay() then localizes the shared solar time per grid,
+     * bending it by season and latitude.
      */
 
     // Internal
@@ -104,6 +106,8 @@ class CurrentTrackerBranch extends BranchPackage {
         int minuteOfDay = calculateMinuteOfDay(dayProgress);
 
         clockHandle.setWorldSecondsElapsed(elapsedSinceEpoch / EngineSetting.MILLIS_PER_SECOND);
+        clockHandle.setGameSecondsElapsed(
+                elapsedSinceEpoch * (double) calendarHandle.getDaysPerDay() / EngineSetting.MILLIS_PER_SECOND);
         clockHandle.setTotalDaysElapsed(totalDaysElapsed);
         clockHandle.setDayProgress(dayProgress);
         clockHandle.setRawTimeOfDay(calculateRawTimeOfDay(dayProgress));

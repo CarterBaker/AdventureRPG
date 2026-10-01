@@ -19,6 +19,7 @@ public class ClockData extends DataPackage {
 
     // Time State
     private double worldSecondsElapsed;
+    private double gameSecondsElapsed;
     private long totalDaysElapsed;
     private long totalDaysWithOffset;
     private double dayProgress;
@@ -73,6 +74,14 @@ public class ClockData extends DataPackage {
 
     public void setWorldSecondsElapsed(double worldSecondsElapsed) {
         this.worldSecondsElapsed = worldSecondsElapsed;
+    }
+
+    public double getGameSecondsElapsed() {
+        return gameSecondsElapsed;
+    }
+
+    public void setGameSecondsElapsed(double gameSecondsElapsed) {
+        this.gameSecondsElapsed = gameSecondsElapsed;
     }
 
     public long getTotalDaysElapsed() {

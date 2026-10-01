@@ -18,7 +18,9 @@ public class LightingSystem extends SystemPackage {
      * Deferred lighting pass. Reads the G-buffer and SSAO result, integrates
      * clouds between camera and fragment against the grid's weather map, and
      * writes LitScene. Binds this window's grid UBOs — sun, moon, sky color and
-     * weather map — onto the pass each frame.
+     * weather map — onto the pass each frame. The world and SSAO targets are
+     * queued ahead of this pass, so the lit world is always drawn with this
+     * frame's camera, the same one the sky and clouds are drawn with.
      */
 
     // Internal
@@ -66,6 +68,8 @@ public class LightingSystem extends SystemPackage {
 
         bindGridLightingData();
 
+        renderManager.ensureFboRendered(worldSystem.getWorldFbo(), context.getWindow());
+        renderManager.ensureFboRendered(ssaoSystem.getSsaoFbo(), context.getWindow());
         renderManager.pushRenderCall(
                 lightingPass.getModelInstance(),
                 litFbo,

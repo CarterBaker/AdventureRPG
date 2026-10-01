@@ -814,11 +814,13 @@ public class EngineSetting {
     public static final int WEATHER_CELL_RESOLVES_PER_FRAME = 32;
     public static final int WEATHER_CELL_SIZE_PIXELS = 2;
     public static final double WEATHER_FLOW_MEANDER_ANGLE_DEGREES = 18.0;
-    public static final double WEATHER_FLOW_MEANDER_PERIOD_SECONDS = 5400.0;
-    public static final double WEATHER_FLOW_MEANDER_SECONDARY_PERIOD_SECONDS = 1980.0;
+    public static final double WEATHER_FLOW_MEANDER_PERIOD_SECONDS = 108000.0;
+    public static final double WEATHER_FLOW_MEANDER_SECONDARY_PERIOD_SECONDS = 39600.0;
     public static final double WEATHER_FLOW_MEANDER_SECONDARY_PHASE = 1.7;
     public static final double WEATHER_FLOW_MEANDER_SECONDARY_WEIGHT = 0.35;
+    public static final double WEATHER_FLOW_RESYNC_SECONDS = 1.0;
     public static final double WEATHER_FLOW_SPEED_KPH = 40.0;
+    public static final double WEATHER_FLOW_SYNC_RATE = 2.0;
     public static final long WEATHER_HASH_SALT_PRIMARY = 0x2545F4914F6CDD1DL;
     public static final long WEATHER_HASH_SALT_SECONDARY = 0x9E3779B97F4A7C15L;
     public static final long WEATHER_LOCAL_KEY_SEED = Long.MIN_VALUE;

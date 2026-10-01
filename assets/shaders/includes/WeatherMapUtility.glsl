@@ -6,51 +6,54 @@
 
 /*
  * Shared reads of a grid's weather window and its cloud layers, so the sky
- * pass and terrain cloud shadows see exactly the same clouds. The window is
- * sampled bilinearly between cell centres, which is what lets the scrolling
- * weather image glide smoothly instead of stepping cell by cell. A layer's
- * density is its archetype's periodic shape field, cut by the local
- * coverage, shaped by a vertical envelope, and eroded toward the crown in
- * proportion to fullness, so puffy archetypes grow rounded domes while
- * sheets stay flat slabs. Thin sheet archetypes read a 2D field, which is
- * all a slab seen from below or edge-on needs. Puffy archetypes read a
- * true volume — the same noise running through height at the same scale as
- * across the ground — so seen from the side they have rounded, billowing
- * flanks instead of the vertical curtains an extruded 2D field shows, and,
- * being isotropic, the volume never slices a cloud into horizontal ledges.
- * Archetypes in between blend the two by fullness. A sample is rejected
- * before any noise is drawn wherever the answer is already known to be
- * zero: outside the vertical envelope, beyond the window's faded edge, and
- * wherever the cut threshold lies above the highest value the shape field
- * can reach.
+ * pass, the lighting pass and terrain cloud shadows see exactly the same
+ * clouds. The window is sampled bilinearly between cell centres, which is what
+ * lets the scrolling weather image glide smoothly instead of stepping cell by
+ * cell. A cloud layer is not a volume of density but a column of cloud raised
+ * over the ground plan of its shape field: the archetype's periodic field, cut
+ * by the local coverage, tells how deep into a cloud a point lies, and that
+ * depth lifts a column between a bottom and a top height. Puffy archetypes
+ * stand on a flat base under a low, round-shouldered dome, its profile a
+ * quarter circle over the cloud's depth; sheets are slabs centred in the layer. Round
+ * sphere bumps carve the column's crown and rim, so a cloud seen from the side
+ * or from above has the scalloped, cauliflower outline of a painted cumulus.
+ * Bumps only ever carve, so a column read without them always contains the
+ * bumped one — a march can step on the cheap column and pay for bumps only
+ * where it touches cloud. A column's opacity comes from its own thickness, so
+ * rims and thin sheets stay translucent while cloud bodies read solid. A
+ * sample is rejected before any noise is drawn wherever the answer is already
+ * known to be empty: beyond the window's faded edge and wherever the weather
+ * holds no coverage.
  */
 
 const float WEATHER_MAP_EPSILON           = 0.001;
 const float WEATHER_MAP_EDGE_MARGIN_CELLS = 1.5;
 const float WEATHER_MAP_EDGE_FADE_CELLS   = 2.0;
 
-const float CLOUD_LAYER_WARP_AMPLITUDE     = 0.6;
-const float CLOUD_LAYER_FIELD_CONTRAST     = 2.2;
-const float CLOUD_LAYER_BILLOW_FLOOR       = 0.45;
-const float CLOUD_LAYER_LUMP_MIN           = 0.72;
-const float CLOUD_LAYER_LUMP_MAX           = 1.18;
-const float CLOUD_LAYER_DETAIL_STRENGTH    = 0.28;
-const float CLOUD_LAYER_VOLUME_FULLNESS_MIN = 0.35;
-const float CLOUD_LAYER_VOLUME_FULLNESS_MAX = 0.75;
-const float CLOUD_LAYER_COVERAGE_BIAS_BASE = 0.4;
-const float CLOUD_LAYER_CROWN_EROSION      = 0.85;
-const float CLOUD_LAYER_MIN_SOFTNESS       = 0.02;
-const float CLOUD_LAYER_SHEET_BASE_RAMP    = 0.30;
-const float CLOUD_LAYER_PUFFY_BASE_RAMP    = 0.05;
-const float CLOUD_LAYER_SHEET_TOP_START    = 0.35;
-const float CLOUD_LAYER_PUFFY_TOP_START    = 0.60;
-const float CLOUD_LAYER_SHAPE_DETAIL_MAX   = 1.0;
+const float CLOUD_LAYER_WARP_AMPLITUDE       = 0.6;
+const float CLOUD_LAYER_FIELD_CONTRAST       = 2.2;
+const float CLOUD_LAYER_BILLOW_MEAN          = 0.86;
+const float CLOUD_LAYER_BILLOW_SCALE         = 0.83;
+const float CLOUD_LAYER_BILLOW_SHARE         = 0.5;
+const float CLOUD_LAYER_COVERAGE_BIAS_BASE   = 0.4;
+const float CLOUD_LAYER_BASE_ROUNDING        = 0.12;
+const float CLOUD_LAYER_SHEET_CENTER         = 0.5;
+const float CLOUD_LAYER_BUMP_DEPTH           = 0.5;
+const float CLOUD_LAYER_BUMP_LATTICE_SCALE   = 0.7;
+const float CLOUD_LAYER_PUFFY_HEIGHT         = 0.55;
+const float CLOUD_LAYER_BUMP_RIM_SHARE       = 0.6;
+const float CLOUD_LAYER_SHEET_BUMP_SHARE     = 0.35;
+const float CLOUD_LAYER_BUMP_FINE_RATIO      = 2.0;
+const float CLOUD_LAYER_BUMP_FINE_WEIGHT     = 0.45;
+const float CLOUD_LAYER_EXTINCTION_PER_BLOCK = 0.08;
+const float CLOUD_LAYER_OPACITY_GAIN         = 2.5;
+const float CLOUD_LAYER_MIN_SOFTNESS         = 0.02;
 
-const uint CLOUD_LAYER_SEED_STRIDE = 7919u;
-const uint CLOUD_LAYER_WARP_SEED_X = 131u;
-const uint CLOUD_LAYER_WARP_SEED_Z = 257u;
-const uint CLOUD_LAYER_DETAIL_SEED = 521u;
-const uint CLOUD_LAYER_VOLUME_SEED = 877u;
+const uint CLOUD_LAYER_SEED_STRIDE    = 7919u;
+const uint CLOUD_LAYER_WARP_SEED_X    = 131u;
+const uint CLOUD_LAYER_WARP_SEED_Z    = 257u;
+const uint CLOUD_LAYER_BUMP_SEED      = 521u;
+const uint CLOUD_LAYER_BUMP_FINE_SEED = 877u;
 
 // ── Weather Window ─────────────────────────────────────────────────────────
 
@@ -111,91 +114,146 @@ float resolveWeatherMapEdgeFade(vec2 positionXZ) {
 
 // ── Cloud Layer Shape ──────────────────────────────────────────────────────
 
+// The cloud standing over one point of a layer: bottom and top as fractions
+// of the layer's height, the column's opacity, the share of light that
+// passes through its body, and how deep in a crease between bumps it stands.
+// An empty column has its bottom above its top and no opacity.
+struct CloudColumn {
+    float bottom;
+    float top;
+    float alpha;
+    float translucency;
+    float crease;
+};
+
+const CloudColumn CLOUD_COLUMN_EMPTY = CloudColumn(1.0, 0.0, 0.0, 1.0, 0.0);
+
 float resolveCloudLayerFeatureSize(int layer) {
     return u_weatherMapOrigin.w / max(u_weatherLayerNoise[layer].y, 1.0);
 }
 
-// heightBlocks is the sample's height above the layer's base.
-float sampleCloudLayerShape(int layer, vec2 positionXZ, float heightBlocks, int octaves, float detailFade) {
-    vec4  noiseParams = u_weatherLayerNoise[layer];
-    vec4  surface     = u_weatherLayerSurface[layer];
-    float fullness    = u_weatherLayerShape[layer].w;
+// Whole bump cells across the shape period, so the bumps tile with it.
+float resolveCloudLayerBumpLattice(int layer) {
+    vec4 noiseParams = u_weatherLayerNoise[layer];
+    return max(floor(max(noiseParams.y, 1.0) * max(noiseParams.z, 1.0) * CLOUD_LAYER_BUMP_LATTICE_SCALE + 0.5), 1.0);
+}
 
-    vec2  lattice = max(noiseParams.xy, vec2(1.0));
-    vec2  p       = (surface.xy + positionXZ) / u_weatherMapOrigin.w * lattice;
-    float rise    = heightBlocks * lattice.y / u_weatherMapOrigin.w;
-    uint  seed    = uint(layer) * CLOUD_LAYER_SEED_STRIDE;
+// Horizontal size of a layer's coarse bumps.
+float resolveCloudLayerBumpSize(int layer) {
+    return u_weatherMapOrigin.w / resolveCloudLayerBumpLattice(layer);
+}
+
+// How deep into a cloud a point lies, 0 at its rim to 1 at its core: the
+// archetype's warped shape field cut by the local coverage. Puffy archetypes
+// lean partly on the billow octaves turned over, which swell into rounded
+// lobes split by sharp creases, so a cloud keeps its broad body while its
+// outline takes a cumulus's cauliflower plan. The billow is
+// recentred onto the plain field's spread, so an authored coverage covers the
+// same share of sky whatever the fullness.
+float resolveCloudLayerBody(int layer, vec2 positionXZ, float coverage, int octaves) {
+    vec4 noiseParams = u_weatherLayerNoise[layer];
+    vec4 surface     = u_weatherLayerSurface[layer];
+    vec2 lattice     = max(noiseParams.xy, vec2(1.0));
+    vec2 p           = (surface.xy + positionXZ) / u_weatherMapOrigin.w * lattice;
+    uint seed        = uint(layer) * CLOUD_LAYER_SEED_STRIDE;
 
     vec2 warp = periodicGradientNoise2DPair(p, lattice, seed + CLOUD_LAYER_WARP_SEED_X, seed + CLOUD_LAYER_WARP_SEED_Z);
     p += warp * noiseParams.w * CLOUD_LAYER_WARP_AMPLITUDE;
 
-    float volumeWeight = smoothstep(CLOUD_LAYER_VOLUME_FULLNESS_MIN, CLOUD_LAYER_VOLUME_FULLNESS_MAX, fullness);
-    vec2  field        = vec2(0.0);
+    vec2  fbmBillow         = periodicFbmBillow2D(p, lattice, octaves, seed);
+    float billow            = (CLOUD_LAYER_BILLOW_MEAN - fbmBillow.y) * CLOUD_LAYER_BILLOW_SCALE + 0.5;
+    float field             = mix(fbmBillow.x, billow, u_weatherLayerShape[layer].w * CLOUD_LAYER_BILLOW_SHARE);
+    float sheet             = clamp((field - 0.5) * CLOUD_LAYER_FIELD_CONTRAST + 0.5, 0.0, 1.0);
+    float effectiveCoverage = clamp(coverage * (CLOUD_LAYER_COVERAGE_BIAS_BASE + surface.z), 0.0, 1.0);
 
-    if (volumeWeight < 1.0)
-    field += periodicFbmBillow2D(p, lattice, octaves, seed) * (1.0 - volumeWeight);
-
-    if (volumeWeight > 0.0)
-    field += periodicFbmBillow3D(vec3(p.x, rise, p.y), lattice, octaves, seed + CLOUD_LAYER_VOLUME_SEED)
-    * volumeWeight;
-
-    float sheet = clamp((field.x - 0.5) * CLOUD_LAYER_FIELD_CONTRAST + 0.5, 0.0, 1.0);
-    float lumps = clamp((field.y - CLOUD_LAYER_BILLOW_FLOOR) / (1.0 - CLOUD_LAYER_BILLOW_FLOOR), 0.0, 1.0);
-    float shape = sheet * mix(1.0, mix(CLOUD_LAYER_LUMP_MIN, CLOUD_LAYER_LUMP_MAX, lumps), fullness);
-
-    if (detailFade > WEATHER_MAP_EPSILON) {
-        float detailMultiplier = max(noiseParams.z, 1.0);
-        float detail = periodicGradientNoise3D(
-            vec3(p.x, rise, p.y) * detailMultiplier, lattice * detailMultiplier, seed + CLOUD_LAYER_DETAIL_SEED);
-        shape = clamp(shape + detail * CLOUD_LAYER_DETAIL_STRENGTH * detailFade, 0.0, 1.0);
-    }
-
-    return shape;
+    return clamp((sheet - (1.0 - effectiveCoverage)) / max(effectiveCoverage, WEATHER_MAP_EPSILON), 0.0, 1.0);
 }
 
-// Density of one layer at a point inside it. heightFraction runs from 0 at
-// the layer's base to 1 at its top.
-float resolveCloudLayerDensity(int layer, vec2 positionXZ, float heightFraction, int octaves, float detailFade) {
-    vec4  shape    = u_weatherLayerShape[layer];
-    vec4  surface  = u_weatherLayerSurface[layer];
-    float fullness = shape.w;
-    float h        = clamp(heightFraction, 0.0, 1.0);
-
-    float baseRamp = mix(CLOUD_LAYER_SHEET_BASE_RAMP, CLOUD_LAYER_PUFFY_BASE_RAMP, fullness);
-    float topStart = mix(CLOUD_LAYER_SHEET_TOP_START, CLOUD_LAYER_PUFFY_TOP_START, fullness);
-    float envelope = smoothstep(0.0, baseRamp, h) * (1.0 - smoothstep(topStart, 1.0, h));
-
-    if (envelope <= WEATHER_MAP_EPSILON)
+// Height the bumps carve from a column, as a fraction of the layer: nothing
+// on a bump's crown, the most in the creases between bumps. Bumps are round
+// in world space whatever the layer's elongation. bumpFade scales the coarse
+// (x) and fine (y) bumps, so distant cloud skips what a pixel cannot show.
+float resolveCloudLayerCarve(int layer, vec2 positionXZ, vec2 bumpFade) {
+    if (bumpFade.x <= WEATHER_MAP_EPSILON)
     return 0.0;
 
+    float lattice = resolveCloudLayerBumpLattice(layer);
+    vec2  p       = (u_weatherLayerSurface[layer].xy + positionXZ) / u_weatherMapOrigin.w * lattice;
+    uint  seed    = uint(layer) * CLOUD_LAYER_SEED_STRIDE;
+
+    float carve = (1.0 - periodicSphereBumps2D(p, vec2(lattice), seed + CLOUD_LAYER_BUMP_SEED)) * bumpFade.x;
+
+    if (bumpFade.y > WEATHER_MAP_EPSILON)
+    carve += (1.0 - periodicSphereBumps2D(
+        p * CLOUD_LAYER_BUMP_FINE_RATIO,
+        vec2(lattice * CLOUD_LAYER_BUMP_FINE_RATIO),
+        seed + CLOUD_LAYER_BUMP_FINE_SEED)) * CLOUD_LAYER_BUMP_FINE_WEIGHT * bumpFade.y;
+
+    return carve * CLOUD_LAYER_BUMP_DEPTH;
+}
+
+// The column of one layer over a point. Pass a zero bumpFade for the cheap
+// column, which always contains the bumped one.
+CloudColumn resolveCloudColumn(int layer, vec2 positionXZ, int octaves, vec2 bumpFade) {
     float edgeFade = resolveWeatherMapEdgeFade(positionXZ);
 
     if (edgeFade <= WEATHER_MAP_EPSILON)
-    return 0.0;
+    return CLOUD_COLUMN_EMPTY;
 
     vec2  weather  = sampleWeatherLayer(layer, positionXZ);
     float coverage = weather.x * edgeFade;
 
     if (coverage <= WEATHER_MAP_EPSILON)
-    return 0.0;
+    return CLOUD_COLUMN_EMPTY;
 
-    float effectiveCoverage = clamp(coverage * (CLOUD_LAYER_COVERAGE_BIAS_BASE + surface.z), 0.0, 1.0);
-    float threshold = 1.0 - effectiveCoverage
-    + effectiveCoverage * h * h * fullness * CLOUD_LAYER_CROWN_EROSION;
-    float softness  = max(surface.w, CLOUD_LAYER_MIN_SOFTNESS);
+    float body = resolveCloudLayerBody(layer, positionXZ, coverage, octaves);
 
-    // The shape field never exceeds a full sheet raised by its largest lump, or 1 once detail clamps it.
-    float fieldMax = detailFade > WEATHER_MAP_EPSILON
-    ? CLOUD_LAYER_SHAPE_DETAIL_MAX
-    : mix(1.0, CLOUD_LAYER_LUMP_MAX, fullness);
+    if (body <= WEATHER_MAP_EPSILON)
+    return CLOUD_COLUMN_EMPTY;
 
-    if (threshold - softness >= fieldMax)
-    return 0.0;
+    vec4  shape    = u_weatherLayerShape[layer];
+    float fullness = shape.w;
+    float carve    = resolveCloudLayerCarve(layer, positionXZ, bumpFade)
+    * mix(CLOUD_LAYER_SHEET_BUMP_SHARE, 1.0, fullness);
 
-    float field = sampleCloudLayerShape(layer, positionXZ, h * shape.y, octaves, detailFade);
-    float body  = smoothstep(threshold - softness, threshold + softness, field);
+    // Bumps eat into the cloud's footprint as well as its crown, so its
+    // outline and walls swell into round lobes rather than one smooth wall.
+    body -= carve * CLOUD_LAYER_BUMP_RIM_SHARE;
 
-    return body * envelope * shape.z * weather.y;
+    if (body <= WEATHER_MAP_EPSILON)
+    return CLOUD_COLUMN_EMPTY;
+
+    float dome     = sqrt(body * (2.0 - body));
+    float rise     = dome - carve;
+    float crease   = clamp(carve / (CLOUD_LAYER_BUMP_DEPTH * (1.0 + CLOUD_LAYER_BUMP_FINE_WEIGHT)), 0.0, 1.0);
+
+    float bottom = mix(CLOUD_LAYER_SHEET_CENTER - rise * 0.5, CLOUD_LAYER_BASE_ROUNDING * (1.0 - body), fullness);
+    float top    = mix(CLOUD_LAYER_SHEET_CENTER + rise * 0.5, rise * CLOUD_LAYER_PUFFY_HEIGHT, fullness);
+
+    if (top <= bottom)
+    return CLOUD_COLUMN_EMPTY;
+
+    // Opacity follows the uncarved dome, so carving shapes a cloud's outline
+    // without thinning it into a speckle of translucent creases. Puffy cloud
+    // is solid outright, only its rim softening; sheets keep the opacity of
+    // their thickness so thin ones still glow through.
+    float opticalDepth = dome * shape.y * shape.z * weather.y * CLOUD_LAYER_EXTINCTION_PER_BLOCK;
+    float softness     = max(u_weatherLayerSurface[layer].w, CLOUD_LAYER_MIN_SOFTNESS);
+    float opacity      = mix(1.0 - exp(-opticalDepth * CLOUD_LAYER_OPACITY_GAIN), 1.0, fullness);
+    float alpha        = opacity * smoothstep(0.0, softness, body);
+
+    return CloudColumn(bottom, top, alpha, exp(-opticalDepth), crease);
+}
+
+bool isInsideCloudColumn(CloudColumn column, float heightFraction) {
+    return column.alpha > WEATHER_MAP_EPSILON && heightFraction >= column.bottom && heightFraction <= column.top;
+}
+
+// How far inside a column a height lies, in layer height fractions: positive
+// inside, zero on its surface, negative outside. An empty column reads as
+// the whole layer away, so a cloud's wall stands out sharply against it.
+float resolveCloudColumnDepth(CloudColumn column, float heightFraction) {
+    return min(heightFraction - column.bottom, column.top - heightFraction);
 }
 
 #endif

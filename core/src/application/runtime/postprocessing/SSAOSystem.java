@@ -21,7 +21,9 @@ public class SSAOSystem extends SystemPackage {
      * Renders the SSAO occlusion pass into SSAOScene each frame from the
      * world G-buffer's normal and depth. The sample kernel and noise texture
      * are generated once at awake and the noise texture is released with the
-     * context. The result is consumed by LightingSystem, never composited.
+     * context. The world target is queued ahead of this pass every frame, so
+     * the occlusion always reads the G-buffer drawn with this frame's camera.
+     * The result is consumed by LightingSystem, never composited.
      */
 
     // Internal
@@ -80,6 +82,8 @@ public class SSAOSystem extends SystemPackage {
 
     @Override
     protected void update() {
+
+        renderManager.ensureFboRendered(worldSystem.getWorldFbo(), context.getWindow());
         renderManager.pushRenderCall(
                 ssaoPass.getModelInstance(),
                 ssaoFbo,

@@ -17,13 +17,14 @@ out vec4 fragColor;
 /*
  * Fullscreen cloud pass for the sky, rendered at the reduced resolution its
  * target declares and sampled back up when composited. Every live cloud
- * layer is integrated along the view ray out to the edge of the weather map
- * (CloudMarch) and written premultiplied, so the upscale blends cloud edges
- * against transparency rather than against black. The target declares a
- * resolving blit, which averages away the march's per-pixel jitter while
- * upscaling and restores straight alpha. Terrain composites
- * over this pass; clouds standing in front of terrain are fogged in by the
- * lighting pass.
+ * layer's nearest surface along the view ray, out to the edge of the weather
+ * map, is found, shaded and composited (CloudMarch), and written
+ * premultiplied, so the upscale blends cloud edges against transparency
+ * rather than against black. The target declares a resolving blit, which
+ * averages away the march's per-pixel jitter while upscaling, softening the
+ * cloud outlines into clean painted edges, and restores straight alpha.
+ * Terrain composites over this pass; clouds standing in front of terrain are
+ * fogged in by the lighting pass.
  */
 
 const float CLOUD_PASS_ALPHA_DISCARD = 0.003;

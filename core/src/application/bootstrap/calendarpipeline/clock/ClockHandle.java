@@ -57,6 +57,14 @@ public class ClockHandle extends HandlePackage {
         clockData.setWorldSecondsElapsed(worldSecondsElapsed);
     }
 
+    public double getGameSecondsElapsed() {
+        return clockData.getGameSecondsElapsed();
+    }
+
+    public void setGameSecondsElapsed(double gameSecondsElapsed) {
+        clockData.setGameSecondsElapsed(gameSecondsElapsed);
+    }
+
     public long getTotalDaysElapsed() {
         return clockData.getTotalDaysElapsed();
     }
