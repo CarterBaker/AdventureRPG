@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferIns
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import engine.root.StructPackage;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CompositeBatchStruct extends StructPackage {
@@ -13,29 +14,35 @@ public class CompositeBatchStruct extends StructPackage {
      * draw pass. The MaterialInstance drives shader and UBO binding; each
      * buffer keeps the material instance it was submitted with, whose own
      * uniforms (a label's color, for one) are pushed before that buffer
-     * draws, and the mask it is clipped to, if any. Source UBOs are lazily
-     * cached on first access — safe since they never change after bootstrap.
-     * Cleared after every draw flush.
+     * draws, and the mask it is clipped to, if any. Pooled per material by
+     * RenderQueueHandle and reset with the first material submitted each
+     * frame. Source UBOs are cached against the MaterialHandle's shared map
+     * they come from. Cleared after every draw flush.
      */
 
     private static final UBOHandle[] EMPTY_UBOS = new UBOHandle[0];
 
     // Internal
-    private final MaterialInstance material;
+    private MaterialInstance material;
     private final ObjectArrayList<CompositeBufferInstance> buffers;
     private final ObjectArrayList<MaterialInstance> bufferMaterials;
     private final ObjectArrayList<MaskStruct> bufferMasks;
 
     // Cache
+    private Object2ObjectOpenHashMap<String, UBOHandle> cachedSourceMap;
     private UBOHandle[] cachedSourceUBOs;
 
     // Constructor \\
 
-    public CompositeBatchStruct(MaterialInstance material) {
-        this.material = material;
+    public CompositeBatchStruct() {
         this.buffers = new ObjectArrayList<>();
         this.bufferMaterials = new ObjectArrayList<>();
         this.bufferMasks = new ObjectArrayList<>();
+    }
+
+    public void reset(MaterialInstance material) {
+        this.material = material;
+        clear();
     }
 
     // Management \\
@@ -76,10 +83,12 @@ public class CompositeBatchStruct extends StructPackage {
 
     public UBOHandle[] getCachedSourceUBOs() {
 
-        if (cachedSourceUBOs != null)
+        Object2ObjectOpenHashMap<String, UBOHandle> sourceUBOs = material.getSourceUBOs();
+
+        if (cachedSourceUBOs != null && sourceUBOs == cachedSourceMap)
             return cachedSourceUBOs;
 
-        var sourceUBOs = material.getSourceUBOs();
+        cachedSourceMap = sourceUBOs;
 
         if (sourceUBOs == null || sourceUBOs.isEmpty())
             cachedSourceUBOs = EMPTY_UBOS;

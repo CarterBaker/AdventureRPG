@@ -4,31 +4,32 @@ import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBufferInstanc
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import engine.root.StructPackage;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class SkinnedBatchStruct extends StructPackage {
 
     /*
      * Pairs one SkinnedBufferInstance with the MaterialInstance every
-     * instance inside it draws with this frame. Source UBOs are lazily
-     * cached on first access, same as RenderBatchStruct — owned by the
-     * MaterialHandle and never change after bootstrap. A fresh
-     * SkinnedBatchStruct is created the first time a given (mesh, material)
-     * combination is pushed in a frame — never reused across frames, since
-     * the queue it lives in is cleared every rewindFrame().
+     * instance inside it draws with this frame. Pooled by RenderQueueHandle
+     * and reset the first time a given (mesh, material) combination is pushed
+     * in a frame, then returned to the pool at rewindFrame(). Source UBOs are
+     * cached against the MaterialHandle's shared map they come from, same as
+     * RenderBatchStruct.
      */
 
     private static final UBOHandle[] EMPTY_UBOS = new UBOHandle[0];
 
     // Internal
-    private final SkinnedBufferInstance skinnedBuffer;
-    private final MaterialInstance material;
+    private SkinnedBufferInstance skinnedBuffer;
+    private MaterialInstance material;
 
     // Cache
+    private Object2ObjectOpenHashMap<String, UBOHandle> cachedSourceMap;
     private UBOHandle[] cachedSourceUBOs;
 
     // Constructor \\
 
-    public SkinnedBatchStruct(SkinnedBufferInstance skinnedBuffer, MaterialInstance material) {
+    public void reset(SkinnedBufferInstance skinnedBuffer, MaterialInstance material) {
         this.skinnedBuffer = skinnedBuffer;
         this.material = material;
     }
@@ -45,10 +46,12 @@ public class SkinnedBatchStruct extends StructPackage {
 
     public UBOHandle[] getCachedSourceUBOs() {
 
-        if (cachedSourceUBOs != null)
+        Object2ObjectOpenHashMap<String, UBOHandle> sourceUBOs = material.getSourceUBOs();
+
+        if (cachedSourceUBOs != null && sourceUBOs == cachedSourceMap)
             return cachedSourceUBOs;
 
-        var sourceUBOs = material.getSourceUBOs();
+        cachedSourceMap = sourceUBOs;
 
         if (sourceUBOs == null || sourceUBOs.isEmpty())
             cachedSourceUBOs = EMPTY_UBOS;

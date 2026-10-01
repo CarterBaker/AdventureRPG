@@ -19,7 +19,9 @@ import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 class GeometryBuildManager extends ManagerPackage {
 
@@ -171,8 +173,11 @@ class GeometryBuildManager extends ManagerPackage {
 
         boolean success = true;
 
-        for (int materialID : verts.keySet()) {
-            if (!dynamicPacketInstance.addVertices(materialID, verts.get(materialID)))
+        ObjectIterator<Int2ObjectMap.Entry<FloatArrayList>> iterator = verts.int2ObjectEntrySet().fastIterator();
+
+        while (iterator.hasNext()) {
+            Int2ObjectMap.Entry<FloatArrayList> entry = iterator.next();
+            if (!dynamicPacketInstance.addVertices(entry.getIntKey(), entry.getValue()))
                 success = false;
         }
 

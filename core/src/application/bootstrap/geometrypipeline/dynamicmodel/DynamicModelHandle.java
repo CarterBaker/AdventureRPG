@@ -11,7 +11,9 @@ public class DynamicModelHandle extends HandlePackage {
     /*
      * CPU-side vertex and index buffer for one material bucket within a dynamic
      * draw. Accumulates quad geometry at runtime and enforces the engine vertex
-     * limit. Owned by DynamicPacketInstance — never shared across packets.
+     * limit. Offset copies shift the appended range in place, so merging never
+     * builds a temporary vertex list. Owned by DynamicPacketInstance — never
+     * shared across packets.
      */
 
     // Internal
@@ -59,6 +61,21 @@ public class DynamicModelHandle extends HandlePackage {
         return floatsToAdd;
     }
 
+    public int tryAddVertices(
+            FloatArrayList sourceVerts,
+            int offset,
+            int length,
+            int[] offsetIndices,
+            float[] offsets) {
+
+        int start = vertices.size();
+        int added = tryAddVertices(sourceVerts, offset, length);
+
+        applyOffsets(start, start + added, offsetIndices, offsets);
+
+        return added;
+    }
+
     public void addQuadVertices(FloatArrayList sourceVerts) {
 
         int floatsPerQuad = vertStride * 4;
@@ -81,27 +98,19 @@ public class DynamicModelHandle extends HandlePackage {
         if (offsetIndices.length != offsets.length)
             throwException("offsetIndices and offsets must have the same length");
 
-        FloatArrayList src = source.vertices;
-        int total = src.size();
-        FloatArrayList shifted = new FloatArrayList(total);
+        int start = vertices.size();
 
-        for (int i = 0; i < total; i += vertStride) {
-            for (int j = 0; j < vertStride; j++) {
+        addQuadVertices(source.vertices);
+        applyOffsets(start, vertices.size(), offsetIndices, offsets);
+    }
 
-                float value = src.getFloat(i + j);
+    private void applyOffsets(int start, int end, int[] offsetIndices, float[] offsets) {
 
-                for (int k = 0; k < offsetIndices.length; k++) {
-                    if (j == offsetIndices[k]) {
-                        value += offsets[k];
-                        break;
-                    }
-                }
+        float[] elements = vertices.elements();
 
-                shifted.add(value);
-            }
-        }
-
-        addQuadVertices(shifted);
+        for (int i = start; i < end; i += vertStride)
+            for (int k = 0; k < offsetIndices.length; k++)
+                elements[i + offsetIndices[k]] += offsets[k];
     }
 
     private void appendQuadIndices(int baseVertex, int quadCount) {

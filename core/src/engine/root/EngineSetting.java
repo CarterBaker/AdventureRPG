@@ -510,6 +510,7 @@ public class EngineSetting {
     public static final int PARTIAL_TICK_INTERVAL_FRAMES = 60;
     public static final int PARTIAL_TICK_PHASE_FRAMES = 15;
     public static final String STARTING_WORLD = "TerraArcana";
+    public static final int WORLD_RENDER_ENTRY_POOL_MAX_PER_MATERIAL = 256;
 
     // Macro Terrain
     public static final int MACRO_ADMISSIONS_PER_FRAME = 16;

@@ -34,7 +34,10 @@ public class GridInstance extends InstancePackage {
      * slots, active chunks, megas and macros, pending requests, render queues,
      * the macro ring anchored to the active chunk, and the window's own
      * location state and UBO instances. rebuildSlots() swaps the layout in
-     * place so holders stay valid.
+     * place so holders stay valid. Each render queue rebuild is diffed against
+     * the last one, and every chunk and mega whose representation changed is
+     * promoted to the front of its assessment order so the switch lands within
+     * frames instead of waiting out a full streaming pass.
      */
 
     // Focal
@@ -99,6 +102,8 @@ public class GridInstance extends InstancePackage {
     // Render Queues — chunk/mega world coordinate → slot handle
     private Long2ObjectLinkedOpenHashMap<GridSlotHandle> chunkRenderQueue;
     private Long2ObjectLinkedOpenHashMap<GridSlotHandle> megaRenderQueue;
+    private Long2ObjectLinkedOpenHashMap<GridSlotHandle> previousChunkRenderQueue;
+    private Long2ObjectLinkedOpenHashMap<GridSlotHandle> previousMegaRenderQueue;
 
     // Settings
     private int batchedChunks;
@@ -190,6 +195,8 @@ public class GridInstance extends InstancePackage {
         // Render Queues
         this.chunkRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
         this.megaRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
+        this.previousChunkRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
+        this.previousMegaRenderQueue = new Long2ObjectLinkedOpenHashMap<>();
 
         // Settings
         this.batchedChunks = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
@@ -232,8 +239,7 @@ public class GridInstance extends InstancePackage {
 
     private void rebuildRenderQueue() {
 
-        chunkRenderQueue.clear();
-        megaRenderQueue.clear();
+        swapRenderQueues();
 
         for (int i = 0; i < totalSlots; i++) {
 
@@ -246,6 +252,22 @@ public class GridInstance extends InstancePackage {
             if (slot.getDetailLevel().renderMode == RenderType.BATCHED)
                 queueMega(slot, chunkCoordinate);
         }
+
+        promoteChangedRepresentations();
+    }
+
+    private void swapRenderQueues() {
+
+        Long2ObjectLinkedOpenHashMap<GridSlotHandle> chunkQueue = previousChunkRenderQueue;
+        Long2ObjectLinkedOpenHashMap<GridSlotHandle> megaQueue = previousMegaRenderQueue;
+
+        this.previousChunkRenderQueue = chunkRenderQueue;
+        this.previousMegaRenderQueue = megaRenderQueue;
+        this.chunkRenderQueue = chunkQueue;
+        this.megaRenderQueue = megaQueue;
+
+        chunkRenderQueue.clear();
+        megaRenderQueue.clear();
     }
 
     private void queueChunk(GridSlotHandle slot, long chunkCoordinate) {
@@ -280,6 +302,43 @@ public class GridInstance extends InstancePackage {
             long coveredChunk = getChunkCoordinateForSlot(coveredSlots.get(i).getGridCoordinate());
             chunkRenderQueue.remove(coveredChunk);
         }
+    }
+
+    // Promotion \\
+
+    // Walked far to near so the nearest changed chunks end up first
+    private void promoteChangedRepresentations() {
+
+        for (int i = totalSlots - 1; i >= 0; i--) {
+
+            long chunkCoordinate = getChunkCoordinateForSlot(loadOrder[i]);
+
+            if (chunkRenderQueue.containsKey(chunkCoordinate)
+                    && !previousChunkRenderQueue.containsKey(chunkCoordinate))
+                promoteChunk(chunkCoordinate);
+
+            if (megaRenderQueue.containsKey(chunkCoordinate)
+                    && !previousMegaRenderQueue.containsKey(chunkCoordinate))
+                promoteMegaBlock(megaRenderQueue.get(chunkCoordinate), chunkCoordinate);
+        }
+    }
+
+    private void promoteMegaBlock(GridSlotHandle megaSlot, long megaCoordinate) {
+
+        ObjectArrayList<GridSlotHandle> coveredSlots = megaSlot.getCoveredSlots();
+
+        for (int i = 0; i < coveredSlots.size(); i++)
+            promoteChunk(getChunkCoordinateForSlot(coveredSlots.get(i).getGridCoordinate()));
+
+        promoteMega(megaCoordinate);
+    }
+
+    public void promoteChunk(long chunkCoordinate) {
+        activeChunks.getAndMoveToFirst(chunkCoordinate);
+    }
+
+    public void promoteMega(long megaCoordinate) {
+        activeMegaChunks.getAndMoveToFirst(megaCoordinate);
     }
 
     // Active State \\

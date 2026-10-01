@@ -71,6 +71,9 @@ class MacroRenderSystem extends SystemPackage {
     private int[] coverageScratch;
     private Vector4Int[] coverageVectors;
 
+    // Scratch
+    private Vector2 gridPositionScratch;
+
     // Base \\
 
     @Override
@@ -89,6 +92,9 @@ class MacroRenderSystem extends SystemPackage {
 
         for (int i = 0; i < coverageVectors.length; i++)
             coverageVectors[i] = new Vector4Int();
+
+        // Scratch
+        this.gridPositionScratch = new Vector2();
     }
 
     @Override
@@ -149,7 +155,7 @@ class MacroRenderSystem extends SystemPackage {
         macro.setPlacement((float) Math.atan2(centerZ, centerX), angularRadius);
 
         positionUBO.updateUniform(EngineSetting.UNIFORM_GRID_POSITION,
-                new Vector2(deltaX * chunkSize, deltaZ * chunkSize));
+                gridPositionScratch.set(deltaX * chunkSize, deltaZ * chunkSize));
         positionUBO.updateUniform(EngineSetting.UNIFORM_DISTANCE_FROM_CENTER, distanceSq);
         uboManager.push(positionUBO);
     }

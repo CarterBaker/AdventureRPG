@@ -19,7 +19,9 @@ class IBOGLSLUtility extends EngineUtility {
     /*
      * GL upload, in-place update and deletion for IBOManager. Updates respecify
      * the same buffer handle so VAOs referencing it stay valid, and every
-     * upload goes through one reusable direct scratch buffer. Package-private.
+     * upload goes through one reusable direct scratch buffer, read straight
+     * from the caller's backing array up to its live count so no upload ever
+     * copies onto the heap. Package-private.
      */
 
     // Scratch
@@ -37,7 +39,7 @@ class IBOGLSLUtility extends EngineUtility {
             IBOHandle iboHandle,
             short[] indices) {
 
-        IBOData iboData = upload(vaoInstance, indices);
+        IBOData iboData = upload(vaoInstance, indices, indices.length);
         iboHandle.constructor(iboData);
 
         return iboHandle;
@@ -46,59 +48,60 @@ class IBOGLSLUtility extends EngineUtility {
     static IBOInstance uploadIndexData(
             VAOInstance vaoInstance,
             IBOInstance iboInstance,
-            short[] indices) {
+            short[] indices,
+            int indexCount) {
 
-        IBOData iboData = upload(vaoInstance, indices);
+        IBOData iboData = upload(vaoInstance, indices, indexCount);
         iboInstance.constructor(iboData);
 
         return iboInstance;
     }
 
-    private static IBOData upload(VAOInstance vaoInstance, short[] indices) {
+    private static IBOData upload(VAOInstance vaoInstance, short[] indices, int indexCount) {
 
         GL30 gl30 = EngineContext.gl30;
         GL20 gl20 = EngineContext.gl20;
-        int size = indices.length * Short.BYTES;
+        int size = indexCount * Short.BYTES;
 
         gl30.glBindVertexArray(vaoInstance.getVAOData().getAttributeHandle());
 
         int ibo = gl20.glGenBuffer();
         gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, ibo);
 
-        ShortBuffer buffer = acquireShortScratch(indices.length);
-        buffer.put(indices).flip();
+        ShortBuffer buffer = acquireShortScratch(indexCount);
+        buffer.put(indices, 0, indexCount).flip();
 
         gl20.glBufferData(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, size, buffer, EngineSetting.GL_STATIC_DRAW);
         gl30.glBindVertexArray(0);
 
-        return new IBOData(ibo, indices.length);
+        return new IBOData(ibo, indexCount);
     }
 
     // Update \\
 
-    static IBOInstance updateIndexData(IBOInstance iboInstance, short[] indices) {
+    static IBOInstance updateIndexData(IBOInstance iboInstance, short[] indices, int indexCount) {
 
         IBOData oldData = iboInstance.getIBOData();
-        IBOData newData = reupload(oldData.getIndexHandle(), indices);
+        IBOData newData = reupload(oldData.getIndexHandle(), indices, indexCount);
         iboInstance.constructor(newData);
 
         return iboInstance;
     }
 
-    private static IBOData reupload(int ibo, short[] indices) {
+    private static IBOData reupload(int ibo, short[] indices, int indexCount) {
 
         GL20 gl20 = EngineContext.gl20;
-        int size = indices.length * Short.BYTES;
+        int size = indexCount * Short.BYTES;
 
         gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, ibo);
 
-        ShortBuffer buffer = acquireShortScratch(indices.length);
-        buffer.put(indices).flip();
+        ShortBuffer buffer = acquireShortScratch(indexCount);
+        buffer.put(indices, 0, indexCount).flip();
 
         gl20.glBufferData(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, size, buffer, EngineSetting.GL_DYNAMIC_DRAW);
         gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, 0);
 
-        return new IBOData(ibo, indices.length);
+        return new IBOData(ibo, indexCount);
     }
 
     // Removal \\

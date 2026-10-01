@@ -16,9 +16,11 @@ import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate4Long;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 public class WorldItemRenderSystem extends SystemPackage {
 
@@ -28,7 +30,9 @@ public class WorldItemRenderSystem extends SystemPackage {
      * swap-remove fixups, and every frame each grid's buffers are pushed into
      * its world target so items are depth tested and lit with the terrain. An
      * item can be hidden while it stays placed — an open chest is drawn open
-     * by whoever opened it — and is shown again from its chunk's list.
+     * by whoever opened it — and is shown again from its chunk's list. Chunk
+     * lists are pooled and instance data is staged in one scratch array, so
+     * streaming items in and out allocates nothing.
      */
 
     private static final int[] INSTANCE_ATTR_SIZES = { 4, 2 };
@@ -46,6 +50,10 @@ public class WorldItemRenderSystem extends SystemPackage {
 
     // Per chunk — tracks which instances belong to each chunk for O(1) pull
     private Long2ObjectOpenHashMap<ObjectArrayList<WorldItemInstance>> chunkCoord2Items;
+    private ObjectArrayList<ObjectArrayList<WorldItemInstance>> itemListPool;
+
+    // Scratch
+    private float[] instanceDataScratch;
 
     // Internal \\
 
@@ -54,6 +62,8 @@ public class WorldItemRenderSystem extends SystemPackage {
         this.itemDefID2Composite = new Int2ObjectOpenHashMap<>();
         this.itemDefID2SlotMap = new Int2ObjectOpenHashMap<>();
         this.chunkCoord2Items = new Long2ObjectOpenHashMap<>();
+        this.itemListPool = new ObjectArrayList<>();
+        this.instanceDataScratch = new float[countInstanceFloats()];
     }
 
     @Override
@@ -71,8 +81,12 @@ public class WorldItemRenderSystem extends SystemPackage {
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
 
-        for (var entry : itemDefID2Composite.int2ObjectEntrySet()) {
-            WorldItemCompositeInstance composite = entry.getValue();
+        ObjectIterator<Int2ObjectMap.Entry<WorldItemCompositeInstance>> iterator = itemDefID2Composite
+                .int2ObjectEntrySet()
+                .fastIterator();
+
+        while (iterator.hasNext()) {
+            WorldItemCompositeInstance composite = iterator.next().getValue();
             CompositeBufferInstance buffer = composite.getCompositeBuffer();
 
             if (buffer.isEmpty())
@@ -96,10 +110,9 @@ public class WorldItemRenderSystem extends SystemPackage {
     public void push(long chunkCoordinate, ObjectArrayList<WorldItemInstance> items) {
         if (items.isEmpty())
             return;
-        debug("pushing chunk to renderer: " + Coordinate2Long.toString(chunkCoordinate));
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
-        ObjectArrayList<WorldItemInstance> stored = new ObjectArrayList<>(items.size());
+        ObjectArrayList<WorldItemInstance> stored = acquireItemList();
         for (int i = 0; i < items.size(); i++) {
             WorldItemInstance instance = items.get(i);
             addToBuffer(instance, chunkX, chunkZ);
@@ -112,9 +125,15 @@ public class WorldItemRenderSystem extends SystemPackage {
         ObjectArrayList<WorldItemInstance> items = chunkCoord2Items.remove(chunkCoordinate);
         if (items == null)
             return;
-        debug("pulling chunk from renderer: " + Coordinate2Long.toString(chunkCoordinate));
         for (int i = 0; i < items.size(); i++)
             removeFromBuffer(items.get(i));
+
+        items.clear();
+        itemListPool.push(items);
+    }
+
+    private ObjectArrayList<WorldItemInstance> acquireItemList() {
+        return itemListPool.isEmpty() ? new ObjectArrayList<>() : itemListPool.pop();
     }
 
     // Runtime Single Instance \\
@@ -123,9 +142,15 @@ public class WorldItemRenderSystem extends SystemPackage {
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);
         int chunkZ = Coordinate2Long.unpackY(chunkCoordinate);
         addToBuffer(instance, chunkX, chunkZ);
-        chunkCoord2Items
-                .computeIfAbsent(chunkCoordinate, k -> new ObjectArrayList<>())
-                .add(instance);
+
+        ObjectArrayList<WorldItemInstance> items = chunkCoord2Items.get(chunkCoordinate);
+
+        if (items == null) {
+            items = acquireItemList();
+            chunkCoord2Items.put(chunkCoordinate, items);
+        }
+
+        items.add(instance);
     }
 
     public void removeItem(WorldItemInstance instance) {
@@ -168,12 +193,14 @@ public class WorldItemRenderSystem extends SystemPackage {
         WorldItemCompositeInstance composite = getOrCreateComposite(instance.getItemDefinitionHandle());
         int itemDefID = instance.getItemDefinitionHandle().getItemID();
 
-        float[] data = {
-                Float.intBitsToFloat(chunkX),
-                Float.intBitsToFloat(chunkZ),
-                subX / svr, subZ / svr,
-                subY / svr, orientation
-        };
+        float[] data = instanceDataScratch;
+        data[0] = Float.intBitsToFloat(chunkX);
+        data[1] = Float.intBitsToFloat(chunkZ);
+        data[2] = subX / svr;
+        data[3] = subZ / svr;
+        data[4] = subY / svr;
+        data[5] = orientation;
+
         int slot = composite.getCompositeBuffer().addInstance(data);
         instance.setInstanceSlot(slot);
 
@@ -210,6 +237,16 @@ public class WorldItemRenderSystem extends SystemPackage {
                 slotMap.put(slot, displaced);
             }
         }
+    }
+
+    private static int countInstanceFloats() {
+
+        int count = 0;
+
+        for (int attributeSize : INSTANCE_ATTR_SIZES)
+            count += attributeSize;
+
+        return count;
     }
 
     // Composite \\

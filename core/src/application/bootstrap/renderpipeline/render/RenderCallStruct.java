@@ -1,29 +1,38 @@
 package application.bootstrap.renderpipeline.render;
 
+import java.util.function.Consumer;
+
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import engine.root.StructPackage;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RenderCallStruct extends StructPackage {
 
     /*
      * One render submission, drawn from a fixed pool by cursor and rewound each
      * frame. The mask is copied in on init, since submitters reuse pooled masks
-     * while calls draw later.
+     * while calls draw later. The material's uniforms and instance UBOs are
+     * snapshotted into grow-only arrays read up to their counts, so a call
+     * allocates nothing once its arrays have reached the largest material.
      */
-
-    private static final UniformStruct<?>[] EMPTY_UNIFORMS = new UniformStruct<?>[0];
-    private static final UBOInstance[] EMPTY_UBOS = new UBOInstance[0];
 
     // Internal
     private ModelInstance modelInstance;
     private MaterialInstance materialInstance;
-    private UniformStruct<?>[] cachedUniforms;
-    private UBOInstance[] cachedInstanceUBOs;
     private final MaskStruct mask = new MaskStruct();
     private boolean masked;
+
+    // Snapshot
+    private UniformStruct<?>[] cachedUniforms = new UniformStruct<?>[0];
+    private int cachedUniformCount;
+    private UBOInstance[] cachedInstanceUBOs = new UBOInstance[0];
+    private int cachedInstanceUBOCount;
+    private final Consumer<UBOInstance> instanceUBOCollector = this::collectInstanceUBO;
 
     // Init \\
 
@@ -36,20 +45,42 @@ public class RenderCallStruct extends StructPackage {
         if (masked)
             this.mask.set(mask);
 
-        var keys = materialInstance.getUniformKeys();
-        if (keys != null && !keys.isEmpty()) {
-            var uniforms = materialInstance.getUniforms();
-            this.cachedUniforms = new UniformStruct<?>[keys.size()];
-            for (int i = 0; i < keys.size(); i++)
-                this.cachedUniforms[i] = uniforms.get(keys.get(i));
-        } else {
-            this.cachedUniforms = EMPTY_UNIFORMS;
-        }
+        snapshotUniforms();
+        snapshotInstanceUBOs();
+    }
 
-        var instanceUBOs = materialInstance.getInstanceUBOs();
-        this.cachedInstanceUBOs = (instanceUBOs != null && !instanceUBOs.isEmpty())
-                ? instanceUBOs.values().toArray(new UBOInstance[0])
-                : EMPTY_UBOS;
+    private void snapshotUniforms() {
+
+        ObjectArrayList<String> keys = materialInstance.getUniformKeys();
+        int keyCount = keys == null ? 0 : keys.size();
+
+        if (cachedUniforms.length < keyCount)
+            cachedUniforms = new UniformStruct<?>[keyCount];
+
+        Object2ObjectOpenHashMap<String, UniformStruct<?>> uniforms = materialInstance.getUniforms();
+
+        for (int i = 0; i < keyCount; i++)
+            cachedUniforms[i] = uniforms.get(keys.get(i));
+
+        cachedUniformCount = keyCount;
+    }
+
+    private void snapshotInstanceUBOs() {
+
+        Int2ObjectOpenHashMap<UBOInstance> instanceUBOs = materialInstance.getInstanceUBOs();
+        int uboCount = instanceUBOs == null ? 0 : instanceUBOs.size();
+
+        if (cachedInstanceUBOs.length < uboCount)
+            cachedInstanceUBOs = new UBOInstance[uboCount];
+
+        cachedInstanceUBOCount = 0;
+
+        if (uboCount > 0)
+            instanceUBOs.values().forEach(instanceUBOCollector);
+    }
+
+    private void collectInstanceUBO(UBOInstance ubo) {
+        cachedInstanceUBOs[cachedInstanceUBOCount++] = ubo;
     }
 
     // Accessible \\
@@ -66,8 +97,16 @@ public class RenderCallStruct extends StructPackage {
         return cachedUniforms;
     }
 
+    public int getCachedUniformCount() {
+        return cachedUniformCount;
+    }
+
     public UBOInstance[] getCachedInstanceUBOs() {
         return cachedInstanceUBOs;
+    }
+
+    public int getCachedInstanceUBOCount() {
+        return cachedInstanceUBOCount;
     }
 
     public MaskStruct getMask() {

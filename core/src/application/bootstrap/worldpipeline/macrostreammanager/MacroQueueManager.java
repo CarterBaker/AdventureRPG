@@ -170,21 +170,18 @@ class MacroQueueManager extends ManagerPackage {
         if (activeMacroChunks.isEmpty())
             return;
 
-        var iterator = activeMacroChunks.long2ObjectEntrySet().iterator();
-        int assessed = 0;
+        int assessCount = Math.min(maxMacroAssessPerFrame, activeMacroChunks.size());
 
-        while (iterator.hasNext() && assessed < maxMacroAssessPerFrame) {
+        // Round robin from the front of the linked map; an assessed macro moves to the back
+        for (int assessed = 0; assessed < assessCount; assessed++) {
 
-            var entry = iterator.next();
-            long macroCoordinate = entry.getLongKey();
-            MacroChunkInstance macro = entry.getValue();
-            iterator.remove();
-            assessed++;
+            long macroCoordinate = activeMacroChunks.firstLongKey();
+            MacroChunkInstance macro = activeMacroChunks.getAndMoveToLast(macroCoordinate);
 
             if (!macroCoordinates.contains(macroCoordinate)) {
 
-                if (!unloadMacro(grid, macro))
-                    activeMacroChunks.put(macroCoordinate, macro);
+                if (unloadMacro(grid, macro))
+                    activeMacroChunks.remove(macroCoordinate);
 
                 continue;
             }
@@ -200,8 +197,6 @@ class MacroQueueManager extends ManagerPackage {
                 case SKIP -> {
                 }
             }
-
-            activeMacroChunks.put(macroCoordinate, macro);
         }
     }
 

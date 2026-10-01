@@ -101,11 +101,12 @@ public class VBOManager extends ManagerPackage {
         return VBOGLSLUtility.uploadVertexData(
                 vaoInstance,
                 create(VBOInstance.class),
-                vertices.toFloatArray());
+                vertices.elements(),
+                vertices.size());
     }
 
     public VBOInstance updateVBOInstance(VAOInstance vaoInstance, VBOInstance vboInstance, FloatArrayList vertices) {
-        return VBOGLSLUtility.updateVertexData(vaoInstance, vboInstance, vertices.toFloatArray());
+        return VBOGLSLUtility.updateVertexData(vaoInstance, vboInstance, vertices.elements(), vertices.size());
     }
 
     // Removal \\

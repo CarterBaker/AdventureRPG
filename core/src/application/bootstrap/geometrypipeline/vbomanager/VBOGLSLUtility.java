@@ -20,7 +20,9 @@ class VBOGLSLUtility extends EngineUtility {
     /*
      * GL upload, in-place update and deletion for VBOManager. Updates respecify
      * the same buffer handle so VAOs referencing it stay valid, and every
-     * upload goes through one reusable direct scratch buffer. Package-private.
+     * upload goes through one reusable direct scratch buffer, read straight
+     * from the caller's backing array up to its live count so no upload ever
+     * copies onto the heap. Package-private.
      */
 
     // Scratch
@@ -38,7 +40,7 @@ class VBOGLSLUtility extends EngineUtility {
             VBOHandle vboHandle,
             float[] vertices) {
 
-        VBOData vboData = upload(vaoInstance, vertices);
+        VBOData vboData = upload(vaoInstance, vertices, vertices.length);
         vboHandle.constructor(vboData);
 
         return vboHandle;
@@ -47,28 +49,29 @@ class VBOGLSLUtility extends EngineUtility {
     static VBOInstance uploadVertexData(
             VAOInstance vaoInstance,
             VBOInstance vboInstance,
-            float[] vertices) {
+            float[] vertices,
+            int floatCount) {
 
-        VBOData vboData = upload(vaoInstance, vertices);
+        VBOData vboData = upload(vaoInstance, vertices, floatCount);
         vboInstance.constructor(vboData);
 
         return vboInstance;
     }
 
-    private static VBOData upload(VAOInstance vaoInstance, float[] vertices) {
+    private static VBOData upload(VAOInstance vaoInstance, float[] vertices, int floatCount) {
 
         GL30 gl30 = EngineContext.gl30;
         GL20 gl20 = EngineContext.gl20;
         VAOData vaoData = vaoInstance.getVAOData();
-        int size = vertices.length * Float.BYTES;
+        int size = floatCount * Float.BYTES;
 
         gl30.glBindVertexArray(vaoData.getAttributeHandle());
 
         int vbo = gl20.glGenBuffer();
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
 
-        FloatBuffer buffer = acquireFloatScratch(vertices.length);
-        buffer.put(vertices).flip();
+        FloatBuffer buffer = acquireFloatScratch(floatCount);
+        buffer.put(vertices, 0, floatCount).flip();
 
         gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, buffer, EngineSetting.GL_STATIC_DRAW);
 
@@ -86,35 +89,39 @@ class VBOGLSLUtility extends EngineUtility {
         gl30.glBindVertexArray(0);
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
-        return new VBOData(vbo, vertices.length / vaoData.getVertStride());
+        return new VBOData(vbo, floatCount / vaoData.getVertStride());
     }
 
     // Update \\
 
-    static VBOInstance updateVertexData(VAOInstance vaoInstance, VBOInstance vboInstance, float[] vertices) {
+    static VBOInstance updateVertexData(
+            VAOInstance vaoInstance,
+            VBOInstance vboInstance,
+            float[] vertices,
+            int floatCount) {
 
         VBOData oldData = vboInstance.getVBOData();
         int vertStride = vaoInstance.getVAOData().getVertStride();
-        VBOData newData = reupload(oldData.getVertexHandle(), vertices, vertStride);
+        VBOData newData = reupload(oldData.getVertexHandle(), vertices, floatCount, vertStride);
         vboInstance.constructor(newData);
 
         return vboInstance;
     }
 
-    private static VBOData reupload(int vbo, float[] vertices, int vertStride) {
+    private static VBOData reupload(int vbo, float[] vertices, int floatCount, int vertStride) {
 
         GL20 gl20 = EngineContext.gl20;
-        int size = vertices.length * Float.BYTES;
+        int size = floatCount * Float.BYTES;
 
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
 
-        FloatBuffer buffer = acquireFloatScratch(vertices.length);
-        buffer.put(vertices).flip();
+        FloatBuffer buffer = acquireFloatScratch(floatCount);
+        buffer.put(vertices, 0, floatCount).flip();
 
         gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, buffer, EngineSetting.GL_DYNAMIC_DRAW);
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
-        return new VBOData(vbo, vertices.length / vertStride);
+        return new VBOData(vbo, floatCount / vertStride);
     }
 
     // Removal \\

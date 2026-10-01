@@ -249,9 +249,10 @@ class RenderSystem extends SystemPackage {
     private void pushInstanceUBOs(RenderCallStruct renderCall) {
 
         UBOInstance[] instances = renderCall.getCachedInstanceUBOs();
+        int instanceCount = renderCall.getCachedInstanceUBOCount();
         ShaderHandle shader = renderCall.getMaterialInstance().getShaderHandle();
 
-        for (int i = 0; i < instances.length; i++) {
+        for (int i = 0; i < instanceCount; i++) {
             UBOInstance ubo = instances[i];
             bindUBO(shader, ubo.getBlockName(), ubo.getBindingPoint(), ubo.getGpuHandle());
         }
@@ -268,9 +269,10 @@ class RenderSystem extends SystemPackage {
     private void pushInstanceUniforms(RenderCallStruct renderCall) {
 
         UniformStruct<?>[] uniforms = renderCall.getCachedUniforms();
+        int uniformCount = renderCall.getCachedUniformCount();
         int textureUnit = 0;
 
-        for (int i = 0; i < uniforms.length; i++) {
+        for (int i = 0; i < uniformCount; i++) {
 
             UniformStruct<?> uniform = uniforms[i];
 
@@ -326,18 +328,18 @@ class RenderSystem extends SystemPackage {
         Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<RenderBatchStruct>> depth2MaterialBatches =
                 queue.fbo2Depth2MaterialBatches.get(fbo);
         if (depth2MaterialBatches == null) {
-            depth2MaterialBatches = new Int2ObjectOpenHashMap<>();
+            depth2MaterialBatches = queue.acquireDepthBatchMap();
             queue.fbo2Depth2MaterialBatches.put(fbo, depth2MaterialBatches);
-            queue.fbo2Depth2BatchList.put(fbo, new Int2ObjectOpenHashMap<>());
-            queue.fbo2DepthOrder.put(fbo, new IntArrayList());
+            queue.fbo2Depth2BatchList.put(fbo, queue.acquireDepthBatchListMap());
+            queue.fbo2DepthOrder.put(fbo, queue.acquireDepthOrder());
             ensureFboQueued(queue, fbo, window);
         }
 
         Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = depth2MaterialBatches.get(depth);
         if (materialBatches == null) {
-            materialBatches = new Int2ObjectOpenHashMap<>();
+            materialBatches = queue.acquireMaterialBatchMap();
             depth2MaterialBatches.put(depth, materialBatches);
-            queue.fbo2Depth2BatchList.get(fbo).put(depth, new ObjectArrayList<>());
+            queue.fbo2Depth2BatchList.get(fbo).put(depth, queue.acquireBatchList());
 
             IntArrayList depths = queue.fbo2DepthOrder.get(fbo);
             int index = 0;
@@ -348,7 +350,7 @@ class RenderSystem extends SystemPackage {
 
         RenderBatchStruct batch = materialBatches.get(materialID);
         if (batch == null) {
-            batch = new RenderBatchStruct(material);
+            batch = queue.acquireRenderBatch(material);
             materialBatches.put(materialID, batch);
             queue.fbo2Depth2BatchList.get(fbo).get(depth).add(batch);
         }
@@ -371,9 +373,9 @@ class RenderSystem extends SystemPackage {
 
         Int2ObjectOpenHashMap<RenderBatchStruct> materialBatches = queue.screenOrder2MaterialBatches.get(order);
         if (materialBatches == null) {
-            materialBatches = new Int2ObjectOpenHashMap<>();
+            materialBatches = queue.acquireMaterialBatchMap();
             queue.screenOrder2MaterialBatches.put(order, materialBatches);
-            queue.screenOrder2BatchList.put(order, new ObjectArrayList<>());
+            queue.screenOrder2BatchList.put(order, queue.acquireBatchList());
 
             IntArrayList orders = queue.screenDepthOrder;
             int index = 0;
@@ -384,7 +386,7 @@ class RenderSystem extends SystemPackage {
 
         RenderBatchStruct batch = materialBatches.get(materialID);
         if (batch == null) {
-            batch = new RenderBatchStruct(material);
+            batch = queue.acquireRenderBatch(material);
             materialBatches.put(materialID, batch);
             queue.screenOrder2BatchList.get(order).add(batch);
         }
@@ -455,7 +457,7 @@ class RenderSystem extends SystemPackage {
         ObjectArrayList<SkinnedBatchStruct> batches = queue.fbo2SkinnedBatchList.get(fbo);
 
         if (batches == null) {
-            batches = new ObjectArrayList<>();
+            batches = queue.acquireSkinnedBatchList();
             queue.fbo2SkinnedBatchList.put(fbo, batches);
         }
 
@@ -466,7 +468,7 @@ class RenderSystem extends SystemPackage {
             if (((SkinnedBatchStruct) elements[i]).getSkinnedBuffer() == skinnedBuffer)
                 return;
 
-        batches.add(new SkinnedBatchStruct(skinnedBuffer, material));
+        batches.add(queue.acquireSkinnedBatch(skinnedBuffer, material));
         ensureFboQueued(queue, fbo, window);
     }
 

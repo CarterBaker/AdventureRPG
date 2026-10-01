@@ -76,7 +76,7 @@ public class CompositeRenderSystem extends SystemPackage {
             batch = queue.screenCompositeMaterialBatches.get(id);
 
             if (batch == null) {
-                batch = new CompositeBatchStruct(material);
+                batch = queue.acquireCompositeBatch(material);
                 queue.screenCompositeMaterialBatches.put(id, batch);
                 queue.screenCompositeBatchList.add(batch);
             }
@@ -84,15 +84,16 @@ public class CompositeRenderSystem extends SystemPackage {
             Int2ObjectOpenHashMap<CompositeBatchStruct> materialBatches = queue.fbo2CompositeMaterialBatches.get(fbo);
 
             if (materialBatches == null) {
-                materialBatches = new Int2ObjectOpenHashMap<>();
+                materialBatches = queue.acquireCompositeBatchMap();
                 queue.fbo2CompositeMaterialBatches.put(fbo, materialBatches);
-                queue.fbo2CompositeBatchList.put(fbo, new ObjectArrayList<>());
+                queue.fbo2CompositeBatchList.put(fbo, queue.acquireCompositeBatchList());
+                queue.compositeFbos.add(fbo);
             }
 
             batch = materialBatches.get(id);
 
             if (batch == null) {
-                batch = new CompositeBatchStruct(material);
+                batch = queue.acquireCompositeBatch(material);
                 materialBatches.put(id, batch);
                 queue.fbo2CompositeBatchList.get(fbo).add(batch);
             }

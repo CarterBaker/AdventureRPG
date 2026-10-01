@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.megastreammanager;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 import application.bootstrap.worldpipeline.chunk.ChunkData;
@@ -27,6 +28,9 @@ class MegaQueueManager extends ManagerPackage {
      * upload budget. Mega resolution and the shared pool are main-thread only;
      * merges run on workers under the mega's lock. Invalidating a mega before
      * its chunk is pooled blocks on that lock so no stale reference survives.
+     * A mega is never dumped while it still stands in for chunks awaiting their
+     * own upload, and an upload the budget turns away keeps its place at the
+     * front of the round robin for the next frame.
      */
 
     // Internal
@@ -52,6 +56,7 @@ class MegaQueueManager extends ManagerPackage {
     // GPU Upload Throttle
     private int megaGpuUploadBudget;
     private int gpuUploadsThisFrame;
+    private LongArrayList deferredUploads;
 
     // Internal \\
 
@@ -75,6 +80,7 @@ class MegaQueueManager extends ManagerPackage {
 
         // GPU Upload Throttle
         this.megaGpuUploadBudget = EngineSetting.MAX_MEGA_GPU_UPLOADS_PER_FRAME;
+        this.deferredUploads = new LongArrayList();
     }
 
     @Override
@@ -223,6 +229,7 @@ class MegaQueueManager extends ManagerPackage {
 
     // Assessment \\
 
+    // Round robin from the front of the linked map; an assessed mega moves to the back
     private void assessActiveMegas(GridInstance grid) {
 
         Long2ObjectLinkedOpenHashMap<MegaChunkInstance> activeMegaChunks = grid.getActiveMegaChunks();
@@ -231,26 +238,26 @@ class MegaQueueManager extends ManagerPackage {
             return;
 
         int megaMax = computeMegaMax(grid);
-        int assessed = 0;
-        var iterator = activeMegaChunks.long2ObjectEntrySet().iterator();
+        int assessCount = Math.min(megaAssessPerFrame, activeMegaChunks.size());
 
-        while (iterator.hasNext() && assessed < megaAssessPerFrame) {
+        deferredUploads.clear();
 
-            var entry = iterator.next();
-            long megaCoord = entry.getLongKey();
-            MegaChunkInstance mega = entry.getValue();
-            iterator.remove();
+        for (int assessed = 0; assessed < assessCount; assessed++) {
 
+            long megaCoord = activeMegaChunks.firstLongKey();
+            MegaChunkInstance mega = activeMegaChunks.getAndMoveToLast(megaCoord);
             MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
             GridSlotHandle gridSlotHandle = grid.getGridSlotForChunk(megaCoord);
 
             if (gridSlotHandle == null) {
-                unloadMega(mega, megaCoord, megaMax);
-                assessed++;
+
+                if (unloadMega(mega, megaCoord, megaMax))
+                    activeMegaChunks.remove(megaCoord);
+
                 continue;
             }
 
-            MegaQueueOperation op = determineOperation(sync, gridSlotHandle);
+            MegaQueueOperation op = determineOperation(grid, megaCoord, sync, gridSlotHandle);
 
             switch (op) {
                 case ASSESS -> assessBranch.assessMega(mega);
@@ -258,19 +265,22 @@ class MegaQueueManager extends ManagerPackage {
                     if (gpuUploadsThisFrame < megaGpuUploadBudget) {
                         renderBranch.renderMega(mega, sync);
                         gpuUploadsThisFrame++;
-                    }
+                    } else
+                        deferredUploads.add(megaCoord);
                 }
                 case DUMP -> dumpBranch.dumpMega(mega, sync, megaCoord);
                 case SKIP -> {
                 }
             }
-
-            activeMegaChunks.put(megaCoord, mega);
-            assessed++;
         }
+
+        for (int i = deferredUploads.size() - 1; i >= 0; i--)
+            grid.promoteMega(deferredUploads.getLong(i));
     }
 
     private MegaQueueOperation determineOperation(
+            GridInstance grid,
+            long megaCoord,
             MegaDataSyncContainer sync,
             GridSlotHandle gridSlotHandle) {
 
@@ -282,8 +292,11 @@ class MegaQueueManager extends ManagerPackage {
 
             MegaData toDump = MegaDataUtility.nextToDump(sync.getData(), slotLevel);
 
+            // Dumping a mega still standing in for its chunks would open a hole until they upload
             if (toDump != null)
-                return MegaQueueOperation.DUMP;
+                return worldRenderManager.isMegaStandingIn(grid, megaCoord)
+                        ? MegaQueueOperation.SKIP
+                        : MegaQueueOperation.DUMP;
 
             MegaData toLoad = MegaDataUtility.nextToLoad(sync.getData(), slotLevel);
 
@@ -306,12 +319,12 @@ class MegaQueueManager extends ManagerPackage {
 
     // Unload \\
 
-    private void unloadMega(MegaChunkInstance mega, long megaCoord, int megaMax) {
+    private boolean unloadMega(MegaChunkInstance mega, long megaCoord, int megaMax) {
 
         MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
 
         if (!sync.tryAcquire())
-            return;
+            return false;
 
         try {
             worldRenderManager.removeMegaInstance(megaCoord);
@@ -324,6 +337,8 @@ class MegaQueueManager extends ManagerPackage {
             megaPool.push(mega);
         else
             mega.dispose();
+
+        return true;
     }
 
     // Invalidation \\

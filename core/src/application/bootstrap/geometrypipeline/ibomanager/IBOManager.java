@@ -101,11 +101,12 @@ public class IBOManager extends ManagerPackage {
         return IBOGLSLUtility.uploadIndexData(
                 vaoInstance,
                 create(IBOInstance.class),
-                indices.toShortArray());
+                indices.elements(),
+                indices.size());
     }
 
     public IBOInstance updateIBOInstance(IBOInstance iboInstance, ShortArrayList indices) {
-        return IBOGLSLUtility.updateIndexData(iboInstance, indices.toShortArray());
+        return IBOGLSLUtility.updateIndexData(iboInstance, indices.elements(), indices.size());
     }
 
     // Removal \\
