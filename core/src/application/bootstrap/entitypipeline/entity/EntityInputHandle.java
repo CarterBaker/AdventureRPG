@@ -13,9 +13,11 @@ public class EntityInputHandle extends HandlePackage {
      * Disconnected from RawInputHandle by design — the translation from raw
      * hardware state to game intent happens in PlayerManager. strafe holds
      * the body to the facing direction instead of letting it turn toward
-     * wherever the entity is heading. aimAction is the moment an aim is
-     * raised and throwAction the moment it is let go; blockAction is held for
-     * as long as the guard stays up.
+     * wherever the entity is heading. primaryAction is held for as long as
+     * the entity keeps attacking, and activateAction is the moment it
+     * activates what it faces or sets down what it holds. aimAction is the
+     * moment an aim is raised and throwAction the moment a raised aim is let
+     * fly; blockAction is held for as long as the guard stays up.
      */
 
     // Movement
@@ -30,7 +32,7 @@ public class EntityInputHandle extends HandlePackage {
 
     // Actions
     private boolean primaryAction;
-    private boolean secondaryAction;
+    private boolean activateAction;
     private boolean aimAction;
     private boolean throwAction;
     private boolean blockAction;
@@ -115,16 +117,16 @@ public class EntityInputHandle extends HandlePackage {
         return primaryAction;
     }
 
-    public boolean isSecondaryAction() {
-        return secondaryAction;
+    public boolean isActivateAction() {
+        return activateAction;
     }
 
     public void setPrimaryAction(boolean v) {
         primaryAction = v;
     }
 
-    public void setSecondaryAction(boolean v) {
-        secondaryAction = v;
+    public void setActivateAction(boolean v) {
+        activateAction = v;
     }
 
     public boolean isAimAction() {
@@ -180,7 +182,7 @@ public class EntityInputHandle extends HandlePackage {
     public void clear() {
         forward = back = left = right = false;
         jump = walk = sprint = strafe = false;
-        primaryAction = secondaryAction = false;
+        primaryAction = activateAction = false;
         aimAction = throwAction = blockAction = false;
     }
 }

@@ -22,9 +22,10 @@ public class CombatManager extends ManagerPackage {
      * the moment its effect lands: SwingBranch strikes with whatever is held,
      * ThrowBranch lets one held item fly. control() reads an entity's input
      * each frame it is driven: an aim raises the held item and holds it back
-     * until let go, when it is thrown, and moving cancels it; a guard stays up
-     * for as long as the entity holds it and has anything in hand to block
-     * with. swing(), gesture() and control() are the only ways an action
+     * until the throw is called for, while letting the aim go or moving
+     * lowers it again; a guard stays up for as long as the entity holds it,
+     * with whatever is in hand or with bare hands. Any item swings and any
+     * item blocks. swing(), gesture() and control() are the only ways an action
      * begins, and only while the hands are free — a heavier held item swings
      * slower. findTarget() is the one place that decides which entity a ray
      * meets, and damage() the one path health is lost, through DamageBranch.
@@ -138,7 +139,7 @@ public class CombatManager extends ManagerPackage {
         switch (actionHandle.getAction()) {
             case NONE -> raiseStance(entity, input, actionHandle);
             case AIM -> controlAim(entity, input, actionHandle);
-            case BLOCK -> controlGuard(entity, input, actionHandle);
+            case BLOCK -> controlGuard(input, actionHandle);
             default -> {
             }
         }
@@ -148,32 +149,31 @@ public class CombatManager extends ManagerPackage {
 
         InventoryHandle inventoryHandle = entity.getInventoryHandle();
 
-        if (input.isBlockAction() && resolveGuardItem(entity) != null)
+        if (input.isBlockAction())
             actionHandle.hold(EntityAction.BLOCK, EngineSetting.BLOCK_RAISE_SECONDS);
         else if (input.isAimAction() && inventoryHandle.hasMainHand())
             actionHandle.hold(EntityAction.AIM, EngineSetting.AIM_RAISE_SECONDS);
     }
 
-    // Letting go throws; moving off cancels the aim and leaves the key to sprint
+    // The throw lets fly; letting the aim go or moving off lowers it and leaves the key to sprint
     private void controlAim(EntityInstance entity, EntityInputHandle input, EntityActionHandle actionHandle) {
 
-        if (input.isThrowAction() && entity.getInventoryHandle().hasMainHand()) {
-            actionHandle.begin(EntityAction.THROW, EngineSetting.THROW_SECONDS, EngineSetting.THROW_RELEASE);
+        if (!input.isSprint() || input.hasHorizontalInput() || !entity.getInventoryHandle().hasMainHand()) {
+            actionHandle.release();
             return;
         }
 
-        if (input.isThrowAction() || !input.isSprint() || input.hasHorizontalInput()
-                || !entity.getInventoryHandle().hasMainHand())
+        if (input.isThrowAction())
+            actionHandle.begin(EntityAction.THROW, EngineSetting.THROW_SECONDS, EngineSetting.THROW_RELEASE);
+    }
+
+    private void controlGuard(EntityInputHandle input, EntityActionHandle actionHandle) {
+
+        if (!input.isBlockAction())
             actionHandle.release();
     }
 
-    private void controlGuard(EntityInstance entity, EntityInputHandle input, EntityActionHandle actionHandle) {
-
-        if (!input.isBlockAction() || resolveGuardItem(entity) == null)
-            actionHandle.release();
-    }
-
-    // The item a guard is raised with — the off hand's, else the main hand's, null with both hands empty
+    // The item a guard is raised with — the off hand's, else the main hand's, null when it guards bare-handed
     ItemInstance resolveGuardItem(EntityInstance entity) {
 
         InventoryHandle inventoryHandle = entity.getInventoryHandle();

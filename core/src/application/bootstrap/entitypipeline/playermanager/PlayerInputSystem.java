@@ -11,8 +11,11 @@ class PlayerInputSystem extends SystemPackage {
      * Translates raw hardware state into game-semantic entity input once per
      * player per frame, before movement. The only place physical bindings map
      * to game actions; while input is locked the entity input is cleared to
-     * neutral. Sprint doubles as the throw: pressed while standing still it
-     * raises an aim, and let go it throws, while held on the move it sprints.
+     * neutral. Primary attacks, Secondary raises a guard, and Activate opens
+     * what it faces or sets down what is held. Sprint doubles as the aim:
+     * pressed while standing still it raises the held item, Primary then
+     * throws it and letting Sprint go lowers it, while held on the move it
+     * sprints.
      */
 
     // Lock
@@ -34,10 +37,10 @@ class PlayerInputSystem extends SystemPackage {
         entity.setWalk(raw.isBindingHeld(KeyBindings.WALK));
         entity.setSprint(raw.isBindingHeld(KeyBindings.SPRINT));
         entity.setPrimaryAction(raw.isBindingHeld(KeyBindings.PRIMARY));
-        entity.setSecondaryAction(raw.isBindingHeld(KeyBindings.SECONDARY));
+        entity.setActivateAction(raw.isBindingClicked(KeyBindings.ACTIVATE));
         entity.setAimAction(raw.isBindingClicked(KeyBindings.SPRINT) && !entity.hasHorizontalInput());
-        entity.setThrowAction(raw.isBindingReleased(KeyBindings.SPRINT));
-        entity.setBlockAction(raw.isBindingHeld(KeyBindings.BLOCK));
+        entity.setThrowAction(raw.isBindingClicked(KeyBindings.PRIMARY));
+        entity.setBlockAction(raw.isBindingHeld(KeyBindings.SECONDARY));
     }
 
     // Lock \\

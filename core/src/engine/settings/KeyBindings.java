@@ -24,7 +24,7 @@ public final class KeyBindings {
     public static Binding WALK = new Binding(InputCode.key(Keys.CONTROL_LEFT));
     public static Binding SPRINT = new Binding(InputCode.key(Keys.SHIFT_LEFT));
 
-    // Mouse
+    // Mouse — Primary attacks, Secondary raises a guard
     public static Binding PRIMARY = new Binding(InputCode.mouse(Buttons.LEFT));
     public static Binding SECONDARY = new Binding(InputCode.mouse(Buttons.RIGHT));
     public static Binding LOOK = new Binding(InputCode.mouse(Buttons.RIGHT));
@@ -34,9 +34,6 @@ public final class KeyBindings {
 
     // Menu
     public static Binding PAUSE = new Binding(InputCode.key(Keys.ESCAPE));
-
-    // Combat
-    public static Binding BLOCK = new Binding(InputCode.key(Keys.Q));
 
     // Inventory
     public static Binding INVENTORY = new Binding(InputCode.key(Keys.I));

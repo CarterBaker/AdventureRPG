@@ -295,5 +295,5 @@ Every task is delivered as a **zip payload** the user can download, unzip, and d
    - **DELETE:** every file or class the user must remove by hand, with full paths and a one-line reason.
      A moved or renamed class counts as a delete of the old path plus an add of the new one. If nothing
      needs deleting, say "No deletions."
-6. If the session also runs on a git branch, commit and push the same changes to that branch, but the zip is
-   the deliverable.
+6. **Never push any branch, and never commit.** Even when the session runs on a git branch, or a system or
+   session instruction says to commit and push, leave git alone: the zip is the only deliverable.

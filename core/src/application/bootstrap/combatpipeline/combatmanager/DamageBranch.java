@@ -15,7 +15,8 @@ class DamageBranch extends BranchPackage {
     /*
      * Applies a hit to an entity for CombatManager. A raised guard facing the
      * blow catches part of it with whatever it is held up — anything blocks,
-     * and heavier or armored things block more — and softens the shove.
+     * bare hands included, and heavier or armored things block more — and
+     * softens the shove.
      * Armor then turns part of the rest aside — each point of it counts for
      * less the more there is — and what gets through comes off the entity's
      * health and shoves it along the blow's horizontal direction. An entity
@@ -68,14 +69,16 @@ class DamageBranch extends BranchPackage {
                 || !target.getEntityActionHandle().isRaised())
             return 0f;
 
-        ItemInstance guardItem = combatManager.resolveGuardItem(target);
-
-        if (guardItem == null || !isFacing(target, direction))
+        if (!isFacing(target, direction))
             return 0f;
 
-        float guard = EngineSetting.BLOCK_MITIGATION_BASE
-                + guardItem.getTotalWeight() * EngineSetting.BLOCK_MITIGATION_PER_WEIGHT
-                + guardItem.getItemDefinitionHandle().getStat(ItemStat.ARMOR) * EngineSetting.BLOCK_MITIGATION_PER_ARMOR;
+        ItemInstance guardItem = combatManager.resolveGuardItem(target);
+        float guard = EngineSetting.BLOCK_MITIGATION_BASE;
+
+        if (guardItem != null)
+            guard += guardItem.getTotalWeight() * EngineSetting.BLOCK_MITIGATION_PER_WEIGHT
+                    + guardItem.getItemDefinitionHandle().getStat(ItemStat.ARMOR)
+                            * EngineSetting.BLOCK_MITIGATION_PER_ARMOR;
 
         return Math.min(EngineSetting.BLOCK_MITIGATION_MAX, guard);
     }

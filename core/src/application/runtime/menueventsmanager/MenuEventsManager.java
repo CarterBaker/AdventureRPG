@@ -1,5 +1,6 @@
 package application.runtime.menueventsmanager;
 
+import application.runtime.menueventsmanager.menus.HUDBranch;
 import application.runtime.menueventsmanager.menus.LoadMenuBranch;
 import application.runtime.menueventsmanager.menus.MainMenuBranch;
 import application.runtime.menueventsmanager.menus.PauseMenuBranch;
@@ -43,6 +44,7 @@ public class MenuEventsManager extends ManagerPackage {
         create(InventoryEquipmentBranch.class);
         create(InventoryContainerBranch.class);
         create(InventoryDragBranch.class);
+        create(HUDBranch.class);
         create(GenericButtonBranch.class);
     }
 }

@@ -9,7 +9,9 @@ public enum SettingsBinding {
     /*
      * The game actions the Controls tab lets a player rebind, in the order
      * they are listed and grouped under their section. Primary stays fixed —
-     * it is the button that clicks menus, so it can never be rebound away.
+     * it is the button that clicks menus and attacks, so it can never be
+     * rebound away. Block is the Secondary binding, and Activate also sets
+     * down whatever is held.
      * Editor bindings are not listed; they stay with the editor.
      */
 
@@ -27,10 +29,8 @@ public enum SettingsBinding {
             KeyBindings.WALK),
     SPRINT(RuntimeSetting.SETTINGS_SECTION_MOVEMENT, RuntimeSetting.SETTINGS_BINDING_SPRINT,
             KeyBindings.SPRINT),
-    PLACE(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_PLACE,
-            KeyBindings.SECONDARY),
     BLOCK(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_BLOCK,
-            KeyBindings.BLOCK),
+            KeyBindings.SECONDARY),
     ACTIVATE(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_ACTIVATE,
             KeyBindings.ACTIVATE),
     INVENTORY(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_INVENTORY,

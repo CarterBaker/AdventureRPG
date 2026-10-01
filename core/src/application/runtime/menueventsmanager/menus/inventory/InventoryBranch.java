@@ -32,6 +32,8 @@ public class InventoryBranch extends BranchPackage {
      * carried item and the camera. Each frame the drag, container and
      * equipment branches settle and redraw what changed. A new item handed in
      * while the cursor is over the open inventory lands where it points.
+     * findOpenableContainer() is the one place that decides which container
+     * the activate binding would open.
      */
 
     // Internal
@@ -119,20 +121,26 @@ public class InventoryBranch extends BranchPackage {
         if (!inputManager.bindingClicked(KeyBindings.ACTIVATE, window))
             return;
 
+        WorldItemInstance container = findOpenableContainer(window);
+
+        if (container != null)
+            openMenu(window, container);
+    }
+
+    // The container the player faces and could open where it lies — null when it faces none or nothing is open
+    // to it now
+    public WorldItemInstance findOpenableContainer(WindowInstance window) {
+
+        if (session != null || !canOpen(window))
+            return null;
+
         WorldItemInstance targetItem = playerManager.getTargetItemForWindow(window.getWindowID());
 
-        if (targetItem != null && worldItemPlacementSystem.canOpen(targetItem))
-            openMenu(window, targetItem);
+        return targetItem != null && worldItemPlacementSystem.canOpen(targetItem) ? targetItem : null;
     }
 
     private boolean canOpen(WindowInstance window) {
-
-        int windowID = window.getWindowID();
-
-        return playerManager.hasPlayerForWindow(windowID)
-                && !playerManager.isFreeCameraForWindow(windowID)
-                && !playerManager.isCharacterPreview(windowID)
-                && !window.getMenuListHandle().isInputLocked();
+        return playerManager.isPlayingForWindow(window.getWindowID());
     }
 
     // The scene menu opens first, so its drag surface lies under every other inventory menu

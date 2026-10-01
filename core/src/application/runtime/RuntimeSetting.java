@@ -79,6 +79,11 @@ public class RuntimeSetting {
     // Pause Menu
     public static final String MENU_PAUSE = "PauseMenu/Pause";
 
+    // HUD
+    public static final String MENU_HUD_CROSSHAIR = "HUD/Crosshair";
+    public static final String MENU_HUD_ACTIVATE = "HUD/Activate";
+    public static final int ENTRY_HUD_ACTIVATE_KEY = 0;
+
     // Character Creator Menus
     public static final String MENU_CREATOR = "CharacterCreator/Creator";
     public static final String MENU_CREATOR_TAB = "CharacterCreator/creator_tab";
@@ -254,9 +259,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_BINDING_MOVE_RIGHT = "Move Right";
     public static final String SETTINGS_BINDING_JUMP = "Jump";
     public static final String SETTINGS_BINDING_WALK = "Walk";
-    public static final String SETTINGS_BINDING_SPRINT = "Sprint / Throw";
-    public static final String SETTINGS_BINDING_PLACE = "Place";
-    public static final String SETTINGS_BINDING_ACTIVATE = "Activate";
+    public static final String SETTINGS_BINDING_SPRINT = "Sprint / Aim";
+    public static final String SETTINGS_BINDING_ACTIVATE = "Activate / Place";
     public static final String SETTINGS_BINDING_BLOCK = "Block";
     public static final String SETTINGS_BINDING_INVENTORY = "Inventory";
     public static final String SETTINGS_BINDING_ROTATE_ITEM = "Rotate Item";

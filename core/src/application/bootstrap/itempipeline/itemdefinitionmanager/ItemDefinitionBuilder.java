@@ -42,12 +42,14 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * pocket shown as its own box of walls; either must name the parts of its
      * lid, left off its model while it stands open. The lid's clearance — the
      * cells that must be empty before it opens — is the boxes the container's
-     * 'clearance' lists, or the cells resting on the lid's upper surface when
-     * it lists none. An item without a display name is titled from its local
-     * name split into words. A tool names its tool type, whose model it is
-     * drawn with unless it names its own mesh, and the highest break tier it
-     * can break. A stackable item holds up to its stack size in one item,
-     * which a container cannot. Bootstrap-only.
+     * 'clearance' lists, or when it lists none the space the lid swings
+     * through: the cells over its upper surface, as high as the lid is short
+     * across, so a block or an item anywhere in its way keeps it shut. An item
+     * without a display name is titled from its local name split into words.
+     * A tool names its tool type, whose model it is drawn with unless it names
+     * its own mesh, and the highest break tier it can break. A stackable item
+     * holds up to its stack size in one item, which a container cannot.
+     * Bootstrap-only.
      */
 
     // Internal
@@ -472,7 +474,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
         return new LidClearanceStruct(cellX.toIntArray(), cellY.toIntArray(), cellZ.toIntArray());
     }
 
-    // The cells resting on the lid's upper surface that the container's own shape leaves open
+    // The space the lid swings through — the cells over its upper surface, up to its shorter width and at most one
+    // block over the model grid, that the container's own shape leaves open
     private LidClearanceStruct resolveLidClearance(
             ArpgArrayStruct lidArpg,
             SubVoxelModelStruct model,
@@ -480,6 +483,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
             String itemName) {
 
         int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        int top = resolution * EngineSetting.ITEM_CLEARANCE_GRID_SPAN - resolution;
         boolean[] lidPart = new boolean[model.getPartCount()];
         SubVoxelModelStruct lidModel = new SubVoxelModelStruct(model);
 
@@ -491,9 +495,46 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 lidModel.removePart(partIndex);
 
         boolean[] lid = ItemShapeStruct.resolveOccupied(lidModel);
+        int swing = resolveLidSwing(lid);
         IntArrayList cellX = new IntArrayList();
         IntArrayList cellY = new IntArrayList();
         IntArrayList cellZ = new IntArrayList();
+
+        for (int z = 0; z < resolution; z++)
+            for (int x = 0; x < resolution; x++) {
+
+                int reached = 0;
+
+                for (int y = 0; y < resolution; y++) {
+
+                    if (!lid[ItemShapeStruct.toCellIndex(x, y, z)])
+                        continue;
+
+                    if (y + 1 < resolution && lid[ItemShapeStruct.toCellIndex(x, y + 1, z)])
+                        continue;
+
+                    for (int rise = Math.max(y + 1, reached); rise <= y + swing && rise < top; rise++) {
+
+                        reached = rise + 1;
+
+                        if (shape.claimsGridCell(x, rise, z))
+                            continue;
+
+                        cellX.add(x);
+                        cellY.add(rise);
+                        cellZ.add(z);
+                    }
+                }
+            }
+
+        return new LidClearanceStruct(cellX.toIntArray(), cellY.toIntArray(), cellZ.toIntArray());
+    }
+
+    // How far the lid reaches up as it opens — its shorter width across the model grid
+    private int resolveLidSwing(boolean[] lid) {
+
+        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        int minX = resolution, minZ = resolution, maxX = -1, maxZ = -1;
 
         for (int z = 0; z < resolution; z++)
             for (int y = 0; y < resolution; y++)
@@ -502,17 +543,13 @@ class ItemDefinitionBuilder extends BuilderPackage {
                     if (!lid[ItemShapeStruct.toCellIndex(x, y, z)])
                         continue;
 
-                    boolean lidAbove = y + 1 < resolution && lid[ItemShapeStruct.toCellIndex(x, y + 1, z)];
-
-                    if (lidAbove || shape.claimsGridCell(x, y + 1, z))
-                        continue;
-
-                    cellX.add(x);
-                    cellY.add(y + 1);
-                    cellZ.add(z);
+                    minX = Math.min(minX, x);
+                    minZ = Math.min(minZ, z);
+                    maxX = Math.max(maxX, x);
+                    maxZ = Math.max(maxZ, z);
                 }
 
-        return new LidClearanceStruct(cellX.toIntArray(), cellY.toIntArray(), cellZ.toIntArray());
+        return maxX < 0 ? 0 : Math.min(maxX - minX, maxZ - minZ) + 1;
     }
 
     // The model drawn in the world while open, without its lid's parts — null for an item that is no container

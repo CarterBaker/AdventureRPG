@@ -9,6 +9,7 @@ import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemCastStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -21,20 +22,22 @@ public class PlacementManager extends ManagerPackage {
      * cooldown, and routes to BlockBranch or ItemBranch based on the action.
      * Player passes mouse input. Enemies pass AI input. Same code path either way.
      * A world item in reach and nearer than any block takes the action first:
-     * the primary action picks it up, and the use action sets the held item
-     * against the face it was hit on, so items stack into piles — containers
-     * included. Opening a container is the activate action, handled in the
-     * runtime, never here. Otherwise the primary action swings whatever is
-     * held through CombatManager, whose strike lands back here on a block
-     * through strikeBlock(), and the use action places the held item — a block
-     * piece as a sub-block, anything else as a world item. Nothing is placed
-     * while a stance is held. findTargetItem() is the one place that decides
-     * which world item an entity is aiming at, and where on it.
+     * the primary action picks it up, and the activate action sets the held
+     * item against the face it was hit on, so items stack into piles —
+     * containers included, unless the container can open, since activating
+     * one that can opens it in the runtime, never here. Otherwise the primary
+     * action swings whatever is held through CombatManager, whose strike lands
+     * back here on a block through strikeBlock(), and the activate action
+     * places the held item — a block piece as a sub-block, anything else as a
+     * world item. Nothing happens here while a stance is held: an aim's throw
+     * and a guard belong to CombatManager. findTargetItem() is the one place
+     * that decides which world item an entity is aiming at, and where on it.
      */
 
     // Internal
     private RaycastManager raycastManager;
     private WorldItemSpaceSystem worldItemSpaceSystem;
+    private WorldItemPlacementSystem worldItemPlacementSystem;
     private CombatManager combatManager;
 
     // Branches
@@ -73,6 +76,7 @@ public class PlacementManager extends ManagerPackage {
         // Internal
         this.raycastManager = get(RaycastManager.class);
         this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
+        this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.combatManager = get(CombatManager.class);
     }
 
@@ -83,11 +87,11 @@ public class PlacementManager extends ManagerPackage {
             Vector3 origin,
             Vector3 direction,
             boolean primaryAction,
-            boolean secondaryAction) {
+            boolean activateAction) {
 
         timeSinceLastPlacement += internal.getDeltaTime();
 
-        if (!primaryAction && !secondaryAction)
+        if (!(primaryAction || activateAction) || entity.getEntityActionHandle().isHolding())
             return;
 
         if (timeSinceLastPlacement < placementInterval)
@@ -103,7 +107,7 @@ public class PlacementManager extends ManagerPackage {
                 return;
             }
 
-            if (!primaryAction && handlePlaceOnItem(entity, direction)) {
+            if (activateAction && handlePlaceOnItem(entity, direction, targetItem)) {
                 timeSinceLastPlacement = 0;
                 combatManager.gesture(entity, EntityAction.PLACE);
             }
@@ -116,7 +120,7 @@ public class PlacementManager extends ManagerPackage {
             return;
         }
 
-        if (entity.getEntityActionHandle().isHolding() || !castFrom(entity, origin, direction))
+        if (!castFrom(entity, origin, direction))
             return;
 
         if (handlePlaceAction(entity, direction, castStruct)) {
@@ -219,12 +223,15 @@ public class PlacementManager extends ManagerPackage {
         return itemBranch.place(entity, direction, castStruct);
     }
 
-    // Against the item findTargetItem() last met — a block piece is a sub-block, which only builds on blocks
-    private boolean handlePlaceOnItem(EntityInstance entity, Vector3 direction) {
+    // Against the item findTargetItem() last met — a block piece is a sub-block, which only builds on blocks, and a
+    // container that can open is opened instead
+    private boolean handlePlaceOnItem(EntityInstance entity, Vector3 direction, WorldItemInstance targetItem) {
 
         ItemInstance held = entity.getInventoryHandle().getMainHand();
 
-        if (held == null || held.getItemDefinitionHandle().isBlockPiece() || entity.getEntityActionHandle().isHolding())
+        if (held == null
+                || held.getItemDefinitionHandle().isBlockPiece()
+                || worldItemPlacementSystem.canOpen(targetItem))
             return false;
 
         return itemBranch.placeOnItem(entity, direction, itemCastStruct);

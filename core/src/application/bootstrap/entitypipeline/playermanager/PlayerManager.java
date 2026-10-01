@@ -254,7 +254,7 @@ public class PlayerManager extends ManagerPackage {
                 eyePosition,
                 camera.getDirection(),
                 input.isPrimaryAction(),
-                input.isSecondaryAction());
+                input.isActivateAction());
         combatManager.control(player);
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
@@ -542,6 +542,17 @@ public class PlayerManager extends ManagerPackage {
 
     public boolean isFreeCameraForWindow(int windowID) {
         return windowID2FreeCamera.get(windowID);
+    }
+
+    // True while the window's player is in play — not flying free, not posed for a preview, no menu holding input
+    public boolean isPlayingForWindow(int windowID) {
+
+        WindowInstance window = windowID2Window.get(windowID);
+
+        return window != null
+                && !windowID2FreeCamera.get(windowID)
+                && !windowID2CharacterPreview.get(windowID)
+                && !window.getMenuListHandle().isInputLocked();
     }
 
     public CameraInstance getCameraForWindow(int windowID) {
