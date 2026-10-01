@@ -41,6 +41,15 @@ const float FOG_SEAM_HAZE         = 0.4;
 const float FOG_SEAM_BAND_CHUNKS  = 12.0;
 const float FOG_SEAM_INSET_CHUNKS = 1.0;
 
+// FOG_SHADOW_SCALE / FOG_LIT_SCALE re-weight computeFogAmount()'s result by
+// how directly lit the fragment is, since fog should read stronger on
+// sunlit distant terrain and weaker in shadow — not the reverse. Across the
+// seam where chunks give way to macro terrain both ease to neutral, so the
+// two meet under identical fog, and toward the rim of the visible world the
+// blend converges on total fog, so the edge always dissolves into the sky.
+const float FOG_SHADOW_SCALE = 0.35;
+const float FOG_LIT_SCALE    = 1.6;
+
 // True horizontal distance from the player, the origin the chunk grid and the macro ring are both laid around.
 float computeFogDistance(vec3 worldPos) {
     return length(worldPos.xz - u_playerPosition.xz);
@@ -78,6 +87,19 @@ vec3 resolveFogColor(vec3 viewDir, float fogFraction) {
     vec3 sky    = resolveSkyColor(skyDir, normalize(u_sunDirection), 0.0);
 
     return mix(u_skyFogColor, sky, fogFraction);
+}
+
+// The whole fog for one lit fragment: lighting and forward water both run it, so a surface fogs the same
+// whichever pass shaded it. litAmount is how directly sun and moon reach the fragment, 0 to 1.
+vec3 applyAtmosphericFog(vec3 color, vec3 worldPos, vec3 viewDir, float litAmount) {
+    float fogDistance = computeFogDistance(worldPos);
+    float fogFraction = computeFogFraction(fogDistance);
+    float seamBlend   = computeFogSeamBlend(fogDistance);
+    float fogT        = computeFogAmount(fogFraction, seamBlend);
+    float fogWeight   = resolveFogWeight(mix(FOG_SHADOW_SCALE, FOG_LIT_SCALE, litAmount), seamBlend);
+    float fogBlend    = resolveFogEdge(fogT * fogWeight, fogFraction);
+
+    return mix(color, resolveFogColor(viewDir, fogFraction), fogBlend);
 }
 
 #endif

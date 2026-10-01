@@ -11,6 +11,7 @@ out vec4 fragColor;
 #include "includes/NoiseUtility.glsl"
 
 uniform sampler2D u_sceneDepth;
+uniform sampler2D u_waterDepth;
 
 /*
  * Fullscreen rain and snow, anchored to the world. A drop carried sideways at
@@ -77,9 +78,9 @@ const float SNOW_BRIGHTNESS    = 1.5;
 
 // ── Scene ──────────────────────────────────────────────────────────────────
 
-// Distance from the camera to the nearest opaque surface along this pixel.
+// Distance from the camera to the nearest opaque or water surface along this pixel.
 float resolveSceneDistance(vec2 uv) {
-    float depth = texture(u_sceneDepth, uv).r;
+    float depth = min(texture(u_sceneDepth, uv).r, texture(u_waterDepth, uv).r);
 
     if (depth >= 1.0)
     return PRECIPITATION_NO_SCENE;

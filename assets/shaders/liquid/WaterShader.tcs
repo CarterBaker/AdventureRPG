@@ -1,0 +1,66 @@
+#version 400 core
+layout(vertices = 4) out;
+
+in  vec3  tcWorldPos[];
+in  vec3  tcNormal[];
+in  float tcLevel[];
+in  float tcSurface[];
+in  float tcTidal[];
+
+out vec3  teWorldPos[];
+out vec3  teNormal[];
+out float teLevel[];
+out float teSurface[];
+out float teTidal[];
+
+#include "liquid/includes/OceanTessellation.glsl"
+
+// Tessellation-level control point. Only patches that ride the tide are subdivided; still and flowing water
+// keeps its four corners. Corners arrive as the origin, then along tangent A, across both, then along
+// tangent B, so outer levels 0 and 2 run along B, 1 and 3 along A, as on the solid surface. See
+// OceanTessellation.glsl for why every shared vertex lands in the same place on both patches.
+
+void main() {
+    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+    teWorldPos[gl_InvocationID] = tcWorldPos[gl_InvocationID];
+    teNormal  [gl_InvocationID] = tcNormal  [gl_InvocationID];
+    teLevel   [gl_InvocationID] = tcLevel   [gl_InvocationID];
+    teSurface [gl_InvocationID] = tcSurface [gl_InvocationID];
+    teTidal   [gl_InvocationID] = tcTidal   [gl_InvocationID];
+
+    if (gl_InvocationID == 0) {
+
+        vec3 p0 = tcWorldPos[0];
+        vec3 p1 = tcWorldPos[1];
+        vec3 p2 = tcWorldPos[2];
+        vec3 p3 = tcWorldPos[3];
+
+        float outer0 = 1.0;
+        float outer1 = 1.0;
+        float outer2 = 1.0;
+        float outer3 = 1.0;
+        float innerA = 1.0;
+        float innerB = 1.0;
+
+        if (max(max(tcTidal[0], tcTidal[1]), max(tcTidal[2], tcTidal[3])) > 0.5) {
+
+            vec3  normal       = tcNormal[0];
+            vec3  center       = (p0 + p1 + p2 + p3) * 0.25;
+            float patchDensity = resolveOceanDensity(resolveOceanPatchChunk(center, normal));
+
+            outer0 = resolveOceanEdgeLevel(p0, p3, center, normal, patchDensity);
+            outer1 = resolveOceanEdgeLevel(p0, p1, center, normal, patchDensity);
+            outer2 = resolveOceanEdgeLevel(p1, p2, center, normal, patchDensity);
+            outer3 = resolveOceanEdgeLevel(p3, p2, center, normal, patchDensity);
+            innerA = resolveOceanInnerLevel(p0, p1, patchDensity);
+            innerB = resolveOceanInnerLevel(p0, p3, patchDensity);
+        }
+
+        gl_TessLevelOuter[0] = outer0;
+        gl_TessLevelOuter[1] = outer1;
+        gl_TessLevelOuter[2] = outer2;
+        gl_TessLevelOuter[3] = outer3;
+        gl_TessLevelInner[0] = innerA;
+        gl_TessLevelInner[1] = innerB;
+    }
+}

@@ -2,7 +2,9 @@ package application.bootstrap.worldpipeline.grid;
 
 import application.bootstrap.calendarpipeline.clock.ClockInstance;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.oceanpipeline.exposure.ExposureInstance;
 import application.bootstrap.oceanpipeline.turbulence.TurbulenceInstance;
+import application.bootstrap.oceanpipeline.wave.WaveInstance;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.weatherpipeline.precipitation.PrecipitationInstance;
@@ -46,6 +48,7 @@ public class GridInstance extends InstancePackage {
     // Window
     private WindowInstance windowInstance;
     private FBOInstance renderTargetFbo;
+    private WaterTargetStruct waterTarget;
 
     // Grid
     private int totalSlots;
@@ -84,6 +87,8 @@ public class GridInstance extends InstancePackage {
 
     // Ocean
     private TurbulenceInstance turbulenceInstance;
+    private ExposureInstance exposureInstance;
+    private WaveInstance waveInstance;
     private UBOInstance oceanDataUBO;
 
     // Chunk State
@@ -137,6 +142,8 @@ public class GridInstance extends InstancePackage {
             PrecipitationInstance precipitationInstance,
             UBOInstance precipitationDataUBO,
             TurbulenceInstance turbulenceInstance,
+            ExposureInstance exposureInstance,
+            WaveInstance waveInstance,
             UBOInstance oceanDataUBO) {
 
         // Focal
@@ -145,6 +152,7 @@ public class GridInstance extends InstancePackage {
         // Window
         this.windowInstance = windowInstance;
         this.renderTargetFbo = renderTargetFbo;
+        this.waterTarget = null;
 
         // Grid
         assignSlots(totalSlots, loadOrder, immediateSlotCount, gridCoordinates, gridSlots, radiusSquared);
@@ -178,6 +186,8 @@ public class GridInstance extends InstancePackage {
 
         // Ocean
         this.turbulenceInstance = turbulenceInstance;
+        this.exposureInstance = exposureInstance;
+        this.waveInstance = waveInstance;
         this.oceanDataUBO = oceanDataUBO;
 
         // Chunk State
@@ -435,6 +445,14 @@ public class GridInstance extends InstancePackage {
         return renderTargetFbo;
     }
 
+    public WaterTargetStruct getWaterTarget() {
+        return waterTarget;
+    }
+
+    public void setWaterTarget(WaterTargetStruct waterTarget) {
+        this.waterTarget = waterTarget;
+    }
+
     public WorldHandle getWorldHandle() {
         return focalEntity.getWorldHandle();
     }
@@ -521,6 +539,14 @@ public class GridInstance extends InstancePackage {
 
     public TurbulenceInstance getTurbulenceInstance() {
         return turbulenceInstance;
+    }
+
+    public ExposureInstance getExposureInstance() {
+        return exposureInstance;
+    }
+
+    public WaveInstance getWaveInstance() {
+        return waveInstance;
     }
 
     public UBOInstance getOceanDataUBO() {

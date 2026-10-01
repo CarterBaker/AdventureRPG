@@ -4,7 +4,9 @@ import java.util.Arrays;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.oceanpipeline.exposuremanager.ExposureManager;
 import application.bootstrap.oceanpipeline.turbulencemanager.TurbulenceManager;
+import application.bootstrap.oceanpipeline.wavemanager.WaveManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
@@ -43,6 +45,8 @@ class GridBuildSystem extends SystemPackage {
     private WindManager windManager;
     private PrecipitationManager precipitationManager;
     private TurbulenceManager turbulenceManager;
+    private ExposureManager exposureManager;
+    private WaveManager waveManager;
 
     // Config
     private int chunkSize;
@@ -76,6 +80,8 @@ class GridBuildSystem extends SystemPackage {
         this.windManager = get(WindManager.class);
         this.precipitationManager = get(PrecipitationManager.class);
         this.turbulenceManager = get(TurbulenceManager.class);
+        this.exposureManager = get(ExposureManager.class);
+        this.waveManager = get(WaveManager.class);
     }
 
     @Override
@@ -137,6 +143,8 @@ class GridBuildSystem extends SystemPackage {
                 precipitationManager.createPrecipitationInstance(),
                 uboManager.createUBOInstance(precipitationDataBase),
                 turbulenceManager.createTurbulenceInstance(),
+                exposureManager.createExposureInstance(),
+                waveManager.createWaveInstance(),
                 uboManager.createUBOInstance(oceanDataBase));
 
         return gridInstance;

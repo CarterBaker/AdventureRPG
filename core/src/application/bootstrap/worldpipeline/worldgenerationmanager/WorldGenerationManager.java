@@ -30,7 +30,7 @@ public class WorldGenerationManager extends ManagerPackage {
      * blocks to every block column, and generateSubChunk() fills subchunks,
      * leaving fully empty or uniform ones unrealized. sampleSurfaceHeight()
      * gives the coarse ground or sea surface at any point for distant macro
-     * terrain. Output is a pure function of seed and coordinate, so it is
+     * terrain, and sampleOpenWater() whether the sea covers it. Output is a pure function of seed and coordinate, so it is
      * cached per chunk and agrees across chunk borders.
      */
 
@@ -414,6 +414,23 @@ public class WorldGenerationManager extends ManagerPackage {
 
     public float sampleSurfaceHeight(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
 
+        float groundHeight = sampleGroundHeight(worldHandle, worldX, worldZ, outBlend);
+
+        if (isOceanReached(outBlend))
+            return Math.max(groundHeight, EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
+
+        return groundHeight;
+    }
+
+    public boolean sampleOpenWater(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
+
+        float groundHeight = sampleGroundHeight(worldHandle, worldX, worldZ, outBlend);
+
+        return isOceanReached(outBlend) && groundHeight < EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+    }
+
+    private float sampleGroundHeight(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
+
         biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, outBlend);
 
         float macroShape = TerrainShapeUtility.computeMacroShapeBlocks(
@@ -421,12 +438,11 @@ public class WorldGenerationManager extends ManagerPackage {
                 worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
                 outBlend);
 
-        float groundHeight = TerrainShapeUtility.clampGroundHeightBlocks(macroShape, 0f);
+        return TerrainShapeUtility.clampGroundHeightBlocks(macroShape, 0f);
+    }
 
-        if (outBlend.getCoastalWeight() > EngineSetting.OCEAN_REACH_THRESHOLD)
-            return Math.max(groundHeight, EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
-
-        return groundHeight;
+    private boolean isOceanReached(BiomeBlendStruct blend) {
+        return blend.getCoastalWeight() > EngineSetting.OCEAN_REACH_THRESHOLD;
     }
 
     // Grid Interpolation \\

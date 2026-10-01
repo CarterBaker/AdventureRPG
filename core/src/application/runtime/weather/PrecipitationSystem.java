@@ -9,6 +9,7 @@ import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.water.WaterSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.SystemPackage;
 
@@ -21,7 +22,9 @@ public class PrecipitationSystem extends SystemPackage {
      * map so nothing falls beneath a block. This system only clones the
      * per-window FBO target and binds the grid's own UBOs — what falls, how
      * hard, and where it is sheltered are all resolved per grid by
-     * PrecipitationManager.
+     * PrecipitationManager. Drops stop at the water surface too, read from the
+     * water target's depth, and nothing falls while the camera is under the
+     * sea.
      */
 
     // Internal
@@ -30,6 +33,7 @@ public class PrecipitationSystem extends SystemPackage {
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
     private WorldSystem worldSystem;
+    private WaterSystem waterSystem;
 
     // Render Target
     private PassHandle precipitationPass;
@@ -44,6 +48,7 @@ public class PrecipitationSystem extends SystemPackage {
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
+        this.waterSystem = get(WaterSystem.class);
     }
 
     @Override
@@ -54,10 +59,14 @@ public class PrecipitationSystem extends SystemPackage {
 
         MaterialInstance mat = precipitationPass.getModelInstance().getMaterial();
         mat.setUniform(RuntimeSetting.UNIFORM_SCENE_DEPTH, worldSystem.getWorldFbo().getDepthTexture());
+        mat.setUniform(RuntimeSetting.UNIFORM_WATER_DEPTH, waterSystem.getWaterFbo().getDepthTexture());
     }
 
     @Override
     protected void lateUpdate() {
+
+        if (waterSystem.isCameraSubmerged())
+            return;
 
         bindGridPrecipitationData(worldSystem.getGridInstance());
 

@@ -2,50 +2,37 @@ package application.bootstrap.oceanpipeline.turbulencemanager;
 
 import java.util.Arrays;
 
-import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.oceanpipeline.turbulence.TurbulenceInstance;
 import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.weatherpipeline.weather.WeatherWindowStruct;
 import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
-import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
-import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.NoiseUtility;
-import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TurbulenceManager extends ManagerPackage {
 
     /*
-     * Owns ocean turbulence and the wave set it drives. Each frame rebuilds
-     * every grid's TurbulenceInstance from its local weather plus nearby
-     * differing weather cells, so an approaching storm roughens the sea ahead
-     * of it. Waves follow the prevailing wind, snap to the world's wrap period,
-     * and are sampled on the CPU exactly as WaterShader evaluates them.
+     * Owns ocean turbulence, the weather term of the sea state, and the ocean
+     * clock every wave and gust runs on. Each frame rebuilds every grid's
+     * TurbulenceInstance from its local weather plus nearby differing weather
+     * cells, so an approaching storm roughens the sea ahead of it and a storm
+     * to the west raises giant waves only on the western water. Grids resolve
+     * in LATE_UPDATE, once FIXED_UPDATE has settled their reference chunk,
+     * since every cell position is relative to it.
      */
 
     // Internal
     private WeatherPatternManager weatherPatternManager;
-    private WindManager windManager;
-    private WorldManager worldManager;
     private WorldStreamManager worldStreamManager;
-    private TideManager tideManager;
 
     // Time
     private double elapsedSeconds;
-
-    // Waves
-    private WorldHandle waveWorldHandle;
-    private double[] waveVectorX;
-    private double[] waveVectorZ;
-    private double[] waveAngularSpeed;
-    private float[] waveAmplitudeShare;
 
     // Scratch
     private final WeatherWindowStruct windowScratch = new WeatherWindowStruct();
@@ -60,18 +47,10 @@ public class TurbulenceManager extends ManagerPackage {
         // Time
         this.elapsedSeconds = 0.0;
 
-        // Waves
-        this.waveVectorX = new double[EngineSetting.OCEAN_WAVE_COUNT];
-        this.waveVectorZ = new double[EngineSetting.OCEAN_WAVE_COUNT];
-        this.waveAngularSpeed = new double[EngineSetting.OCEAN_WAVE_COUNT];
-        this.waveAmplitudeShare = new float[EngineSetting.OCEAN_WAVE_COUNT];
-
         // Scratch
         int mapCellCount = EngineSetting.WEATHER_MAP_RESOLUTION * EngineSetting.WEATHER_MAP_RESOLUTION;
         this.sortScratch = new long[mapCellCount];
         this.cellStrengthScratch = new float[mapCellCount];
-
-        create(TurbulenceBufferSystem.class);
     }
 
     @Override
@@ -79,23 +58,18 @@ public class TurbulenceManager extends ManagerPackage {
 
         // Internal
         this.weatherPatternManager = get(WeatherPatternManager.class);
-        this.windManager = get(WindManager.class);
-        this.worldManager = get(WorldManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
-        this.tideManager = get(TideManager.class);
     }
 
     // Update \\
 
     @Override
     protected void update() {
-
         elapsedSeconds += internal.getDeltaTime();
+    }
 
-        WorldHandle activeWorld = worldManager.getActiveWorld();
-
-        if (activeWorld != waveWorldHandle)
-            resolveWaveSet(activeWorld);
+    @Override
+    protected void lateUpdate() {
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
         Object[] elements = grids.elements();
@@ -120,7 +94,6 @@ public class TurbulenceManager extends ManagerPackage {
         turbulence.beginField(ambientStrength);
 
         resolveCells(turbulence, grid, ambientWeatherStrength);
-        resolveWavePhases(turbulence, grid.getActiveChunkCoordinate());
     }
 
     // Cells \\
@@ -217,62 +190,6 @@ public class TurbulenceManager extends ManagerPackage {
         return windStrength + rainStrength;
     }
 
-    // Waves \\
-
-    private void resolveWaveSet(WorldHandle activeWorld) {
-
-        Vector3 windDirection = windManager.getWindHandle().getGlobalWindDirection();
-
-        double baseAngle = Math.atan2(windDirection.z, windDirection.x);
-        double worldWidthBlocks = activeWorld.getWorldScale().x;
-        double worldHeightBlocks = activeWorld.getWorldScale().y;
-        float shareSum = 0f;
-
-        for (int i = 0; i < EngineSetting.OCEAN_WAVE_COUNT; i++) {
-
-            double angle = baseAngle + Math.toRadians(EngineSetting.OCEAN_WAVE_ANGLES_DEGREES[i]);
-            double wavelength = EngineSetting.OCEAN_WAVE_BASE_WAVELENGTH_BLOCKS
-                    * EngineSetting.OCEAN_WAVE_WAVELENGTH_RATIOS[i];
-            double waveNumber = Math.PI * 2.0 / wavelength;
-
-            waveVectorX[i] = snapToWrapPeriod(Math.cos(angle) * waveNumber, worldWidthBlocks);
-            waveVectorZ[i] = snapToWrapPeriod(Math.sin(angle) * waveNumber, worldHeightBlocks);
-
-            double snappedWaveNumber = Math.sqrt(waveVectorX[i] * waveVectorX[i] + waveVectorZ[i] * waveVectorZ[i]);
-
-            waveAngularSpeed[i] = Math.sqrt(EngineSetting.GRAVITY_FORCE * snappedWaveNumber)
-                    * EngineSetting.OCEAN_WAVE_SPEED_SCALE;
-            waveAmplitudeShare[i] = EngineSetting.OCEAN_WAVE_AMPLITUDE_RATIOS[i];
-            shareSum += waveAmplitudeShare[i];
-        }
-
-        for (int i = 0; i < EngineSetting.OCEAN_WAVE_COUNT; i++)
-            waveAmplitudeShare[i] /= shareSum;
-
-        waveWorldHandle = activeWorld;
-    }
-
-    private double snapToWrapPeriod(double waveVectorComponent, double periodBlocks) {
-
-        double cyclesPerPeriod = Math.PI * 2.0 / periodBlocks;
-
-        return Math.round(waveVectorComponent / cyclesPerPeriod) * cyclesPerPeriod;
-    }
-
-    private void resolveWavePhases(TurbulenceInstance turbulence, long referenceCoordinate) {
-
-        double originX = (double) Coordinate2Long.unpackX(referenceCoordinate) * EngineSetting.CHUNK_SIZE;
-        double originZ = (double) Coordinate2Long.unpackY(referenceCoordinate) * EngineSetting.CHUNK_SIZE;
-
-        for (int i = 0; i < EngineSetting.OCEAN_WAVE_COUNT; i++) {
-
-            double phase = waveVectorX[i] * originX + waveVectorZ[i] * originZ
-                    - waveAngularSpeed[i] * elapsedSeconds;
-
-            turbulence.setWavePhase(i, (float) (phase - Math.floor(phase / (Math.PI * 2.0)) * (Math.PI * 2.0)));
-        }
-    }
-
     // On-Demand \\
 
     public float sampleTurbulence(GridInstance grid, double worldBlockX, double worldBlockZ) {
@@ -281,30 +198,14 @@ public class TurbulenceManager extends ManagerPackage {
                 toRelativeZ(grid, worldBlockZ));
     }
 
-    public float sampleSurfaceHeightBlocks(GridInstance grid, double worldBlockX, double worldBlockZ) {
-
-        TurbulenceInstance turbulence = grid.getTurbulenceInstance();
-
-        float relativeX = toRelativeX(grid, worldBlockX);
-        float relativeZ = toRelativeZ(grid, worldBlockZ);
-        float amplitude = turbulence.sampleWaveAmplitudeBlocks(relativeX, relativeZ);
-        float swell = 0f;
-
-        for (int i = 0; i < EngineSetting.OCEAN_WAVE_COUNT; i++)
-            swell += waveAmplitudeShare[i] * (float) Math.sin(
-                    waveVectorX[i] * relativeX + waveVectorZ[i] * relativeZ + turbulence.getWavePhase(i));
-
-        return tideManager.getSurfaceHeightBlocks() + amplitude * swell;
-    }
-
-    private float toRelativeX(GridInstance grid, double worldBlockX) {
+    public float toRelativeX(GridInstance grid, double worldBlockX) {
 
         double originX = (double) Coordinate2Long.unpackX(grid.getActiveChunkCoordinate()) * EngineSetting.CHUNK_SIZE;
 
         return (float) WorldWrapUtility.wrappedDelta(worldBlockX, originX, grid.getWorldHandle().getWorldScale().x);
     }
 
-    private float toRelativeZ(GridInstance grid, double worldBlockZ) {
+    public float toRelativeZ(GridInstance grid, double worldBlockZ) {
 
         double originZ = (double) Coordinate2Long.unpackY(grid.getActiveChunkCoordinate()) * EngineSetting.CHUNK_SIZE;
 
@@ -323,17 +224,5 @@ public class TurbulenceManager extends ManagerPackage {
 
     public double getElapsedSeconds() {
         return elapsedSeconds;
-    }
-
-    public float getWaveVectorX(int waveIndex) {
-        return (float) waveVectorX[waveIndex];
-    }
-
-    public float getWaveVectorZ(int waveIndex) {
-        return (float) waveVectorZ[waveIndex];
-    }
-
-    public float getWaveAmplitudeShare(int waveIndex) {
-        return waveAmplitudeShare[waveIndex];
     }
 }

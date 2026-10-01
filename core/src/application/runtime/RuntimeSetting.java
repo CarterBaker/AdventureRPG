@@ -19,6 +19,7 @@ public class RuntimeSetting {
     public static final String PASS_LIGHTING = "Lighting";
     public static final String PASS_WEATHER = "Weather";
     public static final String PASS_PRECIPITATION = "Precipitation";
+    public static final String PASS_UNDERWATER = "Underwater";
 
     // FBO Targets
     public static final String FBO_SKY = "SkyScene";
@@ -29,24 +30,29 @@ public class RuntimeSetting {
     public static final String FBO_WEATHER = "WeatherScene";
     public static final String FBO_PRECIPITATION = "PrecipitationScene";
     public static final String FBO_INVENTORY = "InventoryScene";
+    public static final String FBO_WATER = "WaterScene";
 
     // Composite Layers
     public static final int LAYER_SKY = -10;
     public static final int LAYER_WEATHER = -5;
     public static final int LAYER_WORLD = 0;
+    public static final int LAYER_WATER = 1;
     public static final int LAYER_PRECIPITATION = 5;
     public static final int LAYER_UI = 10;
     public static final int LAYER_INVENTORY = 15;
 
     // Pass Uniforms
     public static final String UNIFORM_SCENE_DEPTH = "u_sceneDepth";
+    public static final String UNIFORM_WATER_DEPTH = "u_waterDepth";
     public static final int PASS_DRAW_DEPTH = 0;
+    public static final int UNDERWATER_DRAW_DEPTH = -1;
 
     // Deferred Attachments
     public static final String ATTACHMENT_ALBEDO = "albedo";
     public static final String ATTACHMENT_NORMAL = "normal";
     public static final String ATTACHMENT_MATERIAL = "material";
     public static final String ATTACHMENT_AO = "ao";
+    public static final String ATTACHMENT_COLOR = "color";
 
     // Deferred Uniforms
     public static final String UNIFORM_G_ALBEDO = "u_gAlbedo";

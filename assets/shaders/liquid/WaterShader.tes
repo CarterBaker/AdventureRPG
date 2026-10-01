@@ -1,0 +1,59 @@
+#version 400 core
+layout(quads, equal_spacing, ccw) in;
+
+in vec3  teWorldPos[];
+in vec3  teNormal[];
+in float teLevel[];
+in float teSurface[];
+in float teTidal[];
+
+out vec3  vWorldPos;
+flat out vec3 vFaceNormal;
+out float vTidal;
+out vec4  vOceanState;
+
+#include "includes/CameraData.glsl"
+#include "liquid/includes/OceanSurface.glsl"
+#include "liquid/includes/OceanTessellation.glsl"
+
+// Must match EngineSetting.LIQUID_LEVEL_MAX — GLSL has no visibility into
+// the Java constant, so this is a manually-kept mirror, same convention
+// StandardSurface.tes already uses for its own constant re-derivations.
+const float LIQUID_LEVEL_MAX = 64.0;
+
+// Liquid tessellation evaluation. A tidal surface vertex ignores the level its cell was last written at and
+// rides the live tide plus the wave sum WaveManager samples on the CPU, from a position snapped to the
+// quarter-block lattice so two patches sharing it evaluate bit-identical input. Its sea state travels on to
+// the fragment for slope, foam and ripples. Still and flowing surface vertices sit at their fill level.
+
+void main() {
+    float u = gl_TessCoord.x;
+    float v = gl_TessCoord.y;
+
+    vec3  worldPos = mix(mix(teWorldPos[0], teWorldPos[1], u), mix(teWorldPos[3], teWorldPos[2], u), v);
+    float level    = mix(mix(teLevel[0],   teLevel[1],   u), mix(teLevel[3],   teLevel[2],   u), v);
+    float surface  = mix(mix(teSurface[0], teSurface[1], u), mix(teSurface[3], teSurface[2], u), v);
+    float tidal    = mix(mix(teTidal[0],   teTidal[1],   u), mix(teTidal[3],   teTidal[2],   u), v);
+
+    vOceanState = vec4(0.0);
+    vTidal      = 0.0;
+
+    if (tidal > 0.5) {
+
+        worldPos.xz = snapToOceanLattice(worldPos.xz);
+
+        OceanState state        = resolveOceanState(worldPos.xz);
+        float      displacement = sampleOceanDisplacement(worldPos.xz, state);
+
+        worldPos.y  = u_oceanSurface.x + displacement * resolveOceanDisplacementFade(worldPos.xz);
+        vOceanState = vec4(state.seaState, state.chop, state.swell, displacement);
+        vTidal      = 1.0;
+    }
+    else if (surface > 0.5)
+    worldPos.y -= 1.0 - clamp(level / LIQUID_LEVEL_MAX, 0.0, 1.0);
+
+    vWorldPos   = worldPos;
+    vFaceNormal = teNormal[0];
+
+    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+}

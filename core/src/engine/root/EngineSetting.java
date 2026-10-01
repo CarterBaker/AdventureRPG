@@ -672,7 +672,7 @@ public class EngineSetting {
     public static final int OCEAN_SPILL_CHUNKS = 2;
     public static final float OCEAN_REACH_THRESHOLD = BIOME_OCEAN_FLOOD_THRESHOLD
             - OCEAN_SPILL_CHUNKS / (BIOME_BLEND_BAND_PIXELS * CHUNKS_PER_PIXEL);
-    public static final float OCEAN_TIDE_AMPLITUDE_BLOCKS = 3.0f;
+    public static final float OCEAN_TIDE_AMPLITUDE_BLOCKS = 5.0f;
     public static final int OCEAN_TIDE_CHUNKS_PER_TICK = 24;
     public static final int OCEAN_TIDE_LEVEL_STEP = 4;
     public static final float OCEAN_TIDE_NEAP_AMPLITUDE_RATIO = 0.6f;
@@ -681,7 +681,7 @@ public class EngineSetting {
     public static final double OCEAN_TIDE_SPRING_NEAP_PERIOD_DAYS = 14.0;
     public static final int OCEAN_TIDE_UNAPPLIED = Integer.MIN_VALUE;
 
-    // Ocean Turbulence & Waves
+    // Ocean Turbulence
     public static final float OCEAN_TURBULENCE_CELL_WEIGHT = 4.0f;
     public static final float OCEAN_TURBULENCE_GUST_FREQUENCY = 0.05f;
     public static final float OCEAN_TURBULENCE_GUST_VARIANCE = 0.35f;
@@ -695,21 +695,85 @@ public class EngineSetting {
     public static final float OCEAN_TURBULENCE_WEATHER_FADE_START_RATIO = 0.5f;
     public static final float OCEAN_TURBULENCE_WEATHER_RANGE_CELLS = 2.0f;
     public static final float OCEAN_TURBULENCE_WIND_WEIGHT = 1.0f;
-    public static final float OCEAN_WAVE_AMPLITUDE_PER_TURBULENCE_BLOCKS = 0.18f;
-    public static final float[] OCEAN_WAVE_AMPLITUDE_RATIOS = { 1.0f, 0.55f, 0.35f, 0.2f };
-    public static final float[] OCEAN_WAVE_ANGLES_DEGREES = { 0.0f, 28.0f, -35.0f, 62.0f };
-    public static final float OCEAN_WAVE_BASE_WAVELENGTH_BLOCKS = 24.0f;
-    public static final int OCEAN_WAVE_COUNT = 4;
-    public static final float OCEAN_WAVE_MAX_AMPLITUDE_BLOCKS = 0.9f;
-    public static final float OCEAN_WAVE_SPEED_SCALE = 1.0f;
+
+    // Ocean Exposure
+    public static final int OCEAN_EXPOSURE_BLUR_RADIUS_CELLS = 2;
+    public static final int OCEAN_EXPOSURE_CACHE_MAX_CELLS = 16384;
+    public static final int OCEAN_EXPOSURE_CELL_BLOCKS = 64;
+    public static final float OCEAN_EXPOSURE_FULL_FRACTION = 0.8f;
+    public static final int OCEAN_EXPOSURE_GRID_SIZE = 32;
+    public static final int OCEAN_EXPOSURE_PROBE_CELLS_PER_FRAME = 24;
+    public static final int OCEAN_EXPOSURE_PROBES_PER_AXIS = 2;
+    public static final float OCEAN_EXPOSURE_RESPONSE_PER_SECOND = 0.5f;
+    public static final float OCEAN_EXPOSURE_START_FRACTION = 0.15f;
+    public static final byte OCEAN_EXPOSURE_UNKNOWN = -1;
+    public static final int OCEAN_EXPOSURE_VALUES_PER_VECTOR = 4;
+
+    // Ocean Sea State
+    public static final double OCEAN_NOISE_GRADIENT_SCALE = 2.0 / 4294967295.0;
+    public static final int OCEAN_NOISE_OCTAVE_SEED_STEP = 1013;
+    public static final int OCEAN_NOISE_PCG_INCREMENT = 1013904223;
+    public static final int OCEAN_NOISE_PCG_MULTIPLIER = 1664525;
+    public static final int OCEAN_NOISE_PCG_SEED_MULTIPLIER = 747796405;
+    public static final int OCEAN_NOISE_PCG_SHIFT = 16;
+    public static final long OCEAN_NOISE_UINT_MASK = 0xFFFFFFFFL;
+    public static final float OCEAN_SEA_NOISE_CELL_BLOCKS = 192.0f;
+    public static final float OCEAN_SEA_NOISE_CONTRAST = 1.6f;
+    public static final float OCEAN_SEA_NOISE_DETAIL_WEIGHT = 0.35f;
+    public static final float OCEAN_SEA_NOISE_DRIFT_BLOCKS_PER_SECOND = 1.5f;
+    public static final float OCEAN_SEA_NOISE_MAX = 1.45f;
+    public static final float OCEAN_SEA_NOISE_MIN = 0.4f;
+    public static final int OCEAN_SEA_NOISE_SEED = 7919;
+    public static final float OCEAN_SEA_STATE_CALM = 0.35f;
+    public static final float OCEAN_WHITECAP_CREST_START = 0.55f;
+    public static final float OCEAN_WHITECAP_SEA_STATE_FULL = 3.6f;
+    public static final float OCEAN_WHITECAP_SEA_STATE_START = 1.8f;
+
+    // Ocean Waves
+    public static final float[] OCEAN_WAVE_AMPLITUDE_RATIOS = { 1.0f, 0.6f, 1.0f, 0.65f, 0.4f, 0.25f };
+    public static final float OCEAN_WAVE_AMPLITUDE_EPSILON = 0.001f;
+    public static final float[] OCEAN_WAVE_ANGLES_DEGREES = { 0.0f, 18.0f, -30.0f, 25.0f, 55.0f, -65.0f };
+    public static final float OCEAN_WAVE_CHOP_AMPLITUDE_PER_SEA_STATE = 0.22f;
+    public static final float OCEAN_WAVE_CHOP_MAX_AMPLITUDE_BLOCKS = 0.9f;
+    public static final int OCEAN_WAVE_COUNT = 6;
+    public static final int OCEAN_WAVE_SHAPE_MEAN_TERMS = 12;
+    public static final float OCEAN_WAVE_SHARPNESS = 1.5f;
+    public static final float OCEAN_WAVE_SPEED_SCALE = 0.8f;
+    public static final float OCEAN_WAVE_SWELL_AMPLITUDE_PER_SEA_STATE = 0.9f;
+    public static final int OCEAN_WAVE_SWELL_COUNT = 2;
+    public static final float OCEAN_WAVE_SWELL_MAX_AMPLITUDE_BLOCKS = 3.2f;
+    public static final float OCEAN_WAVE_SWELL_SEA_STATE_START = 1.6f;
     public static final double OCEAN_WAVE_TIME_WRAP_SECONDS = 3600.0;
-    public static final float[] OCEAN_WAVE_WAVELENGTH_RATIOS = { 1.0f, 0.62f, 0.41f, 0.27f };
+    public static final float[] OCEAN_WAVE_WAVELENGTHS_BLOCKS = { 72.0f, 54.0f, 22.0f, 15.0f, 10.0f, 7.0f };
+
+    // Ocean Tessellation
+    public static final int OCEAN_TESSELLATION_FADE_CHUNKS = 2;
+    public static final int OCEAN_TESSELLATION_FAR_RADIUS_CHUNKS = 20;
+    public static final int OCEAN_TESSELLATION_MID_RADIUS_CHUNKS = 10;
+    public static final int OCEAN_TESSELLATION_NEAR_RADIUS_CHUNKS = 4;
+
+    // Ocean Uniforms
+    public static final String UNIFORM_OCEAN_CAMERA = "u_oceanCamera";
+    public static final String UNIFORM_OCEAN_EXPOSURE = "u_oceanExposure";
+    public static final String UNIFORM_OCEAN_EXPOSURE_GRID = "u_oceanExposureGrid";
+    public static final String UNIFORM_OCEAN_NOISE = "u_oceanNoise";
+    public static final String UNIFORM_OCEAN_NOISE_PERIOD = "u_oceanNoisePeriod";
+    public static final String UNIFORM_OCEAN_NOISE_SHAPE = "u_oceanNoiseShape";
+    public static final String UNIFORM_OCEAN_SEA_STATE = "u_oceanSeaState";
     public static final String UNIFORM_OCEAN_SURFACE = "u_oceanSurface";
+    public static final String UNIFORM_OCEAN_TESSELLATION = "u_oceanTessellation";
     public static final String UNIFORM_OCEAN_TURBULENCE_CELLS = "u_oceanTurbulenceCells";
     public static final String UNIFORM_OCEAN_TURBULENCE_COUNT = "u_oceanTurbulenceCount";
     public static final String UNIFORM_OCEAN_TURBULENCE_STRENGTHS = "u_oceanTurbulenceStrengths";
     public static final String UNIFORM_OCEAN_WAVES = "u_oceanWaves";
     public static final String UNIFORM_OCEAN_WAVE_SCALE = "u_oceanWaveScale";
+    public static final String UNIFORM_OCEAN_WHITECAP = "u_oceanWhitecap";
+
+    // Water Pass
+    public static final String UNIFORM_WATER_CLOUD_COLOR = "u_waterCloudColor";
+    public static final String UNIFORM_WATER_SCENE_COLOR = "u_waterSceneColor";
+    public static final String UNIFORM_WATER_SCENE_DEPTH = "u_waterSceneDepth";
+    public static final String UNIFORM_WATER_SKY_COLOR = "u_waterSkyColor";
 
     // Structure Generation
     public static final int DEFAULT_STRUCTURE_SEPARATION_BLOCKS = 0;

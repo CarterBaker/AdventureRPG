@@ -93,4 +93,10 @@ public class LightingSystem extends SystemPackage {
         mat.setUBO(grid.getSkyColorUBO());
         mat.setUBO(grid.getWeatherMapUBO());
     }
+
+    // Accessible \\
+
+    public FBOInstance getLitFbo() {
+        return litFbo;
+    }
 }

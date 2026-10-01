@@ -1,7 +1,5 @@
 package application.bootstrap.oceanpipeline.turbulence;
 
-import java.util.Arrays;
-
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 
@@ -9,9 +7,9 @@ public class TurbulenceInstance extends InstancePackage {
 
     /*
      * One grid's ocean turbulence field: a baseline strength from local weather
-     * plus nearby weather cells, blended by weighted mean, and the grid's
-     * current wave phases. Rewritten by TurbulenceManager each frame and
-     * mirrored into the grid's OceanData UBO.
+     * plus nearby weather cells, blended by weighted mean. Rewritten by
+     * TurbulenceManager each frame and mirrored into the grid's OceanData UBO,
+     * where it is the weather term of the sea state.
      */
 
     // Baseline
@@ -24,9 +22,6 @@ public class TurbulenceInstance extends InstancePackage {
     private float[] cellRadius;
     private float[] cellWeight;
     private float[] cellStrength;
-
-    // Waves
-    private float[] wavePhases;
 
     // Internal \\
 
@@ -41,9 +36,6 @@ public class TurbulenceInstance extends InstancePackage {
         this.cellRadius = new float[capacity];
         this.cellWeight = new float[capacity];
         this.cellStrength = new float[capacity];
-
-        // Waves
-        this.wavePhases = new float[EngineSetting.OCEAN_WAVE_COUNT];
     }
 
     // Constructor \\
@@ -52,7 +44,6 @@ public class TurbulenceInstance extends InstancePackage {
 
         this.ambientStrength = 0f;
         this.cellCount = 0;
-        Arrays.fill(wavePhases, 0f);
     }
 
     // Management \\
@@ -75,10 +66,6 @@ public class TurbulenceInstance extends InstancePackage {
         cellCount++;
 
         return true;
-    }
-
-    public void setWavePhase(int waveIndex, float phase) {
-        wavePhases[waveIndex] = phase;
     }
 
     // Sample \\
@@ -104,12 +91,6 @@ public class TurbulenceInstance extends InstancePackage {
         }
 
         return weightedStrength / totalWeight;
-    }
-
-    public float sampleWaveAmplitudeBlocks(float relativeX, float relativeZ) {
-        return Math.min(
-                sampleStrength(relativeX, relativeZ) * EngineSetting.OCEAN_WAVE_AMPLITUDE_PER_TURBULENCE_BLOCKS,
-                EngineSetting.OCEAN_WAVE_MAX_AMPLITUDE_BLOCKS);
     }
 
     // Accessible \\
@@ -140,9 +121,5 @@ public class TurbulenceInstance extends InstancePackage {
 
     public float getCellStrength(int index) {
         return cellStrength[index];
-    }
-
-    public float getWavePhase(int waveIndex) {
-        return wavePhases[waveIndex];
     }
 }

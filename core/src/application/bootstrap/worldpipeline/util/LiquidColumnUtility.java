@@ -7,12 +7,14 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
+import engine.util.mathematics.extras.Coordinate3Int;
 
 public class LiquidColumnUtility extends EngineUtility {
 
     /*
      * Block-space liquid queries shared by anything that needs to know where
-     * a water surface actually is — currently just SwimBranch. totalY follows
+     * a water surface actually is — SwimBranch, and WaveManager deciding
+     * whether a camera is under the sea. totalY follows
      * the same convention as WorldPositionUtility.findSafeSpawnHeight: an
      * absolute block Y, unrolled across every subchunk in the column
      * (0..WORLD_HEIGHT * CHUNK_SIZE), not a chunk-local coordinate.
@@ -45,6 +47,16 @@ public class LiquidColumnUtility extends EngineUtility {
 
     public static boolean isLiquid(BlockHandle block) {
         return block != null && block.getGeometry() == DynamicGeometryType.LIQUID;
+    }
+
+    public static boolean isTidal(ChunkInstance chunkInstance, int blockX, int totalY, int blockZ) {
+
+        if (totalY < 0 || totalY >= WORLD_TOP_Y)
+            return false;
+
+        SubChunkInstance subChunk = chunkInstance.getSubChunk(totalY / EngineSetting.CHUNK_SIZE);
+
+        return subChunk.isLiquidTidal(Coordinate3Int.pack(blockX, totalY % EngineSetting.CHUNK_SIZE, blockZ));
     }
 
     // Surface \\

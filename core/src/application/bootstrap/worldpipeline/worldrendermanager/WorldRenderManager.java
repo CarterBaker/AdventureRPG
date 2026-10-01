@@ -14,6 +14,7 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.grid.WaterTargetStruct;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -45,7 +46,10 @@ public class WorldRenderManager extends ManagerPackage {
      * GPU, so switching representation never opens a hole. Every change to the
      * entries advances the drawn revision, so MacroRenderSystem, which owns
      * distant macro terrain, re-resolves which chunks a grid draws only when
-     * that can have changed.
+     * that can have changed. Water, any material reading OceanData, never
+     * enters the G-buffer: it is drawn forward into the grid's water target,
+     * after deferred lighting, with the grid's light and sky data and the
+     * scene it refracts and reflects bound on each push.
      */
 
     // Internal
@@ -65,6 +69,13 @@ public class WorldRenderManager extends ManagerPackage {
     // Stand-In — resolved once per grid per frame
     private LongOpenHashSet resolvedStandIns;
     private LongOpenHashSet standInMegas;
+
+    // Water — resolved once per grid per frame
+    private FBOInstance waterFbo;
+    private int waterSceneColorTexture;
+    private int waterSceneDepthTexture;
+    private int waterSkyColorTexture;
+    private int waterCloudColorTexture;
 
     // Pools
     private Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialID2RenderEntryPool;
@@ -152,6 +163,7 @@ public class WorldRenderManager extends ManagerPackage {
                 continue;
 
             frustumCullingSystem.refresh(grid);
+            resolveWaterTarget(grid);
 
             macroRenderSystem.renderGridMacros(grid, window, worldFbo);
             renderGridMegas(grid, window, worldFbo);
@@ -289,11 +301,51 @@ public class WorldRenderManager extends ManagerPackage {
                 material.setUBO(slotUBO);
 
                 if (entry.usesOceanData)
-                    material.setUBO(grid.getOceanDataUBO());
-
-                renderManager.pushRenderCall(entry.modelInstance, worldFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
+                    pushWaterEntry(entry, material, grid, window);
+                else
+                    renderManager.pushRenderCall(
+                            entry.modelInstance,
+                            worldFbo,
+                            EngineSetting.DEFAULT_RENDER_DEPTH,
+                            window);
             }
         }
+    }
+
+    // Water \\
+
+    private void resolveWaterTarget(GridInstance grid) {
+
+        WaterTargetStruct waterTarget = grid.getWaterTarget();
+
+        if (waterTarget == null) {
+            waterFbo = null;
+            return;
+        }
+
+        waterFbo = waterTarget.getWaterFbo();
+        waterSceneColorTexture = waterTarget.getSceneColorTexture();
+        waterSceneDepthTexture = waterTarget.getSceneDepthTexture();
+        waterSkyColorTexture = waterTarget.getSkyColorTexture();
+        waterCloudColorTexture = waterTarget.getCloudColorTexture();
+    }
+
+    private void pushWaterEntry(RenderEntry entry, MaterialInstance material, GridInstance grid, WindowInstance window) {
+
+        if (waterFbo == null)
+            return;
+
+        material.setUBO(grid.getOceanDataUBO());
+        material.setUBO(grid.getSunLightUBO());
+        material.setUBO(grid.getMoonLightUBO());
+        material.setUBO(grid.getSkyColorUBO());
+
+        material.setUniform(EngineSetting.UNIFORM_WATER_SCENE_COLOR, waterSceneColorTexture);
+        material.setUniform(EngineSetting.UNIFORM_WATER_SCENE_DEPTH, waterSceneDepthTexture);
+        material.setUniform(EngineSetting.UNIFORM_WATER_SKY_COLOR, waterSkyColorTexture);
+        material.setUniform(EngineSetting.UNIFORM_WATER_CLOUD_COLOR, waterCloudColorTexture);
+
+        renderManager.pushRenderCall(entry.modelInstance, waterFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
     }
 
     // Update \\
