@@ -3,38 +3,55 @@
 
 #include "includes/NaturalNoiseData.glsl"
 
-// Near-ring natural surface distortion, sampled from the baked noise lattice so it can never disagree with
-// physics sampling the same table. Three lattice taps on three orthogonal projections of the world position
-// form a vector field that is a pure function of position, which keeps the lookup seam-free by construction;
-// that vector is then split against the face normal so the dominant component rides the normal and is
-// actually visible on a horizontal surface, with a smaller in-plane component warping the silhouette. The
-// old axis-aligned form put its large amplitudes on X and Z, which on a top face are both in-plane and
-// therefore invisible, leaving only a few hundredths of a block of real relief.
+// Near-ring natural surface noise, sampled from the baked lattice so it can never disagree with physics sampling
+// the same table (NaturalNoiseUtility.sampleFields() is the formula-for-formula CPU copy). Three projections of
+// the world position are read once and feed two fields, both pure functions of position and therefore seam-free
+// by construction. The detail vector is split against the face normal so the dominant component rides the
+// normal and is visible on a horizontal surface; it fades at every fold and seam like the height relief. The
+// edge warp is not split and never fades at a fold: every patch sharing a vertex moves it by the same offset, so
+// natural edges and corners bend out of their straight lines without ever opening a crack, and only artificial
+// blocks hold it back. A second, finer octave of the warp breaks each edge up within a single block. The
+// amplitudes must match EngineSetting.NATURAL_DETAIL_NORMAL_AMPLITUDE_BLOCKS, NATURAL_EDGE_WARP_* and
+// NATURAL_NOISE_PLANE_OFFSET_CELLS.
 
-const float NATURAL_NOISE_NORMAL_AMPLITUDE  = 0.22;
-const float NATURAL_NOISE_TANGENT_AMPLITUDE = 0.16;
+const float NATURAL_NOISE_NORMAL_AMPLITUDE    = 0.22;
+const float NATURAL_NOISE_TANGENT_AMPLITUDE   = 0.16;
+const float NATURAL_EDGE_WARP_HORIZONTAL      = 0.35;
+const float NATURAL_EDGE_WARP_VERTICAL        = 0.18;
+const float NATURAL_EDGE_WARP_DETAIL_SHARE    = 0.5;
+const float NATURAL_NOISE_PLANE_OFFSET        = 11.37;
 
-vec3 naturalNoiseVector(vec3 worldPos) {
-    vec2 planeXZ = worldPos.xz * NATURAL_NOISE_SEED_SCALE;
-    vec2 planeZY = worldPos.zy * NATURAL_NOISE_SEED_SCALE;
-    vec2 planeXY = worldPos.xy * NATURAL_NOISE_SEED_SCALE;
+void sampleNaturalFields(vec3 worldPos, out vec3 detail, out vec3 warp) {
+    vec3 lattice = toNaturalNoiseLattice(worldPos);
 
-    return vec3(
-        sampleNaturalNoiseSmooth(planeXZ + vec2(17.3,  5.1)) +
-        sampleNaturalNoiseSmooth(planeZY + vec2(61.7, 23.9)),
-        sampleNaturalNoiseSmooth(planeXZ + vec2(91.2, 44.6)) +
-        sampleNaturalNoiseSmooth(planeXY + vec2(13.8, 77.4)),
-        sampleNaturalNoiseSmooth(planeZY + vec2(7.5, 68.2)) +
-        sampleNaturalNoiseSmooth(planeXY + vec2(55.1, 31.6))) - 1.0;
+    vec2 planeXZ = lattice.xz;
+    vec2 planeZY = vec2(lattice.z + NATURAL_NOISE_PLANE_OFFSET, lattice.y);
+    vec2 planeXY = vec2(lattice.x, lattice.y + NATURAL_NOISE_PLANE_OFFSET);
+
+    vec4 xz = sampleNaturalNoise(planeXZ);
+    vec4 zy = sampleNaturalNoise(planeZY);
+    vec4 xy = sampleNaturalNoise(planeXY);
+
+    detail = vec3(xz.x + zy.x, xz.y + xy.x, zy.y + xy.y) * 0.5;
+
+    vec3 primary = vec3(xz.z + zy.z, xz.w + xy.z, zy.w + xy.w) * 0.5;
+
+    vec4 fineXZ = sampleNaturalNoise(planeXZ * 2.0);
+    vec4 fineZY = sampleNaturalNoise(planeZY * 2.0);
+    vec4 fineXY = sampleNaturalNoise(planeXY * 2.0);
+
+    vec3 fine = vec3(fineXZ.z + fineZY.z, fineXZ.w + fineXY.z, fineZY.w + fineXY.w) * 0.5;
+
+    warp = (primary + fine * NATURAL_EDGE_WARP_DETAIL_SHARE) / (1.0 + NATURAL_EDGE_WARP_DETAIL_SHARE)
+        * vec3(NATURAL_EDGE_WARP_HORIZONTAL, NATURAL_EDGE_WARP_VERTICAL, NATURAL_EDGE_WARP_HORIZONTAL);
 }
 
-vec3 applyNaturalSurfaceNoise(vec3 worldPos, vec3 seedPos, vec3 normal, float weight) {
+vec3 applyNaturalSurfaceNoise(vec3 worldPos, vec3 detail, vec3 normal, float weight) {
     if (weight <= 0.001)
     return worldPos;
 
-    vec3  noise      = naturalNoiseVector(seedPos);
-    float along      = dot(noise, normal);
-    vec3  tangential = noise - normal * along;
+    float along      = dot(detail, normal);
+    vec3  tangential = detail - normal * along;
 
     return worldPos + (normal * (along * NATURAL_NOISE_NORMAL_AMPLITUDE)
         + tangential * NATURAL_NOISE_TANGENT_AMPLITUDE) * weight;

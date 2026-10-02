@@ -240,10 +240,15 @@ float fadeFromCells(int mask, vec3 relative) {
     return fade;
 }
 
-// Bevel offset and detail weight for a position, both pure functions of the position and its window.
-void resolveSurfaceShape(SurfaceWindow window, vec3 position, out vec3 bevelOffset, out float detailWeight) {
-    bevelOffset  = vec3(0.0);
-    detailWeight = 1.0;
+// Bevel offset, detail weight and natural weight for a position, all pure functions of the position and its
+// window. The natural weight fades only against artificial sub-blocks, never at a fold or seam, so the edge warp
+// keeps bending natural edges and corners while every artificial block stays sealed and square.
+void resolveSurfaceShape(
+    SurfaceWindow window, vec3 position,
+    out vec3 bevelOffset, out float detailWeight, out float naturalWeight) {
+    bevelOffset   = vec3(0.0);
+    detailWeight  = 1.0;
+    naturalWeight = 1.0;
 
     if (window.solid == window.behind && window.artificial == 0 && window.seam == 0)
     return;
@@ -273,8 +278,9 @@ void resolveSurfaceShape(SurfaceWindow window, vec3 position, out vec3 bevelOffs
     float seamFade    = fadeFromCells(window.seam, relative);
     float featureFade = 1.0 - smoothstep(0.0, BEVEL_EDGE_ACTIVATION, max(solidActivation, airActivation));
 
-    bevelOffset  = (solidOffset * solidDamp + airOffset * airDamp) * naturalFade;
-    detailWeight = naturalFade * seamFade * featureFade;
+    bevelOffset   = (solidOffset * solidDamp + airOffset * airDamp) * naturalFade;
+    detailWeight  = naturalFade * seamFade * featureFade;
+    naturalWeight = naturalFade;
 }
 
 #endif

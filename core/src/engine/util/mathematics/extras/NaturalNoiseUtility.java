@@ -1,5 +1,7 @@
 package engine.util.mathematics.extras;
 
+import java.util.SplittableRandom;
+
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.mathematics.vectors.Vector3;
@@ -7,115 +9,142 @@ import engine.util.mathematics.vectors.Vector3;
 public final class NaturalNoiseUtility extends EngineUtility {
 
     /*
-     * CPU mirror of the natural terrain jitter StandardSurfaceShader applies,
-     * using the same hash so collision and visuals agree. Provides the axis
-     * jitter and gradient BlockCollisionBranch builds natural collision from,
-     * and the tessellation tier distances the shader scopes jitter to.
+     * CPU copy of includes/NaturalNoiseData.glsl and the natural fields in
+     * surface/includes/NearTerrainNoise.glsl, kept formula for formula so a
+     * physics query and a tessellated vertex at the same position agree. The
+     * lattice is baked once from a fixed seed, four independent channels per
+     * cell, and read back as periodic quintic value noise. Its period is a
+     * whole number of chunks, so it wraps with every world and never moves as
+     * the player crosses a chunk. Also holds the tessellation tier distances
+     * the shader scopes the near ring to.
      */
+
+    // Settings
+    private static final int PERIOD = EngineSetting.NATURAL_NOISE_LATTICE_PERIOD;
+    private static final int CHANNELS = EngineSetting.NATURAL_NOISE_CHANNELS;
+    private static final int PLANE_XZ = 0;
+    private static final int PLANE_ZY = CHANNELS;
+    private static final int PLANE_XY = CHANNELS * 2;
 
     // Lattice \\
 
-    public static float hash(float x, float z) {
-        float dot = x * EngineSetting.NATURAL_NOISE_HASH_DOT_X + z * EngineSetting.NATURAL_NOISE_HASH_DOT_Z;
-        float sinValue = (float) Math.sin(dot) * EngineSetting.NATURAL_NOISE_HASH_SCALE;
-        return sinValue - (float) Math.floor(sinValue);
-    }
-
     public static float[] bakeLattice() {
 
-        int period = EngineSetting.NATURAL_NOISE_LATTICE_PERIOD;
-        float[] lattice = new float[period * period];
+        SplittableRandom random = new SplittableRandom(EngineSetting.NATURAL_NOISE_SEED);
+        float[] lattice = new float[EngineSetting.NATURAL_NOISE_LATTICE_SIZE * CHANNELS];
 
-        for (int x = 0; x < period; x++)
-            for (int z = 0; z < period; z++)
-                lattice[x * period + z] = hash((float) x, (float) z);
+        for (int i = 0; i < lattice.length; i++)
+            lattice[i] = (float) random.nextDouble(-1.0, 1.0);
 
         return lattice;
     }
 
-    private static int wrapLatticeIndex(int value, int period) {
-        int wrapped = value % period;
-        return wrapped < 0 ? wrapped + period : wrapped;
+    // All four channels at once, periodic on both lattice axes, written into out from offset
+    public static void sample(float[] lattice, double latticeA, double latticeB, float[] out, int offset) {
+
+        double cellA = Math.floor(latticeA);
+        double cellB = Math.floor(latticeB);
+        float weightA = fade((float) (latticeA - cellA));
+        float weightB = fade((float) (latticeB - cellB));
+
+        int a0 = Math.floorMod((long) cellA, PERIOD);
+        int a1 = Math.floorMod((long) cellA + 1, PERIOD);
+        int b0 = Math.floorMod((long) cellB, PERIOD);
+        int b1 = Math.floorMod((long) cellB + 1, PERIOD);
+
+        int i00 = (a0 * PERIOD + b0) * CHANNELS;
+        int i10 = (a1 * PERIOD + b0) * CHANNELS;
+        int i01 = (a0 * PERIOD + b1) * CHANNELS;
+        int i11 = (a1 * PERIOD + b1) * CHANNELS;
+
+        for (int channel = 0; channel < CHANNELS; channel++) {
+
+            float low = mix(lattice[i00 + channel], lattice[i10 + channel], weightA);
+            float high = mix(lattice[i01 + channel], lattice[i11 + channel], weightA);
+
+            out[offset + channel] = mix(low, high, weightB);
+        }
     }
 
-    public static float sampleSmooth(float px, float pz, float[] lattice) {
+    // Lattice coordinate of a world block coordinate on a wrapping axis, folded into one period first so world
+    // coordinates of any size keep full precision
+    public static double toWrappedLattice(double worldBlocks) {
 
-        int period = EngineSetting.NATURAL_NOISE_LATTICE_PERIOD;
+        double period = EngineSetting.NATURAL_NOISE_PERIOD_BLOCKS;
+        double wrapped = worldBlocks - Math.floor(worldBlocks / period) * period;
 
-        float ix = (float) Math.floor(px);
-        float iz = (float) Math.floor(pz);
-        float fx = px - ix;
-        float fz = pz - iz;
-
-        fx = fx * fx * (3f - 2f * fx);
-        fz = fz * fz * (3f - 2f * fz);
-
-        int x0 = wrapLatticeIndex((int) ix, period);
-        int x1 = wrapLatticeIndex((int) ix + 1, period);
-        int z0 = wrapLatticeIndex((int) iz, period);
-        int z1 = wrapLatticeIndex((int) iz + 1, period);
-
-        float h00 = lattice[x0 * period + z0];
-        float h10 = lattice[x1 * period + z0];
-        float h01 = lattice[x0 * period + z1];
-        float h11 = lattice[x1 * period + z1];
-
-        float top = h00 + (h10 - h00) * fx;
-        float bottom = h01 + (h11 - h01) * fx;
-
-        return top + (bottom - top) * fz;
+        return wrapped / EngineSetting.NATURAL_NOISE_CELL_BLOCKS;
     }
 
-    // Jitter \\
-
-    public static float sampleAxisJitter(double worldX, double worldZ, float[] lattice, int axis) {
-
-        float seedX = (float) worldX * EngineSetting.NATURAL_NOISE_SEED_SCALE;
-        float seedZ = (float) worldZ * EngineSetting.NATURAL_NOISE_SEED_SCALE;
-
-        if (axis == EngineSetting.AXIS_X)
-            return (sampleSmooth(
-                    seedX + EngineSetting.NATURAL_NOISE_OFFSET_X_X,
-                    seedZ + EngineSetting.NATURAL_NOISE_OFFSET_X_Z, lattice) - 0.5f)
-                    * EngineSetting.NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS;
-
-        if (axis == EngineSetting.AXIS_Y)
-            return (sampleSmooth(
-                    seedX + EngineSetting.NATURAL_NOISE_OFFSET_Y_X,
-                    seedZ + EngineSetting.NATURAL_NOISE_OFFSET_Y_Z, lattice) - 0.5f)
-                    * EngineSetting.NATURAL_NOISE_JITTER_VERTICAL_BLOCKS;
-
-        if (axis == EngineSetting.AXIS_Z)
-            return (sampleSmooth(
-                    seedX + EngineSetting.NATURAL_NOISE_OFFSET_Z_X,
-                    seedZ + EngineSetting.NATURAL_NOISE_OFFSET_Z_Z, lattice) - 0.5f)
-                    * EngineSetting.NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS;
-
-        return throwException("axis must be AXIS_X, AXIS_Y, or AXIS_Z: " + axis);
+    public static double toLattice(double worldBlocks) {
+        return worldBlocks / EngineSetting.NATURAL_NOISE_CELL_BLOCKS;
     }
 
-    public static void sampleJitter(double worldX, double worldZ, float[] lattice, Vector3 out) {
-        out.set(
-                sampleAxisJitter(worldX, worldZ, lattice, EngineSetting.AXIS_X),
-                sampleAxisJitter(worldX, worldZ, lattice, EngineSetting.AXIS_Y),
-                sampleAxisJitter(worldX, worldZ, lattice, EngineSetting.AXIS_Z));
+    // Fields \\
+
+    // The near-ring detail vector and the edge warp at a world position, both pure functions of it. The detail
+    // is unit-ranged and split against a face normal by its consumer; the warp is in blocks, the full offset a
+    // natural vertex at that position is drawn at. Scratch holds one set of channels per projection plane.
+    public static void sampleFields(
+            float[] lattice,
+            double worldX, double worldY, double worldZ,
+            float[] scratch,
+            Vector3 outDetail,
+            Vector3 outWarp) {
+
+        double latticeX = toWrappedLattice(worldX);
+        double latticeY = toLattice(worldY);
+        double latticeZ = toWrappedLattice(worldZ);
+        double planeZYA = latticeZ + EngineSetting.NATURAL_NOISE_PLANE_OFFSET_CELLS;
+        double planeXYB = latticeY + EngineSetting.NATURAL_NOISE_PLANE_OFFSET_CELLS;
+
+        samplePlanes(lattice, latticeX, latticeY, latticeZ, planeZYA, planeXYB, 1.0, scratch);
+
+        outDetail.set(
+                (scratch[PLANE_XZ] + scratch[PLANE_ZY]) * 0.5f,
+                (scratch[PLANE_XZ + 1] + scratch[PLANE_XY]) * 0.5f,
+                (scratch[PLANE_ZY + 1] + scratch[PLANE_XY + 1]) * 0.5f);
+
+        float primaryX = (scratch[PLANE_XZ + 2] + scratch[PLANE_ZY + 2]) * 0.5f;
+        float primaryY = (scratch[PLANE_XZ + 3] + scratch[PLANE_XY + 2]) * 0.5f;
+        float primaryZ = (scratch[PLANE_ZY + 3] + scratch[PLANE_XY + 3]) * 0.5f;
+
+        samplePlanes(lattice, latticeX, latticeY, latticeZ, planeZYA, planeXYB, 2.0, scratch);
+
+        float fineX = (scratch[PLANE_XZ + 2] + scratch[PLANE_ZY + 2]) * 0.5f;
+        float fineY = (scratch[PLANE_XZ + 3] + scratch[PLANE_XY + 2]) * 0.5f;
+        float fineZ = (scratch[PLANE_ZY + 3] + scratch[PLANE_XY + 3]) * 0.5f;
+
+        float share = EngineSetting.NATURAL_EDGE_WARP_DETAIL_SHARE;
+        float normalize = 1f / (1f + share);
+
+        outWarp.set(
+                (primaryX + fineX * share) * normalize * EngineSetting.NATURAL_EDGE_WARP_HORIZONTAL_BLOCKS,
+                (primaryY + fineY * share) * normalize * EngineSetting.NATURAL_EDGE_WARP_VERTICAL_BLOCKS,
+                (primaryZ + fineZ * share) * normalize * EngineSetting.NATURAL_EDGE_WARP_HORIZONTAL_BLOCKS);
     }
 
-    public static float sampleAxisJitterGradient(
-            double worldX, double worldZ, float[] lattice, int axis, int tangentAxis) {
+    // The three projections of a position, at frequency times the lattice, into scratch
+    private static void samplePlanes(
+            float[] lattice,
+            double latticeX, double latticeY, double latticeZ,
+            double planeZYA, double planeXYB,
+            double frequency,
+            float[] scratch) {
 
-        float probe = EngineSetting.NATURAL_NOISE_COLLISION_GRADIENT_PROBE_BLOCKS;
+        sample(lattice, latticeX * frequency, latticeZ * frequency, scratch, PLANE_XZ);
+        sample(lattice, planeZYA * frequency, latticeY * frequency, scratch, PLANE_ZY);
+        sample(lattice, latticeX * frequency, planeXYB * frequency, scratch, PLANE_XY);
+    }
 
-        double probeX = tangentAxis == EngineSetting.AXIS_X ? probe : 0.0;
-        double probeZ = tangentAxis == EngineSetting.AXIS_Z ? probe : 0.0;
+    // Utility \\
 
-        if (probeX == 0.0 && probeZ == 0.0)
-            throwException("tangentAxis must be AXIS_X or AXIS_Z: " + tangentAxis);
+    private static float fade(float t) {
+        return t * t * t * (t * (t * 6f - 15f) + 10f);
+    }
 
-        float back = sampleAxisJitter(worldX - probeX, worldZ - probeZ, lattice, axis);
-        float forward = sampleAxisJitter(worldX + probeX, worldZ + probeZ, lattice, axis);
-
-        return (forward - back) / (2f * probe);
+    private static float mix(float a, float b, float t) {
+        return a + (b - a) * t;
     }
 
     // Tessellation Tier \\

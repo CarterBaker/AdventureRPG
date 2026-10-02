@@ -5,6 +5,8 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
+import application.bootstrap.oceanpipeline.tidemanager.TideManager;
+import application.bootstrap.oceanpipeline.wavemanager.WaveManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -22,12 +24,18 @@ public class SwimBranch extends BranchPackage {
      * surface, depth and drag under the entity once per move; depth relative to
      * the entity's height then drives wading, jump penalties, the switch to
      * swimming, surface leaps, climbing out, treading, diving and sinking, and
-     * the water movement states animation reads.
+     * the water movement states animation reads. Over the ocean the surface is
+     * the live sea WaveManager samples, so a crest covers a wader standing in
+     * the open air above the tide line and a trough leaves one dry; a swimmer
+     * treads on the moving surface, riding its rise and fall, and carry() lets
+     * the waves' orbital current push it back and forth as they pass.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
+    private WaveManager waveManager;
+    private TideManager tideManager;
 
     // Settings
     private int chunkSize;
@@ -41,6 +49,7 @@ public class SwimBranch extends BranchPackage {
     private float depth;
     private float depthFactor;
     private boolean surfaced;
+    private Vector3 waterMotion;
 
     // Column
     private ChunkInstance currentChunk;
@@ -51,13 +60,20 @@ public class SwimBranch extends BranchPackage {
 
     @Override
     protected void create() {
+
+        // Settings
         this.chunkSize = EngineSetting.CHUNK_SIZE;
+
+        // Frame
+        this.waterMotion = new Vector3();
     }
 
     @Override
     protected void get() {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
+        this.waveManager = get(WaveManager.class);
+        this.tideManager = get(TideManager.class);
     }
 
     // Refresh \\
@@ -82,6 +98,7 @@ public class SwimBranch extends BranchPackage {
         this.depth = 0f;
         this.depthFactor = 0f;
         this.currentChunk = null;
+        this.waterMotion.set(0f, 0f, 0f);
 
         Vector3 position = entity.getWorldPositionStruct().getPosition();
         long chunkCoordinate = entity.getWorldPositionStruct().getChunkCoordinate();
@@ -94,29 +111,60 @@ public class SwimBranch extends BranchPackage {
         int blockZ = (int) Math.floor(position.z);
         int feetTotalY = (int) Math.floor(position.y);
 
-        BlockHandle touched = LiquidColumnUtility.getBlockAt(chunk, blockManager, blockX, feetTotalY, blockZ);
+        int waterY = LiquidColumnUtility.findWaterY(
+                chunk,
+                blockManager,
+                blockX,
+                feetTotalY,
+                blockZ,
+                tideManager.getSurfaceHeightBlocks());
 
-        if (!LiquidColumnUtility.isLiquid(touched))
+        if (waterY == LiquidColumnUtility.NO_WATER)
             return false;
 
-        float entityHeight = entity.getSize().y;
+        Vector3 size = entity.getSize();
+        float centerX = position.x + size.x * 0.5f;
+        float centerZ = position.z + size.z * 0.5f;
+        float waterSurfaceY = waveManager.sampleWaterSurface(
+                chunk,
+                chunkCoordinate,
+                blockX,
+                waterY,
+                blockZ,
+                centerX,
+                centerZ);
+
+        // A trough, or a shallow fill, has left the feet above the water
+        if (position.y >= waterSurfaceY)
+            return false;
+
+        BlockHandle touched = LiquidColumnUtility.getBlockAt(chunk, blockManager, blockX, waterY, blockZ);
+        float entityHeight = size.y;
         float swimDepth = entityHeight * EngineSetting.SWIM_DEPTH_FRACTION;
 
         this.liquidViscosity = touched.hasViscosity() ? touched.getViscosity() : EngineSetting.SWIM_VISCOSITY_REFERENCE;
         this.speedMultiplier = calculateSpeedMultiplier(liquidViscosity);
-        this.surfaceY = LiquidColumnUtility.findSurfaceHeight(chunk, blockManager, blockX, feetTotalY, blockZ);
+        this.surfaceY = waterSurfaceY;
 
         int floorLimit = (int) Math.floor(surfaceY - entityHeight);
         float floorY = LiquidColumnUtility.findFloorHeight(
                 chunk,
                 blockManager,
                 blockX,
-                feetTotalY,
+                waterY,
                 blockZ,
                 floorLimit);
 
         this.depth = Math.max(0f, surfaceY - floorY);
         this.depthFactor = Math.min(1f, depth / swimDepth);
+
+        if (LiquidColumnUtility.isTidal(chunk, blockX, waterY, blockZ))
+            waveManager.sampleSurfaceMotion(
+                    chunkCoordinate,
+                    centerX,
+                    centerZ,
+                    surfaceY - (position.y + entityHeight * 0.5f),
+                    waterMotion);
 
         this.currentChunk = chunk;
         this.currentBlockX = blockX;
@@ -155,6 +203,18 @@ public class SwimBranch extends BranchPackage {
             return depthDrag;
 
         return depthDrag * (1f - depthFactor * (1f - EngineSetting.WADE_RUN_SPEED_MULTIPLIER));
+    }
+
+    // Current \\
+
+    // The water's own motion, felt as fully as the entity is in it — the whole orbit once swimming
+    void carry(Vector3 movement, EntityInstance entity, boolean swimming) {
+
+        float immersion = swimming ? 1f : depthFactor;
+        float carried = EngineSetting.SWIM_WAVE_CURRENT_SCALE * immersion * internal.getDeltaTime();
+
+        movement.x += waterMotion.x * carried;
+        movement.z += waterMotion.z * carried;
     }
 
     // Jump \\
@@ -256,10 +316,13 @@ public class SwimBranch extends BranchPackage {
         Vector3 vertical = state.getGravityVelocity();
         float delta = internal.getDeltaTime();
         float smoothing = Math.min(1f, delta * EngineSetting.SWIM_VERTICAL_RESPONSIVENESS);
+        float surfaceDepth = isAtSurface(state.getMovementState())
+                ? EngineSetting.SWIM_SURFACE_HOLD_DEPTH
+                : EngineSetting.SWIM_DEEP_THRESHOLD;
 
         state.setMovementState(EntityState.SWIMMING);
 
-        this.surfaced = calculateGapAboveEye(entity) <= EngineSetting.SWIM_DEEP_THRESHOLD
+        this.surfaced = calculateGapAboveEye(entity) <= surfaceDepth
                 && !isDiving(input)
                 && !isPlunging(vertical);
 
@@ -271,13 +334,19 @@ public class SwimBranch extends BranchPackage {
         movement.y += vertical.y * delta;
     }
 
-    // Surface — tread so the eye clears the water by SWIM_HEAD_CLEARANCE
+    // A swimmer already floating stays on the surface until the water closes well over its head, so a passing
+    // crest carries it up instead of dropping it under
+    private boolean isAtSurface(EntityState movementState) {
+        return movementState == EntityState.SWIMMING || movementState == EntityState.TREADING;
+    }
+
+    // Surface — ride the surface's own rise and fall, and tread so the eye clears it by SWIM_HEAD_CLEARANCE
     private float resolveTreadSpeed(EntityInstance entity) {
 
         float diff = calculateTreadHeight(entity) - entity.getWorldPositionStruct().getPosition().y;
         float maxStep = EngineSetting.SWIM_TREAD_SPEED * speedMultiplier;
 
-        return Math.max(-maxStep, Math.min(maxStep, diff * EngineSetting.SWIM_TREAD_RESPONSIVENESS));
+        return waterMotion.y + Math.max(-maxStep, Math.min(maxStep, diff * EngineSetting.SWIM_TREAD_RESPONSIVENESS));
     }
 
     // Underwater — jump swims up, walk dives, a stroke follows the facing pitch, and a still swimmer drifts down
@@ -299,9 +368,10 @@ public class SwimBranch extends BranchPackage {
         return input.isWalk() || resolveStrokePitch(input) < -EngineSetting.SWIM_DIVE_PITCH_THRESHOLD;
     }
 
-    // Sinking faster than treading ever moves means the swimmer arrived from a fall and is still plunging
+    // Sinking faster than treading ever moves on the surface means the swimmer arrived from a fall and is still
+    // plunging
     private boolean isPlunging(Vector3 vertical) {
-        return vertical.y < -EngineSetting.SWIM_TREAD_SPEED * speedMultiplier;
+        return vertical.y - waterMotion.y < -EngineSetting.SWIM_TREAD_SPEED * speedMultiplier;
     }
 
     // How steeply the stroke heads up or down — the facing pitch, reversed when swimming backward

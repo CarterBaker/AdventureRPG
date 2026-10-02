@@ -327,24 +327,22 @@ public class EngineSetting {
     public static final int WORLD_HEIGHT = 64;
 
     // Natural Noise
+    public static final float NATURAL_DETAIL_NORMAL_AMPLITUDE_BLOCKS = 0.22f;
+    public static final float NATURAL_EDGE_WARP_DETAIL_SHARE = 0.5f;
+    public static final float NATURAL_EDGE_WARP_HORIZONTAL_BLOCKS = 0.35f;
+    public static final float NATURAL_EDGE_WARP_VERTICAL_BLOCKS = 0.18f;
     public static final float NATURAL_GROUND_OFFSET_SMOOTHING = 10.0f;
-    public static final float NATURAL_NOISE_COLLISION_GRADIENT_PROBE_BLOCKS = 0.05f;
-    public static final float NATURAL_NOISE_HASH_DOT_X = 127.1f;
-    public static final float NATURAL_NOISE_HASH_DOT_Z = 311.7f;
-    public static final float NATURAL_NOISE_HASH_SCALE = 43758.5453f;
-    public static final float NATURAL_NOISE_JITTER_HORIZONTAL_BLOCKS = 0.4f;
-    public static final float NATURAL_NOISE_JITTER_VERTICAL_BLOCKS = 0.08f;
+    public static final float NATURAL_NOISE_CELL_BLOCKS = 2.0f;
+    public static final int NATURAL_NOISE_CHANNELS = 4;
     public static final float NATURAL_NOISE_MID_TIER_MARGIN_BLOCKS = 512.0f;
-    public static final float NATURAL_NOISE_SEED_SCALE = 0.5f;
-    public static final int NATURAL_NOISE_LATTICE_PERIOD = (int) (CHUNK_SIZE * NATURAL_NOISE_SEED_SCALE);
+    public static final int NATURAL_NOISE_PERIOD_CHUNKS = 4;
+    public static final int NATURAL_NOISE_PLANES = 3;
+    public static final int NATURAL_NOISE_PERIOD_BLOCKS = NATURAL_NOISE_PERIOD_CHUNKS * CHUNK_SIZE;
+    public static final int NATURAL_NOISE_LATTICE_PERIOD =
+            (int) (NATURAL_NOISE_PERIOD_BLOCKS / NATURAL_NOISE_CELL_BLOCKS);
     public static final int NATURAL_NOISE_LATTICE_SIZE = NATURAL_NOISE_LATTICE_PERIOD * NATURAL_NOISE_LATTICE_PERIOD;
-    public static final int NATURAL_NOISE_LATTICE_VEC4_COUNT = (NATURAL_NOISE_LATTICE_SIZE + 3) / 4;
-    public static final float NATURAL_NOISE_OFFSET_X_X = 17.3f;
-    public static final float NATURAL_NOISE_OFFSET_X_Z = 0.0f;
-    public static final float NATURAL_NOISE_OFFSET_Y_X = 53.1f;
-    public static final float NATURAL_NOISE_OFFSET_Y_Z = 83.2f;
-    public static final float NATURAL_NOISE_OFFSET_Z_X = 0.0f;
-    public static final float NATURAL_NOISE_OFFSET_Z_Z = 31.7f;
+    public static final float NATURAL_NOISE_PLANE_OFFSET_CELLS = 11.37f;
+    public static final long NATURAL_NOISE_SEED = 1592148161L;
     public static final String NATURAL_NOISE_UBO = "NaturalNoiseData";
 
     // Rendering Pipeline
@@ -586,6 +584,7 @@ public class EngineSetting {
     public static final float SWIM_LEAP_REST_TOLERANCE = 0.1f;
     public static final float SWIM_MIN_SPEED_MULTIPLIER = 0.15f;
     public static final float SWIM_SINK_SPEED = 0.15f;
+    public static final float SWIM_SURFACE_HOLD_DEPTH = 0.6f;
     public static final float SWIM_TREAD_RESPONSIVENESS = 6.0f;
     public static final float SWIM_TREAD_SPEED = 2.0f;
     public static final float SWIM_UP_SPEED = 2.4f;
@@ -593,6 +592,7 @@ public class EngineSetting {
     public static final float SWIM_VERTICAL_STATE_SPEED = 0.8f;
     public static final float SWIM_VISCOSITY_DRAG_SCALE = 0.12f;
     public static final float SWIM_VISCOSITY_REFERENCE = 1.0f;
+    public static final float SWIM_WAVE_CURRENT_SCALE = 0.75f;
     public static final float WADE_DEEP_SPEED_MULTIPLIER = 0.55f;
     public static final float WADE_RUN_SPEED_MULTIPLIER = 0.4f;
     public static final float WADE_SHALLOW_DEPTH_FACTOR = 0.4f;

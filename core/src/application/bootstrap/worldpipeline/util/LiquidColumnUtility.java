@@ -14,13 +14,16 @@ public class LiquidColumnUtility extends EngineUtility {
     /*
      * Block-space liquid queries shared by anything that needs to know where
      * a water surface actually is — SwimBranch, and WaveManager deciding
-     * whether a camera is under the sea. totalY follows
-     * the same convention as WorldPositionUtility.findSafeSpawnHeight: an
-     * absolute block Y, unrolled across every subchunk in the column
+     * whether a camera is under the sea. findWaterY() is the one place that
+     * decides which liquid a position stands in, a passing wave crest over
+     * the open air above the tide line included. totalY follows the same
+     * convention as WorldPositionUtility.findSafeSpawnHeight: an absolute
+     * block Y, unrolled across every subchunk in the column
      * (0..WORLD_HEIGHT * CHUNK_SIZE), not a chunk-local coordinate.
      */
 
     public static final float NO_SURFACE = EngineSetting.LIQUID_NO_SURFACE;
+    public static final int NO_WATER = EngineSetting.INDEX_NOT_FOUND;
 
     private static final int WORLD_TOP_Y = EngineSetting.WORLD_HEIGHT * EngineSetting.CHUNK_SIZE;
 
@@ -57,6 +60,33 @@ public class LiquidColumnUtility extends EngineUtility {
         SubChunkInstance subChunk = chunkInstance.getSubChunk(totalY / EngineSetting.CHUNK_SIZE);
 
         return subChunk.isLiquidTidal(Coordinate3Int.pack(blockX, totalY % EngineSetting.CHUNK_SIZE, blockZ));
+    }
+
+    // Water \\
+
+    // The totalY of the liquid block a position at totalY can be under: its own block when that is liquid, or the
+    // tidal block just beneath the tide line when the position is in the open air above it, where a wave crest
+    // still passes over. Whether the surface actually covers the position is the caller's to compare.
+    public static int findWaterY(
+            ChunkInstance chunkInstance,
+            BlockManager blockManager,
+            int blockX,
+            int totalY,
+            int blockZ,
+            float tideSurfaceHeight) {
+
+        if (isLiquid(getBlockAt(chunkInstance, blockManager, blockX, totalY, blockZ)))
+            return totalY;
+
+        int beneathTideY = (int) Math.floor(tideSurfaceHeight) - 1;
+
+        if (totalY <= beneathTideY)
+            return NO_WATER;
+
+        boolean tidalBeneath = isLiquid(getBlockAt(chunkInstance, blockManager, blockX, beneathTideY, blockZ))
+                && isTidal(chunkInstance, blockX, beneathTideY, blockZ);
+
+        return tidalBeneath ? beneathTideY : NO_WATER;
     }
 
     // Surface \\

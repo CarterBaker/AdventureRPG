@@ -15,16 +15,34 @@ out vec4  vOceanState;
 #include "includes/CameraData.glsl"
 #include "liquid/includes/OceanSurface.glsl"
 #include "liquid/includes/OceanTessellation.glsl"
+#include "surface/includes/SurfaceTessellationTier.glsl"
+#include "surface/includes/NearTerrainNoise.glsl"
 
 // Must match EngineSetting.LIQUID_LEVEL_MAX — GLSL has no visibility into
 // the Java constant, so this is a manually-kept mirror, same convention
 // StandardSurface.tes already uses for its own constant re-derivations.
 const float LIQUID_LEVEL_MAX = 64.0;
 
+vec3 applyShoreWarp(vec3 worldPos) {
+    float nearStrength = getNearStrength(computeDistanceFromCenterSq(worldPos), getTier0MaxSqDist());
+
+    if (nearStrength <= 0.001)
+    return worldPos;
+
+    vec3 detail;
+    vec3 warp;
+    sampleNaturalFields(worldPos, detail, warp);
+
+    return worldPos + vec3(warp.x, 0.0, warp.z) * nearStrength;
+}
+
 // Liquid tessellation evaluation. A tidal surface vertex ignores the level its cell was last written at and
 // rides the live tide plus the wave sum WaveManager samples on the CPU, from a position snapped to the
 // quarter-block lattice so two patches sharing it evaluate bit-identical input. Its sea state travels on to
-// the fragment for slope, foam and ripples. Still and flowing surface vertices sit at their fill level.
+// the fragment for slope, foam and ripples. Still and flowing surface vertices sit at their fill level. Inside
+// the near ring every vertex is then drawn shifted sideways by the natural edge warp, exactly as the bank beside
+// it is, so the waterline follows the bent shore without a sliver; the shift is horizontal only, so the water
+// stays level and the waves keep the height physics floats on, and the fragment still shades the unshifted sea.
 
 void main() {
     float u = gl_TessCoord.x;
@@ -55,5 +73,5 @@ void main() {
     vWorldPos   = worldPos;
     vFaceNormal = teNormal[0];
 
-    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+    gl_Position = u_viewProjection * vec4(applyShoreWarp(worldPos), 1.0);
 }

@@ -234,14 +234,15 @@ public class EntityInstance extends InstancePackage {
         return size.y * entityData.getEyeLevel();
     }
 
-    // The chunk-local point the entity looks and aims from — the centre of its footprint, at eye height
+    // The chunk-local point the entity looks and aims from — the centre of its footprint, at eye height above
+    // the ground it is drawn standing on
     public Vector3 getEyePosition(Vector3 out) {
 
         Vector3 position = worldPositionStruct.getPosition();
 
         return out.set(
                 position.x + size.x * 0.5f,
-                position.y + getEyeHeight(),
+                position.y + entityStateHandle.getGroundOffset() + getEyeHeight(),
                 position.z + size.z * 0.5f);
     }
 }

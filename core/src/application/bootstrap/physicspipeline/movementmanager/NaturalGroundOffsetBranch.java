@@ -16,11 +16,14 @@ import engine.util.mathematics.vectors.Vector3;
 public class NaturalGroundOffsetBranch extends BranchPackage {
 
     /*
-     * Tracks a smoothed, purely cosmetic vertical offset for where a natural
-     * block's jittered top sits under an entity's feet. It is never written
+     * Tracks a smoothed vertical offset for where a natural block's top is
+     * drawn under an entity's feet: the near-ring detail riding the face
+     * normal plus the edge warp's rise, read from the same lattice the
+     * tessellation stages displace natural terrain with. It is never written
      * into WorldPositionStruct, so collision and gravity stay on the flat
-     * position; the camera and other consumers add it themselves. Stair-step
-     * lifts ease out through the same smoothing.
+     * position; the body and the eye are both drawn on it, so the entity
+     * stands, and looks out from, the ground it is seen on. Stair-step lifts
+     * ease out through the same smoothing.
      */
 
     // Internal
@@ -28,7 +31,19 @@ public class NaturalGroundOffsetBranch extends BranchPackage {
     private WorldStreamManager worldStreamManager;
     private PhysicsNoiseManager physicsNoiseManager;
 
+    // Scratch
+    private Vector3 detailScratch;
+    private Vector3 warpScratch;
+
     // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Scratch
+        this.detailScratch = new Vector3();
+        this.warpScratch = new Vector3();
+    }
 
     @Override
     protected void get() {
@@ -72,6 +87,8 @@ public class NaturalGroundOffsetBranch extends BranchPackage {
         if (below == null || !below.isNatural() || below.getGeometry() != DynamicGeometryType.FULL)
             return 0f;
 
-        return physicsNoiseManager.sampleAxisJitter(centerX, centerZ, EngineSetting.AXIS_Y);
+        physicsNoiseManager.sampleFields(chunkCoordinate, centerX, position.y, centerZ, detailScratch, warpScratch);
+
+        return detailScratch.y * EngineSetting.NATURAL_DETAIL_NORMAL_AMPLITUDE_BLOCKS + warpScratch.y;
     }
 }

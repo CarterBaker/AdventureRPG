@@ -2,7 +2,9 @@ package application.bootstrap.physicspipeline.movementmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
+import application.bootstrap.physicspipeline.physicsnoisemanager.PhysicsNoiseManager;
 import application.bootstrap.physicspipeline.util.SubBlockSampleUtility;
+import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
@@ -22,13 +24,17 @@ public class BlockCollisionBranch extends BranchPackage {
      * floors. Sub-blocks and item boxes already overlapped never block. A
      * grounded entity cut short tries a stair step and eases the lift into the
      * cosmetic ground offset, so sub-block terrain and low items walk like
-     * stairs.
+     * stairs. A natural wall stops the box where its edge warp draws it: a
+     * face bent toward the entity stops it early, so it never sinks into a
+     * bulge it can see, while a face bent away still stops it at the block,
+     * so it never enters solid ground.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
     private WorldItemSpaceSystem worldItemSpaceSystem;
+    private PhysicsNoiseManager physicsNoiseManager;
 
     // Settings
     private float skin;
@@ -44,6 +50,11 @@ public class BlockCollisionBranch extends BranchPackage {
 
     // Scratch — sub-block coordinate, indexed by axis
     private int[] subScratch;
+
+    // Layer — whether the solid layer last found is natural, and the edge warp sampled on its face
+    private boolean layerNatural;
+    private Vector3 detailScratch;
+    private Vector3 warpScratch;
 
     // Item Boxes — min and max corner of each solid item box near the move, six floats each
     private FloatArrayList itemBoxes;
@@ -69,6 +80,10 @@ public class BlockCollisionBranch extends BranchPackage {
         // Scratch
         this.subScratch = new int[EngineSetting.AXIS_COUNT];
 
+        // Layer
+        this.detailScratch = new Vector3();
+        this.warpScratch = new Vector3();
+
         // Item Boxes
         this.itemBoxes = new FloatArrayList();
         this.boxStride = EngineSetting.AXIS_COUNT * 2;
@@ -81,6 +96,7 @@ public class BlockCollisionBranch extends BranchPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
         this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
+        this.physicsNoiseManager = get(PhysicsNoiseManager.class);
     }
 
     // Collision \\
@@ -247,7 +263,8 @@ public class BlockCollisionBranch extends BranchPackage {
                     continue;
 
                 if (isLayerSolid(chunkCoordinate, axis, layer, tangentA, firstA, lastA, tangentB, firstB, lastB))
-                    return Math.min(distance, Math.max(face - lead - skin, 0f));
+                    return Math.min(distance, Math.max(
+                            face + Math.min(resolveFaceWarp(chunkCoordinate, axis, face), 0f) - lead - skin, 0f));
             }
 
             return distance;
@@ -264,7 +281,8 @@ public class BlockCollisionBranch extends BranchPackage {
                 continue;
 
             if (isLayerSolid(chunkCoordinate, axis, layer, tangentA, firstA, lastA, tangentB, firstB, lastB))
-                return Math.max(distance, -Math.max(lead - face - skin, 0f));
+                return Math.max(distance, -Math.max(
+                        lead - face - Math.max(resolveFaceWarp(chunkCoordinate, axis, face), 0f) - skin, 0f));
         }
 
         return distance;
@@ -288,12 +306,43 @@ public class BlockCollisionBranch extends BranchPackage {
                         worldStreamManager,
                         blockManager,
                         chunkCoordinate,
-                        subScratch[axisX], subScratch[axisY], subScratch[axisZ]))
+                        subScratch[axisX], subScratch[axisY], subScratch[axisZ])) {
+                    layerNatural = isNatural(chunkCoordinate);
                     return true;
+                }
             }
         }
 
         return false;
+    }
+
+    private boolean isNatural(long chunkCoordinate) {
+
+        BlockHandle block = SubBlockSampleUtility.getSubBlockAt(
+                worldStreamManager,
+                blockManager,
+                chunkCoordinate,
+                subScratch[axisX], subScratch[axisY], subScratch[axisZ]);
+
+        return block != null && block.isNatural();
+    }
+
+    // Edge Warp \\
+
+    // How far the edge warp moves the natural wall face just found along the sweep axis, sampled where the box
+    // meets it; walls only, since the ground under an entity reaches it through the ground offset instead
+    private float resolveFaceWarp(long chunkCoordinate, int axis, float face) {
+
+        if (axis == axisY || !layerNatural)
+            return 0f;
+
+        float contactX = axis == axisX ? face : (boxMin[axisX] + boxMax[axisX]) * 0.5f;
+        float contactZ = axis == axisZ ? face : (boxMin[axisZ] + boxMax[axisZ]) * 0.5f;
+        float contactY = (boxMin[axisY] + boxMax[axisY]) * 0.5f;
+
+        physicsNoiseManager.sampleFields(chunkCoordinate, contactX, contactY, contactZ, detailScratch, warpScratch);
+
+        return axis == axisX ? warpScratch.x : warpScratch.z;
     }
 
     // Box \\

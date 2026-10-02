@@ -1,42 +1,57 @@
 #ifndef NATURAL_NOISE_DATA_GLSL
 #define NATURAL_NOISE_DATA_GLSL
 
-// Baked once on the CPU by NaturalNoiseSystem, from the exact hash formula
-// this file used to evaluate live with sin() — every consumer now only ever
-// reads this table, so physics sampling the same table on the CPU can never
-// disagree with what gets rendered. PERIOD and SEED_SCALE must match
-// EngineSetting.NATURAL_NOISE_LATTICE_PERIOD and NATURAL_NOISE_SEED_SCALE —
-// GLSL has no visibility into Java constants.
-#define NATURAL_NOISE_LATTICE_PERIOD 8
-#define NATURAL_NOISE_SEED_SCALE 0.5
+#include "includes/PlayerPositionData.glsl"
+#include "includes/SettingsData.glsl"
+
+// Baked once on the CPU by NaturalNoiseSystem, four independent channels per cell in [-1, 1], laid out x * PERIOD
+// + z exactly as NaturalNoiseUtility stores them, so physics sampling the same table can never disagree with what
+// gets rendered. The lattice spans NATURAL_NOISE_PERIOD_CHUNKS chunks, which divides every world, so the field
+// wraps with the world. Positions here are relative to the player's chunk corner, the same space u_gridPosition
+// places every chunk in; folding the player's chunk into the period anchors them on the lattice, so the field is
+// a pure function of world position and never moves as the player crosses a chunk. The defines must match
+// EngineSetting.NATURAL_NOISE_LATTICE_PERIOD, NATURAL_NOISE_PERIOD_CHUNKS and NATURAL_NOISE_CELL_BLOCKS — GLSL
+// has no visibility into Java constants.
+#define NATURAL_NOISE_LATTICE_PERIOD 32
+#define NATURAL_NOISE_PERIOD_CHUNKS 4
+#define NATURAL_NOISE_CELL_BLOCKS 2.0
 
 layout(std140) uniform NaturalNoiseData {
-    vec4 u_naturalNoiseLattice[16];
+    vec4 u_naturalNoiseLattice[NATURAL_NOISE_LATTICE_PERIOD * NATURAL_NOISE_LATTICE_PERIOD];
 };
 
-float sampleNaturalNoiseLattice(int x, int z) {
-    int wrappedX = ((x % NATURAL_NOISE_LATTICE_PERIOD) + NATURAL_NOISE_LATTICE_PERIOD) % NATURAL_NOISE_LATTICE_PERIOD;
-    int wrappedZ = ((z % NATURAL_NOISE_LATTICE_PERIOD) + NATURAL_NOISE_LATTICE_PERIOD) % NATURAL_NOISE_LATTICE_PERIOD;
-    int flatIndex = wrappedX * NATURAL_NOISE_LATTICE_PERIOD + wrappedZ;
-    vec4 packedFour = u_naturalNoiseLattice[flatIndex / 4];
-    int component = flatIndex - (flatIndex / 4) * 4;
-    if (component == 0) return packedFour.x;
-    if (component == 1) return packedFour.y;
-    if (component == 2) return packedFour.z;
-    return packedFour.w;
+vec4 fetchNaturalNoise(float cellA, float cellB) {
+    int a = int(mod(cellA, float(NATURAL_NOISE_LATTICE_PERIOD)));
+    int b = int(mod(cellB, float(NATURAL_NOISE_LATTICE_PERIOD)));
+    return u_naturalNoiseLattice[a * NATURAL_NOISE_LATTICE_PERIOD + b];
 }
 
-float sampleNaturalNoiseSmooth(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
+// All four channels at once, periodic on both lattice axes, with a quintic fade so every field built on it is
+// smooth to its second derivative
+vec4 sampleNaturalNoise(vec2 lattice) {
+    vec2 cell = floor(lattice);
+    vec2 f    = lattice - cell;
+    vec2 w    = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
 
-    float h00 = sampleNaturalNoiseLattice(int(i.x),     int(i.y));
-    float h10 = sampleNaturalNoiseLattice(int(i.x) + 1, int(i.y));
-    float h01 = sampleNaturalNoiseLattice(int(i.x),     int(i.y) + 1);
-    float h11 = sampleNaturalNoiseLattice(int(i.x) + 1, int(i.y) + 1);
+    vec4 n00 = fetchNaturalNoise(cell.x,       cell.y);
+    vec4 n10 = fetchNaturalNoise(cell.x + 1.0, cell.y);
+    vec4 n01 = fetchNaturalNoise(cell.x,       cell.y + 1.0);
+    vec4 n11 = fetchNaturalNoise(cell.x + 1.0, cell.y + 1.0);
 
-    return mix(mix(h00, h10, f.x), mix(h01, h11, f.x), f.y);
+    return mix(mix(n00, n10, w.x), mix(n01, n11, w.x), w.y);
+}
+
+int wrapNaturalNoiseChunk(int chunk) {
+    return ((chunk % NATURAL_NOISE_PERIOD_CHUNKS) + NATURAL_NOISE_PERIOD_CHUNKS) % NATURAL_NOISE_PERIOD_CHUNKS;
+}
+
+// Lattice coordinates of a player-relative position
+vec3 toNaturalNoiseLattice(vec3 position) {
+    vec2 origin = vec2(
+        float(wrapNaturalNoiseChunk(u_playerChunkX)),
+        float(wrapNaturalNoiseChunk(u_playerChunkZ))) * u_chunkSize;
+
+    return vec3(position.x + origin.x, position.y, position.z + origin.y) / NATURAL_NOISE_CELL_BLOCKS;
 }
 
 #endif

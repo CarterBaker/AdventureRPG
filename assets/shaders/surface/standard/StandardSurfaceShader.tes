@@ -38,9 +38,12 @@ out vec3 vColor;
 // detail layer come from the window of sub-blocks around the vertex (see Bevel.glsl), which every patch
 // touching it rebuilds identically from its own edge columns. Natural distortion and height relief therefore
 // fade to exactly zero wherever two surfaces meet, and the only displacement surviving there is the bevel,
-// itself a pure function of the vertex. An artificial patch is never displaced, and every natural neighbour
-// fades flat against it. Geometric normals come from finite differences in block units, taken only where
-// displacement actually runs, so a ten-block quad and a half-block quad shade to the same gradient.
+// itself a pure function of the vertex. On top of all of it the edge warp moves every natural vertex by one
+// offset sampled at its snapped position (see NearTerrainNoise.glsl): since every patch sharing the vertex moves
+// it identically, straight natural edges and corners bend into irregular ones without a crack, and the same
+// lattice gives physics the offset to stand and stop on. An artificial patch is never displaced, and every
+// natural neighbour fades flat against it. Geometric normals come from finite differences in block units, taken
+// only where displacement actually runs, so a ten-block quad and a half-block quad shade to the same gradient.
 
 const float HEIGHT_FD_EPSILON_BLOCKS = 0.02;
 
@@ -61,15 +64,20 @@ vec3 evalDisplacedSurface(
 
     vec3  bevelOffset;
     float detailWeight;
-    resolveSurfaceShape(window, baseWorldPos, bevelOffset, detailWeight);
+    float naturalWeight;
+    resolveSurfaceShape(window, baseWorldPos, bevelOffset, detailWeight, naturalWeight);
+
+    vec3 detail;
+    vec3 warp;
+    sampleNaturalFields(baseWorldPos, detail, warp);
 
     float weight   = detailWeight * nearStrength;
-    vec3  worldPos = applyNaturalSurfaceNoise(baseWorldPos, baseWorldPos, normal, weight);
+    vec3  worldPos = applyNaturalSurfaceNoise(baseWorldPos, detail, normal, weight);
 
     vec2 tiledUV = tileUV(baseWorldPos, teUVOrigin[0], normal, teOrient[0]);
     worldPos = applyHeightDisplacement(worldPos, baseWorldPos, normal, tiledUV, weight);
 
-    return worldPos + bevelOffset * nearStrength;
+    return worldPos + (bevelOffset + warp * naturalWeight) * nearStrength;
 }
 
 void main() {

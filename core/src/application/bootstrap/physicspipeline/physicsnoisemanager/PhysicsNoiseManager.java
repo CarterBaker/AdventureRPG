@@ -7,14 +7,12 @@ import engine.util.mathematics.vectors.Vector3;
 public class PhysicsNoiseManager extends ManagerPackage {
 
     /*
-     * Owns nothing physics-specific of its own — it exists purely to give
-     * NaturalNoiseSystem a home inside the physics pipeline's own dependency
-     * graph, since collision must be able to reach it every frame, and to
-     * expose that system's CPU-side sampling API to the rest of physics: the
-     * full per-axis jitter vector a natural block's own geometry is displaced
-     * by, and the tangential slope of one jitter axis, which is what lets
-     * BlockCollisionBranch wobble a natural block's collision boundary and
-     * deflect movement along it without ever touching the GPU.
+     * Gives NaturalNoiseSystem a home inside the physics pipeline's own
+     * dependency graph, since movement and collision reach it every frame,
+     * and exposes its CPU-side sampling to the rest of physics: the near-ring
+     * detail vector a natural top face is lifted by, and the edge warp every
+     * natural vertex is drawn at, both read from the very lattice the
+     * tessellation stages displace natural terrain with.
      */
 
     // Internal
@@ -29,16 +27,13 @@ public class PhysicsNoiseManager extends ManagerPackage {
 
     // Accessible \\
 
-    public void sampleJitter(double worldX, double worldZ, Vector3 out) {
-        naturalNoiseSystem.sampleJitter(worldX, worldZ, out);
-    }
-
-    public float sampleAxisJitter(double worldX, double worldZ, int axis) {
-        return naturalNoiseSystem.sampleAxisJitter(worldX, worldZ, axis);
-    }
-
-    public float sampleAxisJitterGradient(double worldX, double worldZ, int axis, int tangentAxis) {
-        return naturalNoiseSystem.sampleAxisJitterGradient(worldX, worldZ, axis, tangentAxis);
+    // Detail and warp at a chunk-local position — see NaturalNoiseUtility.sampleFields()
+    public void sampleFields(
+            long chunkCoordinate,
+            float localX, float localY, float localZ,
+            Vector3 outDetail,
+            Vector3 outWarp) {
+        naturalNoiseSystem.sampleFields(chunkCoordinate, localX, localY, localZ, outDetail, outWarp);
     }
 
     public boolean isWithinNearTessellationRing(WorldHandle worldHandle, long entityChunkCoordinate,

@@ -5,7 +5,6 @@ import application.bootstrap.oceanpipeline.turbulencemanager.TurbulenceManager;
 import application.bootstrap.oceanpipeline.util.OceanWaveUtility;
 import application.bootstrap.oceanpipeline.wave.WaveInstance;
 import application.bootstrap.weatherpipeline.windmanager.WindManager;
-import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -32,7 +31,10 @@ public class WaveManager extends ManagerPackage {
      * the wave sum, scaled by a sea state built from weather turbulence, the
      * drifting sea noise and the exposure of the water there. The sample
      * methods are the CPU copy of exactly what OceanSurface.glsl tessellates,
-     * for physics and gameplay. Resolves in LATE_UPDATE, after turbulence and
+     * for physics and gameplay: sampleWaterSurface() is the surface a swimmer
+     * floats on, and sampleSurfaceMotion() how fast that surface rises and how
+     * the water under it moves, the orbit every wave drives through the water
+     * fading with depth. Resolves in LATE_UPDATE, after turbulence and
      * exposure, once every grid's reference chunk is final.
      */
 
@@ -49,6 +51,7 @@ public class WaveManager extends ManagerPackage {
     private double[] waveVectorX;
     private double[] waveVectorZ;
     private double[] waveAngularSpeed;
+    private double[] waveNumber;
     private float[] waveShare;
     private float shapeMean;
 
@@ -69,6 +72,7 @@ public class WaveManager extends ManagerPackage {
         this.waveVectorX = new double[EngineSetting.OCEAN_WAVE_COUNT];
         this.waveVectorZ = new double[EngineSetting.OCEAN_WAVE_COUNT];
         this.waveAngularSpeed = new double[EngineSetting.OCEAN_WAVE_COUNT];
+        this.waveNumber = new double[EngineSetting.OCEAN_WAVE_COUNT];
         this.waveShare = new float[EngineSetting.OCEAN_WAVE_COUNT];
         this.shapeMean = OceanWaveUtility.computeShapeMean(EngineSetting.OCEAN_WAVE_SHARPNESS);
 
@@ -135,14 +139,13 @@ public class WaveManager extends ManagerPackage {
         for (int i = 0; i < EngineSetting.OCEAN_WAVE_COUNT; i++) {
 
             double angle = baseAngle + Math.toRadians(EngineSetting.OCEAN_WAVE_ANGLES_DEGREES[i]);
-            double waveNumber = Math.PI * 2.0 / EngineSetting.OCEAN_WAVE_WAVELENGTHS_BLOCKS[i];
+            double targetWaveNumber = Math.PI * 2.0 / EngineSetting.OCEAN_WAVE_WAVELENGTHS_BLOCKS[i];
 
-            waveVectorX[i] = snapToWrapPeriod(Math.cos(angle) * waveNumber, worldWidthBlocks);
-            waveVectorZ[i] = snapToWrapPeriod(Math.sin(angle) * waveNumber, worldHeightBlocks);
+            waveVectorX[i] = snapToWrapPeriod(Math.cos(angle) * targetWaveNumber, worldWidthBlocks);
+            waveVectorZ[i] = snapToWrapPeriod(Math.sin(angle) * targetWaveNumber, worldHeightBlocks);
 
-            double snappedWaveNumber = Math.sqrt(waveVectorX[i] * waveVectorX[i] + waveVectorZ[i] * waveVectorZ[i]);
-
-            waveAngularSpeed[i] = Math.sqrt(EngineSetting.GRAVITY_FORCE * snappedWaveNumber)
+            waveNumber[i] = Math.sqrt(waveVectorX[i] * waveVectorX[i] + waveVectorZ[i] * waveVectorZ[i]);
+            waveAngularSpeed[i] = Math.sqrt(EngineSetting.GRAVITY_FORCE * waveNumber[i])
                     * EngineSetting.OCEAN_WAVE_SPEED_SCALE;
             waveShare[i] = EngineSetting.OCEAN_WAVE_AMPLITUDE_RATIOS[i];
 
@@ -254,27 +257,29 @@ public class WaveManager extends ManagerPackage {
 
         int localX = Math.floorMod(blockX, EngineSetting.CHUNK_SIZE);
         int localZ = Math.floorMod(blockZ, EngineSetting.CHUNK_SIZE);
-        BlockHandle block = LiquidColumnUtility.getBlockAt(chunk, blockManager, localX, totalY, localZ);
+        int waterY = LiquidColumnUtility.findWaterY(
+                chunk, blockManager, localX, totalY, localZ, tideManager.getSurfaceHeightBlocks());
 
-        if (LiquidColumnUtility.isLiquid(block)) {
-
-            float surfaceHeight = LiquidColumnUtility.isTidal(chunk, localX, totalY, localZ)
-                    ? oceanSurfaceHeight
-                    : LiquidColumnUtility.findSurfaceHeight(chunk, blockManager, localX, totalY, localZ);
-
-            return position.y < surfaceHeight ? surfaceHeight : EngineSetting.LIQUID_NO_SURFACE;
-        }
-
-        int beneathTideY = (int) Math.floor(tideManager.getSurfaceHeightBlocks()) - 1;
-
-        if (totalY <= beneathTideY || position.y >= oceanSurfaceHeight)
+        if (waterY == LiquidColumnUtility.NO_WATER)
             return EngineSetting.LIQUID_NO_SURFACE;
 
-        BlockHandle beneathTide = LiquidColumnUtility.getBlockAt(chunk, blockManager, localX, beneathTideY, localZ);
-        boolean tidalBeneath = LiquidColumnUtility.isLiquid(beneathTide)
-                && LiquidColumnUtility.isTidal(chunk, localX, beneathTideY, localZ);
+        float surfaceHeight = resolveWaterSurface(chunk, localX, waterY, localZ, oceanSurfaceHeight);
 
-        return tidalBeneath ? oceanSurfaceHeight : EngineSetting.LIQUID_NO_SURFACE;
+        return position.y < surfaceHeight ? surfaceHeight : EngineSetting.LIQUID_NO_SURFACE;
+    }
+
+    // The surface of the liquid at waterY: the sea over a tidal block, the still surface over any other
+    private float resolveWaterSurface(
+            ChunkInstance chunk,
+            int blockX,
+            int waterY,
+            int blockZ,
+            float oceanSurfaceHeight) {
+
+        if (LiquidColumnUtility.isTidal(chunk, blockX, waterY, blockZ))
+            return oceanSurfaceHeight;
+
+        return LiquidColumnUtility.findSurfaceHeight(chunk, blockManager, blockX, waterY, blockZ);
     }
 
     // Sample \\
@@ -335,6 +340,46 @@ public class WaveManager extends ManagerPackage {
         outSlope.set(slopeX, slopeZ);
     }
 
+    // The surface's rise in y and the orbital current depthBlocks beneath it in x and z, in blocks per second.
+    // Every wave turns the water under it through a circle as it passes, forward under its crest and back under
+    // its trough, at the speed its own height sets, shrinking with depth by its wave number.
+    private void sampleMotion(
+            WaveInstance wave,
+            float relativeX,
+            float relativeZ,
+            float seaState,
+            float depthBlocks,
+            Vector3 outMotion) {
+
+        float chopAmplitude = OceanWaveUtility.resolveChopAmplitudeBlocks(seaState);
+        float swellAmplitude = OceanWaveUtility.resolveSwellAmplitudeBlocks(seaState);
+        float rise = 0f;
+        float currentX = 0f;
+        float currentZ = 0f;
+
+        for (int i = 0; i < EngineSetting.OCEAN_WAVE_COUNT; i++) {
+
+            float amplitude = (isSwell(i) ? swellAmplitude : chopAmplitude) * waveShare[i];
+            float theta = resolveTheta(wave, i, relativeX, relativeZ);
+            float angularSpeed = (float) waveAngularSpeed[i];
+
+            rise -= amplitude * angularSpeed
+                    * OceanWaveUtility.shapeSlope(theta, EngineSetting.OCEAN_WAVE_SHARPNESS, shapeMean);
+
+            if (waveNumber[i] <= 0.0)
+                continue;
+
+            float orbital = amplitude * angularSpeed
+                    * OceanWaveUtility.shape(theta, EngineSetting.OCEAN_WAVE_SHARPNESS, shapeMean)
+                    * (float) (Math.exp(-waveNumber[i] * depthBlocks) / waveNumber[i]);
+
+            currentX += orbital * (float) waveVectorX[i];
+            currentZ += orbital * (float) waveVectorZ[i];
+        }
+
+        outMotion.set(currentX, rise, currentZ);
+    }
+
     private float resolveTheta(WaveInstance wave, int waveIndex, float relativeX, float relativeZ) {
         return (float) waveVectorX[waveIndex] * relativeX + (float) waveVectorZ[waveIndex] * relativeZ
                 + wave.getWavePhase(waveIndex);
@@ -348,7 +393,85 @@ public class WaveManager extends ManagerPackage {
                 + sampleDisplacement(grid.getWaveInstance(), relativeX, relativeZ, seaState);
     }
 
+    // Grid \\
+
+    // The grid that streams a chunk, whose weather and sea state the water there follows; null when none does
+    private GridInstance findGrid(long chunkCoordinate) {
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++) {
+
+            GridInstance grid = (GridInstance) elements[i];
+
+            if (grid.getGridSlotForChunk(chunkCoordinate) != null)
+                return grid;
+        }
+
+        return null;
+    }
+
+    private double toWorldBlockX(long chunkCoordinate, float localX) {
+        return (double) Coordinate2Long.unpackX(chunkCoordinate) * EngineSetting.CHUNK_SIZE + localX;
+    }
+
+    private double toWorldBlockZ(long chunkCoordinate, float localZ) {
+        return (double) Coordinate2Long.unpackY(chunkCoordinate) * EngineSetting.CHUNK_SIZE + localZ;
+    }
+
     // On-Demand \\
+
+    // The surface of the liquid a chunk-local position's column holds at waterY: the live sea over a tidal block,
+    // the bare tide while no grid streams the chunk, and the still surface over any other liquid
+    public float sampleWaterSurface(
+            ChunkInstance chunk,
+            long chunkCoordinate,
+            int blockX,
+            int waterY,
+            int blockZ,
+            float localX,
+            float localZ) {
+
+        GridInstance grid = findGrid(chunkCoordinate);
+        float oceanSurfaceHeight = grid == null
+                ? tideManager.getSurfaceHeightBlocks()
+                : sampleSurfaceHeightBlocks(
+                        grid,
+                        toWorldBlockX(chunkCoordinate, localX),
+                        toWorldBlockZ(chunkCoordinate, localZ));
+
+        return resolveWaterSurface(chunk, blockX, waterY, blockZ, oceanSurfaceHeight);
+    }
+
+    // The sea's rise and current at a chunk-local position depthBlocks under its surface; still while no grid
+    // streams the chunk
+    public void sampleSurfaceMotion(
+            long chunkCoordinate,
+            float localX,
+            float localZ,
+            float depthBlocks,
+            Vector3 outMotion) {
+
+        GridInstance grid = findGrid(chunkCoordinate);
+
+        if (grid == null) {
+            outMotion.set(0f, 0f, 0f);
+            return;
+        }
+
+        float relativeX = turbulenceManager.toRelativeX(grid, toWorldBlockX(chunkCoordinate, localX));
+        float relativeZ = turbulenceManager.toRelativeZ(grid, toWorldBlockZ(chunkCoordinate, localZ));
+
+        sampleMotion(
+                grid.getWaveInstance(),
+                relativeX,
+                relativeZ,
+                sampleSeaStateRelative(grid, relativeX, relativeZ),
+                Math.max(0f, depthBlocks),
+                outMotion);
+    }
 
     public float sampleSurfaceHeightBlocks(GridInstance grid, double worldBlockX, double worldBlockZ) {
         return sampleSurfaceHeightRelative(

@@ -12,10 +12,10 @@ public class MovementManager extends ManagerPackage {
 
     /*
      * Drives the full movement pipeline for any entity in a fixed order: liquid
-     * contact, leaps, horizontal movement, swimming or gravity, collision,
-     * correction, water state, position, ground offset and facing. fly() is the
-     * physics-free path for free cameras, and face() turns a body without
-     * moving it.
+     * contact, leaps, horizontal movement and the waves carrying it, swimming
+     * or gravity, collision, correction, water state, position, ground offset
+     * and facing. fly() is the physics-free path for free cameras, and face()
+     * turns a body without moving it.
      */
 
     // Internal
@@ -72,8 +72,11 @@ public class MovementManager extends ManagerPackage {
         boolean swimming = swimBranch.isSwimming() && !state.isJumping();
         float dragMultiplier = touchingLiquid ? swimBranch.getSpeedMultiplier(entity, swimming) : 1f;
 
-        // 3. Horizontal
+        // 3. Horizontal — the entity's own stroke, then the water carrying it
         movementBranch.calculate(movement, entity, dragMultiplier, swimming);
+
+        if (touchingLiquid)
+            swimBranch.carry(movement, entity, swimming);
 
         // 4. Vertical
         if (swimming)
