@@ -10,8 +10,6 @@ import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.weatherpipeline.weather.WeatherWindowStruct;
 import application.bootstrap.worldpipeline.grid.GridInstance;
-import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -33,7 +31,6 @@ class WeatherMapBufferSystem extends SystemPackage {
     private WeatherPatternManager weatherPatternManager;
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
-    private WorldManager worldManager;
 
     // Cells
     private Vector4Int[] cells;
@@ -51,7 +48,7 @@ class WeatherMapBufferSystem extends SystemPackage {
     private final WeatherWindowStruct windowScratch = new WeatherWindowStruct();
     private final Vector2 shapeOriginScratch = new Vector2();
     private final Vector4 mapOrigin = new Vector4();
-    private final Vector2 planet = new Vector2();
+    private final Vector2 dome = new Vector2();
     private float[] cellCoverage;
     private float[] cellDensityWeighted;
     private float[] cellDensityWeight;
@@ -88,7 +85,6 @@ class WeatherMapBufferSystem extends SystemPackage {
         this.weatherPatternManager = get(WeatherPatternManager.class);
         this.uboManager = get(UBOManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
-        this.worldManager = get(WorldManager.class);
     }
 
     // Update \\
@@ -109,8 +105,6 @@ class WeatherMapBufferSystem extends SystemPackage {
 
     private void writeGrid(GridInstance grid) {
 
-        WorldHandle activeWorld = worldManager.getActiveWorld();
-
         weatherPatternManager.resolveWindow(grid, windowScratch);
 
         resolveLayers();
@@ -123,7 +117,7 @@ class WeatherMapBufferSystem extends SystemPackage {
                 weatherPatternManager.getCellSizeBlocks(),
                 weatherPatternManager.getShapePeriodBlocks());
 
-        planet.set(WeatherScaleUtility.resolvePlanetRadiusBlocks(activeWorld), EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
+        dome.set(EngineSetting.MACRO_RENDER_DISTANCE_BLOCKS, EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
 
         UBOInstance weatherMapUBO = grid.getWeatherMapUBO();
 
@@ -133,7 +127,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_NOISE, layerNoise);
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_SURFACE, layerSurface);
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_MAP_ORIGIN, mapOrigin);
-        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_PLANET, planet);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_DOME, dome);
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_COUNT, layerCount);
 
         uboManager.push(weatherMapUBO);

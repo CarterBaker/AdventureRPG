@@ -45,8 +45,9 @@ uniform sampler2D u_cloudNoise;
 //                      in blocks, z = cell size in blocks, w = shape period —
 //                      the blocks after which every layer's shape noise
 //                      repeats; divides both world axes so the sky never seams
-// weatherPlanet:       x = planet radius in blocks (from the world's own
-//                      circumference), y = sea level in world blocks
+// weatherDome:         x = the dome's horizon distance in blocks, where every
+//                      layer's base meets sea level (the macro terrain's
+//                      reach), y = sea level in world blocks
 // weatherLayerCount:   live layers, ordered by base altitude
 layout(std140) uniform WeatherMapData {
     ivec4 u_weatherCells[WEATHER_MAP_RESOLUTION * WEATHER_MAP_RESOLUTION];
@@ -55,7 +56,7 @@ layout(std140) uniform WeatherMapData {
     vec4  u_weatherLayerNoise[WEATHER_MAP_MAX_LAYERS];
     vec4  u_weatherLayerSurface[WEATHER_MAP_MAX_LAYERS];
     vec4  u_weatherMapOrigin;
-    vec2  u_weatherPlanet;
+    vec2  u_weatherDome;
     int   u_weatherLayerCount;
 };
 

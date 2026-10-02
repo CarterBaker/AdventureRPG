@@ -126,12 +126,13 @@ vec3 resolveCloudLayerAlbedo(int layer) {
 
 // ── Distance ───────────────────────────────────────────────────────────────
 
-// How far a cloud has faded into the distance, 0 near to 1 at the edge of the
-// weather map, so the horizon holds a soft band of cloud melting into the sky
-// rather than a speckle of clouds too small to resolve.
+// How far a cloud has faded into the distance, 0 near to 1 at the dome's
+// horizon, where the clouds reach sea level, so the horizon holds a soft band
+// of cloud melting into the sky rather than a speckle of clouds too small to
+// resolve.
 float resolveCloudHaze(float horizontalDistance) {
-    float reach = resolveWeatherMapReach();
-    return smoothstep(reach * CLOUD_VISUAL_HAZE_START, reach, horizontalDistance);
+    float horizon = u_weatherDome.x;
+    return smoothstep(horizon * CLOUD_VISUAL_HAZE_START, horizon, horizontalDistance);
 }
 
 // ── Toon ───────────────────────────────────────────────────────────────────

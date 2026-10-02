@@ -461,13 +461,13 @@ public class EngineSetting {
     public static final String UNIFORM_TIME_OF_YEAR = "u_timeOfYear";
     public static final String UNIFORM_TRANSFORM = "u_transform";
     public static final String UNIFORM_WEATHER_CELLS = "u_weatherCells";
+    public static final String UNIFORM_WEATHER_DOME = "u_weatherDome";
     public static final String UNIFORM_WEATHER_LAYER_COLOR = "u_weatherLayerColor";
     public static final String UNIFORM_WEATHER_LAYER_COUNT = "u_weatherLayerCount";
     public static final String UNIFORM_WEATHER_LAYER_NOISE = "u_weatherLayerNoise";
     public static final String UNIFORM_WEATHER_LAYER_SHAPE = "u_weatherLayerShape";
     public static final String UNIFORM_WEATHER_LAYER_SURFACE = "u_weatherLayerSurface";
     public static final String UNIFORM_WEATHER_MAP_ORIGIN = "u_weatherMapOrigin";
-    public static final String UNIFORM_WEATHER_PLANET = "u_weatherPlanet";
 
     // Lighting
     public static final float MOON_BRIGHTNESS_BASE = 0.7f;
@@ -932,7 +932,8 @@ public class EngineSetting {
     public static final float WEATHER_TRANSITION_DURATION_SECONDS = 20.0f;
 
     // Cloud
-    public static final float CLOUD_ALTITUDE_FLOOR_BLOCKS = 560.0f;
+    public static final float CLOUD_ALTITUDE_BLOCKS_PER_KILOMETER = 50.0f;
+    public static final float CLOUD_ALTITUDE_FLOOR_BLOCKS = 570.0f;
     public static final float CLOUD_BLOCKS_PER_KILOMETER = 200.0f;
     public static final float CLOUD_DETAIL_FREQUENCY_RATIO = 4.0f;
     public static final int CLOUD_NOISE_CHANNELS = 3;

@@ -9,12 +9,12 @@ public final class WeatherScaleUtility extends EngineUtility {
     /*
      * The world is a scaled planet. Its scale against a real planet is
      * measured from its own circumference, so the weather pipeline's real-world
-     * flow speeds in kph convert into blocks the same way, and the sky curves
-     * with the planet's own radius. Clouds are sized against the world's
-     * terrain instead, whose heights stand at nearly real scale: every cloud
-     * kilometre — size, thickness and altitude — is the same fixed number of
-     * blocks, and altitudes start from a floor high enough that only mountains
-     * reach into the clouds.
+     * flow speeds in kph convert into blocks the same way. Clouds are sized
+     * against the world's terrain instead: a cloud's breadth and thickness
+     * take a fixed number of blocks per kilometre, large enough to read as
+     * real clouds over the world, while altitudes keep the real spacing
+     * between archetypes at a twentieth of real scale, above a floor high
+     * enough that only mountains reach into the clouds.
      */
 
     // Scale \\
@@ -37,12 +37,7 @@ public final class WeatherScaleUtility extends EngineUtility {
 
     // Height above sea level of a cloud base authored at an altitude in kilometres.
     public static float cloudAltitudeToBlocks(double kilometers) {
-        return EngineSetting.CLOUD_ALTITUDE_FLOOR_BLOCKS + cloudKilometersToBlocks(kilometers);
-    }
-
-    // Planet \\
-
-    public static float resolvePlanetRadiusBlocks(WorldHandle worldHandle) {
-        return (float) (worldHandle.getWorldScale().x / (Math.PI * 2.0));
+        return (float) (EngineSetting.CLOUD_ALTITUDE_FLOOR_BLOCKS
+                + kilometers * EngineSetting.CLOUD_ALTITUDE_BLOCKS_PER_KILOMETER);
     }
 }

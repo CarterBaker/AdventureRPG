@@ -52,7 +52,11 @@ const float CLOUD_FOG_EDGE_BLOCKS        = 4.0;
 // ── Layers ─────────────────────────────────────────────────────────────────
 
 float resolveCloudLayerBaseAltitude(int layer) {
-    return u_weatherLayerShape[layer].x - u_weatherPlanet.y;
+    return u_weatherLayerShape[layer].x - u_weatherDome.y;
+}
+
+float resolveCloudLayerCurvature(int layer) {
+    return resolveCloudDomeCurvature(resolveCloudLayerBaseAltitude(layer));
 }
 
 float resolveCloudLayerThickness(int layer) {
@@ -87,8 +91,8 @@ struct CloudHit {
 };
 
 float resolveCloudLayerHeightFraction(int layer, vec3 relativePosition) {
-    return (resolveCloudDomeAltitude(relativePosition) - resolveCloudLayerBaseAltitude(layer))
-    / resolveCloudLayerThickness(layer);
+    float altitude = resolveCloudDomeAltitude(relativePosition, resolveCloudLayerCurvature(layer));
+    return (altitude - resolveCloudLayerBaseAltitude(layer)) / resolveCloudLayerThickness(layer);
 }
 
 // The column under a point on the ray, bumped or cheap. Points outside the
@@ -118,7 +122,8 @@ float resolveCloudColumnSafeStep(int layer, vec3 rayDir, float t, CloudColumn co
 
     float thickness = resolveCloudLayerThickness(layer);
     float gap       = max(column.bottom - heightFraction, heightFraction - column.top);
-    float climb     = max(abs(dot(rayDir, resolveCloudDomeNormal(rayDir * t))), CLOUD_MARCH_EPSILON);
+    float curvature = resolveCloudLayerCurvature(layer);
+    float climb     = max(abs(dot(rayDir, resolveCloudDomeNormal(rayDir * t, curvature))), CLOUD_MARCH_EPSILON);
 
     if (gap > 0.0)
     return gap * thickness * min(1.0 / climb, CLOUD_MARCH_GAP_STEP_RATIO);
@@ -196,10 +201,10 @@ float sampleCloudColumnDepth(int layer, vec2 positionXZ, vec2 bumpFade, float he
 // upward it falls by one per block toward the crown and rises by one toward
 // the underside. A wall standing over open sky drops sharply sideways, so
 // walls face outward rather than splitting into a lit crown and a shaded
-// underside. The normal is turned onto the planet's local up.
+// underside. The normal is turned onto the dome's local up.
 vec3 resolveCloudSurfaceNormal(int layer, vec3 rayDir, CloudHit hit) {
     vec3  relativePosition = rayDir * hit.t;
-    vec3  up               = resolveCloudDomeNormal(relativePosition);
+    vec3  up               = resolveCloudDomeNormal(relativePosition, resolveCloudLayerCurvature(layer));
     float offset           = resolveCloudLayerBumpSize(layer) * CLOUD_MARCH_NORMAL_OFFSET_RATIO;
     vec2  position         = u_cameraPosition.xz + relativePosition.xz;
     vec2  bumpFade         = resolveCloudMarchBumpFade(layer, hit.t);
@@ -238,7 +243,8 @@ bool findNearestCloudSurface(vec3 rayDir, float jitter, out int hitLayer, out Cl
         float tExit;
 
         if (!resolveCloudDomeInterval(
-            baseAltitude, baseAltitude + resolveCloudLayerThickness(layer), rayDir, limit, tEnter, tExit))
+            baseAltitude, baseAltitude + resolveCloudLayerThickness(layer), resolveCloudLayerCurvature(layer),
+            rayDir, limit, tEnter, tExit))
         continue;
 
         CloudHit layerHit;
