@@ -7,9 +7,11 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
+import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.world.WorldSystem;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
 public class WeatherSystem extends SystemPackage {
@@ -17,10 +19,11 @@ public class WeatherSystem extends SystemPackage {
     /*
      * Renders the sky's clouds in a single fullscreen raymarched pass, driven
      * by the shared processing-pass pipeline. This system only clones the
-     * per-window FBO target and binds the grid's own UBOs — the weather map,
-     * its cloud layers, and where the flow has carried them are all written
-     * per grid by WeatherMapBufferSystem, so nothing about the clouds is a
-     * material setting here.
+     * per-window FBO target, binds the cloud noise the shapes are read from,
+     * and binds the grid's own UBOs — the weather map, its cloud layers, and
+     * where the flow has carried them are all written per grid by
+     * WeatherMapBufferSystem, so nothing about the clouds is a material
+     * setting here.
      */
 
     // Internal
@@ -29,6 +32,7 @@ public class WeatherSystem extends SystemPackage {
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
     private WorldSystem worldSystem;
+    private CloudManager cloudManager;
 
     // Render Target
     private PassHandle weatherPass;
@@ -43,12 +47,17 @@ public class WeatherSystem extends SystemPackage {
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
+        this.cloudManager = get(CloudManager.class);
     }
 
     @Override
     protected void awake() {
         this.weatherPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_WEATHER);
         this.weatherFbo = fboManager.cloneFbo(RuntimeSetting.FBO_WEATHER, context.getWindow());
+
+        weatherPass.getModelInstance().getMaterial().setUniform(
+                EngineSetting.UNIFORM_CLOUD_NOISE,
+                cloudManager.getCloudNoiseTexture());
     }
 
     @Override

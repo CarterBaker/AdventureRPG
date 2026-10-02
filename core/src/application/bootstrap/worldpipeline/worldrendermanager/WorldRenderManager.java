@@ -13,6 +13,7 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
+import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.grid.WaterTargetStruct;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
@@ -49,7 +50,9 @@ public class WorldRenderManager extends ManagerPackage {
      * that can have changed. Water, any material reading OceanData, never
      * enters the G-buffer: it is drawn forward into the grid's water target,
      * after deferred lighting, with the grid's light and sky data and the
-     * scene it refracts and reflects bound on each push.
+     * scene it refracts and reflects bound on each push. Every other material
+     * whose shader reads the cloud noise, for the clouds' shadows, has it
+     * bound on each push.
      */
 
     // Internal
@@ -58,6 +61,7 @@ public class WorldRenderManager extends ManagerPackage {
     private MeshManager meshManager;
     private RenderManager renderManager;
     private WorldStreamManager worldStreamManager;
+    private CloudManager cloudManager;
     private FrustumCullingSystem frustumCullingSystem;
     private MacroRenderSystem macroRenderSystem;
 
@@ -135,6 +139,7 @@ public class WorldRenderManager extends ManagerPackage {
         this.meshManager = get(MeshManager.class);
         this.renderManager = get(RenderManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.cloudManager = get(CloudManager.class);
     }
 
     @Override
@@ -304,13 +309,23 @@ public class WorldRenderManager extends ManagerPackage {
                 if (entry.usesOceanData)
                     pushWaterEntry(entry, material, grid, window);
                 else
-                    renderManager.pushRenderCall(
-                            entry.modelInstance,
-                            worldFbo,
-                            EngineSetting.DEFAULT_RENDER_DEPTH,
-                            window);
+                    pushSurfaceEntry(entry, material, worldFbo, window);
             }
         }
+    }
+
+    // Surface \\
+
+    private void pushSurfaceEntry(
+            RenderEntry entry,
+            MaterialInstance material,
+            FBOInstance worldFbo,
+            WindowInstance window) {
+
+        if (material.getUniform(EngineSetting.UNIFORM_CLOUD_NOISE) != null)
+            material.setUniform(EngineSetting.UNIFORM_CLOUD_NOISE, cloudManager.getCloudNoiseTexture());
+
+        renderManager.pushRenderCall(entry.modelInstance, worldFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
     }
 
     // Water \\

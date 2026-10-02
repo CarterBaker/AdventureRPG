@@ -10,9 +10,9 @@ public class CloudData extends DataPackage {
      * ARPG. Every value the weather shader needs to draw this archetype as a
      * layer of the sky — tint, shape, noise, placement, and motion — lives
      * here and only here. Sizes and elevations are real-world kilometres,
-     * converted into blocks through the active world's own scale when the
-     * weather map is written. CloudHandle wraps this class and delegates
-     * every accessor to it.
+     * converted into blocks at the fixed cloud scale (WeatherScaleUtility)
+     * when the weather map is written. CloudHandle wraps this class and
+     * delegates every accessor to it.
      */
 
     // Identity

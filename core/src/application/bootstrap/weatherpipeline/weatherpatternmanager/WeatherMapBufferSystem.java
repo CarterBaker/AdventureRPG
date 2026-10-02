@@ -114,7 +114,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         weatherPatternManager.resolveWindow(grid, windowScratch);
 
         resolveLayers();
-        writeLayerTable(grid, activeWorld);
+        writeLayerTable(grid);
         writeCells();
 
         mapOrigin.set(
@@ -202,14 +202,14 @@ class WeatherMapBufferSystem extends SystemPackage {
         }
     }
 
-    private void writeLayerTable(GridInstance grid, WorldHandle activeWorld) {
+    private void writeLayerTable(GridInstance grid) {
 
         float shapePeriodBlocks = weatherPatternManager.getShapePeriodBlocks();
 
         for (int slot = 0; slot < layerCount; slot++) {
 
             CloudHandle cloud = layerHandles[slot];
-            float scaleBlocks = WeatherScaleUtility.kilometersToBlocks(activeWorld, cloud.getScaleKm());
+            float scaleBlocks = WeatherScaleUtility.cloudKilometersToBlocks(cloud.getScaleKm());
 
             weatherPatternManager.resolveShapeOrigin(grid, cloud.getDriftSpeedScale(), shapeOriginScratch);
 
@@ -221,8 +221,8 @@ class WeatherMapBufferSystem extends SystemPackage {
 
             layerShape[slot].set(
                     EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS
-                            + WeatherScaleUtility.kilometersToBlocks(activeWorld, cloud.getBaseAltitudeKm()),
-                    WeatherScaleUtility.kilometersToBlocks(activeWorld, cloud.getVerticalThicknessKm()),
+                            + WeatherScaleUtility.cloudAltitudeToBlocks(cloud.getBaseAltitudeKm()),
+                    WeatherScaleUtility.cloudKilometersToBlocks(cloud.getVerticalThicknessKm()),
                     cloud.getDensity(),
                     cloud.getFullness());
 

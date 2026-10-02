@@ -897,7 +897,6 @@ public class EngineSetting {
     public static final float DEFAULT_WEATHER_WIND_TURBULENCE_SCALE = 1.0f;
     public static final float KPH_TO_METERS_PER_SECOND = 1000f / 3600f;
     public static final int MAX_CLOUDS_PER_WEATHER = 3;
-    public static final double METERS_PER_KILOMETER = 1000.0;
     public static final int WEATHER_CELL_RESOLVES_PER_FRAME = 32;
     public static final int WEATHER_CELL_SIZE_PIXELS = 2;
     public static final double WEATHER_FLOW_MEANDER_ANGLE_DEGREES = 18.0;
@@ -933,7 +932,20 @@ public class EngineSetting {
     public static final float WEATHER_TRANSITION_DURATION_SECONDS = 20.0f;
 
     // Cloud
+    public static final float CLOUD_ALTITUDE_FLOOR_BLOCKS = 560.0f;
+    public static final float CLOUD_BLOCKS_PER_KILOMETER = 200.0f;
     public static final float CLOUD_DETAIL_FREQUENCY_RATIO = 4.0f;
+    public static final int CLOUD_NOISE_CHANNELS = 3;
+    public static final int CLOUD_NOISE_LOBE_CELLS = 32;
+    public static final float CLOUD_NOISE_LOBE_JITTER = 0.6f;
+    public static final float CLOUD_NOISE_LOBE_RADIUS = 0.72f;
+    public static final long CLOUD_NOISE_SEED = 0x6C0D5EEDF1A7B33DL;
+    public static final int CLOUD_NOISE_SHAPE_CELLS = 8;
+    public static final int CLOUD_NOISE_SHAPE_OCTAVES = 4;
+    public static final float CLOUD_NOISE_SHAPE_PERSISTENCE = 0.5f;
+    public static final int CLOUD_NOISE_SIZE = 512;
+    public static final int CLOUD_NOISE_TOWER_CELLS = 4;
+    public static final int CLOUD_NOISE_TOWER_OCTAVES = 2;
     public static final float DEFAULT_CLOUD_BASE_ALTITUDE_KM = 1.5f;
     public static final float DEFAULT_CLOUD_COLOR_B = 1.0f;
     public static final float DEFAULT_CLOUD_COLOR_G = 1.0f;
@@ -950,6 +962,7 @@ public class EngineSetting {
     public static final float DEFAULT_CLOUD_SILHOUETTE_SOFTNESS = 0.08f;
     public static final float DEFAULT_CLOUD_VERTICAL_THICKNESS_KM = 1.0f;
     public static final int MAX_CLOUD_TYPES = 8;
+    public static final String UNIFORM_CLOUD_NOISE = "u_cloudNoise";
 
     // Wind
     public static final String UNIFORM_TEMPERATURE = "u_temperature";

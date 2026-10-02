@@ -2,7 +2,6 @@
 #define CLOUD_SHADOW_GLSL
 
 #include "includes/WeatherMapData.glsl"
-#include "includes/NoiseUtility.glsl"
 #include "includes/WeatherMapUtility.glsl"
 
 /*
@@ -14,11 +13,10 @@
  * sunHorizonOffset is the horizontal travel toward the sun per block of
  * height — callers precompute it once per fragment as sunDirection.xz /
  * max(sunDirection.y, minimum elevation). Shadows only need the broad shape,
- * so the column is read at its coarsest octaves with no bumps.
+ * so the column is read with no lobes.
  */
 
 const float CLOUD_SHADOW_HEIGHT_FRACTION = 0.4;
-const int   CLOUD_SHADOW_OCTAVES         = 2;
 const float CLOUD_SHADOW_MAX             = 0.75;
 
 float sampleCloudShadow(vec3 worldPos, vec2 sunHorizonOffset) {
@@ -37,7 +35,7 @@ float sampleCloudShadow(vec3 worldPos, vec2 sunHorizonOffset) {
         continue;
 
         vec2        shadowXZ = worldPos.xz + sunHorizonOffset * layerHeight;
-        CloudColumn column   = resolveCloudColumn(layer, shadowXZ, CLOUD_SHADOW_OCTAVES, vec2(0.0));
+        CloudColumn column   = resolveCloudColumn(layer, shadowXZ, vec2(0.0));
 
         visibility *= 1.0 - column.opacity * CLOUD_SHADOW_MAX;
     }

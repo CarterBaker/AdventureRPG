@@ -1,7 +1,9 @@
 // CloudManager.java
 package application.bootstrap.weatherpipeline.cloudmanager;
 
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.weatherpipeline.cloud.CloudHandle;
+import application.bootstrap.weatherpipeline.util.CloudNoiseUtility;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
@@ -13,8 +15,12 @@ public class CloudManager extends ManagerPackage {
     /*
      * Owns the shared, immutable cloud archetype palette and assigns every
      * archetype a stable sequential type index the weather map uses to place it
-     * in a layer.
+     * in a layer. Also owns the cloud noise texture every cloud shader reads
+     * its shapes from, baked once at awake and released on dispose.
      */
+
+    // Internal
+    private TextureManager textureManager;
 
     // Palette
     private Object2ShortOpenHashMap<String> cloudName2CloudID;
@@ -22,6 +28,9 @@ public class CloudManager extends ManagerPackage {
 
     // Cloud Type Registry
     private int nextCloudTypeIndex;
+
+    // Noise
+    private int cloudNoiseTexture;
 
     // Base \\
 
@@ -37,6 +46,26 @@ public class CloudManager extends ManagerPackage {
         this.nextCloudTypeIndex = 0;
 
         create(CloudLoader.class);
+    }
+
+    @Override
+    protected void get() {
+        this.textureManager = get(TextureManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        this.cloudNoiseTexture = textureManager.createFloatTexture2D(
+                CloudNoiseUtility.bake(),
+                EngineSetting.CLOUD_NOISE_SIZE,
+                EngineSetting.CLOUD_NOISE_SIZE,
+                EngineSetting.GL_REPEAT,
+                EngineSetting.GL_LINEAR);
+    }
+
+    @Override
+    protected void dispose() {
+        textureManager.deleteTexture2D(cloudNoiseTexture);
     }
 
     // Management \\
@@ -106,5 +135,9 @@ public class CloudManager extends ManagerPackage {
 
     public int getCloudTypeCount() {
         return nextCloudTypeIndex;
+    }
+
+    public int getCloudNoiseTexture() {
+        return cloudNoiseTexture;
     }
 }

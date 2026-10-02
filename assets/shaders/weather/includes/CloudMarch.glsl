@@ -29,7 +29,6 @@
  */
 
 const int   CLOUD_MARCH_STEP_BUDGET  = 64;
-const int   CLOUD_MARCH_OCTAVE_LIMIT = 3;
 const int   CLOUD_MARCH_REFINE_STEPS = 5;
 
 const float CLOUD_MARCH_EPSILON                = 0.001;
@@ -66,10 +65,6 @@ float resolveCloudLayerStepTarget(int layer) {
     return min(
         resolveCloudLayerThickness(layer) * CLOUD_MARCH_STEP_THICKNESS_RATIO,
         resolveCloudLayerFeatureSize(layer) * CLOUD_MARCH_STEP_FEATURE_RATIO);
-}
-
-int resolveCloudMarchOctaves(int layer, float t) {
-    return min(resolveCloudOctaves(resolveCloudLayerFeatureSize(layer), t), CLOUD_MARCH_OCTAVE_LIMIT);
 }
 
 // Coarse (x) and fine (y) bump strength at a distance.
@@ -109,7 +104,6 @@ CloudColumn sampleCloudMarchColumn(int layer, vec3 rayDir, float t, bool bumped,
     return resolveCloudColumn(
         layer,
         u_cameraPosition.xz + relativePosition.xz,
-        resolveCloudMarchOctaves(layer, t),
         bumped ? resolveCloudMarchBumpFade(layer, t) : vec2(0.0));
 }
 
@@ -192,8 +186,8 @@ bool findCloudLayerSurface(int layer, vec3 rayDir, float tEnter, float tExit, fl
 }
 
 // How far inside the column beside a hit the hit's own height lies.
-float sampleCloudColumnDepth(int layer, vec2 positionXZ, int octaves, vec2 bumpFade, float heightFraction) {
-    return resolveCloudColumnDepth(resolveCloudColumn(layer, positionXZ, octaves, bumpFade), heightFraction);
+float sampleCloudColumnDepth(int layer, vec2 positionXZ, vec2 bumpFade, float heightFraction) {
+    return resolveCloudColumnDepth(resolveCloudColumn(layer, positionXZ, bumpFade), heightFraction);
 }
 
 // Outward normal of a cloud's surface at a hit: the direction in which the
@@ -208,13 +202,12 @@ vec3 resolveCloudSurfaceNormal(int layer, vec3 rayDir, CloudHit hit) {
     vec3  up               = resolveCloudDomeNormal(relativePosition);
     float offset           = resolveCloudLayerBumpSize(layer) * CLOUD_MARCH_NORMAL_OFFSET_RATIO;
     vec2  position         = u_cameraPosition.xz + relativePosition.xz;
-    int   octaves          = resolveCloudMarchOctaves(layer, hit.t);
     vec2  bumpFade         = resolveCloudMarchBumpFade(layer, hit.t);
     float height           = hit.heightFraction;
 
     float depth = resolveCloudColumnDepth(hit.column, height);
-    float east  = sampleCloudColumnDepth(layer, position + vec2(offset, 0.0), octaves, bumpFade, height);
-    float south = sampleCloudColumnDepth(layer, position + vec2(0.0, offset), octaves, bumpFade, height);
+    float east  = sampleCloudColumnDepth(layer, position + vec2(offset, 0.0), bumpFade, height);
+    float south = sampleCloudColumnDepth(layer, position + vec2(0.0, offset), bumpFade, height);
 
     vec2  slope    = vec2(east - depth, south - depth) * resolveCloudLayerThickness(layer) / offset;
     bool  crown    = hit.column.top - height < height - hit.column.bottom;
@@ -269,8 +262,7 @@ vec3 shadeCloudHit(vec3 rayDir, int layer, CloudHit hit) {
 
     return shadeCloudSurface(
         resolveCloudLight(rayDir), resolveCloudLayerAlbedo(layer), resolveCloudSurfaceNormal(layer, rayDir, hit),
-        rayDir, clamp(columnHeight, 0.0, 1.0), column.crease, u_weatherLayerShape[layer].w,
-        length(rayDir.xz) * hit.t);
+        clamp(columnHeight, 0.0, 1.0), column.crease, u_weatherLayerShape[layer].w, length(rayDir.xz) * hit.t);
 }
 
 // ── Fog ────────────────────────────────────────────────────────────────────
@@ -292,8 +284,7 @@ float resolveCloudFog(out vec3 fogColor) {
         if (heightFraction < 0.0 || heightFraction > 1.0)
         continue;
 
-        CloudColumn column = resolveCloudColumn(
-            layer, u_cameraPosition.xz, resolveCloudMarchOctaves(layer, 0.0), resolveCloudMarchBumpFade(layer, 0.0));
+        CloudColumn column = resolveCloudColumn(layer, u_cameraPosition.xz, resolveCloudMarchBumpFade(layer, 0.0));
 
         if (!isInsideCloudColumn(column, heightFraction))
         continue;
