@@ -185,12 +185,34 @@ public class InventoryViewUtility extends EngineUtility {
             ItemShapeStruct shape,
             Matrix4 out) {
 
+        composeIconMatrix(
+                centerX,
+                centerY,
+                size,
+                shape.getOffsetX(),
+                shape.getOffsetY(),
+                shape.getOffsetZ(),
+                shape.getSizeX(),
+                shape.getSizeY(),
+                shape.getSizeZ(),
+                out);
+    }
+
+    // A box of model sub-voxels turned to the same three-quarter view and fitted inside a square of the given size
+    public static void composeIconMatrix(
+            float centerX,
+            float centerY,
+            float size,
+            int minX,
+            int minY,
+            int minZ,
+            int sizeX,
+            int sizeY,
+            int sizeZ,
+            Matrix4 out) {
+
         float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        float extent = (float) Math.sqrt(
-                shape.getSizeX() * shape.getSizeX()
-                        + shape.getSizeY() * shape.getSizeY()
-                        + shape.getSizeZ() * shape.getSizeZ())
-                / resolution;
+        float extent = (float) Math.sqrt(sizeX * sizeX + sizeY * sizeY + sizeZ * sizeZ) / resolution;
 
         composeTurn(
                 out,
@@ -199,9 +221,9 @@ public class InventoryViewUtility extends EngineUtility {
                 size * RuntimeSetting.INVENTORY_ICON_FILL / extent,
                 centerX,
                 centerY,
-                (shape.getOffsetX() + shape.getSizeX() * 0.5f) / resolution,
-                (shape.getOffsetY() + shape.getSizeY() * 0.5f) / resolution,
-                (shape.getOffsetZ() + shape.getSizeZ() * 0.5f) / resolution);
+                (minX + sizeX * 0.5f) / resolution,
+                (minY + sizeY * 0.5f) / resolution,
+                (minZ + sizeZ * 0.5f) / resolution);
     }
 
     // Picking \\

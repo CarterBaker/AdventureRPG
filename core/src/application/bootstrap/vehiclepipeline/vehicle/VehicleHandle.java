@@ -38,6 +38,10 @@ public class VehicleHandle extends HandlePackage {
         return vehicleData.getDisplayName();
     }
 
+    public VehicleCategory getCategory() {
+        return vehicleData.getCategory();
+    }
+
     public int getPartCount() {
         return vehicleData.getParts().size();
     }
@@ -105,6 +109,30 @@ public class VehicleHandle extends HandlePackage {
 
     public ObjectArrayList<MeshInstance> getHullMeshes() {
         return vehicleData.getHullMeshes();
+    }
+
+    public int getMinX() {
+        return vehicleData.getMinX();
+    }
+
+    public int getMinY() {
+        return vehicleData.getMinY();
+    }
+
+    public int getMinZ() {
+        return vehicleData.getMinZ();
+    }
+
+    public int getMaxX() {
+        return vehicleData.getMaxX();
+    }
+
+    public int getMaxY() {
+        return vehicleData.getMaxY();
+    }
+
+    public int getMaxZ() {
+        return vehicleData.getMaxZ();
     }
 
     public float getBoundingRadius() {

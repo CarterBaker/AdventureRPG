@@ -1,19 +1,19 @@
-package editor.commandconsole.itemgrid;
+package editor.commandconsole.tilegrid;
 
-import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class CommandConsoleItemGridStruct extends StructPackage {
+public class CommandConsoleTileGridStruct<T> extends StructPackage {
 
     /*
-     * One item grid in the command console's tree: the scrolling grid
+     * One category's grid of tiles in the command console's tree: the grid
      * element, the command every tile in it runs, how many columns its rows
-     * are laid out in, and each tile with the area its icon is drawn in and
-     * the item it hands to the command.
+     * are laid out in, each entry it lists with the argument it hands to the
+     * command and the name its tile shows, and the tile and icon area laid
+     * out for each entry, in the same order.
      */
 
     // Grid
@@ -21,38 +21,50 @@ public class CommandConsoleItemGridStruct extends StructPackage {
     private final CommandHandle commandHandle;
     private int columns;
 
+    // Entries
+    private final ObjectArrayList<T> entries;
+    private final ObjectArrayList<String> entryArguments;
+    private final ObjectArrayList<String> entryLabels;
+
     // Tiles
     private final ObjectArrayList<ElementInstance> tileElements;
     private final ObjectArrayList<ElementInstance> iconElements;
-    private final ObjectArrayList<ItemDefinitionHandle> tileItems;
 
     // Constructor \\
 
-    public CommandConsoleItemGridStruct(ElementInstance gridElement, CommandHandle commandHandle) {
+    public CommandConsoleTileGridStruct(ElementInstance gridElement, CommandHandle commandHandle) {
 
         // Grid
         this.gridElement = gridElement;
         this.commandHandle = commandHandle;
         this.columns = EngineSetting.INDEX_NOT_FOUND;
 
+        // Entries
+        this.entries = new ObjectArrayList<>();
+        this.entryArguments = new ObjectArrayList<>();
+        this.entryLabels = new ObjectArrayList<>();
+
         // Tiles
         this.tileElements = new ObjectArrayList<>();
         this.iconElements = new ObjectArrayList<>();
-        this.tileItems = new ObjectArrayList<>();
     }
 
     // Management \\
 
-    public void addTile(ElementInstance tileElement, ElementInstance iconElement, ItemDefinitionHandle item) {
+    public void addEntry(T entry, String argument, String label) {
+        entries.add(entry);
+        entryArguments.add(argument);
+        entryLabels.add(label);
+    }
+
+    public void addTile(ElementInstance tileElement, ElementInstance iconElement) {
         tileElements.add(tileElement);
         iconElements.add(iconElement);
-        tileItems.add(item);
     }
 
     public void clearTiles() {
         tileElements.clear();
         iconElements.clear();
-        tileItems.clear();
     }
 
     // Accessible \\
@@ -73,6 +85,22 @@ public class CommandConsoleItemGridStruct extends StructPackage {
         this.columns = columns;
     }
 
+    public int getEntryCount() {
+        return entries.size();
+    }
+
+    public T getEntry(int index) {
+        return entries.get(index);
+    }
+
+    public String getEntryArgument(int index) {
+        return entryArguments.get(index);
+    }
+
+    public String getEntryLabel(int index) {
+        return entryLabels.get(index);
+    }
+
     public int getTileCount() {
         return tileElements.size();
     }
@@ -87,9 +115,5 @@ public class CommandConsoleItemGridStruct extends StructPackage {
 
     public ElementInstance getIconElement(int index) {
         return iconElements.get(index);
-    }
-
-    public ItemDefinitionHandle getTileItem(int index) {
-        return tileItems.get(index);
     }
 }

@@ -4,17 +4,18 @@ public class CommandConsoleSetting {
 
     /*
      * Constants used only by CommandConsoleContext — its menu, command tree
-     * templates, item and vehicle grids, and command line.
+     * templates, tile grids and their icons, and command line.
      */
 
     // Menus
     public static final String MENU_COMMAND_CONSOLE = "editor/CommandConsole/CommandConsole";
     public static final String MENU_COMMAND_GROUP = "editor/CommandConsole/command_group";
     public static final String MENU_COMMAND_ENTRY = "editor/CommandConsole/command_entry";
-    public static final String MENU_ITEM_HEADER = "editor/CommandConsole/command_item_header";
-    public static final String MENU_ITEM_GRID = "editor/CommandConsole/command_item_grid";
-    public static final String MENU_ITEM_ROW = "editor/CommandConsole/command_item_row";
-    public static final String MENU_ITEM_TILE = "editor/CommandConsole/command_item_tile";
+    public static final String MENU_TILE_HEADER = "editor/CommandConsole/command_tile_header";
+    public static final String MENU_TILE_CATEGORY = "editor/CommandConsole/command_tile_category";
+    public static final String MENU_TILE_GRID = "editor/CommandConsole/command_tile_grid";
+    public static final String MENU_TILE_ROW = "editor/CommandConsole/command_tile_row";
+    public static final String MENU_TILE = "editor/CommandConsole/command_tile";
 
     // Entry Points
     public static final int ENTRY_COMMAND_LINE = 0;
@@ -24,19 +25,19 @@ public class CommandConsoleSetting {
     public static final String ELEMENT_GROUP_MARKER = "command_group_marker";
     public static final String ELEMENT_GROUP_LABEL = "command_group_label";
     public static final String ELEMENT_COMMAND_LABEL = "command_entry_label";
+    public static final String CATEGORY_KEY_SEPARATOR = ":";
 
-    // Item Grid
-    public static final String ELEMENT_ITEM_HEADER_LABEL = "command_item_header_label";
-    public static final String ELEMENT_ITEM_TILE_ICON = "command_item_tile_icon";
-    public static final String ELEMENT_ITEM_TILE_LABEL = "command_item_tile_label";
-    public static final int ITEM_GRID_MIN_COLUMNS = 1;
-    public static final int DEPTH_ITEM_ICON = 0;
+    // Tile Grid
+    public static final String ELEMENT_TILE_HEADER_LABEL = "command_tile_header_label";
+    public static final String ELEMENT_TILE_CATEGORY_MARKER = "command_tile_category_marker";
+    public static final String ELEMENT_TILE_CATEGORY_LABEL = "command_tile_category_label";
+    public static final String ELEMENT_TILE_ICON = "command_tile_icon";
+    public static final String ELEMENT_TILE_LABEL = "command_tile_label";
+    public static final int TILE_GRID_MIN_COLUMNS = 1;
 
-    // Vehicle Grid
-    public static final String MENU_VEHICLE_GRID = "editor/CommandConsole/command_vehicle_grid";
-    public static final String MENU_VEHICLE_ROW = "editor/CommandConsole/command_vehicle_row";
-    public static final String MENU_VEHICLE_TILE = "editor/CommandConsole/command_vehicle_tile";
-    public static final String ELEMENT_VEHICLE_TILE_LABEL = "command_vehicle_tile_label";
+    // Tile Icons
+    public static final String MATERIAL_TILE_VEHICLE = "items/InventoryVehicleMaterial";
+    public static final int DEPTH_TILE_ICON = 0;
 
     // Command Line
     public static final int COMMAND_MAX_LENGTH = 256;

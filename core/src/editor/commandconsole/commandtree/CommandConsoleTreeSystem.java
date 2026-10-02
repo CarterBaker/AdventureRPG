@@ -1,14 +1,17 @@
 package editor.commandconsole.commandtree;
 
+import application.bootstrap.itempipeline.itemdefinition.ItemCategory;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
 import editor.commandconsole.CommandConsoleSetting;
-import editor.commandconsole.itemgrid.CommandConsoleItemGridSystem;
 import editor.commandconsole.panel.CommandConsolePanelSystem;
-import editor.commandconsole.vehiclegrid.CommandConsoleVehicleGridSystem;
+import editor.commandconsole.tilegrid.CommandConsoleTileGridSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -17,26 +20,25 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 public class CommandConsoleTreeSystem extends SystemPackage {
 
     /*
-     * Lists every command that takes no arguments in the command console's
-     * tree, under the group that defines it, so each one runs with a single
-     * click, gives every command that takes an item a scrolling grid of item
-     * tiles, filled by the item grid system, to pick that item from, and every
-     * command that takes a vehicle a grid of vehicle tiles, filled by the
-     * vehicle grid system. A group with none of these is left out. Groups start expanded and collapse on
-     * click; the tree is laid out on the first frame and again only when a
-     * group is toggled.
+     * Lays out the command console's tree, one group per command file. A group
+     * lists every command that takes no arguments first, each run with a
+     * single click, then every command that takes an item or a vehicle under
+     * its own header, with a section per item or vehicle category that holds
+     * any, each a grid of tiles filled by the tile grid system. A group with
+     * none of these is left out. Groups and categories start expanded and
+     * collapse on click; the tree is laid out on the first frame and again
+     * only when one of them is toggled.
      */
 
     // Internal
     private MenuManager menuManager;
     private CommandManager commandManager;
     private CommandConsolePanelSystem commandConsolePanelSystem;
-    private CommandConsoleItemGridSystem commandConsoleItemGridSystem;
-    private CommandConsoleVehicleGridSystem commandConsoleVehicleGridSystem;
+    private CommandConsoleTileGridSystem commandConsoleTileGridSystem;
 
     // Tree
     private ObjectArrayList<ElementInstance> treeElements;
-    private ObjectOpenHashSet<String> collapsedGroupNames;
+    private ObjectOpenHashSet<String> collapsedNodeKeys;
     private boolean layoutPending;
 
     // Base \\
@@ -46,7 +48,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
         // Tree
         this.treeElements = new ObjectArrayList<>();
-        this.collapsedGroupNames = new ObjectOpenHashSet<>();
+        this.collapsedNodeKeys = new ObjectOpenHashSet<>();
         this.layoutPending = true;
     }
 
@@ -55,8 +57,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.commandManager = get(CommandManager.class);
         this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
-        this.commandConsoleItemGridSystem = get(CommandConsoleItemGridSystem.class);
-        this.commandConsoleVehicleGridSystem = get(CommandConsoleVehicleGridSystem.class);
+        this.commandConsoleTileGridSystem = get(CommandConsoleTileGridSystem.class);
     }
 
     // Update \\
@@ -78,8 +79,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         MenuInstance commandConsoleMenu = commandConsolePanelSystem.getCommandConsoleMenu();
         ObjectArrayList<String> groupNames = commandManager.getGroupNames();
 
-        commandConsoleItemGridSystem.clearGrids();
-        commandConsoleVehicleGridSystem.clearGrids();
+        commandConsoleTileGridSystem.clearGrids();
 
         for (int i = 0; i < treeElements.size(); i++)
             menuManager.eject(commandConsoleMenu, CommandConsoleSetting.ENTRY_COMMAND_TREE, treeElements.get(i));
@@ -97,7 +97,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         if (!hasListedCommand(commandHandles))
             return;
 
-        boolean expanded = !collapsedGroupNames.contains(groupName);
+        boolean expanded = !collapsedNodeKeys.contains(groupName);
 
         treeElements.add(menuManager.inject(
                 commandConsoleMenu,
@@ -105,22 +105,22 @@ public class CommandConsoleTreeSystem extends SystemPackage {
                 CommandConsoleSetting.MENU_COMMAND_GROUP,
                 element -> {
                     element.setActionArgOverride(groupName);
-                    setChildText(element, CommandConsoleSetting.ELEMENT_GROUP_MARKER, expanded
-                            ? EngineSetting.HIERARCHY_EXPANDED_MARKER
-                            : EngineSetting.HIERARCHY_COLLAPSED_MARKER);
+                    setChildText(element, CommandConsoleSetting.ELEMENT_GROUP_MARKER, toMarker(expanded));
                     setChildText(element, CommandConsoleSetting.ELEMENT_GROUP_LABEL, groupName);
                 }));
 
         if (!expanded)
             return;
 
+        for (int i = 0; i < commandHandles.size(); i++)
+            if (commandHandles.get(i).isArgumentFree())
+                injectCommand(commandConsoleMenu, commandHandles.get(i));
+
         for (int i = 0; i < commandHandles.size(); i++) {
 
             CommandHandle commandHandle = commandHandles.get(i);
 
-            if (commandHandle.isArgumentFree())
-                injectCommand(commandConsoleMenu, commandHandle);
-            else if (commandHandle.takesItem())
+            if (commandHandle.takesItem())
                 injectItemCommand(commandConsoleMenu, commandHandle);
             else if (commandHandle.takesVehicle())
                 injectVehicleCommand(commandConsoleMenu, commandHandle);
@@ -140,46 +140,89 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
     private void injectItemCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
 
-        treeElements.add(menuManager.inject(
-                commandConsoleMenu,
-                CommandConsoleSetting.ENTRY_COMMAND_TREE,
-                CommandConsoleSetting.MENU_ITEM_HEADER,
-                element -> setChildText(element, CommandConsoleSetting.ELEMENT_ITEM_HEADER_LABEL,
-                        commandHandle.getLabel())));
+        injectTileHeader(commandConsoleMenu, commandHandle);
 
-        ElementInstance grid = menuManager.inject(
-                commandConsoleMenu,
-                CommandConsoleSetting.ENTRY_COMMAND_TREE,
-                CommandConsoleSetting.MENU_ITEM_GRID);
+        for (ItemCategory itemCategory : ItemCategory.VALUES) {
 
-        treeElements.add(grid);
-        commandConsoleItemGridSystem.addGrid(grid, commandHandle);
+            ObjectArrayList<ItemDefinitionHandle> items = commandConsoleTileGridSystem.collectItems(itemCategory);
+
+            if (items.isEmpty())
+                continue;
+
+            ElementInstance grid = injectTileCategory(commandConsoleMenu, commandHandle, itemCategory.getTitle());
+
+            if (grid != null)
+                commandConsoleTileGridSystem.addItemGrid(grid, commandHandle, items);
+        }
     }
 
     private void injectVehicleCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
 
+        injectTileHeader(commandConsoleMenu, commandHandle);
+
+        for (VehicleCategory vehicleCategory : VehicleCategory.VALUES) {
+
+            ObjectArrayList<VehicleHandle> vehicles = commandConsoleTileGridSystem.collectVehicles(vehicleCategory);
+
+            if (vehicles.isEmpty())
+                continue;
+
+            ElementInstance grid = injectTileCategory(commandConsoleMenu, commandHandle, vehicleCategory.getTitle());
+
+            if (grid != null)
+                commandConsoleTileGridSystem.addVehicleGrid(grid, commandHandle, vehicles);
+        }
+    }
+
+    private void injectTileHeader(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
         treeElements.add(menuManager.inject(
                 commandConsoleMenu,
                 CommandConsoleSetting.ENTRY_COMMAND_TREE,
-                CommandConsoleSetting.MENU_ITEM_HEADER,
-                element -> setChildText(element, CommandConsoleSetting.ELEMENT_ITEM_HEADER_LABEL,
+                CommandConsoleSetting.MENU_TILE_HEADER,
+                element -> setChildText(element, CommandConsoleSetting.ELEMENT_TILE_HEADER_LABEL,
                         commandHandle.getLabel())));
+    }
+
+    // A category's header under its command, and the grid its tiles go in — null while it is collapsed
+    private ElementInstance injectTileCategory(
+            MenuInstance commandConsoleMenu,
+            CommandHandle commandHandle,
+            String categoryTitle) {
+
+        String categoryKey = commandHandle.getCommandName() + CommandConsoleSetting.CATEGORY_KEY_SEPARATOR
+                + categoryTitle;
+        boolean expanded = !collapsedNodeKeys.contains(categoryKey);
+
+        treeElements.add(menuManager.inject(
+                commandConsoleMenu,
+                CommandConsoleSetting.ENTRY_COMMAND_TREE,
+                CommandConsoleSetting.MENU_TILE_CATEGORY,
+                element -> {
+                    element.setActionArgOverride(categoryKey);
+                    setChildText(element, CommandConsoleSetting.ELEMENT_TILE_CATEGORY_MARKER, toMarker(expanded));
+                    setChildText(element, CommandConsoleSetting.ELEMENT_TILE_CATEGORY_LABEL, categoryTitle);
+                }));
+
+        if (!expanded)
+            return null;
 
         ElementInstance grid = menuManager.inject(
                 commandConsoleMenu,
                 CommandConsoleSetting.ENTRY_COMMAND_TREE,
-                CommandConsoleSetting.MENU_VEHICLE_GRID);
+                CommandConsoleSetting.MENU_TILE_GRID);
 
         treeElements.add(grid);
-        commandConsoleVehicleGridSystem.addGrid(grid, commandHandle);
+
+        return grid;
     }
 
     // Management \\
 
-    public void toggleCommandGroup(String groupName) {
+    // Collapses an expanded group or category, or expands a collapsed one
+    public void toggleTreeNode(String nodeKey) {
 
-        if (!collapsedGroupNames.remove(groupName))
-            collapsedGroupNames.add(groupName);
+        if (!collapsedNodeKeys.remove(nodeKey))
+            collapsedNodeKeys.add(nodeKey);
 
         this.layoutPending = true;
     }
@@ -194,6 +237,10 @@ public class CommandConsoleTreeSystem extends SystemPackage {
                 return true;
 
         return false;
+    }
+
+    private String toMarker(boolean expanded) {
+        return expanded ? EngineSetting.HIERARCHY_EXPANDED_MARKER : EngineSetting.HIERARCHY_COLLAPSED_MARKER;
     }
 
     private void setChildText(ElementInstance element, String childId, String text) {

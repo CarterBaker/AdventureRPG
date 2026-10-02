@@ -9,7 +9,7 @@ public class VehicleData extends DataPackage {
 
     /*
      * Immutable vehicle definition built from ARPG by VehicleBuilder. Holds its
-     * identity, every part in data order with the masts, sails, helm, rudder,
+     * identity and category, every part in data order with the masts, sails, helm, rudder,
      * capstan and doors its rig and controls work through, the solid sub-voxels
      * riders and cargo collide with, the zones its ladders can be climbed in,
      * the merged meshes of every part that never moves, the bounds of its
@@ -22,6 +22,7 @@ public class VehicleData extends DataPackage {
     // Identity
     private final String vehicleName;
     private final String displayName;
+    private final VehicleCategory category;
 
     // Parts
     private final ObjectArrayList<VehiclePartStruct> parts;
@@ -60,6 +61,7 @@ public class VehicleData extends DataPackage {
     public VehicleData(
             String vehicleName,
             String displayName,
+            VehicleCategory category,
             ObjectArrayList<VehiclePartStruct> parts,
             IntArrayList mastParts,
             ObjectArrayList<VehicleSailStruct> sails,
@@ -84,6 +86,7 @@ public class VehicleData extends DataPackage {
         // Identity
         this.vehicleName = vehicleName;
         this.displayName = displayName;
+        this.category = category;
 
         // Parts
         this.parts = parts;
@@ -126,6 +129,10 @@ public class VehicleData extends DataPackage {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public VehicleCategory getCategory() {
+        return category;
     }
 
     public ObjectArrayList<VehiclePartStruct> getParts() {

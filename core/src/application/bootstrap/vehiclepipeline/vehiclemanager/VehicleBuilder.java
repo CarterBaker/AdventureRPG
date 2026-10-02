@@ -4,6 +4,7 @@ import java.io.File;
 
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoSlotStruct;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleData;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleGridStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
@@ -28,22 +29,22 @@ class VehicleBuilder extends BuilderPackage {
 
     /*
      * Parses one vehicle ARPG file into a VehicleData and wraps it in a
-     * VehicleHandle. Parts are listed in the order they fill the model grid,
-     * each naming its role and texture and filling inclusive "from"/"to"
-     * boxes or single "position"s of sub-voxels, exactly as a structure lists
-     * its blocks. A yard links to its mast and a sail to its yard by name, a
-     * structure may link to the control it is a fitting of, and there is at
-     * most one helm, one rudder and one capstan. A door hinges about its pivot
-     * and axis and swings through its "open_degrees", and every door and
-     * portcullis is numbered in data order. The "hull", "rig", "steering" and
-     * "anchor" groups tune how it handles; the draft and centre of mass height
-     * are sub-voxels of the model grid. The optional "tables" name lists of
-     * items, and each place in "cargo" names the table it is furnished from,
-     * the "corner" of the item's model grid in sub-voxels, its "spin" in
-     * quarter turns about the vertical, and the "chance" it is furnished at
-     * all. Geometry and the hull's physics are worked out by
-     * VehicleGeometryBuilder and VehicleHullBuilder, so a malformed vehicle
-     * fails at boot.
+     * VehicleHandle. Its "category" is a ship unless it names another. Parts
+     * are listed in the order they fill the model grid, each naming its role
+     * and texture and filling inclusive "from"/"to" boxes or single "position"s
+     * of sub-voxels, exactly as a structure lists its blocks. A yard links to
+     * its mast and a sail to its yard by name, a structure may link to the
+     * control it is a fitting of, and there is at most one helm, one rudder and
+     * one capstan. A door hinges about its pivot and axis and swings through
+     * its "open_degrees", and every door and portcullis is numbered in data
+     * order. The "hull", "rig", "steering" and "anchor" groups tune how it
+     * handles; the draft and centre of mass height are sub-voxels of the model
+     * grid. The optional "tables" name lists of items, and each place in
+     * "cargo" names the table it is furnished from, the "corner" of the item's
+     * model grid in sub-voxels, its "spin" in quarter turns about the vertical,
+     * and the "chance" it is furnished at all. Geometry and the hull's physics
+     * are worked out by VehicleGeometryBuilder and VehicleHullBuilder, so a
+     * malformed vehicle fails at boot.
      */
 
     // Internal
@@ -70,6 +71,7 @@ class VehicleBuilder extends BuilderPackage {
                     + ", but the engine's sub-voxel resolution is " + EngineSetting.SUB_VOXEL_RESOLUTION + ".");
 
         String displayName = ArpgUtility.getString(arpg, "display_name", resolveLocalName(vehicleName));
+        VehicleCategory category = ArpgUtility.getEnum(arpg, "category", VehicleCategory.class, VehicleCategory.SHIP);
         ObjectArrayList<VehiclePartStruct> parts = parseParts(ArpgUtility.validateArray(arpg, "parts"), vehicleName);
         IntArrayList doorParts = new IntArrayList();
         IntArrayList mastParts = linkParts(parts, doorParts, vehicleName);
@@ -89,6 +91,7 @@ class VehicleBuilder extends BuilderPackage {
         VehicleData vehicleData = new VehicleData(
                 vehicleName,
                 displayName,
+                category,
                 parts,
                 mastParts,
                 buildSails(parts),

@@ -1156,6 +1156,9 @@ public class EngineSetting {
     public static final float VEHICLE_WATER_DENSITY = 1.025f;
     public static final float VEHICLE_WHEEL_TURNS_PER_RUDDER = 6f;
 
+    // Vehicle Categories
+    public static final String VEHICLE_CATEGORY_TITLE_SHIP = "Ships";
+
     // Vehicle Hull
     public static final int VEHICLE_COLUMN_EXTENT_FLOATS = 5;
     public static final int VEHICLE_COLUMN_SUB_VOXELS = 32;

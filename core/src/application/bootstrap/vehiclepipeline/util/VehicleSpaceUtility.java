@@ -269,7 +269,12 @@ public class VehicleSpaceUtility extends EngineUtility {
 
     // Whether a part is drawn now — an anchor cable only while the anchor is down
     public static boolean isPartShown(VehicleInstance vehicle, VehiclePartStruct part) {
-        return part.getRole().getMotion() != VehiclePartMotion.PAYOUT || vehicle.isAnchored();
+        return isPartShownUnderWay(part) || vehicle.isAnchored();
+    }
+
+    // Whether a part is drawn on a vehicle under way, its anchor aboard — every part but an anchor cable
+    public static boolean isPartShownUnderWay(VehiclePartStruct part) {
+        return part.getRole().getMotion() != VehiclePartMotion.PAYOUT;
     }
 
     // Solid \\
