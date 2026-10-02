@@ -91,6 +91,14 @@ public class EngineSetting {
     public static final int AXIS_X = 0;
     public static final int AXIS_Y = 1;
     public static final int AXIS_Z = 2;
+    public static final String[] AXIS_KEYS = { "x", "y", "z" };
+    public static final int BOX_INT_STRIDE = 6;
+    public static final int BOX_MAX_X = 3;
+    public static final int BOX_MAX_Y = 4;
+    public static final int BOX_MAX_Z = 5;
+    public static final int BOX_MIN_X = 0;
+    public static final int BOX_MIN_Y = 1;
+    public static final int BOX_MIN_Z = 2;
     public static final int BOX_CORNER_BIT_X = 1;
     public static final int BOX_CORNER_BIT_Y = 2;
     public static final int BOX_CORNER_BIT_Z = 4;
@@ -183,6 +191,7 @@ public class EngineSetting {
     public static final String THREAD_CATALOG_PATH = "application/threads";
     public static final String TOOL_TYPE_PATH = "tools";
     public static final String UBO_PATH = "ubos";
+    public static final String VEHICLE_PATH = "vehicles";
     public static final ObjectArraySet<String> VERT_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "vsh",
         "vert", "vs", "vertex" });
     public static final String WEATHER_PATH = "weathers";
@@ -733,18 +742,25 @@ public class EngineSetting {
     public static final float[] OCEAN_WAVE_AMPLITUDE_RATIOS = { 1.0f, 0.6f, 1.0f, 0.65f, 0.4f, 0.25f };
     public static final float OCEAN_WAVE_AMPLITUDE_EPSILON = 0.001f;
     public static final float[] OCEAN_WAVE_ANGLES_DEGREES = { 0.0f, 18.0f, -30.0f, 25.0f, 55.0f, -65.0f };
-    public static final float OCEAN_WAVE_CHOP_AMPLITUDE_PER_SEA_STATE = 0.22f;
-    public static final float OCEAN_WAVE_CHOP_MAX_AMPLITUDE_BLOCKS = 0.9f;
+    public static final float OCEAN_WAVE_CHOP_AMPLITUDE_PER_SEA_STATE = 0.35f;
+    public static final float OCEAN_WAVE_CHOP_MAX_AMPLITUDE_BLOCKS = 1.8f;
     public static final int OCEAN_WAVE_COUNT = 6;
     public static final int OCEAN_WAVE_SHAPE_MEAN_TERMS = 12;
     public static final float OCEAN_WAVE_SHARPNESS = 1.5f;
     public static final float OCEAN_WAVE_SPEED_SCALE = 0.8f;
-    public static final float OCEAN_WAVE_SWELL_AMPLITUDE_PER_SEA_STATE = 0.9f;
+    public static final float OCEAN_WAVE_SWELL_AMPLITUDE_PER_SEA_STATE = 2.6f;
     public static final int OCEAN_WAVE_SWELL_COUNT = 2;
-    public static final float OCEAN_WAVE_SWELL_MAX_AMPLITUDE_BLOCKS = 3.2f;
-    public static final float OCEAN_WAVE_SWELL_SEA_STATE_START = 1.6f;
+    public static final float OCEAN_WAVE_SWELL_MAX_AMPLITUDE_BLOCKS = 9.0f;
+    public static final float OCEAN_WAVE_SWELL_SEA_STATE_START = 1.2f;
     public static final double OCEAN_WAVE_TIME_WRAP_SECONDS = 3600.0;
-    public static final float[] OCEAN_WAVE_WAVELENGTHS_BLOCKS = { 72.0f, 54.0f, 22.0f, 15.0f, 10.0f, 7.0f };
+    public static final float[] OCEAN_WAVE_WAVELENGTHS_BLOCKS = { 150.0f, 110.0f, 34.0f, 22.0f, 14.0f, 9.0f };
+
+    // Ocean Hulls
+    public static final int OCEAN_HULL_HEADER_VECTORS = 4;
+    public static final int OCEAN_HULL_MAX_ENTRIES = 4;
+    public static final int OCEAN_HULL_STATIONS = 8;
+    public static final int OCEAN_HULL_VECTORS_PER_ENTRY = OCEAN_HULL_HEADER_VECTORS
+            + OCEAN_HULL_STATIONS / VECTOR4_COMPONENT_COUNT;
 
     // Ocean Tessellation
     public static final int OCEAN_TESSELLATION_FADE_CHUNKS = 2;
@@ -756,6 +772,8 @@ public class EngineSetting {
     public static final String UNIFORM_OCEAN_CAMERA = "u_oceanCamera";
     public static final String UNIFORM_OCEAN_EXPOSURE = "u_oceanExposure";
     public static final String UNIFORM_OCEAN_EXPOSURE_GRID = "u_oceanExposureGrid";
+    public static final String UNIFORM_OCEAN_HULL_COUNT = "u_oceanHullCount";
+    public static final String UNIFORM_OCEAN_HULLS = "u_oceanHulls";
     public static final String UNIFORM_OCEAN_NOISE = "u_oceanNoise";
     public static final String UNIFORM_OCEAN_NOISE_PERIOD = "u_oceanNoisePeriod";
     public static final String UNIFORM_OCEAN_NOISE_SHAPE = "u_oceanNoiseShape";
@@ -1116,6 +1134,62 @@ public class EngineSetting {
     public static final float PROJECTILE_STRIKE_REBOUND = 0.2f;
     public static final float PROJECTILE_SURFACE_OFFSET = 0.001f;
 
+    // Vehicles
+    public static final float VEHICLE_AIR_DENSITY = 0.001225f;
+    public static final int VEHICLE_BRACE_SAMPLES = 13;
+    public static final float VEHICLE_DOWNFLOOD_UPRIGHTNESS = 0.75f;
+    public static final float VEHICLE_DRAG_LINEAR_SPEED = 0.5f;
+    public static final float VEHICLE_DRY_FLOOD_LIMIT = 0.5f;
+    public static final float VEHICLE_MAX_SPEED = 30f;
+    public static final float VEHICLE_MAX_SPIN = 3f;
+    public static final float VEHICLE_PUMP_UPRIGHTNESS = 0.85f;
+    public static final int VEHICLE_RENDER_CHUNK_RADIUS = 12;
+    public static final float VEHICLE_SAIL_FURLED_SCALE = 0.08f;
+    public static final float VEHICLE_SWAMP_SHARE = 0.5f;
+    public static final int VEHICLE_SUB_STEPS = 4;
+    public static final float VEHICLE_WATER_DENSITY = 1.025f;
+    public static final float VEHICLE_WHEEL_TURNS_PER_RUDDER = 6f;
+
+    // Vehicle Hull
+    public static final int VEHICLE_COLUMN_EXTENT_FLOATS = 5;
+    public static final int VEHICLE_COLUMN_SUB_VOXELS = 32;
+    public static final int VEHICLE_CONTACT_LAYER_STEP = 4;
+    public static final int VEHICLE_DRY_CELL_SUB_VOXELS = 8;
+    public static final int VEHICLE_HULL_MASK_BAND_CELLS = 4;
+    public static final float VEHICLE_PITCH_GYRATION_RATIO = 0.26f;
+    public static final float VEHICLE_ROLL_GYRATION_RATIO = 0.38f;
+    public static final float VEHICLE_YAW_GYRATION_RATIO = 0.27f;
+
+    // Vehicle Ground
+    public static final float VEHICLE_GROUND_DAMPING = 20f;
+    public static final int VEHICLE_GROUND_ESCAPE_STEPS = 4;
+    public static final float VEHICLE_GROUND_FRICTION = 0.6f;
+    public static final float VEHICLE_GROUND_FRICTION_SPEED = 0.5f;
+    public static final float VEHICLE_GROUND_STIFFNESS = 200f;
+
+    // Vehicle Riders
+    public static final float VEHICLE_CLIMB_SIDESTEP_SHARE = 0.4f;
+    public static final float VEHICLE_CLIMB_SPEED = 2.4f;
+    public static final float VEHICLE_HELM_SLACK = 1f;
+    public static final float VEHICLE_HULL_PROBE_HEIGHT = 0.25f;
+    public static final int VEHICLE_LADDER_REACH_SUB_VOXELS = 8;
+    public static final float VEHICLE_RIDER_REACH = 2f;
+
+    // Vehicle Defaults
+    public static final float DEFAULT_VEHICLE_ANCHOR_HOLD = 0.6f;
+    public static final float DEFAULT_VEHICLE_BRACE_LIMIT_DEGREES = 50f;
+    public static final float DEFAULT_VEHICLE_BRACE_RATE_DEGREES = 8f;
+    public static final float DEFAULT_VEHICLE_FLOOD_RATE = 0.06f;
+    public static final float DEFAULT_VEHICLE_HEAVE_DRAG = 0.4f;
+    public static final float DEFAULT_VEHICLE_HOIST_SECONDS = 6f;
+    public static final float DEFAULT_VEHICLE_PUMP_RATE = 0.002f;
+    public static final float DEFAULT_VEHICLE_RUDDER_FORCE = 3f;
+    public static final float DEFAULT_VEHICLE_RUDDER_LIMIT_DEGREES = 35f;
+    public static final float DEFAULT_VEHICLE_RUDDER_RATE_DEGREES = 15f;
+    public static final float DEFAULT_VEHICLE_SAIL_FORCE = 20f;
+    public static final float DEFAULT_VEHICLE_SURGE_DRAG = 0.004f;
+    public static final float DEFAULT_VEHICLE_SWAY_DRAG = 0.1f;
+
     // Appearance
     public static final float DEFAULT_BUILD_FACTOR = 1f;
     public static final float DEFAULT_WEIGHT_RATIO = 0.5f;
@@ -1187,6 +1261,7 @@ public class EngineSetting {
     public static final float SUB_VOXEL_IMPORT_RAY_Z = 0.0071f;
     public static final int SUB_VOXEL_MAX_PARTS = 255;
     public static final String SUB_VOXEL_VAO = "util/vao/ItemVAO";
+    public static final int SUB_VOXEL_UV_BOUNDS_FLOATS = 4;
     public static final int SUB_VOXEL_VERTEX_STRIDE = 6;
     public static final int SUB_VOXEL_AXIS_COUNT = 3;
     public static final int SUB_VOXEL_WALL_COUNT = SUB_VOXEL_AXIS_COUNT * (SUB_VOXEL_RESOLUTION + 1)

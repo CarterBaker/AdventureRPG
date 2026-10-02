@@ -7,6 +7,7 @@ import editor.commandconsole.input.CommandConsoleInputSystem;
 import editor.commandconsole.itemgrid.CommandConsoleItemGridSystem;
 import editor.commandconsole.itemgrid.CommandConsoleItemRenderSystem;
 import editor.commandconsole.panel.CommandConsolePanelSystem;
+import editor.commandconsole.vehiclegrid.CommandConsoleVehicleGridSystem;
 import editor.runtime.EditorInputSystem;
 import engine.root.ContextPackage;
 
@@ -16,8 +17,8 @@ public class CommandConsoleContext extends ContextPackage {
      * Editor tab for sending commands to every open Dev window. Its command
      * line sends whatever is typed into it, and its command tree sends any
      * command that needs no arguments with a single click and any command
-     * that takes an item from a grid of item tiles — clicked for every Dev
-     * window, or dragged onto one Dev window to run there alone. What each
+     * that takes an item or a vehicle from a grid of tiles — clicked for every
+     * Dev window, or dragged onto one Dev window to run there alone. What each
      * command reports lands in the log, shown by the Console tab.
      */
 
@@ -28,6 +29,7 @@ public class CommandConsoleContext extends ContextPackage {
     private CommandConsoleTreeSystem commandConsoleTreeSystem;
     private CommandConsoleItemGridSystem commandConsoleItemGridSystem;
     private CommandConsoleItemRenderSystem commandConsoleItemRenderSystem;
+    private CommandConsoleVehicleGridSystem commandConsoleVehicleGridSystem;
 
     // Internal \\
 
@@ -39,6 +41,7 @@ public class CommandConsoleContext extends ContextPackage {
         this.commandConsoleTreeSystem = create(CommandConsoleTreeSystem.class);
         this.commandConsoleItemGridSystem = create(CommandConsoleItemGridSystem.class);
         this.commandConsoleItemRenderSystem = create(CommandConsoleItemRenderSystem.class);
+        this.commandConsoleVehicleGridSystem = create(CommandConsoleVehicleGridSystem.class);
     }
 
     @Override
@@ -54,5 +57,9 @@ public class CommandConsoleContext extends ContextPackage {
 
     public void dragItemTile(ElementInstance tileElement, WindowInstance window) {
         commandConsoleItemGridSystem.dragTile(tileElement, window);
+    }
+
+    public void dragVehicleTile(ElementInstance tileElement, WindowInstance window) {
+        commandConsoleVehicleGridSystem.dragTile(tileElement, window);
     }
 }

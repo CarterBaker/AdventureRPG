@@ -15,6 +15,7 @@ import application.bootstrap.savepipeline.SavePipeline;
 import application.bootstrap.screencapturepipeline.ScreenCapturePipeline;
 import application.bootstrap.settingspipeline.SettingsPipeline;
 import application.bootstrap.shaderpipeline.ShaderPipeline;
+import application.bootstrap.vehiclepipeline.VehiclePipeline;
 import application.bootstrap.weatherpipeline.WeatherPipeline;
 import application.bootstrap.worldpipeline.WorldPipeline;
 import engine.root.AssemblyPackage;
@@ -35,6 +36,7 @@ public class ApplicationBootstrapAssembly extends AssemblyPackage {
         create(ScreenCapturePipeline.class);
         create(ItemPipeline.class);
         create(PhysicsPipeline.class);
+        create(VehiclePipeline.class);
         create(EntityPipeline.class);
         create(WorldPipeline.class);
         create(CombatPipeline.class);

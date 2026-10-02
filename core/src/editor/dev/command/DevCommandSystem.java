@@ -5,6 +5,7 @@ import java.util.function.Consumer;
 import editor.bootstrap.commandpipeline.command.CommandStruct;
 import editor.dev.freecamera.FreeCameraSystem;
 import editor.dev.item.DevItemSystem;
+import editor.dev.vehicle.DevVehicleSystem;
 import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -22,6 +23,7 @@ public class DevCommandSystem extends SystemPackage {
     // Internal
     private FreeCameraSystem freeCameraSystem;
     private DevItemSystem devItemSystem;
+    private DevVehicleSystem devVehicleSystem;
 
     // Palette
     private Object2ObjectOpenHashMap<String, Consumer<CommandStruct>> commandName2Action;
@@ -46,11 +48,15 @@ public class DevCommandSystem extends SystemPackage {
     protected void get() {
         this.freeCameraSystem = get(FreeCameraSystem.class);
         this.devItemSystem = get(DevItemSystem.class);
+        this.devVehicleSystem = get(DevVehicleSystem.class);
     }
 
     private void registerActions() {
         commandName2Action.put(EditorSetting.COMMAND_FLY, command -> freeCameraSystem.toggleFreeCamera());
         commandName2Action.put(EditorSetting.COMMAND_GIVE, command -> devItemSystem.giveItem(command.getArgument(0)));
+        commandName2Action.put(EditorSetting.COMMAND_SPAWN_VEHICLE,
+                command -> devVehicleSystem.spawnVehicle(command.getArgument(0)));
+        commandName2Action.put(EditorSetting.COMMAND_REMOVE_VEHICLE, command -> devVehicleSystem.removeVehicle());
     }
 
     // Update \\

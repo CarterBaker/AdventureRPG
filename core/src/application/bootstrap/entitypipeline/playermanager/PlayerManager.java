@@ -9,6 +9,8 @@ import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleControlSystem;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleRiderSystem;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -23,6 +25,7 @@ import engine.assets.camera.CameraInstance;
 import engine.input.Keys;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
@@ -39,7 +42,10 @@ public class PlayerManager extends ManagerPackage {
      * previews, and advances the player's animation after movement each frame.
      * After movement the player's input reaches the world through
      * PlacementManager and its stances — aiming and blocking — through
-     * CombatManager; a raised guard holds the player to a walk.
+     * CombatManager; a raised guard holds the player to a walk. Aboard a
+     * vehicle the view turns with the deck, a player at the helm steers with
+     * its sideways input, and the activate binding works the vehicle control
+     * the player faces before it reaches PlacementManager.
      */
 
     // Internal
@@ -54,6 +60,8 @@ public class PlayerManager extends ManagerPackage {
     private PlayerBufferSystem internalBufferSystem;
     private PlacementManager placementManager;
     private CombatManager combatManager;
+    private VehicleControlSystem vehicleControlSystem;
+    private VehicleRiderSystem vehicleRiderSystem;
 
     // Per-window
     private Int2ObjectOpenHashMap<EntityInstance> windowID2Player;
@@ -85,6 +93,7 @@ public class PlayerManager extends ManagerPackage {
     private Vector3 cameraOffset;
     private Vector3 eyePosition;
     private Vector3 facingDirection;
+    private Vector2 turnScratch;
 
     // Internal \\
 
@@ -116,6 +125,7 @@ public class PlayerManager extends ManagerPackage {
         this.cameraOffset = new Vector3();
         this.eyePosition = new Vector3();
         this.facingDirection = new Vector3();
+        this.turnScratch = new Vector2();
     }
 
     @Override
@@ -126,6 +136,8 @@ public class PlayerManager extends ManagerPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.windowManager = get(WindowManager.class);
         this.combatManager = get(CombatManager.class);
+        this.vehicleControlSystem = get(VehicleControlSystem.class);
+        this.vehicleRiderSystem = get(VehicleRiderSystem.class);
     }
 
     @Override
@@ -214,6 +226,8 @@ public class PlayerManager extends ManagerPackage {
             return;
         }
 
+        turnWithDeck(player, camera);
+
         if (windowID2Window.get(windowID).getMenuListHandle().isInputLocked())
             return;
 
@@ -226,6 +240,7 @@ public class PlayerManager extends ManagerPackage {
             return;
         }
 
+        vehicleControlSystem.steer(player);
         writeMovementState(player);
         movementManager.move(player);
         player.updateAnimation(internal.getDeltaTime());
@@ -249,12 +264,15 @@ public class PlayerManager extends ManagerPackage {
         camera.setPosition(cameraPosition);
 
         EntityInputHandle input = player.getEntityInputHandle();
+        boolean activated = input.isActivateAction()
+                && vehicleControlSystem.activate(player, eyePosition, camera.getDirection());
+
         placementManager.update(
                 player,
                 eyePosition,
                 camera.getDirection(),
                 input.isPrimaryAction(),
-                input.isActivateAction());
+                input.isActivateAction() && !activated);
         combatManager.control(player);
 
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
@@ -272,6 +290,15 @@ public class PlayerManager extends ManagerPackage {
 
     private void resolveEyePosition(EntityInstance player) {
         player.getEyePosition(eyePosition);
+    }
+
+    // The view turns with the deck a rider stands on, by however far the deck has turned since the last frame
+    private void turnWithDeck(EntityInstance player, CameraInstance camera) {
+
+        float turn = vehicleRiderSystem.takeTurn(player);
+
+        if (turn != 0f)
+            camera.setRotation(turnScratch.set(-(float) Math.toDegrees(turn), 0f));
     }
 
     // Character Preview \\
@@ -418,6 +445,36 @@ public class PlayerManager extends ManagerPackage {
         resolveEyePosition(player);
 
         return placementManager.placeSubBlock(player, eyePosition, camera.getDirection(), blockID);
+    }
+
+    // True while the window's player faces a vehicle control it can work, or holds a helm it can let go
+    public boolean isFacingVehicleControlForWindow(int windowID) {
+
+        EntityInstance player = windowID2Player.get(windowID);
+        CameraInstance camera = windowID2Camera.get(windowID);
+
+        if (player == null || camera == null)
+            return false;
+
+        resolveEyePosition(player);
+
+        return vehicleControlSystem.isSteering(player)
+                || vehicleControlSystem.findControl(player, eyePosition, camera.getDirection());
+    }
+
+    // True when the window's player aims at a vehicle nearer than anything in the world — VehicleCargoSystem keeps
+    // the hit
+    public boolean isAimingAtVehicleForWindow(int windowID) {
+
+        EntityInstance player = windowID2Player.get(windowID);
+        CameraInstance camera = windowID2Camera.get(windowID);
+
+        if (player == null || camera == null)
+            return false;
+
+        resolveEyePosition(player);
+
+        return placementManager.findTargetVehicle(player, eyePosition, camera.getDirection());
     }
 
     public WorldItemInstance getTargetItemForWindow(int windowID) {

@@ -7,6 +7,7 @@ import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.oceanpipeline.wavemanager.WaveManager;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -28,7 +29,9 @@ public class SwimBranch extends BranchPackage {
      * the live sea WaveManager samples, so a crest covers a wader standing in
      * the open air above the tide line and a trough leaves one dry; a swimmer
      * treads on the moving surface, riding its rise and fall, and carry() lets
-     * the waves' orbital current push it back and forth as they pass.
+     * the waves' orbital current push it back and forth as they pass. Inside
+     * the dry hull of a vehicle there is no water at all, however far below
+     * the sea it lies.
      */
 
     // Internal
@@ -36,6 +39,7 @@ public class SwimBranch extends BranchPackage {
     private BlockManager blockManager;
     private WaveManager waveManager;
     private TideManager tideManager;
+    private VehicleManager vehicleManager;
 
     // Settings
     private int chunkSize;
@@ -74,6 +78,7 @@ public class SwimBranch extends BranchPackage {
         this.blockManager = get(BlockManager.class);
         this.waveManager = get(WaveManager.class);
         this.tideManager = get(TideManager.class);
+        this.vehicleManager = get(VehicleManager.class);
     }
 
     // Refresh \\
@@ -107,6 +112,14 @@ public class SwimBranch extends BranchPackage {
         if (chunk == null)
             return false;
 
+        Vector3 size = entity.getSize();
+        float centerX = position.x + size.x * 0.5f;
+        float centerZ = position.z + size.z * 0.5f;
+
+        if (vehicleManager.isInsideHull(entity.getWorldHandle(), chunkCoordinate,
+                centerX, position.y + EngineSetting.VEHICLE_HULL_PROBE_HEIGHT, centerZ))
+            return false;
+
         int blockX = (int) Math.floor(position.x);
         int blockZ = (int) Math.floor(position.z);
         int feetTotalY = (int) Math.floor(position.y);
@@ -122,9 +135,6 @@ public class SwimBranch extends BranchPackage {
         if (waterY == LiquidColumnUtility.NO_WATER)
             return false;
 
-        Vector3 size = entity.getSize();
-        float centerX = position.x + size.x * 0.5f;
-        float centerZ = position.z + size.z * 0.5f;
         float waterSurfaceY = waveManager.sampleWaterSurface(
                 chunk,
                 chunkCoordinate,

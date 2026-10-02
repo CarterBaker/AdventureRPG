@@ -190,25 +190,11 @@ public class WorldItemSpaceSystem extends SystemPackage {
     }
 
     private int rotateShapeMin(ItemShapeStruct shape, int orientation, int axis) {
-        return Math.min(rotateShapeFirst(shape, orientation, axis), rotateShapeLast(shape, orientation, axis));
+        return itemRotationBufferSystem.getShapeMin(shape, orientation, axis);
     }
 
     private int rotateShapeMax(ItemShapeStruct shape, int orientation, int axis) {
-        return Math.max(rotateShapeFirst(shape, orientation, axis), rotateShapeLast(shape, orientation, axis));
-    }
-
-    private int rotateShapeFirst(ItemShapeStruct shape, int orientation, int axis) {
-        return itemRotationBufferSystem.rotateCell(
-                orientation, axis, shape.getOffsetX(), shape.getOffsetY(), shape.getOffsetZ());
-    }
-
-    private int rotateShapeLast(ItemShapeStruct shape, int orientation, int axis) {
-        return itemRotationBufferSystem.rotateCell(
-                orientation,
-                axis,
-                shape.getOffsetX() + shape.getSizeX() - 1,
-                shape.getOffsetY() + shape.getSizeY() - 1,
-                shape.getOffsetZ() + shape.getSizeZ() - 1);
+        return itemRotationBufferSystem.getShapeMax(shape, orientation, axis);
     }
 
     private void resolveClearanceBounds(LidClearanceStruct clearance, int orientation, int[] corner) {
@@ -292,18 +278,9 @@ public class WorldItemSpaceSystem extends SystemPackage {
         faceScratch[axisY] = face.y;
         faceScratch[axisZ] = face.z;
 
-        for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++) {
-
-            int low = rotateShapeMin(shape, orientation, axis);
-            int high = rotateShapeMax(shape, orientation, axis);
-
-            if (faceScratch[axis] > 0)
-                cornerScratch[axis] = anchorScratch[axis] - low;
-            else if (faceScratch[axis] < 0)
-                cornerScratch[axis] = anchorScratch[axis] - high;
-            else
-                cornerScratch[axis] = anchorScratch[axis] - (low + high) / 2;
-        }
+        for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++)
+            cornerScratch[axis] = itemRotationBufferSystem.resolveFlushCorner(
+                    shape, orientation, axis, anchorScratch[axis], faceScratch[axis]);
 
         return resolveCornerPlacement(
                 world,

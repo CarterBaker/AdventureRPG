@@ -4,6 +4,7 @@ import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.oceanpipeline.turbulencemanager.TurbulenceManager;
 import application.bootstrap.oceanpipeline.util.OceanWaveUtility;
 import application.bootstrap.oceanpipeline.wave.WaveInstance;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -35,7 +36,8 @@ public class WaveManager extends ManagerPackage {
      * floats on, and sampleSurfaceMotion() how fast that surface rises and how
      * the water under it moves, the orbit every wave drives through the water
      * fading with depth. Resolves in LATE_UPDATE, after turbulence and
-     * exposure, once every grid's reference chunk is final.
+     * exposure, once every grid's reference chunk is final. A camera inside
+     * the dry hull of a vehicle is never under the sea.
      */
 
     // Internal
@@ -45,6 +47,7 @@ public class WaveManager extends ManagerPackage {
     private WorldManager worldManager;
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
+    private VehicleManager vehicleManager;
 
     // Waves
     private WorldHandle waveWorldHandle;
@@ -89,6 +92,7 @@ public class WaveManager extends ManagerPackage {
         this.worldManager = get(WorldManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
+        this.vehicleManager = get(VehicleManager.class);
     }
 
     // Update \\
@@ -255,6 +259,12 @@ public class WaveManager extends ManagerPackage {
         if (chunk == null)
             return EngineSetting.LIQUID_NO_SURFACE;
 
+        float chunkLocalX = position.x - Math.floorDiv(blockX, EngineSetting.CHUNK_SIZE) * EngineSetting.CHUNK_SIZE;
+        float chunkLocalZ = position.z - Math.floorDiv(blockZ, EngineSetting.CHUNK_SIZE) * EngineSetting.CHUNK_SIZE;
+
+        if (vehicleManager.isInsideHull(grid.getWorldHandle(), chunkCoordinate, chunkLocalX, position.y, chunkLocalZ))
+            return EngineSetting.LIQUID_NO_SURFACE;
+
         int localX = Math.floorMod(blockX, EngineSetting.CHUNK_SIZE);
         int localZ = Math.floorMod(blockZ, EngineSetting.CHUNK_SIZE);
         int waterY = LiquidColumnUtility.findWaterY(
@@ -395,24 +405,6 @@ public class WaveManager extends ManagerPackage {
 
     // Grid \\
 
-    // The grid that streams a chunk, whose weather and sea state the water there follows; null when none does
-    private GridInstance findGrid(long chunkCoordinate) {
-
-        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
-        Object[] elements = grids.elements();
-        int size = grids.size();
-
-        for (int i = 0; i < size; i++) {
-
-            GridInstance grid = (GridInstance) elements[i];
-
-            if (grid.getGridSlotForChunk(chunkCoordinate) != null)
-                return grid;
-        }
-
-        return null;
-    }
-
     private double toWorldBlockX(long chunkCoordinate, float localX) {
         return (double) Coordinate2Long.unpackX(chunkCoordinate) * EngineSetting.CHUNK_SIZE + localX;
     }
@@ -434,7 +426,7 @@ public class WaveManager extends ManagerPackage {
             float localX,
             float localZ) {
 
-        GridInstance grid = findGrid(chunkCoordinate);
+        GridInstance grid = worldStreamManager.getGridForChunk(chunkCoordinate);
         float oceanSurfaceHeight = grid == null
                 ? tideManager.getSurfaceHeightBlocks()
                 : sampleSurfaceHeightBlocks(
@@ -454,7 +446,7 @@ public class WaveManager extends ManagerPackage {
             float depthBlocks,
             Vector3 outMotion) {
 
-        GridInstance grid = findGrid(chunkCoordinate);
+        GridInstance grid = worldStreamManager.getGridForChunk(chunkCoordinate);
 
         if (grid == null) {
             outMotion.set(0f, 0f, 0f);

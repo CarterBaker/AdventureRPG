@@ -4,6 +4,8 @@ import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.runtime.RuntimeSetting;
 import engine.root.EngineSetting;
@@ -14,18 +16,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class InventoryViewStruct extends StructPackage {
 
     /*
-     * One open container: the container item, the world item it stands as
-     * when it was opened where it lies, whether it is shown this frame, its
-     * panel menu, and, while its list is toggled on, the menu listing its
-     * contents with the rows listed and the item behind each. The container
-     * matrix stands the space on its own floor and the view projection is
-     * the panel's own camera looking down into it; both are recomputed every
-     * frame, and the inverse of their product turns a window point back into
-     * a container-space ray. The view turns by its yaw, tilts by its pitch
-     * and closes in by its zoom. A container in the world also keeps its
-     * item's world matrix, so it can be drawn open where it stands. The
-     * listed revision says which state of the container the list and its
-     * weight show.
+     * One open container: the container item, the world item or the cargo
+     * aboard a vehicle it stands as when it was opened where it lies, whether
+     * it is shown this frame, its panel menu, and, while its list is toggled
+     * on, the menu listing its contents with the rows listed and the item
+     * behind each. The container matrix stands the space on its own floor and
+     * the view projection is the panel's own camera looking down into it;
+     * both are recomputed every frame, and the inverse of their product turns
+     * a window point back into a container-space ray. The view turns by its
+     * yaw, tilts by its pitch and closes in by its zoom. A container opened
+     * where it lies also keeps its item's world matrix, so it can be drawn
+     * open where it stands. The listed revision says which state of the
+     * container the list and its weight show.
      */
 
     // Identity
@@ -34,6 +36,8 @@ public class InventoryViewStruct extends StructPackage {
     // Container
     private ItemInstance containerItem;
     private WorldItemInstance worldItem;
+    private VehicleCargoInstance cargo;
+    private VehicleInstance vehicle;
     private boolean shown;
     private int listedRevision;
 
@@ -82,9 +86,17 @@ public class InventoryViewStruct extends StructPackage {
 
     // Management \\
 
-    public void open(ItemInstance containerItem, WorldItemInstance worldItem, MenuInstance panelMenu) {
+    public void open(
+            ItemInstance containerItem,
+            WorldItemInstance worldItem,
+            VehicleCargoInstance cargo,
+            VehicleInstance vehicle,
+            MenuInstance panelMenu) {
+
         this.containerItem = containerItem;
         this.worldItem = worldItem;
+        this.cargo = cargo;
+        this.vehicle = vehicle;
         this.panelMenu = panelMenu;
         this.shown = false;
         this.worldPlaced = false;
@@ -94,6 +106,8 @@ public class InventoryViewStruct extends StructPackage {
     public void close() {
         this.containerItem = null;
         this.worldItem = null;
+        this.cargo = null;
+        this.vehicle = null;
         this.panelMenu = null;
         this.listMenu = null;
         this.shown = false;
@@ -157,12 +171,25 @@ public class InventoryViewStruct extends StructPackage {
         return containerItem.getContainerInstance();
     }
 
+    // True when the container was opened where it lies, in the world or aboard a vehicle
     public boolean isInWorld() {
-        return worldItem != null;
+        return worldItem != null || cargo != null;
+    }
+
+    public boolean isAboard() {
+        return cargo != null;
     }
 
     public WorldItemInstance getWorldItem() {
         return worldItem;
+    }
+
+    public VehicleCargoInstance getCargo() {
+        return cargo;
+    }
+
+    public VehicleInstance getVehicle() {
+        return vehicle;
     }
 
     public boolean isShown() {

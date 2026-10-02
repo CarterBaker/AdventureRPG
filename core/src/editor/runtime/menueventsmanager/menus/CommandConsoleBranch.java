@@ -11,8 +11,8 @@ public class CommandConsoleBranch extends BranchPackage {
     /*
      * Menu event handlers for the command console tab. A command picked from
      * the command tree runs exactly as if it had been typed; a group toggles,
-     * and an item tile is picked up, in the command console paired with the
-     * window it was pressed in.
+     * and an item or vehicle tile is picked up, in the command console paired
+     * with the window it was pressed in.
      */
 
     // Internal
@@ -39,5 +39,10 @@ public class CommandConsoleBranch extends BranchPackage {
     public void dragItemTile(WindowInstance window, ElementInstance element) {
         if (window.getContext() instanceof CommandConsoleContext commandConsoleContext)
             commandConsoleContext.dragItemTile(element, window);
+    }
+
+    public void dragVehicleTile(WindowInstance window, ElementInstance element) {
+        if (window.getContext() instanceof CommandConsoleContext commandConsoleContext)
+            commandConsoleContext.dragVehicleTile(element, window);
     }
 }

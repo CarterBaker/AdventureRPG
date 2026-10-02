@@ -8,6 +8,7 @@ import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
 import editor.commandconsole.CommandConsoleSetting;
 import editor.commandconsole.itemgrid.CommandConsoleItemGridSystem;
 import editor.commandconsole.panel.CommandConsolePanelSystem;
+import editor.commandconsole.vehiclegrid.CommandConsoleVehicleGridSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -18,9 +19,10 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     /*
      * Lists every command that takes no arguments in the command console's
      * tree, under the group that defines it, so each one runs with a single
-     * click, and gives every command that takes an item a scrolling grid of
-     * item tiles, filled by the item grid system, to pick that item from. A
-     * group with neither is left out. Groups start expanded and collapse on
+     * click, gives every command that takes an item a scrolling grid of item
+     * tiles, filled by the item grid system, to pick that item from, and every
+     * command that takes a vehicle a grid of vehicle tiles, filled by the
+     * vehicle grid system. A group with none of these is left out. Groups start expanded and collapse on
      * click; the tree is laid out on the first frame and again only when a
      * group is toggled.
      */
@@ -30,6 +32,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     private CommandManager commandManager;
     private CommandConsolePanelSystem commandConsolePanelSystem;
     private CommandConsoleItemGridSystem commandConsoleItemGridSystem;
+    private CommandConsoleVehicleGridSystem commandConsoleVehicleGridSystem;
 
     // Tree
     private ObjectArrayList<ElementInstance> treeElements;
@@ -53,6 +56,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         this.commandManager = get(CommandManager.class);
         this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
         this.commandConsoleItemGridSystem = get(CommandConsoleItemGridSystem.class);
+        this.commandConsoleVehicleGridSystem = get(CommandConsoleVehicleGridSystem.class);
     }
 
     // Update \\
@@ -75,6 +79,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         ObjectArrayList<String> groupNames = commandManager.getGroupNames();
 
         commandConsoleItemGridSystem.clearGrids();
+        commandConsoleVehicleGridSystem.clearGrids();
 
         for (int i = 0; i < treeElements.size(); i++)
             menuManager.eject(commandConsoleMenu, CommandConsoleSetting.ENTRY_COMMAND_TREE, treeElements.get(i));
@@ -117,6 +122,8 @@ public class CommandConsoleTreeSystem extends SystemPackage {
                 injectCommand(commandConsoleMenu, commandHandle);
             else if (commandHandle.takesItem())
                 injectItemCommand(commandConsoleMenu, commandHandle);
+            else if (commandHandle.takesVehicle())
+                injectVehicleCommand(commandConsoleMenu, commandHandle);
         }
     }
 
@@ -149,6 +156,24 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         commandConsoleItemGridSystem.addGrid(grid, commandHandle);
     }
 
+    private void injectVehicleCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
+
+        treeElements.add(menuManager.inject(
+                commandConsoleMenu,
+                CommandConsoleSetting.ENTRY_COMMAND_TREE,
+                CommandConsoleSetting.MENU_ITEM_HEADER,
+                element -> setChildText(element, CommandConsoleSetting.ELEMENT_ITEM_HEADER_LABEL,
+                        commandHandle.getLabel())));
+
+        ElementInstance grid = menuManager.inject(
+                commandConsoleMenu,
+                CommandConsoleSetting.ENTRY_COMMAND_TREE,
+                CommandConsoleSetting.MENU_VEHICLE_GRID);
+
+        treeElements.add(grid);
+        commandConsoleVehicleGridSystem.addGrid(grid, commandHandle);
+    }
+
     // Management \\
 
     public void toggleCommandGroup(String groupName) {
@@ -164,7 +189,8 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     private boolean hasListedCommand(ObjectArrayList<CommandHandle> commandHandles) {
 
         for (int i = 0; i < commandHandles.size(); i++)
-            if (commandHandles.get(i).isArgumentFree() || commandHandles.get(i).takesItem())
+            if (commandHandles.get(i).isArgumentFree() || commandHandles.get(i).takesItem()
+                    || commandHandles.get(i).takesVehicle())
                 return true;
 
         return false;

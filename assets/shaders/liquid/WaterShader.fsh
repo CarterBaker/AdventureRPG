@@ -16,7 +16,8 @@ out vec4 FragColor;
 
 /*
  * Forward water, drawn after deferred lighting over the lit scene. Fragments behind opaque geometry are
- * discarded by hand against the scene depth. From above, the scene below is refracted through the wave
+ * discarded by hand against the scene depth, and fragments inside the dry hull of a vehicle are never drawn,
+ * so the sea stays out of its hold. From above, the scene below is refracted through the wave
  * normal and absorbed with the thickness of water it is seen through, so shallows stay clear over sand and
  * deepen through banded turquoise, teal and blue; the sky, clouds and shore reflect by Fresnel; the sun
  * leaves a hard cartoon glint; whitecaps break on storm crests and foam lines ring every shore. From below,
@@ -183,7 +184,7 @@ void main() {
     vec2  screenUV   = resolveWaterScreenUV(gl_FragCoord.xy);
     float sceneDepth = sampleWaterSceneDepth(screenUV);
 
-    if (gl_FragCoord.z > sceneDepth)
+    if (gl_FragCoord.z > sceneDepth || isInsideOceanHull(vWorldPos))
     discard;
 
     vec3  faceNormal      = normalize(vFaceNormal);

@@ -1,11 +1,13 @@
 package application.bootstrap.itempipeline.itemrotationmanager;
 
+import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.vectors.Vector3;
 
 public class ItemRotationBufferSystem extends SystemPackage {
 
@@ -17,6 +19,10 @@ public class ItemRotationBufferSystem extends SystemPackage {
      * turns sub-voxel cells, so the shader, the transforms and every cell an
      * item claims always agree on how an item is turned, and
      * findNearestOrientation() snaps any free rotation onto the closest one.
+     * It is also the one place the shared placement rules live: the box a
+     * turned shape reaches, the corner that sets a shape flush on a face, the
+     * orientation an item set against a face takes, and an item's transform,
+     * so world items and cargo aboard a vehicle are placed alike.
      */
 
     // Internal
@@ -149,6 +155,94 @@ public class ItemRotationBufferSystem extends SystemPackage {
 
     private static int toCell(int centre) {
         return (centre + EngineSetting.SUB_VOXEL_RESOLUTION - 1) / 2;
+    }
+
+    // Shape \\
+
+    // The lowest cell a turned shape reaches on an axis, relative to its model grid's corner
+    public int getShapeMin(ItemShapeStruct shape, int orientation, int axis) {
+        return Math.min(rotateShapeFirst(shape, orientation, axis), rotateShapeLast(shape, orientation, axis));
+    }
+
+    // The highest cell a turned shape reaches on an axis, relative to its model grid's corner
+    public int getShapeMax(ItemShapeStruct shape, int orientation, int axis) {
+        return Math.max(rotateShapeFirst(shape, orientation, axis), rotateShapeLast(shape, orientation, axis));
+    }
+
+    private int rotateShapeFirst(ItemShapeStruct shape, int orientation, int axis) {
+        return rotateCell(orientation, axis, shape.getOffsetX(), shape.getOffsetY(), shape.getOffsetZ());
+    }
+
+    private int rotateShapeLast(ItemShapeStruct shape, int orientation, int axis) {
+        return rotateCell(
+                orientation,
+                axis,
+                shape.getOffsetX() + shape.getSizeX() - 1,
+                shape.getOffsetY() + shape.getSizeY() - 1,
+                shape.getOffsetZ() + shape.getSizeZ() - 1);
+    }
+
+    // One axis of the corner that sets a turned shape flush on a face: along the face it starts at the anchor
+    // outside it, across the face it is centred on the anchor
+    public int resolveFlushCorner(ItemShapeStruct shape, int orientation, int axis, int anchor, int faceComponent) {
+
+        int low = getShapeMin(shape, orientation, axis);
+        int high = getShapeMax(shape, orientation, axis);
+
+        if (faceComponent > 0)
+            return anchor - low;
+
+        if (faceComponent < 0)
+            return anchor - high;
+
+        return anchor - (low + high) / 2;
+    }
+
+    // Placement \\
+
+    // The orientation an item set against a face takes: on a floor or ceiling it lies on the default facing,
+    // spun to the quarter the viewer looks along; against a wall it faces out of the wall
+    public int resolvePlacementOrientation(Direction3Vector hitFace, Vector3 viewDirection) {
+
+        Direction3Vector facing;
+
+        if (hitFace == Direction3Vector.UP || hitFace == Direction3Vector.DOWN)
+            facing = Direction3Vector.VALUES[EngineSetting.DEFAULT_BLOCK_DIRECTION];
+        else
+            facing = hitFace;
+
+        int spin = 0;
+
+        if (facing == Direction3Vector.UP || facing == Direction3Vector.DOWN) {
+
+            float ax = Math.abs(viewDirection.x);
+            float az = Math.abs(viewDirection.z);
+
+            if (ax >= az)
+                spin = viewDirection.x > 0 ? 1 : 3;
+            else
+                spin = viewDirection.z > 0 ? 0 : 2;
+        }
+
+        return facing.ordinal() * 4 + spin;
+    }
+
+    // Transform \\
+
+    // T(corner + centre) * R(orientation) * T(-centre) — an item's model grid cornered at a point given in blocks,
+    // turned about its centre exactly as the item shader turns it
+    public Matrix4 composeTransform(float cornerX, float cornerY, float cornerZ, int orientation, Matrix4 out) {
+        return out.set(
+                1, 0, 0, cornerX + 0.5f,
+                0, 1, 0, cornerY + 0.5f,
+                0, 0, 1, cornerZ + 0.5f,
+                0, 0, 0, 1)
+                .multiply(rotations[orientation])
+                .multiply(
+                        1, 0, 0, -0.5f,
+                        0, 1, 0, -0.5f,
+                        0, 0, 1, -0.5f,
+                        0, 0, 0, 1);
     }
 
     // Build \\

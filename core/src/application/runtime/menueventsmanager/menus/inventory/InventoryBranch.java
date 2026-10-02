@@ -5,6 +5,9 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.kernel.inputpipeline.inputmanager.InputManager;
@@ -24,16 +27,17 @@ public class InventoryBranch extends BranchPackage {
      * Runs the inventory for this context's window. The inventory key shows
      * the equipment board around the framed character preview — turned and
      * panned by dragging, zoomed with the wheel — with the worn bag open in
-     * its panel beside it. Activating a chest or bag that lies in the world
-     * opens it where it lies instead, once nothing rests in its lid's way, the
-     * camera left where it was: its panel on the right, the worn bag's on the
-     * left. Either closes on the inventory key or Pause, and a container also
-     * on being activated again or leaving the world, returning any
-     * carried item and the camera. Each frame the drag, container and
-     * equipment branches settle and redraw what changed. A new item handed in
-     * while the cursor is over the open inventory lands where it points.
-     * findOpenableContainer() is the one place that decides which container
-     * the activate binding would open.
+     * its panel beside it. Activating a chest or bag that lies in the world,
+     * or aboard a vehicle, opens it where it lies instead, once nothing rests
+     * in its lid's way, the camera left where it was: its panel on the right,
+     * the worn bag's on the left. Either closes on the inventory key or
+     * Pause, and a container also on being activated again or leaving where
+     * it lay, returning any carried item and the camera. Each frame the drag,
+     * container and equipment branches settle and redraw what changed. A new
+     * item handed in while the cursor is over the open inventory lands where
+     * it points. findOpenableContainer() is the one place that decides which
+     * container the activate binding would open: the nearer of cargo aboard
+     * a vehicle and a world item.
      */
 
     // Internal
@@ -42,12 +46,18 @@ public class InventoryBranch extends BranchPackage {
     private WindowManager windowManager;
     private PlayerManager playerManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
+    private VehicleCargoSystem vehicleCargoSystem;
     private InventoryEquipmentBranch inventoryEquipmentBranch;
     private InventoryContainerBranch inventoryContainerBranch;
     private InventoryDragBranch inventoryDragBranch;
 
     // State
     private InventorySessionStruct session;
+
+    // Openable — the container findOpenableContainer() last found
+    private WorldItemInstance openableWorldItem;
+    private VehicleCargoInstance openableCargo;
+    private VehicleInstance openableVehicle;
 
     // Base \\
 
@@ -58,6 +68,7 @@ public class InventoryBranch extends BranchPackage {
         this.windowManager = get(WindowManager.class);
         this.playerManager = get(PlayerManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
+        this.vehicleCargoSystem = get(VehicleCargoSystem.class);
         this.inventoryEquipmentBranch = get(InventoryEquipmentBranch.class);
         this.inventoryContainerBranch = get(InventoryContainerBranch.class);
         this.inventoryDragBranch = get(InventoryDragBranch.class);
@@ -73,7 +84,7 @@ public class InventoryBranch extends BranchPackage {
             return;
         }
 
-        if (session.hasChest() && !worldItemPlacementSystem.isPlaced(session.getChestWorldItem())) {
+        if (session.hasChest() && !isChestWhereItLies(session)) {
             closeMenu();
             return;
         }
@@ -114,29 +125,58 @@ public class InventoryBranch extends BranchPackage {
             return;
 
         if (inputManager.bindingClicked(KeyBindings.INVENTORY, window)) {
-            openMenu(window, null);
+            openMenu(window, null, null, null);
             return;
         }
 
         if (!inputManager.bindingClicked(KeyBindings.ACTIVATE, window))
             return;
 
-        WorldItemInstance container = findOpenableContainer(window);
-
-        if (container != null)
-            openMenu(window, container);
+        if (findOpenableContainer(window))
+            openMenu(window, openableWorldItem, openableCargo, openableVehicle);
     }
 
-    // The container the player faces and could open where it lies — null when it faces none or nothing is open
-    // to it now
-    public WorldItemInstance findOpenableContainer(WindowInstance window) {
+    // True when the player faces a container it could open where it lies — the nearer of cargo aboard a vehicle
+    // and a world item, kept as the openable container — false when it faces none or nothing is open to it now
+    public boolean findOpenableContainer(WindowInstance window) {
+
+        this.openableWorldItem = null;
+        this.openableCargo = null;
+        this.openableVehicle = null;
 
         if (session != null || !canOpen(window))
-            return null;
+            return false;
 
-        WorldItemInstance targetItem = playerManager.getTargetItemForWindow(window.getWindowID());
+        int windowID = window.getWindowID();
 
-        return targetItem != null && worldItemPlacementSystem.canOpen(targetItem) ? targetItem : null;
+        if (playerManager.isAimingAtVehicleForWindow(windowID)) {
+
+            if (!vehicleCargoSystem.canOpenCastCargo())
+                return false;
+
+            this.openableCargo = vehicleCargoSystem.getCastCargo();
+            this.openableVehicle = vehicleCargoSystem.getCastVehicle();
+
+            return true;
+        }
+
+        WorldItemInstance targetItem = playerManager.getTargetItemForWindow(windowID);
+
+        if (targetItem == null || !worldItemPlacementSystem.canOpen(targetItem))
+            return false;
+
+        this.openableWorldItem = targetItem;
+
+        return true;
+    }
+
+    // True while the opened container still lies where it was opened, in the world or aboard its vehicle
+    private boolean isChestWhereItLies(InventorySessionStruct session) {
+
+        if (session.isChestAboard())
+            return vehicleCargoSystem.isAboard(session.getChestVehicle(), session.getChestCargo());
+
+        return worldItemPlacementSystem.isPlaced(session.getChestWorldItem());
     }
 
     private boolean canOpen(WindowInstance window) {
@@ -144,11 +184,15 @@ public class InventoryBranch extends BranchPackage {
     }
 
     // The scene menu opens first, so its drag surface lies under every other inventory menu
-    private void openMenu(WindowInstance window, WorldItemInstance chestWorldItem) {
+    private void openMenu(
+            WindowInstance window,
+            WorldItemInstance chestWorldItem,
+            VehicleCargoInstance chestCargo,
+            VehicleInstance chestVehicle) {
 
         int windowID = window.getWindowID();
         MenuInstance sceneMenu = menuManager.openMenu(RuntimeSetting.MENU_INVENTORY_SCENE, window);
-        MenuInstance equipmentMenu = chestWorldItem == null
+        MenuInstance equipmentMenu = chestWorldItem == null && chestCargo == null
                 ? menuManager.openMenu(RuntimeSetting.MENU_INVENTORY_EQUIPMENT, window)
                 : null;
 
@@ -158,7 +202,9 @@ public class InventoryBranch extends BranchPackage {
                 playerManager.getCameraForWindow(windowID).getDirection(),
                 sceneMenu,
                 equipmentMenu,
-                chestWorldItem);
+                chestWorldItem,
+                chestCargo,
+                chestVehicle);
 
         if (session.hasEquipment()) {
             playerManager.beginCharacterPreview(windowID);

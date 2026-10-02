@@ -123,6 +123,23 @@ public class WorldStreamManager extends ManagerPackage {
         return null;
     }
 
+    // The grid that streams a chunk, whose weather and sea the world there follows — null when none does
+    public GridInstance getGridForChunk(long chunkCoordinate) {
+
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++) {
+
+            GridInstance grid = (GridInstance) elements[i];
+
+            if (grid.getGridSlotForChunk(chunkCoordinate) != null)
+                return grid;
+        }
+
+        return null;
+    }
+
     public WorldHandle getActiveWorldHandle() {
 
         if (grids.isEmpty())

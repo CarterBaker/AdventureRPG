@@ -2,6 +2,7 @@ package application.bootstrap.combatpipeline.projectile;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.InstancePackage;
@@ -14,8 +15,10 @@ public class ProjectileInstance extends InstancePackage {
      * One thrown item in flight: the item, who threw it, where its centre is
      * and how it moves — velocity, orientation and the spin it tumbles with —
      * and how long it has flown. Once it comes to rest it remembers the height
-     * of the ground under it until it can settle back into the world. Launched
-     * by ProjectileManager and owned by it until it lands.
+     * of the ground under it until it can settle back into the world, or, on
+     * a vehicle's deck, that vehicle and the point it rests on in the
+     * vehicle's model blocks. Launched by ProjectileManager and owned by it
+     * until it lands.
      */
 
     // Internal
@@ -39,6 +42,8 @@ public class ProjectileInstance extends InstancePackage {
     // Rest
     private boolean resting;
     private float groundY;
+    private VehicleInstance restVehicle;
+    private Vector3 restModelPoint;
 
     // Internal \\
 
@@ -47,6 +52,9 @@ public class ProjectileInstance extends InstancePackage {
 
         // Position
         this.worldPositionStruct = new WorldPositionStruct();
+
+        // Rest
+        this.restModelPoint = new Vector3();
 
         // Motion
         this.velocity = new Vector3();
@@ -97,9 +105,27 @@ public class ProjectileInstance extends InstancePackage {
 
         this.resting = true;
         this.groundY = groundY;
+        this.restVehicle = null;
 
         velocity.set(0f, 0f, 0f);
         spinRate = 0f;
+    }
+
+    // Rests on a vehicle's deck, at a point given in the vehicle's model blocks
+    public void restOn(VehicleInstance vehicle, float modelX, float modelY, float modelZ) {
+
+        rest(worldPositionStruct.getPosition().y);
+
+        this.restVehicle = vehicle;
+        this.restModelPoint.set(modelX, modelY, modelZ);
+    }
+
+    // Takes flight again from where it rests, its flight time begun anew, when it could not settle on a vehicle
+    public void resume() {
+
+        this.resting = false;
+        this.restVehicle = null;
+        this.flightTime = 0f;
     }
 
     // Accessible \\
@@ -154,5 +180,17 @@ public class ProjectileInstance extends InstancePackage {
 
     public float getGroundY() {
         return groundY;
+    }
+
+    public boolean isRestingOnVehicle() {
+        return restVehicle != null;
+    }
+
+    public VehicleInstance getRestVehicle() {
+        return restVehicle;
+    }
+
+    public Vector3 getRestModelPoint() {
+        return restModelPoint;
     }
 }

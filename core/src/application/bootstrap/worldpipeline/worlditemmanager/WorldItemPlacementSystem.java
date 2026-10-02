@@ -181,17 +181,12 @@ public class WorldItemPlacementSystem extends SystemPackage {
                 if (neighbourCoordinate != instance.getChunkCoordinate())
                     continue;
 
-                out.set(
-                        1, 0, 0, offsetX * EngineSetting.CHUNK_SIZE + Coordinate4Long.unpackX(packed) / svr + 0.5f,
-                        0, 1, 0, Coordinate4Long.unpackY(packed) / svr + 0.5f,
-                        0, 0, 1, offsetZ * EngineSetting.CHUNK_SIZE + Coordinate4Long.unpackZ(packed) / svr + 0.5f,
-                        0, 0, 0, 1)
-                        .multiply(itemRotationBufferSystem.getRotation(Coordinate4Long.unpackW(packed)))
-                        .multiply(
-                                1, 0, 0, -0.5f,
-                                0, 1, 0, -0.5f,
-                                0, 0, 1, -0.5f,
-                                0, 0, 0, 1);
+                itemRotationBufferSystem.composeTransform(
+                        offsetX * EngineSetting.CHUNK_SIZE + Coordinate4Long.unpackX(packed) / svr,
+                        Coordinate4Long.unpackY(packed) / svr,
+                        offsetZ * EngineSetting.CHUNK_SIZE + Coordinate4Long.unpackZ(packed) / svr,
+                        Coordinate4Long.unpackW(packed),
+                        out);
 
                 return true;
             }

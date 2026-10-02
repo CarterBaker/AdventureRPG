@@ -146,6 +146,40 @@ float resolveOceanWhitecap(OceanState state, float displacement) {
         * smoothstep(u_oceanWhitecap.z, 1.0, crest);
 }
 
+// ── Hulls ─────────────────────────────────────────────────────────────────
+
+float readOceanHullHalfBeam(int base, int station) {
+    return u_oceanHulls[base + OCEAN_HULL_HEADER_VECTORS + station / 4][station % 4];
+}
+
+// True where a position lies inside the dry hull of a vehicle, which keeps the sea out of it.
+bool isInsideOceanHull(vec3 pos) {
+    int hullCount = min(u_oceanHullCount, OCEAN_HULL_MAX_ENTRIES);
+
+    for (int i = 0; i < hullCount; i++) {
+        int  base   = i * OCEAN_HULL_VECTORS_PER_ENTRY;
+        vec4 point  = vec4(pos, 1.0);
+        vec3 mask   = vec3(dot(u_oceanHulls[base], point), dot(u_oceanHulls[base + 1], point),
+            dot(u_oceanHulls[base + 2], point));
+        vec4 extent = u_oceanHulls[base + 3];
+
+        if (mask.x < 0.0 || mask.x > extent.x || mask.y < extent.y || mask.y > extent.z)
+        continue;
+
+        float station  = clamp(mask.x / extent.x * float(OCEAN_HULL_STATIONS) - 0.5,
+            0.0, float(OCEAN_HULL_STATIONS - 1));
+        int   first    = int(floor(station));
+        int   second   = min(first + 1, OCEAN_HULL_STATIONS - 1);
+        float halfBeam = mix(readOceanHullHalfBeam(base, first), readOceanHullHalfBeam(base, second),
+            station - float(first));
+
+        if (abs(mask.z) < halfBeam)
+        return true;
+    }
+
+    return false;
+}
+
 // ── Ripples ───────────────────────────────────────────────────────────────
 
 float sampleOceanRipple(vec2 pos) {

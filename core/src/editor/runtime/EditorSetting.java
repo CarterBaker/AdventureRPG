@@ -109,6 +109,19 @@ public class EditorSetting {
     public static final String COMMAND_MESSAGE_ITEM_NO_ROOM = ": no room in the backpack or hands for ";
     public static final String COMMAND_MESSAGE_ITEM_NO_CHARACTER = ": free flying, so there is no character to give ";
 
+    // Commands — Vehicles
+    public static final String COMMAND_SPAWN_VEHICLE = "spawnvehicle";
+    public static final String COMMAND_REMOVE_VEHICLE = "removevehicle";
+    public static final String COMMAND_ARGUMENT_VEHICLE = "vehicle";
+    public static final String COMMAND_MESSAGE_VEHICLE_UNKNOWN = ": no vehicle is named ";
+    public static final String COMMAND_MESSAGE_VEHICLE_SPAWNED = ": spawned ";
+    public static final String COMMAND_MESSAGE_VEHICLE_REMOVED = ": removed ";
+    public static final String COMMAND_MESSAGE_VEHICLE_NONE_NEAR = ": no vehicle lies near enough to remove";
+    public static final String COMMAND_MESSAGE_VEHICLE_NO_CHARACTER = ": free flying, so there is no character"
+            + " to spawn beside: ";
+    public static final float DEV_VEHICLE_SPAWN_CLEARANCE = 6f;
+    public static final float DEV_VEHICLE_REMOVE_REACH = 24f;
+
     // Viewports
     public static final String FBO_EDITOR_SCENE = "EditorScene";
 

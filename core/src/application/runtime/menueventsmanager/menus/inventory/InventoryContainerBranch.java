@@ -10,6 +10,9 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.kernel.inputpipeline.inputmanager.InputManager;
@@ -31,17 +34,18 @@ public class InventoryContainerBranch extends BranchPackage {
      * container from above through its own camera, so the whole inside is in
      * reach — tilted and turned by dragging beside it, brought closer with
      * the wheel — and a list of its contents, grouped by category, toggles
-     * over it. A container opened in the world is drawn open where it stands:
-     * its lid is left off, and only a space inside its own model is ever
-     * shown there, never a pocket. Every frame each open view is framed anew,
-     * and lists rebuild only when their container changes. Pressing an item
-     * in any panel picks it up.
+     * over it. A container opened where it lies, in the world or aboard a
+     * vehicle, is drawn open where it stands: its lid is left off, and only a
+     * space inside its own model is ever shown there, never a pocket. Every
+     * frame each open view is framed anew, and lists rebuild only when their
+     * container changes. Pressing an item in any panel picks it up.
      */
 
     // Internal
     private MenuManager menuManager;
     private InputManager inputManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
+    private VehicleCargoSystem vehicleCargoSystem;
     private InventoryBranch inventoryBranch;
     private InventoryDragBranch inventoryDragBranch;
 
@@ -72,6 +76,7 @@ public class InventoryContainerBranch extends BranchPackage {
         this.menuManager = get(MenuManager.class);
         this.inputManager = get(InputManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
+        this.vehicleCargoSystem = get(VehicleCargoSystem.class);
         this.inventoryBranch = get(InventoryBranch.class);
         this.inventoryDragBranch = get(InventoryDragBranch.class);
     }
@@ -96,7 +101,7 @@ public class InventoryContainerBranch extends BranchPackage {
 
     // Views \\
 
-    // Each view follows the container it should show: the worn bag, or the container opened in the world
+    // Each view follows the container it should show: the worn bag, or the container opened where it lies
     private void syncView(InventorySessionStruct session, InventoryViewStruct view) {
 
         ItemInstance containerItem = resolveContainerItem(session, view.getInventoryContainer());
@@ -115,20 +120,24 @@ public class InventoryContainerBranch extends BranchPackage {
         if (inventoryContainer == InventoryContainer.BACKPACK)
             return session.getInventory().getItem(EquipmentSlot.BACKPACK);
 
-        return session.hasChest()
-                ? worldItemPlacementSystem.resolveItemInstance(session.getChestWorldItem())
-                : null;
+        if (!session.hasChest())
+            return null;
+
+        return session.isChestAboard()
+                ? session.getChestCargo().getItemInstance()
+                : worldItemPlacementSystem.resolveItemInstance(session.getChestWorldItem());
     }
 
     private void openView(InventorySessionStruct session, InventoryViewStruct view, ItemInstance containerItem) {
 
         InventoryContainer inventoryContainer = view.getInventoryContainer();
-        WorldItemInstance worldItem = inventoryContainer == InventoryContainer.CHEST
-                ? session.getChestWorldItem()
-                : null;
+        boolean chest = inventoryContainer == InventoryContainer.CHEST;
+        WorldItemInstance worldItem = chest ? session.getChestWorldItem() : null;
+        VehicleCargoInstance cargo = chest ? session.getChestCargo() : null;
+        VehicleInstance vehicle = chest ? session.getChestVehicle() : null;
         MenuInstance panelMenu = menuManager.openMenu(inventoryContainer.getPanelMenuName(), session.getWindow());
 
-        view.open(containerItem, worldItem, panelMenu);
+        view.open(containerItem, worldItem, cargo, vehicle, panelMenu);
 
         panelMenu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_TITLE)
                 .setFontText(containerItem.getItemDefinitionHandle().getDisplayName());
@@ -136,8 +145,8 @@ public class InventoryContainerBranch extends BranchPackage {
                 .setFontText(RuntimeSetting.INVENTORY_TEXT_SHOW_LIST);
         panelMenu.getEntryPoint(RuntimeSetting.ENTRY_CONTAINER_HINT).setFontText(resolveHint(inventoryContainer));
 
-        if (worldItem != null)
-            worldItemPlacementSystem.setItemOpen(worldItem, true);
+        if (view.isInWorld())
+            setOpenWhereItLies(view, true);
     }
 
     private String resolveHint(InventoryContainer inventoryContainer) {
@@ -162,9 +171,18 @@ public class InventoryContainerBranch extends BranchPackage {
         menuManager.closeMenu(view.getPanelMenu());
 
         if (view.isInWorld())
-            worldItemPlacementSystem.setItemOpen(view.getWorldItem(), false);
+            setOpenWhereItLies(view, false);
 
         view.close();
+    }
+
+    // A container opened where it lies claims its lid's clearance and is drawn open by the inventory while open
+    private void setOpenWhereItLies(InventoryViewStruct view, boolean open) {
+
+        if (view.isAboard())
+            vehicleCargoSystem.setOpen(view.getCargo(), open);
+        else
+            worldItemPlacementSystem.setItemOpen(view.getWorldItem(), open);
     }
 
     void closeAll(InventorySessionStruct session) {
@@ -205,6 +223,13 @@ public class InventoryContainerBranch extends BranchPackage {
     private boolean placeInWorld(InventorySessionStruct session, InventoryViewStruct view) {
 
         EntityInstance player = session.getPlayer();
+
+        if (view.isAboard())
+            return vehicleCargoSystem.composeTransform(
+                    view.getVehicle(),
+                    view.getCargo(),
+                    player.getWorldPositionStruct().getChunkCoordinate(),
+                    view.getWorldItemMatrix());
 
         return worldItemPlacementSystem.composeTransform(
                 view.getWorldItem(),

@@ -16,8 +16,9 @@ public class HUDBranch extends BranchPackage {
      * Runs the play HUD for this context's window: a small cursor at the
      * centre of the screen for as long as the player is in play, and under it
      * the activate key cap while the player faces something the activate
-     * binding acts on — for now a container it can open where it lies, as
-     * InventoryBranch decides. The key cap carries the binding's current
+     * binding acts on — a container it can open where it lies, as
+     * InventoryBranch decides, or a vehicle's helm, sails or anchor, or while
+     * it holds a helm it can let go. The key cap carries the binding's current
      * name, so a rebound key shows at once. Neither menu ever takes input.
      */
 
@@ -45,7 +46,8 @@ public class HUDBranch extends BranchPackage {
 
         WindowInstance window = context.getWindow();
         boolean playing = playerManager.isPlayingForWindow(window.getWindowID());
-        boolean activatable = playing && inventoryBranch.findOpenableContainer(window) != null;
+        boolean activatable = playing && (inventoryBranch.findOpenableContainer(window)
+                || playerManager.isFacingVehicleControlForWindow(window.getWindowID()));
 
         this.crosshairMenu = showMenu(crosshairMenu, RuntimeSetting.MENU_HUD_CROSSHAIR, playing, window);
         this.activateMenu = showMenu(activateMenu, RuntimeSetting.MENU_HUD_ACTIVATE, activatable, window);

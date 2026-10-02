@@ -3,7 +3,8 @@
 
 // Must match EngineSetting.OCEAN_WAVE_COUNT, OCEAN_WAVE_SWELL_COUNT, OCEAN_TURBULENCE_UBO_MAX_ENTRIES,
 // OCEAN_TURBULENCE_STRENGTHS_PER_VECTOR, OCEAN_EXPOSURE_GRID_SIZE, OCEAN_EXPOSURE_VALUES_PER_VECTOR,
-// OCEAN_SEA_NOISE_SEED and OCEAN_NOISE_OCTAVE_SEED_STEP — GLSL has no visibility into the Java constants, so
+// OCEAN_SEA_NOISE_SEED, OCEAN_NOISE_OCTAVE_SEED_STEP, OCEAN_HULL_MAX_ENTRIES, OCEAN_HULL_HEADER_VECTORS,
+// OCEAN_HULL_STATIONS and OCEAN_HULL_VECTORS_PER_ENTRY — GLSL has no visibility into the Java constants, so
 // these are manually-kept mirrors, same convention WeatherMapData.glsl already uses for its own entry count.
 // Every tuning value the CPU sampler also reads arrives in the block itself.
 #define OCEAN_WAVE_COUNT 6
@@ -14,6 +15,10 @@
 #define OCEAN_EXPOSURE_VALUES_PER_VECTOR 4
 #define OCEAN_SEA_NOISE_SEED 7919u
 #define OCEAN_NOISE_OCTAVE_SEED_STEP 1013u
+#define OCEAN_HULL_MAX_ENTRIES 4
+#define OCEAN_HULL_HEADER_VECTORS 4
+#define OCEAN_HULL_STATIONS 8
+#define OCEAN_HULL_VECTORS_PER_ENTRY 6
 
 // Source: WaveBufferSystem, one instance per grid. Positions are in blocks relative to the grid's reference
 // chunk, the same space u_gridPosition places every chunk in.
@@ -40,6 +45,12 @@
 // oceanTessellation:         x = near, y = mid, z = far tessellation radius in chunks, w = fade band in chunks
 // oceanNoisePeriod:          sea noise lattice period in cells
 // oceanTurbulenceCount:      number of live cells
+// oceanHulls:                one entry per hull the sea is kept out of (source: VehicleHullMaskSystem):
+//                            three rows taking a position into the hull's mask space (x along the hull from its
+//                            first station, y the model height, z across from its centre line), then
+//                            x = hull length, y = floor, z = top, then the half-beam at every station, packed
+//                            four to a vector
+// oceanHullCount:            number of live hulls
 layout(std140) uniform OceanData {
     vec4  u_oceanWaves[OCEAN_WAVE_COUNT];
     vec4  u_oceanTurbulenceCells[OCEAN_TURBULENCE_MAX_ENTRIES];
@@ -56,6 +67,8 @@ layout(std140) uniform OceanData {
     vec4  u_oceanTessellation;
     vec2  u_oceanNoisePeriod;
     int   u_oceanTurbulenceCount;
+    vec4  u_oceanHulls[OCEAN_HULL_MAX_ENTRIES * OCEAN_HULL_VECTORS_PER_ENTRY];
+    int   u_oceanHullCount;
 };
 
 #endif

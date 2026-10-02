@@ -4,7 +4,7 @@ public class CommandConsoleSetting {
 
     /*
      * Constants used only by CommandConsoleContext — its menu, command tree
-     * templates, item grid, and command line.
+     * templates, item and vehicle grids, and command line.
      */
 
     // Menus
@@ -31,6 +31,12 @@ public class CommandConsoleSetting {
     public static final String ELEMENT_ITEM_TILE_LABEL = "command_item_tile_label";
     public static final int ITEM_GRID_MIN_COLUMNS = 1;
     public static final int DEPTH_ITEM_ICON = 0;
+
+    // Vehicle Grid
+    public static final String MENU_VEHICLE_GRID = "editor/CommandConsole/command_vehicle_grid";
+    public static final String MENU_VEHICLE_ROW = "editor/CommandConsole/command_vehicle_row";
+    public static final String MENU_VEHICLE_TILE = "editor/CommandConsole/command_vehicle_tile";
+    public static final String ELEMENT_VEHICLE_TILE_LABEL = "command_vehicle_tile_label";
 
     // Command Line
     public static final int COMMAND_MAX_LENGTH = 256;

@@ -24,8 +24,10 @@ public class SubVoxelManager extends ManagerPackage {
      * bootstrap meshes and live editor meshes are built identically here — and
      * is the single access point for sub-voxel raycasting, the mesh format,
      * and converting authored quad meshes into sub-voxel models. Also builds a
-     * pocket's open box of walls, which may span more than one block, and
-     * registers models generated at runtime as named meshes.
+     * pocket's open box of walls, which may span more than one block,
+     * registers models generated at runtime as named meshes, and hands its
+     * face writer, texture bounds and face normals to anything meshing
+     * sub-voxels that span many blocks, such as a vehicle.
      */
 
     // Internal
@@ -79,7 +81,7 @@ public class SubVoxelManager extends ManagerPackage {
         return partUVBounds;
     }
 
-    private void writeUVBounds(String textureName, float[] uvBounds, int uvBase) {
+    public void writeUVBounds(String textureName, float[] uvBounds, int uvBase) {
 
         TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(textureName);
 
@@ -126,6 +128,13 @@ public class SubVoxelManager extends ManagerPackage {
         return meshManager.createMesh(vaoTemplate, vertices, indices);
     }
 
+    // Geometry already written through emitFace(), uploaded as a mesh of the sub-voxel format
+    public MeshInstance createMesh(FloatArrayList vertices, ShortArrayList indices) {
+
+        VAOHandle vaoTemplate = vaoManager.getVAOHandleFromVAOName(EngineSetting.SUB_VOXEL_VAO);
+        return meshManager.createMesh(vaoTemplate, vertices, indices);
+    }
+
     public void updateMesh(MeshInstance meshInstance, SubVoxelModelStruct model) {
 
         FloatArrayList vertices = new FloatArrayList();
@@ -133,6 +142,33 @@ public class SubVoxelManager extends ManagerPackage {
         buildGeometry(model, vertices, indices);
 
         meshManager.updateMesh(meshInstance, vertices, indices);
+    }
+
+    // Faces \\
+
+    // One face spanning min to max in block units, its UVs inside the texture bounds at uvBase, running from the
+    // block corner at the origin — the same vertices every sub-voxel mesh is made of
+    public void emitFace(
+            int face,
+            float[] min,
+            float[] max,
+            float originX,
+            float originY,
+            float originZ,
+            float[] uvBounds,
+            int uvBase,
+            FloatArrayList vertices,
+            ShortArrayList indices) {
+
+        SubVoxelMeshUtility.emitFace(
+                face, min, max, originX, originY, originZ,
+                uvBounds[uvBase], uvBounds[uvBase + 1], uvBounds[uvBase + 2], uvBounds[uvBase + 3],
+                vertices, indices);
+    }
+
+    // One component of a face's outward normal, faces numbered as the item shader numbers them
+    public int getFaceNormal(int face, int axis) {
+        return SubVoxelMeshUtility.getFaceNormal(face, axis);
     }
 
     // Raycast \\

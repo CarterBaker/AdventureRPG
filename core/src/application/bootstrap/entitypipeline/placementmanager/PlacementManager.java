@@ -6,6 +6,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemCastStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
@@ -29,9 +30,15 @@ public class PlacementManager extends ManagerPackage {
      * action swings whatever is held through CombatManager, whose strike lands
      * back here on a block through strikeBlock(), and the activate action
      * places the held item — a block piece as a sub-block, anything else as a
-     * world item. Nothing happens here while a stance is held: an aim's throw
-     * and a guard belong to CombatManager. findTargetItem() is the one place
-     * that decides which world item an entity is aiming at, and where on it.
+     * world item. A vehicle's deck or cargo nearer than anything in the world
+     * takes the action instead, through VehicleCargoSystem, by the same rules:
+     * the primary action picks cargo up or swings at the deck, and the
+     * activate action sets the held item down aboard, unless it is a block
+     * piece or the cargo is a container that can open. findTargetVehicle() is
+     * the one place that decides whether a vehicle stands in front.
+     * Nothing happens here while a stance is held: an aim's throw and a guard
+     * belong to CombatManager. findTargetItem() is the one place that decides
+     * which world item an entity is aiming at, and where on it.
      */
 
     // Internal
@@ -39,6 +46,7 @@ public class PlacementManager extends ManagerPackage {
     private WorldItemSpaceSystem worldItemSpaceSystem;
     private WorldItemPlacementSystem worldItemPlacementSystem;
     private CombatManager combatManager;
+    private VehicleCargoSystem vehicleCargoSystem;
 
     // Branches
     private BlockBranch blockBranch;
@@ -78,6 +86,7 @@ public class PlacementManager extends ManagerPackage {
         this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.combatManager = get(CombatManager.class);
+        this.vehicleCargoSystem = get(VehicleCargoSystem.class);
     }
 
     // Update \\
@@ -98,6 +107,11 @@ public class PlacementManager extends ManagerPackage {
             return;
 
         WorldItemInstance targetItem = findTargetItem(entity, origin, direction);
+
+        if (castVehicleBefore(entity, origin, direction, targetItem)) {
+            handleVehicleAction(entity, direction, primaryAction, activateAction);
+            return;
+        }
 
         if (targetItem != null) {
 
@@ -194,6 +208,31 @@ public class PlacementManager extends ManagerPackage {
         return itemCastStruct.isHit() ? itemCastStruct.getWorldItemInstance() : null;
     }
 
+    // True when a vehicle's surface or cargo stands nearer than anything in the world the entity aims at — the hit
+    // stays in VehicleCargoSystem
+    public boolean findTargetVehicle(EntityInstance entity, Vector3 origin, Vector3 direction) {
+        return castVehicleBefore(entity, origin, direction, findTargetItem(entity, origin, direction));
+    }
+
+    private boolean castVehicleBefore(
+            EntityInstance entity,
+            Vector3 origin,
+            Vector3 direction,
+            WorldItemInstance targetItem) {
+        return vehicleCargoSystem.cast(entity, origin, direction, resolveWorldDistance(entity, targetItem));
+    }
+
+    // How far the world findTargetItem() last cast met — its item, else its block, else the entity's reach
+    private float resolveWorldDistance(EntityInstance entity, WorldItemInstance targetItem) {
+
+        if (targetItem != null)
+            return itemCastStruct.getDistance();
+
+        return castStruct.isHit()
+                ? castStruct.getDistance()
+                : entity.getStatisticsHandle().getReach() * EngineSetting.REACH_SCALE;
+    }
+
     private boolean castFrom(EntityInstance entity, Vector3 origin, Vector3 direction) {
 
         WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
@@ -221,6 +260,32 @@ public class PlacementManager extends ManagerPackage {
             return blockBranch.tryPlacePiece(entity, castStruct);
 
         return itemBranch.place(entity, direction, castStruct);
+    }
+
+    // Against the vehicle VehicleCargoSystem last met — the primary action takes cargo up or swings at the deck, the
+    // activate action sets the held item down aboard, unless the cargo is a container that can open, which is
+    // opened instead
+    private void handleVehicleAction(
+            EntityInstance entity,
+            Vector3 direction,
+            boolean primaryAction,
+            boolean activateAction) {
+
+        if (primaryAction && !vehicleCargoSystem.isCargoHit()) {
+            combatManager.swing(entity);
+            return;
+        }
+
+        if (primaryAction && vehicleCargoSystem.pickUp(entity)) {
+            timeSinceLastPlacement = 0;
+            combatManager.gesture(entity, EntityAction.PICK_UP);
+            return;
+        }
+
+        if (activateAction && !vehicleCargoSystem.canOpenCastCargo() && vehicleCargoSystem.place(entity, direction)) {
+            timeSinceLastPlacement = 0;
+            combatManager.gesture(entity, EntityAction.PLACE);
+        }
     }
 
     // Against the item findTargetItem() last met — a block piece is a sub-block, which only builds on blocks, and a

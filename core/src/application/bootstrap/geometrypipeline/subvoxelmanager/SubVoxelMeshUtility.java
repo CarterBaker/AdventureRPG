@@ -16,7 +16,8 @@ class SubVoxelMeshUtility extends EngineUtility {
      * side, hides where cubes bury it on both sides, and takes the place of a
      * cube face it covers. Null outputs count quads only. A pocket's open
      * box is built here too, one quad per block of each wall so every quad's
-     * texels stay inside one block.
+     * texels stay inside one block, and emitFace() is the one face writer
+     * every sub-voxel mesh goes through, a vehicle's included.
      */
 
     // Faces — index order matches the item shader's normal table
@@ -297,7 +298,7 @@ class SubVoxelMeshUtility extends EngineUtility {
     }
 
     // One face spanning min to max in block units; UVs run from the block corner at the origin
-    private static void emitFace(
+    static void emitFace(
             int face,
             float[] min,
             float[] max,
@@ -387,6 +388,11 @@ class SubVoxelMeshUtility extends EngineUtility {
     }
 
     // Utility \\
+
+    // One component of a face's outward normal, in the item shader's face order
+    static int getFaceNormal(int face, int axis) {
+        return FACE_NORMALS[face][axis];
+    }
 
     private static int resolveAxis(int face) {
 

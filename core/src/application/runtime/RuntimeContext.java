@@ -11,6 +11,7 @@ import application.runtime.postprocessing.PostProcessingManager;
 import application.runtime.projectile.ProjectileSystem;
 import application.runtime.recording.RecordingInputSystem;
 import application.runtime.sky.SkySystem;
+import application.runtime.vehicle.VehicleSystem;
 import application.runtime.weather.PrecipitationSystem;
 import application.runtime.water.WaterSystem;
 import application.runtime.weather.WeatherSystem;
@@ -44,6 +45,7 @@ public class RuntimeContext extends ContextPackage {
     private PrecipitationSystem precipitationSystem;
     private InventoryRenderSystem inventoryRenderSystem;
     private ProjectileSystem projectileSystem;
+    private VehicleSystem vehicleSystem;
 
     // Internal \\
 
@@ -66,5 +68,6 @@ public class RuntimeContext extends ContextPackage {
         this.precipitationSystem = create(PrecipitationSystem.class);
         this.inventoryRenderSystem = create(InventoryRenderSystem.class);
         this.projectileSystem = create(ProjectileSystem.class);
+        this.vehicleSystem = create(VehicleSystem.class);
     }
 }

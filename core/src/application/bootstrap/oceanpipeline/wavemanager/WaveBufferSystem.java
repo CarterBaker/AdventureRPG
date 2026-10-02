@@ -7,6 +7,7 @@ import application.bootstrap.oceanpipeline.turbulencemanager.TurbulenceManager;
 import application.bootstrap.oceanpipeline.wave.WaveInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleHullMaskSystem;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
@@ -21,8 +22,9 @@ class WaveBufferSystem extends SystemPackage {
      * Mirrors everything the water shaders need into each grid's own OceanData
      * UBO every frame: the wave set with this grid's phases, the turbulence
      * cells with their strengths packed four to a vector, the exposure window
-     * packed the same way, the sea-state noise lattice, the surface and the
-     * camera's submersion. Every tuning value the CPU sampler also reads is
+     * packed the same way, the sea-state noise lattice, the surface, the
+     * camera's submersion and the masks VehicleHullMaskSystem writes to keep
+     * the sea out of hulls. Every tuning value the CPU sampler also reads is
      * sent from EngineSetting here, so the shader never carries its own copy.
      * Runs in LATE_UPDATE after WaveManager, for the same reason
      * WeatherMapBufferSystem does: every position is relative to a reference
@@ -35,6 +37,7 @@ class WaveBufferSystem extends SystemPackage {
     private TideManager tideManager;
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
+    private VehicleHullMaskSystem vehicleHullMaskSystem;
 
     // Buffer
     private Vector4[] waves;
@@ -51,6 +54,7 @@ class WaveBufferSystem extends SystemPackage {
     private Vector4 exposureGrid;
     private Vector4 camera;
     private Vector4 tessellation;
+    private Vector4[] hulls;
 
     // Base \\
 
@@ -90,6 +94,7 @@ class WaveBufferSystem extends SystemPackage {
                 EngineSetting.OCEAN_TESSELLATION_MID_RADIUS_CHUNKS,
                 EngineSetting.OCEAN_TESSELLATION_FAR_RADIUS_CHUNKS,
                 EngineSetting.OCEAN_TESSELLATION_FADE_CHUNKS);
+        this.hulls = allocate(EngineSetting.OCEAN_HULL_MAX_ENTRIES * EngineSetting.OCEAN_HULL_VECTORS_PER_ENTRY);
     }
 
     @Override
@@ -101,6 +106,7 @@ class WaveBufferSystem extends SystemPackage {
         this.tideManager = get(TideManager.class);
         this.uboManager = get(UBOManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.vehicleHullMaskSystem = get(VehicleHullMaskSystem.class);
     }
 
     // Update \\
@@ -124,6 +130,7 @@ class WaveBufferSystem extends SystemPackage {
         writeWaves(wave);
         writeExposure(grid.getExposureInstance());
         int cellCount = writeCells(turbulence);
+        int hullCount = vehicleHullMaskSystem.writeHullMasks(grid, hulls);
 
         surface.set(
                 tideManager.getSurfaceHeightBlocks(),
@@ -164,6 +171,8 @@ class WaveBufferSystem extends SystemPackage {
         oceanDataUBO.updateUniform(EngineSetting.UNIFORM_OCEAN_TESSELLATION, tessellation);
         oceanDataUBO.updateUniform(EngineSetting.UNIFORM_OCEAN_NOISE_PERIOD, noisePeriod);
         oceanDataUBO.updateUniform(EngineSetting.UNIFORM_OCEAN_TURBULENCE_COUNT, cellCount);
+        oceanDataUBO.updateUniform(EngineSetting.UNIFORM_OCEAN_HULLS, hulls);
+        oceanDataUBO.updateUniform(EngineSetting.UNIFORM_OCEAN_HULL_COUNT, hullCount);
 
         uboManager.push(oceanDataUBO);
     }

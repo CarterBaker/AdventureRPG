@@ -5,6 +5,7 @@ import editor.bootstrap.commandpipeline.command.CommandStruct;
 import editor.dev.command.DevCommandSystem;
 import editor.dev.freecamera.FreeCameraSystem;
 import editor.dev.item.DevItemSystem;
+import editor.dev.vehicle.DevVehicleSystem;
 
 public class DevContext extends RuntimeContext {
 
@@ -12,8 +13,9 @@ public class DevContext extends RuntimeContext {
      * Dev mode entry point for testing. Runs every system RuntimeContext runs,
      * exactly as the game does, and adds only what the command console
      * drives: a command system that receives what is typed or picked in it,
-     * the free camera its fly command switches on, and the item giver its
-     * give command uses. The editor pairs it
+     * the free camera its fly command switches on, the item giver its give
+     * command uses, and the vehicle spawner its spawnvehicle and removevehicle
+     * commands use. The editor pairs it
      * with a Dev Mode tab exactly as it does a preview. Dev-only systems live
      * beside it in the editor, never in runtime.
      */
@@ -22,6 +24,7 @@ public class DevContext extends RuntimeContext {
     private DevCommandSystem devCommandSystem;
     private FreeCameraSystem freeCameraSystem;
     private DevItemSystem devItemSystem;
+    private DevVehicleSystem devVehicleSystem;
 
     // Internal \\
 
@@ -34,6 +37,7 @@ public class DevContext extends RuntimeContext {
         this.devCommandSystem = create(DevCommandSystem.class);
         this.freeCameraSystem = create(FreeCameraSystem.class);
         this.devItemSystem = create(DevItemSystem.class);
+        this.devVehicleSystem = create(DevVehicleSystem.class);
     }
 
     // Management \\

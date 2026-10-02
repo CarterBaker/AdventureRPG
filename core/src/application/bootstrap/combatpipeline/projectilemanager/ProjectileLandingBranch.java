@@ -5,6 +5,8 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.physicspipeline.util.SubBlockSampleUtility;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
 import application.bootstrap.worldpipeline.blockmanager.BlockPlacementSystem;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
@@ -21,6 +23,7 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.quaternions.Quaternion;
 import engine.util.mathematics.vectors.Vector3;
 
 class ProjectileLandingBranch extends BranchPackage {
@@ -33,8 +36,11 @@ class ProjectileLandingBranch extends BranchPackage {
      * the world. Any other item becomes a world item turned to the orientation
      * nearest its tumble, its shape centred where it came to rest and its
      * lowest point set on the ground, raised onto whatever items already lie
-     * there so it never sinks into a pile. settle() is false while there is
-     * nowhere to put it yet.
+     * there so it never sinks into a pile. Anything resting on a vehicle's
+     * deck — a block piece too, since a vehicle has no blocks to build on —
+     * becomes cargo the same way, turned and set in the vehicle's own frame,
+     * and takes flight again when the vehicle has no room for it. settle() is
+     * false while there is nowhere to put it yet.
      */
 
     // Internal
@@ -43,6 +49,7 @@ class ProjectileLandingBranch extends BranchPackage {
     private WorldItemPlacementSystem worldItemPlacementSystem;
     private WorldItemSpaceSystem worldItemSpaceSystem;
     private ItemRotationBufferSystem itemRotationBufferSystem;
+    private VehicleCargoSystem vehicleCargoSystem;
 
     // Settings
     private int chunkSize;
@@ -52,6 +59,7 @@ class ProjectileLandingBranch extends BranchPackage {
     // Scratch
     private Matrix4 rotationScratch;
     private Vector3 cornerScratch;
+    private Quaternion tumbleScratch;
     private WorldItemPlacementStruct placementStruct;
 
     // Internal \\
@@ -67,6 +75,7 @@ class ProjectileLandingBranch extends BranchPackage {
         // Scratch
         this.rotationScratch = new Matrix4();
         this.cornerScratch = new Vector3();
+        this.tumbleScratch = new Quaternion();
         this.placementStruct = new WorldItemPlacementStruct();
     }
 
@@ -79,11 +88,15 @@ class ProjectileLandingBranch extends BranchPackage {
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
+        this.vehicleCargoSystem = get(VehicleCargoSystem.class);
     }
 
     // Settle \\
 
     boolean settle(ProjectileInstance projectile) {
+
+        if (projectile.isRestingOnVehicle())
+            return settleOnVehicle(projectile);
 
         if (projectile.getItemInstance().getItemDefinitionHandle().isBlockPiece())
             return settlePiece(projectile);
@@ -198,6 +211,41 @@ class ProjectileLandingBranch extends BranchPackage {
         worldItemPlacementSystem.placeItem(placementStruct, itemInstance);
 
         return true;
+    }
+
+    // Vehicle \\
+
+    // Cargo turned to the orientation nearest its tumble as the vehicle sees it, its shape centred over the point it
+    // rests on and its lowest point set on the deck — or back in flight, when the vehicle has no room for it
+    private boolean settleOnVehicle(ProjectileInstance projectile) {
+
+        VehicleInstance vehicle = projectile.getRestVehicle();
+        ItemInstance itemInstance = projectile.getItemInstance();
+        ItemShapeStruct shape = itemInstance.getItemDefinitionHandle().getShape();
+        Vector3 rest = projectile.getRestModelPoint();
+
+        tumbleScratch.set(vehicle.getOrientation()).conjugate().multiply(projectile.getOrientation());
+
+        int orientation = itemRotationBufferSystem.findNearestOrientation(tumbleScratch.toMatrix(rotationScratch));
+        Matrix4 rotation = itemRotationBufferSystem.getRotation(orientation);
+
+        rotateAboutCentre(
+                rotation,
+                (shape.getOffsetX() + shape.getSizeX() * 0.5f) / subVoxelResolution,
+                (shape.getOffsetY() + shape.getSizeY() * 0.5f) / subVoxelResolution,
+                (shape.getOffsetZ() + shape.getSizeZ() * 0.5f) / subVoxelResolution);
+
+        int subX = Math.round((rest.x - cornerScratch.x) * subVoxelResolution);
+        int subZ = Math.round((rest.z - cornerScratch.z) * subVoxelResolution);
+        int subY = (int) Math.ceil((rest.y - resolveLowestPoint(rotation, shape)) * subVoxelResolution
+                - EngineSetting.PROJECTILE_SNAP_EPSILON);
+
+        if (vehicleCargoSystem.land(vehicle, itemInstance, orientation, subX, subY, subZ))
+            return true;
+
+        projectile.resume();
+
+        return false;
     }
 
     // The height of the turned shape's lowest corner above its model grid's floor, in blocks

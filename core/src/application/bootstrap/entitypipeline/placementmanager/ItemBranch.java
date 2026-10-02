@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.itempipeline.item.ItemInstance;
+import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
@@ -33,6 +34,7 @@ class ItemBranch extends BranchPackage {
     private WorldStreamManager worldStreamManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
     private WorldItemSpaceSystem worldItemSpaceSystem;
+    private ItemRotationBufferSystem itemRotationBufferSystem;
 
     // Settings
     private int chunkSize;
@@ -63,6 +65,7 @@ class ItemBranch extends BranchPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
+        this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
     }
 
     // Place \\
@@ -116,7 +119,7 @@ class ItemBranch extends BranchPackage {
                 entity.getWorldHandle(),
                 frameChunk,
                 inventoryHandle.getMainHand().getItemDefinitionHandle(),
-                resolveItemOrientation(hitFace, direction),
+                itemRotationBufferSystem.resolvePlacementOrientation(hitFace, direction),
                 anchorX,
                 anchorY,
                 anchorZ,
@@ -162,32 +165,5 @@ class ItemBranch extends BranchPackage {
         worldItemPlacementSystem.removeItem(chunk, worldItemInstance);
 
         return true;
-    }
-
-    // Orientation \\
-
-    private int resolveItemOrientation(Direction3Vector hitFace, Vector3 cameraDirection) {
-
-        Direction3Vector facing;
-
-        if (hitFace == Direction3Vector.UP || hitFace == Direction3Vector.DOWN)
-            facing = Direction3Vector.VALUES[EngineSetting.DEFAULT_BLOCK_DIRECTION];
-        else
-            facing = hitFace;
-
-        int spin = 0;
-
-        if (facing == Direction3Vector.UP || facing == Direction3Vector.DOWN) {
-
-            float ax = Math.abs(cameraDirection.x);
-            float az = Math.abs(cameraDirection.z);
-
-            if (ax >= az)
-                spin = cameraDirection.x > 0 ? 1 : 3;
-            else
-                spin = cameraDirection.z > 0 ? 0 : 2;
-        }
-
-        return facing.ordinal() * 4 + spin;
     }
 }

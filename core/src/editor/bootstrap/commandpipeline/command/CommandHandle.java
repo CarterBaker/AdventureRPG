@@ -9,7 +9,8 @@ public class CommandHandle extends HandlePackage {
      * Persistent reference to one loaded console command. Registered and
      * owned by CommandManager. Delegates all accessors through CommandData.
      * A command whose one argument is an item is picked from the command
-     * console's item tiles.
+     * console's item tiles, and one whose one argument is a vehicle from its
+     * vehicle tiles.
      */
 
     // Internal
@@ -60,5 +61,10 @@ public class CommandHandle extends HandlePackage {
     public boolean takesItem() {
         return commandData.getArgumentCount() == 1
                 && commandData.getArgumentName(0).equals(EditorSetting.COMMAND_ARGUMENT_ITEM);
+    }
+
+    public boolean takesVehicle() {
+        return commandData.getArgumentCount() == 1
+                && commandData.getArgumentName(0).equals(EditorSetting.COMMAND_ARGUMENT_VEHICLE);
     }
 }

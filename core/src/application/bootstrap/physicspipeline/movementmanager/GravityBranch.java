@@ -17,7 +17,8 @@ public class GravityBranch extends BranchPackage {
      * jump() is the single place a jump impulse starts, with the height already
      * adjusted for water by SwimBranch. Landing settles to IDLE, and a grounded
      * entity only turns FALLING past GROUNDED_FALL_SPEED so stepping down keeps
-     * its stride.
+     * its stride. land() settles an entity that a vehicle's deck caught, whose
+     * fall the block grid never saw stop.
      */
 
     // Settings
@@ -133,6 +134,17 @@ public class GravityBranch extends BranchPackage {
         if (!movingWithGravity)
             state.setMovementState(EntityState.FALLING);
         else if (!state.isGrounded())
+            state.setMovementState(EntityState.IDLE);
+    }
+
+    // Something other than the block grid caught the entity's fall — it stops falling and stands
+    void land(EntityInstance entity) {
+
+        EntityStateHandle state = entity.getEntityStateHandle();
+
+        state.getGravityVelocity().set(0f, 0f, 0f);
+
+        if (!state.isGrounded())
             state.setMovementState(EntityState.IDLE);
     }
 
