@@ -20,7 +20,9 @@ public class ItemDefinitionManager extends ManagerPackage {
      * name that only one item carries — ignoring case. Block pieces are not
      * loaded from files: getBlockPieceHandle() builds a block's piece through
      * BlockPieceBranch the first time it is needed, and a piece's name
-     * resolves to its block the same way.
+     * resolves to its block the same way. The farthest any registered item's
+     * shape reaches past the block its corner lies in, before it and after
+     * it, tells world queries how far around a block to look for items.
      */
 
     // Internal
@@ -32,6 +34,10 @@ public class ItemDefinitionManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<ItemDefinitionHandle> itemID2ItemHandle;
     private ObjectArrayList<ItemDefinitionHandle> itemHandles;
     private Int2ObjectOpenHashMap<ItemDefinitionHandle> blockID2BlockPieceHandle;
+
+    // Reach
+    private int maxReachBefore;
+    private int maxReachAfter;
 
     // Base \\
 
@@ -70,6 +76,9 @@ public class ItemDefinitionManager extends ManagerPackage {
         itemName2ItemID.put(item.getItemName(), id);
         itemID2ItemHandle.put(id, item);
         itemHandles.add(item);
+
+        maxReachBefore = Math.max(maxReachBefore, item.getShape().getReachBefore());
+        maxReachAfter = Math.max(maxReachAfter, item.getShape().getReachAfter());
     }
 
     // Block Pieces \\
@@ -165,6 +174,16 @@ public class ItemDefinitionManager extends ManagerPackage {
 
     public ObjectArrayList<ItemDefinitionHandle> getItemHandles() {
         return itemHandles;
+    }
+
+    // The most blocks before its corner's block any registered item reaches on an axis
+    public int getMaxReachBefore() {
+        return maxReachBefore;
+    }
+
+    // The most blocks after its corner's block any registered item reaches on an axis
+    public int getMaxReachAfter() {
+        return maxReachAfter;
     }
 
     public void request(String itemName) {

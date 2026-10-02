@@ -17,8 +17,8 @@
 #define OCEAN_NOISE_OCTAVE_SEED_STEP 1013u
 #define OCEAN_HULL_MAX_ENTRIES 4
 #define OCEAN_HULL_HEADER_VECTORS 4
-#define OCEAN_HULL_STATIONS 8
-#define OCEAN_HULL_VECTORS_PER_ENTRY 6
+#define OCEAN_HULL_STATIONS 16
+#define OCEAN_HULL_VECTORS_PER_ENTRY 8
 
 // Source: WaveBufferSystem, one instance per grid. Positions are in blocks relative to the grid's reference
 // chunk, the same space u_gridPosition places every chunk in.

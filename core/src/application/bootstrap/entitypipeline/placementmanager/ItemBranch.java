@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.itempipeline.item.ItemInstance;
+import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -27,7 +28,8 @@ class ItemBranch extends BranchPackage {
      * or another item's, containers included — oriented by the camera, one at
      * a time from a stack, and leaves it in hand when no spot by that face is
      * free; pickup hands the world item's real item, contents included, to the
-     * entity and removes it from the world only once it fits.
+     * entity as the item it is carried as, and removes it from the world only
+     * once it fits.
      */
 
     // Internal
@@ -35,6 +37,7 @@ class ItemBranch extends BranchPackage {
     private WorldItemPlacementSystem worldItemPlacementSystem;
     private WorldItemSpaceSystem worldItemSpaceSystem;
     private ItemRotationBufferSystem itemRotationBufferSystem;
+    private ItemManager itemManager;
 
     // Settings
     private int chunkSize;
@@ -66,6 +69,7 @@ class ItemBranch extends BranchPackage {
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
+        this.itemManager = get(ItemManager.class);
     }
 
     // Place \\
@@ -157,7 +161,8 @@ class ItemBranch extends BranchPackage {
         if (chunk == null)
             return false;
 
-        ItemInstance itemInstance = worldItemPlacementSystem.resolveItemInstance(worldItemInstance);
+        ItemInstance itemInstance = itemManager.toCarried(
+                worldItemPlacementSystem.resolveItemInstance(worldItemInstance));
 
         if (!entity.getInventoryHandle().give(itemInstance))
             return false;

@@ -9,11 +9,12 @@ public class VehicleData extends DataPackage {
 
     /*
      * Immutable vehicle definition built from ARPG by VehicleBuilder. Holds its
-     * identity, every part in data order with the masts, sails, helm, rudder
-     * and capstan its rig and controls work through, the solid sub-voxels
+     * identity, every part in data order with the masts, sails, helm, rudder,
+     * capstan and doors its rig and controls work through, the solid sub-voxels
      * riders and cargo collide with, the zones its ladders can be climbed in,
      * the merged meshes of every part that never moves, the bounds of its
-     * model grid, the hull's mass and dry volume, and how it handles. Owned by
+     * model grid, the hull's mass and dry volume, how it handles, and the
+     * places it comes furnished at, each with its table of items. Owned by
      * VehicleHandle for the engine lifetime and shared by every vehicle of
      * the type.
      */
@@ -29,6 +30,7 @@ public class VehicleData extends DataPackage {
     private final int helmPart;
     private final int rudderPart;
     private final int capstanPart;
+    private final IntArrayList doorParts;
 
     // Grid
     private final VehicleGridStruct solidGrid;
@@ -50,6 +52,9 @@ public class VehicleData extends DataPackage {
     private final VehicleHullStruct hull;
     private final VehicleHandlingStruct handling;
 
+    // Cargo
+    private final ObjectArrayList<VehicleCargoSlotStruct> cargoSlots;
+
     // Constructor \\
 
     public VehicleData(
@@ -61,6 +66,7 @@ public class VehicleData extends DataPackage {
             int helmPart,
             int rudderPart,
             int capstanPart,
+            IntArrayList doorParts,
             VehicleGridStruct solidGrid,
             IntArrayList climbZones,
             ObjectArrayList<MeshInstance> hullMeshes,
@@ -72,7 +78,8 @@ public class VehicleData extends DataPackage {
             int maxZ,
             float boundingRadius,
             VehicleHullStruct hull,
-            VehicleHandlingStruct handling) {
+            VehicleHandlingStruct handling,
+            ObjectArrayList<VehicleCargoSlotStruct> cargoSlots) {
 
         // Identity
         this.vehicleName = vehicleName;
@@ -85,6 +92,7 @@ public class VehicleData extends DataPackage {
         this.helmPart = helmPart;
         this.rudderPart = rudderPart;
         this.capstanPart = capstanPart;
+        this.doorParts = doorParts;
 
         // Grid
         this.solidGrid = solidGrid;
@@ -105,6 +113,9 @@ public class VehicleData extends DataPackage {
         // Physics
         this.hull = hull;
         this.handling = handling;
+
+        // Cargo
+        this.cargoSlots = cargoSlots;
     }
 
     // Accessible \\
@@ -139,6 +150,10 @@ public class VehicleData extends DataPackage {
 
     public int getCapstanPart() {
         return capstanPart;
+    }
+
+    public IntArrayList getDoorParts() {
+        return doorParts;
     }
 
     public VehicleGridStruct getSolidGrid() {
@@ -187,5 +202,9 @@ public class VehicleData extends DataPackage {
 
     public VehicleHandlingStruct getHandling() {
         return handling;
+    }
+
+    public ObjectArrayList<VehicleCargoSlotStruct> getCargoSlots() {
+        return cargoSlots;
     }
 }

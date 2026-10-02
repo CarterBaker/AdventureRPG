@@ -11,8 +11,10 @@ public class ItemManager extends ManagerPackage {
      * The one place real items are made. createItem() turns an item
      * definition into an ItemInstance, giving a container item its own empty
      * container; createStack() makes a stackable item standing for several,
-     * and splitStack() parts a stack in two. Every item a player is given,
-     * finds, splits off, or restores from a save is created here.
+     * and splitStack() parts a stack in two; toCarried() is the item a placed
+     * item is picked up as, which may be another one, as an open door is
+     * picked up shut. Every item a player is given, finds, splits off, or
+     * restores from a save is created here.
      */
 
     // Internal
@@ -45,6 +47,17 @@ public class ItemManager extends ManagerPackage {
         itemInstance.setStackCount(stackCount);
 
         return itemInstance;
+    }
+
+    // The item a placed item is picked up as — itself, unless its definition names another
+    public ItemInstance toCarried(ItemInstance itemInstance) {
+
+        ItemDefinitionHandle itemDefinitionHandle = itemInstance.getItemDefinitionHandle();
+
+        if (!itemDefinitionHandle.isPickedUpAsOther())
+            return itemInstance;
+
+        return createItem(itemDefinitionHandle.getPickUpAsName());
     }
 
     // Takes a count off a stack as a new item of its own — the stack keeps at least one

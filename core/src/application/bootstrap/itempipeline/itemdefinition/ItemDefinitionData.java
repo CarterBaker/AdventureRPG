@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ItemDefinitionData extends DataPackage {
 
@@ -18,7 +19,9 @@ public class ItemDefinitionData extends DataPackage {
      * a pocket carries the box of walls its space is shown in, drawn only in
      * the inventory's menus. A tool names the tool type it is and the highest
      * break tier it can break; a stackable item holds up to its stack size in
-     * one item; a block piece names the block it builds. Owned by
+     * one item; a block piece names the block it builds. An item may carry
+     * actions that turn it into another item where it stands, and may be
+     * picked up as another item, as an open door is picked up shut. Owned by
      * ItemDefinitionHandle for the engine lifetime.
      */
 
@@ -61,6 +64,10 @@ public class ItemDefinitionData extends DataPackage {
     // Block — the block a block piece builds, BLOCK_PIECE_NONE for every other item
     private final short blockID;
 
+    // Actions
+    private final ObjectArrayList<ItemActionStruct> actions;
+    private final String pickUpAsName;
+
     // Constructor \\
 
     public ItemDefinitionData(
@@ -84,7 +91,9 @@ public class ItemDefinitionData extends DataPackage {
             short toolTypeID,
             int toolTier,
             int stackSize,
-            short blockID) {
+            short blockID,
+            ObjectArrayList<ItemActionStruct> actions,
+            String pickUpAsName) {
 
         // Identity
         this.itemName = itemName;
@@ -124,6 +133,10 @@ public class ItemDefinitionData extends DataPackage {
 
         // Block
         this.blockID = blockID;
+
+        // Actions
+        this.actions = actions;
+        this.pickUpAsName = pickUpAsName;
     }
 
     // Accessible \\
@@ -230,5 +243,17 @@ public class ItemDefinitionData extends DataPackage {
 
     public boolean isBlockPiece() {
         return blockID != EngineSetting.BLOCK_PIECE_NONE;
+    }
+
+    public ObjectArrayList<ItemActionStruct> getActions() {
+        return actions;
+    }
+
+    public boolean isPickedUpAsOther() {
+        return !pickUpAsName.equals(EngineSetting.ITEM_PICK_UP_AS_SELF);
+    }
+
+    public String getPickUpAsName() {
+        return pickUpAsName;
     }
 }

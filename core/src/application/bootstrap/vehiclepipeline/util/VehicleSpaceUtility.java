@@ -24,7 +24,8 @@ public class VehicleSpaceUtility extends EngineUtility {
      * rotation and shifts by its centre of mass, and comes back the other way.
      * The rotation matrix stores its columns first, so a column is a model
      * axis seen in world axes. Moving parts are posed in model blocks here
-     * too, so a part is drawn and struck exactly where it stands.
+     * too, so a part is drawn and struck exactly where it stands, and here a
+     * door that is not shut stops being solid to whatever moves through it.
      */
 
     // Offset \\
@@ -149,7 +150,8 @@ public class VehicleSpaceUtility extends EngineUtility {
     // Parts \\
 
     // Where a moving part stands in model blocks: a yard braced about its mast, a sail braced with it and gathered
-    // up toward its head as it is taken in, a wheel spun about its axle and a rudder swung about its hinge
+    // up toward its head as it is taken in, a wheel spun about its axle, a rudder swung about its hinge, a door
+    // swung about its hinge as far as it stands open and a portcullis lifted by as much of its height
     public static Matrix4 composePartMatrix(
             VehicleInstance vehicle,
             VehiclePartStruct part,
@@ -193,6 +195,27 @@ public class VehicleSpaceUtility extends EngineUtility {
                     turnScratch,
                     turnMatrix,
                     out);
+
+            case SWING -> composeTurn(
+                    part.getPivot(),
+                    part.getAxis(),
+                    part.getOpenAngle() * vehicle.getDoorOpening(part.getDoorIndex()),
+                    turnScratch,
+                    turnMatrix,
+                    out);
+
+            case LIFT -> out.set(
+                    1, 0, 0, 0,
+                    0, 1, 0, (part.getMaxY() - part.getMinY()) / (float) EngineSetting.SUB_VOXEL_RESOLUTION
+                            * vehicle.getDoorOpening(part.getDoorIndex()),
+                    0, 0, 1, 0,
+                    0, 0, 0, 1);
+
+            case DROP -> out.set(
+                    1, 0, 0, 0,
+                    0, 1, 0, vehicle.isAnchored() ? -vehicleHandle.getHandling().getAnchorDrop() : 0f,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1);
 
             default -> out.set(1f);
         }
@@ -244,9 +267,25 @@ public class VehicleSpaceUtility extends EngineUtility {
                         0, 0, 0, 1);
     }
 
-    // Whether a part is drawn now — an anchor only while it is aboard
+    // Whether a part is drawn now — an anchor cable only while the anchor is down
     public static boolean isPartShown(VehicleInstance vehicle, VehiclePartStruct part) {
-        return part.getRole().getMotion() != VehiclePartMotion.STOWED || !vehicle.isAnchored();
+        return part.getRole().getMotion() != VehiclePartMotion.PAYOUT || vehicle.isAnchored();
+    }
+
+    // Solid \\
+
+    // Whether a model sub-voxel stops riders and cargo now — a door stops nothing once it starts to open
+    public static boolean isSolid(VehicleInstance vehicle, int x, int y, int z) {
+
+        int partIndex = vehicle.getVehicleHandle().getSolidGrid().getPart(x, y, z);
+
+        return partIndex != EngineSetting.INDEX_NOT_FOUND
+                && !isPartOpen(vehicle, vehicle.getVehicleHandle().getPart(partIndex));
+    }
+
+    // Whether a part is a door that is not shut
+    public static boolean isPartOpen(VehicleInstance vehicle, VehiclePartStruct part) {
+        return part.isDoor() && vehicle.getDoorOpening(part.getDoorIndex()) > 0f;
     }
 
     // Matrix \\

@@ -758,7 +758,7 @@ public class EngineSetting {
     // Ocean Hulls
     public static final int OCEAN_HULL_HEADER_VECTORS = 4;
     public static final int OCEAN_HULL_MAX_ENTRIES = 4;
-    public static final int OCEAN_HULL_STATIONS = 8;
+    public static final int OCEAN_HULL_STATIONS = 16;
     public static final int OCEAN_HULL_VECTORS_PER_ENTRY = OCEAN_HULL_HEADER_VECTORS
             + OCEAN_HULL_STATIONS / VECTOR4_COMPONENT_COUNT;
 
@@ -1124,6 +1124,10 @@ public class EngineSetting {
     public static final float PROJECTILE_BOUNCE_FRICTION = 0.6f;
     public static final float PROJECTILE_BOUNCE_RESTITUTION = 0.25f;
     public static final float PROJECTILE_BOUNCE_SPIN_DAMPING = 0.5f;
+    public static final float PROJECTILE_BREAK_MOMENTUM_PER_DURABILITY = 40f;
+    public static final float PROJECTILE_DEBRIS_SCATTER = 3f;
+    public static final float PROJECTILE_DEBRIS_SPEED_SHARE = 0.4f;
+    public static final float PROJECTILE_DEBRIS_SPIN_RATE = 9f;
     public static final float PROJECTILE_LAND_SPEED = 2.5f;
     public static final float PROJECTILE_LIQUID_DRAG = 3f;
     public static final float PROJECTILE_MAX_FLIGHT_SECONDS = 20f;
@@ -1137,9 +1141,11 @@ public class EngineSetting {
     // Vehicles
     public static final float VEHICLE_AIR_DENSITY = 0.001225f;
     public static final int VEHICLE_BRACE_SAMPLES = 13;
+    public static final float VEHICLE_DOOR_SWING_SECONDS = 0.5f;
     public static final float VEHICLE_DOWNFLOOD_UPRIGHTNESS = 0.75f;
     public static final float VEHICLE_DRAG_LINEAR_SPEED = 0.5f;
     public static final float VEHICLE_DRY_FLOOD_LIMIT = 0.5f;
+    public static final String VEHICLE_ITEM_MATERIAL = "items/VehicleItemMaterial";
     public static final float VEHICLE_MAX_SPEED = 30f;
     public static final float VEHICLE_MAX_SPIN = 3f;
     public static final float VEHICLE_PUMP_UPRIGHTNESS = 0.85f;
@@ -1155,7 +1161,7 @@ public class EngineSetting {
     public static final int VEHICLE_COLUMN_SUB_VOXELS = 32;
     public static final int VEHICLE_CONTACT_LAYER_STEP = 4;
     public static final int VEHICLE_DRY_CELL_SUB_VOXELS = 8;
-    public static final int VEHICLE_HULL_MASK_BAND_CELLS = 4;
+    public static final int VEHICLE_HULL_MASK_BAND_CELLS = 2;
     public static final float VEHICLE_PITCH_GYRATION_RATIO = 0.26f;
     public static final float VEHICLE_ROLL_GYRATION_RATIO = 0.38f;
     public static final float VEHICLE_YAW_GYRATION_RATIO = 0.27f;
@@ -1176,9 +1182,11 @@ public class EngineSetting {
     public static final float VEHICLE_RIDER_REACH = 2f;
 
     // Vehicle Defaults
+    public static final float DEFAULT_VEHICLE_ANCHOR_DROP = 6f;
     public static final float DEFAULT_VEHICLE_ANCHOR_HOLD = 0.6f;
     public static final float DEFAULT_VEHICLE_BRACE_LIMIT_DEGREES = 50f;
     public static final float DEFAULT_VEHICLE_BRACE_RATE_DEGREES = 8f;
+    public static final float DEFAULT_VEHICLE_DOOR_OPEN_DEGREES = 90f;
     public static final float DEFAULT_VEHICLE_FLOOD_RATE = 0.06f;
     public static final float DEFAULT_VEHICLE_HEAVE_DRAG = 0.4f;
     public static final float DEFAULT_VEHICLE_HOIST_SECONDS = 6f;
@@ -1209,6 +1217,11 @@ public class EngineSetting {
     public static final String ITEM_TOOL_NONE = "";
     public static final int MAX_ITEM_STACK_SIZE = 512;
 
+    // Item Actions
+    public static final String ITEM_ACTION_FIRE_NONE = "";
+    public static final String ITEM_ACTION_HELD_ANY = "";
+    public static final String ITEM_PICK_UP_AS_SELF = "";
+
     // Tools
     public static final int DEFAULT_TOOL_TIER = 0;
     public static final short TOOL_NONE = 0;
@@ -1228,6 +1241,7 @@ public class EngineSetting {
     public static final String ITEM_CATEGORY_TITLE_CLOTHING = "Clothing";
     public static final String ITEM_CATEGORY_TITLE_CONSUMABLE = "Consumables";
     public static final String ITEM_CATEGORY_TITLE_CONTAINER = "Containers";
+    public static final String ITEM_CATEGORY_TITLE_FURNITURE = "Furniture";
     public static final String ITEM_CATEGORY_TITLE_JEWELRY = "Jewelry";
     public static final String ITEM_CATEGORY_TITLE_MATERIAL = "Materials";
     public static final String ITEM_CATEGORY_TITLE_MISC = "Miscellaneous";
@@ -1260,12 +1274,11 @@ public class EngineSetting {
     public static final float SUB_VOXEL_IMPORT_RAY_Y = 0.0137f;
     public static final float SUB_VOXEL_IMPORT_RAY_Z = 0.0071f;
     public static final int SUB_VOXEL_MAX_PARTS = 255;
+    public static final int SUB_VOXEL_MAX_MODEL_BLOCKS = 8;
     public static final String SUB_VOXEL_VAO = "util/vao/ItemVAO";
     public static final int SUB_VOXEL_UV_BOUNDS_FLOATS = 4;
     public static final int SUB_VOXEL_VERTEX_STRIDE = 6;
     public static final int SUB_VOXEL_AXIS_COUNT = 3;
-    public static final int SUB_VOXEL_WALL_COUNT = SUB_VOXEL_AXIS_COUNT * (SUB_VOXEL_RESOLUTION + 1)
-            * SUB_VOXEL_RESOLUTION * SUB_VOXEL_RESOLUTION;
     public static final float SUB_VOXEL_WALL_EDGE_SNAP = 0.25f;
     public static final String[] SUB_VOXEL_WALL_AXIS_KEYS = { "x", "y", "z" };
 

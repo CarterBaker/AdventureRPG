@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.worlditemmanager;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
+import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.physicspipeline.util.SubBlockSampleUtility;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -30,10 +31,13 @@ public class WorldItemSpaceSystem extends SystemPackage {
     /*
      * The one place world item space is queried. A placed item claims the
      * sub-voxel cells of its shape, turned by its orientation inside the
-     * one-block model grid cornered at its packed position, and carries the
-     * rough box around them; an open container also claims its lid's clearance.
+     * model grid cornered at its packed position, and carries the rough box
+     * around them; an open container also claims its lid's clearance. Items
+     * are found by the block their corner lies in, searched as far around a
+     * block as the farthest-reaching registered item can reach.
      * fits() decides whether a shape may stand somewhere — inside the world,
-     * clear of solid blocks and sub-blocks and of every claimed cell — and
+     * clear of solid blocks and sub-blocks and of every claimed cell, save
+     * those of an item it would replace — and
      * resolvePlacement() sets a shape flush on a face and pushes it out until
      * it fits, as resolveCornerPlacement() does from a given corner.
      * isRegionClaimed() keeps blocks out of items, isLidClear() decides whether
@@ -49,6 +53,7 @@ public class WorldItemSpaceSystem extends SystemPackage {
     // Internal
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
+    private ItemDefinitionManager itemDefinitionManager;
     private ItemRotationBufferSystem itemRotationBufferSystem;
 
     // Settings
@@ -149,13 +154,15 @@ public class WorldItemSpaceSystem extends SystemPackage {
         // Internal
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
     }
 
-    // A one-block shape spans at most three sub-blocks on an axis, wherever its corner falls
+    // The sub-blocks the largest shape can span on an axis, turned any way and wherever its corner falls
     private int countSolidCells() {
 
-        int span = resolution / subVoxelsPerSubBlock + 1;
+        int modelSize = EngineSetting.SUB_VOXEL_MAX_MODEL_BLOCKS * resolution;
+        int span = (2 * modelSize - resolution) / subVoxelsPerSubBlock + 1;
 
         return span * span * span;
     }
@@ -213,7 +220,8 @@ public class WorldItemSpaceSystem extends SystemPackage {
 
     // Fit \\
 
-    // True when the turned shape cornered here, in the frame chunk's sub-voxels, claims nothing already taken
+    // True when the turned shape cornered here, in the frame chunk's sub-voxels, claims nothing already taken but by
+    // the item it would replace, which may be null
     public boolean fits(
             WorldHandle world,
             long frameChunk,
@@ -221,7 +229,8 @@ public class WorldItemSpaceSystem extends SystemPackage {
             int orientation,
             int cornerX,
             int cornerY,
-            int cornerZ) {
+            int cornerZ,
+            WorldItemInstance replaced) {
 
         ItemShapeStruct shape = itemDefinitionHandle.getShape();
 
@@ -248,7 +257,7 @@ public class WorldItemSpaceSystem extends SystemPackage {
             int y = cornerY + itemRotationBufferSystem.rotateCell(orientation, axisY, gridX, gridY, gridZ);
             int z = cornerZ + itemRotationBufferSystem.rotateCell(orientation, axisZ, gridX, gridY, gridZ);
 
-            if (isSampledSolid(x, y, z) || isCellTaken(x, y, z, null))
+            if (isSampledSolid(x, y, z) || isCellTaken(x, y, z, replaced))
                 return false;
         }
 
@@ -312,7 +321,7 @@ public class WorldItemSpaceSystem extends SystemPackage {
             int cornerY = baseY + push.y * step;
             int cornerZ = baseZ + push.z * step;
 
-            if (!fits(world, frameChunk, itemDefinitionHandle, orientation, cornerX, cornerY, cornerZ))
+            if (!fits(world, frameChunk, itemDefinitionHandle, orientation, cornerX, cornerY, cornerZ, null))
                 continue;
 
             int chunkOffsetX = Math.floorDiv(cornerX, chunkSpan);
@@ -670,9 +679,11 @@ public class WorldItemSpaceSystem extends SystemPackage {
         int top = 0;
         int columnMinX = blockX * resolution;
         int columnMinZ = blockZ * resolution;
+        int reachBefore = itemDefinitionManager.getMaxReachBefore();
+        int reachAfter = itemDefinitionManager.getMaxReachAfter();
 
-        for (int cornerZ = blockZ - 1; cornerZ <= blockZ; cornerZ++)
-            for (int cornerX = blockX - 1; cornerX <= blockX; cornerX++) {
+        for (int cornerZ = blockZ - reachAfter; cornerZ <= blockZ + reachBefore; cornerZ++)
+            for (int cornerX = blockX - reachAfter; cornerX <= blockX + reachBefore; cornerX++) {
 
                 int chunkOffsetX = Math.floorDiv(cornerX, chunkSize);
                 int chunkOffsetZ = Math.floorDiv(cornerZ, chunkSize);
@@ -747,7 +758,7 @@ public class WorldItemSpaceSystem extends SystemPackage {
         return queryComplete;
     }
 
-    // Every item able to reach a block in the range — its corner lies in that block or the one before on each axis
+    // Every item able to reach a block in the range — its corner lies within the farthest reach of it on each axis
     private void collect(
             WorldHandle world,
             long frameChunk,
@@ -758,19 +769,23 @@ public class WorldItemSpaceSystem extends SystemPackage {
             int maxBlockY,
             int maxBlockZ) {
 
-        int firstX = minBlockX - 1;
-        int firstZ = minBlockZ - 1;
-        int firstY = Math.max(minBlockY - 1, 0);
-        int lastY = Math.min(maxBlockY, worldTopBlock - 1);
+        int reachBefore = itemDefinitionManager.getMaxReachBefore();
+        int reachAfter = itemDefinitionManager.getMaxReachAfter();
+        int firstX = minBlockX - reachAfter;
+        int firstZ = minBlockZ - reachAfter;
+        int lastX = maxBlockX + reachBefore;
+        int lastZ = maxBlockZ + reachBefore;
+        int firstY = Math.max(minBlockY - reachAfter, 0);
+        int lastY = Math.min(maxBlockY + reachBefore, worldTopBlock - 1);
 
         if (firstY > lastY)
             return;
 
         for (int chunkOffsetZ = Math.floorDiv(firstZ, chunkSize);
-                chunkOffsetZ <= Math.floorDiv(maxBlockZ, chunkSize);
+                chunkOffsetZ <= Math.floorDiv(lastZ, chunkSize);
                 chunkOffsetZ++)
             for (int chunkOffsetX = Math.floorDiv(firstX, chunkSize);
-                    chunkOffsetX <= Math.floorDiv(maxBlockX, chunkSize);
+                    chunkOffsetX <= Math.floorDiv(lastX, chunkSize);
                     chunkOffsetX++) {
 
                 WorldItemInstancePaletteHandle palette = findCommittedPalette(
@@ -787,9 +802,9 @@ public class WorldItemSpaceSystem extends SystemPackage {
                 int baseX = chunkOffsetX * chunkSize;
                 int baseZ = chunkOffsetZ * chunkSize;
                 int fromX = Math.max(firstX - baseX, 0);
-                int toX = Math.min(maxBlockX - baseX, chunkSize - 1);
+                int toX = Math.min(lastX - baseX, chunkSize - 1);
                 int fromZ = Math.max(firstZ - baseZ, 0);
-                int toZ = Math.min(maxBlockZ - baseZ, chunkSize - 1);
+                int toZ = Math.min(lastZ - baseZ, chunkSize - 1);
 
                 for (int blockZ = fromZ; blockZ <= toZ; blockZ++)
                     for (int blockX = fromX; blockX <= toX; blockX++)

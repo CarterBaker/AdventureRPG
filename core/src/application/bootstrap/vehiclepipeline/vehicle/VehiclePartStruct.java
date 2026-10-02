@@ -13,8 +13,9 @@ public class VehiclePartStruct extends StructPackage {
      * One named part of a vehicle: its role, the texture its sub-voxels draw
      * with, the boxes of sub-voxels it fills in the vehicle's model grid and
      * the bounds around them. A part that moves keeps its pivot in model
-     * blocks, its axle where it has one, the mast, yard or sail it belongs
-     * to once VehicleBuilder links it, and the meshes it is drawn with. The
+     * blocks, its axle or hinge where it has one, how far it swings open, the
+     * mast, yard, sail or door it belongs to once VehicleBuilder links it, and
+     * the meshes it is drawn with. The
      * control a part works is its own when it is one, or the one it is a
      * fitting of, so a hand on a wheel's stand takes the wheel.
      * Boxes are six ints each, minimum inclusive and maximum exclusive.
@@ -29,11 +30,13 @@ public class VehiclePartStruct extends StructPackage {
     // Pivot
     private final Vector3 pivot;
     private final int axis;
+    private final float openAngle;
 
     // Links
     private int mastIndex;
     private int yardIndex;
     private int sailIndex;
+    private int doorIndex;
     private int controlIndex;
 
     // Boxes
@@ -56,7 +59,8 @@ public class VehiclePartStruct extends StructPackage {
             String textureName,
             String linkName,
             Vector3 pivot,
-            int axis) {
+            int axis,
+            float openAngle) {
 
         // Identity
         this.partName = partName;
@@ -67,11 +71,13 @@ public class VehiclePartStruct extends StructPackage {
         // Pivot
         this.pivot = pivot;
         this.axis = axis;
+        this.openAngle = openAngle;
 
         // Links
         this.mastIndex = EngineSetting.INDEX_NOT_FOUND;
         this.yardIndex = EngineSetting.INDEX_NOT_FOUND;
         this.sailIndex = EngineSetting.INDEX_NOT_FOUND;
+        this.doorIndex = EngineSetting.INDEX_NOT_FOUND;
         this.controlIndex = EngineSetting.INDEX_NOT_FOUND;
 
         // Boxes
@@ -129,6 +135,10 @@ public class VehiclePartStruct extends StructPackage {
         this.sailIndex = sailIndex;
     }
 
+    public void setDoorIndex(int doorIndex) {
+        this.doorIndex = doorIndex;
+    }
+
     public void setControlIndex(int controlIndex) {
         this.controlIndex = controlIndex;
     }
@@ -169,6 +179,11 @@ public class VehiclePartStruct extends StructPackage {
         return axis;
     }
 
+    // The angle in radians a swinging part turns through as it opens, signed by the way it turns
+    public float getOpenAngle() {
+        return openAngle;
+    }
+
     public int getMastIndex() {
         return mastIndex;
     }
@@ -179,6 +194,15 @@ public class VehiclePartStruct extends StructPackage {
 
     public int getSailIndex() {
         return sailIndex;
+    }
+
+    // The door this part opens and shuts as, INDEX_NOT_FOUND when it is none
+    public int getDoorIndex() {
+        return doorIndex;
+    }
+
+    public boolean isDoor() {
+        return doorIndex != EngineSetting.INDEX_NOT_FOUND;
     }
 
     // The part whose control this part works, INDEX_NOT_FOUND when it works none

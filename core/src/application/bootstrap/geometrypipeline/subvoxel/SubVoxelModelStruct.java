@@ -7,14 +7,23 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class SubVoxelModelStruct extends StructPackage {
 
     /*
-     * A model of tiny cubes and flat walls on the SUB_VOXEL_RESOLUTION grid
-     * inside one block. Each cell stores its one-based part index or
-     * SUB_VOXEL_EMPTY_CELL. A wall is one double-sided sub-voxel square lying
-     * on a grid plane: it is addressed by the axis it faces along and a
-     * position whose coordinate on that axis is the plane, from 0 to the
-     * resolution, and whose other two are the cell it covers. Every generated
-     * vertex lands exactly on a sub-voxel boundary.
+     * A model of tiny cubes and flat walls on the SUB_VOXEL_RESOLUTION grid,
+     * one block by default and up to SUB_VOXEL_MAX_MODEL_BLOCKS on each axis,
+     * so furniture keeps its real size. Each cell stores its one-based part
+     * index or SUB_VOXEL_EMPTY_CELL. A wall is one double-sided sub-voxel
+     * square lying on a grid plane: it is addressed by the axis it faces along
+     * and a position whose coordinate on that axis is the plane, from 0 to the
+     * model's size, and whose other two are the cell it covers. Every
+     * generated vertex lands exactly on a sub-voxel boundary.
      */
+
+    // Size — in blocks, and in sub-voxel cells
+    private final int blocksX;
+    private final int blocksY;
+    private final int blocksZ;
+    private final int sizeX;
+    private final int sizeY;
+    private final int sizeZ;
 
     // Parts
     private final ObjectArrayList<SubVoxelPartStruct> parts;
@@ -28,18 +37,48 @@ public class SubVoxelModelStruct extends StructPackage {
     // Constructor \\
 
     public SubVoxelModelStruct() {
+        this(1, 1, 1);
+    }
+
+    public SubVoxelModelStruct(int blocksX, int blocksY, int blocksZ) {
+
+        int maxBlocks = EngineSetting.SUB_VOXEL_MAX_MODEL_BLOCKS;
+
+        if (blocksX < 1 || blocksY < 1 || blocksZ < 1
+                || blocksX > maxBlocks || blocksY > maxBlocks || blocksZ > maxBlocks)
+            throwException("Sub-voxel model of " + blocksX + " x " + blocksY + " x " + blocksZ
+                    + " blocks is outside 1 to " + maxBlocks + " blocks on an axis.");
+
+        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+
+        // Size
+        this.blocksX = blocksX;
+        this.blocksY = blocksY;
+        this.blocksZ = blocksZ;
+        this.sizeX = blocksX * resolution;
+        this.sizeY = blocksY * resolution;
+        this.sizeZ = blocksZ * resolution;
 
         // Parts
         this.parts = new ObjectArrayList<>();
 
         // Cells
-        this.cells = new byte[EngineSetting.SUB_VOXEL_CELL_COUNT];
+        this.cells = new byte[sizeX * sizeY * sizeZ];
 
         // Walls
-        this.walls = new byte[EngineSetting.SUB_VOXEL_WALL_COUNT];
+        this.walls = new byte[(sizeX + 1) * sizeY * sizeZ + sizeX * (sizeY + 1) * sizeZ
+                + sizeX * sizeY * (sizeZ + 1)];
     }
 
     public SubVoxelModelStruct(SubVoxelModelStruct source) {
+
+        // Size
+        this.blocksX = source.blocksX;
+        this.blocksY = source.blocksY;
+        this.blocksZ = source.blocksZ;
+        this.sizeX = source.sizeX;
+        this.sizeY = source.sizeY;
+        this.sizeZ = source.sizeZ;
 
         // Parts
         this.parts = new ObjectArrayList<>(source.parts.size());
@@ -107,9 +146,7 @@ public class SubVoxelModelStruct extends StructPackage {
     // Cells \\
 
     public boolean isInside(int x, int y, int z) {
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        return x >= 0 && y >= 0 && z >= 0 && x < resolution && y < resolution && z < resolution;
+        return x >= 0 && y >= 0 && z >= 0 && x < sizeX && y < sizeY && z < sizeZ;
     }
 
     public boolean isFilled(int x, int y, int z) {
@@ -146,7 +183,6 @@ public class SubVoxelModelStruct extends StructPackage {
 
     public boolean isWallInside(int axis, int x, int y, int z) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         int[] position = { x, y, z };
 
         if (axis < 0 || axis >= EngineSetting.SUB_VOXEL_AXIS_COUNT)
@@ -154,7 +190,7 @@ public class SubVoxelModelStruct extends StructPackage {
 
         for (int i = 0; i < EngineSetting.SUB_VOXEL_AXIS_COUNT; i++) {
 
-            int limit = i == axis ? resolution : resolution - 1;
+            int limit = i == axis ? getSize(i) : getSize(i) - 1;
 
             if (position[i] < 0 || position[i] > limit)
                 return false;
@@ -214,22 +250,28 @@ public class SubVoxelModelStruct extends StructPackage {
     // Utility \\
 
     private int toCellIndex(int x, int y, int z) {
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        return x + resolution * (y + resolution * z);
+        return x + sizeX * (y + sizeY * z);
     }
 
-    // The plane coordinate runs fastest, then the two covered axes in the mesher's u, v order
+    // Each axis's walls follow the last axis's; the plane coordinate runs fastest, then the two covered axes in the
+    // mesher's u, v order
     private int toWallIndex(int axis, int x, int y, int z) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         int[] position = { x, y, z };
-        int plane = position[axis];
-        int u = position[(axis + 1) % EngineSetting.SUB_VOXEL_AXIS_COUNT];
-        int v = position[(axis + 2) % EngineSetting.SUB_VOXEL_AXIS_COUNT];
+        int uAxis = (axis + 1) % EngineSetting.SUB_VOXEL_AXIS_COUNT;
+        int vAxis = (axis + 2) % EngineSetting.SUB_VOXEL_AXIS_COUNT;
+        int base = 0;
 
-        return axis * (resolution + 1) * resolution * resolution
-                + plane + (resolution + 1) * (u + resolution * v);
+        for (int previous = 0; previous < axis; previous++)
+            base += countWalls(previous);
+
+        return base + position[axis]
+                + (getSize(axis) + 1) * (position[uAxis] + getSize(uAxis) * position[vAxis]);
+    }
+
+    private int countWalls(int axis) {
+        return (getSize(axis) + 1) * getSize((axis + 1) % EngineSetting.SUB_VOXEL_AXIS_COUNT)
+                * getSize((axis + 2) % EngineSetting.SUB_VOXEL_AXIS_COUNT);
     }
 
     private void verifyCell(int x, int y, int z) {
@@ -247,5 +289,45 @@ public class SubVoxelModelStruct extends StructPackage {
         if (!hasPart(partIndex))
             throwException("Sub-voxel part index " + partIndex + " does not exist — model has "
                     + parts.size() + " parts.");
+    }
+
+    // Accessible \\
+
+    public int getBlocksX() {
+        return blocksX;
+    }
+
+    public int getBlocksY() {
+        return blocksY;
+    }
+
+    public int getBlocksZ() {
+        return blocksZ;
+    }
+
+    // The model's size on an axis in blocks
+    public int getBlocks(int axis) {
+        return axis == EngineSetting.AXIS_X ? blocksX : axis == EngineSetting.AXIS_Y ? blocksY : blocksZ;
+    }
+
+    public int getSizeX() {
+        return sizeX;
+    }
+
+    public int getSizeY() {
+        return sizeY;
+    }
+
+    public int getSizeZ() {
+        return sizeZ;
+    }
+
+    // The model's size on an axis in sub-voxel cells
+    public int getSize(int axis) {
+        return axis == EngineSetting.AXIS_X ? sizeX : axis == EngineSetting.AXIS_Y ? sizeY : sizeZ;
+    }
+
+    public boolean isSingleBlock() {
+        return blocksX == 1 && blocksY == 1 && blocksZ == 1;
     }
 }

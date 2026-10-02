@@ -3,6 +3,7 @@ package application.bootstrap.itempipeline.itemdefinition;
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import engine.root.HandlePackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ItemDefinitionHandle extends HandlePackage {
 
@@ -139,5 +140,30 @@ public class ItemDefinitionHandle extends HandlePackage {
 
     public boolean isBlockPiece() {
         return itemDefinitionData.isBlockPiece();
+    }
+
+    // The first action answering this trigger with this item held, struck on this cell of the model grid — null when
+    // none does
+    public ItemActionStruct findAction(ItemActionTrigger trigger, String heldName, int gridX, int gridY, int gridZ) {
+
+        ObjectArrayList<ItemActionStruct> actions = itemDefinitionData.getActions();
+
+        for (int i = 0; i < actions.size(); i++)
+            if (actions.get(i).matches(trigger, heldName, gridX, gridY, gridZ))
+                return actions.get(i);
+
+        return null;
+    }
+
+    public boolean hasActions() {
+        return !itemDefinitionData.getActions().isEmpty();
+    }
+
+    public boolean isPickedUpAsOther() {
+        return itemDefinitionData.isPickedUpAsOther();
+    }
+
+    public String getPickUpAsName() {
+        return itemDefinitionData.getPickUpAsName();
     }
 }

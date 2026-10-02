@@ -32,7 +32,9 @@ class ProjectileFlightBranch extends BranchPackage {
      * swept against solid sub-blocks, against the solid sub-voxels and cargo
      * of every vehicle, and against every entity but its thrower; the first
      * entity in reach takes the item's thrown damage, once, and knocks it
-     * back. A block face reflects it with restitution and friction, and a
+     * back. A hard enough hit breaks the block it meets through
+     * ProjectileImpactBranch and it flies on, slowed by the break; otherwise
+     * a block face reflects it with restitution and friction, and a
      * slow enough fall onto the top of a block brings it to rest there; a
      * vehicle's face does the same as the vehicle moves under it, and a slow
      * enough fall onto its deck rests it on that vehicle.
@@ -46,6 +48,7 @@ class ProjectileFlightBranch extends BranchPackage {
     private RaycastManager raycastManager;
     private CombatManager combatManager;
     private VehicleCargoSystem vehicleCargoSystem;
+    private ProjectileImpactBranch projectileImpactBranch;
 
     // Scratch
     private BlockCastStruct castStruct;
@@ -53,6 +56,7 @@ class ProjectileFlightBranch extends BranchPackage {
     private Vector3 direction;
     private Vector3 normalScratch;
     private Vector3 modelScratch;
+    private Vector3 hitScratch;
     private Quaternion spinScratch;
 
     // Internal \\
@@ -66,6 +70,7 @@ class ProjectileFlightBranch extends BranchPackage {
         this.direction = new Vector3();
         this.normalScratch = new Vector3();
         this.modelScratch = new Vector3();
+        this.hitScratch = new Vector3();
         this.spinScratch = new Quaternion();
     }
 
@@ -78,6 +83,7 @@ class ProjectileFlightBranch extends BranchPackage {
         this.raycastManager = get(RaycastManager.class);
         this.combatManager = get(CombatManager.class);
         this.vehicleCargoSystem = get(VehicleCargoSystem.class);
+        this.projectileImpactBranch = get(ProjectileImpactBranch.class);
     }
 
     // Step \\
@@ -184,6 +190,13 @@ class ProjectileFlightBranch extends BranchPackage {
 
         if (!castStruct.isHit()) {
             position.add(direction.x * distance, direction.y * distance, direction.z * distance);
+            return;
+        }
+
+        hitScratch.set(position).add(direction.x * reach, direction.y * reach, direction.z * reach);
+
+        if (projectileImpactBranch.tryBreak(projectile, castStruct, hitScratch)) {
+            position.set(hitScratch);
             return;
         }
 

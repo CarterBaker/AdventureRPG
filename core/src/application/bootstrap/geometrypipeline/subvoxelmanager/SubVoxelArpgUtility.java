@@ -7,14 +7,19 @@ import engine.root.EngineUtility;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 class SubVoxelArpgUtility extends EngineUtility {
 
     /*
      * The single definition of the sub-voxel mesh format: a mesh ARPG file whose
-     * "subvoxels" block holds a resolution and named, textured parts, each
-     * listing its cubes as integer cells and, optionally, its double-sided
-     * walls grouped by the axis they face along. MeshBuilder parses through
+     * "subvoxels" block holds a resolution, its "size" in blocks when it spans
+     * more than one, and named, textured parts, each listing its cubes as
+     * inclusive "from"/"to" boxes of cells and, optionally, its double-sided
+     * walls as boxes lying on one plane, grouped by the axis they face along.
+     * Every model is written with its cubes and
+     * walls merged greedily into as few boxes as cover them exactly, so a file
+     * holds its shape rather than every cell of it. MeshBuilder parses through
      * here and editor tools read and write through here.
      */
 
@@ -36,7 +41,7 @@ class SubVoxelArpgUtility extends EngineUtility {
                     + EngineSetting.SUB_VOXEL_RESOLUTION + ".");
 
         ArpgArrayStruct partsArpg = ArpgUtility.validateArray(subVoxelArpg, "parts");
-        SubVoxelModelStruct model = new SubVoxelModelStruct();
+        SubVoxelModelStruct model = parseSize(subVoxelArpg);
 
         for (int i = 0; i < partsArpg.size(); i++)
             parsePart(model, partsArpg.get(i).getAsObject());
@@ -44,29 +49,47 @@ class SubVoxelArpgUtility extends EngineUtility {
         return model;
     }
 
+    // A model of the blocks its "size" gives on x, y and z, or one block when it gives none
+    private static SubVoxelModelStruct parseSize(ArpgObjectStruct subVoxelArpg) {
+
+        if (!ArpgUtility.hasArray(subVoxelArpg, "size"))
+            return new SubVoxelModelStruct();
+
+        ArpgArrayStruct sizeArpg = ArpgUtility.validateArray(subVoxelArpg, "size", EngineSetting.AXIS_COUNT);
+
+        return new SubVoxelModelStruct(
+                sizeArpg.get(EngineSetting.AXIS_X).getAsInt(),
+                sizeArpg.get(EngineSetting.AXIS_Y).getAsInt(),
+                sizeArpg.get(EngineSetting.AXIS_Z).getAsInt());
+    }
+
     private static void parsePart(SubVoxelModelStruct model, ArpgObjectStruct partArpg) {
 
         String partName = ArpgUtility.validateString(partArpg, "name");
         String textureName = ArpgUtility.validateString(partArpg, "texture");
-        ArpgArrayStruct cubesArpg = ArpgUtility.validateArray(partArpg, "cubes");
+        ArpgArrayStruct boxesArpg = ArpgUtility.validateArray(partArpg, "boxes");
         int partIndex = model.addPart(new SubVoxelPartStruct(partName, textureName));
+        int[] min = new int[EngineSetting.AXIS_COUNT];
+        int[] max = new int[EngineSetting.AXIS_COUNT];
 
-        for (int i = 0; i < cubesArpg.size(); i++) {
+        for (int i = 0; i < boxesArpg.size(); i++) {
 
-            ArpgArrayStruct cubeArpg = cubesArpg.get(i).getAsArray();
+            parseBox(boxesArpg.get(i).getAsObject(), min, max);
 
-            if (cubeArpg.size() != 3)
-                throwException("Sub-voxel cube in part '" + partName + "' must have exactly 3 coordinates.");
+            for (int z = min[EngineSetting.AXIS_Z]; z <= max[EngineSetting.AXIS_Z]; z++)
+                for (int y = min[EngineSetting.AXIS_Y]; y <= max[EngineSetting.AXIS_Y]; y++)
+                    for (int x = min[EngineSetting.AXIS_X]; x <= max[EngineSetting.AXIS_X]; x++) {
 
-            int x = cubeArpg.get(0).getAsInt();
-            int y = cubeArpg.get(1).getAsInt();
-            int z = cubeArpg.get(2).getAsInt();
+                        if (!model.isInside(x, y, z))
+                            throwException("Sub-voxel cell (" + x + ", " + y + ", " + z + ") in part '" + partName
+                                    + "' lies outside the model grid.");
 
-            if (model.isFilled(x, y, z))
-                throwException("Sub-voxel cell (" + x + ", " + y + ", " + z + ") in part '" + partName
-                        + "' is already owned by another cube.");
+                        if (model.isFilled(x, y, z))
+                            throwException("Sub-voxel cell (" + x + ", " + y + ", " + z + ") in part '"
+                                    + partName + "' is already owned by another cube.");
 
-            model.setCell(x, y, z, partIndex);
+                        model.setCell(x, y, z, partIndex);
+                    }
         }
 
         if (ArpgUtility.hasObject(partArpg, "walls"))
@@ -79,6 +102,9 @@ class SubVoxelArpgUtility extends EngineUtility {
             String partName,
             int partIndex) {
 
+        int[] min = new int[EngineSetting.AXIS_COUNT];
+        int[] max = new int[EngineSetting.AXIS_COUNT];
+
         for (int axis = 0; axis < EngineSetting.SUB_VOXEL_AXIS_COUNT; axis++) {
 
             String axisKey = EngineSetting.SUB_VOXEL_WALL_AXIS_KEYS[axis];
@@ -90,25 +116,55 @@ class SubVoxelArpgUtility extends EngineUtility {
 
             for (int i = 0; i < axisArpg.size(); i++) {
 
-                ArpgArrayStruct wallArpg = axisArpg.get(i).getAsArray();
+                parseBox(axisArpg.get(i).getAsObject(), min, max);
 
-                if (wallArpg.size() != 3)
-                    throwException("Sub-voxel wall in part '" + partName + "' must have exactly 3 coordinates.");
+                if (min[axis] != max[axis])
+                    throwException("Sub-voxel walls facing " + axisKey + " in part '" + partName
+                            + "' must lie on one plane, but span " + min[axis] + " to " + max[axis] + ".");
 
-                int x = wallArpg.get(0).getAsInt();
-                int y = wallArpg.get(1).getAsInt();
-                int z = wallArpg.get(2).getAsInt();
-
-                if (!model.isWallInside(axis, x, y, z))
-                    throwException("Sub-voxel wall (" + x + ", " + y + ", " + z + ") facing " + axisKey
-                            + " in part '" + partName + "' lies outside the model grid.");
-
-                if (model.hasWall(axis, x, y, z))
-                    throwException("Sub-voxel wall (" + x + ", " + y + ", " + z + ") facing " + axisKey
-                            + " in part '" + partName + "' is already owned by another wall.");
-
-                model.setWall(axis, x, y, z, partIndex);
+                for (int z = min[EngineSetting.AXIS_Z]; z <= max[EngineSetting.AXIS_Z]; z++)
+                    for (int y = min[EngineSetting.AXIS_Y]; y <= max[EngineSetting.AXIS_Y]; y++)
+                        for (int x = min[EngineSetting.AXIS_X]; x <= max[EngineSetting.AXIS_X]; x++)
+                            addWall(model, axis, x, y, z, partName, partIndex);
             }
+        }
+    }
+
+    private static void addWall(
+            SubVoxelModelStruct model,
+            int axis,
+            int x,
+            int y,
+            int z,
+            String partName,
+            int partIndex) {
+
+        String axisKey = EngineSetting.SUB_VOXEL_WALL_AXIS_KEYS[axis];
+
+        if (!model.isWallInside(axis, x, y, z))
+            throwException("Sub-voxel wall (" + x + ", " + y + ", " + z + ") facing " + axisKey
+                    + " in part '" + partName + "' lies outside the model grid.");
+
+        if (model.hasWall(axis, x, y, z))
+            throwException("Sub-voxel wall (" + x + ", " + y + ", " + z + ") facing " + axisKey
+                    + " in part '" + partName + "' is already owned by another wall.");
+
+        model.setWall(axis, x, y, z, partIndex);
+    }
+
+    // An inclusive "from"/"to" box, its corners sorted into the minimum and maximum given
+    private static void parseBox(ArpgObjectStruct boxArpg, int[] min, int[] max) {
+
+        ArpgArrayStruct from = ArpgUtility.validateArray(boxArpg, "from", EngineSetting.AXIS_COUNT);
+        ArpgArrayStruct to = ArpgUtility.validateArray(boxArpg, "to", EngineSetting.AXIS_COUNT);
+
+        for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++) {
+
+            int first = from.get(axis).getAsInt();
+            int second = to.get(axis).getAsInt();
+
+            min[axis] = Math.min(first, second);
+            max[axis] = Math.max(first, second);
         }
     }
 
@@ -131,34 +187,36 @@ class SubVoxelArpgUtility extends EngineUtility {
 
         ArpgObjectStruct subVoxelArpg = new ArpgObjectStruct();
         subVoxelArpg.addProperty("resolution", EngineSetting.SUB_VOXEL_RESOLUTION);
+
+        if (!model.isSingleBlock()) {
+
+            ArpgArrayStruct sizeArpg = new ArpgArrayStruct();
+
+            for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++)
+                sizeArpg.add(model.getBlocks(axis));
+
+            subVoxelArpg.add("size", sizeArpg);
+        }
+
         subVoxelArpg.add("parts", partsArpg);
         return subVoxelArpg;
     }
 
     private static ArpgObjectStruct toPartArpg(SubVoxelModelStruct model, int partIndex) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        int[] size = { model.getSizeX(), model.getSizeY(), model.getSizeZ() };
+        boolean[] members = new boolean[size[0] * size[1] * size[2]];
+
+        for (int z = 0; z < size[EngineSetting.AXIS_Z]; z++)
+            for (int y = 0; y < size[EngineSetting.AXIS_Y]; y++)
+                for (int x = 0; x < size[EngineSetting.AXIS_X]; x++)
+                    members[toIndex(size, x, y, z)] = model.getCellPart(x, y, z) == partIndex;
+
         SubVoxelPartStruct part = model.getPart(partIndex);
-        ArpgArrayStruct cubesArpg = new ArpgArrayStruct();
-
-        for (int z = 0; z < resolution; z++)
-            for (int y = 0; y < resolution; y++)
-                for (int x = 0; x < resolution; x++) {
-
-                    if (model.getCellPart(x, y, z) != partIndex)
-                        continue;
-
-                    ArpgArrayStruct cubeArpg = new ArpgArrayStruct();
-                    cubeArpg.add(x);
-                    cubeArpg.add(y);
-                    cubeArpg.add(z);
-                    cubesArpg.add(cubeArpg);
-                }
-
         ArpgObjectStruct partArpg = new ArpgObjectStruct();
         partArpg.addProperty("name", part.getPartName());
         partArpg.addProperty("texture", part.getTextureName());
-        partArpg.add("cubes", cubesArpg);
+        partArpg.add("boxes", toBoxesArpg(mergeBoxes(members, size, EngineSetting.INDEX_NOT_FOUND)));
 
         ArpgObjectStruct wallsArpg = toWallsArpg(model, partIndex);
 
@@ -170,31 +228,144 @@ class SubVoxelArpgUtility extends EngineUtility {
 
     private static ArpgObjectStruct toWallsArpg(SubVoxelModelStruct model, int partIndex) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         ArpgObjectStruct wallsArpg = new ArpgObjectStruct();
 
         for (int axis = 0; axis < EngineSetting.SUB_VOXEL_AXIS_COUNT; axis++) {
 
-            ArpgArrayStruct axisArpg = new ArpgArrayStruct();
+            int[] size = { model.getSizeX(), model.getSizeY(), model.getSizeZ() };
+            size[axis]++;
+            boolean[] members = new boolean[size[0] * size[1] * size[2]];
+            boolean any = false;
 
-            for (int z = 0; z <= resolution; z++)
-                for (int y = 0; y <= resolution; y++)
-                    for (int x = 0; x <= resolution; x++) {
+            for (int z = 0; z < size[EngineSetting.AXIS_Z]; z++)
+                for (int y = 0; y < size[EngineSetting.AXIS_Y]; y++)
+                    for (int x = 0; x < size[EngineSetting.AXIS_X]; x++) {
 
-                        if (model.getWallPart(axis, x, y, z) != partIndex)
-                            continue;
+                        boolean member = model.getWallPart(axis, x, y, z) == partIndex;
 
-                        ArpgArrayStruct wallArpg = new ArpgArrayStruct();
-                        wallArpg.add(x);
-                        wallArpg.add(y);
-                        wallArpg.add(z);
-                        axisArpg.add(wallArpg);
+                        members[toIndex(size, x, y, z)] = member;
+                        any |= member;
                     }
 
-            if (!axisArpg.isEmpty())
-                wallsArpg.add(EngineSetting.SUB_VOXEL_WALL_AXIS_KEYS[axis], axisArpg);
+            if (any)
+                wallsArpg.add(EngineSetting.SUB_VOXEL_WALL_AXIS_KEYS[axis],
+                        toBoxesArpg(mergeBoxes(members, size, axis)));
         }
 
         return wallsArpg;
+    }
+
+    private static ArpgArrayStruct toBoxesArpg(IntArrayList boxes) {
+
+        ArpgArrayStruct boxesArpg = new ArpgArrayStruct();
+
+        for (int box = 0; box < boxes.size(); box += EngineSetting.BOX_INT_STRIDE) {
+
+            ArpgArrayStruct from = new ArpgArrayStruct();
+            ArpgArrayStruct to = new ArpgArrayStruct();
+
+            for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++) {
+                from.add(boxes.getInt(box + EngineSetting.BOX_MIN_X + axis));
+                to.add(boxes.getInt(box + EngineSetting.BOX_MAX_X + axis));
+            }
+
+            ArpgObjectStruct boxArpg = new ArpgObjectStruct();
+            boxArpg.add("from", from);
+            boxArpg.add("to", to);
+            boxesArpg.add(boxArpg);
+        }
+
+        return boxesArpg;
+    }
+
+    // Merge \\
+
+    // Every member covered by as few boxes as a greedy sweep finds, each grown along x, then y, then z, and written
+    // as an inclusive minimum and maximum, six ints a box; the locked axis never grows, so walls keep to their plane
+    private static IntArrayList mergeBoxes(boolean[] members, int[] size, int lockedAxis) {
+
+        IntArrayList boxes = new IntArrayList();
+        boolean[] covered = new boolean[members.length];
+        int[] min = new int[EngineSetting.AXIS_COUNT];
+        int[] max = new int[EngineSetting.AXIS_COUNT];
+
+        for (int z = 0; z < size[EngineSetting.AXIS_Z]; z++)
+            for (int y = 0; y < size[EngineSetting.AXIS_Y]; y++)
+                for (int x = 0; x < size[EngineSetting.AXIS_X]; x++) {
+
+                    int index = toIndex(size, x, y, z);
+
+                    if (!members[index] || covered[index])
+                        continue;
+
+                    min[EngineSetting.AXIS_X] = x;
+                    min[EngineSetting.AXIS_Y] = y;
+                    min[EngineSetting.AXIS_Z] = z;
+                    max[EngineSetting.AXIS_X] = x;
+                    max[EngineSetting.AXIS_Y] = y;
+                    max[EngineSetting.AXIS_Z] = z;
+
+                    for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++)
+                        while (axis != lockedAxis && canGrow(members, covered, size, min, max, axis))
+                            max[axis]++;
+
+                    cover(covered, size, min, max);
+
+                    for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++)
+                        boxes.add(min[axis]);
+
+                    for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++)
+                        boxes.add(max[axis]);
+                }
+
+        return boxes;
+    }
+
+    // True when the whole layer just past the box along the axis is made of members not yet covered
+    private static boolean canGrow(
+            boolean[] members,
+            boolean[] covered,
+            int[] size,
+            int[] min,
+            int[] max,
+            int axis) {
+
+        int layer = max[axis] + 1;
+
+        if (layer >= size[axis])
+            return false;
+
+        int[] cell = new int[EngineSetting.AXIS_COUNT];
+
+        for (int z = min[EngineSetting.AXIS_Z]; z <= max[EngineSetting.AXIS_Z]; z++)
+            for (int y = min[EngineSetting.AXIS_Y]; y <= max[EngineSetting.AXIS_Y]; y++)
+                for (int x = min[EngineSetting.AXIS_X]; x <= max[EngineSetting.AXIS_X]; x++) {
+
+                    cell[EngineSetting.AXIS_X] = x;
+                    cell[EngineSetting.AXIS_Y] = y;
+                    cell[EngineSetting.AXIS_Z] = z;
+                    cell[axis] = layer;
+
+                    int index = toIndex(size, cell[0], cell[1], cell[2]);
+
+                    if (!members[index] || covered[index])
+                        return false;
+                }
+
+        return true;
+    }
+
+    private static void cover(boolean[] covered, int[] size, int[] min, int[] max) {
+
+        for (int z = min[EngineSetting.AXIS_Z]; z <= max[EngineSetting.AXIS_Z]; z++)
+            for (int y = min[EngineSetting.AXIS_Y]; y <= max[EngineSetting.AXIS_Y]; y++)
+                for (int x = min[EngineSetting.AXIS_X]; x <= max[EngineSetting.AXIS_X]; x++)
+                    covered[toIndex(size, x, y, z)] = true;
+    }
+
+    // Utility \\
+
+    private static int toIndex(int[] size, int x, int y, int z) {
+        return x + size[EngineSetting.AXIS_X] * (y + size[EngineSetting.AXIS_Y] * z);
     }
 }

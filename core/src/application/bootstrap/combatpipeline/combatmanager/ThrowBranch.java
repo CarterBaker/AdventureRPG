@@ -83,6 +83,7 @@ class ThrowBranch extends BranchPackage {
         projectileManager.launch(
                 entity,
                 itemInstance,
+                entity.getWorldPositionStruct().getChunkCoordinate(),
                 eye,
                 velocity,
                 spinAxis,

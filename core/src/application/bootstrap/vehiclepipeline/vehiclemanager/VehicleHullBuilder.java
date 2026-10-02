@@ -26,8 +26,10 @@ class VehicleHullBuilder extends BuilderPackage {
      * that displacement at the height the data sets, so it floats level at its
      * draft. Inertia follows from the dry volume's length and
      * beam. Contact points are the bottom of every column and the hull's ends
-     * every few layers, and the waterline mask samples the narrowest inner
-     * half-beam around the design waterline at stations along the length.
+     * every few layers, and the waterline mask samples the narrowest
+     * half-beam around the design waterline at stations along the length,
+     * out to the hull's outside less one dry cell so it never reaches past
+     * the planking yet keeps the sea off the inside of every wall.
      */
 
     // Settings
@@ -568,34 +570,34 @@ class VehicleHullBuilder extends BuilderPackage {
                 centerZ };
     }
 
-    // The least room either side of the centre line inside the hull, over every cell column and layer of a station
+    // The least room either side of the centre line out to the hull's outside, short by the dry cell its planking
+    // may only partly fill, over every cell column and layer of a station
     private float resolveStationHalfBeam(int firstX, int lastX, int firstLayer, int lastLayer, float centerZ) {
 
+        float cellBlocks = (float) cellSize / resolution;
         float halfBeam = Float.MAX_VALUE;
 
         for (int x = firstX; x <= lastX; x++)
             for (int y = firstLayer; y <= lastLayer; y++) {
 
-                int innerMin = Integer.MAX_VALUE;
-                int innerMax = Integer.MIN_VALUE;
+                int outerMin = Integer.MAX_VALUE;
+                int outerMax = Integer.MIN_VALUE;
 
                 for (int z = 0; z < cellsZ; z++) {
 
-                    int index = toCellIndex(x, y, z);
-
-                    if (!dry[index] || walls[index])
+                    if (!dry[toCellIndex(x, y, z)])
                         continue;
 
-                    innerMin = Math.min(innerMin, z);
-                    innerMax = Math.max(innerMax, z);
+                    outerMin = Math.min(outerMin, z);
+                    outerMax = Math.max(outerMax, z);
                 }
 
-                if (innerMin == Integer.MAX_VALUE)
+                if (outerMin == Integer.MAX_VALUE)
                     return 0f;
 
                 halfBeam = Math.min(halfBeam, Math.min(
-                        centerZ - toBlocks(originZ, innerMin),
-                        toBlocks(originZ, innerMax + 1) - centerZ));
+                        centerZ - toBlocks(originZ, outerMin),
+                        toBlocks(originZ, outerMax + 1) - centerZ) - cellBlocks);
             }
 
         return Math.max(0f, halfBeam);

@@ -11,7 +11,8 @@ public class VehicleHandlingStruct extends StructPackage {
      * how fast the crew pumps it out again; how hard its sails pull, how far
      * and how fast its yards brace and how fast a sail is set or taken in; how
      * far and how fast its rudder swings and how hard it bites; and how firmly
-     * its anchor holds. Angles are radians.
+     * its anchor holds and how far below its cathead it hangs once dropped,
+     * in blocks. Angles are radians.
      */
 
     // Hull
@@ -34,6 +35,7 @@ public class VehicleHandlingStruct extends StructPackage {
 
     // Anchor
     private final float anchorHold;
+    private final float anchorDrop;
 
     // Constructor \\
 
@@ -50,7 +52,8 @@ public class VehicleHandlingStruct extends StructPackage {
             float rudderLimit,
             float rudderRate,
             float rudderForce,
-            float anchorHold) {
+            float anchorHold,
+            float anchorDrop) {
 
         // Hull
         this.surgeDrag = surgeDrag;
@@ -72,6 +75,7 @@ public class VehicleHandlingStruct extends StructPackage {
 
         // Anchor
         this.anchorHold = anchorHold;
+        this.anchorDrop = anchorDrop;
     }
 
     // Accessible \\
@@ -126,5 +130,9 @@ public class VehicleHandlingStruct extends StructPackage {
 
     public float getAnchorHold() {
         return anchorHold;
+    }
+
+    public float getAnchorDrop() {
+        return anchorDrop;
     }
 }

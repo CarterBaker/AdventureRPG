@@ -21,11 +21,11 @@ public class VehicleControlSystem extends SystemPackage {
      * control an entity faces within its reach, with no block standing in
      * front of it, a fitting of a control answering for it, and activate()
      * works it: the helm is taken or left, every sail of a yard is set or
-     * taken in together, and the anchor dropped or weighed. While an entity
-     * holds a helm, activate() lets it go wherever the entity looks, and
-     * steer() is its turn at the wheel: its sideways input swings the rudder
-     * and it stands fast; it lets go once it moves off the helm or starts to
-     * swim.
+     * taken in together, the anchor dropped or weighed, and a door opened or
+     * shut. While an entity holds a helm, activate() lets it go wherever the
+     * entity looks, and steer() is its turn at the wheel: its sideways input
+     * swings the rudder and it stands fast; it lets go once it moves off the
+     * helm or starts to swim.
      */
 
     // Internal
@@ -130,6 +130,7 @@ public class VehicleControlSystem extends SystemPackage {
             case STEER -> vehicleManager.takeHelm(vehicle, entity);
             case HOIST -> vehicleManager.toggleYard(vehicle, resolveYard(part, controlIndex));
             case MOOR -> vehicleManager.toggleAnchor(vehicle);
+            case OPEN -> vehicleManager.toggleDoor(vehicle, part.getDoorIndex());
             default -> {
                 return false;
             }

@@ -82,6 +82,14 @@ public class VehicleHandle extends HandlePackage {
         return vehicleData.getCapstanPart() != EngineSetting.INDEX_NOT_FOUND;
     }
 
+    public int getDoorCount() {
+        return vehicleData.getDoorParts().size();
+    }
+
+    public VehiclePartStruct getDoor(int doorIndex) {
+        return getPart(vehicleData.getDoorParts().getInt(doorIndex));
+    }
+
     public VehicleGridStruct getSolidGrid() {
         return vehicleData.getSolidGrid();
     }
@@ -109,5 +117,13 @@ public class VehicleHandle extends HandlePackage {
 
     public VehicleHandlingStruct getHandling() {
         return vehicleData.getHandling();
+    }
+
+    public int getCargoSlotCount() {
+        return vehicleData.getCargoSlots().size();
+    }
+
+    public VehicleCargoSlotStruct getCargoSlot(int slotIndex) {
+        return vehicleData.getCargoSlots().get(slotIndex);
     }
 }

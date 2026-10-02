@@ -9,7 +9,12 @@ public enum VehiclePartRole {
      * it can be climbed, how it moves when it is drawn, and what the activate
      * binding does to it. A mast needs a pivot, the vertical axis its yards
      * brace about; a yard names its mast and a sail its yard; a helm needs a
-     * pivot and an axle, and a rudder a pivot, the hinge it swings about.
+     * pivot and an axle, and a rudder a pivot, the hinge it swings about. An
+     * anchor is drawn lowered while it is down, its cable hanging only then. A
+     * door, a hatch or a port lid needs a pivot and an axis, the hinge it
+     * swings open about, and a portcullis, such as a row of port lids, lifts
+     * clear by its own height and seals the hull like its planking does; both
+     * stop riders and cargo only while they stand shut.
      */
 
     HULL(true, true, false, VehiclePartMotion.STATIC, VehiclePartControl.NONE),
@@ -22,8 +27,11 @@ public enum VehiclePartRole {
     LADDER(false, false, true, VehiclePartMotion.STATIC, VehiclePartControl.NONE),
     HELM(true, false, false, VehiclePartMotion.WHEEL, VehiclePartControl.STEER),
     RUDDER(false, false, false, VehiclePartMotion.RUDDER, VehiclePartControl.NONE),
-    ANCHOR(false, false, false, VehiclePartMotion.STOWED, VehiclePartControl.NONE),
-    CAPSTAN(true, false, false, VehiclePartMotion.STATIC, VehiclePartControl.MOOR);
+    ANCHOR(false, false, false, VehiclePartMotion.DROP, VehiclePartControl.NONE),
+    CABLE(false, false, false, VehiclePartMotion.PAYOUT, VehiclePartControl.NONE),
+    CAPSTAN(true, false, false, VehiclePartMotion.STATIC, VehiclePartControl.MOOR),
+    DOOR(true, false, false, VehiclePartMotion.SWING, VehiclePartControl.OPEN),
+    PORTCULLIS(true, true, false, VehiclePartMotion.LIFT, VehiclePartControl.OPEN);
 
     // Values
     public static final VehiclePartRole[] VALUES = values();

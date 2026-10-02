@@ -9,12 +9,13 @@ import engine.util.mathematics.vectors.Vector3;
 class SubVoxelRaycastUtility extends EngineUtility {
 
     /*
-     * Walks a block-space ray through a sub-voxel grid cell by cell, checking
-     * each plane it crosses for a wall. The first filled cell or wall is the
-     * target and the cell before it the placement; a ray leaving through the
-     * floor places onto the floor cell it left from. A new wall covers the
-     * placement cell's struck face, or stands on that face's nearest edge when
-     * the ray lands within SUB_VOXEL_WALL_EDGE_SNAP of it.
+     * Walks a block-space ray through a model's sub-voxel grid, one block or
+     * many, cell by cell, checking each plane it crosses for a wall. The first
+     * filled cell or wall is the target and the cell before it the placement;
+     * a ray leaving through the floor places onto the floor cell it left from.
+     * A new wall covers the placement cell's struck face, or stands on that
+     * face's nearest edge when the ray lands within SUB_VOXEL_WALL_EDGE_SNAP
+     * of it.
      */
 
     // Raycast \\
@@ -29,6 +30,7 @@ class SubVoxelRaycastUtility extends EngineUtility {
 
         float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         float[] rayOrigin = { origin.x * resolution, origin.y * resolution, origin.z * resolution };
+        float[] size = { model.getSizeX(), model.getSizeY(), model.getSizeZ() };
         float[] rayDirection = { direction.x, direction.y, direction.z };
 
         float tEnter = 0f;
@@ -39,14 +41,14 @@ class SubVoxelRaycastUtility extends EngineUtility {
 
             if (rayDirection[axis] == 0f) {
 
-                if (rayOrigin[axis] < 0f || rayOrigin[axis] > resolution)
+                if (rayOrigin[axis] < 0f || rayOrigin[axis] > size[axis])
                     return false;
 
                 continue;
             }
 
             float t0 = (0f - rayOrigin[axis]) / rayDirection[axis];
-            float t1 = (resolution - rayOrigin[axis]) / rayDirection[axis];
+            float t1 = (size[axis] - rayOrigin[axis]) / rayDirection[axis];
 
             if (Math.min(t0, t1) > tEnter) {
                 tEnter = Math.min(t0, t1);
@@ -72,7 +74,7 @@ class SubVoxelRaycastUtility extends EngineUtility {
             int entryAxis,
             SubVoxelHitStruct hit) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        int[] size = { model.getSizeX(), model.getSizeY(), model.getSizeZ() };
         int[] cell = new int[3];
         int[] step = new int[3];
         float[] tMax = new float[3];
@@ -81,7 +83,7 @@ class SubVoxelRaycastUtility extends EngineUtility {
         for (int axis = 0; axis < 3; axis++) {
 
             float entry = rayOrigin[axis] + rayDirection[axis] * tStart;
-            cell[axis] = Math.max(0, Math.min(resolution - 1, (int) Math.floor(entry)));
+            cell[axis] = Math.max(0, Math.min(size[axis] - 1, (int) Math.floor(entry)));
 
             if (rayDirection[axis] > 0f) {
                 step[axis] = 1;
@@ -99,7 +101,7 @@ class SubVoxelRaycastUtility extends EngineUtility {
         }
 
         if (entryAxis != EngineSetting.INDEX_NOT_FOUND
-                && hasWallOnPlane(model, cell, entryAxis, step[entryAxis] > 0 ? 0 : resolution, hit))
+                && hasWallOnPlane(model, cell, entryAxis, step[entryAxis] > 0 ? 0 : size[entryAxis], hit))
             return true;
 
         int[] previous = { EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
@@ -137,7 +139,7 @@ class SubVoxelRaycastUtility extends EngineUtility {
             struckAxis = axis;
             tEntered = tCross;
 
-            if (cell[axis] >= 0 && cell[axis] < resolution)
+            if (cell[axis] >= 0 && cell[axis] < size[axis])
                 continue;
 
             if (axis == 1 && step[axis] < 0) {

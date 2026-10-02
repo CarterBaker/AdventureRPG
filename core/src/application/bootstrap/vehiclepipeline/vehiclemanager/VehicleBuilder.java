@@ -3,6 +3,7 @@ package application.bootstrap.vehiclepipeline.vehiclemanager;
 import java.io.File;
 
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoSlotStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleData;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleGridStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
@@ -20,6 +21,7 @@ import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class VehicleBuilder extends BuilderPackage {
@@ -31,11 +33,17 @@ class VehicleBuilder extends BuilderPackage {
      * boxes or single "position"s of sub-voxels, exactly as a structure lists
      * its blocks. A yard links to its mast and a sail to its yard by name, a
      * structure may link to the control it is a fitting of, and there is at
-     * most one helm, one rudder and one capstan. The "hull",
-     * "rig", "steering" and "anchor" groups tune how it handles; the draft and
-     * centre of mass height are sub-voxels of the model grid. Geometry and the
-     * hull's physics are worked out by VehicleGeometryBuilder and
-     * VehicleHullBuilder, so a malformed vehicle fails at boot.
+     * most one helm, one rudder and one capstan. A door hinges about its pivot
+     * and axis and swings through its "open_degrees", and every door and
+     * portcullis is numbered in data order. The "hull", "rig", "steering" and
+     * "anchor" groups tune how it handles; the draft and centre of mass height
+     * are sub-voxels of the model grid. The optional "tables" name lists of
+     * items, and each place in "cargo" names the table it is furnished from,
+     * the "corner" of the item's model grid in sub-voxels, its "spin" in
+     * quarter turns about the vertical, and the "chance" it is furnished at
+     * all. Geometry and the hull's physics are worked out by
+     * VehicleGeometryBuilder and VehicleHullBuilder, so a malformed vehicle
+     * fails at boot.
      */
 
     // Internal
@@ -63,7 +71,8 @@ class VehicleBuilder extends BuilderPackage {
 
         String displayName = ArpgUtility.getString(arpg, "display_name", resolveLocalName(vehicleName));
         ObjectArrayList<VehiclePartStruct> parts = parseParts(ArpgUtility.validateArray(arpg, "parts"), vehicleName);
-        IntArrayList mastParts = linkParts(parts, vehicleName);
+        IntArrayList doorParts = new IntArrayList();
+        IntArrayList mastParts = linkParts(parts, doorParts, vehicleName);
 
         ArpgObjectStruct hullArpg = ArpgUtility.validateObject(arpg, "hull");
         float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
@@ -86,6 +95,7 @@ class VehicleBuilder extends BuilderPackage {
                 findSinglePart(parts, VehiclePartRole.HELM, vehicleName),
                 findSinglePart(parts, VehiclePartRole.RUDDER, vehicleName),
                 findSinglePart(parts, VehiclePartRole.CAPSTAN, vehicleName),
+                doorParts,
                 solidGrid,
                 buildClimbZones(parts),
                 hullMeshes,
@@ -97,7 +107,8 @@ class VehicleBuilder extends BuilderPackage {
                 bounds[EngineSetting.BOX_MAX_Z],
                 resolveBoundingRadius(bounds, hull.getCenterOfMass()),
                 hull,
-                parseHandling(arpg, hullArpg));
+                parseHandling(arpg, hullArpg),
+                parseCargoSlots(arpg, vehicleName));
 
         VehicleHandle vehicleHandle = create(VehicleHandle.class);
         vehicleHandle.constructor(vehicleData);
@@ -131,7 +142,8 @@ class VehicleBuilder extends BuilderPackage {
                 ArpgUtility.validateString(partArpg, "texture"),
                 ArpgUtility.getString(partArpg, "link", ""),
                 parsePivot(partArpg, role, partName, vehicleName),
-                parseAxis(partArpg, role, partName, vehicleName));
+                parseAxis(partArpg, role, partName, vehicleName),
+                parseOpenAngle(partArpg, role));
 
         ArpgArrayStruct boxesArpg = ArpgUtility.validateArray(partArpg, "boxes");
 
@@ -193,11 +205,11 @@ class VehicleBuilder extends BuilderPackage {
         part.addBox(minX, minY, minZ, Math.max(fromX, toX) + 1, Math.max(fromY, toY) + 1, Math.max(fromZ, toZ) + 1);
     }
 
-    // A mast, helm or rudder turns about its pivot, given in sub-voxels and kept in blocks
+    // A mast, helm, rudder or door turns about its pivot, given in sub-voxels and kept in blocks
     private Vector3 parsePivot(ArpgObjectStruct partArpg, VehiclePartRole role, String partName, String vehicleName) {
 
         boolean required = role == VehiclePartRole.MAST || role == VehiclePartRole.HELM
-                || role == VehiclePartRole.RUDDER;
+                || role == VehiclePartRole.RUDDER || role == VehiclePartRole.DOOR;
 
         if (!partArpg.has("pivot")) {
 
@@ -219,7 +231,7 @@ class VehicleBuilder extends BuilderPackage {
 
     private int parseAxis(ArpgObjectStruct partArpg, VehiclePartRole role, String partName, String vehicleName) {
 
-        if (role != VehiclePartRole.HELM)
+        if (role != VehiclePartRole.HELM && role != VehiclePartRole.DOOR)
             return EngineSetting.AXIS_Y;
 
         String axisName = ArpgUtility.validateString(partArpg, "axis");
@@ -228,14 +240,28 @@ class VehicleBuilder extends BuilderPackage {
             if (EngineSetting.AXIS_KEYS[axis].equalsIgnoreCase(axisName))
                 return axis;
 
-        return throwException("Vehicle '" + vehicleName + "' helm '" + partName + "' turns about axis '"
-                + axisName + "', which is none of x, y or z.");
+        return throwException("Vehicle '" + vehicleName + "' " + ArpgUtility.toEnumName(role) + " '" + partName
+                + "' turns about axis '" + axisName + "', which is none of x, y or z.");
+    }
+
+    // How far a door swings open in radians, its sign the way it turns about its axis
+    private float parseOpenAngle(ArpgObjectStruct partArpg, VehiclePartRole role) {
+
+        if (role != VehiclePartRole.DOOR)
+            return 0f;
+
+        return (float) Math.toRadians(ArpgUtility.getFloat(
+                partArpg, "open_degrees", EngineSetting.DEFAULT_VEHICLE_DOOR_OPEN_DEGREES));
     }
 
     // Links \\
 
-    // Yards to their masts and sails to their yards, returning the masts in data order
-    private IntArrayList linkParts(ObjectArrayList<VehiclePartStruct> parts, String vehicleName) {
+    // Yards to their masts and sails to their yards, every door numbered into the doors given, returning the masts
+    // in data order
+    private IntArrayList linkParts(
+            ObjectArrayList<VehiclePartStruct> parts,
+            IntArrayList doorParts,
+            String vehicleName) {
 
         Object2IntOpenHashMap<String> partName2PartIndex = new Object2IntOpenHashMap<>();
         partName2PartIndex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
@@ -253,6 +279,11 @@ class VehicleBuilder extends BuilderPackage {
             if (parts.get(partIndex).getRole() == VehiclePartRole.MAST) {
                 parts.get(partIndex).setMastIndex(mastParts.size());
                 mastParts.add(partIndex);
+            }
+
+            if (parts.get(partIndex).getRole().getControl() == VehiclePartControl.OPEN) {
+                parts.get(partIndex).setDoorIndex(doorParts.size());
+                doorParts.add(partIndex);
             }
         }
 
@@ -452,12 +483,90 @@ class VehicleBuilder extends BuilderPackage {
                 (float) Math.toRadians(ArpgUtility.getFloat(
                         steeringArpg, "rudder_rate_degrees", EngineSetting.DEFAULT_VEHICLE_RUDDER_RATE_DEGREES)),
                 ArpgUtility.getFloat(steeringArpg, "rudder_force", EngineSetting.DEFAULT_VEHICLE_RUDDER_FORCE),
-                ArpgUtility.getFloat(anchorArpg, "hold", EngineSetting.DEFAULT_VEHICLE_ANCHOR_HOLD));
+                ArpgUtility.getFloat(anchorArpg, "hold", EngineSetting.DEFAULT_VEHICLE_ANCHOR_HOLD),
+                ArpgUtility.getFloat(anchorArpg, "drop", EngineSetting.DEFAULT_VEHICLE_ANCHOR_DROP));
     }
 
     // An optional group, read as empty so every field in it falls back to its default
     private ArpgObjectStruct resolveGroup(ArpgObjectStruct arpg, String key) {
         return ArpgUtility.hasObject(arpg, key) ? arpg.getAsObject(key) : new ArpgObjectStruct();
+    }
+
+    // Cargo \\
+
+    // Every place the vehicle comes furnished at, each drawing from one of its named tables
+    private ObjectArrayList<VehicleCargoSlotStruct> parseCargoSlots(ArpgObjectStruct arpg, String vehicleName) {
+
+        Object2ObjectOpenHashMap<String, ObjectArrayList<String>> tableName2ItemNames = parseTables(
+                resolveGroup(arpg, "tables"), vehicleName);
+        ArpgArrayStruct cargoArpg = ArpgUtility.hasArray(arpg, "cargo")
+                ? arpg.getAsArray("cargo")
+                : new ArpgArrayStruct();
+        ObjectArrayList<VehicleCargoSlotStruct> cargoSlots = new ObjectArrayList<>(cargoArpg.size());
+
+        for (int i = 0; i < cargoArpg.size(); i++)
+            cargoSlots.add(parseCargoSlot(cargoArpg.get(i).getAsObject(), tableName2ItemNames, vehicleName));
+
+        return cargoSlots;
+    }
+
+    private Object2ObjectOpenHashMap<String, ObjectArrayList<String>> parseTables(
+            ArpgObjectStruct tablesArpg,
+            String vehicleName) {
+
+        Object2ObjectOpenHashMap<String, ObjectArrayList<String>> tableName2ItemNames =
+                new Object2ObjectOpenHashMap<>();
+
+        for (String tableName : tablesArpg.keySet()) {
+
+            ArpgArrayStruct itemsArpg = tablesArpg.getAsArray(tableName);
+
+            if (itemsArpg.isEmpty())
+                throwException("Vehicle '" + vehicleName + "' table '" + tableName + "' lists no items.");
+
+            ObjectArrayList<String> itemNames = new ObjectArrayList<>(itemsArpg.size());
+
+            for (int i = 0; i < itemsArpg.size(); i++)
+                itemNames.add(itemsArpg.get(i).getAsString());
+
+            tableName2ItemNames.put(tableName, itemNames);
+        }
+
+        return tableName2ItemNames;
+    }
+
+    private VehicleCargoSlotStruct parseCargoSlot(
+            ArpgObjectStruct slotArpg,
+            Object2ObjectOpenHashMap<String, ObjectArrayList<String>> tableName2ItemNames,
+            String vehicleName) {
+
+        String tableName = ArpgUtility.validateString(slotArpg, "table");
+        ObjectArrayList<String> itemNames = tableName2ItemNames.get(tableName);
+
+        if (itemNames == null)
+            throwException("Vehicle '" + vehicleName + "' cargo names table '" + tableName
+                    + "', which its \"tables\" do not list.");
+
+        ArpgArrayStruct cornerArpg = ArpgUtility.validateArray(slotArpg, "corner", EngineSetting.AXIS_COUNT);
+        int spin = ArpgUtility.getInt(slotArpg, "spin", 0);
+        float chance = ArpgUtility.getFloat(slotArpg, "chance", 1f);
+
+        if (spin < 0 || spin >= EngineSetting.ENCODED_FACE_SPIN_COUNT)
+            throwException("Vehicle '" + vehicleName + "' cargo from table '" + tableName + "' turns " + spin
+                    + " quarter turns, outside 0 to " + (EngineSetting.ENCODED_FACE_SPIN_COUNT - 1) + ".");
+
+        if (chance < 0f || chance > 1f)
+            throwException("Vehicle '" + vehicleName + "' cargo from table '" + tableName
+                    + "' has a chance outside 0 to 1.");
+
+        return new VehicleCargoSlotStruct(
+                tableName,
+                itemNames,
+                cornerArpg.get(0).getAsInt(),
+                cornerArpg.get(1).getAsInt(),
+                cornerArpg.get(2).getAsInt(),
+                EngineSetting.DEFAULT_BLOCK_ORIENTATION + spin,
+                chance);
     }
 
     // Bounds \\

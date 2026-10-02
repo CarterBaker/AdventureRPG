@@ -20,14 +20,16 @@ import editor.itemeditor.tool.ItemEditorToolSystem;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 
 public class ItemEditorRenderSystem extends SystemPackage {
 
     /*
      * Draws the active item, the sub-voxel floor grid, and the tool cursor into
-     * this window's scene target. The cursor fills a cell for a cube and lies
-     * flat on its plane for a wall. The item mesh is rebuilt in place through
+     * this window's scene target. The grid stays bright across every block the
+     * item's model spans. The cursor fills a cell for a cube and lies flat on
+     * its plane for a wall. The item mesh is rebuilt in place through
      * SubVoxelManager only when the item or its revision changes.
      */
 
@@ -58,6 +60,7 @@ public class ItemEditorRenderSystem extends SystemPackage {
     private int renderedRevision;
     private Vector3 cursorCell;
     private Vector3 cursorSize;
+    private Vector2 gridExtent;
 
     // Base \\
 
@@ -65,6 +68,7 @@ public class ItemEditorRenderSystem extends SystemPackage {
     protected void create() {
         this.cursorCell = new Vector3();
         this.cursorSize = new Vector3();
+        this.gridExtent = new Vector2(1f, 1f);
     }
 
     @Override
@@ -145,6 +149,8 @@ public class ItemEditorRenderSystem extends SystemPackage {
 
         renderedDocument = document;
         renderedRevision = document.getRevision();
+        gridExtent.set(document.getModel().getBlocksX(), document.getModel().getBlocksZ());
+        gridModel.getMaterial().setUniform(ItemEditorSetting.UNIFORM_EXTENT, gridExtent);
 
         if (document.getModel().isEmpty())
             return;

@@ -219,15 +219,18 @@ public class EntityRenderSystem extends SystemPackage {
                 .multiply(anchorScratch);
     }
 
-    // Moves the grip — the shape's near end, centred across it — onto the anchor, at natural size
+    // Moves the grip — the shape's near end, centred across it — onto the anchor, at natural size up to one block,
+    // so a shape larger than a block is carried shrunk evenly to fit one
     private void multiplyGripPlacement(Matrix4 out, ItemShapeStruct shape) {
 
         float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        float largest = Math.max(shape.getSizeX(), Math.max(shape.getSizeY(), shape.getSizeZ()));
+        float scale = Math.min(1f, resolution / largest) / resolution;
 
         out.multiply(
-                1, 0, 0, -(shape.getOffsetX() + shape.getSizeX() * 0.5f) / resolution,
-                0, 1, 0, -(shape.getOffsetY() + shape.getSizeY() * 0.5f) / resolution,
-                0, 0, 1, -shape.getOffsetZ() / resolution,
+                scale * resolution, 0, 0, -(shape.getOffsetX() + shape.getSizeX() * 0.5f) * scale,
+                0, scale * resolution, 0, -(shape.getOffsetY() + shape.getSizeY() * 0.5f) * scale,
+                0, 0, scale * resolution, -shape.getOffsetZ() * scale,
                 0, 0, 0, 1);
     }
 

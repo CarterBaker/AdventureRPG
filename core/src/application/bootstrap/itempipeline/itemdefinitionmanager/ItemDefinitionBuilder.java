@@ -9,6 +9,8 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.itempipeline.itemdefinition.ContainerSpaceStruct;
 import application.bootstrap.itempipeline.itemdefinition.EquipmentType;
+import application.bootstrap.itempipeline.itemdefinition.ItemActionStruct;
+import application.bootstrap.itempipeline.itemdefinition.ItemActionTrigger;
 import application.bootstrap.itempipeline.itemdefinition.ItemCategory;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionData;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
@@ -24,6 +26,7 @@ import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
+import engine.util.mathematics.vectors.Vector3;
 import engine.util.mathematics.vectors.Vector3Int;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -37,7 +40,9 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * and reads the item's mesh file through SubVoxelManager — every item mesh
      * must be a sub-voxel model. The shape an item claims in a container and
      * in the world is the boxes its 'space' lists inside that model's grid, or
-     * the model's own cubes and walls when it lists none. A container's space
+     * the model's own cubes and walls when it lists none. That grid spans as
+     * many blocks as the model does, so furniture claims its full size. A
+     * container's model spans one block, and its space
      * either lies inside that model at an offset, clear of its cubes, or is a
      * pocket shown as its own box of walls; either must name the parts of its
      * lid, left off its model while it stands open. The lid's clearance — the
@@ -48,8 +53,13 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * without a display name is titled from its local name split into words.
      * A tool names its tool type, whose model it is drawn with unless it names
      * its own mesh, and the highest break tier it can break. A stackable item
-     * holds up to its stack size in one item, which a container cannot.
-     * Bootstrap-only.
+     * holds up to its stack size in one item, which a container cannot. An
+     * item's "actions" each name a "trigger", optionally the item held "with"
+     * it, whether it "consumes" one of that, and the model "parts" it must be
+     * aimed at, and the item it "becomes"; one may "fire" an item from a
+     * "muzzle" in model sub-voxels along an "aim" at a "speed". "pick_up_as"
+     * names the item it is picked up as. A container carries no actions, so
+     * its contents are never lost. Bootstrap-only.
      */
 
     // Internal
@@ -141,6 +151,12 @@ class ItemDefinitionBuilder extends BuilderPackage {
         if (stackSize > 1 && containerSpace != null)
             throwException("Item '" + itemName + "' is a container and cannot stack — each one keeps its own contents.");
 
+        ObjectArrayList<ItemActionStruct> actions = parseActions(itemArpg, model, itemName);
+
+        if (!actions.isEmpty() && containerSpace != null)
+            throwException("Item '" + itemName + "' is a container with actions; turning it into another item "
+                    + "would lose its contents.");
+
         String materialPath = ArpgUtility.getString(
                 itemArpg, "material", EngineSetting.DEFAULT_ITEM_MATERIAL);
         int materialID = materialManager.getMaterialIDFromMaterialName(materialPath);
@@ -166,7 +182,9 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 toolTypeID,
                 toolTier,
                 stackSize,
-                EngineSetting.BLOCK_PIECE_NONE);
+                EngineSetting.BLOCK_PIECE_NONE,
+                actions,
+                ArpgUtility.getString(itemArpg, "pick_up_as", EngineSetting.ITEM_PICK_UP_AS_SELF));
 
         ItemDefinitionHandle item = create(ItemDefinitionHandle.class);
         item.constructor(itemDefinitionData);
@@ -279,25 +297,31 @@ class ItemDefinitionBuilder extends BuilderPackage {
         if (spaceArpg.isEmpty())
             return throwException("Item '" + itemName + "' declares a space with no boxes.");
 
-        boolean[] occupied = new boolean[EngineSetting.SUB_VOXEL_CELL_COUNT];
+        boolean[] occupied = new boolean[model.getSizeX() * model.getSizeY() * model.getSizeZ()];
 
         for (int i = 0; i < spaceArpg.size(); i++)
-            claimBox(occupied, spaceArpg.get(i).getAsObject(), itemName);
+            claimBox(occupied, model, spaceArpg.get(i).getAsObject(), itemName);
 
-        return new ItemShapeStruct(occupied);
+        return new ItemShapeStruct(occupied, model.getSizeX(), model.getSizeY(), model.getSizeZ());
     }
 
-    private void claimBox(boolean[] occupied, ArpgObjectStruct boxArpg, String itemName) {
+    private void claimBox(boolean[] occupied, SubVoxelModelStruct model, ArpgObjectStruct boxArpg, String itemName) {
 
         Vector3Int size = parseVector(boxArpg);
         Vector3Int offset = parseBoxOffset(boxArpg);
 
-        validateBox(size, offset, 0, EngineSetting.SUB_VOXEL_RESOLUTION, "space", itemName);
+        validateBox(
+                size,
+                offset,
+                new Vector3Int(),
+                new Vector3Int(model.getSizeX(), model.getSizeY(), model.getSizeZ()),
+                "space",
+                itemName);
 
         for (int z = offset.z; z < offset.z + size.z; z++)
             for (int y = offset.y; y < offset.y + size.y; y++)
                 for (int x = offset.x; x < offset.x + size.x; x++)
-                    occupied[ItemShapeStruct.toCellIndex(x, y, z)] = true;
+                    occupied[ItemShapeStruct.toCellIndex(x, y, z, model.getSizeX(), model.getSizeY())] = true;
     }
 
     private Vector3Int parseBoxOffset(ArpgObjectStruct boxArpg) {
@@ -306,24 +330,25 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 : new Vector3Int();
     }
 
-    // A box must have a positive size and lie within cells [low, high) of the model grid on every axis
+    // A box must have a positive size and lie within cells [low, high) of the model grid on each axis
     private void validateBox(
             Vector3Int size,
             Vector3Int offset,
-            int low,
-            int high,
+            Vector3Int low,
+            Vector3Int high,
             String fieldName,
             String itemName) {
 
         if (size.x <= 0 || size.y <= 0 || size.z <= 0)
             throwException("Item '" + itemName + "' declares a " + fieldName + " box with a non-positive size.");
 
-        if (offset.x < low || offset.y < low || offset.z < low
-                || offset.x + size.x > high
-                || offset.y + size.y > high
-                || offset.z + size.z > high)
-            throwException("Item '" + itemName + "' declares a " + fieldName + " box outside cells "
-                    + low + " to " + high + " of its model grid.");
+        if (offset.x < low.x || offset.y < low.y || offset.z < low.z
+                || offset.x + size.x > high.x
+                || offset.y + size.y > high.y
+                || offset.z + size.z > high.z)
+            throwException("Item '" + itemName + "' declares a " + fieldName + " box outside cells ("
+                    + low.x + ", " + low.y + ", " + low.z + ") to (" + high.x + ", " + high.y + ", " + high.z
+                    + ") of its model grid.");
     }
 
     // Container \\
@@ -336,6 +361,11 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
         if (!ArpgUtility.hasObject(itemArpg, "container"))
             return null;
+
+        if (!model.isSingleBlock())
+            throwException("Item '" + itemName + "' is a container with a model of " + model.getBlocksX() + " x "
+                    + model.getBlocksY() + " x " + model.getBlocksZ() + " blocks. A container's model spans one "
+                    + "block, so its lid has a block of clearance to open into.");
 
         ArpgObjectStruct containerArpg = itemArpg.getAsObject("container");
         Vector3Int size = parseVector(containerArpg);
@@ -453,7 +483,13 @@ class ItemDefinitionBuilder extends BuilderPackage {
             Vector3Int size = parseVector(boxArpg);
             Vector3Int offset = parseBoxOffset(boxArpg);
 
-            validateBox(size, offset, -resolution, span - resolution, "clearance", itemName);
+            validateBox(
+                    size,
+                    offset,
+                    new Vector3Int(-resolution),
+                    new Vector3Int(span - resolution),
+                    "clearance",
+                    itemName);
 
             for (int z = offset.z; z < offset.z + size.z; z++)
                 for (int y = offset.y; y < offset.y + size.y; y++)
@@ -484,17 +520,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
         int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         int top = resolution * EngineSetting.ITEM_CLEARANCE_GRID_SPAN - resolution;
-        boolean[] lidPart = new boolean[model.getPartCount()];
-        SubVoxelModelStruct lidModel = new SubVoxelModelStruct(model);
-
-        for (int i = 0; i < lidArpg.size(); i++)
-            lidPart[findPart(model, lidArpg.get(i).getAsString(), itemName)] = true;
-
-        for (int partIndex = lidModel.getPartCount() - 1; partIndex >= 0; partIndex--)
-            if (!lidPart[partIndex])
-                lidModel.removePart(partIndex);
-
-        boolean[] lid = ItemShapeStruct.resolveOccupied(lidModel);
+        boolean[] lid = ItemShapeStruct.resolveOccupied(isolateParts(model, lidArpg, itemName));
         int swing = resolveLidSwing(lid);
         IntArrayList cellX = new IntArrayList();
         IntArrayList cellY = new IntArrayList();
@@ -507,10 +533,10 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
                 for (int y = 0; y < resolution; y++) {
 
-                    if (!lid[ItemShapeStruct.toCellIndex(x, y, z)])
+                    if (!lid[ItemShapeStruct.toCellIndex(x, y, z, resolution, resolution)])
                         continue;
 
-                    if (y + 1 < resolution && lid[ItemShapeStruct.toCellIndex(x, y + 1, z)])
+                    if (y + 1 < resolution && lid[ItemShapeStruct.toCellIndex(x, y + 1, z, resolution, resolution)])
                         continue;
 
                     for (int rise = Math.max(y + 1, reached); rise <= y + swing && rise < top; rise++) {
@@ -540,7 +566,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
             for (int y = 0; y < resolution; y++)
                 for (int x = 0; x < resolution; x++) {
 
-                    if (!lid[ItemShapeStruct.toCellIndex(x, y, z)])
+                    if (!lid[ItemShapeStruct.toCellIndex(x, y, z, resolution, resolution)])
                         continue;
 
                     minX = Math.min(minX, x);
@@ -584,13 +610,104 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 containerSpace.getSize(), containerSpace.getPocketTextureName()).getMeshData();
     }
 
+    // A copy of the model holding only the parts named
+    private SubVoxelModelStruct isolateParts(SubVoxelModelStruct model, ArpgArrayStruct partsArpg, String itemName) {
+
+        boolean[] kept = new boolean[model.getPartCount()];
+        SubVoxelModelStruct isolated = new SubVoxelModelStruct(model);
+
+        for (int i = 0; i < partsArpg.size(); i++)
+            kept[findPart(model, partsArpg.get(i).getAsString(), itemName)] = true;
+
+        for (int partIndex = isolated.getPartCount() - 1; partIndex >= 0; partIndex--)
+            if (!kept[partIndex])
+                isolated.removePart(partIndex);
+
+        return isolated;
+    }
+
     private int findPart(SubVoxelModelStruct model, String partName, String itemName) {
 
         for (int partIndex = 0; partIndex < model.getPartCount(); partIndex++)
             if (model.getPart(partIndex).getPartName().equals(partName))
                 return partIndex;
 
-        return throwException("Item '" + itemName + "' names lid part '" + partName + "', which its model lacks.");
+        return throwException("Item '" + itemName + "' names part '" + partName + "', which its model lacks.");
+    }
+
+    // Actions \\
+
+    private ObjectArrayList<ItemActionStruct> parseActions(
+            ArpgObjectStruct itemArpg,
+            SubVoxelModelStruct model,
+            String itemName) {
+
+        ObjectArrayList<ItemActionStruct> actions = new ObjectArrayList<>();
+
+        if (!ArpgUtility.hasArray(itemArpg, "actions"))
+            return actions;
+
+        ArpgArrayStruct actionsArpg = itemArpg.getAsArray("actions");
+
+        for (int i = 0; i < actionsArpg.size(); i++)
+            actions.add(parseAction(actionsArpg.get(i).getAsObject(), model, itemName));
+
+        return actions;
+    }
+
+    private ItemActionStruct parseAction(ArpgObjectStruct actionArpg, SubVoxelModelStruct model, String itemName) {
+
+        ItemActionTrigger trigger = ArpgUtility.toEnum(
+                ArpgUtility.validateString(actionArpg, "trigger"), ItemActionTrigger.class);
+        String heldItemName = ArpgUtility.getString(actionArpg, "with", EngineSetting.ITEM_ACTION_HELD_ANY);
+        boolean consumesHeld = ArpgUtility.getBoolean(actionArpg, "consumes", false);
+
+        if (consumesHeld && heldItemName.equals(EngineSetting.ITEM_ACTION_HELD_ANY))
+            throwException("Item '" + itemName + "' has an action that consumes what is held without naming it.");
+
+        ItemShapeStruct partShape = ArpgUtility.hasArray(actionArpg, "parts")
+                ? new ItemShapeStruct(isolateParts(model, actionArpg.getAsArray("parts"), itemName))
+                : null;
+        String becomesItemName = ArpgUtility.validateString(actionArpg, "becomes");
+
+        if (!ArpgUtility.hasObject(actionArpg, "fire"))
+            return new ItemActionStruct(
+                    trigger,
+                    heldItemName,
+                    consumesHeld,
+                    partShape,
+                    becomesItemName,
+                    EngineSetting.ITEM_ACTION_FIRE_NONE,
+                    new Vector3(),
+                    new Vector3(),
+                    0f);
+
+        ArpgObjectStruct fireArpg = actionArpg.getAsObject("fire");
+        Vector3 aim = parseFloatVector(fireArpg, "aim");
+
+        if (aim.lengthSquared() <= EngineSetting.DIVISION_EPSILON)
+            throwException("Item '" + itemName + "' fires along an aim of no length.");
+
+        return new ItemActionStruct(
+                trigger,
+                heldItemName,
+                consumesHeld,
+                partShape,
+                becomesItemName,
+                ArpgUtility.validateString(fireArpg, "item"),
+                parseFloatVector(fireArpg, "muzzle"),
+                aim.normalize(),
+                ArpgUtility.validateFloat(fireArpg, "speed"));
+    }
+
+    private Vector3 parseFloatVector(ArpgObjectStruct objectArpg, String key) {
+
+        ArpgArrayStruct vectorArpg = ArpgUtility.validateArray(objectArpg, key, EngineSetting.AXIS_COUNT);
+
+        return new Vector3(
+                vectorArpg.get(0).getAsFloat(),
+                vectorArpg.get(1).getAsFloat(),
+                vectorArpg.get(2).getAsFloat());
     }
 
     // Text \\

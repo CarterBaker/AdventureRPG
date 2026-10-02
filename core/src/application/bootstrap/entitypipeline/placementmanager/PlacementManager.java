@@ -4,6 +4,7 @@ import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
+import application.bootstrap.itempipeline.itemdefinition.ItemActionTrigger;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
@@ -21,24 +22,28 @@ public class PlacementManager extends ManagerPackage {
     /*
      * Entity-agnostic placement manager. Owns the raycast result, placement
      * cooldown, and routes to BlockBranch or ItemBranch based on the action.
-     * Player passes mouse input. Enemies pass AI input. Same code path either way.
-     * A world item in reach and nearer than any block takes the action first:
-     * the primary action picks it up, and the activate action sets the held
-     * item against the face it was hit on, so items stack into piles —
-     * containers included, unless the container can open, since activating
-     * one that can opens it in the runtime, never here. Otherwise the primary
-     * action swings whatever is held through CombatManager, whose strike lands
-     * back here on a block through strikeBlock(), and the activate action
-     * places the held item — a block piece as a sub-block, anything else as a
-     * world item. A vehicle's deck or cargo nearer than anything in the world
-     * takes the action instead, through VehicleCargoSystem, by the same rules:
-     * the primary action picks cargo up or swings at the deck, and the
-     * activate action sets the held item down aboard, unless it is a block
-     * piece or the cargo is a container that can open. findTargetVehicle() is
-     * the one place that decides whether a vehicle stands in front.
-     * Nothing happens here while a stance is held: an aim's throw and a guard
-     * belong to CombatManager. findTargetItem() is the one place that decides
-     * which world item an entity is aiming at, and where on it.
+     * Player passes mouse input. Enemies pass AI input. Same code path either
+     * way. A world item in reach and nearer than any block takes the action
+     * first: an action the item carries for the trigger, the held item and the
+     * spot struck is worked through ItemActionBranch before anything else, as
+     * a door is swung or a cannon loaded and fired; otherwise the primary
+     * action picks it up, and the activate action sets the held item against
+     * the face it was hit on, so items stack into piles — containers included,
+     * unless the container can open, since activating one that can opens it in
+     * the runtime, never here. Otherwise the primary action swings whatever is
+     * held through CombatManager, whose strike lands back here on a block
+     * through strikeBlock(), and the activate action places the held item — a
+     * block piece as a sub-block, anything else as a world item. A vehicle's
+     * deck or cargo nearer than anything in the world takes the action
+     * instead, through VehicleCargoSystem, by the same rules: cargo's own
+     * actions come first, then the primary action picks cargo up or swings at
+     * the deck, and the activate action sets the held item down aboard, unless
+     * it is a block piece or the cargo is a container that can open.
+     * findTargetVehicle() is the one place that decides whether a vehicle
+     * stands in front. Nothing happens here while a stance is held: an aim's
+     * throw and a guard belong to CombatManager. findTargetItem() is the one
+     * place that decides which world item an entity is aiming at, and where on
+     * it.
      */
 
     // Internal
@@ -51,6 +56,7 @@ public class PlacementManager extends ManagerPackage {
     // Branches
     private BlockBranch blockBranch;
     private ItemBranch itemBranch;
+    private ItemActionBranch itemActionBranch;
 
     // Settings
     private float placementInterval;
@@ -68,6 +74,7 @@ public class PlacementManager extends ManagerPackage {
         // Branches
         this.blockBranch = create(BlockBranch.class);
         this.itemBranch = create(ItemBranch.class);
+        this.itemActionBranch = create(ItemActionBranch.class);
 
         // Settings
         this.placementInterval = EngineSetting.BLOCK_PLACEMENT_INTERVAL;
@@ -114,6 +121,12 @@ public class PlacementManager extends ManagerPackage {
         }
 
         if (targetItem != null) {
+
+            if (itemActionBranch.actOnItem(entity, resolveTrigger(primaryAction), targetItem, itemCastStruct)) {
+                timeSinceLastPlacement = 0;
+                combatManager.gesture(entity, EntityAction.PLACE);
+                return;
+            }
 
             if (primaryAction && itemBranch.pickUp(entity, targetItem)) {
                 timeSinceLastPlacement = 0;
@@ -271,6 +284,12 @@ public class PlacementManager extends ManagerPackage {
             boolean primaryAction,
             boolean activateAction) {
 
+        if (itemActionBranch.actOnCargo(entity, resolveTrigger(primaryAction))) {
+            timeSinceLastPlacement = 0;
+            combatManager.gesture(entity, EntityAction.PLACE);
+            return;
+        }
+
         if (primaryAction && !vehicleCargoSystem.isCargoHit()) {
             combatManager.swing(entity);
             return;
@@ -286,6 +305,11 @@ public class PlacementManager extends ManagerPackage {
             timeSinceLastPlacement = 0;
             combatManager.gesture(entity, EntityAction.PLACE);
         }
+    }
+
+    // The primary action strikes, the activate action uses
+    private ItemActionTrigger resolveTrigger(boolean primaryAction) {
+        return primaryAction ? ItemActionTrigger.STRIKE : ItemActionTrigger.USE;
     }
 
     // Against the item findTargetItem() last met — a block piece is a sub-block, which only builds on blocks, and a

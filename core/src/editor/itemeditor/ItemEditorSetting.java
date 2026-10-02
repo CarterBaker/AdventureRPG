@@ -23,6 +23,7 @@ public class ItemEditorSetting {
 
     // Uniforms
     public static final String UNIFORM_RESOLUTION = "u_resolution";
+    public static final String UNIFORM_EXTENT = "u_extent";
     public static final String UNIFORM_CURSOR_CELL = "u_cursorCell";
     public static final String UNIFORM_CURSOR_SIZE = "u_cursorSize";
 
@@ -31,7 +32,7 @@ public class ItemEditorSetting {
     public static final int DEPTH_GRID = 1;
     public static final int DEPTH_CURSOR = 2;
 
-    // Camera
+    // Camera — the target is a share of the model's size, the distances are per block of its largest side
     public static final float ORBIT_TARGET_X = 0.5f;
     public static final float ORBIT_TARGET_Y = 0.5f;
     public static final float ORBIT_TARGET_Z = 0.5f;

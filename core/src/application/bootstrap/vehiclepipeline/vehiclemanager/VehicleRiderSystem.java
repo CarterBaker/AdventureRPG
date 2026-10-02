@@ -6,7 +6,6 @@ import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
-import application.bootstrap.vehiclepipeline.vehicle.VehicleGridStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleRiderStruct;
@@ -253,7 +252,6 @@ public class VehicleRiderSystem extends SystemPackage {
         WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
         Vector3 position = worldPosition.getPosition();
         Vector3 size = entity.getSize();
-        VehicleGridStruct grid = vehicle.getVehicleHandle().getSolidGrid();
 
         VehicleSpaceUtility.toModel(
                 vehicle,
@@ -271,20 +269,20 @@ public class VehicleRiderSystem extends SystemPackage {
         float requestedY = moveScratch.y;
         float requestedZ = moveScratch.z;
 
-        float moveY = sweep(grid, EngineSetting.AXIS_Y, requestedY);
+        float moveY = sweep(vehicle, EngineSetting.AXIS_Y, requestedY);
         translate(EngineSetting.AXIS_Y, moveY);
 
-        float moveX = sweep(grid, EngineSetting.AXIS_X, requestedX);
+        float moveX = sweep(vehicle, EngineSetting.AXIS_X, requestedX);
         translate(EngineSetting.AXIS_X, moveX);
 
-        float moveZ = sweep(grid, EngineSetting.AXIS_Z, requestedZ);
+        float moveZ = sweep(vehicle, EngineSetting.AXIS_Z, requestedZ);
         translate(EngineSetting.AXIS_Z, moveZ);
 
         boolean landed = requestedY < 0f && moveY > requestedY + skin;
         boolean blocked = moveX != requestedX || moveZ != requestedZ;
 
         if (blocked && entity.getEntityStateHandle().isGrounded())
-            stepUp(grid, moveX, moveY, moveZ, entity);
+            stepUp(vehicle, moveX, moveY, moveZ, entity);
         else
             moveScratch.set(moveX, moveY, moveZ);
 
@@ -297,7 +295,7 @@ public class VehicleRiderSystem extends SystemPackage {
     }
 
     // A grounded entity cut short tries the move again a stair step higher, easing the lift into its ground offset
-    private void stepUp(VehicleGridStruct grid, float moveX, float moveY, float moveZ, EntityInstance entity) {
+    private void stepUp(VehicleInstance vehicle, float moveX, float moveY, float moveZ, EntityInstance entity) {
 
         float intendedX = moveScratch.x;
         float intendedZ = moveScratch.z;
@@ -305,16 +303,16 @@ public class VehicleRiderSystem extends SystemPackage {
         translate(EngineSetting.AXIS_X, -moveX);
         translate(EngineSetting.AXIS_Z, -moveZ);
 
-        float rise = sweep(grid, EngineSetting.AXIS_Y, stepHeight);
+        float rise = sweep(vehicle, EngineSetting.AXIS_Y, stepHeight);
         translate(EngineSetting.AXIS_Y, rise);
 
-        float stepX = sweep(grid, EngineSetting.AXIS_X, intendedX);
+        float stepX = sweep(vehicle, EngineSetting.AXIS_X, intendedX);
         translate(EngineSetting.AXIS_X, stepX);
 
-        float stepZ = sweep(grid, EngineSetting.AXIS_Z, intendedZ);
+        float stepZ = sweep(vehicle, EngineSetting.AXIS_Z, intendedZ);
         translate(EngineSetting.AXIS_Z, stepZ);
 
-        float settle = sweep(grid, EngineSetting.AXIS_Y, -rise);
+        float settle = sweep(vehicle, EngineSetting.AXIS_Y, -rise);
         float lift = rise + settle;
 
         boolean climbed = lift > skin
@@ -418,11 +416,11 @@ public class VehicleRiderSystem extends SystemPackage {
 
     // Sweep \\
 
-    private float sweep(VehicleGridStruct grid, int axis, float distance) {
-        return sweepCargo(axis, sweepGrid(grid, axis, distance));
+    private float sweep(VehicleInstance vehicle, int axis, float distance) {
+        return sweepCargo(axis, sweepGrid(vehicle, axis, distance));
     }
 
-    private float sweepGrid(VehicleGridStruct grid, int axis, float distance) {
+    private float sweepGrid(VehicleInstance vehicle, int axis, float distance) {
 
         if (distance == 0f)
             return 0f;
@@ -447,7 +445,7 @@ public class VehicleRiderSystem extends SystemPackage {
                 if (face < lead - skin)
                     continue;
 
-                if (isLayerSolid(grid, axis, layer, tangentA, firstA, lastA, tangentB, firstB, lastB))
+                if (isLayerSolid(vehicle, axis, layer, tangentA, firstA, lastA, tangentB, firstB, lastB))
                     return Math.min(distance, Math.max(face - lead - skin, 0f));
             }
 
@@ -464,7 +462,7 @@ public class VehicleRiderSystem extends SystemPackage {
             if (face > lead + skin)
                 continue;
 
-            if (isLayerSolid(grid, axis, layer, tangentA, firstA, lastA, tangentB, firstB, lastB))
+            if (isLayerSolid(vehicle, axis, layer, tangentA, firstA, lastA, tangentB, firstB, lastB))
                 return Math.max(distance, -Math.max(lead - face - skin, 0f));
         }
 
@@ -472,7 +470,7 @@ public class VehicleRiderSystem extends SystemPackage {
     }
 
     private boolean isLayerSolid(
-            VehicleGridStruct grid,
+            VehicleInstance vehicle,
             int axis, int layer,
             int tangentA, int firstA, int lastA,
             int tangentB, int firstB, int lastB) {
@@ -485,7 +483,8 @@ public class VehicleRiderSystem extends SystemPackage {
                 cellScratch[tangentA] = a;
                 cellScratch[tangentB] = b;
 
-                if (grid.isFilled(
+                if (VehicleSpaceUtility.isSolid(
+                        vehicle,
                         cellScratch[EngineSetting.AXIS_X],
                         cellScratch[EngineSetting.AXIS_Y],
                         cellScratch[EngineSetting.AXIS_Z]))

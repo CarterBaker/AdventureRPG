@@ -13,9 +13,11 @@ public class ProjectileManager extends ManagerPackage {
 
     /*
      * Owns every thrown item in flight. launch() is the one path an item
-     * leaves a hand to fly. Every fixed step ProjectileFlightBranch moves each
+     * takes to fly, whether a hand throws it, a cannon fires it, or an impact
+     * knocks it loose. Every fixed step ProjectileFlightBranch moves each
      * projectile under gravity, drag and spin, striking entities and bouncing
-     * off blocks until it comes to rest, and ProjectileLandingBranch snaps a
+     * off blocks until it comes to rest, ProjectileImpactBranch lets a hard
+     * enough hit break the block it meets, and ProjectileLandingBranch snaps a
      * resting one back into the world — a block piece as a sub-block, anything
      * else as a world item on the nearest sub-voxel position and orientation.
      * One that cannot settle yet waits where it rests and tries again.
@@ -40,6 +42,7 @@ public class ProjectileManager extends ManagerPackage {
         // Branches
         this.projectileFlightBranch = create(ProjectileFlightBranch.class);
         this.projectileLandingBranch = create(ProjectileLandingBranch.class);
+        create(ProjectileImpactBranch.class);
         create(ProjectileRenderSystem.class);
 
         // Projectiles
@@ -68,9 +71,11 @@ public class ProjectileManager extends ManagerPackage {
 
     // Management \\
 
+    // An item set flying from a position in a chunk's frame — the thrower is never struck by it
     public void launch(
             EntityInstance thrower,
             ItemInstance itemInstance,
+            long chunkCoordinate,
             Vector3 position,
             Vector3 velocity,
             Vector3 spinAxis,
@@ -82,7 +87,7 @@ public class ProjectileManager extends ManagerPackage {
                 thrower,
                 itemInstance,
                 thrower.getWorldHandle(),
-                thrower.getWorldPositionStruct().getChunkCoordinate(),
+                chunkCoordinate,
                 position,
                 velocity,
                 spinAxis,

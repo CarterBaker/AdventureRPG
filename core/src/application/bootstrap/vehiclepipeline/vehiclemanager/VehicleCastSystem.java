@@ -23,15 +23,18 @@ class VehicleCastSystem extends SystemPackage {
      * Casts a ray against every vehicle it passes near, each in its own model
      * grid. The ray walks the solid sub-voxels cell by cell from the one it
      * starts in, which is never a hit, and stops at the first filled one,
-     * keeping the face it entered and the cell just outside it; it is tested
-     * against the rough box of every cargo item the same way, and against the
-     * bounds of every yard and sail where they stand now, so canvas can be
-     * reached without being solid, unless the caller asks only for what is
-     * solid. The nearest hit within reach wins.
+     * keeping the face it entered and the cell just outside it; it walks the
+     * cells inside the rough box of every cargo item the same way, stopping
+     * at the first its turned shape claims, and it is tested against the
+     * bounds of every yard, every sail and every door not shut where they
+     * stand now, so canvas and an open door can be reached without being
+     * solid, unless the caller asks only for what is solid. A door's cells
+     * stop the walk only while it is shut. The nearest hit within reach wins.
      */
 
     // Internal
     private VehicleManager vehicleManager;
+    private VehicleCargoSystem vehicleCargoSystem;
 
     // Settings
     private float resolution;
@@ -58,8 +61,9 @@ class VehicleCastSystem extends SystemPackage {
     private float[] tMax;
     private float[] tDelta;
 
-    // Box — the distance the last box test met its box at
+    // Box — the distances the last box test entered and left its box at
     private float boxDistance;
+    private float boxExitDistance;
 
     // Base \\
 
@@ -91,6 +95,7 @@ class VehicleCastSystem extends SystemPackage {
     @Override
     protected void get() {
         this.vehicleManager = get(VehicleManager.class);
+        this.vehicleCargoSystem = get(VehicleCargoSystem.class);
     }
 
     // Cast \\
@@ -167,7 +172,8 @@ class VehicleCastSystem extends SystemPackage {
 
             int part = grid.getPart(cell[EngineSetting.AXIS_X], cell[EngineSetting.AXIS_Y], cell[EngineSetting.AXIS_Z]);
 
-            if (part == EngineSetting.INDEX_NOT_FOUND)
+            if (part == EngineSetting.INDEX_NOT_FOUND
+                    || VehicleSpaceUtility.isPartOpen(vehicle, vehicle.getVehicleHandle().getPart(part)))
                 continue;
 
             out.setPart(vehicle, t, part);
@@ -233,43 +239,67 @@ class VehicleCastSystem extends SystemPackage {
 
             int faceAxis = castBox(originScratch, directionScratch, out.getDistance());
 
-            if (faceAxis == EngineSetting.INDEX_NOT_FOUND)
-                continue;
-
-            out.setCargo(vehicle, boxDistance, item);
-            writeBoxFace(faceAxis, boxDistance, item, out);
+            if (faceAxis != EngineSetting.INDEX_NOT_FOUND)
+                walkCargo(vehicle, item, faceAxis, out);
         }
     }
 
-    // The face of a cargo box the ray entered, and the sub-voxel outside it over the point it struck
-    private void writeBoxFace(int faceAxis, float distance, VehicleCargoInstance item, VehicleCastStruct out) {
+    // Walks the cells of the cargo's box from where the ray entered it, stopping at the first its turned shape claims
+    private void walkCargo(VehicleInstance vehicle, VehicleCargoInstance item, int faceAxis, VehicleCastStruct out) {
 
-        float along = faceAxis == EngineSetting.AXIS_X ? directionScratch.x
-                : faceAxis == EngineSetting.AXIS_Y ? directionScratch.y : directionScratch.z;
-        int normal = along > 0f ? -1 : 1;
-        Direction3Vector face = faceAxis == EngineSetting.AXIS_X
-                ? Direction3Vector.getDirectionX(normal)
-                : faceAxis == EngineSetting.AXIS_Y
-                        ? Direction3Vector.getDirectionY(normal)
-                        : Direction3Vector.getDirectionZ(normal);
+        rayOrigin[EngineSetting.AXIS_X] = originScratch.x * resolution;
+        rayOrigin[EngineSetting.AXIS_Y] = originScratch.y * resolution;
+        rayOrigin[EngineSetting.AXIS_Z] = originScratch.z * resolution;
+        rayDirection[EngineSetting.AXIS_X] = directionScratch.x * resolution;
+        rayDirection[EngineSetting.AXIS_Y] = directionScratch.y * resolution;
+        rayDirection[EngineSetting.AXIS_Z] = directionScratch.z * resolution;
 
-        int hitX = clampCell((originScratch.x + directionScratch.x * distance) * resolution,
-                item.getMinX(), item.getMaxX());
-        int hitY = clampCell((originScratch.y + directionScratch.y * distance) * resolution,
-                item.getMinY(), item.getMaxY());
-        int hitZ = clampCell((originScratch.z + directionScratch.z * distance) * resolution,
-                item.getMinZ(), item.getMaxZ());
+        float t = boxDistance;
+        float exit = Math.min(boxExitDistance, out.getDistance());
 
-        out.setFace(face, hitX + face.x, hitY + face.y, hitZ + face.z);
-    }
+        for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++) {
 
-    private int clampCell(float coordinate, int min, int max) {
-        return Math.max(min, Math.min(max - 1, (int) Math.floor(coordinate)));
+            int min = (int) (boundsMin[axis] * resolution);
+            int max = (int) (boundsMax[axis] * resolution);
+            int entered = (int) Math.floor(rayOrigin[axis] + rayDirection[axis] * (t + EngineSetting.ITEM_RAY_EPSILON));
+
+            cell[axis] = Math.max(min, Math.min(max - 1, entered));
+            step[axis] = rayDirection[axis] > 0f ? 1 : (rayDirection[axis] < 0f ? -1 : 0);
+            tDelta[axis] = step[axis] != 0 ? Math.abs(1f / rayDirection[axis]) : Float.MAX_VALUE;
+
+            if (step[axis] > 0)
+                tMax[axis] = (cell[axis] + 1 - rayOrigin[axis]) / rayDirection[axis];
+            else if (step[axis] < 0)
+                tMax[axis] = (cell[axis] - rayOrigin[axis]) / rayDirection[axis];
+            else
+                tMax[axis] = Float.MAX_VALUE;
+        }
+
+        while (t < exit) {
+
+            if (vehicleCargoSystem.claimsCell(
+                    item, cell[EngineSetting.AXIS_X], cell[EngineSetting.AXIS_Y], cell[EngineSetting.AXIS_Z])) {
+                out.setCargo(vehicle, t, item);
+                writeFace(faceAxis, out);
+                return;
+            }
+
+            int axis = tMax[EngineSetting.AXIS_X] < tMax[EngineSetting.AXIS_Y]
+                    ? (tMax[EngineSetting.AXIS_X] < tMax[EngineSetting.AXIS_Z] ? EngineSetting.AXIS_X
+                            : EngineSetting.AXIS_Z)
+                    : (tMax[EngineSetting.AXIS_Y] < tMax[EngineSetting.AXIS_Z] ? EngineSetting.AXIS_Y
+                            : EngineSetting.AXIS_Z);
+
+            t = tMax[axis];
+            cell[axis] += step[axis];
+            tMax[axis] += tDelta[axis];
+            faceAxis = axis;
+        }
     }
 
     // Canvas \\
 
-    // Every yard and sail tested where it stands now, its pose undone so its bounds stay a box
+    // Every yard, sail and open door tested where it stands now, its pose undone so its bounds stay a box
     private void castCanvas(VehicleInstance vehicle, VehicleCastStruct out) {
 
         VehicleHandle vehicleHandle = vehicle.getVehicleHandle();
@@ -278,7 +308,8 @@ class VehicleCastSystem extends SystemPackage {
 
             VehiclePartStruct part = vehicleHandle.getPart(partIndex);
 
-            if (part.getRole().getControl() != VehiclePartControl.HOIST)
+            if (part.getRole().getControl() != VehiclePartControl.HOIST
+                    && !VehicleSpaceUtility.isPartOpen(vehicle, part))
                 continue;
 
             VehicleSpaceUtility.composePartMatrix(vehicle, part, turnScratch, turnMatrix, partMatrix).inverse();
@@ -345,6 +376,7 @@ class VehicleCastSystem extends SystemPackage {
             return EngineSetting.INDEX_NOT_FOUND;
 
         boxDistance = near;
+        boxExitDistance = far;
 
         return faceAxis;
     }

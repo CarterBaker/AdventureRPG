@@ -26,15 +26,16 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WorldItemPlacementSystem extends SystemPackage {
 
     /*
-     * Single entry point for placing and removing world items and opening
-     * them where they stand. Chunk loads stage item palettes off the main
-     * thread and commit them as they are pushed to WorldItemRenderSystem on
-     * it; runtime placement stands an item on a spot WorldItemSpaceSystem
-     * resolved, updating the subchunk, chunk palette and renderer together.
-     * resolveItemInstance() keeps an item's real contents on its subchunk
-     * struct. composeTransform() is the one CPU-side placement of a world
-     * item — its block-space model matrix relative to a chunk, turned exactly
-     * as the item shader turns it.
+     * Single entry point for placing and removing world items, opening them
+     * where they stand, and turning one into another item in its place, as a
+     * door swings open or a cannon is loaded. Chunk loads stage item palettes
+     * off the main thread and commit them as they are pushed to
+     * WorldItemRenderSystem on it; runtime placement stands an item on a spot
+     * WorldItemSpaceSystem resolved, updating the subchunk, chunk palette and
+     * renderer together. resolveItemInstance() keeps an item's real contents
+     * on its subchunk struct. composeTransform() is the one CPU-side
+     * placement of a world item — its block-space model matrix relative to a
+     * chunk, turned exactly as the item shader turns it.
      */
 
     // Internal
@@ -45,7 +46,17 @@ public class WorldItemPlacementSystem extends SystemPackage {
     private WorldItemSpaceSystem worldItemSpaceSystem;
     private WorldStreamManager worldStreamManager;
 
+    // Scratch
+    private WorldItemPlacementStruct placementScratch;
+
     // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Scratch
+        this.placementScratch = new WorldItemPlacementStruct();
+    }
 
     @Override
     protected void get() {
@@ -130,6 +141,31 @@ public class WorldItemPlacementSystem extends SystemPackage {
         int subChunkCoordinate = (subY / EngineSetting.SUB_VOXEL_RESOLUTION) / EngineSetting.CHUNK_SIZE;
         SubChunkInstance subChunk = chunk.getSubChunk(subChunkCoordinate);
         removeMatchingStruct(subChunk, instance.getPackedPosition(), instance.getPackedItem());
+    }
+
+    // Runtime Replacement \\
+
+    // The item turned into another where it stands, once the other's shape fits there — the real item it was is gone
+    public WorldItemInstance replaceItem(WorldItemInstance instance, ItemDefinitionHandle replacement) {
+
+        ChunkInstance chunk = worldStreamManager.getChunkInstance(instance.getChunkCoordinate());
+        long packedPosition = instance.getPackedPosition();
+
+        if (chunk == null || !worldItemSpaceSystem.fits(
+                chunk.getWorldHandle(),
+                instance.getChunkCoordinate(),
+                replacement,
+                Coordinate4Long.unpackW(packedPosition),
+                Coordinate4Long.unpackX(packedPosition),
+                Coordinate4Long.unpackY(packedPosition),
+                Coordinate4Long.unpackZ(packedPosition),
+                instance))
+            return null;
+
+        removeItem(chunk, instance);
+        placementScratch.set(instance.getChunkCoordinate(), packedPosition);
+
+        return placeItem(placementScratch, itemManager.createItem(replacement));
     }
 
     // State \\

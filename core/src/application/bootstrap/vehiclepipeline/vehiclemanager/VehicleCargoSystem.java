@@ -7,12 +7,16 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
+import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
+import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoSlotStruct;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCastStruct;
-import application.bootstrap.vehiclepipeline.vehicle.VehicleGridStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -34,15 +38,22 @@ public class VehicleCargoSystem extends SystemPackage {
      * a corner, pushed up until it fits; pickUp() hands the real item back,
      * contents and all, once it fits. A container aboard opens where it lies
      * once nothing rests in its lid's way, and claims that clearance while it
-     * stands open. Cargo lives in the vehicle's frame, so all of this holds
-     * while the vehicle sails and rolls, and wherever the vehicle goes the
-     * cargo stays exactly where it was set down.
+     * stands open. A door stops cargo only while it is shut, and cannot shut
+     * on cargo standing in its way. Cargo lives in the vehicle's frame, so
+     * all of this holds while the vehicle sails and rolls, and wherever the
+     * vehicle goes the cargo stays exactly where it was set down.
+     * replaceCargo() turns cargo into another item in its place, as a door
+     * swings open or a cannon is loaded, once the other fits there. stow()
+     * furnishes a vehicle as it enters the world: every place it comes
+     * furnished at draws one item from its table, which must fit there.
      */
 
     // Internal
     private VehicleManager vehicleManager;
     private VehicleCastSystem vehicleCastSystem;
     private ItemRotationBufferSystem itemRotationBufferSystem;
+    private ItemDefinitionManager itemDefinitionManager;
+    private ItemManager itemManager;
 
     // Cast
     private VehicleCastStruct castStruct;
@@ -75,6 +86,8 @@ public class VehicleCargoSystem extends SystemPackage {
         this.vehicleManager = get(VehicleManager.class);
         this.vehicleCastSystem = get(VehicleCastSystem.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
+        this.itemManager = get(ItemManager.class);
     }
 
     // Cast \\
@@ -120,6 +133,20 @@ public class VehicleCargoSystem extends SystemPackage {
         return castStruct.getCargoInstance();
     }
 
+    // One axis of the cell of the cast cargo's own model grid the ray struck, turned back out of its orientation
+    public int getCastGridCell(int axis) {
+
+        VehicleCargoInstance cargo = castStruct.getCargoInstance();
+        Direction3Vector face = castStruct.getHitFace();
+
+        return itemRotationBufferSystem.unrotateCell(
+                cargo.getOrientation(),
+                axis,
+                castStruct.getAnchorX() - face.x - cargo.getCornerX(),
+                castStruct.getAnchorY() - face.y - cargo.getCornerY(),
+                castStruct.getAnchorZ() - face.z - cargo.getCornerZ());
+    }
+
     // Pick Up \\
 
     // The cargo cast() last met handed to the entity, and taken off the vehicle once it fits
@@ -130,7 +157,7 @@ public class VehicleCargoSystem extends SystemPackage {
 
         VehicleCargoInstance cargo = castStruct.getCargoInstance();
 
-        if (!entity.getInventoryHandle().give(cargo.getItemInstance()))
+        if (!entity.getInventoryHandle().give(itemManager.toCarried(cargo.getItemInstance())))
             return false;
 
         castStruct.getVehicleInstance().getCargo().remove(cargo);
@@ -220,7 +247,7 @@ public class VehicleCargoSystem extends SystemPackage {
 
         for (int push = 0; push <= EngineSetting.ITEM_PLACEMENT_PUSH_LIMIT; push++) {
 
-            if (fits(vehicle, shape, orientation))
+            if (fits(vehicle, shape, orientation, null))
                 return true;
 
             for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++)
@@ -230,8 +257,38 @@ public class VehicleCargoSystem extends SystemPackage {
         return false;
     }
 
+    // Stow \\
+
+    // Every place the vehicle comes furnished at, by its chance, takes one item drawn from its table
+    void stow(VehicleInstance vehicle) {
+
+        VehicleHandle vehicleHandle = vehicle.getVehicleHandle();
+
+        for (int slotIndex = 0; slotIndex < vehicleHandle.getCargoSlotCount(); slotIndex++) {
+
+            VehicleCargoSlotStruct slot = vehicleHandle.getCargoSlot(slotIndex);
+
+            if (Math.random() >= slot.getChance())
+                continue;
+
+            String itemName = slot.getItemName((int) (Math.random() * slot.getItemCount()));
+            ItemDefinitionHandle item = itemDefinitionManager.getItemHandleFromItemName(itemName);
+
+            cornerScratch[EngineSetting.AXIS_X] = slot.getCornerX();
+            cornerScratch[EngineSetting.AXIS_Y] = slot.getCornerY();
+            cornerScratch[EngineSetting.AXIS_Z] = slot.getCornerZ();
+
+            if (!fits(vehicle, item.getShape(), slot.getOrientation(), null))
+                throwException("Vehicle '" + vehicleHandle.getVehicleName() + "' stows '" + itemName
+                        + "' from table '" + slot.getTableName() + "' at (" + slot.getCornerX() + ", "
+                        + slot.getCornerY() + ", " + slot.getCornerZ() + "), where it does not fit.");
+
+            addCargo(vehicle, itemManager.createItem(item), slot.getOrientation());
+        }
+    }
+
     // The one way an item comes aboard: cornered where the last fit left it
-    private void addCargo(VehicleInstance vehicle, ItemInstance itemInstance, int orientation) {
+    private VehicleCargoInstance addCargo(VehicleInstance vehicle, ItemInstance itemInstance, int orientation) {
 
         VehicleCargoInstance cargo = create(VehicleCargoInstance.class);
         cargo.constructor(
@@ -243,6 +300,28 @@ public class VehicleCargoSystem extends SystemPackage {
         resolveBounds(cargo);
 
         vehicle.getCargo().add(cargo);
+
+        return cargo;
+    }
+
+    // Replace \\
+
+    // The cargo turned into another item where it stands, once the other's shape fits there — null when it does not
+    public VehicleCargoInstance replaceCargo(
+            VehicleInstance vehicle,
+            VehicleCargoInstance cargo,
+            ItemDefinitionHandle replacement) {
+
+        cornerScratch[EngineSetting.AXIS_X] = cargo.getCornerX();
+        cornerScratch[EngineSetting.AXIS_Y] = cargo.getCornerY();
+        cornerScratch[EngineSetting.AXIS_Z] = cargo.getCornerZ();
+
+        if (!fits(vehicle, replacement.getShape(), cargo.getOrientation(), cargo))
+            return null;
+
+        vehicle.getCargo().remove(cargo);
+
+        return addCargo(vehicle, itemManager.createItem(replacement), cargo.getOrientation());
     }
 
     // Open \\
@@ -261,7 +340,6 @@ public class VehicleCargoSystem extends SystemPackage {
 
         LidClearanceStruct clearance = container.getItemInstance().getItemDefinitionHandle()
                 .getContainerSpace().getLidClearance();
-        VehicleGridStruct grid = vehicle.getVehicleHandle().getSolidGrid();
         int orientation = container.getOrientation();
 
         for (int i = 0; i < clearance.getCellCount(); i++) {
@@ -277,7 +355,7 @@ public class VehicleCargoSystem extends SystemPackage {
             int z = container.getCornerZ()
                     + itemRotationBufferSystem.rotateCell(orientation, EngineSetting.AXIS_Z, gridX, gridY, gridZ);
 
-            if (grid.isFilled(x, y, z) || isCellTaken(vehicle, x, y, z, container))
+            if (VehicleSpaceUtility.isSolid(vehicle, x, y, z) || isCellTaken(vehicle, x, y, z, container))
                 return false;
         }
 
@@ -296,10 +374,13 @@ public class VehicleCargoSystem extends SystemPackage {
 
     // Fit \\
 
-    // True when no cell the turned shape claims at the current corner is solid or taken
-    private boolean fits(VehicleInstance vehicle, ItemShapeStruct shape, int orientation) {
-
-        VehicleGridStruct grid = vehicle.getVehicleHandle().getSolidGrid();
+    // True when no cell the turned shape claims at the current corner is solid or taken but by the cargo it would
+    // replace, which may be null
+    private boolean fits(
+            VehicleInstance vehicle,
+            ItemShapeStruct shape,
+            int orientation,
+            VehicleCargoInstance replaced) {
 
         for (int i = 0; i < shape.getCellCount(); i++) {
 
@@ -314,8 +395,27 @@ public class VehicleCargoSystem extends SystemPackage {
             int z = cornerScratch[EngineSetting.AXIS_Z]
                     + itemRotationBufferSystem.rotateCell(orientation, EngineSetting.AXIS_Z, gridX, gridY, gridZ);
 
-            if (grid.isFilled(x, y, z) || isCellTaken(vehicle, x, y, z, null))
+            if (VehicleSpaceUtility.isSolid(vehicle, x, y, z) || isCellTaken(vehicle, x, y, z, replaced))
                 return false;
+        }
+
+        return true;
+    }
+
+    // True when no cargo and no open lid's clearance holds any cell a part fills where it stands shut
+    public boolean isPartClear(VehicleInstance vehicle, VehiclePartStruct part) {
+
+        for (int box = 0; box < part.getBoxCount(); box++) {
+
+            int maxX = part.getBoxBound(box, EngineSetting.BOX_MAX_X);
+            int maxY = part.getBoxBound(box, EngineSetting.BOX_MAX_Y);
+            int maxZ = part.getBoxBound(box, EngineSetting.BOX_MAX_Z);
+
+            for (int z = part.getBoxBound(box, EngineSetting.BOX_MIN_Z); z < maxZ; z++)
+                for (int y = part.getBoxBound(box, EngineSetting.BOX_MIN_Y); y < maxY; y++)
+                    for (int x = part.getBoxBound(box, EngineSetting.BOX_MIN_X); x < maxX; x++)
+                        if (isCellTaken(vehicle, x, y, z, null))
+                            return false;
         }
 
         return true;
@@ -341,7 +441,7 @@ public class VehicleCargoSystem extends SystemPackage {
     }
 
     // True when a cargo item's turned shape claims a model sub-voxel
-    private boolean claimsCell(VehicleCargoInstance cargo, int x, int y, int z) {
+    boolean claimsCell(VehicleCargoInstance cargo, int x, int y, int z) {
 
         if (x < cargo.getMinX() || y < cargo.getMinY() || z < cargo.getMinZ()
                 || x >= cargo.getMaxX() || y >= cargo.getMaxY() || z >= cargo.getMaxZ())

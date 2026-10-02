@@ -28,12 +28,14 @@ public class VehicleManager extends ManagerPackage {
      * VehicleMotionBranch integrates them. A vehicle is never pinned to the
      * world: at anchor it still floats and rocks, and its anchor only drags.
      * Riders are carried to where the deck now stands once every vehicle has
-     * stepped. The helm, the sails and the anchor change only through here.
+     * stepped, and every door swings toward open or shut. The helm, the
+     * sails, the doors and the anchor change only through here.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private VehicleRiderSystem vehicleRiderSystem;
+    private VehicleCargoSystem vehicleCargoSystem;
 
     // Branches
     private VehicleMotionBranch vehicleMotionBranch;
@@ -41,6 +43,7 @@ public class VehicleManager extends ManagerPackage {
     private VehicleRigBranch vehicleRigBranch;
     private VehicleGroundBranch vehicleGroundBranch;
     private VehicleMooringBranch vehicleMooringBranch;
+    private VehicleDoorBranch vehicleDoorBranch;
 
     // Palette
     private Object2ObjectOpenHashMap<String, VehicleHandle> vehicleName2VehicleHandle;
@@ -74,12 +77,13 @@ public class VehicleManager extends ManagerPackage {
         this.vehicleRigBranch = create(VehicleRigBranch.class);
         this.vehicleGroundBranch = create(VehicleGroundBranch.class);
         this.vehicleMooringBranch = create(VehicleMooringBranch.class);
+        this.vehicleDoorBranch = create(VehicleDoorBranch.class);
 
         // Systems
         this.vehicleRiderSystem = create(VehicleRiderSystem.class);
         create(VehicleCastSystem.class);
         create(VehicleControlSystem.class);
-        create(VehicleCargoSystem.class);
+        this.vehicleCargoSystem = create(VehicleCargoSystem.class);
         create(VehicleRenderSystem.class);
         create(VehicleHullMaskSystem.class);
 
@@ -138,6 +142,7 @@ public class VehicleManager extends ManagerPackage {
         if (worldStreamManager.getChunkInstance(vehicle.getWorldPositionStruct().getChunkCoordinate()) == null)
             return;
 
+        vehicleDoorBranch.swing(vehicle, timeStep);
         vehicleRigBranch.trim(vehicle, timeStep);
         vehicleHullBranch.sampleSea(vehicle);
         vehicleHullBranch.flood(vehicle, timeStep);
@@ -169,8 +174,8 @@ public class VehicleManager extends ManagerPackage {
         vehicleHandles.add(vehicleHandle);
     }
 
-    // Spawns a vehicle at anchor, level, its bow on the heading given and its centre of mass over the position
-    // given, its design waterline on the water there — the one way a vehicle enters the world
+    // Spawns a vehicle at anchor and furnished, level, its bow on the heading given and its centre of mass over the
+    // position given, its design waterline on the water there — the one way a vehicle enters the world
     public VehicleInstance spawn(
             VehicleHandle vehicleHandle,
             WorldHandle worldHandle,
@@ -189,6 +194,7 @@ public class VehicleManager extends ManagerPackage {
         vehicle.getWorldPositionStruct().getPosition().y = vehicleMooringBranch.resolveRestHeight(vehicle);
         vehicles.add(vehicle);
         vehicleMooringBranch.dropAnchor(vehicle);
+        vehicleCargoSystem.stow(vehicle);
 
         return vehicle;
     }
@@ -247,6 +253,19 @@ public class VehicleManager extends ManagerPackage {
         for (int sailIndex = 0; sailIndex < vehicleHandle.getSailCount(); sailIndex++)
             if (vehicleHandle.getSail(sailIndex).getYardIndex() == yardPartIndex)
                 setSail(vehicle, sailIndex, !anySet);
+    }
+
+    // Doors \\
+
+    // Opens a door that is shut or shutting, or shuts one that is open unless cargo stands where it closes
+    public void toggleDoor(VehicleInstance vehicle, int doorIndex) {
+
+        boolean open = !vehicle.isDoorOpen(doorIndex);
+
+        if (!open && !vehicleCargoSystem.isPartClear(vehicle, vehicle.getVehicleHandle().getDoor(doorIndex)))
+            return;
+
+        vehicle.setDoorOpen(doorIndex, open);
     }
 
     // Anchor \\

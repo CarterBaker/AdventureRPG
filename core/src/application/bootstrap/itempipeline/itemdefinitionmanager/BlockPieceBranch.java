@@ -15,6 +15,7 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class BlockPieceBranch extends BranchPackage {
 
@@ -75,7 +76,9 @@ class BlockPieceBranch extends BranchPackage {
                 EngineSetting.TOOL_NONE,
                 EngineSetting.DEFAULT_TOOL_TIER,
                 EngineSetting.BLOCK_PIECE_STACK_SIZE,
-                blockHandle.getBlockID());
+                blockHandle.getBlockID(),
+                new ObjectArrayList<>(),
+                EngineSetting.ITEM_PICK_UP_AS_SELF);
 
         ItemDefinitionHandle item = create(ItemDefinitionHandle.class);
         item.constructor(itemDefinitionData);

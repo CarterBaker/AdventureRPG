@@ -24,15 +24,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class VehicleRenderSystem extends SystemPackage {
 
     /*
-     * Draws every vehicle near a viewer into a window's world target with the
-     * item material worn gear uses, so a vehicle writes the same G-buffer and
-     * is lit like everything else. A vehicle is placed relative to the
-     * viewer's chunk: its hull meshes through its own transform, each moving
-     * part through that transform and its own pose, an anchor only while it is
-     * aboard, and every cargo item through the vehicle's transform and its own
-     * placement on the vehicle's grid, save a container standing open, which
-     * the inventory draws open where it lies. Every draw takes a model of its
-     * own from ItemModelManager.
+     * Draws every vehicle near a viewer into a window's world target. Its hull
+     * and parts draw with the vehicle material, which repeats each part's
+     * texture once per block across faces merged over many blocks, and its
+     * cargo with the item material worn gear uses; both write the same
+     * G-buffer and are lit like everything else. A vehicle is placed relative
+     * to the viewer's chunk: its hull meshes through its own transform, each
+     * moving part through that transform and its own pose, an anchor only
+     * while it is aboard, and every cargo item through the vehicle's transform
+     * and its own placement on the vehicle's grid, save a container standing
+     * open, which the inventory draws open where it lies. Every draw takes a
+     * model of its own from ItemModelManager.
      */
 
     // Internal
@@ -43,6 +45,7 @@ public class VehicleRenderSystem extends SystemPackage {
     private VehicleCargoSystem vehicleCargoSystem;
 
     // Material
+    private int vehicleMaterialID;
     private int equipmentMaterialID;
 
     // Scratch
@@ -78,6 +81,7 @@ public class VehicleRenderSystem extends SystemPackage {
     protected void awake() {
 
         // Material
+        this.vehicleMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.VEHICLE_ITEM_MATERIAL);
         this.equipmentMaterialID = materialManager.getMaterialIDFromMaterialName(
                 EngineSetting.EQUIPMENT_ITEM_MATERIAL);
     }
@@ -111,7 +115,7 @@ public class VehicleRenderSystem extends SystemPackage {
         ObjectArrayList<MeshInstance> hullMeshes = vehicle.getVehicleHandle().getHullMeshes();
 
         for (int i = 0; i < hullMeshes.size(); i++)
-            pushMesh(hullMeshes.get(i), vehicleMatrix, targetFbo, window);
+            pushMesh(hullMeshes.get(i), vehicleMaterialID, vehicleMatrix, targetFbo, window);
     }
 
     private void pushParts(VehicleInstance vehicle, FBOInstance targetFbo, WindowInstance window) {
@@ -131,7 +135,7 @@ public class VehicleRenderSystem extends SystemPackage {
             ObjectArrayList<MeshInstance> meshes = part.getMeshes();
 
             for (int i = 0; i < meshes.size(); i++)
-                pushMesh(meshes.get(i), drawMatrix, targetFbo, window);
+                pushMesh(meshes.get(i), vehicleMaterialID, drawMatrix, targetFbo, window);
         }
     }
 
@@ -160,9 +164,14 @@ public class VehicleRenderSystem extends SystemPackage {
 
     // Draw \\
 
-    private void pushMesh(MeshInstance mesh, Matrix4 transform, FBOInstance targetFbo, WindowInstance window) {
+    private void pushMesh(
+            MeshInstance mesh,
+            int materialID,
+            Matrix4 transform,
+            FBOInstance targetFbo,
+            WindowInstance window) {
 
-        ModelInstance model = itemModelManager.acquireModel(mesh.getMeshData(), equipmentMaterialID);
+        ModelInstance model = itemModelManager.acquireModel(mesh.getMeshData(), materialID);
 
         model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, transform);
         renderManager.pushRenderCall(model, targetFbo, EngineSetting.EQUIPMENT_RENDER_DEPTH, window);

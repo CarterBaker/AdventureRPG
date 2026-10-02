@@ -10,14 +10,23 @@ public class ItemShapeStruct extends StructPackage {
     /*
      * The sub-voxel cells an item claims, trimmed to their bounds: the volume
      * it takes up inside a container and standing in the world. An item's
-     * file defines the cells as boxes in its model grid, or leaves them to
-     * its model, where a wall claims the cell on its far side, or the last
-     * cell where it closes the grid, so a flat item still takes up one layer.
-     * The grid mask answers in one read whether a model-grid cell is claimed.
-     * A rotation is a number of quarter turns about the vertical axis; rotated
-     * cells and the rotated shape transform both keep the shape inside its own
-     * rotated bounds, so a placement is always the shape's minimum corner.
+     * file defines the cells as boxes in its model grid, which spans one block
+     * or several, or leaves them to its model, where a wall claims the cell on
+     * its far side, or the last cell where it closes the grid, so a flat item
+     * still takes up one layer. The grid mask answers in one read whether a
+     * model-grid cell is claimed. A rotation is a number of quarter turns about
+     * the vertical axis; rotated cells and the rotated shape transform both
+     * keep the shape inside its own rotated bounds, so a placement is always
+     * the shape's minimum corner. An item standing in the world turns about
+     * the centre of its model grid's first block, so a shape larger than a
+     * block reaches blocks either side of the one its corner lies in, and its
+     * reach says how many, turned any way at all.
      */
+
+    // Grid Size — the item's model grid in sub-voxel cells
+    private final int gridSizeX;
+    private final int gridSizeY;
+    private final int gridSizeZ;
 
     // Offset — the trimmed shape's first cell inside the item's model grid
     private final int offsetX;
@@ -28,6 +37,10 @@ public class ItemShapeStruct extends StructPackage {
     private final int sizeX;
     private final int sizeY;
     private final int sizeZ;
+
+    // Reach — blocks beyond its corner's block the shape can reach, turned any way
+    private final int reachBefore;
+    private final int reachAfter;
 
     // Cells — shape-local coordinates of every filled cell
     private final int[] cellX;
@@ -40,22 +53,21 @@ public class ItemShapeStruct extends StructPackage {
     // Constructor \\
 
     public ItemShapeStruct(SubVoxelModelStruct model) {
-        this(resolveOccupied(model));
+        this(resolveOccupied(model), model.getSizeX(), model.getSizeY(), model.getSizeZ());
     }
 
-    public ItemShapeStruct(boolean[] occupied) {
+    public ItemShapeStruct(boolean[] occupied, int gridSizeX, int gridSizeY, int gridSizeZ) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         int cellCount = 0;
 
-        int minX = resolution, minY = resolution, minZ = resolution;
+        int minX = gridSizeX, minY = gridSizeY, minZ = gridSizeZ;
         int maxX = 0, maxY = 0, maxZ = 0;
 
-        for (int z = 0; z < resolution; z++)
-            for (int y = 0; y < resolution; y++)
-                for (int x = 0; x < resolution; x++) {
+        for (int z = 0; z < gridSizeZ; z++)
+            for (int y = 0; y < gridSizeY; y++)
+                for (int x = 0; x < gridSizeX; x++) {
 
-                    if (!occupied[toCellIndex(x, y, z)])
+                    if (!occupied[toCellIndex(x, y, z, gridSizeX, gridSizeY)])
                         continue;
 
                     cellCount++;
@@ -70,6 +82,11 @@ public class ItemShapeStruct extends StructPackage {
         if (cellCount == 0)
             throwException("An item shape needs at least one filled sub-voxel cell or wall.");
 
+        // Grid Size
+        this.gridSizeX = gridSizeX;
+        this.gridSizeY = gridSizeY;
+        this.gridSizeZ = gridSizeZ;
+
         // Offset
         this.offsetX = minX;
         this.offsetY = minY;
@@ -80,13 +97,20 @@ public class ItemShapeStruct extends StructPackage {
         this.sizeY = maxY - minY + 1;
         this.sizeZ = maxZ - minZ + 1;
 
+        // Reach
+        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        int lowest = Math.min(minX, Math.min(minY, minZ));
+        int highest = Math.max(maxX, Math.max(maxY, maxZ));
+        this.reachBefore = -Math.floorDiv(Math.min(lowest, resolution - 1 - highest), resolution);
+        this.reachAfter = Math.floorDiv(resolution - 1 + Math.max(highest, resolution - 1 - lowest), resolution);
+
         // Cells
         this.cellX = new int[cellCount];
         this.cellY = new int[cellCount];
         this.cellZ = new int[cellCount];
 
         // Grid
-        this.gridMask = new long[EngineSetting.SUB_VOXEL_CELL_COUNT / Long.SIZE];
+        this.gridMask = new long[(gridSizeX * gridSizeY * gridSizeZ + Long.SIZE - 1) / Long.SIZE];
 
         int index = 0;
 
@@ -94,7 +118,9 @@ public class ItemShapeStruct extends StructPackage {
             for (int y = minY; y <= maxY; y++)
                 for (int x = minX; x <= maxX; x++) {
 
-                    if (!occupied[toCellIndex(x, y, z)])
+                    int cellIndex = toCellIndex(x, y, z, gridSizeX, gridSizeY);
+
+                    if (!occupied[cellIndex])
                         continue;
 
                     cellX[index] = x - minX;
@@ -102,39 +128,41 @@ public class ItemShapeStruct extends StructPackage {
                     cellZ[index] = z - minZ;
                     index++;
 
-                    int cellIndex = toCellIndex(x, y, z);
                     gridMask[cellIndex / Long.SIZE] |= 1L << (cellIndex % Long.SIZE);
                 }
     }
 
-    // Every cell a cube fills or a wall claims
+    // Every cell of the model grid a cube fills or a wall claims
     public static boolean[] resolveOccupied(SubVoxelModelStruct model) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        boolean[] occupied = new boolean[EngineSetting.SUB_VOXEL_CELL_COUNT];
+        int sizeX = model.getSizeX();
+        int sizeY = model.getSizeY();
+        int sizeZ = model.getSizeZ();
+        boolean[] occupied = new boolean[sizeX * sizeY * sizeZ];
 
-        for (int z = 0; z <= resolution; z++)
-            for (int y = 0; y <= resolution; y++)
-                for (int x = 0; x <= resolution; x++) {
+        for (int z = 0; z <= sizeZ; z++)
+            for (int y = 0; y <= sizeY; y++)
+                for (int x = 0; x <= sizeX; x++) {
 
                     if (model.isFilled(x, y, z))
-                        occupied[toCellIndex(x, y, z)] = true;
+                        occupied[toCellIndex(x, y, z, sizeX, sizeY)] = true;
 
                     for (int axis = 0; axis < EngineSetting.SUB_VOXEL_AXIS_COUNT; axis++)
                         if (model.hasWall(axis, x, y, z))
                             occupied[toCellIndex(
-                                    axis == 0 ? Math.min(x, resolution - 1) : x,
-                                    axis == 1 ? Math.min(y, resolution - 1) : y,
-                                    axis == 2 ? Math.min(z, resolution - 1) : z)] = true;
+                                    axis == 0 ? Math.min(x, sizeX - 1) : x,
+                                    axis == 1 ? Math.min(y, sizeY - 1) : y,
+                                    axis == 2 ? Math.min(z, sizeZ - 1) : z,
+                                    sizeX,
+                                    sizeY)] = true;
                 }
 
         return occupied;
     }
 
-    public static int toCellIndex(int x, int y, int z) {
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        return x + resolution * (y + resolution * z);
+    // A cell's index in a model grid of the size given on x and y
+    public static int toCellIndex(int x, int y, int z, int gridSizeX, int gridSizeY) {
+        return x + gridSizeX * (y + gridSizeY * z);
     }
 
     // Rotation \\
@@ -203,12 +231,10 @@ public class ItemShapeStruct extends StructPackage {
     // True where the shape claims this cell of the item's model grid, false outside the grid
     public boolean claimsGridCell(int x, int y, int z) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-
-        if (x < 0 || y < 0 || z < 0 || x >= resolution || y >= resolution || z >= resolution)
+        if (x < 0 || y < 0 || z < 0 || x >= gridSizeX || y >= gridSizeY || z >= gridSizeZ)
             return false;
 
-        int cellIndex = toCellIndex(x, y, z);
+        int cellIndex = toCellIndex(x, y, z, gridSizeX, gridSizeY);
 
         return (gridMask[cellIndex / Long.SIZE] & (1L << (cellIndex % Long.SIZE))) != 0;
     }
@@ -237,6 +263,28 @@ public class ItemShapeStruct extends StructPackage {
 
     public int getSizeZ() {
         return sizeZ;
+    }
+
+    // How many blocks before its corner's block the shape can reach on any axis, turned any way
+    public int getReachBefore() {
+        return reachBefore;
+    }
+
+    // How many blocks after its corner's block the shape can reach on any axis, turned any way
+    public int getReachAfter() {
+        return reachAfter;
+    }
+
+    public int getGridSizeX() {
+        return gridSizeX;
+    }
+
+    public int getGridSizeY() {
+        return gridSizeY;
+    }
+
+    public int getGridSizeZ() {
+        return gridSizeZ;
     }
 
     public int getCellCount() {

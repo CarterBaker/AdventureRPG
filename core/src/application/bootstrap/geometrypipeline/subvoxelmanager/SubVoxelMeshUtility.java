@@ -11,7 +11,9 @@ class SubVoxelMeshUtility extends EngineUtility {
     /*
      * Greedy mesher for sub-voxel models. Emits only cube faces exposed to
      * empty cells, merges coplanar faces of the same part, and maps UVs from
-     * cell position so merged faces keep their texels. A wall is one quad seen
+     * cell position so merged faces keep their texels. A model of many blocks
+     * is meshed one block at a time, so every face's texels stay inside its
+     * own block exactly as a single block's do. A wall is one quad seen
      * from both sides, since items draw without culling; it faces its open
      * side, hides where cubes bury it on both sides, and takes the place of a
      * cube face it covers. Null outputs count quads only. A pocket's open
@@ -40,23 +42,55 @@ class SubVoxelMeshUtility extends EngineUtility {
 
         int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         int[] mask = new int[resolution * resolution];
+        int[] origin = new int[3];
+        int quadCount = 0;
+
+        for (int blockZ = 0; blockZ < model.getBlocksZ(); blockZ++)
+            for (int blockY = 0; blockY < model.getBlocksY(); blockY++)
+                for (int blockX = 0; blockX < model.getBlocksX(); blockX++) {
+
+                    origin[0] = blockX * resolution;
+                    origin[1] = blockY * resolution;
+                    origin[2] = blockZ * resolution;
+                    quadCount += buildBlock(model, origin, mask, partUVBounds, vertices, indices);
+                }
+
+        return quadCount;
+    }
+
+    // One block of the model, its cells from the origin given; a wall plane shared with the next block is that
+    // block's first, so it is meshed once
+    private static int buildBlock(
+            SubVoxelModelStruct model,
+            int[] origin,
+            int[] mask,
+            float[] partUVBounds,
+            FloatArrayList vertices,
+            ShortArrayList indices) {
+
+        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         int quadCount = 0;
 
         for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++)
             for (int slice = 0; slice < resolution; slice++) {
-                fillMask(model, face, slice, mask);
-                quadCount += mergeMask(face, slice, mask, partUVBounds, vertices, indices);
+                fillMask(model, origin, face, slice, mask);
+                quadCount += mergeMask(face, origin, slice, mask, partUVBounds, vertices, indices);
             }
 
-        for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++)
-            for (int plane = 0; plane <= resolution; plane++) {
+        for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++) {
+
+            int axis = resolveAxis(face);
+            int lastPlane = origin[axis] + resolution == model.getSize(axis) ? resolution : resolution - 1;
+
+            for (int plane = 0; plane <= lastPlane; plane++) {
 
                 // A positive face sits on the far side of the slice before the plane
-                int slice = FACE_NORMALS[face][resolveAxis(face)] > 0 ? plane - 1 : plane;
+                int slice = FACE_NORMALS[face][axis] > 0 ? plane - 1 : plane;
 
-                fillWallMask(model, face, plane, mask);
-                quadCount += mergeMask(face, slice, mask, partUVBounds, vertices, indices);
+                fillWallMask(model, origin, face, plane, mask);
+                quadCount += mergeMask(face, origin, slice, mask, partUVBounds, vertices, indices);
             }
+        }
 
         return quadCount;
     }
@@ -127,7 +161,7 @@ class SubVoxelMeshUtility extends EngineUtility {
 
     // Mask \\
 
-    private static void fillMask(SubVoxelModelStruct model, int face, int slice, int[] mask) {
+    private static void fillMask(SubVoxelModelStruct model, int[] origin, int face, int slice, int[] mask) {
 
         int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         int[] normal = FACE_NORMALS[face];
@@ -139,16 +173,16 @@ class SubVoxelMeshUtility extends EngineUtility {
         for (int b = 0; b < resolution; b++)
             for (int a = 0; a < resolution; a++) {
 
-                cell[axis] = slice;
-                cell[uAxis] = a;
-                cell[vAxis] = b;
+                cell[axis] = origin[axis] + slice;
+                cell[uAxis] = origin[uAxis] + a;
+                cell[vAxis] = origin[vAxis] + b;
 
                 int part = model.getCellPart(cell[0], cell[1], cell[2]);
                 boolean exposed = part != EngineSetting.INDEX_NOT_FOUND
                         && !model.isFilled(cell[0] + normal[0], cell[1] + normal[1], cell[2] + normal[2]);
 
                 if (exposed) {
-                    cell[axis] = normal[axis] > 0 ? slice + 1 : slice;
+                    cell[axis] = origin[axis] + (normal[axis] > 0 ? slice + 1 : slice);
                     exposed = !model.hasWall(axis, cell[0], cell[1], cell[2]);
                 }
 
@@ -157,7 +191,7 @@ class SubVoxelMeshUtility extends EngineUtility {
     }
 
     // Walls on one plane that face this face's way: toward their open side, or positive when both sides are open
-    private static void fillWallMask(SubVoxelModelStruct model, int face, int plane, int[] mask) {
+    private static void fillWallMask(SubVoxelModelStruct model, int[] origin, int face, int plane, int[] mask) {
 
         int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         int axis = resolveAxis(face);
@@ -169,9 +203,9 @@ class SubVoxelMeshUtility extends EngineUtility {
         for (int b = 0; b < resolution; b++)
             for (int a = 0; a < resolution; a++) {
 
-                cell[axis] = plane;
-                cell[uAxis] = a;
-                cell[vAxis] = b;
+                cell[axis] = origin[axis] + plane;
+                cell[uAxis] = origin[uAxis] + a;
+                cell[vAxis] = origin[vAxis] + b;
 
                 int part = model.getWallPart(axis, cell[0], cell[1], cell[2]);
                 boolean frontOpen = !isFilledOnSide(model, cell, axis, true);
@@ -195,6 +229,7 @@ class SubVoxelMeshUtility extends EngineUtility {
 
     private static int mergeMask(
             int face,
+            int[] origin,
             int slice,
             int[] mask,
             float[] partUVBounds,
@@ -222,7 +257,7 @@ class SubVoxelMeshUtility extends EngineUtility {
                         mask[a + w + (b + h) * resolution] = EngineSetting.SUB_VOXEL_EMPTY_CELL;
 
                 if (vertices != null)
-                    emitQuad(face, slice, a, b, width, height, value - 1, partUVBounds, vertices, indices);
+                    emitQuad(face, origin, slice, a, b, width, height, value - 1, partUVBounds, vertices, indices);
 
                 quadCount++;
                 a += width;
@@ -263,6 +298,7 @@ class SubVoxelMeshUtility extends EngineUtility {
 
     private static void emitQuad(
             int face,
+            int[] origin,
             int slice,
             int a,
             int b,
@@ -277,22 +313,22 @@ class SubVoxelMeshUtility extends EngineUtility {
         int axis = resolveAxis(face);
         int uAxis = (axis + 1) % 3;
         int vAxis = (axis + 2) % 3;
-        float plane = (FACE_NORMALS[face][axis] > 0 ? slice + 1 : slice) / resolution;
+        float plane = (origin[axis] + (FACE_NORMALS[face][axis] > 0 ? slice + 1 : slice)) / resolution;
 
         float[] min = new float[3];
         float[] max = new float[3];
 
         min[axis] = plane;
         max[axis] = plane;
-        min[uAxis] = a / resolution;
-        max[uAxis] = (a + width) / resolution;
-        min[vAxis] = b / resolution;
-        max[vAxis] = (b + height) / resolution;
+        min[uAxis] = (origin[uAxis] + a) / resolution;
+        max[uAxis] = (origin[uAxis] + a + width) / resolution;
+        min[vAxis] = (origin[vAxis] + b) / resolution;
+        max[vAxis] = (origin[vAxis] + b + height) / resolution;
 
         int uvBase = partIndex * 4;
 
         emitFace(
-                face, min, max, 0f, 0f, 0f,
+                face, min, max, origin[0] / resolution, origin[1] / resolution, origin[2] / resolution,
                 partUVBounds[uvBase], partUVBounds[uvBase + 1], partUVBounds[uvBase + 2], partUVBounds[uvBase + 3],
                 vertices, indices);
     }

@@ -22,8 +22,9 @@ public class VehicleInstance extends InstancePackage {
      * about its centre of mass before VehicleMotionBranch integrates them.
      * It carries the sea it last sampled under each hull column, who stands
      * at its helm and where its rudder lies, how far each mast's yards are
-     * braced and each sail is set, whether it rides at anchor, how much water
-     * it has taken on, and the cargo set down aboard. Spawned and owned by
+     * braced and each sail is set, how far each door stands open and whether
+     * it is opening or shutting, whether it rides at anchor, how much water it
+     * has taken on, and the cargo set down aboard. Spawned and owned by
      * VehicleManager.
      */
 
@@ -57,6 +58,10 @@ public class VehicleInstance extends InstancePackage {
     private float[] braceAngles;
     private float[] sailHoists;
     private boolean[] sailsSet;
+
+    // Doors
+    private float[] doorOpenings;
+    private boolean[] doorsOpen;
 
     // Mooring
     private boolean anchored;
@@ -118,6 +123,10 @@ public class VehicleInstance extends InstancePackage {
         this.braceAngles = new float[vehicleHandle.getMastCount()];
         this.sailHoists = new float[vehicleHandle.getSailCount()];
         this.sailsSet = new boolean[vehicleHandle.getSailCount()];
+
+        // Doors
+        this.doorOpenings = new float[vehicleHandle.getDoorCount()];
+        this.doorsOpen = new boolean[vehicleHandle.getDoorCount()];
     }
 
     // Pose \\
@@ -177,6 +186,16 @@ public class VehicleInstance extends InstancePackage {
 
     public void setSailSet(int sailIndex, boolean set) {
         sailsSet[sailIndex] = set;
+    }
+
+    // Doors \\
+
+    public void setDoorOpening(int doorIndex, float opening) {
+        doorOpenings[doorIndex] = opening;
+    }
+
+    public void setDoorOpen(int doorIndex, boolean open) {
+        doorsOpen[doorIndex] = open;
     }
 
     // Mooring \\
@@ -263,6 +282,16 @@ public class VehicleInstance extends InstancePackage {
 
     public boolean isSailSet(int sailIndex) {
         return sailsSet[sailIndex];
+    }
+
+    // How far a door stands open, from 0 shut to 1 fully open
+    public float getDoorOpening(int doorIndex) {
+        return doorOpenings[doorIndex];
+    }
+
+    // Whether a door is opening or stands open, rather than shutting or shut
+    public boolean isDoorOpen(int doorIndex) {
+        return doorsOpen[doorIndex];
     }
 
     public boolean isAnchored() {
