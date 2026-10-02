@@ -57,16 +57,16 @@ bool intersectCloudDomeSphere(float altitude, vec3 rayDir, out vec2 crossings) {
     return true;
 }
 
-// Distance to the ground the planet presents: sea level, or the camera's own
-// height when it stands below sea level, so no cloud is ever drawn through
-// the planet beneath the horizon.
+// Distance to the ground the world presents. The world itself is flat, so its
+// ground is the sea level plane, or the camera's own height when it stands
+// below sea level: cloud the dome carries down past the world's flat horizon
+// sinks behind it, exactly as the world's own terrain would hide it, and no
+// cloud is ever drawn under the sea the world draws.
 float resolveCloudDomeGroundDistance(vec3 rayDir) {
-    vec2 crossings;
-
-    if (!intersectCloudDomeSphere(min(resolveCloudDomeCameraAltitude(), 0.0), rayDir, crossings))
+    if (rayDir.y >= -CLOUD_DOME_EPSILON)
     return CLOUD_DOME_NO_HIT;
 
-    return crossings.y > 0.0 ? max(crossings.x, 0.0) : CLOUD_DOME_NO_HIT;
+    return max(resolveCloudDomeCameraAltitude(), 0.0) / -rayDir.y;
 }
 
 // The first stretch of the ray, within maxDistance, that lies inside a layer

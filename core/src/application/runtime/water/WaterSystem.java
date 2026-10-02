@@ -70,7 +70,8 @@ public class WaterSystem extends SystemPackage {
                 lightingSystem.getLitFbo(),
                 skySystem.getSkyFbo(),
                 weatherSystem.getWeatherFbo(),
-                RuntimeSetting.ATTACHMENT_COLOR));
+                RuntimeSetting.ATTACHMENT_COLOR,
+                RuntimeSetting.ATTACHMENT_DISTANCE));
     }
 
     @Override

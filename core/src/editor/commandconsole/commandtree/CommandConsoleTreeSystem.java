@@ -22,12 +22,13 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     /*
      * Lays out the command console's tree, one group per command file. A group
      * lists every command that takes no arguments first, each run with a
-     * single click, then every command that takes an item or a vehicle under
-     * its own header, with a section per item or vehicle category that holds
-     * any, each a grid of tiles filled by the tile grid system. A group with
-     * none of these is left out. Groups and categories start expanded and
-     * collapse on click; the tree is laid out on the first frame and again
-     * only when one of them is toggled.
+     * single click, then a section per item or vehicle category that holds
+     * any, each a grid of tiles filled by the tile grid system, for every
+     * command that takes one. An item command heads its sections with its own
+     * name; a vehicle's tile is the command itself, so its sections sit
+     * straight under the group. A group with none of these is left out.
+     * Groups and categories start expanded and collapse on click; the tree is
+     * laid out on the first frame and again only when one of them is toggled.
      */
 
     // Internal
@@ -157,9 +158,6 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     }
 
     private void injectVehicleCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
-
-        injectTileHeader(commandConsoleMenu, commandHandle);
-
         for (VehicleCategory vehicleCategory : VehicleCategory.VALUES) {
 
             ObjectArrayList<VehicleHandle> vehicles = commandConsoleTileGridSystem.collectVehicles(vehicleCategory);

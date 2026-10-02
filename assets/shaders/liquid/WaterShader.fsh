@@ -13,6 +13,7 @@ out vec4 FragColor;
 #include "liquid/includes/WaterSceneData.glsl"
 #include "liquid/includes/WaterReflection.glsl"
 #include "postprocessing/lighting/includes/AtmosphericFog.glsl"
+#include "weather/includes/CloudComposite.glsl"
 
 /*
  * Forward water, drawn after deferred lighting over the lit scene. Fragments behind opaque geometry are
@@ -20,7 +21,8 @@ out vec4 FragColor;
  * so the sea stays out of its hold. From above, the scene below is refracted through the wave
  * normal and absorbed with the thickness of water it is seen through, so shallows stay clear over sand and
  * deepen through banded turquoise, teal and blue; the sky, clouds and shore reflect by Fresnel; the sun
- * leaves a hard cartoon glint; whitecaps break on storm crests and foam lines ring every shore. From below,
+ * leaves a hard cartoon glint; whitecaps break on storm crests and foam lines ring every shore; and clouds
+ * standing between the camera and the surface, or the fog of a cloud the camera is in, lie over it. From below,
  * the sky shows through Snell's window and the rest of the surface mirrors the depths, under the same fog
  * the underwater pass lays over the scene.
  */
@@ -146,8 +148,9 @@ vec3 shadeFromAbove(vec2 screenUV, float sceneDepth, vec3 normal, vec3 viewDir, 
     float foam  = resolveFoam(state, vOceanState.w, shoreDepth, sampleFoamNoise(vWorldPos.xz));
 
     color = mix(color, WATER_FOAM_COLOR * light, foam);
+    color = applyAtmosphericFog(color, vWorldPos, -viewDir, resolveWaterLitAmount(normal));
 
-    return applyAtmosphericFog(color, vWorldPos, -viewDir, resolveWaterLitAmount(normal));
+    return compositeCloudScene(u_waterCloudColor, u_waterCloudDistance, screenUV, color, surfaceDistance);
 }
 
 // ── Below ─────────────────────────────────────────────────────────────────

@@ -14,9 +14,11 @@
  * where it misses, the sky shows.
  */
 
-// The sky and cloud targets, read where a reflected direction lands on screen.
+// The sky and cloud targets, read where a reflected direction lands on screen, and the cloud target's
+// distances, which lay the clouds standing in front of the water over it (CloudComposite).
 uniform sampler2D u_waterSkyColor;
 uniform sampler2D u_waterCloudColor;
+uniform sampler2D u_waterCloudDistance;
 
 const float WATER_REFLECTION_HORIZON_LIFT = 0.03;
 const float WATER_REFLECTION_EDGE_FADE    = 0.1;

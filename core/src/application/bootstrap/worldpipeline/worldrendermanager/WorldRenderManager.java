@@ -76,6 +76,7 @@ public class WorldRenderManager extends ManagerPackage {
     private int waterSceneDepthTexture;
     private int waterSkyColorTexture;
     private int waterCloudColorTexture;
+    private int waterCloudDistanceTexture;
 
     // Pools
     private Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialID2RenderEntryPool;
@@ -328,6 +329,7 @@ public class WorldRenderManager extends ManagerPackage {
         waterSceneDepthTexture = waterTarget.getSceneDepthTexture();
         waterSkyColorTexture = waterTarget.getSkyColorTexture();
         waterCloudColorTexture = waterTarget.getCloudColorTexture();
+        waterCloudDistanceTexture = waterTarget.getCloudDistanceTexture();
     }
 
     private void pushWaterEntry(RenderEntry entry, MaterialInstance material, GridInstance grid, WindowInstance window) {
@@ -344,6 +346,7 @@ public class WorldRenderManager extends ManagerPackage {
         material.setUniform(EngineSetting.UNIFORM_WATER_SCENE_DEPTH, waterSceneDepthTexture);
         material.setUniform(EngineSetting.UNIFORM_WATER_SKY_COLOR, waterSkyColorTexture);
         material.setUniform(EngineSetting.UNIFORM_WATER_CLOUD_COLOR, waterCloudColorTexture);
+        material.setUniform(EngineSetting.UNIFORM_WATER_CLOUD_DISTANCE, waterCloudDistanceTexture);
 
         renderManager.pushRenderCall(entry.modelInstance, waterFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
     }

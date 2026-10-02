@@ -8,37 +8,29 @@
 #include "weather/includes/CloudVisual.glsl"
 
 /*
- * Finds where a ray from the camera first meets each cloud layer, out to a
- * given distance, and composites those surfaces front to back. A layer is a
- * column of cloud over its shape field (WeatherMapUtility), so nothing is
- * integrated along the ray: it steps through the layer's shell reading only
- * the cheap, unbumped column, which always contains the true cloud, until it
- * lands inside one; there it checks the bumped column, bisects onto the true
- * surface, and shades that one point with its own normal. A layer whose cloud
- * is opaque ends the ray, so every layer behind it is only marched up to that
- * cloud, and a translucent sheet lets the layers behind it show through. Steps
- * lengthen with distance, since far cloud covers fewer pixels per block, and
- * the first step is offset per pixel by a share of the caller's jitter: enough
- * that neighbouring rows never sample identical depths, little enough that a
- * cloud's outline stays one crisp edge rather than a dither of hits and
- * misses. The sky march runs in the weather pass at reduced resolution with
- * bumps and surface normals. The fog march runs per terrain fragment in the
- * lighting pass, only where cloud stands between the camera and the fragment,
- * with a few steps, no bumps and the planet's up as its normal. The engine
- * prepends every include to every stage of a program, so nothing here touches
- * fragment-only built-ins; callers pass the jitter in.
+ * Finds where a ray from the camera first meets solid cloud, and the fog
+ * around a camera standing inside one. A layer is a column of cloud over its
+ * shape field (WeatherMapUtility), so nothing is integrated along the ray: it
+ * steps through the layer's shell reading only the cheap, unbumped column,
+ * which always contains the true cloud, until it lands inside one; there it
+ * checks the bumped column and bisects onto the true surface. Every cloud is
+ * opaque, so the nearest surface across all layers is the only one seen: each
+ * layer is marched only up to the nearest surface found so far, and only that
+ * one surface is shaded, with its own normal. Steps lengthen with distance,
+ * since far cloud covers fewer pixels per block, and the first step is offset
+ * per pixel by a share of the caller's jitter: enough that neighbouring rows
+ * never sample identical depths, little enough that a cloud's outline stays
+ * one crisp edge rather than a dither of hits and misses. A camera inside a
+ * cloud sees no surfaces at all, only the cloud's fog, read from the same
+ * bumped column the surface is drawn from, so the fog starts exactly where
+ * the camera passes through the surface. The engine prepends every include to
+ * every stage of a program, so nothing here touches fragment-only built-ins;
+ * callers pass the jitter in.
  */
 
-struct CloudMarchQuality {
-    int  stepBudget;
-    int  octaveLimit;
-    int  refineSteps;
-    bool bumps;
-    bool surfaceNormal;
-};
-
-const CloudMarchQuality CLOUD_MARCH_SKY = CloudMarchQuality(64, 3, 6, true, true);
-const CloudMarchQuality CLOUD_MARCH_FOG = CloudMarchQuality(8, 2, 2, false, false);
+const int   CLOUD_MARCH_STEP_BUDGET  = 64;
+const int   CLOUD_MARCH_OCTAVE_LIMIT = 3;
+const int   CLOUD_MARCH_REFINE_STEPS = 5;
 
 const float CLOUD_MARCH_EPSILON                = 0.001;
 const float CLOUD_MARCH_MIN_THICKNESS_BLOCKS   = 1.0;
@@ -52,8 +44,11 @@ const float CLOUD_MARCH_GAP_STEP_RATIO         = 2.0;
 const float CLOUD_MARCH_MIN_STEP_RATIO         = 0.1;
 const float CLOUD_MARCH_JITTER_SCALE           = 0.25;
 const float CLOUD_MARCH_NORMAL_OFFSET_RATIO    = 0.2;
-const float CLOUD_MARCH_OPAQUE_ALPHA           = 0.98;
 const float CLOUD_MARCH_UNBOUNDED_DISTANCE     = 1.0e30;
+
+const float CLOUD_FOG_DENSITY_PER_BLOCK  = 0.15;
+const float CLOUD_FOG_EDGE_DENSITY_SHARE = 0.3;
+const float CLOUD_FOG_EDGE_BLOCKS        = 4.0;
 
 // ── Layers ─────────────────────────────────────────────────────────────────
 
@@ -73,16 +68,12 @@ float resolveCloudLayerStepTarget(int layer) {
         resolveCloudLayerFeatureSize(layer) * CLOUD_MARCH_STEP_FEATURE_RATIO);
 }
 
-int resolveCloudMarchOctaves(int layer, CloudMarchQuality quality, float t) {
-    return min(resolveCloudOctaves(resolveCloudLayerFeatureSize(layer), t), quality.octaveLimit);
+int resolveCloudMarchOctaves(int layer, float t) {
+    return min(resolveCloudOctaves(resolveCloudLayerFeatureSize(layer), t), CLOUD_MARCH_OCTAVE_LIMIT);
 }
 
-// Coarse (x) and fine (y) bump strength at a distance, none at all for a
-// quality without bumps.
-vec2 resolveCloudMarchBumpFade(int layer, CloudMarchQuality quality, float t) {
-    if (!quality.bumps)
-    return vec2(0.0);
-
+// Coarse (x) and fine (y) bump strength at a distance.
+vec2 resolveCloudMarchBumpFade(int layer, float t) {
     float bumpSize = resolveCloudLayerBumpSize(layer);
 
     return vec2(
@@ -107,8 +98,7 @@ float resolveCloudLayerHeightFraction(int layer, vec3 relativePosition) {
 
 // The column under a point on the ray, bumped or cheap. Points outside the
 // layer's height never touch the noise.
-CloudColumn sampleCloudMarchColumn(
-    int layer, CloudMarchQuality quality, vec3 rayDir, float t, bool bumped, out float heightFraction) {
+CloudColumn sampleCloudMarchColumn(int layer, vec3 rayDir, float t, bool bumped, out float heightFraction) {
     vec3 relativePosition = rayDir * t;
 
     heightFraction = resolveCloudLayerHeightFraction(layer, relativePosition);
@@ -119,8 +109,8 @@ CloudColumn sampleCloudMarchColumn(
     return resolveCloudColumn(
         layer,
         u_cameraPosition.xz + relativePosition.xz,
-        resolveCloudMarchOctaves(layer, quality, t),
-        bumped ? resolveCloudMarchBumpFade(layer, quality, t) : vec2(0.0));
+        resolveCloudMarchOctaves(layer, t),
+        bumped ? resolveCloudMarchBumpFade(layer, t) : vec2(0.0));
 }
 
 // The longest step that cannot carry the ray past the column it stands
@@ -147,9 +137,7 @@ float resolveCloudColumnSafeStep(int layer, vec3 rayDir, float t, CloudColumn co
 // until it leaves the cheap column again, so a bump's crest is never stepped
 // over. On a hit the surface is bisected between the last point outside and
 // the first point inside.
-bool findCloudLayerSurface(
-    int layer, CloudMarchQuality quality, vec3 rayDir, float tEnter, float tExit, float jitter,
-    out CloudHit hit) {
+bool findCloudLayerSurface(int layer, vec3 rayDir, float tEnter, float tExit, float jitter, out CloudHit hit) {
     float stepTarget = resolveCloudLayerStepTarget(layer);
     float stepCeil   = resolveCloudLayerFeatureSize(layer) * CLOUD_MARCH_FAR_STEP_FEATURE_RATIO;
     float tOutside   = tEnter;
@@ -158,28 +146,28 @@ bool findCloudLayerSurface(
 
     hit = CloudHit(tExit, 0.0, CLOUD_COLUMN_EMPTY);
 
-    for (int s = 0; s < quality.stepBudget; s++) {
+    for (int s = 0; s < CLOUD_MARCH_STEP_BUDGET; s++) {
         if (t > tExit)
         break;
 
         float       heightFraction;
-        CloudColumn column = sampleCloudMarchColumn(layer, quality, rayDir, t, false, heightFraction);
+        CloudColumn column = sampleCloudMarchColumn(layer, rayDir, t, false, heightFraction);
         bool        inside = isInsideCloudColumn(column, heightFraction);
 
-        if (inside && quality.bumps) {
-            column  = sampleCloudMarchColumn(layer, quality, rayDir, t, true, heightFraction);
+        if (inside) {
+            column  = sampleCloudMarchColumn(layer, rayDir, t, true, heightFraction);
             refined = true;
-        } else if (!inside) {
+        } else {
             refined = false;
         }
 
         if (isInsideCloudColumn(column, heightFraction)) {
             hit = CloudHit(t, heightFraction, column);
 
-            for (int r = 0; r < quality.refineSteps; r++) {
+            for (int r = 0; r < CLOUD_MARCH_REFINE_STEPS; r++) {
                 float       tMiddle = (tOutside + hit.t) * 0.5;
                 float       middleFraction;
-                CloudColumn middle  = sampleCloudMarchColumn(layer, quality, rayDir, tMiddle, true, middleFraction);
+                CloudColumn middle  = sampleCloudMarchColumn(layer, rayDir, tMiddle, true, middleFraction);
 
                 if (isInsideCloudColumn(middle, middleFraction))
                 hit = CloudHit(tMiddle, middleFraction, middle);
@@ -215,18 +203,14 @@ float sampleCloudColumnDepth(int layer, vec2 positionXZ, int octaves, vec2 bumpF
 // the underside. A wall standing over open sky drops sharply sideways, so
 // walls face outward rather than splitting into a lit crown and a shaded
 // underside. The normal is turned onto the planet's local up.
-vec3 resolveCloudSurfaceNormal(int layer, CloudMarchQuality quality, vec3 rayDir, CloudHit hit) {
-    vec3 relativePosition = rayDir * hit.t;
-    vec3 up               = resolveCloudDomeNormal(relativePosition);
-
-    if (!quality.surfaceNormal)
-    return up;
-
-    float offset   = resolveCloudLayerBumpSize(layer) * CLOUD_MARCH_NORMAL_OFFSET_RATIO;
-    vec2  position = u_cameraPosition.xz + relativePosition.xz;
-    int   octaves  = resolveCloudMarchOctaves(layer, quality, hit.t);
-    vec2  bumpFade = resolveCloudMarchBumpFade(layer, quality, hit.t);
-    float height   = hit.heightFraction;
+vec3 resolveCloudSurfaceNormal(int layer, vec3 rayDir, CloudHit hit) {
+    vec3  relativePosition = rayDir * hit.t;
+    vec3  up               = resolveCloudDomeNormal(relativePosition);
+    float offset           = resolveCloudLayerBumpSize(layer) * CLOUD_MARCH_NORMAL_OFFSET_RATIO;
+    vec2  position         = u_cameraPosition.xz + relativePosition.xz;
+    int   octaves          = resolveCloudMarchOctaves(layer, hit.t);
+    vec2  bumpFade         = resolveCloudMarchBumpFade(layer, hit.t);
+    float height           = hit.heightFraction;
 
     float depth = resolveCloudColumnDepth(hit.column, height);
     float east  = sampleCloudColumnDepth(layer, position + vec2(offset, 0.0), octaves, bumpFade, height);
@@ -241,26 +225,19 @@ vec3 resolveCloudSurfaceNormal(int layer, CloudMarchQuality quality, vec3 rayDir
 
 // ── March ──────────────────────────────────────────────────────────────────
 
-// Each layer's first surface along the ray, shaded once and kept in order of
-// distance, then composited front to back through one running
-// transmittance. Layers are marched only up to the nearest opaque cloud
-// found so far, and the light is resolved only once a ray meets cloud.
-void integrateCloudLayers(
-    vec3 rayDir, float maxDistance, CloudMarchQuality quality, float jitter,
-    inout vec3 color, inout float transmittance) {
+// The nearest cloud surface along the ray across every layer, out to the
+// edge of the weather map or the world's ground. Each layer is marched only
+// up to the nearest surface found so far.
+bool findNearestCloudSurface(vec3 rayDir, float jitter, out int hitLayer, out CloudHit hit) {
     int   layerCount       = min(u_weatherLayerCount, WEATHER_MAP_MAX_LAYERS);
-    float limit            = min(maxDistance, resolveCloudDomeGroundDistance(rayDir));
+    float limit            = resolveCloudDomeGroundDistance(rayDir);
     float horizontalLength = length(rayDir.xz);
 
     if (horizontalLength > CLOUD_MARCH_EPSILON)
     limit = min(limit, resolveWeatherMapReach() / horizontalLength);
 
-    float      hitDistance[WEATHER_MAP_MAX_LAYERS];
-    vec3       hitColor[WEATHER_MAP_MAX_LAYERS];
-    float      hitAlpha[WEATHER_MAP_MAX_LAYERS];
-    int        hitCount      = 0;
-    CloudLight light;
-    bool       lightResolved = false;
+    hitLayer = -1;
+    hit      = CloudHit(limit, 0.0, CLOUD_COLUMN_EMPTY);
 
     for (int layer = 0; layer < layerCount; layer++) {
         float baseAltitude = resolveCloudLayerBaseAltitude(layer);
@@ -271,62 +248,65 @@ void integrateCloudLayers(
             baseAltitude, baseAltitude + resolveCloudLayerThickness(layer), rayDir, limit, tEnter, tExit))
         continue;
 
-        CloudHit hit;
+        CloudHit layerHit;
 
-        if (!findCloudLayerSurface(layer, quality, rayDir, tEnter, tExit, jitter, hit))
+        if (!findCloudLayerSurface(layer, rayDir, tEnter, tExit, jitter, layerHit))
         continue;
 
-        if (!lightResolved) {
-            light         = resolveCloudLight(rayDir);
-            lightResolved = true;
-        }
-
-        CloudColumn column       = hit.column;
-        float       distance     = length(rayDir.xz) * hit.t;
-        float       alpha        = column.alpha * resolveCloudDistanceOpacity(distance);
-        float       columnHeight = (hit.heightFraction - column.bottom)
-        / max(column.top - column.bottom, CLOUD_MARCH_EPSILON);
-        vec3        shaded       = shadeCloudSurface(
-            light, resolveCloudLayerAlbedo(layer), resolveCloudSurfaceNormal(layer, quality, rayDir, hit), rayDir,
-            clamp(columnHeight, 0.0, 1.0), column.translucency, column.crease, u_weatherLayerShape[layer].w,
-            distance);
-
-        int slot = hitCount;
-
-        while (slot > 0 && hitDistance[slot - 1] > hit.t) {
-            hitDistance[slot] = hitDistance[slot - 1];
-            hitColor[slot]    = hitColor[slot - 1];
-            hitAlpha[slot]    = hitAlpha[slot - 1];
-            slot--;
-        }
-
-        hitDistance[slot] = hit.t;
-        hitColor[slot]    = shaded;
-        hitAlpha[slot]    = alpha;
-        hitCount++;
-
-        if (alpha >= CLOUD_MARCH_OPAQUE_ALPHA)
-        limit = min(limit, hit.t);
+        hitLayer = layer;
+        hit      = layerHit;
+        limit    = layerHit.t;
     }
 
-    for (int i = 0; i < hitCount; i++) {
-        if (hitDistance[i] > limit)
-        break;
+    return hitLayer >= 0;
+}
 
-        color         += hitColor[i] * hitAlpha[i] * transmittance;
-        transmittance *= 1.0 - hitAlpha[i];
+// Painted color of a surface findNearestCloudSurface found.
+vec3 shadeCloudHit(vec3 rayDir, int layer, CloudHit hit) {
+    CloudColumn column       = hit.column;
+    float       columnHeight = (hit.heightFraction - column.bottom)
+    / max(column.top - column.bottom, CLOUD_MARCH_EPSILON);
+
+    return shadeCloudSurface(
+        resolveCloudLight(rayDir), resolveCloudLayerAlbedo(layer), resolveCloudSurfaceNormal(layer, rayDir, hit),
+        rayDir, clamp(columnHeight, 0.0, 1.0), column.crease, u_weatherLayerShape[layer].w,
+        length(rayDir.xz) * hit.t);
+}
+
+// ── Fog ────────────────────────────────────────────────────────────────────
+
+// Density per block of the fog around a camera standing inside a cloud, and
+// its color; 0 when the camera stands in open air. The fog thins toward the
+// cloud's base and crown, so climbing into a cloud thickens it over a few
+// blocks rather than at once.
+float resolveCloudFog(out vec3 fogColor) {
+    int   layerCount     = min(u_weatherLayerCount, WEATHER_MAP_MAX_LAYERS);
+    float cameraAltitude = resolveCloudDomeCameraAltitude();
+
+    fogColor = vec3(0.0);
+
+    for (int layer = 0; layer < layerCount; layer++) {
+        float thickness      = resolveCloudLayerThickness(layer);
+        float heightFraction = (cameraAltitude - resolveCloudLayerBaseAltitude(layer)) / thickness;
+
+        if (heightFraction < 0.0 || heightFraction > 1.0)
+        continue;
+
+        CloudColumn column = resolveCloudColumn(
+            layer, u_cameraPosition.xz, resolveCloudMarchOctaves(layer, 0.0), resolveCloudMarchBumpFade(layer, 0.0));
+
+        if (!isInsideCloudColumn(column, heightFraction))
+        continue;
+
+        float depthBlocks = resolveCloudColumnDepth(column, heightFraction) * thickness;
+        float edge        = mix(CLOUD_FOG_EDGE_DENSITY_SHARE, 1.0, smoothstep(0.0, CLOUD_FOG_EDGE_BLOCKS, depthBlocks));
+
+        fogColor = shadeCloudFog(resolveCloudLight(vec3(0.0, 1.0, 0.0)), resolveCloudLayerAlbedo(layer));
+
+        return CLOUD_FOG_DENSITY_PER_BLOCK * u_weatherLayerShape[layer].z * edge;
     }
-}
 
-// The sky seen along a view ray, out to the edge of the weather map.
-void integrateCloudSky(vec3 rayDir, float jitter, inout vec3 color, inout float transmittance) {
-    integrateCloudLayers(rayDir, CLOUD_MARCH_UNBOUNDED_DISTANCE, CLOUD_MARCH_SKY, jitter, color, transmittance);
-}
-
-// Cloud standing between the camera and a surface fragmentDistance away.
-void integrateCloudFog(
-    vec3 rayDir, float fragmentDistance, float jitter, inout vec3 color, inout float transmittance) {
-    integrateCloudLayers(rayDir, fragmentDistance, CLOUD_MARCH_FOG, jitter, color, transmittance);
+    return 0.0;
 }
 
 #endif

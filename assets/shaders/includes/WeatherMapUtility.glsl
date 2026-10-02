@@ -19,9 +19,10 @@
  * or from above has the scalloped, cauliflower outline of a painted cumulus.
  * Bumps only ever carve, so a column read without them always contains the
  * bumped one — a march can step on the cheap column and pay for bumps only
- * where it touches cloud. A column's opacity comes from its own thickness, so
- * rims and thin sheets stay translucent while cloud bodies read solid. A
- * sample is rejected before any noise is drawn wherever the answer is already
+ * where it touches cloud. Every cloud is drawn solid; a column's opacity,
+ * from its own thickness, only weighs the shadow it casts, so thin sheets
+ * shade the ground lightly while cloud bodies shade it fully. A sample is
+ * rejected before any noise is drawn wherever the answer is already
  * known to be empty: beyond the window's faded edge and wherever the weather
  * holds no coverage.
  */
@@ -115,18 +116,17 @@ float resolveWeatherMapEdgeFade(vec2 positionXZ) {
 // ── Cloud Layer Shape ──────────────────────────────────────────────────────
 
 // The cloud standing over one point of a layer: bottom and top as fractions
-// of the layer's height, the column's opacity, the share of light that
-// passes through its body, and how deep in a crease between bumps it stands.
-// An empty column has its bottom above its top and no opacity.
+// of the layer's height, the opacity of the shadow it casts, and how deep in
+// a crease between bumps it stands. An empty column has its bottom above its
+// top and casts no shadow.
 struct CloudColumn {
     float bottom;
     float top;
-    float alpha;
-    float translucency;
+    float opacity;
     float crease;
 };
 
-const CloudColumn CLOUD_COLUMN_EMPTY = CloudColumn(1.0, 0.0, 0.0, 1.0, 0.0);
+const CloudColumn CLOUD_COLUMN_EMPTY = CloudColumn(1.0, 0.0, 0.0, 0.0);
 
 float resolveCloudLayerFeatureSize(int layer) {
     return u_weatherMapOrigin.w / max(u_weatherLayerNoise[layer].y, 1.0);
@@ -233,20 +233,18 @@ CloudColumn resolveCloudColumn(int layer, vec2 positionXZ, int octaves, vec2 bum
     if (top <= bottom)
     return CLOUD_COLUMN_EMPTY;
 
-    // Opacity follows the uncarved dome, so carving shapes a cloud's outline
-    // without thinning it into a speckle of translucent creases. Puffy cloud
-    // is solid outright, only its rim softening; sheets keep the opacity of
-    // their thickness so thin ones still glow through.
+    // Shadow opacity follows the uncarved dome, so carving shapes a cloud's
+    // outline without thinning its shadow into a speckle. Puffy cloud shades
+    // fully, only its rim softening; sheets shade by their thickness.
     float opticalDepth = dome * shape.y * shape.z * weather.y * CLOUD_LAYER_EXTINCTION_PER_BLOCK;
     float softness     = max(u_weatherLayerSurface[layer].w, CLOUD_LAYER_MIN_SOFTNESS);
     float opacity      = mix(1.0 - exp(-opticalDepth * CLOUD_LAYER_OPACITY_GAIN), 1.0, fullness);
-    float alpha        = opacity * smoothstep(0.0, softness, body);
 
-    return CloudColumn(bottom, top, alpha, exp(-opticalDepth), crease);
+    return CloudColumn(bottom, top, opacity * smoothstep(0.0, softness, body), crease);
 }
 
 bool isInsideCloudColumn(CloudColumn column, float heightFraction) {
-    return column.alpha > WEATHER_MAP_EPSILON && heightFraction >= column.bottom && heightFraction <= column.top;
+    return heightFraction >= column.bottom && heightFraction <= column.top;
 }
 
 // How far inside a column a height lies, in layer height fractions: positive

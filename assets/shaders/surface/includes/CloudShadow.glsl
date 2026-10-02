@@ -8,7 +8,7 @@
 /*
  * Terrain shadow cast by the grid's cloud layers, sampled by the surface
  * shader through the same cloud columns the weather pass draws, so a shadow
- * has the shape of the cloud above it and a translucent sheet casts a lighter
+ * has the shape of the cloud above it and a thin sheet casts a lighter
  * one. Each layer is read once at its mid-height, displaced toward the sun by
  * that height above the fragment, so a low sun throws long shadows.
  * sunHorizonOffset is the horizontal travel toward the sun per block of
@@ -39,7 +39,7 @@ float sampleCloudShadow(vec3 worldPos, vec2 sunHorizonOffset) {
         vec2        shadowXZ = worldPos.xz + sunHorizonOffset * layerHeight;
         CloudColumn column   = resolveCloudColumn(layer, shadowXZ, CLOUD_SHADOW_OCTAVES, vec2(0.0));
 
-        visibility *= 1.0 - column.alpha * CLOUD_SHADOW_MAX;
+        visibility *= 1.0 - column.opacity * CLOUD_SHADOW_MAX;
     }
 
     return 1.0 - visibility;

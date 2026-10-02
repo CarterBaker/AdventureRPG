@@ -789,6 +789,7 @@ public class EngineSetting {
 
     // Water Pass
     public static final String UNIFORM_WATER_CLOUD_COLOR = "u_waterCloudColor";
+    public static final String UNIFORM_WATER_CLOUD_DISTANCE = "u_waterCloudDistance";
     public static final String UNIFORM_WATER_SCENE_COLOR = "u_waterSceneColor";
     public static final String UNIFORM_WATER_SCENE_DEPTH = "u_waterSceneDepth";
     public static final String UNIFORM_WATER_SKY_COLOR = "u_waterSkyColor";

@@ -9,18 +9,20 @@ import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.SystemPackage;
 
 public class LightingSystem extends SystemPackage {
 
     /*
-     * Deferred lighting pass. Reads the G-buffer and SSAO result, integrates
-     * clouds between camera and fragment against the grid's weather map, and
-     * writes LitScene. Binds this window's grid UBOs — sun, moon, sky color and
-     * weather map — onto the pass each frame. The world and SSAO targets are
-     * queued ahead of this pass, so the lit world is always drawn with this
-     * frame's camera, the same one the sky and clouds are drawn with.
+     * Deferred lighting pass. Reads the G-buffer and SSAO result, lays the
+     * weather pass's clouds standing in front of each fragment and the fog of
+     * a cloud the camera stands in over it, and writes LitScene. Binds this
+     * window's grid UBOs — sun, moon and sky color — and the weather targets
+     * onto the pass each frame. The world, SSAO and weather targets are queued
+     * ahead of this pass, so the lit world is always drawn with this frame's
+     * camera, the same one the sky and clouds are drawn with.
      */
 
     // Internal
@@ -30,6 +32,7 @@ public class LightingSystem extends SystemPackage {
     private FBORenderSystem fboRenderSystem;
     private WorldSystem worldSystem;
     private SSAOSystem ssaoSystem;
+    private WeatherSystem weatherSystem;
 
     // Render Target
     private PassHandle lightingPass;
@@ -45,6 +48,7 @@ public class LightingSystem extends SystemPackage {
         this.fboRenderSystem = get(FBORenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
         this.ssaoSystem = get(SSAOSystem.class);
+        this.weatherSystem = get(WeatherSystem.class);
     }
 
     @Override
@@ -67,9 +71,11 @@ public class LightingSystem extends SystemPackage {
     protected void update() {
 
         bindGridLightingData();
+        bindCloudTargets();
 
         renderManager.ensureFboRendered(worldSystem.getWorldFbo(), context.getWindow());
         renderManager.ensureFboRendered(ssaoSystem.getSsaoFbo(), context.getWindow());
+        renderManager.ensureFboRendered(weatherSystem.getWeatherFbo(), context.getWindow());
         renderManager.pushRenderCall(
                 lightingPass.getModelInstance(),
                 litFbo,
@@ -91,7 +97,19 @@ public class LightingSystem extends SystemPackage {
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());
         mat.setUBO(grid.getSkyColorUBO());
-        mat.setUBO(grid.getWeatherMapUBO());
+    }
+
+    // Clouds \\
+
+    private void bindCloudTargets() {
+
+        FBOInstance weatherFbo = weatherSystem.getWeatherFbo();
+        MaterialInstance mat = lightingPass.getModelInstance().getMaterial();
+
+        mat.setUniform(RuntimeSetting.UNIFORM_CLOUD_COLOR, weatherFbo.getColorTexture(RuntimeSetting.ATTACHMENT_COLOR));
+        mat.setUniform(
+                RuntimeSetting.UNIFORM_CLOUD_DISTANCE,
+                weatherFbo.getColorTexture(RuntimeSetting.ATTACHMENT_DISTANCE));
     }
 
     // Accessible \\

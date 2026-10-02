@@ -8,9 +8,10 @@ public class WaterTargetStruct extends StructPackage {
     /*
      * Where one grid's water draws and what it reads. Water is drawn forward,
      * after deferred lighting, into its own target; it refracts the lit scene,
-     * tests itself against the scene depth by hand, and reflects the sky and
-     * clouds as the window already drew them. Bound onto the grid by the
-     * runtime WaterSystem once every target exists.
+     * tests itself against the scene depth by hand, reflects the sky and
+     * clouds as the window already drew them, and lays the clouds standing in
+     * front of it over itself by the cloud target's distances. Bound onto the
+     * grid by the runtime WaterSystem once every target exists.
      */
 
     // Target
@@ -22,6 +23,7 @@ public class WaterTargetStruct extends StructPackage {
     private final FBOInstance skyFbo;
     private final FBOInstance cloudFbo;
     private final String colorAttachment;
+    private final String distanceAttachment;
 
     // Constructor \\
 
@@ -31,7 +33,8 @@ public class WaterTargetStruct extends StructPackage {
             FBOInstance litFbo,
             FBOInstance skyFbo,
             FBOInstance cloudFbo,
-            String colorAttachment) {
+            String colorAttachment,
+            String distanceAttachment) {
 
         this.waterFbo = waterFbo;
         this.sceneFbo = sceneFbo;
@@ -39,6 +42,7 @@ public class WaterTargetStruct extends StructPackage {
         this.skyFbo = skyFbo;
         this.cloudFbo = cloudFbo;
         this.colorAttachment = colorAttachment;
+        this.distanceAttachment = distanceAttachment;
     }
 
     // Accessible \\
@@ -61,5 +65,9 @@ public class WaterTargetStruct extends StructPackage {
 
     public int getCloudColorTexture() {
         return cloudFbo.getColorTexture(colorAttachment);
+    }
+
+    public int getCloudDistanceTexture() {
+        return cloudFbo.getColorTexture(distanceAttachment);
     }
 }

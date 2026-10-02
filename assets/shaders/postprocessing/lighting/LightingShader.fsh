@@ -10,12 +10,13 @@ out vec4 fragColor;
 #include "includes/SkyColorData.glsl"
 #include "postprocessing/includes/ViewPosReconstruct.glsl"
 #include "postprocessing/lighting/includes/AtmosphericFog.glsl"
-#include "includes/WeatherMapData.glsl"
-#include "includes/NoiseUtility.glsl"
-#include "includes/WeatherMapUtility.glsl"
-#include "weather/includes/CloudDome.glsl"
-#include "weather/includes/CloudVisual.glsl"
-#include "weather/includes/CloudMarch.glsl"
+#include "weather/includes/CloudComposite.glsl"
+
+// The weather pass's cloud color and distance targets (CloudComposite).
+uniform sampler2D u_cloudColor;
+uniform sampler2D u_cloudDistance;
+
+const float LIGHTING_DISTANCE_EPSILON = 0.001;
 
 void main() {
     float depth = texture(u_gDepth, v_texCoord).r;
@@ -73,21 +74,15 @@ void main() {
 
     vec3  toFragment   = fragPosWorld - u_cameraPosition;
     float fragDistance = length(toFragment);
-    vec3  fragDir      = toFragment / max(fragDistance, CLOUD_MARCH_EPSILON);
+    vec3  fragDir      = toFragment / max(fragDistance, LIGHTING_DISTANCE_EPSILON);
 
     float litAmount = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
 
     lit = applyAtmosphericFog(lit, fragPosWorld, fragDir, litAmount);
 
-    // Cloud between the camera and this fragment — a peak wrapped in cloud,
-    // or terrain seen from inside a cloud — fogs it with the same clouds the
-    // weather pass draws in the sky.
-    vec3  cloudColor   = vec3(0.0);
-    float cloudVisible = 1.0;
-
-    integrateCloudFog(fragDir, fragDistance, interleavedGradientNoise(gl_FragCoord.xy), cloudColor, cloudVisible);
-
-    lit = lit * cloudVisible + cloudColor;
+    // Cloud standing between the camera and this fragment, and the fog of a
+    // cloud the camera stands in, exactly as the weather pass drew them.
+    lit = compositeCloudScene(u_cloudColor, u_cloudDistance, v_texCoord, lit, fragDistance);
 
     fragColor = vec4(lit, 1.0);
 }
