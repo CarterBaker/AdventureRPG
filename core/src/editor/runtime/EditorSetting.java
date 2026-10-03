@@ -9,7 +9,9 @@ public class EditorSetting {
      * point indices, layout persistence, tool tabs, the name dialog, console
      * commands and the command drag between windows, the info pipeline's
      * schemas, hierarchy keys, and status text, the item editor's library and
-     * status text, and the world map's status text.
+     * status text, the image editing framework's history and files, the world
+     * map's status text and overlay toggles, and the world editor's brush and
+     * status text.
      */
 
     // Cursors
@@ -74,6 +76,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
+    public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
 
     // Commands
@@ -131,7 +134,6 @@ public class EditorSetting {
     public static final String TEXTURE_VIEWER_STATUS_NO_BRUSH = "No brush. Click a texture to paint items with it.";
 
     // World Map
-    public static final String WORLD_MAP_STATUS_NO_WORLD = "No world loaded. Open a Preview to see its map.";
     public static final String WORLD_MAP_STATUS_X = "X ";
     public static final String WORLD_MAP_STATUS_Z = "   Z ";
     public static final String WORLD_MAP_STATUS_SEPARATOR = "   |   ";
@@ -139,6 +141,42 @@ public class EditorSetting {
     public static final String WORLD_MAP_STATUS_SCALE_FORMAT = "%.3g";
     public static final String WORLD_MAP_FOLLOW_ON = "Following";
     public static final String WORLD_MAP_FOLLOW_OFF = "Follow";
+    public static final String WORLD_MAP_DAY_NIGHT_ON = "Day/Night On";
+    public static final String WORLD_MAP_DAY_NIGHT_OFF = "Day/Night Off";
+    public static final String WORLD_MAP_WEATHER_ON = "Weather On";
+    public static final String WORLD_MAP_WEATHER_OFF = "Weather Off";
+
+    // Image Editing
+    public static final String IMAGE_FORMAT = "png";
+    public static final String IMAGE_TEMP_SUFFIX = ".tmp";
+    public static final int IMAGE_HISTORY_MAX_STEPS = 64;
+    public static final long IMAGE_HISTORY_MAX_PIXELS = 16777216L;
+
+    // World Editor
+    public static final int WORLD_EDITOR_BRUSH_RADIUS_DEFAULT = 1;
+    public static final int WORLD_EDITOR_BRUSH_RADIUS_MAX = 32;
+    public static final int WORLD_EDITOR_BRUSH_RADIUS_MIN = 0;
+    public static final String WORLD_EDITOR_TOOL_BRUSH = "Brush";
+    public static final String WORLD_EDITOR_TOOL_FILL = "Fill";
+    public static final String WORLD_EDITOR_TOOL_PICK = "Pick";
+    public static final String WORLD_EDITOR_DIRTY_MARKER = "*";
+    public static final String WORLD_EDITOR_STATUS_SEPARATOR = "  |  ";
+    public static final String WORLD_EDITOR_STATUS_RADIUS = "Radius ";
+    public static final String WORLD_EDITOR_STATUS_NO_BIOME = "No biome selected";
+    public static final String WORLD_EDITOR_STATUS_X = "X ";
+    public static final String WORLD_EDITOR_STATUS_Y = "  Y ";
+    public static final String WORLD_EDITOR_STATUS_UNPAINTED = "Unpainted color";
+    public static final String WORLD_EDITOR_MESSAGE_SAVED = "Saved ";
+    public static final String WORLD_EDITOR_MESSAGE_SAVE_FAILED = "Could not save ";
+    public static final String WORLD_EDITOR_MESSAGE_RELOADED = "Reloaded ";
+    public static final String WORLD_EDITOR_MESSAGE_RELOAD_FAILED = "Could not reload ";
+    public static final String WORLD_EDITOR_MESSAGE_NOTHING_TO_UNDO = "Nothing to undo";
+    public static final String WORLD_EDITOR_MESSAGE_NOTHING_TO_REDO = "Nothing to redo";
+    public static final String WORLD_EDITOR_MESSAGE_PICKED = "Picked ";
+    public static final String WORLD_EDITOR_MESSAGE_UNKNOWN_COLOR = "No biome paints this color";
+    public static final String WORLD_EDITOR_MESSAGE_BIOME_LIVE = "Biome live: ";
+    public static final String WORLD_EDITOR_MESSAGE_BIOME_REFUSED = "Biome not applied: ";
+    public static final String WORLD_EDITOR_MESSAGE_BIOME_RETIRED = "Biome retired: ";
 
     // Item Library
     public static final String ITEM_EDITOR_MESH_DIRECTORY = "items";
@@ -148,6 +186,7 @@ public class EditorSetting {
 
     // Info Schemas
     public static final String INFO_SCHEMA_PATH = "schemas";
+    public static final String INFO_SCHEMA_BIOMES = "Biomes";
     public static final String INFO_SCHEMA_ITEMS = "Items";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";

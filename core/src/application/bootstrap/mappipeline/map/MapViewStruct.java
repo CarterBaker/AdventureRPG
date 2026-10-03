@@ -12,7 +12,8 @@ public class MapViewStruct extends StructPackage {
      * pixel and the size in pixels; MapManager.resolveView() answers with the
      * quads to draw this frame and the pyramid level they come from. The draw
      * list is reused frame to frame, so resolving a view allocates nothing
-     * once it has grown to the most quads it needs.
+     * once it has grown to the most quads it needs. The owner also chooses
+     * whether the shared day and night and weather overlays show over it.
      */
 
     // View
@@ -22,6 +23,10 @@ public class MapViewStruct extends StructPackage {
     private double blocksPerPixel;
     private float width;
     private float height;
+
+    // Overlays
+    private boolean showingDayNight;
+    private boolean showingWeather;
 
     // Draws
     private final ObjectArrayList<MapDrawStruct> draws = new ObjectArrayList<>();
@@ -44,6 +49,11 @@ public class MapViewStruct extends StructPackage {
         this.blocksPerPixel = blocksPerPixel;
         this.width = width;
         this.height = height;
+    }
+
+    public void setOverlays(boolean showingDayNight, boolean showingWeather) {
+        this.showingDayNight = showingDayNight;
+        this.showingWeather = showingWeather;
     }
 
     public void beginDraws(int level) {
@@ -101,6 +111,14 @@ public class MapViewStruct extends StructPackage {
 
     public float getHeight() {
         return height;
+    }
+
+    public boolean isShowingDayNight() {
+        return showingDayNight;
+    }
+
+    public boolean isShowingWeather() {
+        return showingWeather;
     }
 
     public int getDrawCount() {

@@ -82,6 +82,7 @@ class WorldBuilder extends BuilderPackage {
         WorldData data = new WorldData(
                 worldName,
                 worldID,
+                file,
                 pixmap,
                 worldScale,
                 gravityMultiplier,

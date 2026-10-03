@@ -23,7 +23,9 @@ public class ClockManager extends ManagerPackage {
      * independently per location. The moon's place in its orbit advances
      * with the clock. Loading and switching worlds share one wiring path,
      * and the clock is solved immediately afterward so every value is
-     * already correct before the first frame reads it.
+     * already correct before the first frame reads it. Any place on the
+     * world can ask its visual time of day, so a map can shade the whole
+     * world by the same shared clock every grid follows.
      */
 
     // Internal
@@ -137,12 +139,19 @@ public class ClockManager extends ManagerPackage {
             GridInstance grid = (GridInstance) elements[i];
             long chunkCoordinate = grid.getActiveChunkCoordinate();
 
-            double locationOffset = WorldWrapUtility.wrappedPlanetaryOffset(locationWorld, chunkCoordinate);
-            double latitudeFactor = WorldWrapUtility.wrappedLatitudeFactor(locationWorld, chunkCoordinate);
-            double visualTimeOfDay = currentTracker.computeVisualTimeOfDay(locationOffset, latitudeFactor);
-
-            grid.getClockInstance().update(visualTimeOfDay, locationOffset, latitudeFactor);
+            grid.getClockInstance().update(
+                    computeVisualTimeOfDay(locationWorld, chunkCoordinate),
+                    WorldWrapUtility.wrappedPlanetaryOffset(locationWorld, chunkCoordinate),
+                    WorldWrapUtility.wrappedLatitudeFactor(locationWorld, chunkCoordinate));
         }
+    }
+
+    // Location Time \\
+
+    public double computeVisualTimeOfDay(WorldHandle world, long chunkCoordinate) {
+        return currentTracker.computeVisualTimeOfDay(
+                WorldWrapUtility.wrappedPlanetaryOffset(world, chunkCoordinate),
+                WorldWrapUtility.wrappedLatitudeFactor(world, chunkCoordinate));
     }
 
     // Location \\

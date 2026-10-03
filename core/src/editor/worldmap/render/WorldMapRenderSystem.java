@@ -6,6 +6,7 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.mappipeline.map.MapDrawStruct;
 import application.bootstrap.mappipeline.map.MapViewStruct;
+import application.bootstrap.mappipeline.mapmanager.MapManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
@@ -30,9 +31,11 @@ public class WorldMapRenderSystem extends SystemPackage {
      * Draws the world map into this window's scene target: one quad per draw
      * the engine's map resolved for this view this frame, each showing its
      * part of a map tile texture, then the arrow marking the character, at the copy of its
-     * position nearest the view's centre and turned to its facing. Tile quads
-     * are pooled with their own materials and grow only to the most tiles a
-     * frame has needed.
+     * position nearest the view's centre and turned to its facing. Each tile
+     * carries the world region it covers and the shared overlay textures, so
+     * its shader can shade day and night and weather over it when the view
+     * shows them. Tile quads are pooled with their own materials and grow
+     * only to the most tiles a frame has needed.
      */
 
     // Internal
@@ -42,6 +45,7 @@ public class WorldMapRenderSystem extends SystemPackage {
     private RenderManager renderManager;
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
+    private MapManager mapManager;
     private WorldMapViewSystem worldMapViewSystem;
 
     // Render Target
@@ -56,6 +60,10 @@ public class WorldMapRenderSystem extends SystemPackage {
     // Tiles
     private Vector4 viewRect;
     private Vector4 uvRect;
+    private Vector4 worldRect;
+
+    // Overlays
+    private Vector2 weatherOffset;
 
     // Marker
     private Vector2 markerCenter;
@@ -73,6 +81,10 @@ public class WorldMapRenderSystem extends SystemPackage {
         // Tiles
         this.viewRect = new Vector4();
         this.uvRect = new Vector4();
+        this.worldRect = new Vector4();
+
+        // Overlays
+        this.weatherOffset = new Vector2();
 
         // Marker
         this.markerCenter = new Vector2();
@@ -88,6 +100,7 @@ public class WorldMapRenderSystem extends SystemPackage {
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
+        this.mapManager = get(MapManager.class);
         this.worldMapViewSystem = get(WorldMapViewSystem.class);
     }
 
@@ -109,7 +122,7 @@ public class WorldMapRenderSystem extends SystemPackage {
 
         WindowInstance window = context.getWindow();
 
-        if (worldMapViewSystem.hasWorld() && window.getWidth() > 0 && window.getHeight() > 0) {
+        if (window.getWidth() > 0 && window.getHeight() > 0) {
             renderTiles(window);
             renderMarker(window);
         }
@@ -124,6 +137,11 @@ public class WorldMapRenderSystem extends SystemPackage {
         MapViewStruct mapView = worldMapViewSystem.getMapView();
         float width = window.getWidth();
         float height = window.getHeight();
+        float showDayNight = mapView.isShowingDayNight() && mapManager.hasDayNightOverlay() ? 1f : 0f;
+        float showWeather = mapView.isShowingWeather() && mapManager.hasWeatherOverlay() ? 1f : 0f;
+
+        if (showWeather > 0f)
+            weatherOffset.set(mapManager.getWeatherOffsetU(), mapManager.getWeatherOffsetV());
 
         for (int i = 0; i < mapView.getDrawCount(); i++) {
 
@@ -137,10 +155,22 @@ public class WorldMapRenderSystem extends SystemPackage {
                     draw.getRight() / width * 2f - 1f,
                     draw.getTop() / height * 2f - 1f);
             uvRect.set(draw.getU0(), draw.getV0(), draw.getU1(), draw.getV1());
+            worldRect.set(draw.getWorldU0(), draw.getWorldV0(), draw.getWorldU1(), draw.getWorldV1());
 
             material.setUniform(WorldMapSetting.UNIFORM_VIEW_RECT, viewRect);
             material.setUniform(WorldMapSetting.UNIFORM_UV_RECT, uvRect);
             material.setUniform(WorldMapSetting.UNIFORM_TILE_TEXTURE, draw.getTexture());
+            material.setUniform(WorldMapSetting.UNIFORM_WORLD_RECT, worldRect);
+            material.setUniform(WorldMapSetting.UNIFORM_SHOW_DAY_NIGHT, showDayNight);
+            material.setUniform(WorldMapSetting.UNIFORM_SHOW_WEATHER, showWeather);
+
+            if (showDayNight > 0f)
+                material.setUniform(WorldMapSetting.UNIFORM_DAYLIGHT_TEXTURE, mapManager.getDaylightTexture());
+
+            if (showWeather > 0f) {
+                material.setUniform(WorldMapSetting.UNIFORM_WEATHER_TEXTURE, mapManager.getWeatherTexture());
+                material.setUniform(WorldMapSetting.UNIFORM_WEATHER_OFFSET, weatherOffset);
+            }
             renderManager.pushRenderCall(tileModel, sceneFbo, WorldMapSetting.DEPTH_TILES, window);
         }
     }

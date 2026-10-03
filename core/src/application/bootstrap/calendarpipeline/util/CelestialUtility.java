@@ -23,6 +23,11 @@ public class CelestialUtility extends EngineUtility {
 
     // Orbit \\
 
+    // The vertical component of the sun's direction at a visual time of day, -1 at nadir and 1 at zenith
+    public static double resolveSolarElevation(double visualTimeOfDay) {
+        return -Math.cos(visualTimeOfDay * TWO_PI);
+    }
+
     // Direction toward the sun at a visual time of day — the sun rides its own path
     public static void resolveSunDirection(double visualTimeOfDay, Vector3 out) {
         resolveOrbitDirection(visualTimeOfDay, 0.0, out);

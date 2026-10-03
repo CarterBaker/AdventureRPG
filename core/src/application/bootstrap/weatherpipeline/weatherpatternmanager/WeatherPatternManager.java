@@ -23,7 +23,9 @@ public class WeatherPatternManager extends ManagerPackage {
      * fixed in noise space, slides across the world with WeatherManager's flow.
      * Each grid reads a window of cells above it, cells are pooled as windows
      * reach them and cross-fade when their biome changes, and each grid keeps a
-     * local WeatherInstance following the cell overhead.
+     * local WeatherInstance following the cell overhead. The weather over any
+     * point of noise space can also be sampled, from its live cell or resolved
+     * exactly as that cell would be, so a map shows what every player sees.
      */
 
     // Internal
@@ -227,12 +229,10 @@ public class WeatherPatternManager extends ManagerPackage {
                 ? create(WeatherInstance.class)
                 : freeCells.remove(freeCells.size() - 1);
 
-        float noisePercentile = weatherManager.sampleNoisePercentile(
-                (cellX + 0.5) * cellSizeChunks,
-                (cellZ + 0.5) * cellSizeChunks);
+        float noisePercentile = sampleCellPercentile(cellX, cellZ);
 
         cell.assignCell(cellKey, cellX, cellZ, noisePercentile);
-        cell.constructor(resolveCellWeather(cell));
+        cell.constructor(resolveCellWeather(cellX, cellZ, noisePercentile));
 
         cellKey2WeatherInstance.put(cellKey, cell);
         activeCells.add(cell);
@@ -280,25 +280,29 @@ public class WeatherPatternManager extends ManagerPackage {
             resolveCursor = (resolveCursor + 1) % size;
 
             WeatherInstance cell = activeCells.get(resolveCursor);
-            WeatherHandle resolved = resolveCellWeather(cell);
+            WeatherHandle resolved = resolveCellWeather(cell.getCellX(), cell.getCellZ(), cell.getNoisePercentile());
 
             if (resolved != cell.getWeatherHandle())
                 cell.beginWeatherTransition(resolved);
         }
     }
 
-    private WeatherHandle resolveCellWeather(WeatherInstance cell) {
+    private float sampleCellPercentile(int cellX, int cellZ) {
+        return weatherManager.sampleNoisePercentile((cellX + 0.5) * cellSizeChunks, (cellZ + 0.5) * cellSizeChunks);
+    }
+
+    private WeatherHandle resolveCellWeather(int cellX, int cellZ, float noisePercentile) {
 
         double worldXBlocks = wrap(
-                (cell.getCellX() + 0.5) * cellSizeBlocks + weatherManager.getFlowOffsetXBlocks(), worldWidthBlocks);
+                (cellX + 0.5) * cellSizeBlocks + weatherManager.getFlowOffsetXBlocks(), worldWidthBlocks);
         double worldZBlocks = wrap(
-                (cell.getCellZ() + 0.5) * cellSizeBlocks + weatherManager.getFlowOffsetZBlocks(), worldHeightBlocks);
+                (cellZ + 0.5) * cellSizeBlocks + weatherManager.getFlowOffsetZBlocks(), worldHeightBlocks);
 
         long worldChunkCoordinate = Coordinate2Long.pack(
                 (int) Math.floor(worldXBlocks / EngineSetting.CHUNK_SIZE),
                 (int) Math.floor(worldZBlocks / EngineSetting.CHUNK_SIZE));
 
-        return weatherManager.resolveWeather(worldChunkCoordinate, cell.getNoisePercentile());
+        return weatherManager.resolveWeather(worldChunkCoordinate, noisePercentile);
     }
 
     private void advanceCellTransitions(float deltaTime) {
@@ -343,6 +347,21 @@ public class WeatherPatternManager extends ManagerPackage {
         }
     }
 
+    // Sampling \\
+
+    // Only valid while the map is resolved for the world asked about, see getMapWorld()
+    public WeatherHandle sampleNoiseWeather(double noiseXBlocks, double noiseZBlocks) {
+
+        int cellX = Math.floorMod((int) Math.floor(noiseXBlocks / cellSizeBlocks), worldCellCountX);
+        int cellZ = Math.floorMod((int) Math.floor(noiseZBlocks / cellSizeBlocks), worldCellCountZ);
+        WeatherInstance cell = cellKey2WeatherInstance.get(Coordinate2Long.pack(cellX, cellZ));
+
+        if (cell != null)
+            return cell.getWeatherHandle();
+
+        return resolveCellWeather(cellX, cellZ, sampleCellPercentile(cellX, cellZ));
+    }
+
     // Utility \\
 
     private double wrap(double value, double period) {
@@ -364,6 +383,10 @@ public class WeatherPatternManager extends ManagerPackage {
 
     public boolean hasActiveMap() {
         return mapWorld != null;
+    }
+
+    public WorldHandle getMapWorld() {
+        return mapWorld;
     }
 
     public int getMapResolution() {

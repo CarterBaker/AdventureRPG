@@ -644,6 +644,15 @@ public class EngineSetting {
     public static final float MAP_WATER_DEEP_BLOCKS = 24f;
     public static final float MAP_WATER_FLOOR_SHARE = 0.45f;
 
+    // World Map — the shared day and night and weather overlays any view can show, and how far a world image edit
+    // reaches past the pixels it changed, through the biome field's blend and warp
+    public static final int MAP_EDIT_MARGIN_PIXELS = 2;
+    public static final float MAP_NIGHT_ELEVATION_DARK = -0.2f;
+    public static final float MAP_NIGHT_ELEVATION_LIGHT = 0.1f;
+    public static final int MAP_OVERLAY_DAYLIGHT_ROWS = 256;
+    public static final int MAP_OVERLAY_WEATHER_SAMPLES_PER_FRAME = 512;
+    public static final int MAP_OVERLAY_WEATHER_TEXELS = 256;
+
     // Sub-Block
     public static final int CHUNK_VERTEX_FLOAT_COUNT = 15;
     public static final int GEOMETRY_EDGE_BITS_PER_CELL = 4;

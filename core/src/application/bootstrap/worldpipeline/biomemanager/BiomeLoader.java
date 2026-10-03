@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.biomemanager;
 
 import java.io.File;
 
+import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
@@ -70,31 +71,15 @@ class BiomeLoader extends LoaderPackage {
 
         try {
             ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+            int mapColor = BiomeArpgUtility.parseMapColor(arpg, resourceName);
 
-            if (!arpg.has("map_color"))
+            if (mapColor == BiomeData.MAP_COLOR_UNDEFINED)
                 return;
 
-            scannedMapColors.add(parseMapColorHex(arpg.get("map_color").getAsString(), resourceName));
+            scannedMapColors.add(mapColor);
             scannedMapColorNames.add(resourceName);
         } catch (Exception e) {
             throwException("Failed to pre-register map color from: " + file.getPath(), e);
-        }
-    }
-
-    private int parseMapColorHex(String raw, String resourceName) {
-
-        String hex = raw.startsWith("#") ? raw.substring(1) : raw;
-
-        if (hex.length() != 6)
-            throwException("Biome \"" + resourceName + "\" has invalid map_color \"" + raw
-                    + "\" — expected a 6-digit hex RGB value, e.g. \"#5B8C3A\".");
-
-        try {
-            return Integer.parseInt(hex, 16);
-        } catch (NumberFormatException e) {
-            throwException(
-                    "Biome \"" + resourceName + "\" has invalid map_color \"" + raw + "\" — not valid hex.", e);
-            return 0;
         }
     }
 

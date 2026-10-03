@@ -10,6 +10,9 @@ public class MapDrawStruct extends StructPackage {
      * texture shown across it, in texture space with v running north to south.
      * A tile still generating is stood in for by the matching part of a
      * coarser tile, so the rectangle always belongs to the tile asked for.
+     * The world region is the same rectangle as a share of the whole world,
+     * unwrapped and with v running north to south, which the day and night
+     * and weather overlays are read across.
      */
 
     // Texture
@@ -27,6 +30,12 @@ public class MapDrawStruct extends StructPackage {
     private float u1;
     private float v1;
 
+    // World Region
+    private float worldU0;
+    private float worldV0;
+    private float worldU1;
+    private float worldV1;
+
     // Management \\
 
     public void set(int texture, float left, float bottom, float right, float top) {
@@ -43,6 +52,13 @@ public class MapDrawStruct extends StructPackage {
         this.v0 = v0;
         this.u1 = u1;
         this.v1 = v1;
+    }
+
+    public void setWorldRegion(float worldU0, float worldV0, float worldU1, float worldV1) {
+        this.worldU0 = worldU0;
+        this.worldV0 = worldV0;
+        this.worldU1 = worldU1;
+        this.worldV1 = worldV1;
     }
 
     // Accessible \\
@@ -81,5 +97,21 @@ public class MapDrawStruct extends StructPackage {
 
     public float getV1() {
         return v1;
+    }
+
+    public float getWorldU0() {
+        return worldU0;
+    }
+
+    public float getWorldV0() {
+        return worldV0;
+    }
+
+    public float getWorldU1() {
+        return worldU1;
+    }
+
+    public float getWorldV1() {
+        return worldV1;
     }
 }

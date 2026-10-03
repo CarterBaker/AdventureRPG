@@ -22,8 +22,9 @@ public class WeatherManager extends ManagerPackage {
      * image across the world; RegionSampleSystem reads a pixel of it as a
      * percentile and walks the governing biome's pool for the active season,
      * which is built once per season, ordered calmest to most severe, and
-     * cached by biome ID. The answer is a pure function of position and
-     * shared world time, so every player sees the same weather.
+     * cached by biome ID until the season turns or a biome is rebuilt live.
+     * The answer is a pure function of position and shared world time, so
+     * every player sees the same weather.
      */
 
     // Internal
@@ -40,6 +41,7 @@ public class WeatherManager extends ManagerPackage {
 
     // Season
     private String activeSeason;
+    private int poolBiomeRevision;
 
     // Biome Pools
     private Short2ObjectOpenHashMap<ObjectArrayList<WeatherHandle>> biomeID2WeatherHandles;
@@ -77,13 +79,15 @@ public class WeatherManager extends ManagerPackage {
     protected void update() {
 
         String currentSeason = clockManager.getClockHandle().getCurrentSeason();
+        int biomeRevision = biomeManager.getRevision();
 
-        if (currentSeason == null || currentSeason.equals(activeSeason))
+        if (currentSeason == null || (currentSeason.equals(activeSeason) && biomeRevision == poolBiomeRevision))
             return;
 
         biomeID2WeatherHandles.clear();
         biomeID2WeatherChances.clear();
         this.activeSeason = currentSeason;
+        this.poolBiomeRevision = biomeRevision;
     }
 
     // Management \\

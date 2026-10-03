@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.world;
 
+import java.io.File;
+
 import engine.assets.image.Pixmap;
 import engine.root.HandlePackage;
 import engine.util.mathematics.vectors.Vector2Int;
@@ -33,6 +35,10 @@ public class WorldHandle extends HandlePackage {
 
     public int getWorldID() {
         return data.getWorldID();
+    }
+
+    public File getWorldFile() {
+        return data.getWorldFile();
     }
 
     public Pixmap getWorld() {

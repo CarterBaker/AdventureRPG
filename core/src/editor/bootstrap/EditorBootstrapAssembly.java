@@ -1,9 +1,11 @@
 package editor.bootstrap;
 
 import editor.bootstrap.commandpipeline.CommandPipeline;
+import editor.bootstrap.imagepipeline.ImagePipeline;
 import editor.bootstrap.infopipeline.InfoPipeline;
 import editor.bootstrap.itemeditorpipeline.ItemEditorPipeline;
 import editor.bootstrap.tabpipeline.TabPipeline;
+import editor.bootstrap.worldeditorpipeline.WorldEditorPipeline;
 import editor.runtime.menueventsmanager.EditorMenuEventsManager;
 import engine.root.AssemblyPackage;
 
@@ -13,7 +15,8 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
      * Editor bootstrap root. Registers editor-global bootstrap managers that
      * must be available before runtime editor contexts and menu reflection run:
      * the tab pipeline, the info pipeline behind every hierarchy tab and info
-     * panel, the item editor pipeline shared by every item editor, the command
+     * panel, the item editor pipeline shared by every item editor, the image
+     * editing framework and the world editor pipeline built on it, the command
      * pipeline that routes console commands to every Dev window, and the one
      * set of editor menu branches the toolbar, every tab's chrome, and every
      * tool route their callbacks to.
@@ -26,6 +29,8 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(TabPipeline.class);
         create(InfoPipeline.class);
         create(ItemEditorPipeline.class);
+        create(ImagePipeline.class);
+        create(WorldEditorPipeline.class);
         create(CommandPipeline.class);
         create(EditorMenuEventsManager.class);
     }

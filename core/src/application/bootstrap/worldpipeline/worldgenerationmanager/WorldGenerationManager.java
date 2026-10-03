@@ -36,7 +36,8 @@ public class WorldGenerationManager extends ManagerPackage {
      * the ground, its sea cover and its colors at any point for distant macro
      * terrain and maps, and sampleOpenWater() whether the sea covers it.
      * Output is a pure function of seed and coordinate, so it is cached per
-     * chunk and agrees across chunk borders.
+     * chunk and agrees across chunk borders. Surface profiles are cached per
+     * biome and dropped whenever a biome is rebuilt live.
      */
 
     // Internal
@@ -48,6 +49,7 @@ public class WorldGenerationManager extends ManagerPackage {
     private TerrainColumnAsyncContainer probeColumnContainer;
     private volatile Short2ObjectOpenHashMap<TerrainSurfaceProfile> biomeID2SurfaceProfile =
             new Short2ObjectOpenHashMap<>();
+    private volatile int surfaceProfileRevision;
 
     private int CHUNK_SIZE;
 
@@ -582,19 +584,30 @@ public class WorldGenerationManager extends ManagerPackage {
 
     private TerrainSurfaceProfile resolveSurfaceProfile(BiomeHandle biomeHandle) {
 
-        TerrainSurfaceProfile profile = biomeID2SurfaceProfile.get(biomeHandle.getBiomeID());
+        if (surfaceProfileRevision == biomeManager.getRevision()) {
 
-        if (profile != null)
-            return profile;
+            TerrainSurfaceProfile profile = biomeID2SurfaceProfile.get(biomeHandle.getBiomeID());
+
+            if (profile != null && profile.biomeHandle == biomeHandle)
+                return profile;
+        }
 
         return createSurfaceProfile(biomeHandle);
     }
 
+    // A live biome rebuild moves the revision, so every profile is rebuilt from the biomes as they now stand
     private synchronized TerrainSurfaceProfile createSurfaceProfile(BiomeHandle biomeHandle) {
+
+        int biomeRevision = biomeManager.getRevision();
+
+        if (surfaceProfileRevision != biomeRevision) {
+            biomeID2SurfaceProfile = new Short2ObjectOpenHashMap<>();
+            surfaceProfileRevision = biomeRevision;
+        }
 
         TerrainSurfaceProfile profile = biomeID2SurfaceProfile.get(biomeHandle.getBiomeID());
 
-        if (profile != null)
+        if (profile != null && profile.biomeHandle == biomeHandle)
             return profile;
 
         short surfaceBlockID = (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSurfaceBlockName());
@@ -602,6 +615,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 biomeHandle.getUnderwaterBlockName());
 
         profile = new TerrainSurfaceProfile(
+                biomeHandle,
                 surfaceBlockID,
                 (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSubsurfaceBlockName()),
                 underwaterBlockID,
@@ -817,6 +831,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
     private static final class TerrainSurfaceProfile {
 
+        final BiomeHandle biomeHandle;
         final short surfaceBlockID;
         final short subsurfaceBlockID;
         final short underwaterBlockID;
@@ -826,6 +841,7 @@ public class WorldGenerationManager extends ManagerPackage {
         final int underwaterSideColor;
 
         TerrainSurfaceProfile(
+                BiomeHandle biomeHandle,
                 short surfaceBlockID,
                 short subsurfaceBlockID,
                 short underwaterBlockID,
@@ -833,6 +849,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 int surfaceSideColor,
                 int underwaterTopColor,
                 int underwaterSideColor) {
+            this.biomeHandle = biomeHandle;
             this.surfaceBlockID = surfaceBlockID;
             this.subsurfaceBlockID = subsurfaceBlockID;
             this.underwaterBlockID = underwaterBlockID;

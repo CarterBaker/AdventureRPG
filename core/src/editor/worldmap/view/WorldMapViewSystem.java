@@ -8,6 +8,7 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -23,8 +24,10 @@ public class WorldMapViewSystem extends SystemPackage {
 
     /*
      * Where the world map looks and what it follows. The map shows the world
-     * of the first streaming grid with a focal entity, north up, and tracks
-     * that character's position and facing every frame. Scrolling zooms about
+     * of the first streaming grid with a focal entity, or the active world
+     * while no preview is open, north up, and tracks that character's
+     * position and facing every frame. It also holds which shared overlays,
+     * day and night and weather, this map shows. Scrolling zooms about
      * the pointer, from a few pixels per block out to the whole world, and
      * dragging pans; panning lets go of the character, and following snaps
      * the view back onto it. The settled view is handed to the engine's map
@@ -36,6 +39,7 @@ public class WorldMapViewSystem extends SystemPackage {
     // Internal
     private EditorInputSystem editorInputSystem;
     private WorldStreamManager worldStreamManager;
+    private WorldManager worldManager;
     private PlayerManager playerManager;
     private MapManager mapManager;
 
@@ -49,6 +53,10 @@ public class WorldMapViewSystem extends SystemPackage {
     private double centerZ;
     private double blocksPerPixel;
     private boolean following;
+
+    // Overlays
+    private boolean showingDayNight;
+    private boolean showingWeather;
 
     // Pan
     private boolean panning;
@@ -76,6 +84,7 @@ public class WorldMapViewSystem extends SystemPackage {
     protected void get() {
         this.editorInputSystem = get(EditorInputSystem.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.worldManager = get(WorldManager.class);
         this.playerManager = get(PlayerManager.class);
         this.mapManager = get(MapManager.class);
     }
@@ -87,10 +96,6 @@ public class WorldMapViewSystem extends SystemPackage {
 
         resolveGrid();
         resolvePlayer();
-
-        if (worldHandle == null)
-            return;
-
         syncMapView();
         handleZoom();
         handlePan();
@@ -117,6 +122,7 @@ public class WorldMapViewSystem extends SystemPackage {
         WindowInstance window = context.getWindow();
 
         mapView.set(worldHandle, centerX, centerZ, blocksPerPixel, window.getWidth(), window.getHeight());
+        mapView.setOverlays(showingDayNight, showingWeather);
     }
 
     // World \\
@@ -139,7 +145,7 @@ public class WorldMapViewSystem extends SystemPackage {
             }
         }
 
-        worldHandle = grid != null ? grid.getWorldHandle() : null;
+        worldHandle = grid != null ? grid.getWorldHandle() : worldManager.getActiveWorld();
     }
 
     private void resolvePlayer() {
@@ -236,6 +242,14 @@ public class WorldMapViewSystem extends SystemPackage {
         following = !following;
     }
 
+    public void toggleDayNight() {
+        showingDayNight = !showingDayNight;
+    }
+
+    public void toggleWeather() {
+        showingWeather = !showingWeather;
+    }
+
     // Conversion — window pixels, y up, to world blocks and back \\
 
     public double screenToWorldX(float screenX) {
@@ -260,10 +274,6 @@ public class WorldMapViewSystem extends SystemPackage {
         return worldHandle;
     }
 
-    public boolean hasWorld() {
-        return worldHandle != null;
-    }
-
     public double getCenterX() {
         return centerX;
     }
@@ -278,6 +288,14 @@ public class WorldMapViewSystem extends SystemPackage {
 
     public boolean isFollowing() {
         return following;
+    }
+
+    public boolean isShowingDayNight() {
+        return showingDayNight;
+    }
+
+    public boolean isShowingWeather() {
+        return showingWeather;
     }
 
     public boolean hasPlayer() {

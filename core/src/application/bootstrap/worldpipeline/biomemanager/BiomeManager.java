@@ -10,9 +10,12 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.root.UtilityPackage.InternalException;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
@@ -25,6 +28,9 @@ public class BiomeManager extends ManagerPackage {
      * variants appear as soft patches, and land meets ocean through its
      * declared beach. Reads are lock-free: registries are copy-on-write
      * snapshots and each worker memoizes map colors in its own scratch.
+     * Biomes can be rebuilt or retired live from an edited ARPG tree; the
+     * revision moves on every such change, so whatever derives from the field
+     * knows to refresh.
      */
 
     // Palette
@@ -37,6 +43,10 @@ public class BiomeManager extends ManagerPackage {
 
     // Internal
     private BiomeFieldAsyncContainer fieldContainer;
+    private BiomeRebuildBranch biomeRebuildBranch;
+
+    // Revision
+    private volatile int revision;
 
     private static final class ColorIndex {
 
@@ -57,6 +67,7 @@ public class BiomeManager extends ManagerPackage {
     protected void create() {
         create(BiomeLoader.class);
         this.fieldContainer = create(BiomeFieldAsyncContainer.class);
+        this.biomeRebuildBranch = create(BiomeRebuildBranch.class);
     }
 
     // Management \\
@@ -98,11 +109,21 @@ public class BiomeManager extends ManagerPackage {
                     + "\" — every variant belongs to exactly one parent biome.");
     }
 
+    // Replaces the color a biome already paints with, or appends it
     synchronized void registerMapColor(String biomeName, int mapColor) {
 
         ColorIndex current = colorIndex;
-        int size = current.colors.length;
+        int index = indexOfMapColor(current, biomeName);
 
+        if (index != EngineSetting.INDEX_NOT_FOUND) {
+
+            int[] colors = current.colors.clone();
+            colors[index] = mapColor;
+            colorIndex = new ColorIndex(colors, current.names);
+            return;
+        }
+
+        int size = current.colors.length;
         int[] colors = Arrays.copyOf(current.colors, size + 1);
         String[] names = Arrays.copyOf(current.names, size + 1);
 
@@ -110,6 +131,86 @@ public class BiomeManager extends ManagerPackage {
         names[size] = biomeName;
 
         colorIndex = new ColorIndex(colors, names);
+    }
+
+    private synchronized void unregisterMapColor(String biomeName) {
+
+        ColorIndex current = colorIndex;
+        int index = indexOfMapColor(current, biomeName);
+
+        if (index == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        int size = current.colors.length - 1;
+        int[] colors = new int[size];
+        String[] names = new String[size];
+
+        System.arraycopy(current.colors, 0, colors, 0, index);
+        System.arraycopy(current.names, 0, names, 0, index);
+        System.arraycopy(current.colors, index + 1, colors, index, size - index);
+        System.arraycopy(current.names, index + 1, names, index, size - index);
+
+        colorIndex = new ColorIndex(colors, names);
+    }
+
+    private int indexOfMapColor(ColorIndex index, String biomeName) {
+
+        for (int i = 0; i < index.names.length; i++)
+            if (index.names[i].equals(biomeName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // Live Edit \
+
+    // Throws a catchable InternalException, leaving the biome as it was, when the tree cannot go live
+    public synchronized void rebuildBiome(String biomeName, ArpgObjectStruct biomeArpg) {
+
+        BiomeHandle biomeHandle = biomeRebuildBranch.build(biomeName, biomeArpg);
+        BiomeHandle previous = biomeName2BiomeHandle.get(biomeName);
+
+        if (previous != null)
+            for (String variantName : previous.getProbableBiomeNames())
+                variantName2ParentName.remove(variantName, biomeName);
+
+        addBiome(biomeHandle);
+
+        if (biomeHandle.hasMapColor())
+            registerMapColor(biomeName, biomeHandle.getMapColor());
+        else
+            unregisterMapColor(biomeName);
+
+        revision++;
+    }
+
+    // A retired biome stays registered for what was generated with it, but no longer paints the world map
+    public synchronized void retireBiome(String biomeName) {
+
+        if (indexOfMapColor(colorIndex, biomeName) == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        if (colorIndex.names.length == 1)
+            throw new InternalException("Biome \"" + biomeName
+                    + "\" is the last biome painted on the world map and cannot be retired.");
+
+        unregisterMapColor(biomeName);
+        revision++;
+    }
+
+    boolean isLastPaintedBiome(String biomeName) {
+
+        ColorIndex index = colorIndex;
+
+        return index.names.length == 1 && index.names[0].equals(biomeName);
+    }
+
+    String getVariantParentName(String variantName) {
+        return variantName2ParentName.get(variantName);
+    }
+
+    BiomeHandle getRegisteredBiome(short biomeID) {
+        return biomeID2BiomeHandle.get(biomeID);
     }
 
     // On-Demand \\
@@ -289,6 +390,23 @@ public class BiomeManager extends ManagerPackage {
     }
 
     // Accessible \\
+
+    public int getRevision() {
+        return revision;
+    }
+
+    public void collectPaintedBiomes(ObjectArrayList<String> outNames, IntArrayList outColors) {
+
+        ColorIndex index = colorIndex;
+
+        outNames.clear();
+        outColors.clear();
+
+        for (int i = 0; i < index.names.length; i++) {
+            outNames.add(index.names[i]);
+            outColors.add(index.colors[i]);
+        }
+    }
 
     public boolean hasBiome(String biomeName) {
         return biomeName2BiomeHandle.containsKey(biomeName);

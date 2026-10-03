@@ -1,5 +1,6 @@
 package application.bootstrap.calendarpipeline.clock;
 
+import application.bootstrap.calendarpipeline.util.CelestialUtility;
 import engine.root.InstancePackage;
 
 public class ClockInstance extends InstancePackage {
@@ -27,7 +28,7 @@ public class ClockInstance extends InstancePackage {
         this.visualTimeOfDay = visualTimeOfDay;
         this.locationOffset = locationOffset;
         this.latitudeFactor = latitudeFactor;
-        this.solarElevation = -Math.cos(visualTimeOfDay * Math.PI * 2.0);
+        this.solarElevation = CelestialUtility.resolveSolarElevation(visualTimeOfDay);
     }
 
     // Accessible \\

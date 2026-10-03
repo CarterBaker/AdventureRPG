@@ -66,6 +66,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openWorldMap(window.getGLWindow());
     }
 
+    public void openWorldEditor(WindowInstance window) {
+        tabManager.openWorldEditor(window.getGLWindow());
+    }
+
     public void openConsole(WindowInstance window) {
         tabManager.openConsole(window.getGLWindow());
     }

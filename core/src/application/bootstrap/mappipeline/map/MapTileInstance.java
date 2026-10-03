@@ -35,6 +35,7 @@ public class MapTileInstance extends InstancePackage {
     private byte[] pixels;
     private boolean generating;
     private volatile boolean generated;
+    private boolean stale;
 
     // Use
     private long lastUsedFrame;
@@ -67,6 +68,7 @@ public class MapTileInstance extends InstancePackage {
         this.uploaded = false;
         this.generating = false;
         this.generated = false;
+        this.stale = false;
         this.shownFinestFrame = EngineSetting.INDEX_NOT_FOUND;
 
         Arrays.fill(chunkVersions, EngineSetting.MAP_CHUNK_VERSION_NONE);
@@ -75,7 +77,10 @@ public class MapTileInstance extends InstancePackage {
     // Generation \\
 
     public void beginGeneration() {
+
         this.generating = true;
+        this.generated = false;
+        this.stale = false;
     }
 
     public void finishGeneration() {
@@ -87,12 +92,20 @@ public class MapTileInstance extends InstancePackage {
     }
 
     public boolean isAwaitingUpload() {
-        return generated && !uploaded;
+        return generating && generated;
     }
 
     public void markUploaded() {
+
         this.uploaded = true;
         this.generating = false;
+        this.generated = false;
+
+        Arrays.fill(chunkVersions, EngineSetting.MAP_CHUNK_VERSION_NONE);
+    }
+
+    public void markStale() {
+        this.stale = true;
     }
 
     // Use \\
@@ -148,7 +161,7 @@ public class MapTileInstance extends InstancePackage {
     }
 
     public boolean isRequested() {
-        return generating || uploaded;
+        return generating || (uploaded && !stale);
     }
 
     public byte[] getPixels() {

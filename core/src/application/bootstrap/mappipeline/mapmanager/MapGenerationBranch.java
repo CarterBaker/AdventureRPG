@@ -102,7 +102,7 @@ public class MapGenerationBranch extends BranchPackage {
         }
     }
 
-    private double resolveSpacing(double tileBlocks) {
+    double resolveSpacing(double tileBlocks) {
         return Math.max(
                 tileBlocks / EngineSetting.MAP_TILE_SAMPLES_PER_SIDE,
                 EngineSetting.MAP_TILE_SAMPLE_SPACING_MIN_BLOCKS);

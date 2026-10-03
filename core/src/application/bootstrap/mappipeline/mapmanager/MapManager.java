@@ -6,6 +6,7 @@ import application.bootstrap.mappipeline.map.MapDrawStruct;
 import application.bootstrap.mappipeline.map.MapTileInstance;
 import application.bootstrap.mappipeline.map.MapViewStruct;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -29,13 +30,20 @@ public class MapManager extends ManagerPackage {
      * budget, have the real chunks under them drawn in once a view shows them
      * at the finest level, and are recycled with their textures once no view
      * has shown them for longest; the level zero tiles are always kept, so the
-     * whole world shows at once. Tile indices wrap with the world.
+     * whole world shows at once. Tile indices wrap with the world. Live edits
+     * mark the tiles they reach stale — an edited region of the world image,
+     * or every tile once a biome is rebuilt — and a stale tile keeps showing
+     * until its fresh pixels upload, so edits sharpen in place. Views may also
+     * show the shared day and night and weather overlays MapOverlayBranch
+     * keeps over their tiles.
      */
 
     // Internal
     private TextureManager textureManager;
+    private BiomeManager biomeManager;
     private MapGenerationBranch mapGenerationBranch;
     private MapChunkBranch mapChunkBranch;
+    private MapOverlayBranch mapOverlayBranch;
 
     // World
     private WorldHandle worldHandle;
@@ -50,6 +58,9 @@ public class MapManager extends ManagerPackage {
     private ObjectArrayList<MapTileInstance> shownFinestTiles;
     private long frame;
 
+    // Live Edits
+    private int shownBiomeRevision;
+
     // Scratch
     private ByteBuffer uploadBuffer;
 
@@ -61,6 +72,7 @@ public class MapManager extends ManagerPackage {
         // Internal
         this.mapGenerationBranch = create(MapGenerationBranch.class);
         this.mapChunkBranch = create(MapChunkBranch.class);
+        this.mapOverlayBranch = create(MapOverlayBranch.class);
 
         // Palette
         this.key2MapTile = new Long2ObjectOpenHashMap<>();
@@ -76,6 +88,7 @@ public class MapManager extends ManagerPackage {
     @Override
     protected void get() {
         this.textureManager = get(TextureManager.class);
+        this.biomeManager = get(BiomeManager.class);
     }
 
     @Override
@@ -100,6 +113,7 @@ public class MapManager extends ManagerPackage {
 
         frame++;
         recycleRetiredTiles();
+        syncBiomeRevision();
 
         if (worldHandle == null)
             return;
@@ -107,6 +121,7 @@ public class MapManager extends ManagerPackage {
         uploadGeneratedTiles();
         refreshShownChunks();
         evictStaleTiles();
+        mapOverlayBranch.update(worldHandle, frame);
     }
 
     // World \\
@@ -179,6 +194,7 @@ public class MapManager extends ManagerPackage {
 
         view.beginDraws(level);
         requestBaseTiles();
+        requestOverlays(view);
 
         long firstX = (long) Math.floor(view.screenToWorldX(0f) / tileBlocks);
         long lastX = (long) Math.floor(view.screenToWorldX(view.getWidth()) / tileBlocks);
@@ -204,7 +220,10 @@ public class MapManager extends ManagerPackage {
 
         if (tile.isUploaded()) {
 
-            view.nextDraw().set(tile.getTexture(), left, bottom, right, top);
+            MapDrawStruct draw = view.nextDraw();
+
+            draw.set(tile.getTexture(), left, bottom, right, top);
+            setWorldRegion(draw, tileX, tileZ, tileBlocks);
 
             if (level == maxLevel && tile.markShownFinest(frame))
                 shownFinestTiles.add(tile);
@@ -229,9 +248,94 @@ public class MapManager extends ManagerPackage {
 
             draw.set(ancestor.getTexture(), left, bottom, right, top);
             draw.setRegion(u0, v0, u0 + 1f / span, v0 + 1f / span);
+            setWorldRegion(draw, tileX, tileZ, tileBlocks);
 
             return;
         }
+    }
+
+    private void setWorldRegion(MapDrawStruct draw, long tileX, long tileZ, long tileBlocks) {
+        draw.setWorldRegion(
+                (float) ((double) tileX * tileBlocks / worldWidthBlocks),
+                (float) ((double) tileZ * tileBlocks / worldHeightBlocks),
+                (float) ((double) (tileX + 1) * tileBlocks / worldWidthBlocks),
+                (float) ((double) (tileZ + 1) * tileBlocks / worldHeightBlocks));
+    }
+
+    // Overlays \\
+
+    private void requestOverlays(MapViewStruct view) {
+
+        if (view.isShowingDayNight())
+            mapOverlayBranch.requestDayNight(frame);
+
+        if (view.isShowingWeather())
+            mapOverlayBranch.requestWeather(frame);
+    }
+
+    // Live Edits \\
+
+    // Pixels are inclusive world image pixels; tiles they reach through the biome field's blend regenerate
+    public void invalidateWorldPixels(
+            WorldHandle editedWorldHandle,
+            int minPixelX,
+            int minPixelZ,
+            int maxPixelX,
+            int maxPixelZ) {
+
+        if (editedWorldHandle != worldHandle)
+            return;
+
+        double pixelBlocks = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
+        int margin = EngineSetting.MAP_EDIT_MARGIN_PIXELS;
+        double minBlockX = (minPixelX - margin) * pixelBlocks;
+        double minBlockZ = (minPixelZ - margin) * pixelBlocks;
+        double maxBlockX = (maxPixelX + 1 + margin) * pixelBlocks;
+        double maxBlockZ = (maxPixelZ + 1 + margin) * pixelBlocks;
+
+        for (MapTileInstance tile : key2MapTile.values()) {
+
+            long tileBlocks = getTileBlocks(tile.getLevel());
+            double reach = mapGenerationBranch.resolveSpacing(tileBlocks);
+            double tileMinX = (double) tile.getTileX() * tileBlocks - reach;
+            double tileMinZ = (double) tile.getTileZ() * tileBlocks - reach;
+
+            if (overlapsWrapped(tileMinX, tileMinX + tileBlocks + reach * 2, minBlockX, maxBlockX, worldWidthBlocks)
+                    && overlapsWrapped(
+                            tileMinZ, tileMinZ + tileBlocks + reach * 2, minBlockZ, maxBlockZ, worldHeightBlocks))
+                tile.markStale();
+        }
+    }
+
+    // A rebuilt biome can change any part of the field, so every tile regenerates
+    private void syncBiomeRevision() {
+
+        int biomeRevision = biomeManager.getRevision();
+
+        if (biomeRevision == shownBiomeRevision)
+            return;
+
+        this.shownBiomeRevision = biomeRevision;
+
+        for (MapTileInstance tile : key2MapTile.values())
+            tile.markStale();
+    }
+
+    // Tests the interval against the region and its copies one world over on either side
+    private boolean overlapsWrapped(double min, double max, double regionMin, double regionMax, double period) {
+
+        if (regionMax - regionMin >= period)
+            return true;
+
+        double shift = Math.floor(regionMin / period) * period;
+        double wrappedMin = regionMin - shift;
+        double wrappedMax = regionMax - shift;
+
+        for (int copy = -1; copy <= 1; copy++)
+            if (min < wrappedMax + copy * period && wrappedMin + copy * period < max)
+                return true;
+
+        return false;
     }
 
     // Tiles \\
@@ -377,5 +481,29 @@ public class MapManager extends ManagerPackage {
 
     public int getMaxLevel() {
         return maxLevel;
+    }
+
+    public boolean hasDayNightOverlay() {
+        return mapOverlayBranch.isDaylightReady();
+    }
+
+    public boolean hasWeatherOverlay() {
+        return mapOverlayBranch.isWeatherReady();
+    }
+
+    public int getDaylightTexture() {
+        return mapOverlayBranch.getDaylightTexture();
+    }
+
+    public int getWeatherTexture() {
+        return mapOverlayBranch.getWeatherTexture();
+    }
+
+    public float getWeatherOffsetU() {
+        return mapOverlayBranch.getWeatherOffsetU();
+    }
+
+    public float getWeatherOffsetV() {
+        return mapOverlayBranch.getWeatherOffsetV();
     }
 }

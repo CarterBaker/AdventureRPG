@@ -17,4 +17,14 @@ public class WorldMapBranch extends BranchPackage {
         if (window.getContext() instanceof WorldMapContext worldMapContext)
             worldMapContext.toggleFollow();
     }
+
+    public void toggleDayNight(WindowInstance window) {
+        if (window.getContext() instanceof WorldMapContext worldMapContext)
+            worldMapContext.toggleDayNight();
+    }
+
+    public void toggleWeather(WindowInstance window) {
+        if (window.getContext() instanceof WorldMapContext worldMapContext)
+            worldMapContext.toggleWeather();
+    }
 }

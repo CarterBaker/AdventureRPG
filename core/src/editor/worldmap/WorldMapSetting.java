@@ -6,8 +6,8 @@ public class WorldMapSetting {
 
     /*
      * Constants used only by WorldMapContext — its viewport mesh and
-     * materials, zoom limits, the character marker, mouse binding and status
-     * menu. The map itself, its tiles and palette, is the engine's.
+     * materials and overlay uniforms, zoom limits, the character marker,
+     * mouse binding and status menu. The map itself, its tiles and palette, is the engine's.
      */
 
     // Meshes
@@ -24,6 +24,12 @@ public class WorldMapSetting {
     public static final String UNIFORM_MARKER_CENTER = "u_markerCenter";
     public static final String UNIFORM_MARKER_DIRECTION = "u_markerDirection";
     public static final String UNIFORM_MARKER_SCALE = "u_markerScale";
+    public static final String UNIFORM_WORLD_RECT = "u_worldRect";
+    public static final String UNIFORM_DAYLIGHT_TEXTURE = "u_daylightTexture";
+    public static final String UNIFORM_WEATHER_TEXTURE = "u_weatherTexture";
+    public static final String UNIFORM_WEATHER_OFFSET = "u_weatherOffset";
+    public static final String UNIFORM_SHOW_DAY_NIGHT = "u_showDayNight";
+    public static final String UNIFORM_SHOW_WEATHER = "u_showWeather";
 
     // Render Order
     public static final int DEPTH_TILES = 0;
@@ -44,4 +50,6 @@ public class WorldMapSetting {
     public static final String MENU_STATUS = "editor/WorldMap/Status";
     public static final int ENTRY_STATUS = 0;
     public static final int ENTRY_FOLLOW_LABEL = 1;
+    public static final int ENTRY_DAY_NIGHT_LABEL = 2;
+    public static final int ENTRY_WEATHER_LABEL = 3;
 }

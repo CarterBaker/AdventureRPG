@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.world;
 
+import java.io.File;
+
 import engine.assets.image.Pixmap;
 import engine.root.DataPackage;
 import engine.util.mathematics.vectors.Vector2Int;
@@ -15,12 +17,15 @@ public class WorldData extends DataPackage {
      * per-world calendar definition, which owns daysPerDay and every other
      * day/year shape setting. worldEpochStart is the real instant the
      * world's calendar sat on its own start date and time, persisted in the
-     * companion ARPG so the world's clock carries on between sessions.
+     * companion ARPG so the world's clock carries on between sessions. The
+     * world file is the image the pixel map was read from, for tools that
+     * edit and save it.
      */
 
     // Identity
     private final String worldName;
     private final int worldID;
+    private final File worldFile;
     private final Pixmap world;
     private final Vector2Int worldScale;
 
@@ -53,6 +58,7 @@ public class WorldData extends DataPackage {
     public WorldData(
             String worldName,
             int worldID,
+            File worldFile,
             Pixmap world,
             Vector2Int worldScale,
             float gravityMultiplier,
@@ -67,6 +73,7 @@ public class WorldData extends DataPackage {
         // Identity
         this.worldName = worldName;
         this.worldID = worldID;
+        this.worldFile = worldFile;
         this.world = world;
         this.worldScale = worldScale;
 
@@ -99,6 +106,10 @@ public class WorldData extends DataPackage {
 
     public int getWorldID() {
         return worldID;
+    }
+
+    public File getWorldFile() {
+        return worldFile;
     }
 
     public Pixmap getWorld() {

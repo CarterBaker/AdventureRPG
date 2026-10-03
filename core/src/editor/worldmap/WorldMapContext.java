@@ -13,8 +13,10 @@ public class WorldMapContext extends ContextPackage {
      * only views and draws: the engine's map streams from a few tiles for the
      * whole world down to single blocks as it zooms, generated on the fly from
      * the terrain, with the real chunks a preview has loaded drawn in once it
-     * reaches them. An arrow always marks the character's position and
-     * facing, and the view follows it until dragged.
+     * reaches them. With no preview open it shows the active world. An arrow
+     * marks the character's position and facing, and the view follows it
+     * until dragged. The shared day and night and weather can be shown over
+     * it, and live world and biome edits sharpen into it as they land.
      */
 
     // Internal
@@ -42,5 +44,13 @@ public class WorldMapContext extends ContextPackage {
 
     public void toggleFollow() {
         worldMapViewSystem.toggleFollow();
+    }
+
+    public void toggleDayNight() {
+        worldMapViewSystem.toggleDayNight();
+    }
+
+    public void toggleWeather() {
+        worldMapViewSystem.toggleWeather();
     }
 }

@@ -28,7 +28,10 @@ public class InfoManager extends ManagerPackage {
      * Owns the editor's ARPG content: every schema, the files opened under it,
      * and the single selection shared by the hierarchy and info panels. Files
      * load on first view and keep edits until saved or reverted; disk access,
-     * edits, rows and hierarchy nodes each live in their own branch.
+     * edits, rows and hierarchy nodes each live in their own branch. Change
+     * listeners hear every entry whose content moves — edited, created or
+     * reverted, saved or not — and delete listeners every entry removed, so
+     * tools can preview edits live.
      */
 
     // Internal
@@ -42,6 +45,8 @@ public class InfoManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<String, InfoSchemaHandle> schemaName2InfoSchemaHandle;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<InfoDocumentInstance>> schemaName2Documents;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2Listeners;
+    private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2ChangeListeners;
+    private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2DeleteListeners;
 
     // Selection
     private InfoSchemaHandle activeSchema;
@@ -71,6 +76,8 @@ public class InfoManager extends ManagerPackage {
         this.schemaName2InfoSchemaHandle = new Object2ObjectOpenHashMap<>();
         this.schemaName2Documents = new Object2ObjectOpenHashMap<>();
         this.schemaName2Listeners = new Object2ObjectOpenHashMap<>();
+        this.schemaName2ChangeListeners = new Object2ObjectOpenHashMap<>();
+        this.schemaName2DeleteListeners = new Object2ObjectOpenHashMap<>();
 
         // Expansion
         this.toggledPaths = new ObjectOpenHashSet<>();
@@ -117,6 +124,14 @@ public class InfoManager extends ManagerPackage {
 
     public void addSelectionListener(String schemaName, Consumer<InfoEntryStruct> listener) {
         schemaName2Listeners.computeIfAbsent(schemaName, name -> new ObjectArrayList<>()).add(listener);
+    }
+
+    public void addChangeListener(String schemaName, Consumer<InfoEntryStruct> listener) {
+        schemaName2ChangeListeners.computeIfAbsent(schemaName, name -> new ObjectArrayList<>()).add(listener);
+    }
+
+    public void addDeleteListener(String schemaName, Consumer<InfoEntryStruct> listener) {
+        schemaName2DeleteListeners.computeIfAbsent(schemaName, name -> new ObjectArrayList<>()).add(listener);
     }
 
     // Documents \\
@@ -351,6 +366,7 @@ public class InfoManager extends ManagerPackage {
         document.markEdited();
 
         select(schema, document, entryName, null);
+        notifyEntry(schemaName2ChangeListeners, getSelectedEntry());
         setStatusMessage(EditorSetting.INFO_MESSAGE_CREATED + entryName);
     }
 
@@ -369,6 +385,7 @@ public class InfoManager extends ManagerPackage {
             document.requireEntryArray();
 
         select(activeSchema, document, null, null);
+        notifyEntries(schemaName2ChangeListeners, activeSchema, document);
         setStatusMessage(EditorSetting.INFO_MESSAGE_CREATED + definitionName);
     }
 
@@ -416,6 +433,7 @@ public class InfoManager extends ManagerPackage {
         if (document.isOnDisk())
             infoLibraryBranch.delete(document);
 
+        notifyEntries(schemaName2DeleteListeners, activeSchema, document);
         getDocuments(activeSchema).remove(document);
         select(activeSchema, null, null, emptyToNull(document.getFolderName()));
         setStatusMessage(EditorSetting.INFO_MESSAGE_DELETED + document.getDefinitionName());
@@ -430,6 +448,8 @@ public class InfoManager extends ManagerPackage {
         if (entryIndex == EngineSetting.INDEX_NOT_FOUND)
             return;
 
+        notifyEntry(schemaName2DeleteListeners, new InfoEntryStruct(
+                schemaName, definitionName, entryName, document.findEntry(entryName)));
         document.requireEntryArray().remove(entryIndex);
         document.markEdited();
 
@@ -489,6 +509,7 @@ public class InfoManager extends ManagerPackage {
         InfoDocumentInstance document = selectedDocument;
 
         if (!document.isOnDisk()) {
+            notifyEntries(schemaName2DeleteListeners, activeSchema, document);
             getDocuments(activeSchema).remove(document);
             select(activeSchema, null, null, emptyToNull(document.getFolderName()));
             setStatusMessage(EditorSetting.INFO_MESSAGE_REVERTED + document.getDefinitionName());
@@ -501,6 +522,7 @@ public class InfoManager extends ManagerPackage {
             return;
 
         document.replaceRoot(root);
+        notifyEntries(schemaName2ChangeListeners, activeSchema, document);
 
         String entryName = selectedEntryName != null
                 && document.findEntryIndex(selectedEntryName) != EngineSetting.INDEX_NOT_FOUND
@@ -679,6 +701,37 @@ public class InfoManager extends ManagerPackage {
         this.statusMessage = null;
         notifyChanged();
         notifyListeners();
+        notifyEntry(schemaName2ChangeListeners, getSelectedEntry());
+    }
+
+    // Entry Listeners \\
+
+    private void notifyEntries(
+            Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2EntryListeners,
+            InfoSchemaHandle schema,
+            InfoDocumentInstance document) {
+
+        if (!schemaName2EntryListeners.containsKey(schema.getSchemaName()))
+            return;
+
+        ObjectArrayList<InfoEntryStruct> entries = new ObjectArrayList<>();
+        addEntries(schema, document, entries);
+
+        for (int i = 0; i < entries.size(); i++)
+            notifyEntry(schemaName2EntryListeners, entries.get(i));
+    }
+
+    private void notifyEntry(
+            Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2EntryListeners,
+            InfoEntryStruct entry) {
+
+        ObjectArrayList<Consumer<InfoEntryStruct>> listeners = entry != null
+                ? schemaName2EntryListeners.get(entry.getSchemaName())
+                : null;
+
+        if (listeners != null)
+            for (int i = 0; i < listeners.size(); i++)
+                listeners.get(i).accept(entry);
     }
 
     // Expansion \\
