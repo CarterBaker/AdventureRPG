@@ -28,7 +28,7 @@ public class Settings {
     public boolean vsync = true;
 
     // Render
-    public int maxRenderDistance = 64;
+    public int maxRenderDistance = 16;
     public int nearTessellationRadius = 5;
 
     // Post Processing — Outlines
@@ -39,10 +39,10 @@ public class Settings {
     // Post Processing — Image
     public boolean antiAliasing = true;
     public boolean depthOfField = true;
-    public float depthOfFieldStrength = 0.7f;
-    public float depthOfFieldBlur = 0.8f;
+    public float depthOfFieldStrength = 0.2f;
+    public float depthOfFieldBlur = 0.2f;
     public boolean bloom = true;
-    public float bloomIntensity = 0.4f;
+    public float bloomIntensity = 0.2f;
 
     // Post Processing — Color
     public float brightness = 1f;
@@ -50,7 +50,7 @@ public class Settings {
     public float saturation = 1.15f;
 
     // Post Processing — Lens
-    public float vignette = 0.35f;
+    public float vignette = 0.2f;
     public float chromaticAberration = 0.2f;
     public float filmGrain = 0.15f;
 
