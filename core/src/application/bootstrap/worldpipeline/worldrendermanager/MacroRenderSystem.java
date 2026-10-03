@@ -127,10 +127,12 @@ class MacroRenderSystem extends SystemPackage {
 
         UBOInstance positionUBO = macro.getPositionUBO();
 
+        // A fresh buffer holds undefined contents until written, so it starts from the words it mirrors
         if (positionUBO == null) {
             positionUBO = uboManager.createUBOInstance(gridCoordinateBase);
             macro.setPositionUBO(positionUBO);
             macro.setCoverageUBO(uboManager.createUBOInstance(macroCoverageBase));
+            pushCoverage(macro);
         }
 
         long delta = WorldWrapUtility.unwrapToGridCoordinate(
