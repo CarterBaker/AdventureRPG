@@ -8,28 +8,30 @@
 #include "postprocessing/includes/InverseDistance.glsl"
 
 /*
- * Ink outlines drawn from the G-buffer for a stylized look. A silhouette is a
- * fragment standing in front of what lies around it: across any plane the
- * inverse distance runs linear, so the four neighbours at the outline's
- * thickness sum to four times the centre, and a fragment in front sums short.
- * Only the nearer side of an edge is inked, so every silhouette, the sky's
- * included, takes one clean line. A crease is a fold between two faces,
- * found from how far their normals turn; creases look one way only, so a
- * fold is inked once rather than on both faces. Outlines fade out with
- * distance before the terrain's detail turns them to noise, and the ink is
- * the surface's own lit color darkened, so lines follow the time of day and
- * take the fog and clouds laid over them afterwards.
+ * Cartoon ink outlines drawn from the G-buffer. A silhouette is a fragment
+ * standing in front of what lies around it: across any plane the inverse
+ * distance runs linear, so the four neighbours at the outline's thickness sum
+ * to four times the centre, and a fragment in front sums short. The test is
+ * relative, so a step of a single block reads as an edge at any distance, and
+ * the band is narrow so lines come out solid rather than shaded. Only the
+ * nearer side of an edge is inked, so every silhouette, the sky's included,
+ * takes one clean line. A crease is a fold between two faces, found from how
+ * far their normals turn; creases look one way only, so a fold is inked once
+ * rather than on both faces. Outlines fade out far away before the terrain's
+ * detail turns them to noise, and the ink is the surface's own lit color
+ * pressed nearly to black, so lines read as drawn ink yet still take the fog
+ * and clouds laid over them afterwards.
  */
 
 const float OUTLINE_EPSILON           = 0.000001;
-const float OUTLINE_SILHOUETTE_START  = 0.08;
-const float OUTLINE_SILHOUETTE_END    = 0.30;
-const float OUTLINE_CREASE_START      = 0.25;
-const float OUTLINE_CREASE_END        = 0.60;
-const float OUTLINE_CREASE_WEIGHT     = 0.75;
-const float OUTLINE_FADE_START        = 64.0;
-const float OUTLINE_FADE_END          = 192.0;
-const float OUTLINE_INK_SHADE         = 0.15;
+const float OUTLINE_SILHOUETTE_START  = 0.012;
+const float OUTLINE_SILHOUETTE_END    = 0.030;
+const float OUTLINE_CREASE_START      = 0.15;
+const float OUTLINE_CREASE_END        = 0.30;
+const float OUTLINE_CREASE_WEIGHT     = 1.0;
+const float OUTLINE_FADE_START        = 96.0;
+const float OUTLINE_FADE_END          = 256.0;
+const float OUTLINE_INK_SHADE         = 0.04;
 const int   OUTLINE_NEIGHBOUR_COUNT   = 4;
 
 const ivec2 OUTLINE_NEIGHBOURS[OUTLINE_NEIGHBOUR_COUNT] = ivec2[](
