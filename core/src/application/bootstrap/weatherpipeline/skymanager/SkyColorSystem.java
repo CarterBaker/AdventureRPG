@@ -190,10 +190,7 @@ class SkyColorSystem extends SystemPackage {
             return;
         }
 
-        this.overcast = SkyColorUtility.clamp01(
-                weather.getBlendedCloudCoverage() * EngineSetting.SKY_OVERCAST_COVERAGE_WEIGHT
-                        + weather.getBlendedPrecipitationIntensity()
-                                * EngineSetting.SKY_OVERCAST_PRECIPITATION_WEIGHT);
+        this.overcast = SkyColorUtility.resolveOvercast(weather);
 
         float saturation = 1f - overcast * EngineSetting.SKY_OVERCAST_DESATURATION;
         float dimming = 1f - overcast * EngineSetting.SKY_OVERCAST_DIMMING;

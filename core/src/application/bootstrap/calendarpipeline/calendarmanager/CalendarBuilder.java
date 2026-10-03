@@ -4,11 +4,13 @@ import java.io.File;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarData;
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
+import application.bootstrap.calendarpipeline.calendar.CalendarMoonStruct;
 import application.bootstrap.calendarpipeline.calendar.CalendarStarStruct;
 import application.bootstrap.calendarpipeline.calendar.CalendarStartStruct;
 import application.bootstrap.calendarpipeline.calendar.CalendarTimeStruct;
 import application.bootstrap.calendarpipeline.calendar.SeasonRangeStruct;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
@@ -21,9 +23,9 @@ class CalendarBuilder extends BuilderPackage {
     /*
      * Parses calendar ARPG into a CalendarData/CalendarHandle: the day-of-
      * week and month layout, this calendar's own day/year shape, its
-     * starting point, the star its world orbits, and its named seasons —
-     * each anchoring a name to a
-     * start date and a day length. A season's climate and sky-color
+     * starting point, the star its world orbits, the orbit of its moon, and
+     * its named seasons — each anchoring a name to a start date and a day
+     * length. A season's climate and sky-color
      * values are resolved separately, by name, through SeasonManager.
      * Bootstrap-only.
      */
@@ -41,11 +43,12 @@ class CalendarBuilder extends BuilderPackage {
         CalendarTimeStruct time = parseTime(arpg, calendarName);
         CalendarStartStruct start = parseStart(arpg, calendarName, monthNames, monthDays, time);
         CalendarStarStruct star = parseStar(arpg, calendarName);
+        CalendarMoonStruct moon = parseMoon(arpg, calendarName);
         ObjectArrayList<SeasonRangeStruct> seasons = parseSeasons(arpg, calendarName, monthNames, monthDays);
 
         CalendarData calendarData = new CalendarData(
                 calendarName, daysOfWeek, monthNames, monthDays, totalDaysInYear,
-                start, time, star, seasons);
+                start, time, star, moon, seasons);
 
         CalendarHandle calendarHandle = create(CalendarHandle.class);
         calendarHandle.constructor(calendarData);
@@ -149,6 +152,39 @@ class CalendarBuilder extends BuilderPackage {
                     " is out of range — must be greater than 0.0");
 
         return new CalendarStarStruct(distance, luminosity);
+    }
+
+    private CalendarMoonStruct parseMoon(ArpgObjectStruct arpg, String calendarName) {
+
+        ArpgObjectStruct moonObject = ArpgUtility.validateObject(arpg, "moon");
+
+        float phaseOffset = ArpgUtility.validateFloat(moonObject, "phaseOffset");
+        float inclination = ArpgUtility.validateFloat(moonObject, "inclination");
+        float nodalCycleDays = ArpgUtility.validateFloat(moonObject, "nodalCycleDays");
+        float distanceCycleDays = ArpgUtility.validateFloat(moonObject, "distanceCycleDays");
+        float sizeVariation = ArpgUtility.validateFloat(moonObject, "sizeVariation");
+
+        if (phaseOffset < 0f || phaseOffset >= 1f)
+            throwException("Calendar \"" + calendarName + "\" moon.phaseOffset " + phaseOffset +
+                    " is out of range — must be at least 0.0 and below 1.0");
+
+        if (inclination < 0f || inclination > EngineSetting.MOON_MAX_INCLINATION_DEGREES)
+            throwException("Calendar \"" + calendarName + "\" moon.inclination " + inclination +
+                    " is out of range — must be between 0.0 and " + EngineSetting.MOON_MAX_INCLINATION_DEGREES);
+
+        if (nodalCycleDays <= 0f)
+            throwException("Calendar \"" + calendarName + "\" moon.nodalCycleDays " + nodalCycleDays +
+                    " is out of range — must be greater than 0.0");
+
+        if (distanceCycleDays <= 0f)
+            throwException("Calendar \"" + calendarName + "\" moon.distanceCycleDays " + distanceCycleDays +
+                    " is out of range — must be greater than 0.0");
+
+        if (sizeVariation < 0f || sizeVariation >= 1f)
+            throwException("Calendar \"" + calendarName + "\" moon.sizeVariation " + sizeVariation +
+                    " is out of range — must be at least 0.0 and below 1.0");
+
+        return new CalendarMoonStruct(phaseOffset, inclination, nodalCycleDays, distanceCycleDays, sizeVariation);
     }
 
     private ObjectArrayList<SeasonRangeStruct> parseSeasons(

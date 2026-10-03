@@ -1,5 +1,6 @@
 package application.bootstrap.lightingpipeline.naturallightmanager;
 
+import application.bootstrap.calendarpipeline.util.CelestialUtility;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -8,8 +9,9 @@ public class SunLightSystem extends SystemPackage {
 
     /*
      * Computes sun direction, color, and intensity each frame from the current
-     * visual time of day. Direction traces a full circle — intensity peaks at
-     * noon and falls to zero at the horizon cutoff.
+     * visual time of day. Direction traces the sun's path through
+     * CelestialUtility — intensity peaks at noon and falls to zero at the
+     * horizon cutoff.
      */
 
     // Output
@@ -33,17 +35,7 @@ public class SunLightSystem extends SystemPackage {
 
     public void update(float visualTimeOfDay) {
 
-        float angle = visualTimeOfDay * (float) Math.PI * 2f;
-        float dirX = -(float) Math.sin(angle);
-        float dirY = -(float) Math.cos(angle);
-        float len = (float) Math.sqrt(dirX * dirX + dirY * dirY);
-
-        if (len > 0f) {
-            dirX /= len;
-            dirY /= len;
-        }
-
-        direction.set(dirX, dirY, 0f);
+        CelestialUtility.resolveSunDirection(visualTimeOfDay, direction);
         color.set(1f, 1f, 1f);
         intensity = computeIntensity(visualTimeOfDay);
     }

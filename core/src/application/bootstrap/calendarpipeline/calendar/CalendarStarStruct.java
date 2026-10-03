@@ -11,7 +11,9 @@ public class CalendarStarStruct extends StructPackage {
      * that orbit, so the star lives beside it. Received light falls off with
      * the square of distance and a planet's temperature follows the fourth
      * root of received light, so temperatureScale — 1.0 for an Earth-like
-     * orbit — is the factor every absolute temperature is multiplied by.
+     * orbit — is the factor every absolute temperature is multiplied by. The
+     * star's disc looks smaller the farther away it is, so apparentScale —
+     * also 1.0 for an Earth-like orbit — sizes the sun drawn in the sky.
      */
 
     // Internal
@@ -20,6 +22,7 @@ public class CalendarStarStruct extends StructPackage {
 
     // Calculated
     private final float temperatureScale;
+    private final float apparentScale;
 
     // Constructor \\
 
@@ -33,6 +36,7 @@ public class CalendarStarStruct extends StructPackage {
         this.temperatureScale = (float) Math.pow(
                 luminosity / ((double) distance * distance),
                 EngineSetting.STAR_TEMPERATURE_EXPONENT);
+        this.apparentScale = 1f / distance;
     }
 
     // Accessible \\
@@ -47,5 +51,9 @@ public class CalendarStarStruct extends StructPackage {
 
     public float getTemperatureScale() {
         return temperatureScale;
+    }
+
+    public float getApparentScale() {
+        return apparentScale;
     }
 }

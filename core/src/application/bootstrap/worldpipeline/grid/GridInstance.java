@@ -71,6 +71,7 @@ public class GridInstance extends InstancePackage {
     private UBOInstance sunLightUBO;
     private UBOInstance moonLightUBO;
     private UBOInstance skyColorUBO;
+    private UBOInstance celestialDataUBO;
 
     // Weather Map
     private UBOInstance weatherMapUBO;
@@ -139,6 +140,7 @@ public class GridInstance extends InstancePackage {
             UBOInstance sunLightUBO,
             UBOInstance moonLightUBO,
             UBOInstance skyColorUBO,
+            UBOInstance celestialDataUBO,
             UBOInstance weatherMapUBO,
             WeatherInstance weatherInstance,
             TemperatureInstance temperatureInstance,
@@ -173,6 +175,7 @@ public class GridInstance extends InstancePackage {
         this.sunLightUBO = sunLightUBO;
         this.moonLightUBO = moonLightUBO;
         this.skyColorUBO = skyColorUBO;
+        this.celestialDataUBO = celestialDataUBO;
 
         // Weather Map
         this.weatherMapUBO = weatherMapUBO;
@@ -512,6 +515,10 @@ public class GridInstance extends InstancePackage {
 
     public UBOInstance getSkyColorUBO() {
         return skyColorUBO;
+    }
+
+    public UBOInstance getCelestialDataUBO() {
+        return celestialDataUBO;
     }
 
     public UBOInstance getWeatherMapUBO() {

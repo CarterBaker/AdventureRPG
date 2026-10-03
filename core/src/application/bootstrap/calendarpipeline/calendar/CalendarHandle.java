@@ -9,7 +9,8 @@ public class CalendarHandle extends HandlePackage {
      * Persistent reference to a loaded calendar definition. Registered and
      * owned by CalendarManager. Delegates all accessors through CalendarData,
      * including the calendar's starting point, its own day/year shape, the
-     * star its world orbits, and its own named seasons.
+     * star its world orbits, the orbit of its moon, and its own named
+     * seasons. A calendar with no lunar cycle has no moon.
      */
 
     // Internal
@@ -125,6 +126,36 @@ public class CalendarHandle extends HandlePackage {
 
     public float getStarTemperatureScale() {
         return calendarData.getStar().getTemperatureScale();
+    }
+
+    public float getStarApparentScale() {
+        return calendarData.getStar().getApparentScale();
+    }
+
+    // Moon \\
+
+    public boolean hasMoon() {
+        return calendarData.getTime().getLunarCycleDays() > 0;
+    }
+
+    public float getMoonPhaseOffset() {
+        return calendarData.getMoon().getPhaseOffset();
+    }
+
+    public float getMoonInclinationRadians() {
+        return calendarData.getMoon().getInclinationRadians();
+    }
+
+    public float getMoonNodalCycleDays() {
+        return calendarData.getMoon().getNodalCycleDays();
+    }
+
+    public float getMoonDistanceCycleDays() {
+        return calendarData.getMoon().getDistanceCycleDays();
+    }
+
+    public float getMoonSizeVariation() {
+        return calendarData.getMoon().getSizeVariation();
     }
 
     // Seasons \\

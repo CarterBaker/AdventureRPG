@@ -20,9 +20,10 @@ public class ClockManager extends ManagerPackage {
      * Drives the in-game clock for the active world. Owns the global
      * ClockHandle and calendar wiring; each grid holds its own
      * ClockInstance, handed out by this manager, so time of day resolves
-     * independently per location. Loading and switching worlds share one
-     * wiring path, and the clock is solved immediately afterward so every
-     * value is already correct before the first frame reads it.
+     * independently per location. The moon's place in its orbit advances
+     * with the clock. Loading and switching worlds share one wiring path,
+     * and the clock is solved immediately afterward so every value is
+     * already correct before the first frame reads it.
      */
 
     // Internal
@@ -35,6 +36,7 @@ public class ClockManager extends ManagerPackage {
     private DayTrackerBranch dayTracker;
     private MonthTrackerBranch monthTracker;
     private YearTrackerBranch yearTracker;
+    private LunarTrackerBranch lunarTracker;
     private ClockBufferSystem internalBuffer;
 
     // Clock
@@ -52,6 +54,7 @@ public class ClockManager extends ManagerPackage {
         this.dayTracker = create(DayTrackerBranch.class);
         this.monthTracker = create(MonthTrackerBranch.class);
         this.yearTracker = create(YearTrackerBranch.class);
+        this.lunarTracker = create(LunarTrackerBranch.class);
         this.internalBuffer = create(ClockBufferSystem.class);
 
         // Clock
@@ -97,6 +100,7 @@ public class ClockManager extends ManagerPackage {
         dayTracker.assignData(calendarHandle, clockHandle, world.getSeed());
         monthTracker.assignData(clockHandle);
         yearTracker.assignData(calendarHandle, clockHandle);
+        lunarTracker.assignData(calendarHandle, clockHandle);
 
         advanceGameClock();
     }
@@ -112,6 +116,7 @@ public class ClockManager extends ManagerPackage {
 
         currentTracker.advanceVisualYear();
         dayTracker.advanceDayBlend();
+        lunarTracker.advanceOrbit();
 
         updateLocationTimes();
     }

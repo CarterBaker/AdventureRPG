@@ -363,6 +363,7 @@ public class EngineSetting {
     public static final String BLIT_PREMULTIPLIED_UNIFORM = "u_premultiplied";
     public static final String BLIT_RESOLVE_UNIFORM = "u_resolve";
     public static final String CAMERA_DATA_UBO = "CameraData";
+    public static final String CELESTIAL_DATA_UBO = "CelestialData";
     public static final int COMPOSITE_BUFFER_INITIAL_CAPACITY = 64;
     public static final int COMPOSITE_UPLOAD_VERSION_UNINITIALIZED = INDEX_NOT_FOUND;
     public static final String DEFAULT_BLIT_MATERIAL = "util/BlitMaterial";
@@ -476,12 +477,14 @@ public class EngineSetting {
     public static final String UNIFORM_WEATHER_MAP_ORIGIN = "u_weatherMapOrigin";
 
     // Lighting
+    public static final float CELESTIAL_POLE_MAX_ELEVATION_DEGREES = 90f;
     public static final float MOON_BRIGHTNESS_BASE = 0.7f;
     public static final float MOON_BRIGHTNESS_LUNAR_SCALE = 0.3f;
     public static final float MOON_COLOR_B = 1.0f;
     public static final float MOON_COLOR_G = 0.85f;
     public static final float MOON_COLOR_R = 0.75f;
     public static final float MOON_HORIZON_CUTOFF = 0.85f;
+    public static final float MOON_MAX_INCLINATION_DEGREES = 90f;
     public static final float MOON_MAX_INTENSITY = 0.25f;
     public static final float MOON_PHASE_MAX = 0.95f;
     public static final float MOON_PHASE_MIN = 0.05f;
@@ -489,9 +492,12 @@ public class EngineSetting {
     public static final String UNIFORM_MOON_COLOR = "u_moonColor";
     public static final String UNIFORM_MOON_DIRECTION = "u_moonDirection";
     public static final String UNIFORM_MOON_INTENSITY = "u_moonIntensity";
+    public static final String UNIFORM_MOON_SCALE = "u_moonScale";
+    public static final String UNIFORM_STAR_ROTATION = "u_starRotation";
     public static final String UNIFORM_SUN_COLOR = "u_sunColor";
     public static final String UNIFORM_SUN_DIRECTION = "u_sunDirection";
     public static final String UNIFORM_SUN_INTENSITY = "u_sunIntensity";
+    public static final String UNIFORM_SUN_SCALE = "u_sunScale";
 
     // Block & World
     public static final String AIR_BLOCK_NAME = "TerraArcanaBlocks/Air";

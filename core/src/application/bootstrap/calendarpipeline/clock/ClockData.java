@@ -7,8 +7,9 @@ public class ClockData extends DataPackage {
 
     /*
      * Global clock state for one world: the persisted epoch, the active
-     * calendar, and every current time value derived from them each frame.
-     * Location-specific time of day lives in each grid's ClockInstance.
+     * calendar, every current time value derived from them each frame, and
+     * where the moon stands in its orbit. Location-specific time of day lives
+     * in each grid's ClockInstance.
      */
 
     // Epoch
@@ -41,6 +42,12 @@ public class ClockData extends DataPackage {
 
     // Noise
     private float randomNoiseFromDay;
+
+    // Lunar State
+    private double lunarPhase;
+    private float lunarIllumination;
+    private float lunarLatitude;
+    private float lunarSizeScale;
 
     // Constructor \\
 
@@ -202,5 +209,37 @@ public class ClockData extends DataPackage {
 
     public void setRandomNoiseFromDay(float randomNoiseFromDay) {
         this.randomNoiseFromDay = randomNoiseFromDay;
+    }
+
+    public double getLunarPhase() {
+        return lunarPhase;
+    }
+
+    public void setLunarPhase(double lunarPhase) {
+        this.lunarPhase = lunarPhase;
+    }
+
+    public float getLunarIllumination() {
+        return lunarIllumination;
+    }
+
+    public void setLunarIllumination(float lunarIllumination) {
+        this.lunarIllumination = lunarIllumination;
+    }
+
+    public float getLunarLatitude() {
+        return lunarLatitude;
+    }
+
+    public void setLunarLatitude(float lunarLatitude) {
+        this.lunarLatitude = lunarLatitude;
+    }
+
+    public float getLunarSizeScale() {
+        return lunarSizeScale;
+    }
+
+    public void setLunarSizeScale(float lunarSizeScale) {
+        this.lunarSizeScale = lunarSizeScale;
     }
 }

@@ -20,6 +20,7 @@ public class RuntimeSetting {
     public static final String PASS_WEATHER = "Weather";
     public static final String PASS_PRECIPITATION = "Precipitation";
     public static final String PASS_UNDERWATER = "Underwater";
+    public static final String PASS_SQUINT = "Squint";
 
     // FBO Targets
     public static final String FBO_SKY = "SkyScene";
@@ -31,6 +32,7 @@ public class RuntimeSetting {
     public static final String FBO_PRECIPITATION = "PrecipitationScene";
     public static final String FBO_INVENTORY = "InventoryScene";
     public static final String FBO_WATER = "WaterScene";
+    public static final String FBO_SQUINT = "SquintScene";
 
     // Composite Layers
     public static final int LAYER_SKY = -10;
@@ -38,6 +40,7 @@ public class RuntimeSetting {
     public static final int LAYER_WORLD = 0;
     public static final int LAYER_WATER = 1;
     public static final int LAYER_PRECIPITATION = 5;
+    public static final int LAYER_SQUINT = 7;
     public static final int LAYER_UI = 10;
     public static final int LAYER_INVENTORY = 15;
 
@@ -46,6 +49,28 @@ public class RuntimeSetting {
     public static final String UNIFORM_WATER_DEPTH = "u_waterDepth";
     public static final int PASS_DRAW_DEPTH = 0;
     public static final int UNDERWATER_DRAW_DEPTH = -1;
+
+    // Sky Bodies
+    public static final String SPRITE_SKY_SUN = "sky/Sun";
+    public static final String SPRITE_SKY_SUN_FLAMES = "sky/SunFlames";
+    public static final String SPRITE_SKY_MOON = "sky/Moon";
+    public static final String SPRITE_SKY_STAR = "sky/Star";
+    public static final String UNIFORM_SKY_SUN_TEXTURE = "u_sunTexture";
+    public static final String UNIFORM_SKY_SUN_FLAME_TEXTURE = "u_sunFlameTexture";
+    public static final String UNIFORM_SKY_MOON_TEXTURE = "u_moonTexture";
+    public static final String UNIFORM_SKY_STAR_TEXTURE = "u_starTexture";
+
+    // Squint
+    public static final String UNIFORM_SQUINT = "u_squint";
+    public static final float SQUINT_LOOK_INNER_DEGREES = 6f;
+    public static final float SQUINT_LOOK_OUTER_DEGREES = 28f;
+    public static final float SQUINT_SUN_ELEVATION_START = 0f;
+    public static final float SQUINT_SUN_ELEVATION_END = 0.25f;
+    public static final float SQUINT_OVERCAST_RELIEF = 0.9f;
+    public static final float SQUINT_OCCLUSION_DISTANCE = 96f;
+    public static final float SQUINT_CLOSE_RATE = 6f;
+    public static final float SQUINT_OPEN_RATE = 2.5f;
+    public static final float SQUINT_VISIBLE_THRESHOLD = 0.005f;
 
     // Deferred Attachments
     public static final String ATTACHMENT_ALBEDO = "albedo";

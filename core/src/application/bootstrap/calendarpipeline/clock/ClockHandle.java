@@ -12,8 +12,9 @@ public class ClockHandle extends HandlePackage {
      * season is resolved live from the active calendar rather than a fixed
      * enum — see CalendarData.getSeasonNameForDate() — so it reflects
      * whatever seasons that calendar defines. Everything here is global and
-     * location-independent; per-location visual time of day lives on each
-     * grid's own ClockInstance instead.
+     * location-independent, the moon's place in its orbit included;
+     * per-location visual time of day lives on each grid's own ClockInstance
+     * instead.
      */
 
     // Internal
@@ -193,5 +194,37 @@ public class ClockHandle extends HandlePackage {
 
     public void setRandomNoiseFromDay(float randomNoiseFromDay) {
         clockData.setRandomNoiseFromDay(randomNoiseFromDay);
+    }
+
+    public double getLunarPhase() {
+        return clockData.getLunarPhase();
+    }
+
+    public void setLunarPhase(double lunarPhase) {
+        clockData.setLunarPhase(lunarPhase);
+    }
+
+    public float getLunarIllumination() {
+        return clockData.getLunarIllumination();
+    }
+
+    public void setLunarIllumination(float lunarIllumination) {
+        clockData.setLunarIllumination(lunarIllumination);
+    }
+
+    public float getLunarLatitude() {
+        return clockData.getLunarLatitude();
+    }
+
+    public void setLunarLatitude(float lunarLatitude) {
+        clockData.setLunarLatitude(lunarLatitude);
+    }
+
+    public float getLunarSizeScale() {
+        return clockData.getLunarSizeScale();
+    }
+
+    public void setLunarSizeScale(float lunarSizeScale) {
+        clockData.setLunarSizeScale(lunarSizeScale);
     }
 }

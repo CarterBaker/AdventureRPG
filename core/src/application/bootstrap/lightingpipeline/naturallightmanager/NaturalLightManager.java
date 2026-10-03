@@ -1,5 +1,7 @@
 package application.bootstrap.lightingpipeline.naturallightmanager;
 
+import application.bootstrap.calendarpipeline.clock.ClockHandle;
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.lightingpipeline.directionallight.DirectionalLightStruct;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
@@ -15,16 +17,20 @@ public class NaturalLightManager extends ManagerPackage {
      * Drives natural lighting per active grid each frame. The sun and moon are
      * computed from that grid's own clock, so each window sees them for
      * wherever its player stands, and written into the grid's Sun and Moon UBO
-     * instances that LightingSystem binds.
+     * instances that LightingSystem binds. The star sphere's turn for that
+     * grid, the sun's apparent size from its calendar star and the moon's from
+     * its orbit go into the grid's CelestialData UBO that the sky draws from.
      */
 
     // Internal
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
+    private ClockManager clockManager;
 
     // Systems
     private SunLightSystem sunLightSystem;
     private MoonLightSystem moonLightSystem;
+    private StarSphereSystem starSphereSystem;
 
     // Scratch
     private final DirectionalLightStruct sunLight = new DirectionalLightStruct();
@@ -36,12 +42,14 @@ public class NaturalLightManager extends ManagerPackage {
     protected void create() {
         this.sunLightSystem = create(SunLightSystem.class);
         this.moonLightSystem = create(MoonLightSystem.class);
+        this.starSphereSystem = create(StarSphereSystem.class);
     }
 
     @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.clockManager = get(ClockManager.class);
     }
 
     @Override
@@ -63,6 +71,7 @@ public class NaturalLightManager extends ManagerPackage {
 
         sunLightSystem.update(visualTimeOfDay);
         moonLightSystem.update(visualTimeOfDay);
+        starSphereSystem.update(grid.getClockInstance());
 
         sunLight.setDirection(
                 sunLightSystem.getDirection().x,
@@ -93,6 +102,8 @@ public class NaturalLightManager extends ManagerPackage {
                 EngineSetting.UNIFORM_MOON_DIRECTION,
                 EngineSetting.UNIFORM_MOON_INTENSITY,
                 EngineSetting.UNIFORM_MOON_COLOR);
+
+        pushCelestial(grid.getCelestialDataUBO());
     }
 
     // Push \\
@@ -107,6 +118,16 @@ public class NaturalLightManager extends ManagerPackage {
         ubo.updateUniform(directionName, light.getDirection());
         ubo.updateUniform(intensityName, light.getIntensity());
         ubo.updateUniform(colorName, light.getColor());
+        uboManager.push(ubo);
+    }
+
+    private void pushCelestial(UBOInstance ubo) {
+
+        ClockHandle clockHandle = clockManager.getClockHandle();
+
+        ubo.updateUniform(EngineSetting.UNIFORM_STAR_ROTATION, starSphereSystem.getRotation());
+        ubo.updateUniform(EngineSetting.UNIFORM_SUN_SCALE, clockHandle.getCalendarHandle().getStarApparentScale());
+        ubo.updateUniform(EngineSetting.UNIFORM_MOON_SCALE, clockHandle.getLunarSizeScale());
         uboManager.push(ubo);
     }
 }

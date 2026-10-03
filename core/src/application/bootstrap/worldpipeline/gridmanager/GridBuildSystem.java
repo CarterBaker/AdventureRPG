@@ -58,6 +58,7 @@ class GridBuildSystem extends SystemPackage {
     private UBOHandle sunLightBase;
     private UBOHandle moonLightBase;
     private UBOHandle skyColorBase;
+    private UBOHandle celestialDataBase;
     private UBOHandle weatherMapBase;
     private UBOHandle windDataBase;
     private UBOHandle precipitationDataBase;
@@ -90,6 +91,7 @@ class GridBuildSystem extends SystemPackage {
         this.sunLightBase = uboManager.getUBOHandleFromUBOName(EngineSetting.SUN_LIGHT_UBO);
         this.moonLightBase = uboManager.getUBOHandleFromUBOName(EngineSetting.MOON_LIGHT_UBO);
         this.skyColorBase = uboManager.getUBOHandleFromUBOName(EngineSetting.SKY_COLOR_UBO);
+        this.celestialDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.CELESTIAL_DATA_UBO);
         this.weatherMapBase = uboManager.getUBOHandleFromUBOName(EngineSetting.WEATHER_MAP_UBO);
         this.windDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.WIND_DATA_UBO);
         this.precipitationDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.PRECIPITATION_DATA_UBO);
@@ -135,6 +137,7 @@ class GridBuildSystem extends SystemPackage {
                 uboManager.createUBOInstance(sunLightBase),
                 uboManager.createUBOInstance(moonLightBase),
                 uboManager.createUBOInstance(skyColorBase),
+                uboManager.createUBOInstance(celestialDataBase),
                 uboManager.createUBOInstance(weatherMapBase),
                 weatherPatternManager.createLocalWeatherInstance(),
                 weatherPatternManager.createTemperatureInstance(),

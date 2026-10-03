@@ -1,5 +1,6 @@
 package application.bootstrap.weatherpipeline.util;
 
+import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.mathematics.vectors.Vector3;
@@ -9,8 +10,9 @@ public final class SkyColorUtility extends EngineUtility {
     /*
      * Stateless color and curve math shared by the sky palette: scalar and
      * color interpolation, eased ramps and bell curves over solar
-     * elevation, and luminance-preserving saturation and haze. Every color
-     * operation writes in place so nothing allocates per frame.
+     * elevation, luminance-preserving saturation and haze, and how overcast a
+     * place's weather leaves its sky. Every color operation writes in place
+     * so nothing allocates per frame.
      */
 
     // Scalar \\
@@ -34,6 +36,18 @@ public final class SkyColorUtility extends EngineUtility {
     public static float smoothstep(float edge0, float edge1, float value) {
         float t = remapClamped(value, edge0, edge1);
         return t * t * (3f - 2f * t);
+    }
+
+    // How overcast a place's weather leaves its sky, from clear at 0 to fully clouded at 1.
+    public static float resolveOvercast(WeatherInstance weather) {
+
+        if (!weather.isConfigured())
+            return 0f;
+
+        return clamp01(
+                weather.getBlendedCloudCoverage() * EngineSetting.SKY_OVERCAST_COVERAGE_WEIGHT
+                        + weather.getBlendedPrecipitationIntensity()
+                                * EngineSetting.SKY_OVERCAST_PRECIPITATION_WEIGHT);
     }
 
     // Rises from start to a full peak, then falls back to zero at end.

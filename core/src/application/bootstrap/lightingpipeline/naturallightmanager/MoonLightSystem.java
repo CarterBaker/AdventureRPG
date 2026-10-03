@@ -1,6 +1,8 @@
 package application.bootstrap.lightingpipeline.naturallightmanager;
 
+import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
+import application.bootstrap.calendarpipeline.util.CelestialUtility;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -9,8 +11,12 @@ public class MoonLightSystem extends SystemPackage {
 
     /*
      * Computes moon direction, color and intensity each frame from time of day
-     * and lunar phase, half a cycle from the sun. The lunar cycle is read live
-     * from the active calendar so it follows world switches.
+     * and the moon's place in its orbit, read live from the clock so it follows
+     * world switches. The moon trails the sun by its phase — beside the sun
+     * when new, opposite it when full — so it rises later every day, and rides
+     * above or below the sun's path by its orbital latitude. Its light grows
+     * with how much of its face is lit and with how close it passes, and a
+     * calendar with no moon gives none.
      */
 
     // Output
@@ -60,39 +66,20 @@ public class MoonLightSystem extends SystemPackage {
 
     public void update(float visualTimeOfDay) {
 
-        float moonT = (visualTimeOfDay + 0.5f) % 1.0f;
-        float angle = moonT * (float) Math.PI * 2f;
-        float dirX = -(float) Math.sin(angle);
-        float dirY = -(float) Math.cos(angle);
-        float len = (float) Math.sqrt(dirX * dirX + dirY * dirY);
+        ClockHandle clockHandle = clockManager.getClockHandle();
+        float illumination = clockHandle.getLunarIllumination();
+        float sizeScale = clockHandle.getLunarSizeScale();
+        float moonT = (float) CelestialUtility.wrapFraction(visualTimeOfDay - clockHandle.getLunarPhase());
 
-        if (len > 0f) {
-            dirX /= len;
-            dirY /= len;
-        }
+        CelestialUtility.resolveOrbitDirection(moonT, clockHandle.getLunarLatitude(), direction);
 
-        float lunarPhase = computeLunarPhase();
-        float brightness = MOON_BRIGHTNESS_BASE + lunarPhase * MOON_BRIGHTNESS_LUNAR_SCALE;
+        float brightness = MOON_BRIGHTNESS_BASE + illumination * MOON_BRIGHTNESS_LUNAR_SCALE;
 
-        direction.set(dirX, dirY, 0f);
         color.set(brightness * MOON_COLOR_R, brightness * MOON_COLOR_G, brightness * MOON_COLOR_B);
-        intensity = computeIntensity(moonT, lunarPhase);
+        intensity = computeIntensity(moonT, illumination) * sizeScale * sizeScale;
     }
 
-    private float computeLunarPhase() {
-
-        int lunarCycleDays = clockManager.getClockHandle().getCalendarHandle().getLunarCycleDays();
-
-        if (lunarCycleDays <= 0)
-            return 0f;
-
-        long totalDays = clockManager.getClockHandle().getTotalDaysElapsed();
-        float cycleProgress = (totalDays % lunarCycleDays) / (float) lunarCycleDays;
-
-        return (1f + (float) Math.sin(cycleProgress * Math.PI * 2f - Math.PI / 2f)) / 2f;
-    }
-
-    private float computeIntensity(float moonT, float lunarPhase) {
+    private float computeIntensity(float moonT, float illumination) {
 
         float distFromMoonNoon = Math.abs(moonT - 0.5f) * 2f;
 
@@ -100,7 +87,7 @@ public class MoonLightSystem extends SystemPackage {
             return 0f;
 
         float blend = 1f - (distFromMoonNoon / MOON_HORIZON_CUTOFF);
-        float phaseScale = MOON_PHASE_MIN + lunarPhase * MOON_PHASE_MAX;
+        float phaseScale = MOON_PHASE_MIN + illumination * MOON_PHASE_MAX;
 
         return blend * blend * phaseScale * MOON_MAX_INTENSITY;
     }
