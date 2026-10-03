@@ -10,6 +10,7 @@ out vec4 fragColor;
 #include "includes/SkyColorData.glsl"
 #include "postprocessing/includes/ViewPosReconstruct.glsl"
 #include "postprocessing/lighting/includes/AtmosphericFog.glsl"
+#include "postprocessing/lighting/includes/Outline.glsl"
 #include "weather/includes/CloudComposite.glsl"
 
 // The weather pass's cloud color and distance targets (CloudComposite).
@@ -77,6 +78,9 @@ void main() {
     vec3  fragDir      = toFragment / max(fragDistance, LIGHTING_DISTANCE_EPSILON);
 
     float litAmount = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
+
+    // Ink outlines on the lit surface, beneath the fog and clouds laid over it.
+    lit = applyOutline(lit, resolveOutline(ivec2(gl_FragCoord.xy), depth, normalView, fragDistance));
 
     lit = applyAtmosphericFog(lit, fragPosWorld, fragDir, litAmount);
 

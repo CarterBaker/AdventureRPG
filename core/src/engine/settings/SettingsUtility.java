@@ -77,7 +77,56 @@ public class SettingsUtility extends EngineUtility {
                 EngineSetting.MOUSE_SENSITIVITY_MIN,
                 EngineSetting.MOUSE_SENSITIVITY_MAX);
 
+        sanitizePostProcessing(settings);
         sanitizeColors(settings);
+    }
+
+    private static void sanitizePostProcessing(Settings settings) {
+
+        settings.outlineThickness = Math.clamp(
+                settings.outlineThickness,
+                EngineSetting.OUTLINE_THICKNESS_MIN,
+                EngineSetting.OUTLINE_THICKNESS_MAX);
+        settings.outlineStrength = Math.clamp(
+                settings.outlineStrength,
+                EngineSetting.OUTLINE_STRENGTH_MIN,
+                EngineSetting.OUTLINE_STRENGTH_MAX);
+        settings.depthOfFieldStrength = Math.clamp(
+                settings.depthOfFieldStrength,
+                EngineSetting.DEPTH_OF_FIELD_STRENGTH_MIN,
+                EngineSetting.DEPTH_OF_FIELD_STRENGTH_MAX);
+        settings.depthOfFieldBlur = Math.clamp(
+                settings.depthOfFieldBlur,
+                EngineSetting.DEPTH_OF_FIELD_BLUR_MIN,
+                EngineSetting.DEPTH_OF_FIELD_BLUR_MAX);
+        settings.bloomIntensity = Math.clamp(
+                settings.bloomIntensity,
+                EngineSetting.BLOOM_INTENSITY_MIN,
+                EngineSetting.BLOOM_INTENSITY_MAX);
+        settings.brightness = Math.clamp(
+                settings.brightness,
+                EngineSetting.BRIGHTNESS_MIN,
+                EngineSetting.BRIGHTNESS_MAX);
+        settings.contrast = Math.clamp(
+                settings.contrast,
+                EngineSetting.CONTRAST_MIN,
+                EngineSetting.CONTRAST_MAX);
+        settings.saturation = Math.clamp(
+                settings.saturation,
+                EngineSetting.SATURATION_MIN,
+                EngineSetting.SATURATION_MAX);
+        settings.vignette = Math.clamp(
+                settings.vignette,
+                EngineSetting.VIGNETTE_MIN,
+                EngineSetting.VIGNETTE_MAX);
+        settings.chromaticAberration = Math.clamp(
+                settings.chromaticAberration,
+                EngineSetting.CHROMATIC_ABERRATION_MIN,
+                EngineSetting.CHROMATIC_ABERRATION_MAX);
+        settings.filmGrain = Math.clamp(
+                settings.filmGrain,
+                EngineSetting.FILM_GRAIN_MIN,
+                EngineSetting.FILM_GRAIN_MAX);
     }
 
     private static void sanitizeColors(Settings settings) {

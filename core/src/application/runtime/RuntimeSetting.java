@@ -21,6 +21,9 @@ public class RuntimeSetting {
     public static final String PASS_PRECIPITATION = "Precipitation";
     public static final String PASS_UNDERWATER = "Underwater";
     public static final String PASS_SQUINT = "Squint";
+    public static final String PASS_POST_PREFILTER = "PostPrefilter";
+    public static final String PASS_POST_BLUR = "PostBlur";
+    public static final String PASS_POST_COMPOSITE = "PostComposite";
 
     // FBO Targets
     public static final String FBO_SKY = "SkyScene";
@@ -33,6 +36,10 @@ public class RuntimeSetting {
     public static final String FBO_INVENTORY = "InventoryScene";
     public static final String FBO_WATER = "WaterScene";
     public static final String FBO_SQUINT = "SquintScene";
+    public static final String FBO_POST_SCENE = "PostScene";
+    public static final String FBO_POST_PREFILTER = "PostPrefilterScene";
+    public static final String FBO_POST_BLUR = "PostBlurScene";
+    public static final String FBO_POST_COMPOSITE = "PostCompositeScene";
 
     // Composite Layers
     public static final int LAYER_SKY = -10;
@@ -102,6 +109,26 @@ public class RuntimeSetting {
     public static final float SSAO_BIAS = 0.025f;
     public static final int SSAO_NOISE_SIZE = 4;
     public static final int SSAO_NOISE_CHANNELS = 3;
+
+    // Post Effects
+    public static final String ATTACHMENT_FOCUS = "focus";
+    public static final String ATTACHMENT_BLOOM = "bloom";
+    public static final String ATTACHMENT_DEPTH_OF_FIELD = "depthOfField";
+    public static final String UNIFORM_SCENE_COLOR = "u_sceneColor";
+    public static final String UNIFORM_FOCUS_INVERSE = "u_focusInverse";
+    public static final String UNIFORM_PREFILTER_FOCUS = "u_prefilterFocus";
+    public static final String UNIFORM_PREFILTER_BLOOM = "u_prefilterBloom";
+    public static final String UNIFORM_BLUR_DEPTH_OF_FIELD = "u_blurDepthOfField";
+    public static final String UNIFORM_BLUR_BLOOM = "u_blurBloom";
+    public static final String UNIFORM_GRAIN_TIME = "u_grainTime";
+    public static final float GRAIN_TIME_PERIOD = 60f;
+
+    // Auto Focus
+    public static final float FOCUS_REACH = 256f;
+    public static final float FOCUS_MIN_DISTANCE = 0.25f;
+    public static final float FOCUS_INFINITY_INVERSE = 0f;
+    public static final float FOCUS_RATE = 6f;
+    public static final float FOCUS_SUBJECT_CENTER = 0.5f;
 
     // Load Menu
     public static final String MENU_LOAD = "MainMenu/Load";
@@ -266,7 +293,13 @@ public class RuntimeSetting {
     public static final String SETTINGS_SECTION_MOVEMENT = "Movement";
     public static final String SETTINGS_SECTION_ACTIONS = "Actions";
     public static final String SETTINGS_SECTION_CAPTURE = "Capture";
+    public static final String SETTINGS_SECTION_OUTLINES = "Outlines";
+    public static final String SETTINGS_SECTION_DEPTH_OF_FIELD = "Depth of Field";
+    public static final String SETTINGS_SECTION_IMAGE = "Image";
+    public static final String SETTINGS_SECTION_COLOR = "Color";
+    public static final String SETTINGS_SECTION_LENS = "Lens";
     public static final String SETTINGS_NOTE_WORLD_APPLY = "World changes apply when you leave Settings";
+    public static final String SETTINGS_NOTE_AUTO_FOCUS = "Focus follows whatever you look at";
 
     // Settings Options
     public static final String SETTINGS_OPTION_FULLSCREEN = "Fullscreen";
@@ -274,12 +307,30 @@ public class RuntimeSetting {
     public static final String SETTINGS_OPTION_FIELD_OF_VIEW = "Field of View";
     public static final String SETTINGS_OPTION_RENDER_DISTANCE = "Distance";
     public static final String SETTINGS_OPTION_TERRAIN_DETAIL = "Detail";
+    public static final String SETTINGS_OPTION_OUTLINES = "Outlines";
+    public static final String SETTINGS_OPTION_OUTLINE_THICKNESS = "Thickness";
+    public static final String SETTINGS_OPTION_ANTI_ALIASING = "Anti-Aliasing";
+    public static final String SETTINGS_OPTION_DEPTH_OF_FIELD = "Depth of Field";
+    public static final String SETTINGS_OPTION_BLOOM = "Bloom";
     public static final String SETTINGS_SLIDER_MOUSE_SENSITIVITY = "Sensitivity";
+    public static final String SETTINGS_SLIDER_OUTLINE_STRENGTH = "Strength";
+    public static final String SETTINGS_SLIDER_DEPTH_OF_FIELD_STRENGTH = "Strength";
+    public static final String SETTINGS_SLIDER_DEPTH_OF_FIELD_BLUR = "Blur Size";
+    public static final String SETTINGS_SLIDER_BLOOM_INTENSITY = "Bloom Intensity";
+    public static final String SETTINGS_SLIDER_BRIGHTNESS = "Brightness";
+    public static final String SETTINGS_SLIDER_CONTRAST = "Contrast";
+    public static final String SETTINGS_SLIDER_SATURATION = "Saturation";
+    public static final String SETTINGS_SLIDER_VIGNETTE = "Vignette";
+    public static final String SETTINGS_SLIDER_CHROMATIC_ABERRATION = "Chromatic Aberration";
+    public static final String SETTINGS_SLIDER_FILM_GRAIN = "Film Grain";
     public static final String SETTINGS_VALUE_ON = "On";
     public static final String SETTINGS_VALUE_OFF = "Off";
     public static final String SETTINGS_FORMAT_CHUNKS = "%d chunks";
     public static final String SETTINGS_FORMAT_FIELD_OF_VIEW = "%.0f";
     public static final String SETTINGS_FORMAT_SENSITIVITY = "%.2f";
+    public static final String SETTINGS_FORMAT_PIXELS = "%d px";
+    public static final String SETTINGS_FORMAT_PERCENT = "%.0f%%";
+    public static final int SETTINGS_OUTLINE_THICKNESS_STEP = 1;
     public static final int SETTINGS_RENDER_DISTANCE_STEP = 8;
     public static final int SETTINGS_RENDER_DISTANCE_PER_RADIUS = 2;
     public static final int SETTINGS_TERRAIN_DETAIL_STEP = 1;

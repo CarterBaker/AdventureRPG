@@ -2,7 +2,6 @@ package application.runtime.postprocessing;
 
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
-import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
@@ -29,7 +28,7 @@ public class LightingSystem extends SystemPackage {
     private PassManager passManager;
     private RenderManager renderManager;
     private FBOManager fboManager;
-    private FBORenderSystem fboRenderSystem;
+    private PostEffectsSystem postEffectsSystem;
     private WorldSystem worldSystem;
     private SSAOSystem ssaoSystem;
     private WeatherSystem weatherSystem;
@@ -45,7 +44,7 @@ public class LightingSystem extends SystemPackage {
         this.passManager = get(PassManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
-        this.fboRenderSystem = get(FBORenderSystem.class);
+        this.postEffectsSystem = get(PostEffectsSystem.class);
         this.worldSystem = get(WorldSystem.class);
         this.ssaoSystem = get(SSAOSystem.class);
         this.weatherSystem = get(WeatherSystem.class);
@@ -81,7 +80,7 @@ public class LightingSystem extends SystemPackage {
                 litFbo,
                 RuntimeSetting.PASS_DRAW_DEPTH,
                 context.getWindow());
-        fboRenderSystem.pushFbo(litFbo, RuntimeSetting.LAYER_WORLD, context.getWindow());
+        postEffectsSystem.pushSceneLayer(litFbo, RuntimeSetting.LAYER_WORLD);
     }
 
     // Grid Lighting \\

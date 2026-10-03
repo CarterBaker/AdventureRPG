@@ -2,13 +2,13 @@ package application.runtime.weather;
 
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
-import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.postprocessing.PostEffectsSystem;
 import application.runtime.water.WaterSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.SystemPackage;
@@ -31,7 +31,7 @@ public class PrecipitationSystem extends SystemPackage {
     private PassManager passManager;
     private RenderManager renderManager;
     private FBOManager fboManager;
-    private FBORenderSystem fboRenderSystem;
+    private PostEffectsSystem postEffectsSystem;
     private WorldSystem worldSystem;
     private WaterSystem waterSystem;
 
@@ -46,7 +46,7 @@ public class PrecipitationSystem extends SystemPackage {
         this.passManager = get(PassManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
-        this.fboRenderSystem = get(FBORenderSystem.class);
+        this.postEffectsSystem = get(PostEffectsSystem.class);
         this.worldSystem = get(WorldSystem.class);
         this.waterSystem = get(WaterSystem.class);
     }
@@ -75,7 +75,7 @@ public class PrecipitationSystem extends SystemPackage {
                 precipitationFbo,
                 RuntimeSetting.PASS_DRAW_DEPTH,
                 context.getWindow());
-        fboRenderSystem.pushFbo(precipitationFbo, RuntimeSetting.LAYER_PRECIPITATION, context.getWindow());
+        postEffectsSystem.pushSceneLayer(precipitationFbo, RuntimeSetting.LAYER_PRECIPITATION);
     }
 
     // Grid Precipitation \\

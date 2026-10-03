@@ -2,7 +2,6 @@ package application.runtime.water;
 
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
-import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
@@ -11,6 +10,7 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.grid.WaterTargetStruct;
 import application.runtime.RuntimeSetting;
 import application.runtime.postprocessing.LightingSystem;
+import application.runtime.postprocessing.PostEffectsSystem;
 import application.runtime.sky.SkySystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
@@ -34,7 +34,7 @@ public class WaterSystem extends SystemPackage {
     private PassManager passManager;
     private RenderManager renderManager;
     private FBOManager fboManager;
-    private FBORenderSystem fboRenderSystem;
+    private PostEffectsSystem postEffectsSystem;
     private WorldSystem worldSystem;
     private LightingSystem lightingSystem;
     private SkySystem skySystem;
@@ -51,7 +51,7 @@ public class WaterSystem extends SystemPackage {
         this.passManager = get(PassManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
-        this.fboRenderSystem = get(FBORenderSystem.class);
+        this.postEffectsSystem = get(PostEffectsSystem.class);
         this.worldSystem = get(WorldSystem.class);
         this.lightingSystem = get(LightingSystem.class);
         this.skySystem = get(SkySystem.class);
@@ -89,7 +89,7 @@ public class WaterSystem extends SystemPackage {
         if (grid != null && grid.getWaveInstance().isCameraSubmerged())
             pushUnderwaterPass(grid);
 
-        fboRenderSystem.pushFbo(waterFbo, RuntimeSetting.LAYER_WATER, context.getWindow());
+        postEffectsSystem.pushSceneLayer(waterFbo, RuntimeSetting.LAYER_WATER);
     }
 
     // Underwater \\

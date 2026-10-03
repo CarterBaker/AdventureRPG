@@ -143,6 +143,7 @@ public class EngineSetting {
     public static final String SAVE_DIRECTORY = "Saves";
     public static final String SETTINGS_FILE_NAME = "Settings.arpg";
     public static final String SETTINGS_UBO = "SettingsData";
+    public static final String POST_PROCESS_UBO = "PostProcessData";
     public static final String VERSION = "0.0.0.1a";
 
     // Logging
@@ -328,6 +329,30 @@ public class EngineSetting {
     public static final int RENDER_DISTANCE_MAX = 112;
     public static final int RENDER_DISTANCE_MIN = 16;
 
+    // User Settings — Post Processing
+    public static final float BLOOM_INTENSITY_MAX = 1f;
+    public static final float BLOOM_INTENSITY_MIN = 0f;
+    public static final float BRIGHTNESS_MAX = 1.5f;
+    public static final float BRIGHTNESS_MIN = 0.5f;
+    public static final float CHROMATIC_ABERRATION_MAX = 1f;
+    public static final float CHROMATIC_ABERRATION_MIN = 0f;
+    public static final float CONTRAST_MAX = 1.5f;
+    public static final float CONTRAST_MIN = 0.5f;
+    public static final float DEPTH_OF_FIELD_BLUR_MAX = 1f;
+    public static final float DEPTH_OF_FIELD_BLUR_MIN = 0f;
+    public static final float DEPTH_OF_FIELD_STRENGTH_MAX = 1f;
+    public static final float DEPTH_OF_FIELD_STRENGTH_MIN = 0f;
+    public static final float FILM_GRAIN_MAX = 1f;
+    public static final float FILM_GRAIN_MIN = 0f;
+    public static final float OUTLINE_STRENGTH_MAX = 1f;
+    public static final float OUTLINE_STRENGTH_MIN = 0f;
+    public static final int OUTLINE_THICKNESS_MAX = 3;
+    public static final int OUTLINE_THICKNESS_MIN = 1;
+    public static final float SATURATION_MAX = 2f;
+    public static final float SATURATION_MIN = 0f;
+    public static final float VIGNETTE_MAX = 1f;
+    public static final float VIGNETTE_MIN = 0f;
+
     // World Scale
     public static final int BIOME_SIZE = 4;
     public static final int BLOCK_PALETTE_THRESHOLD = 512;
@@ -360,6 +385,7 @@ public class EngineSetting {
     public static final String NATURAL_NOISE_UBO = "NaturalNoiseData";
 
     // Rendering Pipeline
+    public static final float BLIT_FULLSCREEN_SENTINEL = -1f;
     public static final String BLIT_PREMULTIPLIED_UNIFORM = "u_premultiplied";
     public static final String BLIT_RESOLVE_UNIFORM = "u_resolve";
     public static final String CAMERA_DATA_UBO = "CameraData";
@@ -475,6 +501,23 @@ public class EngineSetting {
     public static final String UNIFORM_WEATHER_LAYER_SHAPE = "u_weatherLayerShape";
     public static final String UNIFORM_WEATHER_LAYER_SURFACE = "u_weatherLayerSurface";
     public static final String UNIFORM_WEATHER_MAP_ORIGIN = "u_weatherMapOrigin";
+
+    // Post Processing
+    public static final String UNIFORM_ANTI_ALIASING = "u_antiAliasing";
+    public static final String UNIFORM_BLOOM_ENABLED = "u_bloomEnabled";
+    public static final String UNIFORM_BLOOM_INTENSITY = "u_bloomIntensity";
+    public static final String UNIFORM_BRIGHTNESS = "u_brightness";
+    public static final String UNIFORM_CHROMATIC_ABERRATION = "u_chromaticAberration";
+    public static final String UNIFORM_CONTRAST = "u_contrast";
+    public static final String UNIFORM_DOF_BLUR = "u_dofBlur";
+    public static final String UNIFORM_DOF_ENABLED = "u_dofEnabled";
+    public static final String UNIFORM_DOF_STRENGTH = "u_dofStrength";
+    public static final String UNIFORM_FILM_GRAIN = "u_filmGrain";
+    public static final String UNIFORM_OUTLINE_ENABLED = "u_outlineEnabled";
+    public static final String UNIFORM_OUTLINE_STRENGTH = "u_outlineStrength";
+    public static final String UNIFORM_OUTLINE_THICKNESS = "u_outlineThickness";
+    public static final String UNIFORM_SATURATION = "u_saturation";
+    public static final String UNIFORM_VIGNETTE = "u_vignette";
 
     // Lighting
     public static final float CELESTIAL_POLE_MAX_ELEVATION_DEGREES = 90f;

@@ -2,7 +2,6 @@ package application.runtime.sky;
 
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
-import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
@@ -10,6 +9,7 @@ import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.postprocessing.PostEffectsSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.SystemPackage;
 
@@ -31,7 +31,7 @@ public class SkySystem extends SystemPackage {
     private SpriteManager spriteManager;
     private RenderManager renderManager;
     private FBOManager fboManager;
-    private FBORenderSystem fboRenderSystem;
+    private PostEffectsSystem postEffectsSystem;
     private WorldSystem worldSystem;
 
     // Render Target
@@ -46,7 +46,7 @@ public class SkySystem extends SystemPackage {
         this.spriteManager = get(SpriteManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
-        this.fboRenderSystem = get(FBORenderSystem.class);
+        this.postEffectsSystem = get(PostEffectsSystem.class);
         this.worldSystem = get(WorldSystem.class);
     }
 
@@ -68,7 +68,7 @@ public class SkySystem extends SystemPackage {
                 skyFbo,
                 RuntimeSetting.PASS_DRAW_DEPTH,
                 context.getWindow());
-        fboRenderSystem.pushFbo(skyFbo, RuntimeSetting.LAYER_SKY, context.getWindow());
+        postEffectsSystem.pushSceneLayer(skyFbo, RuntimeSetting.LAYER_SKY);
     }
 
     // Grid Lighting \\

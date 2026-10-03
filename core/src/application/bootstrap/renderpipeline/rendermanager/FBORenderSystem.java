@@ -21,7 +21,9 @@ public class FBORenderSystem extends SystemPackage {
      * Composites every window's FBOs onto its screen. Collects pushFbo()
      * submissions with their layer and destination rect, redirects logical
      * windows onto their OS window's region, and blits them in sort order
-     * through the blit material.
+     * through the blit material. pushFboToTarget() blits an FBO into another
+     * FBO through the same material instead, its layer as the draw depth, so
+     * a target can gather several FBOs in order before reaching the screen.
      */
 
     // Internal
@@ -119,26 +121,22 @@ public class FBORenderSystem extends SystemPackage {
             queue.set(j + 1, entry);
         }
 
-        resolutionScratch.set(window.getWidth(), window.getHeight());
-
         for (int i = 0; i < queue.size(); i++) {
             FBOInstance fbo = queue.get(i);
-            ModelInstance model = resolveBlitModel(fbo);
-            model.getMaterial().setUniform(EngineSetting.UNIFORM_SOURCE, fbo.getTextureId());
-
-            FBODestinationStruct destRect = fbo.getPushDestRect();
-            if (destRect != null)
-                destRectScratch.set(destRect.x, destRect.y, destRect.width, destRect.height);
-            else
-                destRectScratch.set(-1f, -1f, -1f, -1f);
-
-            model.getMaterial().setUniform(EngineSetting.UNIFORM_DEST_RECT, destRectScratch);
-            model.getMaterial().setUniform(EngineSetting.UNIFORM_RESOLUTION, resolutionScratch);
+            ModelInstance model = bindBlitModel(fbo, fbo.getPushDestRect(), window);
 
             renderManager.pushScreenCall(model, window, fbo.getPushScreenOrder());
         }
 
         queue.clear();
+    }
+
+    public void pushFboToTarget(FBOInstance fbo, FBOInstance target, int layer, WindowInstance window) {
+
+        if (fbo == null || target == null || window == null)
+            return;
+
+        renderManager.pushRenderCall(bindBlitModel(fbo, null, window), target, layer, window);
     }
 
     public void removeWindowResources(WindowInstance window) {
@@ -162,6 +160,29 @@ public class FBORenderSystem extends SystemPackage {
         }
 
         return null;
+    }
+
+    private ModelInstance bindBlitModel(FBOInstance fbo, FBODestinationStruct destRect, WindowInstance window) {
+
+        ModelInstance model = resolveBlitModel(fbo);
+        MaterialInstance material = model.getMaterial();
+
+        if (destRect != null)
+            destRectScratch.set(destRect.x, destRect.y, destRect.width, destRect.height);
+        else
+            destRectScratch.set(
+                    EngineSetting.BLIT_FULLSCREEN_SENTINEL,
+                    EngineSetting.BLIT_FULLSCREEN_SENTINEL,
+                    EngineSetting.BLIT_FULLSCREEN_SENTINEL,
+                    EngineSetting.BLIT_FULLSCREEN_SENTINEL);
+
+        resolutionScratch.set(window.getWidth(), window.getHeight());
+
+        material.setUniform(EngineSetting.UNIFORM_SOURCE, fbo.getTextureId());
+        material.setUniform(EngineSetting.UNIFORM_DEST_RECT, destRectScratch);
+        material.setUniform(EngineSetting.UNIFORM_RESOLUTION, resolutionScratch);
+
+        return model;
     }
 
     private ModelInstance resolveBlitModel(FBOInstance fbo) {

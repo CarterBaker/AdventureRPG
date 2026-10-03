@@ -31,6 +31,29 @@ public class Settings {
     public int maxRenderDistance = 64;
     public int nearTessellationRadius = 5;
 
+    // Post Processing — Outlines
+    public boolean outlines = true;
+    public int outlineThickness = 2;
+    public float outlineStrength = 0.8f;
+
+    // Post Processing — Image
+    public boolean antiAliasing = true;
+    public boolean depthOfField = true;
+    public float depthOfFieldStrength = 0.7f;
+    public float depthOfFieldBlur = 0.8f;
+    public boolean bloom = true;
+    public float bloomIntensity = 0.4f;
+
+    // Post Processing — Color
+    public float brightness = 1f;
+    public float contrast = 1.08f;
+    public float saturation = 1.15f;
+
+    // Post Processing — Lens
+    public float vignette = 0.35f;
+    public float chromaticAberration = 0.2f;
+    public float filmGrain = 0.15f;
+
     // Input
     public float mouseSensitivity = 0.15f;
 

@@ -2,7 +2,6 @@ package application.runtime.weather;
 
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
-import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
@@ -10,6 +9,7 @@ import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.postprocessing.PostEffectsSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -30,7 +30,7 @@ public class WeatherSystem extends SystemPackage {
     private PassManager passManager;
     private RenderManager renderManager;
     private FBOManager fboManager;
-    private FBORenderSystem fboRenderSystem;
+    private PostEffectsSystem postEffectsSystem;
     private WorldSystem worldSystem;
     private CloudManager cloudManager;
 
@@ -45,7 +45,7 @@ public class WeatherSystem extends SystemPackage {
         this.passManager = get(PassManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
-        this.fboRenderSystem = get(FBORenderSystem.class);
+        this.postEffectsSystem = get(PostEffectsSystem.class);
         this.worldSystem = get(WorldSystem.class);
         this.cloudManager = get(CloudManager.class);
     }
@@ -72,7 +72,7 @@ public class WeatherSystem extends SystemPackage {
                 weatherFbo,
                 RuntimeSetting.PASS_DRAW_DEPTH,
                 context.getWindow());
-        fboRenderSystem.pushFbo(weatherFbo, RuntimeSetting.LAYER_WEATHER, context.getWindow());
+        postEffectsSystem.pushSceneLayer(weatherFbo, RuntimeSetting.LAYER_WEATHER);
     }
 
     // Grid Lighting \\

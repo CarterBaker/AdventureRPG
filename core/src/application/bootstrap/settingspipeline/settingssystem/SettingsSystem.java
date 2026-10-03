@@ -17,11 +17,12 @@ public class SettingsSystem extends SystemPackage {
      * Applies user settings to the running engine and writes them to disk.
      * Every settings change routes through one method per category: display
      * mode through the window platform, field of view onto every window's
-     * camera, render settings through onRenderSettingsChanged(), and
-     * saveSettings() for the file. Owns the RenderSettingsData UBO — the
-     * single source of truth for render settings on the GPU. The grid is only
-     * rebuilt when the render distance actually differs from the one last
-     * applied, since a rebuild reloads every chunk around the player.
+     * camera, render settings through onRenderSettingsChanged(), effect
+     * settings through applyPostProcessing(), and saveSettings() for the
+     * file. Owns the RenderSettingsData and PostProcessData UBOs — the single
+     * source of truth for render and effect settings on the GPU. The grid is
+     * only rebuilt when the render distance actually differs from the one
+     * last applied, since a rebuild reloads every chunk around the player.
      */
 
     // Internal
@@ -31,6 +32,7 @@ public class SettingsSystem extends SystemPackage {
 
     // UBO
     private UBOHandle renderSettingsData;
+    private UBOHandle postProcessData;
 
     // Render State
     private int appliedRenderDistance;
@@ -48,10 +50,12 @@ public class SettingsSystem extends SystemPackage {
     protected void awake() {
 
         this.renderSettingsData = uboManager.getUBOHandleFromUBOName(EngineSetting.SETTINGS_UBO);
+        this.postProcessData = uboManager.getUBOHandleFromUBOName(EngineSetting.POST_PROCESS_UBO);
         this.appliedRenderDistance = settings.maxRenderDistance;
 
         pushEngineSettings();
         pushRenderSettings();
+        applyPostProcessing();
     }
 
     // Settings \\
@@ -89,6 +93,36 @@ public class SettingsSystem extends SystemPackage {
             worldStreamManager.rebuildGrid(grids.get(i));
 
         this.appliedRenderDistance = settings.maxRenderDistance;
+    }
+
+    // Post Processing \\
+
+    public void applyPostProcessing() {
+
+        // Outlines
+        postProcessData.updateUniform(EngineSetting.UNIFORM_OUTLINE_ENABLED, settings.outlines);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_OUTLINE_THICKNESS, settings.outlineThickness);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_OUTLINE_STRENGTH, settings.outlineStrength);
+
+        // Image
+        postProcessData.updateUniform(EngineSetting.UNIFORM_ANTI_ALIASING, settings.antiAliasing);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_DOF_ENABLED, settings.depthOfField);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_DOF_STRENGTH, settings.depthOfFieldStrength);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_DOF_BLUR, settings.depthOfFieldBlur);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_BLOOM_ENABLED, settings.bloom);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_BLOOM_INTENSITY, settings.bloomIntensity);
+
+        // Color
+        postProcessData.updateUniform(EngineSetting.UNIFORM_BRIGHTNESS, settings.brightness);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_CONTRAST, settings.contrast);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_SATURATION, settings.saturation);
+
+        // Lens
+        postProcessData.updateUniform(EngineSetting.UNIFORM_VIGNETTE, settings.vignette);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_CHROMATIC_ABERRATION, settings.chromaticAberration);
+        postProcessData.updateUniform(EngineSetting.UNIFORM_FILM_GRAIN, settings.filmGrain);
+
+        uboManager.push(postProcessData);
     }
 
     // Display \\
