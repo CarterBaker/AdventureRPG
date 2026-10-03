@@ -107,6 +107,11 @@ public class EngineSetting {
     public static final int COLOR_CHANNEL_COUNT = 4;
     public static final float COLOR_CHANNEL_MAX = 1.0f;
     public static final float COLOR_CHANNEL_MIN = 0.0f;
+    public static final int PACKED_COLOR_ALPHA_SHIFT = 24;
+    public static final int PACKED_COLOR_CHANNEL_MASK = 0xFF;
+    public static final int PACKED_COLOR_GREEN_SHIFT = 8;
+    public static final int PACKED_COLOR_RED_SHIFT = 16;
+    public static final int PACKED_COLOR_WHITE = 0xFFFFFF;
     public static final int FNV_OFFSET_BASIS = 0x811c9dc5;
     public static final int FNV_PRIME = 0x01000193;
     public static final int GL_HANDLE_NONE = 0;
@@ -383,6 +388,7 @@ public class EngineSetting {
     public static final String PLAYER_POSITION_UBO = "PlayerPositionData";
     public static final int QUAD_INDEX_COUNT = 6;
     public static final int QUAD_VERTEX_COUNT = 4;
+    public static final String SHADER_ALIAS_ALBEDO = "Albedo";
     public static final float SHADER_ALIAS_DEFAULT_ALPHA = 1.0f;
     public static final int SHADER_ALIAS_LIBRARY_GROWTH_FACTOR = 2;
     public static final int SHADER_ALIAS_LIBRARY_INITIAL_CAPACITY = 16;
@@ -489,6 +495,8 @@ public class EngineSetting {
 
     // Block & World
     public static final String AIR_BLOCK_NAME = "TerraArcanaBlocks/Air";
+    public static final int BLOCK_MAP_COLOR_UNDEFINED = -1;
+    public static final int BLOCK_TEXTURE_UNDEFINED = -1;
     public static final float BLOCK_VISCOSITY_UNDEFINED = -1.0f;
     public static final int CHUNK_POOL_MAX_OVERFLOW = 32;
     public static final String CHUNK_VAO = "util/vao/ChunkVAO";
@@ -527,8 +535,8 @@ public class EngineSetting {
     public static final int MACRO_ADMISSIONS_PER_FRAME = 16;
     public static final float MACRO_ANCHOR_CENTER_CHUNKS = 0.5f;
     public static final int MACRO_ASSESS_PER_FRAME = 128;
-    public static final float MACRO_CELL_ANGLE_RADIANS = 0.04f;
-    public static final int MACRO_CELLS_PER_SIDE_MAX = 8;
+    public static final float MACRO_CELL_ANGLE_RADIANS = 0.03f;
+    public static final int MACRO_CELLS_PER_SIDE_MAX = 32;
     public static final int MACRO_CELLS_PER_SIDE_MIN = 1;
     public static final int MACRO_COVERAGE_BITS_PER_WORD = Integer.SIZE;
     public static final String MACRO_COVERAGE_UBO = "MacroCoverageData";
@@ -538,13 +546,54 @@ public class EngineSetting {
     public static final String MACRO_MATERIAL = "surface/MacroTerrainMaterial";
     public static final int MACRO_POOL_MAX_OVERFLOW = 16;
     public static final float MACRO_RENDER_DISTANCE_BLOCKS = 8192f;
+    public static final int MACRO_TILE_SIZE_BLOCKS = MACRO_CHUNK_SIZE * CHUNK_SIZE;
+    public static final int MACRO_RING_REACH_TILES = (int) Math.ceil(MACRO_RENDER_DISTANCE_BLOCKS
+            / MACRO_TILE_SIZE_BLOCKS) + 1;
     public static final float MACRO_SKIRT_DEPTH_CELLS = 1f;
     public static final int MACRO_STREAMING_MARGIN_CHUNKS = MACRO_CHUNK_SIZE;
     public static final String MACRO_STREAMING_THREAD_NAME = "MacroStreaming";
     public static final float MACRO_SURFACE_OFFSET_BLOCKS = BLOCK_SIZE;
     public static final String MACRO_VAO = "util/vao/MacroVAO";
-    public static final int MACRO_VERTEX_FLOAT_COUNT = 4;
+    public static final int MACRO_VERTEX_FLOAT_COUNT = 5;
     public static final int MAX_MACRO_GPU_UPLOADS_PER_FRAME = 16;
+
+    // Macro Water
+    public static final int MACRO_WATER_COVERAGE_SIZE = RENDER_DISTANCE_MAX;
+    public static final String MACRO_WATER_MATERIAL = "liquid/MacroWaterMaterial";
+    public static final int MACRO_WATER_MASK_TEXELS_PER_TILE = 16;
+    public static final int MACRO_WATER_MASK_TILES = MACRO_RING_REACH_TILES * 2 + 1;
+    public static final int MACRO_WATER_MASK_SIZE = MACRO_WATER_MASK_TILES * MACRO_WATER_MASK_TEXELS_PER_TILE;
+    public static final int MACRO_WATER_MASK_SPAN_CHUNKS = MACRO_WATER_MASK_TILES * MACRO_CHUNK_SIZE;
+    public static final String MACRO_WATER_VAO = "util/vao/MacroWaterVAO";
+    public static final String UNIFORM_MACRO_WATER_ANCHOR = "u_macroWaterAnchor";
+    public static final String UNIFORM_MACRO_WATER_COVERAGE = "u_macroWaterCoverage";
+    public static final String UNIFORM_MACRO_WATER_MASK = "u_macroWaterMask";
+
+    // World Map — a tile pyramid whose finest tile spans one macro tile at one block per texel
+    public static final int MAP_CHUNKS_PER_FRAME = 24;
+    public static final long MAP_CHUNK_VERSION_NONE = -1L;
+    public static final int MAP_COLOR_UNKNOWN = 0x202020;
+    public static final int MAP_COLOR_WATER_DEEP = 0x05295C;
+    public static final int MAP_COLOR_WATER_SHALLOW = 0x38CCC2;
+    public static final float MAP_HILLSHADE_STRENGTH = 0.35f;
+    public static final float MAP_LIGHT_X = -0.70710677f;
+    public static final float MAP_LIGHT_Z = -0.70710677f;
+    public static final int MAP_MAX_LEVELS = 24;
+    public static final float MAP_RELIEF_PER_BLOCK = 0.6f;
+    public static final float MAP_SLOPE_END = 0.75f;
+    public static final float MAP_SLOPE_START = 0.35f;
+    public static final String MAP_THREAD_NAME = "WorldMap";
+    public static final int MAP_TILE_CACHE_MAX = 192;
+    public static final int MAP_TILE_KEY_LEVEL_SHIFT = 48;
+    public static final long MAP_TILE_KEY_AXIS_MASK = 0xFFFFFFL;
+    public static final int MAP_TILE_KEY_X_SHIFT = 24;
+    public static final int MAP_TILE_SAMPLE_SPACING_MIN_BLOCKS = 2;
+    public static final int MAP_TILE_SAMPLES_PER_SIDE = 128;
+    public static final int MAP_TILE_TEXELS = MACRO_TILE_SIZE_BLOCKS;
+    public static final int MAP_TILE_UPLOADS_PER_FRAME = 4;
+    public static final float MAP_WATER_CLEAR_BLOCKS = 4f;
+    public static final float MAP_WATER_DEEP_BLOCKS = 24f;
+    public static final float MAP_WATER_FLOOR_SHARE = 0.45f;
 
     // Sub-Block
     public static final int CHUNK_VERTEX_FLOAT_COUNT = 15;

@@ -8,8 +8,8 @@ public class EditorSetting {
      * Editor-only constants — chrome menus, cursors, input keys, menu entry
      * point indices, layout persistence, tool tabs, the name dialog, console
      * commands and the command drag between windows, the info pipeline's
-     * schemas, hierarchy keys, and status text, and the item editor's library
-     * and status text.
+     * schemas, hierarchy keys, and status text, the item editor's library and
+     * status text, and the world map's status text.
      */
 
     // Cursors
@@ -74,6 +74,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
+    public static final String TAB_TITLE_WORLD_MAP = "World Map";
 
     // Commands
     public static final String COMMAND_PATH = "commands";
@@ -128,6 +129,16 @@ public class EditorSetting {
     // Texture Viewer
     public static final String TEXTURE_VIEWER_STATUS_HOVERED = "Texture: ";
     public static final String TEXTURE_VIEWER_STATUS_NO_BRUSH = "No brush. Click a texture to paint items with it.";
+
+    // World Map
+    public static final String WORLD_MAP_STATUS_NO_WORLD = "No world loaded. Open a Preview to see its map.";
+    public static final String WORLD_MAP_STATUS_X = "X ";
+    public static final String WORLD_MAP_STATUS_Z = "   Z ";
+    public static final String WORLD_MAP_STATUS_SEPARATOR = "   |   ";
+    public static final String WORLD_MAP_STATUS_SCALE = "Blocks per pixel ";
+    public static final String WORLD_MAP_STATUS_SCALE_FORMAT = "%.3g";
+    public static final String WORLD_MAP_FOLLOW_ON = "Following";
+    public static final String WORLD_MAP_FOLLOW_OFF = "Follow";
 
     // Item Library
     public static final String ITEM_EDITOR_MESH_DIRECTORY = "items";

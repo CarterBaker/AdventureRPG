@@ -121,6 +121,21 @@ public class WorldWrapUtility extends EngineUtility {
         return Math.floorMod(blockZ, (long) worldHandle.getWorldScale().y);
     }
 
+    public static double wrapBlockX(WorldHandle worldHandle, double blockX) {
+        return wrapPeriod(blockX, worldHandle.getWorldScale().x);
+    }
+
+    public static double wrapBlockZ(WorldHandle worldHandle, double blockZ) {
+        return wrapPeriod(blockZ, worldHandle.getWorldScale().y);
+    }
+
+    private static double wrapPeriod(double value, double period) {
+
+        double wrapped = value % period;
+
+        return wrapped < 0.0 ? wrapped + period : wrapped;
+    }
+
     public static long wrappedBlockDeltaX(WorldHandle worldHandle, long a, long b) {
         return (long) wrappedDelta(a, b, worldHandle.getWorldScale().x);
     }

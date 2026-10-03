@@ -6,7 +6,8 @@ public class TextureData extends DataPackage {
 
     /*
      * Persistent tile record. Holds tile identity, parent array identity,
-     * GPU handle, atlas and tile pixel dimensions, and normalised UV region.
+     * GPU handle, atlas and tile pixel dimensions, normalised UV region, and
+     * the tile's average albedo as a packed 0xRRGGBB color.
      * Owned by TextureHandle for the full engine session — nothing is discarded.
      */
 
@@ -30,6 +31,9 @@ public class TextureData extends DataPackage {
     private final float u1;
     private final float v1;
 
+    // Average
+    private final int averageColor;
+
     // Constructor \\
 
     public TextureData(
@@ -42,7 +46,8 @@ public class TextureData extends DataPackage {
             int tileWidth,
             int tileHeight,
             float u0, float v0,
-            float u1, float v1) {
+            float u1, float v1,
+            int averageColor) {
 
         this.tileName = tileName;
         this.tileID = tileID;
@@ -56,6 +61,7 @@ public class TextureData extends DataPackage {
         this.v0 = v0;
         this.u1 = u1;
         this.v1 = v1;
+        this.averageColor = averageColor;
     }
 
     // Accessible \\
@@ -106,5 +112,9 @@ public class TextureData extends DataPackage {
 
     public float getV1() {
         return v1;
+    }
+
+    public int getAverageColor() {
+        return averageColor;
     }
 }

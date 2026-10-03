@@ -25,7 +25,7 @@ class MacroQueueManager extends ManagerPackage {
      * drawing its old mesh until the new one lands. Builds are paced by the
      * MacroStreaming pool's capacity and uploads by their own budget, and a
      * macro with a build reserved is never recycled, so a pooled macro never
-     * has work in flight.
+     * has work in flight. A removed grid releases its distant sea with it.
      */
 
     // Internal
@@ -112,6 +112,7 @@ class MacroQueueManager extends ManagerPackage {
 
     void onGridRemoved(GridInstance grid) {
         onGridRebuilt(grid);
+        worldRenderManager.disposeMacroWater(grid);
     }
 
     // Placement \\
@@ -190,7 +191,7 @@ class MacroQueueManager extends ManagerPackage {
                 case BUILD -> buildBranch.buildMacro(macro);
                 case RENDER -> {
                     if (gpuUploadsThisFrame < macroGpuUploadBudget) {
-                        renderBranch.renderMacro(macro);
+                        renderBranch.renderMacro(macro, grid);
                         gpuUploadsThisFrame++;
                     }
                 }
@@ -240,7 +241,7 @@ class MacroQueueManager extends ManagerPackage {
             if (sync.isBuilding())
                 return false;
 
-            worldRenderManager.removeMacroInstance(macro);
+            worldRenderManager.removeMacroInstance(macro, grid);
             macro.reset();
         } finally {
             sync.release();
@@ -276,7 +277,7 @@ class MacroQueueManager extends ManagerPackage {
             sync.acquireIdle();
 
             try {
-                worldRenderManager.removeMacroInstance(macro);
+                worldRenderManager.removeMacroInstance(macro, grid);
                 macro.reset();
             } finally {
                 sync.release();

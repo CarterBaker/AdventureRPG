@@ -8,20 +8,24 @@ import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 public class MacroMeshBranch extends BranchPackage {
 
     /*
-     * Turns a sampled macro lattice into its mesh. A tile that is one flat
-     * surface of one color, open sea above all, collapses to a single quad;
-     * any other tile becomes one indexed grid with every lattice point shared
-     * between its cells. Each outer edge hangs a skirt one cell deep below the
-     * tile's lowest point, so
-     * neighbours sampled at different resolutions never open a crack between
-     * them. Positions are tile-local, placed by the macro's own position UBO,
-     * and color rides as one exact packed float.
+     * Turns a sampled macro lattice into its land mesh and its patch of the
+     * open water mask. A tile that is one flat surface of one color collapses
+     * to a single quad; any other tile becomes one indexed grid with every
+     * lattice point shared between its cells. Each outer edge hangs a skirt
+     * one cell deep below the tile's lowest point, so neighbours sampled at
+     * different resolutions never open a crack between them. Positions are
+     * tile-local, placed by the macro's own position UBO, and the top and
+     * slope colors ride as two exact packed floats. A mask texel is open
+     * wherever any corner of the cell holding it has the sea over it, so the
+     * water plane always reaches the shore the land rises out of, and a dry
+     * basin below sea level, with no open corner, stays dry.
      */
 
     // Settings
     private float tileSizeBlocks;
     private float skirtDepthCells;
     private int vertexFloatCount;
+    private int maskTexelsPerTile;
 
     // Base \\
 
@@ -29,14 +33,15 @@ public class MacroMeshBranch extends BranchPackage {
     protected void create() {
 
         // Settings
-        this.tileSizeBlocks = EngineSetting.MACRO_CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
+        this.tileSizeBlocks = EngineSetting.MACRO_TILE_SIZE_BLOCKS;
         this.skirtDepthCells = EngineSetting.MACRO_SKIRT_DEPTH_CELLS;
         this.vertexFloatCount = EngineSetting.MACRO_VERTEX_FLOAT_COUNT;
+        this.maskTexelsPerTile = EngineSetting.MACRO_WATER_MASK_TEXELS_PER_TILE;
     }
 
-    // Assembly \\
+    // Land \\
 
-    void assembleMesh(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
+    void assembleLand(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
 
         vertices.clear();
         indices.clear();
@@ -49,10 +54,13 @@ public class MacroMeshBranch extends BranchPackage {
     private boolean isUniform(MacroBuildAsyncContainer scratch) {
 
         float height = scratch.heightBlocks[0];
-        float color = scratch.packedColors[0];
+        float topColor = scratch.topColors[0];
+        float sideColor = scratch.sideColors[0];
 
         for (int i = 1; i < scratch.getSampleCount(); i++)
-            if (scratch.heightBlocks[i] != height || scratch.packedColors[i] != color)
+            if (scratch.heightBlocks[i] != height
+                    || scratch.topColors[i] != topColor
+                    || scratch.sideColors[i] != sideColor)
                 return false;
 
         return true;
@@ -84,7 +92,8 @@ public class MacroMeshBranch extends BranchPackage {
                         x * cellSizeBlocks,
                         scratch.heightBlocks[sample],
                         z * cellSizeBlocks,
-                        scratch.packedColors[sample]);
+                        scratch.topColors[sample],
+                        scratch.sideColors[sample]);
             }
         }
 
@@ -129,16 +138,18 @@ public class MacroMeshBranch extends BranchPackage {
                 vertices.getFloat(offset),
                 bottom,
                 vertices.getFloat(offset + 2),
-                vertices.getFloat(offset + 3));
+                vertices.getFloat(offset + 3),
+                vertices.getFloat(offset + 4));
     }
 
     // Vertex \\
 
-    private void pushVertex(FloatArrayList vertices, float x, float y, float z, float packedColor) {
+    private void pushVertex(FloatArrayList vertices, float x, float y, float z, float topColor, float sideColor) {
         vertices.add(x);
         vertices.add(y);
         vertices.add(z);
-        vertices.add(packedColor);
+        vertices.add(topColor);
+        vertices.add(sideColor);
     }
 
     private void pushQuad(ShortArrayList indices, int low, int lowNext, int high, int highNext) {
@@ -148,5 +159,42 @@ public class MacroMeshBranch extends BranchPackage {
         indices.add((short) lowNext);
         indices.add((short) high);
         indices.add((short) highNext);
+    }
+
+    // Water Mask \\
+
+    void assembleWaterMask(MacroBuildAsyncContainer scratch, byte[] waterMask) {
+
+        int samplesPerSide = scratch.getSamplesPerSide();
+        int lastCell = scratch.cellsPerSide - 1;
+        float cellsPerTexel = (float) scratch.cellsPerSide / maskTexelsPerTile;
+        boolean anyOpen = scratch.openWaterCount > 0;
+
+        for (int z = 0; z < maskTexelsPerTile; z++) {
+            for (int x = 0; x < maskTexelsPerTile; x++) {
+
+                int cellX = Math.min((int) ((x + 0.5f) * cellsPerTexel), lastCell);
+                int cellZ = Math.min((int) ((z + 0.5f) * cellsPerTexel), lastCell);
+                int corner = cellZ * samplesPerSide + cellX;
+
+                boolean open = anyOpen && (scratch.openWater[corner]
+                        || scratch.openWater[corner + 1]
+                        || scratch.openWater[corner + samplesPerSide]
+                        || scratch.openWater[corner + samplesPerSide + 1]);
+
+                writeMaskTexel(waterMask, z * maskTexelsPerTile + x, open);
+            }
+        }
+    }
+
+    private void writeMaskTexel(byte[] waterMask, int texel, boolean open) {
+
+        int offset = texel * EngineSetting.COLOR_CHANNEL_COUNT;
+        byte full = (byte) EngineSetting.PACKED_COLOR_CHANNEL_MASK;
+
+        waterMask[offset] = open ? full : 0;
+        waterMask[offset + 1] = 0;
+        waterMask[offset + 2] = 0;
+        waterMask[offset + 3] = full;
     }
 }

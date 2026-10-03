@@ -72,4 +72,8 @@ public class TextureHandle extends HandlePackage {
     public float getV1() {
         return textureData.getV1();
     }
+
+    public int getAverageColor() {
+        return textureData.getAverageColor();
+    }
 }

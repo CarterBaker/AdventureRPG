@@ -1,5 +1,7 @@
 package application.bootstrap.shaderpipeline.texturemanager;
 
+import java.nio.ByteBuffer;
+
 import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
 import application.bootstrap.shaderpipeline.texture.TextureData;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
@@ -67,7 +69,8 @@ public class TextureManager extends ManagerPackage {
                 arrayID, array.getName(),
                 gpuHandle, array.getAtlasPixelSize(),
                 tile.getTileWidth(), tile.getTileHeight(),
-                u0, v0, u1, v1);
+                u0, v0, u1, v1,
+                tile.getAverageColor());
 
         TextureHandle handle = create(TextureHandle.class);
         handle.constructor(data);
@@ -179,6 +182,14 @@ public class TextureManager extends ManagerPackage {
 
     public int createFloatTexture2D(float[] pixels, int width, int height, int wrapMode, int filterMode) {
         return TextureGLSLUtility.createFloatTexture2D(pixels, width, height, wrapMode, filterMode);
+    }
+
+    public int createTexture2D(int width, int height, int wrapMode, int filterMode) {
+        return TextureGLSLUtility.createTexture2D(width, height, wrapMode, filterMode);
+    }
+
+    public void updateTexture2D(int handle, int x, int y, int width, int height, ByteBuffer pixels) {
+        TextureGLSLUtility.updateTexture2D(handle, x, y, width, height, pixels);
     }
 
     public void deleteTexture2D(int handle) {

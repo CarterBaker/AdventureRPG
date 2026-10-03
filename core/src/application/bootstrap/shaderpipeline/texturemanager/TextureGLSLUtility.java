@@ -109,6 +109,41 @@ class TextureGLSLUtility extends EngineUtility {
         return handle;
     }
 
+    static int createTexture2D(int width, int height, int wrapMode, int filterMode) {
+
+        int handle = EngineContext.gl20.glGenTexture();
+
+        if (handle == 0)
+            throwException("GPU handle could not be generated for a " + width + "x" + height + " texture");
+
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, handle);
+        EngineContext.gl20.glTexImage2D(
+                EngineSetting.GL_TEXTURE_2D, 0, EngineSetting.GL_RGBA8,
+                width, height, 0, EngineSetting.GL_RGBA, EngineSetting.GL_UNSIGNED_BYTE,
+                BufferUtility.newByteBuffer(width * height * EngineSetting.COLOR_CHANNEL_COUNT));
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_WRAP_S, wrapMode);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_WRAP_T, wrapMode);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_MIN_FILTER,
+                filterMode);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_MAG_FILTER,
+                filterMode);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
+
+        return handle;
+    }
+
+    // RGBA8 rows are always four-byte aligned, so any region uploads under the default unpack alignment
+    static void updateTexture2D(int handle, int x, int y, int width, int height, ByteBuffer pixels) {
+
+        pixels.position(0);
+
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, handle);
+        EngineContext.gl20.glTexSubImage2D(
+                EngineSetting.GL_TEXTURE_2D, 0, x, y, width, height,
+                EngineSetting.GL_RGBA, EngineSetting.GL_UNSIGNED_BYTE, pixels);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
+    }
+
     // GPU Disposal \\
 
     static void deleteTexture2D(int handle) {

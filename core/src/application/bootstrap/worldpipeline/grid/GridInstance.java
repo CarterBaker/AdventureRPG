@@ -14,6 +14,7 @@ import application.bootstrap.weatherpipeline.wind.WindInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
+import application.bootstrap.worldpipeline.macrochunk.MacroWaterInstance;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -34,12 +35,13 @@ public class GridInstance extends InstancePackage {
     /*
      * The streaming grid around one window's focal entity. Owns load order,
      * slots, active chunks, megas and macros, pending requests, render queues,
-     * the macro ring anchored to the active chunk, and the window's own
-     * location state and UBO instances. rebuildSlots() swaps the layout in
-     * place so holders stay valid. Each render queue rebuild is diffed against
-     * the last one, and every chunk and mega whose representation changed is
-     * promoted to the front of its assessment order so the switch lands within
-     * frames instead of waiting out a full streaming pass.
+     * the macro ring anchored to the active chunk, its distant water plane,
+     * and the window's own location state and UBO instances. rebuildSlots()
+     * swaps the layout in place so holders stay valid. Each render queue
+     * rebuild is diffed against the last one, and every chunk and mega whose
+     * representation changed is promoted to the front of its assessment order
+     * so the switch lands within frames instead of waiting out a full
+     * streaming pass.
      */
 
     // Focal
@@ -103,6 +105,9 @@ public class GridInstance extends InstancePackage {
     private LongOpenHashSet macroCoordinates;
     private long macroAnchorCoordinate;
     private int macroAdmitCursor;
+
+    // Macro Water — created the first time a macro writes its water or the grid draws its sea
+    private MacroWaterInstance macroWaterInstance;
 
     // Render Queues — chunk/mega world coordinate → slot handle
     private Long2ObjectLinkedOpenHashMap<GridSlotHandle> chunkRenderQueue;
@@ -563,6 +568,14 @@ public class GridInstance extends InstancePackage {
 
     public Long2ObjectLinkedOpenHashMap<MacroChunkInstance> getActiveMacroChunks() {
         return activeMacroChunks;
+    }
+
+    public MacroWaterInstance getMacroWaterInstance() {
+        return macroWaterInstance;
+    }
+
+    public void setMacroWaterInstance(MacroWaterInstance macroWaterInstance) {
+        this.macroWaterInstance = macroWaterInstance;
     }
 
     public LongArrayList getMacroLoadOrder() {

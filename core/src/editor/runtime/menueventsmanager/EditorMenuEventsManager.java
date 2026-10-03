@@ -8,6 +8,7 @@ import editor.runtime.menueventsmanager.menus.ItemEditorBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
 import editor.runtime.menueventsmanager.menus.ProfilerBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
+import editor.runtime.menueventsmanager.menus.WorldMapBranch;
 import engine.root.ManagerPackage;
 
 public class EditorMenuEventsManager extends ManagerPackage {
@@ -26,5 +27,6 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(ConsoleBranch.class);
         create(CommandConsoleBranch.class);
         create(ProfilerBranch.class);
+        create(WorldMapBranch.class);
     }
 }

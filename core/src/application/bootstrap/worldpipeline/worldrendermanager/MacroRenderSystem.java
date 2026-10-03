@@ -9,7 +9,6 @@ import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
-import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
@@ -34,14 +33,15 @@ class MacroRenderSystem extends SystemPackage {
     /*
      * Owns the GPU side of every macro chunk: the position UBO placing it
      * against its grid's active chunk, the coverage UBO marking which of its
-     * chunks the grid already draws, its one mesh and model, and its draw
-     * submission. A tile is drawn whenever it faces the camera, and its
-     * coverage is re-resolved before drawing only when the grid's anchor or
-     * drawn chunks changed, so macro terrain fills exactly the ground the
-     * chunk grid leaves open and meets it with no hole and no overlap. A
-     * reupload writes into the macro's existing buffers, a hidden macro keeps
-     * them for its next tenant, and only disposal frees them, so streaming
-     * macros in and out never churns GPU objects.
+     * chunks the grid already draws, its one land mesh and model, and its
+     * draw submission through the shared surface push, so it takes the same
+     * cloud shadows as the chunks beside it. A tile is drawn whenever it
+     * faces the camera, and its coverage is re-resolved before drawing only
+     * when the grid's anchor or drawn chunks changed, so macro terrain fills
+     * exactly the ground the chunk grid leaves open and meets it with no hole
+     * and no overlap. A reupload writes into the macro's existing buffers, a
+     * hidden macro keeps them for its next tenant, and only disposal frees
+     * them, so streaming macros in and out never churns GPU objects.
      */
 
     // Internal
@@ -51,7 +51,6 @@ class MacroRenderSystem extends SystemPackage {
     private ModelManager modelManager;
     private MaterialManager materialManager;
     private VAOManager vaoManager;
-    private RenderManager renderManager;
     private FrustumCullingSystem frustumCullingSystem;
 
     // Handles
@@ -107,7 +106,6 @@ class MacroRenderSystem extends SystemPackage {
         this.modelManager = get(ModelManager.class);
         this.materialManager = get(MaterialManager.class);
         this.vaoManager = get(VAOManager.class);
-        this.renderManager = get(RenderManager.class);
         this.frustumCullingSystem = get(FrustumCullingSystem.class);
     }
 
@@ -237,8 +235,7 @@ class MacroRenderSystem extends SystemPackage {
                 continue;
 
             refreshCoverage(macro, grid);
-            renderManager.pushRenderCall(
-                    macro.getModelInstance(), worldFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
+            worldRenderManager.pushSurfaceModel(macro.getModelInstance(), worldFbo, window);
         }
     }
 

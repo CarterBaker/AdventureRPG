@@ -6,6 +6,7 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -16,10 +17,13 @@ import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import engine.graphics.color.Color;
+import engine.graphics.color.PackedColorUtility;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
+import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class WorldGenerationManager extends ManagerPackage {
@@ -28,10 +32,11 @@ public class WorldGenerationManager extends ManagerPackage {
      * Generates terrain per chunk column. computeColumn() samples the biome
      * field on a macro grid and interpolates height, flooding and dressing
      * blocks to every block column, and generateSubChunk() fills subchunks,
-     * leaving fully empty or uniform ones unrealized. sampleSurfaceHeight()
-     * gives the coarse ground or sea surface at any point for distant macro
-     * terrain, and sampleOpenWater() whether the sea covers it. Output is a pure function of seed and coordinate, so it is
-     * cached per chunk and agrees across chunk borders.
+     * leaving fully empty or uniform ones unrealized. sampleSurface() gives
+     * the ground, its sea cover and its colors at any point for distant macro
+     * terrain and maps, and sampleOpenWater() whether the sea covers it.
+     * Output is a pure function of seed and coordinate, so it is cached per
+     * chunk and agrees across chunk borders.
      */
 
     // Internal
@@ -410,16 +415,67 @@ public class WorldGenerationManager extends ManagerPackage {
         return probe;
     }
 
-    // Surface — any single point, coarse \\
+    // Surface — any single point \\
 
-    public float sampleSurfaceHeight(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
+    public void sampleSurface(
+            WorldHandle worldHandle,
+            double worldX,
+            double worldZ,
+            TerrainSurfaceSampleStruct outSample) {
 
-        float groundHeight = sampleGroundHeight(worldHandle, worldX, worldZ, outBlend);
+        BiomeBlendStruct blend = outSample.getBlend();
+        long seed = worldHandle.getSeed();
+        double worldWidthBlocks = worldHandle.getWorldScale().x;
+        double worldHeightBlocks = worldHandle.getWorldScale().y;
 
-        if (isOceanReached(outBlend))
-            return Math.max(groundHeight, EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS);
+        biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, blend);
 
-        return groundHeight;
+        float macroShape = TerrainShapeUtility.computeMacroShapeBlocks(
+                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, blend);
+        float detail = TerrainShapeUtility.computeDetailBlocks(
+                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks,
+                TerrainShapeUtility.computeDetailWavelengthBlocks(blend),
+                TerrainShapeUtility.computeDetailAmplitudeBlocks(blend));
+
+        int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(macroShape, detail);
+        boolean oceanReached = isOceanReached(blend);
+
+        outSample.groundHeightBlocks = TerrainShapeUtility.clampGroundHeightBlocks(macroShape, detail);
+        outSample.openWater = oceanReached && groundHeight < EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+
+        resolveSurfaceColors(outSample, oceanReached && groundHeight
+                <= EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS);
+    }
+
+    // Weights are normalized, so the weighted sums are the blended channels themselves
+    private void resolveSurfaceColors(TerrainSurfaceSampleStruct sample, boolean underwaterSurface) {
+
+        BiomeBlendStruct blend = sample.getBlend();
+
+        float topRed = 0f;
+        float topGreen = 0f;
+        float topBlue = 0f;
+        float sideRed = 0f;
+        float sideGreen = 0f;
+        float sideBlue = 0f;
+
+        for (int i = 0; i < blend.getCount(); i++) {
+
+            TerrainSurfaceProfile profile = resolveSurfaceProfile(blend.getBiome(i));
+            float weight = blend.getWeight(i);
+            int topColor = underwaterSurface ? profile.underwaterTopColor : profile.surfaceTopColor;
+            int sideColor = underwaterSurface ? profile.underwaterSideColor : profile.surfaceSideColor;
+
+            topRed += PackedColorUtility.red(topColor) * weight;
+            topGreen += PackedColorUtility.green(topColor) * weight;
+            topBlue += PackedColorUtility.blue(topColor) * weight;
+            sideRed += PackedColorUtility.red(sideColor) * weight;
+            sideGreen += PackedColorUtility.green(sideColor) * weight;
+            sideBlue += PackedColorUtility.blue(sideColor) * weight;
+        }
+
+        sample.topColor = PackedColorUtility.pack(topRed, topGreen, topBlue);
+        sample.sideColor = PackedColorUtility.pack(sideRed, sideGreen, sideBlue);
     }
 
     public boolean sampleOpenWater(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
@@ -541,16 +597,42 @@ public class WorldGenerationManager extends ManagerPackage {
         if (profile != null)
             return profile;
 
+        short surfaceBlockID = (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSurfaceBlockName());
+        short underwaterBlockID = (short) blockManager.getBlockIDFromBlockName(
+                biomeHandle.getUnderwaterBlockName());
+
         profile = new TerrainSurfaceProfile(
-                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSurfaceBlockName()),
+                surfaceBlockID,
                 (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSubsurfaceBlockName()),
-                (short) blockManager.getBlockIDFromBlockName(biomeHandle.getUnderwaterBlockName()));
+                underwaterBlockID,
+                resolveMapColor(biomeHandle, surfaceBlockID, Direction3Vector.UP),
+                resolveMapColor(biomeHandle, surfaceBlockID, Direction3Vector.NORTH),
+                resolveMapColor(biomeHandle, underwaterBlockID, Direction3Vector.UP),
+                resolveMapColor(biomeHandle, underwaterBlockID, Direction3Vector.NORTH));
 
         Short2ObjectOpenHashMap<TerrainSurfaceProfile> next = new Short2ObjectOpenHashMap<>(biomeID2SurfaceProfile);
         next.put(biomeHandle.getBiomeID(), profile);
         biomeID2SurfaceProfile = next;
 
         return profile;
+    }
+
+    // A block drawn without a texture stands in with its biome's map color, then its biome color
+    private int resolveMapColor(BiomeHandle biomeHandle, short blockID, Direction3Vector face) {
+
+        BlockHandle blockHandle = blockManager.getBlockHandleFromBlockID(blockID);
+
+        if (blockHandle.hasMapColor())
+            return blockHandle.getMapColorForFace(face);
+
+        int biomeMapColor = biomeManager.getMapColor(biomeHandle);
+
+        if (biomeMapColor != EngineSetting.BIOME_MAP_COLOR_UNDEFINED)
+            return biomeMapColor;
+
+        Color biomeColor = biomeHandle.getBiomeColor();
+
+        return PackedColorUtility.packUnit(biomeColor.r, biomeColor.g, biomeColor.b);
     }
 
     private boolean resolveFillGeometryUniformity(TerrainColumnAsyncContainer column) {
@@ -738,14 +820,26 @@ public class WorldGenerationManager extends ManagerPackage {
         final short surfaceBlockID;
         final short subsurfaceBlockID;
         final short underwaterBlockID;
+        final int surfaceTopColor;
+        final int surfaceSideColor;
+        final int underwaterTopColor;
+        final int underwaterSideColor;
 
         TerrainSurfaceProfile(
                 short surfaceBlockID,
                 short subsurfaceBlockID,
-                short underwaterBlockID) {
+                short underwaterBlockID,
+                int surfaceTopColor,
+                int surfaceSideColor,
+                int underwaterTopColor,
+                int underwaterSideColor) {
             this.surfaceBlockID = surfaceBlockID;
             this.subsurfaceBlockID = subsurfaceBlockID;
             this.underwaterBlockID = underwaterBlockID;
+            this.surfaceTopColor = surfaceTopColor;
+            this.surfaceSideColor = surfaceSideColor;
+            this.underwaterTopColor = underwaterTopColor;
+            this.underwaterSideColor = underwaterSideColor;
         }
     }
 }

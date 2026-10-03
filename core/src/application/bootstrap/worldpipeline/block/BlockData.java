@@ -12,7 +12,8 @@ public class BlockData extends DataPackage {
      * natural marks blocks that receive the edge bevel and vertex jitter;
      * artificial blocks always meet their neighbors flat. A breakable solid
      * block names the tool that breaks it and the item texture its block
-     * piece is drawn with.
+     * piece is drawn with. Every face also carries its texture's average
+     * albedo, the color terrain drawn without textures stands in with.
      */
 
     // Identity
@@ -26,6 +27,7 @@ public class BlockData extends DataPackage {
     // Rendering
     private final int materialID;
     private final int[] faceTextures;
+    private final int[] faceMapColors;
 
     // Breaking
     private final int breakTier;
@@ -50,6 +52,7 @@ public class BlockData extends DataPackage {
             int materialID,
             int northTexture, int eastTexture, int southTexture,
             int westTexture, int upTexture, int downTexture,
+            int[] faceMapColors,
             int breakTier,
             short requiredToolTypeID,
             int durability,
@@ -71,6 +74,7 @@ public class BlockData extends DataPackage {
         this.faceTextures[Direction3Vector.WEST.ordinal()] = westTexture;
         this.faceTextures[Direction3Vector.UP.ordinal()] = upTexture;
         this.faceTextures[Direction3Vector.DOWN.ordinal()] = downTexture;
+        this.faceMapColors = faceMapColors;
 
         this.breakTier = breakTier;
         this.requiredToolTypeID = requiredToolTypeID;
@@ -113,6 +117,14 @@ public class BlockData extends DataPackage {
 
     public int getTextureForFace(Direction3Vector direction) {
         return faceTextures[direction.ordinal()];
+    }
+
+    public int getMapColorForFace(Direction3Vector direction) {
+        return faceMapColors[direction.ordinal()];
+    }
+
+    public boolean hasMapColor() {
+        return faceMapColors[Direction3Vector.UP.ordinal()] != EngineSetting.BLOCK_MAP_COLOR_UNDEFINED;
     }
 
     public int getBreakTier() {

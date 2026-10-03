@@ -19,7 +19,8 @@ public class MacroChunkInstance extends InstancePackage {
      * coverage UBOs are main-thread only and survive pooling, so a reused
      * macro reuploads into the buffers it already owns. The coverage words mark
      * every chunk of the tile the grid currently draws, together with the
-     * anchor and drawn revision they were resolved against.
+     * anchor and drawn revision they were resolved against, and the water
+     * slot records which patch of the grid's open water mask the tile wrote.
      */
 
     // Internal
@@ -46,6 +47,9 @@ public class MacroChunkInstance extends InstancePackage {
     private boolean coverageCurrent;
     private long coverageAnchorCoordinate;
     private int coverageRevision;
+
+    // Water
+    private int waterMaskSlot;
 
     // Placement
     private float angleFromCenter;
@@ -78,6 +82,7 @@ public class MacroChunkInstance extends InstancePackage {
         this.hasGeometry = false;
         this.builtCellsPerSide = 0;
         this.coverageCurrent = false;
+        this.waterMaskSlot = EngineSetting.INDEX_NOT_FOUND;
     }
 
     // GPU \\
@@ -134,6 +139,20 @@ public class MacroChunkInstance extends InstancePackage {
         this.coverageCurrent = true;
         this.coverageAnchorCoordinate = anchorCoordinate;
         this.coverageRevision = drawnRevision;
+    }
+
+    // Water \\
+
+    public void setWaterMaskSlot(int waterMaskSlot) {
+        this.waterMaskSlot = waterMaskSlot;
+    }
+
+    public int getWaterMaskSlot() {
+        return waterMaskSlot;
+    }
+
+    public boolean hasWaterMaskSlot() {
+        return waterMaskSlot != EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Placement \\

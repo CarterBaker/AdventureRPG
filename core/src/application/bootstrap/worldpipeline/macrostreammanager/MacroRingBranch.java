@@ -45,7 +45,7 @@ public class MacroRingBranch extends BranchPackage {
         // Settings
         this.macroChunkSize = EngineSetting.MACRO_CHUNK_SIZE;
         this.chunkSize = EngineSetting.CHUNK_SIZE;
-        this.tileSizeBlocks = macroChunkSize * chunkSize;
+        this.tileSizeBlocks = EngineSetting.MACRO_TILE_SIZE_BLOCKS;
         this.renderDistanceBlocks = EngineSetting.MACRO_RENDER_DISTANCE_BLOCKS;
 
         // Candidates
@@ -56,7 +56,7 @@ public class MacroRingBranch extends BranchPackage {
 
     private long[] buildCandidateOffsets() {
 
-        int reach = (int) Math.ceil(renderDistanceBlocks / tileSizeBlocks) + 1;
+        int reach = EngineSetting.MACRO_RING_REACH_TILES;
         int side = reach * 2 + 1;
         long[] sortScratch = new long[side * side];
         int count = 0;

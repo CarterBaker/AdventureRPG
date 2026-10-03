@@ -12,7 +12,9 @@ import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
 import application.bootstrap.shaderpipeline.texture.TextureAtlasStruct;
 import application.bootstrap.shaderpipeline.texture.TextureTileStruct;
 import engine.assets.atlas.AtlasUtility;
+import engine.graphics.color.PackedColorUtility;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -20,9 +22,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class TextureBuilder extends BuilderPackage {
 
     /*
-     * Builds TextureArrayStructs from image files: creates tiles, packs the
-     * atlas and composites one layer per alias. Only aliases found in the
-     * sources are registered, so UBO seeding writes exactly those.
+     * Builds TextureArrayStructs from image files: creates tiles, records each
+     * tile's average albedo, packs the atlas and composites one layer per
+     * alias. Only aliases found in the sources are registered, so UBO seeding
+     * writes exactly those. The average is weighted by coverage, so a cutout
+     * texture's transparent pixels never darken it.
      */
 
     // Internal
@@ -46,6 +50,8 @@ class TextureBuilder extends BuilderPackage {
             return null;
 
         ObjectArrayList<TextureTileStruct> tiles = new ObjectArrayList<>(tileMap.values());
+        resolveAverageColors(tiles);
+
         int atlasPixelSize = AtlasUtility.pack(tiles);
         TextureAtlasStruct[] atlasLayers = compositeAtlasLayers(tiles, atlasPixelSize);
 
@@ -111,6 +117,53 @@ class TextureBuilder extends BuilderPackage {
             sorted.put(tileNames.get(i), tileMap.get(tileNames.get(i)));
 
         return sorted;
+    }
+
+    // Average Colors \\
+
+    private void resolveAverageColors(ObjectArrayList<TextureTileStruct> tiles) {
+
+        int albedoAlias = aliasLibrarySystem.get(EngineSetting.SHADER_ALIAS_ALBEDO);
+
+        if (albedoAlias == EngineSetting.INDEX_NOT_FOUND)
+            throwException("Alias: " + EngineSetting.SHADER_ALIAS_ALBEDO + " could not be found in the system");
+
+        Color fallback = aliasLibrarySystem.getDefaultColor(albedoAlias);
+        int fallbackColor = PackedColorUtility.pack(fallback.getRed(), fallback.getGreen(), fallback.getBlue());
+
+        for (int i = 0; i < tiles.size(); i++) {
+
+            TextureTileStruct tile = tiles.get(i);
+            BufferedImage albedo = tile.getImage(albedoAlias);
+
+            tile.setAverageColor(albedo != null ? averageImage(albedo, fallbackColor) : fallbackColor);
+        }
+    }
+
+    private int averageImage(BufferedImage image, int fallbackColor) {
+
+        double red = 0.0;
+        double green = 0.0;
+        double blue = 0.0;
+        double coverage = 0.0;
+
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+
+                int argb = image.getRGB(x, y);
+                int alpha = (argb >>> EngineSetting.PACKED_COLOR_ALPHA_SHIFT) & EngineSetting.PACKED_COLOR_CHANNEL_MASK;
+
+                red += PackedColorUtility.red(argb) * alpha;
+                green += PackedColorUtility.green(argb) * alpha;
+                blue += PackedColorUtility.blue(argb) * alpha;
+                coverage += alpha;
+            }
+        }
+
+        if (coverage <= 0.0)
+            return fallbackColor;
+
+        return PackedColorUtility.pack((float) (red / coverage), (float) (green / coverage), (float) (blue / coverage));
     }
 
     // Atlas Compositing \\

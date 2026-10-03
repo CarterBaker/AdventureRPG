@@ -58,6 +58,14 @@ public class BlockHandle extends HandlePackage {
         return blockData.getTextureForFace(direction);
     }
 
+    public int getMapColorForFace(Direction3Vector direction) {
+        return blockData.getMapColorForFace(direction);
+    }
+
+    public boolean hasMapColor() {
+        return blockData.hasMapColor();
+    }
+
     public int getBreakTier() {
         return blockData.getBreakTier();
     }

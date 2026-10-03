@@ -1,32 +1,40 @@
 #version 330 core
 
 layout (location = 0) in vec3  aPos;
-layout (location = 1) in float aColor;
+layout (location = 1) in float aTopColor;
+layout (location = 2) in float aSideColor;
 
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
 
 out vec3 vLocalPos;
 out vec2 vTilePos;
-out vec3 vColor;
+out vec3 vTopColor;
+out vec3 vSideColor;
 
 // Places one distant macro tile. Positions are tile-local and u_gridPosition carries the tile's origin
-// against the grid's active chunk, the same frame every chunk renders in. Vertex tint is an exact 24-bit
-// RGB triple packed by MacroBuildBranch. The grid-relative position leaves for the fragment's facet normal,
-// and the tile-local one for its chunk coverage test.
+// against the grid's active chunk, the same frame every chunk renders in. The top and slope colors are exact
+// 24-bit RGB triples packed by MacroBuildBranch, the average albedo of the blocks a chunk dresses that ground
+// with. The grid-relative position leaves for the fragment's facet normal and cloud shadow, and the
+// tile-local one for its chunk coverage test.
+
+vec3 unpackColor(float packedColor) {
+    int col = int(packedColor);
+
+    return vec3(float((col >> 16) & 255),
+        float((col >>  8) & 255),
+        float(col        & 255)) * (1.0 / 255.0);
+}
 
 void main() {
     vec3 worldPos = aPos;
     worldPos.x   += u_gridPosition.x;
     worldPos.z   += u_gridPosition.y;
 
-    int col = int(aColor);
-
-    vLocalPos = worldPos;
-    vTilePos  = aPos.xz;
-    vColor    = vec3(float((col >> 16) & 255),
-        float((col >>  8) & 255),
-        float(col        & 255)) * (1.0 / 255.0);
+    vLocalPos  = worldPos;
+    vTilePos   = aPos.xz;
+    vTopColor  = unpackColor(aTopColor);
+    vSideColor = unpackColor(aSideColor);
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

@@ -21,6 +21,7 @@ import editor.profiler.ProfilerContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
 import editor.textureviewer.TextureViewerContext;
+import editor.worldmap.WorldMapContext;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -122,6 +123,10 @@ public class TabManager extends ManagerPackage {
                 EditorSetting.TAB_TITLE_TEXTURE_VIEWER,
                 TextureViewerContext.class,
                 osWindow);
+    }
+
+    public TabHandle openWorldMap(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_WORLD_MAP, WorldMapContext.class, osWindow);
     }
 
     public TabHandle openConsole(WindowInstance osWindow) {

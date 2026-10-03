@@ -3,6 +3,7 @@ package application.bootstrap.shaderpipeline.texture;
 import java.awt.image.BufferedImage;
 
 import engine.assets.atlas.AtlasTileData;
+import engine.root.EngineSetting;
 
 public class TextureTileStruct extends AtlasTileData {
 
@@ -10,6 +11,8 @@ public class TextureTileStruct extends AtlasTileData {
      * Bootstrap container for a single named texture tile. Holds per-alias
      * source images during the build phase. Derives pixel dimensions from the
      * first image assigned — all subsequent alias layers must match that size.
+     * The builder records the tile's average albedo before the images go, so
+     * distant terrain and maps can stand in for the texture with one color.
      * GCs with the loader after bootstrap completes.
      * Extends AtlasTileData (external utility) rather than StructPackage —
      * naming exception due to the external base class.
@@ -23,6 +26,9 @@ public class TextureTileStruct extends AtlasTileData {
     // Images
     private BufferedImage[] imageLayers;
 
+    // Average
+    private int averageColor;
+
     // Constructor \\
 
     public TextureTileStruct(int id, String name, String atlas, int aliasCount) {
@@ -30,6 +36,7 @@ public class TextureTileStruct extends AtlasTileData {
         this.name = name;
         this.atlas = atlas;
         this.imageLayers = new BufferedImage[aliasCount];
+        this.averageColor = EngineSetting.PACKED_COLOR_WHITE;
     }
 
     // Management \\
@@ -61,6 +68,10 @@ public class TextureTileStruct extends AtlasTileData {
             imageLayers[i] = null;
     }
 
+    public void setAverageColor(int averageColor) {
+        this.averageColor = averageColor;
+    }
+
     // Accessible \\
 
     public int getID() {
@@ -73,5 +84,9 @@ public class TextureTileStruct extends AtlasTileData {
 
     String getAtlas() {
         return atlas;
+    }
+
+    public int getAverageColor() {
+        return averageColor;
     }
 }

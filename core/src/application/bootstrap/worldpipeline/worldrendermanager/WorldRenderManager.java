@@ -47,12 +47,14 @@ public class WorldRenderManager extends ManagerPackage {
      * GPU, so switching representation never opens a hole. Every change to the
      * entries advances the drawn revision, so MacroRenderSystem, which owns
      * distant macro terrain, re-resolves which chunks a grid draws only when
-     * that can have changed. Water, any material reading OceanData, never
-     * enters the G-buffer: it is drawn forward into the grid's water target,
-     * after deferred lighting, with the grid's light and sky data and the
-     * scene it refracts and reflects bound on each push. Every other material
-     * whose shader reads the cloud noise, for the clouds' shadows, has it
-     * bound on each push.
+     * that can have changed, and MacroWaterRenderSystem owns the grid's
+     * distant sea plane. Water, any material reading OceanData, never enters
+     * the G-buffer: it is drawn forward into the grid's water target, after
+     * deferred lighting, with the grid's light and sky data and the scene it
+     * refracts and reflects bound on each push. Every other material whose
+     * shader reads the cloud noise, for the clouds' shadows, has it bound on
+     * each push. pushSurfaceModel() and pushWaterModel() are the single call
+     * sites for both, shared by chunks, megas and macros.
      */
 
     // Internal
@@ -64,6 +66,7 @@ public class WorldRenderManager extends ManagerPackage {
     private CloudManager cloudManager;
     private FrustumCullingSystem frustumCullingSystem;
     private MacroRenderSystem macroRenderSystem;
+    private MacroWaterRenderSystem macroWaterRenderSystem;
 
     // Entries
     private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> chunkEntries;
@@ -107,6 +110,7 @@ public class WorldRenderManager extends ManagerPackage {
         // Internal
         this.frustumCullingSystem = create(FrustumCullingSystem.class);
         this.macroRenderSystem = create(MacroRenderSystem.class);
+        this.macroWaterRenderSystem = create(MacroWaterRenderSystem.class);
 
         // Entries
         this.chunkEntries = new Long2ObjectOpenHashMap<>();
@@ -172,6 +176,10 @@ public class WorldRenderManager extends ManagerPackage {
             resolveWaterTarget(grid);
 
             macroRenderSystem.renderGridMacros(grid, window, worldFbo);
+
+            if (waterFbo != null)
+                macroWaterRenderSystem.renderGridWater(grid, window);
+
             renderGridMegas(grid, window, worldFbo);
             renderGridChunks(grid, window, worldFbo);
         }
@@ -302,30 +310,26 @@ public class WorldRenderManager extends ManagerPackage {
             for (int i = 0; i < bucketList.size(); i++) {
 
                 RenderEntry entry = bucketList.get(i);
-                MaterialInstance material = entry.modelInstance.getMaterial();
-
-                material.setUBO(slotUBO);
+                entry.modelInstance.getMaterial().setUBO(slotUBO);
 
                 if (entry.usesOceanData)
-                    pushWaterEntry(entry, material, grid, window);
+                    pushWaterModel(entry.modelInstance, grid, window);
                 else
-                    pushSurfaceEntry(entry, material, worldFbo, window);
+                    pushSurfaceModel(entry.modelInstance, worldFbo, window);
             }
         }
     }
 
     // Surface \\
 
-    private void pushSurfaceEntry(
-            RenderEntry entry,
-            MaterialInstance material,
-            FBOInstance worldFbo,
-            WindowInstance window) {
+    void pushSurfaceModel(ModelInstance modelInstance, FBOInstance worldFbo, WindowInstance window) {
+
+        MaterialInstance material = modelInstance.getMaterial();
 
         if (material.getUniform(EngineSetting.UNIFORM_CLOUD_NOISE) != null)
             material.setUniform(EngineSetting.UNIFORM_CLOUD_NOISE, cloudManager.getCloudNoiseTexture());
 
-        renderManager.pushRenderCall(entry.modelInstance, worldFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
+        renderManager.pushRenderCall(modelInstance, worldFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
     }
 
     // Water \\
@@ -347,10 +351,12 @@ public class WorldRenderManager extends ManagerPackage {
         waterCloudDistanceTexture = waterTarget.getCloudDistanceTexture();
     }
 
-    private void pushWaterEntry(RenderEntry entry, MaterialInstance material, GridInstance grid, WindowInstance window) {
+    void pushWaterModel(ModelInstance modelInstance, GridInstance grid, WindowInstance window) {
 
         if (waterFbo == null)
             return;
+
+        MaterialInstance material = modelInstance.getMaterial();
 
         material.setUBO(grid.getOceanDataUBO());
         material.setUBO(grid.getSunLightUBO());
@@ -363,7 +369,7 @@ public class WorldRenderManager extends ManagerPackage {
         material.setUniform(EngineSetting.UNIFORM_WATER_CLOUD_COLOR, waterCloudColorTexture);
         material.setUniform(EngineSetting.UNIFORM_WATER_CLOUD_DISTANCE, waterCloudDistanceTexture);
 
-        renderManager.pushRenderCall(entry.modelInstance, waterFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
+        renderManager.pushRenderCall(modelInstance, waterFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
     }
 
     // Update \\
@@ -402,16 +408,22 @@ public class WorldRenderManager extends ManagerPackage {
         macroRenderSystem.placeMacro(macro, grid);
     }
 
-    public void addMacroInstance(MacroChunkInstance macro) {
+    public void addMacroInstance(MacroChunkInstance macro, GridInstance grid) {
         macroRenderSystem.uploadMacro(macro);
+        macroWaterRenderSystem.writeMask(macro, grid);
     }
 
-    public void removeMacroInstance(MacroChunkInstance macro) {
+    public void removeMacroInstance(MacroChunkInstance macro, GridInstance grid) {
         macroRenderSystem.hideMacro(macro);
+        macroWaterRenderSystem.clearMask(macro, grid);
     }
 
     public void disposeMacroInstance(MacroChunkInstance macro) {
         macroRenderSystem.disposeMacro(macro);
+    }
+
+    public void disposeMacroWater(GridInstance grid) {
+        macroWaterRenderSystem.disposeWater(grid);
     }
 
     // Mega Readiness \\

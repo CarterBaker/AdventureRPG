@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.macrostreammanager;
 
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroDataSyncContainer;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
@@ -8,9 +9,10 @@ import engine.root.BranchPackage;
 public class MacroRenderBranch extends BranchPackage {
 
     /*
-     * Main thread — uploads a built macro's mesh to the GPU under its lock,
-     * records the resolution it was built at, then clears the CPU copy so a
-     * resident macro holds no geometry on the heap.
+     * Main thread — uploads a built macro's mesh and its patch of the grid's
+     * open water mask to the GPU under its lock, records the resolution it was
+     * built at, then clears the CPU copy so a resident macro holds no geometry
+     * on the heap.
      */
 
     // Internal
@@ -25,7 +27,7 @@ public class MacroRenderBranch extends BranchPackage {
 
     // Render \\
 
-    public void renderMacro(MacroChunkInstance macro) {
+    public void renderMacro(MacroChunkInstance macro, GridInstance grid) {
 
         MacroDataSyncContainer sync = macro.getMacroDataSyncContainer();
 
@@ -36,7 +38,7 @@ public class MacroRenderBranch extends BranchPackage {
             if (!sync.isBuilt())
                 return;
 
-            worldRenderManager.addMacroInstance(macro);
+            worldRenderManager.addMacroInstance(macro, grid);
             macro.setBuilt(sync.getBuiltCellsPerSide());
             sync.clearGeometry();
         } finally {

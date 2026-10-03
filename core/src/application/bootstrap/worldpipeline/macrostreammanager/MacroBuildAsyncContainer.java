@@ -1,6 +1,6 @@
 package application.bootstrap.worldpipeline.macrostreammanager;
 
-import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
+import application.bootstrap.worldpipeline.worldgenerationmanager.TerrainSurfaceSampleStruct;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
 
@@ -8,10 +8,10 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
 
     /*
      * Thread-local scratch for one macro build, sized for the finest lattice
-     * a tile can take: the surface height and packed color at every lattice
-     * point, the lattice's lowest ground, and the biome blend each point is
-     * sampled through. Filled by MacroBuildBranch and read by MacroMeshBranch,
-     * so a build allocates nothing.
+     * a tile can take: the ground height, packed top and side colors and open
+     * sea flag at every lattice point, the lattice's lowest ground, and the
+     * surface sample each point is read through. Filled by MacroBuildBranch
+     * and read by MacroMeshBranch, so a build allocates nothing.
      */
 
     static final int MAX_SAMPLES_PER_SIDE = EngineSetting.MACRO_CELLS_PER_SIDE_MAX + 1;
@@ -20,22 +20,28 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
     // Lattice
     int cellsPerSide;
     float[] heightBlocks;
-    float[] packedColors;
+    float[] topColors;
+    float[] sideColors;
+    boolean[] openWater;
     float minHeightBlocks;
+    int openWaterCount;
 
-    // Biome Field
-    BiomeBlendStruct blend;
+    // Surface
+    TerrainSurfaceSampleStruct sample;
 
     @Override
     protected void create() {
         this.heightBlocks = new float[MAX_SAMPLE_COUNT];
-        this.packedColors = new float[MAX_SAMPLE_COUNT];
-        this.blend = new BiomeBlendStruct();
+        this.topColors = new float[MAX_SAMPLE_COUNT];
+        this.sideColors = new float[MAX_SAMPLE_COUNT];
+        this.openWater = new boolean[MAX_SAMPLE_COUNT];
+        this.sample = new TerrainSurfaceSampleStruct();
     }
 
     @Override
     public void reset() {
-        blend.reset();
+        sample.getBlend().reset();
+        this.openWaterCount = 0;
     }
 
     // Lattice \\

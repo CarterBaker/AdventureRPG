@@ -24,6 +24,8 @@ class BlockBuilder extends BuilderPackage {
     /*
      * Parses block ARPG into BlockData wrapped in a BlockHandle, validating
      * geometry type, textures, durability, tooling and, for liquids, viscosity.
+     * Each face's map color is its texture's average albedo, and undefined on
+     * an untextured face.
      * Every breakable solid block must name the tool that breaks it and the
      * item texture its block piece is drawn with, since breaking it hands
      * those pieces out. Bootstrap only.
@@ -131,6 +133,9 @@ class BlockBuilder extends BuilderPackage {
                     lastDefined = textures[i];
             }
 
+        // Map Colors
+        int[] faceMapColors = resolveFaceMapColors(textures);
+
         // Breaking
         int breakTier = ArpgUtility.getInt(blockArpg, "break_tier", 0);
         int durability = ArpgUtility.getInt(blockArpg, "durability", 1);
@@ -173,6 +178,7 @@ class BlockBuilder extends BuilderPackage {
                 textures[Direction3Vector.WEST.ordinal()],
                 textures[Direction3Vector.UP.ordinal()],
                 textures[Direction3Vector.DOWN.ordinal()],
+                faceMapColors,
                 breakTier, requiredToolTypeID, durability,
                 itemTextureName,
                 viscosity);
@@ -181,6 +187,20 @@ class BlockBuilder extends BuilderPackage {
         blockHandle.constructor(blockData);
 
         return blockHandle;
+    }
+
+    // Map Colors \\
+
+    private int[] resolveFaceMapColors(int[] textures) {
+
+        int[] faceMapColors = new int[Direction3Vector.LENGTH];
+
+        for (int i = 0; i < Direction3Vector.LENGTH; i++)
+            faceMapColors[i] = textures[i] != EngineSetting.BLOCK_TEXTURE_UNDEFINED
+                    ? textureManager.getTextureHandleFromTileID(textures[i]).getAverageColor()
+                    : EngineSetting.BLOCK_MAP_COLOR_UNDEFINED;
+
+        return faceMapColors;
     }
 
     // Breaking \\
