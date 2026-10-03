@@ -28,7 +28,7 @@ public class Settings {
     public boolean vsync = true;
 
     // Render
-    public int maxRenderDistance = 16;
+    public int maxRenderDistance = 32;
     public int nearTessellationRadius = 5;
 
     // Post Processing — Outlines

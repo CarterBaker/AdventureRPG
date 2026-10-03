@@ -2,6 +2,7 @@ package application.bootstrap.calendarpipeline.clockmanager;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
+import application.bootstrap.weatherpipeline.util.SkyColorUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 
@@ -17,12 +18,15 @@ class CurrentTrackerBranch extends BranchPackage {
      * rolls over at exactly the instant dayProgress wraps to midnight, and
      * any gap since the last session resolves in one step.
      * computeVisualTimeOfDay() then localizes the shared solar time per grid,
-     * bending it by season and latitude.
+     * bending it by season and latitude, the bend deepening toward the poles
+     * so high latitudes see long winter nights and long summer days.
      */
 
     // Internal
     private long MILLIS_PER_REAL_DAY;
     private double LATITUDE_CURVE_POWER;
+    private float LATITUDE_POLAR_START;
+    private double LATITUDE_POLAR_GAIN;
 
     // Seasonal Bending
     private double SUNRISE_MIN;
@@ -53,6 +57,8 @@ class CurrentTrackerBranch extends BranchPackage {
 
         this.MILLIS_PER_REAL_DAY = EngineSetting.MILLIS_PER_REAL_DAY;
         this.LATITUDE_CURVE_POWER = EngineSetting.LATITUDE_DAYLENGTH_CURVE_POWER;
+        this.LATITUDE_POLAR_START = EngineSetting.LATITUDE_DAYLENGTH_POLAR_START;
+        this.LATITUDE_POLAR_GAIN = EngineSetting.LATITUDE_DAYLENGTH_POLAR_GAIN;
 
         this.SUNRISE_MIN = EngineSetting.CLOCK_SUNRISE_MIN;
         this.SUNRISE_MAX = EngineSetting.CLOCK_SUNRISE_MAX;
@@ -183,9 +189,21 @@ class CurrentTrackerBranch extends BranchPackage {
         double curvedLatitude = Math.signum(latitudeFactor)
                 * Math.pow(Math.abs(latitudeFactor), LATITUDE_CURVE_POWER);
 
-        double delta = (seasonDayLength - 0.5) * curvedLatitude * axialTiltStrength;
+        double delta = (seasonDayLength - 0.5) * curvedLatitude * axialTiltStrength
+                * resolvePolarGain(latitudeFactor);
 
         return Math.max(0.0, Math.min(1.0, 0.5 + delta));
+    }
+
+    // Ramps the bend up past the polar start, so the extremes gather at high latitudes instead of spreading evenly
+    private double resolvePolarGain(double latitudeFactor) {
+
+        float polarWeight = SkyColorUtility.smoothstep(
+                LATITUDE_POLAR_START,
+                1f,
+                (float) Math.abs(latitudeFactor));
+
+        return 1.0 + (LATITUDE_POLAR_GAIN - 1.0) * polarWeight;
     }
 
     double wrapFraction(double value) {

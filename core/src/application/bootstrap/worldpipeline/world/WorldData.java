@@ -43,7 +43,7 @@ public class WorldData extends DataPackage {
     // Tilt — seasonal north-south drift of the weather flow, zero for an upright world
     private final float axialTilt;
 
-    // Planetary Offset — fractional position (0-1) along this world's Y span
+    // Planetary Offset — fractional position (0-1) along this world's X span
     // that lines up with the calendar's global reference time at real-world
     // noon. See WorldWrapUtility.wrappedPlanetaryOffset.
     private final float planetaryOffset;

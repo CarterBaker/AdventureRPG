@@ -649,7 +649,8 @@ public class EngineSetting {
     public static final int MAP_EDIT_MARGIN_PIXELS = 2;
     public static final float MAP_NIGHT_ELEVATION_DARK = -0.2f;
     public static final float MAP_NIGHT_ELEVATION_LIGHT = 0.1f;
-    public static final int MAP_OVERLAY_DAYLIGHT_ROWS = 256;
+    public static final int MAP_OVERLAY_DAYLIGHT_COLUMNS = 256;
+    public static final int MAP_OVERLAY_DAYLIGHT_ROWS = 64;
     public static final int MAP_OVERLAY_WEATHER_SAMPLES_PER_FRAME = 512;
     public static final int MAP_OVERLAY_WEATHER_TEXELS = 256;
 
@@ -1128,6 +1129,8 @@ public class EngineSetting {
     public static final float DEFAULT_SEASON_TEMPERATURE_VARIANCE = 5.0f;
     public static final float DEFAULT_SEASON_WIND_VARIANCE = 1.0f;
     public static final float LATITUDE_DAYLENGTH_CURVE_POWER = 1.0f;
+    public static final double LATITUDE_DAYLENGTH_POLAR_GAIN = 3.0;
+    public static final float LATITUDE_DAYLENGTH_POLAR_START = 0.6f;
     public static final float LATITUDE_DAYLENGTH_REFERENCE_TILT_DEGREES = 23.5f;
     public static final float SEASON_BLEND_RECOMPUTE_EPSILON = 0.00001f;
 
@@ -1137,10 +1140,10 @@ public class EngineSetting {
     public static final float CLOCK_NOISE_MIN = 0.001f;
     public static final double CLOCK_NOON = 0.5;
     public static final double CLOCK_QUARTER = 0.25;
-    public static final double CLOCK_SUNRISE_MAX = 0.40;
+    public static final double CLOCK_SUNRISE_MAX = 0.45;
     public static final double CLOCK_SUNRISE_MIN = 0.05;
     public static final double CLOCK_SUNSET_MAX = 0.95;
-    public static final double CLOCK_SUNSET_MIN = 0.60;
+    public static final double CLOCK_SUNSET_MIN = 0.55;
     public static final double CLOCK_THREE_QUARTERS = 0.75;
     public static final long MILLIS_PER_REAL_DAY = 86400000L;
     public static final double MILLIS_PER_SECOND = 1000.0;

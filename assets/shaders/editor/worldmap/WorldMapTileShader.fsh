@@ -25,8 +25,8 @@ out vec4 FragColor;
 // a quarter a coarser tile stands in with. u_worldRect is the same quad as a
 // share of the whole world, which the shared overlays are read across: the
 // weather, held in noise space and slid by the weather flow, tints rain and
-// lays cloud over the land, and day and night, one darkness per band of the
-// world's north-south span, shades the night side.
+// lays cloud over the land, and day and night, one darkness per spot of the
+// world, shades the night side.
 void main() {
     vec2 quad  = vec2(vQuadUV.x, 1.0 - vQuadUV.y);
     vec2 uv    = mix(u_uvRect.xy, u_uvRect.zw, quad);
@@ -40,7 +40,7 @@ void main() {
     }
 
     if (u_showDayNight > 0.5) {
-        float night = texture(u_daylightTexture, vec2(0.5, world.y)).r;
+        float night = texture(u_daylightTexture, world).r;
         color = mix(color, color * u_nightColor.rgb, night * u_nightStrength);
     }
 

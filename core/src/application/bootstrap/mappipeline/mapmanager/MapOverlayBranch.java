@@ -22,9 +22,10 @@ class MapOverlayBranch extends BranchPackage {
     /*
      * Main thread — keeps the two overlays a map view can show over its tiles,
      * both read from the shared world state every grid follows, so every view,
-     * Dev window and preview agrees. Day and night is one texel per band of
-     * the world's north-south span, each the darkness of the visual time of
-     * day ClockManager gives that band, rebuilt every frame it is shown. The
+     * Dev window and preview agrees. Day and night is a grid of texels over
+     * the world, each the darkness of the visual time of day ClockManager
+     * gives that spot, so the night side follows longitude and bends with the
+     * season by latitude, rebuilt every frame it is shown. The
      * weather covers the whole world in noise space, each texel the cloud
      * cover and precipitation of the weather cell beneath it, resampled a
      * budget of texels per frame and uploaded once a pass completes; views
@@ -65,7 +66,9 @@ class MapOverlayBranch extends BranchPackage {
     protected void create() {
 
         // Day and Night
-        this.daylightPixels = new byte[EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS * EngineSetting.COLOR_CHANNEL_COUNT];
+        this.daylightPixels = new byte[EngineSetting.MAP_OVERLAY_DAYLIGHT_COLUMNS
+                * EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS
+                * EngineSetting.COLOR_CHANNEL_COUNT];
         this.daylightBuffer = BufferUtility.newByteBuffer(daylightPixels.length);
         this.dayNightRequestFrame = EngineSetting.INDEX_NOT_FOUND;
 
@@ -149,28 +152,41 @@ class MapOverlayBranch extends BranchPackage {
 
     private void refreshDaylight() {
 
+        int columns = EngineSetting.MAP_OVERLAY_DAYLIGHT_COLUMNS;
+        int rows = EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS;
+
         if (daylightTexture == 0)
             this.daylightTexture = textureManager.createTexture2D(
-                    1, EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS, EngineSetting.GL_REPEAT, EngineSetting.GL_LINEAR);
+                    columns, rows, EngineSetting.GL_REPEAT, EngineSetting.GL_LINEAR);
 
-        int rows = EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS;
+        int worldWidthChunks = worldHandle.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = worldHandle.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
         for (int row = 0; row < rows; row++) {
 
             int chunkZ = (int) ((row + 0.5) / rows * worldHeightChunks);
-            double visualTimeOfDay = clockManager.computeVisualTimeOfDay(worldHandle, Coordinate2Long.pack(0, chunkZ));
-            float night = 1f - SkyColorUtility.smoothstep(
-                    EngineSetting.MAP_NIGHT_ELEVATION_DARK,
-                    EngineSetting.MAP_NIGHT_ELEVATION_LIGHT,
-                    (float) CelestialUtility.resolveSolarElevation(visualTimeOfDay));
 
-            MapShadeUtility.writeTexel(daylightPixels, row, PackedColorUtility.packUnit(night, 0f, 0f));
+            for (int column = 0; column < columns; column++) {
+
+                int chunkX = (int) ((column + 0.5) / columns * worldWidthChunks);
+                double visualTimeOfDay = clockManager.computeVisualTimeOfDay(
+                        worldHandle,
+                        Coordinate2Long.pack(chunkX, chunkZ));
+                float night = 1f - SkyColorUtility.smoothstep(
+                        EngineSetting.MAP_NIGHT_ELEVATION_DARK,
+                        EngineSetting.MAP_NIGHT_ELEVATION_LIGHT,
+                        (float) CelestialUtility.resolveSolarElevation(visualTimeOfDay));
+
+                MapShadeUtility.writeTexel(
+                        daylightPixels,
+                        row * columns + column,
+                        PackedColorUtility.packUnit(night, 0f, 0f));
+            }
         }
 
         daylightBuffer.clear();
         daylightBuffer.put(daylightPixels);
-        textureManager.updateTexture2D(daylightTexture, 0, 0, 1, rows, daylightBuffer);
+        textureManager.updateTexture2D(daylightTexture, 0, 0, columns, rows, daylightBuffer);
 
         this.daylightReady = true;
     }

@@ -144,27 +144,34 @@ public class WorldWrapUtility extends EngineUtility {
         return (long) wrappedDelta(a, b, worldHandle.getWorldScale().y);
     }
 
-    // Y-Axis Fraction \\
+    // Axis Fraction \\
+
+    private static double wrappedXFraction(WorldHandle worldHandle, long chunkCoordinate) {
+        return wrappedFraction(Coordinate2Long.unpackX(chunkCoordinate), worldHandle.getWorldScale().x);
+    }
 
     private static double wrappedYFraction(WorldHandle worldHandle, long chunkCoordinate) {
+        return wrappedFraction(Coordinate2Long.unpackY(chunkCoordinate), worldHandle.getWorldScale().y);
+    }
 
-        int worldHeightChunks = worldHandle.getWorldScale().y / EngineSetting.CHUNK_SIZE;
+    private static double wrappedFraction(long chunk, int worldSpanBlocks) {
 
-        if (worldHeightChunks <= 0)
+        int worldSpanChunks = worldSpanBlocks / EngineSetting.CHUNK_SIZE;
+
+        if (worldSpanChunks <= 0)
             return 0.0;
 
-        long chunkY = Coordinate2Long.unpackY(chunkCoordinate);
-        long wrappedY = ((chunkY % worldHeightChunks) + worldHeightChunks) % worldHeightChunks;
+        long wrapped = ((chunk % worldSpanChunks) + worldSpanChunks) % worldSpanChunks;
 
-        return (double) wrappedY / worldHeightChunks;
+        return (double) wrapped / worldSpanChunks;
     }
 
     // Planetary Phase \\
 
     public static double wrappedPlanetaryOffset(WorldHandle worldHandle, long chunkCoordinate) {
 
-        double yFraction = wrappedYFraction(worldHandle, chunkCoordinate);
-        double offset = yFraction - worldHandle.getPlanetaryOffset();
+        double xFraction = wrappedXFraction(worldHandle, chunkCoordinate);
+        double offset = xFraction - worldHandle.getPlanetaryOffset();
 
         return (offset % 1.0 + 1.0) % 1.0;
     }
