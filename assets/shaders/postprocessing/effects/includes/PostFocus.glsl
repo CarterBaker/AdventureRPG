@@ -12,9 +12,10 @@
  * blur grows with the difference between a surface's inverse distance and
  * the band edge's, as through a real lens: focused near, the background
  * melts away quickly; focused far, only what stands close to the eye
- * softens; focused at infinity, the focus's inverse distance is zero and the
- * sky stays sharp. A surface's distance is the nearer of the world and the
- * water surface over it. The circle of confusion is signed: negative in
+ * softens. The sky has no surface to focus on, so it always stays sharp and
+ * its clouds, stars, sun and moon are never blurred; a blurred foreground
+ * still spills over it. A surface's distance is the nearer of the world and
+ * the water surface over it. The circle of confusion is signed: negative in
  * front of the focus, positive behind it, so the sign orders any two samples
  * by depth.
  */
@@ -27,16 +28,18 @@ const float DOF_APERTURE_SCALE    = 16.0;
 const float DOF_FOCUS_BAND_DEPTH  = 0.75;
 const float DOF_FOCUS_BAND_SHARE  = 0.15;
 const float DOF_FOCUS_BAND_CLOSED = 0.000001;
+const float DOF_SKY_DEPTH         = 1.0;
 
 ivec2 resolveDepthTexel(vec2 uv, ivec2 offset) {
     ivec2 size = textureSize(u_sceneDepth, 0);
     return clamp(ivec2(uv * vec2(size) - 0.5) + offset, ivec2(0), size - 1);
 }
 
-float resolveSurfaceInverseDistance(ivec2 texel) {
+// The raw depth of the nearer of the world and the water surface over it; the nearest of several is the least.
+float resolveSurfaceDepth(ivec2 texel) {
     float worldDepth = texelFetch(u_sceneDepth, texel, 0).r;
     float waterDepth = texelFetch(u_waterDepth, texel, 0).r;
-    return resolveInverseDistance(min(worldDepth, waterDepth));
+    return min(worldDepth, waterDepth);
 }
 
 // Signed blur from 0 in focus to 1 at the widest the depth of field reaches. The sharp band's edges are
@@ -58,8 +61,16 @@ float resolveCoc(float inverseDistance) {
     return diopters > 0.0 ? -blur : blur;
 }
 
+// The circle of confusion of a raw surface depth; the sky, where nothing was drawn, stays sharp.
+float resolveSurfaceCoc(float surfaceDepth) {
+    if (surfaceDepth >= DOF_SKY_DEPTH)
+    return 0.0;
+
+    return resolveCoc(resolveInverseDistance(surfaceDepth));
+}
+
 float resolveCocAt(vec2 uv) {
-    return resolveCoc(resolveSurfaceInverseDistance(resolveDepthTexel(uv, ivec2(0))));
+    return resolveSurfaceCoc(resolveSurfaceDepth(resolveDepthTexel(uv, ivec2(0))));
 }
 
 #endif
