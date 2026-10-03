@@ -88,6 +88,17 @@ public class HierarchyManager extends ManagerPackage {
         tabName2HierarchyTabProvider.put(tabName, provider);
     }
 
+    // Turns every open panel to a provider's tab, as when a tool selects something inside it
+    public void showTab(String tabName) {
+
+        if (!tabName2HierarchyTabProvider.containsKey(tabName))
+            return;
+
+        for (int i = 0; i < openHierarchies.size(); i++)
+            if (!tabName.equals(openHierarchies.get(i).getActiveTabName()))
+                openHierarchies.get(i).setActiveTabName(tabName);
+    }
+
     public HierarchyInstance openHierarchy(WindowInstance window) {
 
         MenuInstance menu = menuManager.openMenu(EngineSetting.MENU_HIERARCHY, window);

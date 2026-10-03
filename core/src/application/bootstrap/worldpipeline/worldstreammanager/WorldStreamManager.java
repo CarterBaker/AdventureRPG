@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.worldstreammanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -10,6 +11,7 @@ import application.bootstrap.worldpipeline.macrostreammanager.MacroStreamManager
 import application.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -21,11 +23,15 @@ public class WorldStreamManager extends ManagerPackage {
      * frame. Chunks, megas and the distant macro terrain beyond the grid each
      * stream through their own manager. A rebuild re-lays a grid's slots in
      * place, and the frame a grid wraps around the player raises
-     * wrappingPlayer so WorldTickManager holds off.
+     * wrappingPlayer so WorldTickManager holds off. Live world and biome edits
+     * rebuild every grid once they have been quiet for a moment, so every
+     * preview and Dev window streams the edited terrain without a flood of
+     * rebuilds while a brush is dragged.
      */
 
     // Internal
     private GridManager gridManager;
+    private BiomeManager biomeManager;
     private ChunkStreamManager chunkStreamManager;
     private MegaStreamManager megaStreamManager;
     private MacroStreamManager macroStreamManager;
@@ -35,6 +41,11 @@ public class WorldStreamManager extends ManagerPackage {
 
     // Tick Coordination
     private boolean wrappingPlayer;
+
+    // Live Rebuild
+    private int rebuiltBiomeRevision;
+    private boolean liveRebuildPending;
+    private float liveRebuildCountdown;
 
     // Internal \\
 
@@ -50,6 +61,7 @@ public class WorldStreamManager extends ManagerPackage {
     @Override
     protected void get() {
         this.gridManager = get(GridManager.class);
+        this.biomeManager = get(BiomeManager.class);
     }
 
     @Override
@@ -64,6 +76,41 @@ public class WorldStreamManager extends ManagerPackage {
                 rebuilt = true;
 
         this.wrappingPlayer = rebuilt;
+        advanceLiveRebuild();
+    }
+
+    // Live Rebuild \\
+
+    public void requestLiveRebuild() {
+
+        if (grids.isEmpty())
+            return;
+
+        this.liveRebuildPending = true;
+        this.liveRebuildCountdown = EngineSetting.WORLD_LIVE_REBUILD_DELAY_SECONDS;
+    }
+
+    private void advanceLiveRebuild() {
+
+        int biomeRevision = biomeManager.getRevision();
+
+        if (biomeRevision != rebuiltBiomeRevision) {
+            this.rebuiltBiomeRevision = biomeRevision;
+            requestLiveRebuild();
+        }
+
+        if (!liveRebuildPending)
+            return;
+
+        liveRebuildCountdown -= internal.getDeltaTime();
+
+        if (liveRebuildCountdown > 0f)
+            return;
+
+        this.liveRebuildPending = false;
+
+        for (int i = 0; i < grids.size(); i++)
+            rebuildGrid(grids.get(i));
     }
 
     // Grid Lifecycle \\

@@ -1,6 +1,9 @@
 package editor.bootstrap.worldeditorpipeline.worldeditormanager;
 
+import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.runtime.EditorSetting;
@@ -15,6 +18,9 @@ class WorldBiomeBranch extends BranchPackage {
      * live and a deleted one retired from the world map, so every map view
      * and window updates at once. An edit the engine refuses leaves the biome
      * as it was and reports why, in the world editor's status and the log.
+     * Biome selection runs both ways: a biome chosen in the world editor or
+     * clicked on a map is selected in the hierarchy, and a biome selected
+     * there becomes the world editor's brush when it paints the world.
      */
 
     // Internal
@@ -22,7 +28,15 @@ class WorldBiomeBranch extends BranchPackage {
     private BiomeManager biomeManager;
     private WorldEditorManager worldEditorManager;
 
+    // Scratch
+    private BiomeBlendStruct blend;
+
     // Base \\
+
+    @Override
+    protected void create() {
+        this.blend = new BiomeBlendStruct();
+    }
 
     @Override
     protected void get() {
@@ -35,6 +49,27 @@ class WorldBiomeBranch extends BranchPackage {
     protected void awake() {
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_BIOMES, this::rebuildBiome);
         infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_BIOMES, this::retireBiome);
+        infoManager.addSelectionListener(
+                EditorSetting.INFO_SCHEMA_BIOMES,
+                entry -> worldEditorManager.applyBiomeSelection(entry.getEntryName()));
+    }
+
+    // Selection \\
+
+    void selectInHierarchy(String biomeName) {
+        infoManager.selectEntry(EditorSetting.INFO_SCHEMA_BIOMES, biomeName, biomeName);
+    }
+
+    // The biome that dominates the field at a world position, as generation resolves it
+    void selectBiomeAt(WorldHandle worldHandle, double worldX, double worldZ) {
+
+        biomeManager.sampleBiomeField(
+                worldHandle,
+                WorldWrapUtility.wrapBlockX(worldHandle, worldX),
+                WorldWrapUtility.wrapBlockZ(worldHandle, worldZ),
+                blend);
+
+        selectInHierarchy(blend.getDominantBiome().getBiomeName());
     }
 
     // Live Edit \\

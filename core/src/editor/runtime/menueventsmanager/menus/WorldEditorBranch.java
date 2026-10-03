@@ -1,15 +1,18 @@
 package editor.runtime.menueventsmanager.menus;
 
+import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
+import editor.worldeditor.WorldEditorContext;
 import engine.root.BranchPackage;
 
 public class WorldEditorBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the World Editor toolbar and biome palette.
-     * Every action works on the shared world image; palette rows carry their
-     * biome's name.
+     * Every action works on the shared world image, except the player marker
+     * toggle, which targets the editor its button was clicked in; palette
+     * rows carry their biome's name.
      */
 
     // Internal
@@ -60,6 +63,11 @@ public class WorldEditorBranch extends BranchPackage {
 
     public void growBrush() {
         worldEditorManager.resizeBrush(1);
+    }
+
+    public void togglePlayers(WindowInstance window) {
+        if (window.getContext() instanceof WorldEditorContext worldEditorContext)
+            worldEditorContext.togglePlayers();
     }
 
     // Palette \\

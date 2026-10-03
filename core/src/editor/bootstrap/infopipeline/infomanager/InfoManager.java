@@ -1,5 +1,6 @@
 package editor.bootstrap.infopipeline.infomanager;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import application.bootstrap.menupipeline.hierarchy.HierarchyNodeStruct;
@@ -234,6 +235,22 @@ public class InfoManager extends ManagerPackage {
         InfoDocumentInstance document = findDocument(schema, entryKey.substring(0, separator));
 
         select(schema, document, entryKey.substring(separator + EditorSetting.HIERARCHY_KEY_SEPARATOR.length()), null);
+    }
+
+    // Selects an entry for a tool, turning every hierarchy panel to its tab
+    public void selectEntry(String schemaName, String definitionName, String entryName) {
+
+        InfoSchemaHandle schema = getSchema(schemaName);
+        InfoDocumentInstance document = findDocument(schema, definitionName);
+        String selectedName = schema.isArrayLayout() ? entryName : null;
+
+        if (document == null)
+            return;
+
+        if (schema != activeSchema || document != selectedDocument || !Objects.equals(selectedName, selectedEntryName))
+            select(schema, document, selectedName, null);
+
+        hierarchyManager.showTab(schema.getTabName());
     }
 
     private void select(

@@ -45,6 +45,7 @@ public class WorldMapSetting {
 
     // Mouse
     public static final int BUTTON_PAN = Buttons.LEFT;
+    public static final float CLICK_SLOP_PIXELS = 4f;
 
     // Menus
     public static final String MENU_STATUS = "editor/WorldMap/Status";

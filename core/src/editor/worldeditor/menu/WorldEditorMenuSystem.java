@@ -11,6 +11,7 @@ import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.EditorSetting;
 import editor.worldeditor.WorldEditorSetting;
+import editor.worldeditor.render.WorldEditorRenderSystem;
 import editor.worldeditor.tool.WorldEditorToolSystem;
 import engine.graphics.color.Color;
 import engine.graphics.color.PackedColorUtility;
@@ -23,7 +24,8 @@ public class WorldEditorMenuSystem extends SystemPackage {
     /*
      * Opens the World Editor toolbar and biome palette over the viewport. The
      * status line names the image, tool, brush and biome, with the pixel and
-     * biome under the pointer, and rewrites only on change. When the palette
+     * biome under the pointer, and rewrites only on change, as does the
+     * player marker button's label. When the palette
      * moves it lists every biome the image can paint, one row per biome with
      * its color swatch and name, the selected one highlighted and every row
      * carrying its biome's name.
@@ -34,6 +36,7 @@ public class WorldEditorMenuSystem extends SystemPackage {
     private FBOManager fboManager;
     private WorldEditorManager worldEditorManager;
     private WorldEditorToolSystem worldEditorToolSystem;
+    private WorldEditorRenderSystem worldEditorRenderSystem;
 
     // Menus
     private MenuInstance toolbarMenu;
@@ -44,6 +47,7 @@ public class WorldEditorMenuSystem extends SystemPackage {
 
     // Status
     private String shownStatus;
+    private String shownPlayers;
 
     // Base \\
 
@@ -61,6 +65,7 @@ public class WorldEditorMenuSystem extends SystemPackage {
         this.fboManager = get(FBOManager.class);
         this.worldEditorManager = get(WorldEditorManager.class);
         this.worldEditorToolSystem = get(WorldEditorToolSystem.class);
+        this.worldEditorRenderSystem = get(WorldEditorRenderSystem.class);
     }
 
     @Override
@@ -85,6 +90,7 @@ public class WorldEditorMenuSystem extends SystemPackage {
     protected void update() {
 
         refreshStatus();
+        refreshPlayers();
 
         if (worldEditorManager.getPaletteRevision() == shownPaletteRevision)
             return;
@@ -112,6 +118,23 @@ public class WorldEditorMenuSystem extends SystemPackage {
 
         if (statusLabel != null)
             statusLabel.setFontText(status);
+    }
+
+    private void refreshPlayers() {
+
+        String players = worldEditorRenderSystem.isShowingPlayers()
+                ? EditorSetting.WORLD_EDITOR_PLAYERS_ON
+                : EditorSetting.WORLD_EDITOR_PLAYERS_OFF;
+
+        if (players.equals(shownPlayers))
+            return;
+
+        shownPlayers = players;
+
+        ElementInstance playersLabel = toolbarMenu.getEntryPoint(WorldEditorSetting.ENTRY_PLAYERS_LABEL);
+
+        if (playersLabel != null)
+            playersLabel.setFontText(players);
     }
 
     // Palette \\

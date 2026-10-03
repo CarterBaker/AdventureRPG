@@ -1,23 +1,19 @@
 package editor.worldmap.view;
 
-import application.bootstrap.entitypipeline.entity.EntityInstance;
-import application.bootstrap.entitypipeline.playermanager.PlayerManager;
+import application.bootstrap.mappipeline.map.MapMarkerStruct;
 import application.bootstrap.mappipeline.map.MapViewStruct;
 import application.bootstrap.mappipeline.mapmanager.MapManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
-import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.EditorInputSystem;
 import editor.worldmap.WorldMapSetting;
-import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.extras.Coordinate2Long;
-import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldMapViewSystem extends SystemPackage {
@@ -26,22 +22,23 @@ public class WorldMapViewSystem extends SystemPackage {
      * Where the world map looks and what it follows. The map shows the world
      * of the first streaming grid with a focal entity, or the active world
      * while no preview is open, north up, and tracks that character's
-     * position and facing every frame. It also holds which shared overlays,
-     * day and night and weather, this map shows. Scrolling zooms about
-     * the pointer, from a few pixels per block out to the whole world, and
-     * dragging pans; panning lets go of the character, and following snaps
-     * the view back onto it. The settled view is handed to the engine's map
-     * each frame, which answers with the tiles to draw. Positions are world
-     * blocks, wrapped like the world itself, and screen positions are window
-     * pixels with y up.
+     * position and facing every frame through the engine's map markers. It
+     * also holds which shared overlays, day and night and weather, this map
+     * shows. Scrolling zooms about the pointer, from a few pixels per block
+     * out to the whole world, and dragging pans; panning lets go of the
+     * character, and following snaps the view back onto it. A click that
+     * does not drag selects the biome under the pointer in the hierarchy. The
+     * settled view is handed to the engine's map each frame, which answers
+     * with the tiles to draw. Positions are world blocks, wrapped like the
+     * world itself, and screen positions are window pixels with y up.
      */
 
     // Internal
     private EditorInputSystem editorInputSystem;
     private WorldStreamManager worldStreamManager;
     private WorldManager worldManager;
-    private PlayerManager playerManager;
     private MapManager mapManager;
+    private WorldEditorManager worldEditorManager;
 
     // World
     private GridInstance grid;
@@ -62,13 +59,12 @@ public class WorldMapViewSystem extends SystemPackage {
     private boolean panning;
     private float lastMouseX;
     private float lastMouseY;
+    private float pressMouseX;
+    private float pressMouseY;
 
     // Player
     private boolean hasPlayer;
-    private double playerX;
-    private double playerZ;
-    private float headingX;
-    private float headingZ;
+    private MapMarkerStruct playerMarker;
 
     // Base \\
 
@@ -77,7 +73,7 @@ public class WorldMapViewSystem extends SystemPackage {
         this.mapView = new MapViewStruct();
         this.blocksPerPixel = WorldMapSetting.DEFAULT_BLOCKS_PER_PIXEL;
         this.following = true;
-        this.headingZ = -1f;
+        this.playerMarker = new MapMarkerStruct();
     }
 
     @Override
@@ -85,8 +81,8 @@ public class WorldMapViewSystem extends SystemPackage {
         this.editorInputSystem = get(EditorInputSystem.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.worldManager = get(WorldManager.class);
-        this.playerManager = get(PlayerManager.class);
         this.mapManager = get(MapManager.class);
+        this.worldEditorManager = get(WorldEditorManager.class);
     }
 
     // Update \\
@@ -101,8 +97,8 @@ public class WorldMapViewSystem extends SystemPackage {
         handlePan();
 
         if (following && hasPlayer) {
-            centerX = playerX;
-            centerZ = playerZ;
+            centerX = playerMarker.getX();
+            centerZ = playerMarker.getZ();
         }
 
         centerX = WorldWrapUtility.wrapBlockX(worldHandle, centerX);
@@ -152,30 +148,8 @@ public class WorldMapViewSystem extends SystemPackage {
 
         hasPlayer = grid != null;
 
-        if (!hasPlayer)
-            return;
-
-        EntityInstance focalEntity = grid.getFocalEntity();
-        WorldPositionStruct position = focalEntity.getWorldPositionStruct();
-        long chunkCoordinate = position.getChunkCoordinate();
-        Vector3 local = position.getPosition();
-
-        playerX = (double) Coordinate2Long.unpackX(chunkCoordinate) * EngineSetting.CHUNK_SIZE + local.x;
-        playerZ = (double) Coordinate2Long.unpackY(chunkCoordinate) * EngineSetting.CHUNK_SIZE + local.z;
-
-        WindowInstance gridWindow = grid.getWindowInstance();
-
-        if (gridWindow == null || !playerManager.hasPlayerForWindow(gridWindow.getWindowID()))
-            return;
-
-        Vector3 direction = playerManager.getCameraForWindow(gridWindow.getWindowID()).getDirection();
-        float length = (float) Math.sqrt(direction.x * direction.x + direction.z * direction.z);
-
-        if (length <= 0f)
-            return;
-
-        headingX = direction.x / length;
-        headingZ = direction.z / length;
+        if (hasPlayer)
+            mapManager.resolveMarker(grid, playerMarker);
     }
 
     // Input \\
@@ -210,11 +184,20 @@ public class WorldMapViewSystem extends SystemPackage {
         float mouseX = rawInput.getMouseX();
         float mouseY = rawInput.getMouseY();
 
-        if (editorInputSystem.isClicked(WorldMapSetting.BUTTON_PAN))
+        if (editorInputSystem.isClicked(WorldMapSetting.BUTTON_PAN)) {
             panning = true;
+            pressMouseX = mouseX;
+            pressMouseY = mouseY;
+        }
 
-        if (!rawInput.isButtonHeld(WorldMapSetting.BUTTON_PAN))
+        if (panning && !rawInput.isButtonHeld(WorldMapSetting.BUTTON_PAN)) {
+
             panning = false;
+
+            if (Math.abs(mouseX - pressMouseX) <= WorldMapSetting.CLICK_SLOP_PIXELS
+                    && Math.abs(mouseY - pressMouseY) <= WorldMapSetting.CLICK_SLOP_PIXELS)
+                worldEditorManager.selectBiomeAt(worldHandle, screenToWorldX(mouseX), screenToWorldZ(mouseY));
+        }
 
         if (panning && (mouseX != lastMouseX || mouseY != lastMouseY)) {
             following = false;
@@ -303,18 +286,18 @@ public class WorldMapViewSystem extends SystemPackage {
     }
 
     public double getPlayerX() {
-        return playerX;
+        return playerMarker.getX();
     }
 
     public double getPlayerZ() {
-        return playerZ;
+        return playerMarker.getZ();
     }
 
     public float getHeadingX() {
-        return headingX;
+        return playerMarker.getHeadingX();
     }
 
     public float getHeadingZ() {
-        return headingZ;
+        return playerMarker.getHeadingZ();
     }
 }

@@ -159,6 +159,8 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_TOOL_BRUSH = "Brush";
     public static final String WORLD_EDITOR_TOOL_FILL = "Fill";
     public static final String WORLD_EDITOR_TOOL_PICK = "Pick";
+    public static final String WORLD_EDITOR_PLAYERS_ON = "Players On";
+    public static final String WORLD_EDITOR_PLAYERS_OFF = "Players Off";
     public static final String WORLD_EDITOR_DIRTY_MARKER = "*";
     public static final String WORLD_EDITOR_STATUS_SEPARATOR = "  |  ";
     public static final String WORLD_EDITOR_STATUS_RADIUS = "Radius ";

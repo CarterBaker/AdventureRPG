@@ -653,6 +653,9 @@ public class EngineSetting {
     public static final int MAP_OVERLAY_WEATHER_SAMPLES_PER_FRAME = 512;
     public static final int MAP_OVERLAY_WEATHER_TEXELS = 256;
 
+    // World — live edits stream every loaded grid again once edits have been quiet this long
+    public static final float WORLD_LIVE_REBUILD_DELAY_SECONDS = 0.4f;
+
     // Sub-Block
     public static final int CHUNK_VERTEX_FLOAT_COUNT = 15;
     public static final int GEOMETRY_EDGE_BITS_PER_CELL = 4;

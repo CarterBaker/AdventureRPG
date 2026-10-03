@@ -3,10 +3,12 @@ package application.bootstrap.mappipeline.mapmanager;
 import java.nio.ByteBuffer;
 
 import application.bootstrap.mappipeline.map.MapDrawStruct;
+import application.bootstrap.mappipeline.map.MapMarkerStruct;
 import application.bootstrap.mappipeline.map.MapTileInstance;
 import application.bootstrap.mappipeline.map.MapViewStruct;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -35,7 +37,7 @@ public class MapManager extends ManagerPackage {
      * or every tile once a biome is rebuilt — and a stale tile keeps showing
      * until its fresh pixels upload, so edits sharpen in place. Views may also
      * show the shared day and night and weather overlays MapOverlayBranch
-     * keeps over their tiles.
+     * keeps over their tiles, and any map can ask where the players stand.
      */
 
     // Internal
@@ -44,6 +46,7 @@ public class MapManager extends ManagerPackage {
     private MapGenerationBranch mapGenerationBranch;
     private MapChunkBranch mapChunkBranch;
     private MapOverlayBranch mapOverlayBranch;
+    private MapMarkerBranch mapMarkerBranch;
 
     // World
     private WorldHandle worldHandle;
@@ -73,6 +76,7 @@ public class MapManager extends ManagerPackage {
         this.mapGenerationBranch = create(MapGenerationBranch.class);
         this.mapChunkBranch = create(MapChunkBranch.class);
         this.mapOverlayBranch = create(MapOverlayBranch.class);
+        this.mapMarkerBranch = create(MapMarkerBranch.class);
 
         // Palette
         this.key2MapTile = new Long2ObjectOpenHashMap<>();
@@ -271,6 +275,16 @@ public class MapManager extends ManagerPackage {
 
         if (view.isShowingWeather())
             mapOverlayBranch.requestWeather(frame);
+    }
+
+    // Markers \\
+
+    public int resolveMarkers(WorldHandle markerWorldHandle, ObjectArrayList<MapMarkerStruct> markers) {
+        return mapMarkerBranch.resolveMarkers(markerWorldHandle, markers);
+    }
+
+    public void resolveMarker(GridInstance grid, MapMarkerStruct marker) {
+        mapMarkerBranch.resolveMarker(grid, marker);
     }
 
     // Live Edits \\

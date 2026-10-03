@@ -4,6 +4,7 @@ import application.bootstrap.mappipeline.mapmanager.MapManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
@@ -23,15 +24,20 @@ public class WorldEditorManager extends ManagerPackage {
      * every stroke at once, the palette of biomes the image can paint, the
      * selected biome, tool and brush radius, and the status line. Each edited
      * region is handed to MapManager, which regenerates only the map tiles it
-     * reaches, and the palette follows every live biome rebuild. Biome edits
-     * from the Info Panel reach the engine through WorldBiomeBranch.
+     * reaches, and to WorldStreamManager, which streams every preview's
+     * terrain again once the edits settle; the palette follows every live
+     * biome rebuild. Biome edits from the Info Panel reach the engine, and
+     * biome selection stays in step with the hierarchy, through
+     * WorldBiomeBranch.
      */
 
     // Internal
     private WorldManager worldManager;
     private BiomeManager biomeManager;
     private MapManager mapManager;
+    private WorldStreamManager worldStreamManager;
     private ImageManager imageManager;
+    private WorldBiomeBranch worldBiomeBranch;
 
     // World
     private WorldHandle worldHandle;
@@ -60,7 +66,7 @@ public class WorldEditorManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        create(WorldBiomeBranch.class);
+        this.worldBiomeBranch = create(WorldBiomeBranch.class);
 
         // Palette
         this.palette = new ObjectArrayList<>();
@@ -79,6 +85,7 @@ public class WorldEditorManager extends ManagerPackage {
         this.worldManager = get(WorldManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.mapManager = get(MapManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
         this.imageManager = get(ImageManager.class);
     }
 
@@ -101,8 +108,11 @@ public class WorldEditorManager extends ManagerPackage {
         String imageName = activeWorld.getWorldName();
 
         if (!imageManager.hasImage(imageName))
-            imageManager.addEditListener(imageName, region -> mapManager.invalidateWorldPixels(
-                    activeWorld, region.getMinX(), region.getMinY(), region.getMaxX(), region.getMaxY()));
+            imageManager.addEditListener(imageName, region -> {
+                mapManager.invalidateWorldPixels(
+                        activeWorld, region.getMinX(), region.getMinY(), region.getMaxX(), region.getMaxY());
+                worldStreamManager.requestLiveRebuild();
+            });
 
         this.worldHandle = activeWorld;
         this.worldImage = imageManager.openImage(imageName, activeWorld.getWorldFile(), activeWorld.getWorld(), true);
@@ -158,11 +168,26 @@ public class WorldEditorManager extends ManagerPackage {
 
     public void selectBiome(String biomeName) {
 
-        if (findEntry(biomeName) == null)
-            return;
+        if (applyBiomeSelection(biomeName))
+            worldBiomeBranch.selectInHierarchy(biomeName);
+    }
 
-        this.selectedBiomeName = biomeName;
-        notifyPaletteChanged();
+    // Selects a painted biome as the brush without touching the hierarchy, which may be what chose it
+    boolean applyBiomeSelection(String biomeName) {
+
+        if (findEntry(biomeName) == null)
+            return false;
+
+        if (!biomeName.equals(selectedBiomeName)) {
+            this.selectedBiomeName = biomeName;
+            notifyPaletteChanged();
+        }
+
+        return true;
+    }
+
+    public void selectBiomeAt(WorldHandle biomeWorldHandle, double worldX, double worldZ) {
+        worldBiomeBranch.selectBiomeAt(biomeWorldHandle, worldX, worldZ);
     }
 
     // Tools \\
@@ -328,6 +353,12 @@ public class WorldEditorManager extends ManagerPackage {
     }
 
     // Accessible \\
+
+    public WorldHandle getWorldHandle() {
+
+        getWorldImage();
+        return worldHandle;
+    }
 
     public ObjectArrayList<WorldBiomeEntryStruct> getPalette() {
         return palette;
