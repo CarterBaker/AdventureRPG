@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.macrostreammanager;
 
+import application.bootstrap.mappipeline.util.MapShadeUtility;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroDataSyncContainer;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -19,7 +20,10 @@ public class MacroBuildBranch extends BranchPackage {
      * distance calls for: the ground with its detail, down to the sea floor,
      * colored from the average albedo of the blocks a chunk would dress it
      * with, and where the sea stands over it, which becomes the tile's patch
-     * of the open water mask. No block, neighbor or chunk is ever touched.
+     * of the open water mask. Still water at its own level is no part of the
+     * sea's plane, so the lattice rises to its surface and wears its water,
+     * shaded by depth as the map shades it. No block, neighbor or chunk is
+     * ever touched.
      * The target is read on the main thread when the build is reserved,
      * sampling runs outside the macro's lock since a reserved build pins the
      * macro, and only the assembly into its shared buffers runs under it.
@@ -113,11 +117,14 @@ public class MacroBuildBranch extends BranchPackage {
                         originZ + z * cellSizeBlocks,
                         sample);
 
-                float height = sample.getGroundHeightBlocks() + surfaceOffsetBlocks;
+                boolean lakeWater = sample.isLakeWater();
+                int topColor = resolveTopColor(sample);
+                float height = (lakeWater ? sample.getWaterSurfaceBlocks() : sample.getGroundHeightBlocks())
+                        + surfaceOffsetBlocks;
 
                 scratch.heightBlocks[index] = height;
-                scratch.topColors[index] = sample.getTopColor();
-                scratch.sideColors[index] = sample.getSideColor();
+                scratch.topColors[index] = topColor;
+                scratch.sideColors[index] = lakeWater ? topColor : sample.getSideColor();
                 scratch.openWater[index] = sample.isOpenWater();
                 scratch.minHeightBlocks = Math.min(scratch.minHeightBlocks, height);
 
@@ -125,5 +132,15 @@ public class MacroBuildBranch extends BranchPackage {
                     scratch.openWaterCount++;
             }
         }
+    }
+
+    // Still water wears the map's water shade over its floor; everything else its own top
+    private int resolveTopColor(TerrainSurfaceSampleStruct sample) {
+
+        if (!sample.isLakeWater())
+            return sample.getTopColor();
+
+        return MapShadeUtility.shadeWater(
+                sample.getTopColor(), sample.getWaterSurfaceBlocks() - sample.getGroundHeightBlocks());
     }
 }

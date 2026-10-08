@@ -4,6 +4,7 @@ import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import engine.root.BranchPackage;
@@ -107,6 +108,12 @@ class BiomeRebuildBranch extends BranchPackage {
         requireBlock(biomeData.getBiomeName(), biomeData.getSurfaceBlockName(), "surface_block");
         requireBlock(biomeData.getBiomeName(), biomeData.getSubsurfaceBlockName(), "subsurface_block");
         requireBlock(biomeData.getBiomeName(), biomeData.getUnderwaterBlockName(), "underwater_block");
+        requireBlock(biomeData.getBiomeName(), biomeData.getRockBlockName(), "rock_block");
+
+        ObjectArrayList<BiomeVeinStruct> veins = biomeData.getVeins();
+
+        for (int i = 0; i < veins.size(); i++)
+            requireBlock(biomeData.getBiomeName(), veins.get(i).getBlockName(), "veins");
     }
 
     private void validateWeathers(BiomeData biomeData) {

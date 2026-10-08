@@ -367,6 +367,23 @@ public class SubChunkInstance extends WorldRenderInstance {
         blockPaletteHandle.setLiquidTidal(packedXYZ, true);
     }
 
+    // A full, permanent cell of still water that keeps its own level, untouched by the tide
+    public void writeStillLiquid(int packedXYZ, short liquidBlockID) {
+
+        ensurePopulated();
+
+        if (blockPaletteHandle.getBlock(packedXYZ) != liquidBlockID)
+            blockPaletteHandle.setBlock(packedXYZ, liquidBlockID);
+
+        knownEmpty = false;
+        uniformFill = false;
+        opaqueInterior = false;
+
+        blockPaletteHandle.setLiquidLevel(packedXYZ, EngineSetting.LIQUID_LEVEL_MAX);
+        blockPaletteHandle.setLiquidPermanent(packedXYZ, true);
+        blockPaletteHandle.setLiquidTidal(packedXYZ, false);
+    }
+
     // Liquid Activity \\
 
     public void activateLiquid(int packedXYZ) {

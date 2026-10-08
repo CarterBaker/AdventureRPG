@@ -100,6 +100,14 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getUnderwaterBlockName();
     }
 
+    public String getRockBlockName() {
+        return biomeData.getRockBlockName();
+    }
+
+    public float getRockSlope() {
+        return biomeData.getRockSlope();
+    }
+
     public LinearSpline getContinentalnessSpline() {
         return biomeData.getContinentalnessSpline();
     }
@@ -124,8 +132,36 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getTerrainHeightScale();
     }
 
+    public BiomeCliffStruct getCliffs() {
+        return biomeData.getCliffs();
+    }
+
+    public BiomeRidgeStruct getRidges() {
+        return biomeData.getRidges();
+    }
+
+    public BiomeCoastStruct getCoast() {
+        return biomeData.getCoast();
+    }
+
+    public BiomeCaveStruct getCaves() {
+        return biomeData.getCaves();
+    }
+
+    public ObjectArrayList<BiomeVeinStruct> getVeins() {
+        return biomeData.getVeins();
+    }
+
     public boolean hasOceanWater() {
         return biomeData.hasOceanWater();
+    }
+
+    public int getWaterLevelBlocks() {
+        return biomeData.getWaterLevelBlocks();
+    }
+
+    public boolean hasLakeWater() {
+        return biomeData.hasLakeWater();
     }
 
     public String getBeachBiomeName() {

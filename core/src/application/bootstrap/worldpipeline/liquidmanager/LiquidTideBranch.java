@@ -12,10 +12,13 @@ import engine.util.mathematics.extras.Coordinate3Int;
 class LiquidTideBranch extends BranchPackage {
 
     /*
-     * Re-levels one chunk's ocean to a new tide surface. Visits only
-     * ocean-reached columns within the tide band, filling or draining tidal
-     * cells while open water connects them to the sea floor, so the tide rises
-     * around structures. Flow-owned water is untouched and nothing is woken.
+     * Re-levels one chunk's ocean to a new tide surface. Visits only columns
+     * the tide reaches within the tide band, from the sea floor or the lowest
+     * cell of a sea cave that opens on it, filling or draining tidal cells
+     * while open water connects them to that floor, so the tide rises around
+     * structures and into coves. Above an ocean column's ground the water is
+     * always open to the sea. Flow-owned water is untouched and nothing is
+     * woken.
      */
 
     // Internal
@@ -69,14 +72,15 @@ class LiquidTideBranch extends BranchPackage {
             int surfaceLevels) {
 
         int columnIndex = localZ * EngineSetting.CHUNK_SIZE + localX;
-
-        if (!terrainCache.hasOceanWater(columnIndex))
-            return;
-
-        int fromY = Math.max(terrainCache.getGroundHeightBlocks(columnIndex) + 1, TideUtility.BAND_MIN_Y);
+        int openY = terrainCache.hasOceanWater(columnIndex)
+                ? terrainCache.getGroundHeightBlocks(columnIndex) + 1
+                : Integer.MAX_VALUE;
         boolean open = true;
 
-        for (int worldY = fromY; worldY <= TideUtility.BAND_MAX_Y; worldY++) {
+        for (int worldY = terrainCache.getTideFloorY(columnIndex); worldY <= TideUtility.BAND_MAX_Y; worldY++) {
+
+            if (worldY == openY)
+                open = true;
 
             SubChunkInstance subChunkInstance = chunkInstance.getSubChunk(worldY / EngineSetting.CHUNK_SIZE);
             int packedXYZ = Coordinate3Int.pack(localX, worldY % EngineSetting.CHUNK_SIZE, localZ);

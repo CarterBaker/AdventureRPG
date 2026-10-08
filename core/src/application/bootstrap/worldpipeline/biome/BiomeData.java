@@ -14,11 +14,14 @@ public class BiomeData extends DataPackage {
      * Persistent biome record: registry and display names and every curve world
      * generation shapes this biome with — continentalness, erosion and
      * peaks-valleys splines, detail amplitude and wavelength, height scale —
-     * plus its ocean flag, beach biome and the probable biomes chained into
-     * it. Omitted curves default to TerrainShapeUtility's.
+     * its cliffs, ridges, coast, caves and veins, the rock its steep faces
+     * bare and the slope they bare it from, plus its ocean flag, the level of
+     * its own still water, its beach biome and the probable biomes chained
+     * into it. Omitted curves default to TerrainShapeUtility's.
      */
 
     public static final int MAP_COLOR_UNDEFINED = EngineSetting.BIOME_MAP_COLOR_UNDEFINED;
+    public static final int WATER_LEVEL_UNDEFINED = EngineSetting.LAKE_LEVEL_UNDEFINED;
 
     private final String biomeName;
     private final String displayName;
@@ -36,6 +39,8 @@ public class BiomeData extends DataPackage {
     private final String surfaceBlockName;
     private final String subsurfaceBlockName;
     private final String underwaterBlockName;
+    private final String rockBlockName;
+    private final float rockSlope;
 
     private final LinearSpline continentalnessSpline;
     private final LinearSpline erosionSpline;
@@ -44,7 +49,14 @@ public class BiomeData extends DataPackage {
     private final float detailWavelengthBlocks;
     private final float terrainHeightScale;
 
+    private final BiomeCliffStruct cliffs;
+    private final BiomeRidgeStruct ridges;
+    private final BiomeCoastStruct coast;
+    private final BiomeCaveStruct caves;
+    private final ObjectArrayList<BiomeVeinStruct> veins;
+
     private final boolean oceanWater;
+    private final int waterLevelBlocks;
     private final String beachBiomeName;
 
     public BiomeData(
@@ -60,13 +72,21 @@ public class BiomeData extends DataPackage {
             String surfaceBlockName,
             String subsurfaceBlockName,
             String underwaterBlockName,
+            String rockBlockName,
+            float rockSlope,
             LinearSpline continentalnessSpline,
             LinearSpline erosionSpline,
             LinearSpline peaksValleysSpline,
             float detailAmplitudeBlocks,
             float detailWavelengthBlocks,
             float terrainHeightScale,
+            BiomeCliffStruct cliffs,
+            BiomeRidgeStruct ridges,
+            BiomeCoastStruct coast,
+            BiomeCaveStruct caves,
+            ObjectArrayList<BiomeVeinStruct> veins,
             boolean oceanWater,
+            int waterLevelBlocks,
             String beachBiomeName) {
 
         this.biomeName = biomeName;
@@ -85,6 +105,8 @@ public class BiomeData extends DataPackage {
         this.surfaceBlockName = surfaceBlockName;
         this.subsurfaceBlockName = subsurfaceBlockName;
         this.underwaterBlockName = underwaterBlockName;
+        this.rockBlockName = rockBlockName;
+        this.rockSlope = rockSlope;
 
         this.continentalnessSpline = continentalnessSpline;
         this.erosionSpline = erosionSpline;
@@ -93,7 +115,14 @@ public class BiomeData extends DataPackage {
         this.detailWavelengthBlocks = detailWavelengthBlocks;
         this.terrainHeightScale = terrainHeightScale;
 
+        this.cliffs = cliffs;
+        this.ridges = ridges;
+        this.coast = coast;
+        this.caves = caves;
+        this.veins = veins;
+
         this.oceanWater = oceanWater;
+        this.waterLevelBlocks = waterLevelBlocks;
         this.beachBiomeName = beachBiomeName;
     }
 
@@ -153,6 +182,14 @@ public class BiomeData extends DataPackage {
         return underwaterBlockName;
     }
 
+    public String getRockBlockName() {
+        return rockBlockName;
+    }
+
+    public float getRockSlope() {
+        return rockSlope;
+    }
+
     public LinearSpline getContinentalnessSpline() {
         return continentalnessSpline;
     }
@@ -177,8 +214,36 @@ public class BiomeData extends DataPackage {
         return terrainHeightScale;
     }
 
+    public BiomeCliffStruct getCliffs() {
+        return cliffs;
+    }
+
+    public BiomeRidgeStruct getRidges() {
+        return ridges;
+    }
+
+    public BiomeCoastStruct getCoast() {
+        return coast;
+    }
+
+    public BiomeCaveStruct getCaves() {
+        return caves;
+    }
+
+    public ObjectArrayList<BiomeVeinStruct> getVeins() {
+        return veins;
+    }
+
     public boolean hasOceanWater() {
         return oceanWater;
+    }
+
+    public int getWaterLevelBlocks() {
+        return waterLevelBlocks;
+    }
+
+    public boolean hasLakeWater() {
+        return waterLevelBlocks != WATER_LEVEL_UNDEFINED;
     }
 
     public String getBeachBiomeName() {

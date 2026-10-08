@@ -822,6 +822,97 @@ public class EngineSetting {
     public static final int TERRAIN_SEA_LEVEL_BLOCKS = 160;
     public static final int TERRAIN_SURFACE_DEPTH_BLOCKS = 4;
 
+    // Terrain Features
+    public static final float DEFAULT_BIOME_CLIFF_COVERAGE = 0.5f;
+    public static final float DEFAULT_BIOME_CLIFF_STEP_BLOCKS = 10f;
+    public static final float DEFAULT_BIOME_CLIFF_STRENGTH = 0.85f;
+    public static final float DEFAULT_BIOME_COAST_COVERAGE = 0.6f;
+    public static final float DEFAULT_BIOME_COAST_OVERHANG_BLOCKS = 2f;
+    public static final float DEFAULT_BIOME_COAST_SEA_CAVES = 0.4f;
+    public static final float DEFAULT_BIOME_RIDGE_WAVELENGTH_BLOCKS = 220f;
+    public static final float DEFAULT_BIOME_ROCK_SLOPE = 1.3f;
+    public static final float TERRAIN_BEACH_MAX_SLOPE = 0.55f;
+    public static final float TERRAIN_CLIFF_MASK_EDGE = 0.2f;
+    public static final long TERRAIN_CLIFF_MASK_SEED_SALT = 0x5D3A9E71C2B84F06L;
+    public static final double TERRAIN_CLIFF_MASK_WAVELENGTH_BLOCKS = 340.0;
+    public static final float TERRAIN_CLIFF_RISER_FRACTION = 0.2f;
+    public static final float TERRAIN_COAST_CLIFF_MIN_HEIGHT_BLOCKS = 1f;
+    public static final float TERRAIN_COAST_CLIFF_RISE_BLOCKS = 1f;
+    public static final float TERRAIN_COAST_MASK_EDGE = 0.2f;
+    public static final long TERRAIN_COAST_MASK_SEED_SALT = 0x31C7E5A94D0B2F68L;
+    public static final double TERRAIN_COAST_MASK_WAVELENGTH_BLOCKS = 280.0;
+    public static final float TERRAIN_COAST_MIN_SLOPE = 0.02f;
+    public static final int TERRAIN_COAST_NOTCH_SPLASH_BLOCKS = 1;
+    public static final float TERRAIN_COAST_PLATEAU_RELIEF = 0.6f;
+    public static final int TERRAIN_COAST_TOE_CLEARANCE_BLOCKS = 3;
+    public static final float TERRAIN_COAST_TOE_DROP_BLOCKS = 1f;
+    public static final float TERRAIN_COAST_ZONE_OCEAN_WEIGHT = 0.05f;
+    public static final int TERRAIN_FEATURE_LAYERS_MAX = 4;
+    public static final float TERRAIN_FEATURE_MASK_LACUNARITY = 2.0f;
+    public static final int TERRAIN_FEATURE_MASK_OCTAVES = 2;
+    public static final float TERRAIN_FEATURE_MASK_PERSISTENCE = 0.5f;
+    public static final float TERRAIN_FEATURE_MASK_SPAN = 0.6f;
+    public static final float TERRAIN_RIDGE_BIAS = 0.3f;
+    public static final float TERRAIN_RIDGE_GAIN = 0.55f;
+    public static final float TERRAIN_RIDGE_LACUNARITY = 2.1f;
+    public static final int TERRAIN_RIDGE_OCTAVES = 3;
+    public static final long TERRAIN_RIDGE_SEED_SALT = 0x7E2B04D9A6C3851FL;
+
+    // Caves
+    public static final float CAVE_CAVERN_THRESHOLD_MAX = 0.8f;
+    public static final float CAVE_CAVERN_THRESHOLD_MIN = 0.45f;
+    public static final long CAVE_CAVERN_SEED_SALT = 0x1A6F3C8E5B92D074L;
+    public static final float CAVE_CAVERN_VERTICAL_SCALE = 1.8f;
+    public static final double CAVE_CAVERN_WAVELENGTH_BLOCKS = 110.0;
+    public static final float CAVE_ENTRANCE_SHARE = 0.5f;
+    public static final int CAVE_FLOOR_FADE_BLOCKS = 10;
+    public static final int CAVE_LAKE_GUARD_DEPTH_BLOCKS = 44;
+    public static final float CAVE_LAKE_GUARD_WEIGHT = 0.25f;
+    public static final int CAVE_LATTICE_STEP_BLOCKS = 4;
+    public static final int CAVE_ROOF_BLOCKS = 5;
+    public static final float CAVE_SEA_BARRIER_WEIGHT = 0.12f;
+    public static final float CAVE_SEA_FLOOD_WEIGHT = 0.2f;
+    public static final int CAVE_SEA_HEADROOM_BLOCKS = 2;
+    public static final float CAVE_SEA_MAX_WIDTH = 0.14f;
+    public static final float CAVE_SEA_REACH_BLOCKS = 36f;
+    public static final long CAVE_SEA_SEED_SALT = 0x4C8B1E7D20F5A963L;
+    public static final float CAVE_SEA_VERTICAL_SCALE = 0.2f;
+    public static final double CAVE_SEA_WAVELENGTH_BLOCKS = 44.0;
+    public static final float CAVE_TUNNEL_MAX_RADIUS = 0.09f;
+    public static final float CAVE_TUNNEL_MIN_RADIUS = 0.045f;
+    public static final long CAVE_TUNNEL_SEED_SALT_A = 0x63D1A0F4B7E2C958L;
+    public static final long CAVE_TUNNEL_SEED_SALT_B = 0x2B97E5C10D4A3F86L;
+    public static final float CAVE_TUNNEL_VERTICAL_SCALE = 1.4f;
+    public static final double CAVE_TUNNEL_WAVELENGTH_BLOCKS = 80.0;
+    public static final int CAVE_WATER_ROOF_BLOCKS = 6;
+    public static final float DEFAULT_BIOME_CAVE_CAVERNS = 0.15f;
+    public static final boolean DEFAULT_BIOME_CAVE_ENTRANCES = true;
+    public static final int DEFAULT_BIOME_CAVE_MAX_DEPTH_BLOCKS = 80;
+    public static final int DEFAULT_BIOME_CAVE_MIN_HEIGHT_BLOCKS = 40;
+    public static final float DEFAULT_BIOME_CAVE_TUNNELS = 0.35f;
+
+    // Veins
+    public static final float DEFAULT_BIOME_VEIN_ABUNDANCE = 0.3f;
+    public static final int DEFAULT_BIOME_VEIN_MAX_DEPTH_BLOCKS = 48;
+    public static final int DEFAULT_BIOME_VEIN_MAX_HEIGHT_BLOCKS = TERRAIN_MAX_HEIGHT_BLOCKS;
+    public static final int DEFAULT_BIOME_VEIN_MIN_HEIGHT_BLOCKS = 0;
+    public static final float DEFAULT_BIOME_VEIN_THICKNESS_BLOCKS = 2f;
+    public static final float TERRAIN_VEIN_GATE_RANGE = 0.8f;
+    public static final long TERRAIN_VEIN_GATE_SEED_SALT = 0x0F5E9A27C3B81D64L;
+    public static final float TERRAIN_VEIN_GATE_THRESHOLD = 0.6f;
+    public static final double TERRAIN_VEIN_GATE_WAVELENGTH_BLOCKS = 96.0;
+    public static final int TERRAIN_VEIN_PALETTE_MAX = 6;
+    public static final long TERRAIN_VEIN_SEED_SALT = 0x95A3D7E04C1B6F28L;
+    public static final float TERRAIN_VEIN_SHEET_GRADIENT = 0.8f;
+    public static final double TERRAIN_VEIN_WAVELENGTH_BLOCKS = 36.0;
+
+    // Lakes
+    public static final float LAKE_BED_DEPTH_PER_WEIGHT = 24f;
+    public static final int LAKE_LEVEL_UNDEFINED = Integer.MIN_VALUE;
+    public static final int LAKE_RIM_BLOCKS = 1;
+    public static final float LAKE_RIM_FULL_WEIGHT = 0.3f;
+    public static final float LAKE_SHORE_WEIGHT = 0.5f;
+
     // Ocean & Tide
     public static final String OCEAN_DATA_UBO = "OceanData";
     public static final int OCEAN_SPILL_CHUNKS = 2;

@@ -1,11 +1,10 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
@@ -13,6 +12,8 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
+import application.bootstrap.worldpipeline.util.TerrainFeatureStruct;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
@@ -24,20 +25,26 @@ import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Direction3Vector;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class WorldGenerationManager extends ManagerPackage {
 
     /*
      * Generates terrain per chunk column. computeColumn() samples the biome
-     * field on a macro grid and interpolates height, flooding and dressing
-     * blocks to every block column, and generateSubChunk() fills subchunks,
-     * leaving fully empty or uniform ones unrealized. sampleSurface() gives
-     * the ground, its sea cover and its colors at any point for distant macro
-     * terrain and maps, and sampleOpenWater() whether the sea covers it.
-     * Output is a pure function of seed and coordinate, so it is cached per
-     * chunk and agrees across chunk borders. Surface profiles are cached per
-     * biome and dropped whenever a biome is rebuilt live.
+     * field on a macro grid, shapes the ground through cliffs, sea cliffs and
+     * still water, and resolves every block column's ground, dressing, water,
+     * the band its caves and sea caves may hollow, its veins and the lowest
+     * cell the tide reaches. generateSubChunk() fills subchunks, hollowing and
+     * threading them through world-aligned noise lattices, and leaves fully
+     * empty or uniform ones unrealized. The sea stands at sea level and rides
+     * the tide, carried into caves that open on it; still water keeps the
+     * level its biome declares. sampleSurface() gives the ground, the water
+     * over it and its colors at any point for distant macro terrain and maps,
+     * and sampleOpenWater() whether the sea covers it. Output is a pure
+     * function of seed and coordinate, so it is cached per chunk and agrees
+     * across chunk borders. Surface profiles are cached per biome and dropped
+     * whenever a biome is rebuilt live.
      */
 
     // Internal
@@ -47,11 +54,14 @@ public class WorldGenerationManager extends ManagerPackage {
 
     private TerrainColumnAsyncContainer terrainColumnContainer;
     private TerrainColumnAsyncContainer probeColumnContainer;
-    private volatile Short2ObjectOpenHashMap<TerrainSurfaceProfile> biomeID2SurfaceProfile =
+    private volatile Short2ObjectOpenHashMap<TerrainSurfaceProfileStruct> biomeID2SurfaceProfile =
             new Short2ObjectOpenHashMap<>();
     private volatile int surfaceProfileRevision;
 
     private int CHUNK_SIZE;
+    private int seaLevel;
+    private int seaFeatureFloorY;
+    private int seaFeatureCeilingY;
 
     // Blocks
     private short airBlockId;
@@ -63,6 +73,9 @@ public class WorldGenerationManager extends ManagerPackage {
     @Override
     protected void create() {
         this.CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
+        this.seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+        this.seaFeatureFloorY = TerrainCarveUtility.getSeaFeatureFloorY();
+        this.seaFeatureCeilingY = TerrainCarveUtility.getSeaFeatureCeilingY();
         this.terrainColumnContainer = create(TerrainColumnAsyncContainer.class);
         this.probeColumnContainer = create(TerrainColumnAsyncContainer.class);
     }
@@ -107,6 +120,8 @@ public class WorldGenerationManager extends ManagerPackage {
         sampleDetailGrid(column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
         resolveCornerHeights(column);
         resolveBlockColumns(column, seed, worldOffsetX, worldOffsetZ);
+        resolveVeinPalette(column);
+        resolveTideFloors(column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
 
         column.biomeID = column.macroBiomeIDGrid[TerrainColumnAsyncContainer.MACRO_CENTER_INDEX];
         column.allFillBlocksFullGeometry = resolveFillGeometryUniformity(column);
@@ -115,22 +130,7 @@ public class WorldGenerationManager extends ManagerPackage {
         column.computedChunkCoordinate = chunkCoordinate;
         column.hasComputedColumn = true;
 
-        terrainCache.store(
-                chunkCoordinate,
-                column.biomeID,
-                column.groundHeightBlocks,
-                column.columnSurfaceBlockID,
-                column.columnSubsurfaceBlockID,
-                column.columnUnderwaterBlockID,
-                column.columnOceanWater,
-                column.columnGroundMask,
-                column.columnCapMask,
-                column.columnMinGroundHeightBlocks,
-                column.columnMaxGroundHeightBlocks,
-                column.columnTopBlocks,
-                column.allOceanWater,
-                column.hasTidalColumns,
-                column.allFillBlocksFullGeometry);
+        terrainCache.store(column);
     }
 
     private void sampleMacroGrid(
@@ -155,20 +155,18 @@ public class WorldGenerationManager extends ManagerPackage {
 
                 biomeManager.sampleBiomeField(worldHandle, sampleWorldX, sampleWorldZ, blend);
 
+                TerrainShapeUtility.resolveFeatures(
+                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks,
+                        blend, column.macroFeatures[index]);
+
                 column.macroShapeGridBlocks[index] = TerrainShapeUtility.computeMacroShapeBlocks(
                         seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks, blend);
 
-                column.macroDetailAmplitudeGrid[index] = TerrainShapeUtility.computeDetailAmplitudeBlocks(blend);
-                column.macroDetailWavelengthGrid[index] = TerrainShapeUtility.computeDetailWavelengthBlocks(blend);
-                column.macroCoastalWeightGrid[index] = blend.getCoastalWeight();
-
                 BiomeHandle dominantBiome = blend.getDominantBiome();
-                TerrainSurfaceProfile profile = resolveSurfaceProfile(dominantBiome);
 
                 column.macroBiomeIDGrid[index] = dominantBiome.getBiomeID();
-                column.macroSurfaceBlockIDGrid[index] = profile.surfaceBlockID;
-                column.macroSubsurfaceBlockIDGrid[index] = profile.subsurfaceBlockID;
-                column.macroUnderwaterBlockIDGrid[index] = profile.underwaterBlockID;
+                column.macroProfile[index] = resolveSurfaceProfile(dominantBiome);
+                column.macroInlandProfile[index] = resolveSurfaceProfile(blend.getDominantLandBiome());
             }
         }
     }
@@ -181,6 +179,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
         int stride = TerrainColumnAsyncContainer.DETAIL_SAMPLE_STRIDE;
         int samplesPerAxis = TerrainColumnAsyncContainer.DETAIL_SAMPLES_PER_AXIS;
+        TerrainFeatureStruct features = column.features;
 
         for (int gz = 0; gz < samplesPerAxis; gz++) {
             for (int gx = 0; gx < samplesPerAxis; gx++) {
@@ -188,12 +187,16 @@ public class WorldGenerationManager extends ManagerPackage {
                 int localX = gx * stride;
                 int localZ = gz * stride;
 
-                float amplitude = sampleMacroBilinear(column.macroDetailAmplitudeGrid, localX, localZ);
-                float wavelength = sampleMacroBilinear(column.macroDetailWavelengthGrid, localX, localZ);
+                blendFeatures(column, localX, localZ);
 
-                column.detailGridBlocks[gz * samplesPerAxis + gx] = TerrainShapeUtility.computeDetailBlocks(
-                        seed, worldOffsetX + localX, worldOffsetZ + localZ,
-                        worldWidthBlocks, worldHeightBlocks, wavelength, amplitude);
+                int index = gz * samplesPerAxis + gx;
+                long worldX = worldOffsetX + localX;
+                long worldZ = worldOffsetZ + localZ;
+
+                column.detailGridBlocks[index] = TerrainShapeUtility.computeDetailBlocks(
+                        seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, features);
+                column.ridgeGridBlocks[index] = TerrainShapeUtility.computeRidgeBlocks(
+                        seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, features);
             }
         }
     }
@@ -205,13 +208,30 @@ public class WorldGenerationManager extends ManagerPackage {
         for (int cornerZ = 0; cornerZ < cornersPerAxis; cornerZ++) {
             for (int cornerX = 0; cornerX < cornersPerAxis; cornerX++) {
 
+                int cornerIndex = cornerZ * cornersPerAxis + cornerX;
                 float macroShape = sampleMacroBilinear(column.macroShapeGridBlocks, cornerX, cornerZ);
+                float ridge = sampleDetailBilinear(column.ridgeGridBlocks, cornerX, cornerZ);
                 float detail = sampleDetailBilinear(column.detailGridBlocks, cornerX, cornerZ);
 
-                column.cornerHeightBlocks[cornerZ * cornersPerAxis + cornerX] = TerrainShapeUtility
-                        .clampGroundHeightBlocks(macroShape, detail);
+                blendFeatures(column, cornerX, cornerZ);
+
+                column.cornerRawHeightBlocks[cornerIndex] = macroShape + ridge;
+                column.cornerHeightBlocks[cornerIndex] = TerrainShapeUtility.shapeGroundHeightBlocks(
+                        macroShape, ridge, detail, column.features);
             }
         }
+    }
+
+    // Leaves the position's blended features in column.features
+    private float resolveShapedHeight(TerrainColumnAsyncContainer column, int localX, int localZ) {
+
+        blendFeatures(column, localX, localZ);
+
+        return TerrainShapeUtility.shapeGroundHeightBlocks(
+                sampleMacroBilinear(column.macroShapeGridBlocks, localX, localZ),
+                sampleDetailBilinear(column.ridgeGridBlocks, localX, localZ),
+                sampleDetailBilinear(column.detailGridBlocks, localX, localZ),
+                column.features);
     }
 
     private void resolveBlockColumns(
@@ -223,27 +243,40 @@ public class WorldGenerationManager extends ManagerPackage {
         int minGroundHeight = Integer.MAX_VALUE;
         int columnTop = Integer.MIN_VALUE;
         boolean allOceanWater = true;
-        boolean hasTidalColumns = false;
+
+        column.carveMinY = Integer.MAX_VALUE;
+        column.carveMaxY = Integer.MIN_VALUE;
+        column.hasSeaFeatures = false;
+        column.veinMinY = Integer.MAX_VALUE;
+        column.veinMaxY = Integer.MIN_VALUE;
 
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {
             for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
 
                 int columnIndex = localZ * CHUNK_SIZE + localX;
+                int cornerIndex = localZ * TerrainColumnAsyncContainer.CORNERS_PER_AXIS + localX;
 
-                int groundHeight = resolveGroundHeight(column, localX, localZ);
+                blendFeatures(column, localX, localZ);
+
+                TerrainFeatureStruct features = column.features;
+                int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(
+                        column.cornerHeightBlocks[cornerIndex]);
+                boolean oceanWater = TerrainShapeUtility.isOceanReached(features);
+                boolean lakeWater = TerrainShapeUtility.isLakeCovered(features, groundHeight);
+
                 column.groundHeightBlocks[columnIndex] = groundHeight;
-
-                boolean oceanWater = resolveOceanWater(column, localX, localZ);
                 column.columnOceanWater[columnIndex] = oceanWater;
+                column.columnLakeLevelBlocks[columnIndex] = lakeWater
+                        ? features.getLakeLevelBlocks()
+                        : TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED;
 
-                int cornerIndex = pickMacroCorner(
+                int macroCorner = pickMacroCorner(
                         seed, worldOffsetX + localX, worldOffsetZ + localZ, localX, localZ);
 
-                column.columnSurfaceBlockID[columnIndex] = column.macroSurfaceBlockIDGrid[cornerIndex];
-                column.columnSubsurfaceBlockID[columnIndex] = column.macroSubsurfaceBlockIDGrid[cornerIndex];
-                column.columnUnderwaterBlockID[columnIndex] = column.macroUnderwaterBlockIDGrid[cornerIndex];
-
-                resolveColumnSmoothing(column, localX, localZ, columnIndex);
+                resolveColumnDressing(column, localX, localZ, columnIndex, macroCorner, features);
+                resolveColumnSmoothing(column, localX, localZ, columnIndex, features);
+                resolveColumnCarving(column, localX, localZ, columnIndex, features);
+                resolveColumnVeinRange(column, columnIndex);
 
                 int top = resolveColumnTop(column, columnIndex, TideUtility.BAND_MAX_Y);
 
@@ -258,8 +291,6 @@ public class WorldGenerationManager extends ManagerPackage {
 
                 if (!oceanWater)
                     allOceanWater = false;
-                else if (groundHeight < TideUtility.BAND_MAX_Y)
-                    hasTidalColumns = true;
             }
         }
 
@@ -267,19 +298,85 @@ public class WorldGenerationManager extends ManagerPackage {
         column.columnMinGroundHeightBlocks = minGroundHeight;
         column.columnTopBlocks = columnTop;
         column.allOceanWater = allOceanWater;
-        column.hasTidalColumns = hasTidalColumns;
+    }
+
+    // Steep faces bare their rock; sand only lies under water, all the high tide floods included, and on gentle
+    // ground just above it
+    private void resolveColumnDressing(
+            TerrainColumnAsyncContainer column,
+            int localX, int localZ,
+            int columnIndex,
+            int macroCorner,
+            TerrainFeatureStruct features) {
+
+        int groundHeight = column.groundHeightBlocks[columnIndex];
+        float slope = computeColumnSlope(column.cornerHeightBlocks, localX, localZ);
+        boolean oceanWater = column.columnOceanWater[columnIndex];
+
+        int waterLevel = TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED;
+
+        if (oceanWater)
+            waterLevel = TideUtility.BAND_MAX_Y;
+        else if (features.hasLake() && features.getLakeWeight() >= EngineSetting.LAKE_RIM_FULL_WEIGHT)
+            waterLevel = features.getLakeLevelBlocks();
+
+        boolean submerged = (oceanWater && groundHeight < TideUtility.BAND_MAX_Y)
+                || column.columnLakeLevelBlocks[columnIndex] != TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED;
+        boolean shore = waterLevel != TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED
+                && groundHeight <= waterLevel + EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS
+                && slope <= EngineSetting.TERRAIN_BEACH_MAX_SLOPE;
+
+        TerrainSurfaceProfileStruct waterProfile = column.macroProfile[macroCorner];
+        TerrainSurfaceProfileStruct inlandProfile = column.macroInlandProfile[macroCorner];
+        TerrainSurfaceProfileStruct profile = submerged || shore ? waterProfile : inlandProfile;
+
+        if (slope >= profile.rockSlope) {
+            column.columnTopBlockID[columnIndex] = profile.rockBlockID;
+            column.columnFillBlockID[columnIndex] = profile.rockBlockID;
+        } else if (submerged || shore) {
+            column.columnTopBlockID[columnIndex] = waterProfile.underwaterBlockID;
+            column.columnFillBlockID[columnIndex] = waterProfile.underwaterBlockID;
+        } else {
+            column.columnTopBlockID[columnIndex] = inlandProfile.surfaceBlockID;
+            column.columnFillBlockID[columnIndex] = inlandProfile.subsurfaceBlockID;
+        }
+
+        column.columnRockBlockID[columnIndex] = profile.rockBlockID;
+        column.columnProfile[columnIndex] = profile;
+    }
+
+    // Rise per block across the column, from the four corners around it
+    private float computeColumnSlope(float[] cornerHeights, int localX, int localZ) {
+
+        int cornersPerAxis = TerrainColumnAsyncContainer.CORNERS_PER_AXIS;
+        int corner00 = localZ * cornersPerAxis + localX;
+        int corner01 = corner00 + cornersPerAxis;
+
+        float height00 = cornerHeights[corner00];
+        float height10 = cornerHeights[corner00 + 1];
+        float height01 = cornerHeights[corner01];
+        float height11 = cornerHeights[corner01 + 1];
+
+        float slopeX = ((height10 + height11) - (height00 + height01)) * 0.5f;
+        float slopeZ = ((height01 + height11) - (height00 + height10)) * 0.5f;
+
+        return (float) Math.sqrt(slopeX * slopeX + slopeZ * slopeZ);
     }
 
     private void resolveColumnSmoothing(
             TerrainColumnAsyncContainer column,
             int localX, int localZ,
-            int columnIndex) {
+            int columnIndex,
+            TerrainFeatureStruct features) {
 
         int groundHeight = column.groundHeightBlocks[columnIndex];
         int groundMask = SubBlockUtility.MASK_FULL;
         int capMask = SubBlockUtility.MASK_EMPTY;
 
-        if (groundHeight > TideUtility.BAND_MAX_Y) {
+        boolean besideStillWater = features.hasLake()
+                && groundHeight <= features.getLakeLevelBlocks() + EngineSetting.LAKE_RIM_BLOCKS;
+
+        if (groundHeight > TideUtility.BAND_MAX_Y && !besideStillWater) {
 
             int cornersPerAxis = TerrainColumnAsyncContainer.CORNERS_PER_AXIS;
             float threshold = EngineSetting.SUB_BLOCK_SMOOTHING_THRESHOLD_BLOCKS;
@@ -304,10 +401,185 @@ public class WorldGenerationManager extends ManagerPackage {
         column.columnCapMask[columnIndex] = (byte) capMask;
     }
 
+    // Caves keep a roof under any water, including ground the high tide covers, and stay below the deepest bed still
+    // water can have wherever it is near; the sea floods caves near it and walls off the rest up to its high tide
+    private void resolveColumnCarving(
+            TerrainColumnAsyncContainer column,
+            int localX, int localZ,
+            int columnIndex,
+            TerrainFeatureStruct features) {
+
+        int groundHeight = column.groundHeightBlocks[columnIndex];
+        boolean oceanWater = column.columnOceanWater[columnIndex];
+        boolean oceanFlooded = oceanWater && groundHeight < seaLevel;
+        boolean lakeWater = column.columnLakeLevelBlocks[columnIndex] != TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED;
+        float coastalWeight = features.getCoastalWeight();
+
+        byte seaZone = TerrainColumnAsyncContainer.SEA_ZONE_NONE;
+
+        if (coastalWeight >= EngineSetting.CAVE_SEA_FLOOD_WEIGHT)
+            seaZone = TerrainColumnAsyncContainer.SEA_ZONE_FLOOD;
+        else if (coastalWeight >= EngineSetting.CAVE_SEA_BARRIER_WEIGHT)
+            seaZone = TerrainColumnAsyncContainer.SEA_ZONE_BARRIER;
+
+        boolean waterCovered = oceanFlooded || lakeWater
+                || (seaZone == TerrainColumnAsyncContainer.SEA_ZONE_FLOOD
+                        && groundHeight < TideUtility.BAND_MAX_Y + EngineSetting.CAVE_ROOF_BLOCKS);
+
+        int roof = EngineSetting.CAVE_ROOF_BLOCKS;
+
+        if (waterCovered)
+            roof = EngineSetting.CAVE_WATER_ROOF_BLOCKS;
+        else if (features.hasCaveEntrances())
+            roof = 0;
+
+        int caveCeiling = groundHeight - roof;
+
+        if (features.hasLake() && !oceanWater && features.getLakeWeight() >= EngineSetting.CAVE_LAKE_GUARD_WEIGHT)
+            caveCeiling = Math.min(
+                    caveCeiling, features.getLakeLevelBlocks() - EngineSetting.CAVE_LAKE_GUARD_DEPTH_BLOCKS);
+
+        int caveFloor = Math.max(features.getCaveMinHeightBlocks(), groundHeight - features.getCaveMaxDepthBlocks());
+
+        if (!features.hasCaves())
+            caveCeiling = TerrainColumnAsyncContainer.NO_CARVE;
+
+        float rawHeight = column.cornerRawHeightBlocks[localZ * TerrainColumnAsyncContainer.CORNERS_PER_AXIS + localX];
+        float rawSlope = computeColumnSlope(column.cornerRawHeightBlocks, localX, localZ);
+        float shoreDistance = TerrainShapeUtility.computeShoreDistanceBlocks(rawHeight, rawSlope);
+        boolean seaFeatures = seaZone == TerrainColumnAsyncContainer.SEA_ZONE_FLOOD
+                && shoreDistance >= 0f
+                && (features.getCoastOverhangBlocks() > 0f || features.getSeaCaves() > 0f);
+        int seaCeiling = seaFeatures
+                ? Math.min(groundHeight - EngineSetting.CAVE_ROOF_BLOCKS, seaFeatureCeilingY)
+                : TerrainColumnAsyncContainer.NO_CARVE;
+
+        column.columnSeaZone[columnIndex] = seaZone;
+        column.columnCaveFloorY[columnIndex] = caveFloor;
+        column.columnCaveCeilingY[columnIndex] = caveCeiling;
+        column.columnCaveTunnels[columnIndex] = features.getCaveTunnels();
+        column.columnCaveCaverns[columnIndex] = features.getCaveCaverns();
+        column.columnSeaCeilingY[columnIndex] = seaCeiling;
+        column.columnShoreDistanceBlocks[columnIndex] = shoreDistance;
+        column.columnFaceDistanceBlocks[columnIndex] = TerrainShapeUtility.computeCliffFaceDistanceBlocks(
+                rawHeight, rawSlope);
+        column.columnOverhangBlocks[columnIndex] = features.getCoastOverhangBlocks();
+        column.columnSeaCaves[columnIndex] = features.getSeaCaves();
+
+        if (caveFloor <= caveCeiling) {
+            column.carveMinY = Math.min(column.carveMinY, caveFloor);
+            column.carveMaxY = Math.max(column.carveMaxY, caveCeiling);
+        }
+
+        if (seaCeiling >= seaFeatureFloorY) {
+            column.carveMinY = Math.min(column.carveMinY, seaFeatureFloorY);
+            column.carveMaxY = Math.max(column.carveMaxY, seaCeiling);
+            column.hasSeaFeatures = true;
+        }
+    }
+
+    private void resolveColumnVeinRange(TerrainColumnAsyncContainer column, int columnIndex) {
+
+        int groundHeight = column.groundHeightBlocks[columnIndex];
+        BiomeVeinStruct[] veins = column.columnProfile[columnIndex].veins;
+
+        for (int i = 0; i < veins.length; i++) {
+
+            BiomeVeinStruct vein = veins[i];
+            int fromY = Math.max(vein.getMinHeightBlocks(), groundHeight - vein.getMaxDepthBlocks());
+            int toY = Math.min(vein.getMaxHeightBlocks(), groundHeight);
+
+            if (fromY > toY)
+                continue;
+
+            column.veinMinY = Math.min(column.veinMinY, fromY);
+            column.veinMaxY = Math.max(column.veinMaxY, toY);
+        }
+    }
+
+    // Every distinct vein the chunk's columns carry, in first-seen order, up to the palette's size
+    private void resolveVeinPalette(TerrainColumnAsyncContainer column) {
+
+        column.veinCount = 0;
+
+        for (int columnIndex = 0; columnIndex < TerrainColumnAsyncContainer.COLUMN_COUNT; columnIndex++) {
+
+            BiomeVeinStruct[] veins = column.columnProfile[columnIndex].veins;
+
+            for (int i = 0; i < veins.length && column.veinCount < TerrainColumnAsyncContainer.VEIN_PALETTE_MAX; i++)
+                if (findVeinSlot(column, veins[i].getFieldSeed()) == EngineSetting.INDEX_NOT_FOUND)
+                    column.veinSeeds[column.veinCount++] = veins[i].getFieldSeed();
+        }
+    }
+
+    private int findVeinSlot(TerrainColumnAsyncContainer column, long fieldSeed) {
+
+        for (int slot = 0; slot < column.veinCount; slot++)
+            if (column.veinSeeds[slot] == fieldSeed)
+                return slot;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // The ocean re-levels from just above its floor; a flooded cave from its lowest hollow cell in the tide band
+    private void resolveTideFloors(
+            TerrainColumnAsyncContainer column,
+            long seed,
+            long worldOffsetX, long worldOffsetZ,
+            double worldWidthBlocks, double worldHeightBlocks) {
+
+        int bandMinY = TideUtility.BAND_MIN_Y;
+        int bandMaxY = TideUtility.BAND_MAX_Y;
+        int latticeOriginY = TerrainCarveUtility.alignDown(bandMinY);
+        boolean carvesBand = column.carveMinY <= bandMaxY && column.carveMaxY >= bandMinY;
+        boolean hasTidalColumns = false;
+
+        if (carvesBand)
+            TerrainCarveUtility.fillCaveLattice(
+                    seed, worldWidthBlocks, worldHeightBlocks,
+                    worldOffsetX, latticeOriginY, worldOffsetZ,
+                    TerrainColumnAsyncContainer.TIDE_LATTICE_ROWS, column.hasSeaFeatures, column.caveLattice);
+
+        for (int localX = 0; localX < CHUNK_SIZE; localX++) {
+            for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
+
+                int columnIndex = localZ * CHUNK_SIZE + localX;
+                int groundHeight = column.groundHeightBlocks[columnIndex];
+                int tideFloor = TerrainColumnAsyncContainer.NO_TIDE;
+
+                if (column.columnOceanWater[columnIndex])
+                    tideFloor = Math.max(groundHeight + 1, bandMinY);
+
+                if (carvesBand && column.columnSeaZone[columnIndex] == TerrainColumnAsyncContainer.SEA_ZONE_FLOOD) {
+
+                    int topY = Math.min(bandMaxY, groundHeight);
+
+                    for (int worldY = bandMinY; worldY <= topY && worldY < tideFloor; worldY++) {
+                        if (isCarved(column, columnIndex, localX, localZ, worldY, latticeOriginY)) {
+                            tideFloor = worldY;
+                            break;
+                        }
+                    }
+                }
+
+                column.columnTideFloorY[columnIndex] = tideFloor;
+
+                if (tideFloor <= bandMaxY)
+                    hasTidalColumns = true;
+            }
+        }
+
+        column.hasTidalColumns = hasTidalColumns;
+    }
+
     private int resolveColumnTop(TerrainColumnAsyncContainer column, int columnIndex, int topWaterY) {
 
         int groundHeight = column.groundHeightBlocks[columnIndex];
+        int lakeLevel = column.columnLakeLevelBlocks[columnIndex];
         int top = column.columnOceanWater[columnIndex] ? Math.max(groundHeight, topWaterY) : groundHeight;
+
+        if (lakeLevel != TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED)
+            top = Math.max(top, lakeLevel);
 
         if (readMask(column.columnCapMask, columnIndex) != SubBlockUtility.MASK_EMPTY)
             top = Math.max(top, groundHeight + 1);
@@ -319,46 +591,125 @@ public class WorldGenerationManager extends ManagerPackage {
         return masks[columnIndex] & SubBlockUtility.MASK_FULL;
     }
 
-    private int resolveGroundHeight(TerrainColumnAsyncContainer column, int localX, int localZ) {
-
-        float macroShape = sampleMacroBilinear(column.macroShapeGridBlocks, localX, localZ);
-        float detail = sampleDetailBilinear(column.detailGridBlocks, localX, localZ);
-
-        return TerrainShapeUtility.finalizeGroundHeightBlocks(macroShape, detail);
-    }
-
-    private boolean resolveOceanWater(TerrainColumnAsyncContainer column, int localX, int localZ) {
-        return sampleMacroBilinear(column.macroCoastalWeightGrid, localX, localZ)
-                > EngineSetting.OCEAN_REACH_THRESHOLD;
-    }
-
     private void applyCachedColumn(
             TerrainColumnAsyncContainer column,
             WorldHandle worldHandle,
             long chunkCoordinate,
             GenerationCacheStruct terrainCache) {
 
-        column.biomeID = terrainCache.getBiomeID();
-
-        terrainCache.copyGroundHeightsInto(column.groundHeightBlocks);
-        terrainCache.copySurfaceBlockIDsInto(column.columnSurfaceBlockID);
-        terrainCache.copySubsurfaceBlockIDsInto(column.columnSubsurfaceBlockID);
-        terrainCache.copyUnderwaterBlockIDsInto(column.columnUnderwaterBlockID);
-        terrainCache.copyOceanWaterInto(column.columnOceanWater);
-        terrainCache.copyGroundMasksInto(column.columnGroundMask);
-        terrainCache.copyCapMasksInto(column.columnCapMask);
-
-        column.columnMinGroundHeightBlocks = terrainCache.getColumnMinGroundHeightBlocks();
-        column.columnMaxGroundHeightBlocks = terrainCache.getColumnMaxGroundHeightBlocks();
-        column.columnTopBlocks = terrainCache.getColumnTopBlocks();
-
-        column.allOceanWater = terrainCache.hasAllOceanWater();
-        column.hasTidalColumns = terrainCache.hasTidalColumns();
-        column.allFillBlocksFullGeometry = terrainCache.hasAllFillBlocksFullGeometry();
+        terrainCache.applyTo(column);
 
         column.computedWorldHandle = worldHandle;
         column.computedChunkCoordinate = chunkCoordinate;
         column.hasComputedColumn = true;
+    }
+
+    // Carving \\
+
+    // latticeOriginY is the world Y of the cave lattice's first row, which must cover worldY
+    private boolean isCarved(
+            TerrainColumnAsyncContainer column,
+            int columnIndex,
+            int localX, int localZ,
+            int worldY,
+            int latticeOriginY) {
+
+        boolean carved = false;
+        int caveFloor = column.columnCaveFloorY[columnIndex];
+
+        if (worldY >= caveFloor && worldY <= column.columnCaveCeilingY[columnIndex]) {
+
+            int localY = worldY - latticeOriginY;
+            float fade = TerrainCarveUtility.computeFloorFade(worldY, caveFloor);
+
+            carved = TerrainCarveUtility.isTunnel(
+                    sampleCaveLattice(column, TerrainCarveUtility.CHANNEL_TUNNEL_A, localX, localY, localZ),
+                    sampleCaveLattice(column, TerrainCarveUtility.CHANNEL_TUNNEL_B, localX, localY, localZ),
+                    column.columnCaveTunnels[columnIndex], fade)
+                    || TerrainCarveUtility.isCavern(
+                            sampleCaveLattice(column, TerrainCarveUtility.CHANNEL_CAVERN, localX, localY, localZ),
+                            column.columnCaveCaverns[columnIndex], fade);
+        }
+
+        if (!carved && worldY >= seaFeatureFloorY && worldY <= column.columnSeaCeilingY[columnIndex]) {
+
+            carved = TerrainCarveUtility.isNotch(
+                    worldY,
+                    column.columnFaceDistanceBlocks[columnIndex],
+                    column.columnOverhangBlocks[columnIndex])
+                    || TerrainCarveUtility.isSeaCave(
+                            sampleCaveLattice(
+                                    column, TerrainCarveUtility.CHANNEL_SEA,
+                                    localX, worldY - latticeOriginY, localZ),
+                            column.columnSeaCaves[columnIndex], worldY,
+                            column.columnShoreDistanceBlocks[columnIndex]);
+        }
+
+        return carved && !(worldY <= TideUtility.BAND_MAX_Y
+                && column.columnSeaZone[columnIndex] == TerrainColumnAsyncContainer.SEA_ZONE_BARRIER);
+    }
+
+    private float sampleCaveLattice(
+            TerrainColumnAsyncContainer column,
+            int channel,
+            int localX, int localY, int localZ) {
+        return TerrainCarveUtility.sampleLattice(
+                column.caveLattice, TerrainCarveUtility.CAVE_CHANNELS, channel, localX, localY, localZ);
+    }
+
+    // Maps the column's veins onto the chunk's palette slots, false when it carries none
+    private boolean resolveVeinSlots(TerrainColumnAsyncContainer column, int columnIndex) {
+
+        BiomeVeinStruct[] veins = column.columnProfile[columnIndex].veins;
+
+        for (int i = 0; i < veins.length; i++)
+            column.veinSlots[i] = findVeinSlot(column, veins[i].getFieldSeed());
+
+        return veins.length > 0;
+    }
+
+    private short resolveVein(
+            TerrainColumnAsyncContainer column,
+            int columnIndex,
+            int localX, int localZ,
+            int worldY,
+            int latticeOriginY,
+            short rockBlockID) {
+
+        TerrainSurfaceProfileStruct profile = column.columnProfile[columnIndex];
+        int groundHeight = column.groundHeightBlocks[columnIndex];
+        int channels = column.veinCount * TerrainCarveUtility.VEIN_CHANNELS_PER_VEIN;
+        int localY = worldY - latticeOriginY;
+
+        for (int i = 0; i < profile.veins.length; i++) {
+
+            BiomeVeinStruct vein = profile.veins[i];
+            int slot = column.veinSlots[i];
+
+            if (slot == EngineSetting.INDEX_NOT_FOUND
+                    || worldY < vein.getMinHeightBlocks()
+                    || worldY > vein.getMaxHeightBlocks()
+                    || worldY < groundHeight - vein.getMaxDepthBlocks())
+                continue;
+
+            int channel = slot * TerrainCarveUtility.VEIN_CHANNELS_PER_VEIN;
+
+            float gate = TerrainCarveUtility.sampleLattice(
+                    column.veinLattice, channels, channel + TerrainCarveUtility.CHANNEL_VEIN_GATE,
+                    localX, localY, localZ);
+
+            if (!TerrainCarveUtility.isVeinGateOpen(gate, vein))
+                continue;
+
+            float ribbon = TerrainCarveUtility.sampleLattice(
+                    column.veinLattice, channels, channel + TerrainCarveUtility.CHANNEL_VEIN_RIBBON,
+                    localX, localY, localZ);
+
+            if (TerrainCarveUtility.isVeinSeam(ribbon, vein))
+                return profile.veinBlockIDs[i];
+        }
+
+        return rockBlockID;
     }
 
     // Probe — any single block column \\
@@ -370,9 +721,11 @@ public class WorldGenerationManager extends ManagerPackage {
 
         TerrainColumnAsyncContainer probe = resolveProbeColumn(worldHandle, wrappedX, wrappedZ);
 
-        return resolveGroundHeight(probe, (int) (wrappedX % CHUNK_SIZE), (int) (wrappedZ % CHUNK_SIZE));
+        return TerrainShapeUtility.finalizeGroundHeightBlocks(resolveShapedHeight(
+                probe, (int) (wrappedX % CHUNK_SIZE), (int) (wrappedZ % CHUNK_SIZE)));
     }
 
+    // Under the sea or under still water
     public boolean probeFlooded(WorldHandle worldHandle, long worldX, long worldZ) {
 
         long wrappedX = WorldWrapUtility.wrapBlockX(worldHandle, worldX);
@@ -380,11 +733,11 @@ public class WorldGenerationManager extends ManagerPackage {
 
         TerrainColumnAsyncContainer probe = resolveProbeColumn(worldHandle, wrappedX, wrappedZ);
 
-        int localX = (int) (wrappedX % CHUNK_SIZE);
-        int localZ = (int) (wrappedZ % CHUNK_SIZE);
+        int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(resolveShapedHeight(
+                probe, (int) (wrappedX % CHUNK_SIZE), (int) (wrappedZ % CHUNK_SIZE)));
 
-        return resolveOceanWater(probe, localX, localZ)
-                && resolveGroundHeight(probe, localX, localZ) < EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+        return (TerrainShapeUtility.isOceanReached(probe.features) && groundHeight < seaLevel)
+                || TerrainShapeUtility.isLakeCovered(probe.features, groundHeight);
     }
 
     private TerrainColumnAsyncContainer resolveProbeColumn(WorldHandle worldHandle, long wrappedX, long wrappedZ) {
@@ -426,33 +779,50 @@ public class WorldGenerationManager extends ManagerPackage {
             TerrainSurfaceSampleStruct outSample) {
 
         BiomeBlendStruct blend = outSample.getBlend();
+        TerrainFeatureStruct features = outSample.getFeatures();
         long seed = worldHandle.getSeed();
         double worldWidthBlocks = worldHandle.getWorldScale().x;
         double worldHeightBlocks = worldHandle.getWorldScale().y;
 
         biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, blend);
+        TerrainShapeUtility.resolveFeatures(seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, blend, features);
 
         float macroShape = TerrainShapeUtility.computeMacroShapeBlocks(
                 seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, blend);
+        float ridge = TerrainShapeUtility.computeRidgeBlocks(
+                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, features);
         float detail = TerrainShapeUtility.computeDetailBlocks(
-                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks,
-                TerrainShapeUtility.computeDetailWavelengthBlocks(blend),
-                TerrainShapeUtility.computeDetailAmplitudeBlocks(blend));
+                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, features);
 
-        int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(macroShape, detail);
-        boolean oceanReached = isOceanReached(blend);
+        float shapedHeight = TerrainShapeUtility.shapeGroundHeightBlocks(macroShape, ridge, detail, features);
+        int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(shapedHeight);
+        boolean oceanReached = TerrainShapeUtility.isOceanReached(features);
+        boolean lakeWater = TerrainShapeUtility.isLakeCovered(features, groundHeight);
 
-        outSample.groundHeightBlocks = TerrainShapeUtility.clampGroundHeightBlocks(macroShape, detail);
-        outSample.openWater = oceanReached && groundHeight < EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+        outSample.groundHeightBlocks = shapedHeight;
+        outSample.openWater = oceanReached && groundHeight < seaLevel;
+        outSample.lakeWater = lakeWater;
 
-        resolveSurfaceColors(outSample, oceanReached && groundHeight
-                <= EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS);
+        if (outSample.openWater)
+            outSample.waterSurfaceBlocks = seaLevel;
+        else if (lakeWater)
+            outSample.waterSurfaceBlocks = features.getLakeLevelBlocks();
+        else
+            outSample.waterSurfaceBlocks = shapedHeight;
+
+        boolean lakeShore = features.hasLake()
+                && features.getLakeWeight() >= EngineSetting.LAKE_RIM_FULL_WEIGHT
+                && groundHeight <= features.getLakeLevelBlocks() + EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
+
+        resolveSurfaceColors(outSample, lakeWater || lakeShore || (oceanReached
+                && groundHeight <= TideUtility.BAND_MAX_Y + EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS));
     }
 
-    // Weights are normalized, so the weighted sums are the blended channels themselves
+    // Under water every biome reaching the point dresses it; on land only the weight each land biome holds by itself
     private void resolveSurfaceColors(TerrainSurfaceSampleStruct sample, boolean underwaterSurface) {
 
         BiomeBlendStruct blend = sample.getBlend();
+        boolean landDressing = !underwaterSurface && blend.getOceanWeight() < 1f;
 
         float topRed = 0f;
         float topGreen = 0f;
@@ -460,13 +830,19 @@ public class WorldGenerationManager extends ManagerPackage {
         float sideRed = 0f;
         float sideGreen = 0f;
         float sideBlue = 0f;
+        float weightSum = 0f;
 
         for (int i = 0; i < blend.getCount(); i++) {
 
-            TerrainSurfaceProfile profile = resolveSurfaceProfile(blend.getBiome(i));
-            float weight = blend.getWeight(i);
+            BiomeHandle biome = blend.getBiome(i);
+
+            if (landDressing && biome.hasOceanWater())
+                continue;
+
+            TerrainSurfaceProfileStruct profile = resolveSurfaceProfile(biome);
+            float weight = underwaterSurface ? blend.getWeight(i) : blend.getNaturalWeight(i);
             int topColor = underwaterSurface ? profile.underwaterTopColor : profile.surfaceTopColor;
-            int sideColor = underwaterSurface ? profile.underwaterSideColor : profile.surfaceSideColor;
+            int sideColor = underwaterSurface ? profile.underwaterSideColor : profile.rockSideColor;
 
             topRed += PackedColorUtility.red(topColor) * weight;
             topGreen += PackedColorUtility.green(topColor) * weight;
@@ -474,36 +850,68 @@ public class WorldGenerationManager extends ManagerPackage {
             sideRed += PackedColorUtility.red(sideColor) * weight;
             sideGreen += PackedColorUtility.green(sideColor) * weight;
             sideBlue += PackedColorUtility.blue(sideColor) * weight;
+            weightSum += weight;
         }
 
-        sample.topColor = PackedColorUtility.pack(topRed, topGreen, topBlue);
-        sample.sideColor = PackedColorUtility.pack(sideRed, sideGreen, sideBlue);
+        float inverse = weightSum > 0f ? 1f / weightSum : 0f;
+
+        sample.topColor = PackedColorUtility.pack(topRed * inverse, topGreen * inverse, topBlue * inverse);
+        sample.sideColor = PackedColorUtility.pack(sideRed * inverse, sideGreen * inverse, sideBlue * inverse);
     }
 
     public boolean sampleOpenWater(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
 
-        float groundHeight = sampleGroundHeight(worldHandle, worldX, worldZ, outBlend);
+        TerrainColumnAsyncContainer probe = probeColumnContainer.getInstance();
+        float groundHeight = sampleGroundHeight(worldHandle, worldX, worldZ, outBlend, probe.features);
 
-        return isOceanReached(outBlend) && groundHeight < EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+        return TerrainShapeUtility.isOceanReached(probe.features) && groundHeight < seaLevel;
     }
 
-    private float sampleGroundHeight(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
+    private float sampleGroundHeight(
+            WorldHandle worldHandle,
+            double worldX,
+            double worldZ,
+            BiomeBlendStruct outBlend,
+            TerrainFeatureStruct outFeatures) {
+
+        long seed = worldHandle.getSeed();
+        double worldWidthBlocks = worldHandle.getWorldScale().x;
+        double worldHeightBlocks = worldHandle.getWorldScale().y;
 
         biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, outBlend);
+        TerrainShapeUtility.resolveFeatures(
+                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend, outFeatures);
 
         float macroShape = TerrainShapeUtility.computeMacroShapeBlocks(
-                worldHandle.getSeed(), worldX, worldZ,
-                worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
-                outBlend);
+                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend);
 
-        return TerrainShapeUtility.clampGroundHeightBlocks(macroShape, 0f);
-    }
-
-    private boolean isOceanReached(BiomeBlendStruct blend) {
-        return blend.getCoastalWeight() > EngineSetting.OCEAN_REACH_THRESHOLD;
+        return TerrainShapeUtility.shapeGroundHeightBlocks(macroShape, 0f, 0f, outFeatures);
     }
 
     // Grid Interpolation \\
+
+    private void blendFeatures(TerrainColumnAsyncContainer column, int localX, int localZ) {
+
+        int stride = TerrainColumnAsyncContainer.MACRO_SAMPLE_STRIDE;
+        int samplesPerAxis = TerrainColumnAsyncContainer.MACRO_SAMPLES_PER_AXIS;
+        int maxCell = samplesPerAxis - 2;
+
+        int cellX = Math.min(localX / stride, maxCell);
+        int cellZ = Math.min(localZ / stride, maxCell);
+
+        float tx = (localX - cellX * stride) / (float) stride;
+        float tz = (localZ - cellZ * stride) / (float) stride;
+
+        int index00 = cellZ * samplesPerAxis + cellX;
+        int index01 = index00 + samplesPerAxis;
+
+        column.features.blendBilinear(
+                column.macroFeatures[index00],
+                column.macroFeatures[index00 + 1],
+                column.macroFeatures[index01],
+                column.macroFeatures[index01 + 1],
+                tx, tz);
+    }
 
     private float sampleMacroBilinear(float[] grid, int localX, int localZ) {
         return sampleGridBilinear(
@@ -582,11 +990,13 @@ public class WorldGenerationManager extends ManagerPackage {
         return index11;
     }
 
-    private TerrainSurfaceProfile resolveSurfaceProfile(BiomeHandle biomeHandle) {
+    // Surface Profile \\
+
+    private TerrainSurfaceProfileStruct resolveSurfaceProfile(BiomeHandle biomeHandle) {
 
         if (surfaceProfileRevision == biomeManager.getRevision()) {
 
-            TerrainSurfaceProfile profile = biomeID2SurfaceProfile.get(biomeHandle.getBiomeID());
+            TerrainSurfaceProfileStruct profile = biomeID2SurfaceProfile.get(biomeHandle.getBiomeID());
 
             if (profile != null && profile.biomeHandle == biomeHandle)
                 return profile;
@@ -596,7 +1006,7 @@ public class WorldGenerationManager extends ManagerPackage {
     }
 
     // A live biome rebuild moves the revision, so every profile is rebuilt from the biomes as they now stand
-    private synchronized TerrainSurfaceProfile createSurfaceProfile(BiomeHandle biomeHandle) {
+    private synchronized TerrainSurfaceProfileStruct createSurfaceProfile(BiomeHandle biomeHandle) {
 
         int biomeRevision = biomeManager.getRevision();
 
@@ -605,7 +1015,7 @@ public class WorldGenerationManager extends ManagerPackage {
             surfaceProfileRevision = biomeRevision;
         }
 
-        TerrainSurfaceProfile profile = biomeID2SurfaceProfile.get(biomeHandle.getBiomeID());
+        TerrainSurfaceProfileStruct profile = biomeID2SurfaceProfile.get(biomeHandle.getBiomeID());
 
         if (profile != null && profile.biomeHandle == biomeHandle)
             return profile;
@@ -613,18 +1023,31 @@ public class WorldGenerationManager extends ManagerPackage {
         short surfaceBlockID = (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSurfaceBlockName());
         short underwaterBlockID = (short) blockManager.getBlockIDFromBlockName(
                 biomeHandle.getUnderwaterBlockName());
+        short rockBlockID = (short) blockManager.getBlockIDFromBlockName(biomeHandle.getRockBlockName());
 
-        profile = new TerrainSurfaceProfile(
+        ObjectArrayList<BiomeVeinStruct> veinList = biomeHandle.getVeins();
+        BiomeVeinStruct[] veins = veinList.toArray(new BiomeVeinStruct[0]);
+        short[] veinBlockIDs = new short[veins.length];
+
+        for (int i = 0; i < veins.length; i++)
+            veinBlockIDs[i] = (short) blockManager.getBlockIDFromBlockName(veins[i].getBlockName());
+
+        profile = new TerrainSurfaceProfileStruct(
                 biomeHandle,
                 surfaceBlockID,
                 (short) blockManager.getBlockIDFromBlockName(biomeHandle.getSubsurfaceBlockName()),
                 underwaterBlockID,
+                rockBlockID,
+                biomeHandle.getRockSlope(),
+                veins,
+                veinBlockIDs,
                 resolveMapColor(biomeHandle, surfaceBlockID, Direction3Vector.UP),
-                resolveMapColor(biomeHandle, surfaceBlockID, Direction3Vector.NORTH),
                 resolveMapColor(biomeHandle, underwaterBlockID, Direction3Vector.UP),
-                resolveMapColor(biomeHandle, underwaterBlockID, Direction3Vector.NORTH));
+                resolveMapColor(biomeHandle, underwaterBlockID, Direction3Vector.NORTH),
+                resolveMapColor(biomeHandle, rockBlockID, Direction3Vector.NORTH));
 
-        Short2ObjectOpenHashMap<TerrainSurfaceProfile> next = new Short2ObjectOpenHashMap<>(biomeID2SurfaceProfile);
+        Short2ObjectOpenHashMap<TerrainSurfaceProfileStruct> next = new Short2ObjectOpenHashMap<>(
+                biomeID2SurfaceProfile);
         next.put(biomeHandle.getBiomeID(), profile);
         biomeID2SurfaceProfile = next;
 
@@ -655,9 +1078,22 @@ public class WorldGenerationManager extends ManagerPackage {
             return false;
 
         for (int i = 0; i < TerrainColumnAsyncContainer.MACRO_SAMPLE_COUNT; i++)
-            if (!isFullGeometry(column.macroSurfaceBlockIDGrid[i])
-                    || !isFullGeometry(column.macroSubsurfaceBlockIDGrid[i])
-                    || !isFullGeometry(column.macroUnderwaterBlockIDGrid[i]))
+            if (!isFullGeometryProfile(column.macroProfile[i]) || !isFullGeometryProfile(column.macroInlandProfile[i]))
+                return false;
+
+        return true;
+    }
+
+    private boolean isFullGeometryProfile(TerrainSurfaceProfileStruct profile) {
+
+        if (!isFullGeometry(profile.surfaceBlockID)
+                || !isFullGeometry(profile.subsurfaceBlockID)
+                || !isFullGeometry(profile.underwaterBlockID)
+                || !isFullGeometry(profile.rockBlockID))
+            return false;
+
+        for (int i = 0; i < profile.veinBlockIDs.length; i++)
+            if (!isFullGeometry(profile.veinBlockIDs[i]))
                 return false;
 
         return true;
@@ -683,10 +1119,12 @@ public class WorldGenerationManager extends ManagerPackage {
         }
 
         int surfaceDepth = EngineSetting.TERRAIN_SURFACE_DEPTH_BLOCKS;
-        int seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
         int subChunkTopY = offsetY + CHUNK_SIZE - 1;
 
-        if (subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
+        boolean carves = offsetY <= column.carveMaxY && subChunkTopY >= column.carveMinY;
+        boolean veins = column.veinCount > 0 && offsetY <= column.veinMaxY && subChunkTopY >= column.veinMinY;
+
+        if (!carves && !veins && subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
             subChunkInstance.markUniformFill(DynamicGeometryType.FULL, stoneBlockId);
             return true;
         }
@@ -698,9 +1136,10 @@ public class WorldGenerationManager extends ManagerPackage {
             return true;
         }
 
+        fillSubChunkLattices(worldHandle, chunkCoordinate, column, offsetY, carves, veins);
+
         BlockPaletteHandle blocks = subChunkInstance.getBlockPaletteHandle();
 
-        int beachRange = EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
         int tideSurfaceLevels = column.tideSurfaceLevels;
         int topWaterY = TideUtility.getTopWaterY(tideSurfaceLevels);
 
@@ -715,10 +1154,11 @@ public class WorldGenerationManager extends ManagerPackage {
                 int columnIndex = localZ * CHUNK_SIZE + localX;
 
                 int groundHeight = column.groundHeightBlocks[columnIndex];
-                boolean oceanWater = column.columnOceanWater[columnIndex];
+                int lakeLevel = column.columnLakeLevelBlocks[columnIndex];
                 int columnTop = resolveColumnTop(column, columnIndex, topWaterY);
                 int groundMask = readMask(column.columnGroundMask, columnIndex);
                 int capMask = readMask(column.columnCapMask, columnIndex);
+                boolean seaFlood = column.columnSeaZone[columnIndex] == TerrainColumnAsyncContainer.SEA_ZONE_FLOOD;
 
                 if (offsetY > columnTop) {
                     hasAirOrWater = true;
@@ -733,53 +1173,72 @@ public class WorldGenerationManager extends ManagerPackage {
                     continue;
                 }
 
-                boolean useUnderwaterBlocks = oceanWater && groundHeight <= seaLevel + beachRange;
-
-                short topBlockID = useUnderwaterBlocks
-                        ? column.columnUnderwaterBlockID[columnIndex]
-                        : column.columnSurfaceBlockID[columnIndex];
-
-                short fillBlockID = useUnderwaterBlocks
-                        ? column.columnUnderwaterBlockID[columnIndex]
-                        : column.columnSubsurfaceBlockID[columnIndex];
+                short topBlockID = column.columnTopBlockID[columnIndex];
+                short fillBlockID = column.columnFillBlockID[columnIndex];
+                short rockBlockID = column.columnRockBlockID[columnIndex];
+                boolean columnVeins = veins && resolveVeinSlots(column, columnIndex);
 
                 for (int localY = 0; localY < CHUNK_SIZE; localY++) {
 
                     int worldY = localY + offsetY;
+                    int packedXYZ = Coordinate3Int.pack(localX, localY, localZ);
                     short resultBlockID;
 
                     if (worldY > columnTop) {
                         resultBlockID = airBlockId;
                         hasAirOrWater = true;
                     } else if (worldY == groundHeight + 1 && capMask != SubBlockUtility.MASK_EMPTY) {
-                        resultBlockID = topBlockID;
                         hasAirOrWater = true;
                         isUniform = false;
-                        subChunkInstance.setSubBlocks(
-                                Coordinate3Int.pack(localX, localY, localZ), topBlockID, capMask);
+                        if (carves && groundHeight >= offsetY
+                                && isCarved(column, columnIndex, localX, localZ, groundHeight, offsetY)) {
+                            resultBlockID = airBlockId;
+                        } else {
+                            resultBlockID = topBlockID;
+                            subChunkInstance.setSubBlocks(packedXYZ, topBlockID, capMask);
+                        }
+                    } else if (worldY > groundHeight && lakeLevel != TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED) {
+                        resultBlockID = waterBlockId;
+                        hasAirOrWater = true;
+                        isUniform = false;
+                        subChunkInstance.writeStillLiquid(packedXYZ, waterBlockId);
                     } else if (worldY > groundHeight) {
                         short level = TideUtility.getFillLevel(tideSurfaceLevels, worldY);
                         resultBlockID = waterBlockId;
                         hasAirOrWater = true;
-                        subChunkInstance.writeTidalLiquid(
-                                Coordinate3Int.pack(localX, localY, localZ), waterBlockId, level);
+                        subChunkInstance.writeTidalLiquid(packedXYZ, waterBlockId, level);
                         if (level < EngineSetting.LIQUID_LEVEL_MAX)
                             isUniform = false;
+                    } else if (carves && isCarved(column, columnIndex, localX, localZ, worldY, offsetY)) {
+                        hasAirOrWater = true;
+                        resultBlockID = airBlockId;
+                        if (seaFlood && worldY <= topWaterY) {
+                            short level = TideUtility.getFillLevel(tideSurfaceLevels, worldY);
+                            if (level > EngineSetting.LIQUID_LEVEL_EMPTY) {
+                                resultBlockID = waterBlockId;
+                                subChunkInstance.writeTidalLiquid(packedXYZ, waterBlockId, level);
+                                if (level < EngineSetting.LIQUID_LEVEL_MAX)
+                                    isUniform = false;
+                            }
+                        }
                     } else if (worldY == groundHeight && groundMask != SubBlockUtility.MASK_FULL) {
                         resultBlockID = topBlockID;
                         hasAirOrWater = true;
                         isUniform = false;
-                        subChunkInstance.setSubBlocks(
-                                Coordinate3Int.pack(localX, localY, localZ), topBlockID, groundMask);
-                    } else if (worldY == groundHeight) {
-                        resultBlockID = topBlockID;
-                        blocks.setBlock(localX, localY, localZ, topBlockID);
-                    } else if (worldY > groundHeight - surfaceDepth) {
-                        resultBlockID = fillBlockID;
-                        blocks.setBlock(localX, localY, localZ, fillBlockID);
+                        subChunkInstance.setSubBlocks(packedXYZ, topBlockID, groundMask);
                     } else {
-                        resultBlockID = stoneBlockId;
-                        blocks.setBlock(localX, localY, localZ, stoneBlockId);
+                        if (worldY == groundHeight)
+                            resultBlockID = topBlockID;
+                        else if (worldY > groundHeight - surfaceDepth)
+                            resultBlockID = fillBlockID;
+                        else
+                            resultBlockID = stoneBlockId;
+
+                        if (columnVeins && (resultBlockID == stoneBlockId || resultBlockID == rockBlockID))
+                            resultBlockID = resolveVein(
+                                    column, columnIndex, localX, localZ, worldY, offsetY, resultBlockID);
+
+                        blocks.setBlock(localX, localY, localZ, resultBlockID);
                     }
 
                     if (isUniform) {
@@ -806,6 +1265,36 @@ public class WorldGenerationManager extends ManagerPackage {
         return true;
     }
 
+    private void fillSubChunkLattices(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            TerrainColumnAsyncContainer column,
+            int offsetY,
+            boolean carves,
+            boolean veins) {
+
+        if (!carves && !veins)
+            return;
+
+        long seed = worldHandle.getSeed();
+        long worldOffsetX = (long) Coordinate2Long.unpackX(chunkCoordinate) * CHUNK_SIZE;
+        long worldOffsetZ = (long) Coordinate2Long.unpackY(chunkCoordinate) * CHUNK_SIZE;
+        double worldWidthBlocks = worldHandle.getWorldScale().x;
+        double worldHeightBlocks = worldHandle.getWorldScale().y;
+
+        if (carves)
+            TerrainCarveUtility.fillCaveLattice(
+                    seed, worldWidthBlocks, worldHeightBlocks,
+                    worldOffsetX, offsetY, worldOffsetZ,
+                    TerrainCarveUtility.LATTICE_SIDE, column.hasSeaFeatures, column.caveLattice);
+
+        if (veins)
+            TerrainCarveUtility.fillVeinLattice(
+                    seed, worldWidthBlocks, worldHeightBlocks,
+                    worldOffsetX, offsetY, worldOffsetZ,
+                    TerrainCarveUtility.LATTICE_SIDE, column.veinSeeds, column.veinCount, column.veinLattice);
+    }
+
     private TerrainColumnAsyncContainer requireComputedColumn(long chunkCoordinate) {
 
         TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();
@@ -825,38 +1314,5 @@ public class WorldGenerationManager extends ManagerPackage {
 
     public int getColumnTideSurfaceLevels(long chunkCoordinate) {
         return requireComputedColumn(chunkCoordinate).tideSurfaceLevels;
-    }
-
-    // Surface Profile \\
-
-    private static final class TerrainSurfaceProfile {
-
-        final BiomeHandle biomeHandle;
-        final short surfaceBlockID;
-        final short subsurfaceBlockID;
-        final short underwaterBlockID;
-        final int surfaceTopColor;
-        final int surfaceSideColor;
-        final int underwaterTopColor;
-        final int underwaterSideColor;
-
-        TerrainSurfaceProfile(
-                BiomeHandle biomeHandle,
-                short surfaceBlockID,
-                short subsurfaceBlockID,
-                short underwaterBlockID,
-                int surfaceTopColor,
-                int surfaceSideColor,
-                int underwaterTopColor,
-                int underwaterSideColor) {
-            this.biomeHandle = biomeHandle;
-            this.surfaceBlockID = surfaceBlockID;
-            this.subsurfaceBlockID = subsurfaceBlockID;
-            this.underwaterBlockID = underwaterBlockID;
-            this.surfaceTopColor = surfaceTopColor;
-            this.surfaceSideColor = surfaceSideColor;
-            this.underwaterTopColor = underwaterTopColor;
-            this.underwaterSideColor = underwaterSideColor;
-        }
     }
 }

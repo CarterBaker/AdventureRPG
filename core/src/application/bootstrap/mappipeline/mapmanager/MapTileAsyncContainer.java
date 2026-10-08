@@ -9,7 +9,7 @@ public class MapTileAsyncContainer extends AsyncContainerPackage {
     /*
      * Thread-local scratch for one map tile: the terrain lattice the tile is
      * sampled on, one sample beyond the tile on every side, and the ground,
-     * sea cover and colors resolved at every texel, one texel beyond the tile
+     * water cover, water surface and colors resolved at every texel, one texel beyond the tile
      * on every side so each inner texel finds its slope. Filled and read by
      * MapGenerationBranch on the WorldMap pool, so a tile allocates nothing.
      */
@@ -21,12 +21,14 @@ public class MapTileAsyncContainer extends AsyncContainerPackage {
     int samplesPerSide;
     float[] sampleHeights;
     float[] sampleWater;
+    float[] sampleWaterSurfaces;
     int[] sampleTopColors;
     int[] sampleSideColors;
 
     // Texels
     float[] texelHeights;
     float[] texelWater;
+    float[] texelWaterSurfaces;
     int[] texelTopColors;
     int[] texelSideColors;
 
@@ -41,10 +43,12 @@ public class MapTileAsyncContainer extends AsyncContainerPackage {
 
         this.sampleHeights = new float[sampleCount];
         this.sampleWater = new float[sampleCount];
+        this.sampleWaterSurfaces = new float[sampleCount];
         this.sampleTopColors = new int[sampleCount];
         this.sampleSideColors = new int[sampleCount];
         this.texelHeights = new float[texelCount];
         this.texelWater = new float[texelCount];
+        this.texelWaterSurfaces = new float[texelCount];
         this.texelTopColors = new int[texelCount];
         this.texelSideColors = new int[texelCount];
         this.sample = new TerrainSurfaceSampleStruct();

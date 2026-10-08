@@ -9,13 +9,17 @@ public class BiomeBlendStruct extends StructPackage {
      * One position's resolved biome influence: the distinct biomes reaching it
      * and their normalized weights, filled in place so field sampling never
      * allocates. Past BIOME_FIELD_MAX_CONTRIBUTORS the smallest weight is
-     * displaced, and weight moved into shore buffers is tallied separately.
+     * displaced, and weight moved into shore buffers is tallied separately,
+     * in total and per biome on both sides of the move, so the biome a
+     * position naturally belongs to stays readable beneath its shore buffer.
      */
 
     private static final int CAPACITY = EngineSetting.BIOME_FIELD_MAX_CONTRIBUTORS;
 
     private final BiomeHandle[] biomes = new BiomeHandle[CAPACITY];
     private final float[] weights = new float[CAPACITY];
+    private final float[] bufferShares = new float[CAPACITY];
+    private final float[] convertedShares = new float[CAPACITY];
 
     private int count;
     private float weightSum;
@@ -49,6 +53,8 @@ public class BiomeBlendStruct extends StructPackage {
         if (count < CAPACITY) {
             biomes[count] = biome;
             weights[count] = weight;
+            bufferShares[count] = 0f;
+            convertedShares[count] = 0f;
             weightSum += weight;
             count++;
             return;
@@ -66,6 +72,8 @@ public class BiomeBlendStruct extends StructPackage {
         weightSum += weight - weights[smallest];
         biomes[smallest] = biome;
         weights[smallest] = weight;
+        bufferShares[smallest] = 0f;
+        convertedShares[smallest] = 0f;
     }
 
     public void normalize() {
@@ -75,8 +83,11 @@ public class BiomeBlendStruct extends StructPackage {
 
         float inverse = 1f / weightSum;
 
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < count; i++) {
             weights[i] *= inverse;
+            bufferShares[i] *= inverse;
+            convertedShares[i] *= inverse;
+        }
 
         bufferWeight *= inverse;
         weightSum = 1f;
@@ -90,10 +101,18 @@ public class BiomeBlendStruct extends StructPackage {
             return;
 
         weights[index] -= converted;
+        convertedShares[index] += converted;
         weightSum -= converted;
         bufferWeight += converted;
 
         accumulate(bufferBiome, converted);
+
+        for (int i = 0; i < count; i++) {
+            if (biomes[i] == bufferBiome) {
+                bufferShares[i] = Math.min(weights[i], bufferShares[i] + converted);
+                return;
+            }
+        }
     }
 
     // Accessible \\
@@ -114,6 +133,11 @@ public class BiomeBlendStruct extends StructPackage {
         return weights[index];
     }
 
+    // The weight a biome holds by itself, as it stood before any shore buffer was converted into or out of it
+    public float getNaturalWeight(int index) {
+        return weights[index] - bufferShares[index] + convertedShares[index];
+    }
+
     public BiomeHandle getDominantBiome() {
 
         if (count == 0)
@@ -127,6 +151,25 @@ public class BiomeBlendStruct extends StructPackage {
                 dominant = i;
 
         return biomes[dominant];
+    }
+
+    // The land biome the position belongs to beneath any shore buffer, the dominant biome where no land reaches
+    public BiomeHandle getDominantLandBiome() {
+
+        BiomeHandle dominant = getDominantBiome();
+        float dominantWeight = 0f;
+
+        for (int i = 0; i < count; i++) {
+
+            float naturalWeight = getNaturalWeight(i);
+
+            if (!biomes[i].hasOceanWater() && naturalWeight > dominantWeight) {
+                dominantWeight = naturalWeight;
+                dominant = biomes[i];
+            }
+        }
+
+        return dominant;
     }
 
     public float getOceanWeight() {

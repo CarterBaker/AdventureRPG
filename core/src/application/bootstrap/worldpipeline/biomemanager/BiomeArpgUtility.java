@@ -1,6 +1,11 @@
 package application.bootstrap.worldpipeline.biomemanager;
 
+import application.bootstrap.worldpipeline.biome.BiomeCaveStruct;
+import application.bootstrap.worldpipeline.biome.BiomeCliffStruct;
+import application.bootstrap.worldpipeline.biome.BiomeCoastStruct;
 import application.bootstrap.worldpipeline.biome.BiomeData;
+import application.bootstrap.worldpipeline.biome.BiomeRidgeStruct;
+import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.biome.ProbableBiomePlacement;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
@@ -23,9 +28,10 @@ class BiomeArpgUtility extends EngineUtility {
     /*
      * The single definition of the biome format: display name, weathers, map
      * color, probable biomes with their placement, patch sizes and shapes,
-     * surface blocks, ocean and beach settings, and
-     * the optional terrain shape splines and detail controls, each falling
-     * back to TerrainShapeUtility's defaults. A malformed field throws a
+     * surface and rock blocks, ocean, still water and beach settings, the
+     * optional terrain shape splines and detail controls, each falling back
+     * to TerrainShapeUtility's defaults, and the optional cliffs, ridges,
+     * coast, caves and veins. A malformed field throws a
      * catchable InternalException naming the biome, so BiomeBuilder fails the
      * boot on it while a live rebuild from the editor reports it and keeps the
      * biome it already had.
@@ -54,8 +60,16 @@ class BiomeArpgUtility extends EngineUtility {
                 biomeArpg, "subsurface_block", EngineSetting.DEFAULT_SUBSURFACE_BLOCK_NAME);
         String underwaterBlockName = parseBlockName(
                 biomeArpg, "underwater_block", EngineSetting.DEFAULT_UNDERWATER_BLOCK_NAME);
+        String rockBlockName = parseBlockName(
+                biomeArpg, "rock_block", EngineSetting.DEFAULT_STONE_BLOCK_NAME);
+
+        float rockSlope = ArpgUtility.getFloat(biomeArpg, "rock_slope", EngineSetting.DEFAULT_BIOME_ROCK_SLOPE);
+
+        if (rockSlope <= 0f)
+            throw fail(biomeName, "\"rock_slope\" must be greater than 0.");
 
         boolean oceanWater = ArpgUtility.getBoolean(biomeArpg, "ocean_water", false);
+        int waterLevelBlocks = parseWaterLevel(biomeArpg, biomeName, oceanWater);
         String beachBiomeName = parseBeachBiomeName(biomeArpg, biomeName, oceanWater);
 
         LinearSpline continentalnessSpline = parseSpline(
@@ -82,14 +96,21 @@ class BiomeArpgUtility extends EngineUtility {
         float terrainHeightScale = ArpgUtility.getFloat(
                 biomeArpg, "terrain_height_scale", EngineSetting.DEFAULT_BIOME_TERRAIN_HEIGHT_SCALE);
 
+        BiomeCliffStruct cliffs = parseCliffs(biomeArpg, biomeName);
+        BiomeRidgeStruct ridges = parseRidges(biomeArpg, biomeName);
+        BiomeCoastStruct coast = parseCoast(biomeArpg, biomeName, oceanWater);
+        BiomeCaveStruct caves = parseCaves(biomeArpg, biomeName);
+        ObjectArrayList<BiomeVeinStruct> veins = parseVeins(biomeArpg, biomeName);
+
         return new BiomeData(
                 biomeName, displayName, biomeID, Color.WHITE,
                 seasonWeatherNames, seasonWeatherChances, seasonNames,
                 mapColor, probableBiomes,
-                surfaceBlockName, subsurfaceBlockName, underwaterBlockName,
+                surfaceBlockName, subsurfaceBlockName, underwaterBlockName, rockBlockName, rockSlope,
                 continentalnessSpline, erosionSpline, peaksValleysSpline,
                 detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale,
-                oceanWater, beachBiomeName);
+                cliffs, ridges, coast, caves, veins,
+                oceanWater, waterLevelBlocks, beachBiomeName);
     }
 
     // Display Name \\
@@ -326,6 +347,180 @@ class BiomeArpgUtility extends EngineUtility {
         return beachBiomeName;
     }
 
+    // Still Water \\
+
+    private static int parseWaterLevel(ArpgObjectStruct biomeArpg, String biomeName, boolean oceanWater) {
+
+        if (!biomeArpg.has("water_level_blocks"))
+            return BiomeData.WATER_LEVEL_UNDEFINED;
+
+        int waterLevelBlocks = biomeArpg.get("water_level_blocks").getAsInt();
+
+        if (oceanWater)
+            throw fail(biomeName, "is an ocean and declares \"water_level_blocks\" " + waterLevelBlocks
+                    + " — the sea always stands at sea level and rides the tide; only still water declares its "
+                    + "own level.");
+
+        if (waterLevelBlocks <= EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS
+                || waterLevelBlocks >= EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS)
+            throw fail(biomeName, "has \"water_level_blocks\" " + waterLevelBlocks + " — it must lie between "
+                    + EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS + " and " + EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS
+                    + ", exclusive.");
+
+        return waterLevelBlocks;
+    }
+
+    // Terrain Features \\
+
+    private static BiomeCliffStruct parseCliffs(ArpgObjectStruct biomeArpg, String biomeName) {
+
+        if (!biomeArpg.has("cliffs") || biomeArpg.get("cliffs").isNull())
+            return BiomeCliffStruct.NONE;
+
+        ArpgObjectStruct cliffsArpg = biomeArpg.getAsObject("cliffs");
+
+        float stepBlocks = ArpgUtility.getFloat(
+                cliffsArpg, "step_blocks", EngineSetting.DEFAULT_BIOME_CLIFF_STEP_BLOCKS);
+        float strength = ArpgUtility.getFloat(cliffsArpg, "strength", EngineSetting.DEFAULT_BIOME_CLIFF_STRENGTH);
+        float coverage = ArpgUtility.getFloat(cliffsArpg, "coverage", EngineSetting.DEFAULT_BIOME_CLIFF_COVERAGE);
+
+        if (stepBlocks <= 0f)
+            throw fail(biomeName, "\"cliffs\" \"step_blocks\" must be greater than 0.");
+
+        requireUnit(strength, biomeName, "cliffs", "strength");
+        requireUnit(coverage, biomeName, "cliffs", "coverage");
+
+        return new BiomeCliffStruct(stepBlocks, strength, coverage);
+    }
+
+    private static BiomeRidgeStruct parseRidges(ArpgObjectStruct biomeArpg, String biomeName) {
+
+        if (!biomeArpg.has("ridges") || biomeArpg.get("ridges").isNull())
+            return BiomeRidgeStruct.NONE;
+
+        ArpgObjectStruct ridgesArpg = biomeArpg.getAsObject("ridges");
+
+        float amplitudeBlocks = ArpgUtility.getFloat(ridgesArpg, "amplitude_blocks", 0f);
+        float wavelengthBlocks = ArpgUtility.getFloat(
+                ridgesArpg, "wavelength_blocks", EngineSetting.DEFAULT_BIOME_RIDGE_WAVELENGTH_BLOCKS);
+
+        if (amplitudeBlocks < 0f)
+            throw fail(biomeName, "\"ridges\" \"amplitude_blocks\" must not be negative.");
+
+        if (wavelengthBlocks <= 0f)
+            throw fail(biomeName, "\"ridges\" \"wavelength_blocks\" must be greater than 0.");
+
+        return new BiomeRidgeStruct(amplitudeBlocks, wavelengthBlocks);
+    }
+
+    private static BiomeCoastStruct parseCoast(ArpgObjectStruct biomeArpg, String biomeName, boolean oceanWater) {
+
+        if (!biomeArpg.has("coast") || biomeArpg.get("coast").isNull())
+            return BiomeCoastStruct.NONE;
+
+        if (oceanWater)
+            throw fail(biomeName, "is an ocean and declares \"coast\" — coasts are declared by the land biomes "
+                    + "an ocean borders.");
+
+        ArpgObjectStruct coastArpg = biomeArpg.getAsObject("coast");
+
+        float cliffHeightBlocks = ArpgUtility.getFloat(coastArpg, "cliff_height_blocks", 0f);
+        float coverage = ArpgUtility.getFloat(coastArpg, "coverage", EngineSetting.DEFAULT_BIOME_COAST_COVERAGE);
+        float overhangBlocks = ArpgUtility.getFloat(
+                coastArpg, "overhang_blocks", EngineSetting.DEFAULT_BIOME_COAST_OVERHANG_BLOCKS);
+        float seaCaves = ArpgUtility.getFloat(coastArpg, "sea_caves", EngineSetting.DEFAULT_BIOME_COAST_SEA_CAVES);
+
+        if (cliffHeightBlocks < 0f)
+            throw fail(biomeName, "\"coast\" \"cliff_height_blocks\" must not be negative.");
+
+        if (overhangBlocks < 0f)
+            throw fail(biomeName, "\"coast\" \"overhang_blocks\" must not be negative.");
+
+        requireUnit(coverage, biomeName, "coast", "coverage");
+        requireUnit(seaCaves, biomeName, "coast", "sea_caves");
+
+        return new BiomeCoastStruct(cliffHeightBlocks, coverage, overhangBlocks, seaCaves);
+    }
+
+    private static BiomeCaveStruct parseCaves(ArpgObjectStruct biomeArpg, String biomeName) {
+
+        if (!biomeArpg.has("caves") || biomeArpg.get("caves").isNull())
+            return BiomeCaveStruct.DEFAULT;
+
+        ArpgObjectStruct cavesArpg = biomeArpg.getAsObject("caves");
+
+        float tunnels = ArpgUtility.getFloat(cavesArpg, "tunnels", EngineSetting.DEFAULT_BIOME_CAVE_TUNNELS);
+        float caverns = ArpgUtility.getFloat(cavesArpg, "caverns", EngineSetting.DEFAULT_BIOME_CAVE_CAVERNS);
+        int minHeightBlocks = ArpgUtility.getInt(
+                cavesArpg, "min_height_blocks", EngineSetting.DEFAULT_BIOME_CAVE_MIN_HEIGHT_BLOCKS);
+        int maxDepthBlocks = ArpgUtility.getInt(
+                cavesArpg, "max_depth_blocks", EngineSetting.DEFAULT_BIOME_CAVE_MAX_DEPTH_BLOCKS);
+        boolean entrances = ArpgUtility.getBoolean(
+                cavesArpg, "entrances", EngineSetting.DEFAULT_BIOME_CAVE_ENTRANCES);
+
+        requireUnit(tunnels, biomeName, "caves", "tunnels");
+        requireUnit(caverns, biomeName, "caves", "caverns");
+
+        if (minHeightBlocks < 0)
+            throw fail(biomeName, "\"caves\" \"min_height_blocks\" must not be negative.");
+
+        if (maxDepthBlocks <= 0)
+            throw fail(biomeName, "\"caves\" \"max_depth_blocks\" must be greater than 0.");
+
+        return new BiomeCaveStruct(tunnels, caverns, minHeightBlocks, maxDepthBlocks, entrances);
+    }
+
+    private static ObjectArrayList<BiomeVeinStruct> parseVeins(ArpgObjectStruct biomeArpg, String biomeName) {
+
+        ObjectArrayList<BiomeVeinStruct> veins = new ObjectArrayList<>();
+
+        if (!biomeArpg.has("veins"))
+            return veins;
+
+        ArpgArrayStruct veinArray = biomeArpg.getAsArray("veins");
+
+        if (veinArray.size() > EngineSetting.TERRAIN_VEIN_PALETTE_MAX)
+            throw fail(biomeName, "declares " + veinArray.size() + " \"veins\" — no more than "
+                    + EngineSetting.TERRAIN_VEIN_PALETTE_MAX + " are allowed.");
+
+        for (ArpgElementStruct element : veinArray)
+            veins.add(parseVein(element.getAsObject(), biomeName));
+
+        return veins;
+    }
+
+    private static BiomeVeinStruct parseVein(ArpgObjectStruct veinArpg, String biomeName) {
+
+        String blockName = requireString(veinArpg, "block", biomeName, "veins");
+
+        float abundance = ArpgUtility.getFloat(veinArpg, "abundance", EngineSetting.DEFAULT_BIOME_VEIN_ABUNDANCE);
+        float thicknessBlocks = ArpgUtility.getFloat(
+                veinArpg, "thickness_blocks", EngineSetting.DEFAULT_BIOME_VEIN_THICKNESS_BLOCKS);
+        int minHeightBlocks = ArpgUtility.getInt(
+                veinArpg, "min_height_blocks", EngineSetting.DEFAULT_BIOME_VEIN_MIN_HEIGHT_BLOCKS);
+        int maxHeightBlocks = ArpgUtility.getInt(
+                veinArpg, "max_height_blocks", EngineSetting.DEFAULT_BIOME_VEIN_MAX_HEIGHT_BLOCKS);
+        int maxDepthBlocks = ArpgUtility.getInt(
+                veinArpg, "max_depth_blocks", EngineSetting.DEFAULT_BIOME_VEIN_MAX_DEPTH_BLOCKS);
+
+        requireUnit(abundance, biomeName, "veins", "abundance");
+
+        if (thicknessBlocks <= 0f)
+            throw fail(biomeName, "\"veins\" entry \"" + blockName + "\" must have \"thickness_blocks\" "
+                    + "greater than 0.");
+
+        if (maxHeightBlocks < minHeightBlocks)
+            throw fail(biomeName, "\"veins\" entry \"" + blockName + "\" has \"max_height_blocks\" "
+                    + maxHeightBlocks + ", below its \"min_height_blocks\" " + minHeightBlocks + ".");
+
+        if (maxDepthBlocks <= 0)
+            throw fail(biomeName, "\"veins\" entry \"" + blockName + "\" must have \"max_depth_blocks\" "
+                    + "greater than 0.");
+
+        return new BiomeVeinStruct(
+                blockName, abundance, thicknessBlocks, minHeightBlocks, maxHeightBlocks, maxDepthBlocks);
+    }
+
     // Terrain Shape \\
 
     private static LinearSpline parseSpline(
@@ -385,6 +580,13 @@ class BiomeArpgUtility extends EngineUtility {
             throw fail(biomeName, "\"" + field + "\" entry is missing required \"" + key + "\" field.");
 
         return entryArpg.get(key).getAsString();
+    }
+
+    private static void requireUnit(float value, String biomeName, String field, String key) {
+
+        if (value < 0f || value > 1f)
+            throw fail(biomeName, "\"" + field + "\" \"" + key + "\" is " + value
+                    + " — it must run from 0 to 1.");
     }
 
     private static InternalException fail(String biomeName, String message) {

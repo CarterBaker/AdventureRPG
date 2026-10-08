@@ -20,7 +20,8 @@ public class MapGenerationBranch extends BranchPackage {
      * The terrain is sampled on a lattice at most MAP_TILE_SAMPLES_PER_SIDE on
      * a side, one sample beyond the tile all round, and spread to every texel,
      * one texel beyond the tile all round, so each texel finds its slope; then
-     * each texel is shaded as land or water. The tile raises its generated
+     * each texel is shaded as land or water, the sea and still water alike
+     * deepening below their own surfaces. The tile raises its generated
      * flag only once its pixels are whole.
      */
 
@@ -95,7 +96,8 @@ public class MapGenerationBranch extends BranchPackage {
                         sample);
 
                 scratch.sampleHeights[index] = sample.getGroundHeightBlocks();
-                scratch.sampleWater[index] = sample.isOpenWater() ? 1f : 0f;
+                scratch.sampleWater[index] = sample.isOpenWater() || sample.isLakeWater() ? 1f : 0f;
+                scratch.sampleWaterSurfaces[index] = sample.getWaterSurfaceBlocks();
                 scratch.sampleTopColors[index] = sample.getTopColor();
                 scratch.sampleSideColors[index] = sample.getSideColor();
             }
@@ -136,6 +138,7 @@ public class MapGenerationBranch extends BranchPackage {
 
                 scratch.texelHeights[texel] = bilinear(scratch.sampleHeights, corner, below, tx, tz);
                 scratch.texelWater[texel] = bilinear(scratch.sampleWater, corner, below, tx, tz);
+                scratch.texelWaterSurfaces[texel] = bilinear(scratch.sampleWaterSurfaces, corner, below, tx, tz);
                 scratch.texelTopColors[texel] = bilinear(scratch.sampleTopColors, corner, below, tx, tz);
                 scratch.texelSideColors[texel] = bilinear(scratch.sampleSideColors, corner, below, tx, tz);
             }
@@ -174,7 +177,7 @@ public class MapGenerationBranch extends BranchPackage {
                 if (scratch.texelWater[texel] >= 0.5f)
                     color = MapShadeUtility.shadeWater(
                             scratch.texelTopColors[texel],
-                            EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS - scratch.texelHeights[texel]);
+                            scratch.texelWaterSurfaces[texel] - scratch.texelHeights[texel]);
                 else
                     color = MapShadeUtility.shadeLand(
                             scratch.texelTopColors[texel],
