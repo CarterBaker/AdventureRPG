@@ -4,7 +4,7 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.pass.PassHandle;
+import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.grid.WaterTargetStruct;
@@ -41,7 +41,7 @@ public class WaterSystem extends SystemPackage {
     private WeatherSystem weatherSystem;
 
     // Render Target
-    private PassHandle underwaterPass;
+    private PassInstance underwaterPass;
     private FBOInstance waterFbo;
 
     // Internal \\
@@ -61,7 +61,7 @@ public class WaterSystem extends SystemPackage {
     @Override
     protected void awake() {
 
-        this.underwaterPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_UNDERWATER);
+        this.underwaterPass = passManager.clonePass(RuntimeSetting.PASS_UNDERWATER);
         this.waterFbo = fboManager.cloneFbo(RuntimeSetting.FBO_WATER, context.getWindow());
 
         worldSystem.getGridInstance().setWaterTarget(new WaterTargetStruct(

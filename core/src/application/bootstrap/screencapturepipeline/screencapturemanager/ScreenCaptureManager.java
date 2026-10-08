@@ -8,7 +8,9 @@ public class ScreenCaptureManager extends ManagerPackage {
     /*
      * Owns screenshots and video recording for the window the caller names.
      * Requests only record intent; all readback and file dispatch happen in
-     * flush(), called once per frame by the engine's draw.
+     * flush(), called once per frame by the engine's draw. A window that closes
+     * drops its pending screenshot and ends its recording through
+     * releaseWindow().
      */
 
     // Internal
@@ -31,6 +33,11 @@ public class ScreenCaptureManager extends ManagerPackage {
 
     public void toggleRecording(WindowInstance window) {
         videoRecordingSystem.toggleRecording(window);
+    }
+
+    public void releaseWindow(WindowInstance window) {
+        screenshotSystem.releaseWindow(window);
+        videoRecordingSystem.releaseWindow(window);
     }
 
     // Draw Authority \\

@@ -40,6 +40,8 @@ public class PlayerManager extends ManagerPackage {
      * hovered window's player updates, gated on its menu lock. Also handles
      * free-camera flight, rerolls, spawn verification, and character-creator
      * previews, and advances the player's animation after movement each frame.
+     * despawnPlayer() mirrors spawnPlayer(), forgetting every per-window entry
+     * and taking the player out of the world when its window closes.
      * After movement the player's input reaches the world through
      * PlacementManager and its stances — aiming and blocking — through
      * CombatManager; a raised guard holds the player to a walk. Aboard a
@@ -180,6 +182,28 @@ public class PlayerManager extends ManagerPackage {
         windowID2CharacterPreview.put(windowID, false);
         windowID2CharacterPreviewYaw.put(windowID, 0f);
         return player;
+    }
+
+    public void despawnPlayer(WindowInstance window) {
+
+        int windowID = window.getWindowID();
+        EntityInstance player = windowID2Player.remove(windowID);
+
+        windowID2Camera.remove(windowID);
+        windowID2RawInput.remove(windowID);
+        windowID2Window.remove(windowID);
+        windowID2VerifyPlayerPosition.remove(windowID);
+        windowID2FreeCamera.remove(windowID);
+        windowID2ZoomDistance.remove(windowID);
+        windowID2ZoomTarget.remove(windowID);
+        windowID2FirstPersonToggled.remove(windowID);
+        windowID2PreFirstPersonZoomTarget.remove(windowID);
+        windowID2CharacterPreview.remove(windowID);
+        windowID2CharacterPreviewYaw.remove(windowID);
+        windowID2PreviewFraming.remove(windowID);
+
+        if (player != null)
+            entityManager.despawnEntity(player);
     }
 
     // Character \\

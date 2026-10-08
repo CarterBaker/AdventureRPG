@@ -7,7 +7,7 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
-import application.bootstrap.shaderpipeline.pass.PassHandle;
+import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.weatherpipeline.util.SkyColorUtility;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -41,7 +41,7 @@ public class SquintSystem extends SystemPackage {
     private WaterSystem waterSystem;
 
     // Render Target
-    private PassHandle squintPass;
+    private PassInstance squintPass;
     private FBOInstance squintFbo;
 
     // Look
@@ -76,7 +76,7 @@ public class SquintSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.squintPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_SQUINT);
+        this.squintPass = passManager.clonePass(RuntimeSetting.PASS_SQUINT);
         this.squintFbo = fboManager.cloneFbo(RuntimeSetting.FBO_SQUINT, context.getWindow());
     }
 

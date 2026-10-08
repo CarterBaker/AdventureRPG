@@ -20,7 +20,10 @@ public class InputManager extends ManagerPackage {
      * always read the Input of that window's own OS window. syncFocus() is the
      * single authority for focus and capture, and publishActiveInput() then
      * commits EngineContext.input once per frame for code that has no window in
-     * hand.
+     * hand. Capture is held only while its OS window has the OS focus, and a
+     * window leaving the engine hands its capture back through
+     * releaseWindow(), so the cursor is never left caught by a window the
+     * user has left or that is gone; clicking back into it captures again.
      */
 
     private CursorSystem cursorSystem;
@@ -75,6 +78,8 @@ public class InputManager extends ManagerPackage {
 
     private void syncFocus() {
 
+        releaseUnfocusedCapture();
+
         WindowInstance hovered = windowManager.getHoveredWindow();
 
         if (hovered == null)
@@ -96,6 +101,14 @@ public class InputManager extends ManagerPackage {
 
         if (windowManager.getCapturedWindow() == null)
             onWindowFocused(hovered);
+    }
+
+    private void releaseUnfocusedCapture() {
+
+        WindowInstance captured = windowManager.getCapturedWindow();
+
+        if (captured != null && !internal.windowPlatform.isWindowFocused(captured.getGLWindow()))
+            cursorSystem.releaseCapture();
     }
 
     private void publishActiveInput() {
@@ -151,6 +164,10 @@ public class InputManager extends ManagerPackage {
 
     public void setAuthorityResolver(InputAuthorityResolver resolver) {
         this.authorityResolver = resolver;
+    }
+
+    public void releaseWindow(WindowInstance window) {
+        cursorSystem.releaseCaptureIfOwner(window);
     }
 
     private boolean isHovered(WindowInstance window) {

@@ -72,13 +72,6 @@ public class TabContext extends ContextPackage {
             contentContext.getWindow().dispose();
         }
 
-        if (chromeMenu != null) {
-            menuManager.closeMenu(chromeMenu);
-            chromeMenu = null;
-        }
-
-        menuManager.setMenuTargetFbo(getWindow(), null);
-
         tabManager.deregisterTab(ownerHandle);
     }
 

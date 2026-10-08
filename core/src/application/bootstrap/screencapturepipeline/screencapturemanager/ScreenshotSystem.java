@@ -81,6 +81,15 @@ class ScreenshotSystem extends SystemPackage {
         timeStampLog("Screenshot requested for window: " + window.getWindowID());
     }
 
+    void releaseWindow(WindowInstance window) {
+
+        if (!captureRequested || requestedWindow != window)
+            return;
+
+        this.captureRequested = false;
+        this.requestedWindow = null;
+    }
+
     // Draw Authority \\
 
     void flush() {

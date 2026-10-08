@@ -29,7 +29,8 @@ public class VehicleManager extends ManagerPackage {
      * world: at anchor it still floats and rocks, and its anchor only drags.
      * Riders are carried to where the deck now stands once every vehicle has
      * stepped, and every door swings toward open or shut. The helm, the
-     * sails, the doors and the anchor change only through here.
+     * sails, the doors and the anchor change only through here, and an entity
+     * leaving the world lets go of every vehicle through releaseEntity().
      */
 
     // Internal
@@ -223,6 +224,12 @@ public class VehicleManager extends ManagerPackage {
         for (int i = 0; i < vehicles.size(); i++)
             if (vehicles.get(i).getHelmsman() == entity)
                 vehicles.get(i).setHelmsman(null);
+    }
+
+    // An entity leaving the world lets go of its helm and goes ashore
+    public void releaseEntity(EntityInstance entity) {
+        releaseHelm(entity);
+        vehicleRiderSystem.releaseEntity(entity);
     }
 
     public VehicleInstance findHelmFor(EntityInstance entity) {

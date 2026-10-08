@@ -4,7 +4,7 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.pass.PassHandle;
+import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -35,7 +35,7 @@ public class SkySystem extends SystemPackage {
     private WorldSystem worldSystem;
 
     // Render Target
-    private PassHandle skyPass;
+    private PassInstance skyPass;
     private FBOInstance skyFbo;
 
     @Override
@@ -52,7 +52,7 @@ public class SkySystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.skyPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_SKY);
+        this.skyPass = passManager.clonePass(RuntimeSetting.PASS_SKY);
         this.skyFbo = fboManager.cloneFbo(RuntimeSetting.FBO_SKY, context.getWindow());
 
         bindSkyBodyPictures();

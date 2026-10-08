@@ -78,13 +78,6 @@ public class WorldMapMenuSystem extends SystemPackage {
         this.statusMenu = menuManager.openMenu(WorldMapSetting.MENU_STATUS, window);
     }
 
-    @Override
-    protected void dispose() {
-
-        menuManager.closeMenu(statusMenu);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
-    }
-
     // Update \\
 
     @Override

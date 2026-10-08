@@ -14,6 +14,8 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
+import application.bootstrap.worldpipeline.world.WorldEditRegionStruct;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -34,7 +36,8 @@ class ChunkQueueManager extends ManagerPackage {
      * budget turns away keeps its place at the front of the round robin, so a
      * ready chunk reaches the GPU next frame instead of a full pass later.
      * Pooled chunks are reused only under their own lock, and unloading a chunk
-     * invalidates any mega it fed.
+     * invalidates any mega it fed. A live edit restreams only the grid's chunks
+     * its region reaches, nearest first, and leaves every other chunk standing.
      */
 
     // Internal
@@ -152,6 +155,50 @@ class ChunkQueueManager extends ManagerPackage {
 
     void onGridRemoved(GridInstance grid) {
         onGridRebuilt(grid);
+    }
+
+    // Restream \\
+
+    // Walked far to near so the nearest regenerated chunks load first
+    void restreamRegion(GridInstance grid, WorldEditRegionStruct region) {
+
+        Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
+        LongLinkedOpenHashSet loadRequests = grid.getLoadRequests();
+        WorldHandle worldHandle = grid.getWorldHandle();
+
+        for (int i = grid.getTotalSlots() - 1; i >= 0; i--) {
+
+            long chunkCoordinate = grid.getChunkCoordinateForSlot(grid.getGridCoordinate(i));
+
+            if (!region.reachesChunk(worldHandle, chunkCoordinate))
+                continue;
+
+            ChunkInstance chunkInstance = activeChunks.remove(chunkCoordinate);
+
+            if (chunkInstance == null)
+                continue;
+
+            discardChunk(grid, chunkCoordinate, chunkInstance);
+            loadRequests.addAndMoveToFirst(chunkCoordinate);
+        }
+    }
+
+    // Waits out any work in flight, since every chunk the edit reaches must regenerate from the edited world
+    private void discardChunk(GridInstance grid, long chunkCoordinate, ChunkInstance chunkInstance) {
+
+        ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
+        syncContainer.acquire();
+
+        try {
+            grid.getUnloadRequests().remove(chunkCoordinate);
+            worldRenderManager.removeChunkInstance(chunkCoordinate);
+            chunkInstance.reset();
+        } finally {
+            syncContainer.release();
+        }
+
+        worldStreamManager.invalidateMegaForChunk(chunkCoordinate);
+        recycleChunk(grid, chunkInstance);
     }
 
     // Queue Execution \\

@@ -4,7 +4,7 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.pass.PassHandle;
+import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
@@ -34,7 +34,7 @@ public class LightingSystem extends SystemPackage {
     private WeatherSystem weatherSystem;
 
     // Render Target
-    private PassHandle lightingPass;
+    private PassInstance lightingPass;
     private FBOInstance litFbo;
 
     // Base \\
@@ -52,7 +52,7 @@ public class LightingSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.lightingPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_LIGHTING);
+        this.lightingPass = passManager.clonePass(RuntimeSetting.PASS_LIGHTING);
         this.litFbo = fboManager.cloneFbo(RuntimeSetting.FBO_LIT, context.getWindow());
 
         FBOInstance worldFbo = worldSystem.getWorldFbo();

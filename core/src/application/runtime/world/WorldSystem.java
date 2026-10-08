@@ -14,7 +14,8 @@ public class WorldSystem extends SystemPackage {
      * Initializes the world stream grid for the context window at startup,
      * binding the world render target so chunk rendering composites
      * correctly. Retains the created GridInstance so other per-window
-     * systems (lighting, sky) can read this window's own grid.
+     * systems (lighting, sky) can read this window's own grid, and removes
+     * the grid from streaming when the context closes.
      */
 
     // Internal
@@ -46,6 +47,11 @@ public class WorldSystem extends SystemPackage {
                 playerManager.getPlayerForWindow(windowID),
                 context.getWindow(),
                 worldFbo);
+    }
+
+    @Override
+    protected void dispose() {
+        worldStreamManager.removeGrid(gridInstance);
     }
 
     // Accessible \\

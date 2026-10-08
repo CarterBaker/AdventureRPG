@@ -71,13 +71,6 @@ public class ConsolePanelSystem extends SystemPackage {
             throwException("Console menu '" + ConsoleSetting.MENU_CONSOLE + "' has no line list entry point.");
     }
 
-    @Override
-    protected void dispose() {
-
-        menuManager.closeMenu(consoleMenu);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
-    }
-
     // Update \\
 
     @Override

@@ -2,8 +2,10 @@ package application.kernel.windowpipeline.window;
 
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
+import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.render.RenderQueueHandle;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
+import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.assets.camera.CameraInstance;
 import engine.assets.camera.OrthographicCameraInstance;
@@ -17,9 +19,10 @@ public class WindowInstance extends InstancePackage {
      * Runtime window wrapper. Pairs with a context and owns its render queue
      * and menu list. Logical windows (tabs) have no native handle and composite
      * onto an OS window through a target and rect. zOrder decides both draw
-     * order and hit priority, and dispose() tears down every window composited
-     * onto this one along with its render resources before firing the dispose
-     * listener.
+     * order and hit priority. dispose() is the one teardown for every OS and
+     * logical window: the windows composited onto it go first, then its
+     * context releases what its systems registered, then the cursor capture,
+     * menus and render resources it held, before the dispose listener fires.
      */
 
     // Data
@@ -76,6 +79,8 @@ public class WindowInstance extends InstancePackage {
     private RenderManager renderManager;
     private VAOManager vaoManager;
     private WindowManager windowManager;
+    private InputManager inputManager;
+    private MenuManager menuManager;
 
     // Internal \\
 
@@ -97,6 +102,8 @@ public class WindowInstance extends InstancePackage {
         this.renderManager = get(RenderManager.class);
         this.vaoManager = get(VAOManager.class);
         this.windowManager = get(WindowManager.class);
+        this.inputManager = get(InputManager.class);
+        this.menuManager = get(MenuManager.class);
     }
 
     @Override
@@ -303,16 +310,19 @@ public class WindowInstance extends InstancePackage {
         renderManager.migrateWindowResources(this, previousGLWindow);
     }
 
+    // Each child detaches itself as it goes, so a child another child already took down is never disposed twice
     public void dispose() {
 
-        for (WindowInstance child : new ObjectArrayList<>(children))
-            child.dispose();
-
-        vaoManager.removeWindowVAOs(getWindowID());
-        renderManager.removeWindowResources(this);
+        while (!children.isEmpty())
+            children.top().dispose();
 
         if (context != null)
             internal.destroyContext(context);
+
+        inputManager.releaseWindow(this);
+        menuManager.releaseWindow(this);
+        vaoManager.removeWindowVAOs(getWindowID());
+        renderManager.removeWindowResources(this);
 
         setCompositeTarget(null);
         windowManager.removeWindow(this);

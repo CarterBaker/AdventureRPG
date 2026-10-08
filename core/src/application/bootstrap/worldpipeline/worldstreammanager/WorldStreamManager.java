@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.worldstreammanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -9,6 +10,7 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
 import application.bootstrap.worldpipeline.macrostreammanager.MacroStreamManager;
 import application.bootstrap.worldpipeline.megastreammanager.MegaStreamManager;
+import application.bootstrap.worldpipeline.world.WorldEditRegionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
@@ -24,14 +26,18 @@ public class WorldStreamManager extends ManagerPackage {
      * stream through their own manager. A rebuild re-lays a grid's slots in
      * place, and the frame a grid wraps around the player raises
      * wrappingPlayer so WorldTickManager holds off. Live world and biome edits
-     * rebuild every grid once they have been quiet for a moment, so every
-     * preview and Dev window streams the edited terrain without a flood of
-     * rebuilds while a brush is dragged.
+     * gather into one region and, once quiet for a moment, restream in place
+     * only the chunks and macro tiles that region reaches, so a preview or Dev
+     * window far from the brush never streams again, one near it keeps every
+     * chunk the edit cannot change, and a player whose own chunk regenerated is
+     * set down again on the new ground. The restream frame raises
+     * wrappingPlayer as a wrap does.
      */
 
     // Internal
     private GridManager gridManager;
     private BiomeManager biomeManager;
+    private PlayerManager playerManager;
     private ChunkStreamManager chunkStreamManager;
     private MegaStreamManager megaStreamManager;
     private MacroStreamManager macroStreamManager;
@@ -44,7 +50,7 @@ public class WorldStreamManager extends ManagerPackage {
 
     // Live Rebuild
     private int rebuiltBiomeRevision;
-    private boolean liveRebuildPending;
+    private WorldEditRegionStruct liveRebuildRegion;
     private float liveRebuildCountdown;
 
     // Internal \\
@@ -53,6 +59,7 @@ public class WorldStreamManager extends ManagerPackage {
     protected void create() {
 
         this.grids = new ObjectArrayList<>();
+        this.liveRebuildRegion = new WorldEditRegionStruct();
         this.chunkStreamManager = create(ChunkStreamManager.class);
         this.megaStreamManager = create(MegaStreamManager.class);
         this.macroStreamManager = create(MacroStreamManager.class);
@@ -62,6 +69,7 @@ public class WorldStreamManager extends ManagerPackage {
     protected void get() {
         this.gridManager = get(GridManager.class);
         this.biomeManager = get(BiomeManager.class);
+        this.playerManager = get(PlayerManager.class);
     }
 
     @Override
@@ -75,42 +83,74 @@ public class WorldStreamManager extends ManagerPackage {
             if (((GridInstance) elements[i]).updateActiveChunkCoordinate())
                 rebuilt = true;
 
+        if (advanceLiveRebuild())
+            rebuilt = true;
+
         this.wrappingPlayer = rebuilt;
-        advanceLiveRebuild();
     }
 
     // Live Rebuild \\
 
-    public void requestLiveRebuild() {
+    public void requestLiveRebuild(
+            WorldHandle editedWorldHandle,
+            int minPixelX,
+            int minPixelZ,
+            int maxPixelX,
+            int maxPixelZ) {
 
         if (grids.isEmpty())
             return;
 
-        this.liveRebuildPending = true;
+        liveRebuildRegion.includePixels(editedWorldHandle, minPixelX, minPixelZ, maxPixelX, maxPixelZ);
         this.liveRebuildCountdown = EngineSetting.WORLD_LIVE_REBUILD_DELAY_SECONDS;
     }
 
-    private void advanceLiveRebuild() {
+    // A rebuilt biome can change any part of the field, so it reaches everything
+    private void requestBiomeRebuild() {
+
+        if (grids.isEmpty())
+            return;
+
+        liveRebuildRegion.includeEverything();
+        this.liveRebuildCountdown = EngineSetting.WORLD_LIVE_REBUILD_DELAY_SECONDS;
+    }
+
+    private boolean advanceLiveRebuild() {
 
         int biomeRevision = biomeManager.getRevision();
 
         if (biomeRevision != rebuiltBiomeRevision) {
             this.rebuiltBiomeRevision = biomeRevision;
-            requestLiveRebuild();
+            requestBiomeRebuild();
         }
 
-        if (!liveRebuildPending)
-            return;
+        if (liveRebuildRegion.isEmpty())
+            return false;
 
         liveRebuildCountdown -= internal.getDeltaTime();
 
         if (liveRebuildCountdown > 0f)
-            return;
-
-        this.liveRebuildPending = false;
+            return false;
 
         for (int i = 0; i < grids.size(); i++)
-            rebuildGrid(grids.get(i));
+            restreamRegion(grids.get(i), liveRebuildRegion);
+
+        liveRebuildRegion.clear();
+        return true;
+    }
+
+    private void restreamRegion(GridInstance grid, WorldEditRegionStruct region) {
+
+        chunkStreamManager.restreamRegion(grid, region);
+        macroStreamManager.restreamRegion(grid, region);
+
+        if (!region.reachesChunk(grid.getWorldHandle(), grid.getActiveChunkCoordinate()))
+            return;
+
+        int windowID = grid.getWindowInstance().getWindowID();
+
+        if (playerManager.hasPlayerForWindow(windowID))
+            playerManager.verifyPlayerPositionForWindow(windowID);
     }
 
     // Grid Lifecycle \\

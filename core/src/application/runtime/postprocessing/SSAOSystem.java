@@ -4,7 +4,7 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.pass.PassHandle;
+import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
@@ -35,7 +35,7 @@ public class SSAOSystem extends SystemPackage {
     private TextureManager textureManager;
 
     // Render Target
-    private PassHandle ssaoPass;
+    private PassInstance ssaoPass;
     private FBOInstance ssaoFbo;
     private int noiseTexture;
 
@@ -54,7 +54,7 @@ public class SSAOSystem extends SystemPackage {
     @Override
     protected void awake() {
 
-        this.ssaoPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_SSAO);
+        this.ssaoPass = passManager.clonePass(RuntimeSetting.PASS_SSAO);
         this.ssaoFbo = fboManager.cloneFbo(RuntimeSetting.FBO_SSAO, context.getWindow());
         this.noiseTexture = textureManager.createFloatTexture2D(
                 generateNoise(),

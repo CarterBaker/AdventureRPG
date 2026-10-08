@@ -3,6 +3,8 @@ package application.bootstrap.worldpipeline.macrostreammanager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroDataSyncContainer;
+import application.bootstrap.worldpipeline.world.WorldEditRegionStruct;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
@@ -25,7 +27,9 @@ class MacroQueueManager extends ManagerPackage {
      * drawing its old mesh until the new one lands. Builds are paced by the
      * MacroStreaming pool's capacity and uploads by their own budget, and a
      * macro with a build reserved is never recycled, so a pooled macro never
-     * has work in flight. A removed grid releases its distant sea with it.
+     * has work in flight. A removed grid releases its distant sea with it. A
+     * live edit rebuilds only the tiles its region reaches, each drawing its
+     * old mesh until the new one lands.
      */
 
     // Internal
@@ -113,6 +117,38 @@ class MacroQueueManager extends ManagerPackage {
     void onGridRemoved(GridInstance grid) {
         onGridRebuilt(grid);
         worldRenderManager.disposeMacroWater(grid);
+    }
+
+    // Restream \\
+
+    void restreamRegion(GridInstance grid, WorldEditRegionStruct region) {
+
+        WorldHandle worldHandle = grid.getWorldHandle();
+        ObjectIterator<Long2ObjectMap.Entry<MacroChunkInstance>> iterator = grid.getActiveMacroChunks()
+                .long2ObjectEntrySet()
+                .fastIterator();
+
+        while (iterator.hasNext()) {
+
+            MacroChunkInstance macro = iterator.next().getValue();
+
+            if (region.reachesArea(worldHandle, macro.getCoordinate(), EngineSetting.MACRO_CHUNK_SIZE))
+                invalidateMacro(macro);
+        }
+    }
+
+    // A build in flight read the world before the edit, so it is waited out and its geometry dropped
+    private void invalidateMacro(MacroChunkInstance macro) {
+
+        MacroDataSyncContainer sync = macro.getMacroDataSyncContainer();
+        sync.acquireIdle();
+
+        try {
+            sync.clearGeometry();
+            macro.invalidateBuild();
+        } finally {
+            sync.release();
+        }
     }
 
     // Placement \\

@@ -4,7 +4,7 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.pass.PassHandle;
+import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
@@ -35,7 +35,7 @@ public class WeatherSystem extends SystemPackage {
     private CloudManager cloudManager;
 
     // Render Target
-    private PassHandle weatherPass;
+    private PassInstance weatherPass;
     private FBOInstance weatherFbo;
 
     // Internal \\
@@ -52,7 +52,7 @@ public class WeatherSystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.weatherPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_WEATHER);
+        this.weatherPass = passManager.clonePass(RuntimeSetting.PASS_WEATHER);
         this.weatherFbo = fboManager.cloneFbo(RuntimeSetting.FBO_WEATHER, context.getWindow());
 
         weatherPass.getModelInstance().getMaterial().setUniform(

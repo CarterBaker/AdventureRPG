@@ -570,6 +570,10 @@ public class VehicleRiderSystem extends SystemPackage {
         entity2VehicleRider.values().removeIf(rider -> rider.getVehicleInstance() == vehicle);
     }
 
+    void releaseEntity(EntityInstance entity) {
+        entity2VehicleRider.remove(entity);
+    }
+
     // Utility \\
 
     // Whether the entity lies within the vehicle's bounding radius plus its own size and the margin given

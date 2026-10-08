@@ -654,8 +654,11 @@ public class EngineSetting {
     public static final int MAP_OVERLAY_WEATHER_SAMPLES_PER_FRAME = 512;
     public static final int MAP_OVERLAY_WEATHER_TEXELS = 256;
 
-    // World — live edits stream every loaded grid again once edits have been quiet this long
+    // World — live edits restream what they reach of every loaded grid once edits have been quiet this long, and an
+    // edited world pixel reaches terrain this far past itself, through the biome field and the structures it places
     public static final float WORLD_LIVE_REBUILD_DELAY_SECONDS = 0.4f;
+    public static final int WORLD_LIVE_REBUILD_MARGIN_CHUNKS = MAP_EDIT_MARGIN_PIXELS * CHUNKS_PER_PIXEL
+            + EngineSetting.STRUCTURE_MAX_EXTENT_BLOCKS / CHUNK_SIZE;
 
     // Sub-Block
     public static final int CHUNK_VERTEX_FLOAT_COUNT = 15;

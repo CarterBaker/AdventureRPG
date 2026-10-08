@@ -24,9 +24,9 @@ public class WorldEditorManager extends ManagerPackage {
      * every stroke at once, the palette of biomes the image can paint, the
      * selected biome, tool and brush radius, and the status line. Each edited
      * region is handed to MapManager, which regenerates only the map tiles it
-     * reaches, and to WorldStreamManager, which streams every preview's
-     * terrain again once the edits settle; the palette follows every live
-     * biome rebuild. Biome edits from the Info Panel reach the engine, and
+     * reaches, and to WorldStreamManager, which restreams only the preview and
+     * Dev terrain it reaches once the edits settle; the palette follows every
+     * live biome rebuild. Biome edits from the Info Panel reach the engine, and
      * biome selection stays in step with the hierarchy, through
      * WorldBiomeBranch.
      */
@@ -111,7 +111,8 @@ public class WorldEditorManager extends ManagerPackage {
             imageManager.addEditListener(imageName, region -> {
                 mapManager.invalidateWorldPixels(
                         activeWorld, region.getMinX(), region.getMinY(), region.getMaxX(), region.getMaxY());
-                worldStreamManager.requestLiveRebuild();
+                worldStreamManager.requestLiveRebuild(
+                        activeWorld, region.getMinX(), region.getMinY(), region.getMaxX(), region.getMaxY());
             });
 
         this.worldHandle = activeWorld;

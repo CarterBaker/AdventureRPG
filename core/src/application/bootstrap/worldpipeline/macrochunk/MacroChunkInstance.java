@@ -14,10 +14,11 @@ public class MacroChunkInstance extends InstancePackage {
      * single coarse heightfield mesh. Pooled by MacroQueueManager. The ring
      * sets the lattice resolution the tile should be built at and the upload
      * records the one it was built at, so a tile whose resolution band moves
-     * is rebuilt while its old mesh keeps drawing. Geometry waits in the sync
-     * container between build and upload, while the mesh, model, position and
-     * coverage UBOs are main-thread only and survive pooling, so a reused
-     * macro reuploads into the buffers it already owns. The coverage words mark
+     * is rebuilt while its old mesh keeps drawing, as is one whose terrain a
+     * live edit changed. Geometry waits in the sync container between build
+     * and upload, while the mesh, model, position and coverage UBOs are
+     * main-thread only and survive pooling, so a reused macro reuploads into
+     * the buffers it already owns. The coverage words mark
      * every chunk of the tile the grid currently draws, together with the
      * anchor and drawn revision they were resolved against, and the water
      * slot records which patch of the grid's open water mask the tile wrote.
@@ -127,6 +128,10 @@ public class MacroChunkInstance extends InstancePackage {
 
     public void setBuilt(int cellsPerSide) {
         this.builtCellsPerSide = cellsPerSide;
+    }
+
+    public void invalidateBuild() {
+        this.builtCellsPerSide = 0;
     }
 
     // Coverage \\

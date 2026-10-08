@@ -176,8 +176,6 @@ public class WindowManager extends ManagerPackage {
     public void removeWindow(WindowInstance window) {
         windows.remove(window);
         hoveredWindows.remove(window);
-        if (capturedWindow == window)
-            capturedWindow = null;
         if (focusedWindow == window)
             focusedWindow = null;
     }

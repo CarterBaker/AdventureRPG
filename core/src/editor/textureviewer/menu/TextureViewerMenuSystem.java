@@ -54,13 +54,6 @@ public class TextureViewerMenuSystem extends SystemPackage {
         this.statusMenu = menuManager.openMenu(TextureViewerSetting.MENU_STATUS, window);
     }
 
-    @Override
-    protected void dispose() {
-
-        menuManager.closeMenu(statusMenu);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
-    }
-
     // Update \\
 
     @Override

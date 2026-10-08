@@ -52,13 +52,6 @@ public class CommandConsolePanelSystem extends SystemPackage {
                     + "' has no command tree entry point.");
     }
 
-    @Override
-    protected void dispose() {
-
-        menuManager.closeMenu(commandConsoleMenu);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
-    }
-
     // Management \\
 
     public void setCommandText(String text) {

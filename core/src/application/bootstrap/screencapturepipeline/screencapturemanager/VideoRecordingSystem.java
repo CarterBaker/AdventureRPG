@@ -152,6 +152,11 @@ class VideoRecordingSystem extends SystemPackage {
             startRecording(window);
     }
 
+    void releaseWindow(WindowInstance window) {
+        if (recording && activeWindow == window)
+            stopRecording();
+    }
+
     // Session \\
 
     private void startRecording(WindowInstance window) {

@@ -28,7 +28,9 @@ public class MenuManager extends ManagerPackage {
      * in its MenuListHandle. Input routes through ElementHitSystem; opening and
      * closing lock_input menus releases and reclaims cursor capture on the
      * focused window. openMenuWindow() and closeMenuWindow() are the single
-     * pair for menus that live in their own logical window.
+     * pair for menus that live in their own logical window, and a window
+     * leaving the engine closes every menu it still shows through
+     * releaseWindow().
      */
 
     // Internal
@@ -286,10 +288,17 @@ public class MenuManager extends ManagerPackage {
         if (instance == null)
             return;
 
-        WindowInstance window = instance.getWindow();
-        closeMenu(instance);
+        instance.getWindow().dispose();
+    }
+
+    public void releaseWindow(WindowInstance window) {
+
+        ObjectArrayList<MenuInstance> menus = window.getMenuListHandle().getMenus();
+
+        for (int i = 0; i < menus.size(); i++)
+            closeMenu(menus.get(i));
+
         setMenuTargetFbo(window, null);
-        window.dispose();
     }
 
     public ObjectArrayList<MenuInstance> getActiveMenus(WindowInstance window) {

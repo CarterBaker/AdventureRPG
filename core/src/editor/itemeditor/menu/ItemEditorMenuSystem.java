@@ -67,13 +67,6 @@ public class ItemEditorMenuSystem extends SystemPackage {
         this.toolbarMenu = menuManager.openMenu(ItemEditorSetting.MENU_TOOLBAR, window);
     }
 
-    @Override
-    protected void dispose() {
-
-        menuManager.closeMenu(toolbarMenu);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
-    }
-
     // Update \\
 
     @Override

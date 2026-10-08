@@ -94,6 +94,10 @@ public class CombatManager extends ManagerPackage {
             combatants.add(entity);
     }
 
+    public void removeCombatant(EntityInstance entity) {
+        combatants.remove(entity);
+    }
+
     // Actions \\
 
     public boolean swing(EntityInstance entity) {

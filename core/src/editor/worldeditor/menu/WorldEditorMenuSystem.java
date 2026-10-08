@@ -77,13 +77,6 @@ public class WorldEditorMenuSystem extends SystemPackage {
         this.toolbarMenu = menuManager.openMenu(WorldEditorSetting.MENU_TOOLBAR, window);
     }
 
-    @Override
-    protected void dispose() {
-
-        menuManager.closeMenu(toolbarMenu);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
-    }
-
     // Update \\
 
     @Override

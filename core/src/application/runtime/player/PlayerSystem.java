@@ -12,8 +12,8 @@ public class PlayerSystem extends SystemPackage {
      * and the context's RawInputHandle to spawnPlayer() — both caller-owned,
      * no internal lookups. The spawned player only becomes a saved character
      * once the main menu starts or loads one; on dispose SaveManager writes
-     * back whichever character this window is playing. The editor reuses
-     * RuntimeContext unchanged.
+     * back whichever character this window is playing and the player is
+     * despawned with its window. The editor reuses RuntimeContext unchanged.
      */
 
     // Internal
@@ -38,5 +38,6 @@ public class PlayerSystem extends SystemPackage {
     @Override
     protected void dispose() {
         saveManager.saveCharacter(context.getWindow());
+        playerManager.despawnPlayer(context.getWindow());
     }
 }

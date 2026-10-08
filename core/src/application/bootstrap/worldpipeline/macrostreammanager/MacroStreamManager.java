@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.macrostreammanager;
 
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.world.WorldEditRegionStruct;
 import engine.root.ManagerPackage;
 
 public class MacroStreamManager extends ManagerPackage {
@@ -33,5 +34,9 @@ public class MacroStreamManager extends ManagerPackage {
 
     public void onGridRemoved(GridInstance grid) {
         macroQueueManager.onGridRemoved(grid);
+    }
+
+    public void restreamRegion(GridInstance grid, WorldEditRegionStruct region) {
+        macroQueueManager.restreamRegion(grid, region);
     }
 }

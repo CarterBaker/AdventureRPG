@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.world.WorldEditRegionStruct;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -52,6 +53,10 @@ public class ChunkStreamManager extends ManagerPackage {
 
     public void onGridRemoved(GridInstance grid) {
         chunkQueueManager.onGridRemoved(grid);
+    }
+
+    public void restreamRegion(GridInstance grid, WorldEditRegionStruct region) {
+        chunkQueueManager.restreamRegion(grid, region);
     }
 
     // Utility \\

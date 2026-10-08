@@ -147,10 +147,7 @@ public class ProfilerPanelSystem extends SystemPackage {
 
     @Override
     protected void dispose() {
-
         profilerManager.releaseSampling();
-        menuManager.closeMenu(profilerMenu);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
     }
 
     // Build \\

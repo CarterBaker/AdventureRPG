@@ -43,8 +43,6 @@ public class HierarchyPanelSystem extends SystemPackage {
 
     @Override
     protected void dispose() {
-
         hierarchyManager.closeHierarchy(hierarchy);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
     }
 }

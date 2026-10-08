@@ -37,12 +37,6 @@ public class EditorDockSystem extends SystemPackage {
         this.tabManager = get(TabManager.class);
     }
 
-    @Override
-    protected void dispose() {
-        menuManager.closeMenu(baseMenu);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
-    }
-
     // Management \\
 
     public void openBaseMenu(String menuName) {

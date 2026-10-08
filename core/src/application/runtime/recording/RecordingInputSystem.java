@@ -12,7 +12,8 @@ public class RecordingInputSystem extends SystemPackage {
      * context's own InputSystem for raw input rather than owning a second
      * RawInputHandle, and forwards clicks straight to ScreenCaptureManager's
      * two public hooks — one for a single screenshot, one to toggle video
-     * recording — with no capture logic of its own.
+     * recording — with no capture logic of its own. Closing the context
+     * releases whatever capture its window still had in flight.
      */
 
     // Internal
@@ -35,5 +36,10 @@ public class RecordingInputSystem extends SystemPackage {
 
         if (inputSystem.getRawInputHandle().isBindingClicked(KeyBindings.RECORD_VIDEO))
             screenCaptureManager.toggleRecording(context.getWindow());
+    }
+
+    @Override
+    protected void dispose() {
+        screenCaptureManager.releaseWindow(context.getWindow());
     }
 }

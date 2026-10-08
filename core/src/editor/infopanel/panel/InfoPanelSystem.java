@@ -65,13 +65,6 @@ public class InfoPanelSystem extends SystemPackage {
         this.panelMenu = menuManager.openMenu(InfoPanelSetting.MENU_INFO_PANEL, window);
     }
 
-    @Override
-    protected void dispose() {
-
-        menuManager.closeMenu(panelMenu);
-        menuManager.setMenuTargetFbo(context.getWindow(), null);
-    }
-
     // Update \\
 
     @Override

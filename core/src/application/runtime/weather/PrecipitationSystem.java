@@ -4,7 +4,7 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.pass.PassHandle;
+import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
@@ -36,7 +36,7 @@ public class PrecipitationSystem extends SystemPackage {
     private WaterSystem waterSystem;
 
     // Render Target
-    private PassHandle precipitationPass;
+    private PassInstance precipitationPass;
     private FBOInstance precipitationFbo;
 
     // Internal \\
@@ -54,7 +54,7 @@ public class PrecipitationSystem extends SystemPackage {
     @Override
     protected void awake() {
 
-        this.precipitationPass = passManager.getPassHandleFromPassName(RuntimeSetting.PASS_PRECIPITATION);
+        this.precipitationPass = passManager.clonePass(RuntimeSetting.PASS_PRECIPITATION);
         this.precipitationFbo = fboManager.cloneFbo(RuntimeSetting.FBO_PRECIPITATION, context.getWindow());
 
         MaterialInstance mat = precipitationPass.getModelInstance().getMaterial();
