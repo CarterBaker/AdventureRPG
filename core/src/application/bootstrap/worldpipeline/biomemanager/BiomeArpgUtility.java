@@ -1,6 +1,8 @@
 package application.bootstrap.worldpipeline.biomemanager;
 
 import application.bootstrap.worldpipeline.biome.BiomeData;
+import application.bootstrap.worldpipeline.biome.ProbableBiomePlacement;
+import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
@@ -20,7 +22,8 @@ class BiomeArpgUtility extends EngineUtility {
 
     /*
      * The single definition of the biome format: display name, weathers, map
-     * color, probable variants, surface blocks, ocean and beach settings, and
+     * color, probable biomes with their placement, patch sizes and shapes,
+     * surface blocks, ocean and beach settings, and
      * the optional terrain shape splines and detail controls, each falling
      * back to TerrainShapeUtility's defaults. A malformed field throws a
      * catchable InternalException naming the biome, so BiomeBuilder fails the
@@ -43,10 +46,7 @@ class BiomeArpgUtility extends EngineUtility {
         int mapColor = parseMapColor(biomeArpg, biomeName);
         String displayName = parseDisplayName(biomeArpg, biomeName, mapColor);
 
-        ObjectArrayList<String> probableBiomeNames = new ObjectArrayList<>();
-        FloatArrayList probableBiomeChances = new FloatArrayList();
-
-        parseProbableBiomes(biomeArpg, biomeName, probableBiomeNames, probableBiomeChances);
+        ObjectArrayList<ProbableBiomeStruct> probableBiomes = parseProbableBiomes(biomeArpg, biomeName);
 
         String surfaceBlockName = parseBlockName(
                 biomeArpg, "surface_block", EngineSetting.DEFAULT_SURFACE_BLOCK_NAME);
@@ -85,7 +85,7 @@ class BiomeArpgUtility extends EngineUtility {
         return new BiomeData(
                 biomeName, displayName, biomeID, Color.WHITE,
                 seasonWeatherNames, seasonWeatherChances, seasonNames,
-                mapColor, probableBiomeNames, probableBiomeChances,
+                mapColor, probableBiomes,
                 surfaceBlockName, subsurfaceBlockName, underwaterBlockName,
                 continentalnessSpline, erosionSpline, peaksValleysSpline,
                 detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale,
@@ -185,42 +185,126 @@ class BiomeArpgUtility extends EngineUtility {
 
     // Probable Biomes \\
 
-    private static void parseProbableBiomes(
+    private static ObjectArrayList<ProbableBiomeStruct> parseProbableBiomes(
             ArpgObjectStruct biomeArpg,
-            String biomeName,
-            ObjectArrayList<String> outNames,
-            FloatArrayList outChances) {
+            String biomeName) {
+
+        ObjectArrayList<ProbableBiomeStruct> probableBiomes = new ObjectArrayList<>();
 
         if (!biomeArpg.has("probable_biomes"))
-            return;
+            return probableBiomes;
 
         ArpgArrayStruct probableArray = biomeArpg.getAsArray("probable_biomes");
-        float runningTotal = 0f;
+        float scatteredTotal = 0f;
 
         for (ArpgElementStruct element : probableArray) {
 
-            ArpgObjectStruct entryArpg = element.getAsObject();
-            String variantName = requireString(entryArpg, "name", biomeName, "probable_biomes");
+            ProbableBiomeStruct probableBiome = parseProbableBiome(element.getAsObject(), biomeName, scatteredTotal);
 
-            if (!entryArpg.has("chance"))
-                throw fail(biomeName, "probable_biomes entry \"" + variantName
-                        + "\" is missing required \"chance\" field.");
+            if (!probableBiome.isCentered())
+                scatteredTotal += probableBiome.getChance();
 
-            float chance = entryArpg.get("chance").getAsFloat();
+            if (scatteredTotal > 1f)
+                throw fail(biomeName, "probable_biomes scattered chances sum to " + scatteredTotal
+                        + ", which exceeds 1.0 — reduce the chances so they share no more than the whole biome.");
 
-            if (chance <= 0f || chance > 1f)
-                throw fail(biomeName, "probable_biomes entry \"" + variantName + "\" has chance " + chance
-                        + " — chance must be greater than 0 and no more than 1.");
-
-            runningTotal += chance;
-
-            if (runningTotal > 1f)
-                throw fail(biomeName, "probable_biomes chances sum to " + runningTotal
-                        + ", which exceeds 1.0 — reduce the chances so the base biome retains some probability.");
-
-            outNames.add(variantName);
-            outChances.add(chance);
+            probableBiomes.add(probableBiome);
         }
+
+        return probableBiomes;
+    }
+
+    // A scattered entry covers the part of what earlier entries leave that makes its chance a share of the whole
+    private static ProbableBiomeStruct parseProbableBiome(
+            ArpgObjectStruct entryArpg,
+            String biomeName,
+            float scatteredTotal) {
+
+        String variantName = requireString(entryArpg, "name", biomeName, "probable_biomes");
+
+        if (variantName.equals(biomeName))
+            throw fail(biomeName, "lists itself in \"probable_biomes\".");
+
+        if (!entryArpg.has("chance"))
+            throw fail(biomeName, "probable_biomes entry \"" + variantName
+                    + "\" is missing required \"chance\" field.");
+
+        float chance = entryArpg.get("chance").getAsFloat();
+
+        if (chance <= 0f || chance > 1f)
+            throw fail(biomeName, "probable_biomes entry \"" + variantName + "\" has chance " + chance
+                    + " — chance must be greater than 0 and no more than 1.");
+
+        ProbableBiomePlacement placement = parsePlacement(entryArpg, biomeName, variantName);
+
+        float minSizeBlocks = ArpgUtility.getFloat(
+                entryArpg, "min_size_blocks", EngineSetting.BIOME_PROBABLE_DEFAULT_MIN_SIZE_BLOCKS);
+
+        float maxSizeBlocks = ArpgUtility.getFloat(
+                entryArpg, "max_size_blocks",
+                Math.max(minSizeBlocks, EngineSetting.BIOME_PROBABLE_DEFAULT_MAX_SIZE_BLOCKS));
+
+        if (minSizeBlocks <= 0f)
+            throw fail(biomeName, "probable_biomes entry \"" + variantName + "\" has min_size_blocks "
+                    + minSizeBlocks + " — it must be greater than 0.");
+
+        if (maxSizeBlocks < minSizeBlocks)
+            throw fail(biomeName, "probable_biomes entry \"" + variantName + "\" has max_size_blocks "
+                    + maxSizeBlocks + ", smaller than its min_size_blocks " + minSizeBlocks + ".");
+
+        int minArms = ArpgUtility.getInt(entryArpg, "min_arms", EngineSetting.BIOME_PROBABLE_DEFAULT_MIN_ARMS);
+        int maxArms = ArpgUtility.getInt(
+                entryArpg, "max_arms", Math.max(minArms, EngineSetting.BIOME_PROBABLE_DEFAULT_MAX_ARMS));
+
+        if (minArms < 0 || maxArms < minArms || maxArms > EngineSetting.BIOME_PROBABLE_SHAPE_MAX_ARMS)
+            throw fail(biomeName, "probable_biomes entry \"" + variantName + "\" has arms " + minArms + " to "
+                    + maxArms + " — they must run from 0 up to " + EngineSetting.BIOME_PROBABLE_SHAPE_MAX_ARMS
+                    + ", with min_arms no more than max_arms.");
+
+        float minCoreScale = ArpgUtility.getFloat(
+                entryArpg, "min_core_scale", EngineSetting.BIOME_PROBABLE_DEFAULT_MIN_CORE_SCALE);
+
+        float maxCoreScale = ArpgUtility.getFloat(
+                entryArpg, "max_core_scale",
+                Math.max(minCoreScale, EngineSetting.BIOME_PROBABLE_DEFAULT_MAX_CORE_SCALE));
+
+        if (minCoreScale <= 0f || maxCoreScale < minCoreScale || maxCoreScale > 1f)
+            throw fail(biomeName, "probable_biomes entry \"" + variantName + "\" has core scales " + minCoreScale
+                    + " to " + maxCoreScale + " — they must be greater than 0 and no more than 1, "
+                    + "with min_core_scale no more than max_core_scale.");
+
+        float coverage = placement == ProbableBiomePlacement.CENTER
+                ? chance
+                : computeScatterCoverage(chance, scatteredTotal);
+
+        return new ProbableBiomeStruct(
+                variantName, placement, chance, coverage,
+                minSizeBlocks, maxSizeBlocks, minArms, maxArms, minCoreScale, maxCoreScale);
+    }
+
+    private static float computeScatterCoverage(float chance, float scatteredTotal) {
+
+        float remainingShare = 1f - scatteredTotal;
+
+        return remainingShare > chance ? chance / remainingShare : 1f;
+    }
+
+    private static ProbableBiomePlacement parsePlacement(
+            ArpgObjectStruct entryArpg,
+            String biomeName,
+            String variantName) {
+
+        if (!entryArpg.has("placement"))
+            return ProbableBiomePlacement.SCATTER;
+
+        String raw = entryArpg.get("placement").getAsString();
+
+        for (ProbableBiomePlacement placement : ProbableBiomePlacement.values())
+            if (placement.name().equalsIgnoreCase(raw))
+                return placement;
+
+        throw fail(biomeName, "probable_biomes entry \"" + variantName + "\" has invalid placement \"" + raw
+                + "\" — expected \"scatter\" or \"center\".");
     }
 
     // Beach Biome \\

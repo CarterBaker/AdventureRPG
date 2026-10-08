@@ -10,12 +10,14 @@ import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleControlSystem;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleRiderSystem;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
@@ -47,7 +49,9 @@ public class PlayerManager extends ManagerPackage {
      * CombatManager; a raised guard holds the player to a walk. Aboard a
      * vehicle the view turns with the deck, a player at the helm steers with
      * its sideways input, and the activate binding works the vehicle control
-     * the player faces before it reaches PlacementManager.
+     * the player faces before it reaches PlacementManager. A teleported
+     * player lets go of any vehicle and is dropped onto the ground of the
+     * column it was sent to, by the same check that verifies a spawn.
      */
 
     // Internal
@@ -64,6 +68,7 @@ public class PlayerManager extends ManagerPackage {
     private CombatManager combatManager;
     private VehicleControlSystem vehicleControlSystem;
     private VehicleRiderSystem vehicleRiderSystem;
+    private VehicleManager vehicleManager;
 
     // Per-window
     private Int2ObjectOpenHashMap<EntityInstance> windowID2Player;
@@ -140,6 +145,7 @@ public class PlayerManager extends ManagerPackage {
         this.combatManager = get(CombatManager.class);
         this.vehicleControlSystem = get(VehicleControlSystem.class);
         this.vehicleRiderSystem = get(VehicleRiderSystem.class);
+        this.vehicleManager = get(VehicleManager.class);
     }
 
     @Override
@@ -226,6 +232,33 @@ public class PlayerManager extends ManagerPackage {
 
         if (!freeCamera)
             verifyPlayerPositionForWindow(windowID);
+    }
+
+    // Teleport \\
+
+    // The window's player stands at the top of the column given and settles onto the ground once its chunk streams in
+    public void teleportPlayerForWindow(int windowID, long chunkCoordinate, int blockX, int blockZ) {
+
+        EntityInstance player = windowID2Player.get(windowID);
+
+        if (player == null)
+            return;
+
+        WorldPositionStruct worldPositionStruct = player.getWorldPositionStruct();
+        EntityStateHandle state = player.getEntityStateHandle();
+
+        vehicleManager.releaseEntity(player);
+        worldPositionStruct.getPosition().set(
+                blockX,
+                EngineSetting.WORLD_HEIGHT * EngineSetting.CHUNK_SIZE - 1,
+                blockZ);
+        worldPositionStruct.setChunkCoordinate(
+                WorldWrapUtility.wrapAroundWorld(player.getWorldHandle(), chunkCoordinate));
+        state.getGravityVelocity().set(0f);
+        state.getHorizontalVelocity().set(0f);
+
+        verifyPlayerPositionForWindow(windowID);
+        internalBufferSystem.updatePlayerPosition(worldPositionStruct);
     }
 
     // Player \\

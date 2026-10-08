@@ -1,5 +1,6 @@
 package editor.commandconsole;
 
+import editor.commandconsole.chunkfield.CommandConsoleChunkFieldSystem;
 import editor.commandconsole.commandtree.CommandConsoleTreeSystem;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -17,7 +18,8 @@ public class CommandConsoleContext extends ContextPackage {
      * line sends whatever is typed into it, and its command tree sends any
      * command that needs no arguments with a single click and any command
      * that takes an item or a vehicle from tiles grouped by category — clicked
-     * for every Dev window, or dragged onto one Dev window to run there alone.
+     * for every Dev window, or dragged onto one Dev window to run there alone —
+     * and any command that takes a chunk from X and Y fields typed into.
      * What each command reports lands in the log, shown by the Console tab.
      */
 
@@ -28,6 +30,7 @@ public class CommandConsoleContext extends ContextPackage {
     private CommandConsoleTreeSystem commandConsoleTreeSystem;
     private CommandConsoleTileGridSystem commandConsoleTileGridSystem;
     private CommandConsoleTileRenderSystem commandConsoleTileRenderSystem;
+    private CommandConsoleChunkFieldSystem commandConsoleChunkFieldSystem;
 
     // Internal \\
 
@@ -39,6 +42,7 @@ public class CommandConsoleContext extends ContextPackage {
         this.commandConsoleTreeSystem = create(CommandConsoleTreeSystem.class);
         this.commandConsoleTileGridSystem = create(CommandConsoleTileGridSystem.class);
         this.commandConsoleTileRenderSystem = create(CommandConsoleTileRenderSystem.class);
+        this.commandConsoleChunkFieldSystem = create(CommandConsoleChunkFieldSystem.class);
     }
 
     @Override
@@ -54,5 +58,15 @@ public class CommandConsoleContext extends ContextPackage {
 
     public void dragTile(ElementInstance tileElement, WindowInstance window) {
         commandConsoleTileGridSystem.dragTile(tileElement, window);
+    }
+
+    public void focusChunkField(String fieldKey) {
+        commandConsoleChunkFieldSystem.focusField(fieldKey);
+        commandConsoleInputSystem.restartCaret();
+    }
+
+    public void runChunkCommand(String commandName) {
+        commandConsoleChunkFieldSystem.runCommand(commandName);
+        commandConsoleInputSystem.restartCaret();
     }
 }

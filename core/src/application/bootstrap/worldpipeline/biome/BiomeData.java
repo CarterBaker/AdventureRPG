@@ -14,8 +14,8 @@ public class BiomeData extends DataPackage {
      * Persistent biome record: registry and display names and every curve world
      * generation shapes this biome with — continentalness, erosion and
      * peaks-valleys splines, detail amplitude and wavelength, height scale —
-     * plus its ocean flag and beach biome. Omitted curves default to
-     * TerrainShapeUtility's.
+     * plus its ocean flag, beach biome and the probable biomes chained into
+     * it. Omitted curves default to TerrainShapeUtility's.
      */
 
     public static final int MAP_COLOR_UNDEFINED = EngineSetting.BIOME_MAP_COLOR_UNDEFINED;
@@ -31,8 +31,7 @@ public class BiomeData extends DataPackage {
     private final ObjectArrayList<String> seasonNames;
 
     private final int mapColor;
-    private final ObjectArrayList<String> probableBiomeNames;
-    private final FloatArrayList probableBiomeChances;
+    private final ObjectArrayList<ProbableBiomeStruct> probableBiomes;
 
     private final String surfaceBlockName;
     private final String subsurfaceBlockName;
@@ -57,8 +56,7 @@ public class BiomeData extends DataPackage {
             Object2ObjectOpenHashMap<String, FloatArrayList> seasonWeatherChances,
             ObjectArrayList<String> seasonNames,
             int mapColor,
-            ObjectArrayList<String> probableBiomeNames,
-            FloatArrayList probableBiomeChances,
+            ObjectArrayList<ProbableBiomeStruct> probableBiomes,
             String surfaceBlockName,
             String subsurfaceBlockName,
             String underwaterBlockName,
@@ -82,8 +80,7 @@ public class BiomeData extends DataPackage {
         this.seasonNames = seasonNames;
 
         this.mapColor = mapColor;
-        this.probableBiomeNames = probableBiomeNames;
-        this.probableBiomeChances = probableBiomeChances;
+        this.probableBiomes = probableBiomes;
 
         this.surfaceBlockName = surfaceBlockName;
         this.subsurfaceBlockName = subsurfaceBlockName;
@@ -140,12 +137,8 @@ public class BiomeData extends DataPackage {
         return mapColor != MAP_COLOR_UNDEFINED;
     }
 
-    public ObjectArrayList<String> getProbableBiomeNames() {
-        return probableBiomeNames;
-    }
-
-    public FloatArrayList getProbableBiomeChances() {
-        return probableBiomeChances;
+    public ObjectArrayList<ProbableBiomeStruct> getProbableBiomes() {
+        return probableBiomes;
     }
 
     public String getSurfaceBlockName() {

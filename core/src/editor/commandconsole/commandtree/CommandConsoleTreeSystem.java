@@ -10,6 +10,7 @@ import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
 import editor.commandconsole.CommandConsoleSetting;
+import editor.commandconsole.chunkfield.CommandConsoleChunkFieldSystem;
 import editor.commandconsole.panel.CommandConsolePanelSystem;
 import editor.commandconsole.tilegrid.CommandConsoleTileGridSystem;
 import engine.root.EngineSetting;
@@ -24,9 +25,11 @@ public class CommandConsoleTreeSystem extends SystemPackage {
      * lists every command that takes no arguments first, each run with a
      * single click, then a section per item or vehicle category that holds
      * any, each a grid of tiles filled by the tile grid system, for every
-     * command that takes one. An item command heads its sections with its own
-     * name; a vehicle's tile is the command itself, so its sections sit
-     * straight under the group. A group with none of these is left out.
+     * command that takes one, and a row of X and Y fields, filled by the chunk
+     * field system, for every command that takes a chunk. An item command
+     * heads its sections with its own name; a vehicle's tile is the command
+     * itself, so its sections sit straight under the group. A group with none
+     * of these is left out.
      * Groups and categories start expanded and collapse on click; the tree is
      * laid out on the first frame and again only when one of them is toggled.
      */
@@ -36,6 +39,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     private CommandManager commandManager;
     private CommandConsolePanelSystem commandConsolePanelSystem;
     private CommandConsoleTileGridSystem commandConsoleTileGridSystem;
+    private CommandConsoleChunkFieldSystem commandConsoleChunkFieldSystem;
 
     // Tree
     private ObjectArrayList<ElementInstance> treeElements;
@@ -59,6 +63,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         this.commandManager = get(CommandManager.class);
         this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
         this.commandConsoleTileGridSystem = get(CommandConsoleTileGridSystem.class);
+        this.commandConsoleChunkFieldSystem = get(CommandConsoleChunkFieldSystem.class);
     }
 
     // Update \\
@@ -81,6 +86,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         ObjectArrayList<String> groupNames = commandManager.getGroupNames();
 
         commandConsoleTileGridSystem.clearGrids();
+        commandConsoleChunkFieldSystem.clearFields();
 
         for (int i = 0; i < treeElements.size(); i++)
             menuManager.eject(commandConsoleMenu, CommandConsoleSetting.ENTRY_COMMAND_TREE, treeElements.get(i));
@@ -125,6 +131,8 @@ public class CommandConsoleTreeSystem extends SystemPackage {
                 injectItemCommand(commandConsoleMenu, commandHandle);
             else if (commandHandle.takesVehicle())
                 injectVehicleCommand(commandConsoleMenu, commandHandle);
+            else if (commandHandle.takesChunk())
+                injectChunkCommand(commandConsoleMenu, commandHandle);
         }
     }
 
@@ -170,6 +178,17 @@ public class CommandConsoleTreeSystem extends SystemPackage {
             if (grid != null)
                 commandConsoleTileGridSystem.addVehicleGrid(grid, commandHandle, vehicles);
         }
+    }
+
+    private void injectChunkCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
+        treeElements.add(menuManager.inject(
+                commandConsoleMenu,
+                CommandConsoleSetting.ENTRY_COMMAND_TREE,
+                CommandConsoleSetting.MENU_CHUNK_ENTRY,
+                element -> {
+                    setChildText(element, CommandConsoleSetting.ELEMENT_CHUNK_LABEL, commandHandle.getLabel());
+                    commandConsoleChunkFieldSystem.addChunkFields(element, commandHandle);
+                }));
     }
 
     private void injectTileHeader(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
@@ -231,7 +250,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
         for (int i = 0; i < commandHandles.size(); i++)
             if (commandHandles.get(i).isArgumentFree() || commandHandles.get(i).takesItem()
-                    || commandHandles.get(i).takesVehicle())
+                    || commandHandles.get(i).takesVehicle() || commandHandles.get(i).takesChunk())
                 return true;
 
         return false;

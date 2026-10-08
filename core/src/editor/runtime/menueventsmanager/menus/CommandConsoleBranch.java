@@ -11,8 +11,9 @@ public class CommandConsoleBranch extends BranchPackage {
     /*
      * Menu event handlers for the command console tab. A command picked from
      * the command tree runs exactly as if it had been typed; a group or
-     * category toggles, and an item or vehicle tile is picked up, in the
-     * command console paired with the window it was pressed in.
+     * category toggles, an item or vehicle tile is picked up, and a chunk
+     * field is focused or its command run, in the command console paired with
+     * the window it was pressed in.
      */
 
     // Internal
@@ -39,5 +40,15 @@ public class CommandConsoleBranch extends BranchPackage {
     public void dragTile(WindowInstance window, ElementInstance element) {
         if (window.getContext() instanceof CommandConsoleContext commandConsoleContext)
             commandConsoleContext.dragTile(element, window);
+    }
+
+    public void focusChunkField(String fieldKey, WindowInstance window) {
+        if (window.getContext() instanceof CommandConsoleContext commandConsoleContext)
+            commandConsoleContext.focusChunkField(fieldKey);
+    }
+
+    public void runChunkCommand(String commandName, WindowInstance window) {
+        if (window.getContext() instanceof CommandConsoleContext commandConsoleContext)
+            commandConsoleContext.runChunkCommand(commandName);
     }
 }

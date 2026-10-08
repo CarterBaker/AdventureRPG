@@ -126,6 +126,15 @@ public class EditorSetting {
     public static final float DEV_VEHICLE_SPAWN_CLEARANCE = 6f;
     public static final float DEV_VEHICLE_REMOVE_REACH = 24f;
 
+    // Commands — Teleport
+    public static final String COMMAND_TELEPORT = "teleport";
+    public static final String COMMAND_ARGUMENT_CHUNK_X = "chunkX";
+    public static final String COMMAND_ARGUMENT_CHUNK_Y = "chunkY";
+    public static final String COMMAND_MESSAGE_TELEPORT_INVALID = ": a chunk coordinate must be a whole number, not ";
+    public static final String COMMAND_MESSAGE_TELEPORT_NO_PLAYER = ": no player to move";
+    public static final String COMMAND_MESSAGE_TELEPORT_MOVED = ": moved to chunk ";
+    public static final String COMMAND_MESSAGE_TELEPORT_SEPARATOR = ", ";
+
     // Viewports
     public static final String FBO_EDITOR_SCENE = "EditorScene";
 

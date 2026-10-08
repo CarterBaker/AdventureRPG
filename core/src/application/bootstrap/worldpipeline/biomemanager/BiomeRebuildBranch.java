@@ -4,6 +4,7 @@ import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -20,8 +21,9 @@ class BiomeRebuildBranch extends BranchPackage {
      * be loaded on demand, so every biome, block, weather and season the tree
      * names must already be registered; its registry ID must neither be the
      * reserved sentinel nor collide with another biome; its variants must not
-     * belong to another parent; and the last biome painted on the world map
-     * must keep its color. Every refusal is a catchable InternalException.
+     * belong to another parent or chain back into it; and the last biome
+     * painted on the world map must keep its color. Every refusal is a
+     * catchable InternalException.
      */
 
     // Internal
@@ -79,11 +81,11 @@ class BiomeRebuildBranch extends BranchPackage {
     private void validateVariants(BiomeData biomeData) {
 
         String biomeName = biomeData.getBiomeName();
-        ObjectArrayList<String> variantNames = biomeData.getProbableBiomeNames();
+        ObjectArrayList<ProbableBiomeStruct> probableBiomes = biomeData.getProbableBiomes();
 
-        for (int i = 0; i < variantNames.size(); i++) {
+        for (int i = 0; i < probableBiomes.size(); i++) {
 
-            String variantName = variantNames.get(i);
+            String variantName = probableBiomes.get(i).getBiomeName();
             String parentName = biomeManager.getVariantParentName(variantName);
 
             requireBiome(biomeName, variantName, "probable_biomes");
@@ -91,6 +93,10 @@ class BiomeRebuildBranch extends BranchPackage {
             if (parentName != null && !parentName.equals(biomeName))
                 throw fail(biomeName, "lists \"" + variantName + "\" in \"probable_biomes\", which already belongs "
                         + "to \"" + parentName + "\".");
+
+            if (biomeManager.isChainedBeneath(biomeName, variantName))
+                throw fail(biomeName, "lists \"" + variantName + "\" in \"probable_biomes\", but is already chained "
+                        + "beneath it — a probable biome chain cannot loop back on itself.");
         }
 
         if (biomeData.getBeachBiomeName() != null)

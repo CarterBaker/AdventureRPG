@@ -6,8 +6,9 @@ public class WorldMapSetting {
 
     /*
      * Constants used only by WorldMapContext — its viewport mesh and
-     * materials and overlay uniforms, zoom limits, the character marker,
-     * mouse binding and status menu. The map itself, its tiles and palette, is the engine's.
+     * materials and overlay uniforms, zoom limits, the character marker and
+     * how near it a press grabs it, mouse binding and status menu. The map
+     * itself, its tiles and palette, is the engine's.
      */
 
     // Meshes
@@ -42,6 +43,7 @@ public class WorldMapSetting {
 
     // Marker
     public static final float MARKER_SIZE_PIXELS = 14f;
+    public static final float MARKER_GRAB_RADIUS_PIXELS = 14f;
 
     // Mouse
     public static final int BUTTON_PAN = Buttons.LEFT;

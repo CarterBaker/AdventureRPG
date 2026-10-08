@@ -5,6 +5,7 @@ import java.util.function.Consumer;
 import editor.bootstrap.commandpipeline.command.CommandStruct;
 import editor.dev.freecamera.FreeCameraSystem;
 import editor.dev.item.DevItemSystem;
+import editor.dev.teleport.DevTeleportSystem;
 import editor.dev.vehicle.DevVehicleSystem;
 import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
@@ -24,6 +25,7 @@ public class DevCommandSystem extends SystemPackage {
     private FreeCameraSystem freeCameraSystem;
     private DevItemSystem devItemSystem;
     private DevVehicleSystem devVehicleSystem;
+    private DevTeleportSystem devTeleportSystem;
 
     // Palette
     private Object2ObjectOpenHashMap<String, Consumer<CommandStruct>> commandName2Action;
@@ -49,6 +51,7 @@ public class DevCommandSystem extends SystemPackage {
         this.freeCameraSystem = get(FreeCameraSystem.class);
         this.devItemSystem = get(DevItemSystem.class);
         this.devVehicleSystem = get(DevVehicleSystem.class);
+        this.devTeleportSystem = get(DevTeleportSystem.class);
     }
 
     private void registerActions() {
@@ -57,6 +60,8 @@ public class DevCommandSystem extends SystemPackage {
         commandName2Action.put(EditorSetting.COMMAND_SPAWN_VEHICLE,
                 command -> devVehicleSystem.spawnVehicle(command.getArgument(0)));
         commandName2Action.put(EditorSetting.COMMAND_REMOVE_VEHICLE, command -> devVehicleSystem.removeVehicle());
+        commandName2Action.put(EditorSetting.COMMAND_TELEPORT,
+                command -> devTeleportSystem.teleport(command.getArgument(0), command.getArgument(1)));
     }
 
     // Update \\

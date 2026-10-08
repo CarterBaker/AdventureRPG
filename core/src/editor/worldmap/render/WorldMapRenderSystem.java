@@ -31,7 +31,8 @@ public class WorldMapRenderSystem extends SystemPackage {
      * Draws the world map into this window's scene target: one quad per draw
      * the engine's map resolved for this view this frame, each showing its
      * part of a map tile texture, then the arrow marking the character, at the copy of its
-     * position nearest the view's centre and turned to its facing. Each tile
+     * position nearest the view's centre and turned to its facing, or under the pointer while
+     * it is being dragged. Each tile
      * carries the world region it covers and the shared overlay textures, so
      * its shader can shade day and night and weather over it when the view
      * shows them. Tile quads are pooled with their own materials and grow
@@ -199,9 +200,9 @@ public class WorldMapRenderSystem extends SystemPackage {
         double blocksPerPixel = worldMapViewSystem.getBlocksPerPixel();
 
         double deltaX = WorldWrapUtility.wrappedDelta(
-                worldMapViewSystem.getPlayerX(), worldMapViewSystem.getCenterX(), worldHandle.getWorldScale().x);
+                worldMapViewSystem.getMarkerX(), worldMapViewSystem.getCenterX(), worldHandle.getWorldScale().x);
         double deltaZ = WorldWrapUtility.wrappedDelta(
-                worldMapViewSystem.getPlayerZ(), worldMapViewSystem.getCenterZ(), worldHandle.getWorldScale().y);
+                worldMapViewSystem.getMarkerZ(), worldMapViewSystem.getCenterZ(), worldHandle.getWorldScale().y);
 
         float screenX = (float) (width * 0.5 + deltaX / blocksPerPixel);
         float screenY = (float) (height * 0.5 - deltaZ / blocksPerPixel);

@@ -5,6 +5,7 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
 import editor.commandconsole.CommandConsoleSetting;
+import editor.commandconsole.chunkfield.CommandConsoleChunkFieldSystem;
 import editor.commandconsole.panel.CommandConsolePanelSystem;
 import editor.runtime.EditorInputSystem;
 import editor.runtime.EditorSetting;
@@ -19,10 +20,12 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
      * The command console's command line. While its window holds focus it
      * takes every character the editor font can draw, Backspace removes the
      * last one, Escape clears the line, and Enter hands it to CommandManager,
-     * which routes it to every open Dev window. Typed characters are read from
-     * whichever OS window the console currently lives in, so the line keeps
-     * working after its tab is moved, and a caret blinks at its end while the
-     * window is focused.
+     * which routes it to every open Dev window. While one of the tree's chunk
+     * fields is focused the same keys edit that field instead, and Escape
+     * hands typing back to the line. Typed characters are read from whichever
+     * OS window the console currently lives in, so the line keeps working
+     * after its tab is moved, and a caret blinks at the end of whatever takes
+     * the typing while the window is focused.
      */
 
     // Internal
@@ -31,6 +34,7 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
     private CommandManager commandManager;
     private EditorInputSystem editorInputSystem;
     private CommandConsolePanelSystem commandConsolePanelSystem;
+    private CommandConsoleChunkFieldSystem commandConsoleChunkFieldSystem;
 
     // Text Input
     private Input textInput;
@@ -56,6 +60,7 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
         this.commandManager = get(CommandManager.class);
         this.editorInputSystem = get(EditorInputSystem.class);
         this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
+        this.commandConsoleChunkFieldSystem = get(CommandConsoleChunkFieldSystem.class);
     }
 
     @Override
@@ -78,17 +83,17 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_ENTER)
                 || rawInput.isKeyClicked(EditorSetting.KEY_ENTER_NUMPAD)) {
-            submitCommand();
+            submit();
             return;
         }
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE)) {
-            clearCommand();
+            clear();
             return;
         }
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_BACKSPACE))
-            removeCommandCharacter();
+            removeCharacter();
     }
 
     private void updateCaret() {
@@ -133,8 +138,51 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
     @Override
     public void onChar(char character) {
 
-        if (isFocused() && EngineSetting.FONT_DEFAULT_CHARSET.indexOf(character) != EngineSetting.INDEX_NOT_FOUND)
-            appendCommandCharacter(character);
+        if (!isFocused() || EngineSetting.FONT_DEFAULT_CHARSET.indexOf(character) == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        if (commandConsoleChunkFieldSystem.hasFocus()) {
+            commandConsoleChunkFieldSystem.appendCharacter(character);
+            restartCaret();
+            return;
+        }
+
+        appendCommandCharacter(character);
+    }
+
+    // Routing \\
+
+    private void submit() {
+
+        if (commandConsoleChunkFieldSystem.hasFocus()) {
+            commandConsoleChunkFieldSystem.submitFocusedField();
+            restartCaret();
+            return;
+        }
+
+        submitCommand();
+    }
+
+    private void clear() {
+
+        if (commandConsoleChunkFieldSystem.hasFocus()) {
+            commandConsoleChunkFieldSystem.clearFocus();
+            restartCaret();
+            return;
+        }
+
+        clearCommand();
+    }
+
+    private void removeCharacter() {
+
+        if (commandConsoleChunkFieldSystem.hasFocus()) {
+            commandConsoleChunkFieldSystem.removeCharacter();
+            restartCaret();
+            return;
+        }
+
+        removeCommandCharacter();
     }
 
     // Command Line \\
@@ -171,17 +219,24 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
         restartCaret();
     }
 
-    private void restartCaret() {
+    private void refreshCommandLabel() {
+
+        boolean lineCaretVisible = caretVisible && !commandConsoleChunkFieldSystem.hasFocus();
+
+        commandConsolePanelSystem.setCommandText(lineCaretVisible
+                ? commandBuffer + CommandConsoleSetting.COMMAND_CARET
+                : commandBuffer.toString());
+        commandConsoleChunkFieldSystem.setCaretVisible(caretVisible);
+    }
+
+    // Management \\
+
+    // Shows the caret at once on whatever now takes the typing, and starts its blink over
+    public void restartCaret() {
 
         this.caretElapsed = 0f;
         this.caretVisible = isFocused();
         refreshCommandLabel();
-    }
-
-    private void refreshCommandLabel() {
-        commandConsolePanelSystem.setCommandText(caretVisible
-                ? commandBuffer + CommandConsoleSetting.COMMAND_CARET
-                : commandBuffer.toString());
     }
 
     // Utility \\

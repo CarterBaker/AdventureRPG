@@ -4,7 +4,7 @@ public class CommandConsoleSetting {
 
     /*
      * Constants used only by CommandConsoleContext — its menu, command tree
-     * templates, tile grids and their icons, and command line.
+     * templates, tile grids and their icons, chunk fields, and command line.
      */
 
     // Menus
@@ -16,6 +16,7 @@ public class CommandConsoleSetting {
     public static final String MENU_TILE_GRID = "editor/CommandConsole/command_tile_grid";
     public static final String MENU_TILE_ROW = "editor/CommandConsole/command_tile_row";
     public static final String MENU_TILE = "editor/CommandConsole/command_tile";
+    public static final String MENU_CHUNK_ENTRY = "editor/CommandConsole/command_chunk_entry";
 
     // Entry Points
     public static final int ENTRY_COMMAND_LINE = 0;
@@ -38,6 +39,18 @@ public class CommandConsoleSetting {
     // Tile Icons
     public static final String MATERIAL_TILE_VEHICLE = "items/InventoryVehicleMaterial";
     public static final int DEPTH_TILE_ICON = 0;
+
+    // Chunk Fields
+    public static final String ELEMENT_CHUNK_LABEL = "command_chunk_label";
+    public static final String ELEMENT_CHUNK_FIELD_X = "command_chunk_field_x";
+    public static final String ELEMENT_CHUNK_FIELD_Y = "command_chunk_field_y";
+    public static final String ELEMENT_CHUNK_FIELD_X_TEXT = "command_chunk_field_x_text";
+    public static final String ELEMENT_CHUNK_FIELD_Y_TEXT = "command_chunk_field_y_text";
+    public static final String ELEMENT_CHUNK_GO = "command_chunk_go";
+    public static final String CHUNK_FIELD_KEY_SEPARATOR = ":";
+    public static final String CHUNK_FIELD_CHARACTERS = "-0123456789";
+    public static final int CHUNK_FIELD_COUNT = 2;
+    public static final int CHUNK_FIELD_MAX_LENGTH = 11;
 
     // Command Line
     public static final int COMMAND_MAX_LENGTH = 256;

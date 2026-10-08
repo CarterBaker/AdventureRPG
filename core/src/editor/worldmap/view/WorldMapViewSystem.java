@@ -1,5 +1,6 @@
 package editor.worldmap.view;
 
+import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.mappipeline.map.MapMarkerStruct;
 import application.bootstrap.mappipeline.map.MapViewStruct;
 import application.bootstrap.mappipeline.mapmanager.MapManager;
@@ -13,7 +14,9 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.EditorInputSystem;
 import editor.worldmap.WorldMapSetting;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldMapViewSystem extends SystemPackage {
@@ -26,11 +29,14 @@ public class WorldMapViewSystem extends SystemPackage {
      * also holds which shared overlays, day and night and weather, this map
      * shows. Scrolling zooms about the pointer, from a few pixels per block
      * out to the whole world, and dragging pans; panning lets go of the
-     * character, and following snaps the view back onto it. A click that
-     * does not drag selects the biome under the pointer in the hierarchy. The
-     * settled view is handed to the engine's map each frame, which answers
-     * with the tiles to draw. Positions are world blocks, wrapped like the
-     * world itself, and screen positions are window pixels with y up.
+     * character, and following snaps the view back onto it. A press on the
+     * character's arrow picks it up instead, and dropping it anywhere else
+     * moves that window's character to the block column under it. A click
+     * that does not drag selects the biome under the pointer in the
+     * hierarchy. The settled view is handed to the engine's map each frame,
+     * which answers with the tiles to draw. Positions are world blocks,
+     * wrapped like the world itself, and screen positions are window pixels
+     * with y up.
      */
 
     // Internal
@@ -39,6 +45,7 @@ public class WorldMapViewSystem extends SystemPackage {
     private WorldManager worldManager;
     private MapManager mapManager;
     private WorldEditorManager worldEditorManager;
+    private PlayerManager playerManager;
 
     // World
     private GridInstance grid;
@@ -62,6 +69,11 @@ public class WorldMapViewSystem extends SystemPackage {
     private float pressMouseX;
     private float pressMouseY;
 
+    // Marker Drag
+    private boolean draggingMarker;
+    private double dragX;
+    private double dragZ;
+
     // Player
     private boolean hasPlayer;
     private MapMarkerStruct playerMarker;
@@ -83,6 +95,7 @@ public class WorldMapViewSystem extends SystemPackage {
         this.worldManager = get(WorldManager.class);
         this.mapManager = get(MapManager.class);
         this.worldEditorManager = get(WorldEditorManager.class);
+        this.playerManager = get(PlayerManager.class);
     }
 
     // Update \\
@@ -94,6 +107,8 @@ public class WorldMapViewSystem extends SystemPackage {
         resolvePlayer();
         syncMapView();
         handleZoom();
+        handlePress();
+        handleMarkerDrag();
         handlePan();
 
         if (following && hasPlayer) {
@@ -178,24 +193,55 @@ public class WorldMapViewSystem extends SystemPackage {
         blocksPerPixel = zoomed;
     }
 
+    // A press on the character's arrow picks it up; anywhere else it starts a pan
+    private void handlePress() {
+
+        if (!editorInputSystem.isClicked(WorldMapSetting.BUTTON_PAN))
+            return;
+
+        RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
+
+        pressMouseX = rawInput.getMouseX();
+        pressMouseY = rawInput.getMouseY();
+
+        if (isOverMarker(pressMouseX, pressMouseY))
+            draggingMarker = true;
+        else
+            panning = true;
+    }
+
+    private void handleMarkerDrag() {
+
+        if (!draggingMarker)
+            return;
+
+        RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
+        float mouseX = rawInput.getMouseX();
+        float mouseY = rawInput.getMouseY();
+
+        dragX = WorldWrapUtility.wrapBlockX(worldHandle, screenToWorldX(mouseX));
+        dragZ = WorldWrapUtility.wrapBlockZ(worldHandle, screenToWorldZ(mouseY));
+
+        if (rawInput.isButtonHeld(WorldMapSetting.BUTTON_PAN))
+            return;
+
+        draggingMarker = false;
+
+        if (!isClick(mouseX, mouseY))
+            dropMarker();
+    }
+
     private void handlePan() {
 
         RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
         float mouseX = rawInput.getMouseX();
         float mouseY = rawInput.getMouseY();
 
-        if (editorInputSystem.isClicked(WorldMapSetting.BUTTON_PAN)) {
-            panning = true;
-            pressMouseX = mouseX;
-            pressMouseY = mouseY;
-        }
-
         if (panning && !rawInput.isButtonHeld(WorldMapSetting.BUTTON_PAN)) {
 
             panning = false;
 
-            if (Math.abs(mouseX - pressMouseX) <= WorldMapSetting.CLICK_SLOP_PIXELS
-                    && Math.abs(mouseY - pressMouseY) <= WorldMapSetting.CLICK_SLOP_PIXELS)
+            if (isClick(mouseX, mouseY))
                 worldEditorManager.selectBiomeAt(worldHandle, screenToWorldX(mouseX), screenToWorldZ(mouseY));
         }
 
@@ -209,6 +255,11 @@ public class WorldMapViewSystem extends SystemPackage {
         lastMouseY = mouseY;
     }
 
+    private boolean isClick(float mouseX, float mouseY) {
+        return Math.abs(mouseX - pressMouseX) <= WorldMapSetting.CLICK_SLOP_PIXELS
+                && Math.abs(mouseY - pressMouseY) <= WorldMapSetting.CLICK_SLOP_PIXELS;
+    }
+
     private double clampZoom(double zoom) {
 
         WindowInstance window = context.getWindow();
@@ -217,6 +268,43 @@ public class WorldMapViewSystem extends SystemPackage {
                 worldHandle.getWorldScale().y / (double) Math.max(window.getHeight(), 1));
 
         return Math.max(WorldMapSetting.MIN_BLOCKS_PER_PIXEL, Math.min(maxBlocksPerPixel, zoom));
+    }
+
+    // Marker \\
+
+    // Whether a screen point lies on the character's arrow, at the copy of its position nearest the view's centre
+    private boolean isOverMarker(float screenX, float screenY) {
+
+        if (!hasPlayer)
+            return false;
+
+        float deltaX = screenX - mapView.worldToScreenX(centerX + WorldWrapUtility.wrappedDelta(
+                playerMarker.getX(), centerX, worldHandle.getWorldScale().x));
+        float deltaY = screenY - mapView.worldToScreenY(centerZ + WorldWrapUtility.wrappedDelta(
+                playerMarker.getZ(), centerZ, worldHandle.getWorldScale().y));
+        float radius = WorldMapSetting.MARKER_GRAB_RADIUS_PIXELS;
+
+        return deltaX * deltaX + deltaY * deltaY <= radius * radius;
+    }
+
+    // The character of the window the followed grid streams for moves to the block column the arrow was dropped on
+    private void dropMarker() {
+
+        WindowInstance gridWindow = grid != null ? grid.getWindowInstance() : null;
+
+        if (gridWindow == null)
+            return;
+
+        long blockX = (long) Math.floor(dragX);
+        long blockZ = (long) Math.floor(dragZ);
+
+        playerManager.teleportPlayerForWindow(
+                gridWindow.getWindowID(),
+                Coordinate2Long.pack(
+                        (int) Math.floorDiv(blockX, EngineSetting.CHUNK_SIZE),
+                        (int) Math.floorDiv(blockZ, EngineSetting.CHUNK_SIZE)),
+                (int) Math.floorMod(blockX, EngineSetting.CHUNK_SIZE),
+                (int) Math.floorMod(blockZ, EngineSetting.CHUNK_SIZE));
     }
 
     // Management \\
@@ -291,6 +379,19 @@ public class WorldMapViewSystem extends SystemPackage {
 
     public double getPlayerZ() {
         return playerMarker.getZ();
+    }
+
+    // Where the arrow is drawn: under the pointer while it is carried, on the character otherwise
+    public double getMarkerX() {
+        return draggingMarker ? dragX : playerMarker.getX();
+    }
+
+    public double getMarkerZ() {
+        return draggingMarker ? dragZ : playerMarker.getZ();
+    }
+
+    public boolean isDraggingMarker() {
+        return draggingMarker;
     }
 
     public float getHeadingX() {

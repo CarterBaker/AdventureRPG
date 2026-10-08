@@ -15,7 +15,8 @@ public class WorldMapContext extends ContextPackage {
      * the terrain, with the real chunks a preview has loaded drawn in once it
      * reaches them. With no preview open it shows the active world. An arrow
      * marks the character's position and facing, and the view follows it
-     * until dragged. The shared day and night and weather can be shown over
+     * until dragged; dragging the arrow itself moves the character to
+     * wherever it is dropped. The shared day and night and weather can be shown over
      * it, and live world and biome edits sharpen into it as they land.
      */
 

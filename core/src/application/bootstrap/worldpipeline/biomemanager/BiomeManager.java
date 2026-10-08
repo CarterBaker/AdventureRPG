@@ -5,6 +5,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
+import application.bootstrap.worldpipeline.biome.ProbablePatchStruct;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.assets.image.Pixmap;
@@ -14,7 +16,6 @@ import engine.root.UtilityPackage.InternalException;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
@@ -25,10 +26,11 @@ public class BiomeManager extends ManagerPackage {
      * Owns the biome palette and the biome field, the continuous function
      * giving each biome's share at any world position. The world map is
      * reconstructed through a warped kernel so painted borders blend, probable
-     * variants appear as soft patches, and land meets ocean through its
-     * declared beach. Reads are lock-free: registries are copy-on-write
-     * snapshots and each worker memoizes map colors in its own scratch.
-     * Biomes can be rebuilt or retired live from an edited ARPG tree; the
+     * biomes scatter as shaped patches or sit at the center of their parent's
+     * patches, chaining their own probable biomes to any depth, and land
+     * meets ocean through its declared beach. Reads are lock-free: registries
+     * are copy-on-write snapshots and each worker memoizes map colors in its
+     * own scratch. Biomes can be rebuilt or retired live from an edited ARPG tree; the
      * revision moves on every such change, so whatever derives from the field
      * knows to refresh.
      */
@@ -95,11 +97,16 @@ public class BiomeManager extends ManagerPackage {
         biomeName2BiomeHandle.put(biomeHandle.getBiomeName(), biomeHandle);
         biomeID2BiomeHandle = nextID2BiomeHandle;
 
-        for (String variantName : biomeHandle.getProbableBiomeNames())
-            linkVariant(variantName, biomeHandle.getBiomeName());
+        for (ProbableBiomeStruct probableBiome : biomeHandle.getProbableBiomes())
+            linkVariant(probableBiome.getBiomeName(), biomeHandle.getBiomeName());
     }
 
     private void linkVariant(String variantName, String parentName) {
+
+        if (isChainedBeneath(parentName, variantName))
+            throwException("Biome \"" + parentName + "\" lists \"" + variantName + "\" in \"probable_biomes\", "
+                    + "but \"" + parentName + "\" is already chained beneath \"" + variantName
+                    + "\" — a probable biome chain cannot loop back on itself.");
 
         String existingParentName = variantName2ParentName.putIfAbsent(variantName, parentName);
 
@@ -171,8 +178,8 @@ public class BiomeManager extends ManagerPackage {
         BiomeHandle previous = biomeName2BiomeHandle.get(biomeName);
 
         if (previous != null)
-            for (String variantName : previous.getProbableBiomeNames())
-                variantName2ParentName.remove(variantName, biomeName);
+            for (ProbableBiomeStruct probableBiome : previous.getProbableBiomes())
+                variantName2ParentName.remove(probableBiome.getBiomeName(), biomeName);
 
         addBiome(biomeHandle);
 
@@ -207,6 +214,22 @@ public class BiomeManager extends ManagerPackage {
 
     String getVariantParentName(String variantName) {
         return variantName2ParentName.get(variantName);
+    }
+
+    // True when the biome is the descendant itself or anywhere up its chain of parents
+    boolean isChainedBeneath(String descendantName, String biomeName) {
+
+        String currentName = descendantName;
+
+        while (currentName != null) {
+
+            if (currentName.equals(biomeName))
+                return true;
+
+            currentName = variantName2ParentName.get(currentName);
+        }
+
+        return false;
     }
 
     BiomeHandle getRegisteredBiome(short biomeID) {
@@ -245,9 +268,27 @@ public class BiomeManager extends ManagerPackage {
                 warpedPixelX, warpedPixelZ, map.getWidth(), map.getHeight(),
                 scratch.mapPixelX, scratch.mapPixelZ, scratch.mapWeights);
 
-        int patchCount = BiomeFieldUtility.computePatchSamples(
-                seed ^ EngineSetting.BIOME_PATCH_SEED, warpedPixelX, warpedPixelZ,
-                map.getWidth(), map.getHeight(), scratch.patchCellHash, scratch.patchWeights);
+        int mapBiomeCount = collectMapBiomes(scratch, map);
+
+        scratch.probableSeed = seed ^ EngineSetting.BIOME_PROBABLE_SEED;
+        scratch.probablePixelX = pixelX;
+        scratch.probablePixelZ = pixelZ;
+        scratch.mapWidth = map.getWidth();
+        scratch.mapHeight = map.getHeight();
+
+        for (int i = 0; i < mapBiomeCount; i++)
+            accumulateChain(
+                    scratch, scratch.mapBiomes[i], scratch.mapBiomeWeights[i],
+                    0L, ProbablePatchStruct.NO_PATCH_SHAPE, 0f, outBlend);
+
+        outBlend.normalize();
+        resolveShoreBuffers(outBlend);
+    }
+
+    // Merges map samples that resolve to the same biome, so each chain is walked once per position
+    private int collectMapBiomes(BiomeFieldAsyncContainer scratch, Pixmap map) {
+
+        int count = 0;
 
         for (int i = 0; i < BiomeFieldUtility.MAP_SAMPLE_COUNT; i++) {
 
@@ -260,19 +301,63 @@ public class BiomeManager extends ManagerPackage {
                     scratch,
                     map.getPixelRGB(scratch.mapPixelX[i], scratch.mapPixelZ[i]));
 
-            if (patchCount == 0 || mapBiome.getProbableBiomeNames().isEmpty()) {
-                outBlend.accumulate(mapBiome, mapWeight);
-                continue;
+            int index = 0;
+
+            while (index < count && scratch.mapBiomes[index] != mapBiome)
+                index++;
+
+            if (index == count) {
+                scratch.mapBiomes[count] = mapBiome;
+                scratch.mapBiomeWeights[count] = 0f;
+                count++;
             }
 
-            for (int patch = 0; patch < patchCount; patch++)
-                outBlend.accumulate(
-                        resolveProbableBiome(mapBiome, scratch.patchCellHash[patch]),
-                        mapWeight * scratch.patchWeights[patch]);
+            scratch.mapBiomeWeights[index] += mapWeight;
         }
 
-        outBlend.normalize();
-        resolveShoreBuffers(outBlend);
+        return count;
+    }
+
+    // Each probable biome claims what it covers of the share earlier entries left, then walks its own chain
+    private void accumulateChain(
+            BiomeFieldAsyncContainer scratch,
+            BiomeHandle biome,
+            float weight,
+            long hostHash,
+            float hostShape,
+            float hostNoise,
+            BiomeBlendStruct outBlend) {
+
+        ObjectArrayList<ProbableBiomeStruct> probableBiomes = biome.getProbableBiomes();
+        ProbablePatchStruct patch = scratch.probablePatch;
+        float remaining = 1f;
+
+        for (int i = 0; i < probableBiomes.size() && remaining > 0f; i++) {
+
+            ProbableBiomeStruct probableBiome = probableBiomes.get(i);
+
+            if (probableBiome.isCentered())
+                BiomeFieldUtility.computeCenterCoverage(probableBiome, hostHash, hostShape, hostNoise, patch);
+            else
+                BiomeFieldUtility.computeScatterCoverage(
+                        scratch.probableSeed, probableBiome,
+                        scratch.probablePixelX, scratch.probablePixelZ,
+                        scratch.mapWidth, scratch.mapHeight, patch);
+
+            float coverage = patch.getCoverage();
+
+            if (coverage <= 0f)
+                continue;
+
+            float share = remaining * coverage;
+            remaining -= share;
+
+            accumulateChain(
+                    scratch, getBiomeHandleFromBiomeName(probableBiome.getBiomeName()), weight * share,
+                    patch.getPatchHash(), patch.getPatchShape(), patch.getPatchNoise(), outBlend);
+        }
+
+        outBlend.accumulate(biome, weight * remaining);
     }
 
     private void resolveShoreBuffers(BiomeBlendStruct blend) {
@@ -296,27 +381,6 @@ public class BiomeManager extends ManagerPackage {
         }
 
         blend.normalize();
-    }
-
-    private BiomeHandle resolveProbableBiome(BiomeHandle baseBiome, long cellHash) {
-
-        ObjectArrayList<String> probableNames = baseBiome.getProbableBiomeNames();
-        FloatArrayList probableChances = baseBiome.getProbableBiomeChances();
-
-        float roll = BiomeFieldUtility.hash01(
-                cellHash ^ (baseBiome.getBiomeID() * EngineSetting.HASH_FINALIZER_MULTIPLIER_2));
-
-        float cumulative = 0f;
-
-        for (int i = 0; i < probableNames.size(); i++) {
-
-            cumulative += probableChances.getFloat(i);
-
-            if (roll < cumulative)
-                return getBiomeHandleFromBiomeName(probableNames.get(i));
-        }
-
-        return baseBiome;
     }
 
     // World Map Resolution \\

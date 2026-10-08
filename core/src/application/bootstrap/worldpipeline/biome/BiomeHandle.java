@@ -84,12 +84,8 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.hasMapColor();
     }
 
-    public ObjectArrayList<String> getProbableBiomeNames() {
-        return biomeData.getProbableBiomeNames();
-    }
-
-    public FloatArrayList getProbableBiomeChances() {
-        return biomeData.getProbableBiomeChances();
+    public ObjectArrayList<ProbableBiomeStruct> getProbableBiomes() {
+        return biomeData.getProbableBiomes();
     }
 
     public String getSurfaceBlockName() {
