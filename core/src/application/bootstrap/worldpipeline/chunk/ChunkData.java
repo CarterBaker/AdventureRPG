@@ -6,9 +6,11 @@ public enum ChunkData {
 
     /*
      * The stages a chunk moves through, from loading and generation to
-     * geometry, merging, rendering, batching and items. Each stage names the
-     * stages it requires and leads to, whether it may be dumped, and the detail
-     * level it is kept up to.
+     * geometry, merging, rendering, batching, its trees and items. Each stage
+     * names the stages it requires and leads to, whether it may be dumped, and
+     * the detail level it is kept up to. A chunk's trees are a layer of their
+     * own beside its terrain: built from the chunk alone once it generates,
+     * and kept only while the chunk is drawn on its own rather than by a mega.
      */
 
     LOAD_DATA(
@@ -22,7 +24,7 @@ public enum ChunkData {
     GENERATION_DATA(
             true, GridSlotDetailLevel.NEAR,
             new String[] { "LOAD_DATA", "ESSENTIAL_DATA" },
-            new String[] { "NEIGHBOR_DATA", "ITEM_DATA" }),
+            new String[] { "NEIGHBOR_DATA", "TREE_DATA", "ITEM_DATA" }),
     NEIGHBOR_DATA(
             false, null,
             new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA" },
@@ -46,6 +48,14 @@ public enum ChunkData {
             false, null,
             new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "NEIGHBOR_DATA", "BUILD_DATA",
                     "MERGE_DATA" },
+            new String[] {}),
+    TREE_DATA(
+            true, null,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA" },
+            new String[] { "TREE_RENDER_DATA" }),
+    TREE_RENDER_DATA(
+            true, null,
+            new String[] { "LOAD_DATA", "ESSENTIAL_DATA", "GENERATION_DATA", "TREE_DATA" },
             new String[] {}),
     ITEM_DATA(
             true, GridSlotDetailLevel.NEAR,

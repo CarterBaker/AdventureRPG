@@ -14,6 +14,8 @@ enum QueueOperation {
     MERGE,
     ITEM_LOAD,
     ITEM_RENDER,
+    TREE_BUILD,
+    TREE_RENDER,
     BATCH,
     RENDER,
     DUMP,

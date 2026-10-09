@@ -80,6 +80,10 @@ public class TreeHandle extends HandlePackage {
         return treeData.getPartColors();
     }
 
+    public int[] getPartAlbedos() {
+        return treeData.getPartAlbedos();
+    }
+
     public boolean[] getPartOpaque() {
         return treeData.getPartOpaque();
     }

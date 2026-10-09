@@ -8,9 +8,11 @@ public final class ChunkDataUtility extends EngineUtility {
     /*
      * Stateless walker over the ChunkData dependency graph. Decides the next
      * stage to load or dump from the slot's detail level, individual render
-     * need and mega membership. A stage is needed when its own condition holds
-     * or a stage that currently needs it requires it, so loading and dumping
-     * never drift apart.
+     * need, whether the chunk's own trees are drawn and mega membership. A
+     * stage is needed when its own condition holds or a stage that currently
+     * needs it requires it, so loading and dumping never drift apart. A
+     * chunk's own trees are drawn while the grid draws the chunk on its own,
+     * and kept on past that only until its mega's stand-ins are on the GPU.
      */
 
     // Load \\
@@ -19,6 +21,7 @@ public final class ChunkDataUtility extends EngineUtility {
             boolean[] flags,
             GridSlotDetailLevel slotLevel,
             boolean needsIndividualRender,
+            boolean treesDrawnIndividually,
             boolean partOfMegaBlock) {
 
         for (ChunkData stage : ChunkData.VALUES) {
@@ -29,7 +32,7 @@ public final class ChunkDataUtility extends EngineUtility {
             if (!requiresMet(stage, flags))
                 continue;
 
-            if (!isNeeded(stage, slotLevel, needsIndividualRender, partOfMegaBlock))
+            if (!isNeeded(stage, slotLevel, needsIndividualRender, treesDrawnIndividually, partOfMegaBlock))
                 continue;
 
             return stage;
@@ -42,14 +45,15 @@ public final class ChunkDataUtility extends EngineUtility {
             ChunkData stage,
             GridSlotDetailLevel slotLevel,
             boolean needsIndividualRender,
+            boolean treesDrawnIndividually,
             boolean partOfMegaBlock) {
 
-        if (isDirectlyRequired(stage, slotLevel, needsIndividualRender, partOfMegaBlock))
+        if (isDirectlyRequired(stage, slotLevel, needsIndividualRender, treesDrawnIndividually, partOfMegaBlock))
             return true;
 
         for (ChunkData other : ChunkData.VALUES) {
 
-            if (!isDirectlyRequired(other, slotLevel, needsIndividualRender, partOfMegaBlock))
+            if (!isDirectlyRequired(other, slotLevel, needsIndividualRender, treesDrawnIndividually, partOfMegaBlock))
                 continue;
 
             for (ChunkData req : other.requires)
@@ -64,6 +68,7 @@ public final class ChunkDataUtility extends EngineUtility {
             ChunkData stage,
             GridSlotDetailLevel slotLevel,
             boolean needsIndividualRender,
+            boolean treesDrawnIndividually,
             boolean partOfMegaBlock) {
 
         if (stage == ChunkData.BATCH_DATA)
@@ -71,6 +76,9 @@ public final class ChunkDataUtility extends EngineUtility {
 
         if (stage == ChunkData.RENDER_DATA)
             return needsIndividualRender;
+
+        if (stage == ChunkData.TREE_RENDER_DATA)
+            return treesDrawnIndividually;
 
         if (stage.minimumLevel == null)
             return false;
@@ -93,6 +101,7 @@ public final class ChunkDataUtility extends EngineUtility {
             boolean[] flags,
             GridSlotDetailLevel slotLevel,
             boolean needsIndividualRender,
+            boolean treesDrawnIndividually,
             boolean partOfMegaBlock) {
 
         for (int i = ChunkData.LENGTH - 1; i >= 0; i--) {
@@ -105,7 +114,7 @@ public final class ChunkDataUtility extends EngineUtility {
             if (!stage.dumpable)
                 continue;
 
-            if (isNeeded(stage, slotLevel, needsIndividualRender, partOfMegaBlock))
+            if (isNeeded(stage, slotLevel, needsIndividualRender, treesDrawnIndividually, partOfMegaBlock))
                 continue;
 
             return stage;

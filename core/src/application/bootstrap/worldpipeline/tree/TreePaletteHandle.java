@@ -32,12 +32,10 @@ public class TreePaletteHandle extends HandlePackage {
     // Main thread — one more tree, unless the chunk already holds it
     public boolean add(TreeInstance tree) {
 
+        if (contains(tree))
+            return false;
+
         TreeInstance[] current = trees;
-
-        for (int i = 0; i < current.length; i++)
-            if (current[i] == tree)
-                return false;
-
         TreeInstance[] grown = new TreeInstance[current.length + 1];
 
         System.arraycopy(current, 0, grown, 0, current.length);
@@ -59,6 +57,17 @@ public class TreePaletteHandle extends HandlePackage {
     }
 
     // Accessible \\
+
+    public boolean contains(TreeInstance tree) {
+
+        TreeInstance[] current = trees;
+
+        for (int i = 0; i < current.length; i++)
+            if (current[i] == tree)
+                return true;
+
+        return false;
+    }
 
     public TreeInstance[] getTrees() {
         return trees;

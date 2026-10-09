@@ -64,6 +64,7 @@ class MacroQueueManager extends ManagerPackage {
         this.buildBranch = create(MacroBuildBranch.class);
         this.renderBranch = create(MacroRenderBranch.class);
         create(MacroMeshBranch.class);
+        create(MacroCanopyBranch.class);
 
         // Pool
         this.macroPool = new ObjectArrayList<>();

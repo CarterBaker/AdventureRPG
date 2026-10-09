@@ -4,7 +4,6 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.TreeGe
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
@@ -23,16 +22,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class TreeGeometryBranch extends BranchPackage {
 
     /*
-     * Draws the trees a chunk holds into one of its subchunks. The wood of
-     * every tree reaching the subchunk is laid on one grid a block wider than
-     * the subchunk on every side, each species with its own bark and
-     * heartwood parts, then merged into quads for the subchunk's blocks alone:
-     * the margin only tells the mesher and the bevel what lies beyond, so wood
-     * crossing a border meets itself without a seam or a hidden face, and any
-     * wood a leaf cluster wholly hides is left out. Each
-     * leaf cluster is drawn by the subchunk its centre lies in. Wood goes to
-     * the bark material and leaves to the leaf material, merged with the
-     * subchunk's terrain like any other geometry.
+     * Draws the trees a chunk holds, apart from its terrain, one vertex list
+     * per material. The wood of every tree reaching the chunk is laid on one
+     * grid a block wider than the chunk on every side and as tall as its
+     * trees stand, each species with its own bark and heartwood parts, then
+     * merged into quads for the chunk's own columns alone: the margin only
+     * tells the mesher and the bevel what lies beyond, so wood crossing a
+     * border meets itself without a seam or a hidden face, and a trunk merges
+     * into long faces from its root to its crown. Any wood a leaf cluster
+     * wholly hides is left out, and each leaf cluster is drawn by the chunk
+     * its centre lies in. Only the chunk's own tree palette is ever read,
+     * never a neighbor, so a build needs no lock but the chunk's own. Wood
+     * goes to the bark material and leaves to the leaf material.
      */
 
     // Internal
@@ -67,95 +68,94 @@ class TreeGeometryBranch extends BranchPackage {
         this.subVoxelManager = get(SubVoxelManager.class);
     }
 
-    // Reach \\
-
-    // True when any tree the chunk holds can reach into the subchunk
-    boolean reachesSubChunk(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance) {
-
-        TreeInstance[] trees = chunkInstance.getTreePaletteHandle().getTrees();
-        int baseY = (int) subChunkInstance.getCoordinate() * chunkSize;
-
-        for (int i = 0; i < trees.length; i++)
-            if (reaches(trees[i].getShape(), trees[i].getBaseY() - baseY, -margin, chunkSize + margin))
-                return true;
-
-        return false;
-    }
-
-    // Vertically only — the chunk holds a tree because it reaches the chunk's columns
-    private boolean reaches(TreeShapeStruct shape, float rootY, float min, float max) {
-        return !shape.isEmpty() && rootY + shape.getMinY() < max && rootY + shape.getMaxY() > min;
-    }
-
     // Build \\
 
-    void assembleTrees(
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance,
-            Int2ObjectOpenHashMap<FloatArrayList> verts) {
-
-        TreeInstance[] trees = chunkInstance.getTreePaletteHandle().getTrees();
-
-        if (trees.length == 0)
-            return;
+    // Every material's vertices for the chunk's trees, in the chunk's frame — read before this thread's next build
+    Int2ObjectOpenHashMap<FloatArrayList> assembleTrees(ChunkInstance chunkInstance) {
 
         TreeGeometryAsyncContainer scratch = treeContainer.getInstance();
         scratch.reset();
+
+        TreeInstance[] trees = chunkInstance.getTreePaletteHandle().getTrees();
+        ObjectArrayList<TreeShapeStruct> shapes = scratch.getShapes();
+        float lowY = Float.MAX_VALUE;
+        float highY = -Float.MAX_VALUE;
+
+        for (int i = 0; i < trees.length; i++) {
+
+            TreeShapeStruct shape = trees[i].getShape();
+
+            shapes.add(shape);
+
+            if (shape.isEmpty())
+                continue;
+
+            lowY = Math.min(lowY, trees[i].getBaseY() + shape.getMinY());
+            highY = Math.max(highY, trees[i].getBaseY() + shape.getMaxY());
+        }
+
+        if (lowY > highY)
+            return scratch.getVerts();
 
         WorldHandle worldHandle = chunkInstance.getWorldHandle();
         long chunkCoordinate = chunkInstance.getCoordinate();
         long chunkOriginX = (long) Coordinate2Long.unpackX(chunkCoordinate) * chunkSize;
         long chunkOriginZ = (long) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize;
-        int baseY = (int) subChunkInstance.getCoordinate() * chunkSize;
-        int regionMax = (chunkSize + margin * 2) * resolution;
-        FloatArrayList leafVerts = verts.computeIfAbsent(treeManager.getLeafMaterialID(), k -> new FloatArrayList());
+        int floorY = (int) Math.floor(lowY) - margin;
+        int columnHeight = (int) Math.ceil(highY) - floorY + margin;
+        int regionAcross = (chunkSize + margin * 2) * resolution;
+        int regionUp = columnHeight * resolution;
+        FloatArrayList leafVerts = scratch.getVerts(treeManager.getLeafMaterialID());
 
         for (int i = 0; i < trees.length; i++) {
 
             TreeInstance tree = trees[i];
-            TreeShapeStruct shape = tree.getShape();
-            int rootX = (int) WorldWrapUtility.wrappedBlockDeltaX(worldHandle, tree.getAnchorX(), chunkOriginX);
-            int rootY = tree.getBaseY() - baseY;
-            int rootZ = (int) WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, tree.getAnchorZ(), chunkOriginZ);
+            TreeShapeStruct shape = shapes.get(i);
 
-            if (!reaches(shape, rootY, -margin, chunkSize + margin))
+            if (shape.isEmpty())
                 continue;
+
+            int rootX = (int) WorldWrapUtility.wrappedBlockDeltaX(worldHandle, tree.getAnchorX(), chunkOriginX);
+            int rootY = tree.getBaseY() - floorY;
+            int rootZ = (int) WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, tree.getAnchorZ(), chunkOriginZ);
 
             if (!shape.getNodes().isEmpty()) {
 
                 TreeRasterUtility.rasterize(
-                        shape, rootX + margin, rootY + margin, rootZ + margin,
-                        0, 0, 0, regionMax, regionMax, regionMax,
+                        shape, rootX + margin, rootY, rootZ + margin,
+                        0, 0, 0, regionAcross, regionUp, regionAcross,
                         resolvePartBase(scratch.getPartSpecies(), shape.getTreeHandle()),
                         scratch.getGrid());
                 TreeMeshUtility.collectHiders(
                         shape,
                         (rootX + margin + EngineSetting.TREE_ROOT_CENTER_BLOCKS) * resolution,
-                        (rootY + margin) * resolution,
+                        rootY * resolution,
                         (rootZ + margin + EngineSetting.TREE_ROOT_CENTER_BLOCKS) * resolution,
                         scratch.getHiders());
             }
 
             TreeMeshUtility.emitLeaves(
-                    shape, rootX + EngineSetting.TREE_ROOT_CENTER_BLOCKS, rootY,
+                    shape, rootX + EngineSetting.TREE_ROOT_CENTER_BLOCKS, tree.getBaseY(),
                     rootZ + EngineSetting.TREE_ROOT_CENTER_BLOCKS,
-                    0f, 0f, 0f, chunkSize, chunkSize, chunkSize, leafVerts);
+                    0f, -Float.MAX_VALUE, 0f, chunkSize, Float.MAX_VALUE, chunkSize, leafVerts);
         }
 
         SubVoxelGridStruct grid = scratch.getGrid();
 
         if (grid.isEmpty())
-            return;
+            return scratch.getVerts();
 
         subVoxelManager.meshGrid(
                 grid, null,
-                margin, margin, margin,
-                margin + chunkSize - 1, margin + chunkSize - 1, margin + chunkSize - 1,
+                margin, 0, margin,
+                margin + chunkSize - 1, columnHeight - 1, margin + chunkSize - 1,
                 scratch.getQuads());
 
         TreeMeshUtility.emitWood(
-                grid, scratch.getQuads(), scratch.getPartSpecies(), scratch.getHiders(), -margin, -margin, -margin,
-                verts.computeIfAbsent(treeManager.getBarkMaterialID(), k -> new FloatArrayList()));
+                grid, scratch.getQuads(), scratch.getPartSpecies(), scratch.getHiders(), -margin, floorY, -margin,
+                scratch.getVerts(treeManager.getBarkMaterialID()));
+
+        return scratch.getVerts();
     }
 
     // The first of a species' two wood parts, the species given its parts the first time one of its trees is laid

@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.chunk;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
@@ -25,7 +26,8 @@ public class ChunkInstance extends WorldRenderInstance {
      * are reconfigured in place, and tideSurfaceLevels records the tide the
      * ocean was last written against. It holds every tree that reaches it
      * from the moment it generates until it is reset, when TreeManager lets
-     * them go.
+     * them go, and draws them into a tree packet of its own, apart from its
+     * terrain, so a tree that changes never rebuilds the ground.
      */
 
     // Internal
@@ -35,6 +37,7 @@ public class ChunkInstance extends WorldRenderInstance {
     private WorldItemInstancePaletteHandle worldItemInstancePaletteHandle;
     private GenerationCacheStruct terrainCache;
     private TreePaletteHandle treePaletteHandle;
+    private DynamicPacketInstance treePacketInstance;
     private TreeManager treeManager;
 
     // Scratch — pre-allocated, reused per merge call
@@ -64,6 +67,7 @@ public class ChunkInstance extends WorldRenderInstance {
         this.chunkNeighbors = create(ChunkNeighborHandle.class);
         this.treePaletteHandle = create(TreePaletteHandle.class);
         this.treePaletteHandle.constructor();
+        this.treePacketInstance = create(DynamicPacketInstance.class);
 
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
@@ -103,6 +107,8 @@ public class ChunkInstance extends WorldRenderInstance {
                 coordinate,
                 vaoHandle);
 
+        this.treePacketInstance.constructor(vaoHandle);
+
         for (byte subChunkCoordinate = 0; subChunkCoordinate < EngineSetting.WORLD_HEIGHT; subChunkCoordinate++)
             subChunks[subChunkCoordinate].constructor(
                     worldRenderManager,
@@ -122,6 +128,7 @@ public class ChunkInstance extends WorldRenderInstance {
         getDynamicPacket().clear();
         worldItemInstancePaletteHandle.clear();
         treeManager.releaseTrees(treePaletteHandle);
+        treePacketInstance.clear();
         terrainCache.invalidate();
         tideSurfaceLevels = EngineSetting.OCEAN_TIDE_UNAPPLIED;
 
@@ -179,6 +186,10 @@ public class ChunkInstance extends WorldRenderInstance {
 
     public TreePaletteHandle getTreePaletteHandle() {
         return treePaletteHandle;
+    }
+
+    public DynamicPacketInstance getTreePacketInstance() {
+        return treePacketInstance;
     }
 
     public GenerationCacheStruct getTerrainCache() {

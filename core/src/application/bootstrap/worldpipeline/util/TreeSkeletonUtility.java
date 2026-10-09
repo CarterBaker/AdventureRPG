@@ -40,7 +40,7 @@ public final class TreeSkeletonUtility extends EngineUtility {
         TreeSkeletonStruct skeleton = new TreeSkeletonStruct();
         TreeRandomStruct random = new TreeRandomStruct(seed);
         TreeTrunkStruct trunk = treeHandle.getTrunk();
-        float height = random.nextRange(trunk.getMinHeightBlocks(), trunk.getMaxHeightBlocks());
+        float height = drawMatureHeight(trunk, random);
         float baseAzimuth = random.next() * TWO_PI;
         int stems = trunk.getStems();
 
@@ -50,6 +50,15 @@ public final class TreeSkeletonUtility extends EngineUtility {
             growStem(treeHandle, skeleton, random, height, baseAzimuth + stem * TWO_PI / stems, stems > 1);
 
         return skeleton;
+    }
+
+    // The height a tree grows to at maturity, the first draw of its seed — known without growing it
+    public static float resolveMatureHeight(TreeHandle treeHandle, long seed) {
+        return drawMatureHeight(treeHandle.getTrunk(), new TreeRandomStruct(seed));
+    }
+
+    private static float drawMatureHeight(TreeTrunkStruct trunk, TreeRandomStruct random) {
+        return random.nextRange(trunk.getMinHeightBlocks(), trunk.getMaxHeightBlocks());
     }
 
     // Stem \\

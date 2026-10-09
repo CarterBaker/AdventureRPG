@@ -108,7 +108,6 @@ class TreeChopBranch extends BranchPackage {
         float centerX = shape.getLeafX(leaf);
         float centerY = shape.getLeafY(leaf);
         float centerZ = shape.getLeafZ(leaf);
-        float radius = Math.max(shape.getLeafRadiusH(leaf), shape.getLeafRadiusV(leaf));
         TreeGrowthStruct growth = tree.getTreeHandle().getGrowth();
 
         tree.breakLeaf(source, treeManager.getCurrentDay());
@@ -117,7 +116,7 @@ class TreeChopBranch extends BranchPackage {
                 shape.getSeed() ^ EngineSetting.TREE_SEED_DROP_SALT, source, 0)) < growth.getSeedChance())
             treeFallBranch.throwDrop(tree, entity, growth.getSeedItemName(), centerX, centerY, centerZ, source);
 
-        rebuildAround(tree, centerX, centerY, centerZ, radius);
+        treeRebuildBranch.rebuildTree(tree, true);
     }
 
     // Wood \\
@@ -151,8 +150,7 @@ class TreeChopBranch extends BranchPackage {
             return;
         }
 
-        rebuildAround(tree, mouthX / resolution, mouthY / resolution, mouthZ / resolution,
-                carve.getReach() / resolution);
+        treeRebuildBranch.rebuildTree(tree, true);
     }
 
     // Level and unit length: the swing's own heading, or straight into the face struck when it swings plumb
@@ -276,22 +274,6 @@ class TreeChopBranch extends BranchPackage {
 
         TreeShapeStruct piece = tree.sever(before.getSourceSegment(segment), share, treeManager.getCurrentDay());
 
-        treeFallBranch.fell(tree, piece, before, entity, cutX, cutY, cutZ, heading[0], heading[1], toppling);
-    }
-
-    // Rebuild \\
-
-    // Every subchunk within a reach of a point in blocks from the centre of a tree's root
-    private void rebuildAround(TreeInstance tree, float x, float y, float z, float reach) {
-
-        float rootX = tree.getAnchorX() + EngineSetting.TREE_ROOT_CENTER_BLOCKS;
-        float rootZ = tree.getAnchorZ() + EngineSetting.TREE_ROOT_CENTER_BLOCKS;
-
-        treeRebuildBranch.rebuild(
-                tree.getWorldHandle(),
-                (long) Math.floor(rootX + x - reach), (int) Math.floor(tree.getBaseY() + y - reach),
-                (long) Math.floor(rootZ + z - reach),
-                (long) Math.floor(rootX + x + reach), (int) Math.floor(tree.getBaseY() + y + reach),
-                (long) Math.floor(rootZ + z + reach));
+        treeFallBranch.fell(tree, piece, entity, cutX, cutY, cutZ, heading[0], heading[1], toppling);
     }
 }

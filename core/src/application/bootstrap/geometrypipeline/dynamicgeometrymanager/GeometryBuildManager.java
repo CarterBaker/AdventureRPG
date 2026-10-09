@@ -28,10 +28,11 @@ class GeometryBuildManager extends ManagerPackage {
     /*
      * Drives a chunk's geometry build subchunk by subchunk and routes each
      * block to its geometry branch. Empty subchunks, and uniform or opaque ones
-     * enclosed by equally solid neighbors, skip the block walk entirely; an
-     * empty one still draws any tree reaching into it, since a crown stands in
-     * open air. Callers already hold the chunk's lock, so no gating happens
-     * here.
+     * enclosed by equally solid neighbors, skip the block walk entirely.
+     * Trees are never part of the terrain: buildTrees() draws the trees a
+     * chunk holds into the chunk's own tree packet, so a tree that changes
+     * never rebuilds the ground under it. Callers already hold the chunk's
+     * lock, so no gating happens here.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -95,7 +96,8 @@ class GeometryBuildManager extends ManagerPackage {
 
         if (subChunkInstance.isKnownEmpty()) {
             subChunkInstance.finalizeBlockTypeTally();
-            return buildTreesOnly(dynamicGeometryAsyncContainer, chunkInstance, subChunkInstance);
+            dynamicPacketInstance.unlock();
+            return true;
         }
 
         if (subChunkInstance.isUniformFill() && isFullyEnclosed(chunkInstance, subChunkInstance)) {
@@ -173,30 +175,21 @@ class GeometryBuildManager extends ManagerPackage {
         }
 
         subChunkInstance.finalizeBlockTypeTally();
-        treeGeometryBranch.assembleTrees(chunkInstance, subChunkInstance, verts);
 
         return pushVerts(verts, dynamicPacketInstance);
     }
 
-    // An empty subchunk has no blocks to walk, only the trees that may reach into it
-    private boolean buildTreesOnly(
-            DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
-            ChunkInstance chunkInstance,
-            SubChunkInstance subChunkInstance) {
+    // Tree Geometry \\
 
-        DynamicPacketInstance dynamicPacketInstance = subChunkInstance.getDynamicPacketInstance();
+    // The trees a chunk holds drawn into its own tree packet, apart from its terrain
+    boolean buildTrees(ChunkInstance chunkInstance) {
 
-        if (!treeGeometryBranch.reachesSubChunk(chunkInstance, subChunkInstance)) {
-            dynamicPacketInstance.unlock();
-            return true;
-        }
+        DynamicPacketInstance treePacketInstance = chunkInstance.getTreePacketInstance();
 
-        dynamicGeometryAsyncContainer.reset();
+        treePacketInstance.beginGenerating();
+        treePacketInstance.clearModels();
 
-        Int2ObjectOpenHashMap<FloatArrayList> verts = dynamicGeometryAsyncContainer.getVerts();
-        treeGeometryBranch.assembleTrees(chunkInstance, subChunkInstance, verts);
-
-        return pushVerts(verts, dynamicPacketInstance);
+        return pushVerts(treeGeometryBranch.assembleTrees(chunkInstance), treePacketInstance);
     }
 
     // Every material's vertices handed to the packet, which is ready when anything was drawn

@@ -26,7 +26,13 @@ public class TreeManager extends ManagerPackage {
      * so the streaming threads only ever read the palette. World generation
      * asks it for the trees that reach a chunk, which the chunk holds until
      * it is reset; the registry shares one instance of each tree between every
-     * chunk it reaches. It is the one way anything touches a tree: castTree()
+     * chunk it reaches. A tree stays virtual — its height and age, nothing
+     * grown — until something near enough needs its shape, and gives the
+     * shape back once nothing has for a while. Trees are drawn apart from the
+     * ground: in full by the chunks near the player, as stand-ins by the
+     * megas beyond them, and as a canopy by distant macro terrain, so a tree
+     * that changes redraws only itself. It is the one way anything touches a
+     * tree: castTree()
      * finds what a ray meets, strikeTree() lands a swing on it,
      * collectWoodBoxes() gives movement the wood to collide with, and plant()
      * roots a seed. Each frame it publishes the game day for the streaming

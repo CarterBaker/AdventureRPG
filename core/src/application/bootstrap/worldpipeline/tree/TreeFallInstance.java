@@ -11,9 +11,8 @@ public class TreeFallInstance extends InstancePackage {
 
     /*
      * One piece a cut freed from a tree, falling free of it: the tree it came
-     * from, the shape it carries away and the shape the tree stood with before
-     * the cut, the cut it hinges on, in blocks from the centre of the tree's
-     * root, and the way it falls. A piece standing upright topples about its
+     * from, the shape it carries away, the cut it hinges on, in blocks from
+     * the centre of the tree's root, and the way it falls. A piece standing upright topples about its
      * cut, away from whoever cut it, gathering speed as a felled trunk does;
      * any other drops straight down. Its geometry is written by a worker and
      * published whole, then uploaded on the main thread as meshes in the
@@ -23,7 +22,6 @@ public class TreeFallInstance extends InstancePackage {
     // Source
     private TreeInstance tree;
     private TreeShapeStruct piece;
-    private TreeShapeStruct before;
     private EntityInstance feller;
 
     // Hinge — blocks from the centre of the tree's root
@@ -53,7 +51,6 @@ public class TreeFallInstance extends InstancePackage {
     public void constructor(
             TreeInstance tree,
             TreeShapeStruct piece,
-            TreeShapeStruct before,
             EntityInstance feller,
             float pivotX,
             float pivotY,
@@ -65,7 +62,6 @@ public class TreeFallInstance extends InstancePackage {
         // Source
         this.tree = tree;
         this.piece = piece;
-        this.before = before;
         this.feller = feller;
 
         // Hinge
@@ -171,10 +167,6 @@ public class TreeFallInstance extends InstancePackage {
 
     public TreeShapeStruct getPiece() {
         return piece;
-    }
-
-    public TreeShapeStruct getBefore() {
-        return before;
     }
 
     public EntityInstance getFeller() {

@@ -17,6 +17,7 @@ import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.bootstrap.worldpipeline.world.WorldEditRegionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -39,6 +40,17 @@ class ChunkQueueManager extends ManagerPackage {
      * Pooled chunks are reused only under their own lock, and unloading a chunk
      * invalidates any mega it fed. A live edit restreams only the grid's chunks
      * its region reaches, nearest first, and leaves every other chunk standing.
+     * Every chunk leaves through clearChunk(), which takes back all it handed
+     * the renderers, its world items included. The moment a grid moves, every
+     * chunk it left behind is queued to unload and every load it no longer
+     * wants is dropped; unloads drain on their own budget, a chunk with an
+     * async task still reserved waiting for it, and no fresh chunk is made
+     * while the grid already holds more than it streams, so travelling far
+     * and fast never holds more than the grid around the player. A removed
+     * grid keeps draining until its last chunk is pooled. A chunk's trees are
+     * a layer of their own: refreshTrees() redraws them alone, at once for a
+     * change the player made and through the stream for one the world made,
+     * never touching the chunk's terrain or its neighbors.
      */
 
     // Internal
@@ -47,6 +59,7 @@ class ChunkQueueManager extends ManagerPackage {
     private WorldStreamManager worldStreamManager;
     private ChunkStreamManager chunkStreamManager;
     private WorldRenderManager worldRenderManager;
+    private WorldItemPlacementSystem worldItemPlacementSystem;
     private ThreadHandle worldStreamingThreadHandle;
 
     // Branches
@@ -56,6 +69,8 @@ class ChunkQueueManager extends ManagerPackage {
     private MergeBranch mergeBranch;
     private ItemLoadBranch itemLoadBranch;
     private ItemRenderBranch itemRenderBranch;
+    private TreeBuildBranch treeBuildBranch;
+    private TreeRenderBranch treeRenderBranch;
     private BatchBranch batchBranch;
     private RenderBranch renderBranch;
     private DumpBranch dumpBranch;
@@ -67,12 +82,21 @@ class ChunkQueueManager extends ManagerPackage {
     private QueueInstance chunkQueue;
     private Int2ObjectOpenHashMap<ChunkQueueItem> id2QueueItem;
 
+    // Retired — removed grids still holding chunks that could not unload yet
+    private ObjectArrayList<GridInstance> retiredGrids;
+
     // Pool — shared across all grids
     private ObjectArrayList<ChunkInstance> chunkPool;
     private int chunkPoolMaxOverflow;
 
     // Streaming
     private int maxChunkStreamPerBatch;
+    private int maxChunkUnloadsPerFrame;
+
+    // Settings
+    private int itemRenderDataIndex;
+    private int treeDataIndex;
+    private int treeRenderDataIndex;
 
     // Admission Backpressure — paces scanning/loading against the pipeline's
     // actual throughput instead of letting either race ahead of it
@@ -96,6 +120,8 @@ class ChunkQueueManager extends ManagerPackage {
         this.mergeBranch = create(MergeBranch.class);
         this.itemLoadBranch = create(ItemLoadBranch.class);
         this.itemRenderBranch = create(ItemRenderBranch.class);
+        this.treeBuildBranch = create(TreeBuildBranch.class);
+        this.treeRenderBranch = create(TreeRenderBranch.class);
         this.batchBranch = create(BatchBranch.class);
         this.renderBranch = create(RenderBranch.class);
         this.dumpBranch = create(DumpBranch.class);
@@ -109,12 +135,21 @@ class ChunkQueueManager extends ManagerPackage {
             id2QueueItem.put(handle.getQueueItemID(), item);
         }
 
+        // Retired
+        this.retiredGrids = new ObjectArrayList<>();
+
         // Pool
         this.chunkPool = new ObjectArrayList<>();
         this.chunkPoolMaxOverflow = EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
 
         // Streaming
         this.maxChunkStreamPerBatch = EngineSetting.MAX_CHUNK_STREAM_PER_BATCH;
+        this.maxChunkUnloadsPerFrame = EngineSetting.MAX_CHUNK_UNLOADS_PER_FRAME;
+
+        // Settings
+        this.itemRenderDataIndex = ChunkData.ITEM_RENDER_DATA.index;
+        this.treeDataIndex = ChunkData.TREE_DATA.index;
+        this.treeRenderDataIndex = ChunkData.TREE_RENDER_DATA.index;
 
         // Admission Backpressure
         this.maxChunkAdmissionsPerFrame = EngineSetting.MAX_CHUNK_STREAM_PER_FRAME;
@@ -134,6 +169,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.worldRenderManager = get(WorldRenderManager.class);
+        this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.worldStreamingThreadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
     }
 
@@ -145,6 +181,7 @@ class ChunkQueueManager extends ManagerPackage {
     @Override
     protected void update() {
         this.gpuUploadsThisFrame = 0;
+        drainRetiredGrids();
         executeQueue();
     }
 
@@ -157,7 +194,32 @@ class ChunkQueueManager extends ManagerPackage {
     }
 
     void onGridRemoved(GridInstance grid) {
+
         onGridRebuilt(grid);
+
+        if (!grid.getActiveChunks().isEmpty())
+            retiredGrids.add(grid);
+    }
+
+    // Every chunk the grid left behind queued to unload, and every load it no longer wants dropped
+    void onGridMoved(GridInstance grid) {
+
+        LongLinkedOpenHashSet unloadRequests = grid.getUnloadRequests();
+        var activeIterator = grid.getActiveChunks().keySet().iterator();
+
+        while (activeIterator.hasNext()) {
+
+            long chunkCoordinate = activeIterator.nextLong();
+
+            if (grid.getGridSlotForChunk(chunkCoordinate) == null)
+                unloadRequests.add(chunkCoordinate);
+        }
+
+        var loadIterator = grid.getLoadRequests().iterator();
+
+        while (loadIterator.hasNext())
+            if (grid.getGridSlotForChunk(loadIterator.nextLong()) == null)
+                loadIterator.remove();
     }
 
     // Restream \\
@@ -194,8 +256,7 @@ class ChunkQueueManager extends ManagerPackage {
 
         try {
             grid.getUnloadRequests().remove(chunkCoordinate);
-            worldRenderManager.removeChunkInstance(chunkCoordinate);
-            chunkInstance.reset();
+            clearChunk(chunkCoordinate, chunkInstance);
         } finally {
             syncContainer.release();
         }
@@ -275,6 +336,10 @@ class ChunkQueueManager extends ManagerPackage {
 
             if (chunkPool.isEmpty()) {
 
+                // A grid still holding chunks it left behind waits for them to unload before it grows
+                if (activeChunks.size() >= grid.getTotalSlots() + chunkPoolMaxOverflow)
+                    break;
+
                 iterator.remove();
 
                 ChunkInstance freshInstance = create(ChunkInstance.class);
@@ -328,6 +393,8 @@ class ChunkQueueManager extends ManagerPackage {
 
         Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
 
+        unloadRequestedChunks(grid);
+
         if (activeChunks.isEmpty())
             return;
 
@@ -340,13 +407,8 @@ class ChunkQueueManager extends ManagerPackage {
             long chunkCoordinate = activeChunks.firstLongKey();
             ChunkInstance chunkInstance = activeChunks.getAndMoveToLast(chunkCoordinate);
 
-            if (grid.getUnloadRequests().contains(chunkCoordinate)) {
-
-                if (unloadChunk(grid, chunkCoordinate, chunkInstance))
-                    activeChunks.remove(chunkCoordinate);
-
+            if (grid.getUnloadRequests().contains(chunkCoordinate))
                 continue;
-            }
 
             GridSlotHandle gridSlotHandle = grid.getGridSlotForChunk(chunkCoordinate);
 
@@ -375,6 +437,14 @@ class ChunkQueueManager extends ManagerPackage {
             case MERGE -> mergeBranch.mergeChunk(chunkInstance);
             case ITEM_LOAD -> itemLoadBranch.loadItems(chunkInstance);
             case ITEM_RENDER -> itemRenderBranch.renderItems(chunkInstance);
+            case TREE_BUILD -> treeBuildBranch.buildTrees(chunkInstance);
+            case TREE_RENDER -> {
+                if (gpuUploadsThisFrame < chunkGpuUploadBudget) {
+                    treeRenderBranch.renderTrees(chunkInstance);
+                    gpuUploadsThisFrame++;
+                } else
+                    deferredUploads.add(chunkCoordinate);
+            }
             case BATCH -> batchBranch.batchChunk(chunkInstance, grid);
             case RENDER -> {
                 if (gpuUploadsThisFrame < chunkGpuUploadBudget) {
@@ -391,6 +461,46 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Unload \\
 
+    private void drainRetiredGrids() {
+
+        for (int i = retiredGrids.size() - 1; i >= 0; i--) {
+
+            GridInstance grid = retiredGrids.get(i);
+            unloadRequestedChunks(grid);
+
+            if (grid.getActiveChunks().isEmpty())
+                retiredGrids.remove(i);
+        }
+    }
+
+    // Oldest requests first, within the frame's budget; a chunk that cannot go yet keeps its place for the next frame
+    private void unloadRequestedChunks(GridInstance grid) {
+
+        Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
+        var iterator = grid.getUnloadRequests().iterator();
+        int attempted = 0;
+
+        while (iterator.hasNext() && attempted < maxChunkUnloadsPerFrame) {
+
+            long chunkCoordinate = iterator.nextLong();
+            ChunkInstance chunkInstance = activeChunks.get(chunkCoordinate);
+
+            if (chunkInstance == null) {
+                iterator.remove();
+                continue;
+            }
+
+            attempted++;
+
+            if (!unloadChunk(grid, chunkCoordinate, chunkInstance))
+                continue;
+
+            iterator.remove();
+            activeChunks.remove(chunkCoordinate);
+        }
+    }
+
+    // A chunk with an async task still reserved is left for a later frame, so no task ever runs on a pooled chunk
     private boolean unloadChunk(GridInstance grid, long chunkCoordinate, ChunkInstance chunkInstance) {
 
         ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
@@ -399,9 +509,11 @@ class ChunkQueueManager extends ManagerPackage {
             return false;
 
         try {
-            grid.getUnloadRequests().remove(chunkCoordinate);
-            worldRenderManager.removeChunkInstance(chunkCoordinate);
-            chunkInstance.reset();
+
+            if (syncContainer.hasWorkLocked())
+                return false;
+
+            clearChunk(chunkCoordinate, chunkInstance);
         } finally {
             syncContainer.release();
         }
@@ -410,6 +522,17 @@ class ChunkQueueManager extends ManagerPackage {
         recycleChunk(grid, chunkInstance);
 
         return true;
+    }
+
+    // Under the chunk's lock — everything the chunk handed the renderers taken back, and its data let go
+    private void clearChunk(long chunkCoordinate, ChunkInstance chunkInstance) {
+
+        if (chunkInstance.getChunkDataSyncContainer().getData()[itemRenderDataIndex])
+            worldItemPlacementSystem.pullChunkFromRenderer(chunkCoordinate);
+
+        worldRenderManager.removeChunkInstance(chunkCoordinate);
+        worldRenderManager.removeChunkTrees(chunkCoordinate);
+        chunkInstance.reset();
     }
 
     private void recycleChunk(GridInstance grid, ChunkInstance chunkInstance) {
@@ -424,35 +547,18 @@ class ChunkQueueManager extends ManagerPackage {
 
     private void flushActiveChunks(GridInstance grid) {
 
-        Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
         LongLinkedOpenHashSet unloadRequests = grid.getUnloadRequests();
-
-        var iterator = activeChunks.long2ObjectEntrySet().iterator();
+        var iterator = grid.getActiveChunks().long2ObjectEntrySet().iterator();
 
         while (iterator.hasNext()) {
 
             var entry = iterator.next();
             long chunkCoordinate = entry.getLongKey();
-            ChunkInstance chunkInstance = entry.getValue();
-            iterator.remove();
 
-            ChunkDataSyncContainer sync = chunkInstance.getChunkDataSyncContainer();
-
-            if (!sync.tryAcquire()) {
-                activeChunks.put(chunkCoordinate, chunkInstance);
+            if (unloadChunk(grid, chunkCoordinate, entry.getValue()))
+                iterator.remove();
+            else
                 unloadRequests.add(chunkCoordinate);
-                continue;
-            }
-
-            try {
-                worldRenderManager.removeChunkInstance(chunkCoordinate);
-                chunkInstance.reset();
-            } finally {
-                sync.release();
-            }
-
-            worldStreamManager.invalidateMegaForChunk(chunkCoordinate);
-            recycleChunk(grid, chunkInstance);
         }
     }
 
@@ -480,14 +586,22 @@ class ChunkQueueManager extends ManagerPackage {
             // Contribution to the mega never waits on the mega being rendered, since it produces that state
             boolean partOfMegaBlock = coveredByMega && slotLevel.renderMode == RenderType.BATCHED;
 
+            // A chunk's own trees hold on past its mega taking over only until the mega's stand-ins are drawn
+            boolean treesDrawnIndividually = !coveredByMega
+                    || (syncContainer.getData()[treeRenderDataIndex]
+                            && !worldRenderManager.isMegaTreesDrawn(
+                                    Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate)));
+
             ChunkData toDump = ChunkDataUtility.nextToDump(
-                    syncContainer.getData(), slotLevel, needsIndividualRender, partOfMegaBlock);
+                    syncContainer.getData(), slotLevel, needsIndividualRender, treesDrawnIndividually,
+                    partOfMegaBlock);
 
             if (toDump != null)
                 return QueueOperation.DUMP;
 
             ChunkData toLoad = ChunkDataUtility.nextToLoad(
-                    syncContainer.getData(), slotLevel, needsIndividualRender, partOfMegaBlock);
+                    syncContainer.getData(), slotLevel, needsIndividualRender, treesDrawnIndividually,
+                    partOfMegaBlock);
 
             if (toLoad != null) {
 
@@ -514,6 +628,7 @@ class ChunkQueueManager extends ManagerPackage {
                 || operation == QueueOperation.BUILD
                 || operation == QueueOperation.MERGE
                 || operation == QueueOperation.ITEM_LOAD
+                || operation == QueueOperation.TREE_BUILD
                 || operation == QueueOperation.BATCH;
     }
 
@@ -529,6 +644,8 @@ class ChunkQueueManager extends ManagerPackage {
             case BATCH_DATA -> QueueOperation.BATCH;
             case ITEM_DATA -> QueueOperation.ITEM_LOAD;
             case ITEM_RENDER_DATA -> QueueOperation.ITEM_RENDER;
+            case TREE_DATA -> QueueOperation.TREE_BUILD;
+            case TREE_RENDER_DATA -> QueueOperation.TREE_RENDER;
             default -> QueueOperation.SKIP;
         };
     }
@@ -541,9 +658,38 @@ class ChunkQueueManager extends ManagerPackage {
             case BUILD -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_BUILD);
             case MERGE -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_MERGE);
             case ITEM_LOAD -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_ITEM_LOAD);
+            case TREE_BUILD -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_TREE);
             case BATCH -> syncContainer.beginWorkLocked(ChunkDataSyncContainer.WORK_BATCH);
             default -> true;
         };
+    }
+
+    // Trees \\
+
+    // A built chunk's trees drawn again after one of them changed — at once, upload included, for a change the
+    // player made; otherwise handed back to the stream, the old trees showing until the new ones land. A chunk
+    // whose trees were never built draws them fresh when the stream first does
+    void refreshTrees(ChunkInstance chunk, boolean immediate) {
+
+        ChunkDataSyncContainer syncContainer = chunk.getChunkDataSyncContainer();
+        syncContainer.acquire();
+
+        try {
+            boolean[] data = syncContainer.getData();
+
+            if (!data[treeDataIndex])
+                return;
+
+            if (!immediate || !treeBuildBranch.buildLocked(chunk)) {
+                ChunkDataUtility.cascadeClear(ChunkData.TREE_DATA, data);
+                return;
+            }
+
+            if (data[treeRenderDataIndex])
+                data[treeRenderDataIndex] = treeRenderBranch.uploadLocked(chunk);
+        } finally {
+            syncContainer.release();
+        }
     }
 
     // Invalidation \\

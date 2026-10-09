@@ -68,7 +68,7 @@ class TreePlantBranch extends BranchPackage {
             return false;
 
         handToChunks(tree);
-        treeRebuildBranch.rebuildTree(tree, tree.getShape(), tree.getShape());
+        treeRebuildBranch.rebuildTree(tree, true);
 
         return true;
     }

@@ -20,18 +20,21 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WorldStreamManager extends ManagerPackage {
 
     /*
-     * Single public entry point for world streaming. Owns the grid registry and
-     * grid lifecycle, one grid per window, and drives coordinate tracking each
-     * frame. Chunks, megas and the distant macro terrain beyond the grid each
-     * stream through their own manager. A rebuild re-lays a grid's slots in
-     * place, and the frame a grid wraps around the player raises
-     * wrappingPlayer so WorldTickManager holds off. Live world and biome edits
-     * gather into one region and, once quiet for a moment, restream in place
-     * only the chunks and macro tiles that region reaches, so a preview or Dev
-     * window far from the brush never streams again, one near it keeps every
-     * chunk the edit cannot change, and a player whose own chunk regenerated is
-     * set down again on the new ground. The restream frame raises
-     * wrappingPlayer as a wrap does.
+     * Single public entry point for world streaming. Owns the grid registry
+     * and grid lifecycle, one grid per window, and drives coordinate tracking
+     * each frame. Chunks, megas and the distant macro terrain beyond the grid
+     * each stream through their own manager. A rebuild re-lays a grid's slots
+     * in place, and the frame a grid wraps around the player raises
+     * wrappingPlayer so WorldTickManager holds off; that same frame the chunk
+     * and mega streams let go of everything the grid left behind. Live world
+     * and biome edits gather into one region and, once quiet for a moment,
+     * restream in place only the chunks and macro tiles that region reaches,
+     * so a preview or Dev window far from the brush never streams again, one
+     * near it keeps every chunk the edit cannot change, and a player whose own
+     * chunk regenerated is set down again on the new ground. The restream
+     * frame raises wrappingPlayer as a wrap does. A tree that changes is
+     * redrawn alone, in the chunks that draw it and in the mega standing in
+     * for them, never the ground under it.
      */
 
     // Internal
@@ -79,9 +82,17 @@ public class WorldStreamManager extends ManagerPackage {
         int size = grids.size();
         boolean rebuilt = false;
 
-        for (int i = 0; i < size; i++)
-            if (((GridInstance) elements[i]).updateActiveChunkCoordinate())
-                rebuilt = true;
+        for (int i = 0; i < size; i++) {
+
+            GridInstance grid = (GridInstance) elements[i];
+
+            if (!grid.updateActiveChunkCoordinate())
+                continue;
+
+            chunkStreamManager.onGridMoved(grid);
+            megaStreamManager.onGridMoved(grid);
+            rebuilt = true;
+        }
 
         if (advanceLiveRebuild())
             rebuilt = true;
@@ -184,6 +195,18 @@ public class WorldStreamManager extends ManagerPackage {
 
     public void invalidateMegaForChunk(long chunkCoordinate) {
         megaStreamManager.invalidateMegaForChunk(chunkCoordinate);
+    }
+
+    // Trees \\
+
+    // A chunk's trees drawn again, at once for a change the player made, else through the stream
+    public void refreshChunkTrees(ChunkInstance chunkInstance, boolean immediate) {
+        chunkStreamManager.refreshTrees(chunkInstance, immediate);
+    }
+
+    // The stand-ins of the mega holding a chunk drawn again, its terrain left as it is
+    public void refreshMegaTrees(long chunkCoordinate) {
+        megaStreamManager.invalidateMegaTrees(chunkCoordinate);
     }
 
     // Accessible \\

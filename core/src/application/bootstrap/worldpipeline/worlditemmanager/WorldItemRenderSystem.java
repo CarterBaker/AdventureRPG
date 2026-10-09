@@ -32,7 +32,9 @@ public class WorldItemRenderSystem extends SystemPackage {
      * item can be hidden while it stays placed — an open chest is drawn open
      * by whoever opened it — and is shown again from its chunk's list. Chunk
      * lists are pooled and instance data is staged in one scratch array, so
-     * streaming items in and out allocates nothing.
+     * streaming items in and out allocates nothing. A chunk pushed again first
+     * takes back what it pushed before, so no item is ever left in a buffer
+     * without a chunk to pull it.
      */
 
     private static final int[] INSTANCE_ATTR_SIZES = { 4, 2 };
@@ -108,6 +110,7 @@ public class WorldItemRenderSystem extends SystemPackage {
     // Chunk Push / Pull \\
 
     public void push(long chunkCoordinate, ObjectArrayList<WorldItemInstance> items) {
+        pull(chunkCoordinate);
         if (items.isEmpty())
             return;
         int chunkX = Coordinate2Long.unpackX(chunkCoordinate);

@@ -26,7 +26,9 @@ public final class TreeMeshUtility extends EngineUtility {
      * of the box around its ellipsoid, each vertex carrying the way to the
      * cluster's centre and its radii, so the leaf shader traces the rounded
      * clump inside the box and every vertex stays correct wherever a merge
-     * moves the box. Positions are in blocks in the caller's frame.
+     * moves the box. A distant stand-in draws its trunk as a plain box of
+     * wood, rounded at its upright edges, and its crown as a few clusters.
+     * Positions are in blocks in the caller's frame.
      */
 
     private static final float SCALE = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
@@ -81,6 +83,72 @@ public final class TreeMeshUtility extends EngineUtility {
                 out.add(localV);
                 out.add(quads.getWidth(quad));
                 out.add(quads.getHeight(quad));
+                addPadding(out);
+            }
+        }
+    }
+
+    // The four upright faces of a box of one wood part, in blocks of the caller's frame — its foot stands in the
+    // ground and its top in a crown, so neither is drawn, and its upright edges round over like any outer edge
+    public static void emitWoodBox(
+            float minX,
+            float minY,
+            float minZ,
+            float maxX,
+            float maxY,
+            float maxZ,
+            float cornerU,
+            float cornerV,
+            float color,
+            FloatArrayList out) {
+
+        float[] min = { minX, minY, minZ };
+        float[] size = {
+                (maxX - minX) * EngineSetting.SUB_VOXEL_RESOLUTION,
+                (maxY - minY) * EngineSetting.SUB_VOXEL_RESOLUTION,
+                (maxZ - minZ) * EngineSetting.SUB_VOXEL_RESOLUTION };
+        float[] corner = new float[EngineSetting.AXIS_COUNT];
+
+        for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++) {
+
+            int axis = SubVoxelMeshUtility.resolveAxis(face);
+
+            if (axis == EngineSetting.AXIS_Y)
+                continue;
+
+            int uAxis = (axis + 1) % EngineSetting.AXIS_COUNT;
+            int vAxis = (axis + 2) % EngineSetting.AXIS_COUNT;
+            float width = size[uAxis];
+            float height = size[vAxis];
+            int uEdge = uAxis == EngineSetting.AXIS_Y ? EngineSetting.TREE_EDGE_FLAT : EngineSetting.TREE_EDGE_CONVEX;
+            int vEdge = vAxis == EngineSetting.AXIS_Y ? EngineSetting.TREE_EDGE_FLAT : EngineSetting.TREE_EDGE_CONVEX;
+            int edges = uEdge
+                    | uEdge << EngineSetting.TREE_EDGE_BITS
+                    | vEdge << EngineSetting.TREE_EDGE_BITS * 2
+                    | vEdge << EngineSetting.TREE_EDGE_BITS * 3;
+            float meta = face | edges << EngineSetting.TREE_META_EDGE_SHIFT;
+
+            corner[axis] = SubVoxelMeshUtility.getFaceNormal(face, axis) > 0 ? size[axis] : 0f;
+
+            for (int vertex = 0; vertex < EngineSetting.QUAD_VERTEX_COUNT; vertex++) {
+
+                float localU = isHighU(vertex) ? width : 0f;
+                float localV = isHighV(vertex) ? height : 0f;
+
+                corner[uAxis] = localU;
+                corner[vAxis] = localV;
+
+                out.add(min[0] + corner[0] * SCALE);
+                out.add(min[1] + corner[1] * SCALE);
+                out.add(min[2] + corner[2] * SCALE);
+                out.add(cornerU);
+                out.add(cornerV);
+                out.add(meta);
+                out.add(color);
+                out.add(localU);
+                out.add(localV);
+                out.add(width);
+                out.add(height);
                 addPadding(out);
             }
         }
@@ -271,7 +339,7 @@ public final class TreeMeshUtility extends EngineUtility {
     }
 
     // The six faces of the box around one cluster's ellipsoid
-    private static void emitCluster(
+    public static void emitCluster(
             float centerX,
             float centerY,
             float centerZ,

@@ -50,6 +50,7 @@ class TreeBuilder extends BuilderPackage {
             treeData = TreeArpgUtility.parse(
                     treeName, treeID, arpg,
                     this::resolveTextureCorner,
+                    this::resolveTextureColor,
                     toolTypeManager::getToolTypeIDFromToolTypeName,
                     itemDefinitionManager::getItemIDFromItemName);
         } catch (InternalException e) {
@@ -68,5 +69,9 @@ class TreeBuilder extends BuilderPackage {
         TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(textureName);
 
         return new float[] { textureHandle.getU0(), textureHandle.getV0() };
+    }
+
+    private int resolveTextureColor(String textureName) {
+        return textureManager.getTextureHandleFromTextureName(textureName).getAverageColor();
     }
 }

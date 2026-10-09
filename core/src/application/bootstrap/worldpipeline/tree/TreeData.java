@@ -10,9 +10,10 @@ public class TreeData extends DataPackage {
      * leaves, wood and growth, and how far a grown tree can reach from its
      * root sideways and upward, in blocks. Its four parts — bark, heartwood,
      * leaves and accent leaves — are resolved once at load to the texture
-     * corner each is drawn from, the tint it is drawn with, whether it hides
-     * what lies behind it and whether it sways in the wind, so geometry can be
-     * built on any thread without a lookup.
+     * corner each is drawn from, the tint it is drawn with, the color it
+     * shows from afar — its texture's average albedo under that tint —
+     * whether it hides what lies behind it and whether it sways in the wind,
+     * so geometry can be built on any thread without a lookup.
      */
 
     private final String treeName;
@@ -32,6 +33,7 @@ public class TreeData extends DataPackage {
 
     private final float[] partCorners;
     private final int[] partColors;
+    private final int[] partAlbedos;
     private final boolean[] partOpaque;
     private final boolean[] partSway;
 
@@ -50,6 +52,7 @@ public class TreeData extends DataPackage {
             float heightReachBlocks,
             float[] partCorners,
             int[] partColors,
+            int[] partAlbedos,
             boolean[] partOpaque,
             boolean[] partSway) {
 
@@ -70,6 +73,7 @@ public class TreeData extends DataPackage {
 
         this.partCorners = partCorners;
         this.partColors = partColors;
+        this.partAlbedos = partAlbedos;
         this.partOpaque = partOpaque;
         this.partSway = partSway;
     }
@@ -128,6 +132,10 @@ public class TreeData extends DataPackage {
 
     public int[] getPartColors() {
         return partColors;
+    }
+
+    public int[] getPartAlbedos() {
+        return partAlbedos;
     }
 
     public boolean[] getPartOpaque() {

@@ -9,9 +9,10 @@ import engine.root.ManagerPackage;
 public class DynamicGeometryManager extends ManagerPackage {
 
     /*
-     * Entry point for dynamic geometry assembly. Delegates chunk and subchunk
-     * builds to GeometryBuildManager, exposes font glyph assembly to the menu
-     * pipeline, and owns the shared async scratch used by synchronous builds.
+     * Entry point for dynamic geometry assembly. Delegates chunk, subchunk and
+     * chunk tree builds to GeometryBuildManager, exposes font glyph assembly
+     * to the menu pipeline, and owns the shared async scratch used by
+     * synchronous builds.
      */
 
     // Internal
@@ -60,6 +61,13 @@ public class DynamicGeometryManager extends ManagerPackage {
                 dynamicGeometryAsyncContainer,
                 chunkInstance,
                 chunkInstance.getSubChunks()[subChunkIndex]);
+    }
+
+    // Tree Geometry \\
+
+    // Callers hold the chunk's own lock — trees read nothing of any neighbor, so no other lock is needed
+    public boolean buildTrees(ChunkInstance chunkInstance) {
+        return internalBuildManager.buildTrees(chunkInstance);
     }
 
     // Accessible \\

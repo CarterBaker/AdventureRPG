@@ -1,7 +1,6 @@
 package application.bootstrap.worldpipeline.treemanager;
 
 import application.bootstrap.worldpipeline.tree.TreeInstance;
-import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -10,11 +9,13 @@ class TreeGrowthBranch extends BranchPackage {
 
     /*
      * Main thread — grows every unwounded tree in the loaded world with the
-     * game's days. A tree's shape only changes when its age crosses into its
-     * next growth stage, so most checks find nothing to do; every so often
-     * the registry is walked from where the last walk stopped, and only a
-     * few trees are regrown and redrawn per walk, so a forest coming of age
-     * together never costs a frame more than a few small rebuilds.
+     * game's days, and lets go of the shapes nothing has needed for a while.
+     * A tree's shape only changes when its age crosses into its next growth
+     * stage, so most checks find nothing to do; every so often the registry
+     * is walked from where the last walk stopped, and only a few trees are
+     * regrown and redrawn per walk, so a forest coming of age together never
+     * costs a frame more than a few small rebuilds. A tree still virtual only
+     * moves its age on; its new shape is grown when something first needs it.
      */
 
     // Internal
@@ -52,10 +53,20 @@ class TreeGrowthBranch extends BranchPackage {
         if (sinceCheck < EngineSetting.TREE_GROWTH_CHECK_SECONDS)
             return;
 
+        float elapsed = sinceCheck;
+
         sinceCheck = 0f;
         treeRegistryBranch.collectTrees(trees);
 
-        double currentDay = treeManager.getCurrentDay();
+        for (int i = 0; i < trees.size(); i++)
+            trees.get(i).idle(elapsed);
+
+        regrowDue(treeManager.getCurrentDay());
+        trees.clear();
+    }
+
+    private void regrowDue(double currentDay) {
+
         int regrown = 0;
 
         for (int visited = 0; visited < trees.size() && regrown < EngineSetting.TREE_GROWTH_REBUILDS_PER_CHECK;
@@ -73,10 +84,8 @@ class TreeGrowthBranch extends BranchPackage {
             if (TreeInstance.toStage(age) == tree.getGrowthStage())
                 continue;
 
-            TreeShapeStruct before = tree.getShape();
-
             tree.regrow(age);
-            treeRebuildBranch.rebuildTree(tree, before, tree.getShape());
+            treeRebuildBranch.rebuildTree(tree, false);
             regrown++;
         }
     }

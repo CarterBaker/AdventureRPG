@@ -7,13 +7,13 @@ import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
+import application.bootstrap.worldpipeline.util.TreeDistributionUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
-import engine.util.mathematics.extras.NoiseUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class TreePlacementBranch extends BranchPackage {
@@ -164,7 +164,8 @@ class TreePlacementBranch extends BranchPackage {
                     placeTree(scratch, biome, treeHandle, anchorX, anchorZ);
             }
             case FIELD -> {
-                if (chanceRoll < kind.getChance() && isInPatch(scratch, kind, anchorX, anchorZ))
+                if (chanceRoll < kind.getChance()
+                        && TreeDistributionUtility.isInPatch(scratch.worldHandle.getSeed(), kind, anchorX, anchorZ))
                     placeTree(scratch, biome, treeHandle, anchorX, anchorZ);
             }
             case CLUSTERED -> {
@@ -201,17 +202,6 @@ class TreePlacementBranch extends BranchPackage {
                     centerX + Math.round(Math.cos(angle) * distance),
                     centerZ + Math.round(Math.sin(angle) * distance));
         }
-    }
-
-    // A field keeps its trees where a slow noise of the place lies under its coverage
-    private boolean isInPatch(TreePlacementAsyncContainer scratch, BiomeTreeStruct kind, long anchorX, long anchorZ) {
-
-        float noise = NoiseUtility.noise2(
-                scratch.worldHandle.getSeed() ^ EngineSetting.TREE_PATCH_SALT ^ kind.getNameSeed(),
-                anchorX / (double) kind.getPatchWavelengthBlocks(),
-                anchorZ / (double) kind.getPatchWavelengthBlocks());
-
-        return (noise + 1f) * 0.5f < kind.getPatchCoverage();
     }
 
     // Tree \\

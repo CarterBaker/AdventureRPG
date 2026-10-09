@@ -578,6 +578,7 @@ public class EngineSetting {
     public static final int MAX_CHUNK_STREAM_PER_BATCH = 32;
     public static final int MAX_CHUNK_STREAM_PER_FRAME = 128;
     public static final int MAX_CHUNK_STREAM_PER_QUEUE = 1024;
+    public static final int MAX_CHUNK_UNLOADS_PER_FRAME = 64;
     public static final int MAX_MEGA_GPU_UPLOADS_PER_FRAME = 4;
     public static final int MEGA_ASSESS_PER_FRAME = GRID_SLOTS_SCAN_PER_FRAME / MEGA_CHUNK_SIZE;
     public static final int MEGA_POOL_MAX_OVERFLOW = 8;
@@ -1222,10 +1223,36 @@ public class EngineSetting {
     public static final long TREE_PLANTED_SEED_SALT = 0x6D03A9F1C85B2E47L;
     public static final long TREE_SEED_SALT = 0xE3A05C8B17F4296DL;
 
-    // Tree Geometry — the blocks of wood laid around a subchunk so its borders mesh as if nothing ended there, and
+    // Tree Geometry — the blocks of wood laid around a chunk so its borders mesh as if nothing ended there, and
     // where a root's centre lies across its block
     public static final int TREE_GEOMETRY_MARGIN_BLOCKS = 1;
     public static final float TREE_ROOT_CENTER_BLOCKS = 0.5f;
+
+    // Tree Lifetime — how long a tree nothing has touched keeps its grown shape before letting it go
+    public static final float TREE_SHAPE_IDLE_SECONDS = 30f;
+
+    // Tree Impostor — the few lumps and the trunk a mega draws for each tree rooted in it
+    public static final float TREE_IMPOSTOR_COLUMNAR_TAPER = 0.45f;
+    public static final float TREE_IMPOSTOR_CONIFER_TAPER = 0.9f;
+    public static final int TREE_IMPOSTOR_CONE_TIERS = 3;
+    public static final int TREE_IMPOSTOR_CROWN_BOTTOM = 0;
+    public static final int TREE_IMPOSTOR_CROWN_FLOATS = 5;
+    public static final int TREE_IMPOSTOR_CROWN_RADIUS = 2;
+    public static final float TREE_IMPOSTOR_CROWN_REACH_SHARE = 0.55f;
+    public static final int TREE_IMPOSTOR_CROWN_TOP = 1;
+    public static final float TREE_IMPOSTOR_PALM_SQUASH = 0.35f;
+    public static final long TREE_IMPOSTOR_SEED_SALT = 0x3A9E61C4F07B28D5L;
+    public static final float TREE_IMPOSTOR_TIER_RADIUS_SHARE = 0.75f;
+    public static final int TREE_IMPOSTOR_TRUNK_HALF_WIDTH = 4;
+    public static final float TREE_IMPOSTOR_TRUNK_REACH_SHARE = 0.5f;
+    public static final int TREE_IMPOSTOR_TRUNK_TOP = 3;
+
+    // Tree Canopy — the jagged blanket distant macro terrain lays over its woods
+    public static final float TREE_CANOPY_JITTER = 0.35f;
+    public static final float TREE_CANOPY_MIN_COVERAGE = 0.3f;
+    public static final long TREE_CANOPY_SALT = 0x6C2F94A1E8D3075BL;
+    public static final float TREE_CANOPY_SIDE_SHADE = 0.7f;
+    public static final float TREE_CANOPY_SINK_BLOCKS = 2f;
 
     // Tree Materials
     public static final String TREE_BARK_MATERIAL = "trees/TreeBarkMaterial";

@@ -5,17 +5,27 @@ import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 public enum MegaData {
 
     /*
-     * The stages a mega chunk moves through, batching then rendering, with the
-     * same requires, leads-to and detail level rules as ChunkData.
+     * The stages a mega chunk moves through, batching then rendering, then the
+     * stand-ins for the trees rooted in it built and rendered as a layer of
+     * their own, with the same requires, leads-to and detail level rules as
+     * ChunkData.
      */
 
     BATCH_DATA(
             false, null,
             new String[] {},
-            new String[] { "RENDER_DATA" }),
+            new String[] { "RENDER_DATA", "TREE_DATA" }),
     RENDER_DATA(
             true, GridSlotDetailLevel.NEAR,
             new String[] { "BATCH_DATA" },
+            new String[] {}),
+    TREE_DATA(
+            true, GridSlotDetailLevel.NEAR,
+            new String[] { "BATCH_DATA" },
+            new String[] { "TREE_RENDER_DATA" }),
+    TREE_RENDER_DATA(
+            true, GridSlotDetailLevel.NEAR,
+            new String[] { "BATCH_DATA", "TREE_DATA" },
             new String[] {});
 
     public final int index;

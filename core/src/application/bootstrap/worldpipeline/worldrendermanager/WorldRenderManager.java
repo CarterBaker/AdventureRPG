@@ -54,7 +54,12 @@ public class WorldRenderManager extends ManagerPackage {
      * refracts and reflects bound on each push. Every other material whose
      * shader reads the cloud noise, for the clouds' shadows, has it bound on
      * each push. pushSurfaceModel() and pushWaterModel() are the single call
-     * sites for both, shared by chunks, megas and macros.
+     * sites for both, shared by chunks, megas and macros. Trees are entries
+     * of their own beside the terrain — a chunk's full trees, a mega's
+     * stand-ins — drawn whenever the terrain they belong to is, so a tree
+     * that changes reuploads only itself. Until a mega's stand-ins land, the
+     * trees its chunks still hold stand in for them, so no forest blinks out
+     * as the player walks away from it.
      */
 
     // Internal
@@ -72,6 +77,11 @@ public class WorldRenderManager extends ManagerPackage {
     private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> chunkEntries;
     private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> megaEntries;
     private LongOpenHashSet emptyChunks;
+
+    // Tree Entries
+    private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> chunkTreeEntries;
+    private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> megaTreeEntries;
+    private LongOpenHashSet drawnMegaTrees;
 
     // Stand-In — resolved once per grid per frame
     private LongOpenHashSet resolvedStandIns;
@@ -116,6 +126,11 @@ public class WorldRenderManager extends ManagerPackage {
         this.chunkEntries = new Long2ObjectOpenHashMap<>();
         this.megaEntries = new Long2ObjectOpenHashMap<>();
         this.emptyChunks = new LongOpenHashSet();
+
+        // Tree Entries
+        this.chunkTreeEntries = new Long2ObjectOpenHashMap<>();
+        this.megaTreeEntries = new Long2ObjectOpenHashMap<>();
+        this.drawnMegaTrees = new LongOpenHashSet();
 
         // Stand-In
         this.resolvedStandIns = new LongOpenHashSet();
@@ -207,6 +222,30 @@ public class WorldRenderManager extends ManagerPackage {
             }
 
             pushEntries(materialEntries, slot.getSlotUBO(), grid, worldFbo, window);
+
+            if (drawnMegaTrees.contains(coordinate))
+                pushTrees(megaTreeEntries, coordinate, slot.getSlotUBO(), grid, worldFbo, window);
+            else
+                pushCoveredChunkTrees(slot, grid, window, worldFbo);
+        }
+    }
+
+    // A mega whose stand-ins are not on the GPU yet shows whatever trees its chunks still hold
+    private void pushCoveredChunkTrees(
+            GridSlotHandle megaSlot,
+            GridInstance grid,
+            WindowInstance window,
+            FBOInstance worldFbo) {
+
+        ObjectArrayList<GridSlotHandle> coveredSlots = megaSlot.getCoveredSlots();
+
+        for (int i = 0; i < coveredSlots.size(); i++) {
+
+            GridSlotHandle coveredSlot = coveredSlots.get(i);
+
+            if (frustumCullingSystem.isChunkVisible(coveredSlot))
+                pushTrees(chunkTreeEntries, coveredSlot.getChunkCoordinate(), coveredSlot.getSlotUBO(), grid,
+                        worldFbo, window);
         }
     }
 
@@ -225,13 +264,7 @@ public class WorldRenderManager extends ManagerPackage {
             if (!frustumCullingSystem.isChunkVisible(coveredSlot))
                 continue;
 
-            Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = chunkEntries
-                    .get(coveredSlot.getChunkCoordinate());
-
-            if (materialEntries == null)
-                continue;
-
-            pushEntries(materialEntries, coveredSlot.getSlotUBO(), grid, worldFbo, window);
+            pushChunk(coveredSlot.getChunkCoordinate(), coveredSlot.getSlotUBO(), grid, worldFbo, window);
         }
     }
 
@@ -260,13 +293,27 @@ public class WorldRenderManager extends ManagerPackage {
             if (!frustumCullingSystem.isChunkVisible(slot))
                 continue;
 
-            Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = chunkEntries.get(coordinate);
-
-            if (materialEntries == null)
-                continue;
-
-            pushEntries(materialEntries, slot.getSlotUBO(), grid, worldFbo, window);
+            pushChunk(coordinate, slot.getSlotUBO(), grid, worldFbo, window);
         }
+    }
+
+    // A chunk drawn on its own, its trees with it once its ground is on the GPU — ground with no geometry included
+    private void pushChunk(
+            long coordinate,
+            UBOInstance slotUBO,
+            GridInstance grid,
+            FBOInstance worldFbo,
+            WindowInstance window) {
+
+        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = chunkEntries.get(coordinate);
+
+        if (materialEntries == null && !emptyChunks.contains(coordinate))
+            return;
+
+        if (materialEntries != null)
+            pushEntries(materialEntries, slotUBO, grid, worldFbo, window);
+
+        pushTrees(chunkTreeEntries, coordinate, slotUBO, grid, worldFbo, window);
     }
 
     // A standing-in mega is drawn once, the first time one of its chunks comes up, and covers all of them
@@ -286,10 +333,27 @@ public class WorldRenderManager extends ManagerPackage {
 
         GridSlotHandle megaSlot = grid.getGridSlotForChunk(megaCoordinate);
 
-        if (frustumCullingSystem.isMegaVisible(megaSlot))
+        if (frustumCullingSystem.isMegaVisible(megaSlot)) {
             pushEntries(megaEntries.get(megaCoordinate), megaSlot.getSlotUBO(), grid, worldFbo, window);
+            pushTrees(megaTreeEntries, megaCoordinate, megaSlot.getSlotUBO(), grid, worldFbo, window);
+        }
 
         return true;
+    }
+
+    // The trees standing on a chunk or mega, when it has any on the GPU
+    private void pushTrees(
+            Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> treeEntries,
+            long coordinate,
+            UBOInstance slotUBO,
+            GridInstance grid,
+            FBOInstance worldFbo,
+            WindowInstance window) {
+
+        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = treeEntries.get(coordinate);
+
+        if (materialEntries != null)
+            pushEntries(materialEntries, slotUBO, grid, worldFbo, window);
     }
 
     private void pushEntries(
@@ -384,7 +448,7 @@ public class WorldRenderManager extends ManagerPackage {
             if (emptyChunks.remove(coordinate))
                 drawnRevision++;
 
-            return updateEntries(worldRenderInstance, chunkEntries);
+            return updateEntries(coordinate, worldRenderInstance.getDynamicPacketInstance(), chunkEntries);
         }
 
         if (!hasGridSlotForChunk(coordinate))
@@ -399,7 +463,55 @@ public class WorldRenderManager extends ManagerPackage {
     }
 
     public boolean addMegaInstance(WorldRenderInstance worldRenderInstance) {
-        return updateEntries(worldRenderInstance, megaEntries);
+        return updateEntries(
+                worldRenderInstance.getCoordinate(), worldRenderInstance.getDynamicPacketInstance(), megaEntries);
+    }
+
+    // Trees \\
+
+    // A chunk's tree packet on the GPU, or its old trees taken down when it holds none — false only when no grid
+    // draws the chunk any more
+    public boolean addChunkTrees(long coordinate, DynamicPacketInstance treePacket) {
+        return updateTrees(coordinate, treePacket, chunkTreeEntries);
+    }
+
+    public void removeChunkTrees(long coordinate) {
+        removeEntries(coordinate, chunkTreeEntries);
+    }
+
+    public boolean addMegaTrees(long coordinate, DynamicPacketInstance treePacket) {
+
+        if (!updateTrees(coordinate, treePacket, megaTreeEntries))
+            return false;
+
+        drawnMegaTrees.add(coordinate);
+
+        return true;
+    }
+
+    // True once a mega's stand-ins are on the GPU, none at all included
+    public boolean isMegaTreesDrawn(long megaCoordinate) {
+        return drawnMegaTrees.contains(megaCoordinate);
+    }
+
+    private boolean updateTrees(
+            long coordinate,
+            DynamicPacketInstance treePacket,
+            Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> treeEntries) {
+
+        if (!hasGridSlotForChunk(coordinate)) {
+            removeEntries(coordinate, treeEntries);
+            return false;
+        }
+
+        if (treePacket.getState() != DynamicPacketState.READY) {
+            removeEntries(coordinate, treeEntries);
+            return true;
+        }
+
+        updateEntries(coordinate, treePacket, treeEntries);
+
+        return true;
     }
 
     // Macro \\
@@ -492,17 +604,14 @@ public class WorldRenderManager extends ManagerPackage {
     // Entries \\
 
     private boolean updateEntries(
-            WorldRenderInstance worldRenderInstance,
+            long coordinate,
+            DynamicPacketInstance dynamicPacket,
             Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> entries) {
-
-        long coordinate = worldRenderInstance.getCoordinate();
 
         if (!hasGridSlotForChunk(coordinate)) {
             removeEntries(coordinate, entries);
             return false;
         }
-
-        DynamicPacketInstance dynamicPacket = worldRenderInstance.getDynamicPacketInstance();
 
         if (dynamicPacket.getState() != DynamicPacketState.READY)
             return false;
@@ -610,8 +719,11 @@ public class WorldRenderManager extends ManagerPackage {
         removeEntries(coordinate, chunkEntries);
     }
 
+    // A mega's stand-in trees leave with it
     public void removeMegaInstance(long coordinate) {
         removeEntries(coordinate, megaEntries);
+        removeEntries(coordinate, megaTreeEntries);
+        drawnMegaTrees.remove(coordinate);
     }
 
     private void removeEntries(

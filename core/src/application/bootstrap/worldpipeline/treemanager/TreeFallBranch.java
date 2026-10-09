@@ -107,7 +107,6 @@ class TreeFallBranch extends BranchPackage {
     void fell(
             TreeInstance tree,
             TreeShapeStruct piece,
-            TreeShapeStruct before,
             EntityInstance feller,
             float pivotX,
             float pivotY,
@@ -117,12 +116,12 @@ class TreeFallBranch extends BranchPackage {
             boolean toppling) {
 
         if (piece.isEmpty()) {
-            treeRebuildBranch.rebuildTree(tree, before, tree.getShape());
+            treeRebuildBranch.rebuildTree(tree, true);
             return;
         }
 
         TreeFallInstance fall = create(TreeFallInstance.class);
-        fall.constructor(tree, piece, before, feller, pivotX, pivotY, pivotZ, headingX, headingZ, toppling);
+        fall.constructor(tree, piece, feller, pivotX, pivotY, pivotZ, headingX, headingZ, toppling);
         falls.add(fall);
 
         executeAsync(threadHandle, () -> buildGeometry(fall));
@@ -194,7 +193,7 @@ class TreeFallBranch extends BranchPackage {
 
         uploadMeshes(fall.getBuiltBark(), fall.getBarkMeshes());
         uploadMeshes(fall.getBuiltLeaves(), fall.getLeafMeshes());
-        treeRebuildBranch.rebuildTree(fall.getTree(), fall.getBefore(), fall.getTree().getShape());
+        treeRebuildBranch.rebuildTree(fall.getTree(), true);
 
         fall.setAngle(EngineSetting.TREE_FALL_START_RADIANS, 0f);
         fall.setState(TreeFallState.FALLING);

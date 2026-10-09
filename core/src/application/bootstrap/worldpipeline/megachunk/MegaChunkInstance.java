@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.megachunk;
 
+import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -18,12 +19,15 @@ public class MegaChunkInstance extends WorldRenderInstance {
      * the first time is appended; a chunk contributing again forces a full
      * rebuild from every member, which MegaMergeBranch runs only while holding
      * all their locks. finalizeGeometry() marks the packet ready once every
-     * chunk is present.
+     * chunk is present. The stand-ins for the trees rooted in its chunks live
+     * in a packet of their own, so a tree that changes never re-merges the
+     * ground.
      */
 
     // Internal
     private MegaDataSyncContainer megaDataSyncContainer;
     private MegaBatchHandle megaBatchStruct;
+    private DynamicPacketInstance treePacketInstance;
 
     // Scratch — pre-allocated, reused per merge call
     private int[] vertPositionArray;
@@ -45,6 +49,7 @@ public class MegaChunkInstance extends WorldRenderInstance {
         // Internal
         this.megaDataSyncContainer = create(MegaDataSyncContainer.class);
         this.megaBatchStruct = create(MegaBatchHandle.class);
+        this.treePacketInstance = create(DynamicPacketInstance.class);
 
         // Scratch
         this.vertPositionArray = new int[] { 0, 2 };
@@ -77,6 +82,7 @@ public class MegaChunkInstance extends WorldRenderInstance {
         this.megaScale = megaScale;
 
         megaBatchStruct.constructor(megaChunkCoordinate, megaScale);
+        treePacketInstance.constructor(vaoHandle);
         megaDataSyncContainer.resetData();
     }
 
@@ -85,6 +91,7 @@ public class MegaChunkInstance extends WorldRenderInstance {
     public void reset() {
         megaDataSyncContainer.resetData();
         getDynamicPacket().clear();
+        treePacketInstance.clear();
         megaBatchStruct.reset();
     }
 
@@ -158,6 +165,10 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
     public MegaDataSyncContainer getMegaDataSyncContainer() {
         return megaDataSyncContainer;
+    }
+
+    public DynamicPacketInstance getTreePacketInstance() {
+        return treePacketInstance;
     }
 
     public boolean isReadyToRender() {

@@ -5,6 +5,7 @@ import application.bootstrap.worldpipeline.util.TreeSkeletonUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate3Long;
 
 public class TreeInstance extends InstancePackage {
@@ -13,13 +14,18 @@ public class TreeInstance extends InstancePackage {
      * One tree standing in the world: its species, the block column its root
      * grows from and the block its trunk rises out of, the seed it grew from,
      * the game day it was planted, and whether a hand planted it or the world
-     * did. Its skeleton is grown once; what stands of it is a shape rebuilt
-     * on the main thread whenever it grows a stage, an axe notches it, a cut
-     * severs part of it or a cluster of its leaves is knocked off, and
-     * published whole, so chunk builds on any
-     * thread read it without a lock. The first wound freezes its age, so it
-     * grows no further and every notch stays where it was struck. Every chunk
-     * its reach overlaps holds it, and the registry keeps the count.
+     * did. Like a subchunk's palettes, its skeleton and shape stay virtual
+     * until something needs them: a tree only seen from afar is known by its
+     * mature height and age alone, and the first getShape() grows it, on any
+     * thread. A shape nothing has asked for in a while is let go again by
+     * idle(), since it can always be grown back from the seed; a tree an axe
+     * or a hand has altered keeps its own for good. What stands of a tree is
+     * rebuilt whenever it grows a stage, an axe notches it, a cut severs part
+     * of it or a cluster of its leaves is knocked off, and published whole,
+     * so chunk builds on any thread read it without a lock. The first wound
+     * freezes its age, so it grows no further and every notch stays where it
+     * was struck. Every chunk its reach overlaps holds it, and the registry
+     * keeps the count.
      */
 
     // Identity
@@ -30,18 +36,28 @@ public class TreeInstance extends InstancePackage {
     private int baseY;
     private long seed;
     private boolean planted;
+    private float matureHeight;
+    private long rootChunkCoordinate;
 
     // Growth
     private double plantedDay;
+    private float age;
+    private float frozenAge;
+    private int growthStage;
+    private boolean altered;
+
+    // Realized — guarded by the instance, null while the tree is virtual
     private TreeSkeletonStruct skeleton;
     private float[] severs;
     private boolean[] brokenLeaves;
     private TreeCarveStruct[] carves;
-    private float frozenAge;
-    private int growthStage;
 
     // Shape
     private volatile TreeShapeStruct shape;
+
+    // Lifetime — whether anything read the shape since the last idle check, and for how long nothing has
+    private volatile boolean used;
+    private float idleSeconds;
 
     // Registry
     private long registryKey;
@@ -71,20 +87,17 @@ public class TreeInstance extends InstancePackage {
         this.baseY = baseY;
         this.seed = seed;
         this.planted = planted;
+        this.matureHeight = TreeSkeletonUtility.resolveMatureHeight(treeHandle, seed);
+        this.rootChunkCoordinate = Coordinate2Long.pack(
+                (int) Math.floorDiv(anchorX, EngineSetting.CHUNK_SIZE),
+                (int) Math.floorDiv(anchorZ, EngineSetting.CHUNK_SIZE));
         this.registryKey = toRegistryKey(anchorX, anchorZ, treeHandle.getTreeID());
 
         // Growth
         this.plantedDay = plantedDay;
-        this.skeleton = TreeSkeletonUtility.grow(treeHandle, seed);
-        this.severs = TreeShapeUtility.createSevers(skeleton);
-        this.brokenLeaves = TreeShapeUtility.createBrokenLeaves(skeleton);
-        this.carves = new TreeCarveStruct[0];
         this.frozenAge = Float.NaN;
-
-        float age = resolveAge(currentDay);
-
+        this.age = resolveAge(currentDay);
         this.growthStage = toStage(age);
-        this.shape = TreeShapeUtility.evaluate(treeHandle, seed, skeleton, age, severs, brokenLeaves, carves);
     }
 
     // Registry \\
@@ -92,6 +105,63 @@ public class TreeInstance extends InstancePackage {
     // One key per species and root column — the species' ID rides in the packed height a column leaves unused
     public static long toRegistryKey(long anchorX, long anchorZ, short treeID) {
         return Coordinate3Long.pack((int) anchorX, treeID, (int) anchorZ);
+    }
+
+    // Realization \\
+
+    // The skeleton grown from the seed and the shape standing at the tree's age, the first time anything needs them
+    private synchronized TreeShapeStruct realize() {
+
+        if (shape != null)
+            return shape;
+
+        this.skeleton = TreeSkeletonUtility.grow(treeHandle, seed);
+        this.severs = TreeShapeUtility.createSevers(skeleton);
+        this.brokenLeaves = TreeShapeUtility.createBrokenLeaves(skeleton);
+        this.carves = new TreeCarveStruct[0];
+        this.shape = TreeShapeUtility.evaluate(treeHandle, seed, skeleton, age, severs, brokenLeaves, carves);
+
+        return shape;
+    }
+
+    // The tree back to its virtual self — only ever one nothing has altered, which grows back the very same
+    private synchronized void release() {
+
+        if (altered)
+            return;
+
+        this.skeleton = null;
+        this.severs = null;
+        this.brokenLeaves = null;
+        this.carves = null;
+        this.shape = null;
+    }
+
+    public boolean isRealized() {
+        return shape != null;
+    }
+
+    // Lifetime \\
+
+    // Main thread — a shape nothing read for long enough is let go
+    public void idle(float elapsedSeconds) {
+
+        if (used) {
+            used = false;
+            idleSeconds = 0f;
+            return;
+        }
+
+        if (shape == null || altered)
+            return;
+
+        idleSeconds += elapsedSeconds;
+
+        if (idleSeconds < EngineSetting.TREE_SHAPE_IDLE_SECONDS)
+            return;
+
+        idleSeconds = 0f;
+        release();
     }
 
     // Growth \\
@@ -112,29 +182,38 @@ public class TreeInstance extends InstancePackage {
         return Math.min(EngineSetting.TREE_GROWTH_STAGES, (int) (age * EngineSetting.TREE_GROWTH_STAGES));
     }
 
-    // Main thread — the shape regrown to an age, publishing a new shape
-    public void regrow(float age) {
+    // Main thread — the tree grown to an age, publishing a new shape when it stands realized
+    public synchronized void regrow(float age) {
+
+        this.age = age;
         this.growthStage = toStage(age);
-        this.shape = TreeShapeUtility.evaluate(treeHandle, seed, skeleton, age, severs, brokenLeaves, carves);
+
+        if (skeleton != null)
+            this.shape = TreeShapeUtility.evaluate(treeHandle, seed, skeleton, age, severs, brokenLeaves, carves);
     }
 
     // Main thread — the whole tree grown again from its seed after its species changed, every wound healed
-    public void regrowSpecies(double currentDay) {
+    public synchronized void regrowSpecies(double currentDay) {
 
-        this.skeleton = TreeSkeletonUtility.grow(treeHandle, seed);
-        this.severs = TreeShapeUtility.createSevers(skeleton);
-        this.brokenLeaves = TreeShapeUtility.createBrokenLeaves(skeleton);
-        this.carves = new TreeCarveStruct[0];
+        this.matureHeight = TreeSkeletonUtility.resolveMatureHeight(treeHandle, seed);
         this.frozenAge = Float.NaN;
+        this.altered = false;
+        this.age = resolveAge(currentDay);
+        this.growthStage = toStage(age);
 
-        regrow(resolveAge(currentDay));
+        this.skeleton = null;
+        this.severs = null;
+        this.brokenLeaves = null;
+        this.carves = null;
+        this.shape = null;
     }
 
     // Wounds \\
 
     // Main thread — a notch struck into the tree, freezing its age at the first one
-    public void addCarve(TreeCarveStruct carve, double currentDay) {
+    public synchronized void addCarve(TreeCarveStruct carve, double currentDay) {
 
+        realize();
         freeze(currentDay);
 
         TreeCarveStruct[] grown = new TreeCarveStruct[carves.length + 1];
@@ -143,13 +222,15 @@ public class TreeInstance extends InstancePackage {
         grown[carves.length] = carve;
 
         this.carves = grown;
+        this.altered = true;
         this.shape = shape.withCarves(grown);
     }
 
     // Main thread — one skeleton segment cut at a share of its length: everything beyond the cut leaves the tree,
     // and the piece it frees is handed back
-    public TreeShapeStruct sever(int segment, float share, double currentDay) {
+    public synchronized TreeShapeStruct sever(int segment, float share, double currentDay) {
 
+        realize();
         freeze(currentDay);
 
         TreeShapeStruct piece = TreeShapeUtility.extract(
@@ -158,20 +239,24 @@ public class TreeInstance extends InstancePackage {
         cut[segment] = Math.min(cut[segment], share);
 
         this.severs = cut;
+        this.altered = true;
         this.shape = TreeShapeUtility.evaluate(treeHandle, seed, skeleton, frozenAge, cut, brokenLeaves, carves);
 
         return piece;
     }
 
     // Main thread — one skeleton cluster knocked off for good, the tree growing on without it
-    public void breakLeaf(int leaf, double currentDay) {
+    public synchronized void breakLeaf(int leaf, double currentDay) {
+
+        realize();
 
         boolean[] broken = brokenLeaves.clone();
         broken[leaf] = true;
 
         this.brokenLeaves = broken;
-        this.shape = TreeShapeUtility.evaluate(
-                treeHandle, seed, skeleton, resolveAge(currentDay), severs, broken, carves);
+        this.altered = true;
+        this.age = resolveAge(currentDay);
+        this.shape = TreeShapeUtility.evaluate(treeHandle, seed, skeleton, age, severs, broken, carves);
     }
 
     private void freeze(double currentDay) {
@@ -181,6 +266,11 @@ public class TreeInstance extends InstancePackage {
 
     public boolean isWounded() {
         return !Float.isNaN(frozenAge);
+    }
+
+    // True once an axe or a hand changed the tree from what its seed grows, so its shape is never let go
+    public boolean isAltered() {
+        return altered;
     }
 
     // Accessible \\
@@ -213,28 +303,34 @@ public class TreeInstance extends InstancePackage {
         return planted;
     }
 
-    public TreeSkeletonStruct getSkeleton() {
-        return skeleton;
+    // The chunk its root stands in — the one whose mega draws its stand-in
+    public long getRootChunkCoordinate() {
+        return rootChunkCoordinate;
     }
 
-    public float[] getSevers() {
-        return severs;
+    public float getMatureHeight() {
+        return matureHeight;
     }
 
-    public boolean[] getBrokenLeaves() {
-        return brokenLeaves;
-    }
-
-    public TreeCarveStruct[] getCarves() {
-        return carves;
+    public float getAge() {
+        return age;
     }
 
     public int getGrowthStage() {
         return growthStage;
     }
 
+    // What stands of the tree, grown the first time anything asks — any thread
     public TreeShapeStruct getShape() {
-        return shape;
+
+        TreeShapeStruct current = shape;
+
+        if (current == null)
+            current = realize();
+
+        used = true;
+
+        return current;
     }
 
     public long getRegistryKey() {

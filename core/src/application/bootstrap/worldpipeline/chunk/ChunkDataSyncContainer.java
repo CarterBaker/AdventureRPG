@@ -10,7 +10,9 @@ public class ChunkDataSyncContainer extends SyncContainerPackage {
      * Thread-safe boolean flag array tracking which ChunkData stages are
      * complete for a single chunk. Acquired before any read or write to the
      * flags array. getData() exposes the raw array for direct index access
-     * in hot paths — callers must hold the lock.
+     * in hot paths — callers must hold the lock. hasWorkLocked() tells
+     * whether any async task is still reserved, so a chunk is never pooled
+     * with a task left to run on it.
      */
 
     // Internal
@@ -23,13 +25,15 @@ public class ChunkDataSyncContainer extends SyncContainerPackage {
     public static final int WORK_MERGE = 2;
     public static final int WORK_ITEM_LOAD = 3;
     public static final int WORK_BATCH = 4;
+    public static final int WORK_TREE = 5;
+    public static final int WORK_COUNT = 6;
 
     // Internal \\
 
     @Override
     protected void create() {
         this.data = new boolean[ChunkData.LENGTH];
-        this.workInProgress = new boolean[5];
+        this.workInProgress = new boolean[WORK_COUNT];
     }
 
     // Reset \\
@@ -70,6 +74,15 @@ public class ChunkDataSyncContainer extends SyncContainerPackage {
     }
 
     // Accessible \\
+
+    public boolean hasWorkLocked() {
+
+        for (int i = 0; i < workInProgress.length; i++)
+            if (workInProgress[i])
+                return true;
+
+        return false;
+    }
 
     public boolean[] getData() {
         return data;

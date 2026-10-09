@@ -55,8 +55,18 @@ public class ChunkStreamManager extends ManagerPackage {
         chunkQueueManager.onGridRemoved(grid);
     }
 
+    public void onGridMoved(GridInstance grid) {
+        chunkQueueManager.onGridMoved(grid);
+    }
+
     public void restreamRegion(GridInstance grid, WorldEditRegionStruct region) {
         chunkQueueManager.restreamRegion(grid, region);
+    }
+
+    // Trees \\
+
+    public void refreshTrees(ChunkInstance chunkInstance, boolean immediate) {
+        chunkQueueManager.refreshTrees(chunkInstance, immediate);
     }
 
     // Utility \\

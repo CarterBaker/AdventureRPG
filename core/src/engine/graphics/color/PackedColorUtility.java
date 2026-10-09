@@ -55,6 +55,14 @@ public final class PackedColorUtility extends EngineUtility {
         return pack(red(packed) * factor, green(packed) * factor, blue(packed) * factor);
     }
 
+    // One color tinted by another, channel by channel, as a texture is tinted by its color
+    public static int multiply(int color, int tint) {
+        return pack(
+                red(color) * red(tint) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                green(color) * green(tint) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                blue(color) * blue(tint) / EngineSetting.COLOR_CHANNEL_BYTE_MAX);
+    }
+
     public static int mix(int from, int to, float t) {
         return pack(
                 red(from) + (red(to) - red(from)) * t,

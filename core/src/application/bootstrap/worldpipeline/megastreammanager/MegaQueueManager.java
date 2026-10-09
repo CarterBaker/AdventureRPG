@@ -17,6 +17,7 @@ import application.bootstrap.worldpipeline.megachunk.MegaDataSyncContainer;
 import application.bootstrap.worldpipeline.megachunk.MegaDataUtility;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
+import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -30,19 +31,26 @@ class MegaQueueManager extends ManagerPackage {
      * its chunk is pooled blocks on that lock so no stale reference survives.
      * A mega is never dumped while it still stands in for chunks awaiting their
      * own upload, and an upload the budget turns away keeps its place at the
-     * front of the round robin for the next frame.
+     * front of the round robin for the next frame. The moment a grid moves,
+     * every mega it left behind is unloaded rather than waiting its turn, so
+     * travel never keeps a mega the grid no longer reaches. A mega's tree
+     * stand-ins are built and uploaded as a layer of their own once its
+     * terrain is on the GPU, and invalidateMegaTrees() rebuilds only them.
      */
 
     // Internal
     private WorldRenderManager worldRenderManager;
     private WorldStreamManager worldStreamManager;
     private ChunkStreamManager chunkStreamManager;
+    private ThreadHandle worldStreamingThreadHandle;
 
     // Branches
     private MegaMergeBranch mergeBranch;
     private MegaAssessBranch assessBranch;
     private MegaRenderBranch renderBranch;
     private MegaDumpBranch dumpBranch;
+    private MegaTreeBuildBranch treeBuildBranch;
+    private MegaTreeRenderBranch treeRenderBranch;
 
     // Pool — shared across all grids
     private ObjectArrayList<MegaChunkInstance> megaPool;
@@ -68,6 +76,8 @@ class MegaQueueManager extends ManagerPackage {
         this.assessBranch = create(MegaAssessBranch.class);
         this.renderBranch = create(MegaRenderBranch.class);
         this.dumpBranch = create(MegaDumpBranch.class);
+        this.treeBuildBranch = create(MegaTreeBuildBranch.class);
+        this.treeRenderBranch = create(MegaTreeRenderBranch.class);
 
         // Pool
         this.megaPool = new ObjectArrayList<>();
@@ -90,6 +100,7 @@ class MegaQueueManager extends ManagerPackage {
         this.worldRenderManager = get(WorldRenderManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.worldStreamingThreadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
     }
 
     @Override
@@ -113,6 +124,22 @@ class MegaQueueManager extends ManagerPackage {
 
     void onGridRemoved(GridInstance grid) {
         flushActiveMegas(grid);
+    }
+
+    // A mega still busy is left for the round robin to unload on a later pass
+    void onGridMoved(GridInstance grid) {
+
+        int megaMax = computeMegaMax(grid);
+        var iterator = grid.getActiveMegaChunks().long2ObjectEntrySet().iterator();
+
+        while (iterator.hasNext()) {
+
+            var entry = iterator.next();
+            long megaCoord = entry.getLongKey();
+
+            if (grid.getGridSlotForChunk(megaCoord) == null && unloadMega(entry.getValue(), megaCoord, megaMax))
+                iterator.remove();
+        }
     }
 
     // Mega Max \\
@@ -268,6 +295,14 @@ class MegaQueueManager extends ManagerPackage {
                     } else
                         deferredUploads.add(megaCoord);
                 }
+                case TREE_BUILD -> treeBuildBranch.buildTrees(mega);
+                case TREE_RENDER -> {
+                    if (gpuUploadsThisFrame < megaGpuUploadBudget) {
+                        treeRenderBranch.renderTrees(mega, sync);
+                        gpuUploadsThisFrame++;
+                    } else
+                        deferredUploads.add(megaCoord);
+                }
                 case DUMP -> dumpBranch.dumpMega(mega, sync, megaCoord);
                 case SKIP -> {
                 }
@@ -300,10 +335,18 @@ class MegaQueueManager extends ManagerPackage {
 
             MegaData toLoad = MegaDataUtility.nextToLoad(sync.getData(), slotLevel);
 
-            if (toLoad != null)
-                return toOperation(toLoad);
+            if (toLoad == null)
+                return MegaQueueOperation.SKIP;
 
-            return MegaQueueOperation.SKIP;
+            MegaQueueOperation operation = toOperation(toLoad);
+
+            // A saturated pool leaves the mega for a later pass before its build is reserved
+            if (operation == MegaQueueOperation.TREE_BUILD
+                    && (!worldStreamingThreadHandle.hasCapacity()
+                            || !sync.beginWorkLocked(MegaDataSyncContainer.WORK_TREE)))
+                return MegaQueueOperation.SKIP;
+
+            return operation;
         } finally {
             sync.release();
         }
@@ -313,6 +356,8 @@ class MegaQueueManager extends ManagerPackage {
         return switch (stage) {
             case BATCH_DATA -> MegaQueueOperation.ASSESS;
             case RENDER_DATA -> MegaQueueOperation.RENDER;
+            case TREE_DATA -> MegaQueueOperation.TREE_BUILD;
+            case TREE_RENDER_DATA -> MegaQueueOperation.TREE_RENDER;
             default -> MegaQueueOperation.SKIP;
         };
     }
@@ -366,6 +411,34 @@ class MegaQueueManager extends ManagerPackage {
                 worldRenderManager.removeMegaInstance(megaCoord);
                 clearChunkBatchFlags(mega);
                 mega.reset();
+            } finally {
+                sync.release();
+            }
+        }
+    }
+
+    // The stand-ins of the mega holding a chunk built again from its trees as they now stand, the old ones drawn
+    // until the new ones land and the mega's terrain left as it is
+    void invalidateMegaTrees(long chunkCoordinate) {
+
+        long megaCoord = Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate);
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++) {
+
+            MegaChunkInstance mega = ((GridInstance) elements[i]).getActiveMegaChunks().get(megaCoord);
+
+            if (mega == null)
+                continue;
+
+            MegaDataSyncContainer sync = mega.getMegaDataSyncContainer();
+            sync.acquire();
+
+            try {
+                MegaDataUtility.cascadeClear(MegaData.TREE_DATA, sync.getData());
             } finally {
                 sync.release();
             }

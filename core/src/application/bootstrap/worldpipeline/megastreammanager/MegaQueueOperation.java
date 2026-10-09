@@ -9,6 +9,8 @@ enum MegaQueueOperation {
 
     ASSESS,
     RENDER,
+    TREE_BUILD,
+    TREE_RENDER,
     DUMP,
     SKIP
 }

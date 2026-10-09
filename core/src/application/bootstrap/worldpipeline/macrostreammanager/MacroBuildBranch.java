@@ -22,7 +22,9 @@ public class MacroBuildBranch extends BranchPackage {
      * with, and where the sea stands over it, which becomes the tile's patch
      * of the open water mask. Still water at its own level is no part of the
      * sea's plane, so the lattice rises to its surface and wears its water,
-     * shaded by depth as the map shades it. No block, neighbor or chunk is
+     * shaded by depth as the map shades it. Woods raise a jagged canopy over
+     * the ground they stand on, sampled by MacroCanopyBranch and laid into the
+     * tile's mesh apart from the land. No block, neighbor, chunk or tree is
      * ever touched.
      * The target is read on the main thread when the build is reserved,
      * sampling runs outside the macro's lock since a reserved build pins the
@@ -33,6 +35,7 @@ public class MacroBuildBranch extends BranchPackage {
     private ThreadHandle threadHandle;
     private WorldGenerationManager worldGenerationManager;
     private MacroMeshBranch macroMeshBranch;
+    private MacroCanopyBranch macroCanopyBranch;
     private MacroBuildAsyncContainer macroBuildAsyncContainer;
 
     // Settings
@@ -59,6 +62,7 @@ public class MacroBuildBranch extends BranchPackage {
         this.threadHandle = getThreadHandleFromThreadName(EngineSetting.MACRO_STREAMING_THREAD_NAME);
         this.worldGenerationManager = get(WorldGenerationManager.class);
         this.macroMeshBranch = get(MacroMeshBranch.class);
+        this.macroCanopyBranch = get(MacroCanopyBranch.class);
     }
 
     // Build \\
@@ -81,6 +85,7 @@ public class MacroBuildBranch extends BranchPackage {
                 sync.acquire();
                 try {
                     macroMeshBranch.assembleLand(scratch, sync.getVertices(), sync.getIndices());
+                    macroMeshBranch.assembleCanopy(scratch, sync.getVertices(), sync.getIndices());
                     macroMeshBranch.assembleWaterMask(scratch, sync.getWaterMask());
                     sync.markBuilt(cellsPerSide);
                 } finally {
@@ -105,17 +110,16 @@ public class MacroBuildBranch extends BranchPackage {
 
         scratch.minHeightBlocks = Float.MAX_VALUE;
         scratch.openWaterCount = 0;
+        scratch.canopyCount = 0;
 
         for (int z = 0; z < samplesPerSide; z++) {
             for (int x = 0; x < samplesPerSide; x++) {
 
                 int index = z * samplesPerSide + x;
+                double sampleX = originX + x * cellSizeBlocks;
+                double sampleZ = originZ + z * cellSizeBlocks;
 
-                worldGenerationManager.sampleSurface(
-                        worldHandle,
-                        originX + x * cellSizeBlocks,
-                        originZ + z * cellSizeBlocks,
-                        sample);
+                worldGenerationManager.sampleSurface(worldHandle, sampleX, sampleZ, sample);
 
                 boolean lakeWater = sample.isLakeWater();
                 int topColor = resolveTopColor(sample);
@@ -130,6 +134,8 @@ public class MacroBuildBranch extends BranchPackage {
 
                 if (sample.isOpenWater())
                     scratch.openWaterCount++;
+
+                macroCanopyBranch.sampleCanopy(scratch, worldHandle, index, sampleX, sampleZ);
             }
         }
     }

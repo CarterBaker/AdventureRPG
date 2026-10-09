@@ -33,13 +33,28 @@ public final class TreeShapeUtility extends EngineUtility {
 
     // The size of a tree at an age, from a sapling's height at zero to full size at one
     public static float resolveScale(TreeSkeletonStruct skeleton, float age) {
+        return resolveScale(skeleton.getMatureHeight(), age);
+    }
 
-        float saplingShare = Math.min(1f,
-                EngineSetting.TREE_SAPLING_HEIGHT_BLOCKS / Math.max(skeleton.getMatureHeight(),
-                        EngineSetting.TREE_MIN_SEGMENT_BLOCKS));
+    public static float resolveScale(float matureHeight, float age) {
+
+        float saplingShare = Math.min(1f, EngineSetting.TREE_SAPLING_HEIGHT_BLOCKS
+                / Math.max(matureHeight, EngineSetting.TREE_MIN_SEGMENT_BLOCKS));
         float growth = (float) Math.pow(clamp01(age), EngineSetting.TREE_GROWTH_CURVE);
 
         return saplingShare + (1f - saplingShare) * growth;
+    }
+
+    // How far a tree's crown spreads from its trunk at a scale, judged from its species without growing it: the
+    // species' full reach shrunk to this tree's height, then to the share a crown fills of it
+    public static float resolveCrownRadius(TreeHandle treeHandle, float matureHeight, float scale) {
+
+        float heightShare = matureHeight / Math.max(treeHandle.getTrunk().getMaxHeightBlocks(),
+                EngineSetting.TREE_MIN_SEGMENT_BLOCKS);
+        float leafRadius = treeHandle.getLeaves().getRadiusBlocks() * scale;
+
+        return Math.max(leafRadius,
+                treeHandle.getReachBlocks() * heightShare * scale * EngineSetting.TREE_IMPOSTOR_CROWN_REACH_SHARE);
     }
 
     // A full set of leaf marks with nothing broken off

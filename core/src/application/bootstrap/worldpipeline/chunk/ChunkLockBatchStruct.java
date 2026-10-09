@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
+import engine.util.mathematics.extras.Direction2Vector;
 
 public class ChunkLockBatchStruct extends StructPackage {
 
@@ -12,7 +13,9 @@ public class ChunkLockBatchStruct extends StructPackage {
      * coordinate, so every task in the world acquires overlapping locks in
      * the same global order and two tasks can never deadlock. Locks are only
      * ever taken with tryAcquire; a batch that cannot take them all releases
-     * what it holds and the work is retried on a later pass.
+     * what it holds and the work is retried on a later pass. addNeighborhood()
+     * gathers a chunk with its eight neighbors, the set any geometry build
+     * reads.
      */
 
     // Batch
@@ -50,6 +53,26 @@ public class ChunkLockBatchStruct extends StructPackage {
         coordinates[index + 1] = coordinate;
         chunks[index + 1] = chunk;
         count++;
+    }
+
+    // A chunk and its eight neighbors — false when any neighbor is not loaded
+    public boolean addNeighborhood(ChunkInstance chunk) {
+
+        ChunkNeighborHandle neighbors = chunk.getChunkNeighbors();
+
+        add(chunk);
+
+        for (int i = 0; i < Direction2Vector.LENGTH; i++) {
+
+            ChunkInstance neighborChunk = neighbors.getNeighborChunk(i);
+
+            if (neighborChunk == null)
+                return false;
+
+            add(neighborChunk);
+        }
+
+        return true;
     }
 
     public boolean isFull() {

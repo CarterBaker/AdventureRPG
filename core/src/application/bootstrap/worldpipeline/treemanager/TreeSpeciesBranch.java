@@ -7,7 +7,6 @@ import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.tree.TreeData;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
-import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
 import engine.root.BranchPackage;
 import engine.root.UtilityPackage.InternalException;
 import engine.util.arpg.ArpgObjectStruct;
@@ -65,6 +64,7 @@ class TreeSpeciesBranch extends BranchPackage {
         TreeData treeData = TreeArpgUtility.parse(
                 treeName, treeHandle.getTreeID(), treeArpg,
                 textureName -> resolveTextureCorner(treeName, textureName),
+                textureName -> resolveTextureColor(treeName, textureName),
                 toolTypeName -> resolveToolTypeID(treeName, toolTypeName),
                 itemName -> resolveItemID(treeName, itemName));
 
@@ -85,10 +85,8 @@ class TreeSpeciesBranch extends BranchPackage {
             if (tree.getTreeHandle() != treeHandle)
                 continue;
 
-            TreeShapeStruct before = tree.getShape();
-
             tree.regrowSpecies(treeManager.getCurrentDay());
-            treeRebuildBranch.rebuildTree(tree, before, tree.getShape());
+            treeRebuildBranch.rebuildTree(tree, false);
         }
 
         trees.clear();
@@ -104,6 +102,14 @@ class TreeSpeciesBranch extends BranchPackage {
         TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(textureName);
 
         return new float[] { textureHandle.getU0(), textureHandle.getV0() };
+    }
+
+    private int resolveTextureColor(String treeName, String textureName) {
+
+        if (!textureManager.hasTexture(textureName))
+            throw fail(treeName, "names unknown texture \"" + textureName + "\".");
+
+        return textureManager.getTextureHandleFromTextureName(textureName).getAverageColor();
     }
 
     private int resolveToolTypeID(String treeName, String toolTypeName) {

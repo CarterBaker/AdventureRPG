@@ -36,6 +36,10 @@ public class MegaStreamManager extends ManagerPackage {
         megaQueueManager.onGridRemoved(grid);
     }
 
+    public void onGridMoved(GridInstance grid) {
+        megaQueueManager.onGridMoved(grid);
+    }
+
     // Accessible \\
 
     public MegaChunkInstance resolveMegaForChunk(ChunkInstance chunkInstance, GridInstance grid) {
@@ -48,5 +52,9 @@ public class MegaStreamManager extends ManagerPackage {
 
     public void invalidateMegaForChunk(long chunkCoordinate) {
         megaQueueManager.invalidateMegaForChunk(chunkCoordinate);
+    }
+
+    public void invalidateMegaTrees(long chunkCoordinate) {
+        megaQueueManager.invalidateMegaTrees(chunkCoordinate);
     }
 }

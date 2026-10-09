@@ -18,7 +18,11 @@ public class MacroMeshBranch extends BranchPackage {
      * slope colors ride as two exact packed floats. A mask texel is open
      * wherever any corner of the cell holding it has the sea over it, so the
      * water plane always reaches the shore the land rises out of, and a dry
-     * basin below sea level, with no open corner, stays dry.
+     * basin below sea level, with no open corner, stays dry. Woods are a
+     * second grid laid after the land in the same buffers: every lattice
+     * point under a canopy rises to it in the woods' colors and every other
+     * one sinks below the ground, and only a cell with a canopy corner is
+     * drawn, so a forest's edge breaks off in jagged slopes into the land.
      */
 
     // Settings
@@ -114,6 +118,53 @@ public class MacroMeshBranch extends BranchPackage {
 
                 if (x == cellsPerSide - 1)
                     pushSkirt(vertices, indices, corner + 1, corner + cornersPerSide + 1, skirtBottom);
+            }
+        }
+    }
+
+    // Canopy \\
+
+    void assembleCanopy(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
+
+        if (scratch.canopyCount == 0)
+            return;
+
+        int samplesPerSide = scratch.getSamplesPerSide();
+        int cellsPerSide = scratch.cellsPerSide;
+        float cellSizeBlocks = tileSizeBlocks / cellsPerSide;
+        int base = vertices.size() / vertexFloatCount;
+
+        for (int z = 0; z < samplesPerSide; z++) {
+            for (int x = 0; x < samplesPerSide; x++) {
+
+                int sample = z * samplesPerSide + x;
+                boolean wooded = scratch.canopyHeights[sample] > 0f;
+
+                pushVertex(
+                        vertices,
+                        x * cellSizeBlocks,
+                        wooded
+                                ? scratch.heightBlocks[sample] + scratch.canopyHeights[sample]
+                                : scratch.heightBlocks[sample] - EngineSetting.TREE_CANOPY_SINK_BLOCKS,
+                        z * cellSizeBlocks,
+                        wooded ? scratch.canopyTopColors[sample] : scratch.topColors[sample],
+                        wooded ? scratch.canopySideColors[sample] : scratch.sideColors[sample]);
+            }
+        }
+
+        for (int z = 0; z < cellsPerSide; z++) {
+            for (int x = 0; x < cellsPerSide; x++) {
+
+                int corner = z * samplesPerSide + x;
+
+                if (scratch.canopyHeights[corner] <= 0f
+                        && scratch.canopyHeights[corner + 1] <= 0f
+                        && scratch.canopyHeights[corner + samplesPerSide] <= 0f
+                        && scratch.canopyHeights[corner + samplesPerSide + 1] <= 0f)
+                    continue;
+
+                pushQuad(indices, base + corner, base + corner + 1,
+                        base + corner + samplesPerSide, base + corner + samplesPerSide + 1);
             }
         }
     }

@@ -12,6 +12,7 @@ import application.bootstrap.worldpipeline.tree.TreeLeafStruct;
 import application.bootstrap.worldpipeline.tree.TreeLogStruct;
 import application.bootstrap.worldpipeline.tree.TreeTrunkStruct;
 import application.bootstrap.worldpipeline.tree.TreeWoodStruct;
+import engine.graphics.color.PackedColorUtility;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.root.UtilityPackage.InternalException;
@@ -28,12 +29,12 @@ class TreeArpgUtility extends EngineUtility {
      * The single definition of the tree species format: display name, form,
      * and the optional trunk, branches, leaves, wood and growth objects, every
      * field falling back to its EngineSetting default. Names the species
-     * points at — textures, its tool type, its log and seed items — are
-     * resolved through the functions the caller hands in, so the parsed
-     * species is complete and every lookup happens once, at load. A malformed
-     * field throws a catchable InternalException naming the species, so
-     * TreeBuilder fails the boot on it while a live rebuild from the editor
-     * reports it and keeps the species it already had.
+     * points at — textures with their average colors, its tool type, its log
+     * and seed items — are resolved through the functions the caller hands in,
+     * so the parsed species is complete and every lookup happens once, at
+     * load. A malformed field throws a catchable InternalException naming the
+     * species, so TreeBuilder fails the boot on it while a live rebuild from
+     * the editor reports it and keeps the species it already had.
      */
 
     // Parse \\
@@ -43,6 +44,7 @@ class TreeArpgUtility extends EngineUtility {
             short treeID,
             ArpgObjectStruct treeArpg,
             Function<String, float[]> resolveTextureCorner,
+            ToIntFunction<String> resolveTextureColor,
             ToIntFunction<String> resolveToolTypeID,
             ToIntFunction<String> resolveItemID) {
 
@@ -61,6 +63,7 @@ class TreeArpgUtility extends EngineUtility {
                 computeHeightReach(trunk, leaves),
                 resolvePartCorners(wood, leaves, resolveTextureCorner),
                 resolvePartColors(wood, leaves),
+                resolvePartAlbedos(wood, leaves, resolveTextureColor),
                 resolvePartOpaque(),
                 resolvePartSway());
     }
@@ -392,6 +395,27 @@ class TreeArpgUtility extends EngineUtility {
         colors[EngineSetting.TREE_PART_ACCENT] = leaves.getAccentColor();
 
         return colors;
+    }
+
+    // Each part as it shows from afar: its texture's average color under its tint
+    private static int[] resolvePartAlbedos(
+            TreeWoodStruct wood,
+            TreeLeafStruct leaves,
+            ToIntFunction<String> resolveTextureColor) {
+
+        int[] colors = resolvePartColors(wood, leaves);
+        int[] albedos = new int[EngineSetting.TREE_PART_COUNT];
+
+        albedos[EngineSetting.TREE_PART_BARK] = PackedColorUtility.multiply(
+                resolveTextureColor.applyAsInt(wood.getBarkTextureName()), colors[EngineSetting.TREE_PART_BARK]);
+        albedos[EngineSetting.TREE_PART_WOOD] = PackedColorUtility.multiply(
+                resolveTextureColor.applyAsInt(wood.getWoodTextureName()), colors[EngineSetting.TREE_PART_WOOD]);
+        albedos[EngineSetting.TREE_PART_LEAF] = PackedColorUtility.multiply(
+                resolveTextureColor.applyAsInt(leaves.getTextureName()), colors[EngineSetting.TREE_PART_LEAF]);
+        albedos[EngineSetting.TREE_PART_ACCENT] = PackedColorUtility.multiply(
+                resolveTextureColor.applyAsInt(leaves.getAccentTextureName()), colors[EngineSetting.TREE_PART_ACCENT]);
+
+        return albedos;
     }
 
     // Every part hides what lies behind it — leaves are solid foliage, so wood buried in a crown costs nothing

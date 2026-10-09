@@ -8,7 +8,6 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkLockBatchPoolStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkLockBatchStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkLockResult;
-import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -65,7 +64,7 @@ public class BuildBranch extends BranchPackage {
         ChunkDataSyncContainer ownSync = chunkInstance.getChunkDataSyncContainer();
         ChunkLockBatchStruct batch = lockBatchPool.acquire();
 
-        if (!collectLockSet(chunkInstance, batch)) {
+        if (!batch.addNeighborhood(chunkInstance)) {
             lockBatchPool.release(batch);
             ownSync.setData(ChunkData.NEIGHBOR_DATA, false);
             ownSync.endWork(ChunkDataSyncContainer.WORK_BUILD);
@@ -73,25 +72,6 @@ public class BuildBranch extends BranchPackage {
         }
 
         executeAsync(threadHandle, () -> runLockedBuild(chunkInstance, batch));
-    }
-
-    private boolean collectLockSet(ChunkInstance chunkInstance, ChunkLockBatchStruct batch) {
-
-        ChunkNeighborHandle neighbors = chunkInstance.getChunkNeighbors();
-
-        batch.add(chunkInstance);
-
-        for (int i = 0; i < Direction2Vector.LENGTH; i++) {
-
-            ChunkInstance neighborChunk = neighbors.getNeighborChunk(i);
-
-            if (neighborChunk == null)
-                return false;
-
-            batch.add(neighborChunk);
-        }
-
-        return true;
     }
 
     // Locked Build \\
