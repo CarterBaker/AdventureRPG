@@ -8,22 +8,31 @@ import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
-import engine.util.registry.RegistryUtility;
 
 class BehaviorBuilder extends BuilderPackage {
 
     /*
-     * Parses behavior ARPG into a BehaviorData and wraps it in a BehaviorHandle.
-     * Derives the short behavior ID from the resource name via RegistryUtility.
+     * Parses behavior ARPG into a BehaviorData and wraps it in a BehaviorHandle,
+     * under the short behavior ID BehaviorManager assigns its name.
      * Bootstrap-only.
      */
+
+    // Internal
+    private BehaviorManager behaviorManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.behaviorManager = get(BehaviorManager.class);
+    }
 
     // Build \\
 
     BehaviorHandle build(File file, String behaviorName) {
 
         ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
-        short behaviorID = RegistryUtility.toShortID(behaviorName);
+        short behaviorID = behaviorManager.registerBehaviorName(behaviorName);
         float jumpDuration = arpg.has("jump_duration")
                 ? arpg.get("jump_duration").getAsFloat()
                 : EngineSetting.DEFAULT_JUMP_DURATION;

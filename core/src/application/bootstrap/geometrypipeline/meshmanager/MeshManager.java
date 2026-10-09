@@ -12,23 +12,25 @@ import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
 import application.bootstrap.geometrypipeline.vbo.VBOHandle;
 import application.bootstrap.geometrypipeline.vbo.VBOInstance;
 import application.bootstrap.geometrypipeline.vbomanager.VBOManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 public class MeshManager extends ManagerPackage {
 
     /*
      * Central registry for all GPU-resident mesh data. Owns the name-to-ID
-     * and ID-to-handle palettes for static bootstrap meshes, drives the mesh
-     * load pipeline via MeshLoader, and handles runtime mesh creation,
-     * in-place updating, and removal by delegating buffer operations to
-     * VAOManager, VBOManager, and IBOManager. createMeshHandle() registers a
-     * mesh generated at runtime under a name, exactly like a loaded one.
+     * and ID-to-handle palettes, with IDs assigned in registration order,
+     * drives the mesh load pipeline via MeshLoader, and handles runtime mesh
+     * creation, in-place updating, and removal by delegating buffer
+     * operations to VAOManager, VBOManager, and IBOManager. createMeshHandle()
+     * registers a mesh generated at runtime under a name, exactly like a
+     * loaded one.
      */
 
     // Internal
@@ -38,7 +40,7 @@ public class MeshManager extends ManagerPackage {
 
     // Palette
     private Object2IntOpenHashMap<String> meshName2MeshID;
-    private Int2ObjectOpenHashMap<MeshHandle> meshID2MeshHandle;
+    private ObjectArrayList<MeshHandle> meshID2MeshHandle;
 
     // Base \\
 
@@ -46,8 +48,8 @@ public class MeshManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.meshName2MeshID = new Object2IntOpenHashMap<>();
-        this.meshID2MeshHandle = new Int2ObjectOpenHashMap<>();
+        this.meshName2MeshID = RegistryUtility.createNameIndex();
+        this.meshID2MeshHandle = RegistryUtility.createPalette();
         create(MeshLoader.class);
     }
 
@@ -63,11 +65,8 @@ public class MeshManager extends ManagerPackage {
     // Management \\
 
     void addMeshHandle(String meshName, MeshHandle meshHandle) {
-
-        int id = RegistryUtility.toIntID(meshName);
-
-        meshName2MeshID.put(meshName, id);
-        meshID2MeshHandle.put(id, meshHandle);
+        RegistryUtility.registerHandle(
+                meshName2MeshID, meshID2MeshHandle, meshName, meshHandle, EngineSetting.REGISTRY_INT_ID_COUNT);
     }
 
     // Bounds \\
@@ -116,19 +115,19 @@ public class MeshManager extends ManagerPackage {
     }
 
     public boolean hasMesh(String meshName) {
-        return meshName2MeshID.containsKey(meshName);
+        return RegistryUtility.getHandle(meshName2MeshID, meshID2MeshHandle, meshName) != null;
     }
 
     public int getMeshIDFromMeshName(String meshName) {
 
-        if (!meshName2MeshID.containsKey(meshName))
+        if (!hasMesh(meshName))
             request(meshName);
 
         return meshName2MeshID.getInt(meshName);
     }
 
     public MeshHandle getMeshHandleFromMeshID(int meshID) {
-        return meshID2MeshHandle.get(meshID);
+        return RegistryUtility.getHandle(meshID2MeshHandle, meshID);
     }
 
     public MeshHandle getMeshHandleFromMeshName(String meshName) {
@@ -167,7 +166,7 @@ public class MeshManager extends ManagerPackage {
             FloatArrayList vertices,
             ShortArrayList indices) {
 
-        if (meshName2MeshID.containsKey(meshName))
+        if (hasMesh(meshName))
             throwException("Mesh \"" + meshName + "\" is already registered.");
 
         VAOInstance vaoInstance = vaoManager.createVAOInstance(vaoTemplate);

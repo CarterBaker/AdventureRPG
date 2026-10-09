@@ -14,9 +14,20 @@ class BiomeBuilder extends BuilderPackage {
 
     /*
      * Parses biome ARPG into BiomeData wrapped in a BiomeHandle through
-     * BiomeArpgUtility, the one definition of the format. Everything is
-     * validated at load, so a malformed biome fails at boot.
+     * BiomeArpgUtility, the one definition of the format, under the ID
+     * BiomeManager assigns its name. Everything is validated at load, so a
+     * malformed biome fails at boot.
      */
+
+    // Internal
+    private BiomeManager biomeManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.biomeManager = get(BiomeManager.class);
+    }
 
     // Build \\
 
@@ -27,7 +38,7 @@ class BiomeBuilder extends BuilderPackage {
         BiomeData biomeData;
 
         try {
-            biomeData = BiomeArpgUtility.parse(biomeName, arpg);
+            biomeData = BiomeArpgUtility.parse(biomeName, biomeManager.registerBiomeName(biomeName), arpg);
         } catch (InternalException e) {
             return throwException(e.getMessage(), e.getCause());
         }

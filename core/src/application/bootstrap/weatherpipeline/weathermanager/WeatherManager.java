@@ -7,10 +7,11 @@ import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
@@ -36,8 +37,8 @@ public class WeatherManager extends ManagerPackage {
     private RegionSampleSystem regionSampleSystem;
 
     // Palette
-    private Object2ShortOpenHashMap<String> weatherName2WeatherID;
-    private Short2ObjectOpenHashMap<WeatherHandle> weatherID2WeatherHandle;
+    private Object2IntOpenHashMap<String> weatherName2WeatherID;
+    private ObjectArrayList<WeatherHandle> weatherID2WeatherHandle;
 
     // Season
     private String activeSeason;
@@ -53,9 +54,8 @@ public class WeatherManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.weatherName2WeatherID = new Object2ShortOpenHashMap<>();
-        this.weatherName2WeatherID.defaultReturnValue((short) -1);
-        this.weatherID2WeatherHandle = new Short2ObjectOpenHashMap<>();
+        this.weatherName2WeatherID = RegistryUtility.createNameIndex();
+        this.weatherID2WeatherHandle = RegistryUtility.createPalette();
 
         // Biome Pools
         this.biomeID2WeatherHandles = new Short2ObjectOpenHashMap<>();
@@ -92,20 +92,18 @@ public class WeatherManager extends ManagerPackage {
 
     // Management \\
 
+    short registerWeatherName(String weatherName) {
+        return (short) RegistryUtility.registerID(
+                weatherName2WeatherID, weatherID2WeatherHandle, weatherName, EngineSetting.REGISTRY_SHORT_ID_COUNT);
+    }
+
     void addWeatherHandle(WeatherHandle weatherHandle) {
 
-        if (weatherID2WeatherHandle.containsKey(weatherHandle.getWeatherID())) {
-            WeatherHandle existing = weatherID2WeatherHandle.get(weatherHandle.getWeatherID());
-            if (RegistryUtility.isCollision(weatherHandle.getWeatherName(), existing.getWeatherName(),
-                    weatherHandle.getWeatherID()))
-                throwException("Weather ID collision: '"
-                        + weatherHandle.getWeatherName() + "' collides with '"
-                        + existing.getWeatherName() + "' (ID " + weatherHandle.getWeatherID()
-                        + ") — rename one weather to resolve");
-        }
+        if (weatherID2WeatherHandle.get(weatherHandle.getWeatherID()) != null)
+            throwException("Duplicate weather name: '" + weatherHandle.getWeatherName()
+                    + "' was registered more than once");
 
-        weatherName2WeatherID.put(weatherHandle.getWeatherName(), weatherHandle.getWeatherID());
-        weatherID2WeatherHandle.put(weatherHandle.getWeatherID(), weatherHandle);
+        weatherID2WeatherHandle.set(weatherHandle.getWeatherID(), weatherHandle);
     }
 
     // On-Demand \\
@@ -189,25 +187,25 @@ public class WeatherManager extends ManagerPackage {
     // Accessible \\
 
     public boolean hasWeather(String weatherName) {
-        return weatherName2WeatherID.containsKey(weatherName);
+        return RegistryUtility.getHandle(weatherName2WeatherID, weatherID2WeatherHandle, weatherName) != null;
     }
 
     public short getWeatherIDFromWeatherName(String weatherName) {
 
-        if (!weatherName2WeatherID.containsKey(weatherName))
+        if (!hasWeather(weatherName))
             request(weatherName);
 
-        if (!weatherName2WeatherID.containsKey(weatherName))
+        if (!hasWeather(weatherName))
             throwException("Weather \"" + weatherName + "\" was not registered after its on-demand load completed — "
                     + "the loaded file must declare a different weather name than the one requested. "
                     + "Check for a resource-name/path mismatch between the weather directory and its declared name.");
 
-        return weatherName2WeatherID.getShort(weatherName);
+        return (short) weatherName2WeatherID.getInt(weatherName);
     }
 
     public WeatherHandle getWeatherHandleFromWeatherID(short weatherID) {
 
-        WeatherHandle handle = weatherID2WeatherHandle.get(weatherID);
+        WeatherHandle handle = RegistryUtility.getHandle(weatherID2WeatherHandle, weatherID);
 
         if (handle == null)
             throwException("No handle registered for weather ID: " + weatherID);

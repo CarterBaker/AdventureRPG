@@ -58,7 +58,7 @@ class WorldLoader extends LoaderPackage {
 
         String worldName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
         WorldHandle handle = internalBuilder.build(file, root, worldName);
-        worldManager.addWorld(worldName, handle);
+        worldManager.addWorld(handle);
     }
 
     // On-Demand \\

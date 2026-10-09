@@ -2,10 +2,12 @@ package application.bootstrap.entitypipeline.featuremanager;
 
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.registry.RegistryUtility;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class FeatureManager extends ManagerPackage {
 
@@ -19,8 +21,8 @@ public class FeatureManager extends ManagerPackage {
      */
 
     // Palette
-    private Object2ObjectOpenHashMap<String, FeatureHandle> featureName2FeatureHandle;
-    private Short2ObjectOpenHashMap<FeatureHandle> featureID2FeatureHandle;
+    private Object2IntOpenHashMap<String> featureName2FeatureID;
+    private ObjectArrayList<FeatureHandle> featureID2FeatureHandle;
     private Object2ObjectOpenHashMap<FeatureSlot, ObjectArrayList<FeatureHandle>> featureSlot2FeatureHandles;
 
     // Base \\
@@ -29,8 +31,8 @@ public class FeatureManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.featureName2FeatureHandle = new Object2ObjectOpenHashMap<>();
-        this.featureID2FeatureHandle = new Short2ObjectOpenHashMap<>();
+        this.featureName2FeatureID = RegistryUtility.createNameIndex();
+        this.featureID2FeatureHandle = RegistryUtility.createPalette();
         this.featureSlot2FeatureHandles = new Object2ObjectOpenHashMap<>();
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
@@ -41,17 +43,21 @@ public class FeatureManager extends ManagerPackage {
 
     // Management \\
 
+    short registerFeatureName(String featureName) {
+        return (short) RegistryUtility.registerID(
+                featureName2FeatureID, featureID2FeatureHandle, featureName, EngineSetting.REGISTRY_SHORT_ID_COUNT);
+    }
+
     void addFeature(FeatureHandle handle) {
 
-        featureName2FeatureHandle.put(handle.getFeatureName(), handle);
-        featureID2FeatureHandle.put(handle.getFeatureID(), handle);
+        featureID2FeatureHandle.set(handle.getFeatureID(), handle);
         featureSlot2FeatureHandles.get(handle.getFeatureSlot()).add(handle);
     }
 
     // Accessible \\
 
     public boolean hasFeature(String featureName) {
-        return featureName2FeatureHandle.containsKey(featureName);
+        return RegistryUtility.getHandle(featureName2FeatureID, featureID2FeatureHandle, featureName) != null;
     }
 
     public boolean isFeatureAvailable(String featureName) {
@@ -60,16 +66,16 @@ public class FeatureManager extends ManagerPackage {
     }
 
     public FeatureHandle getFeatureHandleFromFeatureID(short featureID) {
-        return featureID2FeatureHandle.get(featureID);
+        return RegistryUtility.getHandle(featureID2FeatureHandle, featureID);
     }
 
     public FeatureHandle getFeatureHandleFromFeatureName(String featureName) {
 
-        FeatureHandle handle = featureName2FeatureHandle.get(featureName);
+        FeatureHandle handle = RegistryUtility.getHandle(featureName2FeatureID, featureID2FeatureHandle, featureName);
 
         if (handle == null) {
             ((FeatureLoader) internalLoader).request(featureName);
-            handle = featureName2FeatureHandle.get(featureName);
+            handle = RegistryUtility.getHandle(featureName2FeatureID, featureID2FeatureHandle, featureName);
         }
 
         if (handle == null)

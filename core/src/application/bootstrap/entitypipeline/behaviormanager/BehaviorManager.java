@@ -1,22 +1,24 @@
 package application.bootstrap.entitypipeline.behaviormanager;
 
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class BehaviorManager extends ManagerPackage {
 
     /*
      * Owns the behavior palette for the engine lifetime. Supports lookup by
-     * both name and short ID. Auto-triggers an on-demand load via
-     * BehaviorLoader on a name-based cache miss.
+     * both name and short ID, with IDs assigned in registration order.
+     * Auto-triggers an on-demand load via BehaviorLoader on a name-based
+     * cache miss.
      */
 
     // Palette
-    private Object2ObjectOpenHashMap<String, BehaviorHandle> behaviorName2BehaviorHandle;
-    private Short2ObjectOpenHashMap<BehaviorHandle> behaviorID2BehaviorHandle;
+    private Object2IntOpenHashMap<String> behaviorName2BehaviorID;
+    private ObjectArrayList<BehaviorHandle> behaviorID2BehaviorHandle;
 
     // Base \\
 
@@ -24,49 +26,45 @@ public class BehaviorManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.behaviorName2BehaviorHandle = new Object2ObjectOpenHashMap<>();
-        this.behaviorID2BehaviorHandle = new Short2ObjectOpenHashMap<>();
+        this.behaviorName2BehaviorID = RegistryUtility.createNameIndex();
+        this.behaviorID2BehaviorHandle = RegistryUtility.createPalette();
         create(BehaviorLoader.class);
     }
 
     // Management \\
 
-    void addBehavior(BehaviorHandle handle) {
+    short registerBehaviorName(String behaviorName) {
+        return (short) RegistryUtility.registerID(
+                behaviorName2BehaviorID, behaviorID2BehaviorHandle, behaviorName,
+                EngineSetting.REGISTRY_SHORT_ID_COUNT);
+    }
 
-        behaviorName2BehaviorHandle.put(handle.getBehaviorName(), handle);
-        behaviorID2BehaviorHandle.put(handle.getBehaviorID(), handle);
+    void addBehavior(BehaviorHandle handle) {
+        behaviorID2BehaviorHandle.set(handle.getBehaviorID(), handle);
     }
 
     // Accessible \\
 
     public boolean hasBehavior(String behaviorName) {
-        return behaviorName2BehaviorHandle.containsKey(behaviorName);
+        return RegistryUtility.getHandle(behaviorName2BehaviorID, behaviorID2BehaviorHandle, behaviorName) != null;
     }
 
     public short getBehaviorIDFromBehaviorName(String behaviorName) {
 
-        if (!behaviorName2BehaviorHandle.containsKey(behaviorName))
+        if (!hasBehavior(behaviorName))
             ((BehaviorLoader) internalLoader).request(behaviorName);
 
-        return RegistryUtility.toShortID(behaviorName);
+        if (!hasBehavior(behaviorName))
+            throwException("[BehaviorManager] Behavior could not be loaded: \"" + behaviorName + "\"");
+
+        return (short) behaviorName2BehaviorID.getInt(behaviorName);
     }
 
     public BehaviorHandle getBehaviorHandleFromBehaviorID(short behaviorID) {
-        return behaviorID2BehaviorHandle.get(behaviorID);
+        return RegistryUtility.getHandle(behaviorID2BehaviorHandle, behaviorID);
     }
 
     public BehaviorHandle getBehaviorHandleFromBehaviorName(String behaviorName) {
-
-        BehaviorHandle handle = behaviorName2BehaviorHandle.get(behaviorName);
-
-        if (handle == null) {
-            ((BehaviorLoader) internalLoader).request(behaviorName);
-            handle = behaviorName2BehaviorHandle.get(behaviorName);
-        }
-
-        if (handle == null)
-            throwException("[BehaviorManager] Behavior could not be loaded: \"" + behaviorName + "\"");
-
-        return handle;
+        return getBehaviorHandleFromBehaviorID(getBehaviorIDFromBehaviorName(behaviorName));
     }
 }

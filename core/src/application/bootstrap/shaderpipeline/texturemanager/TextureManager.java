@@ -6,9 +6,9 @@ import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
 import application.bootstrap.shaderpipeline.texture.TextureData;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texture.TextureTileStruct;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -16,27 +16,28 @@ public class TextureManager extends ManagerPackage {
 
     /*
      * Owns every texture array and the tile lookup chain, name to ID to handle,
-     * loading the parent array on a tile miss. Font atlases register through
-     * the same path as single-layer arrays.
+     * loading the parent array on a tile miss. Tile and array IDs are assigned
+     * in registration order. Font atlases register through the same path as
+     * single-layer arrays.
      */
 
     // Tile Palette
     private Object2IntOpenHashMap<String> textureName2TileID;
-    private Int2ObjectOpenHashMap<TextureHandle> tileID2TextureHandle;
+    private ObjectArrayList<TextureHandle> tileID2TextureHandle;
 
     // Array Palette
     private Object2IntOpenHashMap<String> arrayName2ArrayID;
-    private Int2ObjectOpenHashMap<TextureHandle> arrayID2TextureHandle;
+    private ObjectArrayList<TextureHandle> arrayID2TextureHandle;
 
     // Base \\
 
     @Override
     protected void create() {
 
-        this.textureName2TileID = new Object2IntOpenHashMap<>();
-        this.tileID2TextureHandle = new Int2ObjectOpenHashMap<>();
-        this.arrayName2ArrayID = new Object2IntOpenHashMap<>();
-        this.arrayID2TextureHandle = new Int2ObjectOpenHashMap<>();
+        this.textureName2TileID = RegistryUtility.createNameIndex();
+        this.tileID2TextureHandle = RegistryUtility.createPalette();
+        this.arrayName2ArrayID = RegistryUtility.createNameIndex();
+        this.arrayID2TextureHandle = RegistryUtility.createPalette();
 
         create(TextureLoader.class);
     }
@@ -44,13 +45,16 @@ public class TextureManager extends ManagerPackage {
     @Override
     protected void dispose() {
 
-        for (TextureHandle handle : arrayID2TextureHandle.values())
-            TextureGLSLUtility.deleteTextureArray(handle.getGpuHandle());
+        for (int arrayID = 0; arrayID < arrayID2TextureHandle.size(); arrayID++) {
 
-        textureName2TileID.clear();
-        tileID2TextureHandle.clear();
-        arrayName2ArrayID.clear();
-        arrayID2TextureHandle.clear();
+            TextureHandle handle = arrayID2TextureHandle.get(arrayID);
+
+            if (handle != null)
+                TextureGLSLUtility.deleteTextureArray(handle.getGpuHandle());
+        }
+
+        RegistryUtility.clearPalette(textureName2TileID, tileID2TextureHandle);
+        RegistryUtility.clearPalette(arrayName2ArrayID, arrayID2TextureHandle);
     }
 
     // Management \\
@@ -61,8 +65,10 @@ public class TextureManager extends ManagerPackage {
             TextureArrayStruct array,
             int gpuHandle) {
 
-        int tileID = RegistryUtility.toIntID(tile.getName());
-        int arrayID = RegistryUtility.toIntID(array.getName());
+        int tileID = RegistryUtility.registerID(
+                textureName2TileID, tileID2TextureHandle, tile.getName(), EngineSetting.REGISTRY_INT_ID_COUNT);
+        int arrayID = RegistryUtility.registerID(
+                arrayName2ArrayID, arrayID2TextureHandle, array.getName(), EngineSetting.REGISTRY_INT_ID_COUNT);
 
         TextureData data = new TextureData(
                 tile.getName(), tileID,
@@ -75,13 +81,10 @@ public class TextureManager extends ManagerPackage {
         TextureHandle handle = create(TextureHandle.class);
         handle.constructor(data);
 
-        textureName2TileID.put(tile.getName(), tileID);
-        tileID2TextureHandle.put(tileID, handle);
+        tileID2TextureHandle.set(tileID, handle);
 
-        if (!arrayName2ArrayID.containsKey(array.getName())) {
-            arrayName2ArrayID.put(array.getName(), arrayID);
-            arrayID2TextureHandle.put(arrayID, handle);
-        }
+        if (arrayID2TextureHandle.get(arrayID) == null)
+            arrayID2TextureHandle.set(arrayID, handle);
     }
 
     public void register(TextureArrayStruct arrayStruct, int gpuHandle) {
@@ -106,19 +109,19 @@ public class TextureManager extends ManagerPackage {
     // Accessible \\
 
     public boolean hasTexture(String textureName) {
-        return textureName2TileID.containsKey(textureName);
+        return RegistryUtility.getHandle(textureName2TileID, tileID2TextureHandle, textureName) != null;
     }
 
     public int getTileIDFromTextureName(String textureName) {
 
-        if (!textureName2TileID.containsKey(textureName)) {
+        if (!hasTexture(textureName)) {
             String arrayName = textureName.contains("/")
                     ? textureName.substring(0, textureName.lastIndexOf('/'))
                     : textureName;
             request(arrayName);
         }
 
-        if (!textureName2TileID.containsKey(textureName))
+        if (!hasTexture(textureName))
             throwException("Texture not found after load: \"" + textureName + "\"");
 
         return textureName2TileID.getInt(textureName);
@@ -126,7 +129,7 @@ public class TextureManager extends ManagerPackage {
 
     public TextureHandle getTextureHandleFromTileID(int tileID) {
 
-        TextureHandle handle = tileID2TextureHandle.get(tileID);
+        TextureHandle handle = RegistryUtility.getHandle(tileID2TextureHandle, tileID);
 
         if (handle == null)
             throwException("No handle registered for tile ID: " + tileID);
@@ -139,15 +142,15 @@ public class TextureManager extends ManagerPackage {
     }
 
     public boolean hasArray(String arrayName) {
-        return arrayName2ArrayID.containsKey(arrayName);
+        return RegistryUtility.getHandle(arrayName2ArrayID, arrayID2TextureHandle, arrayName) != null;
     }
 
     public int getArrayIDFromArrayName(String arrayName) {
 
-        if (!arrayName2ArrayID.containsKey(arrayName))
+        if (!hasArray(arrayName))
             request(arrayName);
 
-        if (!arrayName2ArrayID.containsKey(arrayName))
+        if (!hasArray(arrayName))
             throwException("Array not found after load: \"" + arrayName + "\"");
 
         return arrayName2ArrayID.getInt(arrayName);
@@ -155,7 +158,7 @@ public class TextureManager extends ManagerPackage {
 
     public TextureHandle getTextureHandleFromArrayID(int arrayID) {
 
-        TextureHandle handle = arrayID2TextureHandle.get(arrayID);
+        TextureHandle handle = RegistryUtility.getHandle(arrayID2TextureHandle, arrayID);
 
         if (handle == null)
             throwException("No handle registered for array ID: " + arrayID);
@@ -172,9 +175,13 @@ public class TextureManager extends ManagerPackage {
         int arrayID = getArrayIDFromArrayName(arrayName);
         ObjectArrayList<String> textureNames = new ObjectArrayList<>();
 
-        for (TextureHandle handle : tileID2TextureHandle.values())
-            if (handle.getArrayID() == arrayID)
+        for (int tileID = 0; tileID < tileID2TextureHandle.size(); tileID++) {
+
+            TextureHandle handle = tileID2TextureHandle.get(tileID);
+
+            if (handle != null && handle.getArrayID() == arrayID)
                 textureNames.add(handle.getTileName());
+        }
 
         textureNames.sort(String.CASE_INSENSITIVE_ORDER);
         return textureNames;

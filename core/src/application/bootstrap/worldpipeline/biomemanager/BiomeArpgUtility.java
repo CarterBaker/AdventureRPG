@@ -18,7 +18,6 @@ import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.extras.LinearSpline;
-import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -39,9 +38,7 @@ class BiomeArpgUtility extends EngineUtility {
 
     // Parse \\
 
-    static BiomeData parse(String biomeName, ArpgObjectStruct biomeArpg) {
-
-        short biomeID = RegistryUtility.toShortID(biomeName);
+    static BiomeData parse(String biomeName, short biomeID, ArpgObjectStruct biomeArpg) {
 
         ObjectArrayList<String> seasonNames = new ObjectArrayList<>();
         Object2ObjectOpenHashMap<String, ObjectArrayList<String>> seasonWeatherNames = new Object2ObjectOpenHashMap<>();

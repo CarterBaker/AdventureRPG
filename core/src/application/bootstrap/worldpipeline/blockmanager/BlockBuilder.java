@@ -16,7 +16,6 @@ import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
 import engine.util.mathematics.extras.Direction3Vector;
-import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class BlockBuilder extends BuilderPackage {
@@ -32,6 +31,7 @@ class BlockBuilder extends BuilderPackage {
      */
 
     // Internal
+    private BlockManager blockManager;
     private TextureManager textureManager;
     private MaterialManager materialManager;
     private ToolTypeManager toolTypeManager;
@@ -40,6 +40,7 @@ class BlockBuilder extends BuilderPackage {
 
     @Override
     protected void get() {
+        this.blockManager = get(BlockManager.class);
         this.textureManager = get(TextureManager.class);
         this.materialManager = get(MaterialManager.class);
         this.toolTypeManager = get(ToolTypeManager.class);
@@ -72,7 +73,7 @@ class BlockBuilder extends BuilderPackage {
         // Identity
         String localName = ArpgUtility.validateString(blockArpg, "name");
         String blockName = pathPrefix + "/" + localName;
-        short blockID = RegistryUtility.toShortID(blockName);
+        short blockID = blockManager.registerBlockName(blockName);
 
         // Geometry
         String typeStr = ArpgUtility.getString(blockArpg, "type", "FULL");

@@ -15,15 +15,16 @@ import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector4;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class SpriteManager extends ManagerPackage {
 
     /*
-     * Owns all loaded SpriteHandles. Drives loading via SpriteLoader and
-     * exposes cloneSprite() for runtime instance creation. On palette miss,
-     * triggers an immediate on-demand load. GPU textures are released on dispose.
+     * Owns all loaded SpriteHandles, with IDs assigned in registration order.
+     * Drives loading via SpriteLoader and exposes cloneSprite() for runtime
+     * instance creation. On palette miss, triggers an immediate on-demand
+     * load. GPU textures are released on dispose.
      */
 
     // Internal
@@ -33,15 +34,15 @@ public class SpriteManager extends ManagerPackage {
 
     // Palette
     private Object2IntOpenHashMap<String> spriteName2SpriteID;
-    private Int2ObjectOpenHashMap<SpriteHandle> spriteID2SpriteHandle;
+    private ObjectArrayList<SpriteHandle> spriteID2SpriteHandle;
 
     // Base \\
 
     @Override
     protected void create() {
 
-        this.spriteName2SpriteID = new Object2IntOpenHashMap<>();
-        this.spriteID2SpriteHandle = new Int2ObjectOpenHashMap<>();
+        this.spriteName2SpriteID = RegistryUtility.createNameIndex();
+        this.spriteID2SpriteHandle = RegistryUtility.createPalette();
 
         create(SpriteLoader.class);
     }
@@ -56,19 +57,22 @@ public class SpriteManager extends ManagerPackage {
     @Override
     protected void dispose() {
 
-        for (SpriteHandle handle : spriteID2SpriteHandle.values())
-            SpriteGLSLUtility.deleteSprite(handle.getGpuHandle());
+        for (int spriteID = 0; spriteID < spriteID2SpriteHandle.size(); spriteID++) {
 
-        spriteName2SpriteID.clear();
-        spriteID2SpriteHandle.clear();
+            SpriteHandle handle = spriteID2SpriteHandle.get(spriteID);
+
+            if (handle != null)
+                SpriteGLSLUtility.deleteSprite(handle.getGpuHandle());
+        }
+
+        RegistryUtility.clearPalette(spriteName2SpriteID, spriteID2SpriteHandle);
     }
 
     // Management \\
 
     void addSpriteHandle(String spriteName, SpriteHandle handle) {
-        int id = RegistryUtility.toIntID(spriteName);
-        spriteName2SpriteID.put(spriteName, id);
-        spriteID2SpriteHandle.put(id, handle);
+        RegistryUtility.registerHandle(
+                spriteName2SpriteID, spriteID2SpriteHandle, spriteName, handle, EngineSetting.REGISTRY_INT_ID_COUNT);
     }
 
     // Accessible \\
@@ -77,17 +81,21 @@ public class SpriteManager extends ManagerPackage {
         ((SpriteLoader) internalLoader).request(spriteName);
     }
 
+    private boolean isSpriteRegistered(String spriteName) {
+        return RegistryUtility.getHandle(spriteName2SpriteID, spriteID2SpriteHandle, spriteName) != null;
+    }
+
     public boolean hasSprite(String spriteName) {
 
-        if (!spriteName2SpriteID.containsKey(spriteName))
+        if (!isSpriteRegistered(spriteName))
             request(spriteName);
 
-        return spriteName2SpriteID.containsKey(spriteName);
+        return isSpriteRegistered(spriteName);
     }
 
     public int getSpriteIDFromSpriteName(String spriteName) {
 
-        if (!spriteName2SpriteID.containsKey(spriteName))
+        if (!isSpriteRegistered(spriteName))
             request(spriteName);
 
         return spriteName2SpriteID.getInt(spriteName);
@@ -95,7 +103,7 @@ public class SpriteManager extends ManagerPackage {
 
     public SpriteHandle getSpriteHandleFromSpriteID(int spriteID) {
 
-        SpriteHandle handle = spriteID2SpriteHandle.get(spriteID);
+        SpriteHandle handle = RegistryUtility.getHandle(spriteID2SpriteHandle, spriteID);
 
         if (handle == null)
             throwException("Sprite ID not found: " + spriteID);

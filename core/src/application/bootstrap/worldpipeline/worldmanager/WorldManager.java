@@ -4,8 +4,8 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldManager extends ManagerPackage {
 
@@ -17,7 +17,7 @@ public class WorldManager extends ManagerPackage {
 
     // Palette
     private Object2IntOpenHashMap<String> worldName2WorldID;
-    private Int2ObjectOpenHashMap<WorldHandle> worldID2WorldHandle;
+    private ObjectArrayList<WorldHandle> worldID2WorldHandle;
 
     // Active
     private WorldHandle activeWorld;
@@ -28,37 +28,39 @@ public class WorldManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.worldName2WorldID = new Object2IntOpenHashMap<>();
-        this.worldID2WorldHandle = new Int2ObjectOpenHashMap<>();
-        this.worldName2WorldID.defaultReturnValue(-1);
+        this.worldName2WorldID = RegistryUtility.createNameIndex();
+        this.worldID2WorldHandle = RegistryUtility.createPalette();
 
         create(WorldLoader.class);
     }
 
     // Management \\
 
-    void addWorld(String worldName, WorldHandle worldHandle) {
+    int registerWorldName(String worldName) {
+        return RegistryUtility.registerID(
+                worldName2WorldID, worldID2WorldHandle, worldName, EngineSetting.REGISTRY_INT_ID_COUNT);
+    }
 
-        int id = RegistryUtility.toIntID(worldName);
-        worldName2WorldID.put(worldName, id);
-        worldID2WorldHandle.put(id, worldHandle);
+    void addWorld(WorldHandle worldHandle) {
 
-        if (activeWorld == null && worldName.equals(EngineSetting.STARTING_WORLD))
+        worldID2WorldHandle.set(worldHandle.getWorldID(), worldHandle);
+
+        if (activeWorld == null && worldHandle.getWorldName().equals(EngineSetting.STARTING_WORLD))
             activeWorld = worldHandle;
     }
 
     // Accessible \\
 
     public boolean hasWorld(String worldName) {
-        return worldName2WorldID.containsKey(worldName);
+        return RegistryUtility.getHandle(worldName2WorldID, worldID2WorldHandle, worldName) != null;
     }
 
     public int getWorldIDFromWorldName(String worldName) {
 
-        if (!worldName2WorldID.containsKey(worldName))
+        if (!hasWorld(worldName))
             request(worldName);
 
-        if (!worldName2WorldID.containsKey(worldName))
+        if (!hasWorld(worldName))
             throwException("World not found after load: \"" + worldName + "\"");
 
         return worldName2WorldID.getInt(worldName);
@@ -66,7 +68,7 @@ public class WorldManager extends ManagerPackage {
 
     public WorldHandle getWorldHandleFromWorldID(int worldID) {
 
-        WorldHandle handle = worldID2WorldHandle.get(worldID);
+        WorldHandle handle = RegistryUtility.getHandle(worldID2WorldHandle, worldID);
 
         if (handle == null)
             throwException("World ID not found: " + worldID);

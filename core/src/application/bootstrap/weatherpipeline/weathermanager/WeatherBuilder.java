@@ -13,7 +13,6 @@ import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -31,12 +30,14 @@ class WeatherBuilder extends BuilderPackage {
      */
 
     // Internal
+    private WeatherManager weatherManager;
     private CloudManager cloudManager;
 
     // Base \\
 
     @Override
     protected void get() {
+        this.weatherManager = get(WeatherManager.class);
         this.cloudManager = get(CloudManager.class);
     }
 
@@ -45,7 +46,7 @@ class WeatherBuilder extends BuilderPackage {
     WeatherHandle build(File file, File root) {
 
         String weatherName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-        short weatherID = RegistryUtility.toShortID(weatherName);
+        short weatherID = weatherManager.registerWeatherName(weatherName);
 
         ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 

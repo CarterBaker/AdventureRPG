@@ -3,10 +3,11 @@ package application.bootstrap.shaderpipeline.shadermanager;
 import application.bootstrap.shaderpipeline.shader.ShaderHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ShaderManager extends ManagerPackage {
 
@@ -14,7 +15,7 @@ public class ShaderManager extends ManagerPackage {
      * Owns registration and retrieval for all compiled shader programs.
      * Source file parsing lives entirely in bootstrap and never reaches here.
      * Triggers on-demand loading when a requested shader name is not yet
-     * in the palette.
+     * in the palette. Shader IDs are assigned in registration order.
      */
 
     // Internal
@@ -22,15 +23,15 @@ public class ShaderManager extends ManagerPackage {
 
     // Palette
     private Object2IntOpenHashMap<String> shaderName2ShaderID;
-    private Int2ObjectOpenHashMap<ShaderHandle> shaderID2ShaderHandle;
+    private ObjectArrayList<ShaderHandle> shaderID2ShaderHandle;
 
     // Base \\
 
     @Override
     protected void create() {
 
-        this.shaderName2ShaderID = new Object2IntOpenHashMap<>();
-        this.shaderID2ShaderHandle = new Int2ObjectOpenHashMap<>();
+        this.shaderName2ShaderID = RegistryUtility.createNameIndex();
+        this.shaderID2ShaderHandle = RegistryUtility.createPalette();
 
         create(ShaderLoader.class);
     }
@@ -43,19 +44,26 @@ public class ShaderManager extends ManagerPackage {
     @Override
     protected void dispose() {
 
-        for (ShaderHandle handle : shaderID2ShaderHandle.values())
-            ShaderGLSLUtility.deleteShaderProgram(handle.getGpuHandle());
+        for (int shaderID = 0; shaderID < shaderID2ShaderHandle.size(); shaderID++) {
 
-        shaderName2ShaderID.clear();
-        shaderID2ShaderHandle.clear();
+            ShaderHandle handle = shaderID2ShaderHandle.get(shaderID);
+
+            if (handle != null)
+                ShaderGLSLUtility.deleteShaderProgram(handle.getGpuHandle());
+        }
+
+        RegistryUtility.clearPalette(shaderName2ShaderID, shaderID2ShaderHandle);
     }
 
     // Management \\
 
+    int registerShaderName(String shaderName) {
+        return RegistryUtility.registerID(
+                shaderName2ShaderID, shaderID2ShaderHandle, shaderName, EngineSetting.REGISTRY_INT_ID_COUNT);
+    }
+
     void addShaderHandle(ShaderHandle handle) {
-        int id = RegistryUtility.toIntID(handle.getShaderName());
-        shaderName2ShaderID.put(handle.getShaderName(), id);
-        shaderID2ShaderHandle.put(id, handle);
+        shaderID2ShaderHandle.set(handle.getShaderID(), handle);
     }
 
     void bindShaderToUBO(ShaderHandle shader, String blockName) {
@@ -72,12 +80,12 @@ public class ShaderManager extends ManagerPackage {
     }
 
     public boolean hasShader(String shaderName) {
-        return shaderName2ShaderID.containsKey(shaderName);
+        return RegistryUtility.getHandle(shaderName2ShaderID, shaderID2ShaderHandle, shaderName) != null;
     }
 
     public int getShaderIDFromShaderName(String shaderName) {
 
-        if (!shaderName2ShaderID.containsKey(shaderName))
+        if (!hasShader(shaderName))
             request(shaderName);
 
         return shaderName2ShaderID.getInt(shaderName);
@@ -85,7 +93,7 @@ public class ShaderManager extends ManagerPackage {
 
     public ShaderHandle getShaderHandleFromShaderID(int shaderID) {
 
-        ShaderHandle handle = shaderID2ShaderHandle.get(shaderID);
+        ShaderHandle handle = RegistryUtility.getHandle(shaderID2ShaderHandle, shaderID);
 
         if (handle == null)
             throwException("Shader ID not found: " + shaderID);

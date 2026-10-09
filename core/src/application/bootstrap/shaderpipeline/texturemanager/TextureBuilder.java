@@ -16,7 +16,6 @@ import engine.graphics.color.PackedColorUtility;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.io.FileUtility;
-import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class TextureBuilder extends BuilderPackage {
@@ -92,7 +91,6 @@ class TextureBuilder extends BuilderPackage {
 
             if (tile == null) {
                 tile = new TextureTileStruct(
-                        RegistryUtility.toIntID(fullName),
                         fullName,
                         atlasName,
                         aliasCount);
@@ -109,7 +107,7 @@ class TextureBuilder extends BuilderPackage {
             Object2ObjectLinkedOpenHashMap<String, TextureTileStruct> tileMap) {
 
         ObjectArrayList<String> tileNames = new ObjectArrayList<>(tileMap.keySet());
-        tileNames.sort((a, b) -> Integer.compare(tileMap.get(a).getID(), tileMap.get(b).getID()));
+        tileNames.sort(String::compareTo);
 
         Object2ObjectLinkedOpenHashMap<String, TextureTileStruct> sorted = new Object2ObjectLinkedOpenHashMap<>();
 
@@ -220,7 +218,6 @@ class TextureBuilder extends BuilderPackage {
             TextureAtlasStruct[] atlasLayers) {
 
         TextureArrayStruct arrayStruct = new TextureArrayStruct(
-                RegistryUtility.toIntID(arrayName),
                 arrayName,
                 atlasPixelSize,
                 atlasLayers);

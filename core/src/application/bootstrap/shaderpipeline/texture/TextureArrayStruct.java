@@ -18,7 +18,6 @@ public class TextureArrayStruct extends StructPackage {
      */
 
     // Identity
-    private final int id;
     private final String name;
     private final int atlasPixelSize;
 
@@ -34,12 +33,10 @@ public class TextureArrayStruct extends StructPackage {
     // Constructor \\
 
     public TextureArrayStruct(
-            int id,
             String name,
             int atlasPixelSize,
             TextureAtlasStruct[] textureArray) {
 
-        this.id = id;
         this.name = name;
         this.atlasPixelSize = atlasPixelSize;
         this.textureArray = textureArray;
@@ -83,10 +80,6 @@ public class TextureArrayStruct extends StructPackage {
         for (int i = 0; i < textureArray.length; i++)
             layers[i] = textureArray[i].getAtlas();
         return layers;
-    }
-
-    public int getID() {
-        return id;
     }
 
     public String getName() {

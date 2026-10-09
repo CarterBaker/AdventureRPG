@@ -17,8 +17,8 @@ import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class BiomeManager extends ManagerPackage {
 
@@ -28,16 +28,18 @@ public class BiomeManager extends ManagerPackage {
      * reconstructed through a warped kernel so painted borders blend, probable
      * biomes scatter as shaped patches or sit at the center of their parent's
      * patches, chaining their own probable biomes to any depth, and land
-     * meets ocean through its declared beach. Reads are lock-free: registries
-     * are copy-on-write snapshots and each worker memoizes map colors in its
-     * own scratch. Biomes can be rebuilt or retired live from an edited ARPG tree; the
-     * revision moves on every such change, so whatever derives from the field
-     * knows to refresh.
+     * meets ocean through its declared beach. Biome IDs are assigned in
+     * registration order. Reads are lock-free: registries are copy-on-write
+     * snapshots and each worker memoizes map colors in its own scratch. Biomes
+     * can be rebuilt or retired live from an edited ARPG tree; the revision
+     * moves on every such change, so whatever derives from the field knows to
+     * refresh.
      */
 
     // Palette
     private final ConcurrentHashMap<String, BiomeHandle> biomeName2BiomeHandle = new ConcurrentHashMap<>();
-    private volatile Short2ObjectOpenHashMap<BiomeHandle> biomeID2BiomeHandle = new Short2ObjectOpenHashMap<>();
+    private final Object2IntOpenHashMap<String> biomeName2BiomeID = RegistryUtility.createNameIndex();
+    private volatile ObjectArrayList<BiomeHandle> biomeID2BiomeHandle = RegistryUtility.createPalette();
     private final ConcurrentHashMap<String, String> variantName2ParentName = new ConcurrentHashMap<>();
 
     // Map Color Index
@@ -74,25 +76,26 @@ public class BiomeManager extends ManagerPackage {
 
     // Management \\
 
+    // A name keeps its ID for the engine lifetime, so a rebuilt biome replaces the handle under the same ID
+    synchronized short registerBiomeName(String biomeName) {
+
+        int biomeID = biomeName2BiomeID.getInt(biomeName);
+
+        if (biomeID != RegistryUtility.ID_NONE)
+            return (short) biomeID;
+
+        ObjectArrayList<BiomeHandle> nextID2BiomeHandle = new ObjectArrayList<>(biomeID2BiomeHandle);
+        biomeID = RegistryUtility.registerID(
+                biomeName2BiomeID, nextID2BiomeHandle, biomeName, EngineSetting.REGISTRY_SHORT_ID_COUNT);
+        biomeID2BiomeHandle = nextID2BiomeHandle;
+
+        return (short) biomeID;
+    }
+
     synchronized void addBiome(BiomeHandle biomeHandle) {
 
-        if (biomeHandle.getBiomeID() == EngineSetting.REGISTRY_RESERVED_ID)
-            throwException("Biome \"" + biomeHandle.getBiomeName()
-                    + "\" hashed to the reserved registry ID (" + EngineSetting.REGISTRY_RESERVED_ID
-                    + "), which the biome palette uses as its \"not yet generated\" sentinel — "
-                    + "rename this biome so its hashed ID no longer collides with the sentinel.");
-
-        BiomeHandle existing = biomeID2BiomeHandle.get(biomeHandle.getBiomeID());
-
-        if (existing != null && RegistryUtility.isCollision(biomeHandle.getBiomeName(), existing.getBiomeName(),
-                biomeHandle.getBiomeID()))
-            throwException("Biome ID collision: '"
-                    + biomeHandle.getBiomeName() + "' collides with '"
-                    + existing.getBiomeName() + "' (ID " + biomeHandle.getBiomeID()
-                    + ") — rename one biome to resolve");
-
-        Short2ObjectOpenHashMap<BiomeHandle> nextID2BiomeHandle = new Short2ObjectOpenHashMap<>(biomeID2BiomeHandle);
-        nextID2BiomeHandle.put(biomeHandle.getBiomeID(), biomeHandle);
+        ObjectArrayList<BiomeHandle> nextID2BiomeHandle = new ObjectArrayList<>(biomeID2BiomeHandle);
+        nextID2BiomeHandle.set(biomeHandle.getBiomeID(), biomeHandle);
 
         biomeName2BiomeHandle.put(biomeHandle.getBiomeName(), biomeHandle);
         biomeID2BiomeHandle = nextID2BiomeHandle;
@@ -230,10 +233,6 @@ public class BiomeManager extends ManagerPackage {
         }
 
         return false;
-    }
-
-    BiomeHandle getRegisteredBiome(short biomeID) {
-        return biomeID2BiomeHandle.get(biomeID);
     }
 
     // On-Demand \\
@@ -532,7 +531,7 @@ public class BiomeManager extends ManagerPackage {
                     + "subchunk's biome palette holds until world generation actually runs on it. The caller "
                     + "read biome data before ChunkData.GENERATION_DATA was set for this chunk.");
 
-        BiomeHandle handle = biomeID2BiomeHandle.get(biomeID);
+        BiomeHandle handle = RegistryUtility.getHandle(biomeID2BiomeHandle, biomeID);
 
         if (handle == null)
             throwException("No handle registered for biome ID: " + biomeID);

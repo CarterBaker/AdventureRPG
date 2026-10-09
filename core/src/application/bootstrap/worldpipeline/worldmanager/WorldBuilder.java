@@ -13,7 +13,6 @@ import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
-import engine.util.registry.RegistryUtility;
 
 class WorldBuilder extends BuilderPackage {
 
@@ -28,11 +27,21 @@ class WorldBuilder extends BuilderPackage {
      * game is running.
      */
 
+    // Internal
+    private WorldManager worldManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.worldManager = get(WorldManager.class);
+    }
+
     // Build \\
 
     WorldHandle build(File file, File root, String worldName) {
 
-        int worldID = RegistryUtility.toIntID(worldName);
+        int worldID = worldManager.registerWorldName(worldName);
         Pixmap pixmap = new Pixmap(file);
         Vector2Int worldScale = calculateWorldScale(pixmap);
 

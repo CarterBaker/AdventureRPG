@@ -8,10 +8,8 @@ import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import engine.root.BranchPackage;
-import engine.root.EngineSetting;
 import engine.root.UtilityPackage.InternalException;
 import engine.util.arpg.ArpgObjectStruct;
-import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class BiomeRebuildBranch extends BranchPackage {
@@ -20,11 +18,10 @@ class BiomeRebuildBranch extends BranchPackage {
      * Builds the handle for a live biome edit and proves it can go live
      * before anything changes. Once the boot loaders are released nothing can
      * be loaded on demand, so every biome, block, weather and season the tree
-     * names must already be registered; its registry ID must neither be the
-     * reserved sentinel nor collide with another biome; its variants must not
-     * belong to another parent or chain back into it; and the last biome
-     * painted on the world map must keep its color. Every refusal is a
-     * catchable InternalException.
+     * names must already be registered; its variants must not belong to
+     * another parent or chain back into it; and the last biome painted on the
+     * world map must keep its color. A biome keeps the ID its name was first
+     * registered under. Every refusal is a catchable InternalException.
      */
 
     // Internal
@@ -47,9 +44,9 @@ class BiomeRebuildBranch extends BranchPackage {
 
     BiomeHandle build(String biomeName, ArpgObjectStruct biomeArpg) {
 
-        BiomeData biomeData = BiomeArpgUtility.parse(biomeName, biomeArpg);
+        BiomeData biomeData = BiomeArpgUtility.parse(
+                biomeName, biomeManager.registerBiomeName(biomeName), biomeArpg);
 
-        validateIdentity(biomeData);
         validateVariants(biomeData);
         validateBlocks(biomeData);
         validateWeathers(biomeData);
@@ -62,22 +59,6 @@ class BiomeRebuildBranch extends BranchPackage {
     }
 
     // Validation \\
-
-    private void validateIdentity(BiomeData biomeData) {
-
-        String biomeName = biomeData.getBiomeName();
-        short biomeID = biomeData.getBiomeID();
-
-        if (biomeID == EngineSetting.REGISTRY_RESERVED_ID)
-            throw fail(biomeName, "hashes to the reserved registry ID " + EngineSetting.REGISTRY_RESERVED_ID
-                    + " — rename it.");
-
-        BiomeHandle existing = biomeManager.getRegisteredBiome(biomeID);
-
-        if (existing != null && RegistryUtility.isCollision(biomeName, existing.getBiomeName(), biomeID))
-            throw fail(biomeName, "collides with \"" + existing.getBiomeName() + "\" (ID " + biomeID
-                    + ") — rename one of them.");
-    }
 
     private void validateVariants(BiomeData biomeData) {
 

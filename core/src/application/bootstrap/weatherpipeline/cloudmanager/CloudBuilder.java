@@ -10,7 +10,6 @@ import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
 import engine.util.mathematics.vectors.Vector3;
-import engine.util.registry.RegistryUtility;
 
 class CloudBuilder extends BuilderPackage {
 
@@ -23,12 +22,22 @@ class CloudBuilder extends BuilderPackage {
      * scale. "elongation" stretches the width along the prevailing flow.
      */
 
+    // Internal
+    private CloudManager cloudManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.cloudManager = get(CloudManager.class);
+    }
+
     // Build \\
 
     CloudHandle build(File file, File root) {
 
         String cloudName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
-        short cloudID = RegistryUtility.toShortID(cloudName);
+        short cloudID = cloudManager.registerCloudName(cloudName);
 
         ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 

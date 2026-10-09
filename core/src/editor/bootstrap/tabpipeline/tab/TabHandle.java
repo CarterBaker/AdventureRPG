@@ -3,7 +3,6 @@ package editor.bootstrap.tabpipeline.tab;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.ContextPackage;
 import engine.root.HandlePackage;
-import engine.util.registry.RegistryUtility;
 
 public class TabHandle extends HandlePackage {
 
@@ -41,8 +40,8 @@ public class TabHandle extends HandlePackage {
         return tabData.getTabTitle();
     }
 
-    public int getTabId() {
-        return RegistryUtility.toIntID(getTabTitle());
+    public int getTabID() {
+        return tabData.getTabID();
     }
 
     public Class<? extends ContextPackage> getContentContextClass() {

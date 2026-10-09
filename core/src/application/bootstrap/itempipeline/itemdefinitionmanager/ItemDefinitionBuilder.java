@@ -63,6 +63,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
      */
 
     // Internal
+    private ItemDefinitionManager itemDefinitionManager;
     private MeshManager meshManager;
     private MaterialManager materialManager;
     private SubVoxelManager subVoxelManager;
@@ -84,6 +85,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
     protected void get() {
 
         // Internal
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
@@ -115,7 +117,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
         String localName = ArpgUtility.validateString(itemArpg, "name");
         String itemName = ItemRegistryUtility.toItemName(pathPrefix, localName);
-        int itemID = ItemRegistryUtility.toItemIntID(itemName);
+        int itemID = itemDefinitionManager.registerItemName(itemName);
 
         String displayName = ArpgUtility.getString(itemArpg, "display_name", EngineSetting.ITEM_DISPLAY_NAME_NONE);
 

@@ -1,6 +1,5 @@
 package application.bootstrap.shaderpipeline.ubomanager;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -14,6 +13,7 @@ import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformData;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformUtility;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 
@@ -23,7 +23,8 @@ public class UBOManager extends ManagerPackage {
      * Single authority on UBO lifetime, binding point allocation, and all GPU
      * operations. Owns all UBOHandles permanently. External callers receive a
      * UBOInstance via createUBOInstance() and push updates via push(). Handle
-     * and Instance never touch GL directly.
+     * and Instance never touch GL directly. UBO IDs are assigned in
+     * registration order.
      */
 
     // Internal
@@ -32,7 +33,7 @@ public class UBOManager extends ManagerPackage {
 
     // Palette
     private Object2IntOpenHashMap<String> uboName2UBOID;
-    private Int2ObjectOpenHashMap<UBOHandle> uboID2UBOHandle;
+    private ObjectArrayList<UBOHandle> uboID2UBOHandle;
     private ObjectArrayList<UBOInstance> activeInstances;
 
     // Base \\
@@ -42,8 +43,8 @@ public class UBOManager extends ManagerPackage {
 
         this.nextAvailableBinding = 0;
         this.usedBindings = new IntOpenHashSet();
-        this.uboName2UBOID = new Object2IntOpenHashMap<>();
-        this.uboID2UBOHandle = new Int2ObjectOpenHashMap<>();
+        this.uboName2UBOID = RegistryUtility.createNameIndex();
+        this.uboID2UBOHandle = RegistryUtility.createPalette();
         this.activeInstances = new ObjectArrayList<>();
 
         create(UBOLoader.class);
@@ -52,14 +53,18 @@ public class UBOManager extends ManagerPackage {
     @Override
     protected void dispose() {
 
-        for (UBOHandle handle : uboID2UBOHandle.values())
-            UBOGLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
+        for (int uboID = 0; uboID < uboID2UBOHandle.size(); uboID++) {
+
+            UBOHandle handle = uboID2UBOHandle.get(uboID);
+
+            if (handle != null)
+                UBOGLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
+        }
 
         for (int i = 0; i < activeInstances.size(); i++)
             UBOGLSLUtility.deleteUniformBuffer(activeInstances.get(i).getGpuHandle());
 
-        uboName2UBOID.clear();
-        uboID2UBOHandle.clear();
+        RegistryUtility.clearPalette(uboName2UBOID, uboID2UBOHandle);
         activeInstances.clear();
         usedBindings.clear();
     }
@@ -70,11 +75,12 @@ public class UBOManager extends ManagerPackage {
 
         String blockName = handle.getBlockName();
 
-        if (uboName2UBOID.containsKey(blockName))
+        if (hasUBO(blockName))
             return;
 
         int binding = resolveBinding(handle.getRequestedBinding(), blockName);
-        int id = RegistryUtility.toIntID(blockName);
+        int id = RegistryUtility.registerID(
+                uboName2UBOID, uboID2UBOHandle, blockName, EngineSetting.REGISTRY_INT_ID_COUNT);
         int gpuHandle = UBOGLSLUtility.createUniformBuffer();
         int totalSize = computeStd140BufferSize(handle.getUniformDeclarations());
 
@@ -85,8 +91,7 @@ public class UBOManager extends ManagerPackage {
         UBOGLSLUtility.allocateUniformBuffer(gpuHandle, totalSize);
         UBOGLSLUtility.bindUniformBufferBase(gpuHandle, binding);
 
-        uboName2UBOID.put(blockName, id);
-        uboID2UBOHandle.put(id, handle);
+        uboID2UBOHandle.set(id, handle);
     }
 
     public UBOInstance createUBOInstance(UBOHandle handle) {
@@ -137,8 +142,13 @@ public class UBOManager extends ManagerPackage {
 
         // Shared/source UBO handles may not be re-bound every draw call.
         // Re-assert their binding points whenever a context is made current.
-        for (UBOHandle handle : uboID2UBOHandle.values())
-            UBOGLSLUtility.bindUniformBufferBase(handle.getGpuHandle(), handle.getBindingPoint());
+        for (int uboID = 0; uboID < uboID2UBOHandle.size(); uboID++) {
+
+            UBOHandle handle = uboID2UBOHandle.get(uboID);
+
+            if (handle != null)
+                UBOGLSLUtility.bindUniformBufferBase(handle.getGpuHandle(), handle.getBindingPoint());
+        }
     }
 
     // Binding Registry \\
@@ -206,12 +216,12 @@ public class UBOManager extends ManagerPackage {
     }
 
     public boolean hasUBO(String uboName) {
-        return uboName2UBOID.containsKey(uboName);
+        return RegistryUtility.getHandle(uboName2UBOID, uboID2UBOHandle, uboName) != null;
     }
 
     public int getUBOIDFromUBOName(String uboName) {
 
-        if (!uboName2UBOID.containsKey(uboName))
+        if (!hasUBO(uboName))
             request(uboName);
 
         return uboName2UBOID.getInt(uboName);
@@ -219,7 +229,7 @@ public class UBOManager extends ManagerPackage {
 
     public UBOHandle getUBOHandleFromUBOID(int uboID) {
 
-        UBOHandle handle = uboID2UBOHandle.get(uboID);
+        UBOHandle handle = RegistryUtility.getHandle(uboID2UBOHandle, uboID);
 
         if (handle == null)
             throwException("UBO ID not found: " + uboID);
@@ -233,8 +243,8 @@ public class UBOManager extends ManagerPackage {
 
     public UBOHandle findUBOHandle(String blockName) {
 
-        if (uboName2UBOID.containsKey(blockName))
-            return uboID2UBOHandle.get(uboName2UBOID.getInt(blockName));
+        if (hasUBO(blockName))
+            return RegistryUtility.getHandle(uboName2UBOID, uboID2UBOHandle, blockName);
 
         try {
             request(blockName);
@@ -242,9 +252,6 @@ public class UBOManager extends ManagerPackage {
             return null;
         }
 
-        if (!uboName2UBOID.containsKey(blockName))
-            return null;
-
-        return uboID2UBOHandle.get(uboName2UBOID.getInt(blockName));
+        return RegistryUtility.getHandle(uboName2UBOID, uboID2UBOHandle, blockName);
     }
 }

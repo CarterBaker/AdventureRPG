@@ -7,15 +7,16 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class FontManager extends ManagerPackage {
 
     /*
      * Owns the font palette for the engine lifetime. Drives font rasterization
-     * and atlas registration via FontLoader. GPU resources are owned and
-     * disposed by TextureManager — FontManager holds no GPU state directly.
+     * and atlas registration via FontLoader, with font IDs assigned in
+     * registration order. GPU resources are owned and disposed by
+     * TextureManager — FontManager holds no GPU state directly.
      */
 
     // Internal
@@ -23,16 +24,15 @@ public class FontManager extends ManagerPackage {
 
     // Palette
     private Object2IntOpenHashMap<String> fontName2FontID;
-    private Int2ObjectOpenHashMap<FontHandle> fontID2FontHandle;
+    private ObjectArrayList<FontHandle> fontID2FontHandle;
 
     // Base \\
 
     @Override
     protected void create() {
 
-        this.fontName2FontID = new Object2IntOpenHashMap<>();
-        this.fontID2FontHandle = new Int2ObjectOpenHashMap<>();
-        this.fontName2FontID.defaultReturnValue(-1);
+        this.fontName2FontID = RegistryUtility.createNameIndex();
+        this.fontID2FontHandle = RegistryUtility.createPalette();
 
         create(FontLoader.class);
     }
@@ -44,27 +44,25 @@ public class FontManager extends ManagerPackage {
 
     @Override
     protected void dispose() {
-        fontName2FontID.clear();
-        fontID2FontHandle.clear();
+        RegistryUtility.clearPalette(fontName2FontID, fontID2FontHandle);
     }
 
     // Management \\
 
     void addFont(String fontName, FontHandle fontHandle) {
-        int id = RegistryUtility.toIntID(fontName);
-        fontName2FontID.put(fontName, id);
-        fontID2FontHandle.put(id, fontHandle);
+        RegistryUtility.registerHandle(
+                fontName2FontID, fontID2FontHandle, fontName, fontHandle, EngineSetting.REGISTRY_INT_ID_COUNT);
     }
 
     // Accessible \\
 
     public boolean hasFont(String fontName) {
-        return fontName2FontID.containsKey(fontName);
+        return RegistryUtility.getHandle(fontName2FontID, fontID2FontHandle, fontName) != null;
     }
 
     public int getFontIDFromFontName(String fontName) {
 
-        if (!fontName2FontID.containsKey(fontName))
+        if (!hasFont(fontName))
             request(fontName);
 
         return fontName2FontID.getInt(fontName);
@@ -72,7 +70,7 @@ public class FontManager extends ManagerPackage {
 
     public FontHandle getFontHandleFromFontID(int fontID) {
 
-        FontHandle handle = fontID2FontHandle.get(fontID);
+        FontHandle handle = RegistryUtility.getHandle(fontID2FontHandle, fontID);
 
         if (handle == null)
             throwException("Font ID not found: " + fontID);

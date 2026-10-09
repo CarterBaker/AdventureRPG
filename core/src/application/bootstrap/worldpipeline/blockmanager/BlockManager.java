@@ -5,15 +5,16 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class BlockManager extends ManagerPackage {
 
     /*
      * Owns the block palette by name and ID with a per-ID geometry type table,
      * the block orientation buffer, and BlockPlacementSystem, the single entry
-     * point for world block edits.
+     * point for world block edits. Block IDs are assigned in registration
+     * order, so every block name must be unique.
      */
 
     // Internal
@@ -21,7 +22,7 @@ public class BlockManager extends ManagerPackage {
 
     // Palette
     private Object2IntOpenHashMap<String> blockName2BlockID;
-    private Int2ObjectOpenHashMap<BlockHandle> blockID2BlockHandle;
+    private ObjectArrayList<BlockHandle> blockID2BlockHandle;
     private DynamicGeometryType[] blockID2GeometryType;
 
     // Base \\
@@ -29,10 +30,8 @@ public class BlockManager extends ManagerPackage {
     @Override
     protected void create() {
 
-        this.blockName2BlockID = new Object2IntOpenHashMap<>();
-        this.blockName2BlockID.defaultReturnValue(-1);
-
-        this.blockID2BlockHandle = new Int2ObjectOpenHashMap<>();
+        this.blockName2BlockID = RegistryUtility.createNameIndex();
+        this.blockID2BlockHandle = RegistryUtility.createPalette();
         this.blockID2GeometryType = new DynamicGeometryType[EngineSetting.REGISTRY_SHORT_ID_COUNT];
 
         this.internalBufferSystem = create(BlockBufferSystem.class);
@@ -43,21 +42,21 @@ public class BlockManager extends ManagerPackage {
 
     // Management \\
 
+    short registerBlockName(String blockName) {
+        return (short) RegistryUtility.registerID(
+                blockName2BlockID, blockID2BlockHandle, blockName, EngineSetting.REGISTRY_SHORT_ID_COUNT);
+    }
+
     void addBlock(BlockHandle blockHandle) {
 
-        if (blockID2BlockHandle.containsKey(blockHandle.getBlockID())) {
-            BlockHandle existing = blockID2BlockHandle.get(blockHandle.getBlockID());
-            if (RegistryUtility.isCollision(blockHandle.getBlockName(), existing.getBlockName(),
-                    blockHandle.getBlockID()))
-                throwException("Block ID collision: '"
-                        + blockHandle.getBlockName() + "' collides with '"
-                        + existing.getBlockName() + "' (ID " + blockHandle.getBlockID()
-                        + ") — rename one block to resolve");
-        }
+        short blockID = blockHandle.getBlockID();
 
-        blockName2BlockID.put(blockHandle.getBlockName(), blockHandle.getBlockID());
-        blockID2BlockHandle.put(blockHandle.getBlockID(), blockHandle);
-        blockID2GeometryType[blockHandle.getBlockID()] = blockHandle.getGeometry();
+        if (blockID2BlockHandle.get(blockID) != null)
+            throwException("Duplicate block name: '" + blockHandle.getBlockName()
+                    + "' is declared more than once — every block name must be unique");
+
+        blockID2BlockHandle.set(blockID, blockHandle);
+        blockID2GeometryType[blockID] = blockHandle.getGeometry();
     }
 
     // On-Demand \\
@@ -69,15 +68,15 @@ public class BlockManager extends ManagerPackage {
     // Accessible \\
 
     public boolean hasBlock(String blockName) {
-        return blockName2BlockID.containsKey(blockName);
+        return RegistryUtility.getHandle(blockName2BlockID, blockID2BlockHandle, blockName) != null;
     }
 
     public int getBlockIDFromBlockName(String blockName) {
 
-        if (!blockName2BlockID.containsKey(blockName))
+        if (!hasBlock(blockName))
             request(blockName);
 
-        if (!blockName2BlockID.containsKey(blockName))
+        if (!hasBlock(blockName))
             throwException("Block \"" + blockName + "\" was not registered after its on-demand load completed — "
                     + "the loaded file must declare a different block name than the one requested. "
                     + "Check for a resource-name/path mismatch between the block directory and its declared name.");
@@ -87,7 +86,7 @@ public class BlockManager extends ManagerPackage {
 
     public BlockHandle getBlockHandleFromBlockID(int blockID) {
 
-        BlockHandle handle = blockID2BlockHandle.get(blockID);
+        BlockHandle handle = RegistryUtility.getHandle(blockID2BlockHandle, blockID);
 
         if (handle == null)
             throwException("No handle registered for block ID: " + blockID);

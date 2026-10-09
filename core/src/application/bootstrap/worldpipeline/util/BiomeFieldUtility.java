@@ -171,7 +171,7 @@ public final class BiomeFieldUtility extends EngineUtility {
         int firstCellZ = floorToInt((blockZ - maxReachBlocks) / cellHeightBlocks);
         int lastCellZ = floorToInt((blockZ + maxReachBlocks) / cellHeightBlocks);
 
-        long scatterSeed = seed ^ mix64(probableBiome.getBiomeID());
+        long scatterSeed = seed ^ mix64(probableBiome.getNameSeed());
 
         float uncovered = 1f;
         float bestMembership = 0f;
@@ -248,7 +248,7 @@ public final class BiomeFieldUtility extends EngineUtility {
         if (hostShape == ProbablePatchStruct.NO_PATCH_SHAPE)
             return;
 
-        long coreHash = mix64(hostHash ^ mix64(probableBiome.getBiomeID()) ^ EngineSetting.BIOME_PROBABLE_CORE_SEED);
+        long coreHash = mix64(hostHash ^ mix64(probableBiome.getNameSeed()) ^ EngineSetting.BIOME_PROBABLE_CORE_SEED);
 
         if (toUnit(coreHash) >= probableBiome.getChance())
             return;

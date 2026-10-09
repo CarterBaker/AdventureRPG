@@ -12,11 +12,13 @@ public class ProbableBiomeStruct extends StructPackage {
      * arm ranges, and core scales when centered. Coverage is the part of what
      * earlier entries leave that keeps the chance a share of the whole; past
      * the inverted coverage the biome becomes the ground and its patches the
-     * parent's pockets. Scatter density and cell size are resolved once here.
+     * parent's pockets. Scatter density and cell size are resolved once here,
+     * and the patches are salted by the biome's name seed, so they fall in the
+     * same place whatever order biomes load in.
      */
 
     private final String biomeName;
-    private final short biomeID;
+    private final int nameSeed;
     private final ProbableBiomePlacement placement;
     private final float chance;
     private final float coverage;
@@ -45,7 +47,7 @@ public class ProbableBiomeStruct extends StructPackage {
             float maxCoreScale) {
 
         this.biomeName = biomeName;
-        this.biomeID = RegistryUtility.toShortID(biomeName);
+        this.nameSeed = RegistryUtility.toNameSeed(biomeName);
         this.placement = placement;
         this.chance = chance;
         this.coverage = coverage;
@@ -71,8 +73,8 @@ public class ProbableBiomeStruct extends StructPackage {
         return biomeName;
     }
 
-    public short getBiomeID() {
-        return biomeID;
+    public int getNameSeed() {
+        return nameSeed;
     }
 
     public ProbableBiomePlacement getPlacement() {

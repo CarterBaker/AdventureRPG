@@ -3,41 +3,46 @@ package application.bootstrap.shaderpipeline.materialmanager;
 import application.bootstrap.shaderpipeline.material.MaterialData;
 import application.bootstrap.shaderpipeline.material.MaterialHandle;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MaterialManager extends ManagerPackage {
 
     /*
-     * Owns all material handles. Drives loading via MaterialLoader and exposes
-     * cloneMaterial() for runtime instance creation. Handles are persistent —
-     * instances are cloned on demand and discarded by the caller.
+     * Owns all material handles, with IDs assigned in registration order.
+     * Drives loading via MaterialLoader and exposes cloneMaterial() for
+     * runtime instance creation. Handles are persistent — instances are
+     * cloned on demand and discarded by the caller.
      */
 
     // Palette
     private Object2IntOpenHashMap<String> materialName2MaterialID;
-    private Int2ObjectOpenHashMap<MaterialHandle> materialID2MaterialHandle;
+    private ObjectArrayList<MaterialHandle> materialID2MaterialHandle;
 
     // Base \\
 
     @Override
     protected void create() {
 
-        this.materialName2MaterialID = new Object2IntOpenHashMap<>();
-        this.materialID2MaterialHandle = new Int2ObjectOpenHashMap<>();
-        this.materialName2MaterialID.defaultReturnValue(-1);
+        this.materialName2MaterialID = RegistryUtility.createNameIndex();
+        this.materialID2MaterialHandle = RegistryUtility.createPalette();
 
         create(MaterialLoader.class);
     }
 
     // Management \\
 
-    void addMaterial(String materialName, MaterialHandle handle) {
-        int id = RegistryUtility.toIntID(materialName);
-        materialName2MaterialID.put(materialName, id);
-        materialID2MaterialHandle.put(id, handle);
+    int registerMaterialName(String materialName) {
+        return RegistryUtility.registerID(
+                materialName2MaterialID, materialID2MaterialHandle, materialName,
+                EngineSetting.REGISTRY_INT_ID_COUNT);
+    }
+
+    void addMaterial(MaterialHandle handle) {
+        materialID2MaterialHandle.set(handle.getMaterialID(), handle);
     }
 
     // On-Demand \\
@@ -49,15 +54,15 @@ public class MaterialManager extends ManagerPackage {
     // Accessible \\
 
     public boolean hasMaterial(String materialName) {
-        return materialName2MaterialID.containsKey(materialName);
+        return RegistryUtility.getHandle(materialName2MaterialID, materialID2MaterialHandle, materialName) != null;
     }
 
     public int getMaterialIDFromMaterialName(String materialName) {
 
-        if (!materialName2MaterialID.containsKey(materialName))
+        if (!hasMaterial(materialName))
             request(materialName);
 
-        if (!materialName2MaterialID.containsKey(materialName))
+        if (!hasMaterial(materialName))
             throwException("Material not found after load: '" + materialName + "'");
 
         return materialName2MaterialID.getInt(materialName);
@@ -65,7 +70,7 @@ public class MaterialManager extends ManagerPackage {
 
     public MaterialHandle getMaterialHandleFromMaterialID(int materialID) {
 
-        MaterialHandle handle = materialID2MaterialHandle.get(materialID);
+        MaterialHandle handle = RegistryUtility.getHandle(materialID2MaterialHandle, materialID);
 
         if (handle == null)
             throwException("No handle registered for material ID: " + materialID);

@@ -19,9 +19,9 @@ class MeshLoader extends LoaderPackage {
     /*
      * Drives the full mesh bootstrap pipeline per file. Creates a shared
      * VAOInstance per mesh, then delegates to the VAO, VBO, and IBO builders
-     * before assembling the final MeshHandle via MeshBuilder. IDs are
-     * derived from resource names via RegistryUtility. Supports on-demand
-     * loading for meshes not yet in the palette at runtime.
+     * before assembling the final MeshHandle via MeshBuilder; MeshManager
+     * assigns each mesh its ID as it registers. Supports on-demand loading
+     * for meshes not yet in the palette at runtime.
      */
 
     // Internal

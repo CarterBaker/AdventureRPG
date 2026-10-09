@@ -31,7 +31,7 @@ public class BiomeVeinStruct extends StructPackage {
             int maxDepthBlocks) {
 
         this.blockName = blockName;
-        this.fieldSeed = RegistryUtility.toShortID(blockName) * EngineSetting.HASH_FINALIZER_MULTIPLIER_1;
+        this.fieldSeed = RegistryUtility.toNameSeed(blockName) * EngineSetting.HASH_FINALIZER_MULTIPLIER_1;
         this.abundance = abundance;
         this.thicknessBlocks = thicknessBlocks;
         this.minHeightBlocks = minHeightBlocks;

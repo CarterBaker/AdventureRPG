@@ -12,7 +12,6 @@ import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.BuilderPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
-import engine.util.registry.RegistryUtility;
 
 class FeatureBuilder extends BuilderPackage {
 
@@ -26,6 +25,7 @@ class FeatureBuilder extends BuilderPackage {
      */
 
     // Internal
+    private FeatureManager featureManager;
     private MeshManager meshManager;
     private TextureManager textureManager;
 
@@ -33,6 +33,7 @@ class FeatureBuilder extends BuilderPackage {
 
     @Override
     protected void get() {
+        this.featureManager = get(FeatureManager.class);
         this.meshManager = get(MeshManager.class);
         this.textureManager = get(TextureManager.class);
     }
@@ -42,7 +43,7 @@ class FeatureBuilder extends BuilderPackage {
     FeatureHandle build(File file, String featureName) {
 
         ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
-        short featureID = RegistryUtility.toShortID(featureName);
+        short featureID = featureManager.registerFeatureName(featureName);
         FeatureSlot featureSlot = parseSlot(arpg, file);
 
         MeshHandle meshHandle = featureSlot.isMeshSlot() ? parseMesh(arpg, file) : null;

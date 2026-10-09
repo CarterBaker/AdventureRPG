@@ -16,7 +16,6 @@ import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.assets.atlas.AtlasUtility;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -112,7 +111,6 @@ class FontBuilder extends BuilderPackage {
             String tileName = fontName + "/" + new String(Character.toChars(tile.getCodepoint()));
 
             TextureTileStruct struct = new TextureTileStruct(
-                    RegistryUtility.toIntID(tileName),
                     tileName,
                     fontName,
                     1);
@@ -154,7 +152,6 @@ class FontBuilder extends BuilderPackage {
 
         TextureAtlasStruct atlasLayer = new TextureAtlasStruct(atlasPixelSize, canvas);
         TextureArrayStruct arrayStruct = new TextureArrayStruct(
-                RegistryUtility.toIntID(name),
                 name,
                 atlasPixelSize,
                 new TextureAtlasStruct[] { atlasLayer });

@@ -61,7 +61,7 @@ public class LayoutSaveBranch extends BranchPackage {
             TabHandle tabHandle = openTabs.get(i);
             ArpgObjectStruct tabArpg = new ArpgObjectStruct();
 
-            tabArpg.addProperty("id", tabHandle.getTabId());
+            tabArpg.addProperty("id", tabHandle.getTabID());
             tabArpg.addProperty("baseTitle", tabHandle.getTabData().getBaseTitle());
             tabArpg.addProperty("contentClass", tabHandle.getContentContextClass().getName());
             tabsArpg.add(tabArpg);
@@ -110,7 +110,7 @@ public class LayoutSaveBranch extends BranchPackage {
         nodeArpg.addProperty("split", node.isSplit());
 
         if (!node.isSplit()) {
-            nodeArpg.addProperty("tab", node.getTab().getTabId());
+            nodeArpg.addProperty("tab", node.getTab().getTabID());
             return nodeArpg;
         }
 

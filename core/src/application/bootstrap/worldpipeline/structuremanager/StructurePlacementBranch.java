@@ -121,28 +121,28 @@ class StructurePlacementBranch extends BranchPackage {
             int cellZ) {
 
         StructureFrequencyStruct frequency = structureHandle.getFrequency();
-        short structureID = structureHandle.getStructureID();
+        int nameSeed = structureHandle.getNameSeed();
         long seed = scratch.worldHandle.getSeed();
 
         float chanceRoll = StructurePlacementUtility.rollCell(
-                seed, structureID, cellX, cellZ, EngineSetting.STRUCTURE_CHANCE_SALT);
+                seed, nameSeed, cellX, cellZ, EngineSetting.STRUCTURE_CHANCE_SALT);
 
         if (chanceRoll >= frequency.getChance())
             return;
 
         long anchorX = StructurePlacementUtility.computeCellAnchor(
                 cellX, frequency.getSpacingBlocks(), frequency.getSeparationBlocks(),
-                StructurePlacementUtility.rollCell(seed, structureID, cellX, cellZ,
+                StructurePlacementUtility.rollCell(seed, nameSeed, cellX, cellZ,
                         EngineSetting.STRUCTURE_OFFSET_X_SALT));
 
         long anchorZ = StructurePlacementUtility.computeCellAnchor(
                 cellZ, frequency.getSpacingBlocks(), frequency.getSeparationBlocks(),
-                StructurePlacementUtility.rollCell(seed, structureID, cellX, cellZ,
+                StructurePlacementUtility.rollCell(seed, nameSeed, cellX, cellZ,
                         EngineSetting.STRUCTURE_OFFSET_Z_SALT));
 
         int quarterTurns = frequency.hasRandomRotation()
                 ? StructurePlacementUtility.rollQuarterTurns(StructurePlacementUtility.rollCell(
-                        seed, structureID, cellX, cellZ, EngineSetting.STRUCTURE_ROTATION_SALT))
+                        seed, nameSeed, cellX, cellZ, EngineSetting.STRUCTURE_ROTATION_SALT))
                 : 0;
 
         if (!reachesChunk(scratch, structureHandle, anchorX, anchorZ))

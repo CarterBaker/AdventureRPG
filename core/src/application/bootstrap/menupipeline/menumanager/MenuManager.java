@@ -14,9 +14,9 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -43,7 +43,7 @@ public class MenuManager extends ManagerPackage {
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
-    private Int2ObjectOpenHashMap<MenuHandle> menuID2MenuHandle;
+    private ObjectArrayList<MenuHandle> menuID2MenuHandle;
 
     // Deferred close — scratch buffer only, not the source of truth for open state
     private ObjectArrayList<MenuInstance> pendingCloseMenus;
@@ -55,9 +55,8 @@ public class MenuManager extends ManagerPackage {
 
     @Override
     protected void create() {
-        this.menuName2MenuID = new Object2IntOpenHashMap<>();
-        this.menuID2MenuHandle = new Int2ObjectOpenHashMap<>();
-        this.menuName2MenuID.defaultReturnValue(-1);
+        this.menuName2MenuID = RegistryUtility.createNameIndex();
+        this.menuID2MenuHandle = RegistryUtility.createPalette();
         this.pendingCloseMenus = new ObjectArrayList<>();
         this.window2MenuTargetFbo = new Object2ObjectOpenHashMap<>();
         create(MenuLoader.class);
@@ -203,25 +202,24 @@ public class MenuManager extends ManagerPackage {
     // Management \\
 
     void addMenu(String menuName, MenuHandle menuHandle) {
-        int id = RegistryUtility.toIntID(menuName);
-        menuName2MenuID.put(menuName, id);
-        menuID2MenuHandle.put(id, menuHandle);
+        RegistryUtility.registerHandle(
+                menuName2MenuID, menuID2MenuHandle, menuName, menuHandle, EngineSetting.REGISTRY_INT_ID_COUNT);
     }
 
     // Accessible \\
 
     public boolean hasMenu(String menuName) {
-        return menuName2MenuID.containsKey(menuName);
+        return RegistryUtility.getHandle(menuName2MenuID, menuID2MenuHandle, menuName) != null;
     }
 
     public int getMenuIDFromMenuName(String menuName) {
-        if (!menuName2MenuID.containsKey(menuName))
+        if (!hasMenu(menuName))
             request(menuName);
         return menuName2MenuID.getInt(menuName);
     }
 
     public MenuHandle getMenuHandleFromMenuID(int menuID) {
-        MenuHandle handle = menuID2MenuHandle.get(menuID);
+        MenuHandle handle = RegistryUtility.getHandle(menuID2MenuHandle, menuID);
         if (handle == null)
             throwException("Menu ID not found: " + menuID);
         return handle;

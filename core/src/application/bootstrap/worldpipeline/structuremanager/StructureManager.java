@@ -6,10 +6,11 @@ import java.util.Comparator;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class StructureManager extends ManagerPackage {
 
@@ -18,15 +19,17 @@ public class StructureManager extends ManagerPackage {
      * for stamping structures into a chunk. Every structure is resolved on
      * demand in awake(), before any chunk generates, and published to worker
      * threads as an immutable name-sorted snapshot so every chunk walks
-     * structures in the same order without locking.
+     * structures in the same order without locking. Structure IDs are
+     * assigned in registration order.
      */
 
     // Internal
     private StructurePlacementBranch structurePlacementBranch;
 
     // Palette
-    private Object2ObjectOpenHashMap<String, StructureHandle> structureName2StructureHandle;
-    private Short2ObjectOpenHashMap<StructureHandle> structureID2StructureHandle;
+    private Object2IntOpenHashMap<String> structureName2StructureID;
+    private ObjectArrayList<StructureHandle> structureID2StructureHandle;
+    private ObjectArrayList<StructureHandle> structureHandleList;
 
     // Generation Snapshot
     private volatile StructureHandle[] structureHandles;
@@ -37,8 +40,9 @@ public class StructureManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.structureName2StructureHandle = new Object2ObjectOpenHashMap<>();
-        this.structureID2StructureHandle = new Short2ObjectOpenHashMap<>();
+        this.structureName2StructureID = RegistryUtility.createNameIndex();
+        this.structureID2StructureHandle = RegistryUtility.createPalette();
+        this.structureHandleList = new ObjectArrayList<>();
 
         // Generation Snapshot
         this.structureHandles = new StructureHandle[0];
@@ -54,26 +58,29 @@ public class StructureManager extends ManagerPackage {
 
     // Management \\
 
+    short registerStructureName(String structureName) {
+        return (short) RegistryUtility.registerID(
+                structureName2StructureID, structureID2StructureHandle, structureName,
+                EngineSetting.REGISTRY_SHORT_ID_COUNT);
+    }
+
     void addStructureHandle(StructureHandle structureHandle) {
 
-        StructureHandle existing = structureID2StructureHandle.get(structureHandle.getStructureID());
+        short structureID = structureHandle.getStructureID();
 
-        if (existing != null && RegistryUtility.isCollision(structureHandle.getStructureName(),
-                existing.getStructureName(), structureHandle.getStructureID()))
-            throwException("Structure ID collision: '"
-                    + structureHandle.getStructureName() + "' collides with '"
-                    + existing.getStructureName() + "' (ID " + structureHandle.getStructureID()
-                    + ") — rename one structure to resolve");
+        if (structureID2StructureHandle.get(structureID) != null)
+            throwException("Duplicate structure name: '" + structureHandle.getStructureName()
+                    + "' was registered more than once");
 
-        structureName2StructureHandle.put(structureHandle.getStructureName(), structureHandle);
-        structureID2StructureHandle.put(structureHandle.getStructureID(), structureHandle);
+        structureID2StructureHandle.set(structureID, structureHandle);
+        structureHandleList.add(structureHandle);
 
         publishSnapshot();
     }
 
     private void publishSnapshot() {
 
-        StructureHandle[] snapshot = structureName2StructureHandle.values().toArray(new StructureHandle[0]);
+        StructureHandle[] snapshot = structureHandleList.toArray(new StructureHandle[0]);
         Arrays.sort(snapshot, Comparator.comparing(StructureHandle::getStructureName));
 
         structureHandles = snapshot;
@@ -94,16 +101,19 @@ public class StructureManager extends ManagerPackage {
     // Accessible \\
 
     public boolean hasStructure(String structureName) {
-        return structureName2StructureHandle.containsKey(structureName);
+        return RegistryUtility.getHandle(
+                structureName2StructureID, structureID2StructureHandle, structureName) != null;
     }
 
     public StructureHandle getStructureHandleFromStructureName(String structureName) {
 
-        StructureHandle handle = structureName2StructureHandle.get(structureName);
+        StructureHandle handle = RegistryUtility.getHandle(
+                structureName2StructureID, structureID2StructureHandle, structureName);
 
         if (handle == null) {
             request(structureName);
-            handle = structureName2StructureHandle.get(structureName);
+            handle = RegistryUtility.getHandle(
+                    structureName2StructureID, structureID2StructureHandle, structureName);
         }
 
         if (handle == null)
@@ -119,7 +129,7 @@ public class StructureManager extends ManagerPackage {
 
     public StructureHandle getStructureHandleFromStructureID(short structureID) {
 
-        StructureHandle handle = structureID2StructureHandle.get(structureID);
+        StructureHandle handle = RegistryUtility.getHandle(structureID2StructureHandle, structureID);
 
         if (handle == null)
             throwException("No handle registered for structure ID: " + structureID);

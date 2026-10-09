@@ -12,7 +12,6 @@ import application.bootstrap.shaderpipeline.pass.PassHandle;
 import engine.root.BuilderPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
-import engine.util.registry.RegistryUtility;
 
 class PassBuilder extends BuilderPackage {
 
@@ -23,6 +22,7 @@ class PassBuilder extends BuilderPackage {
      */
 
     // Internal
+    private PassManager passManager;
     private MeshManager meshManager;
     private MaterialManager materialManager;
 
@@ -30,6 +30,7 @@ class PassBuilder extends BuilderPackage {
 
     @Override
     protected void get() {
+        this.passManager = get(PassManager.class);
         this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
     }
@@ -46,7 +47,7 @@ class PassBuilder extends BuilderPackage {
 
         MeshHandle meshHandle = getMeshHandleFromArpg(arpg);
 
-        int passID = RegistryUtility.toIntID(passName);
+        int passID = passManager.registerPassName(passName);
 
         ModelInstance modelInstance = create(ModelInstance.class);
         modelInstance.constructor(meshHandle.getMeshData(), material);

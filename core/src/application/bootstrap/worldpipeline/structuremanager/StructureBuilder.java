@@ -40,6 +40,7 @@ class StructureBuilder extends BuilderPackage {
      */
 
     // Internal
+    private StructureManager structureManager;
     private BlockManager blockManager;
     private BiomeManager biomeManager;
 
@@ -70,6 +71,7 @@ class StructureBuilder extends BuilderPackage {
 
     @Override
     protected void get() {
+        this.structureManager = get(StructureManager.class);
         this.blockManager = get(BlockManager.class);
         this.biomeManager = get(BiomeManager.class);
     }
@@ -78,7 +80,7 @@ class StructureBuilder extends BuilderPackage {
 
     StructureHandle build(File file, String structureName) {
 
-        short structureID = RegistryUtility.toShortID(structureName);
+        short structureID = structureManager.registerStructureName(structureName);
         ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
 
         int[] origin = parseOrigin(arpg);
@@ -107,7 +109,7 @@ class StructureBuilder extends BuilderPackage {
         ObjectArrayList<StructureFixedPlacementStruct> fixedPlacements = parseFixedPlacements(arpg, structureName);
 
         StructureData structureData = new StructureData(
-                structureName, structureID,
+                structureName, structureID, RegistryUtility.toNameSeed(structureName),
                 offsetX.toIntArray(), offsetY.toIntArray(), offsetZ.toIntArray(),
                 blockIDs.toShortArray(), blockOrientations.toShortArray(),
                 blockGeometry.toArray(new DynamicGeometryType[0]),

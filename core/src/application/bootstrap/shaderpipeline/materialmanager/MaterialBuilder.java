@@ -16,7 +16,6 @@ import application.bootstrap.shaderpipeline.uniforms.UniformUtility;
 import engine.root.BuilderPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
-import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class MaterialBuilder extends BuilderPackage {
@@ -106,7 +105,7 @@ class MaterialBuilder extends BuilderPackage {
         }
 
         // Construct
-        int materialID = RegistryUtility.toIntID(materialName);
+        int materialID = materialManager.registerMaterialName(materialName);
         MaterialData data = new MaterialData(
                 materialName,
                 materialID,
@@ -116,7 +115,7 @@ class MaterialBuilder extends BuilderPackage {
 
         MaterialHandle handle = create(MaterialHandle.class);
         handle.constructor(data);
-        materialManager.addMaterial(materialName, handle);
+        materialManager.addMaterial(handle);
     }
 
     // Sampler Resolution \\

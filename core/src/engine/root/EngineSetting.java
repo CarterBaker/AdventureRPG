@@ -127,7 +127,12 @@ public class EngineSetting {
     public static final float HALF_TURN_DEGREES = 180f;
     public static final double NOISE_SEAM_BLEND_WAVELENGTHS = 3.0;
     public static final short REGISTRY_RESERVED_ID = 0;
+    public static final int REGISTRY_ID_NONE = -1;
     public static final int REGISTRY_SHORT_ID_COUNT = 0x8000;
+    public static final int REGISTRY_INT_ID_COUNT = Integer.MAX_VALUE;
+    public static final int REGISTRY_ITEM_ID_COUNT = 0x10000;
+    public static final int REGISTRY_ITEM_ID_SHIFT = 16;
+    public static final int REGISTRY_NAME_SEED_MASK = 0x7FFF;
 
     // Engine & Application
     public static final String BIN_DIRECTORY = "bin";
@@ -1035,7 +1040,7 @@ public class EngineSetting {
     public static final int DEFAULT_STRUCTURE_SEPARATION_BLOCKS = 0;
     public static final int DEFAULT_STRUCTURE_Y_OFFSET_BLOCKS = 0;
     public static final long STRUCTURE_CHANCE_SALT = 0x3E9A71C45B0D82F6L;
-    public static final long STRUCTURE_ID_HASH_MULTIPLIER = 0xD6E8FEB86659FD93L;
+    public static final long STRUCTURE_NAME_SEED_MULTIPLIER = 0xD6E8FEB86659FD93L;
     public static final int STRUCTURE_MAX_BLOCK_COUNT = 262144;
     public static final int STRUCTURE_MAX_EXTENT_BLOCKS = 1024;
     public static final long STRUCTURE_OFFSET_X_SALT = 0x5C1F8B2A7E94D063L;

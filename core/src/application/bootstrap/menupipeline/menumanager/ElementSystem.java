@@ -1,6 +1,5 @@
 package application.bootstrap.menupipeline.menumanager;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
@@ -26,22 +25,21 @@ public class ElementSystem extends SystemPackage {
     /*
      * Owns the master element registry and builds runtime element instances,
      * cloning sprite instances for each state and building state children and
-     * overlay roots. Colors are resolved later, each frame, by
-     * MenuRenderSystem.
+     * overlay roots. Master IDs are assigned in registration order. Colors are
+     * resolved later, each frame, by MenuRenderSystem.
      */
 
     private SpriteManager spriteManager;
     private FontManager fontManager;
 
     private Object2IntOpenHashMap<String> masterKey2MasterID;
-    private Int2ObjectOpenHashMap<ElementHandle> masterID2MasterHandle;
+    private ObjectArrayList<ElementHandle> masterID2MasterHandle;
     private ObjectOpenHashSet<String> loadingFiles;
 
     @Override
     protected void create() {
-        this.masterKey2MasterID = new Object2IntOpenHashMap<>();
-        this.masterID2MasterHandle = new Int2ObjectOpenHashMap<>();
-        this.masterKey2MasterID.defaultReturnValue(-1);
+        this.masterKey2MasterID = RegistryUtility.createNameIndex();
+        this.masterID2MasterHandle = RegistryUtility.createPalette();
         this.loadingFiles = new ObjectOpenHashSet<>();
     }
 
@@ -54,18 +52,16 @@ public class ElementSystem extends SystemPackage {
     // Master Registry \\
 
     public boolean hasMaster(String key) {
-        return masterKey2MasterID.containsKey(key);
+        return getMaster(key) != null;
     }
 
     public ElementHandle getMaster(String key) {
-        int id = masterKey2MasterID.getInt(key);
-        return id == -1 ? null : masterID2MasterHandle.get(id);
+        return RegistryUtility.getHandle(masterKey2MasterID, masterID2MasterHandle, key);
     }
 
     public void registerMaster(String key, ElementHandle handle) {
-        int id = RegistryUtility.toIntID(key);
-        masterKey2MasterID.put(key, id);
-        masterID2MasterHandle.put(id, handle);
+        RegistryUtility.registerHandle(
+                masterKey2MasterID, masterID2MasterHandle, key, handle, EngineSetting.REGISTRY_INT_ID_COUNT);
     }
 
     public Iterable<String> getMasterKeys() {

@@ -29,6 +29,7 @@ class BlockPieceBranch extends BranchPackage {
      */
 
     // Internal
+    private ItemDefinitionManager itemDefinitionManager;
     private SubVoxelManager subVoxelManager;
     private MaterialManager materialManager;
 
@@ -38,6 +39,7 @@ class BlockPieceBranch extends BranchPackage {
     protected void get() {
 
         // Internal
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
         this.materialManager = get(MaterialManager.class);
     }
@@ -58,7 +60,7 @@ class BlockPieceBranch extends BranchPackage {
         ItemDefinitionData itemDefinitionData = new ItemDefinitionData(
                 itemName,
                 blockHandle.getLocalName(),
-                ItemRegistryUtility.toItemIntID(itemName),
+                itemDefinitionManager.registerItemName(itemName),
                 blockHandle.getLocalName(),
                 EngineSetting.BLOCK_PIECE_DESCRIPTION,
                 ItemCategory.MATERIAL,

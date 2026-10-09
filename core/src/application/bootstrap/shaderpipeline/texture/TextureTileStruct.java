@@ -19,7 +19,6 @@ public class TextureTileStruct extends AtlasTileData {
      */
 
     // Identity
-    private final int id;
     private final String name;
     private final String atlas;
 
@@ -31,8 +30,7 @@ public class TextureTileStruct extends AtlasTileData {
 
     // Constructor \\
 
-    public TextureTileStruct(int id, String name, String atlas, int aliasCount) {
-        this.id = id;
+    public TextureTileStruct(String name, String atlas, int aliasCount) {
         this.name = name;
         this.atlas = atlas;
         this.imageLayers = new BufferedImage[aliasCount];
@@ -73,10 +71,6 @@ public class TextureTileStruct extends AtlasTileData {
     }
 
     // Accessible \\
-
-    public int getID() {
-        return id;
-    }
 
     public String getName() {
         return name;

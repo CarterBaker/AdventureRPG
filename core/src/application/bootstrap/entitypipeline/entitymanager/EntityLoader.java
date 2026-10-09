@@ -12,7 +12,7 @@ class EntityLoader extends LoaderPackage {
 
     /*
      * Scans the entity template ARPG directory and loads all definitions into
-     * EntityManager. IDs are derived from template names via RegistryUtility.
+     * EntityManager, which assigns each template its ID as it registers.
      * Supports on-demand loading for templates not yet in the palette at runtime.
      */
 

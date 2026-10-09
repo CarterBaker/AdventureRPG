@@ -27,7 +27,6 @@ import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -41,11 +40,11 @@ public class TabManager extends ManagerPackage {
      * content runs isolated, so a crashing tab closes instead of taking the
      * editor down. pushRects() and notifyLayoutChanged() are the single call
      * sites for rect propagation and layout saving and no-op while a batch is
-     * open.
+     * open. Tab IDs are assigned in registration order and never reused.
      */
     // Palette
     private Object2IntOpenHashMap<String> tabName2TabID;
-    private Int2ObjectOpenHashMap<TabHandle> tabID2TabHandle;
+    private ObjectArrayList<TabHandle> tabID2TabHandle;
     // Active
     private ObjectArrayList<TabHandle> openTabs;
     // Counter
@@ -64,9 +63,8 @@ public class TabManager extends ManagerPackage {
     // Internal \\
     @Override
     protected void create() {
-        tabName2TabID = new Object2IntOpenHashMap<>();
-        tabName2TabID.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
-        tabID2TabHandle = new Int2ObjectOpenHashMap<>();
+        tabName2TabID = RegistryUtility.createNameIndex();
+        tabID2TabHandle = RegistryUtility.createPalette();
         openTabs = new ObjectArrayList<>();
         classInstanceCounter = new Object2IntOpenHashMap<>();
         classInstanceCounter.defaultReturnValue(0);
@@ -165,8 +163,10 @@ public class TabManager extends ManagerPackage {
         if (hasTab(title))
             throwException("Tab title collision: " + title);
         // Handle
+        int tabID = RegistryUtility.registerID(
+                tabName2TabID, tabID2TabHandle, title, EngineSetting.REGISTRY_INT_ID_COUNT);
         TabHandle handle = create(TabHandle.class);
-        handle.constructor(new TabData(baseTitle, title, contentClass));
+        handle.constructor(new TabData(baseTitle, title, tabID, contentClass));
         // Chrome window
         WindowInstance tabWindow = windowManager.createLogicalWindow(title, osWindow);
         tabWindow.setCaptureEligible(false);
@@ -184,9 +184,7 @@ public class TabManager extends ManagerPackage {
         tabContext.bringToFront();
         handle.mount(tabContext);
         tabContext.setOwnerHandle(handle);
-        int tabID = RegistryUtility.toIntID(title);
-        tabName2TabID.put(title, tabID);
-        tabID2TabHandle.put(tabID, handle);
+        tabID2TabHandle.set(tabID, handle);
         openTabs.add(handle);
         dockLayoutSystem.addTab(osWindow, handle);
         pushRects();
@@ -225,9 +223,8 @@ public class TabManager extends ManagerPackage {
     public void deregisterTab(TabHandle handle) {
         if (handle == null || !openTabs.contains(handle))
             return;
-        int tabID = getTabIDFromTabName(handle.getTabTitle());
         tabName2TabID.removeInt(handle.getTabTitle());
-        tabID2TabHandle.remove(tabID);
+        tabID2TabHandle.set(handle.getTabID(), null);
         openTabs.remove(handle);
         handle.mount(null);
     }
@@ -367,17 +364,17 @@ public class TabManager extends ManagerPackage {
     }
 
     public boolean hasTab(String name) {
-        return tabName2TabID.containsKey(name);
+        return RegistryUtility.getHandle(tabName2TabID, tabID2TabHandle, name) != null;
     }
 
     public int getTabIDFromTabName(String name) {
-        if (!tabName2TabID.containsKey(name))
+        if (!hasTab(name))
             throwException("Tab name not found: " + name);
         return tabName2TabID.getInt(name);
     }
 
     public TabHandle getTabHandleFromTabID(int id) {
-        TabHandle handle = tabID2TabHandle.get(id);
+        TabHandle handle = RegistryUtility.getHandle(tabID2TabHandle, id);
         if (handle == null)
             throwException("Tab ID not found: " + id);
         return handle;

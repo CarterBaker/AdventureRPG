@@ -72,10 +72,10 @@ public final class StructurePlacementUtility extends EngineUtility {
 
     // Hashing \\
 
-    public static float rollCell(long seed, short structureID, int cellX, int cellZ, long salt) {
+    public static float rollCell(long seed, int nameSeed, int cellX, int cellZ, long salt) {
         return BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
                 seed ^ EngineSetting.STRUCTURE_PLACEMENT_SEED ^ salt
-                        ^ (structureID * EngineSetting.STRUCTURE_ID_HASH_MULTIPLIER),
+                        ^ (nameSeed * EngineSetting.STRUCTURE_NAME_SEED_MULTIPLIER),
                 cellX, cellZ));
     }
 

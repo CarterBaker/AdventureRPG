@@ -34,6 +34,10 @@ public class StructureHandle extends HandlePackage {
         return structureData.getStructureID();
     }
 
+    public int getNameSeed() {
+        return structureData.getNameSeed();
+    }
+
     public int getBlockCount() {
         return structureData.getBlockCount();
     }

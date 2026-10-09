@@ -5,10 +5,11 @@ import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.ibo.IBOInstance;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 public class IBOManager extends ManagerPackage {
@@ -24,8 +25,8 @@ public class IBOManager extends ManagerPackage {
     private MeshManager meshManager;
 
     // Palette
-    private Object2ObjectOpenHashMap<String, IBOHandle> iboName2IBOHandle;
-    private Short2ObjectOpenHashMap<IBOHandle> iboID2IBOHandle;
+    private Object2IntOpenHashMap<String> iboName2IBOID;
+    private ObjectArrayList<IBOHandle> iboID2IBOHandle;
 
     // Base \\
 
@@ -33,8 +34,8 @@ public class IBOManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.iboName2IBOHandle = new Object2ObjectOpenHashMap<>();
-        this.iboID2IBOHandle = new Short2ObjectOpenHashMap<>();
+        this.iboName2IBOID = RegistryUtility.createNameIndex();
+        this.iboID2IBOHandle = RegistryUtility.createPalette();
     }
 
     @Override
@@ -47,11 +48,8 @@ public class IBOManager extends ManagerPackage {
     // Management \\
 
     void registerIBO(String resourceName, IBOHandle handle) {
-
-        short id = RegistryUtility.toShortID(resourceName);
-
-        iboName2IBOHandle.put(resourceName, handle);
-        iboID2IBOHandle.put(id, handle);
+        RegistryUtility.registerHandle(
+                iboName2IBOID, iboID2IBOHandle, resourceName, handle, EngineSetting.REGISTRY_SHORT_ID_COUNT);
     }
 
     public IBOHandle addIBOFromData(
@@ -72,19 +70,19 @@ public class IBOManager extends ManagerPackage {
     // Accessible \\
 
     public boolean hasIBO(String iboName) {
-        return iboName2IBOHandle.containsKey(iboName);
+        return getIBOHandleDirect(iboName) != null;
     }
 
     public short getIBOIDFromIBOName(String iboName) {
 
-        if (!iboName2IBOHandle.containsKey(iboName))
+        if (!hasIBO(iboName))
             meshManager.request(iboName);
 
-        return RegistryUtility.toShortID(iboName);
+        return (short) iboName2IBOID.getInt(iboName);
     }
 
     public IBOHandle getIBOHandleFromIBOID(short iboID) {
-        return iboID2IBOHandle.get(iboID);
+        return RegistryUtility.getHandle(iboID2IBOHandle, iboID);
     }
 
     public IBOHandle getIBOHandleFromIBOName(String iboName) {
@@ -92,7 +90,7 @@ public class IBOManager extends ManagerPackage {
     }
 
     public IBOHandle getIBOHandleDirect(String iboName) {
-        return iboName2IBOHandle.get(iboName);
+        return RegistryUtility.getHandle(iboName2IBOID, iboID2IBOHandle, iboName);
     }
 
     // Runtime \\

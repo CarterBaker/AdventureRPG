@@ -7,8 +7,8 @@ import application.bootstrap.weatherpipeline.util.CloudNoiseUtility;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CloudManager extends ManagerPackage {
 
@@ -23,8 +23,8 @@ public class CloudManager extends ManagerPackage {
     private TextureManager textureManager;
 
     // Palette
-    private Object2ShortOpenHashMap<String> cloudName2CloudID;
-    private Short2ObjectOpenHashMap<CloudHandle> cloudID2CloudHandle;
+    private Object2IntOpenHashMap<String> cloudName2CloudID;
+    private ObjectArrayList<CloudHandle> cloudID2CloudHandle;
 
     // Cloud Type Registry
     private int nextCloudTypeIndex;
@@ -38,9 +38,8 @@ public class CloudManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.cloudName2CloudID = new Object2ShortOpenHashMap<>();
-        this.cloudName2CloudID.defaultReturnValue((short) -1);
-        this.cloudID2CloudHandle = new Short2ObjectOpenHashMap<>();
+        this.cloudName2CloudID = RegistryUtility.createNameIndex();
+        this.cloudID2CloudHandle = RegistryUtility.createPalette();
 
         // Cloud Type Registry
         this.nextCloudTypeIndex = 0;
@@ -70,17 +69,16 @@ public class CloudManager extends ManagerPackage {
 
     // Management \\
 
+    short registerCloudName(String cloudName) {
+        return (short) RegistryUtility.registerID(
+                cloudName2CloudID, cloudID2CloudHandle, cloudName, EngineSetting.REGISTRY_SHORT_ID_COUNT);
+    }
+
     void addCloud(CloudHandle cloudHandle) {
 
-        if (cloudID2CloudHandle.containsKey(cloudHandle.getCloudID())) {
-            CloudHandle existing = cloudID2CloudHandle.get(cloudHandle.getCloudID());
-            if (RegistryUtility.isCollision(cloudHandle.getCloudName(), existing.getCloudName(),
-                    cloudHandle.getCloudID()))
-                throwException("Cloud ID collision: '"
-                        + cloudHandle.getCloudName() + "' collides with '"
-                        + existing.getCloudName() + "' (ID " + cloudHandle.getCloudID()
-                        + ") — rename one cloud to resolve");
-        }
+        if (cloudID2CloudHandle.get(cloudHandle.getCloudID()) != null)
+            throwException("Duplicate cloud name: '" + cloudHandle.getCloudName()
+                    + "' was registered more than once");
 
         if (nextCloudTypeIndex >= EngineSetting.MAX_CLOUD_TYPES)
             throwException("Exceeded EngineSetting.MAX_CLOUD_TYPES (" + EngineSetting.MAX_CLOUD_TYPES
@@ -90,8 +88,7 @@ public class CloudManager extends ManagerPackage {
         cloudHandle.assignCloudTypeIndex(nextCloudTypeIndex);
         nextCloudTypeIndex++;
 
-        cloudName2CloudID.put(cloudHandle.getCloudName(), cloudHandle.getCloudID());
-        cloudID2CloudHandle.put(cloudHandle.getCloudID(), cloudHandle);
+        cloudID2CloudHandle.set(cloudHandle.getCloudID(), cloudHandle);
     }
 
     // On-Demand \\
@@ -103,25 +100,25 @@ public class CloudManager extends ManagerPackage {
     // Accessible \\
 
     public boolean hasCloud(String cloudName) {
-        return cloudName2CloudID.containsKey(cloudName);
+        return RegistryUtility.getHandle(cloudName2CloudID, cloudID2CloudHandle, cloudName) != null;
     }
 
     public short getCloudIDFromCloudName(String cloudName) {
 
-        if (!cloudName2CloudID.containsKey(cloudName))
+        if (!hasCloud(cloudName))
             request(cloudName);
 
-        if (!cloudName2CloudID.containsKey(cloudName))
+        if (!hasCloud(cloudName))
             throwException("Cloud \"" + cloudName + "\" was not registered after its on-demand load completed — "
                     + "the loaded file must declare a different cloud name than the one requested. "
                     + "Check for a resource-name/path mismatch between the cloud directory and its declared name.");
 
-        return cloudName2CloudID.getShort(cloudName);
+        return (short) cloudName2CloudID.getInt(cloudName);
     }
 
     public CloudHandle getCloudHandleFromCloudID(short cloudID) {
 
-        CloudHandle handle = cloudID2CloudHandle.get(cloudID);
+        CloudHandle handle = RegistryUtility.getHandle(cloudID2CloudHandle, cloudID);
 
         if (handle == null)
             throwException("No handle registered for cloud ID: " + cloudID);

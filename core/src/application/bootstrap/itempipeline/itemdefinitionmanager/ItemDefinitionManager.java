@@ -4,6 +4,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -13,10 +14,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ItemDefinitionManager extends ManagerPackage {
 
     /*
-     * Owns the item definition palette for the engine lifetime. Detects and
-     * rejects ID collisions on registration. Supports on-demand loading via
-     * ItemDefinitionLoader for items not yet in the palette at runtime. findItemHandle()
-     * resolves what a person types — a full item name, or a local or display
+     * Owns the item definition palette for the engine lifetime. Items are
+     * indexed in registration order, each ID carrying its index in the upper
+     * 16 bits, and an item name declared twice is rejected. Supports on-demand
+     * loading via ItemDefinitionLoader for items not yet in the palette at
+     * runtime. findItemHandle() resolves what a person types — a full item name, or a local or display
      * name that only one item carries — ignoring case. Block pieces are not
      * loaded from files: getBlockPieceHandle() builds a block's piece through
      * BlockPieceBranch the first time it is needed, and a piece's name
@@ -30,8 +32,8 @@ public class ItemDefinitionManager extends ManagerPackage {
     private BlockPieceBranch blockPieceBranch;
 
     // Palette
-    private Object2IntOpenHashMap<String> itemName2ItemID;
-    private Int2ObjectOpenHashMap<ItemDefinitionHandle> itemID2ItemHandle;
+    private Object2IntOpenHashMap<String> itemName2ItemIndex;
+    private ObjectArrayList<ItemDefinitionHandle> itemIndex2ItemHandle;
     private ObjectArrayList<ItemDefinitionHandle> itemHandles;
     private Int2ObjectOpenHashMap<ItemDefinitionHandle> blockID2BlockPieceHandle;
 
@@ -45,8 +47,8 @@ public class ItemDefinitionManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.itemName2ItemID = new Object2IntOpenHashMap<>();
-        this.itemID2ItemHandle = new Int2ObjectOpenHashMap<>();
+        this.itemName2ItemIndex = RegistryUtility.createNameIndex();
+        this.itemIndex2ItemHandle = RegistryUtility.createPalette();
         this.itemHandles = new ObjectArrayList<>();
         this.blockID2BlockPieceHandle = new Int2ObjectOpenHashMap<>();
         this.blockPieceBranch = create(BlockPieceBranch.class);
@@ -60,21 +62,20 @@ public class ItemDefinitionManager extends ManagerPackage {
 
     // Management \\
 
+    int registerItemName(String itemName) {
+        return ItemRegistryUtility.toItemID(RegistryUtility.registerID(
+                itemName2ItemIndex, itemIndex2ItemHandle, itemName, EngineSetting.REGISTRY_ITEM_ID_COUNT));
+    }
+
     void addItem(ItemDefinitionHandle item) {
 
-        int id = item.getItemID();
+        int itemIndex = ItemRegistryUtility.toItemIndex(item.getItemID());
 
-        if (itemID2ItemHandle.containsKey(id)) {
-            ItemDefinitionHandle existing = itemID2ItemHandle.get(id);
-            if (RegistryUtility.isCollision(item.getItemName(), existing.getItemName(), id))
-                throwException("Item ID collision: '"
-                        + item.getItemName() + "' collides with '"
-                        + existing.getItemName()
-                        + "' (ID " + id + ") — rename one item to resolve");
-        }
+        if (itemIndex2ItemHandle.get(itemIndex) != null)
+            throwException("Duplicate item name: '" + item.getItemName()
+                    + "' is declared more than once — every item name must be unique");
 
-        itemName2ItemID.put(item.getItemName(), id);
-        itemID2ItemHandle.put(id, item);
+        itemIndex2ItemHandle.set(itemIndex, item);
         itemHandles.add(item);
 
         maxReachBefore = Math.max(maxReachBefore, item.getShape().getReachBefore());
@@ -116,28 +117,33 @@ public class ItemDefinitionManager extends ManagerPackage {
 
     // Accessible \\
 
+    private boolean isItemRegistered(String itemName) {
+        return RegistryUtility.getHandle(itemName2ItemIndex, itemIndex2ItemHandle, itemName) != null;
+    }
+
     public boolean hasItem(String itemName) {
 
-        if (!itemName2ItemID.containsKey(itemName) && ItemRegistryUtility.isBlockPieceName(itemName))
+        if (!isItemRegistered(itemName) && ItemRegistryUtility.isBlockPieceName(itemName))
             requestBlockPiece(itemName);
 
-        return itemName2ItemID.containsKey(itemName);
+        return isItemRegistered(itemName);
     }
 
     public int getItemIDFromItemName(String itemName) {
 
-        if (!itemName2ItemID.containsKey(itemName))
+        if (!isItemRegistered(itemName))
             request(itemName);
 
-        if (!itemName2ItemID.containsKey(itemName))
+        if (!isItemRegistered(itemName))
             throwException("Item name not found after request: " + itemName);
 
-        return itemName2ItemID.getInt(itemName);
+        return ItemRegistryUtility.toItemID(itemName2ItemIndex.getInt(itemName));
     }
 
     public ItemDefinitionHandle getItemHandleFromItemID(int itemID) {
 
-        ItemDefinitionHandle item = itemID2ItemHandle.get(itemID);
+        ItemDefinitionHandle item = RegistryUtility.getHandle(
+                itemIndex2ItemHandle, ItemRegistryUtility.toItemIndex(itemID));
 
         if (item == null)
             throwException("Item ID not found: " + itemID);

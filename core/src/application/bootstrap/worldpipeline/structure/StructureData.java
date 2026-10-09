@@ -10,11 +10,13 @@ public class StructureData extends DataPackage {
      * Persistent structure record. Blocks are parallel arrays of origin-relative
      * offsets with names already resolved to ID, orientation, and geometry, so
      * stamping is a straight walk over primitives. Unlisted positions are left
-     * untouched; listed air carves.
+     * untouched; listed air carves. Placement rolls are salted by the name
+     * seed, so a structure lands in the same cells whatever order it loads in.
      */
 
     private final String structureName;
     private final short structureID;
+    private final int nameSeed;
 
     private final int[] blockOffsetX;
     private final int[] blockOffsetY;
@@ -40,6 +42,7 @@ public class StructureData extends DataPackage {
     public StructureData(
             String structureName,
             short structureID,
+            int nameSeed,
             int[] blockOffsetX,
             int[] blockOffsetY,
             int[] blockOffsetZ,
@@ -60,6 +63,7 @@ public class StructureData extends DataPackage {
 
         this.structureName = structureName;
         this.structureID = structureID;
+        this.nameSeed = nameSeed;
 
         this.blockOffsetX = blockOffsetX;
         this.blockOffsetY = blockOffsetY;
@@ -89,6 +93,10 @@ public class StructureData extends DataPackage {
 
     public short getStructureID() {
         return structureID;
+    }
+
+    public int getNameSeed() {
+        return nameSeed;
     }
 
     public int getBlockCount() {

@@ -1,23 +1,25 @@
 package application.bootstrap.itempipeline.tooltypemanager;
 
 import application.bootstrap.itempipeline.tooltype.ToolTypeHandle;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ToolTypeManager extends ManagerPackage {
 
     /*
-     * Owns the tool type palette for the engine lifetime. Detects and rejects
-     * ID collisions on registration. Supports on-demand loading via
-     * ToolTypeLoader for tool types not yet in the palette at runtime.
-     * TOOL_NONE (0) is a reserved sentinel meaning no tool required.
+     * Owns the tool type palette for the engine lifetime, assigning IDs in
+     * registration order and rejecting a tool type name declared twice.
+     * Supports on-demand loading via ToolTypeLoader for tool types not yet in
+     * the palette at runtime. TOOL_NONE (0) is the reserved sentinel meaning
+     * no tool required.
      */
 
     // Palette
-    private Object2ShortOpenHashMap<String> toolTypeName2ToolTypeID;
-    private Short2ObjectOpenHashMap<ToolTypeHandle> toolTypeID2ToolTypeHandle;
+    private Object2IntOpenHashMap<String> toolTypeName2ToolTypeID;
+    private ObjectArrayList<ToolTypeHandle> toolTypeID2ToolTypeHandle;
 
     // Base \\
 
@@ -25,50 +27,50 @@ public class ToolTypeManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.toolTypeName2ToolTypeID = new Object2ShortOpenHashMap<>();
-        this.toolTypeID2ToolTypeHandle = new Short2ObjectOpenHashMap<>();
+        this.toolTypeName2ToolTypeID = RegistryUtility.createNameIndex();
+        this.toolTypeID2ToolTypeHandle = RegistryUtility.createPalette();
         create(ToolTypeLoader.class);
     }
 
     // Management \\
 
+    short registerToolTypeName(String toolTypeName) {
+        return (short) RegistryUtility.registerID(
+                toolTypeName2ToolTypeID, toolTypeID2ToolTypeHandle, toolTypeName,
+                EngineSetting.REGISTRY_SHORT_ID_COUNT);
+    }
+
     void addToolType(ToolTypeHandle tool) {
 
         short id = tool.getToolTypeID();
 
-        if (toolTypeID2ToolTypeHandle.containsKey(id)) {
-            ToolTypeHandle existing = toolTypeID2ToolTypeHandle.get(id);
-            if (RegistryUtility.isCollision(
-                    tool.getToolTypeName(),
-                    existing.getToolTypeName(),
-                    id))
-                throwException("ToolType ID collision: '"
-                        + tool.getToolTypeName() + "' collides with '"
-                        + existing.getToolTypeName()
-                        + "' (ID " + id + ") — rename one to resolve");
-        }
+        if (toolTypeID2ToolTypeHandle.get(id) != null)
+            throwException("Duplicate tool type name: '" + tool.getToolTypeName()
+                    + "' is declared more than once — every tool type name must be unique");
 
-        toolTypeName2ToolTypeID.put(tool.getToolTypeName(), id);
-        toolTypeID2ToolTypeHandle.put(id, tool);
+        toolTypeID2ToolTypeHandle.set(id, tool);
     }
 
     // Accessible \\
 
     public boolean hasToolType(String toolTypeName) {
-        return toolTypeName2ToolTypeID.containsKey(toolTypeName);
+        return RegistryUtility.getHandle(toolTypeName2ToolTypeID, toolTypeID2ToolTypeHandle, toolTypeName) != null;
     }
 
     public short getToolTypeIDFromToolTypeName(String toolTypeName) {
 
-        if (!toolTypeName2ToolTypeID.containsKey(toolTypeName))
+        if (!hasToolType(toolTypeName))
             request(toolTypeName);
 
-        return toolTypeName2ToolTypeID.getShort(toolTypeName);
+        if (!hasToolType(toolTypeName))
+            throwException("ToolType not found after load: \"" + toolTypeName + "\"");
+
+        return (short) toolTypeName2ToolTypeID.getInt(toolTypeName);
     }
 
     public ToolTypeHandle getToolTypeHandleFromToolTypeID(short toolTypeID) {
 
-        ToolTypeHandle handle = toolTypeID2ToolTypeHandle.get(toolTypeID);
+        ToolTypeHandle handle = RegistryUtility.getHandle(toolTypeID2ToolTypeHandle, toolTypeID);
 
         if (handle == null)
             throwException("ToolType ID not found: " + toolTypeID);

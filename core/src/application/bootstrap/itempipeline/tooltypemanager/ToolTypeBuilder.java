@@ -9,16 +9,25 @@ import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class ToolTypeBuilder extends BuilderPackage {
 
     /*
      * Parses tool type ARPG files and builds ToolTypeHandle instances. Each
-     * ARPG file may contain multiple tool entries under a 'tools' array.
-     * Bootstrap-only.
+     * ARPG file may contain multiple tool entries under a 'tools' array, each
+     * under the ID ToolTypeManager assigns its name. Bootstrap-only.
      */
+
+    // Internal
+    private ToolTypeManager toolTypeManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.toolTypeManager = get(ToolTypeManager.class);
+    }
 
     // Build \\
 
@@ -45,7 +54,7 @@ class ToolTypeBuilder extends BuilderPackage {
 
         String localName = ArpgUtility.validateString(toolArpg, "name");
         String toolTypeName = pathPrefix + "/" + localName;
-        short toolTypeID = RegistryUtility.toShortID(toolTypeName);
+        short toolTypeID = toolTypeManager.registerToolTypeName(toolTypeName);
         String defaultModelPath = ArpgUtility.getString(toolArpg, "model", "");
 
         ToolTypeData toolTypeData = new ToolTypeData(toolTypeName, localName, toolTypeID, defaultModelPath);

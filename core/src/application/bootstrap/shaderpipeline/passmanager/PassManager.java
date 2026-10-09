@@ -6,27 +6,30 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.pass.PassData;
 import application.bootstrap.shaderpipeline.pass.PassHandle;
 import application.bootstrap.shaderpipeline.pass.PassInstance;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class PassManager extends ManagerPackage {
 
     /*
-     * Owns the full-screen pass palette. Each pass pairs a quad model with its
-     * material, loaded on demand on a miss.
+     * Owns the full-screen pass palette, with IDs assigned in registration
+     * order. Each pass pairs a quad model with its material, loaded on demand
+     * on a miss.
      */
 
     private MaterialManager materialManager;
 
     private Object2IntOpenHashMap<String> passName2PassID;
-    private Int2ObjectOpenHashMap<PassHandle> passID2PassHandle;
+    private ObjectArrayList<PassHandle> passID2PassHandle;
 
     @Override
     protected void create() {
 
-        this.passName2PassID = new Object2IntOpenHashMap<>();
-        this.passID2PassHandle = new Int2ObjectOpenHashMap<>();
+        this.passName2PassID = RegistryUtility.createNameIndex();
+        this.passID2PassHandle = RegistryUtility.createPalette();
 
         create(PassLoader.class);
     }
@@ -36,9 +39,13 @@ public class PassManager extends ManagerPackage {
         this.materialManager = get(MaterialManager.class);
     }
 
+    int registerPassName(String passName) {
+        return RegistryUtility.registerID(
+                passName2PassID, passID2PassHandle, passName, EngineSetting.REGISTRY_INT_ID_COUNT);
+    }
+
     void addPassHandle(PassHandle handle) {
-        passName2PassID.put(handle.getPassName(), handle.getPassID());
-        passID2PassHandle.put(handle.getPassID(), handle);
+        passID2PassHandle.set(handle.getPassID(), handle);
     }
 
     public void request(String passName) {
@@ -46,12 +53,12 @@ public class PassManager extends ManagerPackage {
     }
 
     public boolean hasPass(String passName) {
-        return passName2PassID.containsKey(passName);
+        return RegistryUtility.getHandle(passName2PassID, passID2PassHandle, passName) != null;
     }
 
     public int getPassIDFromPassName(String passName) {
 
-        if (!passName2PassID.containsKey(passName))
+        if (!hasPass(passName))
             request(passName);
 
         return passName2PassID.getInt(passName);
@@ -59,7 +66,7 @@ public class PassManager extends ManagerPackage {
 
     public PassHandle getPassHandleFromPassID(int passID) {
 
-        PassHandle handle = passID2PassHandle.get(passID);
+        PassHandle handle = RegistryUtility.getHandle(passID2PassHandle, passID);
 
         if (handle == null)
             throwException("Pass ID not found: " + passID);

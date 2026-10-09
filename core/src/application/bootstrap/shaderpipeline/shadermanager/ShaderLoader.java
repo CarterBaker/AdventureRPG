@@ -13,7 +13,6 @@ import application.bootstrap.shaderpipeline.uniforms.UniformUtility;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
-import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -136,7 +135,7 @@ class ShaderLoader extends LoaderPackage {
 
     private ShaderHandle assembleShader(ShaderSourceStruct assembly) {
 
-        int shaderID = RegistryUtility.toIntID(assembly.getShaderName());
+        int shaderID = shaderManager.registerShaderName(assembly.getShaderName());
         int gpuHandle = ShaderGLSLUtility.createShaderProgram(assembly);
 
         boolean usesTessellation = assembly.getTCS() != null && assembly.getTES() != null;

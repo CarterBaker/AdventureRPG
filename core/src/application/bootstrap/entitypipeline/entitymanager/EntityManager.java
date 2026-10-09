@@ -10,11 +10,12 @@ import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EntityManager extends ManagerPackage {
 
@@ -38,7 +39,7 @@ public class EntityManager extends ManagerPackage {
 
     // Palette
     private Object2IntOpenHashMap<String> templateName2TemplateID;
-    private Int2ObjectOpenHashMap<EntityHandle> templateID2EntityHandle;
+    private ObjectArrayList<EntityHandle> templateID2EntityHandle;
 
     // Base \\
 
@@ -46,8 +47,8 @@ public class EntityManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.templateName2TemplateID = new Object2IntOpenHashMap<>();
-        this.templateID2EntityHandle = new Int2ObjectOpenHashMap<>();
+        this.templateName2TemplateID = RegistryUtility.createNameIndex();
+        this.templateID2EntityHandle = RegistryUtility.createPalette();
         create(EntityLoader.class);
     }
 
@@ -64,22 +65,20 @@ public class EntityManager extends ManagerPackage {
     // Management \\
 
     void addEntityTemplate(String templateName, EntityHandle entityHandle) {
-
-        int id = RegistryUtility.toIntID(templateName);
-
-        templateName2TemplateID.put(templateName, id);
-        templateID2EntityHandle.put(id, entityHandle);
+        RegistryUtility.registerHandle(
+                templateName2TemplateID, templateID2EntityHandle, templateName, entityHandle,
+                EngineSetting.REGISTRY_INT_ID_COUNT);
     }
 
     // Accessible \\
 
     public boolean hasTemplate(String templateName) {
-        return templateName2TemplateID.containsKey(templateName);
+        return RegistryUtility.getHandle(templateName2TemplateID, templateID2EntityHandle, templateName) != null;
     }
 
     public int getTemplateIDFromTemplateName(String templateName) {
 
-        if (!templateName2TemplateID.containsKey(templateName))
+        if (!hasTemplate(templateName))
             ((EntityLoader) internalLoader).request(templateName);
 
         return templateName2TemplateID.getInt(templateName);
@@ -87,7 +86,7 @@ public class EntityManager extends ManagerPackage {
 
     public EntityHandle getEntityHandleFromTemplateID(int templateID) {
 
-        EntityHandle handle = templateID2EntityHandle.get(templateID);
+        EntityHandle handle = RegistryUtility.getHandle(templateID2EntityHandle, templateID);
 
         if (handle == null)
             throwException("Entity template ID not found: " + templateID);

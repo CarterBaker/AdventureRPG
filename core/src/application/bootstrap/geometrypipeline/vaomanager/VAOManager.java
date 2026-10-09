@@ -7,15 +7,16 @@ import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
 public class VAOManager extends ManagerPackage {
 
@@ -35,8 +36,8 @@ public class VAOManager extends ManagerPackage {
     private WindowManager windowManager;
 
     // Palette
-    private Object2ObjectOpenHashMap<String, VAOHandle> vaoName2VAOHandle;
-    private Short2ObjectOpenHashMap<VAOHandle> vaoID2VAOHandle;
+    private Object2IntOpenHashMap<String> vaoName2VAOID;
+    private ObjectArrayList<VAOHandle> vaoID2VAOHandle;
 
     // Runtime Window Cache — sourceVAO -> (windowID -> clonedVAO)
     private Int2ObjectOpenHashMap<Int2IntOpenHashMap> sourceVAO2WindowClones;
@@ -47,8 +48,8 @@ public class VAOManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.vaoName2VAOHandle = new Object2ObjectOpenHashMap<>();
-        this.vaoID2VAOHandle = new Short2ObjectOpenHashMap<>();
+        this.vaoName2VAOID = RegistryUtility.createNameIndex();
+        this.vaoID2VAOHandle = RegistryUtility.createPalette();
 
         // Runtime Window Cache
         this.sourceVAO2WindowClones = new Int2ObjectOpenHashMap<>();
@@ -65,29 +66,26 @@ public class VAOManager extends ManagerPackage {
     // Management \\
 
     void registerVAO(String resourceName, VAOHandle handle) {
-
-        short id = RegistryUtility.toShortID(resourceName);
-
-        vaoName2VAOHandle.put(resourceName, handle);
-        vaoID2VAOHandle.put(id, handle);
+        RegistryUtility.registerHandle(
+                vaoName2VAOID, vaoID2VAOHandle, resourceName, handle, EngineSetting.REGISTRY_SHORT_ID_COUNT);
     }
 
     // Accessible \\
 
     public boolean hasVAO(String vaoName) {
-        return vaoName2VAOHandle.containsKey(vaoName);
+        return getVAOHandleDirect(vaoName) != null;
     }
 
     public short getVAOIDFromVAOName(String vaoName) {
 
-        if (!vaoName2VAOHandle.containsKey(vaoName))
+        if (!hasVAO(vaoName))
             meshManager.request(vaoName);
 
-        return RegistryUtility.toShortID(vaoName);
+        return (short) vaoName2VAOID.getInt(vaoName);
     }
 
     public VAOHandle getVAOHandleFromVAOID(short vaoID) {
-        return vaoID2VAOHandle.get(vaoID);
+        return RegistryUtility.getHandle(vaoID2VAOHandle, vaoID);
     }
 
     public VAOHandle getVAOHandleFromVAOName(String vaoName) {
@@ -95,7 +93,7 @@ public class VAOManager extends ManagerPackage {
     }
 
     public VAOHandle getVAOHandleDirect(String vaoName) {
-        return vaoName2VAOHandle.get(vaoName);
+        return RegistryUtility.getHandle(vaoName2VAOID, vaoID2VAOHandle, vaoName);
     }
 
     // Instance Management \\

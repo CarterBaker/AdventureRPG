@@ -62,6 +62,14 @@ When in doubt, find the closest existing system and mirror it exactly.
 - **Data-driven content** lives in `.arpg` files and goes through the Loader/Builder pattern, with every read,
   write and validation routed through `ArpgUtility` (see **ARPG Data Files**). There is no Gson and no JSON
   library; never add one.
+- **Registry IDs are assigned, never hashed.** A manager owns a `name2ID` map (`RegistryUtility.createNameIndex()`)
+  and an `ID2Handle` `ObjectArrayList` palette (`RegistryUtility.createPalette()`, slot 0 reserved as the sentinel).
+  IDs come only from `RegistryUtility.registerID` / `registerHandle`, in registration order, at load time (bootstrap
+  batch or on-demand request; never at scan, never eagerly). Builders get their ID from the manager's
+  `registerXName(name)`; lookups go through `RegistryUtility.getHandle`. Resolve a name once, cache the int ID, and
+  index by ID afterwards. Names are the only uniqueness requirement; a duplicate name is an error. IDs differ between
+  runs, so never persist an ID (saves store names) and never seed anything with one: world generation salts its
+  noise with `RegistryUtility.toNameSeed(name)`. Items keep their index in the upper 16 bits (`ItemRegistryUtility`).
 - **No raw `Thread` usage.** Async work goes through the thread pipeline.
 - **Errors use `throwException(...)`** with a clear, specific message. Logging uses the `UtilityPackage` helpers.
 - **Collections** use fastutil (`Object2ObjectOpenHashMap`, `ObjectArrayList`, `Int2ObjectOpenHashMap`, etc.),

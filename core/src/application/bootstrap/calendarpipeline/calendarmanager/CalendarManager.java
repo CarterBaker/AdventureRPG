@@ -1,22 +1,23 @@
 package application.bootstrap.calendarpipeline.calendarmanager;
 
 import application.bootstrap.calendarpipeline.calendar.CalendarHandle;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CalendarManager extends ManagerPackage {
 
     /*
      * Owns the calendar palette for the engine lifetime. Supports on-demand
      * loading via CalendarLoader on a cache miss. Keyed by full calendar name
-     * e.g. "standard/Overworld".
+     * e.g. "standard/Overworld", with IDs assigned in registration order.
      */
 
     // Palette
-    private Object2ObjectOpenHashMap<String, CalendarHandle> calendarName2CalendarHandle;
-    private Short2ObjectOpenHashMap<CalendarHandle> calendarID2CalendarHandle;
+    private Object2IntOpenHashMap<String> calendarName2CalendarID;
+    private ObjectArrayList<CalendarHandle> calendarID2CalendarHandle;
 
     // Base \\
 
@@ -24,51 +25,42 @@ public class CalendarManager extends ManagerPackage {
     protected void create() {
 
         // Palette
-        this.calendarName2CalendarHandle = new Object2ObjectOpenHashMap<>();
-        this.calendarID2CalendarHandle = new Short2ObjectOpenHashMap<>();
+        this.calendarName2CalendarID = RegistryUtility.createNameIndex();
+        this.calendarID2CalendarHandle = RegistryUtility.createPalette();
         create(CalendarLoader.class);
     }
 
     // Management \\
 
     void addCalendarHandle(CalendarHandle calendarHandle) {
-
-        short id = RegistryUtility.toShortID(calendarHandle.getCalendarName());
-
-        calendarName2CalendarHandle.put(calendarHandle.getCalendarName(), calendarHandle);
-        calendarID2CalendarHandle.put(id, calendarHandle);
+        RegistryUtility.registerHandle(
+                calendarName2CalendarID, calendarID2CalendarHandle,
+                calendarHandle.getCalendarName(), calendarHandle,
+                EngineSetting.REGISTRY_SHORT_ID_COUNT);
     }
 
     // Accessible \\
 
     public boolean hasCalendar(String calendarName) {
-        return calendarName2CalendarHandle.containsKey(calendarName);
+        return RegistryUtility.getHandle(calendarName2CalendarID, calendarID2CalendarHandle, calendarName) != null;
     }
 
     public short getCalendarIDFromCalendarName(String calendarName) {
 
-        if (!calendarName2CalendarHandle.containsKey(calendarName))
+        if (!hasCalendar(calendarName))
             ((CalendarLoader) internalLoader).request(calendarName);
 
-        return RegistryUtility.toShortID(calendarName);
+        if (!hasCalendar(calendarName))
+            throwException("[CalendarManager] Calendar could not be loaded: \"" + calendarName + "\"");
+
+        return (short) calendarName2CalendarID.getInt(calendarName);
     }
 
     public CalendarHandle getCalendarHandleFromCalendarID(short calendarID) {
-        return calendarID2CalendarHandle.get(calendarID);
+        return RegistryUtility.getHandle(calendarID2CalendarHandle, calendarID);
     }
 
     public CalendarHandle getCalendarHandleFromCalendarName(String calendarName) {
-
-        CalendarHandle handle = calendarName2CalendarHandle.get(calendarName);
-
-        if (handle == null) {
-            ((CalendarLoader) internalLoader).request(calendarName);
-            handle = calendarName2CalendarHandle.get(calendarName);
-        }
-
-        if (handle == null)
-            throwException("[CalendarManager] Calendar could not be loaded: \"" + calendarName + "\"");
-
-        return handle;
+        return getCalendarHandleFromCalendarID(getCalendarIDFromCalendarName(calendarName));
     }
 }
