@@ -188,6 +188,8 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_MESSAGE_BIOME_LIVE = "Biome live: ";
     public static final String WORLD_EDITOR_MESSAGE_BIOME_REFUSED = "Biome not applied: ";
     public static final String WORLD_EDITOR_MESSAGE_BIOME_RETIRED = "Biome retired: ";
+    public static final String WORLD_EDITOR_MESSAGE_TREE_LIVE = "Tree live: ";
+    public static final String WORLD_EDITOR_MESSAGE_TREE_REFUSED = "Tree not applied: ";
 
     // Item Library
     public static final String ITEM_EDITOR_MESH_DIRECTORY = "items";
@@ -199,6 +201,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_PATH = "schemas";
     public static final String INFO_SCHEMA_BIOMES = "Biomes";
     public static final String INFO_SCHEMA_ITEMS = "Items";
+    public static final String INFO_SCHEMA_TREES = "Trees";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";

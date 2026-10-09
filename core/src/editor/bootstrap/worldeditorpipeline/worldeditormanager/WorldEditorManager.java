@@ -28,7 +28,8 @@ public class WorldEditorManager extends ManagerPackage {
      * Dev terrain it reaches once the edits settle; the palette follows every
      * live biome rebuild. Biome edits from the Info Panel reach the engine, and
      * biome selection stays in step with the hierarchy, through
-     * WorldBiomeBranch.
+     * WorldBiomeBranch, and tree species edits reach it through
+     * WorldTreeBranch.
      */
 
     // Internal
@@ -67,6 +68,7 @@ public class WorldEditorManager extends ManagerPackage {
 
         // Internal
         this.worldBiomeBranch = create(WorldBiomeBranch.class);
+        create(WorldTreeBranch.class);
 
         // Palette
         this.palette = new ObjectArrayList<>();

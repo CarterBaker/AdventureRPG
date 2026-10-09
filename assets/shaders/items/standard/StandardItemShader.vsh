@@ -16,13 +16,17 @@ const vec3 NORMALS[6] = vec3[](
 
 out vec3 vNormalView;
 out vec3 vViewPosition;
-out vec2 vUV;
+out vec2 vUVOrigin;
+out vec3 vModelPosition;
+flat out int vFace;
 
 void main() {
     mat4 R      = u_rotations[int(aInstance1.y)];
     vec3 rotPos = (R * vec4(aPos - vec3(0.5), 1.0)).xyz + vec3(0.5);
     vNormalView = normalize(mat3(u_view) * (mat3(R) * NORMALS[int(aNorIndex)]));
-    vUV         = aUV;
+    vUVOrigin      = aUV;
+    vModelPosition = aPos;
+    vFace          = int(aNorIndex);
 
     int chunkX = floatBitsToInt(aInstance0.x);
     int chunkZ = floatBitsToInt(aInstance0.y);

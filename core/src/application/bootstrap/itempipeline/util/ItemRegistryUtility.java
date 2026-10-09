@@ -20,6 +20,10 @@ public class ItemRegistryUtility extends EngineUtility {
         return definitionName + "/" + localName;
     }
 
+    public static String toDefinitionName(String itemName) {
+        return itemName.substring(0, Math.max(itemName.lastIndexOf('/'), 0));
+    }
+
     public static String toBlockPieceName(String blockName) {
         return EngineSetting.BLOCK_PIECE_NAME_PREFIX + blockName;
     }

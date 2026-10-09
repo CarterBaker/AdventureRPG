@@ -166,4 +166,12 @@ public class ItemDefinitionHandle extends HandlePackage {
     public String getPickUpAsName() {
         return itemDefinitionData.getPickUpAsName();
     }
+
+    public boolean isSeed() {
+        return itemDefinitionData.isSeed();
+    }
+
+    public String getPlantsTreeName() {
+        return itemDefinitionData.getPlantsTreeName();
+    }
 }

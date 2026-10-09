@@ -5,10 +5,10 @@ import engine.root.DataPackage;
 public class ToolTypeData extends DataPackage {
 
     /*
-     * Immutable tool type definition loaded from ARPG. Holds identity and
+     * Immutable tool type definition loaded from ARPG. Holds identity, the
      * default model path for one tool type — the mesh a tool item of this
-     * type is drawn with unless it names its own. Owned by ToolTypeHandle
-     * for the engine lifetime.
+     * type is drawn with unless it names its own — and how the tool is swung.
+     * Owned by ToolTypeHandle for the engine lifetime.
      */
 
     // Identity
@@ -19,13 +19,17 @@ public class ToolTypeData extends DataPackage {
     // Model
     private final String defaultModelPath;
 
+    // Swing
+    private final ToolSwing swing;
+
     // Constructor \\
 
     public ToolTypeData(
             String toolTypeName,
             String localName,
             short toolTypeID,
-            String defaultModelPath) {
+            String defaultModelPath,
+            ToolSwing swing) {
 
         // Identity
         this.toolTypeName = toolTypeName;
@@ -34,6 +38,9 @@ public class ToolTypeData extends DataPackage {
 
         // Model
         this.defaultModelPath = defaultModelPath;
+
+        // Swing
+        this.swing = swing;
     }
 
     // Accessible \\
@@ -52,5 +59,9 @@ public class ToolTypeData extends DataPackage {
 
     public String getDefaultModelPath() {
         return defaultModelPath;
+    }
+
+    public ToolSwing getSwing() {
+        return swing;
     }
 }

@@ -80,7 +80,8 @@ class BlockPieceBranch extends BranchPackage {
                 EngineSetting.BLOCK_PIECE_STACK_SIZE,
                 blockHandle.getBlockID(),
                 new ObjectArrayList<>(),
-                EngineSetting.ITEM_PICK_UP_AS_SELF);
+                EngineSetting.ITEM_PICK_UP_AS_SELF,
+                EngineSetting.ITEM_PLANTS_NONE);
 
         ItemDefinitionHandle item = create(ItemDefinitionHandle.class);
         item.constructor(itemDefinitionData);

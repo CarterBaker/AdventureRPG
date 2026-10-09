@@ -5,9 +5,11 @@ import application.bootstrap.worldpipeline.biome.BiomeCliffStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCoastStruct;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeRidgeStruct;
+import application.bootstrap.worldpipeline.biome.BiomeTreeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.biome.ProbableBiomePlacement;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
+import application.bootstrap.worldpipeline.tree.TreeDistribution;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
@@ -30,7 +32,7 @@ class BiomeArpgUtility extends EngineUtility {
      * surface and rock blocks, ocean, still water and beach settings, the
      * optional terrain shape splines and detail controls, each falling back
      * to TerrainShapeUtility's defaults, and the optional cliffs, ridges,
-     * coast, caves and veins. A malformed field throws a
+     * coast, caves, veins and trees. A malformed field throws a
      * catchable InternalException naming the biome, so BiomeBuilder fails the
      * boot on it while a live rebuild from the editor reports it and keeps the
      * biome it already had.
@@ -98,6 +100,7 @@ class BiomeArpgUtility extends EngineUtility {
         BiomeCoastStruct coast = parseCoast(biomeArpg, biomeName, oceanWater);
         BiomeCaveStruct caves = parseCaves(biomeArpg, biomeName);
         ObjectArrayList<BiomeVeinStruct> veins = parseVeins(biomeArpg, biomeName);
+        ObjectArrayList<BiomeTreeStruct> trees = parseTrees(biomeArpg, biomeName);
 
         return new BiomeData(
                 biomeName, displayName, biomeID, Color.WHITE,
@@ -106,7 +109,7 @@ class BiomeArpgUtility extends EngineUtility {
                 surfaceBlockName, subsurfaceBlockName, underwaterBlockName, rockBlockName, rockSlope,
                 continentalnessSpline, erosionSpline, peaksValleysSpline,
                 detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale,
-                cliffs, ridges, coast, caves, veins,
+                cliffs, ridges, coast, caves, veins, trees,
                 oceanWater, waterLevelBlocks, beachBiomeName);
     }
 
@@ -484,6 +487,91 @@ class BiomeArpgUtility extends EngineUtility {
             veins.add(parseVein(element.getAsObject(), biomeName));
 
         return veins;
+    }
+
+    // Trees \\
+
+    private static ObjectArrayList<BiomeTreeStruct> parseTrees(ArpgObjectStruct biomeArpg, String biomeName) {
+
+        ObjectArrayList<BiomeTreeStruct> trees = new ObjectArrayList<>();
+
+        if (!biomeArpg.has("trees"))
+            return trees;
+
+        ArpgArrayStruct treeArray = biomeArpg.getAsArray("trees");
+
+        if (treeArray.size() > EngineSetting.BIOME_MAX_TREE_KINDS)
+            throw fail(biomeName, "declares " + treeArray.size() + " \"trees\" — no more than "
+                    + EngineSetting.BIOME_MAX_TREE_KINDS + " are allowed.");
+
+        for (ArpgElementStruct element : treeArray)
+            trees.add(parseTree(element.getAsObject(), biomeName));
+
+        return trees;
+    }
+
+    private static BiomeTreeStruct parseTree(ArpgObjectStruct treeArpg, String biomeName) {
+
+        String treeName = requireString(treeArpg, "tree", biomeName, "trees");
+        String distributionName = ArpgUtility.getString(
+                treeArpg, "distribution", EngineSetting.DEFAULT_BIOME_TREE_DISTRIBUTION);
+        TreeDistribution distribution = null;
+
+        for (TreeDistribution candidate : TreeDistribution.values())
+            if (candidate.name().equalsIgnoreCase(distributionName))
+                distribution = candidate;
+
+        if (distribution == null)
+            throw fail(biomeName, "\"trees\" entry \"" + treeName + "\" has unknown \"distribution\" \""
+                    + distributionName + "\".");
+
+        int spacingBlocks = ArpgUtility.getInt(
+                treeArpg, "spacing_blocks", EngineSetting.DEFAULT_BIOME_TREE_SPACING_BLOCKS);
+        float chance = ArpgUtility.getFloat(treeArpg, "chance", EngineSetting.DEFAULT_BIOME_TREE_CHANCE);
+        float clusterRadiusBlocks = ArpgUtility.getFloat(
+                treeArpg, "cluster_radius_blocks", EngineSetting.DEFAULT_BIOME_TREE_CLUSTER_RADIUS_BLOCKS);
+        int minClusterTrees = EngineSetting.DEFAULT_BIOME_TREE_MIN_CLUSTER_TREES;
+        int maxClusterTrees = EngineSetting.DEFAULT_BIOME_TREE_MAX_CLUSTER_TREES;
+        float patchWavelengthBlocks = ArpgUtility.getFloat(
+                treeArpg, "patch_wavelength_blocks", EngineSetting.DEFAULT_BIOME_TREE_PATCH_WAVELENGTH_BLOCKS);
+        float patchCoverage = ArpgUtility.getFloat(
+                treeArpg, "patch_coverage", EngineSetting.DEFAULT_BIOME_TREE_PATCH_COVERAGE);
+
+        if (ArpgUtility.hasArray(treeArpg, "cluster_trees")) {
+
+            ArpgArrayStruct clusterTrees = treeArpg.getAsArray("cluster_trees");
+
+            if (clusterTrees.size() != 2)
+                throw fail(biomeName, "\"trees\" entry \"" + treeName + "\" \"cluster_trees\" must be a "
+                        + "[min, max] pair.");
+
+            minClusterTrees = clusterTrees.get(0).getAsInt();
+            maxClusterTrees = clusterTrees.get(1).getAsInt();
+        }
+
+        if (spacingBlocks < EngineSetting.BIOME_MIN_TREE_SPACING_BLOCKS)
+            throw fail(biomeName, "\"trees\" entry \"" + treeName + "\" must have \"spacing_blocks\" of at least "
+                    + EngineSetting.BIOME_MIN_TREE_SPACING_BLOCKS + ".");
+
+        requireUnit(chance, biomeName, "trees", "chance");
+        requireUnit(patchCoverage, biomeName, "trees", "patch_coverage");
+
+        if (clusterRadiusBlocks < 0f || clusterRadiusBlocks > EngineSetting.BIOME_MAX_TREE_CLUSTER_RADIUS_BLOCKS)
+            throw fail(biomeName, "\"trees\" entry \"" + treeName + "\" must have \"cluster_radius_blocks\" from 0 to "
+                    + EngineSetting.BIOME_MAX_TREE_CLUSTER_RADIUS_BLOCKS + ".");
+
+        if (minClusterTrees < 1 || maxClusterTrees < minClusterTrees
+                || maxClusterTrees > EngineSetting.BIOME_MAX_CLUSTER_TREES)
+            throw fail(biomeName, "\"trees\" entry \"" + treeName + "\" \"cluster_trees\" must run from 1 up to "
+                    + EngineSetting.BIOME_MAX_CLUSTER_TREES + ", its maximum no lower than its minimum.");
+
+        if (patchWavelengthBlocks <= 0f)
+            throw fail(biomeName, "\"trees\" entry \"" + treeName + "\" must have \"patch_wavelength_blocks\" "
+                    + "greater than 0.");
+
+        return new BiomeTreeStruct(
+                treeName, distribution, spacingBlocks, chance, clusterRadiusBlocks,
+                minClusterTrees, maxClusterTrees, patchWavelengthBlocks, patchCoverage);
     }
 
     private static BiomeVeinStruct parseVein(ArpgObjectStruct veinArpg, String biomeName) {

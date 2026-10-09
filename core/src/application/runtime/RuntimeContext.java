@@ -12,6 +12,7 @@ import application.runtime.projectile.ProjectileSystem;
 import application.runtime.recording.RecordingInputSystem;
 import application.runtime.sky.SkySystem;
 import application.runtime.sky.SquintSystem;
+import application.runtime.tree.TreeSystem;
 import application.runtime.vehicle.VehicleSystem;
 import application.runtime.weather.PrecipitationSystem;
 import application.runtime.water.WaterSystem;
@@ -48,6 +49,7 @@ public class RuntimeContext extends ContextPackage {
     private InventoryRenderSystem inventoryRenderSystem;
     private ProjectileSystem projectileSystem;
     private VehicleSystem vehicleSystem;
+    private TreeSystem treeSystem;
 
     // Internal \\
 
@@ -72,5 +74,6 @@ public class RuntimeContext extends ContextPackage {
         this.inventoryRenderSystem = create(InventoryRenderSystem.class);
         this.projectileSystem = create(ProjectileSystem.class);
         this.vehicleSystem = create(VehicleSystem.class);
+        this.treeSystem = create(TreeSystem.class);
     }
 }

@@ -5,6 +5,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
@@ -16,8 +17,9 @@ public class GenerationBranch extends BranchPackage {
     /*
      * Async — generates a chunk on the WorldStreaming thread. computeColumn()
      * resolves the column once and caches it per chunk, every subchunk then
-     * generates from it, StructureManager stamps overlapping structures, and
-     * the tide surface is recorded. Sets LOAD_DATA, ESSENTIAL_DATA and
+     * generates from it, StructureManager stamps overlapping structures,
+     * TreeManager hands the chunk every tree that reaches it, and the tide
+     * surface is recorded. Sets LOAD_DATA, ESSENTIAL_DATA and
      * GENERATION_DATA once the chunk is populated.
      */
 
@@ -25,6 +27,7 @@ public class GenerationBranch extends BranchPackage {
     private ThreadHandle threadHandle;
     private WorldGenerationManager worldGenerationManager;
     private StructureManager structureManager;
+    private TreeManager treeManager;
 
     // Settings
     private int loadIndex;
@@ -40,6 +43,7 @@ public class GenerationBranch extends BranchPackage {
         this.threadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
         this.worldGenerationManager = get(WorldGenerationManager.class);
         this.structureManager = get(StructureManager.class);
+        this.treeManager = get(TreeManager.class);
 
         // Settings
         this.loadIndex = ChunkData.LOAD_DATA.index;
@@ -88,6 +92,7 @@ public class GenerationBranch extends BranchPackage {
 
         if (success) {
             structureManager.generateStructures(worldHandle, chunkCoordinate, subChunks);
+            treeManager.generateTrees(worldHandle, chunkCoordinate, chunkInstance.getTreePaletteHandle());
             chunkInstance.setTideSurfaceLevels(worldGenerationManager.getColumnTideSurfaceLevels(chunkCoordinate));
             container.getData()[essentialIndex] = true;
             container.getData()[generationIndex] = true;

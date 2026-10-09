@@ -2,6 +2,7 @@ package application.bootstrap.itempipeline.tooltypemanager;
 
 import java.io.File;
 
+import application.bootstrap.itempipeline.tooltype.ToolSwing;
 import application.bootstrap.itempipeline.tooltype.ToolTypeData;
 import application.bootstrap.itempipeline.tooltype.ToolTypeHandle;
 import engine.root.BuilderPackage;
@@ -16,7 +17,9 @@ class ToolTypeBuilder extends BuilderPackage {
     /*
      * Parses tool type ARPG files and builds ToolTypeHandle instances. Each
      * ARPG file may contain multiple tool entries under a 'tools' array, each
-     * under the ID ToolTypeManager assigns its name. Bootstrap-only.
+     * under the ID ToolTypeManager assigns its name, with the model it is drawn
+     * with and how it is swung, overhead unless it says level.
+     * Bootstrap-only.
      */
 
     // Internal
@@ -56,8 +59,9 @@ class ToolTypeBuilder extends BuilderPackage {
         String toolTypeName = pathPrefix + "/" + localName;
         short toolTypeID = toolTypeManager.registerToolTypeName(toolTypeName);
         String defaultModelPath = ArpgUtility.getString(toolArpg, "model", "");
+        ToolSwing swing = ArpgUtility.getEnum(toolArpg, "swing", ToolSwing.class, ToolSwing.OVERHEAD);
 
-        ToolTypeData toolTypeData = new ToolTypeData(toolTypeName, localName, toolTypeID, defaultModelPath);
+        ToolTypeData toolTypeData = new ToolTypeData(toolTypeName, localName, toolTypeID, defaultModelPath, swing);
 
         ToolTypeHandle tool = create(ToolTypeHandle.class);
         tool.constructor(toolTypeData);

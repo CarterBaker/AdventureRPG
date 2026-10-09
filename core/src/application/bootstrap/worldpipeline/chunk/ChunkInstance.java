@@ -5,6 +5,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.tree.TreePaletteHandle;
+import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.GenerationCacheStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstancePaletteHandle;
@@ -21,7 +23,9 @@ public class ChunkInstance extends WorldRenderInstance {
      * and reset before reuse. merge() combines subchunk packets and bumps a
      * globally unique mergeVersion so megas never confuse occupants; neighbors
      * are reconfigured in place, and tideSurfaceLevels records the tide the
-     * ocean was last written against.
+     * ocean was last written against. It holds every tree that reaches it
+     * from the moment it generates until it is reset, when TreeManager lets
+     * them go.
      */
 
     // Internal
@@ -30,6 +34,8 @@ public class ChunkInstance extends WorldRenderInstance {
     private ChunkNeighborHandle chunkNeighbors;
     private WorldItemInstancePaletteHandle worldItemInstancePaletteHandle;
     private GenerationCacheStruct terrainCache;
+    private TreePaletteHandle treePaletteHandle;
+    private TreeManager treeManager;
 
     // Scratch — pre-allocated, reused per merge call
     private int[] vertPositionArray;
@@ -56,6 +62,8 @@ public class ChunkInstance extends WorldRenderInstance {
         this.worldItemInstancePaletteHandle.constructor();
         this.terrainCache = new GenerationCacheStruct();
         this.chunkNeighbors = create(ChunkNeighborHandle.class);
+        this.treePaletteHandle = create(TreePaletteHandle.class);
+        this.treePaletteHandle.constructor();
 
         this.subChunks = new SubChunkInstance[EngineSetting.WORLD_HEIGHT];
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
@@ -83,7 +91,10 @@ public class ChunkInstance extends WorldRenderInstance {
             VAOHandle vaoHandle,
             short airBlockId,
             BlockManager blockManager,
+            TreeManager treeManager,
             Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
+
+        this.treeManager = treeManager;
 
         super.constructor(
                 worldRenderManager,
@@ -110,6 +121,7 @@ public class ChunkInstance extends WorldRenderInstance {
         chunkDataSyncContainer.resetData();
         getDynamicPacket().clear();
         worldItemInstancePaletteHandle.clear();
+        treeManager.releaseTrees(treePaletteHandle);
         terrainCache.invalidate();
         tideSurfaceLevels = EngineSetting.OCEAN_TIDE_UNAPPLIED;
 
@@ -163,6 +175,10 @@ public class ChunkInstance extends WorldRenderInstance {
 
     public WorldItemInstancePaletteHandle getWorldItemInstancePaletteHandle() {
         return worldItemInstancePaletteHandle;
+    }
+
+    public TreePaletteHandle getTreePaletteHandle() {
+        return treePaletteHandle;
     }
 
     public GenerationCacheStruct getTerrainCache() {

@@ -1,9 +1,12 @@
 #version 330 core
 
-in vec2 vUV;
+in vec2 vUVOrigin;
+in vec3 vModelPosition;
 in vec3 vPosition;
+flat in int vFace;
 
 #include "items/includes/ItemsStandard.glsl"
+#include "items/includes/BlockRepeat.glsl"
 
 uniform sampler2DArray u_textureArray;
 uniform vec3  u_lightDirection;
@@ -16,10 +19,12 @@ out vec4 FragColor;
  * Items in the inventory are lit by one fixed light in window space. The
  * facet normal comes from screen-space derivatives, since the transform
  * scales items freely. u_tint blends the lit colour toward a tint colour by
- * its alpha — greyed for hidden gear, green or red for a drop preview.
+ * its alpha — greyed for hidden gear, green or red for a drop preview. Faces
+ * merge across block boundaries, so the texture repeats once per block.
  */
 void main() {
-    vec4 albedo = texture(u_textureArray, vec3(vUV, float(u_layer_albedo)));
+    vec2 uv     = resolveRepeatedUV(vUVOrigin, vModelPosition, vFace, u_uvPerBlock);
+    vec4 albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
 
     if (albedo.a < 0.01)
     discard;

@@ -6,6 +6,8 @@ import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.itempipeline.item.ItemInstance;
+import application.bootstrap.itempipeline.tooltype.ToolSwing;
+import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.physicspipeline.util.RayBoxUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import engine.root.EngineSetting;
@@ -20,6 +22,7 @@ public class CombatManager extends ManagerPackage {
      * Entity-agnostic combat. Every spawned entity is a combatant, and each
      * frame CombatManager advances every combatant's action and resolves it
      * the moment its effect lands: SwingBranch strikes with whatever is held,
+     * whether swung overhead or level as its tool type swings it, and
      * ThrowBranch lets one held item fly. control() reads an entity's input
      * each frame it is driven: an aim raises the held item and holds it back
      * until the throw is called for, while letting the aim go or moving
@@ -32,6 +35,9 @@ public class CombatManager extends ManagerPackage {
      * The player passes mouse input and an enemy would pass its own; the code
      * path is the same.
      */
+
+    // Internal
+    private ToolTypeManager toolTypeManager;
 
     // Branches
     private SwingBranch swingBranch;
@@ -58,6 +64,11 @@ public class CombatManager extends ManagerPackage {
         this.combatants = new ObjectArrayList<>();
     }
 
+    @Override
+    protected void get() {
+        this.toolTypeManager = get(ToolTypeManager.class);
+    }
+
     // Update \\
 
     @Override
@@ -79,7 +90,7 @@ public class CombatManager extends ManagerPackage {
     private void resolve(EntityInstance entity, EntityAction action) {
 
         switch (action) {
-            case SWING -> swingBranch.strike(entity);
+            case SWING, CHOP -> swingBranch.strike(entity);
             case THROW -> throwBranch.release(entity);
             default -> {
             }
@@ -109,8 +120,26 @@ public class CombatManager extends ManagerPackage {
                 EngineSetting.SWING_MAX_SECONDS,
                 EngineSetting.SWING_BASE_SECONDS + resolveHeldWeight(entity) * EngineSetting.SWING_SECONDS_PER_WEIGHT);
 
-        entity.getEntityActionHandle().begin(EntityAction.SWING, duration, EngineSetting.SWING_IMPACT);
+        entity.getEntityActionHandle().begin(resolveSwingAction(entity), duration, EngineSetting.SWING_IMPACT);
         return true;
+    }
+
+    // A tool its type swings level sweeps across from the side; anything else comes down overhead
+    private EntityAction resolveSwingAction(EntityInstance entity) {
+
+        ItemInstance held = entity.getInventoryHandle().getMainHand();
+
+        if (held == null)
+            return EntityAction.SWING;
+
+        short toolTypeID = held.getItemDefinitionHandle().getToolTypeID();
+
+        if (toolTypeID == EngineSetting.TOOL_NONE)
+            return EntityAction.SWING;
+
+        return toolTypeManager.getToolTypeHandleFromToolTypeID(toolTypeID).getSwing() == ToolSwing.LEVEL
+                ? EntityAction.CHOP
+                : EntityAction.SWING;
     }
 
     // A short gesture that only animates — setting something down or taking it up

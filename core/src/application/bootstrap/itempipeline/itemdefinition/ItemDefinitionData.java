@@ -21,8 +21,9 @@ public class ItemDefinitionData extends DataPackage {
      * break tier it can break; a stackable item holds up to its stack size in
      * one item; a block piece names the block it builds. An item may carry
      * actions that turn it into another item where it stands, and may be
-     * picked up as another item, as an open door is picked up shut. Owned by
-     * ItemDefinitionHandle for the engine lifetime.
+     * picked up as another item, as an open door is picked up shut. A seed
+     * names the tree it grows into once planted. Owned by ItemDefinitionHandle
+     * for the engine lifetime.
      */
 
     // Identity
@@ -67,6 +68,7 @@ public class ItemDefinitionData extends DataPackage {
     // Actions
     private final ObjectArrayList<ItemActionStruct> actions;
     private final String pickUpAsName;
+    private final String plantsTreeName;
 
     // Constructor \\
 
@@ -93,7 +95,8 @@ public class ItemDefinitionData extends DataPackage {
             int stackSize,
             short blockID,
             ObjectArrayList<ItemActionStruct> actions,
-            String pickUpAsName) {
+            String pickUpAsName,
+            String plantsTreeName) {
 
         // Identity
         this.itemName = itemName;
@@ -137,6 +140,7 @@ public class ItemDefinitionData extends DataPackage {
         // Actions
         this.actions = actions;
         this.pickUpAsName = pickUpAsName;
+        this.plantsTreeName = plantsTreeName;
     }
 
     // Accessible \\
@@ -255,5 +259,13 @@ public class ItemDefinitionData extends DataPackage {
 
     public String getPickUpAsName() {
         return pickUpAsName;
+    }
+
+    public boolean isSeed() {
+        return !plantsTreeName.equals(EngineSetting.ITEM_PLANTS_NONE);
+    }
+
+    public String getPlantsTreeName() {
+        return plantsTreeName;
     }
 }

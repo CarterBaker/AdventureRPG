@@ -14,6 +14,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
+import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.bootstrap.worldpipeline.world.WorldEditRegionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
@@ -42,6 +43,7 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Internal
     private BlockManager blockManager;
+    private TreeManager treeManager;
     private WorldStreamManager worldStreamManager;
     private ChunkStreamManager chunkStreamManager;
     private WorldRenderManager worldRenderManager;
@@ -128,6 +130,7 @@ class ChunkQueueManager extends ManagerPackage {
 
         // Internal
         this.blockManager = get(BlockManager.class);
+        this.treeManager = get(TreeManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.worldRenderManager = get(WorldRenderManager.class);
@@ -282,6 +285,7 @@ class ChunkQueueManager extends ManagerPackage {
                         chunkStreamManager.getChunkVAO(),
                         airBlockId,
                         blockManager,
+                        treeManager,
                         activeChunks);
 
                 activeChunks.put(chunkCoordinate, freshInstance);
@@ -306,6 +310,7 @@ class ChunkQueueManager extends ManagerPackage {
                         chunkStreamManager.getChunkVAO(),
                         airBlockId,
                         blockManager,
+                        treeManager,
                         activeChunks);
             } finally {
                 syncContainer.release();

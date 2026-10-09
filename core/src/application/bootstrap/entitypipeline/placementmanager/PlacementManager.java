@@ -3,11 +3,15 @@ package application.bootstrap.entitypipeline.placementmanager;
 import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
+import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemActionTrigger;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
+import application.bootstrap.worldpipeline.tree.TreeHandle;
+import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemCastStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
@@ -15,6 +19,8 @@ import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSy
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.vectors.Vector3;
 
 public class PlacementManager extends ManagerPackage {
@@ -33,7 +39,8 @@ public class PlacementManager extends ManagerPackage {
      * the runtime, never here. Otherwise the primary action swings whatever is
      * held through CombatManager, whose strike lands back here on a block
      * through strikeBlock(), and the activate action places the held item — a
-     * block piece as a sub-block, anything else as a world item. A vehicle's
+     * block piece as a sub-block, a seed into the ground as a tree of its
+     * species, anything else as a world item. A vehicle's
      * deck or cargo nearer than anything in the world takes the action
      * instead, through VehicleCargoSystem, by the same rules: cargo's own
      * actions come first, then the primary action picks cargo up or swings at
@@ -52,6 +59,7 @@ public class PlacementManager extends ManagerPackage {
     private WorldItemPlacementSystem worldItemPlacementSystem;
     private CombatManager combatManager;
     private VehicleCargoSystem vehicleCargoSystem;
+    private TreeManager treeManager;
 
     // Branches
     private BlockBranch blockBranch;
@@ -94,6 +102,7 @@ public class PlacementManager extends ManagerPackage {
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.combatManager = get(CombatManager.class);
         this.vehicleCargoSystem = get(VehicleCargoSystem.class);
+        this.treeManager = get(TreeManager.class);
     }
 
     // Update \\
@@ -272,7 +281,34 @@ public class PlacementManager extends ManagerPackage {
         if (held.getItemDefinitionHandle().isBlockPiece())
             return blockBranch.tryPlacePiece(entity, castStruct);
 
+        if (held.getItemDefinitionHandle().isSeed())
+            return plantSeed(entity, castStruct);
+
         return itemBranch.place(entity, direction, castStruct);
+    }
+
+    // The seed in the main hand set into the top of the block that was hit, rooting a tree in the block above
+    private boolean plantSeed(EntityInstance entity, BlockCastStruct castStruct) {
+
+        if (castStruct.getHitFace() != Direction3Vector.UP)
+            return false;
+
+        long chunkCoordinate = castStruct.getChunkCoordinate();
+        long anchorX = (long) Coordinate2Long.unpackX(chunkCoordinate) * EngineSetting.CHUNK_SIZE
+                + castStruct.getBlockX();
+        long anchorZ = (long) Coordinate2Long.unpackY(chunkCoordinate) * EngineSetting.CHUNK_SIZE
+                + castStruct.getBlockZ();
+        int baseY = castStruct.getSubChunkY() * EngineSetting.CHUNK_SIZE + castStruct.getBlockY() + 1;
+        InventoryHandle inventoryHandle = entity.getInventoryHandle();
+        TreeHandle treeHandle = treeManager.getTreeHandleFromTreeName(
+                inventoryHandle.getMainHand().getItemDefinitionHandle().getPlantsTreeName());
+
+        if (!treeManager.plant(treeHandle, entity.getWorldHandle(), anchorX, anchorZ, baseY))
+            return false;
+
+        inventoryHandle.takeOne(EquipmentSlot.MAIN_HAND);
+
+        return true;
     }
 
     // Against the vehicle VehicleCargoSystem last met — the primary action takes cargo up or swings at the deck, the

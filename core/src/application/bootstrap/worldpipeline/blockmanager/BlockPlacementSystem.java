@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
+import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
@@ -29,6 +30,8 @@ public class BlockPlacementSystem extends SystemPackage {
      * subchunk the edit touched, diagonals included, each under its chunk's
      * lock. A cell whose eighth sub-block is filled in becomes a whole block
      * again, so a cell built up from pieces stores like any other block.
+     * rebuildSubChunks() redraws a stretch of a chunk whose blocks have not
+     * changed, when something else it draws, such as a tree, has.
      */
 
     // Internal
@@ -276,6 +279,30 @@ public class BlockPlacementSystem extends SystemPackage {
     }
 
     // Rebuild \\
+
+    // A loaded, generated chunk's subchunks between two rows, inclusive, rebuilt under the chunk's lock — for what a
+    // chunk draws besides its blocks, such as the trees it holds; a chunk not loaded or not yet generated is left be
+    public void rebuildSubChunks(ChunkInstance chunk, int firstSubChunkY, int lastSubChunkY) {
+
+        ChunkDataSyncContainer syncContainer = chunk.getChunkDataSyncContainer();
+        syncContainer.acquire();
+
+        try {
+
+            if (!syncContainer.getData()[ChunkData.GENERATION_DATA.index])
+                return;
+
+            for (int subChunkY = Math.max(0, firstSubChunkY);
+                    subChunkY <= Math.min(worldHeight - 1, lastSubChunkY); subChunkY++)
+                rebuildSubChunk(chunk, subChunkY);
+
+            mergeAndRender(chunk);
+        } finally {
+            syncContainer.release();
+        }
+
+        invalidateChunk(chunk.getCoordinate());
+    }
 
     private boolean isAtLateralEdge(int packedXYZ, Direction2Vector direction) {
 

@@ -8,13 +8,17 @@ layout(location = 2) in vec2  aUV;
 uniform mat4 u_projection;
 uniform mat4 u_model;
 
-out vec2 vUV;
+out vec2 vUVOrigin;
+out vec3 vModelPosition;
 out vec3 vPosition;
+flat out int vFace;
 
 void main() {
     vec4 position = u_model * vec4(aPos, 1.0);
 
-    vUV         = aUV;
-    vPosition   = position.xyz;
+    vUVOrigin      = aUV;
+    vModelPosition = aPos;
+    vPosition      = position.xyz;
+    vFace          = int(aNorIndex);
     gl_Position = u_projection * position;
 }

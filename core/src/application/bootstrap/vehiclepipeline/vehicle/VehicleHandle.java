@@ -1,6 +1,7 @@
 package application.bootstrap.vehiclepipeline.vehicle;
 
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
+import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -94,7 +95,7 @@ public class VehicleHandle extends HandlePackage {
         return getPart(vehicleData.getDoorParts().getInt(doorIndex));
     }
 
-    public VehicleGridStruct getSolidGrid() {
+    public SubVoxelGridStruct getSolidGrid() {
         return vehicleData.getSolidGrid();
     }
 

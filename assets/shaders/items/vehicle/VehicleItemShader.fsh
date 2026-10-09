@@ -6,6 +6,7 @@ in vec3 vViewPosition;
 flat in int vFace;
 
 #include "items/includes/ItemsStandard.glsl"
+#include "items/includes/BlockRepeat.glsl"
 
 uniform sampler2DArray u_textureArray;
 
@@ -22,17 +23,8 @@ layout(location = 2) out vec4 gMaterial;
  */
 const float VEHICLE_SPECULAR = 0.18;
 
-vec2 resolveBlockUV(vec3 local) {
-    if (vFace == 0) return vec2(local.x, local.y);
-    if (vFace == 1) return vec2(1.0 - local.z, local.y);
-    if (vFace == 2) return vec2(1.0 - local.x, local.y);
-    if (vFace == 3) return vec2(local.z, local.y);
-    if (vFace == 4) return vec2(local.x, local.z);
-    return vec2(local.x, 1.0 - local.z);
-}
-
 void main() {
-    vec2 uv     = vUVOrigin + resolveBlockUV(fract(vModelPosition)) * u_uvPerBlock;
+    vec2 uv     = resolveRepeatedUV(vUVOrigin, vModelPosition, vFace, u_uvPerBlock);
     vec4 albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
 
     if (albedo.a < 0.01)

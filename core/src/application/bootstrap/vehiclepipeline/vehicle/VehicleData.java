@@ -1,6 +1,7 @@
 package application.bootstrap.vehiclepipeline.vehicle;
 
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
+import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import engine.root.DataPackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -34,7 +35,7 @@ public class VehicleData extends DataPackage {
     private final IntArrayList doorParts;
 
     // Grid
-    private final VehicleGridStruct solidGrid;
+    private final SubVoxelGridStruct solidGrid;
     private final IntArrayList climbZones;
 
     // Render
@@ -69,7 +70,7 @@ public class VehicleData extends DataPackage {
             int rudderPart,
             int capstanPart,
             IntArrayList doorParts,
-            VehicleGridStruct solidGrid,
+            SubVoxelGridStruct solidGrid,
             IntArrayList climbZones,
             ObjectArrayList<MeshInstance> hullMeshes,
             int minX,
@@ -163,7 +164,7 @@ public class VehicleData extends DataPackage {
         return doorParts;
     }
 
-    public VehicleGridStruct getSolidGrid() {
+    public SubVoxelGridStruct getSolidGrid() {
         return solidGrid;
     }
 

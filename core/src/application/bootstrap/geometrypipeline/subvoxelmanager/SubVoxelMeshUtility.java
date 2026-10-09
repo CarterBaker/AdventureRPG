@@ -1,25 +1,24 @@
 package application.bootstrap.geometrypipeline.subvoxelmanager;
 
+import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
+import application.bootstrap.geometrypipeline.subvoxel.SubVoxelQuadListStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
-class SubVoxelMeshUtility extends EngineUtility {
+public class SubVoxelMeshUtility extends EngineUtility {
 
     /*
-     * Greedy mesher for sub-voxel models. Emits only cube faces exposed to
-     * empty cells, merges coplanar faces of the same part, and maps UVs from
-     * cell position so merged faces keep their texels. A model of many blocks
-     * is meshed one block at a time, so every face's texels stay inside its
-     * own block exactly as a single block's do. A wall is one quad seen
-     * from both sides, since items draw without culling; it faces its open
-     * side, hides where cubes bury it on both sides, and takes the place of a
-     * cube face it covers. Null outputs count quads only. A pocket's open
-     * box is built here too, one quad per block of each wall so every quad's
-     * texels stay inside one block, and emitFace() is the one face writer
-     * every sub-voxel mesh goes through, a vehicle's included.
+     * The item vertex format for sub-voxel surfaces. A model's cubes and
+     * walls are laid onto a sub-voxel grid and meshed by
+     * SubVoxelGridMeshUtility like every other sub-voxel surface, so its faces
+     * merge across block boundaries. A face carries only its part's texture
+     * corner, and the item shaders repeat the texture once per block of the
+     * model grid, so a merged face keeps every texel. A pocket's open box is
+     * built here too, one quad per wall, and emitFace() is the one face writer
+     * every item-format sub-voxel mesh goes through, a vehicle's included.
      */
 
     // Faces — index order matches the item shader's normal table
@@ -32,72 +31,75 @@ class SubVoxelMeshUtility extends EngineUtility {
             { 0, -1, 0 }
     };
 
-    // Build \\
+    // Model \\
 
-    static int build(
-            SubVoxelModelStruct model,
-            float[] partUVBounds,
-            FloatArrayList vertices,
-            ShortArrayList indices) {
+    // Every cube and wall of the model laid onto the grid, its corner at the grid origin
+    static void writeGrid(SubVoxelModelStruct model, SubVoxelGridStruct grid) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int[] mask = new int[resolution * resolution];
-        int[] origin = new int[3];
-        int quadCount = 0;
+        grid.clear();
 
-        for (int blockZ = 0; blockZ < model.getBlocksZ(); blockZ++)
-            for (int blockY = 0; blockY < model.getBlocksY(); blockY++)
-                for (int blockX = 0; blockX < model.getBlocksX(); blockX++) {
+        for (int z = 0; z < model.getSizeZ(); z++)
+            for (int y = 0; y < model.getSizeY(); y++)
+                for (int x = 0; x < model.getSizeX(); x++) {
 
-                    origin[0] = blockX * resolution;
-                    origin[1] = blockY * resolution;
-                    origin[2] = blockZ * resolution;
-                    quadCount += buildBlock(model, origin, mask, partUVBounds, vertices, indices);
+                    int part = model.getCellPart(x, y, z);
+
+                    if (part != EngineSetting.INDEX_NOT_FOUND)
+                        grid.setPart(x, y, z, part);
                 }
 
-        return quadCount;
+        for (int axis = 0; axis < EngineSetting.SUB_VOXEL_AXIS_COUNT; axis++)
+            writeWalls(model, grid, axis);
     }
 
-    // One block of the model, its cells from the origin given; a wall plane shared with the next block is that
-    // block's first, so it is meshed once
-    private static int buildBlock(
-            SubVoxelModelStruct model,
-            int[] origin,
-            int[] mask,
+    private static void writeWalls(SubVoxelModelStruct model, SubVoxelGridStruct grid, int axis) {
+
+        int[] position = new int[EngineSetting.AXIS_COUNT];
+        int uAxis = (axis + 1) % EngineSetting.AXIS_COUNT;
+        int vAxis = (axis + 2) % EngineSetting.AXIS_COUNT;
+
+        for (int v = 0; v < model.getSize(vAxis); v++)
+            for (int u = 0; u < model.getSize(uAxis); u++)
+                for (int plane = 0; plane <= model.getSize(axis); plane++) {
+
+                    position[axis] = plane;
+                    position[uAxis] = u;
+                    position[vAxis] = v;
+
+                    int part = model.getWallPart(axis, position[0], position[1], position[2]);
+
+                    if (part != EngineSetting.INDEX_NOT_FOUND)
+                        grid.setWall(axis, position[0], position[1], position[2], part);
+                }
+    }
+
+    // Quads \\
+
+    // Every quad from first up to last written as item-format faces, each carrying its part's texture corner
+    static void emitQuads(
+            SubVoxelQuadListStruct quads,
+            int first,
+            int last,
             float[] partUVBounds,
+            float[] minScratch,
+            float[] maxScratch,
             FloatArrayList vertices,
             ShortArrayList indices) {
 
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int quadCount = 0;
+        for (int quad = first; quad < last; quad++) {
 
-        for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++)
-            for (int slice = 0; slice < resolution; slice++) {
-                fillMask(model, origin, face, slice, mask);
-                quadCount += mergeMask(face, origin, slice, mask, partUVBounds, vertices, indices);
-            }
+            int uvBase = quads.getPart(quad) * EngineSetting.SUB_VOXEL_UV_BOUNDS_FLOATS;
 
-        for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++) {
-
-            int axis = resolveAxis(face);
-            int lastPlane = origin[axis] + resolution == model.getSize(axis) ? resolution : resolution - 1;
-
-            for (int plane = 0; plane <= lastPlane; plane++) {
-
-                // A positive face sits on the far side of the slice before the plane
-                int slice = FACE_NORMALS[face][axis] > 0 ? plane - 1 : plane;
-
-                fillWallMask(model, origin, face, plane, mask);
-                quadCount += mergeMask(face, origin, slice, mask, partUVBounds, vertices, indices);
-            }
+            resolveQuadBounds(quads, quad, minScratch, maxScratch);
+            emitFace(
+                    quads.getFace(quad), minScratch, maxScratch,
+                    partUVBounds[uvBase], partUVBounds[uvBase + 1], vertices, indices);
         }
-
-        return quadCount;
     }
 
     // Pocket \\
 
-    // An open box of walls around a pocket's space — a floor and four sides facing in, split per block
+    // An open box of walls around a pocket's space — a floor and four sides facing in, one quad each
     static void buildPocket(
             int sizeX,
             int sizeY,
@@ -106,293 +108,57 @@ class SubVoxelMeshUtility extends EngineUtility {
             FloatArrayList vertices,
             ShortArrayList indices) {
 
+        float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         int[] size = { sizeX, sizeY, sizeZ };
+        float[] min = new float[EngineSetting.AXIS_COUNT];
+        float[] max = new float[EngineSetting.AXIS_COUNT];
 
         for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++) {
 
             int axis = resolveAxis(face);
 
             // The open top has no wall, and every other wall faces into the space
-            if (axis == 1 && FACE_NORMALS[face][axis] < 0)
+            if (axis == EngineSetting.AXIS_Y && FACE_NORMALS[face][axis] < 0)
                 continue;
 
-            int plane = FACE_NORMALS[face][axis] > 0 ? 0 : size[axis];
+            for (int component = 0; component < EngineSetting.AXIS_COUNT; component++) {
+                min[component] = 0f;
+                max[component] = size[component] / resolution;
+            }
 
-            emitPocketWall(face, axis, plane, size, uvBounds, vertices, indices);
+            float plane = FACE_NORMALS[face][axis] > 0 ? 0f : size[axis] / resolution;
+
+            min[axis] = plane;
+            max[axis] = plane;
+
+            emitFace(face, min, max, uvBounds[0], uvBounds[1], vertices, indices);
         }
-    }
-
-    private static void emitPocketWall(
-            int face,
-            int axis,
-            int plane,
-            int[] size,
-            float[] uvBounds,
-            FloatArrayList vertices,
-            ShortArrayList indices) {
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int uAxis = (axis + 1) % 3;
-        int vAxis = (axis + 2) % 3;
-        float[] min = new float[3];
-        float[] max = new float[3];
-        float[] origin = new float[3];
-
-        min[axis] = (float) plane / resolution;
-        max[axis] = min[axis];
-        origin[axis] = (float) Math.floor(min[axis]);
-
-        for (int b = 0; b < size[vAxis]; b += resolution)
-            for (int a = 0; a < size[uAxis]; a += resolution) {
-
-                min[uAxis] = (float) a / resolution;
-                max[uAxis] = (float) Math.min(a + resolution, size[uAxis]) / resolution;
-                min[vAxis] = (float) b / resolution;
-                max[vAxis] = (float) Math.min(b + resolution, size[vAxis]) / resolution;
-                origin[uAxis] = min[uAxis];
-                origin[vAxis] = min[vAxis];
-
-                emitFace(
-                        face, min, max, origin[0], origin[1], origin[2],
-                        uvBounds[0], uvBounds[1], uvBounds[2], uvBounds[3],
-                        vertices, indices);
-            }
-    }
-
-    // Mask \\
-
-    private static void fillMask(SubVoxelModelStruct model, int[] origin, int face, int slice, int[] mask) {
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int[] normal = FACE_NORMALS[face];
-        int axis = resolveAxis(face);
-        int uAxis = (axis + 1) % 3;
-        int vAxis = (axis + 2) % 3;
-        int[] cell = new int[3];
-
-        for (int b = 0; b < resolution; b++)
-            for (int a = 0; a < resolution; a++) {
-
-                cell[axis] = origin[axis] + slice;
-                cell[uAxis] = origin[uAxis] + a;
-                cell[vAxis] = origin[vAxis] + b;
-
-                int part = model.getCellPart(cell[0], cell[1], cell[2]);
-                boolean exposed = part != EngineSetting.INDEX_NOT_FOUND
-                        && !model.isFilled(cell[0] + normal[0], cell[1] + normal[1], cell[2] + normal[2]);
-
-                if (exposed) {
-                    cell[axis] = origin[axis] + (normal[axis] > 0 ? slice + 1 : slice);
-                    exposed = !model.hasWall(axis, cell[0], cell[1], cell[2]);
-                }
-
-                mask[a + b * resolution] = exposed ? part + 1 : EngineSetting.SUB_VOXEL_EMPTY_CELL;
-            }
-    }
-
-    // Walls on one plane that face this face's way: toward their open side, or positive when both sides are open
-    private static void fillWallMask(SubVoxelModelStruct model, int[] origin, int face, int plane, int[] mask) {
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int axis = resolveAxis(face);
-        boolean positive = FACE_NORMALS[face][axis] > 0;
-        int uAxis = (axis + 1) % 3;
-        int vAxis = (axis + 2) % 3;
-        int[] cell = new int[3];
-
-        for (int b = 0; b < resolution; b++)
-            for (int a = 0; a < resolution; a++) {
-
-                cell[axis] = origin[axis] + plane;
-                cell[uAxis] = origin[uAxis] + a;
-                cell[vAxis] = origin[vAxis] + b;
-
-                int part = model.getWallPart(axis, cell[0], cell[1], cell[2]);
-                boolean frontOpen = !isFilledOnSide(model, cell, axis, true);
-                boolean backOpen = !isFilledOnSide(model, cell, axis, false);
-                boolean shown = part != EngineSetting.INDEX_NOT_FOUND
-                        && (positive ? frontOpen : backOpen && !frontOpen);
-
-                mask[a + b * resolution] = shown ? part + 1 : EngineSetting.SUB_VOXEL_EMPTY_CELL;
-            }
-    }
-
-    private static boolean isFilledOnSide(SubVoxelModelStruct model, int[] wall, int axis, boolean positive) {
-
-        int offset = positive ? 0 : -1;
-
-        return model.isFilled(
-                wall[0] + (axis == 0 ? offset : 0),
-                wall[1] + (axis == 1 ? offset : 0),
-                wall[2] + (axis == 2 ? offset : 0));
-    }
-
-    private static int mergeMask(
-            int face,
-            int[] origin,
-            int slice,
-            int[] mask,
-            float[] partUVBounds,
-            FloatArrayList vertices,
-            ShortArrayList indices) {
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int quadCount = 0;
-
-        for (int b = 0; b < resolution; b++)
-            for (int a = 0; a < resolution;) {
-
-                int value = mask[a + b * resolution];
-
-                if (value == EngineSetting.SUB_VOXEL_EMPTY_CELL) {
-                    a++;
-                    continue;
-                }
-
-                int width = measureWidth(mask, value, a, b);
-                int height = measureHeight(mask, value, a, b, width);
-
-                for (int h = 0; h < height; h++)
-                    for (int w = 0; w < width; w++)
-                        mask[a + w + (b + h) * resolution] = EngineSetting.SUB_VOXEL_EMPTY_CELL;
-
-                if (vertices != null)
-                    emitQuad(face, origin, slice, a, b, width, height, value - 1, partUVBounds, vertices, indices);
-
-                quadCount++;
-                a += width;
-            }
-
-        return quadCount;
-    }
-
-    private static int measureWidth(int[] mask, int value, int a, int b) {
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int width = 1;
-
-        while (a + width < resolution && mask[a + width + b * resolution] == value)
-            width++;
-
-        return width;
-    }
-
-    private static int measureHeight(int[] mask, int value, int a, int b, int width) {
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int height = 1;
-
-        while (b + height < resolution) {
-
-            for (int w = 0; w < width; w++)
-                if (mask[a + w + (b + height) * resolution] != value)
-                    return height;
-
-            height++;
-        }
-
-        return height;
     }
 
     // Emit \\
 
-    private static void emitQuad(
-            int face,
-            int[] origin,
-            int slice,
-            int a,
-            int b,
-            int width,
-            int height,
-            int partIndex,
-            float[] partUVBounds,
-            FloatArrayList vertices,
-            ShortArrayList indices) {
-
-        float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int axis = resolveAxis(face);
-        int uAxis = (axis + 1) % 3;
-        int vAxis = (axis + 2) % 3;
-        float plane = (origin[axis] + (FACE_NORMALS[face][axis] > 0 ? slice + 1 : slice)) / resolution;
-
-        float[] min = new float[3];
-        float[] max = new float[3];
-
-        min[axis] = plane;
-        max[axis] = plane;
-        min[uAxis] = (origin[uAxis] + a) / resolution;
-        max[uAxis] = (origin[uAxis] + a + width) / resolution;
-        min[vAxis] = (origin[vAxis] + b) / resolution;
-        max[vAxis] = (origin[vAxis] + b + height) / resolution;
-
-        int uvBase = partIndex * 4;
-
-        emitFace(
-                face, min, max, origin[0] / resolution, origin[1] / resolution, origin[2] / resolution,
-                partUVBounds[uvBase], partUVBounds[uvBase + 1], partUVBounds[uvBase + 2], partUVBounds[uvBase + 3],
-                vertices, indices);
-    }
-
-    // One face spanning min to max in block units; UVs run from the block corner at the origin
+    // One face spanning min to max in block units, carrying its texture's corner
     static void emitFace(
             int face,
             float[] min,
             float[] max,
-            float originX,
-            float originY,
-            float originZ,
             float u0,
             float v0,
-            float u1,
-            float v1,
             FloatArrayList vertices,
             ShortArrayList indices) {
 
         int baseVertex = vertices.size() / EngineSetting.SUB_VOXEL_VERTEX_STRIDE;
+        float[] corners = new float[EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.AXIS_COUNT];
 
-        float x0 = min[0], y0 = min[1], z0 = min[2];
-        float x1 = max[0], y1 = max[1], z1 = max[2];
-        float lx0 = x0 - originX, ly0 = y0 - originY, lz0 = z0 - originZ;
-        float lx1 = x1 - originX, ly1 = y1 - originY, lz1 = z1 - originZ;
+        resolveCorners(face, min, max, corners);
 
-        switch (face) {
-            case 0 -> {
-                putVertex(vertices, x0, y0, z1, face, lx0, ly0, u0, v0, u1, v1);
-                putVertex(vertices, x1, y0, z1, face, lx1, ly0, u0, v0, u1, v1);
-                putVertex(vertices, x1, y1, z1, face, lx1, ly1, u0, v0, u1, v1);
-                putVertex(vertices, x0, y1, z1, face, lx0, ly1, u0, v0, u1, v1);
-            }
-            case 1 -> {
-                putVertex(vertices, x1, y0, z1, face, 1f - lz1, ly0, u0, v0, u1, v1);
-                putVertex(vertices, x1, y0, z0, face, 1f - lz0, ly0, u0, v0, u1, v1);
-                putVertex(vertices, x1, y1, z0, face, 1f - lz0, ly1, u0, v0, u1, v1);
-                putVertex(vertices, x1, y1, z1, face, 1f - lz1, ly1, u0, v0, u1, v1);
-            }
-            case 2 -> {
-                putVertex(vertices, x1, y0, z0, face, 1f - lx1, ly0, u0, v0, u1, v1);
-                putVertex(vertices, x0, y0, z0, face, 1f - lx0, ly0, u0, v0, u1, v1);
-                putVertex(vertices, x0, y1, z0, face, 1f - lx0, ly1, u0, v0, u1, v1);
-                putVertex(vertices, x1, y1, z0, face, 1f - lx1, ly1, u0, v0, u1, v1);
-            }
-            case 3 -> {
-                putVertex(vertices, x0, y0, z0, face, lz0, ly0, u0, v0, u1, v1);
-                putVertex(vertices, x0, y0, z1, face, lz1, ly0, u0, v0, u1, v1);
-                putVertex(vertices, x0, y1, z1, face, lz1, ly1, u0, v0, u1, v1);
-                putVertex(vertices, x0, y1, z0, face, lz0, ly1, u0, v0, u1, v1);
-            }
-            case 4 -> {
-                putVertex(vertices, x0, y1, z0, face, lx0, lz0, u0, v0, u1, v1);
-                putVertex(vertices, x1, y1, z0, face, lx1, lz0, u0, v0, u1, v1);
-                putVertex(vertices, x1, y1, z1, face, lx1, lz1, u0, v0, u1, v1);
-                putVertex(vertices, x0, y1, z1, face, lx0, lz1, u0, v0, u1, v1);
-            }
-            default -> {
-                putVertex(vertices, x0, y0, z1, face, lx0, 1f - lz1, u0, v0, u1, v1);
-                putVertex(vertices, x1, y0, z1, face, lx1, 1f - lz1, u0, v0, u1, v1);
-                putVertex(vertices, x1, y0, z0, face, lx1, 1f - lz0, u0, v0, u1, v1);
-                putVertex(vertices, x0, y0, z0, face, lx0, 1f - lz0, u0, v0, u1, v1);
-            }
-        }
+        for (int corner = 0; corner < EngineSetting.QUAD_VERTEX_COUNT; corner++)
+            putVertex(
+                    vertices,
+                    corners[corner * EngineSetting.AXIS_COUNT],
+                    corners[corner * EngineSetting.AXIS_COUNT + 1],
+                    corners[corner * EngineSetting.AXIS_COUNT + 2],
+                    face, u0, v0);
 
         indices.add((short) baseVertex);
         indices.add((short) (baseVertex + 1));
@@ -402,35 +168,94 @@ class SubVoxelMeshUtility extends EngineUtility {
         indices.add((short) baseVertex);
     }
 
+    // The four corners of a face spanning min to max, three floats each, in the order every sub-voxel face is wound
+    static void resolveCorners(int face, float[] min, float[] max, float[] corners) {
+
+        float x0 = min[0], y0 = min[1], z0 = min[2];
+        float x1 = max[0], y1 = max[1], z1 = max[2];
+
+        switch (face) {
+            case 0 -> writeCorners(corners, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1);
+            case 1 -> writeCorners(corners, x1, y0, z1, x1, y0, z0, x1, y1, z0, x1, y1, z1);
+            case 2 -> writeCorners(corners, x1, y0, z0, x0, y0, z0, x0, y1, z0, x1, y1, z0);
+            case 3 -> writeCorners(corners, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0);
+            case 4 -> writeCorners(corners, x0, y1, z0, x1, y1, z0, x1, y1, z1, x0, y1, z1);
+            default -> writeCorners(corners, x0, y0, z1, x1, y0, z1, x1, y0, z0, x0, y0, z0);
+        }
+    }
+
+    private static void writeCorners(
+            float[] corners,
+            float ax, float ay, float az,
+            float bx, float by, float bz,
+            float cx, float cy, float cz,
+            float dx, float dy, float dz) {
+
+        corners[0] = ax;
+        corners[1] = ay;
+        corners[2] = az;
+        corners[3] = bx;
+        corners[4] = by;
+        corners[5] = bz;
+        corners[6] = cx;
+        corners[7] = cy;
+        corners[8] = cz;
+        corners[9] = dx;
+        corners[10] = dy;
+        corners[11] = dz;
+    }
+
+    // A quad's extent in blocks, its plane at both ends of its own axis
+    static void resolveQuadBounds(SubVoxelQuadListStruct quads, int quad, float[] min, float[] max) {
+
+        float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
+        int axis = resolveAxis(quads.getFace(quad));
+        int uAxis = (axis + 1) % EngineSetting.AXIS_COUNT;
+        int vAxis = (axis + 2) % EngineSetting.AXIS_COUNT;
+
+        min[axis] = quads.getPlane(quad) * scale;
+        max[axis] = min[axis];
+        min[uAxis] = quads.getU(quad) * scale;
+        max[uAxis] = (quads.getU(quad) + quads.getWidth(quad)) * scale;
+        min[vAxis] = quads.getV(quad) * scale;
+        max[vAxis] = (quads.getV(quad) + quads.getHeight(quad)) * scale;
+    }
+
     private static void putVertex(
             FloatArrayList vertices,
             float x,
             float y,
             float z,
             int face,
-            float localU,
-            float localV,
             float u0,
-            float v0,
-            float u1,
-            float v1) {
+            float v0) {
 
         vertices.add(x);
         vertices.add(y);
         vertices.add(z);
         vertices.add(face);
-        vertices.add(u0 + localU * (u1 - u0));
-        vertices.add(v0 + localV * (v1 - v0));
+        vertices.add(u0);
+        vertices.add(v0);
     }
 
     // Utility \\
 
     // One component of a face's outward normal, in the item shader's face order
-    static int getFaceNormal(int face, int axis) {
+    public static int getFaceNormal(int face, int axis) {
         return FACE_NORMALS[face][axis];
     }
 
-    private static int resolveAxis(int face) {
+    // The face whose normal runs along an axis, toward its positive or negative side
+    static int resolveFace(int axis, boolean positive) {
+
+        for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++)
+            if (FACE_NORMALS[face][axis] == (positive ? 1 : -1))
+                return face;
+
+        return throwException("No face runs along axis " + axis + ".");
+    }
+
+    public static int resolveAxis(int face) {
 
         int[] normal = FACE_NORMALS[face];
 

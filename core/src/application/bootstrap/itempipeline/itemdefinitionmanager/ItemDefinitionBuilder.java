@@ -58,8 +58,9 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * it, whether it "consumes" one of that, and the model "parts" it must be
      * aimed at, and the item it "becomes"; one may "fire" an item from a
      * "muzzle" in model sub-voxels along an "aim" at a "speed". "pick_up_as"
-     * names the item it is picked up as. A container carries no actions, so
-     * its contents are never lost. Bootstrap-only.
+     * names the item it is picked up as, and "plants" the tree a seed grows
+     * into. A container carries no actions, so its contents are never lost.
+     * Bootstrap-only.
      */
 
     // Internal
@@ -186,7 +187,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 stackSize,
                 EngineSetting.BLOCK_PIECE_NONE,
                 actions,
-                ArpgUtility.getString(itemArpg, "pick_up_as", EngineSetting.ITEM_PICK_UP_AS_SELF));
+                ArpgUtility.getString(itemArpg, "pick_up_as", EngineSetting.ITEM_PICK_UP_AS_SELF),
+                ArpgUtility.getString(itemArpg, "plants", EngineSetting.ITEM_PLANTS_NONE));
 
         ItemDefinitionHandle item = create(ItemDefinitionHandle.class);
         item.constructor(itemDefinitionData);

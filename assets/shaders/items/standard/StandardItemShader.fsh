@@ -2,9 +2,12 @@
 
 in vec3 vNormalView;
 in vec3 vViewPosition;
-in vec2 vUV;
+in vec2 vUVOrigin;
+in vec3 vModelPosition;
+flat in int vFace;
 
 #include "items/includes/ItemsStandard.glsl"
+#include "items/includes/BlockRepeat.glsl"
 
 uniform sampler2DArray u_textureArray;
 
@@ -17,12 +20,14 @@ layout(location = 2) out vec4 gMaterial;
  * deferred lighting pass lights, shades and fogs them identically. Items draw
  * without culling and a wall is one quad seen from both sides, so the normal
  * is turned to face the viewer; a cube face is only ever seen from the side
- * it already faces.
+ * it already faces. Faces merge across block boundaries, so the texture repeats
+ * once per block of the item's own model grid.
  */
 const float ITEM_SPECULAR = 0.18;
 
 void main() {
-    vec4 albedo = texture(u_textureArray, vec3(vUV, float(u_layer_albedo)));
+    vec2 uv     = resolveRepeatedUV(vUVOrigin, vModelPosition, vFace, u_uvPerBlock);
+    vec4 albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
 
     if (albedo.a < 0.01)
     discard;

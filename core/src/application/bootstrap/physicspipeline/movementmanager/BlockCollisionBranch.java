@@ -6,6 +6,7 @@ import application.bootstrap.physicspipeline.physicsnoisemanager.PhysicsNoiseMan
 import application.bootstrap.physicspipeline.util.SubBlockSampleUtility;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -21,8 +22,10 @@ public class BlockCollisionBranch extends BranchPackage {
      * clamps each axis at the first solid face, keeping a thin skin. The rough
      * boxes of solid world items near the move are gathered once and clamp
      * the same sweep, so a pile stops an entity and items stack into walls and
-     * floors. Sub-blocks and item boxes already overlapped never block. A
-     * grounded entity cut short tries a stair step and eases the lift into the
+     * floors, and so do the boxes of any tree wood near the move, so a trunk
+     * stops an entity and a limb holds it up, while leaves let it through.
+     * Sub-blocks and item boxes already overlapped never block. A grounded
+     * entity cut short tries a stair step and eases the lift into the
      * cosmetic ground offset, so sub-block terrain and low items walk like
      * stairs. A natural wall stops the box where its edge warp draws it: a
      * face bent toward the entity stops it early, so it never sinks into a
@@ -35,6 +38,7 @@ public class BlockCollisionBranch extends BranchPackage {
     private BlockManager blockManager;
     private WorldItemSpaceSystem worldItemSpaceSystem;
     private PhysicsNoiseManager physicsNoiseManager;
+    private TreeManager treeManager;
 
     // Settings
     private float skin;
@@ -56,7 +60,7 @@ public class BlockCollisionBranch extends BranchPackage {
     private Vector3 detailScratch;
     private Vector3 warpScratch;
 
-    // Item Boxes — min and max corner of each solid item box near the move, six floats each
+    // Item Boxes — min and max corner of each solid item box and tree wood box near the move, six floats each
     private FloatArrayList itemBoxes;
     private int boxStride;
 
@@ -97,6 +101,7 @@ public class BlockCollisionBranch extends BranchPackage {
         this.blockManager = get(BlockManager.class);
         this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
         this.physicsNoiseManager = get(PhysicsNoiseManager.class);
+        this.treeManager = get(TreeManager.class);
     }
 
     // Collision \\
@@ -174,19 +179,20 @@ public class BlockCollisionBranch extends BranchPackage {
 
     // Item Boxes \\
 
-    // Every solid item box the move or a stair step could reach, gathered once for all its sweeps
+    // Every solid item box and tree wood box the move or a stair step could reach, gathered once for all its sweeps
     private void gatherItemBoxes(EntityInstance entity, long chunkCoordinate, Vector3 movement) {
 
+        float minX = boxMin[axisX] + Math.min(movement.x, 0f) - skin;
+        float minY = boxMin[axisY] + Math.min(movement.y, 0f) - skin;
+        float minZ = boxMin[axisZ] + Math.min(movement.z, 0f) - skin;
+        float maxX = boxMax[axisX] + Math.max(movement.x, 0f) + skin;
+        float maxY = boxMax[axisY] + Math.max(movement.y, 0f) + stepHeight + skin;
+        float maxZ = boxMax[axisZ] + Math.max(movement.z, 0f) + skin;
+
         worldItemSpaceSystem.collectSolidBoxes(
-                entity.getWorldHandle(),
-                chunkCoordinate,
-                boxMin[axisX] + Math.min(movement.x, 0f) - skin,
-                boxMin[axisY] + Math.min(movement.y, 0f) - skin,
-                boxMin[axisZ] + Math.min(movement.z, 0f) - skin,
-                boxMax[axisX] + Math.max(movement.x, 0f) + skin,
-                boxMax[axisY] + Math.max(movement.y, 0f) + stepHeight + skin,
-                boxMax[axisZ] + Math.max(movement.z, 0f) + skin,
-                itemBoxes);
+                entity.getWorldHandle(), chunkCoordinate, minX, minY, minZ, maxX, maxY, maxZ, itemBoxes);
+        treeManager.collectWoodBoxes(
+                entity.getWorldHandle(), chunkCoordinate, minX, minY, minZ, maxX, maxY, maxZ, itemBoxes);
     }
 
     // The distance left once the first item box ahead along the axis stops it

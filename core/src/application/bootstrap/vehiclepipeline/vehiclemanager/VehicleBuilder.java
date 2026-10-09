@@ -3,10 +3,10 @@ package application.bootstrap.vehiclepipeline.vehiclemanager;
 import java.io.File;
 
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
+import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoSlotStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleData;
-import application.bootstrap.vehiclepipeline.vehicle.VehicleGridStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandlingStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHullStruct;
@@ -81,7 +81,7 @@ class VehicleBuilder extends BuilderPackage {
         float draft = ArpgUtility.validateInt(hullArpg, "draft") * scale;
         float centerOfMassHeight = ArpgUtility.validateInt(hullArpg, "center_of_mass_height") * scale;
 
-        VehicleGridStruct solidGrid = vehicleGeometryBuilder.buildSolidGrid(parts);
+        SubVoxelGridStruct solidGrid = vehicleGeometryBuilder.buildSolidGrid(parts);
         ObjectArrayList<MeshInstance> hullMeshes = vehicleGeometryBuilder.buildHullMeshes(parts);
         vehicleGeometryBuilder.buildPartMeshes(parts);
 

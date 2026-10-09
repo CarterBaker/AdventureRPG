@@ -1,9 +1,9 @@
 package application.bootstrap.vehiclepipeline.vehiclemanager;
 
+import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCastStruct;
-import application.bootstrap.vehiclepipeline.vehicle.VehicleGridStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartControl;
@@ -152,7 +152,7 @@ class VehicleCastSystem extends SystemPackage {
 
     private void castGrid(VehicleInstance vehicle, VehicleCastStruct out) {
 
-        VehicleGridStruct grid = vehicle.getVehicleHandle().getSolidGrid();
+        SubVoxelGridStruct grid = vehicle.getVehicleHandle().getSolidGrid();
         beginWalk(originScratch, directionScratch);
 
         while (true) {

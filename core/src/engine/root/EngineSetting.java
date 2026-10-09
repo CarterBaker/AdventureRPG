@@ -193,6 +193,7 @@ public class EngineSetting {
     public static final String SHADER_PATH = "shaders";
     public static final String SPRITE_PATH = "sprites";
     public static final String STRUCTURE_PATH = "structures";
+    public static final String TREE_PATH = "trees";
     public static final ObjectArraySet<String> TCS_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tcs",
         "tesc" });
     public static final ObjectArraySet<String> TES_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tes",
@@ -911,6 +912,20 @@ public class EngineSetting {
     public static final float TERRAIN_VEIN_SHEET_GRADIENT = 0.8f;
     public static final double TERRAIN_VEIN_WAVELENGTH_BLOCKS = 36.0;
 
+    // Biome Trees — how a biome spreads each kind of tree it links
+    public static final int BIOME_MAX_CLUSTER_TREES = 24;
+    public static final int BIOME_MAX_TREE_CLUSTER_RADIUS_BLOCKS = 48;
+    public static final int BIOME_MAX_TREE_KINDS = 8;
+    public static final int BIOME_MIN_TREE_SPACING_BLOCKS = 2;
+    public static final float DEFAULT_BIOME_TREE_CHANCE = 0.5f;
+    public static final float DEFAULT_BIOME_TREE_CLUSTER_RADIUS_BLOCKS = 8f;
+    public static final String DEFAULT_BIOME_TREE_DISTRIBUTION = "scattered";
+    public static final int DEFAULT_BIOME_TREE_MAX_CLUSTER_TREES = 6;
+    public static final int DEFAULT_BIOME_TREE_MIN_CLUSTER_TREES = 3;
+    public static final float DEFAULT_BIOME_TREE_PATCH_COVERAGE = 0.6f;
+    public static final float DEFAULT_BIOME_TREE_PATCH_WAVELENGTH_BLOCKS = 96f;
+    public static final int DEFAULT_BIOME_TREE_SPACING_BLOCKS = 12;
+
     // Lakes
     public static final float LAKE_BED_DEPTH_PER_WEIGHT = 24f;
     public static final int LAKE_LEVEL_UNDEFINED = Integer.MIN_VALUE;
@@ -1049,6 +1064,202 @@ public class EngineSetting {
     public static final long STRUCTURE_PLACEMENT_SEED = 0x1B7F3D95C28E46A0L;
     public static final int STRUCTURE_QUARTER_TURN_COUNT = 4;
     public static final long STRUCTURE_ROTATION_SALT = 0xA60C9E4F2D7B1853L;
+
+    // Tree Parts — the four parts every tree species is drawn with, and the texture corner each carries
+    public static final int TREE_PART_BARK = 0;
+    public static final int TREE_PART_WOOD = 1;
+    public static final int TREE_PART_LEAF = 2;
+    public static final int TREE_PART_ACCENT = 3;
+    public static final int TREE_PART_COUNT = 4;
+    public static final int TREE_PART_CORNER_FLOATS = 2;
+    public static final int TREE_WOOD_PART_COUNT = 2;
+
+    // Tree Mesh — how a wood vertex packs its face and edge kinds, and the slots it leaves empty
+    public static final int TREE_EDGE_BITS = 2;
+    public static final int TREE_HIDER_FLOATS = 5;
+    public static final float TREE_LEAF_HIDE_SHARE = 0.66f;
+    public static final int TREE_EDGE_CONCAVE = 2;
+    public static final int TREE_EDGE_CONVEX = 1;
+    public static final int TREE_EDGE_FLAT = 0;
+    public static final int TREE_META_EDGE_SHIFT = 3;
+    public static final int TREE_WOOD_PADDING_FLOATS = 4;
+
+    // Tree Defaults — every optional field of a tree species file
+    public static final String TREE_DEFAULT_BARK_COLOR = "#FFFFFF";
+    public static final int TREE_DEFAULT_BARK_SUB_VOXELS = 2;
+    public static final String TREE_DEFAULT_BARK_TEXTURE = "items/standard/OakBark";
+    public static final float TREE_DEFAULT_BRANCH_ANGLE_DEGREES = 50f;
+    public static final int TREE_DEFAULT_BRANCH_CHILDREN = 3;
+    public static final float TREE_DEFAULT_BRANCH_CHILD_ANGLE_DEGREES = 35f;
+    public static final float TREE_DEFAULT_BRANCH_CHILD_LENGTH = 0.6f;
+    public static final float TREE_DEFAULT_BRANCH_GRAVITY = -0.05f;
+    public static final float TREE_DEFAULT_BRANCH_LENGTH = 0.4f;
+    public static final int TREE_DEFAULT_BRANCH_LEVELS = 2;
+    public static final float TREE_DEFAULT_BRANCH_RADIUS_RATIO = 0.6f;
+    public static final int TREE_DEFAULT_BRANCH_SEGMENTS = 4;
+    public static final float TREE_DEFAULT_BRANCH_TWIST_DEGREES = 137.5f;
+    public static final float TREE_DEFAULT_CROWN_START = 0.35f;
+    public static final String TREE_DEFAULT_FORM = "broadleaf";
+    public static final float TREE_DEFAULT_GROWTH_DAYS = 20f;
+    public static final String TREE_DEFAULT_LEAF_COLOR = "#FFFFFF";
+    public static final float TREE_DEFAULT_LEAF_DENSITY = 0.8f;
+    public static final float TREE_DEFAULT_LEAF_RADIUS_BLOCKS = 2f;
+    public static final float TREE_DEFAULT_LEAF_SQUASH = 0.75f;
+    public static final String TREE_DEFAULT_LEAF_TEXTURE = "items/standard/LeavesBroad";
+    public static final float TREE_DEFAULT_LOG_LENGTH_BLOCKS = 1f;
+    public static final int TREE_DEFAULT_MAX_BRANCH_COUNT = 6;
+    public static final float TREE_DEFAULT_MAX_HEIGHT_BLOCKS = 16f;
+    public static final int TREE_DEFAULT_MIN_BRANCH_COUNT = 4;
+    public static final float TREE_DEFAULT_MIN_HEIGHT_BLOCKS = 10f;
+    public static final float TREE_DEFAULT_SEED_CHANCE = 0.2f;
+    public static final String TREE_DEFAULT_TOOL = "Standard/Axe";
+    public static final float TREE_DEFAULT_TRUNK_FLARE = 0.3f;
+    public static final float TREE_DEFAULT_TRUNK_LEADER = 0.6f;
+    public static final float TREE_DEFAULT_TRUNK_LEAN_DEGREES = 4f;
+    public static final float TREE_DEFAULT_TRUNK_RADIUS_BLOCKS = 0.45f;
+    public static final int TREE_DEFAULT_TRUNK_STEMS = 1;
+    public static final float TREE_DEFAULT_TRUNK_STEM_SPREAD_BLOCKS = 0f;
+    public static final float TREE_DEFAULT_TRUNK_TAPER = 0.4f;
+    public static final float TREE_DEFAULT_TRUNK_WOBBLE = 0.04f;
+    public static final float TREE_DEFAULT_WILD_MAX_AGE = 1f;
+    public static final float TREE_DEFAULT_WILD_MIN_AGE = 0.6f;
+    public static final String TREE_DEFAULT_WOOD_TEXTURE = "items/standard/OakHeartwood";
+
+    // Tree Limits
+    public static final int TREE_COLOR_HEX_DIGITS = 6;
+    public static final int TREE_MAX_BRANCH_CHILDREN = 8;
+    public static final int TREE_MAX_BRANCH_COUNT = 48;
+    public static final int TREE_MAX_BRANCH_LEVELS = 5;
+    public static final int TREE_MAX_BRANCH_SEGMENTS = 12;
+    public static final float TREE_MAX_HEIGHT_BLOCKS = 240f;
+    public static final int TREE_MAX_STEMS = 12;
+    public static final float TREE_MAX_TRUNK_RADIUS_BLOCKS = 16f;
+    public static final float TREE_NO_SPREAD = 0f;
+    public static final float TREE_REACH_MARGIN_BLOCKS = 1f;
+    public static final int TREE_MAX_LEAF_CLUSTERS = 4096;
+    public static final int TREE_MAX_SEGMENTS = 8192;
+
+    // Tree Growth — how a species grows its skeleton, every share of its height or length
+    public static final float TREE_ALONG_LEAF_TIP_SHARE = 0.35f;
+    public static final float TREE_ANGLE_JITTER_MAX = 1.15f;
+    public static final float TREE_ANGLE_JITTER_MIN = 0.85f;
+    public static final float TREE_BRANCH_GROW_SPAN = 0.06f;
+    public static final float TREE_BRANCH_TIP_RADIUS_SHARE = 0.35f;
+    public static final float TREE_BRANCH_WANDER = 0.12f;
+    public static final float TREE_CHILD_FIRST_SHARE = 0.3f;
+    public static final float TREE_CHILD_LENGTH_FALLOFF = 0.4f;
+    public static final float TREE_CONE_TIP_SHARE = 0.08f;
+    public static final float TREE_FLARE_HEIGHT_RADII = 2.5f;
+    public static final float TREE_FLARE_MAX_SHARE = 0.3f;
+    public static final float TREE_GROWTH_CURVE = 0.7f;
+    public static final float TREE_GROWTH_CHECK_SECONDS = 1f;
+    public static final int TREE_GROWTH_REBUILDS_PER_CHECK = 2;
+    public static final int TREE_GROWTH_STAGES = 24;
+    public static final float TREE_LEAN_MIN_SHARE = 0.5f;
+    public static final float TREE_LENGTH_JITTER_MAX = 1.2f;
+    public static final float TREE_LENGTH_JITTER_MIN = 0.8f;
+    public static final float TREE_LEVEL_BIRTH_STEP = 0.05f;
+    public static final float TREE_LIMB_AZIMUTH_JITTER = 0.26f;
+    public static final float TREE_LIMB_BIRTH_MAX = 0.06f;
+    public static final float TREE_LIMB_BIRTH_MIN = 0.02f;
+    public static final float TREE_LIMB_JITTER_MAX = 0.9f;
+    public static final float TREE_LIMB_JITTER_MIN = 0.1f;
+    public static final float TREE_LIMB_LENGTH_FALLOFF = 0.35f;
+    public static final float TREE_LIMB_TOP_ANGLE_SHARE = 0.55f;
+    public static final float TREE_LIMB_TOP_SHARE = 0.2f;
+    public static final int TREE_MAX_TRUNK_SEGMENTS = 32;
+    public static final int TREE_MID_LEAF_MIN_SEGMENTS = 3;
+    public static final float TREE_MID_LEAF_SHARE = 0.65f;
+    public static final float TREE_MIN_LEAF_RADIUS_BLOCKS = 0.125f;
+    public static final float TREE_MIN_RADIUS_BLOCKS = 1f / 32f;
+    public static final float TREE_MIN_SEGMENT_BLOCKS = 0.05f;
+    public static final int TREE_MIN_TRUNK_SEGMENTS = 3;
+    public static final float TREE_PALM_BEND = 0.06f;
+    public static final float TREE_PINNATE_FIRST_SHARE = 0.12f;
+    public static final float TREE_SAPLING_HEIGHT_BLOCKS = 0.75f;
+    public static final float TREE_SHARE_EPSILON = 0.001f;
+    public static final float TREE_SPINDLE_BASE_SHARE = 0.55f;
+    public static final float TREE_STEM_MIN_HEIGHT_SHARE = 0.7f;
+    public static final float TREE_STEM_MIN_SPREAD_SHARE = 0.5f;
+    public static final int TREE_STRAND_DEPTH = TREE_MAX_BRANCH_LEVELS + 1;
+    public static final float TREE_STRAND_LEAF_SHARE = 0.45f;
+    public static final int TREE_STRAND_SEGMENTS = 3;
+    public static final float TREE_STRAND_STRETCH = 2f;
+    public static final float TREE_STRAND_SWAY = 0.12f;
+    public static final float TREE_TRUNK_SEGMENT_BLOCKS = 3f;
+    public static final float TREE_TRUNK_SINK_BLOCKS = 1f;
+    public static final float TREE_TUFT_RADIUS_SHARE = 0.7f;
+    public static final float TREE_UPRIGHT_LIMIT = 0.95f;
+    public static final float TREE_WEEPING_DROOP = 0.35f;
+    public static final int TREE_WHORL_MAX_BOUGHS = 6;
+    public static final int TREE_WHORL_MIN_BOUGHS = 3;
+    public static final float TREE_WHORL_TOP_SHARE = 0.96f;
+
+    // Tree Raster — a node's radius in sub-voxels, and the salts of a leaf cluster's keep and accent rolls
+    public static final float TREE_LEAF_CAST_SHARE = 0.86f;
+    public static final long TREE_LEAF_ACCENT_SALT = 0x2C5E8A13F07D49B6L;
+    public static final long TREE_LEAF_KEEP_SALT = 0x7A4D1C93E5B2068FL;
+    public static final long TREE_LEAF_SEED_SALT = 0x51E3B7A90C4D682FL;
+    public static final int TREE_MAX_NODE_RADIUS = 256;
+    public static final int TREE_NODE_MAX_BOXES = 7;
+    public static final int TREE_MIN_NODE_RADIUS = 1;
+
+    // Tree Placement — the salts every placement roll is drawn with, the spacing biomes are looked for at around a
+    // chunk, and the ground cache's bound and markers
+    public static final long TREE_AGE_SALT = 0x3C81E5A7D20F96B4L;
+    public static final int TREE_BIOME_SAMPLE_SPACING_BLOCKS = 16;
+    public static final long TREE_CHANCE_SALT = 0x6F2A9D04C7B3E851L;
+    public static final long TREE_CLUSTER_ANGLE_SALT = 0x0B57E3C9A1D86F24L;
+    public static final long TREE_CLUSTER_COUNT_SALT = 0x94D0B62E5F1A7C38L;
+    public static final long TREE_CLUSTER_SPREAD_SALT = 0x2E6C1F8A4B93D705L;
+    public static final int TREE_GROUND_CACHE_MAX = 16384;
+    public static final int TREE_GROUND_FLOODED = Integer.MIN_VALUE;
+    public static final int TREE_GROUND_UNKNOWN = Integer.MAX_VALUE;
+    public static final long TREE_OFFSET_X_SALT = 0xA7193F5C0E2D84B6L;
+    public static final long TREE_OFFSET_Z_SALT = 0x5D8E2B07F6C1A943L;
+    public static final long TREE_PATCH_SALT = 0xC24F6A1D93E05B78L;
+    public static final long TREE_PLACEMENT_SALT = 0x1F9B4E72A8C6D035L;
+    public static final long TREE_PLANTED_SEED_SALT = 0x6D03A9F1C85B2E47L;
+    public static final long TREE_SEED_SALT = 0xE3A05C8B17F4296DL;
+
+    // Tree Geometry — the blocks of wood laid around a subchunk so its borders mesh as if nothing ended there, and
+    // where a root's centre lies across its block
+    public static final int TREE_GEOMETRY_MARGIN_BLOCKS = 1;
+    public static final float TREE_ROOT_CENTER_BLOCKS = 0.5f;
+
+    // Tree Materials
+    public static final String TREE_BARK_MATERIAL = "trees/TreeBarkMaterial";
+    public static final String TREE_LEAF_MATERIAL = "trees/TreeLeafMaterial";
+    public static final String TREE_BARK_FALLING_MATERIAL = "trees/TreeBarkFallingMaterial";
+    public static final String TREE_LEAF_FALLING_MATERIAL = "trees/TreeLeafFallingMaterial";
+
+    // Tree Fall — how a felled piece comes down, rests and breaks into its drops
+    public static final long TREE_DROP_ANGLE_SALT = 0x8E2C47B05A1F96D3L;
+    public static final float TREE_DROP_LIFT_BLOCKS = 0.5f;
+    public static final float TREE_DROP_LIFT_SPEED = 3f;
+    public static final float TREE_DROP_SPIN_RATE = 4f;
+    public static final float TREE_DROP_SPREAD_SPEED = 1.5f;
+    public static final float TREE_FALL_DROP_BLOCKS = 3f;
+    public static final float TREE_FALL_HINGE_ACCELERATION = 1.5f;
+    public static final float TREE_FALL_MIN_LENGTH_BLOCKS = 1f;
+    public static final float TREE_FALL_REST_RADIANS = 1.48f;
+    public static final float TREE_FALL_REST_SECONDS = 1.5f;
+    public static final float TREE_FALL_START_RADIANS = 0.02f;
+    public static final int TREE_MAX_LOG_DROPS = 40;
+    public static final int TREE_MAX_LOG_KINDS = 8;
+    public static final int TREE_MAX_SEED_DROPS = 4;
+    public static final long TREE_SEED_DROP_SALT = 0x4B9D1E6372C0A85FL;
+
+    // Tree Chop — a level stroke's wedge, in sub-voxels, and the share of a cross-section that must stand for the
+    // wood to hold
+    public static final float TREE_CHOP_BITE_SUB_VOXELS = 3f;
+    public static final float TREE_CHOP_HALF_HEIGHT_SUB_VOXELS = 4f;
+    public static final float TREE_CHOP_LEVEL_EPSILON = 0.05f;
+    public static final float TREE_CHOP_MOUTH_SUB_VOXELS = 1f;
+    public static final float TREE_CHOP_TIER_BITE_SUB_VOXELS = 1f;
+    public static final float TREE_CHOP_WEDGE_TAPER = 0.5f;
+    public static final int TREE_CHOP_WIDTH_MARGIN_SUB_VOXELS = 2;
+    public static final float TREE_SEVER_REMAINING_SHARE = 0.25f;
 
     // Sky & Atmosphere
     public static final double DEGREES_PER_FULL_ROTATION = 360.0;
@@ -1483,6 +1694,7 @@ public class EngineSetting {
     public static final String ITEM_ACTION_FIRE_NONE = "";
     public static final String ITEM_ACTION_HELD_ANY = "";
     public static final String ITEM_PICK_UP_AS_SELF = "";
+    public static final String ITEM_PLANTS_NONE = "";
 
     // Tools
     public static final int DEFAULT_TOOL_TIER = 0;

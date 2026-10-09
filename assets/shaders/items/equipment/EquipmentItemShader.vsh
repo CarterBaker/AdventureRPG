@@ -8,13 +8,17 @@ layout(location = 2) in vec2  aUV;
 // Carries the item's one-block cube onto its anchor on the posed character.
 uniform mat4 u_model;
 
-out vec2 vUV;
+out vec2 vUVOrigin;
+out vec3 vModelPosition;
 out vec3 vViewPosition;
+flat out int vFace;
 
 void main() {
     vec4 worldPosition = u_model * vec4(aPos, 1.0);
 
-    vUV           = aUV;
+    vUVOrigin      = aUV;
+    vModelPosition = aPos;
+    vFace          = int(aNorIndex);
     vViewPosition = (u_view * worldPosition).xyz;
     gl_Position   = u_viewProjection * worldPosition;
 }

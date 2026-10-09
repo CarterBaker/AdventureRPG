@@ -28,8 +28,10 @@ class GeometryBuildManager extends ManagerPackage {
     /*
      * Drives a chunk's geometry build subchunk by subchunk and routes each
      * block to its geometry branch. Empty subchunks, and uniform or opaque ones
-     * enclosed by equally solid neighbors, skip the block walk entirely.
-     * Callers already hold the chunk's lock, so no gating happens here.
+     * enclosed by equally solid neighbors, skip the block walk entirely; an
+     * empty one still draws any tree reaching into it, since a crown stands in
+     * open air. Callers already hold the chunk's lock, so no gating happens
+     * here.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -43,6 +45,7 @@ class GeometryBuildManager extends ManagerPackage {
     private PartialGeometryBranch partialGeometryBranch;
     private ComplexGeometryBranch complexGeometryBranch;
     private LiquidGeometryBranch liquidGeometryBranch;
+    private TreeGeometryBranch treeGeometryBranch;
     private BiomeManager biomeManager;
     private BlockManager blockManager;
 
@@ -62,6 +65,7 @@ class GeometryBuildManager extends ManagerPackage {
         this.partialGeometryBranch = create(PartialGeometryBranch.class);
         this.complexGeometryBranch = create(ComplexGeometryBranch.class);
         this.liquidGeometryBranch = create(LiquidGeometryBranch.class);
+        this.treeGeometryBranch = create(TreeGeometryBranch.class);
 
         // Settings
         this.BLOCK_COORDINATE_COUNT = ChunkCoordinateUtility.BLOCK_COORDINATE_COUNT;
@@ -91,8 +95,7 @@ class GeometryBuildManager extends ManagerPackage {
 
         if (subChunkInstance.isKnownEmpty()) {
             subChunkInstance.finalizeBlockTypeTally();
-            dynamicPacketInstance.unlock();
-            return true;
+            return buildTreesOnly(dynamicGeometryAsyncContainer, chunkInstance, subChunkInstance);
         }
 
         if (subChunkInstance.isUniformFill() && isFullyEnclosed(chunkInstance, subChunkInstance)) {
@@ -170,6 +173,36 @@ class GeometryBuildManager extends ManagerPackage {
         }
 
         subChunkInstance.finalizeBlockTypeTally();
+        treeGeometryBranch.assembleTrees(chunkInstance, subChunkInstance, verts);
+
+        return pushVerts(verts, dynamicPacketInstance);
+    }
+
+    // An empty subchunk has no blocks to walk, only the trees that may reach into it
+    private boolean buildTreesOnly(
+            DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance) {
+
+        DynamicPacketInstance dynamicPacketInstance = subChunkInstance.getDynamicPacketInstance();
+
+        if (!treeGeometryBranch.reachesSubChunk(chunkInstance, subChunkInstance)) {
+            dynamicPacketInstance.unlock();
+            return true;
+        }
+
+        dynamicGeometryAsyncContainer.reset();
+
+        Int2ObjectOpenHashMap<FloatArrayList> verts = dynamicGeometryAsyncContainer.getVerts();
+        treeGeometryBranch.assembleTrees(chunkInstance, subChunkInstance, verts);
+
+        return pushVerts(verts, dynamicPacketInstance);
+    }
+
+    // Every material's vertices handed to the packet, which is ready when anything was drawn
+    private boolean pushVerts(
+            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            DynamicPacketInstance dynamicPacketInstance) {
 
         boolean success = true;
 

@@ -12,11 +12,13 @@ const vec3 NORMALS[6] = vec3[](
 
 out vec3 vNormal;
 out vec3 vPosition;
-out vec2 vUV;
+out vec2 vUVOrigin;
+flat out int vFace;
 
 void main() {
     vNormal     = NORMALS[int(aNorIndex)];
     vPosition   = aPos;
-    vUV         = aUV;
+    vUVOrigin   = aUV;
+    vFace       = int(aNorIndex);
     gl_Position = u_viewProjection * vec4(aPos, 1.0);
 }
