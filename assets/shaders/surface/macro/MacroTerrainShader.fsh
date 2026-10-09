@@ -4,6 +4,7 @@ in vec3 vLocalPos;
 in vec2 vTilePos;
 in vec3 vTopColor;
 in vec3 vSideColor;
+flat in int vCoverChunk;
 
 #include "includes/CameraData.glsl"
 #include "includes/SunLightData.glsl"
@@ -14,16 +15,16 @@ layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
 
-// Distant macro terrain, written into the same G-buffer as the voxel surface so the deferred lighting and
-// fog passes treat it as ordinary ground. Any fragment over a chunk the grid itself draws right now is
-// discarded, so macro terrain fills every chunk the grid has not drawn — beyond its footprint, along its rim,
-// and wherever streaming has not caught up — and never overlaps one. The facet normal comes from screen-space
-// derivatives of the flat position, which gives the low poly look without any normal data, and a heightfield
-// never faces down. A gentle facet shows its top color and a steep one turns to its slope color, the way a
-// stepped voxel hillside shows more block sides the steeper it climbs. Sun visibility under the cloud layers
-// is the same the voxel surface writes, so cloud shadows run on across the seam. All three targets must
-// output alpha = 1.0, since this pass draws with blending enabled; gMaterial packs sun visibility, specular
-// and ao.
+// Distant macro terrain, written into the same G-buffer as the voxel surface so the deferred lighting and fog passes
+// treat it as ordinary ground. Any fragment over a chunk the grid itself draws right now is discarded, so macro terrain
+// fills every chunk the grid has not drawn — beyond its footprint, along its rim, and wherever streaming has not caught
+// up — and never overlaps one. A tree stand-in is discarded whole once the grid draws the chunk its tree roots in,
+// since the grid then draws that tree itself. The facet normal comes from screen-space derivatives of the flat
+// position, which gives the low poly look without any normal data, and a heightfield never faces down. A gentle facet
+// shows its top color and a steep one turns to its slope color, the way a stepped voxel hillside shows more block sides
+// the steeper it climbs. Sun visibility under the cloud layers is the same the voxel surface writes, so cloud shadows
+// run on across the seam. All three targets must output alpha = 1.0, since this pass draws with blending enabled;
+// gMaterial packs sun visibility, specular and ao.
 
 const float MACRO_SPECULAR           = 0.0;
 const float MACRO_AO                 = 1.0;
@@ -41,7 +42,9 @@ float resolveSunVisibility() {
 }
 
 void main() {
-    if (isDrawnByChunkGrid(vTilePos))
+    bool drawnByGrid = vCoverChunk >= 0 ? isChunkDrawnByGrid(vCoverChunk) : isDrawnByChunkGrid(vTilePos);
+
+    if (drawnByGrid)
     discard;
 
     vec3 normal = normalize(cross(dFdx(vLocalPos), dFdy(vLocalPos)));

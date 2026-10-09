@@ -8,6 +8,8 @@ import application.bootstrap.worldpipeline.tree.TreeCastStruct;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreePaletteHandle;
+import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
+import application.bootstrap.worldpipeline.util.TreeDistributionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -25,25 +27,29 @@ public class TreeManager extends ManagerPackage {
      * world. Every species is loaded in awake(), before any chunk generates,
      * so the streaming threads only ever read the palette. World generation
      * asks it for the trees that reach a chunk, which the chunk holds until
-     * it is reset; the registry shares one instance of each tree between every
-     * chunk it reaches. A tree stays virtual — its height and age, nothing
-     * grown — until something near enough needs its shape, and gives the
-     * shape back once nothing has for a while. Trees are drawn apart from the
-     * ground: in full by the chunks near the player, as stand-ins by the
-     * megas beyond them, and as a canopy by distant macro terrain, so a tree
-     * that changes redraws only itself. It is the one way anything touches a
-     * tree: castTree()
-     * finds what a ray meets, strikeTree() lands a swing on it,
-     * collectWoodBoxes() gives movement the wood to collide with, and plant()
-     * roots a seed. Each frame it publishes the game day for the streaming
-     * threads, grows the trees whose stage has come, and carries every felled
-     * piece through its fall. Tree IDs are assigned in registration order.
+     * it is reset; the registry shares one instance of each tree between
+     * every chunk it reaches. Where wild trees root is one answer, given room
+     * from one another, read alike by chunk placement and by distant terrain
+     * that stands each tree in on its own. A tree stays virtual — its height
+     * and age, nothing grown — until something near enough needs its shape,
+     * and gives the shape back once nothing has for a while. Trees are drawn
+     * apart from the ground: in full by the chunks near the player, as
+     * stand-ins by the megas beyond them, as flat stand-ins by the macro
+     * terrain nearest them, and as a canopy by the macro terrain beyond that,
+     * so a tree that changes redraws only itself. It is the one way anything
+     * touches a tree: castTree() finds what a ray meets, strikeTree() lands a
+     * swing on it, collectWoodBoxes() gives movement the wood to collide
+     * with, and plant() roots a seed. Each frame it publishes the game day
+     * for the streaming threads, grows the trees whose stage has come, and
+     * carries every felled piece through its fall. Tree IDs are assigned in
+     * registration order.
      */
 
     // Internal
     private ClockManager clockManager;
     private MaterialManager materialManager;
     private TreeRegistryBranch treeRegistryBranch;
+    private TreeSiteBranch treeSiteBranch;
     private TreePlacementBranch treePlacementBranch;
     private TreeSpaceBranch treeSpaceBranch;
     private TreeChopBranch treeChopBranch;
@@ -56,8 +62,9 @@ public class TreeManager extends ManagerPackage {
     private Object2IntOpenHashMap<String> treeName2TreeID;
     private ObjectArrayList<TreeHandle> treeID2TreeHandle;
 
-    // Reach — the farthest any species can reach from its root, in blocks
+    // Reach — the farthest any species can reach from its root, and the most room any keeps around it, in blocks
     private volatile float maxReachBlocks;
+    private volatile float maxClearanceBlocks;
 
     // Materials
     private int barkMaterialID;
@@ -77,6 +84,7 @@ public class TreeManager extends ManagerPackage {
 
         create(TreeLoader.class);
         this.treeRegistryBranch = create(TreeRegistryBranch.class);
+        this.treeSiteBranch = create(TreeSiteBranch.class);
         this.treePlacementBranch = create(TreePlacementBranch.class);
         this.treeSpaceBranch = create(TreeSpaceBranch.class);
         create(TreeRebuildBranch.class);
@@ -138,9 +146,11 @@ public class TreeManager extends ManagerPackage {
         updateMaxReach(treeHandle);
     }
 
-    // A species reaching further than any before widens how far around a chunk its trees are looked for
+    // A species reaching further, or keeping more room, than any before widens how far around a region its trees
+    // are looked for
     void updateMaxReach(TreeHandle treeHandle) {
         maxReachBlocks = Math.max(maxReachBlocks, treeHandle.getReachBlocks());
+        maxClearanceBlocks = Math.max(maxClearanceBlocks, TreeDistributionUtility.resolveClearance(treeHandle));
     }
 
     // Live Edit \\
@@ -163,6 +173,18 @@ public class TreeManager extends ManagerPackage {
 
         releaseTrees(treePaletteHandle);
         treePaletteHandle.set(treePlacementBranch.placeTrees(worldHandle, chunkCoordinate, currentDay));
+    }
+
+    // Any thread — every wild tree rooted in a block region that stands once its neighbours are judged, handed back
+    // from the thread's own scratch and read before the thread's next search
+    public void collectSites(
+            WorldHandle worldHandle,
+            long minX,
+            long minZ,
+            long maxX,
+            long maxZ,
+            ObjectArrayList<TreeSiteStruct> out) {
+        treeSiteBranch.collectSites(worldHandle, minX, minZ, maxX, maxZ, out);
     }
 
     // Every tree a palette holds let go, the palette left empty
@@ -257,6 +279,10 @@ public class TreeManager extends ManagerPackage {
 
     public float getMaxReachBlocks() {
         return maxReachBlocks;
+    }
+
+    public float getMaxClearanceBlocks() {
+        return maxClearanceBlocks;
     }
 
     public int getBarkMaterialID() {

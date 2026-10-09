@@ -166,7 +166,6 @@ public class EngineSetting {
     // File Paths & Extensions
     public static final String ANIMATION_PATH = "animations";
     public static final String ANIMATION_TREE_PATH = "animationtrees";
-    public static final String ARCHITECTURE_PATH = "architectures";
     public static final String BEHAVIOR_PATH = "behaviors";
     public static final String BIOME_PATH = "biomes";
     public static final String BLOCK_PATH = "blocks";
@@ -177,7 +176,6 @@ public class EngineSetting {
     public static final String ENTITY_PATH = "entities";
     public static final String FEATURE_PATH = "features";
     public static final String FBO_CATALOG_PATH = "application/fbos";
-    public static final String FURNISHING_PATH = "furnishings";
     public static final ObjectArraySet<String> FONT_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "ttf",
         "otf" });
     public static final String FONT_PATH = "fonts";
@@ -191,12 +189,9 @@ public class EngineSetting {
     public static final String MESH_PATH = "mesh";
     public static final String PASS_PATH = "processingpasses";
     public static final String RIG_PATH = "rigs";
-    public static final String ROAD_PATH = "roads";
     public static final String SEASON_PATH = "seasons";
-    public static final String SETTLEMENT_PATH = "settlements";
     public static final String SHADER_PATH = "shaders";
     public static final String SPRITE_PATH = "sprites";
-    public static final String STRUCTURE_LIST_PATH = "structurelists";
     public static final String STRUCTURE_PATH = "structures";
     public static final String TREE_PATH = "trees";
     public static final ObjectArraySet<String> TCS_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tcs",
@@ -555,7 +550,6 @@ public class EngineSetting {
 
     // Block & World
     public static final String AIR_BLOCK_NAME = "TerraArcanaBlocks/Air";
-    public static final double BLOCK_CENTER_OFFSET = 0.5;
     public static final int BLOCK_MAP_COLOR_UNDEFINED = -1;
     public static final int BLOCK_TEXTURE_UNDEFINED = -1;
     public static final float BLOCK_VISCOSITY_UNDEFINED = -1.0f;
@@ -602,6 +596,7 @@ public class EngineSetting {
     public static final int MACRO_CELLS_PER_SIDE_MIN = 1;
     public static final int MACRO_COVERAGE_BITS_PER_WORD = Integer.SIZE;
     public static final String MACRO_COVERAGE_UBO = "MacroCoverageData";
+    public static final float MACRO_COVER_OWN_CHUNK = -1f;
     public static final int MACRO_COVERAGE_WORD_COUNT = MACRO_CHUNK_SIZE * MACRO_CHUNK_SIZE
             / MACRO_COVERAGE_BITS_PER_WORD;
     public static final int MACRO_COVERAGE_VECTOR_COUNT = MACRO_COVERAGE_WORD_COUNT / VECTOR4_COMPONENT_COUNT;
@@ -616,7 +611,7 @@ public class EngineSetting {
     public static final String MACRO_STREAMING_THREAD_NAME = "MacroStreaming";
     public static final float MACRO_SURFACE_OFFSET_BLOCKS = BLOCK_SIZE;
     public static final String MACRO_VAO = "util/vao/MacroVAO";
-    public static final int MACRO_VERTEX_FLOAT_COUNT = 5;
+    public static final int MACRO_VERTEX_FLOAT_COUNT = 6;
     public static final int MAX_MACRO_GPU_UPLOADS_PER_FRAME = 16;
 
     // Macro Water
@@ -1072,120 +1067,6 @@ public class EngineSetting {
     public static final int STRUCTURE_QUARTER_TURN_COUNT = 4;
     public static final long STRUCTURE_ROTATION_SALT = 0xA60C9E4F2D7B1853L;
 
-    // Structure Content — the space a layer row leaves untouched, a footprint column with no solid block, and the
-    // salts a placed structure's furnishing rolls are drawn with
-    public static final long STRUCTURE_FURNISHING_ITEM_SALT = 0x4F1C8A6E39D2B705L;
-    public static final long STRUCTURE_FURNISHING_SALT = 0x93B6D0E47A215C8FL;
-    public static final int STRUCTURE_FOOTPRINT_EMPTY = Integer.MIN_VALUE;
-    public static final char STRUCTURE_LAYER_SKIP_CHARACTER = ' ';
-
-    // Roads — centrelines a few blocks a point, bent by a few seeded harmonics, and the defaults of every optional
-    // road field
-    public static final int DEFAULT_ROAD_BRIDGE_MIN_HEIGHT_BLOCKS = 4;
-    public static final int DEFAULT_ROAD_CLEARANCE_BLOCKS = 4;
-    public static final float DEFAULT_ROAD_MAX_GRADE = 0.18f;
-    public static final int DEFAULT_ROAD_PILLAR_SPACING_BLOCKS = 8;
-    public static final int DEFAULT_ROAD_TUNNEL_HEIGHT_BLOCKS = 5;
-    public static final int DEFAULT_ROAD_TUNNEL_MIN_DEPTH_BLOCKS = 8;
-    public static final double ROAD_CURVE_BEND_SCALE = 0.25;
-    public static final double ROAD_CURVE_HARMONIC_FALLOFF = 0.5;
-    public static final int ROAD_CURVE_ROLL_ROW = 0x5A17;
-    public static final float ROAD_HALF_STEP_FRACTION = 0.5f;
-    public static final float ROAD_HEIGHT_FREE = Float.NaN;
-    public static final float ROAD_MAX_WIDTH_BLOCKS = 12f;
-    public static final int ROAD_MIN_SPAN_POINTS = 4;
-    public static final float ROAD_PILLAR_DEPTH_BLOCKS = 1.5f;
-    public static final double ROAD_POINT_SPACING_BLOCKS = 2.0;
-    public static final double ROAD_RAIL_WIDTH_BLOCKS = 1.0;
-    public static final int ROAD_RING_MIN_POINTS = 16;
-    public static final int ROAD_SHOULDER_MAX_STEP_BLOCKS = 1;
-    public static final int ROAD_SMOOTHING_RADIUS_POINTS = 4;
-    public static final long ROAD_SURFACE_SALT = 0x2D8F61B3C40E9A57L;
-    public static final double ROAD_TUNNEL_ARCH_DROP_BLOCKS = 2.0;
-    public static final int ROAD_TUNNEL_MIN_HEIGHT_BLOCKS = 3;
-    public static final float ROAD_WATER_CLEARANCE_BLOCKS = 2f;
-
-    // Layouts — how lots keep apart from one another and from roads, the ground they stand on, and walls' battlements
-    public static final int LAYOUT_GROUND_FLOODED = Integer.MIN_VALUE;
-    public static final double LAYOUT_LOT_GAP_BLOCKS = 2.0;
-    public static final int LAYOUT_LOT_GROUND_SAMPLES = 5;
-    public static final int LAYOUT_LOT_MAX_SLOPE_BLOCKS = 4;
-    public static final int LAYOUT_LOT_MAX_STEP_BLOCKS = 4;
-    public static final double LAYOUT_LOT_ROAD_GAP_BLOCKS = 1.0;
-    public static final double LAYOUT_LOT_SAMPLE_STEP_BLOCKS = 2.0;
-    public static final long LAYOUT_RANDOM_STEP_SALT = 0x9E3779B97F4A7C15L;
-    public static final double LAYOUT_WALL_CRENEL_DEPTH_BLOCKS = 1.0;
-    public static final float LAYOUT_WALL_CRENEL_SPACING_BLOCKS = 2f;
-
-    // Settlements — one settlement cell per this many blocks each way, each holding at most one settlement a margin
-    // inside it, and how a settlement's ring, streets, lanes, wall, lots and trails are drawn
-    public static final boolean DEFAULT_NATURAL_SETTLEMENTS = true;
-    public static final int DEFAULT_SETTLEMENT_MAX_SLOPE_BLOCKS = 20;
-    public static final int DEFAULT_SETTLEMENT_MIN_GROUND_HEIGHT_BLOCKS = 161;
-    public static final float DEFAULT_SETTLEMENT_OUTPOST_CHANCE = 0.6f;
-    public static final int DEFAULT_SETTLEMENT_SETBACK_BLOCKS = 1;
-    public static final float DEFAULT_SETTLEMENT_STREET_BEND = 0.3f;
-    public static final int DEFAULT_SETTLEMENT_TOWER_SPACING_BLOCKS = 32;
-    public static final float SETTLEMENT_BRANCH_END_FRACTION = 0.85f;
-    public static final float SETTLEMENT_BRANCH_START_FRACTION = 0.3f;
-    public static final double SETTLEMENT_BRANCH_TILT_RADIANS = 0.35;
-    public static final int SETTLEMENT_CACHE_CAPACITY = 1024;
-    public static final float SETTLEMENT_CELL_CHANCE = 0.55f;
-    public static final int SETTLEMENT_CELL_MARGIN_BLOCKS = 256;
-    public static final int SETTLEMENT_CELL_SIZE_BLOCKS = 1024;
-    public static final float SETTLEMENT_GATE_MARGIN_BLOCKS = 1f;
-    public static final int SETTLEMENT_LOT_EDGE_BLOCKS = 4;
-    public static final int SETTLEMENT_LOT_STEP_BLOCKS = 3;
-    public static final float SETTLEMENT_MACRO_MAX_CELL_BLOCKS = 32f;
-    public static final float SETTLEMENT_MACRO_SINK_BLOCKS = 2f;
-    public static final double SETTLEMENT_MAP_MAX_SPACING_BLOCKS = 32.0;
-    public static final int SETTLEMENT_MAX_REACH_BLOCKS = 448;
-    public static final float SETTLEMENT_OVERPASS_END_FRACTION = 0.6f;
-    public static final float SETTLEMENT_OVERPASS_START_FRACTION = 0.25f;
-    public static final int SETTLEMENT_REACH_MARGIN_BLOCKS = 24;
-    public static final int SETTLEMENT_RING_MAX_RADIUS_BLOCKS = 48;
-    public static final int SETTLEMENT_RING_MIN_RADIUS_BLOCKS = 12;
-    public static final float SETTLEMENT_RING_WOBBLE = 0.08f;
-    public static final int SETTLEMENT_ROLE_ATTEMPTS = 40;
-    public static final String SETTLEMENT_ROLE_GATEHOUSE = "gatehouse";
-    public static final String SETTLEMENT_ROLE_OUTPOST = "outpost";
-    public static final String SETTLEMENT_ROLE_OVERPASS = "overpass";
-    public static final String SETTLEMENT_ROLE_WALL_TOWER = "wall_tower";
-    public static final double SETTLEMENT_SLOPE_PROBE_FRACTION = 0.6;
-    public static final int SETTLEMENT_SLOPE_PROBES = 6;
-    public static final double SETTLEMENT_SPOKE_JITTER = 0.35;
-    public static final float SETTLEMENT_TOWER_GATE_CLEARANCE_BLOCKS = 6f;
-    public static final float SETTLEMENT_TRAIL_BEND = 0.4f;
-    public static final double SETTLEMENT_TRAIL_MAX_TURN_RADIANS = 0.8;
-    public static final double SETTLEMENT_TREE_CLEARANCE_BLOCKS = 3.0;
-    public static final float SETTLEMENT_WALL_WOBBLE = 0.06f;
-
-    // Settlement Links — the roads joining neighbouring settlements east and south, the side trails off them, and
-    // how far one may stray from the straight run between its ends
-    public static final float SETTLEMENT_LINK_BEND = 0.18f;
-    public static final float SETTLEMENT_LINK_CHANCE = 0.75f;
-    public static final int SETTLEMENT_LINK_DIRECTIONS = 2;
-    public static final int SETTLEMENT_LINK_EAST = 0;
-    public static final int SETTLEMENT_LINK_MAX_TRAILS = 2;
-    public static final float SETTLEMENT_LINK_OUTPOST_CHANCE = 0.6f;
-    public static final double SETTLEMENT_LINK_REACH_BLOCKS = 768.0;
-    public static final int SETTLEMENT_LINK_SOUTH = 1;
-    public static final float SETTLEMENT_LINK_TRAIL_END_FRACTION = 0.8f;
-    public static final int SETTLEMENT_LINK_TRAIL_MAX_BLOCKS = 110;
-    public static final int SETTLEMENT_LINK_TRAIL_MIN_BLOCKS = 30;
-    public static final float SETTLEMENT_LINK_TRAIL_START_FRACTION = 0.2f;
-    public static final int SETTLEMENT_LINK_WINDOW_CELLS = 2;
-
-    // Settlement Salts
-    public static final long SETTLEMENT_ARCHITECTURE_SALT = 0x6B2E91F04D7C38A5L;
-    public static final long SETTLEMENT_CHANCE_SALT = 0x1F7A4C93E25B60D8L;
-    public static final long SETTLEMENT_LINK_SALT = 0xC4D90A37E6812F5BL;
-    public static final long SETTLEMENT_OFFSET_X_SALT = 0x8E35B27C10F94DA6L;
-    public static final long SETTLEMENT_OFFSET_Z_SALT = 0x3A60F8D51B2E97C4L;
-    public static final long SETTLEMENT_PLAN_SALT = 0xD1B84F2763AC059EL;
-    public static final long SETTLEMENT_SITE_SALT = 0x57E2C9A0B3F6184DL;
-    public static final long SETTLEMENT_TYPE_SALT = 0xA98D3C6F207E51B4L;
-
     // Tree Parts — the four parts every tree species is drawn with, and the texture corner each carries
     public static final int TREE_PART_BARK = 0;
     public static final int TREE_PART_WOOD = 1;
@@ -1343,6 +1224,11 @@ public class EngineSetting {
     public static final long TREE_PLANTED_SEED_SALT = 0x6D03A9F1C85B2E47L;
     public static final long TREE_SEED_SALT = 0xE3A05C8B17F4296DL;
 
+    // Tree Clearance — the room a wild tree keeps around its root: a share of its typical crown, never less than its
+    // trunk and a margin
+    public static final float TREE_CLEARANCE_CROWN_SHARE = 0.5f;
+    public static final float TREE_CLEARANCE_TRUNK_MARGIN_BLOCKS = 1f;
+
     // Tree Geometry — the blocks of wood laid around a chunk so its borders mesh as if nothing ended there, and
     // where a root's centre lies across its block
     public static final int TREE_GEOMETRY_MARGIN_BLOCKS = 1;
@@ -1360,12 +1246,24 @@ public class EngineSetting {
     public static final int TREE_IMPOSTOR_CROWN_RADIUS = 2;
     public static final float TREE_IMPOSTOR_CROWN_REACH_SHARE = 0.55f;
     public static final int TREE_IMPOSTOR_CROWN_TOP = 1;
+    public static final int TREE_IMPOSTOR_LUMP_CENTER_Y = 0;
+    public static final int TREE_IMPOSTOR_LUMP_FLOATS = 3;
+    public static final int TREE_IMPOSTOR_LUMP_RADIUS_H = 1;
+    public static final int TREE_IMPOSTOR_LUMP_RADIUS_V = 2;
+    public static final int TREE_IMPOSTOR_LUMPS_MAX_FLOATS = TREE_IMPOSTOR_CONE_TIERS * TREE_IMPOSTOR_LUMP_FLOATS;
     public static final float TREE_IMPOSTOR_PALM_SQUASH = 0.35f;
     public static final long TREE_IMPOSTOR_SEED_SALT = 0x3A9E61C4F07B28D5L;
     public static final float TREE_IMPOSTOR_TIER_RADIUS_SHARE = 0.75f;
     public static final int TREE_IMPOSTOR_TRUNK_HALF_WIDTH = 4;
     public static final float TREE_IMPOSTOR_TRUNK_REACH_SHARE = 0.5f;
     public static final int TREE_IMPOSTOR_TRUNK_TOP = 3;
+
+    // Tree Stand-In — the trees near macro terrain draws one by one, as a trunk box under the impostor's crown in
+    // flat colors, on every tile sampled at least this finely; coarser tiles lay the canopy instead. A lump's box
+    // keeps the share of its radii that covers what the lump's rounded cluster does
+    public static final int TREE_STAND_IN_BOX_CORNERS = 8;
+    public static final float TREE_STAND_IN_LUMP_SHARE = 0.886f;
+    public static final int TREE_STAND_IN_MIN_CELLS_PER_SIDE = 8;
 
     // Tree Canopy — the jagged blanket distant macro terrain lays over its woods
     public static final float TREE_CANOPY_JITTER = 0.35f;

@@ -22,12 +22,12 @@ public class MacroBuildBranch extends BranchPackage {
      * with, and where the sea stands over it, which becomes the tile's patch
      * of the open water mask. Still water at its own level is no part of the
      * sea's plane, so the lattice rises to its surface and wears its water,
-     * shaded by depth as the map shades it. Woods raise a jagged canopy over
-     * the ground they stand on, sampled by MacroCanopyBranch and laid into the
-     * tile's mesh apart from the land, and settlements raise their buildings,
-     * walls and bridges and lay their roads, sampled by MacroSettlementBranch
-     * from their plans and laid after the woods. No block, neighbor, chunk or
-     * tree is ever touched.
+     * shaded by depth as the map shades it. A tile sampled finely enough
+     * stands its trees in one by one through MacroTreeBranch, each where
+     * chunk placement roots it; a coarser one raises a jagged canopy over the
+     * woods instead, sampled by MacroCanopyBranch. Either is laid into the
+     * tile's mesh apart from the land. No block, neighbor or chunk is ever
+     * touched, and no tree is ever grown.
      * The target is read on the main thread when the build is reserved,
      * sampling runs outside the macro's lock since a reserved build pins the
      * macro, and only the assembly into its shared buffers runs under it.
@@ -38,7 +38,7 @@ public class MacroBuildBranch extends BranchPackage {
     private WorldGenerationManager worldGenerationManager;
     private MacroMeshBranch macroMeshBranch;
     private MacroCanopyBranch macroCanopyBranch;
-    private MacroSettlementBranch macroSettlementBranch;
+    private MacroTreeBranch macroTreeBranch;
     private MacroBuildAsyncContainer macroBuildAsyncContainer;
 
     // Settings
@@ -66,7 +66,7 @@ public class MacroBuildBranch extends BranchPackage {
         this.worldGenerationManager = get(WorldGenerationManager.class);
         this.macroMeshBranch = get(MacroMeshBranch.class);
         this.macroCanopyBranch = get(MacroCanopyBranch.class);
-        this.macroSettlementBranch = get(MacroSettlementBranch.class);
+        this.macroTreeBranch = get(MacroTreeBranch.class);
     }
 
     // Build \\
@@ -84,13 +84,15 @@ public class MacroBuildBranch extends BranchPackage {
 
             try {
                 scratch.cellsPerSide = cellsPerSide;
+                scratch.standIns = macroTreeBranch.drawsStandIns(cellsPerSide);
                 sampleLattice(scratch, worldHandle, coordinate);
+                macroTreeBranch.sampleStandIns(scratch, worldHandle, coordinate);
 
                 sync.acquire();
                 try {
                     macroMeshBranch.assembleLand(scratch, sync.getVertices(), sync.getIndices());
                     macroMeshBranch.assembleCanopy(scratch, sync.getVertices(), sync.getIndices());
-                    macroMeshBranch.assembleStructures(scratch, sync.getVertices(), sync.getIndices());
+                    macroMeshBranch.assembleStandIns(scratch, sync.getVertices(), sync.getIndices());
                     macroMeshBranch.assembleWaterMask(scratch, sync.getWaterMask());
                     sync.markBuilt(cellsPerSide);
                 } finally {
@@ -116,9 +118,6 @@ public class MacroBuildBranch extends BranchPackage {
         scratch.minHeightBlocks = Float.MAX_VALUE;
         scratch.openWaterCount = 0;
         scratch.canopyCount = 0;
-        scratch.structureCount = 0;
-
-        macroSettlementBranch.gatherLayouts(scratch, worldHandle, originX, originZ, cellSizeBlocks);
 
         for (int z = 0; z < samplesPerSide; z++) {
             for (int x = 0; x < samplesPerSide; x++) {
@@ -138,13 +137,14 @@ public class MacroBuildBranch extends BranchPackage {
                 scratch.topColors[index] = topColor;
                 scratch.sideColors[index] = lakeWater ? topColor : sample.getSideColor();
                 scratch.openWater[index] = sample.isOpenWater();
+                scratch.stillWater[index] = lakeWater;
                 scratch.minHeightBlocks = Math.min(scratch.minHeightBlocks, height);
 
                 if (sample.isOpenWater())
                     scratch.openWaterCount++;
 
-                macroCanopyBranch.sampleCanopy(scratch, worldHandle, index, sampleX, sampleZ);
-                macroSettlementBranch.sampleSettlement(scratch, worldHandle, index, sampleX, sampleZ, cellSizeBlocks);
+                if (!scratch.standIns)
+                    macroCanopyBranch.sampleCanopy(scratch, worldHandle, index, sampleX, sampleZ);
             }
         }
     }

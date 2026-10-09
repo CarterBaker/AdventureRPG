@@ -16,8 +16,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MacroCanopyBranch extends BranchPackage {
 
     /*
-     * Async — the woods distant macro terrain shows, judged per lattice point
-     * without placing or growing a single tree. Every kind of tree the
+     * Async — the woods the farthest macro terrain shows, on tiles sampled
+     * too coarsely to stand their trees in one by one, judged per lattice
+     * point without placing or growing a single tree. Every kind of tree the
      * point's biome grows covers a share of its ground, as tree placement
      * would spread it; where they cover enough of it together, a canopy
      * stands over the ground as high as their typical wild trees, jittered a

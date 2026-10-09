@@ -20,7 +20,9 @@ public final class TreeImpostorUtility extends EngineUtility {
      * that rises to a point for a conifer or columnar tree, and one flat
      * spread for a palm. A tree an axe or a hand altered is sized from its own
      * shape, so a stump stands as a stump. Positions are in blocks of the
-     * caller's frame.
+     * caller's frame. Macro terrain lays its own flat stand-ins out by the
+     * same sizes and crown, so a tree keeps its place and bulk as it passes
+     * from one to the other.
      */
 
     // Emit \\
@@ -39,7 +41,7 @@ public final class TreeImpostorUtility extends EngineUtility {
         if (tree.isAltered())
             measureShape(tree.getShape(), crown);
         else
-            estimateCrown(tree, crown);
+            estimateCrown(treeHandle, tree.getMatureHeight(), tree.getAge(), crown);
 
         float rootY = tree.getBaseY();
         float halfWidth = crown[EngineSetting.TREE_IMPOSTOR_TRUNK_HALF_WIDTH];
@@ -63,11 +65,9 @@ public final class TreeImpostorUtility extends EngineUtility {
     // Sizes \\
 
     // A grown tree's crown judged from its species, mature height and age, never growing it
-    private static void estimateCrown(TreeInstance tree, float[] crown) {
+    public static void estimateCrown(TreeHandle treeHandle, float matureHeight, float age, float[] crown) {
 
-        TreeHandle treeHandle = tree.getTreeHandle();
-        float matureHeight = tree.getMatureHeight();
-        float scale = TreeShapeUtility.resolveScale(matureHeight, tree.getAge());
+        float scale = TreeShapeUtility.resolveScale(matureHeight, age);
         float height = matureHeight * scale;
         float bottom = height * treeHandle.getBranches().getCrownStart();
         float top = height + treeHandle.getLeaves().getRadiusBlocks() * scale;
@@ -119,6 +119,55 @@ public final class TreeImpostorUtility extends EngineUtility {
 
     // Crown \\
 
+    // The lumps a crown is drawn as by its form, each its centre's height above the root and its two radii,
+    // TREE_IMPOSTOR_LUMP_FLOATS apiece — the number laid out
+    public static int layoutCrown(TreeForm form, float[] crown, float[] lumps) {
+
+        float bottom = crown[EngineSetting.TREE_IMPOSTOR_CROWN_BOTTOM];
+        float top = crown[EngineSetting.TREE_IMPOSTOR_CROWN_TOP];
+        float radius = crown[EngineSetting.TREE_IMPOSTOR_CROWN_RADIUS];
+
+        return switch (form) {
+            case CONIFER -> layoutCone(bottom, top, radius, EngineSetting.TREE_IMPOSTOR_CONIFER_TAPER, lumps);
+            case COLUMNAR -> layoutCone(bottom, top, radius, EngineSetting.TREE_IMPOSTOR_COLUMNAR_TAPER, lumps);
+            case PALM -> {
+                float squashed = Math.max(radius * EngineSetting.TREE_IMPOSTOR_PALM_SQUASH,
+                        EngineSetting.TREE_MIN_LEAF_RADIUS_BLOCKS);
+                yield layoutLump(0, top - squashed, radius, squashed, lumps);
+            }
+            default -> layoutLump(0, (bottom + top) * 0.5f, radius,
+                    Math.max((top - bottom) * 0.5f, EngineSetting.TREE_MIN_LEAF_RADIUS_BLOCKS), lumps);
+        };
+    }
+
+    // A stack of lumps from the crown's foot to its top, each narrower than the one below by the taper's share
+    private static int layoutCone(float bottom, float top, float radius, float taper, float[] lumps) {
+
+        int tiers = EngineSetting.TREE_IMPOSTOR_CONE_TIERS;
+        float tierHeight = (top - bottom) / tiers;
+        float radiusV = Math.max(tierHeight * EngineSetting.TREE_IMPOSTOR_TIER_RADIUS_SHARE,
+                EngineSetting.TREE_MIN_LEAF_RADIUS_BLOCKS);
+
+        for (int tier = 0; tier < tiers; tier++)
+            layoutLump(tier, bottom + (tier + 0.5f) * tierHeight,
+                    Math.max(radius * (1f - taper * tier / tiers), EngineSetting.TREE_MIN_LEAF_RADIUS_BLOCKS),
+                    radiusV, lumps);
+
+        return tiers;
+    }
+
+    // One lump written in at its index — the number laid out up to and including it
+    private static int layoutLump(int lump, float centerY, float radiusH, float radiusV, float[] lumps) {
+
+        int offset = lump * EngineSetting.TREE_IMPOSTOR_LUMP_FLOATS;
+
+        lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_CENTER_Y] = centerY;
+        lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_RADIUS_H] = radiusH;
+        lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_RADIUS_V] = radiusV;
+
+        return lump + 1;
+    }
+
     private static void emitCrown(
             TreeInstance tree,
             float[] crown,
@@ -127,49 +176,16 @@ public final class TreeImpostorUtility extends EngineUtility {
             float rootZ,
             FloatArrayList leaves) {
 
-        float bottom = crown[EngineSetting.TREE_IMPOSTOR_CROWN_BOTTOM];
-        float top = crown[EngineSetting.TREE_IMPOSTOR_CROWN_TOP];
-        float radius = crown[EngineSetting.TREE_IMPOSTOR_CROWN_RADIUS];
-        TreeForm form = tree.getTreeHandle().getForm();
+        float[] lumps = new float[EngineSetting.TREE_IMPOSTOR_LUMPS_MAX_FLOATS];
+        int count = layoutCrown(tree.getTreeHandle().getForm(), crown, lumps);
 
-        switch (form) {
-            case CONIFER -> emitCone(tree, bottom, top, radius, EngineSetting.TREE_IMPOSTOR_CONIFER_TAPER,
-                    rootX, rootY, rootZ, leaves);
-            case COLUMNAR -> emitCone(tree, bottom, top, radius, EngineSetting.TREE_IMPOSTOR_COLUMNAR_TAPER,
-                    rootX, rootY, rootZ, leaves);
-            case PALM -> {
-                float squashed = Math.max(radius * EngineSetting.TREE_IMPOSTOR_PALM_SQUASH,
-                        EngineSetting.TREE_MIN_LEAF_RADIUS_BLOCKS);
-                emitLump(tree, 0, rootX, rootY + top - squashed, rootZ, radius, squashed, leaves);
-            }
-            default -> emitLump(tree, 0, rootX, rootY + (bottom + top) * 0.5f, rootZ, radius,
-                    Math.max((top - bottom) * 0.5f, EngineSetting.TREE_MIN_LEAF_RADIUS_BLOCKS), leaves);
-        }
-    }
+        for (int lump = 0; lump < count; lump++) {
 
-    // A stack of lumps from the crown's foot to its top, each narrower than the one below by the taper's share
-    private static void emitCone(
-            TreeInstance tree,
-            float bottom,
-            float top,
-            float radius,
-            float taper,
-            float rootX,
-            float rootY,
-            float rootZ,
-            FloatArrayList leaves) {
+            int offset = lump * EngineSetting.TREE_IMPOSTOR_LUMP_FLOATS;
 
-        int tiers = EngineSetting.TREE_IMPOSTOR_CONE_TIERS;
-        float tierHeight = (top - bottom) / tiers;
-        float radiusV = Math.max(tierHeight * EngineSetting.TREE_IMPOSTOR_TIER_RADIUS_SHARE,
-                EngineSetting.TREE_MIN_LEAF_RADIUS_BLOCKS);
-
-        for (int tier = 0; tier < tiers; tier++) {
-
-            float radiusH = Math.max(radius * (1f - taper * tier / tiers), EngineSetting.TREE_MIN_LEAF_RADIUS_BLOCKS);
-
-            emitLump(tree, tier, rootX, rootY + bottom + (tier + 0.5f) * tierHeight, rootZ, radiusH, radiusV,
-                    leaves);
+            emitLump(tree, lump, rootX, rootY + lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_CENTER_Y], rootZ,
+                    lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_RADIUS_H],
+                    lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_RADIUS_V], leaves);
         }
     }
 

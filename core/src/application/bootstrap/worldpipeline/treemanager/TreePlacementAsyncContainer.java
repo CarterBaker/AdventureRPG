@@ -1,13 +1,10 @@
 package application.bootstrap.worldpipeline.treemanager;
 
-import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
-import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
+import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -15,13 +12,12 @@ public class TreePlacementAsyncContainer extends AsyncContainerPackage {
 
     /*
      * Thread-local scratch for finding every tree that reaches one chunk: the
-     * chunk and the game day it generates on, the biomes found around it and
-     * the placement cells one kind of tree covers, the blend an anchor's biome
-     * is judged by, the trees found so far and the planted trees to look
-     * through, and the ground under recent
-     * anchors. Neighbouring chunks share most of their anchors and generate
-     * on the same threads, so the ground cache spares most terrain probes; it
-     * is emptied whenever it grows past its bound.
+     * chunk and the game day it generates on, the wild sites rooted within
+     * reach of it, the trees found so far and the planted trees to look
+     * through, and the ground under recent anchors. Neighbouring chunks share
+     * most of their anchors and generate on the same threads, so the ground
+     * cache spares most terrain probes; it is emptied whenever it grows past
+     * its bound.
      */
 
     // Chunk
@@ -30,14 +26,8 @@ public class TreePlacementAsyncContainer extends AsyncContainerPackage {
     long chunkOriginZ;
     double currentDay;
 
-    // Biomes
-    IntOpenHashSet biomeIDs;
-    ObjectArrayList<BiomeHandle> biomes;
-    BiomeBlendStruct blend;
-
-    // Placement Cells
-    IntArrayList cellsX;
-    IntArrayList cellsZ;
+    // Sites
+    ObjectArrayList<TreeSiteStruct> sites;
 
     // Found
     ObjectArrayList<TreeInstance> trees;
@@ -49,14 +39,8 @@ public class TreePlacementAsyncContainer extends AsyncContainerPackage {
     @Override
     protected void create() {
 
-        // Biomes
-        this.biomeIDs = new IntOpenHashSet();
-        this.biomes = new ObjectArrayList<>();
-        this.blend = new BiomeBlendStruct();
-
-        // Placement Cells
-        this.cellsX = new IntArrayList();
-        this.cellsZ = new IntArrayList();
+        // Sites
+        this.sites = new ObjectArrayList<>();
 
         // Found
         this.trees = new ObjectArrayList<>();
@@ -69,8 +53,7 @@ public class TreePlacementAsyncContainer extends AsyncContainerPackage {
 
     @Override
     public void reset() {
-        biomeIDs.clear();
-        biomes.clear();
+        sites.clear();
         trees.clear();
 
         if (anchor2Ground.size() > EngineSetting.TREE_GROUND_CACHE_MAX)

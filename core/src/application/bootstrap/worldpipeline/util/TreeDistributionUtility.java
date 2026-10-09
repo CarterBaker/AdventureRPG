@@ -16,7 +16,8 @@ public final class TreeDistributionUtility extends EngineUtility {
      * add up to. A field kind keeps its trees inside the patches of a slow
      * noise; every kind covers a share of the ground set by its spacing, its
      * chance and the size of its groves, against the crown a typical wild tree
-     * of it spreads — its middle mature height at its middle wild age.
+     * of it spreads — its middle mature height at its middle wild age — and
+     * every wild tree keeps room around its root by that same crown.
      */
 
     // Patch \\
@@ -52,6 +53,20 @@ public final class TreeDistributionUtility extends EngineUtility {
         float spacing = kind.getSpacingBlocks();
 
         return Math.min(1f, trees * (float) Math.PI * radius * radius / (spacing * spacing));
+    }
+
+    // Clearance \\
+
+    // How far a wild tree of a species keeps its neighbours' roots from its own: a share of its typical crown, never
+    // less than its trunk and stems spread with a margin, so no two trunks ever grow into one another
+    public static float resolveClearance(TreeHandle treeHandle) {
+
+        float matureHeight = resolveTypicalMatureHeight(treeHandle);
+        float scale = TreeShapeUtility.resolveScale(matureHeight, resolveTypicalAge(treeHandle));
+        float trunk = (treeHandle.getTrunk().getRadiusBlocks() + treeHandle.getTrunk().getStemSpreadBlocks()) * scale
+                + EngineSetting.TREE_CLEARANCE_TRUNK_MARGIN_BLOCKS;
+
+        return Math.max(trunk, resolveTypicalCrownRadius(treeHandle) * EngineSetting.TREE_CLEARANCE_CROWN_SHARE);
     }
 
     // Typical Tree \\

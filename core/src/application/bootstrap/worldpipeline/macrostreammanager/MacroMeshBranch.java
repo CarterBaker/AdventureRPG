@@ -23,10 +23,17 @@ public class MacroMeshBranch extends BranchPackage {
      * point under a canopy rises to it in the woods' colors and every other
      * one sinks below the ground, and only a cell with a canopy corner is
      * drawn, so a forest's edge breaks off in jagged slopes into the land.
-     * Settlements are a third grid laid the same way after the woods, their
-     * structures, walls and bridges rising out of the land in their own
-     * colors.
+     * Nearer tiles lay their trees instead, one box per crown lump and per
+     * trunk, eight corners each, every crown before any trunk, so a tile
+     * crowded past what one mesh can index gives up trunks before crowns.
+     * Every vertex names the chunk of the tile it yields to once the chunk
+     * grid draws it: a tree's boxes name the chunk it roots in, and ground
+     * and canopy name none, yielding wherever they lie.
      */
+
+    // Box — each face's four corners counterclockwise from outside, a corner's bits picking its high x, y and z
+    private static final int[][] BOX_SIDE_FACES = { { 1, 3, 7, 5 }, { 0, 4, 6, 2 }, { 4, 5, 7, 6 }, { 0, 2, 3, 1 } };
+    private static final int[][] BOX_CAP_FACES = { { 2, 6, 7, 3 }, { 0, 1, 5, 4 } };
 
     // Settings
     private float tileSizeBlocks;
@@ -100,7 +107,8 @@ public class MacroMeshBranch extends BranchPackage {
                         scratch.heightBlocks[sample],
                         z * cellSizeBlocks,
                         scratch.topColors[sample],
-                        scratch.sideColors[sample]);
+                        scratch.sideColors[sample],
+                        EngineSetting.MACRO_COVER_OWN_CHUNK);
             }
         }
 
@@ -125,33 +133,11 @@ public class MacroMeshBranch extends BranchPackage {
         }
     }
 
-    // Raised Layers \\
+    // Canopy \\
 
     void assembleCanopy(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
-        assembleRaised(
-                scratch, scratch.canopyHeights, scratch.canopyTopColors, scratch.canopySideColors,
-                scratch.canopyCount, EngineSetting.TREE_CANOPY_SINK_BLOCKS, vertices, indices);
-    }
 
-    void assembleStructures(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
-        assembleRaised(
-                scratch, scratch.structureHeights, scratch.structureTopColors, scratch.structureSideColors,
-                scratch.structureCount, EngineSetting.SETTLEMENT_MACRO_SINK_BLOCKS, vertices, indices);
-    }
-
-    // A grid over the land where every raised lattice point stands its height above the ground in its own colors
-    // and every other one sinks below it, drawing only cells with a raised corner
-    private void assembleRaised(
-            MacroBuildAsyncContainer scratch,
-            float[] raisedHeights,
-            float[] raisedTopColors,
-            float[] raisedSideColors,
-            int raisedCount,
-            float sinkBlocks,
-            FloatArrayList vertices,
-            ShortArrayList indices) {
-
-        if (raisedCount == 0)
+        if (scratch.canopyCount == 0)
             return;
 
         int samplesPerSide = scratch.getSamplesPerSide();
@@ -163,17 +149,18 @@ public class MacroMeshBranch extends BranchPackage {
             for (int x = 0; x < samplesPerSide; x++) {
 
                 int sample = z * samplesPerSide + x;
-                boolean raised = raisedHeights[sample] > 0f;
+                boolean wooded = scratch.canopyHeights[sample] > 0f;
 
                 pushVertex(
                         vertices,
                         x * cellSizeBlocks,
-                        raised
-                                ? scratch.heightBlocks[sample] + raisedHeights[sample]
-                                : scratch.heightBlocks[sample] - sinkBlocks,
+                        wooded
+                                ? scratch.heightBlocks[sample] + scratch.canopyHeights[sample]
+                                : scratch.heightBlocks[sample] - EngineSetting.TREE_CANOPY_SINK_BLOCKS,
                         z * cellSizeBlocks,
-                        raised ? raisedTopColors[sample] : scratch.topColors[sample],
-                        raised ? raisedSideColors[sample] : scratch.sideColors[sample]);
+                        wooded ? scratch.canopyTopColors[sample] : scratch.topColors[sample],
+                        wooded ? scratch.canopySideColors[sample] : scratch.sideColors[sample],
+                        EngineSetting.MACRO_COVER_OWN_CHUNK);
             }
         }
 
@@ -182,15 +169,77 @@ public class MacroMeshBranch extends BranchPackage {
 
                 int corner = z * samplesPerSide + x;
 
-                if (raisedHeights[corner] <= 0f
-                        && raisedHeights[corner + 1] <= 0f
-                        && raisedHeights[corner + samplesPerSide] <= 0f
-                        && raisedHeights[corner + samplesPerSide + 1] <= 0f)
+                if (scratch.canopyHeights[corner] <= 0f
+                        && scratch.canopyHeights[corner + 1] <= 0f
+                        && scratch.canopyHeights[corner + samplesPerSide] <= 0f
+                        && scratch.canopyHeights[corner + samplesPerSide + 1] <= 0f)
                     continue;
 
                 pushQuad(indices, base + corner, base + corner + 1,
                         base + corner + samplesPerSide, base + corner + samplesPerSide + 1);
             }
+        }
+    }
+
+    // Stand-Ins \\
+
+    // Every tree's boxes laid after the land and canopy in the same buffers, as many as one mesh can index
+    void assembleStandIns(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
+
+        if (pushBoxes(scratch.standInCrowns, true, vertices, indices))
+            pushBoxes(scratch.standInTrunks, false, vertices, indices);
+    }
+
+    // False once the mesh can index no further box
+    private boolean pushBoxes(FloatArrayList boxes, boolean capped, FloatArrayList vertices, ShortArrayList indices) {
+
+        int cursor = 0;
+
+        while (cursor < boxes.size()) {
+
+            int base = vertices.size() / vertexFloatCount;
+
+            if (base + EngineSetting.TREE_STAND_IN_BOX_CORNERS > EngineSetting.MESH_VERT_LIMIT)
+                return false;
+
+            float minX = boxes.getFloat(cursor++);
+            float minY = boxes.getFloat(cursor++);
+            float minZ = boxes.getFloat(cursor++);
+            float maxX = boxes.getFloat(cursor++);
+            float maxY = boxes.getFloat(cursor++);
+            float maxZ = boxes.getFloat(cursor++);
+            float topColor = boxes.getFloat(cursor++);
+            float sideColor = boxes.getFloat(cursor++);
+            float cover = boxes.getFloat(cursor++);
+
+            for (int corner = 0; corner < EngineSetting.TREE_STAND_IN_BOX_CORNERS; corner++)
+                pushVertex(
+                        vertices,
+                        (corner & 1) != 0 ? maxX : minX,
+                        (corner & 2) != 0 ? maxY : minY,
+                        (corner & 4) != 0 ? maxZ : minZ,
+                        topColor,
+                        sideColor,
+                        cover);
+
+            pushFaces(indices, base, BOX_SIDE_FACES);
+
+            if (capped)
+                pushFaces(indices, base, BOX_CAP_FACES);
+        }
+
+        return true;
+    }
+
+    private void pushFaces(ShortArrayList indices, int base, int[][] faces) {
+
+        for (int[] face : faces) {
+            indices.add((short) (base + face[0]));
+            indices.add((short) (base + face[1]));
+            indices.add((short) (base + face[2]));
+            indices.add((short) (base + face[0]));
+            indices.add((short) (base + face[2]));
+            indices.add((short) (base + face[3]));
         }
     }
 
@@ -215,17 +264,27 @@ public class MacroMeshBranch extends BranchPackage {
                 bottom,
                 vertices.getFloat(offset + 2),
                 vertices.getFloat(offset + 3),
-                vertices.getFloat(offset + 4));
+                vertices.getFloat(offset + 4),
+                vertices.getFloat(offset + 5));
     }
 
     // Vertex \\
 
-    private void pushVertex(FloatArrayList vertices, float x, float y, float z, float topColor, float sideColor) {
+    private void pushVertex(
+            FloatArrayList vertices,
+            float x,
+            float y,
+            float z,
+            float topColor,
+            float sideColor,
+            float cover) {
+
         vertices.add(x);
         vertices.add(y);
         vertices.add(z);
         vertices.add(topColor);
         vertices.add(sideColor);
+        vertices.add(cover);
     }
 
     private void pushQuad(ShortArrayList indices, int low, int lowNext, int high, int highNext) {
