@@ -3,8 +3,10 @@ package application.bootstrap.worldpipeline.worldmanager;
 import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
 
+import application.bootstrap.worldpipeline.util.WorldPlacementArpgUtility;
 import application.bootstrap.worldpipeline.world.WorldData;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import engine.assets.image.Pixmap;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
@@ -13,6 +15,7 @@ import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class WorldBuilder extends BuilderPackage {
 
@@ -24,7 +27,8 @@ class WorldBuilder extends BuilderPackage {
      * seed and its epoch start: once assigned, each is written back to disk
      * immediately so every future load reproduces the same terrain and the
      * same clock — the world keeps time from its epoch whether or not the
-     * game is running.
+     * game is running. Its hand-picked settlement and structure placements,
+     * and whether settlements also grow on their own, are read from it too.
      */
 
     // Internal
@@ -85,6 +89,11 @@ class WorldBuilder extends BuilderPackage {
                 planetaryOffset = wrapUnitFraction(arpg.get("planetary_offset").getAsFloat());
         }
 
+        ObjectArrayList<WorldPlacementStruct> placements = WorldPlacementArpgUtility.parsePlacements(
+                arpg, worldName);
+        boolean naturalSettlements = ArpgUtility.getBoolean(
+                arpg, "natural_settlements", EngineSetting.DEFAULT_NATURAL_SETTLEMENTS);
+
         long seed = resolveWorldSeed(arpg, arpgFile);
         long worldEpochStart = resolveWorldEpochStart(arpg, arpgFile);
 
@@ -101,7 +110,9 @@ class WorldBuilder extends BuilderPackage {
                 rotationSpeed,
                 axialTilt,
                 planetaryOffset,
-                seed);
+                seed,
+                placements,
+                naturalSettlements);
 
         WorldHandle handle = create(WorldHandle.class);
         handle.constructor(data);

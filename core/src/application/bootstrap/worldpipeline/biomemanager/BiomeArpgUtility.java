@@ -32,7 +32,8 @@ class BiomeArpgUtility extends EngineUtility {
      * surface and rock blocks, ocean, still water and beach settings, the
      * optional terrain shape splines and detail controls, each falling back
      * to TerrainShapeUtility's defaults, and the optional cliffs, ridges,
-     * coast, caves, veins and trees. A malformed field throws a
+     * coast, caves, veins, trees and the architectures settlements on it are
+     * built in. A malformed field throws a
      * catchable InternalException naming the biome, so BiomeBuilder fails the
      * boot on it while a live rebuild from the editor reports it and keeps the
      * biome it already had.
@@ -101,6 +102,7 @@ class BiomeArpgUtility extends EngineUtility {
         BiomeCaveStruct caves = parseCaves(biomeArpg, biomeName);
         ObjectArrayList<BiomeVeinStruct> veins = parseVeins(biomeArpg, biomeName);
         ObjectArrayList<BiomeTreeStruct> trees = parseTrees(biomeArpg, biomeName);
+        ObjectArrayList<String> architectureNames = parseArchitectures(biomeArpg);
 
         return new BiomeData(
                 biomeName, displayName, biomeID, Color.WHITE,
@@ -109,7 +111,7 @@ class BiomeArpgUtility extends EngineUtility {
                 surfaceBlockName, subsurfaceBlockName, underwaterBlockName, rockBlockName, rockSlope,
                 continentalnessSpline, erosionSpline, peaksValleysSpline,
                 detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale,
-                cliffs, ridges, coast, caves, veins, trees,
+                cliffs, ridges, coast, caves, veins, trees, architectureNames,
                 oceanWater, waterLevelBlocks, beachBiomeName);
     }
 
@@ -487,6 +489,21 @@ class BiomeArpgUtility extends EngineUtility {
             veins.add(parseVein(element.getAsObject(), biomeName));
 
         return veins;
+    }
+
+    // Architectures \\
+
+    private static ObjectArrayList<String> parseArchitectures(ArpgObjectStruct biomeArpg) {
+
+        ObjectArrayList<String> architectureNames = new ObjectArrayList<>();
+
+        if (!ArpgUtility.hasArray(biomeArpg, "architectures"))
+            return architectureNames;
+
+        for (ArpgElementStruct element : biomeArpg.getAsArray("architectures"))
+            architectureNames.add(element.getAsString());
+
+        return architectureNames;
     }
 
     // Trees \\

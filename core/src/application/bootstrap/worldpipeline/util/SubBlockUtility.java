@@ -79,4 +79,38 @@ public class SubBlockUtility extends EngineUtility {
     public static boolean isSubdivided(int mask) {
         return mask != MASK_EMPTY && mask != MASK_FULL;
     }
+
+    // Every octant in one layer of a cell, 0 the lower and 1 the upper
+    public static int layerMask(int octantY) {
+
+        int mask = MASK_EMPTY;
+
+        for (int octantZ = 0; octantZ < DIVISIONS; octantZ++)
+            for (int octantX = 0; octantX < DIVISIONS; octantX++)
+                mask |= getOctantBit(getOctant(octantX, octantY, octantZ));
+
+        return mask;
+    }
+
+    // Every octant on one horizontal side of a cell
+    public static int sideMask(Direction3Vector side) {
+
+        int mask = MASK_EMPTY;
+
+        for (int octant = 0; octant < OCTANT_COUNT; octant++) {
+
+            int octantX = getOctantX(octant);
+            int octantZ = getOctantZ(octant);
+
+            boolean onSide = side.x > 0 && octantX == 1
+                    || side.x < 0 && octantX == 0
+                    || side.z > 0 && octantZ == 1
+                    || side.z < 0 && octantZ == 0;
+
+            if (onSide)
+                mask |= getOctantBit(octant);
+        }
+
+        return mask;
+    }
 }

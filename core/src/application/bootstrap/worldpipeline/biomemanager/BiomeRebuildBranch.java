@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.biomemanager;
 
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
+import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.BiomeTreeStruct;
@@ -19,8 +20,8 @@ class BiomeRebuildBranch extends BranchPackage {
     /*
      * Builds the handle for a live biome edit and proves it can go live
      * before anything changes. Once the boot loaders are released nothing can
-     * be loaded on demand, so every biome, block, weather, season and tree it
-     * names must already be registered; its variants must not belong to
+     * be loaded on demand, so every biome, block, weather, season, tree and
+     * architecture it names must already be registered; its variants must not belong to
      * another parent or chain back into it; and the last biome painted on the
      * world map must keep its color. A biome keeps the ID its name was first
      * registered under. Every refusal is a catchable InternalException.
@@ -32,6 +33,7 @@ class BiomeRebuildBranch extends BranchPackage {
     private WeatherManager weatherManager;
     private SeasonManager seasonManager;
     private TreeManager treeManager;
+    private ArchitectureManager architectureManager;
 
     // Base \\
 
@@ -42,6 +44,7 @@ class BiomeRebuildBranch extends BranchPackage {
         this.weatherManager = get(WeatherManager.class);
         this.seasonManager = get(SeasonManager.class);
         this.treeManager = get(TreeManager.class);
+        this.architectureManager = get(ArchitectureManager.class);
     }
 
     // Build \\
@@ -55,6 +58,7 @@ class BiomeRebuildBranch extends BranchPackage {
         validateBlocks(biomeData);
         validateWeathers(biomeData);
         validateTrees(biomeData);
+        validateArchitectures(biomeData);
         validateMapColor(biomeData);
 
         BiomeHandle biomeHandle = create(BiomeHandle.class);
@@ -129,6 +133,16 @@ class BiomeRebuildBranch extends BranchPackage {
             if (!treeManager.hasTree(trees.get(i).getTreeName()))
                 throw fail(biomeData.getBiomeName(), "\"trees\" names unknown tree \""
                         + trees.get(i).getTreeName() + "\".");
+    }
+
+    private void validateArchitectures(BiomeData biomeData) {
+
+        ObjectArrayList<String> architectureNames = biomeData.getArchitectureNames();
+
+        for (int i = 0; i < architectureNames.size(); i++)
+            if (!architectureManager.hasArchitecture(architectureNames.get(i)))
+                throw fail(biomeData.getBiomeName(), "\"architectures\" names unknown architecture \""
+                        + architectureNames.get(i) + "\".");
     }
 
     private void validateMapColor(BiomeData biomeData) {

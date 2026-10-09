@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.chunkstreammanager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
 import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
@@ -17,8 +18,10 @@ public class GenerationBranch extends BranchPackage {
     /*
      * Async — generates a chunk on the WorldStreaming thread. computeColumn()
      * resolves the column once and caches it per chunk, every subchunk then
-     * generates from it, StructureManager stamps overlapping structures,
-     * TreeManager hands the chunk every tree that reaches it, and the tide
+     * generates from it, SettlementManager lays the settlements and the
+     * roads between them that reach it, StructureManager stamps overlapping
+     * structures, TreeManager hands the chunk every tree that reaches it,
+     * none on ground a settlement or road claims, and the tide
      * surface is recorded. Sets LOAD_DATA, ESSENTIAL_DATA and
      * GENERATION_DATA once the chunk is populated.
      */
@@ -26,6 +29,7 @@ public class GenerationBranch extends BranchPackage {
     // Internal
     private ThreadHandle threadHandle;
     private WorldGenerationManager worldGenerationManager;
+    private SettlementManager settlementManager;
     private StructureManager structureManager;
     private TreeManager treeManager;
 
@@ -42,6 +46,7 @@ public class GenerationBranch extends BranchPackage {
         // Internal
         this.threadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
         this.worldGenerationManager = get(WorldGenerationManager.class);
+        this.settlementManager = get(SettlementManager.class);
         this.structureManager = get(StructureManager.class);
         this.treeManager = get(TreeManager.class);
 
@@ -91,6 +96,7 @@ public class GenerationBranch extends BranchPackage {
         }
 
         if (success) {
+            settlementManager.generateSettlements(worldHandle, chunkCoordinate, subChunks);
             structureManager.generateStructures(worldHandle, chunkCoordinate, subChunks);
             treeManager.generateTrees(worldHandle, chunkCoordinate, chunkInstance.getTreePaletteHandle());
             chunkInstance.setTideSurfaceLevels(worldGenerationManager.getColumnTideSurfaceLevels(chunkCoordinate));

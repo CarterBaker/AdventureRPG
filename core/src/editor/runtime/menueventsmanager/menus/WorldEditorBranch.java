@@ -10,9 +10,9 @@ public class WorldEditorBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the World Editor toolbar and biome palette.
-     * Every action works on the shared world image, except the player marker
-     * toggle, which targets the editor its button was clicked in; palette
-     * rows carry their biome's name.
+     * Every action works on the shared world image and its hand placements,
+     * except the player marker toggle, which targets the editor its button
+     * was clicked in; palette rows carry their biome's name.
      */
 
     // Internal
@@ -55,6 +55,26 @@ public class WorldEditorBranch extends BranchPackage {
 
     public void selectPickTool() {
         worldEditorManager.setTool(WorldEditorTool.PICK);
+    }
+
+    public void selectPlaceTool() {
+        worldEditorManager.setTool(WorldEditorTool.PLACE);
+    }
+
+    public void selectClearTool() {
+        worldEditorManager.setTool(WorldEditorTool.CLEAR);
+    }
+
+    public void previousPlaceable() {
+        worldEditorManager.cyclePlaceable(-1);
+    }
+
+    public void nextPlaceable() {
+        worldEditorManager.cyclePlaceable(1);
+    }
+
+    public void turnPlacement() {
+        worldEditorManager.turnPlacement();
     }
 
     public void shrinkBrush() {

@@ -1,5 +1,6 @@
 package application.bootstrap.vehiclepipeline.vehicle;
 
+import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import engine.root.EngineSetting;
@@ -152,7 +153,7 @@ public class VehicleHandle extends HandlePackage {
         return vehicleData.getCargoSlots().size();
     }
 
-    public VehicleCargoSlotStruct getCargoSlot(int slotIndex) {
+    public FurnishingSlotStruct getCargoSlot(int slotIndex) {
         return vehicleData.getCargoSlots().get(slotIndex);
     }
 }

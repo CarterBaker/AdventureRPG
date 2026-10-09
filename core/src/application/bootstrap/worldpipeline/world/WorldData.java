@@ -6,6 +6,7 @@ import engine.assets.image.Pixmap;
 import engine.root.DataPackage;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldData extends DataPackage {
 
@@ -19,7 +20,9 @@ public class WorldData extends DataPackage {
      * world's calendar sat on its own start date and time, persisted in the
      * companion ARPG so the world's clock carries on between sessions. The
      * world file is the image the pixel map was read from, for tools that
-     * edit and save it.
+     * edit and save it. The placements are the settlements and structures
+     * picked by hand for this world as it was loaded, and naturalSettlements
+     * whether settlements also grow on their own wherever its biomes allow.
      */
 
     // Identity
@@ -53,6 +56,10 @@ public class WorldData extends DataPackage {
     // this value plus a deterministic position, never from mutable state.
     private final long seed;
 
+    // Placement
+    private final ObjectArrayList<WorldPlacementStruct> placements;
+    private final boolean naturalSettlements;
+
     // Constructor \\
 
     public WorldData(
@@ -68,7 +75,9 @@ public class WorldData extends DataPackage {
             float rotationSpeed,
             float axialTilt,
             float planetaryOffset,
-            long seed) {
+            long seed,
+            ObjectArrayList<WorldPlacementStruct> placements,
+            boolean naturalSettlements) {
 
         // Identity
         this.worldName = worldName;
@@ -96,6 +105,10 @@ public class WorldData extends DataPackage {
 
         // Generation
         this.seed = seed;
+
+        // Placement
+        this.placements = placements;
+        this.naturalSettlements = naturalSettlements;
     }
 
     // Accessible \\
@@ -150,5 +163,13 @@ public class WorldData extends DataPackage {
 
     public long getSeed() {
         return seed;
+    }
+
+    public ObjectArrayList<WorldPlacementStruct> getPlacements() {
+        return placements;
+    }
+
+    public boolean hasNaturalSettlements() {
+        return naturalSettlements;
     }
 }

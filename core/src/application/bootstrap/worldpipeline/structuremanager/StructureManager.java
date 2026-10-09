@@ -6,6 +6,7 @@ import java.util.Comparator;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
@@ -16,15 +17,18 @@ public class StructureManager extends ManagerPackage {
 
     /*
      * Owns the structure palette and is world generation's single entry point
-     * for stamping structures into a chunk. Every structure is resolved on
-     * demand in awake(), before any chunk generates, and published to worker
-     * threads as an immutable name-sorted snapshot so every chunk walks
-     * structures in the same order without locking. Structure IDs are
-     * assigned in registration order.
+     * for stamping structures into a chunk, whether they place themselves,
+     * were placed by hand in the world or stand on a layout's lot. Every
+     * structure is resolved on demand in awake(), before any chunk generates,
+     * and published to worker threads as an immutable name-sorted snapshot so
+     * every chunk walks structures in the same order without locking.
+     * Structure IDs are assigned in registration order.
      */
 
     // Internal
+    private WorldManager worldManager;
     private StructurePlacementBranch structurePlacementBranch;
+    private StructureStampBranch structureStampBranch;
 
     // Palette
     private Object2IntOpenHashMap<String> structureName2StructureID;
@@ -48,7 +52,13 @@ public class StructureManager extends ManagerPackage {
         this.structureHandles = new StructureHandle[0];
 
         create(StructureLoader.class);
+        this.structureStampBranch = create(StructureStampBranch.class);
         this.structurePlacementBranch = create(StructurePlacementBranch.class);
+    }
+
+    @Override
+    protected void get() {
+        this.worldManager = get(WorldManager.class);
     }
 
     @Override
@@ -95,10 +105,29 @@ public class StructureManager extends ManagerPackage {
     // Generation \\
 
     public void generateStructures(WorldHandle worldHandle, long chunkCoordinate, SubChunkInstance[] subChunks) {
-        structurePlacementBranch.generateStructures(worldHandle, chunkCoordinate, subChunks, structureHandles);
+        structurePlacementBranch.generateStructures(
+                worldHandle, chunkCoordinate, subChunks, structureHandles, worldManager.getPlacements(worldHandle));
+    }
+
+    // Worker — one structure's share of a chunk, laid at an anchor and turned clockwise by whole quarter turns
+    public void stampStructure(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            SubChunkInstance[] subChunks,
+            StructureHandle structureHandle,
+            long anchorX,
+            long anchorZ,
+            int anchorY,
+            int quarterTurns) {
+        structureStampBranch.stamp(
+                worldHandle, chunkCoordinate, subChunks, structureHandle, anchorX, anchorZ, anchorY, quarterTurns);
     }
 
     // Accessible \\
+
+    public StructureHandle[] getStructureHandles() {
+        return structureHandles;
+    }
 
     public boolean hasStructure(String structureName) {
         return RegistryUtility.getHandle(

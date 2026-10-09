@@ -12,8 +12,10 @@ import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
@@ -26,6 +28,7 @@ import editor.worldeditor.tool.WorldEditorToolSystem;
 import editor.worldeditor.view.WorldEditorViewSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -36,8 +39,9 @@ public class WorldEditorRenderSystem extends SystemPackage {
      * Draws the world image into this window's scene target where the view
      * places it, from the GPU texture ImageManager keeps current, then the
      * brush's outline over the pixels a stroke at the pointer would cover,
-     * and, while shown, an arrow for every player at their place and facing.
-     * Marker quads are pooled with their own materials.
+     * an arrow for every hand-placed settlement and structure facing the way
+     * it is turned, and, while shown, an arrow for every player at their
+     * place and facing. Marker quads are pooled with their own materials.
      */
 
     // Internal
@@ -172,40 +176,82 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
     private void renderMarkers(WindowInstance window) {
 
-        if (!showingPlayers)
-            return;
-
         WorldHandle worldHandle = worldEditorManager.getWorldHandle();
-        int count = mapManager.resolveMarkers(worldHandle, markers);
-        double pixelBlocks = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
-        float width = window.getWidth();
-        float height = window.getHeight();
-        float size = WorldEditorSetting.MARKER_SIZE_PIXELS;
+        int drawn = renderPlacementMarkers(window, worldHandle);
 
-        markerScale.set(size / width * 2f, size / height * 2f);
+        if (showingPlayers)
+            renderPlayerMarkers(window, worldHandle, drawn);
+    }
+
+    // Every hand placement, pointing the way its front faces once turned
+    private int renderPlacementMarkers(WindowInstance window, WorldHandle worldHandle) {
+
+        WorldPlacementStruct[] placements = worldEditorManager.getPlacements();
+        int drawn = 0;
+
+        for (int i = 0; i < placements.length; i++) {
+
+            WorldPlacementStruct placement = placements[i];
+            Direction3Vector facing = StructurePlacementUtility.rotateDirection(
+                    Direction3Vector.NORTH, placement.getQuarterTurns());
+
+            if (pushMarker(window, worldHandle, drawn, placement.getWorldX(), placement.getWorldZ(),
+                    facing.x, facing.z))
+                drawn++;
+        }
+
+        return drawn;
+    }
+
+    private void renderPlayerMarkers(WindowInstance window, WorldHandle worldHandle, int drawn) {
+
+        int count = mapManager.resolveMarkers(worldHandle, markers);
 
         for (int i = 0; i < count; i++) {
 
             MapMarkerStruct marker = markers.get(i);
-            float screenX = worldEditorViewSystem.imageToScreenX(
-                    WorldWrapUtility.wrapBlockX(worldHandle, marker.getX()) / pixelBlocks);
-            float screenY = worldEditorViewSystem.imageToScreenY(
-                    WorldWrapUtility.wrapBlockZ(worldHandle, marker.getZ()) / pixelBlocks);
 
-            if (screenX < -size || screenY < -size || screenX > width + size || screenY > height + size)
-                continue;
-
-            markerCenter.set(screenX / width * 2f - 1f, screenY / height * 2f - 1f);
-            markerDirection.set(marker.getHeadingX(), -marker.getHeadingZ());
-
-            ModelInstance markerModel = acquireMarkerModel(i);
-            MaterialInstance material = markerModel.getMaterial();
-            material.setUniform(WorldEditorSetting.UNIFORM_MARKER_CENTER, markerCenter);
-            material.setUniform(WorldEditorSetting.UNIFORM_MARKER_DIRECTION, markerDirection);
-            material.setUniform(WorldEditorSetting.UNIFORM_MARKER_SCALE, markerScale);
-
-            renderManager.pushRenderCall(markerModel, sceneFbo, WorldEditorSetting.DEPTH_MARKERS, window);
+            if (pushMarker(window, worldHandle, drawn, marker.getX(), marker.getZ(),
+                    marker.getHeadingX(), marker.getHeadingZ()))
+                drawn++;
         }
+    }
+
+    // One arrow at a world position and heading, skipped when it falls off the window
+    private boolean pushMarker(
+            WindowInstance window,
+            WorldHandle worldHandle,
+            int index,
+            double worldX,
+            double worldZ,
+            float headingX,
+            float headingZ) {
+
+        double pixelBlocks = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
+        float width = window.getWidth();
+        float height = window.getHeight();
+        float size = WorldEditorSetting.MARKER_SIZE_PIXELS;
+        float screenX = worldEditorViewSystem.imageToScreenX(
+                WorldWrapUtility.wrapBlockX(worldHandle, worldX) / pixelBlocks);
+        float screenY = worldEditorViewSystem.imageToScreenY(
+                WorldWrapUtility.wrapBlockZ(worldHandle, worldZ) / pixelBlocks);
+
+        if (screenX < -size || screenY < -size || screenX > width + size || screenY > height + size)
+            return false;
+
+        markerScale.set(size / width * 2f, size / height * 2f);
+        markerCenter.set(screenX / width * 2f - 1f, screenY / height * 2f - 1f);
+        markerDirection.set(headingX, -headingZ);
+
+        ModelInstance markerModel = acquireMarkerModel(index);
+        MaterialInstance material = markerModel.getMaterial();
+        material.setUniform(WorldEditorSetting.UNIFORM_MARKER_CENTER, markerCenter);
+        material.setUniform(WorldEditorSetting.UNIFORM_MARKER_DIRECTION, markerDirection);
+        material.setUniform(WorldEditorSetting.UNIFORM_MARKER_SCALE, markerScale);
+
+        renderManager.pushRenderCall(markerModel, sceneFbo, WorldEditorSetting.DEPTH_MARKERS, window);
+
+        return true;
     }
 
     private ModelInstance acquireMarkerModel(int index) {

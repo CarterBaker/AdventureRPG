@@ -144,6 +144,24 @@ public class WorldWrapUtility extends EngineUtility {
         return (long) wrappedDelta(a, b, worldHandle.getWorldScale().y);
     }
 
+    public static double wrappedBlockDeltaX(WorldHandle worldHandle, double a, double b) {
+        return wrappedDelta(a, b, worldHandle.getWorldScale().x);
+    }
+
+    public static double wrappedBlockDeltaZ(WorldHandle worldHandle, double a, double b) {
+        return wrappedDelta(a, b, worldHandle.getWorldScale().y);
+    }
+
+    // The copy of a block position, across the world's wrap, nearest a reference — the unwrapped frame a plan
+    // measured around that reference keeps its positions in
+    public static double unwrapBlockX(WorldHandle worldHandle, double blockX, double referenceX) {
+        return referenceX + wrappedBlockDeltaX(worldHandle, blockX, referenceX);
+    }
+
+    public static double unwrapBlockZ(WorldHandle worldHandle, double blockZ, double referenceZ) {
+        return referenceZ + wrappedBlockDeltaZ(worldHandle, blockZ, referenceZ);
+    }
+
     // Axis Fraction \\
 
     private static double wrappedXFraction(WorldHandle worldHandle, long chunkCoordinate) {

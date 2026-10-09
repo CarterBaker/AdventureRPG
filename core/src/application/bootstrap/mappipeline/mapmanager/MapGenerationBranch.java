@@ -2,6 +2,10 @@ package application.bootstrap.mappipeline.mapmanager;
 
 import application.bootstrap.mappipeline.map.MapTileInstance;
 import application.bootstrap.mappipeline.util.MapShadeUtility;
+import application.bootstrap.worldpipeline.layout.LayoutSurfaceKind;
+import application.bootstrap.worldpipeline.layout.LayoutSurfaceStruct;
+import application.bootstrap.worldpipeline.layoutmanager.LayoutManager;
+import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.TerrainSurfaceSampleStruct;
@@ -21,13 +25,19 @@ public class MapGenerationBranch extends BranchPackage {
      * a side, one sample beyond the tile all round, and spread to every texel,
      * one texel beyond the tile all round, so each texel finds its slope; then
      * each texel is shaded as land or water, the sea and still water alike
-     * deepening below their own surfaces. The tile raises its generated
-     * flag only once its pixels are whole.
+     * deepening below their own surfaces. Once the lattice is fine enough to
+     * show a building, the settlements and roads reaching the tile are
+     * gathered and laid over it: roads recolor the ground and structures,
+     * walls and bridges stand at their own heights in their own colors, so
+     * the map shades them like the land. The tile raises its generated flag
+     * only once its pixels are whole.
      */
 
     // Internal
     private ThreadHandle threadHandle;
     private WorldGenerationManager worldGenerationManager;
+    private SettlementManager settlementManager;
+    private LayoutManager layoutManager;
     private MapTileAsyncContainer mapTileAsyncContainer;
 
     // Base \\
@@ -41,6 +51,8 @@ public class MapGenerationBranch extends BranchPackage {
     protected void get() {
         this.threadHandle = getThreadHandleFromThreadName(EngineSetting.MAP_THREAD_NAME);
         this.worldGenerationManager = get(WorldGenerationManager.class);
+        this.settlementManager = get(SettlementManager.class);
+        this.layoutManager = get(LayoutManager.class);
     }
 
     // Generation \\
@@ -84,6 +96,8 @@ public class MapGenerationBranch extends BranchPackage {
 
         scratch.samplesPerSide = (int) Math.round(tileBlocks / spacing) + 3;
 
+        gatherLayouts(scratch, worldHandle, latticeX, latticeZ, spacing);
+
         for (int z = 0; z < scratch.samplesPerSide; z++) {
             for (int x = 0; x < scratch.samplesPerSide; x++) {
 
@@ -100,8 +114,63 @@ public class MapGenerationBranch extends BranchPackage {
                 scratch.sampleWaterSurfaces[index] = sample.getWaterSurfaceBlocks();
                 scratch.sampleTopColors[index] = sample.getTopColor();
                 scratch.sampleSideColors[index] = sample.getSideColor();
+
+                overlayLayouts(scratch, worldHandle, index, latticeX + x * spacing, latticeZ + z * spacing, spacing);
             }
         }
+    }
+
+    // Layouts \\
+
+    // Every settlement and road reaching the lattice, gathered only while it is fine enough to show a building
+    private void gatherLayouts(
+            MapTileAsyncContainer scratch,
+            WorldHandle worldHandle,
+            double latticeX,
+            double latticeZ,
+            double spacing) {
+
+        scratch.layouts.clear();
+
+        if (spacing > EngineSetting.SETTLEMENT_MAP_MAX_SPACING_BLOCKS)
+            return;
+
+        double span = (scratch.samplesPerSide - 1) * spacing;
+
+        settlementManager.collectLayouts(
+                worldHandle, latticeX - spacing, latticeZ - spacing,
+                latticeX + span + spacing, latticeZ + span + spacing, scratch.layouts);
+    }
+
+    // What the gathered layouts show at one lattice point, laid over the land sampled there
+    private void overlayLayouts(
+            MapTileAsyncContainer scratch,
+            WorldHandle worldHandle,
+            int index,
+            double x,
+            double z,
+            double spacing) {
+
+        if (scratch.layouts.isEmpty())
+            return;
+
+        LayoutSurfaceStruct surface = scratch.layoutSurface;
+
+        layoutManager.sampleSurface(worldHandle, scratch.layouts, x, z, spacing * 0.5, surface);
+
+        if (!surface.isFound())
+            return;
+
+        if (surface.getKind() == LayoutSurfaceKind.GROUND && scratch.sampleWater[index] > 0f)
+            return;
+
+        if (surface.getKind() == LayoutSurfaceKind.RAISED) {
+            scratch.sampleHeights[index] = Math.max(scratch.sampleHeights[index], surface.getHeightBlocks());
+            scratch.sampleWater[index] = 0f;
+            scratch.sampleSideColors[index] = surface.getSideColor();
+        }
+
+        scratch.sampleTopColors[index] = surface.getTopColor();
     }
 
     double resolveSpacing(double tileBlocks) {

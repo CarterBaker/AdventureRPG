@@ -1,19 +1,26 @@
 package application.bootstrap.worldpipeline.structuremanager;
 
 import java.io.File;
+import java.util.Arrays;
 
+import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
+import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
+import application.bootstrap.furnishingpipeline.util.FurnishingArpgUtility;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
+import application.bootstrap.worldpipeline.block.SubBlockShape;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.structure.StructureData;
 import application.bootstrap.worldpipeline.structure.StructureFixedPlacementStruct;
 import application.bootstrap.worldpipeline.structure.StructureFrequencyStruct;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
+import application.bootstrap.worldpipeline.structure.StructurePaletteEntryStruct;
 import application.bootstrap.worldpipeline.structure.StructureRulesStruct;
 import application.bootstrap.worldpipeline.structure.StructureSurfaceType;
 import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
@@ -23,8 +30,10 @@ import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.extras.Coordinate3Long;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.registry.RegistryUtility;
+import it.unimi.dsi.fastutil.bytes.ByteArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
@@ -33,16 +42,29 @@ class StructureBuilder extends BuilderPackage {
 
     /*
      * Parses structure ARPG into a StructureData and wraps it in a
-     * StructureHandle. Block entries are single "position"s or inclusive
-     * "from"/"to" boxes applied in order, so a later entry overwrites an
-     * earlier one at the same cell. Every block, biome, and value is resolved
-     * and validated here, so a malformed structure fails at boot.
+     * StructureHandle. A structure may keep its own "palette" of blocks keyed
+     * by single characters, each a block with its facing, spin and an
+     * optional sub-block "shape" or raw "mask" for a partial block. Its
+     * "layers" lay those keys row by row, a row running along x and each row
+     * one step along z, over one or more heights, with a space leaving a cell
+     * untouched; its "blocks" then lay single "position"s or inclusive
+     * "from"/"to" boxes, each naming a block or a palette key. Everything is
+     * applied in order, so a later entry overwrites an earlier one at the
+     * same cell. The "front" names the side its entrance faces, "furnishings"
+     * the places it comes furnished at, and "clear_terrain" whether the
+     * ground inside its footprint is carved away before it is laid. Every
+     * block, biome, table and value is resolved and validated here, so a
+     * malformed structure fails at boot.
      */
 
     // Internal
     private StructureManager structureManager;
     private BlockManager blockManager;
     private BiomeManager biomeManager;
+    private FurnishingManager furnishingManager;
+
+    // Palette
+    private Object2ObjectOpenHashMap<String, StructurePaletteEntryStruct> key2PaletteEntry;
 
     // Block Accumulation
     private IntArrayList offsetX;
@@ -50,6 +72,7 @@ class StructureBuilder extends BuilderPackage {
     private IntArrayList offsetZ;
     private ShortArrayList blockIDs;
     private ShortArrayList blockOrientations;
+    private ByteArrayList blockMasks;
     private ObjectArrayList<DynamicGeometryType> blockGeometry;
     private Long2IntOpenHashMap position2BlockIndex;
 
@@ -58,12 +81,16 @@ class StructureBuilder extends BuilderPackage {
     @Override
     protected void create() {
 
+        // Palette
+        this.key2PaletteEntry = new Object2ObjectOpenHashMap<>();
+
         // Block Accumulation
         this.offsetX = new IntArrayList();
         this.offsetY = new IntArrayList();
         this.offsetZ = new IntArrayList();
         this.blockIDs = new ShortArrayList();
         this.blockOrientations = new ShortArrayList();
+        this.blockMasks = new ByteArrayList();
         this.blockGeometry = new ObjectArrayList<>();
         this.position2BlockIndex = new Long2IntOpenHashMap();
         this.position2BlockIndex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
@@ -74,6 +101,7 @@ class StructureBuilder extends BuilderPackage {
         this.structureManager = get(StructureManager.class);
         this.blockManager = get(BlockManager.class);
         this.biomeManager = get(BiomeManager.class);
+        this.furnishingManager = get(FurnishingManager.class);
     }
 
     // Build \\
@@ -86,7 +114,13 @@ class StructureBuilder extends BuilderPackage {
         int[] origin = parseOrigin(arpg);
 
         clearBlocks();
+        parsePalette(arpg, structureName);
+        parseLayers(arpg, structureName, origin);
         parseBlocks(arpg, structureName, origin);
+
+        if (blockIDs.isEmpty())
+            throwException("Structure \"" + structureName
+                    + "\" must lay at least one block through its \"layers\" or \"blocks\".");
 
         int minOffsetX = min(offsetX);
         int maxOffsetX = max(offsetX);
@@ -96,6 +130,17 @@ class StructureBuilder extends BuilderPackage {
                 Math.max(-minOffsetX, maxOffsetX),
                 Math.max(-minOffsetZ, maxOffsetZ));
 
+        int width = maxOffsetX - minOffsetX + 1;
+        int depth = maxOffsetZ - minOffsetZ + 1;
+        boolean[] footprint = new boolean[width * depth];
+        int[] footprintTopOffsetY = new int[width * depth];
+        int[] footprintTopColors = new int[width * depth];
+        int[] footprintSideColors = new int[width * depth];
+
+        buildFootprint(
+                minOffsetX, minOffsetZ, width,
+                footprint, footprintTopOffsetY, footprintTopColors, footprintSideColors);
+
         int yOffsetBlocks = ArpgUtility.getInt(
                 arpg, "y_offset_blocks", EngineSetting.DEFAULT_STRUCTURE_Y_OFFSET_BLOCKS);
 
@@ -103,6 +148,11 @@ class StructureBuilder extends BuilderPackage {
         short foundationBlockID = foundation
                 ? parseFoundationBlockID(arpg, structureName)
                 : EngineSetting.REGISTRY_RESERVED_ID;
+        boolean clearTerrain = ArpgUtility.getBoolean(arpg, "clear_terrain", false);
+
+        Direction3Vector front = parseFront(arpg, structureName);
+        ObjectArrayList<FurnishingSlotStruct> furnishings = FurnishingArpgUtility.parseSlots(
+                arpg, "furnishings", structureName, furnishingManager);
 
         StructureRulesStruct rules = parseRules(arpg, structureName);
         StructureFrequencyStruct frequency = parseFrequency(arpg, structureName);
@@ -111,10 +161,12 @@ class StructureBuilder extends BuilderPackage {
         StructureData structureData = new StructureData(
                 structureName, structureID, RegistryUtility.toNameSeed(structureName),
                 offsetX.toIntArray(), offsetY.toIntArray(), offsetZ.toIntArray(),
-                blockIDs.toShortArray(), blockOrientations.toShortArray(),
+                blockIDs.toShortArray(), blockOrientations.toShortArray(), blockMasks.toByteArray(),
                 blockGeometry.toArray(new DynamicGeometryType[0]),
-                minOffsetX, maxOffsetX, minOffsetZ, maxOffsetZ, horizontalReachBlocks,
-                yOffsetBlocks, foundationBlockID, foundation,
+                minOffsetX, maxOffsetX, min(offsetY), max(offsetY), minOffsetZ, maxOffsetZ, horizontalReachBlocks,
+                footprint, footprintTopOffsetY, footprintTopColors, footprintSideColors,
+                yOffsetBlocks, foundationBlockID, foundation, clearTerrain,
+                front, furnishings,
                 rules, frequency, fixedPlacements);
 
         StructureHandle structureHandle = create(StructureHandle.class);
@@ -133,6 +185,101 @@ class StructureBuilder extends BuilderPackage {
         return parseVector(arpg, "origin");
     }
 
+    // Palette Parsing \\
+
+    private void parsePalette(ArpgObjectStruct arpg, String structureName) {
+
+        key2PaletteEntry.clear();
+
+        if (!ArpgUtility.hasObject(arpg, "palette"))
+            return;
+
+        ArpgObjectStruct paletteArpg = arpg.getAsObject("palette");
+
+        for (String key : paletteArpg.keySet()) {
+
+            if (key.length() != 1 || key.charAt(0) == EngineSetting.STRUCTURE_LAYER_SKIP_CHARACTER)
+                throwException("Structure \"" + structureName + "\" palette key \"" + key
+                        + "\" must be a single character other than a space.");
+
+            key2PaletteEntry.put(key, parseEntry(paletteArpg.getAsObject(key), structureName));
+        }
+    }
+
+    // A block with its orientation and mask, named inline or by palette key
+    private StructurePaletteEntryStruct parseEntry(ArpgObjectStruct entry, String structureName) {
+
+        boolean hasKey = entry.has("palette");
+
+        if (hasKey == entry.has("block"))
+            throwException("Structure \"" + structureName
+                    + "\" entry must name exactly one of \"block\" or \"palette\".");
+
+        if (hasKey) {
+
+            String key = entry.get("palette").getAsString();
+            StructurePaletteEntryStruct paletteEntry = key2PaletteEntry.get(key);
+
+            if (paletteEntry == null)
+                throwException("Structure \"" + structureName + "\" names palette key \"" + key
+                        + "\", which its \"palette\" does not list.");
+
+            return paletteEntry;
+        }
+
+        BlockHandle blockHandle = blockManager.getBlockHandleFromBlockName(ArpgUtility.validateString(entry, "block"));
+
+        return new StructurePaletteEntryStruct(
+                blockHandle,
+                parseOrientation(entry, blockHandle, structureName),
+                parseMask(entry, blockHandle, structureName));
+    }
+
+    // Layer Parsing \\
+
+    private void parseLayers(ArpgObjectStruct arpg, String structureName, int[] origin) {
+
+        if (!ArpgUtility.hasArray(arpg, "layers"))
+            return;
+
+        for (ArpgElementStruct element : arpg.getAsArray("layers"))
+            parseLayer(element.getAsObject(), structureName, origin);
+    }
+
+    private void parseLayer(ArpgObjectStruct layer, String structureName, int[] origin) {
+
+        int baseY = ArpgUtility.validateInt(layer, "y");
+        int height = ArpgUtility.getInt(layer, "height", 1);
+        ArpgArrayStruct rows = ArpgUtility.validateArray(layer, "rows");
+
+        if (height < 1)
+            throwException("Structure \"" + structureName + "\" layer at y " + baseY + " has height " + height
+                    + " — a layer covers at least one height.");
+
+        for (int y = baseY; y < baseY + height; y++)
+            for (int z = 0; z < rows.size(); z++)
+                parseRow(rows.get(z).getAsString(), y, z, structureName, origin);
+    }
+
+    private void parseRow(String row, int y, int z, String structureName, int[] origin) {
+
+        for (int x = 0; x < row.length(); x++) {
+
+            char key = row.charAt(x);
+
+            if (key == EngineSetting.STRUCTURE_LAYER_SKIP_CHARACTER)
+                continue;
+
+            StructurePaletteEntryStruct entry = key2PaletteEntry.get(String.valueOf(key));
+
+            if (entry == null)
+                throwException("Structure \"" + structureName + "\" layer at y " + y + " uses key '" + key
+                        + "', which its \"palette\" does not list.");
+
+            putBlock(x - origin[0], y - origin[1], z - origin[2], entry, structureName);
+        }
+    }
+
     // Block Parsing \\
 
     private void clearBlocks() {
@@ -142,53 +289,50 @@ class StructureBuilder extends BuilderPackage {
         offsetZ.clear();
         blockIDs.clear();
         blockOrientations.clear();
+        blockMasks.clear();
         blockGeometry.clear();
         position2BlockIndex.clear();
     }
 
     private void parseBlocks(ArpgObjectStruct arpg, String structureName, int[] origin) {
 
-        ArpgArrayStruct blockArray = ArpgUtility.validateArray(arpg, "blocks");
+        if (!ArpgUtility.hasArray(arpg, "blocks"))
+            return;
 
-        for (ArpgElementStruct element : blockArray)
+        for (ArpgElementStruct element : arpg.getAsArray("blocks"))
             parseBlockEntry(element.getAsObject(), structureName, origin);
-
-        if (blockIDs.isEmpty())
-            throwException("Structure \"" + structureName + "\" \"blocks\" must declare at least one block.");
     }
 
     private void parseBlockEntry(ArpgObjectStruct entry, String structureName, int[] origin) {
 
-        String blockName = ArpgUtility.validateString(entry, "block");
-        BlockHandle blockHandle = blockManager.getBlockHandleFromBlockName(blockName);
-        short orientation = parseOrientation(entry, blockHandle, structureName);
+        StructurePaletteEntryStruct paletteEntry = parseEntry(entry, structureName);
 
         boolean hasPosition = entry.has("position");
         boolean hasBox = entry.has("from") || entry.has("to");
 
         if (hasPosition == hasBox)
-            throwException("Structure \"" + structureName + "\" block entry \"" + blockName
+            throwException("Structure \"" + structureName + "\" block entry \""
+                    + paletteEntry.getBlockHandle().getBlockName()
                     + "\" must declare either \"position\" or both \"from\" and \"to\" — not both, not neither.");
 
         if (hasPosition) {
             int[] position = parseVector(entry, "position");
             putBlock(position[0] - origin[0], position[1] - origin[1], position[2] - origin[2],
-                    blockHandle, orientation, structureName);
+                    paletteEntry, structureName);
             return;
         }
 
         int[] from = parseVector(entry, "from");
         int[] to = parseVector(entry, "to");
 
-        parseBlockBox(from, to, origin, blockHandle, orientation, structureName);
+        parseBlockBox(from, to, origin, paletteEntry, structureName);
     }
 
     private void parseBlockBox(
             int[] from,
             int[] to,
             int[] origin,
-            BlockHandle blockHandle,
-            short orientation,
+            StructurePaletteEntryStruct entry,
             String structureName) {
 
         int minX = Math.min(from[0], to[0]) - origin[0];
@@ -201,34 +345,36 @@ class StructureBuilder extends BuilderPackage {
         long volume = ((long) maxX - minX + 1) * ((long) maxY - minY + 1) * ((long) maxZ - minZ + 1);
 
         if (volume > EngineSetting.STRUCTURE_MAX_BLOCK_COUNT)
-            throwException("Structure \"" + structureName + "\" box of \"" + blockHandle.getBlockName()
+            throwException("Structure \"" + structureName + "\" box of \""
+                    + entry.getBlockHandle().getBlockName()
                     + "\" covers " + volume + " blocks, which exceeds the structure limit of "
                     + EngineSetting.STRUCTURE_MAX_BLOCK_COUNT + ".");
 
         for (int y = minY; y <= maxY; y++)
             for (int z = minZ; z <= maxZ; z++)
                 for (int x = minX; x <= maxX; x++)
-                    putBlock(x, y, z, blockHandle, orientation, structureName);
+                    putBlock(x, y, z, entry, structureName);
     }
 
     private void putBlock(
             int x,
             int y,
             int z,
-            BlockHandle blockHandle,
-            short orientation,
+            StructurePaletteEntryStruct entry,
             String structureName) {
 
         validateExtent(x, structureName);
         validateExtent(y, structureName);
         validateExtent(z, structureName);
 
+        BlockHandle blockHandle = entry.getBlockHandle();
         long position = Coordinate3Long.pack(x, y, z);
         int index = position2BlockIndex.get(position);
 
         if (index != EngineSetting.INDEX_NOT_FOUND) {
             blockIDs.set(index, blockHandle.getBlockID());
-            blockOrientations.set(index, orientation);
+            blockOrientations.set(index, entry.getOrientation());
+            blockMasks.set(index, (byte) entry.getMask());
             blockGeometry.set(index, blockHandle.getGeometry());
             return;
         }
@@ -243,7 +389,8 @@ class StructureBuilder extends BuilderPackage {
         offsetY.add(y);
         offsetZ.add(z);
         blockIDs.add(blockHandle.getBlockID());
-        blockOrientations.add(orientation);
+        blockOrientations.add(entry.getOrientation());
+        blockMasks.add((byte) entry.getMask());
         blockGeometry.add(blockHandle.getGeometry());
     }
 
@@ -287,19 +434,127 @@ class StructureBuilder extends BuilderPackage {
         }
     }
 
+    // Mask Parsing \\
+
+    // The octants a block fills: a named "shape", a raw "mask", or the whole cell
+    private int parseMask(ArpgObjectStruct entry, BlockHandle blockHandle, String structureName) {
+
+        boolean hasShape = entry.has("shape");
+        boolean hasMask = entry.has("mask");
+
+        if (hasShape && hasMask)
+            throwException("Structure \"" + structureName + "\" block \"" + blockHandle.getBlockName()
+                    + "\" declares both \"shape\" and \"mask\" — name one.");
+
+        int mask = hasShape
+                ? ArpgUtility.getEnum(entry, "shape", SubBlockShape.class, SubBlockShape.FULL).getMask()
+                : ArpgUtility.getInt(entry, "mask", SubBlockUtility.MASK_FULL);
+
+        if (mask <= SubBlockUtility.MASK_EMPTY || mask > SubBlockUtility.MASK_FULL)
+            throwException("Structure \"" + structureName + "\" block \"" + blockHandle.getBlockName()
+                    + "\" has mask " + mask + " — a mask fills from 1 to " + SubBlockUtility.MASK_FULL
+                    + " octants' bits; lay air to empty a cell.");
+
+        if (SubBlockUtility.isSubdivided(mask) && blockHandle.getGeometry() != DynamicGeometryType.FULL)
+            throwException("Structure \"" + structureName + "\" block \"" + blockHandle.getBlockName()
+                    + "\" is partial, but only a FULL-geometry block can be laid as sub-blocks.");
+
+        return mask;
+    }
+
+    // Front Parsing \\
+
+    private Direction3Vector parseFront(ArpgObjectStruct arpg, String structureName) {
+
+        Direction3Vector front = ArpgUtility.getEnum(arpg, "front", Direction3Vector.class, Direction3Vector.NORTH);
+
+        if (front.y != 0)
+            throwException("Structure \"" + structureName + "\" \"front\" must be NORTH, EAST, SOUTH, or WEST.");
+
+        return front;
+    }
+
+    // Footprint \\
+
+    // Per column: whether any block is listed, and the top solid block with the colors it is seen in from afar
+    private void buildFootprint(
+            int minOffsetX,
+            int minOffsetZ,
+            int width,
+            boolean[] footprint,
+            int[] topOffsetY,
+            int[] topColors,
+            int[] sideColors) {
+
+        Arrays.fill(topOffsetY, EngineSetting.STRUCTURE_FOOTPRINT_EMPTY);
+
+        int[] lowOffsetY = new int[topOffsetY.length];
+        Arrays.fill(lowOffsetY, Integer.MAX_VALUE);
+
+        for (int i = 0; i < blockIDs.size(); i++) {
+
+            int column = (offsetZ.getInt(i) - minOffsetZ) * width + offsetX.getInt(i) - minOffsetX;
+            footprint[column] = true;
+
+            BlockHandle blockHandle = resolveVisibleBlock(i);
+
+            if (blockHandle == null)
+                continue;
+
+            int y = offsetY.getInt(i);
+            lowOffsetY[column] = Math.min(lowOffsetY[column], y);
+
+            if (y <= topOffsetY[column])
+                continue;
+
+            topOffsetY[column] = y;
+            topColors[column] = blockHandle.getMapColorForFace(Direction3Vector.UP);
+        }
+
+        for (int column = 0; column < topOffsetY.length; column++)
+            if (topOffsetY[column] != EngineSetting.STRUCTURE_FOOTPRINT_EMPTY)
+                sideColors[column] = resolveSideColor(
+                        minOffsetX + column % width, minOffsetZ + column / width,
+                        lowOffsetY[column], topOffsetY[column], topColors[column]);
+    }
+
+    // The wall a column shows from the side: the first visible block at or below its middle height
+    private int resolveSideColor(int x, int z, int lowY, int topY, int topColor) {
+
+        for (int y = (lowY + topY) / 2; y >= lowY; y--) {
+
+            int index = position2BlockIndex.get(Coordinate3Long.pack(x, y, z));
+
+            if (index == EngineSetting.INDEX_NOT_FOUND)
+                continue;
+
+            BlockHandle blockHandle = resolveVisibleBlock(index);
+
+            if (blockHandle != null)
+                return blockHandle.getMapColorForFace(Direction3Vector.NORTH);
+        }
+
+        return topColor;
+    }
+
+    // The block laid at an index when it is solid and has colors to be seen in, otherwise null
+    private BlockHandle resolveVisibleBlock(int index) {
+
+        DynamicGeometryType geometry = blockGeometry.get(index);
+
+        if (geometry == DynamicGeometryType.NONE || geometry == DynamicGeometryType.LIQUID)
+            return null;
+
+        BlockHandle blockHandle = blockManager.getBlockHandleFromBlockID(blockIDs.getShort(index));
+
+        return blockHandle.hasMapColor() ? blockHandle : null;
+    }
+
     // Foundation Parsing \\
 
     private short parseFoundationBlockID(ArpgObjectStruct arpg, String structureName) {
-
-        BlockHandle blockHandle = blockManager.getBlockHandleFromBlockName(
-                arpg.get("foundation_block").getAsString());
-        DynamicGeometryType geometry = blockHandle.getGeometry();
-
-        if (geometry == DynamicGeometryType.NONE || geometry == DynamicGeometryType.LIQUID)
-            throwException("Structure \"" + structureName + "\" \"foundation_block\" \""
-                    + blockHandle.getBlockName() + "\" must be a solid block.");
-
-        return blockHandle.getBlockID();
+        return blockManager.getSolidBlockHandleFromBlockName(
+                arpg.get("foundation_block").getAsString(), structureName).getBlockID();
     }
 
     // Rules Parsing \\

@@ -2,9 +2,10 @@ package application.bootstrap.vehiclepipeline.vehiclemanager;
 
 import java.io.File;
 
+import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
+import application.bootstrap.furnishingpipeline.util.FurnishingArpgUtility;
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
-import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoSlotStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleData;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
@@ -22,7 +23,6 @@ import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class VehicleBuilder extends BuilderPackage {
@@ -39,10 +39,10 @@ class VehicleBuilder extends BuilderPackage {
      * its "open_degrees", and every door and portcullis is numbered in data
      * order. The "hull", "rig", "steering" and "anchor" groups tune how it
      * handles; the draft and centre of mass height are sub-voxels of the model
-     * grid. The optional "tables" name lists of items, and each place in
-     * "cargo" names the table it is furnished from, the "corner" of the item's
-     * model grid in sub-voxels, its "spin" in quarter turns about the vertical,
-     * and the "chance" it is furnished at all. Geometry and the hull's physics
+     * grid. Each place in the optional "cargo" names the shared furnishing
+     * table it is furnished from, the "corner" of the item's model grid in
+     * sub-voxels, its "spin" in quarter turns about the vertical, and the
+     * "chance" it is furnished at all. Geometry and the hull's physics
      * are worked out by VehicleGeometryBuilder and VehicleHullBuilder, so a
      * malformed vehicle fails at boot.
      */
@@ -50,6 +50,7 @@ class VehicleBuilder extends BuilderPackage {
     // Internal
     private VehicleGeometryBuilder vehicleGeometryBuilder;
     private VehicleHullBuilder vehicleHullBuilder;
+    private FurnishingManager furnishingManager;
 
     // Base \\
 
@@ -57,6 +58,7 @@ class VehicleBuilder extends BuilderPackage {
     protected void get() {
         this.vehicleGeometryBuilder = get(VehicleGeometryBuilder.class);
         this.vehicleHullBuilder = get(VehicleHullBuilder.class);
+        this.furnishingManager = get(FurnishingManager.class);
     }
 
     // Build \\
@@ -111,7 +113,7 @@ class VehicleBuilder extends BuilderPackage {
                 resolveBoundingRadius(bounds, hull.getCenterOfMass()),
                 hull,
                 parseHandling(arpg, hullArpg),
-                parseCargoSlots(arpg, vehicleName));
+                FurnishingArpgUtility.parseSlots(arpg, "cargo", vehicleName, furnishingManager));
 
         VehicleHandle vehicleHandle = create(VehicleHandle.class);
         vehicleHandle.constructor(vehicleData);
@@ -493,83 +495,6 @@ class VehicleBuilder extends BuilderPackage {
     // An optional group, read as empty so every field in it falls back to its default
     private ArpgObjectStruct resolveGroup(ArpgObjectStruct arpg, String key) {
         return ArpgUtility.hasObject(arpg, key) ? arpg.getAsObject(key) : new ArpgObjectStruct();
-    }
-
-    // Cargo \\
-
-    // Every place the vehicle comes furnished at, each drawing from one of its named tables
-    private ObjectArrayList<VehicleCargoSlotStruct> parseCargoSlots(ArpgObjectStruct arpg, String vehicleName) {
-
-        Object2ObjectOpenHashMap<String, ObjectArrayList<String>> tableName2ItemNames = parseTables(
-                resolveGroup(arpg, "tables"), vehicleName);
-        ArpgArrayStruct cargoArpg = ArpgUtility.hasArray(arpg, "cargo")
-                ? arpg.getAsArray("cargo")
-                : new ArpgArrayStruct();
-        ObjectArrayList<VehicleCargoSlotStruct> cargoSlots = new ObjectArrayList<>(cargoArpg.size());
-
-        for (int i = 0; i < cargoArpg.size(); i++)
-            cargoSlots.add(parseCargoSlot(cargoArpg.get(i).getAsObject(), tableName2ItemNames, vehicleName));
-
-        return cargoSlots;
-    }
-
-    private Object2ObjectOpenHashMap<String, ObjectArrayList<String>> parseTables(
-            ArpgObjectStruct tablesArpg,
-            String vehicleName) {
-
-        Object2ObjectOpenHashMap<String, ObjectArrayList<String>> tableName2ItemNames =
-                new Object2ObjectOpenHashMap<>();
-
-        for (String tableName : tablesArpg.keySet()) {
-
-            ArpgArrayStruct itemsArpg = tablesArpg.getAsArray(tableName);
-
-            if (itemsArpg.isEmpty())
-                throwException("Vehicle '" + vehicleName + "' table '" + tableName + "' lists no items.");
-
-            ObjectArrayList<String> itemNames = new ObjectArrayList<>(itemsArpg.size());
-
-            for (int i = 0; i < itemsArpg.size(); i++)
-                itemNames.add(itemsArpg.get(i).getAsString());
-
-            tableName2ItemNames.put(tableName, itemNames);
-        }
-
-        return tableName2ItemNames;
-    }
-
-    private VehicleCargoSlotStruct parseCargoSlot(
-            ArpgObjectStruct slotArpg,
-            Object2ObjectOpenHashMap<String, ObjectArrayList<String>> tableName2ItemNames,
-            String vehicleName) {
-
-        String tableName = ArpgUtility.validateString(slotArpg, "table");
-        ObjectArrayList<String> itemNames = tableName2ItemNames.get(tableName);
-
-        if (itemNames == null)
-            throwException("Vehicle '" + vehicleName + "' cargo names table '" + tableName
-                    + "', which its \"tables\" do not list.");
-
-        ArpgArrayStruct cornerArpg = ArpgUtility.validateArray(slotArpg, "corner", EngineSetting.AXIS_COUNT);
-        int spin = ArpgUtility.getInt(slotArpg, "spin", 0);
-        float chance = ArpgUtility.getFloat(slotArpg, "chance", 1f);
-
-        if (spin < 0 || spin >= EngineSetting.ENCODED_FACE_SPIN_COUNT)
-            throwException("Vehicle '" + vehicleName + "' cargo from table '" + tableName + "' turns " + spin
-                    + " quarter turns, outside 0 to " + (EngineSetting.ENCODED_FACE_SPIN_COUNT - 1) + ".");
-
-        if (chance < 0f || chance > 1f)
-            throwException("Vehicle '" + vehicleName + "' cargo from table '" + tableName
-                    + "' has a chance outside 0 to 1.");
-
-        return new VehicleCargoSlotStruct(
-                tableName,
-                itemNames,
-                cornerArpg.get(0).getAsInt(),
-                cornerArpg.get(1).getAsInt(),
-                cornerArpg.get(2).getAsInt(),
-                EngineSetting.DEFAULT_BLOCK_ORIENTATION + spin,
-                chance);
     }
 
     // Bounds \\

@@ -1,9 +1,7 @@
 package application.bootstrap.worldpipeline.structuremanager;
 
-import java.util.Arrays;
-
-import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
 import application.bootstrap.worldpipeline.structure.StructureFixedPlacementStruct;
 import application.bootstrap.worldpipeline.structure.StructureFrequencyStruct;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
@@ -12,6 +10,8 @@ import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.world.WorldPlacementKind;
+import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -21,22 +21,27 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class StructurePlacementBranch extends BranchPackage {
 
     /*
-     * Async — stamps every structure that reaches one freshly generated chunk
-     * into it, on that chunk's own worker thread. Each chunk independently
-     * re-derives every candidate that could reach it and writes only its own
-     * blocks, so a structure spanning several chunks lands identically in
-     * each without any chunk touching another. Cheap rejections run first:
-     * the chance roll, then reach, then biome, then the ground probes.
+     * Async — stamps every structure that places itself or was placed by hand
+     * and reaches one freshly generated chunk into it, on that chunk's own
+     * worker thread. Each chunk independently re-derives every candidate that
+     * could reach it and lays only its own share through
+     * StructureStampBranch, so a structure spanning several chunks lands
+     * identically in each without any chunk touching another. Cheap
+     * rejections run first: the chance roll, then reach, then biome, then the
+     * ground probes, and a structure that places itself never lands on ground
+     * a settlement or road claims.
      */
 
     // Internal
+    private StructureManager structureManager;
     private BiomeManager biomeManager;
     private WorldGenerationManager worldGenerationManager;
+    private SettlementManager settlementManager;
+    private StructureStampBranch structureStampBranch;
     private StructurePlacementAsyncContainer placementContainer;
 
     // Settings
     private int chunkSize;
-    private int worldHeightBlocks;
 
     // Internal \\
 
@@ -48,13 +53,15 @@ class StructurePlacementBranch extends BranchPackage {
 
         // Settings
         this.chunkSize = EngineSetting.CHUNK_SIZE;
-        this.worldHeightBlocks = EngineSetting.WORLD_HEIGHT * EngineSetting.CHUNK_SIZE;
     }
 
     @Override
     protected void get() {
+        this.structureManager = get(StructureManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.worldGenerationManager = get(WorldGenerationManager.class);
+        this.settlementManager = get(SettlementManager.class);
+        this.structureStampBranch = get(StructureStampBranch.class);
     }
 
     // Generation \\
@@ -63,7 +70,8 @@ class StructurePlacementBranch extends BranchPackage {
             WorldHandle worldHandle,
             long chunkCoordinate,
             SubChunkInstance[] subChunks,
-            StructureHandle[] structureHandles) {
+            StructureHandle[] structureHandles,
+            WorldPlacementStruct[] placements) {
 
         StructurePlacementAsyncContainer scratch = placementContainer.getInstance();
 
@@ -82,6 +90,8 @@ class StructurePlacementBranch extends BranchPackage {
 
             generateFixedPlacements(scratch, structureHandle);
         }
+
+        generateWorldPlacements(scratch, placements);
     }
 
     // Frequency Placement \\
@@ -151,6 +161,10 @@ class StructurePlacementBranch extends BranchPackage {
         if (!passesRules(scratch, structureHandle, anchorX, anchorZ, quarterTurns))
             return;
 
+        if (settlementManager.isClaimed(
+                scratch.worldHandle, anchorX, anchorZ, structureHandle.getHorizontalReachBlocks()))
+            return;
+
         stampStructure(
                 scratch, structureHandle, anchorX, anchorZ,
                 resolveGroundAnchorY(scratch, structureHandle, anchorX, anchorZ), quarterTurns);
@@ -186,6 +200,31 @@ class StructurePlacementBranch extends BranchPackage {
                 : resolveGroundAnchorY(scratch, structureHandle, anchorX, anchorZ);
 
         stampStructure(scratch, structureHandle, anchorX, anchorZ, anchorY, quarterTurns);
+    }
+
+    // World Placement \\
+
+    // Every structure the world's placements stand up by hand, unruled, anchored on the ground
+    private void generateWorldPlacements(StructurePlacementAsyncContainer scratch, WorldPlacementStruct[] placements) {
+
+        for (int i = 0; i < placements.length; i++) {
+
+            WorldPlacementStruct placement = placements[i];
+
+            if (placement.getKind() != WorldPlacementKind.STRUCTURE)
+                continue;
+
+            StructureHandle structureHandle = structureManager.getStructureHandleFromStructureName(placement.getName());
+            long anchorX = WorldWrapUtility.wrapBlockX(scratch.worldHandle, placement.getWorldX());
+            long anchorZ = WorldWrapUtility.wrapBlockZ(scratch.worldHandle, placement.getWorldZ());
+
+            if (!reachesChunk(scratch, structureHandle, anchorX, anchorZ))
+                continue;
+
+            stampStructure(
+                    scratch, structureHandle, anchorX, anchorZ,
+                    resolveGroundAnchorY(scratch, structureHandle, anchorX, anchorZ), placement.getQuarterTurns());
+        }
     }
 
     // Reach \\
@@ -322,88 +361,8 @@ class StructurePlacementBranch extends BranchPackage {
             long anchorZ,
             int anchorY,
             int quarterTurns) {
-
-        long relativeX = WorldWrapUtility.wrappedBlockDeltaX(scratch.worldHandle, anchorX, scratch.chunkOriginX);
-        long relativeZ = WorldWrapUtility.wrappedBlockDeltaZ(scratch.worldHandle, anchorZ, scratch.chunkOriginZ);
-
-        int[] offsetX = structureHandle.getBlockOffsetX();
-        int[] offsetY = structureHandle.getBlockOffsetY();
-        int[] offsetZ = structureHandle.getBlockOffsetZ();
-        short[] blockIDs = structureHandle.getBlockIDs();
-        short[] blockOrientations = structureHandle.getBlockOrientations();
-        DynamicGeometryType[] blockGeometry = structureHandle.getBlockGeometry();
-
-        boolean foundation = structureHandle.hasFoundation();
-
-        if (foundation)
-            Arrays.fill(scratch.columnFloorY, Integer.MAX_VALUE);
-
-        for (int i = 0; i < blockIDs.length; i++) {
-
-            long localX = relativeX + StructurePlacementUtility.rotateX(offsetX[i], offsetZ[i], quarterTurns);
-            long localZ = relativeZ + StructurePlacementUtility.rotateZ(offsetX[i], offsetZ[i], quarterTurns);
-
-            if (localX < 0 || localX >= chunkSize || localZ < 0 || localZ >= chunkSize)
-                continue;
-
-            int worldY = anchorY + offsetY[i];
-            DynamicGeometryType geometry = blockGeometry[i];
-
-            writeBlock(
-                    scratch.subChunks, (int) localX, worldY, (int) localZ, blockIDs[i],
-                    StructurePlacementUtility.rotateOrientation(blockOrientations[i], quarterTurns),
-                    geometry == DynamicGeometryType.LIQUID);
-
-            if (foundation && geometry != DynamicGeometryType.NONE && geometry != DynamicGeometryType.LIQUID) {
-                int columnIndex = (int) localZ * chunkSize + (int) localX;
-                scratch.columnFloorY[columnIndex] = Math.min(scratch.columnFloorY[columnIndex], worldY);
-            }
-        }
-
-        if (foundation)
-            stampFoundation(scratch, structureHandle.getFoundationBlockID());
-    }
-
-    private void stampFoundation(StructurePlacementAsyncContainer scratch, short foundationBlockID) {
-
-        for (int localZ = 0; localZ < chunkSize; localZ++) {
-            for (int localX = 0; localX < chunkSize; localX++) {
-
-                int floorY = scratch.columnFloorY[localZ * chunkSize + localX];
-
-                if (floorY == Integer.MAX_VALUE)
-                    continue;
-
-                int groundHeight = worldGenerationManager.getColumnGroundHeight(
-                        scratch.chunkCoordinate, localX, localZ);
-
-                for (int worldY = floorY - 1; worldY > groundHeight; worldY--)
-                    writeBlock(
-                            scratch.subChunks, localX, worldY, localZ, foundationBlockID,
-                            EngineSetting.DEFAULT_BLOCK_ORIENTATION, false);
-            }
-        }
-    }
-
-    private void writeBlock(
-            SubChunkInstance[] subChunks,
-            int localX,
-            int worldY,
-            int localZ,
-            short blockID,
-            short orientation,
-            boolean liquid) {
-
-        if (worldY < 0 || worldY >= worldHeightBlocks)
-            return;
-
-        SubChunkInstance subChunk = subChunks[worldY / chunkSize];
-        int localY = worldY % chunkSize;
-
-        subChunk.setBlock(localX, localY, localZ, blockID);
-        subChunk.getBlockRotationPaletteHandle().setBlock(localX, localY, localZ, orientation);
-        subChunk.setLiquidLevel(
-                localX, localY, localZ,
-                liquid ? EngineSetting.LIQUID_LEVEL_MAX : EngineSetting.LIQUID_LEVEL_EMPTY);
+        structureStampBranch.stamp(
+                scratch.worldHandle, scratch.chunkCoordinate, scratch.subChunks,
+                structureHandle, anchorX, anchorZ, anchorY, quarterTurns);
     }
 }

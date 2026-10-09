@@ -9,7 +9,9 @@ import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
+import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
+import editor.bootstrap.worldeditorpipeline.worldplacement.WorldPlacementEntryStruct;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -29,7 +31,9 @@ public class WorldEditorManager extends ManagerPackage {
      * live biome rebuild. Biome edits from the Info Panel reach the engine, and
      * biome selection stays in step with the hierarchy, through
      * WorldBiomeBranch, and tree species edits reach it through
-     * WorldTreeBranch.
+     * WorldTreeBranch. Settlements and structures hand-picked onto the
+     * world, and their palette, are kept through WorldPlacementBranch and
+     * saved and reloaded with the image.
      */
 
     // Internal
@@ -39,6 +43,7 @@ public class WorldEditorManager extends ManagerPackage {
     private WorldStreamManager worldStreamManager;
     private ImageManager imageManager;
     private WorldBiomeBranch worldBiomeBranch;
+    private WorldPlacementBranch worldPlacementBranch;
 
     // World
     private WorldHandle worldHandle;
@@ -69,6 +74,7 @@ public class WorldEditorManager extends ManagerPackage {
         // Internal
         this.worldBiomeBranch = create(WorldBiomeBranch.class);
         create(WorldTreeBranch.class);
+        this.worldPlacementBranch = create(WorldPlacementBranch.class);
 
         // Palette
         this.palette = new ObjectArrayList<>();
@@ -274,6 +280,35 @@ public class WorldEditorManager extends ManagerPackage {
         return imageColor >>> Byte.SIZE;
     }
 
+    // Placement \\
+
+    // A placement tool's click at an image position, in image pixels with fractions kept
+    public void applyPlacement(double imageX, double imageY) {
+
+        WorldHandle world = getWorldHandle();
+
+        switch (activeTool) {
+            case PLACE -> worldPlacementBranch.place(world, imageX, imageY);
+            case CLEAR -> worldPlacementBranch.clear(world, imageX, imageY);
+            default -> {
+            }
+        }
+    }
+
+    public void cyclePlaceable(int step) {
+        worldPlacementBranch.cycle(step);
+        notifyChanged();
+    }
+
+    public void turnPlacement() {
+        worldPlacementBranch.turn();
+        notifyChanged();
+    }
+
+    public WorldPlacementStruct[] getPlacements() {
+        return worldManager.getPlacements(getWorldHandle());
+    }
+
     // History \\
 
     public void undo() {
@@ -292,18 +327,28 @@ public class WorldEditorManager extends ManagerPackage {
 
         ImageDocumentInstance image = getWorldImage();
 
-        setStatusMessage(imageManager.saveImage(image)
+        if (!imageManager.saveImage(image)) {
+            setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_SAVE_FAILED + image.getImageName());
+            return;
+        }
+
+        setStatusMessage(worldPlacementBranch.save(worldHandle)
                 ? EditorSetting.WORLD_EDITOR_MESSAGE_SAVED + image.getImageName()
-                : EditorSetting.WORLD_EDITOR_MESSAGE_SAVE_FAILED + image.getImageName());
+                : EditorSetting.WORLD_EDITOR_MESSAGE_PLACEMENTS_SAVE_FAILED + image.getImageName());
     }
 
     public void reloadWorldImage() {
 
         ImageDocumentInstance image = getWorldImage();
 
-        setStatusMessage(imageManager.reloadImage(image)
+        if (!imageManager.reloadImage(image)) {
+            setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_RELOAD_FAILED + image.getImageName());
+            return;
+        }
+
+        setStatusMessage(worldPlacementBranch.reload(worldHandle, image.getWidth(), image.getHeight())
                 ? EditorSetting.WORLD_EDITOR_MESSAGE_RELOADED + image.getImageName()
-                : EditorSetting.WORLD_EDITOR_MESSAGE_RELOAD_FAILED + image.getImageName());
+                : EditorSetting.WORLD_EDITOR_MESSAGE_PLACEMENTS_RELOAD_FAILED + image.getImageName());
     }
 
     // Status \\
@@ -332,16 +377,30 @@ public class WorldEditorManager extends ManagerPackage {
         if (image.isDirty())
             status.append(EditorSetting.WORLD_EDITOR_DIRTY_MARKER);
 
-        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeTool.getLabel())
-                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(EditorSetting.WORLD_EDITOR_STATUS_RADIUS)
-                .append(brushRadius)
-                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
-                .append(entry != null ? entry.getDisplayName() : EditorSetting.WORLD_EDITOR_STATUS_NO_BIOME);
+        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeTool.getLabel());
+
+        if (activeTool.isPlacement())
+            appendPlacementStatus(status);
+        else
+            status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(EditorSetting.WORLD_EDITOR_STATUS_RADIUS)
+                    .append(brushRadius)
+                    .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
+                    .append(entry != null ? entry.getDisplayName() : EditorSetting.WORLD_EDITOR_STATUS_NO_BIOME);
 
         if (statusMessage != null)
             status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(statusMessage);
 
         return status.toString();
+    }
+
+    private void appendPlacementStatus(StringBuilder status) {
+
+        WorldPlacementEntryStruct placeable = worldPlacementBranch.getSelected();
+
+        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
+                .append(placeable != null ? placeable.getDisplayName() : EditorSetting.WORLD_EDITOR_STATUS_NO_PLACEABLE)
+                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(EditorSetting.WORLD_EDITOR_STATUS_TURNS)
+                .append(worldPlacementBranch.getQuarterTurns());
     }
 
     public String describePixel(int pixelX, int pixelY) {

@@ -232,7 +232,7 @@ field's `key`, `type` (`string`, `int`, `float`, `boolean`, `enum`, `object`, `a
 
 | Schema | Directory under `assets/` | Layout |
 |---|---|---|
-| AnimationTrees, Animations, Behaviors, Biomes, Calendars, Clouds, Entities, Features, Materials, Passes, Rigs, Seasons, Shaders, Sprites, Structures, TextureAliases, UBOs, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
+| AnimationTrees, Animations, Architectures, Behaviors, Biomes, Calendars, Clouds, Entities, Features, Furnishings, Materials, Passes, Rigs, Roads, Seasons, Settlements, Shaders, Sprites, StructureLists, Structures, TextureAliases, UBOs, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
 | Blocks, FBOs, Items, Threads, Tools | `blocks`, `application/fbos`, `items`, `application/threads`, `tools` | an array (`blocks`, `fbos`, `items`, `threads`, `tools`) of entries, each named by its `name` field |
 | (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `CommandBuilder`, `SubVoxelArpgUtility`) |
 

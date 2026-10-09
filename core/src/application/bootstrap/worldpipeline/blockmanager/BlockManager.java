@@ -107,4 +107,16 @@ public class BlockManager extends ManagerPackage {
     public BlockHandle getBlockHandleFromBlockName(String blockName) {
         return getBlockHandleFromBlockID(getBlockIDFromBlockName(blockName));
     }
+
+    // A block content builds with that must be solid, refused naming its owner when it is air or a liquid
+    public BlockHandle getSolidBlockHandleFromBlockName(String blockName, String ownerName) {
+
+        BlockHandle blockHandle = getBlockHandleFromBlockName(blockName);
+        DynamicGeometryType geometry = blockHandle.getGeometry();
+
+        if (geometry == DynamicGeometryType.NONE || geometry == DynamicGeometryType.LIQUID)
+            throwException("\"" + ownerName + "\" names \"" + blockName + "\", which is not a solid block.");
+
+        return blockHandle;
+    }
 }

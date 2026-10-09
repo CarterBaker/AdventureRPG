@@ -17,8 +17,10 @@ public class BiomeData extends DataPackage {
      * its cliffs, ridges, coast, caves and veins, the rock its steep faces
      * bare and the slope they bare it from, plus its ocean flag, the level of
      * its own still water, its beach biome and the probable biomes chained
-     * into it, and the trees it grows and how it spreads them. Omitted curves
-     * default to TerrainShapeUtility's.
+     * into it, the trees it grows and how it spreads them, and the
+     * architectures settlements on it may be built in, none letting no
+     * settlement grow there on its own. Omitted curves default to
+     * TerrainShapeUtility's.
      */
 
     public static final int MAP_COLOR_UNDEFINED = EngineSetting.BIOME_MAP_COLOR_UNDEFINED;
@@ -56,6 +58,7 @@ public class BiomeData extends DataPackage {
     private final BiomeCaveStruct caves;
     private final ObjectArrayList<BiomeVeinStruct> veins;
     private final ObjectArrayList<BiomeTreeStruct> trees;
+    private final ObjectArrayList<String> architectureNames;
 
     private final boolean oceanWater;
     private final int waterLevelBlocks;
@@ -88,6 +91,7 @@ public class BiomeData extends DataPackage {
             BiomeCaveStruct caves,
             ObjectArrayList<BiomeVeinStruct> veins,
             ObjectArrayList<BiomeTreeStruct> trees,
+            ObjectArrayList<String> architectureNames,
             boolean oceanWater,
             int waterLevelBlocks,
             String beachBiomeName) {
@@ -124,6 +128,7 @@ public class BiomeData extends DataPackage {
         this.caves = caves;
         this.veins = veins;
         this.trees = trees;
+        this.architectureNames = architectureNames;
 
         this.oceanWater = oceanWater;
         this.waterLevelBlocks = waterLevelBlocks;
@@ -240,6 +245,10 @@ public class BiomeData extends DataPackage {
 
     public ObjectArrayList<BiomeTreeStruct> getTrees() {
         return trees;
+    }
+
+    public ObjectArrayList<String> getArchitectureNames() {
+        return architectureNames;
     }
 
     public boolean hasOceanWater() {

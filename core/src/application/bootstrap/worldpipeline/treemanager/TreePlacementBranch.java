@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.treemanager;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.BiomeTreeStruct;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
@@ -27,7 +28,8 @@ class TreePlacementBranch extends BranchPackage {
      * one grove per cell spread inside its cluster radius, and a field kind a
      * tree in nearly every cell, thinned by a slow patch noise into woods and
      * clearings. Cheap rejections run first: the rolls, then reach, then the
-     * biome at the root, then the ground beneath it. Every roll is a pure
+     * biome at the root, then the ground a settlement or road claims, then
+     * the ground beneath it. Every roll is a pure
      * function of the world seed, the tree and the place, so every chunk a
      * tree reaches finds it on its own; the registry then hands every chunk
      * the same instance. Every tree a hand planted that reaches the chunk is
@@ -39,6 +41,7 @@ class TreePlacementBranch extends BranchPackage {
     private TreeRegistryBranch treeRegistryBranch;
     private BiomeManager biomeManager;
     private WorldGenerationManager worldGenerationManager;
+    private SettlementManager settlementManager;
     private TreePlacementAsyncContainer placementContainer;
 
     // Settings
@@ -62,6 +65,7 @@ class TreePlacementBranch extends BranchPackage {
         this.treeRegistryBranch = get(TreeRegistryBranch.class);
         this.biomeManager = get(BiomeManager.class);
         this.worldGenerationManager = get(WorldGenerationManager.class);
+        this.settlementManager = get(SettlementManager.class);
     }
 
     // Placement \\
@@ -230,6 +234,13 @@ class TreePlacementBranch extends BranchPackage {
         BiomeHandle anchorBiome = scratch.blend.getDominantBiome();
 
         if (anchorBiome == null || anchorBiome.getBiomeID() != biome.getBiomeID())
+            return;
+
+        if (settlementManager.isClaimed(
+                worldHandle,
+                anchorX + EngineSetting.BLOCK_CENTER_OFFSET,
+                anchorZ + EngineSetting.BLOCK_CENTER_OFFSET,
+                EngineSetting.SETTLEMENT_TREE_CLEARANCE_BLOCKS))
             return;
 
         int ground = probeGround(scratch, anchorX, anchorZ);

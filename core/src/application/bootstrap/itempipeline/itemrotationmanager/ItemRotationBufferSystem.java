@@ -21,8 +21,10 @@ public class ItemRotationBufferSystem extends SystemPackage {
      * findNearestOrientation() snaps any free rotation onto the closest one.
      * It is also the one place the shared placement rules live: the box a
      * turned shape reaches, the corner that sets a shape flush on a face, the
-     * orientation an item set against a face takes, and an item's transform,
-     * so world items and cargo aboard a vehicle are placed alike.
+     * orientation an item set against a face takes, the orientation an item
+     * takes when whatever it stands in turns about the vertical, and an
+     * item's transform, so world items, cargo aboard a vehicle and furniture
+     * in a turned structure are placed alike.
      */
 
     // Internal
@@ -34,6 +36,9 @@ public class ItemRotationBufferSystem extends SystemPackage {
     // Cell Rotations — each orientation's rounded 3x3 rotation, row by row
     private int[] cellRotations;
     private int cellRotationStride;
+
+    // Turns — each orientation after whole quarter turns about the vertical, quarter turns innermost
+    private int[] turnedOrientations;
 
     // Internal \\
 
@@ -70,6 +75,22 @@ public class ItemRotationBufferSystem extends SystemPackage {
                 writeCellRotation(index, rotations[index]);
             }
         }
+
+        buildTurns();
+    }
+
+    private void buildTurns() {
+
+        int turnCount = EngineSetting.STRUCTURE_QUARTER_TURN_COUNT;
+        Direction3Vector up = Direction3Vector.UP;
+
+        this.turnedOrientations = new int[rotations.length * turnCount];
+
+        for (int orientation = 0; orientation < rotations.length; orientation++)
+            for (int quarterTurns = 0; quarterTurns < turnCount; quarterTurns++)
+                turnedOrientations[orientation * turnCount + quarterTurns] = findNearestOrientation(
+                        axisRotation(up.x, up.y, up.z, quarterTurns * EngineSetting.QUARTER_TURN_DEGREES)
+                                .multiply(rotations[orientation]));
     }
 
     private void pushItemRotationData() {
@@ -126,6 +147,15 @@ public class ItemRotationBufferSystem extends SystemPackage {
         }
 
         return nearest;
+    }
+
+    // The orientation an item takes when whatever it stands in turns clockwise about the vertical, seen from above,
+    // by whole quarter turns — the same turn a structure's offsets take
+    public int turnOrientation(int orientation, int quarterTurns) {
+
+        int turnCount = EngineSetting.STRUCTURE_QUARTER_TURN_COUNT;
+
+        return turnedOrientations[orientation * turnCount + Math.floorMod(quarterTurns, turnCount)];
     }
 
     // One axis of the model-grid cell a cell turns into — its centre turned about the grid's centre

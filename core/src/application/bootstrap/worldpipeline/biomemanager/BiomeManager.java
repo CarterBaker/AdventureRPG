@@ -471,6 +471,13 @@ public class BiomeManager extends ManagerPackage {
         }
     }
 
+    // Every registered biome copied out
+    public void collectBiomes(ObjectArrayList<BiomeHandle> outBiomes) {
+
+        outBiomes.clear();
+        outBiomes.addAll(biomeName2BiomeHandle.values());
+    }
+
     public boolean hasBiome(String biomeName) {
         return biomeName2BiomeHandle.containsKey(biomeName);
     }

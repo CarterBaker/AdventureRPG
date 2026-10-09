@@ -156,6 +156,10 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getTrees();
     }
 
+    public ObjectArrayList<String> getArchitectureNames() {
+        return biomeData.getArchitectureNames();
+    }
+
     public boolean hasOceanWater() {
         return biomeData.hasOceanWater();
     }

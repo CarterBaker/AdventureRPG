@@ -14,8 +14,9 @@ public class WorldEditorToolSystem extends SystemPackage {
      * Turns the pointer into the image pixel under it each frame and drives
      * the active tool: a click on the image begins a stroke, dragging carries
      * it on wherever the pointer goes, and releasing ends it as one undo step.
-     * Nothing begins while the view is being panned. The hovered pixel is
-     * kept for the brush outline and status line.
+     * A placement tool instead acts once per click, on the exact position
+     * under the pointer. Nothing begins while the view is being panned. The
+     * hovered pixel is kept for the brush outline and status line.
      */
 
     // Internal
@@ -52,22 +53,33 @@ public class WorldEditorToolSystem extends SystemPackage {
 
         RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
         ImageDocumentInstance image = worldEditorManager.getWorldImage();
+        double imageX = worldEditorViewSystem.screenToImageX(rawInput.getMouseX());
+        double imageY = worldEditorViewSystem.screenToImageY(rawInput.getMouseY());
 
-        hoveredX = (int) Math.floor(worldEditorViewSystem.screenToImageX(rawInput.getMouseX()));
-        hoveredY = (int) Math.floor(worldEditorViewSystem.screenToImageY(rawInput.getMouseY()));
+        hoveredX = (int) Math.floor(imageX);
+        hoveredY = (int) Math.floor(imageY);
         hovering = editorInputSystem.isPointerActive()
                 && hoveredX >= 0 && hoveredY >= 0 && hoveredX < image.getWidth() && hoveredY < image.getHeight();
 
         if (stroking && !rawInput.isButtonHeld(WorldEditorSetting.BUTTON_APPLY))
             endStroke();
 
-        if (stroking)
+        if (stroking) {
             worldEditorManager.continueStroke(hoveredX, hoveredY);
-        else if (hovering && !worldEditorViewSystem.isPanning()
-                && editorInputSystem.isClicked(WorldEditorSetting.BUTTON_APPLY)) {
-            worldEditorManager.beginStroke(hoveredX, hoveredY);
-            stroking = true;
+            return;
         }
+
+        if (!hovering || worldEditorViewSystem.isPanning()
+                || !editorInputSystem.isClicked(WorldEditorSetting.BUTTON_APPLY))
+            return;
+
+        if (worldEditorManager.getTool().isPlacement()) {
+            worldEditorManager.applyPlacement(imageX, imageY);
+            return;
+        }
+
+        worldEditorManager.beginStroke(hoveredX, hoveredY);
+        stroking = true;
     }
 
     private void endStroke() {

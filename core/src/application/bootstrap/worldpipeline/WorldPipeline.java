@@ -1,9 +1,14 @@
 package application.bootstrap.worldpipeline;
 
+import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
+import application.bootstrap.worldpipeline.layoutmanager.LayoutManager;
 import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
+import application.bootstrap.worldpipeline.roadmanager.RoadManager;
+import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
+import application.bootstrap.worldpipeline.structurelistmanager.StructureListManager;
 import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
@@ -24,8 +29,12 @@ public class WorldPipeline extends PipelinePackage {
      * is registered immediately after WorldStreamManager so its update() runs
      * later in the same frame, after that frame's wrap state is known.
      * StructureManager follows WorldGenerationManager, whose terrain probe it
-     * anchors structures against, and TreeManager follows it in turn, so the
-     * game day it publishes each frame is current before the world streams.
+     * anchors structures against, and the settlement managers follow it in
+     * the order they resolve one another: roads, the structure lists that
+     * draw from structures, the architectures that name both, the layouts
+     * they are laid as, and the settlements built from them all. TreeManager
+     * follows in turn, so the game day it publishes each frame is current
+     * before the world streams.
      */
 
     @Override
@@ -36,6 +45,11 @@ public class WorldPipeline extends PipelinePackage {
         create(LiquidManager.class);
         create(WorldGenerationManager.class);
         create(StructureManager.class);
+        create(RoadManager.class);
+        create(StructureListManager.class);
+        create(ArchitectureManager.class);
+        create(LayoutManager.class);
+        create(SettlementManager.class);
         create(TreeManager.class);
         create(GridManager.class);
         create(WorldStreamManager.class);

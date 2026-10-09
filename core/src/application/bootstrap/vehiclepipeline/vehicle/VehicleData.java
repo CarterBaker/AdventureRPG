@@ -1,5 +1,6 @@
 package application.bootstrap.vehiclepipeline.vehicle;
 
+import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import engine.root.DataPackage;
@@ -15,7 +16,8 @@ public class VehicleData extends DataPackage {
      * riders and cargo collide with, the zones its ladders can be climbed in,
      * the merged meshes of every part that never moves, the bounds of its
      * model grid, the hull's mass and dry volume, how it handles, and the
-     * places it comes furnished at, each with its table of items. Owned by
+     * places it comes furnished at, each drawing from a shared furnishing
+     * table. Owned by
      * VehicleHandle for the engine lifetime and shared by every vehicle of
      * the type.
      */
@@ -55,7 +57,7 @@ public class VehicleData extends DataPackage {
     private final VehicleHandlingStruct handling;
 
     // Cargo
-    private final ObjectArrayList<VehicleCargoSlotStruct> cargoSlots;
+    private final ObjectArrayList<FurnishingSlotStruct> cargoSlots;
 
     // Constructor \\
 
@@ -82,7 +84,7 @@ public class VehicleData extends DataPackage {
             float boundingRadius,
             VehicleHullStruct hull,
             VehicleHandlingStruct handling,
-            ObjectArrayList<VehicleCargoSlotStruct> cargoSlots) {
+            ObjectArrayList<FurnishingSlotStruct> cargoSlots) {
 
         // Identity
         this.vehicleName = vehicleName;
@@ -212,7 +214,7 @@ public class VehicleData extends DataPackage {
         return handling;
     }
 
-    public ObjectArrayList<VehicleCargoSlotStruct> getCargoSlots() {
+    public ObjectArrayList<FurnishingSlotStruct> getCargoSlots() {
         return cargoSlots;
     }
 }

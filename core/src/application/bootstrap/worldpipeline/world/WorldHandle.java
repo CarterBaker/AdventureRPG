@@ -6,6 +6,7 @@ import engine.assets.image.Pixmap;
 import engine.root.HandlePackage;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldHandle extends HandlePackage {
 
@@ -79,5 +80,13 @@ public class WorldHandle extends HandlePackage {
 
     public long getSeed() {
         return data.getSeed();
+    }
+
+    public ObjectArrayList<WorldPlacementStruct> getPlacements() {
+        return data.getPlacements();
+    }
+
+    public boolean hasNaturalSettlements() {
+        return data.hasNaturalSettlements();
     }
 }

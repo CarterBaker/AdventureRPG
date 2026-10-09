@@ -1,18 +1,18 @@
 package application.bootstrap.vehiclepipeline.vehiclemanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
+import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
-import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
-import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoSlotStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCastStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
@@ -45,15 +45,16 @@ public class VehicleCargoSystem extends SystemPackage {
      * replaceCargo() turns cargo into another item in its place, as a door
      * swings open or a cannon is loaded, once the other fits there. stow()
      * furnishes a vehicle as it enters the world: every place it comes
-     * furnished at draws one item from its table, which must fit there.
+     * furnished at draws one item from its shared furnishing table through
+     * FurnishingManager, which must fit there.
      */
 
     // Internal
     private VehicleManager vehicleManager;
     private VehicleCastSystem vehicleCastSystem;
     private ItemRotationBufferSystem itemRotationBufferSystem;
-    private ItemDefinitionManager itemDefinitionManager;
     private ItemManager itemManager;
+    private FurnishingManager furnishingManager;
 
     // Cast
     private VehicleCastStruct castStruct;
@@ -86,8 +87,8 @@ public class VehicleCargoSystem extends SystemPackage {
         this.vehicleManager = get(VehicleManager.class);
         this.vehicleCastSystem = get(VehicleCastSystem.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
-        this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.itemManager = get(ItemManager.class);
+        this.furnishingManager = get(FurnishingManager.class);
     }
 
     // Cast \\
@@ -266,21 +267,20 @@ public class VehicleCargoSystem extends SystemPackage {
 
         for (int slotIndex = 0; slotIndex < vehicleHandle.getCargoSlotCount(); slotIndex++) {
 
-            VehicleCargoSlotStruct slot = vehicleHandle.getCargoSlot(slotIndex);
+            FurnishingSlotStruct slot = vehicleHandle.getCargoSlot(slotIndex);
 
             if (Math.random() >= slot.getChance())
                 continue;
 
-            String itemName = slot.getItemName((int) (Math.random() * slot.getItemCount()));
-            ItemDefinitionHandle item = itemDefinitionManager.getItemHandleFromItemName(itemName);
+            ItemDefinitionHandle item = furnishingManager.drawItem(slot.getFurnishingID(), (float) Math.random());
 
             cornerScratch[EngineSetting.AXIS_X] = slot.getCornerX();
             cornerScratch[EngineSetting.AXIS_Y] = slot.getCornerY();
             cornerScratch[EngineSetting.AXIS_Z] = slot.getCornerZ();
 
             if (!fits(vehicle, item.getShape(), slot.getOrientation(), null))
-                throwException("Vehicle '" + vehicleHandle.getVehicleName() + "' stows '" + itemName
-                        + "' from table '" + slot.getTableName() + "' at (" + slot.getCornerX() + ", "
+                throwException("Vehicle '" + vehicleHandle.getVehicleName() + "' stows '" + item.getItemName()
+                        + "' from furnishing '" + slot.getFurnishingName() + "' at (" + slot.getCornerX() + ", "
                         + slot.getCornerY() + ", " + slot.getCornerZ() + "), where it does not fit.");
 
             addCargo(vehicle, itemManager.createItem(item), slot.getOrientation());
