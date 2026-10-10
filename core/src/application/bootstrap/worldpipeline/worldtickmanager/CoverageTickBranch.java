@@ -1,12 +1,9 @@
 package application.bootstrap.worldpipeline.worldtickmanager;
 
-import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
-import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
-import application.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.covering.CoveringHandle;
 import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
@@ -24,9 +21,6 @@ import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import it.unimi.dsi.fastutil.objects.Reference2LongLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Reference2LongMap;
 
 public class CoverageTickBranch extends BranchPackage {
 
@@ -44,11 +38,9 @@ public class CoverageTickBranch extends BranchPackage {
      * that chunk's lock is free. Every chunk ticks under its own lock. A
      * change only marks its subchunk for a rebuild when the cell has a face
      * the mesher could draw the covering on, since a cell boxed in by whole
-     * blocks draws nothing either way. Marked subchunks wait in a queue that
-     * rebuildPending() drains each frame within its own budget, so a tick
-     * never stalls a frame however much ground it grows; a built chunk's
-     * subchunks are rebuilt and re-merged in place, and one the stream has
-     * yet to build is left to build from the coverage as it now stands.
+     * blocks draws nothing either way. Marked subchunks are queued on
+     * SubChunkRebuildBranch, which rebuilds them within its own budget, so a
+     * tick never stalls a frame however much ground it grows.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -59,8 +51,7 @@ public class CoverageTickBranch extends BranchPackage {
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
     private CoveringManager coveringManager;
-    private DynamicGeometryManager dynamicGeometryManager;
-    private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
+    private SubChunkRebuildBranch subChunkRebuildBranch;
 
     // Settings
     private int intervalFrames;
@@ -68,9 +59,6 @@ public class CoverageTickBranch extends BranchPackage {
     private int chunkSize;
     private int worldHeight;
     private int generationDataIndex;
-    private int neighborDataIndex;
-    private int buildDataIndex;
-    private int rebuildsPerFrame;
 
     // State
     private int frameCounter;
@@ -80,9 +68,6 @@ public class CoverageTickBranch extends BranchPackage {
     // Scratch — the subchunks a tick touched in the chunk it ticks, and in a neighbour a seed crossed into
     private boolean[] touchedSubChunks;
     private boolean[] touchedNeighborSubChunks;
-
-    // Pending — the subchunks of each chunk still waiting on a rebuild, one bit per subchunk
-    private Reference2LongLinkedOpenHashMap<ChunkInstance> chunk2PendingSubChunks;
 
     // Internal \\
 
@@ -95,13 +80,6 @@ public class CoverageTickBranch extends BranchPackage {
         this.chunkSize = EngineSetting.CHUNK_SIZE;
         this.worldHeight = EngineSetting.WORLD_HEIGHT;
         this.generationDataIndex = ChunkData.GENERATION_DATA.index;
-        this.neighborDataIndex = ChunkData.NEIGHBOR_DATA.index;
-        this.buildDataIndex = ChunkData.BUILD_DATA.index;
-        this.rebuildsPerFrame = EngineSetting.COVERAGE_REBUILDS_PER_FRAME;
-
-        if (worldHeight > Long.SIZE)
-            throwException("Coverage rebuilds track a chunk's subchunks in one long — WORLD_HEIGHT "
-                    + worldHeight + " exceeds " + Long.SIZE + " subchunks.");
 
         // State
         this.frameCounter = EngineSetting.COVERAGE_TICK_PHASE_FRAMES;
@@ -111,9 +89,6 @@ public class CoverageTickBranch extends BranchPackage {
         // Scratch
         this.touchedSubChunks = new boolean[worldHeight];
         this.touchedNeighborSubChunks = new boolean[worldHeight];
-
-        // Pending
-        this.chunk2PendingSubChunks = new Reference2LongLinkedOpenHashMap<>();
     }
 
     @Override
@@ -123,8 +98,7 @@ public class CoverageTickBranch extends BranchPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
         this.coveringManager = get(CoveringManager.class);
-        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
-        this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
+        this.subChunkRebuildBranch = get(SubChunkRebuildBranch.class);
     }
 
     // Schedule \\
@@ -440,64 +414,11 @@ public class CoverageTickBranch extends BranchPackage {
                 continue;
 
             touched[subChunkY] = false;
-            pending |= 1L << subChunkY;
+            pending |= SubChunkRebuildBranch.toSubChunkBit(subChunkY);
         }
 
         if (pending != 0L)
-            chunk2PendingSubChunks.put(chunk, chunk2PendingSubChunks.getLong(chunk) | pending);
-    }
-
-    // Queued subchunks rebuilt oldest chunk first, up to the frame's budget; a chunk whose lock is busy waits
-    public void rebuildPending() {
-
-        int budget = rebuildsPerFrame;
-        ObjectIterator<Reference2LongMap.Entry<ChunkInstance>> iterator = chunk2PendingSubChunks
-                .reference2LongEntrySet().fastIterator();
-
-        while (budget > 0 && iterator.hasNext()) {
-
-            Reference2LongMap.Entry<ChunkInstance> entry = iterator.next();
-            ChunkInstance chunk = entry.getKey();
-            ChunkDataSyncContainer syncContainer = chunk.getChunkDataSyncContainer();
-
-            if (!syncContainer.tryAcquire())
-                continue;
-
-            long pending = entry.getLongValue();
-            boolean built;
-
-            try {
-
-                boolean[] data = syncContainer.getData();
-                built = data[neighborDataIndex] && data[buildDataIndex];
-
-                if (built) {
-
-                    while (pending != 0L && budget > 0) {
-
-                        int subChunkY = Long.numberOfTrailingZeros(pending);
-                        pending &= pending - 1L;
-                        budget--;
-
-                        chunk.getSubChunk(subChunkY).getDynamicPacketInstance().clear();
-                        dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
-                    }
-
-                    ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, data);
-                } else
-                    pending = 0L;
-            } finally {
-                syncContainer.release();
-            }
-
-            if (built)
-                worldStreamManager.invalidateMegaForChunk(chunk.getCoordinate());
-
-            if (pending == 0L)
-                iterator.remove();
-            else
-                entry.setValue(pending);
-        }
+            subChunkRebuildBranch.queueRebuild(chunk, pending);
     }
 
     // Utility \\

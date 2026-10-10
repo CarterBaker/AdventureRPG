@@ -10,9 +10,9 @@ public class WorldTickManager extends ManagerPackage {
      * coverings. FULL, PARTIAL, COMPLEX, LIQUID and coverage each own their
      * own frame interval and counter rather than sharing one cycle length,
      * so a branch that must run often (liquid) and branches that can run
-     * rarely are both just their own EngineSetting interval. The rebuilds
-     * coverage growth queues drain every frame within their own budget.
-     * Every branch is held rather than advanced on any frame
+     * rarely are both just their own EngineSetting interval. The subchunk
+     * rebuilds liquid and coverage queue drain every frame within their own
+     * budget. Every branch is held rather than advanced on any frame
      * WorldStreamManager reports as a player-wrap frame, so no tick ever
      * competes with that rebuild for the same frame.
      */
@@ -26,6 +26,7 @@ public class WorldTickManager extends ManagerPackage {
     private ComplexTickBranch complexTickBranch;
     private LiquidTickBranch liquidTickBranch;
     private CoverageTickBranch coverageTickBranch;
+    private SubChunkRebuildBranch subChunkRebuildBranch;
 
     // Internal \\
 
@@ -38,6 +39,7 @@ public class WorldTickManager extends ManagerPackage {
         this.complexTickBranch = create(ComplexTickBranch.class);
         this.liquidTickBranch = create(LiquidTickBranch.class);
         this.coverageTickBranch = create(CoverageTickBranch.class);
+        this.subChunkRebuildBranch = create(SubChunkRebuildBranch.class);
     }
 
     @Override
@@ -70,6 +72,6 @@ public class WorldTickManager extends ManagerPackage {
         if (coverageTickBranch.advance())
             coverageTickBranch.tick();
 
-        coverageTickBranch.rebuildPending();
+        subChunkRebuildBranch.rebuildPending();
     }
 }

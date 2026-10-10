@@ -1,13 +1,10 @@
 package application.bootstrap.worldpipeline.worldtickmanager;
 
-import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
-import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
-import application.bootstrap.worldpipeline.chunk.ChunkDataUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
@@ -19,7 +16,6 @@ import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortIterator;
 import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
@@ -29,11 +25,11 @@ public class LiquidTickBranch extends BranchPackage {
     /*
      * Schedules liquid flow over each grid's IMMEDIATE range in quadrant
      * cycles, visiting only subchunks with active liquid. Each chunk ticks
-     * under its own lock and touched subchunks are rebuilt and re-merged. Each
-     * firing also re-levels nearby ocean chunks whose water lags the live tide.
-     * Only a touched chunk that has already been built, and so has every
-     * neighbor generated, is rebuilt in place; any other picks the new water
-     * up when the stream first builds it.
+     * under its own lock. Each firing also re-levels nearby ocean chunks whose
+     * water lags the live tide. Touched subchunks are queued on
+     * SubChunkRebuildBranch rather than rebuilt in the tick: flowing water
+     * ahead of the queue, since the player watches it move, and the tide
+     * behind it, so a tide sweeping many chunks never stalls a frame.
      */
 
     // Internal
@@ -41,22 +37,16 @@ public class LiquidTickBranch extends BranchPackage {
     private BlockManager blockManager;
     private LiquidManager liquidManager;
     private TideManager tideManager;
-    private DynamicGeometryManager dynamicGeometryManager;
-    private DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer;
+    private SubChunkRebuildBranch subChunkRebuildBranch;
 
     // Settings
     private int intervalFrames;
     private float tideRangeSquared;
-    private int neighborDataIndex;
-    private int buildDataIndex;
 
     // State
     private int frameCounter;
     private int quadrantCursor;
     private long[] lastQuadrantTickMillis;
-
-    // Scratch
-    private LongArrayList touchedChunkCoordinates;
 
     // Internal \\
 
@@ -66,16 +56,11 @@ public class LiquidTickBranch extends BranchPackage {
         // Settings
         this.intervalFrames = EngineSetting.LIQUID_TICK_INTERVAL_FRAMES;
         this.tideRangeSquared = EngineSetting.OCEAN_TIDE_RANGE_CHUNKS * EngineSetting.OCEAN_TIDE_RANGE_CHUNKS;
-        this.neighborDataIndex = ChunkData.NEIGHBOR_DATA.index;
-        this.buildDataIndex = ChunkData.BUILD_DATA.index;
 
         // State
         this.frameCounter = EngineSetting.LIQUID_TICK_PHASE_FRAMES;
         this.quadrantCursor = 0;
         this.lastQuadrantTickMillis = new long[TickQuadrant.VALUES.length];
-
-        // Scratch
-        this.touchedChunkCoordinates = new LongArrayList();
     }
 
     @Override
@@ -86,8 +71,7 @@ public class LiquidTickBranch extends BranchPackage {
         this.blockManager = get(BlockManager.class);
         this.liquidManager = get(LiquidManager.class);
         this.tideManager = get(TideManager.class);
-        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
-        this.dynamicGeometryAsyncContainer = dynamicGeometryManager.getDynamicGeometryAsyncInstance();
+        this.subChunkRebuildBranch = get(SubChunkRebuildBranch.class);
     }
 
     // Schedule \\
@@ -157,7 +141,6 @@ public class LiquidTickBranch extends BranchPackage {
         if (!syncContainer.tryAcquire())
             return;
 
-        touchedChunkCoordinates.clear();
         liquidManager.beginChunkTick(chunk);
 
         try {
@@ -166,13 +149,11 @@ public class LiquidTickBranch extends BranchPackage {
             for (int i = 0; i < subChunks.length; i++)
                 tickSubChunk(chunk, subChunks[i], delta);
 
-            rebuildTouched();
+            queueTouched(true);
         } finally {
             liquidManager.endChunkTick();
             syncContainer.release();
         }
-
-        invalidateTouchedMegas();
     }
 
     private void tickSubChunk(ChunkInstance chunk, SubChunkInstance subChunk, float delta) {
@@ -235,68 +216,39 @@ public class LiquidTickBranch extends BranchPackage {
 
         boolean tidal = false;
 
-        touchedChunkCoordinates.clear();
         liquidManager.beginChunkTick(chunk);
 
         try {
             if (syncContainer.getData()[ChunkData.GENERATION_DATA.index]
                     && chunk.getTideSurfaceLevels() != surfaceLevels) {
                 tidal = liquidManager.tide(chunk, surfaceLevels);
-                rebuildTouched();
+                queueTouched(false);
             }
         } finally {
             liquidManager.endChunkTick();
             syncContainer.release();
         }
 
-        invalidateTouchedMegas();
-
         return tidal;
     }
 
     // Rebuild \\
 
-    private void rebuildTouched() {
+    // Every subchunk the chunk tick touched queued for a rebuild — urgent for flow, behind the rest for the tide
+    private void queueTouched(boolean urgent) {
 
         ObjectArrayList<ChunkInstance> touchedChunks = liquidManager.getTouchedChunks();
         IntArrayList touchedSubChunkY = liquidManager.getTouchedSubChunkY();
 
         for (int i = 0; i < touchedChunks.size(); i++) {
 
-            ChunkInstance touchedChunk = touchedChunks.get(i);
+            long subChunkBit = SubChunkRebuildBranch.toSubChunkBit(touchedSubChunkY.getInt(i));
 
-            if (!isBuilt(touchedChunk))
-                continue;
-
-            rebuildSubChunkGeometry(touchedChunk, touchedSubChunkY.getInt(i));
-
-            if (touchedChunkCoordinates.contains(touchedChunk.getCoordinate()))
-                continue;
-
-            ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, touchedChunk.getChunkDataSyncContainer().getData());
-            touchedChunkCoordinates.add(touchedChunk.getCoordinate());
+            if (urgent)
+                subChunkRebuildBranch.queueUrgentRebuild(touchedChunks.get(i), subChunkBit);
+            else
+                subChunkRebuildBranch.queueRebuild(touchedChunks.get(i), subChunkBit);
         }
-    }
-
-    // Touched chunks are claimed, so their lock is held while their stage flags are read
-    private boolean isBuilt(ChunkInstance chunkInstance) {
-
-        boolean[] data = chunkInstance.getChunkDataSyncContainer().getData();
-
-        return data[neighborDataIndex] && data[buildDataIndex];
-    }
-
-    private void invalidateTouchedMegas() {
-        for (int i = 0; i < touchedChunkCoordinates.size(); i++)
-            worldStreamManager.invalidateMegaForChunk(touchedChunkCoordinates.getLong(i));
-    }
-
-    private void rebuildSubChunkGeometry(ChunkInstance targetChunk, int subChunkY) {
-
-        SubChunkInstance touchedSubChunk = targetChunk.getSubChunk(subChunkY);
-
-        touchedSubChunk.getDynamicPacketInstance().clear();
-        dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, targetChunk, subChunkY);
     }
 
     private float resolveFlowInterval(SubChunkInstance subChunk) {

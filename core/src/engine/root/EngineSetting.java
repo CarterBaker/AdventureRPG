@@ -595,6 +595,7 @@ public class EngineSetting {
     public static final int PARTIAL_TICK_PHASE_FRAMES = 15;
     public static final String STARTING_WORLD = "TerraArcana";
     public static final int WORLD_RENDER_ENTRY_POOL_MAX_PER_MATERIAL = 256;
+    public static final int WORLD_TICK_REBUILDS_PER_FRAME = 4;
 
     // Macro Terrain
     public static final int MACRO_ADMISSIONS_PER_FRAME = 16;
@@ -721,10 +722,8 @@ public class EngineSetting {
     public static final float COVERAGE_TINT_CHROMA_HIGH = 0.3f;
     public static final float COVERAGE_TINT_CHROMA_LOW = 0.08f;
 
-    // Coverage Growth — how often coverage ticks, how many cells of a covered subchunk each tick draws, how many
-    // subchunks its changes rebuild each frame, how far up or down a covering spreads, and the salts its rolls are
-    // drawn with
-    public static final int COVERAGE_REBUILDS_PER_FRAME = 2;
+    // Coverage Growth — how often coverage ticks, how many cells of a covered subchunk each tick draws, how far up
+    // or down a covering spreads, and the salts its rolls are drawn with
     public static final int COVERAGE_SPREAD_REACH_Y = 1;
     public static final long COVERAGE_SPREAD_DIRECTION_SALT = 0x2C7B19E05D3F8A64L;
     public static final long COVERAGE_SPREAD_HEIGHT_SALT = 0x71E4A0C58B26D39FL;
