@@ -3,14 +3,17 @@ package application.bootstrap.worldpipeline.worldgenerationmanager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
+import application.bootstrap.worldpipeline.biome.BiomeCoveringStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
+import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
 import application.bootstrap.worldpipeline.util.TerrainFeatureStruct;
@@ -35,7 +38,9 @@ public class WorldGenerationManager extends ManagerPackage {
      * field on a macro grid, shapes the ground through cliffs, sea cliffs and
      * still water, and resolves every block column's ground, dressing, water,
      * the band its caves and sea caves may hollow, its veins and the lowest
-     * cell the tide reaches. generateSubChunk() fills subchunks, hollowing and
+     * cell the tide reaches. A column's top block takes the coverage its
+     * biome lays over that ground, thinned per column by the covering's
+     * variance. generateSubChunk() fills subchunks, hollowing and
      * threading them through world-aligned noise lattices, and leaves fully
      * empty or uniform ones unrealized. The sea stands at sea level and rides
      * the tide, carried into caves that open on it; still water keeps the
@@ -50,6 +55,7 @@ public class WorldGenerationManager extends ManagerPackage {
     // Internal
     private BlockManager blockManager;
     private BiomeManager biomeManager;
+    private CoveringManager coveringManager;
     private TideManager tideManager;
 
     private TerrainColumnAsyncContainer terrainColumnContainer;
@@ -84,6 +90,7 @@ public class WorldGenerationManager extends ManagerPackage {
     protected void get() {
         this.blockManager = get(BlockManager.class);
         this.biomeManager = get(BiomeManager.class);
+        this.coveringManager = get(CoveringManager.class);
         this.tideManager = get(TideManager.class);
     }
 
@@ -273,7 +280,9 @@ public class WorldGenerationManager extends ManagerPackage {
                 int macroCorner = pickMacroCorner(
                         seed, worldOffsetX + localX, worldOffsetZ + localZ, localX, localZ);
 
-                resolveColumnDressing(column, localX, localZ, columnIndex, macroCorner, features);
+                resolveColumnDressing(
+                        column, seed, worldOffsetX + localX, worldOffsetZ + localZ,
+                        localX, localZ, columnIndex, macroCorner, features);
                 resolveColumnSmoothing(column, localX, localZ, columnIndex, features);
                 resolveColumnCarving(column, localX, localZ, columnIndex, features);
                 resolveColumnVeinRange(column, columnIndex);
@@ -301,9 +310,11 @@ public class WorldGenerationManager extends ManagerPackage {
     }
 
     // Steep faces bare their rock; sand only lies under water, all the high tide floods included, and on gentle
-    // ground just above it
+    // ground just above it. Whichever ground the top takes, it takes the coverage its biome lays over that ground
     private void resolveColumnDressing(
             TerrainColumnAsyncContainer column,
+            long seed,
+            long worldX, long worldZ,
             int localX, int localZ,
             int columnIndex,
             int macroCorner,
@@ -333,16 +344,34 @@ public class WorldGenerationManager extends ManagerPackage {
         if (slope >= profile.rockSlope) {
             column.columnTopBlockID[columnIndex] = profile.rockBlockID;
             column.columnFillBlockID[columnIndex] = profile.rockBlockID;
+            column.columnTopCoverage[columnIndex] = resolveColumnCoverage(
+                    profile.rockCoverage, profile.rockCoverageVariance, seed, worldX, worldZ);
         } else if (submerged || shore) {
             column.columnTopBlockID[columnIndex] = waterProfile.underwaterBlockID;
             column.columnFillBlockID[columnIndex] = waterProfile.underwaterBlockID;
+            column.columnTopCoverage[columnIndex] = resolveColumnCoverage(
+                    waterProfile.underwaterCoverage, waterProfile.underwaterCoverageVariance, seed, worldX, worldZ);
         } else {
             column.columnTopBlockID[columnIndex] = inlandProfile.surfaceBlockID;
             column.columnFillBlockID[columnIndex] = inlandProfile.subsurfaceBlockID;
+            column.columnTopCoverage[columnIndex] = resolveColumnCoverage(
+                    inlandProfile.surfaceCoverage, inlandProfile.surfaceCoverageVariance, seed, worldX, worldZ);
         }
 
         column.columnRockBlockID[columnIndex] = profile.rockBlockID;
         column.columnProfile[columnIndex] = profile;
+    }
+
+    // The biome's coverage for a column, fallen short of its full level by up to its variance, drawn per column
+    private short resolveColumnCoverage(short coverage, int variance, long seed, long worldX, long worldZ) {
+
+        if (variance == 0 || !CoverageUtility.isCovered(coverage))
+            return coverage;
+
+        float roll = BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
+                seed ^ EngineSetting.BIOME_COVERING_VARIANCE_SALT, (int) worldX, (int) worldZ));
+
+        return CoverageUtility.addLevels(coverage, -(int) (roll * (variance + 1)));
     }
 
     // Rise per block across the column, from the four corners around it
@@ -1025,6 +1054,13 @@ public class WorldGenerationManager extends ManagerPackage {
                 biomeHandle.getUnderwaterBlockName());
         short rockBlockID = (short) blockManager.getBlockIDFromBlockName(biomeHandle.getRockBlockName());
 
+        short surfaceCoverage = resolveProfileCoverage(
+                biomeHandle, biomeHandle.getSurfaceCovering(), surfaceBlockID);
+        short underwaterCoverage = resolveProfileCoverage(
+                biomeHandle, biomeHandle.getUnderwaterCovering(), underwaterBlockID);
+        short rockCoverage = resolveProfileCoverage(
+                biomeHandle, biomeHandle.getRockCovering(), rockBlockID);
+
         ObjectArrayList<BiomeVeinStruct> veinList = biomeHandle.getVeins();
         BiomeVeinStruct[] veins = veinList.toArray(new BiomeVeinStruct[0]);
         short[] veinBlockIDs = new short[veins.length];
@@ -1039,12 +1075,18 @@ public class WorldGenerationManager extends ManagerPackage {
                 underwaterBlockID,
                 rockBlockID,
                 biomeHandle.getRockSlope(),
+                surfaceCoverage,
+                resolveProfileVariance(biomeHandle.getSurfaceCovering()),
+                underwaterCoverage,
+                resolveProfileVariance(biomeHandle.getUnderwaterCovering()),
+                rockCoverage,
+                resolveProfileVariance(biomeHandle.getRockCovering()),
                 veins,
                 veinBlockIDs,
-                resolveMapColor(biomeHandle, surfaceBlockID, Direction3Vector.UP),
-                resolveMapColor(biomeHandle, underwaterBlockID, Direction3Vector.UP),
-                resolveMapColor(biomeHandle, underwaterBlockID, Direction3Vector.NORTH),
-                resolveMapColor(biomeHandle, rockBlockID, Direction3Vector.NORTH));
+                resolveCoveredMapColor(biomeHandle, surfaceBlockID, surfaceCoverage, Direction3Vector.UP),
+                resolveCoveredMapColor(biomeHandle, underwaterBlockID, underwaterCoverage, Direction3Vector.UP),
+                resolveCoveredMapColor(biomeHandle, underwaterBlockID, underwaterCoverage, Direction3Vector.NORTH),
+                resolveCoveredMapColor(biomeHandle, rockBlockID, rockCoverage, Direction3Vector.NORTH));
 
         Short2ObjectOpenHashMap<TerrainSurfaceProfileStruct> next = new Short2ObjectOpenHashMap<>(
                 biomeID2SurfaceProfile);
@@ -1052,6 +1094,32 @@ public class WorldGenerationManager extends ManagerPackage {
         biomeID2SurfaceProfile = next;
 
         return profile;
+    }
+
+    // The coverage a biome lays over one kind of ground, NONE when it lays none there
+    private short resolveProfileCoverage(BiomeHandle biomeHandle, BiomeCoveringStruct covering, short hostBlockID) {
+
+        if (covering == null)
+            return CoverageUtility.NONE;
+
+        return coveringManager.resolveCoverage(
+                covering.getCoveringName(), covering.getLevel(), hostBlockID, biomeHandle.getBiomeName());
+    }
+
+    private int resolveProfileVariance(BiomeCoveringStruct covering) {
+        return covering != null ? covering.getVariance() : EngineSetting.DEFAULT_BIOME_COVERING_VARIANCE;
+    }
+
+    // A block's map color with the coverage its biome lays over it, tinted by the biome
+    private int resolveCoveredMapColor(BiomeHandle biomeHandle, short blockID, short coverage, Direction3Vector face) {
+
+        Color biomeTint = biomeHandle.getBiomeColor();
+
+        return coveringManager.resolveCoveredColor(
+                resolveMapColor(biomeHandle, blockID, face),
+                coverage,
+                PackedColorUtility.packUnit(biomeTint.r, biomeTint.g, biomeTint.b),
+                face != Direction3Vector.UP);
     }
 
     // A block drawn without a texture stands in with its biome's map color, then its biome color
@@ -1174,6 +1242,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 }
 
                 short topBlockID = column.columnTopBlockID[columnIndex];
+                short topCoverage = column.columnTopCoverage[columnIndex];
                 short fillBlockID = column.columnFillBlockID[columnIndex];
                 short rockBlockID = column.columnRockBlockID[columnIndex];
                 boolean columnVeins = veins && resolveVeinSlots(column, columnIndex);
@@ -1196,6 +1265,7 @@ public class WorldGenerationManager extends ManagerPackage {
                         } else {
                             resultBlockID = topBlockID;
                             subChunkInstance.setSubBlocks(packedXYZ, topBlockID, capMask);
+                            subChunkInstance.setCoverage(packedXYZ, topCoverage);
                         }
                     } else if (worldY > groundHeight && lakeLevel != TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED) {
                         resultBlockID = waterBlockId;
@@ -1226,6 +1296,7 @@ public class WorldGenerationManager extends ManagerPackage {
                         hasAirOrWater = true;
                         isUniform = false;
                         subChunkInstance.setSubBlocks(packedXYZ, topBlockID, groundMask);
+                        subChunkInstance.setCoverage(packedXYZ, topCoverage);
                     } else {
                         if (worldY == groundHeight)
                             resultBlockID = topBlockID;
@@ -1239,6 +1310,12 @@ public class WorldGenerationManager extends ManagerPackage {
                                     column, columnIndex, localX, localZ, worldY, offsetY, resultBlockID);
 
                         blocks.setBlock(localX, localY, localZ, resultBlockID);
+
+                        if (worldY == groundHeight && resultBlockID == topBlockID
+                                && CoverageUtility.isCovered(topCoverage)) {
+                            subChunkInstance.setCoverage(packedXYZ, topCoverage);
+                            isUniform = false;
+                        }
                     }
 
                     if (isUniform) {

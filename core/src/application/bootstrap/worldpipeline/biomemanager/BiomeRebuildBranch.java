@@ -3,12 +3,15 @@ package application.bootstrap.worldpipeline.biomemanager;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
+import application.bootstrap.worldpipeline.biome.BiomeCoveringStruct;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.BiomeTreeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.covering.CoveringHandle;
+import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import engine.root.BranchPackage;
 import engine.root.UtilityPackage.InternalException;
@@ -20,16 +23,19 @@ class BiomeRebuildBranch extends BranchPackage {
     /*
      * Builds the handle for a live biome edit and proves it can go live
      * before anything changes. Once the boot loaders are released nothing can
-     * be loaded on demand, so every biome, block, weather, season, tree and
-     * architecture it names must already be registered; its variants must not belong to
-     * another parent or chain back into it; and the last biome painted on the
-     * world map must keep its color. A biome keeps the ID its name was first
-     * registered under. Every refusal is a catchable InternalException.
+     * be loaded on demand, so every biome, block, covering, weather, season,
+     * tree and architecture it names must already be registered, and every
+     * covering must host the ground it is laid on; its variants must not
+     * belong to another parent or chain back into it; and the last biome
+     * painted on the world map must keep its color. A biome keeps the ID its
+     * name was first registered under. Every refusal is a catchable
+     * InternalException.
      */
 
     // Internal
     private BiomeManager biomeManager;
     private BlockManager blockManager;
+    private CoveringManager coveringManager;
     private WeatherManager weatherManager;
     private SeasonManager seasonManager;
     private TreeManager treeManager;
@@ -41,6 +47,7 @@ class BiomeRebuildBranch extends BranchPackage {
     protected void get() {
         this.biomeManager = get(BiomeManager.class);
         this.blockManager = get(BlockManager.class);
+        this.coveringManager = get(CoveringManager.class);
         this.weatherManager = get(WeatherManager.class);
         this.seasonManager = get(SeasonManager.class);
         this.treeManager = get(TreeManager.class);
@@ -56,6 +63,7 @@ class BiomeRebuildBranch extends BranchPackage {
 
         validateVariants(biomeData);
         validateBlocks(biomeData);
+        validateCoverings(biomeData);
         validateWeathers(biomeData);
         validateTrees(biomeData);
         validateArchitectures(biomeData);
@@ -104,6 +112,16 @@ class BiomeRebuildBranch extends BranchPackage {
 
         for (int i = 0; i < veins.size(); i++)
             requireBlock(biomeData.getBiomeName(), veins.get(i).getBlockName(), "veins");
+    }
+
+    private void validateCoverings(BiomeData biomeData) {
+        requireCovering(
+                biomeData, biomeData.getSurfaceCovering(), biomeData.getSurfaceBlockName(), "surface_covering");
+        requireCovering(
+                biomeData, biomeData.getRockCovering(), biomeData.getRockBlockName(), "rock_covering");
+        requireCovering(
+                biomeData, biomeData.getUnderwaterCovering(), biomeData.getUnderwaterBlockName(),
+                "underwater_covering");
     }
 
     private void validateWeathers(BiomeData biomeData) {
@@ -165,6 +183,22 @@ class BiomeRebuildBranch extends BranchPackage {
 
         if (!blockManager.hasBlock(blockName))
             throw fail(biomeName, "\"" + field + "\" names unknown block \"" + blockName + "\".");
+    }
+
+    private void requireCovering(BiomeData biomeData, BiomeCoveringStruct covering, String blockName, String field) {
+
+        if (covering == null)
+            return;
+
+        String biomeName = biomeData.getBiomeName();
+        CoveringHandle coveringHandle = coveringManager.findCoveringHandle(covering.getCoveringName());
+
+        if (coveringHandle == null)
+            throw fail(biomeName, "\"" + field + "\" names unknown covering \"" + covering.getCoveringName() + "\".");
+
+        if (!coveringHandle.canHost(blockManager.getBlockHandleFromBlockName(blockName).getBlockID()))
+            throw fail(biomeName, "\"" + field + "\" lays \"" + covering.getCoveringName() + "\" over \"" + blockName
+                    + "\", which it does not name among its \"hosts\".");
     }
 
     private InternalException fail(String biomeName, String message) {

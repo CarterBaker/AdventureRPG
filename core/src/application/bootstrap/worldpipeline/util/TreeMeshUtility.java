@@ -382,6 +382,7 @@ public final class TreeMeshUtility extends EngineUtility {
                 out.add(seed);
                 out.add(0f);
                 out.add(0f);
+                out.add(0f);
             }
         }
     }

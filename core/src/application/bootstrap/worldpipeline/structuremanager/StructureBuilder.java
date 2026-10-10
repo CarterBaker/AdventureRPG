@@ -12,6 +12,7 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
 import application.bootstrap.worldpipeline.block.SubBlockShape;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.structure.StructureData;
 import application.bootstrap.worldpipeline.structure.StructureFixedPlacementStruct;
 import application.bootstrap.worldpipeline.structure.StructureFrequencyStruct;
@@ -19,6 +20,7 @@ import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.structure.StructurePaletteEntryStruct;
 import application.bootstrap.worldpipeline.structure.StructureRulesStruct;
 import application.bootstrap.worldpipeline.structure.StructureSurfaceType;
+import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.root.BuilderPackage;
@@ -44,7 +46,8 @@ class StructureBuilder extends BuilderPackage {
      * Parses structure ARPG into a StructureData and wraps it in a
      * StructureHandle. A structure may keep its own "palette" of blocks keyed
      * by single characters, each a block with its facing, spin and an
-     * optional sub-block "shape" or raw "mask" for a partial block. Its
+     * optional sub-block "shape" or raw "mask" for a partial block, and an
+     * optional "covering" grown over it to its "coverage" level. Its
      * "layers" lay those keys row by row, a row running along x and each row
      * one step along z, over one or more heights, with a space leaving a cell
      * untouched; its "blocks" then lay single "position"s or inclusive
@@ -60,6 +63,7 @@ class StructureBuilder extends BuilderPackage {
     // Internal
     private StructureManager structureManager;
     private BlockManager blockManager;
+    private CoveringManager coveringManager;
     private BiomeManager biomeManager;
     private FurnishingManager furnishingManager;
 
@@ -73,6 +77,7 @@ class StructureBuilder extends BuilderPackage {
     private ShortArrayList blockIDs;
     private ShortArrayList blockOrientations;
     private ByteArrayList blockMasks;
+    private ShortArrayList blockCoverages;
     private ObjectArrayList<DynamicGeometryType> blockGeometry;
     private Long2IntOpenHashMap position2BlockIndex;
 
@@ -91,6 +96,7 @@ class StructureBuilder extends BuilderPackage {
         this.blockIDs = new ShortArrayList();
         this.blockOrientations = new ShortArrayList();
         this.blockMasks = new ByteArrayList();
+        this.blockCoverages = new ShortArrayList();
         this.blockGeometry = new ObjectArrayList<>();
         this.position2BlockIndex = new Long2IntOpenHashMap();
         this.position2BlockIndex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
@@ -100,6 +106,7 @@ class StructureBuilder extends BuilderPackage {
     protected void get() {
         this.structureManager = get(StructureManager.class);
         this.blockManager = get(BlockManager.class);
+        this.coveringManager = get(CoveringManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.furnishingManager = get(FurnishingManager.class);
     }
@@ -162,6 +169,7 @@ class StructureBuilder extends BuilderPackage {
                 structureName, structureID, RegistryUtility.toNameSeed(structureName),
                 offsetX.toIntArray(), offsetY.toIntArray(), offsetZ.toIntArray(),
                 blockIDs.toShortArray(), blockOrientations.toShortArray(), blockMasks.toByteArray(),
+                blockCoverages.toShortArray(),
                 blockGeometry.toArray(new DynamicGeometryType[0]),
                 minOffsetX, maxOffsetX, min(offsetY), max(offsetY), minOffsetZ, maxOffsetZ, horizontalReachBlocks,
                 footprint, footprintTopOffsetY, footprintTopColors, footprintSideColors,
@@ -232,7 +240,8 @@ class StructureBuilder extends BuilderPackage {
         return new StructurePaletteEntryStruct(
                 blockHandle,
                 parseOrientation(entry, blockHandle, structureName),
-                parseMask(entry, blockHandle, structureName));
+                parseMask(entry, blockHandle, structureName),
+                parseCoverage(entry, blockHandle, structureName));
     }
 
     // Layer Parsing \\
@@ -290,6 +299,7 @@ class StructureBuilder extends BuilderPackage {
         blockIDs.clear();
         blockOrientations.clear();
         blockMasks.clear();
+        blockCoverages.clear();
         blockGeometry.clear();
         position2BlockIndex.clear();
     }
@@ -375,6 +385,7 @@ class StructureBuilder extends BuilderPackage {
             blockIDs.set(index, blockHandle.getBlockID());
             blockOrientations.set(index, entry.getOrientation());
             blockMasks.set(index, (byte) entry.getMask());
+            blockCoverages.set(index, entry.getCoverage());
             blockGeometry.set(index, blockHandle.getGeometry());
             return;
         }
@@ -391,6 +402,7 @@ class StructureBuilder extends BuilderPackage {
         blockIDs.add(blockHandle.getBlockID());
         blockOrientations.add(entry.getOrientation());
         blockMasks.add((byte) entry.getMask());
+        blockCoverages.add(entry.getCoverage());
         blockGeometry.add(blockHandle.getGeometry());
     }
 
@@ -432,6 +444,29 @@ class StructureBuilder extends BuilderPackage {
             return throwException("Structure \"" + structureName + "\" has invalid facing \"" + raw
                     + "\" — expected NORTH, EAST, SOUTH, WEST, UP, or DOWN.", e);
         }
+    }
+
+    // Coverage Parsing \\
+
+    // The covering grown over a block at its level, the full level unless it names one, NONE when it names none
+    private short parseCoverage(ArpgObjectStruct entry, BlockHandle blockHandle, String structureName) {
+
+        String coveringName = ArpgUtility.getString(entry, "covering", EngineSetting.STRUCTURE_COVERING_NONE);
+
+        if (coveringName.equals(EngineSetting.STRUCTURE_COVERING_NONE)) {
+
+            if (entry.has("coverage"))
+                throwException("Structure \"" + structureName + "\" block \"" + blockHandle.getBlockName()
+                        + "\" declares a \"coverage\" level but names no \"covering\".");
+
+            return CoverageUtility.NONE;
+        }
+
+        return coveringManager.resolveCoverage(
+                coveringName,
+                ArpgUtility.getInt(entry, "coverage", CoverageUtility.LEVEL_MAX),
+                blockHandle.getBlockID(),
+                structureName);
     }
 
     // Mask Parsing \\
@@ -508,7 +543,11 @@ class StructureBuilder extends BuilderPackage {
                 continue;
 
             topOffsetY[column] = y;
-            topColors[column] = blockHandle.getMapColorForFace(Direction3Vector.UP);
+            topColors[column] = coveringManager.resolveCoveredColor(
+                    blockHandle.getMapColorForFace(Direction3Vector.UP),
+                    blockCoverages.getShort(i),
+                    EngineSetting.PACKED_COLOR_WHITE,
+                    false);
         }
 
         for (int column = 0; column < topOffsetY.length; column++)

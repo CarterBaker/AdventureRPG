@@ -174,6 +174,7 @@ public class EngineSetting {
     public static final String BLOCK_TEXTURE_PATH = "textures";
     public static final String CALENDAR_PATH = "calendars";
     public static final String CLOUD_PATH = "clouds";
+    public static final String COVERING_PATH = "coverings";
     public static final String ENTITY_PATH = "entities";
     public static final String FEATURE_PATH = "features";
     public static final String FBO_CATALOG_PATH = "application/fbos";
@@ -675,7 +676,7 @@ public class EngineSetting {
             + EngineSetting.STRUCTURE_MAX_EXTENT_BLOCKS / CHUNK_SIZE;
 
     // Sub-Block
-    public static final int CHUNK_VERTEX_FLOAT_COUNT = 15;
+    public static final int CHUNK_VERTEX_FLOAT_COUNT = 16;
     public static final int GEOMETRY_EDGE_BITS_PER_CELL = 4;
     public static final int GEOMETRY_EDGE_CELLS_PER_WORD = 6;
     public static final int GEOMETRY_MAX_MERGE_EXTENT = 10;
@@ -688,6 +689,46 @@ public class EngineSetting {
     public static final int SUB_BLOCK_MASK_FULL = (1 << SUB_BLOCK_OCTANT_COUNT) - 1;
     public static final float SUB_BLOCK_SIZE = BLOCK_SIZE / SUB_BLOCK_DIVISIONS;
     public static final float SUB_BLOCK_SMOOTHING_THRESHOLD_BLOCKS = 0.5f;
+
+    // Coverage — a covering's ID and level packed into one short per cell, the same with the face it shows on packed
+    // into one exact float per vertex, and the table the surface shader reads every covering's tiles from
+    public static final int COVERAGE_LEVEL_BITS = 4;
+    public static final int COVERAGE_LEVEL_MAX = (1 << COVERAGE_LEVEL_BITS) - 1;
+    public static final short COVERAGE_NONE = 0;
+    public static final int COVERAGE_VERTEX_ID_SHIFT = COVERAGE_LEVEL_BITS + 1;
+    public static final int COVERAGE_VERTEX_SIDE_BIT = 1 << COVERAGE_LEVEL_BITS;
+    public static final String COVERING_DATA_UBO = "CoveringData";
+    public static final int COVERING_ID_COUNT = 64;
+    public static final float COVERING_TILE_NONE = -1f;
+    public static final String UNIFORM_COVERING_STYLE = "u_coveringStyle";
+    public static final String UNIFORM_COVERING_TILES = "u_coveringTiles";
+
+    // Coverage Growth — how often coverage ticks, how many cells of a covered subchunk each tick draws, how far up
+    // or down a covering spreads, and the salts its rolls are drawn with
+    public static final int COVERAGE_SPREAD_REACH_Y = 1;
+    public static final long COVERAGE_SPREAD_DIRECTION_SALT = 0x2C7B19E05D3F8A64L;
+    public static final long COVERAGE_SPREAD_HEIGHT_SALT = 0x71E4A0C58B26D39FL;
+    public static final long COVERAGE_SPREAD_SALT = 0x4A9F3D61C07E2B85L;
+    public static final long COVERAGE_GROWTH_SALT = 0x93D50B7A2E1C648FL;
+    public static final long COVERAGE_SAMPLE_SALT = 0x5E08C3B7F1A9246DL;
+    public static final int COVERAGE_TICK_INTERVAL_FRAMES = 20;
+    public static final int COVERAGE_TICK_PHASE_FRAMES = 10;
+    public static final int COVERAGE_TICK_SAMPLES_PER_SUBCHUNK = 64;
+
+    // Covering Defaults — every optional field of a covering file
+    public static final float DEFAULT_COVERING_GROWTH_CHANCE = 0.05f;
+    public static final int DEFAULT_COVERING_MOISTURE_RADIUS = 0;
+    public static final boolean DEFAULT_COVERING_REQUIRES_OPEN_TOP = true;
+    public static final float DEFAULT_COVERING_SPREAD_CHANCE = 0f;
+    public static final int DEFAULT_COVERING_SPREAD_LEVEL = COVERAGE_LEVEL_MAX;
+    public static final float DEFAULT_COVERING_TINT_STRENGTH = 1f;
+    public static final String COVERING_DROP_NONE = "";
+    public static final String COVERING_TEXTURE_NONE = "";
+
+    // Biome Coverings — the tint a biome lends the coverings that grow in it, and the optional coverings it lays
+    public static final String DEFAULT_BIOME_COVERING_TINT = "#8CB85C";
+    public static final int DEFAULT_BIOME_COVERING_VARIANCE = 0;
+    public static final long BIOME_COVERING_VARIANCE_SALT = 0x6F2A8D41C9B37E05L;
 
     // Liquid & Swimming
     public static final int LIQUID_BASIN_MIN_DEPTH = 8;
@@ -795,7 +836,7 @@ public class EngineSetting {
     public static final float DEFAULT_BIOME_TERRAIN_HEIGHT_SCALE = 1.0f;
     public static final String DEFAULT_STONE_BLOCK_NAME = "TerraArcanaBlocks/Stone Block";
     public static final String DEFAULT_SUBSURFACE_BLOCK_NAME = "TerraArcanaBlocks/Dirt Block";
-    public static final String DEFAULT_SURFACE_BLOCK_NAME = "TerraArcanaBlocks/Grass Block";
+    public static final String DEFAULT_SURFACE_BLOCK_NAME = "TerraArcanaBlocks/Dirt Block";
     public static final String DEFAULT_UNDERWATER_BLOCK_NAME = "TerraArcanaBlocks/Sand";
     public static final String DEFAULT_WATER_BLOCK_NAME = "TerraArcanaBlocks/Water";
     public static final int TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS = 3;
@@ -1062,6 +1103,7 @@ public class EngineSetting {
     // Structure Generation
     public static final int DEFAULT_STRUCTURE_SEPARATION_BLOCKS = 0;
     public static final int DEFAULT_STRUCTURE_Y_OFFSET_BLOCKS = 0;
+    public static final String STRUCTURE_COVERING_NONE = "";
     public static final long STRUCTURE_CHANCE_SALT = 0x3E9A71C45B0D82F6L;
     public static final long STRUCTURE_NAME_SEED_MULTIPLIER = 0xD6E8FEB86659FD93L;
     public static final int STRUCTURE_MAX_BLOCK_COUNT = 262144;
@@ -1204,7 +1246,7 @@ public class EngineSetting {
     public static final int TREE_EDGE_CONVEX = 1;
     public static final int TREE_EDGE_FLAT = 0;
     public static final int TREE_META_EDGE_SHIFT = 3;
-    public static final int TREE_WOOD_PADDING_FLOATS = 4;
+    public static final int TREE_WOOD_PADDING_FLOATS = 5;
 
     // Tree Defaults — every optional field of a tree species file
     public static final String TREE_DEFAULT_BARK_COLOR = "#FFFFFF";
@@ -1860,6 +1902,8 @@ public class EngineSetting {
     public static final String ITEM_ACTION_HELD_ANY = "";
     public static final String ITEM_PICK_UP_AS_SELF = "";
     public static final String ITEM_PLANTS_NONE = "";
+    public static final int ITEM_NURTURES_NONE = 0;
+    public static final String ITEM_SOWS_NONE = "";
 
     // Tools
     public static final int DEFAULT_TOOL_TIER = 0;

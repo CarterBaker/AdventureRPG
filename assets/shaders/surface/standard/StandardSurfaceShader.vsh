@@ -5,6 +5,7 @@ layout (location = 2) in float aMeta;
 layout (location = 3) in float aColor;
 layout (location = 4) in vec4  aEdgeLow;
 layout (location = 5) in vec4  aEdgeHigh;
+layout (location = 6) in float aCoverage;
 
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
@@ -29,6 +30,7 @@ out float tcNatural;
 out float tcEdgeCells;
 out vec4  tcEdgeLow;
 out vec4  tcEdgeHigh;
+out float tcCoverage;
 
 // Places raw block-face geometry in world space and unpacks the integer-packed vertex attributes. Face
 // index, encoded face orientation, both merged quad extents in sub-blocks, the natural-block flag and the
@@ -36,9 +38,10 @@ out vec4  tcEdgeHigh;
 // B1 in xyzw) carries four-bit column codes, one per entry across a run capped at ten entries plus one padding
 // entry at either end, split into a low word of six entries and a high word of the rest — twenty-four bits
 // each and therefore exact in a float32 mantissa. An entry covers two sub-blocks on a block-resolution quad and
-// one on a sub-block quad. Extents leave here in blocks. Per-vertex displacement still happens after
-// tessellation, since tessellation only ever sees a merged quad's four real corners. The layout must match
-// the one SurfaceEmissionBranch writes.
+// one on a sub-block quad. The coverage word, also exact, carries the face's covering ID, whether it shows the
+// covering's side tiles and the level it has grown to; it passes through untouched. Extents leave here in
+// blocks. Per-vertex displacement still happens after tessellation, since tessellation only ever sees a merged
+// quad's four real corners. The layout must match the one SurfaceEmissionBranch writes.
 
 void main() {
     vec3 worldPos  = aPos;
@@ -62,4 +65,5 @@ void main() {
         float(col        & 255)) * (1.0 / 255.0);
     tcEdgeLow   = aEdgeLow;
     tcEdgeHigh  = aEdgeHigh;
+    tcCoverage  = aCoverage;
 }

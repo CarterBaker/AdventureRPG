@@ -27,6 +27,7 @@ public class GenerationCacheStruct extends StructPackage {
     private final short[] topBlockID = new short[COLUMN_COUNT];
     private final short[] fillBlockID = new short[COLUMN_COUNT];
     private final short[] rockBlockID = new short[COLUMN_COUNT];
+    private final short[] topCoverage = new short[COLUMN_COUNT];
     private final boolean[] oceanWater = new boolean[COLUMN_COUNT];
     private final int[] lakeLevelBlocks = new int[COLUMN_COUNT];
     private final byte[] groundMask = new byte[COLUMN_COUNT];
@@ -77,6 +78,7 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(column.columnTopBlockID, 0, topBlockID, 0, COLUMN_COUNT);
         System.arraycopy(column.columnFillBlockID, 0, fillBlockID, 0, COLUMN_COUNT);
         System.arraycopy(column.columnRockBlockID, 0, rockBlockID, 0, COLUMN_COUNT);
+        System.arraycopy(column.columnTopCoverage, 0, topCoverage, 0, COLUMN_COUNT);
         System.arraycopy(column.columnOceanWater, 0, oceanWater, 0, COLUMN_COUNT);
         System.arraycopy(column.columnLakeLevelBlocks, 0, lakeLevelBlocks, 0, COLUMN_COUNT);
         System.arraycopy(column.columnGroundMask, 0, groundMask, 0, COLUMN_COUNT);
@@ -124,6 +126,7 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(topBlockID, 0, column.columnTopBlockID, 0, COLUMN_COUNT);
         System.arraycopy(fillBlockID, 0, column.columnFillBlockID, 0, COLUMN_COUNT);
         System.arraycopy(rockBlockID, 0, column.columnRockBlockID, 0, COLUMN_COUNT);
+        System.arraycopy(topCoverage, 0, column.columnTopCoverage, 0, COLUMN_COUNT);
         System.arraycopy(oceanWater, 0, column.columnOceanWater, 0, COLUMN_COUNT);
         System.arraycopy(lakeLevelBlocks, 0, column.columnLakeLevelBlocks, 0, COLUMN_COUNT);
         System.arraycopy(groundMask, 0, column.columnGroundMask, 0, COLUMN_COUNT);

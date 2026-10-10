@@ -10,8 +10,8 @@ public class StructureData extends DataPackage {
 
     /*
      * Persistent structure record. Blocks are parallel arrays of origin-relative
-     * offsets with names already resolved to ID, orientation, sub-block mask
-     * and geometry, so stamping is a straight walk over primitives. Unlisted
+     * offsets with names already resolved to ID, orientation, sub-block mask,
+     * coverage and geometry, so stamping is a straight walk over primitives. Unlisted
      * positions are left untouched; listed air carves, and a structure that
      * clears terrain also carves the ground standing inside its footprint.
      * The footprint grid spans the horizontal bounds and holds, per column,
@@ -34,6 +34,7 @@ public class StructureData extends DataPackage {
     private final short[] blockIDs;
     private final short[] blockOrientations;
     private final byte[] blockMasks;
+    private final short[] blockCoverages;
     private final DynamicGeometryType[] blockGeometry;
 
     // Bounds
@@ -80,6 +81,7 @@ public class StructureData extends DataPackage {
             short[] blockIDs,
             short[] blockOrientations,
             byte[] blockMasks,
+            short[] blockCoverages,
             DynamicGeometryType[] blockGeometry,
             int minOffsetX,
             int maxOffsetX,
@@ -114,6 +116,7 @@ public class StructureData extends DataPackage {
         this.blockIDs = blockIDs;
         this.blockOrientations = blockOrientations;
         this.blockMasks = blockMasks;
+        this.blockCoverages = blockCoverages;
         this.blockGeometry = blockGeometry;
 
         // Bounds
@@ -189,6 +192,10 @@ public class StructureData extends DataPackage {
 
     public byte[] getBlockMasks() {
         return blockMasks;
+    }
+
+    public short[] getBlockCoverages() {
+        return blockCoverages;
     }
 
     public DynamicGeometryType[] getBlockGeometry() {

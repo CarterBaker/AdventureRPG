@@ -397,5 +397,6 @@ class LiquidGeometryBranch extends BranchPackage {
         buffer.add(0f);
         buffer.add(0f);
         buffer.add(0f);
+        buffer.add(0f); // coverage slot — solid geometry only
     }
 }

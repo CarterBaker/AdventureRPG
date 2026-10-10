@@ -27,8 +27,10 @@ class BlockBranch extends BranchPackage {
      * strike met — each taking the block's full durability, and hands out one
      * block piece; a whole block breaks whole and hands out a piece for each
      * of its eight sub-blocks. The pieces must fit in the striker's inventory,
-     * or the block holds. A held piece is placed back as a sub-block of its
-     * block. Every world edit it makes goes through BlockPlacementSystem.
+     * or the block holds. A whole block broken under a fully grown covering
+     * also hands out the covering's drop through CoverageBranch. A held piece
+     * is placed back as a sub-block of its block. Every world edit it makes
+     * goes through BlockPlacementSystem.
      */
 
     // Internal
@@ -36,6 +38,7 @@ class BlockBranch extends BranchPackage {
     private BlockPlacementSystem blockPlacementSystem;
     private ItemDefinitionManager itemDefinitionManager;
     private ItemManager itemManager;
+    private CoverageBranch coverageBranch;
 
     // Block IDs
     private short airBlockID;
@@ -62,6 +65,7 @@ class BlockBranch extends BranchPackage {
         this.blockPlacementSystem = get(BlockPlacementSystem.class);
         this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.itemManager = get(ItemManager.class);
+        this.coverageBranch = get(CoverageBranch.class);
     }
 
     @Override
@@ -109,12 +113,18 @@ class BlockBranch extends BranchPackage {
         if (!givePieces(entity, block, subdivided ? 1 : SubBlockUtility.OCTANT_COUNT))
             return true;
 
+        String coveringDrop = subdivided
+                ? EngineSetting.COVERING_DROP_NONE
+                : coverageBranch.resolveDrop(castStruct);
+
         boolean broken = subdivided
                 ? blockPlacementSystem.removeSubBlock(castStruct)
                 : blockPlacementSystem.replaceBlock(castStruct, airBlockID);
 
         if (!broken)
             return true;
+
+        coverageBranch.giveDrop(entity, coveringDrop);
 
         resetBreakTarget();
 

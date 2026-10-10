@@ -9,8 +9,10 @@ class TerrainSurfaceProfileStruct extends StructPackage {
     /*
      * One biome's dressing resolved against the block palette: the blocks it
      * lays on land, under water and on faces too steep to hold soil, the
-     * slope those faces start at, its veins with their block IDs, and the map
-     * colors distant terrain draws it with. Built once per biome and revision
+     * slope those faces start at, the coverage it lays over each of those
+     * three with how many levels a column may fall short of it, its veins
+     * with their block IDs, and the map colors distant terrain draws it with,
+     * its coverings included. Built once per biome and revision
      * by WorldGenerationManager and shared by every thread.
      */
 
@@ -20,6 +22,12 @@ class TerrainSurfaceProfileStruct extends StructPackage {
     final short underwaterBlockID;
     final short rockBlockID;
     final float rockSlope;
+    final short surfaceCoverage;
+    final int surfaceCoverageVariance;
+    final short underwaterCoverage;
+    final int underwaterCoverageVariance;
+    final short rockCoverage;
+    final int rockCoverageVariance;
     final BiomeVeinStruct[] veins;
     final short[] veinBlockIDs;
     final int surfaceTopColor;
@@ -34,6 +42,12 @@ class TerrainSurfaceProfileStruct extends StructPackage {
             short underwaterBlockID,
             short rockBlockID,
             float rockSlope,
+            short surfaceCoverage,
+            int surfaceCoverageVariance,
+            short underwaterCoverage,
+            int underwaterCoverageVariance,
+            short rockCoverage,
+            int rockCoverageVariance,
             BiomeVeinStruct[] veins,
             short[] veinBlockIDs,
             int surfaceTopColor,
@@ -47,6 +61,12 @@ class TerrainSurfaceProfileStruct extends StructPackage {
         this.underwaterBlockID = underwaterBlockID;
         this.rockBlockID = rockBlockID;
         this.rockSlope = rockSlope;
+        this.surfaceCoverage = surfaceCoverage;
+        this.surfaceCoverageVariance = surfaceCoverageVariance;
+        this.underwaterCoverage = underwaterCoverage;
+        this.underwaterCoverageVariance = underwaterCoverageVariance;
+        this.rockCoverage = rockCoverage;
+        this.rockCoverageVariance = rockCoverageVariance;
         this.veins = veins;
         this.veinBlockIDs = veinBlockIDs;
         this.surfaceTopColor = surfaceTopColor;

@@ -68,6 +68,10 @@ public class StructureHandle extends HandlePackage {
         return structureData.getBlockMasks();
     }
 
+    public short[] getBlockCoverages() {
+        return structureData.getBlockCoverages();
+    }
+
     public DynamicGeometryType[] getBlockGeometry() {
         return structureData.getBlockGeometry();
     }

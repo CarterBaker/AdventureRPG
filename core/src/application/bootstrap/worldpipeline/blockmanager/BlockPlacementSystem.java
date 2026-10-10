@@ -9,6 +9,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
+import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
@@ -29,6 +30,9 @@ public class BlockPlacementSystem extends SystemPackage {
      * subchunk the edit touched, diagonals included, each under its chunk's
      * lock. A cell whose eighth sub-block is filled in becomes a whole block
      * again, so a cell built up from pieces stores like any other block.
+     * editCoverage() changes only the coverage grown over a cell, which
+     * touches no surface but the cell's own, so it rebuilds the cell's
+     * subchunk alone.
      */
 
     // Internal
@@ -338,7 +342,45 @@ public class BlockPlacementSystem extends SystemPackage {
         worldStreamManager.invalidateChunkBatch(chunkCoordinate);
     }
 
+    // Coverage \\
+
+    // The cell the cast struck given a new coverage — callers have checked its block hosts the covering
+    public boolean editCoverage(BlockCastStruct castStruct, short coverage) {
+
+        ChunkInstance chunk = worldStreamManager.getChunkInstance(castStruct.getChunkCoordinate());
+
+        if (chunk == null)
+            return false;
+
+        int subChunkY = castStruct.getSubChunkY();
+        ChunkDataSyncContainer syncContainer = chunk.getChunkDataSyncContainer();
+        syncContainer.acquire();
+
+        try {
+            chunk.getSubChunk(subChunkY).setCoverage(toHitXYZ(castStruct), coverage);
+
+            rebuildSubChunk(chunk, subChunkY);
+            mergeAndRender(chunk);
+        } finally {
+            syncContainer.release();
+        }
+
+        invalidateChunk(chunk.getCoordinate());
+
+        return true;
+    }
+
     // Accessible \\
+
+    public short getCoverage(BlockCastStruct castStruct) {
+
+        ChunkInstance chunk = worldStreamManager.getChunkInstance(castStruct.getChunkCoordinate());
+
+        if (chunk == null)
+            return CoverageUtility.NONE;
+
+        return chunk.getSubChunk(castStruct.getSubChunkY()).getCoverage(toHitXYZ(castStruct));
+    }
 
     public int getSubBlockMask(BlockCastStruct castStruct) {
 

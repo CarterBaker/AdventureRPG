@@ -6,13 +6,14 @@ import engine.root.ManagerPackage;
 public class WorldTickManager extends ManagerPackage {
 
     /*
-     * Drives the world's per-block-type tick cycle. FULL, PARTIAL, COMPLEX,
-     * and LIQUID each own their own frame interval and counter rather than
-     * sharing one cycle length, so a branch that must run often (liquid) and
-     * branches that can run rarely are both just their own EngineSetting
-     * interval. Every branch is held rather than advanced on any frame
-     * WorldStreamManager reports as a player-wrap frame, so no tick ever
-     * competes with that rebuild for the same frame.
+     * Drives the world's per-block-type tick cycle and the growth of its
+     * coverings. FULL, PARTIAL, COMPLEX, LIQUID and coverage each own their
+     * own frame interval and counter rather than sharing one cycle length,
+     * so a branch that must run often (liquid) and branches that can run
+     * rarely are both just their own EngineSetting interval. Every branch is
+     * held rather than advanced on any frame WorldStreamManager reports as a
+     * player-wrap frame, so no tick ever competes with that rebuild for the
+     * same frame.
      */
 
     // Internal
@@ -23,6 +24,7 @@ public class WorldTickManager extends ManagerPackage {
     private PartialTickBranch partialTickBranch;
     private ComplexTickBranch complexTickBranch;
     private LiquidTickBranch liquidTickBranch;
+    private CoverageTickBranch coverageTickBranch;
 
     // Internal \\
 
@@ -34,6 +36,7 @@ public class WorldTickManager extends ManagerPackage {
         this.partialTickBranch = create(PartialTickBranch.class);
         this.complexTickBranch = create(ComplexTickBranch.class);
         this.liquidTickBranch = create(LiquidTickBranch.class);
+        this.coverageTickBranch = create(CoverageTickBranch.class);
     }
 
     @Override
@@ -62,5 +65,8 @@ public class WorldTickManager extends ManagerPackage {
 
         if (liquidTickBranch.advance())
             liquidTickBranch.tick();
+
+        if (coverageTickBranch.advance())
+            coverageTickBranch.tick();
     }
 }

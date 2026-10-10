@@ -6,6 +6,7 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemPaletteHandle;
@@ -24,13 +25,17 @@ public class SubChunkInstance extends WorldRenderInstance {
      * virtual; per-block palettes are only realized when an edit or a geometry
      * build needs them, and released again on reset(). Tracks the geometry
      * types its last build contained, and setSubBlocks() is the single write
-     * path for sub-block cells. Writes happen under the chunk's lock.
+     * path for sub-block cells. Coverage lives in a palette of its own,
+     * written only through setCoverage(), and a cell loses its coverage the
+     * moment its block or sub-block mask changes, so a covering never
+     * outlives the face it grew over. Writes happen under the chunk's lock.
      */
 
     // Internal
     private BlockPaletteHandle biomePaletteHandle;
     private BlockPaletteHandle blockPaletteHandle;
     private BlockPaletteHandle blockRotationPaletteHandle;
+    private BlockPaletteHandle coveragePaletteHandle;
     private WorldItemPaletteHandle worldItemPaletteHandle;
     private BlockManager blockManager;
 
@@ -38,6 +43,9 @@ public class SubChunkInstance extends WorldRenderInstance {
     private boolean populated;
     private short airBlockId;
     private short columnBiomeID;
+
+    // Coverage — set once any cell is covered, cleared only when the storage is released
+    private boolean covered;
 
     // Block Type Composition — tallied during geometry build
     private ReferenceOpenHashSet<DynamicGeometryType> containedBlockTypes;
@@ -70,6 +78,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         this.biomePaletteHandle = create(BlockPaletteHandle.class);
         this.blockPaletteHandle = create(BlockPaletteHandle.class);
         this.blockRotationPaletteHandle = create(BlockPaletteHandle.class);
+        this.coveragePaletteHandle = create(BlockPaletteHandle.class);
         this.worldItemPaletteHandle = create(WorldItemPaletteHandle.class);
         this.worldItemPaletteHandle.constructor();
 
@@ -145,6 +154,8 @@ public class SubChunkInstance extends WorldRenderInstance {
         blockRotationPaletteHandle.constructor(
                 EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD,
                 EngineSetting.DEFAULT_BLOCK_ORIENTATION);
+        coveragePaletteHandle.constructor(
+                EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD, CoverageUtility.NONE);
 
         if (uniformFill)
             blockPaletteHandle.fill(uniformBlockID);
@@ -160,8 +171,10 @@ public class SubChunkInstance extends WorldRenderInstance {
         biomePaletteHandle.releaseStorage();
         blockPaletteHandle.releaseStorage();
         blockRotationPaletteHandle.releaseStorage();
+        coveragePaletteHandle.releaseStorage();
 
         populated = false;
+        covered = false;
     }
 
     public boolean isPopulated() {
@@ -307,7 +320,13 @@ public class SubChunkInstance extends WorldRenderInstance {
     }
 
     public void setBlock(int packedXYZ, short blockID) {
+
         ensurePopulated();
+
+        if (blockPaletteHandle.getBlock(packedXYZ) != blockID
+                || blockPaletteHandle.getSubBlockMask(packedXYZ) != SubBlockUtility.MASK_FULL)
+            clearCoverage(packedXYZ);
+
         blockPaletteHandle.setBlock(packedXYZ, blockID);
         knownEmpty = false;
         uniformFill = false;
@@ -327,6 +346,10 @@ public class SubChunkInstance extends WorldRenderInstance {
         }
 
         ensurePopulated();
+
+        if (blockPaletteHandle.getBlock(packedXYZ) != blockID
+                || blockPaletteHandle.getSubBlockMask(packedXYZ) != mask)
+            clearCoverage(packedXYZ);
 
         if (blockPaletteHandle.getBlock(packedXYZ) != blockID)
             blockPaletteHandle.setBlock(packedXYZ, blockID);
@@ -382,6 +405,41 @@ public class SubChunkInstance extends WorldRenderInstance {
         blockPaletteHandle.setLiquidLevel(packedXYZ, EngineSetting.LIQUID_LEVEL_MAX);
         blockPaletteHandle.setLiquidPermanent(packedXYZ, true);
         blockPaletteHandle.setLiquidTidal(packedXYZ, false);
+    }
+
+    // Coverage \\
+
+    // The single write path for coverage — callers have already checked the cell's block can host the covering
+    public void setCoverage(int packedXYZ, short coverage) {
+
+        if (!CoverageUtility.isCovered(coverage)) {
+            clearCoverage(packedXYZ);
+            return;
+        }
+
+        ensurePopulated();
+        coveragePaletteHandle.setBlock(packedXYZ, coverage);
+        covered = true;
+    }
+
+    private void clearCoverage(int packedXYZ) {
+
+        if (!covered)
+            return;
+
+        coveragePaletteHandle.setBlock(packedXYZ, CoverageUtility.NONE);
+    }
+
+    public short getCoverage(int packedXYZ) {
+
+        if (!covered)
+            return CoverageUtility.NONE;
+
+        return coveragePaletteHandle.getBlock(packedXYZ);
+    }
+
+    public boolean hasCoverage() {
+        return covered;
     }
 
     // Liquid Activity \\

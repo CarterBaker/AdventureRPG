@@ -40,7 +40,8 @@ public class PlacementManager extends ManagerPackage {
      * held through CombatManager, whose strike lands back here on a block
      * through strikeBlock(), and the activate action places the held item — a
      * block piece as a sub-block, a seed into the ground as a tree of its
-     * species, anything else as a world item. A vehicle's
+     * species, a sower or nurturer onto the block as the covering it tends,
+     * anything else as a world item. A vehicle's
      * deck or cargo nearer than anything in the world takes the action
      * instead, through VehicleCargoSystem, by the same rules: cargo's own
      * actions come first, then the primary action picks cargo up or swings at
@@ -63,6 +64,7 @@ public class PlacementManager extends ManagerPackage {
 
     // Branches
     private BlockBranch blockBranch;
+    private CoverageBranch coverageBranch;
     private ItemBranch itemBranch;
     private ItemActionBranch itemActionBranch;
 
@@ -81,6 +83,7 @@ public class PlacementManager extends ManagerPackage {
 
         // Branches
         this.blockBranch = create(BlockBranch.class);
+        this.coverageBranch = create(CoverageBranch.class);
         this.itemBranch = create(ItemBranch.class);
         this.itemActionBranch = create(ItemActionBranch.class);
 
@@ -283,6 +286,9 @@ public class PlacementManager extends ManagerPackage {
 
         if (held.getItemDefinitionHandle().isSeed())
             return plantSeed(entity, castStruct);
+
+        if (held.getItemDefinitionHandle().isSower() || held.getItemDefinitionHandle().isNurturer())
+            return coverageBranch.tryTend(entity, castStruct);
 
         return itemBranch.place(entity, direction, castStruct);
     }

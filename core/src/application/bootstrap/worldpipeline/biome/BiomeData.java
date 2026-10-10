@@ -15,7 +15,9 @@ public class BiomeData extends DataPackage {
      * generation shapes this biome with — continentalness, erosion and
      * peaks-valleys splines, detail amplitude and wavelength, height scale —
      * its cliffs, ridges, coast, caves and veins, the rock its steep faces
-     * bare and the slope they bare it from, plus its ocean flag, the level of
+     * bare and the slope they bare it from, the coverings it lays over its
+     * surface, rock and underwater ground and the tint it lends every
+     * covering growing in it, plus its ocean flag, the level of
      * its own still water, its beach biome and the probable biomes chained
      * into it, the trees it grows and how it spreads them, and the
      * architectures settlements on it may be built in, none letting no
@@ -44,6 +46,10 @@ public class BiomeData extends DataPackage {
     private final String underwaterBlockName;
     private final String rockBlockName;
     private final float rockSlope;
+
+    private final BiomeCoveringStruct surfaceCovering;
+    private final BiomeCoveringStruct rockCovering;
+    private final BiomeCoveringStruct underwaterCovering;
 
     private final LinearSpline continentalnessSpline;
     private final LinearSpline erosionSpline;
@@ -79,6 +85,9 @@ public class BiomeData extends DataPackage {
             String underwaterBlockName,
             String rockBlockName,
             float rockSlope,
+            BiomeCoveringStruct surfaceCovering,
+            BiomeCoveringStruct rockCovering,
+            BiomeCoveringStruct underwaterCovering,
             LinearSpline continentalnessSpline,
             LinearSpline erosionSpline,
             LinearSpline peaksValleysSpline,
@@ -114,6 +123,10 @@ public class BiomeData extends DataPackage {
         this.underwaterBlockName = underwaterBlockName;
         this.rockBlockName = rockBlockName;
         this.rockSlope = rockSlope;
+
+        this.surfaceCovering = surfaceCovering;
+        this.rockCovering = rockCovering;
+        this.underwaterCovering = underwaterCovering;
 
         this.continentalnessSpline = continentalnessSpline;
         this.erosionSpline = erosionSpline;
@@ -197,6 +210,18 @@ public class BiomeData extends DataPackage {
 
     public float getRockSlope() {
         return rockSlope;
+    }
+
+    public BiomeCoveringStruct getSurfaceCovering() {
+        return surfaceCovering;
+    }
+
+    public BiomeCoveringStruct getRockCovering() {
+        return rockCovering;
+    }
+
+    public BiomeCoveringStruct getUnderwaterCovering() {
+        return underwaterCovering;
     }
 
     public LinearSpline getContinentalnessSpline() {

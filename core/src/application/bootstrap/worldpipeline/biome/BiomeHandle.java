@@ -108,6 +108,18 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getRockSlope();
     }
 
+    public BiomeCoveringStruct getSurfaceCovering() {
+        return biomeData.getSurfaceCovering();
+    }
+
+    public BiomeCoveringStruct getRockCovering() {
+        return biomeData.getRockCovering();
+    }
+
+    public BiomeCoveringStruct getUnderwaterCovering() {
+        return biomeData.getUnderwaterCovering();
+    }
+
     public LinearSpline getContinentalnessSpline() {
         return biomeData.getContinentalnessSpline();
     }

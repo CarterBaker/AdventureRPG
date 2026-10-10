@@ -12,6 +12,7 @@ in float teNatural[];
 in float teEdgeCells[];
 in vec4  teEdgeLow[];
 in vec4  teEdgeHigh[];
+in float teCoverage[];
 
 out vec3 vLocalPos;
 out vec3 vUVLocalPos;
@@ -19,6 +20,7 @@ out vec3 vNormal;
 flat out vec2 vUVOrigin;
 flat out float vOrient;
 out vec3 vColor;
+flat out float vCoverage;
 
 #include "includes/CameraData.glsl"
 #include "includes/SettingsData.glsl"
@@ -147,6 +149,7 @@ void main() {
     vOrient     = teOrient[0];
     vColor      = mix(mix(teColor[0], teColor[1], u),
                       mix(teColor[3], teColor[2], u), v);
+    vCoverage   = teCoverage[0];
 
     gl_Position = u_viewProjection * vec4(worldPos, 1.0);
 }

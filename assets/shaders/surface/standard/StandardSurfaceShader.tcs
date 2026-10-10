@@ -12,6 +12,7 @@ in  float tcNatural[];
 in  float tcEdgeCells[];
 in  vec4  tcEdgeLow[];
 in  vec4  tcEdgeHigh[];
+in  float tcCoverage[];
 
 out vec3  teWorldPos[];
 out vec3  teNormal[];
@@ -24,6 +25,7 @@ out float teNatural[];
 out float teEdgeCells[];
 out vec4  teEdgeLow[];
 out vec4  teEdgeHigh[];
+out float teCoverage[];
 
 #include "includes/SettingsData.glsl"
 #include "includes/PlayerPositionData.glsl"
@@ -49,6 +51,7 @@ void main() {
     teEdgeCells[gl_InvocationID] = tcEdgeCells[gl_InvocationID];
     teEdgeLow  [gl_InvocationID] = tcEdgeLow  [gl_InvocationID];
     teEdgeHigh [gl_InvocationID] = tcEdgeHigh [gl_InvocationID];
+    teCoverage [gl_InvocationID] = tcCoverage [gl_InvocationID];
 
     if (gl_InvocationID == 0) {
 

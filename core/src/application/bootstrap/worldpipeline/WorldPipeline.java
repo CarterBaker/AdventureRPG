@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline;
 import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
 import application.bootstrap.worldpipeline.layoutmanager.LayoutManager;
 import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
@@ -24,7 +25,8 @@ public class WorldPipeline extends PipelinePackage {
     /*
      * Registers all world pipeline managers in dependency order. Cross-system
      * references resolve in each manager's get() phase after all managers are
-     * created. WorldStreamManager must update before WorldRenderManager each
+     * created. CoveringManager follows BlockManager, whose blocks its
+     * coverings name as hosts. WorldStreamManager must update before WorldRenderManager each
      * frame so the render queue is current when rendering runs. WorldTickManager
      * is registered immediately after WorldStreamManager so its update() runs
      * later in the same frame, after that frame's wrap state is known.
@@ -41,6 +43,7 @@ public class WorldPipeline extends PipelinePackage {
     protected void create() {
         create(WorldManager.class);
         create(BlockManager.class);
+        create(CoveringManager.class);
         create(BiomeManager.class);
         create(LiquidManager.class);
         create(WorldGenerationManager.class);

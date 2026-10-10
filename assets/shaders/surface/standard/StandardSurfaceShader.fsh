@@ -6,6 +6,7 @@ in vec3       vNormal;
 flat in vec2  vUVOrigin;
 flat in float vOrient;
 in vec3 vColor;
+flat in float vCoverage;
 
 #include "includes/CameraData.glsl"
 #include "includes/SettingsData.glsl"
@@ -22,6 +23,7 @@ in vec3 vColor;
 #include "surface/includes/SurfaceTierMid.glsl"
 #include "surface/includes/SurfaceTierFlat.glsl"
 #include "surface/includes/CloudShadow.glsl"
+#include "surface/includes/Coverage.glsl"
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
@@ -82,6 +84,10 @@ void main() {
 
     if (!visible)
     discard;
+
+    applyCoverage(
+        vUVLocalPos, tiledUV, vUVOrigin, vCoverage, vColor, vNormal, u_view, fragDistSq <= tier1MaxSqDist,
+        albedo, normalView, specular, ao);
 
     float sunVisibility = resolveSunVisibility();
 

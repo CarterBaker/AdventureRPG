@@ -81,7 +81,9 @@ class BlockPieceBranch extends BranchPackage {
                 blockHandle.getBlockID(),
                 new ObjectArrayList<>(),
                 EngineSetting.ITEM_PICK_UP_AS_SELF,
-                EngineSetting.ITEM_PLANTS_NONE);
+                EngineSetting.ITEM_PLANTS_NONE,
+                EngineSetting.ITEM_SOWS_NONE,
+                EngineSetting.ITEM_NURTURES_NONE);
 
         ItemDefinitionHandle item = create(ItemDefinitionHandle.class);
         item.constructor(itemDefinitionData);

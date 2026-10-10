@@ -77,6 +77,7 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     short[] columnTopBlockID;
     short[] columnFillBlockID;
     short[] columnRockBlockID;
+    short[] columnTopCoverage;
     boolean[] columnOceanWater;
     int[] columnLakeLevelBlocks;
     byte[] columnGroundMask;
@@ -150,6 +151,7 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
         this.columnTopBlockID = new short[COLUMN_COUNT];
         this.columnFillBlockID = new short[COLUMN_COUNT];
         this.columnRockBlockID = new short[COLUMN_COUNT];
+        this.columnTopCoverage = new short[COLUMN_COUNT];
         this.columnOceanWater = new boolean[COLUMN_COUNT];
         this.columnLakeLevelBlocks = new int[COLUMN_COUNT];
         this.columnGroundMask = new byte[COLUMN_COUNT];

@@ -8,7 +8,9 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
@@ -23,11 +25,17 @@ class SurfaceEmissionBranch extends BranchPackage {
      * Turns one merged solid quad into its four patch vertices at either
      * resolution. Packs the column codes along each edge and the face, extents
      * and flags into float-exact words, so the surface shader can rebuild the
-     * sub-cells around any vertex exactly as neighboring quads do.
+     * sub-cells around any vertex exactly as neighboring quads do. The cell's
+     * coverage rides along as one more exact word: its covering and level on
+     * an upper face, on an upright face only when the covering has side
+     * tiles, and never on a lower face. resolveCoverageWord() is the one
+     * definition both merge passes compare, so a merged quad never spans two
+     * coverages.
      */
 
     // Internal
     private TextureManager textureManager;
+    private CoveringManager coveringManager;
     private SubCellSampleBranch subCellSampleBranch;
 
     // Settings
@@ -77,6 +85,7 @@ class SurfaceEmissionBranch extends BranchPackage {
 
         // Internal
         this.textureManager = get(TextureManager.class);
+        this.coveringManager = get(CoveringManager.class);
         this.subCellSampleBranch = get(SubCellSampleBranch.class);
     }
 
@@ -126,13 +135,14 @@ class SurfaceEmissionBranch extends BranchPackage {
         float vert3Color = resolveVertColor(chunkInstance, subChunkInstance, vert3X, vert3Y, vert3Z,
                 biomeHandle, vertColorAccumulator);
 
-        // Texture and orientation
-        short baseOrientation = rotationPaletteHandle.getBlock(
-                subCellSampleBranch.toCellXYZ(originSubX, originSubY, originSubZ));
+        // Texture, orientation and coverage
+        int cellXYZ = subCellSampleBranch.toCellXYZ(originSubX, originSubY, originSubZ);
+        short baseOrientation = rotationPaletteHandle.getBlock(cellXYZ);
         int orientation = baseOrientation & 0xFFFF;
         int textureID = resolveTextureID(blockHandle, faceDirection, orientation);
         TextureHandle textureHandle = textureManager.getTextureHandleFromTileID(textureID);
         int encodedFace = resolveEncodedFace(blockHandle, faceDirection, orientation);
+        float coverageWord = resolveCoverageWord(subChunkInstance, cellXYZ, faceDirection);
 
         // Edge columns
         int lastA = sizeA - 1;
@@ -168,10 +178,14 @@ class SurfaceEmissionBranch extends BranchPackage {
         float v0 = textureHandle.getV0();
         float fMeta = (float) meta;
 
-        pushVert(buffer, vert0X, vert0Y, vert0Z, u0, v0, fMeta, vert0Color, edgeA0, edgeA1, edgeB0, edgeB1);
-        pushVert(buffer, vert1X, vert1Y, vert1Z, u0, v0, fMeta, vert1Color, edgeA0, edgeA1, edgeB0, edgeB1);
-        pushVert(buffer, vert2X, vert2Y, vert2Z, u0, v0, fMeta, vert2Color, edgeA0, edgeA1, edgeB0, edgeB1);
-        pushVert(buffer, vert3X, vert3Y, vert3Z, u0, v0, fMeta, vert3Color, edgeA0, edgeA1, edgeB0, edgeB1);
+        pushVert(buffer, vert0X, vert0Y, vert0Z, u0, v0, fMeta, vert0Color, edgeA0, edgeA1, edgeB0, edgeB1,
+                coverageWord);
+        pushVert(buffer, vert1X, vert1Y, vert1Z, u0, v0, fMeta, vert1Color, edgeA0, edgeA1, edgeB0, edgeB1,
+                coverageWord);
+        pushVert(buffer, vert2X, vert2Y, vert2Z, u0, v0, fMeta, vert2Color, edgeA0, edgeA1, edgeB0, edgeB1,
+                coverageWord);
+        pushVert(buffer, vert3X, vert3Y, vert3Z, u0, v0, fMeta, vert3Color, edgeA0, edgeA1, edgeB0, edgeB1,
+                coverageWord);
     }
 
     // Edge Classification \\
@@ -261,6 +275,25 @@ class SurfaceEmissionBranch extends BranchPackage {
         return Direction3Vector.getEncodedFace(orientation, worldFace);
     }
 
+    // Coverage \\
+
+    // The coverage word a face of a cell carries — bare on a lower face and on an upright face of a sideless covering
+    float resolveCoverageWord(SubChunkInstance subChunkInstance, int cellXYZ, Direction3Vector faceDirection) {
+
+        short coverage = subChunkInstance.getCoverage(cellXYZ);
+
+        if (!CoverageUtility.isCovered(coverage) || faceDirection == Direction3Vector.DOWN)
+            return CoverageUtility.NONE;
+
+        if (faceDirection == Direction3Vector.UP)
+            return CoverageUtility.toVertexWord(coverage, false);
+
+        if (!coveringManager.getCoveringHandleFromCoverage(coverage).hasSide())
+            return CoverageUtility.NONE;
+
+        return CoverageUtility.toVertexWord(coverage, true);
+    }
+
     // Vertex Color \\
 
     private float resolveVertColor(
@@ -327,7 +360,8 @@ class SurfaceEmissionBranch extends BranchPackage {
             int vertSubX, int vertSubY, int vertSubZ,
             float u0, float v0,
             float meta, float color,
-            long edgeA0, long edgeA1, long edgeB0, long edgeB1) {
+            long edgeA0, long edgeA1, long edgeB0, long edgeB1,
+            float coverageWord) {
 
         buffer.add(vertSubX * subBlockSize);
         buffer.add(vertSubY * subBlockSize);
@@ -344,5 +378,6 @@ class SurfaceEmissionBranch extends BranchPackage {
         buffer.add(toHighWord(edgeA1));
         buffer.add(toHighWord(edgeB0));
         buffer.add(toHighWord(edgeB1));
+        buffer.add(coverageWord);
     }
 }

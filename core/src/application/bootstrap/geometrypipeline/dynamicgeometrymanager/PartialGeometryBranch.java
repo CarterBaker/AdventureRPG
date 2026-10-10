@@ -23,8 +23,8 @@ class PartialGeometryBranch extends BranchPackage {
     /*
      * Sub-block resolution pass. Owns every face of a subdivided block and
      * every whole-block face that is not block-simple, greedily merging
-     * sub-faces of matching block, biome and orientation within the subchunk
-     * and the merge extent limit.
+     * sub-faces of matching block, biome, orientation and coverage word
+     * within the subchunk and the merge extent limit.
      */
 
     // Internal
@@ -145,7 +145,10 @@ class PartialGeometryBranch extends BranchPackage {
         Direction3Vector tangentA = Direction3Vector.getTangentA(direction3Vector);
         Direction3Vector tangentB = Direction3Vector.getTangentB(direction3Vector);
 
-        short baseOrientation = rotationPaletteHandle.getBlock(subCellSampleBranch.toCellXYZ(subX, subY, subZ));
+        int baseCellXYZ = subCellSampleBranch.toCellXYZ(subX, subY, subZ);
+        short baseOrientation = rotationPaletteHandle.getBlock(baseCellXYZ);
+        float baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(
+                subChunkInstance, baseCellXYZ, direction3Vector);
 
         subAccumulatedBatch.set(getSubIndex(subX, subY, subZ));
 
@@ -167,6 +170,7 @@ class PartialGeometryBranch extends BranchPackage {
                         biomeHandle,
                         blockHandle,
                         baseOrientation,
+                        baseCoverageWord,
                         subAccumulatedBatch,
                         subBatchReturn)) {
                     subAccumulatedBatch.or(subBatchReturn);
@@ -191,6 +195,7 @@ class PartialGeometryBranch extends BranchPackage {
                         biomeHandle,
                         blockHandle,
                         baseOrientation,
+                        baseCoverageWord,
                         subAccumulatedBatch,
                         subBatchReturn)) {
                     subAccumulatedBatch.or(subBatchReturn);
@@ -230,6 +235,7 @@ class PartialGeometryBranch extends BranchPackage {
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             short baseOrientation,
+            float baseCoverageWord,
             BitSet subAccumulatedBatch,
             BitSet subBatchReturn) {
 
@@ -258,6 +264,7 @@ class PartialGeometryBranch extends BranchPackage {
                     blockHandle,
                     orientationSensitive,
                     baseOrientation,
+                    baseCoverageWord,
                     subAccumulatedBatch)) {
                 subBatchReturn.clear();
                 return false;
@@ -281,6 +288,7 @@ class PartialGeometryBranch extends BranchPackage {
             BlockHandle blockHandle,
             boolean orientationSensitive,
             short baseOrientation,
+            float baseCoverageWord,
             BitSet subAccumulatedBatch) {
 
         if (subAccumulatedBatch.get(getSubIndex(checkX, checkY, checkZ)))
@@ -304,6 +312,9 @@ class PartialGeometryBranch extends BranchPackage {
             return false;
 
         if (orientationSensitive && rotationPaletteHandle.getBlock(cellXYZ) != baseOrientation)
+            return false;
+
+        if (surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, cellXYZ, direction3Vector) != baseCoverageWord)
             return false;
 
         if (!subCellSampleBranch.hasSubFace(

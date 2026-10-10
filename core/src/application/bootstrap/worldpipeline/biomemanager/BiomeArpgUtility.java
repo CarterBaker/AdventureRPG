@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.biomemanager;
 import application.bootstrap.worldpipeline.biome.BiomeCaveStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCliffStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCoastStruct;
+import application.bootstrap.worldpipeline.biome.BiomeCoveringStruct;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeRidgeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeTreeStruct;
@@ -10,8 +11,10 @@ import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.biome.ProbableBiomePlacement;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.tree.TreeDistribution;
+import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import engine.graphics.color.Color;
+import engine.graphics.color.PackedColorUtility;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.root.UtilityPackage.InternalException;
@@ -29,7 +32,9 @@ class BiomeArpgUtility extends EngineUtility {
     /*
      * The single definition of the biome format: display name, weathers, map
      * color, probable biomes with their placement, patch sizes and shapes,
-     * surface and rock blocks, ocean, still water and beach settings, the
+     * surface and rock blocks, the coverings laid over them and the tint
+     * every covering takes from the biome, ocean, still water and beach
+     * settings, the
      * optional terrain shape splines and detail controls, each falling back
      * to TerrainShapeUtility's defaults, and the optional cliffs, ridges,
      * coast, caves, veins, trees and the architectures settlements on it are
@@ -68,6 +73,11 @@ class BiomeArpgUtility extends EngineUtility {
         if (rockSlope <= 0f)
             throw fail(biomeName, "\"rock_slope\" must be greater than 0.");
 
+        Color coveringTint = parseCoveringTint(biomeArpg, biomeName);
+        BiomeCoveringStruct surfaceCovering = parseCovering(biomeArpg, "surface_covering", biomeName);
+        BiomeCoveringStruct rockCovering = parseCovering(biomeArpg, "rock_covering", biomeName);
+        BiomeCoveringStruct underwaterCovering = parseCovering(biomeArpg, "underwater_covering", biomeName);
+
         boolean oceanWater = ArpgUtility.getBoolean(biomeArpg, "ocean_water", false);
         int waterLevelBlocks = parseWaterLevel(biomeArpg, biomeName, oceanWater);
         String beachBiomeName = parseBeachBiomeName(biomeArpg, biomeName, oceanWater);
@@ -105,10 +115,11 @@ class BiomeArpgUtility extends EngineUtility {
         ObjectArrayList<String> architectureNames = parseArchitectures(biomeArpg);
 
         return new BiomeData(
-                biomeName, displayName, biomeID, Color.WHITE,
+                biomeName, displayName, biomeID, coveringTint,
                 seasonWeatherNames, seasonWeatherChances, seasonNames,
                 mapColor, probableBiomes,
                 surfaceBlockName, subsurfaceBlockName, underwaterBlockName, rockBlockName, rockSlope,
+                surfaceCovering, rockCovering, underwaterCovering,
                 continentalnessSpline, erosionSpline, peaksValleysSpline,
                 detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale,
                 cliffs, ridges, coast, caves, veins, trees, architectureNames,
@@ -191,19 +202,60 @@ class BiomeArpgUtility extends EngineUtility {
         if (!biomeArpg.has("map_color"))
             return BiomeData.MAP_COLOR_UNDEFINED;
 
-        String raw = biomeArpg.get("map_color").getAsString();
+        return parseHexColor(biomeArpg.get("map_color").getAsString(), "map_color", biomeName);
+    }
+
+    private static int parseHexColor(String raw, String field, String biomeName) {
+
         String hex = raw.startsWith("#") ? raw.substring(1) : raw;
 
         if (hex.length() != 6)
-            throw fail(biomeName, "has invalid map_color \"" + raw
+            throw fail(biomeName, "has invalid " + field + " \"" + raw
                     + "\" — expected a 6-digit hex RGB value, e.g. \"#5B8C3A\".");
 
         try {
             return Integer.parseInt(hex, 16);
         } catch (NumberFormatException e) {
-            throw new InternalException("Biome \"" + biomeName + "\" has invalid map_color \"" + raw
+            throw new InternalException("Biome \"" + biomeName + "\" has invalid " + field + " \"" + raw
                     + "\" — not valid hex.", e);
         }
+    }
+
+    // Coverings \\
+
+    // The tint every covering growing in the biome takes, carried to the surface shader in each terrain vertex's color
+    private static Color parseCoveringTint(ArpgObjectStruct biomeArpg, String biomeName) {
+
+        int tint = parseHexColor(
+                ArpgUtility.getString(biomeArpg, "covering_tint", EngineSetting.DEFAULT_BIOME_COVERING_TINT),
+                "covering_tint", biomeName);
+
+        return new Color(
+                PackedColorUtility.red(tint) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                PackedColorUtility.green(tint) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                PackedColorUtility.blue(tint) / EngineSetting.COLOR_CHANNEL_BYTE_MAX);
+    }
+
+    // A covering the biome lays over one kind of ground, null when it lays none there
+    private static BiomeCoveringStruct parseCovering(ArpgObjectStruct biomeArpg, String field, String biomeName) {
+
+        if (!ArpgUtility.hasObject(biomeArpg, field))
+            return null;
+
+        ArpgObjectStruct coveringArpg = biomeArpg.getAsObject(field);
+        String coveringName = requireString(coveringArpg, "covering", biomeName, field);
+        int level = ArpgUtility.getInt(coveringArpg, "level", CoverageUtility.LEVEL_MAX);
+        int variance = ArpgUtility.getInt(coveringArpg, "variance", EngineSetting.DEFAULT_BIOME_COVERING_VARIANCE);
+
+        if (level < 1 || level > CoverageUtility.LEVEL_MAX)
+            throw fail(biomeName, "\"" + field + "\" has level " + level + " — it must run from 1 to "
+                    + CoverageUtility.LEVEL_MAX + ".");
+
+        if (variance < 0 || variance >= level)
+            throw fail(biomeName, "\"" + field + "\" has variance " + variance
+                    + " — it must run from 0 up to one below its level, so every column keeps some covering.");
+
+        return new BiomeCoveringStruct(coveringName, level, variance);
     }
 
     // Probable Biomes \\

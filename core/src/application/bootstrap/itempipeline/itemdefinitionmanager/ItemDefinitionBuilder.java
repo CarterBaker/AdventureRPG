@@ -20,6 +20,8 @@ import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
+import application.bootstrap.worldpipeline.util.CoverageUtility;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
@@ -59,7 +61,10 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * aimed at, and the item it "becomes"; one may "fire" an item from a
      * "muzzle" in model sub-voxels along an "aim" at a "speed". "pick_up_as"
      * names the item it is picked up as, and "plants" the tree a seed grows
-     * into. A container carries no actions, so its contents are never lost.
+     * into. "sows" names the covering an item lays over the block it is used
+     * on and "nurtures" the levels it adds there, which a sower must name; an
+     * item that only nurtures feeds whatever already covers the block. A
+     * container carries no actions, so its contents are never lost.
      * Bootstrap-only.
      */
 
@@ -69,6 +74,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private MaterialManager materialManager;
     private SubVoxelManager subVoxelManager;
     private ToolTypeManager toolTypeManager;
+    private CoveringManager coveringManager;
 
     // Directory
     private File meshRoot;
@@ -91,6 +97,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
         this.materialManager = get(MaterialManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
         this.toolTypeManager = get(ToolTypeManager.class);
+        this.coveringManager = get(CoveringManager.class);
     }
 
     // Build \\
@@ -160,6 +167,10 @@ class ItemDefinitionBuilder extends BuilderPackage {
             throwException("Item '" + itemName + "' is a container with actions; turning it into another item "
                     + "would lose its contents.");
 
+        String plantsTreeName = ArpgUtility.getString(itemArpg, "plants", EngineSetting.ITEM_PLANTS_NONE);
+        String sowsCoveringName = parseSows(itemArpg, plantsTreeName, itemName);
+        int nurtureLevels = parseNurtures(itemArpg, sowsCoveringName, itemName);
+
         String materialPath = ArpgUtility.getString(
                 itemArpg, "material", EngineSetting.DEFAULT_ITEM_MATERIAL);
         int materialID = materialManager.getMaterialIDFromMaterialName(materialPath);
@@ -188,7 +199,9 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 EngineSetting.BLOCK_PIECE_NONE,
                 actions,
                 ArpgUtility.getString(itemArpg, "pick_up_as", EngineSetting.ITEM_PICK_UP_AS_SELF),
-                ArpgUtility.getString(itemArpg, "plants", EngineSetting.ITEM_PLANTS_NONE));
+                plantsTreeName,
+                sowsCoveringName,
+                nurtureLevels);
 
         ItemDefinitionHandle item = create(ItemDefinitionHandle.class);
         item.constructor(itemDefinitionData);
@@ -209,6 +222,38 @@ class ItemDefinitionBuilder extends BuilderPackage {
             stats[ArpgUtility.toEnum(statName, ItemStat.class).ordinal()] = statsArpg.get(statName).getAsFloat();
 
         return stats;
+    }
+
+    // Coverage \\
+
+    private String parseSows(ArpgObjectStruct itemArpg, String plantsTreeName, String itemName) {
+
+        String sowsCoveringName = ArpgUtility.getString(itemArpg, "sows", EngineSetting.ITEM_SOWS_NONE);
+
+        if (sowsCoveringName.equals(EngineSetting.ITEM_SOWS_NONE))
+            return sowsCoveringName;
+
+        if (!plantsTreeName.equals(EngineSetting.ITEM_PLANTS_NONE))
+            throwException("Item '" + itemName + "' both \"plants\" a tree and \"sows\" a covering — name one.");
+
+        coveringManager.getCoveringHandleFromCoveringName(sowsCoveringName);
+
+        return sowsCoveringName;
+    }
+
+    private int parseNurtures(ArpgObjectStruct itemArpg, String sowsCoveringName, String itemName) {
+
+        int nurtureLevels = ArpgUtility.getInt(itemArpg, "nurtures", EngineSetting.ITEM_NURTURES_NONE);
+
+        if (nurtureLevels < 0 || nurtureLevels > CoverageUtility.LEVEL_MAX)
+            throwException("Item '" + itemName + "' \"nurtures\" " + nurtureLevels
+                    + " levels — it must run from 0 to " + CoverageUtility.LEVEL_MAX + ".");
+
+        if (nurtureLevels == EngineSetting.ITEM_NURTURES_NONE && !sowsCoveringName.equals(EngineSetting.ITEM_SOWS_NONE))
+            throwException("Item '" + itemName + "' \"sows\" a covering but \"nurtures\" no levels — name how many "
+                    + "levels one use lays.");
+
+        return nurtureLevels;
     }
 
     // Tool \\

@@ -22,8 +22,10 @@ public class ItemDefinitionData extends DataPackage {
      * one item; a block piece names the block it builds. An item may carry
      * actions that turn it into another item where it stands, and may be
      * picked up as another item, as an open door is picked up shut. A seed
-     * names the tree it grows into once planted. Owned by ItemDefinitionHandle
-     * for the engine lifetime.
+     * names the tree it grows into once planted. An item may sow a covering
+     * over the block it is used on and nurture what covers it by a number of
+     * levels, as grass seed sows grass and a moisture pouch feeds moss. Owned
+     * by ItemDefinitionHandle for the engine lifetime.
      */
 
     // Identity
@@ -70,6 +72,10 @@ public class ItemDefinitionData extends DataPackage {
     private final String pickUpAsName;
     private final String plantsTreeName;
 
+    // Coverage — the covering a sower lays, ITEM_SOWS_NONE for none, and the levels it adds where it is used
+    private final String sowsCoveringName;
+    private final int nurtureLevels;
+
     // Constructor \\
 
     public ItemDefinitionData(
@@ -96,7 +102,9 @@ public class ItemDefinitionData extends DataPackage {
             short blockID,
             ObjectArrayList<ItemActionStruct> actions,
             String pickUpAsName,
-            String plantsTreeName) {
+            String plantsTreeName,
+            String sowsCoveringName,
+            int nurtureLevels) {
 
         // Identity
         this.itemName = itemName;
@@ -141,6 +149,10 @@ public class ItemDefinitionData extends DataPackage {
         this.actions = actions;
         this.pickUpAsName = pickUpAsName;
         this.plantsTreeName = plantsTreeName;
+
+        // Coverage
+        this.sowsCoveringName = sowsCoveringName;
+        this.nurtureLevels = nurtureLevels;
     }
 
     // Accessible \\
@@ -267,5 +279,21 @@ public class ItemDefinitionData extends DataPackage {
 
     public String getPlantsTreeName() {
         return plantsTreeName;
+    }
+
+    public boolean isSower() {
+        return !sowsCoveringName.equals(EngineSetting.ITEM_SOWS_NONE);
+    }
+
+    public String getSowsCoveringName() {
+        return sowsCoveringName;
+    }
+
+    public boolean isNurturer() {
+        return nurtureLevels != EngineSetting.ITEM_NURTURES_NONE;
+    }
+
+    public int getNurtureLevels() {
+        return nurtureLevels;
     }
 }

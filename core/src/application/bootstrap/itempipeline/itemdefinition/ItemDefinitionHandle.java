@@ -174,4 +174,20 @@ public class ItemDefinitionHandle extends HandlePackage {
     public String getPlantsTreeName() {
         return itemDefinitionData.getPlantsTreeName();
     }
+
+    public boolean isSower() {
+        return itemDefinitionData.isSower();
+    }
+
+    public String getSowsCoveringName() {
+        return itemDefinitionData.getSowsCoveringName();
+    }
+
+    public boolean isNurturer() {
+        return itemDefinitionData.isNurturer();
+    }
+
+    public int getNurtureLevels() {
+        return itemDefinitionData.getNurtureLevels();
+    }
 }
