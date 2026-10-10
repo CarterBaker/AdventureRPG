@@ -7,7 +7,9 @@ import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingMana
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
+import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
+import application.bootstrap.worldpipeline.structure.StructureSurfaceType;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.ChunkWriteUtility;
@@ -19,6 +21,7 @@ import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGeneratio
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Coordinate4Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -29,10 +32,11 @@ class StructureStampBranch extends BranchPackage {
      * itself, was placed by hand or stands on a settlement's lot. Only the
      * chunk's own columns are written, so every chunk a structure reaches lays
      * its share independently. A structure that clears terrain first carves
-     * the ground standing inside its footprint down to its lowest block; its
-     * blocks are then laid turned, orientation and sub-block mask alike, a
-     * foundation is filled from its lowest solid blocks down to the ground,
-     * and every place it comes furnished at whose item corner falls in the
+     * the ground standing inside its footprint down to its lowest block, or
+     * underground only the space it fills; its blocks are then laid turned,
+     * orientation and sub-block mask alike, a foundation is filled from its
+     * lowest solid blocks down to the ground, or underground down through any
+     * open cave to the first solid block, and every place it comes furnished at whose item corner falls in the
      * chunk draws its furniture as a world item. Every roll is salted by the
      * world, the structure and its anchor, so a structure furnishes alike in
      * every chunk and every session.
@@ -40,6 +44,7 @@ class StructureStampBranch extends BranchPackage {
 
     // Internal
     private WorldGenerationManager worldGenerationManager;
+    private BlockManager blockManager;
     private FurnishingManager furnishingManager;
     private ItemRotationBufferSystem itemRotationBufferSystem;
     private StructureStampAsyncContainer stampContainer;
@@ -69,6 +74,7 @@ class StructureStampBranch extends BranchPackage {
     @Override
     protected void get() {
         this.worldGenerationManager = get(WorldGenerationManager.class);
+        this.blockManager = get(BlockManager.class);
         this.furnishingManager = get(FurnishingManager.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
     }
@@ -105,7 +111,8 @@ class StructureStampBranch extends BranchPackage {
 
     // Terrain \\
 
-    // The ground standing inside the footprint, carved from the structure's lowest block up to the ground's top
+    // The ground standing inside the footprint, carved from the structure's lowest block up to the ground's top, or
+    // underground up to the structure's highest block
     private void clearFootprint(
             long chunkCoordinate,
             SubChunkInstance[] subChunks,
@@ -120,6 +127,7 @@ class StructureStampBranch extends BranchPackage {
         int minOffsetZ = structureHandle.getMinOffsetZ();
         int width = structureHandle.getMaxOffsetX() - minOffsetX + 1;
         int floorY = anchorY + structureHandle.getMinOffsetY();
+        boolean underground = isUnderground(structureHandle);
 
         for (int column = 0; column < footprint.length; column++) {
 
@@ -134,10 +142,11 @@ class StructureStampBranch extends BranchPackage {
             if (localX < 0 || localX >= chunkSize || localZ < 0 || localZ >= chunkSize)
                 continue;
 
-            int groundHeight = worldGenerationManager.getColumnGroundHeight(
-                    chunkCoordinate, (int) localX, (int) localZ);
+            int topY = underground
+                    ? anchorY + structureHandle.getMaxOffsetY()
+                    : worldGenerationManager.getColumnGroundHeight(chunkCoordinate, (int) localX, (int) localZ);
 
-            ChunkWriteUtility.clearColumn(subChunks, (int) localX, floorY, groundHeight, (int) localZ);
+            ChunkWriteUtility.clearColumn(subChunks, (int) localX, floorY, topY, (int) localZ);
         }
     }
 
@@ -194,14 +203,17 @@ class StructureStampBranch extends BranchPackage {
         }
 
         if (foundation)
-            layFoundation(scratch, chunkCoordinate, subChunks, structureHandle.getFoundationBlockID());
+            layFoundation(
+                    scratch, chunkCoordinate, subChunks, structureHandle.getFoundationBlockID(),
+                    isUnderground(structureHandle));
     }
 
     private void layFoundation(
             StructureStampAsyncContainer scratch,
             long chunkCoordinate,
             SubChunkInstance[] subChunks,
-            short foundationBlockID) {
+            short foundationBlockID,
+            boolean underground) {
 
         for (int localZ = 0; localZ < chunkSize; localZ++) {
             for (int localX = 0; localX < chunkSize; localX++) {
@@ -211,12 +223,36 @@ class StructureStampBranch extends BranchPackage {
                 if (floorY == Integer.MAX_VALUE)
                     continue;
 
-                int groundHeight = worldGenerationManager.getColumnGroundHeight(chunkCoordinate, localX, localZ);
+                int bottomY = underground
+                        ? findSolidBelow(subChunks, localX, floorY, localZ)
+                        : worldGenerationManager.getColumnGroundHeight(chunkCoordinate, localX, localZ);
 
-                for (int worldY = floorY - 1; worldY > groundHeight; worldY--)
+                for (int worldY = floorY - 1; worldY > bottomY; worldY--)
                     ChunkWriteUtility.writeSolid(subChunks, localX, worldY, localZ, foundationBlockID);
             }
         }
+    }
+
+    // The first whole solid block below a height, no further down than a cave foundation reaches
+    private int findSolidBelow(SubChunkInstance[] subChunks, int localX, int fromY, int localZ) {
+
+        int lowestY = Math.max(fromY - EngineSetting.STRUCTURE_CAVE_FOUNDATION_MAX_BLOCKS, 0);
+
+        for (int worldY = fromY - 1; worldY > lowestY; worldY--) {
+
+            SubChunkInstance subChunk = subChunks[worldY / chunkSize];
+            int packedXYZ = Coordinate3Int.pack(localX, worldY % chunkSize, localZ);
+
+            if (blockManager.getGeometryFromBlockID(subChunk.getBlock(packedXYZ)) == DynamicGeometryType.FULL
+                    && subChunk.getSubBlockMask(packedXYZ) == EngineSetting.SUB_BLOCK_MASK_FULL)
+                return worldY;
+        }
+
+        return lowestY;
+    }
+
+    private boolean isUnderground(StructureHandle structureHandle) {
+        return structureHandle.getRules().getSurfaceType() == StructureSurfaceType.CAVE;
     }
 
     // Furnishing \\

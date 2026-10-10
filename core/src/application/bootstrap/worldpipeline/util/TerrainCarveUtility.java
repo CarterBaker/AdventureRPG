@@ -7,34 +7,49 @@ import engine.root.EngineUtility;
 public final class TerrainCarveUtility extends EngineUtility {
 
     /*
-     * Stateless volume fields that hollow and thread the ground: winding
-     * tunnels where two noise surfaces cross, caverns where a broad field
-     * swells, sea caves running in from the shore through the tide band, the
-     * notch the waves cut beneath a sea cliff between low and high tide, and mineral veins as thin seams
-     * gated by a broad field. Noise is sampled on a lattice anchored to the
-     * world grid every CAVE_LATTICE_STEP_BLOCKS and read back trilinearly, so
-     * any caller filling the lattice over any range reads the same value at
-     * the same block, and a chunk pays for a few hundred samples rather than
-     * one per block. Thresholds are pure functions of the sampled values and
-     * the column's controls.
+     * Stateless volume fields that hollow and thread the ground. Caves are a
+     * signed density measured in blocks from the nearest wall, positive inside
+     * the hollow: long winding tunnels where two noise surfaces cross, thin
+     * passages where two finer ones cross behind a gate, and caverns where a
+     * broad field roughened by the finer ones swells, swelling wider the
+     * deeper they lie. Each closes
+     * smoothly toward the floor and roof of its band and below the tide where
+     * the sea is walled off, so nothing ends on a flat cut and a wall can be
+     * placed at sub-block precision. Sea caves run in from the shore through
+     * the tide band, a notch is cut beneath sea cliffs, and mineral veins run
+     * as thin seams gated by a broad field. Noise is sampled on a lattice
+     * anchored to the world grid every CAVE_LATTICE_STEP_BLOCKS and read back
+     * trilinearly, so every caller filling the lattice over any range reads
+     * the same value at the same point, and a lattice cell's corners bound
+     * every value inside it, which lets solid rock be skipped a cell at a time.
      */
 
     public static final int LATTICE_STEP = EngineSetting.CAVE_LATTICE_STEP_BLOCKS;
     public static final int LATTICE_SIDE = EngineSetting.CHUNK_SIZE / LATTICE_STEP + 1;
+    public static final int COLUMN_LATTICE_SIDE = 2;
 
-    public static final int CHANNEL_TUNNEL_A = 0;
-    public static final int CHANNEL_TUNNEL_B = 1;
-    public static final int CHANNEL_CAVERN = 2;
-    public static final int CHANNEL_SEA = 3;
-    public static final int CAVE_CHANNELS = 4;
+    public static final int CHANNEL_SPAGHETTI_A = 0;
+    public static final int CHANNEL_SPAGHETTI_B = 1;
+    public static final int CHANNEL_SPAGHETTI_RADIUS = 2;
+    public static final int CHANNEL_CHEESE = 3;
+    public static final int CHANNEL_NOODLE_A = 4;
+    public static final int CHANNEL_NOODLE_B = 5;
+    public static final int CHANNEL_NOODLE_GATE = 6;
+    public static final int CHANNEL_SEA = 7;
+    public static final int CAVE_CHANNELS = 8;
 
     public static final int CHANNEL_VEIN_RIBBON = 0;
     public static final int CHANNEL_VEIN_GATE = 1;
     public static final int VEIN_CHANNELS_PER_VEIN = 2;
 
+    private static final float GRADIENT = EngineSetting.CAVE_NOISE_GRADIENT;
+    private static final float SPAGHETTI_SCALE = (float) EngineSetting.CAVE_SPAGHETTI_WAVELENGTH_BLOCKS / GRADIENT;
+    private static final float NOODLE_SCALE = (float) EngineSetting.CAVE_NOODLE_WAVELENGTH_BLOCKS / GRADIENT;
+    private static final float CHEESE_SCALE = (float) EngineSetting.CAVE_CHEESE_WAVELENGTH_BLOCKS / GRADIENT;
+
     // Lattice \\
 
-    // Number of lattice rows covering every block from fromY to toY, starting at the row at or below fromY
+    // Number of lattice rows covering every point from fromY to toY, starting at the row at or below fromY
     public static int computeLatticeRows(int fromY, int toY) {
         return (alignDown(toY) - alignDown(fromY)) / LATTICE_STEP + 2;
     }
@@ -43,55 +58,89 @@ public final class TerrainCarveUtility extends EngineUtility {
         return Math.floorDiv(worldY, LATTICE_STEP) * LATTICE_STEP;
     }
 
-    // The sea cave channel is only sampled where a chunk can hold sea caves at all
+    public static long alignDown(long worldXZ) {
+        return Math.floorDiv(worldXZ, (long) LATTICE_STEP) * LATTICE_STEP;
+    }
+
+    // side points per horizontal axis from the origin; the sea channel is only sampled where it can matter
     public static void fillCaveLattice(
             long seed,
             double worldWidthBlocks, double worldHeightBlocks,
             long originX, int originY, long originZ,
+            int side,
             int rows,
             boolean seaChannel,
             float[] outLattice) {
 
         for (int row = 0; row < rows; row++) {
-            for (int z = 0; z < LATTICE_SIDE; z++) {
-                for (int x = 0; x < LATTICE_SIDE; x++) {
+            for (int z = 0; z < side; z++) {
+                for (int x = 0; x < side; x++) {
 
                     double worldX = originX + (long) x * LATTICE_STEP;
                     double worldY = originY + row * LATTICE_STEP;
                     double worldZ = originZ + (long) z * LATTICE_STEP;
-                    int base = latticeIndex(x, row, z) * CAVE_CHANNELS;
+                    int base = latticeIndex(side, x, row, z) * CAVE_CHANNELS;
 
-                    outLattice[base + CHANNEL_TUNNEL_A] = TerrainNoiseUtility.sampleVolume(
-                            seed ^ EngineSetting.CAVE_TUNNEL_SEED_SALT_A,
+                    outLattice[base + CHANNEL_SPAGHETTI_A] = TerrainNoiseUtility.sampleVolume(
+                            seed ^ EngineSetting.CAVE_SPAGHETTI_SEED_SALT_A,
                             worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
-                            EngineSetting.CAVE_TUNNEL_WAVELENGTH_BLOCKS, EngineSetting.CAVE_TUNNEL_VERTICAL_SCALE);
+                            EngineSetting.CAVE_SPAGHETTI_WAVELENGTH_BLOCKS,
+                            EngineSetting.CAVE_SPAGHETTI_VERTICAL_SCALE);
 
-                    outLattice[base + CHANNEL_TUNNEL_B] = TerrainNoiseUtility.sampleVolume(
-                            seed ^ EngineSetting.CAVE_TUNNEL_SEED_SALT_B,
+                    outLattice[base + CHANNEL_SPAGHETTI_B] = TerrainNoiseUtility.sampleVolume(
+                            seed ^ EngineSetting.CAVE_SPAGHETTI_SEED_SALT_B,
                             worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
-                            EngineSetting.CAVE_TUNNEL_WAVELENGTH_BLOCKS, EngineSetting.CAVE_TUNNEL_VERTICAL_SCALE);
+                            EngineSetting.CAVE_SPAGHETTI_WAVELENGTH_BLOCKS,
+                            EngineSetting.CAVE_SPAGHETTI_VERTICAL_SCALE);
 
-                    outLattice[base + CHANNEL_CAVERN] = TerrainNoiseUtility.sampleVolume(
-                            seed ^ EngineSetting.CAVE_CAVERN_SEED_SALT,
+                    outLattice[base + CHANNEL_SPAGHETTI_RADIUS] = TerrainNoiseUtility.sampleVolume(
+                            seed ^ EngineSetting.CAVE_SPAGHETTI_RADIUS_SEED_SALT,
                             worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
-                            EngineSetting.CAVE_CAVERN_WAVELENGTH_BLOCKS, EngineSetting.CAVE_CAVERN_VERTICAL_SCALE);
+                            EngineSetting.CAVE_SPAGHETTI_RADIUS_WAVELENGTH_BLOCKS, 1f);
 
-                    if (seaChannel)
-                        outLattice[base + CHANNEL_SEA] = TerrainNoiseUtility.sampleVolume(
-                                seed ^ EngineSetting.CAVE_SEA_SEED_SALT,
-                                worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
-                                EngineSetting.CAVE_SEA_WAVELENGTH_BLOCKS, EngineSetting.CAVE_SEA_VERTICAL_SCALE);
+                    outLattice[base + CHANNEL_CHEESE] = TerrainNoiseUtility.sampleVolume(
+                            seed ^ EngineSetting.CAVE_CHEESE_SEED_SALT,
+                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            EngineSetting.CAVE_CHEESE_WAVELENGTH_BLOCKS, EngineSetting.CAVE_CHEESE_VERTICAL_SCALE);
+
+                    outLattice[base + CHANNEL_NOODLE_A] = TerrainNoiseUtility.sampleVolume(
+                            seed ^ EngineSetting.CAVE_NOODLE_SEED_SALT_A,
+                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            EngineSetting.CAVE_NOODLE_WAVELENGTH_BLOCKS, EngineSetting.CAVE_NOODLE_VERTICAL_SCALE);
+
+                    outLattice[base + CHANNEL_NOODLE_B] = TerrainNoiseUtility.sampleVolume(
+                            seed ^ EngineSetting.CAVE_NOODLE_SEED_SALT_B,
+                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            EngineSetting.CAVE_NOODLE_WAVELENGTH_BLOCKS, EngineSetting.CAVE_NOODLE_VERTICAL_SCALE);
+
+                    outLattice[base + CHANNEL_NOODLE_GATE] = TerrainNoiseUtility.sampleVolume(
+                            seed ^ EngineSetting.CAVE_NOODLE_GATE_SEED_SALT,
+                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            EngineSetting.CAVE_NOODLE_GATE_WAVELENGTH_BLOCKS, 1f);
+
+                    outLattice[base + CHANNEL_CHEESE] += outLattice[base + CHANNEL_SPAGHETTI_RADIUS]
+                            * EngineSetting.CAVE_CHEESE_SWELL_DETAIL
+                            + outLattice[base + CHANNEL_NOODLE_A] * EngineSetting.CAVE_CHEESE_FINE_DETAIL;
+
+                    outLattice[base + CHANNEL_SEA] = seaChannel
+                            ? TerrainNoiseUtility.sampleVolume(
+                                    seed ^ EngineSetting.CAVE_SEA_SEED_SALT,
+                                    worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                                    EngineSetting.CAVE_SEA_WAVELENGTH_BLOCKS, EngineSetting.CAVE_SEA_VERTICAL_SCALE)
+                            : 0f;
                 }
             }
         }
     }
 
+    // Only the slots marked active are sampled; the rest keep stale values no caller reads
     public static void fillVeinLattice(
             long seed,
             double worldWidthBlocks, double worldHeightBlocks,
             long originX, int originY, long originZ,
             int rows,
             long[] veinSeeds,
+            boolean[] activeVeins,
             int veinCount,
             float[] outLattice) {
 
@@ -104,9 +153,12 @@ public final class TerrainCarveUtility extends EngineUtility {
                     double worldX = originX + (long) x * LATTICE_STEP;
                     double worldY = originY + row * LATTICE_STEP;
                     double worldZ = originZ + (long) z * LATTICE_STEP;
-                    int base = latticeIndex(x, row, z) * channels;
+                    int base = latticeIndex(LATTICE_SIDE, x, row, z) * channels;
 
                     for (int vein = 0; vein < veinCount; vein++) {
+
+                        if (!activeVeins[vein])
+                            continue;
 
                         long veinSeed = seed ^ EngineSetting.TERRAIN_VEIN_SEED_SALT ^ veinSeeds[vein];
                         int veinBase = base + vein * VEIN_CHANNELS_PER_VEIN;
@@ -125,31 +177,33 @@ public final class TerrainCarveUtility extends EngineUtility {
         }
     }
 
-    // localY is measured from the lattice's first row
+    // Local coordinates are measured from the lattice's first point, and points past its last are held to its edge
     public static float sampleLattice(
             float[] lattice,
+            int side,
+            int rows,
             int channels,
             int channel,
-            int localX,
-            int localY,
-            int localZ) {
+            float localX,
+            float localY,
+            float localZ) {
 
-        int cellX = Math.min(localX / LATTICE_STEP, LATTICE_SIDE - 2);
-        int cellY = localY / LATTICE_STEP;
-        int cellZ = Math.min(localZ / LATTICE_STEP, LATTICE_SIDE - 2);
+        int cellX = Math.min((int) (localX / LATTICE_STEP), side - 2);
+        int cellY = Math.min((int) (localY / LATTICE_STEP), rows - 2);
+        int cellZ = Math.min((int) (localZ / LATTICE_STEP), side - 2);
 
-        float tx = (localX - cellX * LATTICE_STEP) / (float) LATTICE_STEP;
-        float ty = (localY - cellY * LATTICE_STEP) / (float) LATTICE_STEP;
-        float tz = (localZ - cellZ * LATTICE_STEP) / (float) LATTICE_STEP;
+        float tx = (localX - cellX * LATTICE_STEP) / LATTICE_STEP;
+        float ty = (localY - cellY * LATTICE_STEP) / LATTICE_STEP;
+        float tz = (localZ - cellZ * LATTICE_STEP) / LATTICE_STEP;
 
-        float v000 = lattice[latticeIndex(cellX, cellY, cellZ) * channels + channel];
-        float v100 = lattice[latticeIndex(cellX + 1, cellY, cellZ) * channels + channel];
-        float v010 = lattice[latticeIndex(cellX, cellY + 1, cellZ) * channels + channel];
-        float v110 = lattice[latticeIndex(cellX + 1, cellY + 1, cellZ) * channels + channel];
-        float v001 = lattice[latticeIndex(cellX, cellY, cellZ + 1) * channels + channel];
-        float v101 = lattice[latticeIndex(cellX + 1, cellY, cellZ + 1) * channels + channel];
-        float v011 = lattice[latticeIndex(cellX, cellY + 1, cellZ + 1) * channels + channel];
-        float v111 = lattice[latticeIndex(cellX + 1, cellY + 1, cellZ + 1) * channels + channel];
+        float v000 = lattice[latticeIndex(side, cellX, cellY, cellZ) * channels + channel];
+        float v100 = lattice[latticeIndex(side, cellX + 1, cellY, cellZ) * channels + channel];
+        float v010 = lattice[latticeIndex(side, cellX, cellY + 1, cellZ) * channels + channel];
+        float v110 = lattice[latticeIndex(side, cellX + 1, cellY + 1, cellZ) * channels + channel];
+        float v001 = lattice[latticeIndex(side, cellX, cellY, cellZ + 1) * channels + channel];
+        float v101 = lattice[latticeIndex(side, cellX + 1, cellY, cellZ + 1) * channels + channel];
+        float v011 = lattice[latticeIndex(side, cellX, cellY + 1, cellZ + 1) * channels + channel];
+        float v111 = lattice[latticeIndex(side, cellX + 1, cellY + 1, cellZ + 1) * channels + channel];
 
         float near = lerp(lerp(v000, v100, tx), lerp(v010, v110, tx), ty);
         float far = lerp(lerp(v001, v101, tx), lerp(v011, v111, tx), ty);
@@ -157,43 +211,177 @@ public final class TerrainCarveUtility extends EngineUtility {
         return lerp(near, far, tz);
     }
 
-    private static int latticeIndex(int x, int row, int z) {
-        return (row * LATTICE_SIDE + z) * LATTICE_SIDE + x;
+    // The value one channel holds at one lattice point
+    public static float readLattice(float[] lattice, int side, int channels, int channel, int x, int row, int z) {
+        return lattice[latticeIndex(side, x, row, z) * channels + channel];
     }
 
-    // Caves \\
-
-    // Tunnels and caverns narrow toward the floor of their band, so they close off rather than end on a flat cut
-    public static float computeFloorFade(int worldY, int floorY) {
-        return Math.min(1f, (worldY - floorY + 1) / (float) EngineSetting.CAVE_FLOOR_FADE_BLOCKS);
+    private static int latticeIndex(int side, int x, int row, int z) {
+        return (row * side + z) * side + x;
     }
 
-    // Any tunnels at all run wide enough to walk, widening toward the maximum as tunnels rises
-    public static boolean isTunnel(float tunnelA, float tunnelB, float tunnels, float fade) {
+    // Tunnels \\
+
+    // Long winding tunnels where two surfaces cross, their radius swelling, pinching and closing with a third field
+    public static float computeSpaghetti(float spaghettiA, float spaghettiB, float radiusField, float tunnels) {
 
         if (tunnels <= 0f)
-            return false;
+            return EngineSetting.CAVE_DENSITY_SOLID;
 
-        float radius = (EngineSetting.CAVE_TUNNEL_MIN_RADIUS
-                + (EngineSetting.CAVE_TUNNEL_MAX_RADIUS - EngineSetting.CAVE_TUNNEL_MIN_RADIUS) * Math.min(tunnels, 1f))
-                * fade;
+        float distance = (float) Math.sqrt(spaghettiA * spaghettiA + spaghettiB * spaghettiB) * SPAGHETTI_SCALE;
 
-        return tunnelA * tunnelA + tunnelB * tunnelB < radius * radius;
+        return computeSpaghettiRadius(radiusField, tunnels) - distance;
     }
 
-    public static boolean isCavern(float cavern, float caverns, float fade) {
+    private static float computeSpaghettiRadius(float radiusField, float tunnels) {
 
-        if (caverns <= 0f || fade <= 0f)
-            return false;
+        float swell = clamp01(radiusField * 0.5f + 0.5f);
+        float radius = EngineSetting.CAVE_SPAGHETTI_MIN_RADIUS_BLOCKS
+                + (EngineSetting.CAVE_SPAGHETTI_MAX_RADIUS_BLOCKS - EngineSetting.CAVE_SPAGHETTI_MIN_RADIUS_BLOCKS)
+                        * swell;
 
-        float threshold = EngineSetting.CAVE_CAVERN_THRESHOLD_MAX
-                - (EngineSetting.CAVE_CAVERN_THRESHOLD_MAX - EngineSetting.CAVE_CAVERN_THRESHOLD_MIN)
-                        * Math.min(caverns, 1f);
+        return radius * computeAmountScale(tunnels)
+                * smoothstep(swell / EngineSetting.CAVE_SPAGHETTI_CLOSE_SHARE);
+    }
 
-        return cavern > threshold + (1f - threshold) * (1f - fade);
+    // Thin passages where two finer surfaces cross, only where their gate opens, narrowing to nothing at its edge
+    public static float computeNoodle(float noodleA, float noodleB, float gate, float radiusField, float noodles) {
+
+        float open = computeNoodleOpening(gate, noodles);
+
+        if (open <= 0f)
+            return EngineSetting.CAVE_DENSITY_SOLID;
+
+        float distance = (float) Math.sqrt(noodleA * noodleA + noodleB * noodleB) * NOODLE_SCALE;
+        float swell = clamp01(radiusField * 0.5f + 0.5f);
+        float radius = EngineSetting.CAVE_NOODLE_MIN_RADIUS_BLOCKS
+                + (EngineSetting.CAVE_NOODLE_MAX_RADIUS_BLOCKS - EngineSetting.CAVE_NOODLE_MIN_RADIUS_BLOCKS) * swell;
+
+        return radius * open - distance;
+    }
+
+    private static float computeNoodleOpening(float gate, float noodles) {
+
+        if (noodles <= 0f)
+            return 0f;
+
+        float threshold = EngineSetting.CAVE_NOODLE_GATE_THRESHOLD - noodles * EngineSetting.CAVE_NOODLE_GATE_RANGE;
+
+        return smoothstep((gate - threshold) / EngineSetting.CAVE_NOODLE_GATE_EDGE);
+    }
+
+    // Caverns where a broad field swells past its threshold, the threshold falling as the ground above deepens
+    public static float computeCheese(float cheese, float caverns, float depthBelowGroundBlocks) {
+
+        if (caverns <= 0f)
+            return EngineSetting.CAVE_DENSITY_SOLID;
+
+        float deep = clamp01((depthBelowGroundBlocks - EngineSetting.CAVE_CHEESE_MIN_DEPTH_BLOCKS)
+                / EngineSetting.CAVE_CHEESE_DEPTH_RAMP_BLOCKS);
+        float share = EngineSetting.CAVE_CHEESE_SHALLOW_SHARE + (1f - EngineSetting.CAVE_CHEESE_SHALLOW_SHARE) * deep;
+
+        return (cheese - computeCheeseThreshold(caverns * share)) * CHEESE_SCALE;
+    }
+
+    private static float computeCheeseThreshold(float amount) {
+        return EngineSetting.CAVE_CHEESE_THRESHOLD_MAX
+                - (EngineSetting.CAVE_CHEESE_THRESHOLD_MAX - EngineSetting.CAVE_CHEESE_THRESHOLD_MIN)
+                        * Math.min(amount, 1f);
+    }
+
+    private static float computeAmountScale(float amount) {
+        return EngineSetting.CAVE_SPAGHETTI_AMOUNT_FLOOR
+                + (1f - EngineSetting.CAVE_SPAGHETTI_AMOUNT_FLOOR) * Math.min(amount, 1f);
+    }
+
+    // Bounds \\
+
+    // The most any tunnel can open anywhere inside a lattice cell, from the extremes its corners hold
+    public static float boundSpaghetti(float minA, float maxA, float minB, float maxB, float tunnels) {
+
+        if (tunnels <= 0f)
+            return EngineSetting.CAVE_DENSITY_SOLID;
+
+        float nearA = computeNearestToZero(minA, maxA);
+        float nearB = computeNearestToZero(minB, maxB);
+        float distance = (float) Math.sqrt(nearA * nearA + nearB * nearB) * SPAGHETTI_SCALE;
+
+        return EngineSetting.CAVE_SPAGHETTI_MAX_RADIUS_BLOCKS * computeAmountScale(tunnels) - distance;
+    }
+
+    public static float boundNoodle(float minA, float maxA, float minB, float maxB, float maxGate, float noodles) {
+
+        float open = computeNoodleOpening(maxGate, noodles);
+
+        if (open <= 0f)
+            return EngineSetting.CAVE_DENSITY_SOLID;
+
+        float nearA = computeNearestToZero(minA, maxA);
+        float nearB = computeNearestToZero(minB, maxB);
+        float distance = (float) Math.sqrt(nearA * nearA + nearB * nearB) * NOODLE_SCALE;
+
+        return EngineSetting.CAVE_NOODLE_MAX_RADIUS_BLOCKS * open - distance;
+    }
+
+    public static float boundCheese(float maxCheese, float caverns) {
+
+        if (caverns <= 0f)
+            return EngineSetting.CAVE_DENSITY_SOLID;
+
+        return (maxCheese - computeCheeseThreshold(caverns)) * CHEESE_SCALE;
+    }
+
+    private static float computeNearestToZero(float min, float max) {
+
+        if (min <= 0f && max >= 0f)
+            return 0f;
+
+        return Math.min(Math.abs(min), Math.abs(max));
+    }
+
+    // Band \\
+
+    // Closes every cave toward the lowest block of its band, so it ends on a rounded floor
+    public static float computeFloorPenalty(float worldY, int floorY) {
+        return Math.max(0f, floorY + EngineSetting.CAVE_FLOOR_FADE_BLOCKS - worldY)
+                * EngineSetting.CAVE_FLOOR_FADE_STRENGTH;
+    }
+
+    // Closes every cave toward the highest block of its band, so it ends on a domed roof
+    public static float computeRoofPenalty(float worldY, int ceilingY) {
+        return Math.max(0f, worldY - (ceilingY - EngineSetting.CAVE_ROOF_TAPER_BLOCKS))
+                * EngineSetting.CAVE_ROOF_TAPER_STRENGTH;
+    }
+
+    // Rock left above a cave thickens with the slope, so a steep face keeps as much rock sideways as flat ground above
+    public static int computeRoofBlocks(float slope) {
+        return Math.min(
+                EngineSetting.CAVE_ROOF_MAX_BLOCKS,
+                EngineSetting.CAVE_ROOF_BLOCKS + Math.round(slope * EngineSetting.CAVE_ROOF_SLOPE_BLOCKS));
     }
 
     // Sea \\
+
+    // 1 across the walled band between a sea that floods caves and ground kept dry, easing to 0 either side of it
+    public static float computeBarrierWeight(float coastalWeight) {
+
+        float edge = EngineSetting.CAVE_SEA_BARRIER_EDGE;
+        float rise = smoothstep((coastalWeight - (EngineSetting.CAVE_SEA_BARRIER_WEIGHT - edge)) / edge);
+        float fall = 1f - smoothstep((coastalWeight - EngineSetting.CAVE_SEA_FLOOD_WEIGHT) / edge);
+
+        return Math.min(rise, fall);
+    }
+
+    // Caves close below high tide wherever the sea is walled off, easing open again above it
+    public static float computeBarrierPenalty(float worldY, float barrierWeight) {
+
+        if (barrierWeight <= 0f)
+            return 0f;
+
+        float above = (worldY - TideUtility.BAND_MAX_Y) / EngineSetting.CAVE_SEA_BARRIER_RISE_BLOCKS;
+
+        return barrierWeight * EngineSetting.CAVE_SEA_BARRIER_PENALTY_BLOCKS * (1f - clamp01(above));
+    }
 
     // Runs in from the shore through the whole tide band with headroom above high tide, tallest at the band's middle
     // and narrowing as it reaches inland
@@ -243,6 +431,27 @@ public final class TerrainCarveUtility extends EngineUtility {
         return Math.max(getNotchTopY(), TideUtility.BAND_MAX_Y + EngineSetting.CAVE_SEA_HEADROOM_BLOCKS);
     }
 
+    // Entrances \\
+
+    // The rare patches where caves may break through the ground, from a broad field over the world's surface
+    public static boolean isEntrance(
+            long seed,
+            double worldX, double worldZ,
+            double worldWidthBlocks, double worldHeightBlocks) {
+
+        double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
+
+        float field = TerrainNoiseUtility.sampleFractal(
+                seed ^ EngineSetting.CAVE_ENTRANCE_SEED_SALT,
+                Math.cos(spatialAngle), Math.sin(spatialAngle), worldZ, worldWidthBlocks, worldHeightBlocks,
+                EngineSetting.CAVE_ENTRANCE_WAVELENGTH_BLOCKS,
+                EngineSetting.TERRAIN_FEATURE_MASK_OCTAVES,
+                EngineSetting.TERRAIN_FEATURE_MASK_PERSISTENCE,
+                EngineSetting.TERRAIN_FEATURE_MASK_LACUNARITY);
+
+        return field > EngineSetting.CAVE_ENTRANCE_THRESHOLD;
+    }
+
     // Veins \\
 
     // A broad field opens the rock to a vein only where its abundance reaches
@@ -257,7 +466,32 @@ public final class TerrainCarveUtility extends EngineUtility {
                 / (float) EngineSetting.TERRAIN_VEIN_WAVELENGTH_BLOCKS;
     }
 
+    // Hashing \\
+
+    public static long hashCell(long seed, int cellX, int cellY, int cellZ) {
+        return BiomeFieldUtility.hashCell(seed ^ (cellY * EngineSetting.CAVE_HASH_Y_MULTIPLIER), cellX, cellZ);
+    }
+
+    public static float rollCell(long seed, long salt, int cellX, int cellY, int cellZ) {
+        return BiomeFieldUtility.hash01(hashCell(seed ^ salt, cellX, cellY, cellZ));
+    }
+
     // Math \\
+
+    public static float smoothstep(float t) {
+
+        if (t <= 0f)
+            return 0f;
+
+        if (t >= 1f)
+            return 1f;
+
+        return t * t * (3f - 2f * t);
+    }
+
+    public static float clamp01(float value) {
+        return Math.max(0f, Math.min(1f, value));
+    }
 
     private static float lerp(float from, float to, float t) {
         return from + (to - from) * t;

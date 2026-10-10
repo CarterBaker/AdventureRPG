@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.biomemanager;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
+import application.bootstrap.worldpipeline.biome.BiomeCaveBiomeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCoveringStruct;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
@@ -10,6 +11,7 @@ import application.bootstrap.worldpipeline.biome.BiomeTreeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.cavebiomemanager.CaveBiomeManager;
 import application.bootstrap.worldpipeline.covering.CoveringHandle;
 import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
@@ -24,7 +26,7 @@ class BiomeRebuildBranch extends BranchPackage {
      * Builds the handle for a live biome edit and proves it can go live
      * before anything changes. Once the boot loaders are released nothing can
      * be loaded on demand, so every biome, block, covering, weather, season,
-     * tree and architecture it names must already be registered, and every
+     * tree, cave biome and architecture it names must already be registered, and every
      * covering must host the ground it is laid on; its variants must not
      * belong to another parent or chain back into it; and the last biome
      * painted on the world map must keep its color. A biome keeps the ID its
@@ -40,6 +42,7 @@ class BiomeRebuildBranch extends BranchPackage {
     private SeasonManager seasonManager;
     private TreeManager treeManager;
     private ArchitectureManager architectureManager;
+    private CaveBiomeManager caveBiomeManager;
 
     // Base \\
 
@@ -52,6 +55,7 @@ class BiomeRebuildBranch extends BranchPackage {
         this.seasonManager = get(SeasonManager.class);
         this.treeManager = get(TreeManager.class);
         this.architectureManager = get(ArchitectureManager.class);
+        this.caveBiomeManager = get(CaveBiomeManager.class);
     }
 
     // Build \\
@@ -66,6 +70,7 @@ class BiomeRebuildBranch extends BranchPackage {
         validateCoverings(biomeData);
         validateWeathers(biomeData);
         validateTrees(biomeData);
+        validateCaveBiomes(biomeData);
         validateArchitectures(biomeData);
         validateMapColor(biomeData);
 
@@ -151,6 +156,16 @@ class BiomeRebuildBranch extends BranchPackage {
             if (!treeManager.hasTree(trees.get(i).getTreeName()))
                 throw fail(biomeData.getBiomeName(), "\"trees\" names unknown tree \""
                         + trees.get(i).getTreeName() + "\".");
+    }
+
+    private void validateCaveBiomes(BiomeData biomeData) {
+
+        ObjectArrayList<BiomeCaveBiomeStruct> caveBiomes = biomeData.getCaveBiomes();
+
+        for (int i = 0; i < caveBiomes.size(); i++)
+            if (!caveBiomeManager.hasCaveBiome(caveBiomes.get(i).getCaveBiomeName()))
+                throw fail(biomeData.getBiomeName(), "\"cave_biomes\" names unknown cave biome \""
+                        + caveBiomes.get(i).getCaveBiomeName() + "\".");
     }
 
     private void validateArchitectures(BiomeData biomeData) {

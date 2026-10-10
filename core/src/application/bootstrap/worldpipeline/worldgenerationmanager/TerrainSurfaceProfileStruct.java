@@ -11,9 +11,10 @@ class TerrainSurfaceProfileStruct extends StructPackage {
      * lays on land, under water and on faces too steep to hold soil, the
      * slope those faces start at, the coverage it lays over each of those
      * three with how many levels a column may fall short of it, its veins
-     * with their block IDs, and the map colors distant terrain draws it with,
-     * its coverings included. Built once per biome and revision
-     * by WorldGenerationManager and shared by every thread.
+     * with their block IDs, the cave biomes it holds beneath it, and the map
+     * colors distant terrain draws it with, its coverings included. Built
+     * once per biome and revision by WorldGenerationManager and shared by
+     * every thread.
      */
 
     final BiomeHandle biomeHandle;
@@ -30,6 +31,7 @@ class TerrainSurfaceProfileStruct extends StructPackage {
     final int rockCoverageVariance;
     final BiomeVeinStruct[] veins;
     final short[] veinBlockIDs;
+    final TerrainCaveEntryStruct[] caveEntries;
     final int surfaceTopColor;
     final int underwaterTopColor;
     final int underwaterSideColor;
@@ -50,6 +52,7 @@ class TerrainSurfaceProfileStruct extends StructPackage {
             int rockCoverageVariance,
             BiomeVeinStruct[] veins,
             short[] veinBlockIDs,
+            TerrainCaveEntryStruct[] caveEntries,
             int surfaceTopColor,
             int underwaterTopColor,
             int underwaterSideColor,
@@ -69,6 +72,7 @@ class TerrainSurfaceProfileStruct extends StructPackage {
         this.rockCoverageVariance = rockCoverageVariance;
         this.veins = veins;
         this.veinBlockIDs = veinBlockIDs;
+        this.caveEntries = caveEntries;
         this.surfaceTopColor = surfaceTopColor;
         this.underwaterTopColor = underwaterTopColor;
         this.underwaterSideColor = underwaterSideColor;

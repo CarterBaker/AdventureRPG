@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.biomemanager;
 
+import application.bootstrap.worldpipeline.biome.BiomeCaveBiomeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCaveStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCliffStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCoastStruct;
@@ -27,7 +28,7 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class BiomeArpgUtility extends EngineUtility {
+public class BiomeArpgUtility extends EngineUtility {
 
     /*
      * The single definition of the biome format: display name, weathers, map
@@ -37,8 +38,9 @@ class BiomeArpgUtility extends EngineUtility {
      * settings, the
      * optional terrain shape splines and detail controls, each falling back
      * to TerrainShapeUtility's defaults, and the optional cliffs, ridges,
-     * coast, caves, veins, trees and the architectures settlements on it are
-     * built in. A malformed field throws a
+     * coast, caves, the cave biomes it holds beneath it, veins, trees and the
+     * architectures settlements on it are built in. Coverings and veins are
+     * read the same way for cave biomes. A malformed field throws a
      * catchable InternalException naming the biome, so BiomeBuilder fails the
      * boot on it while a live rebuild from the editor reports it and keeps the
      * biome it already had.
@@ -110,7 +112,8 @@ class BiomeArpgUtility extends EngineUtility {
         BiomeRidgeStruct ridges = parseRidges(biomeArpg, biomeName);
         BiomeCoastStruct coast = parseCoast(biomeArpg, biomeName, oceanWater);
         BiomeCaveStruct caves = parseCaves(biomeArpg, biomeName);
-        ObjectArrayList<BiomeVeinStruct> veins = parseVeins(biomeArpg, biomeName);
+        ObjectArrayList<BiomeCaveBiomeStruct> caveBiomes = parseCaveBiomes(biomeArpg, biomeName);
+        ObjectArrayList<BiomeVeinStruct> veins = parseVeins(biomeArpg, biomeName, EngineSetting.BIOME_MAX_VEINS);
         ObjectArrayList<BiomeTreeStruct> trees = parseTrees(biomeArpg, biomeName);
         ObjectArrayList<String> architectureNames = parseArchitectures(biomeArpg);
 
@@ -122,7 +125,7 @@ class BiomeArpgUtility extends EngineUtility {
                 surfaceCovering, rockCovering, underwaterCovering,
                 continentalnessSpline, erosionSpline, peaksValleysSpline,
                 detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale,
-                cliffs, ridges, coast, caves, veins, trees, architectureNames,
+                cliffs, ridges, coast, caves, caveBiomes, veins, trees, architectureNames,
                 oceanWater, waterLevelBlocks, beachBiomeName);
     }
 
@@ -237,7 +240,7 @@ class BiomeArpgUtility extends EngineUtility {
     }
 
     // A covering the biome lays over one kind of ground, null when it lays none there
-    private static BiomeCoveringStruct parseCovering(ArpgObjectStruct biomeArpg, String field, String biomeName) {
+    public static BiomeCoveringStruct parseCovering(ArpgObjectStruct biomeArpg, String field, String biomeName) {
 
         if (!ArpgUtility.hasObject(biomeArpg, field))
             return null;
@@ -505,6 +508,8 @@ class BiomeArpgUtility extends EngineUtility {
 
         float tunnels = ArpgUtility.getFloat(cavesArpg, "tunnels", EngineSetting.DEFAULT_BIOME_CAVE_TUNNELS);
         float caverns = ArpgUtility.getFloat(cavesArpg, "caverns", EngineSetting.DEFAULT_BIOME_CAVE_CAVERNS);
+        float noodles = ArpgUtility.getFloat(cavesArpg, "noodles", EngineSetting.DEFAULT_BIOME_CAVE_NOODLES);
+        float lakes = ArpgUtility.getFloat(cavesArpg, "lakes", EngineSetting.DEFAULT_BIOME_CAVE_LAKES);
         int minHeightBlocks = ArpgUtility.getInt(
                 cavesArpg, "min_height_blocks", EngineSetting.DEFAULT_BIOME_CAVE_MIN_HEIGHT_BLOCKS);
         int maxDepthBlocks = ArpgUtility.getInt(
@@ -514,6 +519,8 @@ class BiomeArpgUtility extends EngineUtility {
 
         requireUnit(tunnels, biomeName, "caves", "tunnels");
         requireUnit(caverns, biomeName, "caves", "caverns");
+        requireUnit(noodles, biomeName, "caves", "noodles");
+        requireUnit(lakes, biomeName, "caves", "lakes");
 
         if (minHeightBlocks < 0)
             throw fail(biomeName, "\"caves\" \"min_height_blocks\" must not be negative.");
@@ -521,10 +528,71 @@ class BiomeArpgUtility extends EngineUtility {
         if (maxDepthBlocks <= 0)
             throw fail(biomeName, "\"caves\" \"max_depth_blocks\" must be greater than 0.");
 
-        return new BiomeCaveStruct(tunnels, caverns, minHeightBlocks, maxDepthBlocks, entrances);
+        return new BiomeCaveStruct(tunnels, caverns, noodles, lakes, minHeightBlocks, maxDepthBlocks, entrances);
     }
 
-    private static ObjectArrayList<BiomeVeinStruct> parseVeins(ArpgObjectStruct biomeArpg, String biomeName) {
+    // Each cave biome claims its chance of the regions beneath the biome, together claiming no more than all of them
+    private static ObjectArrayList<BiomeCaveBiomeStruct> parseCaveBiomes(ArpgObjectStruct biomeArpg, String biomeName) {
+
+        ObjectArrayList<BiomeCaveBiomeStruct> caveBiomes = new ObjectArrayList<>();
+
+        if (!ArpgUtility.hasArray(biomeArpg, "cave_biomes"))
+            return caveBiomes;
+
+        ArpgArrayStruct caveBiomeArray = biomeArpg.getAsArray("cave_biomes");
+        float chanceTotal = 0f;
+
+        if (caveBiomeArray.size() > EngineSetting.BIOME_MAX_CAVE_BIOMES)
+            throw fail(biomeName, "declares " + caveBiomeArray.size() + " \"cave_biomes\" — no more than "
+                    + EngineSetting.BIOME_MAX_CAVE_BIOMES + " are allowed.");
+
+        for (ArpgElementStruct element : caveBiomeArray) {
+
+            BiomeCaveBiomeStruct caveBiome = parseCaveBiome(element.getAsObject(), biomeName);
+
+            chanceTotal += caveBiome.getChance();
+
+            if (chanceTotal > 1f)
+                throw fail(biomeName, "\"cave_biomes\" chances sum to " + chanceTotal
+                        + ", which exceeds 1.0 — they share the regions beneath the biome.");
+
+            caveBiomes.add(caveBiome);
+        }
+
+        return caveBiomes;
+    }
+
+    private static BiomeCaveBiomeStruct parseCaveBiome(ArpgObjectStruct entryArpg, String biomeName) {
+
+        String caveBiomeName = requireString(entryArpg, "cave_biome", biomeName, "cave_biomes");
+
+        float chance = ArpgUtility.getFloat(entryArpg, "chance", EngineSetting.DEFAULT_BIOME_CAVE_BIOME_CHANCE);
+        int minHeightBlocks = ArpgUtility.getInt(
+                entryArpg, "min_height_blocks", EngineSetting.DEFAULT_BIOME_CAVE_BIOME_MIN_HEIGHT_BLOCKS);
+        int maxHeightBlocks = ArpgUtility.getInt(
+                entryArpg, "max_height_blocks", EngineSetting.DEFAULT_BIOME_CAVE_BIOME_MAX_HEIGHT_BLOCKS);
+        int maxDepthBlocks = ArpgUtility.getInt(
+                entryArpg, "max_depth_blocks", EngineSetting.DEFAULT_BIOME_CAVE_BIOME_MAX_DEPTH_BLOCKS);
+
+        if (chance <= 0f || chance > 1f)
+            throw fail(biomeName, "\"cave_biomes\" entry \"" + caveBiomeName + "\" has chance " + chance
+                    + " — chance must be greater than 0 and no more than 1.");
+
+        if (maxHeightBlocks < minHeightBlocks)
+            throw fail(biomeName, "\"cave_biomes\" entry \"" + caveBiomeName + "\" has \"max_height_blocks\" "
+                    + maxHeightBlocks + ", below its \"min_height_blocks\" " + minHeightBlocks + ".");
+
+        if (maxDepthBlocks <= 0)
+            throw fail(biomeName, "\"cave_biomes\" entry \"" + caveBiomeName + "\" must have \"max_depth_blocks\" "
+                    + "greater than 0.");
+
+        return new BiomeCaveBiomeStruct(caveBiomeName, chance, minHeightBlocks, maxHeightBlocks, maxDepthBlocks);
+    }
+
+    public static ObjectArrayList<BiomeVeinStruct> parseVeins(
+            ArpgObjectStruct biomeArpg,
+            String biomeName,
+            int maxVeins) {
 
         ObjectArrayList<BiomeVeinStruct> veins = new ObjectArrayList<>();
 
@@ -533,9 +601,9 @@ class BiomeArpgUtility extends EngineUtility {
 
         ArpgArrayStruct veinArray = biomeArpg.getAsArray("veins");
 
-        if (veinArray.size() > EngineSetting.TERRAIN_VEIN_PALETTE_MAX)
+        if (veinArray.size() > maxVeins)
             throw fail(biomeName, "declares " + veinArray.size() + " \"veins\" — no more than "
-                    + EngineSetting.TERRAIN_VEIN_PALETTE_MAX + " are allowed.");
+                    + maxVeins + " are allowed.");
 
         for (ArpgElementStruct element : veinArray)
             veins.add(parseVein(element.getAsObject(), biomeName));

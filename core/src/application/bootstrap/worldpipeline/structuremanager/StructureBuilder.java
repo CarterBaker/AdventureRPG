@@ -653,7 +653,7 @@ class StructureBuilder extends BuilderPackage {
             return StructureSurfaceType.valueOf(raw.toUpperCase());
         } catch (IllegalArgumentException e) {
             return throwException("Structure \"" + structureName + "\" has invalid surface \"" + raw
-                    + "\" — expected LAND, UNDERWATER, or ANY.", e);
+                    + "\" — expected LAND, UNDERWATER, ANY, or CAVE.", e);
         }
     }
 

@@ -7,8 +7,9 @@ public class StructureRulesStruct extends StructPackage {
 
     /*
      * Where a structure is appropriate, evaluated at its anchor column:
-     * allowed biomes (empty allows all), dry or flooded ground, the ground
-     * height range, and the most the ground may vary across the footprint.
+     * allowed biomes (empty allows all), dry or flooded ground or a cave
+     * floor, the height range the ground or cave floor must lie in, and the
+     * most it may vary across the footprint.
      */
 
     private final ShortOpenHashSet biomeIDs;

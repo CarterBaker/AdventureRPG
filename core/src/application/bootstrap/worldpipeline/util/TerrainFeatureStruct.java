@@ -48,6 +48,8 @@ public class TerrainFeatureStruct extends StructPackage {
     // Caves
     float caveTunnels;
     float caveCaverns;
+    float caveNoodles;
+    float caveLakes;
     float caveMinHeightBlocks;
     float caveMaxDepthBlocks;
     float caveEntrances;
@@ -106,6 +108,14 @@ public class TerrainFeatureStruct extends StructPackage {
         caveCaverns = interpolate(
                 corner00.caveCaverns, corner10.caveCaverns,
                 corner01.caveCaverns, corner11.caveCaverns,
+                weight00, weight10, weight01, weight11);
+        caveNoodles = interpolate(
+                corner00.caveNoodles, corner10.caveNoodles,
+                corner01.caveNoodles, corner11.caveNoodles,
+                weight00, weight10, weight01, weight11);
+        caveLakes = interpolate(
+                corner00.caveLakes, corner10.caveLakes,
+                corner01.caveLakes, corner11.caveLakes,
                 weight00, weight10, weight01, weight11);
         caveMinHeightBlocks = interpolate(
                 corner00.caveMinHeightBlocks, corner10.caveMinHeightBlocks,
@@ -256,6 +266,14 @@ public class TerrainFeatureStruct extends StructPackage {
         return caveCaverns;
     }
 
+    public float getCaveNoodles() {
+        return caveNoodles;
+    }
+
+    public float getCaveLakes() {
+        return caveLakes;
+    }
+
     public int getCaveMinHeightBlocks() {
         return Math.round(caveMinHeightBlocks);
     }
@@ -269,7 +287,7 @@ public class TerrainFeatureStruct extends StructPackage {
     }
 
     public boolean hasCaves() {
-        return caveTunnels > 0f || caveCaverns > 0f;
+        return caveTunnels > 0f || caveCaverns > 0f || caveNoodles > 0f || caveLakes > 0f;
     }
 
     public int getLakeLevelBlocks() {

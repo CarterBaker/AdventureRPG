@@ -14,7 +14,8 @@ public class BiomeData extends DataPackage {
      * Persistent biome record: registry and display names and every curve world
      * generation shapes this biome with — continentalness, erosion and
      * peaks-valleys splines, detail amplitude and wavelength, height scale —
-     * its cliffs, ridges, coast, caves and veins, the rock its steep faces
+     * its cliffs, ridges, coast, caves, the cave biomes it holds beneath it
+     * and its veins, the rock its steep faces
      * bare and the slope they bare it from, the coverings it lays over its
      * surface, rock and underwater ground and the tint it lends every
      * covering growing in it, plus its ocean flag, the level of
@@ -62,6 +63,7 @@ public class BiomeData extends DataPackage {
     private final BiomeRidgeStruct ridges;
     private final BiomeCoastStruct coast;
     private final BiomeCaveStruct caves;
+    private final ObjectArrayList<BiomeCaveBiomeStruct> caveBiomes;
     private final ObjectArrayList<BiomeVeinStruct> veins;
     private final ObjectArrayList<BiomeTreeStruct> trees;
     private final ObjectArrayList<String> architectureNames;
@@ -98,6 +100,7 @@ public class BiomeData extends DataPackage {
             BiomeRidgeStruct ridges,
             BiomeCoastStruct coast,
             BiomeCaveStruct caves,
+            ObjectArrayList<BiomeCaveBiomeStruct> caveBiomes,
             ObjectArrayList<BiomeVeinStruct> veins,
             ObjectArrayList<BiomeTreeStruct> trees,
             ObjectArrayList<String> architectureNames,
@@ -139,6 +142,7 @@ public class BiomeData extends DataPackage {
         this.ridges = ridges;
         this.coast = coast;
         this.caves = caves;
+        this.caveBiomes = caveBiomes;
         this.veins = veins;
         this.trees = trees;
         this.architectureNames = architectureNames;
@@ -262,6 +266,10 @@ public class BiomeData extends DataPackage {
 
     public BiomeCaveStruct getCaves() {
         return caves;
+    }
+
+    public ObjectArrayList<BiomeCaveBiomeStruct> getCaveBiomes() {
+        return caveBiomes;
     }
 
     public ObjectArrayList<BiomeVeinStruct> getVeins() {

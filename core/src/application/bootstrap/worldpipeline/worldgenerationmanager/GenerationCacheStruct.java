@@ -8,9 +8,10 @@ public class GenerationCacheStruct extends StructPackage {
     /*
      * Per-chunk memo of computeColumn(): the identity biome and, per block
      * column, ground height, dressing blocks, sea reach and still water,
-     * smoothing octants, the band its caves and sea caves may hollow, its
-     * veins and the lowest cell the tide reaches, with the chunk's vein
-     * palette and carve ranges. Output is a pure function of seed and
+     * smoothing octants, the band its caves and sea caves may hollow with how
+     * much of each kind of cave it holds, its veins and the lowest cell the
+     * tide reaches, with the chunk's vein palette, the heights each vein
+     * reaches, and its carve ranges. Output is a pure function of seed and
      * coordinate, so this only skips recomputation on a reload; heights are
      * stored as shorts.
      */
@@ -40,6 +41,8 @@ public class GenerationCacheStruct extends StructPackage {
     private final int[] caveCeilingY = new int[COLUMN_COUNT];
     private final float[] caveTunnels = new float[COLUMN_COUNT];
     private final float[] caveCaverns = new float[COLUMN_COUNT];
+    private final float[] caveNoodles = new float[COLUMN_COUNT];
+    private final float[] caveBarrier = new float[COLUMN_COUNT];
     private final int[] seaCeilingY = new int[COLUMN_COUNT];
     private final float[] shoreDistanceBlocks = new float[COLUMN_COUNT];
     private final float[] faceDistanceBlocks = new float[COLUMN_COUNT];
@@ -53,6 +56,9 @@ public class GenerationCacheStruct extends StructPackage {
     private short columnTopBlocks;
     private int carveMinY;
     private int carveMaxY;
+    private float maxCaveTunnels;
+    private float maxCaveCaverns;
+    private float maxCaveNoodles;
     private boolean hasSeaFeatures;
     private int veinMinY;
     private int veinMaxY;
@@ -63,6 +69,8 @@ public class GenerationCacheStruct extends StructPackage {
 
     // Vein Palette
     private final long[] veinSeeds = new long[EngineSetting.TERRAIN_VEIN_PALETTE_MAX];
+    private final int[] veinSlotMinY = new int[EngineSetting.TERRAIN_VEIN_PALETTE_MAX];
+    private final int[] veinSlotMaxY = new int[EngineSetting.TERRAIN_VEIN_PALETTE_MAX];
     private int veinCount;
 
     // Store \\
@@ -90,6 +98,8 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(column.columnCaveCeilingY, 0, caveCeilingY, 0, COLUMN_COUNT);
         System.arraycopy(column.columnCaveTunnels, 0, caveTunnels, 0, COLUMN_COUNT);
         System.arraycopy(column.columnCaveCaverns, 0, caveCaverns, 0, COLUMN_COUNT);
+        System.arraycopy(column.columnCaveNoodles, 0, caveNoodles, 0, COLUMN_COUNT);
+        System.arraycopy(column.columnCaveBarrier, 0, caveBarrier, 0, COLUMN_COUNT);
         System.arraycopy(column.columnSeaCeilingY, 0, seaCeilingY, 0, COLUMN_COUNT);
         System.arraycopy(column.columnShoreDistanceBlocks, 0, shoreDistanceBlocks, 0, COLUMN_COUNT);
         System.arraycopy(column.columnFaceDistanceBlocks, 0, faceDistanceBlocks, 0, COLUMN_COUNT);
@@ -102,6 +112,9 @@ public class GenerationCacheStruct extends StructPackage {
         this.columnTopBlocks = (short) column.columnTopBlocks;
         this.carveMinY = column.carveMinY;
         this.carveMaxY = column.carveMaxY;
+        this.maxCaveTunnels = column.maxCaveTunnels;
+        this.maxCaveCaverns = column.maxCaveCaverns;
+        this.maxCaveNoodles = column.maxCaveNoodles;
         this.hasSeaFeatures = column.hasSeaFeatures;
         this.veinMinY = column.veinMinY;
         this.veinMaxY = column.veinMaxY;
@@ -111,6 +124,8 @@ public class GenerationCacheStruct extends StructPackage {
         this.allFillBlocksFullGeometry = column.allFillBlocksFullGeometry;
 
         System.arraycopy(column.veinSeeds, 0, veinSeeds, 0, column.veinCount);
+        System.arraycopy(column.veinSlotMinY, 0, veinSlotMinY, 0, column.veinCount);
+        System.arraycopy(column.veinSlotMaxY, 0, veinSlotMaxY, 0, column.veinCount);
         this.veinCount = column.veinCount;
 
         this.valid = true;
@@ -138,6 +153,8 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(caveCeilingY, 0, column.columnCaveCeilingY, 0, COLUMN_COUNT);
         System.arraycopy(caveTunnels, 0, column.columnCaveTunnels, 0, COLUMN_COUNT);
         System.arraycopy(caveCaverns, 0, column.columnCaveCaverns, 0, COLUMN_COUNT);
+        System.arraycopy(caveNoodles, 0, column.columnCaveNoodles, 0, COLUMN_COUNT);
+        System.arraycopy(caveBarrier, 0, column.columnCaveBarrier, 0, COLUMN_COUNT);
         System.arraycopy(seaCeilingY, 0, column.columnSeaCeilingY, 0, COLUMN_COUNT);
         System.arraycopy(shoreDistanceBlocks, 0, column.columnShoreDistanceBlocks, 0, COLUMN_COUNT);
         System.arraycopy(faceDistanceBlocks, 0, column.columnFaceDistanceBlocks, 0, COLUMN_COUNT);
@@ -150,6 +167,9 @@ public class GenerationCacheStruct extends StructPackage {
         column.columnTopBlocks = columnTopBlocks;
         column.carveMinY = carveMinY;
         column.carveMaxY = carveMaxY;
+        column.maxCaveTunnels = maxCaveTunnels;
+        column.maxCaveCaverns = maxCaveCaverns;
+        column.maxCaveNoodles = maxCaveNoodles;
         column.hasSeaFeatures = hasSeaFeatures;
         column.veinMinY = veinMinY;
         column.veinMaxY = veinMaxY;
@@ -159,6 +179,8 @@ public class GenerationCacheStruct extends StructPackage {
         column.allFillBlocksFullGeometry = allFillBlocksFullGeometry;
 
         System.arraycopy(veinSeeds, 0, column.veinSeeds, 0, veinCount);
+        System.arraycopy(veinSlotMinY, 0, column.veinSlotMinY, 0, veinCount);
+        System.arraycopy(veinSlotMaxY, 0, column.veinSlotMaxY, 0, veinCount);
         column.veinCount = veinCount;
     }
 

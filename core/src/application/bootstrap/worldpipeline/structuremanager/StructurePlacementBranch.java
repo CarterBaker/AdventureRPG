@@ -6,6 +6,7 @@ import application.bootstrap.worldpipeline.structure.StructureFixedPlacementStru
 import application.bootstrap.worldpipeline.structure.StructureFrequencyStruct;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.structure.StructureRulesStruct;
+import application.bootstrap.worldpipeline.structure.StructureSurfaceType;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
@@ -29,7 +30,9 @@ class StructurePlacementBranch extends BranchPackage {
      * identically in each without any chunk touching another. Cheap
      * rejections run first: the chance roll, then reach, then biome, then the
      * ground probes, and a structure that places itself never lands on ground
-     * a settlement or road claims.
+     * a settlement or road claims. A structure that stands in caves is
+     * anchored on the highest dry cave floor down its anchor column with room
+     * above it for the whole structure, found exactly as caves are carved.
      */
 
     // Internal
@@ -161,13 +164,13 @@ class StructurePlacementBranch extends BranchPackage {
         if (!passesRules(scratch, structureHandle, anchorX, anchorZ, quarterTurns))
             return;
 
-        if (settlementManager.isClaimed(
+        if (!isUnderground(structureHandle) && settlementManager.isClaimed(
                 scratch.worldHandle, anchorX, anchorZ, structureHandle.getHorizontalReachBlocks()))
             return;
 
         stampStructure(
                 scratch, structureHandle, anchorX, anchorZ,
-                resolveGroundAnchorY(scratch, structureHandle, anchorX, anchorZ), quarterTurns);
+                resolveAnchorY(scratch, structureHandle, anchorX, anchorZ), quarterTurns);
     }
 
     // Fixed Placement \\
@@ -197,7 +200,7 @@ class StructurePlacementBranch extends BranchPackage {
 
         int anchorY = placement.hasWorldY()
                 ? placement.getWorldY()
-                : resolveGroundAnchorY(scratch, structureHandle, anchorX, anchorZ);
+                : resolveAnchorY(scratch, structureHandle, anchorX, anchorZ);
 
         stampStructure(scratch, structureHandle, anchorX, anchorZ, anchorY, quarterTurns);
     }
@@ -223,7 +226,7 @@ class StructurePlacementBranch extends BranchPackage {
 
             stampStructure(
                     scratch, structureHandle, anchorX, anchorZ,
-                    resolveGroundAnchorY(scratch, structureHandle, anchorX, anchorZ), placement.getQuarterTurns());
+                    resolveAnchorY(scratch, structureHandle, anchorX, anchorZ), placement.getQuarterTurns());
         }
     }
 
@@ -255,6 +258,10 @@ class StructurePlacementBranch extends BranchPackage {
 
         StructureRulesStruct rules = structureHandle.getRules();
 
+        if (rules.getSurfaceType() == StructureSurfaceType.CAVE)
+            return passesBiomeRule(scratch, rules, anchorX, anchorZ)
+                    && passesCaveRule(scratch, structureHandle, rules, anchorX, anchorZ, quarterTurns);
+
         return passesBiomeRule(scratch, rules, anchorX, anchorZ)
                 && passesSurfaceRule(scratch, rules, anchorX, anchorZ)
                 && passesHeightRule(scratch, rules, anchorX, anchorZ)
@@ -283,8 +290,76 @@ class StructurePlacementBranch extends BranchPackage {
         return switch (rules.getSurfaceType()) {
             case LAND -> !worldGenerationManager.probeFlooded(scratch.worldHandle, anchorX, anchorZ);
             case UNDERWATER -> worldGenerationManager.probeFlooded(scratch.worldHandle, anchorX, anchorZ);
-            case ANY -> true;
+            case ANY, CAVE -> true;
         };
+    }
+
+    // A dry cave floor in the height range with room above for the structure, and where the slope is limited, a dry
+    // floor under every corner of its footprint within that slope of it
+    private boolean passesCaveRule(
+            StructurePlacementAsyncContainer scratch,
+            StructureHandle structureHandle,
+            StructureRulesStruct rules,
+            long anchorX,
+            long anchorZ,
+            int quarterTurns) {
+
+        int floorY = probeStructureFloor(
+                scratch, structureHandle, anchorX, anchorZ,
+                rules.getMinGroundHeightBlocks(), rules.getMaxGroundHeightBlocks());
+
+        if (floorY == EngineSetting.CAVE_FLOOR_NONE)
+            return false;
+
+        if (!rules.isSlopeLimited())
+            return true;
+
+        int lowestY = floorY - rules.getMaxSlopeBlocks();
+        int highestY = floorY + rules.getMaxSlopeBlocks();
+        int minX = structureHandle.getMinOffsetX();
+        int maxX = structureHandle.getMaxOffsetX();
+        int minZ = structureHandle.getMinOffsetZ();
+        int maxZ = structureHandle.getMaxOffsetZ();
+
+        return probeCornerFloor(scratch, anchorX, anchorZ, minX, minZ, quarterTurns, lowestY, highestY)
+                && probeCornerFloor(scratch, anchorX, anchorZ, maxX, minZ, quarterTurns, lowestY, highestY)
+                && probeCornerFloor(scratch, anchorX, anchorZ, minX, maxZ, quarterTurns, lowestY, highestY)
+                && probeCornerFloor(scratch, anchorX, anchorZ, maxX, maxZ, quarterTurns, lowestY, highestY);
+    }
+
+    private boolean probeCornerFloor(
+            StructurePlacementAsyncContainer scratch,
+            long anchorX,
+            long anchorZ,
+            int offsetX,
+            int offsetZ,
+            int quarterTurns,
+            int lowestY,
+            int highestY) {
+        return worldGenerationManager.probeCaveFloor(
+                scratch.worldHandle,
+                anchorX + StructurePlacementUtility.rotateX(offsetX, offsetZ, quarterTurns),
+                anchorZ + StructurePlacementUtility.rotateZ(offsetX, offsetZ, quarterTurns),
+                lowestY, highestY, 1) != EngineSetting.CAVE_FLOOR_NONE;
+    }
+
+    // The highest dry cave floor in a height range with room above it for the whole structure
+    private int probeStructureFloor(
+            StructurePlacementAsyncContainer scratch,
+            StructureHandle structureHandle,
+            long anchorX,
+            long anchorZ,
+            int minY,
+            int maxY) {
+
+        int clearanceBlocks = Math.max(1, structureHandle.getYOffsetBlocks() + structureHandle.getMaxOffsetY() + 1);
+
+        return worldGenerationManager.probeCaveFloor(
+                scratch.worldHandle, anchorX, anchorZ, minY, maxY, clearanceBlocks);
+    }
+
+    private boolean isUnderground(StructureHandle structureHandle) {
+        return structureHandle.getRules().getSurfaceType() == StructureSurfaceType.CAVE;
     }
 
     private boolean passesHeightRule(
@@ -341,11 +416,24 @@ class StructurePlacementBranch extends BranchPackage {
 
     // Anchor \\
 
-    private int resolveGroundAnchorY(
+    // On the ground plus the structure's Y offset, or on its cave floor — CAVE_FLOOR_NONE when it finds none
+    private int resolveAnchorY(
             StructurePlacementAsyncContainer scratch,
             StructureHandle structureHandle,
             long anchorX,
             long anchorZ) {
+
+        if (isUnderground(structureHandle)) {
+
+            StructureRulesStruct rules = structureHandle.getRules();
+            int floorY = probeStructureFloor(
+                    scratch, structureHandle, anchorX, anchorZ,
+                    rules.getMinGroundHeightBlocks(), rules.getMaxGroundHeightBlocks());
+
+            return floorY == EngineSetting.CAVE_FLOOR_NONE
+                    ? EngineSetting.CAVE_FLOOR_NONE
+                    : floorY + 1 + structureHandle.getYOffsetBlocks();
+        }
 
         int groundHeight = worldGenerationManager.probeGroundHeight(scratch.worldHandle, anchorX, anchorZ);
 
@@ -361,6 +449,10 @@ class StructurePlacementBranch extends BranchPackage {
             long anchorZ,
             int anchorY,
             int quarterTurns) {
+
+        if (anchorY == EngineSetting.CAVE_FLOOR_NONE)
+            return;
+
         structureStampBranch.stamp(
                 scratch.worldHandle, scratch.chunkCoordinate, scratch.subChunks,
                 structureHandle, anchorX, anchorZ, anchorY, quarterTurns);

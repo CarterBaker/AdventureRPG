@@ -160,6 +160,10 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getCaves();
     }
 
+    public ObjectArrayList<BiomeCaveBiomeStruct> getCaveBiomes() {
+        return biomeData.getCaveBiomes();
+    }
+
     public ObjectArrayList<BiomeVeinStruct> getVeins() {
         return biomeData.getVeins();
     }

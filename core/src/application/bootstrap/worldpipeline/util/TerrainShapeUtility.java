@@ -240,6 +240,8 @@ public final class TerrainShapeUtility extends EngineUtility {
 
         float tunnels = 0f;
         float caverns = 0f;
+        float noodles = 0f;
+        float lakes = 0f;
         float minHeight = 0f;
         float maxDepth = 0f;
         float entrances = 0f;
@@ -251,6 +253,8 @@ public final class TerrainShapeUtility extends EngineUtility {
 
             tunnels += caves.getTunnels() * weight;
             caverns += caves.getCaverns() * weight;
+            noodles += caves.getNoodles() * weight;
+            lakes += caves.getLakes() * weight;
             minHeight += caves.getMinHeightBlocks() * weight;
             maxDepth += caves.getMaxDepthBlocks() * weight;
             entrances += caves.hasEntrances() ? weight : 0f;
@@ -258,6 +262,8 @@ public final class TerrainShapeUtility extends EngineUtility {
 
         outFeatures.caveTunnels = tunnels;
         outFeatures.caveCaverns = caverns;
+        outFeatures.caveNoodles = noodles;
+        outFeatures.caveLakes = lakes;
         outFeatures.caveMinHeightBlocks = minHeight;
         outFeatures.caveMaxDepthBlocks = maxDepth;
         outFeatures.caveEntrances = entrances;

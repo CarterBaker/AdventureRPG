@@ -7,6 +7,7 @@ import application.bootstrap.worldpipeline.util.TideUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
 
@@ -14,11 +15,15 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
      * Thread-local scratch holding one resolved chunk column. Biome-dependent
      * values are evaluated per macro grid point and interpolated to all block
      * columns, with the tide surface and the corner height grids, shaped and
-     * raw, that drive sub-block edge smoothing, slope and shore distance. Each block column carries its
-     * ground, dressing, water, the band its caves and sea caves may hollow,
-     * its veins and the lowest cell the tide reaches. The cave and vein
-     * lattices are refilled per subchunk. Filled once per chunk by
-     * computeColumn() and read by every generateSubChunk() call.
+     * raw, that drive sub-block edge smoothing, slope and shore distance.
+     * Each block column carries its ground, dressing, water, the band its
+     * caves and sea caves may hollow with how much of each kind of cave it
+     * holds and how far the sea is walled off below it, its veins and the
+     * lowest cell the tide reaches. The vein palette holds the surface's
+     * veins and those of every cave biome lining the chunk's regions, each
+     * with the heights it can reach. The cave and vein lattices are refilled
+     * per subchunk. Filled once per chunk by computeColumn() and read by
+     * every generateSubChunk() call.
      */
 
     static final int COLUMN_COUNT = EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
@@ -38,7 +43,7 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
 
     static final int TIDE_LATTICE_ROWS = TerrainCarveUtility.computeLatticeRows(
             TideUtility.BAND_MIN_Y, TideUtility.BAND_MAX_Y);
-    static final int LATTICE_ROWS = Math.max(TerrainCarveUtility.LATTICE_SIDE, TIDE_LATTICE_ROWS);
+    static final int LATTICE_ROWS = Math.max(CaveVolumeAsyncContainer.LATTICE_ROWS, TIDE_LATTICE_ROWS);
     static final int LATTICE_POINTS = LATTICE_ROWS * TerrainCarveUtility.LATTICE_SIDE
             * TerrainCarveUtility.LATTICE_SIDE;
 
@@ -50,6 +55,7 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
 
     static final int NO_TIDE = Integer.MAX_VALUE;
     static final int NO_CARVE = Integer.MIN_VALUE;
+    static final int NO_FLOOR = EngineSetting.CAVE_FLOOR_NONE;
 
     boolean hasComputedColumn;
     WorldHandle computedWorldHandle;
@@ -90,6 +96,8 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     int[] columnCaveCeilingY;
     float[] columnCaveTunnels;
     float[] columnCaveCaverns;
+    float[] columnCaveNoodles;
+    float[] columnCaveBarrier;
     int[] columnSeaCeilingY;
     float[] columnShoreDistanceBlocks;
     float[] columnFaceDistanceBlocks;
@@ -103,6 +111,9 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     int columnMaxGroundHeightBlocks;
     int carveMinY;
     int carveMaxY;
+    float maxCaveTunnels;
+    float maxCaveCaverns;
+    float maxCaveNoodles;
     boolean hasSeaFeatures;
     int veinMinY;
     int veinMaxY;
@@ -112,13 +123,17 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     boolean hasTidalColumns;
     boolean allFillBlocksFullGeometry;
 
-    // Vein Palette
+    // Vein Palette — the surface's veins, then those of every cave biome that can line the chunk's regions
     long[] veinSeeds;
+    int[] veinSlotMinY;
+    int[] veinSlotMaxY;
     int veinCount;
+    ObjectArrayList<TerrainCaveProfileStruct> regionProfiles;
 
     // Lattices — refilled per subchunk
     float[] caveLattice;
     float[] veinLattice;
+    boolean[] activeVeins;
     int[] veinSlots;
 
     // Tide
@@ -163,6 +178,8 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
         this.columnCaveCeilingY = new int[COLUMN_COUNT];
         this.columnCaveTunnels = new float[COLUMN_COUNT];
         this.columnCaveCaverns = new float[COLUMN_COUNT];
+        this.columnCaveNoodles = new float[COLUMN_COUNT];
+        this.columnCaveBarrier = new float[COLUMN_COUNT];
         this.columnSeaCeilingY = new int[COLUMN_COUNT];
         this.columnShoreDistanceBlocks = new float[COLUMN_COUNT];
         this.columnFaceDistanceBlocks = new float[COLUMN_COUNT];
@@ -171,10 +188,14 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
         this.columnTideFloorY = new int[COLUMN_COUNT];
 
         this.veinSeeds = new long[VEIN_PALETTE_MAX];
+        this.veinSlotMinY = new int[VEIN_PALETTE_MAX];
+        this.veinSlotMaxY = new int[VEIN_PALETTE_MAX];
+        this.regionProfiles = new ObjectArrayList<>();
 
         this.caveLattice = new float[LATTICE_POINTS * TerrainCarveUtility.CAVE_CHANNELS];
         this.veinLattice = new float[LATTICE_POINTS * VEIN_PALETTE_MAX * TerrainCarveUtility.VEIN_CHANNELS_PER_VEIN];
-        this.veinSlots = new int[VEIN_PALETTE_MAX];
+        this.activeVeins = new boolean[VEIN_PALETTE_MAX];
+        this.veinSlots = new int[EngineSetting.BIOME_MAX_VEINS];
 
         this.hasComputedColumn = false;
     }
