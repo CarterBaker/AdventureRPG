@@ -26,8 +26,10 @@ public class MacroBuildBranch extends BranchPackage {
      * stands its trees in one by one through MacroTreeBranch, each where
      * chunk placement roots it; a coarser one raises a jagged canopy over the
      * woods instead, sampled by MacroCanopyBranch. Either is laid into the
-     * tile's mesh apart from the land. No block, neighbor or chunk is ever
-     * touched, and no tree is ever grown.
+     * tile's mesh apart from the land, and settlements raise their buildings,
+     * walls and bridges and lay their roads, sampled by MacroSettlementBranch
+     * from their plans and laid after the woods. No block, neighbor or chunk
+     * is ever touched, and no tree is ever grown.
      * The target is read on the main thread when the build is reserved,
      * sampling runs outside the macro's lock since a reserved build pins the
      * macro, and only the assembly into its shared buffers runs under it.
@@ -38,6 +40,7 @@ public class MacroBuildBranch extends BranchPackage {
     private WorldGenerationManager worldGenerationManager;
     private MacroMeshBranch macroMeshBranch;
     private MacroCanopyBranch macroCanopyBranch;
+    private MacroSettlementBranch macroSettlementBranch;
     private MacroTreeBranch macroTreeBranch;
     private MacroBuildAsyncContainer macroBuildAsyncContainer;
 
@@ -66,6 +69,7 @@ public class MacroBuildBranch extends BranchPackage {
         this.worldGenerationManager = get(WorldGenerationManager.class);
         this.macroMeshBranch = get(MacroMeshBranch.class);
         this.macroCanopyBranch = get(MacroCanopyBranch.class);
+        this.macroSettlementBranch = get(MacroSettlementBranch.class);
         this.macroTreeBranch = get(MacroTreeBranch.class);
     }
 
@@ -92,6 +96,7 @@ public class MacroBuildBranch extends BranchPackage {
                 try {
                     macroMeshBranch.assembleLand(scratch, sync.getVertices(), sync.getIndices());
                     macroMeshBranch.assembleCanopy(scratch, sync.getVertices(), sync.getIndices());
+                    macroMeshBranch.assembleStructures(scratch, sync.getVertices(), sync.getIndices());
                     macroMeshBranch.assembleStandIns(scratch, sync.getVertices(), sync.getIndices());
                     macroMeshBranch.assembleWaterMask(scratch, sync.getWaterMask());
                     sync.markBuilt(cellsPerSide);
@@ -118,6 +123,9 @@ public class MacroBuildBranch extends BranchPackage {
         scratch.minHeightBlocks = Float.MAX_VALUE;
         scratch.openWaterCount = 0;
         scratch.canopyCount = 0;
+        scratch.structureCount = 0;
+
+        macroSettlementBranch.gatherLayouts(scratch, worldHandle, originX, originZ, cellSizeBlocks);
 
         for (int z = 0; z < samplesPerSide; z++) {
             for (int x = 0; x < samplesPerSide; x++) {
@@ -145,6 +153,7 @@ public class MacroBuildBranch extends BranchPackage {
 
                 if (!scratch.standIns)
                     macroCanopyBranch.sampleCanopy(scratch, worldHandle, index, sampleX, sampleZ);
+                macroSettlementBranch.sampleSettlement(scratch, worldHandle, index, sampleX, sampleZ, cellSizeBlocks);
             }
         }
     }

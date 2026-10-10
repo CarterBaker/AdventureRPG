@@ -23,12 +23,15 @@ public class MacroMeshBranch extends BranchPackage {
      * point under a canopy rises to it in the woods' colors and every other
      * one sinks below the ground, and only a cell with a canopy corner is
      * drawn, so a forest's edge breaks off in jagged slopes into the land.
-     * Nearer tiles lay their trees instead, one box per crown lump and per
-     * trunk, eight corners each, every crown before any trunk, so a tile
-     * crowded past what one mesh can index gives up trunks before crowns.
-     * Every vertex names the chunk of the tile it yields to once the chunk
-     * grid draws it: a tree's boxes name the chunk it roots in, and ground
-     * and canopy name none, yielding wherever they lie.
+     * Settlements are a third grid laid the same way after the woods, their
+     * structures, walls and bridges rising out of the land in their own
+     * colors. Nearer tiles lay their trees as boxes instead of a canopy, one
+     * per crown lump and per trunk, eight corners each, every crown before
+     * any trunk, so a tile crowded past what one mesh can index gives up
+     * trunks before crowns. Every vertex names the chunk of the tile it
+     * yields to once the chunk grid draws it: a tree's boxes name the chunk
+     * it roots in, and ground, canopy and settlements name none, yielding
+     * wherever they lie.
      */
 
     // Box — each face's four corners counterclockwise from outside, a corner's bits picking its high x, y and z
@@ -133,11 +136,33 @@ public class MacroMeshBranch extends BranchPackage {
         }
     }
 
-    // Canopy \\
+    // Raised Layers \\
 
     void assembleCanopy(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
+        assembleRaised(
+                scratch, scratch.canopyHeights, scratch.canopyTopColors, scratch.canopySideColors,
+                scratch.canopyCount, EngineSetting.TREE_CANOPY_SINK_BLOCKS, vertices, indices);
+    }
 
-        if (scratch.canopyCount == 0)
+    void assembleStructures(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
+        assembleRaised(
+                scratch, scratch.structureHeights, scratch.structureTopColors, scratch.structureSideColors,
+                scratch.structureCount, EngineSetting.SETTLEMENT_MACRO_SINK_BLOCKS, vertices, indices);
+    }
+
+    // A grid over the land where every raised lattice point stands its height above the ground in its own colors
+    // and every other one sinks below it, drawing only cells with a raised corner
+    private void assembleRaised(
+            MacroBuildAsyncContainer scratch,
+            float[] raisedHeights,
+            float[] raisedTopColors,
+            float[] raisedSideColors,
+            int raisedCount,
+            float sinkBlocks,
+            FloatArrayList vertices,
+            ShortArrayList indices) {
+
+        if (raisedCount == 0)
             return;
 
         int samplesPerSide = scratch.getSamplesPerSide();
@@ -149,17 +174,17 @@ public class MacroMeshBranch extends BranchPackage {
             for (int x = 0; x < samplesPerSide; x++) {
 
                 int sample = z * samplesPerSide + x;
-                boolean wooded = scratch.canopyHeights[sample] > 0f;
+                boolean raised = raisedHeights[sample] > 0f;
 
                 pushVertex(
                         vertices,
                         x * cellSizeBlocks,
-                        wooded
-                                ? scratch.heightBlocks[sample] + scratch.canopyHeights[sample]
-                                : scratch.heightBlocks[sample] - EngineSetting.TREE_CANOPY_SINK_BLOCKS,
+                        raised
+                                ? scratch.heightBlocks[sample] + raisedHeights[sample]
+                                : scratch.heightBlocks[sample] - sinkBlocks,
                         z * cellSizeBlocks,
-                        wooded ? scratch.canopyTopColors[sample] : scratch.topColors[sample],
-                        wooded ? scratch.canopySideColors[sample] : scratch.sideColors[sample],
+                        raised ? raisedTopColors[sample] : scratch.topColors[sample],
+                        raised ? raisedSideColors[sample] : scratch.sideColors[sample],
                         EngineSetting.MACRO_COVER_OWN_CHUNK);
             }
         }
@@ -169,10 +194,10 @@ public class MacroMeshBranch extends BranchPackage {
 
                 int corner = z * samplesPerSide + x;
 
-                if (scratch.canopyHeights[corner] <= 0f
-                        && scratch.canopyHeights[corner + 1] <= 0f
-                        && scratch.canopyHeights[corner + samplesPerSide] <= 0f
-                        && scratch.canopyHeights[corner + samplesPerSide + 1] <= 0f)
+                if (raisedHeights[corner] <= 0f
+                        && raisedHeights[corner + 1] <= 0f
+                        && raisedHeights[corner + samplesPerSide] <= 0f
+                        && raisedHeights[corner + samplesPerSide + 1] <= 0f)
                     continue;
 
                 pushQuad(indices, base + corner, base + corner + 1,

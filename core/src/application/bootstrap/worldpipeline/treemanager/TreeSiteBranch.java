@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.treemanager;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.BiomeTreeStruct;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
@@ -25,21 +26,22 @@ class TreeSiteBranch extends BranchPackage {
      * region: a scattered kind rolls one tree per cell, a clustered kind one
      * grove per cell spread inside its cluster radius, and a field kind a
      * tree in nearly every cell, thinned by a slow patch noise into woods and
-     * clearings; a site stands only where its own biome holds its root. Every
-     * tree then keeps a clearance around its root, and of two sites closer
-     * than their clearances together only the one that outranks the other
-     * stands, so no two trees ever root inside one another however their
-     * kinds and groves overlap. A site is judged against every site within a
-     * full clearance of it, rolled past the region asked for, and every roll
-     * is a pure function of the world seed, the tree and the place, so every
-     * caller asking about one site finds the same answer on its own. Sites
-     * are handed back from the thread's own scratch, read before its next
-     * search.
+     * clearings; a site stands only where its own biome holds its root and no
+     * settlement or road claims the ground around it. Every tree then keeps a
+     * clearance around its root, and of two sites closer than their
+     * clearances together only the one that outranks the other stands, so no
+     * two trees ever root inside one another however their kinds and groves
+     * overlap. A site is judged against every site within a full clearance of
+     * it, rolled past the region asked for, and every roll is a pure function
+     * of the world seed, the tree and the place, so every caller asking about
+     * one site finds the same answer on its own. Sites are handed back from
+     * the thread's own scratch, read before its next search.
      */
 
     // Internal
     private TreeManager treeManager;
     private BiomeManager biomeManager;
+    private SettlementManager settlementManager;
     private TreeSiteAsyncContainer siteContainer;
 
     // Base \\
@@ -53,6 +55,7 @@ class TreeSiteBranch extends BranchPackage {
     protected void get() {
         this.treeManager = get(TreeManager.class);
         this.biomeManager = get(BiomeManager.class);
+        this.settlementManager = get(SettlementManager.class);
     }
 
     // Sites \\
@@ -218,7 +221,8 @@ class TreeSiteBranch extends BranchPackage {
 
     // Site \\
 
-    // A rolled root kept as a site when it lies in the widened region, its biome holds it and no site took its key
+    // A rolled root kept as a site when it lies in the widened region, no site took its key, its biome holds it and
+    // no settlement or road claims it
     private void placeSite(
             TreeSiteAsyncContainer scratch,
             BiomeHandle biome,
@@ -244,6 +248,13 @@ class TreeSiteBranch extends BranchPackage {
         BiomeHandle anchorBiome = scratch.blend.getDominantBiome();
 
         if (anchorBiome == null || anchorBiome.getBiomeID() != biome.getBiomeID())
+            return;
+
+        if (settlementManager.isClaimed(
+                worldHandle,
+                anchorX + EngineSetting.BLOCK_CENTER_OFFSET,
+                anchorZ + EngineSetting.BLOCK_CENTER_OFFSET,
+                EngineSetting.SETTLEMENT_TREE_CLEARANCE_BLOCKS))
             return;
 
         TreeSiteStruct site = scratch.nextSite();
