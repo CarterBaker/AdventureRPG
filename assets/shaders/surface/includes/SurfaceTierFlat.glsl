@@ -2,13 +2,14 @@
 #define SURFACE_TIER_FLAT_GLSL
 
 /*
-* Flat pass — albedo only, raw per-face vertex normal (no normal-map
- * sample), no AO/specular sample. Reused twice: as the hole-filling
- * underlay beneath the Detail pass on the innermost ring, and as the
- * cheapest tier beyond the Mid ring.
+ * Flat tier — albedo only, raw per-face vertex normal (no normal-map
+ * sample), no AO/specular sample. Every fragment runs it first: it is the
+ * whole material beyond the detail radius, and the albedo and fallback the
+ * detail tier blends from within it.
  *
- * Returns false if the fragment should be discarded — see SurfaceTierFull.glsl
- * for why the actual 'discard' call lives in main() instead of here.
+ * Returns false if the fragment should be discarded. The actual 'discard'
+ * call has to happen in main(), not here — NVIDIA's compiler (error C7608)
+ * rejects 'discard' inside any function that has 'out' parameters.
  */
 
 const float FLAT_TIER_SPECULAR = 0.0;

@@ -504,7 +504,8 @@ class CaveDressingBranch extends BranchPackage {
                 || (localZ < chunkSize - 1 && volume.isHollow(localX, worldY, localZ + 1));
     }
 
-    // A covering fallen short of its full level by up to its variance, drawn per cell
+    // A covering fallen short of its full level by up to its variance, drawn per patch of cells so neighbouring
+    // faces share a level and the mesher still merges them
     private short resolveCellCoverage(
             WorldHandle worldHandle,
             short coverage,
@@ -516,9 +517,10 @@ class CaveDressingBranch extends BranchPackage {
         if (variance == 0)
             return coverage;
 
+        int patch = EngineSetting.BIOME_COVERING_VARIANCE_PATCH_BLOCKS;
         float shortfall = TerrainCarveUtility.rollCell(
                 worldHandle.getSeed(), EngineSetting.BIOME_COVERING_VARIANCE_SALT,
-                (int) worldX, worldY, (int) worldZ);
+                (int) Math.floorDiv(worldX, patch), Math.floorDiv(worldY, patch), (int) Math.floorDiv(worldZ, patch));
 
         return CoverageUtility.addLevels(coverage, -(int) (shortfall * (variance + 1)));
     }

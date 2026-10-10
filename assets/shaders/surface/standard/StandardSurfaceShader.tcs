@@ -30,13 +30,15 @@ out float teCoverage[];
 #include "includes/SettingsData.glsl"
 #include "includes/PlayerPositionData.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
+#include "surface/includes/PatchCulling.glsl"
 
-// Tessellation-level control point. The tier is resolved once per patch from the chunk that owns the
+// Tessellation-level control point. The density is resolved once per patch from the chunk that owns the
 // patch's origin sub-block, so every patch of a chunk agrees and the two perpendicular faces of one block
 // can never land in different chunks and pick different densities along the edge they share. Near levels
 // place a vertex every quarter block and far levels one per edge-word entry, so every level is a whole
 // number and every vertex falls on the quarter-block lattice; with merges capped at ten blocks the near
-// level tops out at 40 and never approaches the hardware clamp.
+// level tops out at 40 and never approaches the hardware clamp. A patch wholly outside the view is dropped
+// with zero levels before it is evaluated (see PatchCulling.glsl).
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -55,17 +57,26 @@ void main() {
 
     if (gl_InvocationID == 0) {
 
-        float tier0MaxSqDist = getTier0MaxSqDist();
-        float tier1MaxSqDist = getTier1MaxSqDist();
+        if (isPatchOutsideView(tcWorldPos[0], tcWorldPos[1], tcWorldPos[2], tcWorldPos[3])) {
+            gl_TessLevelOuter[0] = 0.0;
+            gl_TessLevelOuter[1] = 0.0;
+            gl_TessLevelOuter[2] = 0.0;
+            gl_TessLevelOuter[3] = 0.0;
+            gl_TessLevelInner[0] = 0.0;
+            gl_TessLevelInner[1] = 0.0;
+            return;
+        }
+
+        float nearDensityMaxSqDist = getNearDensityMaxSqDist();
 
         vec3  chunkCenter = getOriginBlockChunkCenter(
             tcWorldPos[0], tcWorldPos[1], tcWorldPos[3], tcNormal[0]);
 
-        float chunkDistSq = computeDistanceFromCenterSq(chunkCenter);
+        float chunkDistSq = computeDistanceFromPlayerSq(chunkCenter);
         float entryBlocks = tcEdgeCells[0] * SUB_BLOCK_SIZE;
 
-        float levelA = getEdgeTessLevel(chunkDistSq, tcSizeA[0], entryBlocks, tier0MaxSqDist, tier1MaxSqDist);
-        float levelB = getEdgeTessLevel(chunkDistSq, tcSizeB[0], entryBlocks, tier0MaxSqDist, tier1MaxSqDist);
+        float levelA = getEdgeTessLevel(chunkDistSq, tcSizeA[0], entryBlocks, nearDensityMaxSqDist);
+        float levelB = getEdgeTessLevel(chunkDistSq, tcSizeB[0], entryBlocks, nearDensityMaxSqDist);
 
         gl_TessLevelOuter[0] = levelB;
         gl_TessLevelOuter[1] = levelA;

@@ -6,8 +6,9 @@ public class TextureData extends DataPackage {
 
     /*
      * Persistent tile record. Holds tile identity, parent array identity,
-     * GPU handle, atlas and tile pixel dimensions, normalised UV region, and
-     * the tile's average albedo as a packed 0xRRGGBB color.
+     * GPU handle, atlas and tile pixel dimensions, normalised UV region, the
+     * tile's average albedo as a packed 0xRRGGBB color, and its reveal, null
+     * for a tile no image source baked (a font atlas).
      * Owned by TextureHandle for the full engine session — nothing is discarded.
      */
 
@@ -33,6 +34,7 @@ public class TextureData extends DataPackage {
 
     // Average
     private final int averageColor;
+    private final TextureRevealStruct reveal;
 
     // Constructor \\
 
@@ -47,7 +49,8 @@ public class TextureData extends DataPackage {
             int tileHeight,
             float u0, float v0,
             float u1, float v1,
-            int averageColor) {
+            int averageColor,
+            TextureRevealStruct reveal) {
 
         this.tileName = tileName;
         this.tileID = tileID;
@@ -62,6 +65,7 @@ public class TextureData extends DataPackage {
         this.u1 = u1;
         this.v1 = v1;
         this.averageColor = averageColor;
+        this.reveal = reveal;
     }
 
     // Accessible \\
@@ -116,5 +120,9 @@ public class TextureData extends DataPackage {
 
     public int getAverageColor() {
         return averageColor;
+    }
+
+    public TextureRevealStruct getReveal() {
+        return reveal;
     }
 }

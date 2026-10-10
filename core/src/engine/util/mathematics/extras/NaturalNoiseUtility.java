@@ -15,8 +15,8 @@ public final class NaturalNoiseUtility extends EngineUtility {
      * lattice is baked once from a fixed seed, four independent channels per
      * cell, and read back as periodic quintic value noise. Its period is a
      * whole number of chunks, so it wraps with every world and never moves as
-     * the player crosses a chunk. Also holds the tessellation tier distances
-     * the shader scopes the near ring to.
+     * the player crosses a chunk. Also holds the near tessellation density
+     * radius the shader scopes the detail ring to.
      */
 
     // Settings
@@ -149,17 +149,9 @@ public final class NaturalNoiseUtility extends EngineUtility {
 
     // Tessellation Tier \\
 
-    public static float getTier1MaxSqDistChunks(float renderDistance, float chunkSize) {
-        float halfD = renderDistance * 0.5f - 0.5f;
-        float marginChunks = EngineSetting.NATURAL_NOISE_MID_TIER_MARGIN_BLOCKS
-                / (chunkSize * (float) Math.sqrt(2.0));
-        float farHalfD = Math.max(halfD - marginChunks, 1f);
-        return farHalfD * farHalfD * 2f;
-    }
-
-    public static float getTier0MaxSqDistChunks(float nearTessellationRadius, float renderDistance, float chunkSize) {
-        float tier1 = getTier1MaxSqDistChunks(renderDistance, chunkSize);
-        float r = Math.max(nearTessellationRadius, 1f);
-        return Math.min(2f * r * r + 0.5f, tier1);
+    // Squared distance in blocks within which a chunk's center takes the near tessellation density
+    public static float getNearDensityMaxSqDistBlocks(float detailRadius) {
+        float densityRadius = Math.max(detailRadius, 0f) + EngineSetting.NATURAL_NOISE_DETAIL_DENSITY_MARGIN_BLOCKS;
+        return densityRadius * densityRadius;
     }
 }

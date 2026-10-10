@@ -44,7 +44,8 @@ flat out float vCoverage;
 // offset sampled at its snapped position (see NearTerrainNoise.glsl): since every patch sharing the vertex moves
 // it identically, straight natural edges and corners bend into irregular ones without a crack, and the same
 // lattice gives physics the offset to stand and stop on. An artificial patch is never displaced, and every
-// natural neighbour fades flat against it. Geometric normals come from finite differences in block units, taken
+// natural neighbour fades flat against it. All of it rides the detail strength, which fades to nothing at the detail
+// radius (see SurfaceTessellationTier.glsl). Geometric normals come from finite differences in block units, taken
 // only where displacement actually runs, so a ten-block quad and a half-block quad shade to the same gradient.
 
 const float HEIGHT_FD_EPSILON_BLOCKS = 0.02;
@@ -103,8 +104,7 @@ void main() {
         mix(mix(teWorldPos[0], teWorldPos[1], u),
             mix(teWorldPos[3], teWorldPos[2], u), v));
 
-    float tier0MaxSqDist = getTier0MaxSqDist();
-    float nearStrength   = getNearStrength(computeDistanceFromCenterSq(baseWorldPos), tier0MaxSqDist);
+    float nearStrength = getDetailStrength(baseWorldPos);
 
     vec3 worldPos = evalDisplacedSurface(
         baseWorldPos, tangentA, tangentB, normal, sizeASub, sizeBSub, cellsPerEntry, nearStrength);
@@ -123,8 +123,8 @@ void main() {
         vec3 baseA = baseWorldPos + tangentA * stepA;
         vec3 baseB = baseWorldPos + tangentB * stepB;
 
-        float nearStrengthA = getNearStrength(computeDistanceFromCenterSq(baseA), tier0MaxSqDist);
-        float nearStrengthB = getNearStrength(computeDistanceFromCenterSq(baseB), tier0MaxSqDist);
+        float nearStrengthA = getDetailStrength(baseA);
+        float nearStrengthB = getDetailStrength(baseB);
 
         vec3 posAlongA = evalDisplacedSurface(
             baseA, tangentA, tangentB, normal, sizeASub, sizeBSub, cellsPerEntry, nearStrengthA);

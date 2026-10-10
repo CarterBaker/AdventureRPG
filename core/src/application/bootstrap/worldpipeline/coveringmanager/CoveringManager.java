@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.coveringmanager;
 
+import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
 import application.bootstrap.worldpipeline.covering.CoveringHandle;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
 import engine.graphics.color.PackedColorUtility;
@@ -93,8 +94,9 @@ public class CoveringManager extends ManagerPackage {
         return CoverageUtility.pack(coveringHandle.getCoveringID(), level);
     }
 
-    // A face's color with its coverage laid over it as far as the coverage has grown, tinted as far as the covering
-    // takes a tint — an upright face only shows a covering that has side tiles
+    // A face's color with its coverage laid over it by the share of its tile it shows at its level, tinted as far
+    // as each of its texels takes a tint — the same approximation the surface shader draws distant faces with. An
+    // upright face only shows a covering that has side tiles
     public int resolveCoveredColor(int faceColor, short coverage, int tint, boolean side) {
 
         CoveringHandle coveringHandle = getCoveringHandleFromCoverage(coverage);
@@ -102,11 +104,33 @@ public class CoveringManager extends ManagerPackage {
         if (coveringHandle == null || (side && !coveringHandle.hasSide()))
             return faceColor;
 
-        int coveringTint = PackedColorUtility.mix(
-                EngineSetting.PACKED_COLOR_WHITE, tint, coveringHandle.getTintStrength());
-        int coveringColor = PackedColorUtility.multiply(coveringHandle.getMapColor(), coveringTint);
+        TextureRevealStruct reveal = side ? coveringHandle.getSideReveal() : coveringHandle.getTopReveal();
+        int coveringColor = resolveRevealColor(reveal, tint, coveringHandle.getTintStrength());
 
-        return PackedColorUtility.mix(faceColor, coveringColor, CoverageUtility.getShare(coverage));
+        return PackedColorUtility.mix(
+                faceColor, coveringColor, reveal.getLevelShare(CoverageUtility.getLevel(coverage)));
+    }
+
+    // The average a tile shows, its tintable part carried toward the tint as far as the covering takes one
+    private int resolveRevealColor(TextureRevealStruct reveal, int tint, float tintStrength) {
+
+        int revealColor = reveal.getRevealColor();
+        int tintableColor = reveal.getTintableColor();
+
+        return PackedColorUtility.pack(
+                resolveRevealChannel(
+                        PackedColorUtility.red(revealColor), PackedColorUtility.red(tintableColor),
+                        PackedColorUtility.red(tint), tintStrength),
+                resolveRevealChannel(
+                        PackedColorUtility.green(revealColor), PackedColorUtility.green(tintableColor),
+                        PackedColorUtility.green(tint), tintStrength),
+                resolveRevealChannel(
+                        PackedColorUtility.blue(revealColor), PackedColorUtility.blue(tintableColor),
+                        PackedColorUtility.blue(tint), tintStrength));
+    }
+
+    private float resolveRevealChannel(int reveal, int tintable, int tint, float tintStrength) {
+        return reveal + tintStrength * tintable * (tint / EngineSetting.COLOR_CHANNEL_BYTE_MAX - 1f);
     }
 
     // The covering a packed coverage carries, null when it is bare

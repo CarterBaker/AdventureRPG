@@ -76,7 +76,8 @@ public class TextureManager extends ManagerPackage {
                 gpuHandle, array.getAtlasPixelSize(),
                 tile.getTileWidth(), tile.getTileHeight(),
                 u0, v0, u1, v1,
-                tile.getAverageColor());
+                tile.getAverageColor(),
+                tile.getReveal());
 
         TextureHandle handle = create(TextureHandle.class);
         handle.constructor(data);

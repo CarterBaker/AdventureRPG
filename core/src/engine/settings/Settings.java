@@ -29,7 +29,7 @@ public class Settings {
 
     // Render
     public int maxRenderDistance = 32;
-    public int nearTessellationRadius = 5;
+    public int detailRadius = 48;
 
     // Post Processing — Outlines
     public boolean outlines = true;

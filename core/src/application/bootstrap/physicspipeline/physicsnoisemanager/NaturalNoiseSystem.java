@@ -96,13 +96,9 @@ class NaturalNoiseSystem extends SystemPackage {
                 Coordinate2Long.unpackY(blockChunkCoordinate),
                 Coordinate2Long.unpackY(entityChunkCoordinate));
 
-        float distanceSqChunks = (float) (deltaX * deltaX + deltaZ * deltaZ);
+        float distanceSqBlocks = (float) (deltaX * deltaX + deltaZ * deltaZ)
+                * EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
 
-        float tier0MaxSqDist = NaturalNoiseUtility.getTier0MaxSqDistChunks(
-                (float) settings.nearTessellationRadius,
-                (float) settings.maxRenderDistance,
-                (float) EngineSetting.CHUNK_SIZE);
-
-        return distanceSqChunks <= tier0MaxSqDist;
+        return distanceSqBlocks <= NaturalNoiseUtility.getNearDensityMaxSqDistBlocks(settings.detailRadius);
     }
 }

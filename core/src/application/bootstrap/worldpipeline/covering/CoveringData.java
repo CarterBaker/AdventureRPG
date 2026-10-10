@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.covering;
 
+import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
@@ -15,8 +16,9 @@ public class CoveringData extends DataPackage {
      * bare host beside it by its spread chance once it reaches its spread
      * level, recedes under a solid block when it needs an open top, and
      * grows or spreads only near liquid when it names a moisture radius. Its
-     * tint strength is how far the biome's tint colors it, its map color the
-     * top tiles' average albedo, and a fully grown cell broken whole hands
+     * tint strength is how far the biome's tint colors it, its reveals how
+     * its top and side tiles show at every level, which distant faces and
+     * maps stand in for it with, and a fully grown cell broken whole hands
      * out its drop item, if it names one.
      */
 
@@ -31,7 +33,8 @@ public class CoveringData extends DataPackage {
     // Rendering
     private final int topTileID;
     private final int sideTileID;
-    private final int mapColor;
+    private final TextureRevealStruct topReveal;
+    private final TextureRevealStruct sideReveal;
     private final float tintStrength;
 
     // Growth
@@ -53,7 +56,8 @@ public class CoveringData extends DataPackage {
             ShortOpenHashSet hostBlockIDs,
             int topTileID,
             int sideTileID,
-            int mapColor,
+            TextureRevealStruct topReveal,
+            TextureRevealStruct sideReveal,
             float tintStrength,
             float growthChance,
             float spreadChance,
@@ -73,7 +77,8 @@ public class CoveringData extends DataPackage {
         // Rendering
         this.topTileID = topTileID;
         this.sideTileID = sideTileID;
-        this.mapColor = mapColor;
+        this.topReveal = topReveal;
+        this.sideReveal = sideReveal;
         this.tintStrength = tintStrength;
 
         // Growth
@@ -117,8 +122,13 @@ public class CoveringData extends DataPackage {
         return sideTileID != EngineSetting.BLOCK_TEXTURE_UNDEFINED;
     }
 
-    public int getMapColor() {
-        return mapColor;
+    public TextureRevealStruct getTopReveal() {
+        return topReveal;
+    }
+
+    // The side tiles' reveal, null where the covering has no side tiles
+    public TextureRevealStruct getSideReveal() {
+        return sideReveal;
     }
 
     public float getTintStrength() {

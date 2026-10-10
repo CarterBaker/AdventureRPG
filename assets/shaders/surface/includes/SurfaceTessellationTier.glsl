@@ -4,42 +4,45 @@
 #include "includes/SettingsData.glsl"
 #include "includes/PlayerPositionData.glsl"
 
-// Shared tier-distance math for StandardSurfaceShader's vsh/tcs/tes/fsh. Tessellation
-// density is decided from the chunk that owns the patch's origin sub-block rather than from a patch or edge
-// midpoint: merged quads never cross a chunk, so every face of a given block resolves to one key, and a
-// long quad whose center drifts into the neighbouring chunk can no longer pick a different tier from the
-// perpendicular face it shares an edge with. The near tier places a vertex every quarter block on every
-// patch, and the far tier one vertex per edge-word entry — a block on block quads, a sub-block on
-// sub-block quads — so every level is a whole number, every tessellated vertex lies on the quarter-block
-// lattice, and two patches of different sizes place their shared vertices at the same lattice points.
-// Displacement strength fades to zero a full chunk inside the density boundary, so wherever two chunks
-// disagree on density the surface there is already flat. The mid tier ends MID_TIER_MARGIN_BLOCKS short of
-// the render edge, and must match EngineSetting.NATURAL_NOISE_MID_TIER_MARGIN_BLOCKS. SUB_BLOCK_SIZE must match
-// EngineSetting.SUB_BLOCK_SIZE.
+// Shared detail-radius math for StandardSurfaceShader's vsh/tcs/tes/fsh and the water's shore warp. One radius, in
+// blocks, scopes every piece of near detail: the bevel, natural distortion, height relief and edge warp, the normal,
+// specular and ambient occlusion maps, and the full growth of every covering. All of it shares one strength, full
+// out to DETAIL_FADE_BAND_BLOCKS short of the radius and fading to nothing at the radius itself, so nothing pops in
+// ahead of the rest. Tessellation density is decided from the chunk that owns the patch's origin sub-block rather
+// than from a patch or edge midpoint: merged quads never cross a chunk, so every face of a given block resolves to
+// one key, and a long quad whose center drifts into the neighbouring chunk can no longer pick a different density
+// from the perpendicular face it shares an edge with. A chunk takes the near density while its center lies within
+// DETAIL_DENSITY_MARGIN_BLOCKS beyond the radius; the margin exceeds half a chunk's diagonal, so every position the
+// strength reaches lies in a near chunk and every edge where two densities meet is already flat. The near density
+// places a vertex every quarter block on every patch, and the far density one vertex per edge-word entry — a block
+// on block quads, a sub-block on sub-block quads — so every level is a whole number, every tessellated vertex lies on
+// the quarter-block lattice, and two patches of different sizes place their shared vertices at the same lattice
+// points. DETAIL_DENSITY_MARGIN_BLOCKS must match EngineSetting.NATURAL_NOISE_DETAIL_DENSITY_MARGIN_BLOCKS and
+// SUB_BLOCK_SIZE EngineSetting.SUB_BLOCK_SIZE.
 
-const float SUB_BLOCK_SIZE              = 0.5;
-const float MID_TIER_MARGIN_BLOCKS      = 512.0;
-const float NEAR_TESSELLATION_DENSITY   = 4.0;
-const float MAX_TESSELLATION_LEVEL      = 64.0;
-const float NEAR_FADE_END_CHUNKS        = 1.0;
-const float NEAR_FADE_BAND_CHUNKS       = 1.0;
-const float ORIGIN_SUB_BLOCK_HALF_SIZE  = SUB_BLOCK_SIZE * 0.5;
+const float SUB_BLOCK_SIZE               = 0.5;
+const float DETAIL_FADE_BAND_BLOCKS      = 8.0;
+const float DETAIL_DENSITY_MARGIN_BLOCKS = 12.0;
+const float NEAR_TESSELLATION_DENSITY    = 4.0;
+const float MAX_TESSELLATION_LEVEL       = 64.0;
+const float ORIGIN_SUB_BLOCK_HALF_SIZE   = SUB_BLOCK_SIZE * 0.5;
 
-float getTier1MaxSqDist() {
-    float halfD        = u_renderDistance * 0.5 - 0.5;
-    float marginChunks = MID_TIER_MARGIN_BLOCKS / (u_chunkSize * sqrt(2.0));
-    float farHalfD     = max(halfD - marginChunks, 1.0);
-    return farHalfD * farHalfD * 2.0;
+// Squared horizontal distance in blocks from the player
+float computeDistanceFromPlayerSq(vec3 worldPos) {
+    vec2 fromPlayer = worldPos.xz - u_playerPosition.xz;
+    return dot(fromPlayer, fromPlayer);
 }
 
-float getTier0MaxSqDist() {
-    float r = max(u_nearTessellationRadius, 1.0);
-    return min(2.0 * r * r + 0.5, getTier1MaxSqDist());
+// Strength of every piece of near detail at a position, 1 inside the radius' fade band down to 0 at the radius
+float getDetailStrength(vec3 worldPos) {
+    float fadeEnd   = max(u_detailRadius, 0.0);
+    float fadeStart = max(fadeEnd - DETAIL_FADE_BAND_BLOCKS, 0.0);
+    return 1.0 - smoothstep(fadeStart, fadeEnd, sqrt(computeDistanceFromPlayerSq(worldPos)));
 }
 
-float computeDistanceFromCenterSq(vec3 worldPos) {
-    vec2 fromPlayerChunks = (worldPos.xz - u_playerPosition.xz) / u_chunkSize;
-    return dot(fromPlayerChunks, fromPlayerChunks);
+float getNearDensityMaxSqDist() {
+    float densityRadius = max(u_detailRadius, 0.0) + DETAIL_DENSITY_MARGIN_BLOCKS;
+    return densityRadius * densityRadius;
 }
 
 // Center of the sub-block that owns the patch's first corner, pulled a quarter block back along the face
@@ -57,10 +60,8 @@ vec3 getOriginBlockChunkCenter(vec3 corner0, vec3 corner1, vec3 corner3, vec3 no
 }
 
 // sizeBlocks is the edge's length in blocks and entryBlocks the length one edge-word entry covers.
-float getEdgeTessLevel(
-    float chunkDistSq, float sizeBlocks, float entryBlocks,
-    float tier0MaxSqDist, float tier1MaxSqDist) {
-    if (chunkDistSq <= tier0MaxSqDist)
+float getEdgeTessLevel(float chunkDistSq, float sizeBlocks, float entryBlocks, float nearDensityMaxSqDist) {
+    if (chunkDistSq <= nearDensityMaxSqDist)
     return clamp(sizeBlocks * NEAR_TESSELLATION_DENSITY, 1.0, MAX_TESSELLATION_LEVEL);
     return clamp(sizeBlocks / entryBlocks, 1.0, MAX_TESSELLATION_LEVEL);
 }
@@ -69,14 +70,6 @@ float getEdgeTessLevel(
 // patches evaluating the same shared vertex from different corners and extents land on bit-identical input.
 vec3 snapToTessellationLattice(vec3 position) {
     return round(position * NEAR_TESSELLATION_DENSITY) / NEAR_TESSELLATION_DENSITY;
-}
-
-float getNearStrength(float distSq, float tier0MaxSqDist) {
-    float dist      = sqrt(distSq);
-    float tier0Dist = sqrt(tier0MaxSqDist);
-    float fadeEnd   = max(tier0Dist - NEAR_FADE_END_CHUNKS, 0.0);
-    float fadeStart = max(fadeEnd - NEAR_FADE_BAND_CHUNKS, 0.0);
-    return 1.0 - smoothstep(fadeStart, fadeEnd, dist);
 }
 
 #endif

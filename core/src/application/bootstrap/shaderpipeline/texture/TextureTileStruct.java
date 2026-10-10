@@ -11,8 +11,9 @@ public class TextureTileStruct extends AtlasTileData {
      * Bootstrap container for a single named texture tile. Holds per-alias
      * source images during the build phase. Derives pixel dimensions from the
      * first image assigned — all subsequent alias layers must match that size.
-     * The builder records the tile's average albedo before the images go, so
-     * distant terrain and maps can stand in for the texture with one color.
+     * The builder records the tile's average albedo and its reveal before the
+     * images go, so distant terrain and maps can stand in for the texture, and
+     * for a covering grown over a face, with one color.
      * GCs with the loader after bootstrap completes.
      * Extends AtlasTileData (external utility) rather than StructPackage —
      * naming exception due to the external base class.
@@ -27,6 +28,7 @@ public class TextureTileStruct extends AtlasTileData {
 
     // Average
     private int averageColor;
+    private TextureRevealStruct reveal;
 
     // Constructor \\
 
@@ -70,6 +72,10 @@ public class TextureTileStruct extends AtlasTileData {
         this.averageColor = averageColor;
     }
 
+    public void setReveal(TextureRevealStruct reveal) {
+        this.reveal = reveal;
+    }
+
     // Accessible \\
 
     public String getName() {
@@ -82,5 +88,9 @@ public class TextureTileStruct extends AtlasTileData {
 
     public int getAverageColor() {
         return averageColor;
+    }
+
+    public TextureRevealStruct getReveal() {
+        return reveal;
     }
 }

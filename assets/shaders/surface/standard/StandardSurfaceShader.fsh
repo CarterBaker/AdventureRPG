@@ -20,7 +20,6 @@ flat in float vCoverage;
 #include "surface/includes/Specular.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 #include "surface/includes/SurfaceTierFull.glsl"
-#include "surface/includes/SurfaceTierMid.glsl"
 #include "surface/includes/SurfaceTierFlat.glsl"
 #include "surface/includes/CloudShadow.glsl"
 #include "surface/includes/Coverage.glsl"
@@ -30,17 +29,18 @@ layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
 
 /*
-* Tier selection mirrors the TCS/TES exactly, via computeDistanceFromCenterSq()
- * (SurfaceTessellationTier.glsl) evaluated against this fragment's own
- * vLocalPos rather than the old shared-per-slot u_distanceFromCenter, so a
- * fragment always picks the same material tier its own geometry was built
- * with, regardless of whether it came from an individually rendered chunk
- * or a mega batch. This selection governs geometric material-sampling
- * detail only — it has no bearing on fog. Atmospheric fog is computed
- * entirely in the deferred Lighting.fsh pass from the fragment's
- * reconstructed world position, so it stays perfectly continuous across
- * every ring boundary regardless of chunk size. See
- * surface/includes/AtmosphericFog.glsl.
+ * Material detail follows the same detail strength the TES displaces with,
+ * via getDetailStrength() (SurfaceTessellationTier.glsl) evaluated against
+ * this fragment's own vLocalPos, so normal, specular and ambient occlusion
+ * maps and the full draw of a covering fade out across exactly the band the
+ * bevel and relief fade across. Every fragment first runs the flat tier for
+ * its albedo; beyond the radius that is the whole material, with any
+ * covering laid over it by its baked approximation, and within it the detail
+ * tier and the covering's full draw take over, the base maps read only where
+ * no covering texel shows. Inside the fade band both are drawn and blended,
+ * so nothing pops. This selection governs material detail only — it has no
+ * bearing on fog, which the deferred Lighting.fsh pass computes from the
+ * fragment's reconstructed world position.
  */
 
 // Sun visibility under the grid's cloud layers, written into gMaterial.r so
@@ -60,34 +60,43 @@ float resolveSunVisibility() {
 }
 
 void main() {
-    vec2 tiledUV = tileUV(vUVLocalPos, vUVOrigin, vNormal, vOrient);
-
-    float tier0MaxSqDist = getTier0MaxSqDist();
-    float tier1MaxSqDist = getTier1MaxSqDist();
-    float fragDistSq     = computeDistanceFromCenterSq(vLocalPos);
+    vec2  tiledUV = tileUV(vUVLocalPos, vUVOrigin, vNormal, vOrient);
+    float detail  = getDetailStrength(vLocalPos);
 
     vec3  albedo;
     vec3  normalView;
     float specular;
     float ao;
-    bool  visible;
 
-    if (fragDistSq <= tier0MaxSqDist) {
-        visible = shadeSurfaceFull(tiledUV, vNormal, u_view, albedo, normalView, specular, ao);
-    }
-    else if (fragDistSq <= tier1MaxSqDist) {
-        visible = shadeSurfaceMid(tiledUV, vNormal, u_view, albedo, normalView, specular, ao);
-    }
-    else {
-        visible = shadeSurfaceFlat(tiledUV, vNormal, u_view, albedo, normalView, specular, ao);
-    }
-
-    if (!visible)
+    if (!shadeSurfaceFlat(tiledUV, vNormal, u_view, albedo, normalView, specular, ao))
     discard;
 
-    applyCoverage(
-        vUVLocalPos, tiledUV, vUVOrigin, vCoverage, vColor, vNormal, u_view, fragDistSq <= tier1MaxSqDist,
-        albedo, normalView, specular, ao);
+    vec3 farAlbedo = detail < 1.0 ? approximateCoverage(albedo, vCoverage, vColor) : albedo;
+
+    if (detail > 0.0) {
+
+        vec3  nearAlbedo;
+        vec3  nearNormalView;
+        float nearSpecular;
+        float nearAO;
+
+        bool covered = sampleCoverageDetail(
+            vUVLocalPos, tiledUV, vUVOrigin, vCoverage, vColor, vNormal, u_view,
+            nearAlbedo, nearNormalView, nearSpecular, nearAO);
+
+        if (!covered) {
+            nearAlbedo = albedo;
+            sampleSurfaceDetail(tiledUV, vNormal, u_view, nearNormalView, nearSpecular, nearAO);
+        }
+
+        albedo     = mix(farAlbedo, nearAlbedo, detail);
+        normalView = normalize(mix(normalView, nearNormalView, detail));
+        specular   = mix(specular, nearSpecular, detail);
+        ao         = mix(ao, nearAO, detail);
+    }
+    else {
+        albedo = farAlbedo;
+    }
 
     float sunVisibility = resolveSunVisibility();
 

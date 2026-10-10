@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.covering;
 
+import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
 import engine.root.HandlePackage;
 
 public class CoveringHandle extends HandlePackage {
@@ -53,8 +54,12 @@ public class CoveringHandle extends HandlePackage {
         return coveringData.hasSide();
     }
 
-    public int getMapColor() {
-        return coveringData.getMapColor();
+    public TextureRevealStruct getTopReveal() {
+        return coveringData.getTopReveal();
+    }
+
+    public TextureRevealStruct getSideReveal() {
+        return coveringData.getSideReveal();
     }
 
     public float getTintStrength() {

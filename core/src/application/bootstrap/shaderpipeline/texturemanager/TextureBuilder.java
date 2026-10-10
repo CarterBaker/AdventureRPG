@@ -10,7 +10,9 @@ import javax.imageio.ImageIO;
 
 import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
 import application.bootstrap.shaderpipeline.texture.TextureAtlasStruct;
+import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
 import application.bootstrap.shaderpipeline.texture.TextureTileStruct;
+import application.bootstrap.weatherpipeline.util.SkyColorUtility;
 import engine.assets.atlas.AtlasUtility;
 import engine.graphics.color.PackedColorUtility;
 import engine.root.BuilderPackage;
@@ -22,10 +24,14 @@ class TextureBuilder extends BuilderPackage {
 
     /*
      * Builds TextureArrayStructs from image files: creates tiles, records each
-     * tile's average albedo, packs the atlas and composites one layer per
-     * alias. Only aliases found in the sources are registered, so UBO seeding
-     * writes exactly those. The average is weighted by coverage, so a cutout
-     * texture's transparent pixels never darken it.
+     * tile's average albedo and its reveal, packs the atlas and composites one
+     * layer per alias. Only aliases found in the sources are registered, so
+     * UBO seeding writes exactly those. The average is weighted by coverage,
+     * so a cutout texture's transparent pixels never darken it. The reveal
+     * follows the surface shader's full draw of a covering texel for texel —
+     * shown once its growth is reached and its alpha clears the cutoff, tinted
+     * as far as its chroma allows — so a distant face approximating the tile
+     * shows exactly the share and color a full draw would.
      */
 
     // Internal
@@ -50,6 +56,7 @@ class TextureBuilder extends BuilderPackage {
 
         ObjectArrayList<TextureTileStruct> tiles = new ObjectArrayList<>(tileMap.values());
         resolveAverageColors(tiles);
+        resolveReveals(tiles);
 
         int atlasPixelSize = AtlasUtility.pack(tiles);
         TextureAtlasStruct[] atlasLayers = compositeAtlasLayers(tiles, atlasPixelSize);
@@ -162,6 +169,116 @@ class TextureBuilder extends BuilderPackage {
             return fallbackColor;
 
         return PackedColorUtility.pack((float) (red / coverage), (float) (green / coverage), (float) (blue / coverage));
+    }
+
+    // Reveals \\
+
+    private void resolveReveals(ObjectArrayList<TextureTileStruct> tiles) {
+
+        int albedoAlias = aliasLibrarySystem.get(EngineSetting.SHADER_ALIAS_ALBEDO);
+        int growthAlias = aliasLibrarySystem.get(EngineSetting.SHADER_ALIAS_GROWTH);
+
+        if (growthAlias == EngineSetting.INDEX_NOT_FOUND)
+            throwException("Alias: " + EngineSetting.SHADER_ALIAS_GROWTH + " could not be found in the system");
+
+        int albedoFallback = aliasLibrarySystem.getDefaultColor(albedoAlias).getRGB();
+        int growthFallback = aliasLibrarySystem.getDefaultColor(growthAlias).getRGB();
+
+        for (int i = 0; i < tiles.size(); i++) {
+
+            TextureTileStruct tile = tiles.get(i);
+
+            tile.setReveal(revealImage(
+                    tile.getImage(albedoAlias),
+                    tile.getImage(growthAlias),
+                    tile.getTileWidth(),
+                    tile.getTileHeight(),
+                    albedoFallback,
+                    growthFallback));
+        }
+    }
+
+    private TextureRevealStruct revealImage(
+            BufferedImage albedo,
+            BufferedImage growth,
+            int width,
+            int height,
+            int albedoFallback,
+            int growthFallback) {
+
+        int levelMax = EngineSetting.COVERAGE_LEVEL_MAX;
+        int channelMax = EngineSetting.PACKED_COLOR_CHANNEL_MASK;
+        int[] firstShownCounts = new int[levelMax + 1];
+
+        double red = 0.0;
+        double green = 0.0;
+        double blue = 0.0;
+        double tintableRed = 0.0;
+        double tintableGreen = 0.0;
+        double tintableBlue = 0.0;
+        int shown = 0;
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+
+                int argb = albedo != null ? albedo.getRGB(x, y) : albedoFallback;
+                int alpha = (argb >>> EngineSetting.PACKED_COLOR_ALPHA_SHIFT) & channelMax;
+
+                if (alpha / EngineSetting.COLOR_CHANNEL_BYTE_MAX < EngineSetting.COVERAGE_ALPHA_CUTOFF)
+                    continue;
+
+                int growthValue = PackedColorUtility.red(growth != null ? growth.getRGB(x, y) : growthFallback);
+                firstShownCounts[(growthValue * levelMax + channelMax - 1) / channelMax]++;
+
+                float tintWeight = resolveTintWeight(argb);
+
+                red += PackedColorUtility.red(argb);
+                green += PackedColorUtility.green(argb);
+                blue += PackedColorUtility.blue(argb);
+                tintableRed += PackedColorUtility.red(argb) * tintWeight;
+                tintableGreen += PackedColorUtility.green(argb) * tintWeight;
+                tintableBlue += PackedColorUtility.blue(argb) * tintWeight;
+                shown++;
+            }
+        }
+
+        float[] levelShares = new float[levelMax + 1];
+        float texelCount = Math.max(width * height, 1);
+        int shownByLevel = 0;
+
+        for (int level = 0; level <= levelMax; level++) {
+            shownByLevel += firstShownCounts[level];
+            levelShares[level] = shownByLevel / texelCount;
+        }
+
+        if (shown == 0) {
+            int fallbackColor = PackedColorUtility.pack(
+                    PackedColorUtility.red(albedoFallback),
+                    PackedColorUtility.green(albedoFallback),
+                    PackedColorUtility.blue(albedoFallback));
+            return new TextureRevealStruct(levelShares, fallbackColor, fallbackColor);
+        }
+
+        return new TextureRevealStruct(
+                levelShares,
+                PackedColorUtility.pack((float) (red / shown), (float) (green / shown), (float) (blue / shown)),
+                PackedColorUtility.pack(
+                        (float) (tintableRed / shown),
+                        (float) (tintableGreen / shown),
+                        (float) (tintableBlue / shown)));
+    }
+
+    // How far a texel takes a biome's tint, full while unsaturated and none once its chroma clears the band
+    private float resolveTintWeight(int argb) {
+
+        int max = Math.max(PackedColorUtility.red(argb),
+                Math.max(PackedColorUtility.green(argb), PackedColorUtility.blue(argb)));
+        int min = Math.min(PackedColorUtility.red(argb),
+                Math.min(PackedColorUtility.green(argb), PackedColorUtility.blue(argb)));
+        float chroma = (max - min) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
+
+        return 1f - SkyColorUtility.smoothstep(
+                EngineSetting.COVERAGE_TINT_CHROMA_LOW, EngineSetting.COVERAGE_TINT_CHROMA_HIGH, chroma);
     }
 
     // Atlas Compositing \\

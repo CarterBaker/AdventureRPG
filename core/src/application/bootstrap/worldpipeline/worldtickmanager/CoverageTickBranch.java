@@ -15,6 +15,7 @@ import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.util.TickQuadrant;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
@@ -23,6 +24,9 @@ import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import it.unimi.dsi.fastutil.objects.Reference2LongLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2LongMap;
 
 public class CoverageTickBranch extends BranchPackage {
 
@@ -37,8 +41,14 @@ public class CoverageTickBranch extends BranchPackage {
      * Otherwise it may grow a level, and once it reaches its spread level it
      * may seed a bare host beside it, a level up or down included, at the
      * first level. A seed crossing into a neighbouring chunk only lands when
-     * that chunk's lock is free. Every chunk ticks under its own lock, and a
-     * touched subchunk that has been built is rebuilt and re-merged in place.
+     * that chunk's lock is free. Every chunk ticks under its own lock. A
+     * change only marks its subchunk for a rebuild when the cell has a face
+     * the mesher could draw the covering on, since a cell boxed in by whole
+     * blocks draws nothing either way. Marked subchunks wait in a queue that
+     * rebuildPending() drains each frame within its own budget, so a tick
+     * never stalls a frame however much ground it grows; a built chunk's
+     * subchunks are rebuilt and re-merged in place, and one the stream has
+     * yet to build is left to build from the coverage as it now stands.
      */
 
     private static final Direction3Vector[] LATERAL_DIRECTIONS = {
@@ -60,6 +70,7 @@ public class CoverageTickBranch extends BranchPackage {
     private int generationDataIndex;
     private int neighborDataIndex;
     private int buildDataIndex;
+    private int rebuildsPerFrame;
 
     // State
     private int frameCounter;
@@ -69,6 +80,9 @@ public class CoverageTickBranch extends BranchPackage {
     // Scratch — the subchunks a tick touched in the chunk it ticks, and in a neighbour a seed crossed into
     private boolean[] touchedSubChunks;
     private boolean[] touchedNeighborSubChunks;
+
+    // Pending — the subchunks of each chunk still waiting on a rebuild, one bit per subchunk
+    private Reference2LongLinkedOpenHashMap<ChunkInstance> chunk2PendingSubChunks;
 
     // Internal \\
 
@@ -83,6 +97,11 @@ public class CoverageTickBranch extends BranchPackage {
         this.generationDataIndex = ChunkData.GENERATION_DATA.index;
         this.neighborDataIndex = ChunkData.NEIGHBOR_DATA.index;
         this.buildDataIndex = ChunkData.BUILD_DATA.index;
+        this.rebuildsPerFrame = EngineSetting.COVERAGE_REBUILDS_PER_FRAME;
+
+        if (worldHeight > Long.SIZE)
+            throwException("Coverage rebuilds track a chunk's subchunks in one long — WORLD_HEIGHT "
+                    + worldHeight + " exceeds " + Long.SIZE + " subchunks.");
 
         // State
         this.frameCounter = EngineSetting.COVERAGE_TICK_PHASE_FRAMES;
@@ -92,6 +111,9 @@ public class CoverageTickBranch extends BranchPackage {
         // Scratch
         this.touchedSubChunks = new boolean[worldHeight];
         this.touchedNeighborSubChunks = new boolean[worldHeight];
+
+        // Pending
+        this.chunk2PendingSubChunks = new Reference2LongLinkedOpenHashMap<>();
     }
 
     @Override
@@ -161,8 +183,6 @@ public class CoverageTickBranch extends BranchPackage {
         if (!syncContainer.tryAcquire())
             return;
 
-        boolean touched = false;
-
         try {
 
             if (!syncContainer.getData()[generationDataIndex])
@@ -173,14 +193,11 @@ public class CoverageTickBranch extends BranchPackage {
             for (int subChunkY = 0; subChunkY < subChunks.length; subChunkY++)
                 if (subChunks[subChunkY].hasCoverage())
                     tickSubChunk(chunk, subChunkY);
-
-            touched = rebuildTouched(chunk, touchedSubChunks);
         } finally {
             syncContainer.release();
         }
 
-        if (touched)
-            worldStreamManager.invalidateMegaForChunk(chunk.getCoordinate());
+        queueTouched(chunk, touchedSubChunks);
     }
 
     private void tickSubChunk(ChunkInstance chunk, int subChunkY) {
@@ -213,12 +230,14 @@ public class CoverageTickBranch extends BranchPackage {
         int cellSalt = chunkSalt + worldY;
 
         if (!coveringHandle.canHost(subChunk.getBlock(packedXYZ))) {
-            writeCoverage(chunk, subChunkY, packedXYZ, CoverageUtility.NONE, touchedSubChunks);
+            writeCoverage(chunk, subChunkY, packedXYZ, CoverageUtility.NONE, coveringHandle, touchedSubChunks);
             return;
         }
 
         if (coveringHandle.requiresOpenTop() && isSmothered(chunk, localX, worldY, localZ)) {
-            writeCoverage(chunk, subChunkY, packedXYZ, CoverageUtility.addLevels(coverage, -1), touchedSubChunks);
+            writeCoverage(
+                    chunk, subChunkY, packedXYZ, CoverageUtility.addLevels(coverage, -1), coveringHandle,
+                    touchedSubChunks);
             return;
         }
 
@@ -228,7 +247,9 @@ public class CoverageTickBranch extends BranchPackage {
 
         if (!CoverageUtility.isFull(coverage)
                 && roll(EngineSetting.COVERAGE_GROWTH_SALT, cellIndex, cellSalt) < coveringHandle.getGrowthChance())
-            writeCoverage(chunk, subChunkY, packedXYZ, CoverageUtility.addLevels(coverage, 1), touchedSubChunks);
+            writeCoverage(
+                    chunk, subChunkY, packedXYZ, CoverageUtility.addLevels(coverage, 1), coveringHandle,
+                    touchedSubChunks);
 
         if (CoverageUtility.getLevel(coverage) >= coveringHandle.getSpreadLevel()
                 && roll(EngineSetting.COVERAGE_SPREAD_SALT, cellIndex, cellSalt) < coveringHandle.getSpreadChance())
@@ -309,21 +330,17 @@ public class CoverageTickBranch extends BranchPackage {
         if (!syncContainer.tryAcquire())
             return;
 
-        boolean touched = false;
-
         try {
 
             if (!syncContainer.getData()[generationDataIndex])
                 return;
 
             seedCell(neighbor, lateralXYZ, targetY, coveringHandle, seed, touchedNeighborSubChunks);
-            touched = rebuildTouched(neighbor, touchedNeighborSubChunks);
         } finally {
             syncContainer.release();
         }
 
-        if (touched)
-            worldStreamManager.invalidateMegaForChunk(neighbor.getCoordinate());
+        queueTouched(neighbor, touchedNeighborSubChunks);
     }
 
     private void seedCell(
@@ -347,24 +364,75 @@ public class CoverageTickBranch extends BranchPackage {
         if (coveringHandle.requiresOpenTop() && isSmothered(chunk, localX, targetY, localZ))
             return;
 
-        writeCoverage(chunk, subChunkY, targetXYZ, seed, touched);
+        writeCoverage(chunk, subChunkY, targetXYZ, seed, coveringHandle, touched);
     }
 
     // Write \\
 
-    private void writeCoverage(ChunkInstance chunk, int subChunkY, int packedXYZ, short coverage, boolean[] touched) {
+    // The cell's coverage written, its subchunk marked for a rebuild only when the change can be seen
+    private void writeCoverage(
+            ChunkInstance chunk,
+            int subChunkY,
+            int packedXYZ,
+            short coverage,
+            CoveringHandle coveringHandle,
+            boolean[] touched) {
+
         chunk.getSubChunk(subChunkY).setCoverage(packedXYZ, coverage);
-        touched[subChunkY] = true;
+
+        if (showsCoverage(chunk, subChunkY, packedXYZ, coveringHandle))
+            touched[subChunkY] = true;
+    }
+
+    // Visibility \\
+
+    // True when any face the covering is drawn on could be open — its upper face, and its upright faces when the
+    // covering has side tiles. A face against a whole FULL block is never drawn, and one at the chunk's edge is
+    // taken as open, since the cell beside it lies under another chunk's lock
+    private boolean showsCoverage(ChunkInstance chunk, int subChunkY, int packedXYZ, CoveringHandle coveringHandle) {
+
+        int localX = Coordinate3Int.unpackX(packedXYZ);
+        int localZ = Coordinate3Int.unpackZ(packedXYZ);
+        int worldY = subChunkY * chunkSize + Coordinate3Int.unpackY(packedXYZ);
+
+        if (!isWholeFull(chunk, localX, worldY, localZ))
+            return true;
+
+        if (worldY + 1 < worldHeight * chunkSize && !isWholeFull(chunk, localX, worldY + 1, localZ))
+            return true;
+
+        if (!coveringHandle.hasSide())
+            return false;
+
+        for (Direction3Vector direction : LATERAL_DIRECTIONS) {
+
+            if (ChunkCoordinateUtility.isAtEdge(packedXYZ, direction))
+                return true;
+
+            int lateralXYZ = ChunkCoordinateUtility.getNeighborAndWrap(packedXYZ, direction);
+
+            if (!isWholeFull(chunk, Coordinate3Int.unpackX(lateralXYZ), worldY, Coordinate3Int.unpackZ(lateralXYZ)))
+                return true;
+        }
+
+        return false;
+    }
+
+    private boolean isWholeFull(ChunkInstance chunk, int localX, int worldY, int localZ) {
+
+        SubChunkInstance subChunk = chunk.getSubChunk(worldY / chunkSize);
+        int packedXYZ = Coordinate3Int.pack(localX, worldY % chunkSize, localZ);
+
+        return blockManager.getGeometryFromBlockID(subChunk.getBlock(packedXYZ)) == DynamicGeometryType.FULL
+                && !SubBlockUtility.isSubdivided(subChunk.getSubBlockMask(packedXYZ));
     }
 
     // Rebuild \\
 
-    // Every subchunk of the chunk the tick touched, rebuilt when the chunk has been built — true when any was touched
-    private boolean rebuildTouched(ChunkInstance chunk, boolean[] touched) {
+    // Every subchunk the tick touched queued against its chunk, the touched flags cleared for the next tick
+    private void queueTouched(ChunkInstance chunk, boolean[] touched) {
 
-        boolean[] data = chunk.getChunkDataSyncContainer().getData();
-        boolean built = data[neighborDataIndex] && data[buildDataIndex];
-        boolean anyTouched = false;
+        long pending = 0L;
 
         for (int subChunkY = 0; subChunkY < worldHeight; subChunkY++) {
 
@@ -372,18 +440,64 @@ public class CoverageTickBranch extends BranchPackage {
                 continue;
 
             touched[subChunkY] = false;
-            anyTouched = true;
-
-            if (built) {
-                chunk.getSubChunk(subChunkY).getDynamicPacketInstance().clear();
-                dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
-            }
+            pending |= 1L << subChunkY;
         }
 
-        if (anyTouched && built)
-            ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, data);
+        if (pending != 0L)
+            chunk2PendingSubChunks.put(chunk, chunk2PendingSubChunks.getLong(chunk) | pending);
+    }
 
-        return anyTouched;
+    // Queued subchunks rebuilt oldest chunk first, up to the frame's budget; a chunk whose lock is busy waits
+    public void rebuildPending() {
+
+        int budget = rebuildsPerFrame;
+        ObjectIterator<Reference2LongMap.Entry<ChunkInstance>> iterator = chunk2PendingSubChunks
+                .reference2LongEntrySet().fastIterator();
+
+        while (budget > 0 && iterator.hasNext()) {
+
+            Reference2LongMap.Entry<ChunkInstance> entry = iterator.next();
+            ChunkInstance chunk = entry.getKey();
+            ChunkDataSyncContainer syncContainer = chunk.getChunkDataSyncContainer();
+
+            if (!syncContainer.tryAcquire())
+                continue;
+
+            long pending = entry.getLongValue();
+            boolean built;
+
+            try {
+
+                boolean[] data = syncContainer.getData();
+                built = data[neighborDataIndex] && data[buildDataIndex];
+
+                if (built) {
+
+                    while (pending != 0L && budget > 0) {
+
+                        int subChunkY = Long.numberOfTrailingZeros(pending);
+                        pending &= pending - 1L;
+                        budget--;
+
+                        chunk.getSubChunk(subChunkY).getDynamicPacketInstance().clear();
+                        dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
+                    }
+
+                    ChunkDataUtility.cascadeClear(ChunkData.MERGE_DATA, data);
+                } else
+                    pending = 0L;
+            } finally {
+                syncContainer.release();
+            }
+
+            if (built)
+                worldStreamManager.invalidateMegaForChunk(chunk.getCoordinate());
+
+            if (pending == 0L)
+                iterator.remove();
+            else
+                entry.setValue(pending);
+        }
     }
 
     // Utility \\

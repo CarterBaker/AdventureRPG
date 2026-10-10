@@ -55,11 +55,6 @@ public class CoverageUtility extends EngineUtility {
         return getLevel(coverage) == LEVEL_MAX;
     }
 
-    // Share of the full level the coverage has reached, 0 bare to 1 fully grown
-    public static float getShare(short coverage) {
-        return getLevel(coverage) / (float) LEVEL_MAX;
-    }
-
     // Vertex \\
 
     public static float toVertexWord(short coverage, boolean side) {

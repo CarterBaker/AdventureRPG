@@ -325,6 +325,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_SLIDER_FILM_GRAIN = "Film Grain";
     public static final String SETTINGS_VALUE_ON = "On";
     public static final String SETTINGS_VALUE_OFF = "Off";
+    public static final String SETTINGS_FORMAT_BLOCKS = "%d blocks";
     public static final String SETTINGS_FORMAT_CHUNKS = "%d chunks";
     public static final String SETTINGS_FORMAT_FIELD_OF_VIEW = "%.0f";
     public static final String SETTINGS_FORMAT_SENSITIVITY = "%.2f";
@@ -333,7 +334,7 @@ public class RuntimeSetting {
     public static final int SETTINGS_OUTLINE_THICKNESS_STEP = 1;
     public static final int SETTINGS_RENDER_DISTANCE_STEP = 8;
     public static final int SETTINGS_RENDER_DISTANCE_PER_RADIUS = 2;
-    public static final int SETTINGS_TERRAIN_DETAIL_STEP = 1;
+    public static final int SETTINGS_TERRAIN_DETAIL_STEP = 8;
     public static final float SETTINGS_FIELD_OF_VIEW_STEP = 5f;
     public static final float SETTINGS_SLIDER_PERCENT_SCALE = 100f;
 

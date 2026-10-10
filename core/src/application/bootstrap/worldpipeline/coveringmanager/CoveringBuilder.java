@@ -4,6 +4,7 @@ import java.io.File;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
+import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -62,12 +63,14 @@ class CoveringBuilder extends BuilderPackage {
         validateTextureArray(topTexture, hostBlockIDs, coveringName);
 
         int sideTileID = EngineSetting.BLOCK_TEXTURE_UNDEFINED;
+        TextureRevealStruct sideReveal = null;
         String sideTextureName = ArpgUtility.getString(arpg, "side_texture", EngineSetting.COVERING_TEXTURE_NONE);
 
         if (!sideTextureName.equals(EngineSetting.COVERING_TEXTURE_NONE)) {
             TextureHandle sideTexture = textureManager.getTextureHandleFromTextureName(sideTextureName);
             validateTextureArray(sideTexture, hostBlockIDs, coveringName);
             sideTileID = sideTexture.getTileID();
+            sideReveal = validateReveal(sideTexture, coveringName);
         }
 
         float tintStrength = parseShare(
@@ -93,7 +96,8 @@ class CoveringBuilder extends BuilderPackage {
                 hostBlockIDs,
                 topTexture.getTileID(),
                 sideTileID,
-                topTexture.getAverageColor(),
+                validateReveal(topTexture, coveringName),
+                sideReveal,
                 tintStrength,
                 growthChance,
                 spreadChance,
@@ -159,6 +163,17 @@ class CoveringBuilder extends BuilderPackage {
                         + "\" lives in another texture array than host \"" + hostHandle.getBlockName()
                         + "\" — a covering's tiles must share the array its hosts are drawn from.");
         }
+    }
+
+    private TextureRevealStruct validateReveal(TextureHandle textureHandle, String coveringName) {
+
+        TextureRevealStruct reveal = textureHandle.getReveal();
+
+        if (reveal == null)
+            throwException("Covering \"" + coveringName + "\" texture \"" + textureHandle.getTileName()
+                    + "\" carries no reveal — a covering's tiles must come from an image texture array.");
+
+        return reveal;
     }
 
     // Growth \\

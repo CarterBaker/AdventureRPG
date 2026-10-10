@@ -333,12 +333,12 @@ public class EngineSetting {
     public static final String INPUT_NAME_WORD_SEPARATOR = " ";
 
     // User Settings
+    public static final int DETAIL_RADIUS_MAX = 128;
+    public static final int DETAIL_RADIUS_MIN = 16;
     public static final float FIELD_OF_VIEW_MAX = 110f;
     public static final float FIELD_OF_VIEW_MIN = 50f;
     public static final float MOUSE_SENSITIVITY_MAX = 1.0f;
     public static final float MOUSE_SENSITIVITY_MIN = 0.01f;
-    public static final int NEAR_TESSELLATION_RADIUS_MAX = 8;
-    public static final int NEAR_TESSELLATION_RADIUS_MIN = 1;
     public static final int RENDER_DISTANCE_MAX = 112;
     public static final int RENDER_DISTANCE_MIN = 16;
 
@@ -386,7 +386,7 @@ public class EngineSetting {
     public static final float NATURAL_GROUND_OFFSET_SMOOTHING = 10.0f;
     public static final float NATURAL_NOISE_CELL_BLOCKS = 2.0f;
     public static final int NATURAL_NOISE_CHANNELS = 4;
-    public static final float NATURAL_NOISE_MID_TIER_MARGIN_BLOCKS = 512.0f;
+    public static final float NATURAL_NOISE_DETAIL_DENSITY_MARGIN_BLOCKS = 12.0f;
     public static final int NATURAL_NOISE_PERIOD_CHUNKS = 4;
     public static final int NATURAL_NOISE_PLANES = 3;
     public static final int NATURAL_NOISE_PERIOD_BLOCKS = NATURAL_NOISE_PERIOD_CHUNKS * CHUNK_SIZE;
@@ -430,6 +430,7 @@ public class EngineSetting {
     public static final int QUAD_VERTEX_COUNT = 4;
     public static final String SHADER_ALIAS_ALBEDO = "Albedo";
     public static final float SHADER_ALIAS_DEFAULT_ALPHA = 1.0f;
+    public static final String SHADER_ALIAS_GROWTH = "Growth";
     public static final int SHADER_ALIAS_LIBRARY_GROWTH_FACTOR = 2;
     public static final int SHADER_ALIAS_LIBRARY_INITIAL_CAPACITY = 16;
     public static final int SHADER_UBO_UNSPECIFIED_BINDING = INDEX_NOT_FOUND;
@@ -483,6 +484,7 @@ public class EngineSetting {
     public static final String UNIFORM_CURRENT_HOUR = "u_currentHour";
     public static final String UNIFORM_CURRENT_MINUTE = "u_currentMinute";
     public static final String UNIFORM_DELTA_TIME = "u_deltaTime";
+    public static final String UNIFORM_DETAIL_RADIUS = "u_detailRadius";
     public static final String UNIFORM_DEST_RECT = "u_destRect";
     public static final String UNIFORM_DISTANCE_FROM_CENTER = "u_distanceFromCenter";
     public static final String UNIFORM_FACE_ORIENTATIONS = "u_faceOrientations";
@@ -490,7 +492,6 @@ public class EngineSetting {
     public static final String UNIFORM_GRID_POSITION = "u_gridPosition";
     public static final String UNIFORM_MACRO_COVERAGE = "u_macroCoverage";
     public static final String UNIFORM_NATURAL_NOISE_LATTICE = "u_naturalNoiseLattice";
-    public static final String UNIFORM_NEAR_TESSELLATION_RADIUS = "u_nearTessellationRadius";
     public static final String UNIFORM_PLAYER_CHUNK_X = "u_playerChunkX";
     public static final String UNIFORM_PLAYER_CHUNK_Z = "u_playerChunkZ";
     public static final String UNIFORM_PLAYER_POSITION = "u_playerPosition";
@@ -700,12 +701,30 @@ public class EngineSetting {
     public static final int COVERAGE_VERTEX_SIDE_BIT = 1 << COVERAGE_LEVEL_BITS;
     public static final String COVERING_DATA_UBO = "CoveringData";
     public static final int COVERING_ID_COUNT = 64;
+    public static final int COVERING_FACES_PER_COVERING = 2;
+    public static final int COVERING_FACE_COUNT = COVERING_ID_COUNT * COVERING_FACES_PER_COVERING;
     public static final float COVERING_TILE_NONE = -1f;
+    public static final String UNIFORM_COVERING_REVEAL_COLOR = "u_coveringRevealColor";
+    public static final String UNIFORM_COVERING_REVEAL_SHARES = "u_coveringRevealShares";
+    public static final String UNIFORM_COVERING_REVEAL_TINTABLE = "u_coveringRevealTintable";
     public static final String UNIFORM_COVERING_STYLE = "u_coveringStyle";
     public static final String UNIFORM_COVERING_TILES = "u_coveringTiles";
 
-    // Coverage Growth — how often coverage ticks, how many cells of a covered subchunk each tick draws, how far up
-    // or down a covering spreads, and the salts its rolls are drawn with
+    // Coverage Reveal — how a covering's tile shows over a face, which the surface shader draws in full within the
+    // detail radius and the texture builder bakes for every tile so distant faces and maps approximate it: a texel
+    // shows once its growth is reached and its alpha clears the cutoff, and takes the biome's tint as far as its
+    // chroma stays below the band. Shares travel one byte per level, four levels to an int.
+    public static final float COVERAGE_ALPHA_CUTOFF = 0.5f;
+    public static final int COVERAGE_SHARE_BITS = Byte.SIZE;
+    public static final int COVERAGE_SHARE_MAX = (1 << COVERAGE_SHARE_BITS) - 1;
+    public static final int COVERAGE_SHARES_PER_WORD = Integer.SIZE / COVERAGE_SHARE_BITS;
+    public static final float COVERAGE_TINT_CHROMA_HIGH = 0.3f;
+    public static final float COVERAGE_TINT_CHROMA_LOW = 0.08f;
+
+    // Coverage Growth — how often coverage ticks, how many cells of a covered subchunk each tick draws, how many
+    // subchunks its changes rebuild each frame, how far up or down a covering spreads, and the salts its rolls are
+    // drawn with
+    public static final int COVERAGE_REBUILDS_PER_FRAME = 2;
     public static final int COVERAGE_SPREAD_REACH_Y = 1;
     public static final long COVERAGE_SPREAD_DIRECTION_SALT = 0x2C7B19E05D3F8A64L;
     public static final long COVERAGE_SPREAD_HEIGHT_SALT = 0x71E4A0C58B26D39FL;
@@ -729,6 +748,7 @@ public class EngineSetting {
     // Biome Coverings — the tint a biome lends the coverings that grow in it, and the optional coverings it lays
     public static final String DEFAULT_BIOME_COVERING_TINT = "#8CB85C";
     public static final int DEFAULT_BIOME_COVERING_VARIANCE = 0;
+    public static final int BIOME_COVERING_VARIANCE_PATCH_BLOCKS = 4;
     public static final long BIOME_COVERING_VARIANCE_SALT = 0x6F2A8D41C9B37E05L;
 
     // Liquid & Swimming

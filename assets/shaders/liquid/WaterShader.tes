@@ -24,7 +24,7 @@ out vec4  vOceanState;
 const float LIQUID_LEVEL_MAX = 64.0;
 
 vec3 applyShoreWarp(vec3 worldPos) {
-    float nearStrength = getNearStrength(computeDistanceFromCenterSq(worldPos), getTier0MaxSqDist());
+    float nearStrength = getDetailStrength(worldPos);
 
     if (nearStrength <= 0.001)
     return worldPos;

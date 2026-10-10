@@ -390,14 +390,18 @@ public class WorldGenerationManager extends ManagerPackage {
         column.columnProfile[columnIndex] = profile;
     }
 
-    // The biome's coverage for a column, fallen short of its full level by up to its variance, drawn per column
+    // The biome's coverage for a column, fallen short of its full level by up to its variance, drawn per patch of
+    // columns so neighbouring faces share a level and the mesher still merges them
     private short resolveColumnCoverage(short coverage, int variance, long seed, long worldX, long worldZ) {
 
         if (variance == 0 || !CoverageUtility.isCovered(coverage))
             return coverage;
 
+        int patch = EngineSetting.BIOME_COVERING_VARIANCE_PATCH_BLOCKS;
         float roll = BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
-                seed ^ EngineSetting.BIOME_COVERING_VARIANCE_SALT, (int) worldX, (int) worldZ));
+                seed ^ EngineSetting.BIOME_COVERING_VARIANCE_SALT,
+                (int) Math.floorDiv(worldX, patch),
+                (int) Math.floorDiv(worldZ, patch)));
 
         return CoverageUtility.addLevels(coverage, -(int) (roll * (variance + 1)));
     }

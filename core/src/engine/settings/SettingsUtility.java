@@ -60,10 +60,10 @@ public class SettingsUtility extends EngineUtility {
         if (settings.windowHeight < EngineSetting.MIN_WINDOW_DIMENSION)
             settings.windowHeight = EngineSetting.MIN_WINDOW_DIMENSION;
 
-        settings.nearTessellationRadius = Math.clamp(
-                settings.nearTessellationRadius,
-                EngineSetting.NEAR_TESSELLATION_RADIUS_MIN,
-                EngineSetting.NEAR_TESSELLATION_RADIUS_MAX);
+        settings.detailRadius = Math.clamp(
+                settings.detailRadius,
+                EngineSetting.DETAIL_RADIUS_MIN,
+                EngineSetting.DETAIL_RADIUS_MAX);
         settings.maxRenderDistance = Math.clamp(
                 settings.maxRenderDistance,
                 EngineSetting.RENDER_DISTANCE_MIN,

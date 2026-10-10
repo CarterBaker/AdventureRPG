@@ -152,10 +152,10 @@ public class SettingsOptionBranch extends BranchPackage {
                 session.markRenderSettingsChanged();
             }
             case TERRAIN_DETAIL -> {
-                settings.nearTessellationRadius = Math.clamp(
-                        settings.nearTessellationRadius + step * RuntimeSetting.SETTINGS_TERRAIN_DETAIL_STEP,
-                        EngineSetting.NEAR_TESSELLATION_RADIUS_MIN,
-                        EngineSetting.NEAR_TESSELLATION_RADIUS_MAX);
+                settings.detailRadius = Math.clamp(
+                        settings.detailRadius + step * RuntimeSetting.SETTINGS_TERRAIN_DETAIL_STEP,
+                        EngineSetting.DETAIL_RADIUS_MIN,
+                        EngineSetting.DETAIL_RADIUS_MAX);
                 session.markRenderSettingsChanged();
             }
             case OUTLINES -> {
@@ -193,8 +193,8 @@ public class SettingsOptionBranch extends BranchPackage {
                     RuntimeSetting.SETTINGS_FORMAT_CHUNKS,
                     settings.maxRenderDistance / RuntimeSetting.SETTINGS_RENDER_DISTANCE_PER_RADIUS);
             case TERRAIN_DETAIL -> String.format(
-                    RuntimeSetting.SETTINGS_FORMAT_CHUNKS,
-                    settings.nearTessellationRadius);
+                    RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
+                    settings.detailRadius);
             case OUTLINES -> formatToggle(settings.outlines);
             case OUTLINE_THICKNESS -> String.format(RuntimeSetting.SETTINGS_FORMAT_PIXELS, settings.outlineThickness);
             case DEPTH_OF_FIELD -> formatToggle(settings.depthOfField);
