@@ -328,7 +328,6 @@ public class BlockPlacementSystem extends SystemPackage {
     }
 
     private void rebuildSubChunk(ChunkInstance chunk, int subChunkY) {
-        chunk.getSubChunk(subChunkY).getDynamicPacketInstance().clear();
         dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
     }
 

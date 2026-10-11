@@ -295,14 +295,19 @@ class RenderSystem extends SystemPackage {
 
         RenderGLSLUtility.bindVAO(vao);
 
-        if (tessellated)
-            RenderGLSLUtility.drawPatches(
-                    model.getIndexCount() / EngineSetting.QUAD_INDEX_COUNT * EngineSetting.QUAD_VERTEX_COUNT);
-        else
+        int triangles;
+
+        if (tessellated) {
+            RenderGLSLUtility.drawPatches(meshData.getVertexCount());
+            triangles = meshData.getVertexCount() / EngineSetting.QUAD_VERTEX_COUNT
+                    * (EngineSetting.QUAD_INDEX_COUNT / EngineSetting.TRIANGLE_VERTEX_COUNT);
+        } else {
             RenderGLSLUtility.drawElements(model.getIndexCount());
+            triangles = model.getIndexCount() / EngineSetting.TRIANGLE_VERTEX_COUNT;
+        }
 
         RenderGLSLUtility.unbindVAO();
-        profilerManager.recordDraw(window, model.getIndexCount() / EngineSetting.TRIANGLE_VERTEX_COUNT);
+        profilerManager.recordDraw(window, triangles);
     }
 
     // Submit \\

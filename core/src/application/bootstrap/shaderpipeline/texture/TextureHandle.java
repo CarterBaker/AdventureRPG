@@ -73,6 +73,10 @@ public class TextureHandle extends HandlePackage {
         return textureData.getV1();
     }
 
+    public int getAtlasCell() {
+        return textureData.getAtlasCell();
+    }
+
     public int getAverageColor() {
         return textureData.getAverageColor();
     }

@@ -315,6 +315,10 @@ class Lwjgl3GL implements GL40 {
         GL15.glDeleteBuffers(buffers);
     }
 
+    public void glTexBuffer(int target, int internalformat, int buffer) {
+        GL31C.glTexBuffer(target, internalformat, buffer);
+    }
+
     public void glBufferData(int target, int size, Buffer data, int usage) {
         if (data instanceof FloatBuffer fb)
             GL15.glBufferData(target, fb, usage);

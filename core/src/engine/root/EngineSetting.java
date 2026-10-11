@@ -53,9 +53,11 @@ public class EngineSetting {
     public static final int GL_RGB16F = 0x881B;
     public static final int GL_RGB32F = 0x8815;
     public static final int GL_RGB8 = 0x8051;
+    public static final int GL_RG32UI = 0x823C;
     public static final int GL_RGBA = 0x1908;
     public static final int GL_RGBA16F = 0x881A;
     public static final int GL_RGBA32F = 0x8814;
+    public static final int GL_RGBA32UI = 0x8D70;
     public static final int GL_RGBA8 = 0x8058;
     public static final int GL_SCISSOR_TEST = 0x0C11;
     public static final int GL_SRC_ALPHA = 0x0302;
@@ -64,6 +66,7 @@ public class EngineSetting {
     public static final int GL_TEXTURE0 = 0x84C0;
     public static final int GL_TEXTURE_2D = 0x0DE1;
     public static final int GL_TEXTURE_2D_ARRAY = 0x8C1A;
+    public static final int GL_TEXTURE_BUFFER = 0x8C2A;
     public static final int GL_TEXTURE_MAG_FILTER = 0x2800;
     public static final int GL_TEXTURE_MIN_FILTER = 0x2801;
     public static final int GL_TEXTURE_WRAP_S = 0x2802;
@@ -692,6 +695,37 @@ public class EngineSetting {
     public static final int SUB_BLOCK_MASK_FULL = (1 << SUB_BLOCK_OCTANT_COUNT) - 1;
     public static final float SUB_BLOCK_SIZE = BLOCK_SIZE / SUB_BLOCK_DIVISIONS;
     public static final float SUB_BLOCK_SMOOTHING_THRESHOLD_BLOCKS = 0.5f;
+
+    // Quad Records — the packed per-quad records terrain and water draw from, pulled by their shaders from a buffer
+    // texture with no vertex attributes. Word 0 of every layout is the quad's position in sub-blocks from its draw's
+    // origin, so merging shifts a record with one add. A solid record carries the geometry meta word, the coverage
+    // word beside the tile's atlas cell, then one stream of 24-bit words — four corner tints, four low and four high
+    // edge words — packed four words to three ints. A liquid record carries its face, extents, level and tidal flag
+    // in one word. Layouts must match includes/QuadRecord.glsl.
+    public static final String QUAD_VAO = "util/vao/QuadVAO";
+    public static final String UNIFORM_QUAD_BUFFER = "u_quadBuffer";
+    public static final int ATLAS_CELL_AXIS_BITS = 8;
+    public static final int QUAD_PACKET_INITIAL_BUCKETS = 4;
+    public static final int QUAD_BUFFER_SHRINK_DIVISOR = 4;
+    public static final int QUAD_RECORD_POSITION_X_BITS = 10;
+    public static final int QUAD_RECORD_POSITION_Z_BITS = 10;
+    public static final int QUAD_RECORD_POSITION_Z_SHIFT = QUAD_RECORD_POSITION_X_BITS;
+    public static final int QUAD_RECORD_POSITION_Y_SHIFT = QUAD_RECORD_POSITION_X_BITS + QUAD_RECORD_POSITION_Z_BITS;
+    public static final int QUAD_RECORD_TEXEL_INTS = 4;
+    public static final int QUAD_RECORD_SOLID_INTS = 12;
+    public static final int QUAD_RECORD_TILE_SHIFT = 16;
+    public static final int QUAD_RECORD_STREAM_WORD_BITS = 24;
+    public static final int QUAD_RECORD_STREAM_WORD_MASK = (1 << QUAD_RECORD_STREAM_WORD_BITS) - 1;
+    public static final int QUAD_RECORD_LIQUID_INTS = 2;
+    public static final int QUAD_RECORD_LIQUID_SIZE_A_SHIFT = GEOMETRY_META_FACE_BITS;
+    public static final int QUAD_RECORD_LIQUID_SIZE_BITS = 4;
+    public static final int QUAD_RECORD_LIQUID_SIZE_B_SHIFT = QUAD_RECORD_LIQUID_SIZE_A_SHIFT
+            + QUAD_RECORD_LIQUID_SIZE_BITS;
+    public static final int QUAD_RECORD_LIQUID_LEVEL_SHIFT = QUAD_RECORD_LIQUID_SIZE_B_SHIFT
+            + QUAD_RECORD_LIQUID_SIZE_BITS;
+    public static final int QUAD_RECORD_LIQUID_LEVEL_BITS = 7;
+    public static final int QUAD_RECORD_LIQUID_TIDAL_SHIFT = QUAD_RECORD_LIQUID_LEVEL_SHIFT
+            + QUAD_RECORD_LIQUID_LEVEL_BITS;
 
     // Coverage — a covering's ID and level packed into one short per cell, the same with the face it shows on packed
     // into one exact float per vertex, and the table the surface shader reads every covering's tiles from

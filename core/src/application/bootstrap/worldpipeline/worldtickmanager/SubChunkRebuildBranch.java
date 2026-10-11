@@ -161,7 +161,6 @@ public class SubChunkRebuildBranch extends BranchPackage {
             pending &= pending - 1L;
             budget--;
 
-            chunk.getSubChunk(subChunkY).getDynamicPacketInstance().clear();
             dynamicGeometryManager.buildSubChunk(dynamicGeometryAsyncContainer, chunk, subChunkY);
         }
 

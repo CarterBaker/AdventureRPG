@@ -57,7 +57,7 @@ public class CoverageUtility extends EngineUtility {
 
     // Vertex \\
 
-    public static float toVertexWord(short coverage, boolean side) {
+    public static int toVertexWord(short coverage, boolean side) {
 
         if (!isCovered(coverage))
             return NONE;

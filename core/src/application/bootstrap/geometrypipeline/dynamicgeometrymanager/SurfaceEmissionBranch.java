@@ -1,6 +1,8 @@
 package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
+import application.bootstrap.geometrypipeline.quadpacket.QuadRecordUtility;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
@@ -16,21 +18,22 @@ import engine.graphics.color.Color;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Direction3Vector;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 class SurfaceEmissionBranch extends BranchPackage {
 
     /*
-     * Turns one merged solid quad into its four patch vertices at either
-     * resolution. Packs the column codes along each edge and the face, extents
-     * and flags into float-exact words, so the surface shader can rebuild the
-     * sub-cells around any vertex exactly as neighboring quads do. The cell's
-     * coverage rides along as one more exact word: its covering and level on
-     * an upper face, on an upright face only when the covering has side
-     * tiles, and never on a lower face. resolveCoverageWord() is the one
-     * definition both merge passes compare, so a merged quad never spans two
-     * coverages.
+     * Turns one merged solid quad into its packed record at either
+     * resolution: its origin, the face, extents and flags in one meta word,
+     * the coverage word beside the tile's atlas cell, then its four corner
+     * tints and the column codes along each edge as 24-bit words, so the
+     * surface shader rebuilds its corners and the sub-cells around any vertex
+     * exactly as neighboring quads do. The coverage word carries the cell's
+     * covering and level on an upper face, on an upright face only when the
+     * covering has side tiles, and never on a lower face.
+     * resolveCoverageWord() is the one definition both merge passes compare,
+     * so a merged quad never spans two coverages. Every value is a local, so
+     * builder threads emit through it at once.
      */
 
     // Internal
@@ -53,8 +56,7 @@ class SurfaceEmissionBranch extends BranchPackage {
     private int sizeBShift;
     private int naturalShift;
     private int edgeUnitShift;
-    private int vertexFloatCount;
-    private int quadVertexCount;
+    private int tileShift;
 
     // Internal \\
 
@@ -76,8 +78,7 @@ class SurfaceEmissionBranch extends BranchPackage {
         this.sizeBShift = sizeAShift + EngineSetting.GEOMETRY_META_SIZE_BITS;
         this.naturalShift = sizeBShift + EngineSetting.GEOMETRY_META_SIZE_BITS;
         this.edgeUnitShift = naturalShift + 1;
-        this.vertexFloatCount = EngineSetting.CHUNK_VERTEX_FLOAT_COUNT;
-        this.quadVertexCount = EngineSetting.QUAD_VERTEX_COUNT;
+        this.tileShift = EngineSetting.QUAD_RECORD_TILE_SHIFT;
     }
 
     @Override
@@ -95,7 +96,7 @@ class SurfaceEmissionBranch extends BranchPackage {
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
             BlockPaletteHandle rotationPaletteHandle,
-            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            QuadPacketInstance quadPacket,
             Color vertColorAccumulator,
             int originSubX, int originSubY, int originSubZ,
             int sizeA, int sizeB,
@@ -126,13 +127,13 @@ class SurfaceEmissionBranch extends BranchPackage {
         int vert3Y = vert0Y + tangentB.y * sizeB;
         int vert3Z = vert0Z + tangentB.z * sizeB;
 
-        float vert0Color = resolveVertColor(chunkInstance, subChunkInstance, vert0X, vert0Y, vert0Z,
+        int vert0Color = resolveVertColor(chunkInstance, subChunkInstance, vert0X, vert0Y, vert0Z,
                 biomeHandle, vertColorAccumulator);
-        float vert1Color = resolveVertColor(chunkInstance, subChunkInstance, vert1X, vert1Y, vert1Z,
+        int vert1Color = resolveVertColor(chunkInstance, subChunkInstance, vert1X, vert1Y, vert1Z,
                 biomeHandle, vertColorAccumulator);
-        float vert2Color = resolveVertColor(chunkInstance, subChunkInstance, vert2X, vert2Y, vert2Z,
+        int vert2Color = resolveVertColor(chunkInstance, subChunkInstance, vert2X, vert2Y, vert2Z,
                 biomeHandle, vertColorAccumulator);
-        float vert3Color = resolveVertColor(chunkInstance, subChunkInstance, vert3X, vert3Y, vert3Z,
+        int vert3Color = resolveVertColor(chunkInstance, subChunkInstance, vert3X, vert3Y, vert3Z,
                 biomeHandle, vertColorAccumulator);
 
         // Texture, orientation and coverage
@@ -142,7 +143,7 @@ class SurfaceEmissionBranch extends BranchPackage {
         int textureID = resolveTextureID(blockHandle, faceDirection, orientation);
         TextureHandle textureHandle = textureManager.getTextureHandleFromTileID(textureID);
         int encodedFace = resolveEncodedFace(blockHandle, faceDirection, orientation);
-        float coverageWord = resolveCoverageWord(subChunkInstance, cellXYZ, faceDirection);
+        int coverageWord = resolveCoverageWord(subChunkInstance, cellXYZ, faceDirection);
 
         // Edge columns
         int lastA = sizeA - 1;
@@ -171,21 +172,17 @@ class SurfaceEmissionBranch extends BranchPackage {
                 | ((blockHandle.isNatural() ? 1 : 0) << naturalShift)
                 | ((cellsPerEntry == divisions ? 1 : 0) << edgeUnitShift);
 
-        FloatArrayList buffer = verts.computeIfAbsent(blockHandle.getMaterialID(), k -> new FloatArrayList());
-        buffer.ensureCapacity(buffer.size() + vertexFloatCount * quadVertexCount);
+        IntArrayList records = quadPacket.getRecords(
+                blockHandle.getMaterialID(), EngineSetting.QUAD_RECORD_SOLID_INTS);
 
-        float u0 = textureHandle.getU0();
-        float v0 = textureHandle.getV0();
-        float fMeta = (float) meta;
-
-        pushVert(buffer, vert0X, vert0Y, vert0Z, u0, v0, fMeta, vert0Color, edgeA0, edgeA1, edgeB0, edgeB1,
-                coverageWord);
-        pushVert(buffer, vert1X, vert1Y, vert1Z, u0, v0, fMeta, vert1Color, edgeA0, edgeA1, edgeB0, edgeB1,
-                coverageWord);
-        pushVert(buffer, vert2X, vert2Y, vert2Z, u0, v0, fMeta, vert2Color, edgeA0, edgeA1, edgeB0, edgeB1,
-                coverageWord);
-        pushVert(buffer, vert3X, vert3Y, vert3Z, u0, v0, fMeta, vert3Color, edgeA0, edgeA1, edgeB0, edgeB1,
-                coverageWord);
+        records.add(QuadRecordUtility.packPosition(originSubX, originSubY, originSubZ));
+        records.add(meta);
+        records.add(coverageWord | (textureHandle.getAtlasCell() << tileShift));
+        QuadRecordUtility.addWords(records, vert0Color, vert1Color, vert2Color, vert3Color);
+        QuadRecordUtility.addWords(records, toLowWord(edgeA0), toLowWord(edgeA1), toLowWord(edgeB0),
+                toLowWord(edgeB1));
+        QuadRecordUtility.addWords(records, toHighWord(edgeA0), toHighWord(edgeA1), toHighWord(edgeB0),
+                toHighWord(edgeB1));
     }
 
     // Edge Classification \\
@@ -235,12 +232,12 @@ class SurfaceEmissionBranch extends BranchPackage {
         return codes;
     }
 
-    private float toLowWord(long codes) {
-        return (float) (int) (codes & edgeWordMask);
+    private int toLowWord(long codes) {
+        return (int) (codes & edgeWordMask);
     }
 
-    private float toHighWord(long codes) {
-        return (float) (int) ((codes >>> edgeWordBits) & edgeWordMask);
+    private int toHighWord(long codes) {
+        return (int) ((codes >>> edgeWordBits) & edgeWordMask);
     }
 
     // Texture \\
@@ -278,7 +275,7 @@ class SurfaceEmissionBranch extends BranchPackage {
     // Coverage \\
 
     // The coverage word a face of a cell carries — bare on a lower face and on an upright face of a sideless covering
-    float resolveCoverageWord(SubChunkInstance subChunkInstance, int cellXYZ, Direction3Vector faceDirection) {
+    int resolveCoverageWord(SubChunkInstance subChunkInstance, int cellXYZ, Direction3Vector faceDirection) {
 
         short coverage = subChunkInstance.getCoverage(cellXYZ);
 
@@ -296,7 +293,7 @@ class SurfaceEmissionBranch extends BranchPackage {
 
     // Vertex Color \\
 
-    private float resolveVertColor(
+    private int resolveVertColor(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
             int vertSubX, int vertSubY, int vertSubZ,
@@ -341,7 +338,7 @@ class SurfaceEmissionBranch extends BranchPackage {
                 vertColorAccumulator.b * scale);
     }
 
-    private float packColor(float r, float g, float b) {
+    private int packColor(float r, float g, float b) {
 
         int ir = Math.round(Math.min(Math.max(r, EngineSetting.COLOR_CHANNEL_MIN), EngineSetting.COLOR_CHANNEL_MAX)
                 * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
@@ -350,34 +347,6 @@ class SurfaceEmissionBranch extends BranchPackage {
         int ib = Math.round(Math.min(Math.max(b, EngineSetting.COLOR_CHANNEL_MIN), EngineSetting.COLOR_CHANNEL_MAX)
                 * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
 
-        return (float) ((ir << 16) | (ig << 8) | ib);
-    }
-
-    // Vertex \\
-
-    private void pushVert(
-            FloatArrayList buffer,
-            int vertSubX, int vertSubY, int vertSubZ,
-            float u0, float v0,
-            float meta, float color,
-            long edgeA0, long edgeA1, long edgeB0, long edgeB1,
-            float coverageWord) {
-
-        buffer.add(vertSubX * subBlockSize);
-        buffer.add(vertSubY * subBlockSize);
-        buffer.add(vertSubZ * subBlockSize);
-        buffer.add(u0);
-        buffer.add(v0);
-        buffer.add(meta);
-        buffer.add(color);
-        buffer.add(toLowWord(edgeA0));
-        buffer.add(toLowWord(edgeA1));
-        buffer.add(toLowWord(edgeB0));
-        buffer.add(toLowWord(edgeB1));
-        buffer.add(toHighWord(edgeA0));
-        buffer.add(toHighWord(edgeA1));
-        buffer.add(toHighWord(edgeB0));
-        buffer.add(toHighWord(edgeB1));
-        buffer.add(coverageWord);
+        return (ir << 16) | (ig << 8) | ib;
     }
 }

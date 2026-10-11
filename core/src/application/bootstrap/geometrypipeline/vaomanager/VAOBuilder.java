@@ -16,7 +16,8 @@ public class VAOBuilder extends BuilderPackage {
     /*
      * Parses the 'vao' field from mesh ARPG and constructs a VAOHandle layout
      * template. Supports direct attribute size arrays and string references to
-     * other registered VAOs. When the mesh ARPG declares a "rig", two extra
+     * other registered VAOs; an empty array is an attribute-less layout, for
+     * meshes whose shader pulls its data by vertex index. When the mesh ARPG declares a "rig", two extra
      * trailing attributes — bone indices and bone weights, each
      * EngineSetting.MAX_BONE_INFLUENCES floats wide — are appended after the
      * declared attributes. Bootstrap-only.
@@ -104,9 +105,6 @@ public class VAOBuilder extends BuilderPackage {
     // Creation \\
 
     private VAOHandle buildLayout(ArpgArrayStruct arpgArray, File file, boolean hasBones) {
-
-        if (arpgArray.size() == 0)
-            throwException("VAO attribute size array must not be empty in file: " + file.getName());
 
         int declaredCount = arpgArray.size();
         int totalCount = hasBones ? declaredCount + 2 : declaredCount;

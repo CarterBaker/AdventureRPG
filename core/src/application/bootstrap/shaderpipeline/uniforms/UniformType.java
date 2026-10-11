@@ -222,6 +222,11 @@ public enum UniformType {
         public void writeElement(ByteBuffer buffer, Object value) {
             buffer.putInt((Integer) value);
         }
+    },
+    SAMPLE_UINT_BUFFER("usamplerBuffer", 4, 4) {
+        public void writeElement(ByteBuffer buffer, Object value) {
+            buffer.putInt((Integer) value);
+        }
     };
 
     // Internal

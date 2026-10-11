@@ -73,6 +73,7 @@ public final class UniformUtility extends EngineUtility {
             case MATRIX4_DOUBLE -> isArray ? new Matrix4DoubleArrayUniform(count) : new Matrix4DoubleUniform();
             case SAMPLE_IMAGE_2D -> new SampleImage2DUniform();
             case SAMPLE_IMAGE_2D_ARRAY -> new SampleImage2DArrayUniform();
+            case SAMPLE_UINT_BUFFER -> new SampleUintBufferUniform();
             default -> {
                 throwException("Unsupported uniform type: " + ud.getUniformType());
                 yield null;

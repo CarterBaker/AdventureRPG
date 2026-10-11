@@ -7,7 +7,7 @@ public interface GL30 extends GL20 {
 
     /*
      * Engine GL30 interface. Extends GL20 with vertex array objects, UBO
-     * binding, instanced drawing, and 3D texture support.
+     * binding, instanced drawing, buffer textures, and 3D texture support.
      */
 
     // Vertex Arrays \\
@@ -53,6 +53,10 @@ public interface GL30 extends GL20 {
     void glUniformBlockBinding(int program, int uniformBlockIndex, int uniformBlockBinding);
 
     void glDeleteBuffers(int n, IntBuffer buffers);
+
+    // Buffer Textures \\
+
+    void glTexBuffer(int target, int internalformat, int buffer);
 
     // 3D Textures \\
 

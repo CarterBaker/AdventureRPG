@@ -7,20 +7,18 @@ import engine.graphics.color.Color;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Direction3Vector;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
 
     /*
-     * Reusable scratch container for one geometry build pass. Holds per-material
-     * vertex buffers, directional greedy-mesh bitsets at block resolution and
-     * at sub-block resolution, and a per-vertex color accumulator. Reset
-     * between passes via reset() — no allocations at runtime.
+     * Reusable scratch container for one geometry build pass. Holds the
+     * directional greedy-mesh bitsets at block resolution and at sub-block
+     * resolution, and a per-vertex color accumulator; records go straight
+     * into the subchunk's packet. Reset between passes via reset() — no
+     * allocations at runtime.
      */
 
     // Internal
-    private Int2ObjectOpenHashMap<FloatArrayList> verts;
     private BitSet[] directionalBatches;
     private BitSet batchReturn;
     private BitSet[] subDirectionalBatches;
@@ -33,7 +31,6 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
     protected void create() {
 
         // Internal
-        this.verts = new Int2ObjectOpenHashMap<>();
         this.directionalBatches = new BitSet[Direction3Vector.LENGTH];
         for (int i = 0; i < Direction3Vector.LENGTH; i++)
             directionalBatches[i] = new BitSet();
@@ -53,9 +50,6 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
     @Override
     public void reset() {
 
-        for (FloatArrayList buffer : verts.values())
-            buffer.clear();
-
         for (int i = 0; i < Direction3Vector.LENGTH; i++) {
             directionalBatches[i].clear();
             subDirectionalBatches[i].clear();
@@ -66,10 +60,6 @@ public class DynamicGeometryAsyncContainer extends AsyncContainerPackage {
     }
 
     // Accessible \\
-
-    public Int2ObjectOpenHashMap<FloatArrayList> getVerts() {
-        return verts;
-    }
 
     public BitSet[] getDirectionalBatches() {
         return directionalBatches;

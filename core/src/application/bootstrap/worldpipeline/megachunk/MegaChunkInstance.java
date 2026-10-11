@@ -1,8 +1,11 @@
 package application.bootstrap.worldpipeline.megachunk;
 
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
+import application.bootstrap.geometrypipeline.quadpacket.QuadRecordUtility;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
@@ -15,11 +18,13 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MegaChunkInstance extends WorldRenderInstance {
 
     /*
-     * A merged geometry batch of MEGA_CHUNK_SIZE² chunks. A chunk joining for
-     * the first time is appended; a chunk contributing again forces a full
-     * rebuild from every member, which MegaMergeBranch runs only while holding
-     * all their locks. finalizeGeometry() marks the packet ready once every
-     * chunk is present. The stand-ins for the trees rooted in its chunks live
+     * A merged geometry batch of MEGA_CHUNK_SIZE² chunks, built straight from
+     * its chunks' subchunk records so no chunk keeps a merged copy for it. A
+     * chunk joining for the first time is appended; a chunk contributing again
+     * forces a full rebuild from every member, which MegaMergeBranch runs only
+     * while holding all their locks. Either way every bucket is reserved
+     * before a record is copied, so it grows at most once. finalizeGeometry()
+     * marks the packet ready once every chunk is present. The stand-ins for the trees rooted in its chunks live
      * in a packet of their own, so a tree that changes never re-merges the
      * ground.
      */
@@ -29,17 +34,13 @@ public class MegaChunkInstance extends WorldRenderInstance {
     private MegaBatchHandle megaBatchStruct;
     private DynamicPacketInstance treePacketInstance;
 
-    // Scratch — pre-allocated, reused per merge call
-    private int[] vertPositionArray;
-    private float[] mergeOffsetValues;
-
     // State
     private int megaScale;
     private int megaX;
     private int megaZ;
 
     // Settings
-    private int chunkSize;
+    private int subChunkSpan;
 
     // Internal \\
 
@@ -51,12 +52,8 @@ public class MegaChunkInstance extends WorldRenderInstance {
         this.megaBatchStruct = create(MegaBatchHandle.class);
         this.treePacketInstance = create(DynamicPacketInstance.class);
 
-        // Scratch
-        this.vertPositionArray = new int[] { 0, 2 };
-        this.mergeOffsetValues = new float[2];
-
         // Settings
-        this.chunkSize = EngineSetting.CHUNK_SIZE;
+        this.subChunkSpan = EngineSetting.CHUNK_SIZE * EngineSetting.SUB_BLOCK_DIVISIONS;
 
         super.create();
     }
@@ -74,8 +71,7 @@ public class MegaChunkInstance extends WorldRenderInstance {
                 worldRenderManager,
                 worldHandle,
                 RenderType.BATCHED,
-                megaChunkCoordinate,
-                vaoHandle);
+                megaChunkCoordinate);
 
         this.megaX = Coordinate2Long.unpackX(megaChunkCoordinate);
         this.megaZ = Coordinate2Long.unpackY(megaChunkCoordinate);
@@ -90,7 +86,7 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
     public void reset() {
         megaDataSyncContainer.resetData();
-        getDynamicPacket().clear();
+        getQuadPacket().clear();
         treePacketInstance.clear();
         megaBatchStruct.reset();
     }
@@ -110,55 +106,66 @@ public class MegaChunkInstance extends WorldRenderInstance {
         if (!megaBatchStruct.registerChunk(chunkInstance))
             return false;
 
-        if (!mergeChunk(chunkInstance))
-            return false;
+        QuadPacketInstance quadPacket = getQuadPacket();
+
+        reserveChunk(quadPacket, chunkInstance);
+        quadPacket.commitReserve();
+        mergeChunk(quadPacket, chunkInstance);
 
         megaBatchStruct.recordMerged(chunkInstance.getCoordinate());
         megaBatchStruct.recordMergedVersion(chunkInstance.getCoordinate(), chunkInstance.getMergeVersion());
         return true;
     }
 
-    public boolean batchAndMergeAll(ChunkInstance chunkInstance) {
+    public void batchAndMergeAll(ChunkInstance chunkInstance) {
 
         megaBatchStruct.updateChunk(chunkInstance.getCoordinate(), chunkInstance);
         megaBatchStruct.clearMerged();
-        getDynamicPacket().clear();
 
+        QuadPacketInstance quadPacket = getQuadPacket();
         ObjectArrayList<ChunkInstance> list = megaBatchStruct.getBatchedChunkList();
         Object[] elements = list.elements();
         int size = list.size();
 
+        quadPacket.clear();
+
+        for (int i = 0; i < size; i++)
+            reserveChunk(quadPacket, (ChunkInstance) elements[i]);
+
+        quadPacket.commitReserve();
+
         for (int i = 0; i < size; i++) {
             ChunkInstance batched = (ChunkInstance) elements[i];
-            if (!mergeChunk(batched))
-                return false;
+            mergeChunk(quadPacket, batched);
             megaBatchStruct.recordMerged(batched.getCoordinate());
             megaBatchStruct.recordMergedVersion(batched.getCoordinate(), batched.getMergeVersion());
         }
-
-        return true;
     }
 
-    private boolean mergeChunk(ChunkInstance chunkInstance) {
+    private void reserveChunk(QuadPacketInstance quadPacket, ChunkInstance chunkInstance) {
 
-        long chunkCoord = chunkInstance.getCoordinate();
-        int chunkX = Coordinate2Long.unpackX(chunkCoord);
-        int chunkZ = Coordinate2Long.unpackY(chunkCoord);
+        SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
 
-        mergeOffsetValues[0] = (chunkX - megaX) * chunkSize;
-        mergeOffsetValues[1] = (chunkZ - megaZ) * chunkSize;
+        for (int i = 0; i < subChunks.length; i++)
+            quadPacket.reserve(subChunks[i].getQuadPacketInstance());
+    }
 
-        return getDynamicPacket().merge(
-                chunkInstance.getDynamicPacketInstance(),
-                vertPositionArray,
-                mergeOffsetValues);
+    // Every subchunk's records shifted from its own origin to the mega's
+    private void mergeChunk(QuadPacketInstance quadPacket, ChunkInstance chunkInstance) {
+
+        long chunkCoordinate = chunkInstance.getCoordinate();
+        int offsetX = (Coordinate2Long.unpackX(chunkCoordinate) - megaX) * subChunkSpan;
+        int offsetZ = (Coordinate2Long.unpackY(chunkCoordinate) - megaZ) * subChunkSpan;
+        SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
+
+        for (int i = 0; i < subChunks.length; i++)
+            quadPacket.merge(
+                    subChunks[i].getQuadPacketInstance(),
+                    QuadRecordUtility.packPosition(offsetX, i * subChunkSpan, offsetZ));
     }
 
     public void finalizeGeometry() {
-        if (getDynamicPacket().hasModels())
-            getDynamicPacket().setReady();
-        else
-            getDynamicPacket().unlock();
+        getQuadPacket().finish();
     }
 
     // Accessible \\

@@ -4,6 +4,7 @@ import java.util.BitSet;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
@@ -88,29 +89,29 @@ class GeometryBuildManager extends ManagerPackage {
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance) {
 
-        DynamicPacketInstance dynamicPacketInstance = subChunkInstance.getDynamicPacketInstance();
+        QuadPacketInstance quadPacket = subChunkInstance.getQuadPacketInstance();
 
-        dynamicPacketInstance.beginGenerating();
-        dynamicPacketInstance.clearModels();
+        quadPacket.clear();
+        quadPacket.beginGenerating();
         subChunkInstance.beginBlockTypeTally();
 
         if (subChunkInstance.isKnownEmpty()) {
             subChunkInstance.finalizeBlockTypeTally();
-            dynamicPacketInstance.unlock();
+            quadPacket.unlock();
             return true;
         }
 
         if (subChunkInstance.isUniformFill() && isFullyEnclosed(chunkInstance, subChunkInstance)) {
             tallyUniformFill(subChunkInstance);
             subChunkInstance.finalizeBlockTypeTally();
-            dynamicPacketInstance.unlock();
+            quadPacket.unlock();
             return true;
         }
 
         if (subChunkInstance.isOpaqueInterior() && isFullyEnclosedOpaque(chunkInstance, subChunkInstance)) {
             tallyOpaqueInterior(subChunkInstance);
             subChunkInstance.finalizeBlockTypeTally();
-            dynamicPacketInstance.unlock();
+            quadPacket.unlock();
             return true;
         }
 
@@ -119,7 +120,6 @@ class GeometryBuildManager extends ManagerPackage {
         BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
         BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
         BlockPaletteHandle rotationPaletteHandle = subChunkInstance.getBlockRotationPaletteHandle();
-        Int2ObjectOpenHashMap<FloatArrayList> verts = dynamicGeometryAsyncContainer.getVerts();
         BitSet[] directionalBatches = dynamicGeometryAsyncContainer.getDirectionalBatches();
         BitSet batchReturn = dynamicGeometryAsyncContainer.getBatchReturn();
         BitSet[] subDirectionalBatches = dynamicGeometryAsyncContainer.getSubDirectionalBatches();
@@ -160,12 +160,11 @@ class GeometryBuildManager extends ManagerPackage {
                         biomePaletteHandle,
                         blockPaletteHandle,
                         rotationPaletteHandle,
-                        dynamicPacketInstance,
+                        quadPacket,
                         xyz,
                         Direction3Vector.VALUES[direction],
                         biomeHandle,
                         blockHandle,
-                        verts,
                         accumulatedBatch,
                         batchReturn,
                         subDirectionalBatches[direction],
@@ -175,8 +174,9 @@ class GeometryBuildManager extends ManagerPackage {
         }
 
         subChunkInstance.finalizeBlockTypeTally();
+        quadPacket.finish();
 
-        return pushVerts(verts, dynamicPacketInstance);
+        return true;
     }
 
     // Tree Geometry \\
@@ -222,12 +222,11 @@ class GeometryBuildManager extends ManagerPackage {
             BlockPaletteHandle biomePaletteHandle,
             BlockPaletteHandle blockPaletteHandle,
             BlockPaletteHandle rotationPaletteHandle,
-            DynamicPacketInstance dynamicPacketInstance,
+            QuadPacketInstance quadPacket,
             int xyz,
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            Int2ObjectOpenHashMap<FloatArrayList> verts,
             BitSet accumulatedBatch,
             BitSet batchReturn,
             BitSet subAccumulatedBatch,
@@ -247,7 +246,7 @@ class GeometryBuildManager extends ManagerPackage {
                                     direction3Vector,
                                     biomeHandle,
                                     blockHandle,
-                                    verts,
+                                    quadPacket,
                                     accumulatedBatch,
                                     batchReturn,
                                     vertColorAccumulator)
@@ -261,7 +260,7 @@ class GeometryBuildManager extends ManagerPackage {
                                     direction3Vector,
                                     biomeHandle,
                                     blockHandle,
-                                    verts,
+                                    quadPacket,
                                     subAccumulatedBatch,
                                     subBatchReturn,
                                     vertColorAccumulator);
@@ -275,7 +274,7 @@ class GeometryBuildManager extends ManagerPackage {
                     direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    verts,
+                    quadPacket,
                     subAccumulatedBatch,
                     subBatchReturn,
                     vertColorAccumulator);
@@ -285,12 +284,11 @@ class GeometryBuildManager extends ManagerPackage {
                     biomePaletteHandle,
                     blockPaletteHandle,
                     rotationPaletteHandle,
-                    dynamicPacketInstance,
                     xyz,
                     direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    verts,
+                    quadPacket,
                     accumulatedBatch,
                     batchReturn,
                     vertColorAccumulator);
@@ -300,12 +298,11 @@ class GeometryBuildManager extends ManagerPackage {
                     biomePaletteHandle,
                     blockPaletteHandle,
                     rotationPaletteHandle,
-                    dynamicPacketInstance,
                     xyz,
                     direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    verts,
+                    quadPacket,
                     accumulatedBatch,
                     batchReturn,
                     vertColorAccumulator);

@@ -2,6 +2,7 @@ package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import java.util.BitSet;
 
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
@@ -16,8 +17,6 @@ import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Direction3Vector;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 class FullGeometryBranch extends BranchPackage {
 
@@ -75,7 +74,7 @@ class FullGeometryBranch extends BranchPackage {
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            QuadPacketInstance quadPacket,
             BitSet accumulatedBatch,
             BitSet batchReturn,
             Color vertColorAccumulator) {
@@ -93,7 +92,7 @@ class FullGeometryBranch extends BranchPackage {
                 direction3Vector,
                 biomeHandle,
                 blockHandle,
-                verts,
+                quadPacket,
                 accumulatedBatch,
                 batchReturn,
                 vertColorAccumulator);
@@ -137,13 +136,11 @@ class FullGeometryBranch extends BranchPackage {
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            QuadPacketInstance quadPacket,
             BitSet accumulatedBatch,
             BitSet batchReturn,
             Color vertColorAccumulator) {
 
-        boolean checkA = true;
-        boolean checkB = true;
         int sizeA = 1;
         int sizeB = 1;
 
@@ -151,68 +148,60 @@ class FullGeometryBranch extends BranchPackage {
         Direction3Vector tangentB = Direction3Vector.getTangentB(direction3Vector);
 
         short baseOrientation = rotationPaletteHandle.getBlock(xyz);
-        float baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, xyz, direction3Vector);
+        int baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, xyz, direction3Vector);
 
         accumulatedBatch.set(ChunkCoordinateUtility.getIndex(xyz));
 
-        do {
+        // Each run grows as far as it can along A, then the rows it spans grow along B
+        while (tryExpand(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                rotationPaletteHandle,
+                xyz,
+                direction3Vector,
+                tangentA,
+                tangentB,
+                sizeA,
+                sizeB,
+                biomeHandle,
+                blockHandle,
+                baseOrientation,
+                baseCoverageWord,
+                accumulatedBatch,
+                batchReturn)) {
+            accumulatedBatch.or(batchReturn);
+            sizeA++;
+        }
 
-            if (checkA) {
-                if (tryExpand(
-                        chunkInstance,
-                        subChunkInstance,
-                        biomePaletteHandle,
-                        blockPaletteHandle,
-                        rotationPaletteHandle,
-                        xyz,
-                        direction3Vector,
-                        tangentA,
-                        tangentB,
-                        sizeA,
-                        sizeB,
-                        biomeHandle,
-                        blockHandle,
-                        baseOrientation,
-                        baseCoverageWord,
-                        accumulatedBatch,
-                        batchReturn)) {
-                    accumulatedBatch.or(batchReturn);
-                    sizeA++;
-                } else
-                    checkA = false;
-            }
-
-            if (checkB) {
-                if (tryExpand(
-                        chunkInstance,
-                        subChunkInstance,
-                        biomePaletteHandle,
-                        blockPaletteHandle,
-                        rotationPaletteHandle,
-                        xyz,
-                        direction3Vector,
-                        tangentB,
-                        tangentA,
-                        sizeB,
-                        sizeA,
-                        biomeHandle,
-                        blockHandle,
-                        baseOrientation,
-                        baseCoverageWord,
-                        accumulatedBatch,
-                        batchReturn)) {
-                    accumulatedBatch.or(batchReturn);
-                    sizeB++;
-                } else
-                    checkB = false;
-            }
-        } while (checkA || checkB);
+        while (tryExpand(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                rotationPaletteHandle,
+                xyz,
+                direction3Vector,
+                tangentB,
+                tangentA,
+                sizeB,
+                sizeA,
+                biomeHandle,
+                blockHandle,
+                baseOrientation,
+                baseCoverageWord,
+                accumulatedBatch,
+                batchReturn)) {
+            accumulatedBatch.or(batchReturn);
+            sizeB++;
+        }
 
         surfaceEmissionBranch.emitQuad(
                 chunkInstance,
                 subChunkInstance,
                 rotationPaletteHandle,
-                verts,
+                quadPacket,
                 vertColorAccumulator,
                 toFrontSub(Coordinate3Int.unpackX(xyz), direction3Vector.x),
                 toFrontSub(Coordinate3Int.unpackY(xyz), direction3Vector.y),
@@ -240,7 +229,7 @@ class FullGeometryBranch extends BranchPackage {
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             short baseOrientation,
-            float baseCoverageWord,
+            int baseCoverageWord,
             BitSet accumulatedBatch,
             BitSet batchReturn) {
 
@@ -296,7 +285,7 @@ class FullGeometryBranch extends BranchPackage {
             BlockHandle blockHandle,
             boolean orientationSensitive,
             short baseOrientation,
-            float baseCoverageWord,
+            int baseCoverageWord,
             BitSet accumulatedBatch) {
 
         if (accumulatedBatch.get(ChunkCoordinateUtility.getIndex(checkXYZ)))

@@ -3,6 +3,8 @@ package application.bootstrap.worldpipeline.chunk;
 import java.util.concurrent.atomic.AtomicLong;
 
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
+import application.bootstrap.geometrypipeline.quadpacket.QuadRecordUtility;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
@@ -21,8 +23,11 @@ public class ChunkInstance extends WorldRenderInstance {
 
     /*
      * One loaded chunk column owning its subchunks. Pooled by ChunkQueueManager
-     * and reset before reuse. merge() combines subchunk packets and bumps a
-     * globally unique mergeVersion so megas never confuse occupants; neighbors
+     * and reset before reuse. Its subchunks' records are the only CPU copy of
+     * its terrain: merge() marks them final by bumping a globally unique
+     * mergeVersion so megas never confuse occupants, and assemble() appends
+     * them into a caller's staging packet for upload, each bucket grown at
+     * most once; neighbors
      * are reconfigured in place, and tideSurfaceLevels records the tide the
      * ocean was last written against. It holds every tree that reaches it
      * from the moment it generates until it is reset, when TreeManager lets
@@ -40,12 +45,8 @@ public class ChunkInstance extends WorldRenderInstance {
     private DynamicPacketInstance treePacketInstance;
     private TreeManager treeManager;
 
-    // Scratch — pre-allocated, reused per merge call
-    private int[] vertPositionArray;
-    private float[] mergeOffsetValues;
-
     // Settings
-    private int chunkSize;
+    private int subChunkSpan;
 
     // Merge Version
     private static final AtomicLong MERGE_VERSION_SEQUENCE = new AtomicLong();
@@ -73,12 +74,8 @@ public class ChunkInstance extends WorldRenderInstance {
         for (short i = 0; i < EngineSetting.WORLD_HEIGHT; i++)
             subChunks[i] = create(SubChunkInstance.class);
 
-        // Scratch
-        this.vertPositionArray = new int[] { 1 };
-        this.mergeOffsetValues = new float[1];
-
         // Settings
-        this.chunkSize = EngineSetting.CHUNK_SIZE;
+        this.subChunkSpan = EngineSetting.CHUNK_SIZE * EngineSetting.SUB_BLOCK_DIVISIONS;
 
         // Tide
         this.tideSurfaceLevels = EngineSetting.OCEAN_TIDE_UNAPPLIED;
@@ -104,8 +101,7 @@ public class ChunkInstance extends WorldRenderInstance {
                 worldRenderManager,
                 worldHandle,
                 RenderType.INDIVIDUAL,
-                coordinate,
-                vaoHandle);
+                coordinate);
 
         this.treePacketInstance.constructor(vaoHandle);
 
@@ -114,7 +110,6 @@ public class ChunkInstance extends WorldRenderInstance {
                     worldRenderManager,
                     worldHandle,
                     subChunkCoordinate,
-                    vaoHandle,
                     airBlockId,
                     blockManager);
 
@@ -125,7 +120,6 @@ public class ChunkInstance extends WorldRenderInstance {
 
     public void reset() {
         chunkDataSyncContainer.resetData();
-        getDynamicPacket().clear();
         worldItemInstancePaletteHandle.clear();
         treeManager.releaseTrees(treePaletteHandle);
         treePacketInstance.clear();
@@ -138,28 +132,26 @@ public class ChunkInstance extends WorldRenderInstance {
 
     // Geometry \\
 
-    public boolean merge() {
-
-        boolean success = true;
-        getDynamicPacket().clear();
-
-        for (SubChunkInstance subChunk : subChunks) {
-            mergeOffsetValues[0] = subChunk.getCoordinate() * chunkSize;
-            if (!getDynamicPacket().merge(
-                    subChunk.getDynamicPacketInstance(),
-                    vertPositionArray,
-                    mergeOffsetValues))
-                success = false;
-        }
-
-        if (getDynamicPacket().hasModels())
-            getDynamicPacket().setReady();
-        else
-            getDynamicPacket().unlock();
-
+    public void merge() {
         mergeVersion = MERGE_VERSION_SEQUENCE.incrementAndGet();
+    }
 
-        return success;
+    // Every subchunk's records shifted from its own origin to the chunk's — callers hold the chunk's lock
+    public void assemble(QuadPacketInstance staging) {
+
+        staging.clear();
+
+        for (int i = 0; i < subChunks.length; i++)
+            staging.reserve(subChunks[i].getQuadPacketInstance());
+
+        staging.commitReserve();
+
+        for (int i = 0; i < subChunks.length; i++)
+            staging.merge(
+                    subChunks[i].getQuadPacketInstance(),
+                    QuadRecordUtility.packPosition(0, i * subChunkSpan, 0));
+
+        staging.finish();
     }
 
     // Accessible \\

@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.geometrypipeline.ibomanager.IBOManager;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
+import application.bootstrap.geometrypipeline.quadbuffermanager.QuadBufferManager;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import application.bootstrap.geometrypipeline.skinnedbuffermanager.SkinnedBufferManager;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
@@ -17,7 +18,8 @@ public class GeometryPipeline extends PipelinePackage {
     /*
      * Registers the geometry managers in dependency order: VAO, VBO and IBO
      * before MeshManager, RigManager before MeshManager for rigged meshes, then
-     * SkinnedBufferManager and SubVoxelManager, which only build on demand.
+     * QuadBufferManager, SkinnedBufferManager and SubVoxelManager, which only
+     * build on demand.
      */
 
     @Override
@@ -25,6 +27,7 @@ public class GeometryPipeline extends PipelinePackage {
         create(VBOManager.class);
         create(IBOManager.class);
         create(VAOManager.class);
+        create(QuadBufferManager.class);
         create(RigManager.class);
         create(MeshManager.class);
         create(SubVoxelManager.class);

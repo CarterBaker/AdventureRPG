@@ -2,7 +2,8 @@ package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import java.util.BitSet;
 
-import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
+import application.bootstrap.geometrypipeline.quadpacket.QuadRecordUtility;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
@@ -19,16 +20,16 @@ import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Direction2Vector;
 import engine.util.mathematics.extras.Direction3Vector;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 class LiquidGeometryBranch extends BranchPackage {
 
     /*
-     * Geometry branch for liquid blocks. Settled water emits only greedily
-     * merged UP faces; flowing water emits one quad per exposed face. Faces
-     * against opaque blocks are dropped, and each vertex carries its fill level
-     * plus surface and tidal flags for the water shader.
+     * Geometry branch for liquid blocks. Settled water emits only its UP
+     * faces; flowing water emits every exposed face; both greedily merged. Faces
+     * against opaque blocks are dropped, and each face becomes one packed
+     * record of its first corner, extents, fill level and tidal flag, from
+     * which the water shader rebuilds its corners and surface flags.
      */
 
     // Internal
@@ -38,6 +39,7 @@ class LiquidGeometryBranch extends BranchPackage {
 
     private static final int CHUNK_SIZE = EngineSetting.CHUNK_SIZE;
     private static final int WORLD_HEIGHT = EngineSetting.WORLD_HEIGHT;
+    private static final int SUB_BLOCK_DIVISIONS = EngineSetting.SUB_BLOCK_DIVISIONS;
 
     // Internal \\
 
@@ -60,12 +62,11 @@ class LiquidGeometryBranch extends BranchPackage {
             BlockPaletteHandle biomePaletteHandle,
             BlockPaletteHandle blockPaletteHandle,
             BlockPaletteHandle rotationPaletteHandle,
-            DynamicPacketInstance dynamicPacketInstance,
             int xyz,
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            QuadPacketInstance quadPacket,
             BitSet accumulatedBatch,
             BitSet batchReturn,
             Color vertColorAccumulator) {
@@ -86,7 +87,7 @@ class LiquidGeometryBranch extends BranchPackage {
                 direction3Vector,
                 biomeHandle,
                 blockHandle,
-                verts,
+                quadPacket,
                 accumulatedBatch,
                 batchReturn);
 
@@ -104,7 +105,7 @@ class LiquidGeometryBranch extends BranchPackage {
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            QuadPacketInstance quadPacket,
             BitSet accumulatedBatch,
             BitSet batchReturn) {
 
@@ -116,42 +117,27 @@ class LiquidGeometryBranch extends BranchPackage {
         byte sizeA = 1;
         byte sizeB = 1;
 
-        // Only a settled subchunk pays for expansion — a flowing one rebuilds
-        // every tick anyway, so merged runs would just be discarded unused.
-        if (subChunkInstance.isLiquidStable()) {
+        Direction3Vector tangentA = Direction3Vector.getTangentA(direction3Vector);
+        Direction3Vector tangentB = Direction3Vector.getTangentB(direction3Vector);
 
-            Direction3Vector tangentA = Direction3Vector.getTangentA(direction3Vector);
-            Direction3Vector tangentB = Direction3Vector.getTangentB(direction3Vector);
-
-            boolean checkA = true;
-            boolean checkB = true;
-
-            do {
-                if (checkA) {
-                    if (tryExpand(
-                            chunkInstance, subChunkInstance, biomePaletteHandle, blockPaletteHandle,
-                            xyz, direction3Vector, tangentA, tangentB, sizeA, sizeB,
-                            level, tidal, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
-                        accumulatedBatch.or(batchReturn);
-                        sizeA++;
-                    } else
-                        checkA = false;
-                }
-
-                if (checkB) {
-                    if (tryExpand(
-                            chunkInstance, subChunkInstance, biomePaletteHandle, blockPaletteHandle,
-                            xyz, direction3Vector, tangentB, tangentA, sizeB, sizeA,
-                            level, tidal, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
-                        accumulatedBatch.or(batchReturn);
-                        sizeB++;
-                    } else
-                        checkB = false;
-                }
-            } while (checkA || checkB);
+        // Each run grows as far as it can along A, then the rows it spans grow along B
+        while (tryExpand(
+                chunkInstance, subChunkInstance, biomePaletteHandle, blockPaletteHandle,
+                xyz, direction3Vector, tangentA, tangentB, sizeA, sizeB,
+                level, tidal, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
+            accumulatedBatch.or(batchReturn);
+            sizeA++;
         }
 
-        finalizeFace(verts, xyz, sizeA, sizeB, direction3Vector, biomeHandle, blockHandle, level, tidalSurface);
+        while (tryExpand(
+                chunkInstance, subChunkInstance, biomePaletteHandle, blockPaletteHandle,
+                xyz, direction3Vector, tangentB, tangentA, sizeB, sizeA,
+                level, tidal, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
+            accumulatedBatch.or(batchReturn);
+            sizeB++;
+        }
+
+        finalizeFace(quadPacket, xyz, sizeA, sizeB, direction3Vector, blockHandle, level, tidalSurface);
     }
 
     private boolean tryExpand(
@@ -306,97 +292,24 @@ class LiquidGeometryBranch extends BranchPackage {
 
     // Face Finalization \\
 
+    // One record per merged face: its first corner and extents, the level it holds and whether it rides the tide
     private void finalizeFace(
-            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            QuadPacketInstance quadPacket,
             int xyz,
             byte sizeA,
             byte sizeB,
             Direction3Vector direction3Vector,
-            BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             short level,
             boolean tidalSurface) {
 
-        Direction3Vector tangentA = Direction3Vector.getTangentA(direction3Vector);
-        Direction3Vector tangentB = Direction3Vector.getTangentB(direction3Vector);
+        int vertXYZ = ChunkCoordinateUtility.convertToVertSpace(xyz, direction3Vector);
+        IntArrayList records = quadPacket.getRecords(blockHandle.getMaterialID(), EngineSetting.QUAD_RECORD_LIQUID_INTS);
 
-        int vert0XYZ = ChunkCoordinateUtility.convertToVertSpace(xyz, direction3Vector);
-        int vert1XYZ = ChunkCoordinateUtility.getVertCoordinateFromOffset(vert0XYZ, tangentA, sizeA);
-        int vert2XYZ = ChunkCoordinateUtility.getVertCoordinateFromOffset(vert1XYZ, tangentB, sizeB);
-        int vert3XYZ = ChunkCoordinateUtility.getVertCoordinateFromOffset(vert0XYZ, tangentB, sizeB);
-
-        // Whichever corners sit at the greatest Y are this face's "surface"
-        // vertices — always all 4 for UP, none for DOWN, and the top pair
-        // for a side face (or the top pair of a vertically-merged run).
-        int y0 = Coordinate3Int.unpackY(vert0XYZ);
-        int y1 = Coordinate3Int.unpackY(vert1XYZ);
-        int y2 = Coordinate3Int.unpackY(vert2XYZ);
-        int y3 = Coordinate3Int.unpackY(vert3XYZ);
-        int maxY = Math.max(Math.max(y0, y1), Math.max(y2, y3));
-
-        int meta = (direction3Vector.index & 0x7)
-                | (((direction3Vector.ordinal() * 4) & 0x3F) << 3)
-                | (((sizeA - 1) & 0xF) << 9)
-                | (((sizeB - 1) & 0xF) << 13);
-
-        float fMeta = (float) meta;
-        float color = packColor(biomeHandle.getBiomeColor());
-        float levelF = (float) level;
-
-        FloatArrayList buffer = verts.computeIfAbsent(blockHandle.getMaterialID(), k -> new FloatArrayList());
-
-        float surface0 = surfaceFlag(direction3Vector, y0, maxY);
-        float surface1 = surfaceFlag(direction3Vector, y1, maxY);
-        float surface2 = surfaceFlag(direction3Vector, y2, maxY);
-        float surface3 = surfaceFlag(direction3Vector, y3, maxY);
-
-        writeVertex(buffer, vert0XYZ, fMeta, color, levelF, surface0, tidalFlag(tidalSurface, surface0));
-        writeVertex(buffer, vert1XYZ, fMeta, color, levelF, surface1, tidalFlag(tidalSurface, surface1));
-        writeVertex(buffer, vert2XYZ, fMeta, color, levelF, surface2, tidalFlag(tidalSurface, surface2));
-        writeVertex(buffer, vert3XYZ, fMeta, color, levelF, surface3, tidalFlag(tidalSurface, surface3));
-    }
-
-    private float surfaceFlag(Direction3Vector direction3Vector, int vertY, int maxY) {
-        return direction3Vector != Direction3Vector.DOWN && vertY == maxY ? 1f : 0f;
-    }
-
-    private float tidalFlag(boolean tidalSurface, float isSurface) {
-        return tidalSurface ? isSurface : 0f;
-    }
-
-    private float packColor(Color color) {
-
-        int r = Math.round(Math.min(Math.max(color.r, 0f), 1f) * 255f);
-        int g = Math.round(Math.min(Math.max(color.g, 0f), 1f) * 255f);
-        int b = Math.round(Math.min(Math.max(color.b, 0f), 1f) * 255f);
-
-        return (float) ((r << 16) | (g << 8) | b);
-    }
-
-    private void writeVertex(
-            FloatArrayList buffer,
-            int vertXYZ,
-            float meta,
-            float color,
-            float level,
-            float isSurface,
-            float isTidalSurface) {
-
-        buffer.add((float) Coordinate3Int.unpackX(vertXYZ));
-        buffer.add((float) Coordinate3Int.unpackY(vertXYZ));
-        buffer.add((float) Coordinate3Int.unpackZ(vertXYZ));
-        buffer.add(0f); // u — liquid is untextured
-        buffer.add(0f); // v — liquid is untextured
-        buffer.add(meta);
-        buffer.add(color);
-        buffer.add(level); // edge A0 slot: fluid level, 0..LIQUID_LEVEL_MAX
-        buffer.add(isSurface); // edge A1 slot: 1 = pull to fluid surface height
-        buffer.add(isTidalSurface); // edge B0 slot: 1 = ride the live tide and ocean waves
-        buffer.add(0f);
-        buffer.add(0f); // high edge slots — solid geometry only
-        buffer.add(0f);
-        buffer.add(0f);
-        buffer.add(0f);
-        buffer.add(0f); // coverage slot — solid geometry only
+        records.add(QuadRecordUtility.packPosition(
+                Coordinate3Int.unpackX(vertXYZ) * SUB_BLOCK_DIVISIONS,
+                Coordinate3Int.unpackY(vertXYZ) * SUB_BLOCK_DIVISIONS,
+                Coordinate3Int.unpackZ(vertXYZ) * SUB_BLOCK_DIVISIONS));
+        records.add(QuadRecordUtility.packLiquid(direction3Vector.index, sizeA, sizeB, level, tidalSurface));
     }
 }

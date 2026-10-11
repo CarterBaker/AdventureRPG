@@ -83,7 +83,6 @@ public class DumpBranch extends BranchPackage {
         switch (stage) {
             case GENERATION_DATA -> dumpGenerationData(chunkInstance);
             case BUILD_DATA -> dumpBuildData(chunkInstance);
-            case MERGE_DATA -> dumpMergeData(chunkInstance);
             case RENDER_DATA -> dumpRenderData(chunkInstance);
             case TREE_DATA -> dumpTreeData(chunkInstance);
             case TREE_RENDER_DATA -> dumpTreeRenderData(chunkInstance, syncContainer);
@@ -107,11 +106,7 @@ public class DumpBranch extends BranchPackage {
     private void dumpBuildData(ChunkInstance chunkInstance) {
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
         for (SubChunkInstance subChunk : subChunks)
-            subChunk.getDynamicPacketInstance().clear();
-    }
-
-    private void dumpMergeData(ChunkInstance chunkInstance) {
-        chunkInstance.getDynamicPacketInstance().clear();
+            subChunk.getQuadPacketInstance().release();
     }
 
     private void dumpRenderData(ChunkInstance chunkInstance) {

@@ -1,14 +1,17 @@
 package application.bootstrap.shaderpipeline.texture;
 
 import engine.root.DataPackage;
+import engine.root.EngineSetting;
 
 public class TextureData extends DataPackage {
 
     /*
      * Persistent tile record. Holds tile identity, parent array identity,
      * GPU handle, atlas and tile pixel dimensions, normalised UV region, the
-     * tile's average albedo as a packed 0xRRGGBB color, and its reveal, null
-     * for a tile no image source baked (a font atlas).
+     * tile's atlas cell packed column and row for shaders that rebuild its
+     * UV origin from u_uvPerBlock, the tile's average albedo as a packed
+     * 0xRRGGBB color, and its reveal, null for a tile no image source baked
+     * (a font atlas).
      * Owned by TextureHandle for the full engine session — nothing is discarded.
      */
 
@@ -31,6 +34,7 @@ public class TextureData extends DataPackage {
     private final float v0;
     private final float u1;
     private final float v1;
+    private final int atlasCell;
 
     // Average
     private final int averageColor;
@@ -64,6 +68,8 @@ public class TextureData extends DataPackage {
         this.v0 = v0;
         this.u1 = u1;
         this.v1 = v1;
+        this.atlasCell = (Math.round(u0 * atlasPixelSize) / tileWidth)
+                | ((Math.round(v0 * atlasPixelSize) / tileHeight) << EngineSetting.ATLAS_CELL_AXIS_BITS);
         this.averageColor = averageColor;
         this.reveal = reveal;
     }
@@ -116,6 +122,10 @@ public class TextureData extends DataPackage {
 
     public float getV1() {
         return v1;
+    }
+
+    public int getAtlasCell() {
+        return atlasCell;
     }
 
     public int getAverageColor() {

@@ -46,6 +46,14 @@ public class BufferUtility extends EngineUtility {
         return newFloatBuffer(growCapacity(scratch == null ? 0 : scratch.capacity(), floatCount));
     }
 
+    public static IntBuffer ensureCapacity(IntBuffer scratch, int intCount) {
+
+        if (scratch != null && scratch.capacity() >= intCount)
+            return scratch.clear();
+
+        return newIntBuffer(growCapacity(scratch == null ? 0 : scratch.capacity(), intCount));
+    }
+
     public static ShortBuffer ensureCapacity(ShortBuffer scratch, int shortCount) {
 
         if (scratch != null && scratch.capacity() >= shortCount)

@@ -13,10 +13,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MegaRenderBranch extends BranchPackage {
 
     /*
-     * Uploads merged mega geometry and clears the CPU copy, then sets
-     * BATCH_DATA on every batched chunk under the mega lock, blocking on each
-     * chunk's lock so none is missed. The batched list is only read while the
-     * mega lock is held.
+     * Uploads merged mega geometry and releases the CPU copy's storage, then
+     * sets BATCH_DATA on every batched chunk under the mega lock, blocking on
+     * each chunk's lock so none is missed. The batched list is only read while
+     * the mega lock is held.
      */
 
     // Internal
@@ -50,7 +50,7 @@ public class MegaRenderBranch extends BranchPackage {
             if (!worldRenderSystem.addMegaInstance(mega))
                 return;
 
-            mega.getDynamicPacketInstance().clear();
+            mega.getQuadPacketInstance().release();
             sync.getData()[renderDataIndex] = true;
 
             markBatchedChunksRendered(mega);

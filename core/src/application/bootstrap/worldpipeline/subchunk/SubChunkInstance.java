@@ -3,7 +3,6 @@ package application.bootstrap.worldpipeline.subchunk;
 import java.util.Arrays;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
-import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
@@ -100,7 +99,6 @@ public class SubChunkInstance extends WorldRenderInstance {
             WorldRenderManager worldRenderManager,
             WorldHandle worldHandle,
             long coordinate,
-            VAOHandle vaoHandle,
             short airBlockId,
             BlockManager blockManager) {
 
@@ -108,8 +106,7 @@ public class SubChunkInstance extends WorldRenderInstance {
                 worldRenderManager,
                 worldHandle,
                 RenderType.INVALID,
-                coordinate,
-                vaoHandle);
+                coordinate);
 
         this.airBlockId = airBlockId;
         this.blockManager = blockManager;
@@ -126,7 +123,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         releaseStorageIfPopulated();
 
         worldItemPaletteHandle.clear();
-        getDynamicPacket().clear();
+        getQuadPacket().clear();
         containedBlockTypes.clear();
         Arrays.fill(blockTypeCounts, 0);
         containedLiquidBlockIDs.clear();

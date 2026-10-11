@@ -2,6 +2,7 @@ package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
 import java.util.BitSet;
 
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
@@ -15,8 +16,6 @@ import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate3Int;
 import engine.util.mathematics.extras.Direction3Vector;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 class PartialGeometryBranch extends BranchPackage {
 
@@ -71,7 +70,7 @@ class PartialGeometryBranch extends BranchPackage {
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            QuadPacketInstance quadPacket,
             BitSet subAccumulatedBatch,
             BitSet subBatchReturn,
             Color vertColorAccumulator) {
@@ -109,7 +108,7 @@ class PartialGeometryBranch extends BranchPackage {
                     direction3Vector,
                     biomeHandle,
                     blockHandle,
-                    verts,
+                    quadPacket,
                     subAccumulatedBatch,
                     subBatchReturn,
                     vertColorAccumulator);
@@ -132,13 +131,11 @@ class PartialGeometryBranch extends BranchPackage {
             Direction3Vector direction3Vector,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
-            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            QuadPacketInstance quadPacket,
             BitSet subAccumulatedBatch,
             BitSet subBatchReturn,
             Color vertColorAccumulator) {
 
-        boolean checkA = true;
-        boolean checkB = true;
         int sizeA = 1;
         int sizeB = 1;
 
@@ -147,69 +144,61 @@ class PartialGeometryBranch extends BranchPackage {
 
         int baseCellXYZ = subCellSampleBranch.toCellXYZ(subX, subY, subZ);
         short baseOrientation = rotationPaletteHandle.getBlock(baseCellXYZ);
-        float baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(
+        int baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(
                 subChunkInstance, baseCellXYZ, direction3Vector);
 
         subAccumulatedBatch.set(getSubIndex(subX, subY, subZ));
 
-        do {
+        // Each run grows as far as it can along A, then the rows it spans grow along B
+        while (tryExpand(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                rotationPaletteHandle,
+                subX, subY, subZ,
+                direction3Vector,
+                tangentA,
+                tangentB,
+                sizeA,
+                sizeB,
+                biomeHandle,
+                blockHandle,
+                baseOrientation,
+                baseCoverageWord,
+                subAccumulatedBatch,
+                subBatchReturn)) {
+            subAccumulatedBatch.or(subBatchReturn);
+            sizeA++;
+        }
 
-            if (checkA) {
-                if (tryExpand(
-                        chunkInstance,
-                        subChunkInstance,
-                        biomePaletteHandle,
-                        blockPaletteHandle,
-                        rotationPaletteHandle,
-                        subX, subY, subZ,
-                        direction3Vector,
-                        tangentA,
-                        tangentB,
-                        sizeA,
-                        sizeB,
-                        biomeHandle,
-                        blockHandle,
-                        baseOrientation,
-                        baseCoverageWord,
-                        subAccumulatedBatch,
-                        subBatchReturn)) {
-                    subAccumulatedBatch.or(subBatchReturn);
-                    sizeA++;
-                } else
-                    checkA = false;
-            }
-
-            if (checkB) {
-                if (tryExpand(
-                        chunkInstance,
-                        subChunkInstance,
-                        biomePaletteHandle,
-                        blockPaletteHandle,
-                        rotationPaletteHandle,
-                        subX, subY, subZ,
-                        direction3Vector,
-                        tangentB,
-                        tangentA,
-                        sizeB,
-                        sizeA,
-                        biomeHandle,
-                        blockHandle,
-                        baseOrientation,
-                        baseCoverageWord,
-                        subAccumulatedBatch,
-                        subBatchReturn)) {
-                    subAccumulatedBatch.or(subBatchReturn);
-                    sizeB++;
-                } else
-                    checkB = false;
-            }
-        } while (checkA || checkB);
+        while (tryExpand(
+                chunkInstance,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                rotationPaletteHandle,
+                subX, subY, subZ,
+                direction3Vector,
+                tangentB,
+                tangentA,
+                sizeB,
+                sizeA,
+                biomeHandle,
+                blockHandle,
+                baseOrientation,
+                baseCoverageWord,
+                subAccumulatedBatch,
+                subBatchReturn)) {
+            subAccumulatedBatch.or(subBatchReturn);
+            sizeB++;
+        }
 
         surfaceEmissionBranch.emitQuad(
                 chunkInstance,
                 subChunkInstance,
                 rotationPaletteHandle,
-                verts,
+                quadPacket,
                 vertColorAccumulator,
                 subX, subY, subZ,
                 sizeA,
@@ -235,7 +224,7 @@ class PartialGeometryBranch extends BranchPackage {
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             short baseOrientation,
-            float baseCoverageWord,
+            int baseCoverageWord,
             BitSet subAccumulatedBatch,
             BitSet subBatchReturn) {
 
@@ -288,7 +277,7 @@ class PartialGeometryBranch extends BranchPackage {
             BlockHandle blockHandle,
             boolean orientationSensitive,
             short baseOrientation,
-            float baseCoverageWord,
+            int baseCoverageWord,
             BitSet subAccumulatedBatch) {
 
         if (subAccumulatedBatch.get(getSubIndex(checkX, checkY, checkZ)))

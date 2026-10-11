@@ -78,7 +78,12 @@ public class MegaMergeBranch extends BranchPackage {
 
         try {
             collectOtherChunks(chunkInstance, mega.getBatchedChunkList(), batch);
-            return batch.tryLockAll() == ChunkLockResult.ACQUIRED && mega.batchAndMergeAll(chunkInstance);
+
+            if (batch.tryLockAll() != ChunkLockResult.ACQUIRED)
+                return false;
+
+            mega.batchAndMergeAll(chunkInstance);
+            return true;
         } finally {
             batch.unlockAll();
             lockBatchPool.release(batch);

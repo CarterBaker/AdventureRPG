@@ -42,8 +42,8 @@ public class MergeBranch extends BranchPackage {
                 () -> {
                     try {
                         syncContainer.acquire();
-                        boolean success = chunkInstance.merge();
-                        syncContainer.getData()[mergeIndex] = success;
+                        chunkInstance.merge();
+                        syncContainer.getData()[mergeIndex] = true;
                     } finally {
                         syncContainer.release();
                         syncContainer.endWork(ChunkDataSyncContainer.WORK_MERGE);

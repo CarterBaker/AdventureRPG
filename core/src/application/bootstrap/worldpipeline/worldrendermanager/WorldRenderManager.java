@@ -7,6 +7,9 @@ import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
+import application.bootstrap.geometrypipeline.quadbuffer.QuadBufferInstance;
+import application.bootstrap.geometrypipeline.quadbuffermanager.QuadBufferManager;
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
@@ -14,6 +17,7 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
+import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.grid.WaterTargetStruct;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
@@ -26,6 +30,7 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -39,7 +44,10 @@ public class WorldRenderManager extends ManagerPackage {
 
     /*
      * Owns the GPU representation of every rendered chunk, mega and macro.
-     * updateEntries() reconciles a rebuilt packet bucket by bucket, reuploading
+     * updateQuadEntries() reconciles a rebuilt terrain packet one entry per
+     * material, each a quad buffer its shader pulls records from; a chunk's is
+     * assembled into one shared staging packet, so no chunk keeps a merged
+     * copy. updateEntries() does the same for a tree packet's meshes; both reupload
      * into the same buffers so per-window VAO clones stay valid, and released
      * entries are emptied and pooled per material so streaming never churns GPU
      * objects or garbage. A mega that has left its grid's mega queue keeps
@@ -66,6 +74,7 @@ public class WorldRenderManager extends ManagerPackage {
     private MaterialManager materialManager;
     private ModelManager modelManager;
     private MeshManager meshManager;
+    private QuadBufferManager quadBufferManager;
     private RenderManager renderManager;
     private WorldStreamManager worldStreamManager;
     private CloudManager cloudManager;
@@ -102,6 +111,7 @@ public class WorldRenderManager extends ManagerPackage {
     private int renderEntryPoolMax;
 
     // Scratch
+    private QuadPacketInstance chunkStaging;
     private IntOpenHashSet seenMaterials;
     private FloatArrayList emptyVertices;
     private ShortArrayList emptyIndices;
@@ -143,6 +153,7 @@ public class WorldRenderManager extends ManagerPackage {
         this.renderEntryPoolMax = EngineSetting.WORLD_RENDER_ENTRY_POOL_MAX_PER_MATERIAL;
 
         // Scratch
+        this.chunkStaging = create(QuadPacketInstance.class);
         this.seenMaterials = new IntOpenHashSet();
         this.emptyVertices = new FloatArrayList();
         this.emptyIndices = new ShortArrayList();
@@ -156,6 +167,7 @@ public class WorldRenderManager extends ManagerPackage {
         this.materialManager = get(MaterialManager.class);
         this.modelManager = get(ModelManager.class);
         this.meshManager = get(MeshManager.class);
+        this.quadBufferManager = get(QuadBufferManager.class);
         this.renderManager = get(RenderManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.cloudManager = get(CloudManager.class);
@@ -439,16 +451,21 @@ public class WorldRenderManager extends ManagerPackage {
     // Update \\
 
     // A merged chunk with no geometry is rendered as nothing, so it never stalls a handoff or retries its upload
-    public boolean addChunkInstance(WorldRenderInstance worldRenderInstance) {
+    public boolean addChunkInstance(ChunkInstance chunkInstance) {
 
-        long coordinate = worldRenderInstance.getCoordinate();
+        long coordinate = chunkInstance.getCoordinate();
 
-        if (worldRenderInstance.getDynamicPacketInstance().getState() != DynamicPacketState.EMPTY) {
+        chunkInstance.assemble(chunkStaging);
+
+        if (chunkStaging.getState() != DynamicPacketState.EMPTY) {
 
             if (emptyChunks.remove(coordinate))
                 drawnRevision++;
 
-            return updateEntries(coordinate, worldRenderInstance.getDynamicPacketInstance(), chunkEntries);
+            boolean drawn = updateQuadEntries(coordinate, chunkStaging, chunkEntries);
+            chunkStaging.clear();
+
+            return drawn;
         }
 
         if (!hasGridSlotForChunk(coordinate))
@@ -463,8 +480,8 @@ public class WorldRenderManager extends ManagerPackage {
     }
 
     public boolean addMegaInstance(WorldRenderInstance worldRenderInstance) {
-        return updateEntries(
-                worldRenderInstance.getCoordinate(), worldRenderInstance.getDynamicPacketInstance(), megaEntries);
+        return updateQuadEntries(
+                worldRenderInstance.getCoordinate(), worldRenderInstance.getQuadPacketInstance(), megaEntries);
     }
 
     // Trees \\
@@ -603,6 +620,58 @@ public class WorldRenderManager extends ManagerPackage {
 
     // Entries \\
 
+    // One entry per material bucket, its quad buffer rewritten in place
+    private boolean updateQuadEntries(
+            long coordinate,
+            QuadPacketInstance quadPacket,
+            Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> entries) {
+
+        if (!hasGridSlotForChunk(coordinate)) {
+            removeEntries(coordinate, entries);
+            return false;
+        }
+
+        if (quadPacket.getState() != DynamicPacketState.READY)
+            return false;
+
+        drawnRevision++;
+
+        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = entries.get(coordinate);
+
+        if (materialEntries == null) {
+            materialEntries = acquireMaterialEntries();
+            entries.put(coordinate, materialEntries);
+        }
+
+        seenMaterials.clear();
+
+        for (int bucket = 0; bucket < quadPacket.getBucketCount(); bucket++) {
+
+            IntArrayList records = quadPacket.getBucketRecords(bucket);
+
+            if (records.isEmpty())
+                continue;
+
+            int materialID = quadPacket.getBucketMaterialID(bucket);
+            int stride = quadPacket.getBucketStride(bucket);
+            ObjectArrayList<RenderEntry> renderBuckets = materialEntries.get(materialID);
+
+            if (renderBuckets == null) {
+                renderBuckets = acquireBucketList();
+                materialEntries.put(materialID, renderBuckets);
+            }
+
+            if (renderBuckets.isEmpty())
+                renderBuckets.add(acquireQuadEntry(materialID, records, stride));
+            else
+                uploadQuadEntry(renderBuckets.get(0), records, stride);
+
+            seenMaterials.add(materialID);
+        }
+
+        return pruneUnseenMaterials(coordinate, materialEntries, entries);
+    }
+
     private boolean updateEntries(
             long coordinate,
             DynamicPacketInstance dynamicPacket,
@@ -670,6 +739,15 @@ public class WorldRenderManager extends ManagerPackage {
             } else
                 seenMaterials.add(materialID);
         }
+
+        return pruneUnseenMaterials(coordinate, materialEntries, entries);
+    }
+
+    // Every material the rebuilt packet no longer holds released — false when nothing of the instance is left
+    private boolean pruneUnseenMaterials(
+            long coordinate,
+            Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries,
+            Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> entries) {
 
         ObjectIterator<Int2ObjectMap.Entry<ObjectArrayList<RenderEntry>>> iterator = materialEntries
                 .int2ObjectEntrySet()
@@ -792,7 +870,33 @@ public class WorldRenderManager extends ManagerPackage {
         MaterialInstance clonedMaterial = materialManager.cloneMaterial(materialID);
         ModelInstance modelInstance = modelManager.createModel(meshInstance, clonedMaterial);
 
-        return new RenderEntry(bucket.getVAOHandle(), meshInstance, modelInstance);
+        return new RenderEntry(bucket.getVAOHandle(), meshInstance, null, modelInstance);
+    }
+
+    private RenderEntry acquireQuadEntry(int materialID, IntArrayList records, int stride) {
+
+        ObjectArrayList<RenderEntry> pool = materialID2RenderEntryPool.get(materialID);
+
+        while (pool != null && !pool.isEmpty()) {
+
+            RenderEntry pooled = pool.pop();
+
+            if (pooled.quadBuffer != null) {
+                uploadQuadEntry(pooled, records, stride);
+                return pooled;
+            }
+
+            disposeEntry(pooled);
+        }
+
+        QuadBufferInstance quadBuffer = quadBufferManager.createQuadBuffer(records, stride);
+        MaterialInstance clonedMaterial = materialManager.cloneMaterial(materialID);
+
+        clonedMaterial.setUniform(EngineSetting.UNIFORM_QUAD_BUFFER, quadBuffer.getTextureHandle());
+
+        ModelInstance modelInstance = modelManager.createModel(quadBuffer.getMeshData(), clonedMaterial);
+
+        return new RenderEntry(null, null, quadBuffer, modelInstance);
     }
 
     // A pooled entry keeps its buffer handles but gives up its storage until its next tenant uploads
@@ -811,8 +915,13 @@ public class WorldRenderManager extends ManagerPackage {
             return;
         }
 
-        meshManager.updateMesh(entry.meshInstance, emptyVertices, emptyIndices);
-        entry.modelInstance.updateMeshData(entry.meshInstance.getMeshData());
+        if (entry.quadBuffer != null)
+            quadBufferManager.empty(entry.quadBuffer);
+        else {
+            meshManager.updateMesh(entry.meshInstance, emptyVertices, emptyIndices);
+            entry.modelInstance.updateMeshData(entry.meshInstance.getMeshData());
+        }
+
         pool.push(entry);
     }
 
@@ -821,8 +930,17 @@ public class WorldRenderManager extends ManagerPackage {
         entry.modelInstance.updateMeshData(entry.meshInstance.getMeshData());
     }
 
+    private void uploadQuadEntry(RenderEntry entry, IntArrayList records, int stride) {
+        quadBufferManager.upload(entry.quadBuffer, records, stride);
+        entry.modelInstance.updateMeshData(entry.quadBuffer.getMeshData());
+    }
+
     private void disposeEntry(RenderEntry entry) {
-        modelManager.removeMesh(entry.modelInstance);
+
+        if (entry.quadBuffer != null)
+            quadBufferManager.removeQuadBuffer(entry.quadBuffer);
+        else
+            modelManager.removeMesh(entry.modelInstance);
     }
 
     // Render Entry \\
@@ -831,12 +949,18 @@ public class WorldRenderManager extends ManagerPackage {
 
         final VAOHandle vaoHandle;
         final MeshInstance meshInstance;
+        final QuadBufferInstance quadBuffer;
         final ModelInstance modelInstance;
         final boolean usesOceanData;
 
-        RenderEntry(VAOHandle vaoHandle, MeshInstance meshInstance, ModelInstance modelInstance) {
+        RenderEntry(
+                VAOHandle vaoHandle,
+                MeshInstance meshInstance,
+                QuadBufferInstance quadBuffer,
+                ModelInstance modelInstance) {
             this.vaoHandle = vaoHandle;
             this.meshInstance = meshInstance;
+            this.quadBuffer = quadBuffer;
             this.modelInstance = modelInstance;
             this.usesOceanData = modelInstance.getMaterial().getShaderHandle()
                     .getCompiledUBOBlockNames().contains(EngineSetting.OCEAN_DATA_UBO);
