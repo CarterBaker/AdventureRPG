@@ -5,6 +5,7 @@ import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InfoPanelBranch extends BranchPackage {
 
@@ -14,7 +15,8 @@ public class InfoPanelBranch extends BranchPackage {
      * they act on. Booleans toggle and enums cycle in place, every other value
      * is typed into the text dialog, new entries, files, and map keys are
      * named through the name dialog, and deleting asks for the selection's
-     * name to be typed back as confirmation.
+     * name to be typed back as confirmation. Copying asks for a new name,
+     * then a new value for each unique field, before anything is created.
      */
 
     // Internal
@@ -53,6 +55,44 @@ public class InfoPanelBranch extends BranchPackage {
                 EditorSetting.DIALOG_TITLE_NEW_FILE,
                 infoManager::isNewFileNameValid,
                 infoManager::createFile);
+    }
+
+    public void copySelection(WindowInstance window) {
+
+        if (!infoManager.beginCopy())
+            return;
+
+        nameDialogBranch.open(
+                window,
+                EditorSetting.DIALOG_TITLE_COPY_PREFIX + infoManager.getCopySourceName()
+                        + EditorSetting.DIALOG_TITLE_COPY_SUFFIX,
+                infoManager::isCopyNameValid,
+                copyName -> requestCopyValue(
+                        window, copyName, infoManager.getCopyUniqueKeys(), new ObjectArrayList<>()));
+    }
+
+    private void requestCopyValue(
+            WindowInstance window,
+            String copyName,
+            ObjectArrayList<String> copyKeys,
+            ObjectArrayList<String> copyTexts) {
+
+        if (copyTexts.size() == copyKeys.size()) {
+            infoManager.copy(copyName, copyTexts);
+            return;
+        }
+
+        String key = copyKeys.get(copyTexts.size());
+
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.DIALOG_TITLE_UNIQUE_PREFIX + key,
+                infoManager.getCopyValueText(key),
+                text -> infoManager.isCopyValueValid(key, text),
+                text -> {
+                    copyTexts.add(text);
+                    requestCopyValue(window, copyName, copyKeys, copyTexts);
+                });
     }
 
     public void deleteSelection(WindowInstance window) {

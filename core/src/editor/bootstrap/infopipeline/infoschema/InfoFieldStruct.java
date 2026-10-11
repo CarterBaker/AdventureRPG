@@ -13,13 +13,15 @@ public class InfoFieldStruct extends StructPackage {
      * its object is optional unless marked required. The default is the value
      * a newly added primitive starts from; groups start from their structure.
      * A fixed length pins an array's size, so its elements can be edited but
-     * never added or removed.
+     * never added or removed. A unique field must differ from every other
+     * entry of its schema, so a copy has to be given a new value for it.
      */
 
     // Identity
     private final String key;
     private final InfoFieldType type;
     private final boolean required;
+    private final boolean unique;
 
     // Value
     private final ArpgElementStruct defaultValue;
@@ -36,6 +38,7 @@ public class InfoFieldStruct extends StructPackage {
             String key,
             InfoFieldType type,
             boolean required,
+            boolean unique,
             ArpgElementStruct defaultValue,
             ObjectArrayList<String> values,
             ObjectArrayList<InfoFieldStruct> fields,
@@ -46,6 +49,7 @@ public class InfoFieldStruct extends StructPackage {
         this.key = key;
         this.type = type;
         this.required = required;
+        this.unique = unique;
 
         // Value
         this.defaultValue = defaultValue;
@@ -84,6 +88,10 @@ public class InfoFieldStruct extends StructPackage {
 
     public boolean isRequired() {
         return required;
+    }
+
+    public boolean isUnique() {
+        return unique;
     }
 
     public ArpgElementStruct getDefaultValue() {

@@ -67,6 +67,9 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_EDIT_PREFIX = "Edit ";
     public static final String DIALOG_TITLE_DELETE_PREFIX = "Type ";
     public static final String DIALOG_TITLE_DELETE_SUFFIX = " to delete it";
+    public static final String DIALOG_TITLE_COPY_PREFIX = "Copy ";
+    public static final String DIALOG_TITLE_COPY_SUFFIX = " as";
+    public static final String DIALOG_TITLE_UNIQUE_PREFIX = "Unique ";
 
     // Tabs
     public static final String TAB_TITLE_COMMAND_CONSOLE = "Command Console";
@@ -248,6 +251,8 @@ public class EditorSetting {
     public static final String INFO_MESSAGE_REVERTED = "Reverted ";
     public static final String INFO_MESSAGE_CREATED = "Created ";
     public static final String INFO_MESSAGE_DELETED = "Deleted ";
+    public static final String INFO_MESSAGE_COPIED = "Copied ";
+    public static final String INFO_MESSAGE_COPY_ABORTED = "Copy aborted: the source or a unique value changed";
     public static final String INFO_MESSAGE_REQUIRED = "Required fields cannot be removed";
     public static final String INFO_MESSAGE_FIXED_LENGTH = "This list has a fixed length";
 

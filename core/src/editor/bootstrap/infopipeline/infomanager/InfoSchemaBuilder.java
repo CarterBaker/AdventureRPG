@@ -23,7 +23,9 @@ class InfoSchemaBuilder extends BuilderPackage {
      * objects need fields, and arrays and maps need an element. A primitive
      * without a "default" starts from the natural empty value of its type,
      * and every default is checked against its type so a malformed schema
-     * fails at boot. An array layout must declare its name field.
+     * fails at boot. An array layout must declare its name field. Only a
+     * top-level primitive may be marked unique, and never the name field,
+     * which is unique already.
      */
 
     // Build \\
@@ -43,15 +45,20 @@ class InfoSchemaBuilder extends BuilderPackage {
                 null,
                 InfoFieldType.OBJECT,
                 true,
+                false,
                 null,
                 new ObjectArrayList<>(),
-                parseFields(ArpgUtility.validateArray(arpg, "fields"), schemaName),
+                parseFields(ArpgUtility.validateArray(arpg, "fields"), true, schemaName),
                 null,
                 0);
 
         if (nameField != null && !isRequiredString(rootField.findField(nameField)))
             throwException("Info schema '" + schemaName + "' must declare its name field '" + nameField
                     + "' as a required string.");
+
+        if (nameField != null && rootField.findField(nameField).isUnique())
+            throwException("Info schema '" + schemaName + "' marks its name field '" + nameField
+                    + "' unique; entry names are unique already.");
 
         InfoSchemaData schemaData = new InfoSchemaData(
                 schemaName,
@@ -61,7 +68,8 @@ class InfoSchemaBuilder extends BuilderPackage {
                 entriesKey,
                 nameField,
                 defaultFile,
-                rootField);
+                rootField,
+                collectUniqueKeys(rootField));
 
         InfoSchemaHandle schemaHandle = create(InfoSchemaHandle.class);
         schemaHandle.constructor(schemaData);
@@ -71,13 +79,16 @@ class InfoSchemaBuilder extends BuilderPackage {
 
     // Parse \\
 
-    private ObjectArrayList<InfoFieldStruct> parseFields(ArpgArrayStruct fieldsArpg, String schemaName) {
+    private ObjectArrayList<InfoFieldStruct> parseFields(
+            ArpgArrayStruct fieldsArpg,
+            boolean topLevel,
+            String schemaName) {
 
         ObjectArrayList<InfoFieldStruct> fields = new ObjectArrayList<>(fieldsArpg.size());
 
         for (int i = 0; i < fieldsArpg.size(); i++) {
 
-            InfoFieldStruct field = parseField(fieldsArpg.get(i).getAsObject(), true, schemaName);
+            InfoFieldStruct field = parseField(fieldsArpg.get(i).getAsObject(), true, topLevel, schemaName);
 
             for (int j = 0; j < fields.size(); j++)
                 if (fields.get(j).getKey().equals(field.getKey()))
@@ -90,7 +101,11 @@ class InfoSchemaBuilder extends BuilderPackage {
         return fields;
     }
 
-    private InfoFieldStruct parseField(ArpgObjectStruct fieldArpg, boolean keyed, String schemaName) {
+    private InfoFieldStruct parseField(
+            ArpgObjectStruct fieldArpg,
+            boolean keyed,
+            boolean topLevel,
+            String schemaName) {
 
         String key = keyed ? ArpgUtility.validateString(fieldArpg, "key") : null;
         String typeName = ArpgUtility.validateString(fieldArpg, "type");
@@ -101,14 +116,15 @@ class InfoSchemaBuilder extends BuilderPackage {
                     + typeName + "'.");
 
         boolean required = ArpgUtility.getBoolean(fieldArpg, "required", false);
+        boolean unique = ArpgUtility.getBoolean(fieldArpg, "unique", false);
         ObjectArrayList<String> values = type == InfoFieldType.ENUM
                 ? parseValues(fieldArpg, key, schemaName)
                 : new ObjectArrayList<>();
         ObjectArrayList<InfoFieldStruct> fields = type == InfoFieldType.OBJECT
-                ? parseFields(ArpgUtility.validateArray(fieldArpg, "fields"), schemaName)
+                ? parseFields(ArpgUtility.validateArray(fieldArpg, "fields"), false, schemaName)
                 : new ObjectArrayList<>();
         InfoFieldStruct element = type == InfoFieldType.ARRAY || type == InfoFieldType.MAP
-                ? parseField(ArpgUtility.validateObject(fieldArpg, "element"), false, schemaName)
+                ? parseField(ArpgUtility.validateObject(fieldArpg, "element"), false, false, schemaName)
                 : null;
         int length = type == InfoFieldType.ARRAY ? ArpgUtility.getInt(fieldArpg, "length", 0) : 0;
         ArpgElementStruct defaultValue = type.isGroup() ? null : parseDefault(fieldArpg, type, values, key, schemaName);
@@ -116,7 +132,11 @@ class InfoSchemaBuilder extends BuilderPackage {
         if (length < 0)
             throwException("Info schema '" + schemaName + "' field '" + key + "' has a negative length.");
 
-        return new InfoFieldStruct(key, type, required, defaultValue, values, fields, element, length);
+        if (unique && (!topLevel || type.isGroup() || type == InfoFieldType.RAW))
+            throwException("Info schema '" + schemaName + "' field '" + key
+                    + "' is marked unique, but only a top-level primitive field can be.");
+
+        return new InfoFieldStruct(key, type, required, unique, defaultValue, values, fields, element, length);
     }
 
     private ObjectArrayList<String> parseValues(ArpgObjectStruct fieldArpg, String key, String schemaName) {
@@ -168,6 +188,19 @@ class InfoSchemaBuilder extends BuilderPackage {
     }
 
     // Utility \\
+
+    private ObjectArrayList<String> collectUniqueKeys(InfoFieldStruct rootField) {
+
+        ObjectArrayList<InfoFieldStruct> fields = rootField.getFields();
+        ObjectArrayList<String> uniqueKeys = new ObjectArrayList<>();
+
+        for (int i = 0; i < fields.size(); i++)
+            if (fields.get(i).isUnique())
+                uniqueKeys.add(fields.get(i).getKey());
+
+        uniqueKeys.trim();
+        return uniqueKeys;
+    }
 
     private boolean isRequiredString(InfoFieldStruct field) {
         return field != null && field.isRequired() && field.getType() == InfoFieldType.STRING;

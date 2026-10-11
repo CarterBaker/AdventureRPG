@@ -1,6 +1,7 @@
 package editor.bootstrap.infopipeline.infoschema;
 
 import engine.root.HandlePackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InfoSchemaHandle extends HandlePackage {
 
@@ -56,6 +57,10 @@ public class InfoSchemaHandle extends HandlePackage {
 
     public InfoFieldStruct getRootField() {
         return infoSchemaData.getRootField();
+    }
+
+    public ObjectArrayList<String> getUniqueKeys() {
+        return infoSchemaData.getUniqueKeys();
     }
 
     public boolean isArrayLayout() {

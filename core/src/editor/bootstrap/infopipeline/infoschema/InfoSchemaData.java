@@ -1,6 +1,7 @@
 package editor.bootstrap.infopipeline.infoschema;
 
 import engine.root.DataPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InfoSchemaData extends DataPackage {
 
@@ -9,7 +10,8 @@ public class InfoSchemaData extends DataPackage {
      * appears under, the asset directory its files live in, and the fields an
      * entry allows. With an entries key every file holds many named entries in
      * that array, and new entries land in the default file when none is
-     * chosen; without one every file is a single entry.
+     * chosen; without one every file is a single entry. Unique keys name the
+     * top-level fields no two entries may share.
      */
 
     // Identity
@@ -25,6 +27,7 @@ public class InfoSchemaData extends DataPackage {
 
     // Fields
     private final InfoFieldStruct rootField;
+    private final ObjectArrayList<String> uniqueKeys;
 
     // Constructor \\
 
@@ -36,7 +39,8 @@ public class InfoSchemaData extends DataPackage {
             String entriesKey,
             String nameField,
             String defaultFile,
-            InfoFieldStruct rootField) {
+            InfoFieldStruct rootField,
+            ObjectArrayList<String> uniqueKeys) {
 
         // Identity
         this.schemaName = schemaName;
@@ -51,6 +55,7 @@ public class InfoSchemaData extends DataPackage {
 
         // Fields
         this.rootField = rootField;
+        this.uniqueKeys = uniqueKeys;
     }
 
     // Accessible \\
@@ -85,6 +90,10 @@ public class InfoSchemaData extends DataPackage {
 
     public InfoFieldStruct getRootField() {
         return rootField;
+    }
+
+    public ObjectArrayList<String> getUniqueKeys() {
+        return uniqueKeys;
     }
 
     public boolean isArrayLayout() {

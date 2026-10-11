@@ -18,6 +18,7 @@ import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import engine.util.arpg.ArpgValueStruct;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -32,7 +33,9 @@ public class InfoManager extends ManagerPackage {
      * edits, rows and hierarchy nodes each live in their own branch. Change
      * listeners hear every entry whose content moves — edited, created or
      * reverted, saved or not — and delete listeners every entry removed, so
-     * tools can preview edits live.
+     * tools can preview edits live. A copy pins its source when it begins and
+     * is only built once a new name and every unique value check out, so a
+     * stale or clashing copy aborts without touching any document.
      */
 
     // Internal
@@ -54,6 +57,11 @@ public class InfoManager extends ManagerPackage {
     private InfoDocumentInstance selectedDocument;
     private String selectedEntryName;
     private String selectedFolderName;
+
+    // Copy
+    private InfoSchemaHandle copySchema;
+    private InfoDocumentInstance copyDocument;
+    private String copyEntryName;
 
     // Expansion
     private ObjectOpenHashSet<String> toggledPaths;
@@ -416,7 +424,169 @@ public class InfoManager extends ManagerPackage {
                 ? selectedFolderName
                 : selectedDocument != null ? selectedDocument.getFolderName() : "";
 
+        return toFolderPrefix(folderName);
+    }
+
+    private String toFolderPrefix(String folderName) {
         return folderName.isEmpty() ? "" : folderName + EditorSetting.INFO_FOLDER_SEPARATOR;
+    }
+
+    // Copy \\
+
+    public boolean beginCopy() {
+
+        if (getSelectedEntryArpg() == null)
+            return false;
+
+        this.copySchema = activeSchema;
+        this.copyDocument = selectedDocument;
+        this.copyEntryName = activeSchema.isArrayLayout() ? selectedEntryName : null;
+        return true;
+    }
+
+    public String getCopySourceName() {
+        return copyEntryName != null ? copyEntryName : copyDocument.getFileName();
+    }
+
+    public ObjectArrayList<String> getCopyUniqueKeys() {
+
+        ArpgObjectStruct sourceArpg = getCopySourceArpg();
+        ObjectArrayList<String> uniqueKeys = copySchema.getUniqueKeys();
+        ObjectArrayList<String> copyKeys = new ObjectArrayList<>(uniqueKeys.size());
+
+        for (int i = 0; i < uniqueKeys.size(); i++)
+            if (sourceArpg != null && sourceArpg.has(uniqueKeys.get(i)))
+                copyKeys.add(uniqueKeys.get(i));
+
+        return copyKeys;
+    }
+
+    public String getCopyValueText(String key) {
+
+        InfoTargetStruct target = resolveCopySource(key);
+
+        return target != null && target.hasValue()
+                ? infoEditBranch.formatValue(target.getValue(), target.resolveType())
+                : "";
+    }
+
+    public boolean isCopyNameValid(String copyName) {
+
+        if (!isCopySourceValid() || !FileUtility.isValidFileName(copyName, EditorSetting.NAME_INPUT_MAX_LENGTH))
+            return false;
+
+        return copySchema.isArrayLayout()
+                ? copyDocument.findEntryIndex(copyName) == EngineSetting.INDEX_NOT_FOUND
+                : !isDefinitionNameTaken(copySchema, toFolderPrefix(copyDocument.getFolderName()) + copyName);
+    }
+
+    public boolean isCopyValueValid(String key, String text) {
+
+        InfoTargetStruct target = resolveCopySource(key);
+
+        if (target == null || !target.hasValue())
+            return false;
+
+        ArpgElementStruct value = infoEditBranch.parse(target, text);
+        return value != null && value.isValue() && !isValueTaken(key, value.getAsValue());
+    }
+
+    public void copy(String copyName, ObjectArrayList<String> copyTexts) {
+
+        ObjectArrayList<String> copyKeys = isCopySourceValid() ? getCopyUniqueKeys() : null;
+
+        if (!isCopyReady(copyName, copyKeys, copyTexts)) {
+            endCopy();
+            setStatusMessage(EditorSetting.INFO_MESSAGE_COPY_ABORTED);
+            return;
+        }
+
+        InfoSchemaHandle schema = copySchema;
+        InfoDocumentInstance sourceDocument = copyDocument;
+        ArpgObjectStruct copyArpg = getCopySourceArpg().deepCopy();
+
+        endCopy();
+
+        for (int i = 0; i < copyKeys.size(); i++) {
+
+            InfoTargetStruct target = infoEditBranch.resolve(copyArpg, schema.getRootField(), copyKeys.get(i));
+            target.write(infoEditBranch.parse(target, copyTexts.get(i)));
+        }
+
+        if (schema.isArrayLayout()) {
+
+            copyArpg.addProperty(schema.getNameField(), copyName);
+            sourceDocument.requireEntryArray().add(copyArpg);
+            sourceDocument.markEdited();
+
+            select(schema, sourceDocument, copyName, null);
+            notifyEntry(schemaName2ChangeListeners, getSelectedEntry());
+        } else {
+
+            InfoDocumentInstance document = openNewDocument(
+                    schema, toFolderPrefix(sourceDocument.getFolderName()) + copyName, copyArpg);
+
+            select(schema, document, null, null);
+            notifyEntries(schemaName2ChangeListeners, schema, document);
+        }
+
+        setStatusMessage(EditorSetting.INFO_MESSAGE_COPIED + copyName);
+    }
+
+    private boolean isCopyReady(String copyName, ObjectArrayList<String> copyKeys, ObjectArrayList<String> copyTexts) {
+
+        if (copyKeys == null || copyKeys.size() != copyTexts.size() || !isCopyNameValid(copyName))
+            return false;
+
+        for (int i = 0; i < copyKeys.size(); i++)
+            if (!isCopyValueValid(copyKeys.get(i), copyTexts.get(i)))
+                return false;
+
+        return true;
+    }
+
+    private boolean isCopySourceValid() {
+        return copyDocument != null && getDocuments(copySchema).contains(copyDocument) && getCopySourceArpg() != null;
+    }
+
+    private ArpgObjectStruct getCopySourceArpg() {
+
+        if (copyDocument == null)
+            return null;
+
+        return copyEntryName != null ? copyDocument.findEntry(copyEntryName) : copyDocument.getRoot();
+    }
+
+    private InfoTargetStruct resolveCopySource(String key) {
+        return isCopySourceValid() ? infoEditBranch.resolve(getCopySourceArpg(), copySchema.getRootField(), key) : null;
+    }
+
+    private boolean isValueTaken(String key, ArpgValueStruct value) {
+
+        ObjectArrayList<InfoEntryStruct> entries = getEntries(copySchema.getSchemaName());
+
+        for (int i = 0; i < entries.size(); i++) {
+
+            ArpgElementStruct existing = entries.get(i).getArpg().get(key);
+
+            if (existing != null && existing.isValue() && isSameValue(existing.getAsValue(), value))
+                return true;
+        }
+
+        return false;
+    }
+
+    private boolean isSameValue(ArpgValueStruct existing, ArpgValueStruct value) {
+        return existing.isString() && value.isString()
+                ? existing.getAsString().equalsIgnoreCase(value.getAsString())
+                : existing.equals(value);
+    }
+
+    private void endCopy() {
+
+        this.copySchema = null;
+        this.copyDocument = null;
+        this.copyEntryName = null;
     }
 
     // Delete \\
