@@ -13,7 +13,8 @@ public final class TideUtility extends EngineUtility {
      * pass resolve the same cell to the same level for the same tide. The
      * tide band is every cell whose fill can differ between the lowest and
      * the highest tide: cells beneath it are always full, cells above it are
-     * never reached.
+     * never reached. The voxel surface is held a lead above the live one and
+     * never past the band, so the cells always cover the drawn sea.
      */
 
     public static final int BASE_SURFACE_LEVELS = toSurfaceLevels(EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + 1.0);
@@ -34,6 +35,12 @@ public final class TideUtility extends EngineUtility {
         int step = EngineSetting.OCEAN_TIDE_LEVEL_STEP;
 
         return (int) Math.round(surfaceHeightBlocks * EngineSetting.LIQUID_LEVEL_MAX / step) * step;
+    }
+
+    public static int toVoxelSurfaceLevels(double surfaceHeightBlocks) {
+        return Math.min(
+                toSurfaceLevels(surfaceHeightBlocks + EngineSetting.OCEAN_TIDE_VOXEL_LEAD_BLOCKS),
+                MAX_SURFACE_LEVELS);
     }
 
     public static int getTopWaterY(int surfaceLevels) {

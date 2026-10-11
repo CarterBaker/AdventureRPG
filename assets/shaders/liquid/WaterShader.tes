@@ -38,8 +38,11 @@ vec3 applyShoreWarp(vec3 worldPos) {
 
 // Liquid tessellation evaluation. A tidal surface vertex ignores the level its cell was last written at and
 // rides the live tide plus the wave sum WaveManager samples on the CPU, from a position snapped to the
-// quarter-block lattice so two patches sharing it evaluate bit-identical input. Its sea state travels on to
-// the fragment for slope, foam and ripples. Still and flowing surface vertices sit at their fill level. Inside
+// quarter-block lattice so two patches sharing it evaluate bit-identical input. The voxel sea is held a lead
+// above the live tide, so an upright tidal face rises from its base only as far as the live surface and folds
+// flat onto its base while the surface is below it: cells the tide has not yet reached or not yet left never
+// show a wall, and the up faces above them, riding the same surface, meet without a seam. Its sea state travels
+// on to the fragment for slope, foam and ripples. Still and flowing surface vertices sit at their fill level. Inside
 // the near ring every vertex is then drawn shifted sideways by the natural edge warp, exactly as the bank beside
 // it is, so the waterline follows the bent shore without a sliver; the shift is horizontal only, so the water
 // stays level and the waves keep the height physics floats on, and the fragment still shades the unshifted sea.
@@ -56,16 +59,25 @@ void main() {
     vOceanState = vec4(0.0);
     vTidal      = 0.0;
 
-    if (tidal > 0.5) {
+    if (tidal > 0.0) {
 
         worldPos.xz = snapToOceanLattice(worldPos.xz);
 
         OceanState state        = resolveOceanState(worldPos.xz);
         float      displacement = sampleOceanDisplacement(worldPos.xz, state);
+        float      surfaceY     = u_oceanSurface.x + displacement * resolveOceanDisplacementFade(worldPos.xz);
 
-        worldPos.y  = u_oceanSurface.x + displacement * resolveOceanDisplacementFade(worldPos.xz);
-        vOceanState = vec4(state.seaState, state.chop, state.swell, displacement);
-        vTidal      = 1.0;
+        if (teNormal[0].y < 0.5) {
+            float baseY = min(min(teWorldPos[0].y, teWorldPos[1].y), min(teWorldPos[2].y, teWorldPos[3].y));
+            surfaceY    = mix(baseY, max(surfaceY, baseY), tidal);
+        }
+
+        worldPos.y = surfaceY;
+
+        if (tidal > 0.5) {
+            vOceanState = vec4(state.seaState, state.chop, state.swell, displacement);
+            vTidal      = 1.0;
+        }
     }
     else if (surface > 0.5)
     worldPos.y -= 1.0 - clamp(level / LIQUID_LEVEL_MAX, 0.0, 1.0);

@@ -2,21 +2,28 @@ package application.bootstrap.oceanpipeline.tidemanager;
 
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
+import application.bootstrap.calendarpipeline.util.CelestialUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.vectors.Vector3;
 
 public class TideManager extends ManagerPackage {
 
     /*
-     * Owns the world's one tide. Every frame the global clock is resolved into
-     * a tide offset from sea level: a daily cycle that crests at
-     * OCEAN_TIDE_PEAK_TIME_OF_DAY, with its reach swinging between spring and
-     * neap across OCEAN_TIDE_SPRING_NEAP_PERIOD_DAYS. The whole ocean shares
-     * the result, so every chunk and every window agree on where the water
-     * is. The surface is published twice: as a continuous height for the
-     * shader, and as quantized liquid levels for world generation and the
-     * tide pass, which world-streaming threads read without a lock.
+     * Owns the world's one tide, raised by the moon itself. Every frame the
+     * global clock places the moon and the sun on their paths exactly as the
+     * sky draws them, and each lifts the sea into two bulges, one beneath it
+     * and one opposite, so high water follows the moon overhead and underfoot
+     * and arrives later every day. The moon pulls harder the closer it passes
+     * and not at all in a calendar without one; the weaker sun adds springs at
+     * new and full moon and neaps at the quarters. The surface is published
+     * twice: as a continuous height every renderer and physics read, and as
+     * quantized liquid levels held a lead above it, so the voxel sea already
+     * covers wherever the live surface is about to be on the way up and
+     * still covers it on the way down, and no chunk is ever caught short of
+     * the water drawn over it. World-streaming threads read the levels
+     * without a lock.
      */
 
     // Internal
@@ -27,6 +34,9 @@ public class TideManager extends ManagerPackage {
     private float surfaceHeightBlocks;
     private volatile int surfaceLevels;
 
+    // Scratch
+    private final Vector3 bodyDirection = new Vector3();
+
     // Base \\
 
     @Override
@@ -35,7 +45,7 @@ public class TideManager extends ManagerPackage {
         // Tide
         this.tideOffsetBlocks = 0f;
         this.surfaceHeightBlocks = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + 1f;
-        this.surfaceLevels = TideUtility.BASE_SURFACE_LEVELS;
+        this.surfaceLevels = TideUtility.toVoxelSurfaceLevels(surfaceHeightBlocks);
     }
 
     @Override
@@ -49,26 +59,29 @@ public class TideManager extends ManagerPackage {
     protected void update() {
 
         ClockHandle clockHandle = clockManager.getClockHandle();
+        double timeOfDay = clockHandle.getRawTimeOfDay();
+        float sizeScale = clockHandle.getLunarSizeScale();
 
-        double elapsedDays = clockHandle.getTotalDaysElapsed() + clockHandle.getDayProgress();
+        CelestialUtility.resolveOrbitDirection(
+                CelestialUtility.wrapFraction(timeOfDay - clockHandle.getLunarPhase()),
+                clockHandle.getLunarLatitude(),
+                bodyDirection);
+        double lunarPull = EngineSetting.OCEAN_TIDE_LUNAR_SHARE * sizeScale * sizeScale * sizeScale
+                * computeBulge(bodyDirection);
 
-        tideOffsetBlocks = (float) (computeAmplitudeBlocks(elapsedDays)
-                * computeDailyCycle(clockHandle.getRawTimeOfDay()));
+        CelestialUtility.resolveSunDirection(timeOfDay, bodyDirection);
+        double solarPull = EngineSetting.OCEAN_TIDE_SOLAR_SHARE * computeBulge(bodyDirection);
+
+        tideOffsetBlocks = (float) (EngineSetting.OCEAN_TIDE_AMPLITUDE_BLOCKS
+                * Math.max(-1.0, Math.min(1.0, lunarPull + solarPull)));
         surfaceHeightBlocks = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + 1f + tideOffsetBlocks;
-        surfaceLevels = TideUtility.toSurfaceLevels(surfaceHeightBlocks);
+        surfaceLevels = TideUtility.toVoxelSurfaceLevels(surfaceHeightBlocks);
     }
 
-    private double computeAmplitudeBlocks(double elapsedDays) {
-
-        double springNeapPhase = elapsedDays / EngineSetting.OCEAN_TIDE_SPRING_NEAP_PERIOD_DAYS;
-        double springFactor = 0.5 * (1.0 + Math.cos(springNeapPhase * Math.PI * 2.0));
-        double neapRatio = EngineSetting.OCEAN_TIDE_NEAP_AMPLITUDE_RATIO;
-
-        return EngineSetting.OCEAN_TIDE_AMPLITUDE_BLOCKS * (neapRatio + (1.0 - neapRatio) * springFactor);
-    }
-
-    private double computeDailyCycle(double rawTimeOfDay) {
-        return Math.cos((rawTimeOfDay - EngineSetting.OCEAN_TIDE_PEAK_TIME_OF_DAY) * Math.PI * 2.0);
+    // Height of the two tidal bulges a body raises under a direction toward it: 1 with the body overhead or
+    // underfoot, -1 with it on the horizon
+    private double computeBulge(Vector3 direction) {
+        return 2.0 * direction.y * direction.y - 1.0;
     }
 
     // Accessible \\

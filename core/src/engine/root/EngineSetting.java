@@ -1161,11 +1161,11 @@ public class EngineSetting {
     public static final float OCEAN_TIDE_AMPLITUDE_BLOCKS = 5.0f;
     public static final int OCEAN_TIDE_CHUNKS_PER_TICK = 24;
     public static final int OCEAN_TIDE_LEVEL_STEP = 4;
-    public static final float OCEAN_TIDE_NEAP_AMPLITUDE_RATIO = 0.6f;
-    public static final double OCEAN_TIDE_PEAK_TIME_OF_DAY = 0.0;
+    public static final float OCEAN_TIDE_LUNAR_SHARE = 0.7f;
     public static final int OCEAN_TIDE_RANGE_CHUNKS = 16;
-    public static final double OCEAN_TIDE_SPRING_NEAP_PERIOD_DAYS = 14.0;
+    public static final float OCEAN_TIDE_SOLAR_SHARE = 0.3f;
     public static final int OCEAN_TIDE_UNAPPLIED = Integer.MIN_VALUE;
+    public static final float OCEAN_TIDE_VOXEL_LEAD_BLOCKS = 0.5f;
 
     // Ocean Turbulence
     public static final float OCEAN_TURBULENCE_CELL_WEIGHT = 4.0f;
