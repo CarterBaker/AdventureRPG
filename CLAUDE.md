@@ -19,6 +19,23 @@ When in doubt, find the closest existing system and mirror it exactly.
 
 ---
 
+## Effort and Token Budget
+
+Scale the effort to the task, automatically. Judge each task's size before starting and re-judge if it turns out
+larger or smaller than it looked. Where a task falls, and how far to lean either way, is at your discretion.
+
+- **Small tasks** (a bug in one or two files, a constant, a rename, a single asset, a question): conserve weekly
+  usage. Read only the files the change touches and their direct neighbours, search with targeted greps, skip broad
+  exploration and subagents, never re-read what is already in context, and keep the reply short.
+- **Large tasks** (a new system or pipeline, a multi-file feature, a requested cross-cutting change, performance
+  work): weekly usage is a lesser concern than getting it right. Read every system the change touches, trace all
+  callers, compile and verify, and use subagents for broad searches when they save time. Stay efficient: no
+  redundant reads, repeated searches, or wasted passes.
+- **The quality bar never scales.** Only the amount of investigation and verification does: a small task is still
+  complete, compiles, and follows every rule in this file.
+
+---
+
 ## Reuse and Compartmentalization
 
 - **Search before writing.** Before adding a method, look for one that already does the job (`util/`,
