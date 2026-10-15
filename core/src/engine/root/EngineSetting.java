@@ -2197,31 +2197,16 @@ public class EngineSetting {
     public static final float MENU_THEME_ALPHA_DEFAULT = 1.0f;
 
     // Screen Capture & Recording
-    public static final int AVI_FLAG_HAS_INDEX = 0x00000010;
-    public static final int AVI_FRAME_CHUNK_HEADER_LENGTH_BYTES = 8;
-    public static final int AVI_INDEX_ENTRY_LENGTH_BYTES = 16;
-    public static final int AVI_INDEX_FLAG_KEYFRAME = 0x00000010;
-    public static final int AVI_MAIN_HEADER_LENGTH_BYTES = 56;
-    public static final int AVI_STREAM_FORMAT_LENGTH_BYTES = 40;
-    public static final int AVI_STREAM_HEADER_LENGTH_BYTES = 56;
-    public static final String AVI_UNCOMPRESSED_FOURCC = "DIB ";
     public static final int BYTES_PER_PIXEL_BGRA = 4;
     public static final String CAPTURE_ROOT_DIRECTORY = "Capture";
     public static final String CAPTURE_TIMESTAMP_PATTERN = "yyyy-MM-dd_HH-mm-ss";
-    public static final int RECORDING_LOSSLESS_FRAME_RATE = 60;
-    public static final int RECORDING_CAPTURE_MAX_OWED_FRAMES = RECORDING_LOSSLESS_FRAME_RATE * 2;
-    public static final String RECORDING_CONVERSION_TEMP_SUFFIX = ".converting";
+    public static final int RECORDING_BUFFER_COUNT = 4;
+    public static final String RECORDING_EXTENSION = "mp4";
     public static final String RECORDING_FILE_PREFIX = "Recording_";
-    public static final int RECORDING_LOSSLESS_BUFFER_COUNT = 4;
-    public static final String RECORDING_LOSSLESS_EXTENSION = "avi";
-    public static final int RECORDING_LOSSLESS_MAX_OWED_FRAMES = RECORDING_LOSSLESS_FRAME_RATE * 2;
+    public static final int RECORDING_FRAME_RATE = 30;
+    public static final int RECORDING_MAX_WIDTH = 1280;
+    public static final int RECORDING_MOTION_SEARCH_RANGE = 0;
     public static final String RECORDING_OUTPUT_DIRECTORY = "Videos";
-    public static final String RECORDING_STANDARD_EXTENSION = "mp4";
-    public static final int RECORDING_STANDARD_FRAME_RATE = 30;
-    public static final int RECORDING_STANDARD_FRAME_SAMPLE_STRIDE = RECORDING_LOSSLESS_FRAME_RATE
-            / RECORDING_STANDARD_FRAME_RATE;
-    public static final int RECORDING_STANDARD_MAX_WIDTH = 1280;
-    public static final int RIFF_CHUNK_HEADER_LENGTH_BYTES = 8;
     public static final String SCREENSHOT_FILE_PREFIX = "Screenshot_";
     public static final String SCREENSHOT_LOSSLESS_EXTENSION = "tga";
     public static final String SCREENSHOT_OUTPUT_DIRECTORY = "Images";
@@ -2233,4 +2218,19 @@ public class EngineSetting {
     public static final int TGA_PIXEL_DEPTH_BITS = 32;
     public static final String VIDEO_ENCODE_THREAD_NAME = "VideoEncode";
     public static final String VIDEO_WRITE_THREAD_NAME = "VideoWrite";
+
+    // Screen Capture YUV (full-range BT.601, fixed point)
+    public static final int YUV_BLUE_CHROMA_BLUE = 128;
+    public static final int YUV_BLUE_CHROMA_GREEN = -85;
+    public static final int YUV_BLUE_CHROMA_RED = -43;
+    public static final int YUV_CHROMA_FIXED_POINT_SHIFT = 10;
+    public static final int YUV_CHROMA_ROUNDING = 512;
+    public static final int YUV_FIXED_POINT_SHIFT = 8;
+    public static final int YUV_LUMA_BLUE = 29;
+    public static final int YUV_LUMA_GREEN = 150;
+    public static final int YUV_LUMA_RED = 77;
+    public static final int YUV_RED_CHROMA_BLUE = -21;
+    public static final int YUV_RED_CHROMA_GREEN = -107;
+    public static final int YUV_RED_CHROMA_RED = 128;
+    public static final int YUV_ROUNDING = 128;
 }

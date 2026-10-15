@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import java.nio.channels.FileChannel;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -40,6 +42,7 @@ class ScreenshotSystem extends SystemPackage {
     private Future<?> pendingWrite;
 
     private ByteBuffer pixelBuffer;
+    private IntBuffer pixelInts;
     private BufferedImage pngImage;
     private int[] pngPixels;
     private int bufferedWidth;
@@ -83,10 +86,11 @@ class ScreenshotSystem extends SystemPackage {
 
     void releaseWindow(WindowInstance window) {
 
-        if (!captureRequested || requestedWindow != window)
+        if (requestedWindow != window)
             return;
 
         this.captureRequested = false;
+        this.awaitingReadback = false;
         this.requestedWindow = null;
     }
 
@@ -185,7 +189,9 @@ class ScreenshotSystem extends SystemPackage {
         if (pixelBuffer != null && bufferedWidth == width && bufferedHeight == height)
             return;
 
-        this.pixelBuffer = ByteBuffer.allocateDirect(width * height * EngineSetting.BYTES_PER_PIXEL_BGRA);
+        this.pixelBuffer = ByteBuffer.allocateDirect(width * height * EngineSetting.BYTES_PER_PIXEL_BGRA)
+                .order(ByteOrder.LITTLE_ENDIAN);
+        this.pixelInts = pixelBuffer.asIntBuffer();
         this.pngImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         this.pngPixels = ((DataBufferInt) pngImage.getRaster().getDataBuffer()).getData();
         this.bufferedWidth = width;
@@ -222,25 +228,8 @@ class ScreenshotSystem extends SystemPackage {
 
     private void writePng(File file, int width, int height) {
 
-        int stride = width * EngineSetting.BYTES_PER_PIXEL_BGRA;
-
-        for (int row = 0; row < height; row++) {
-
-            int rowStart = row * stride;
-            int destinationRow = (height - 1 - row) * width;
-
-            for (int col = 0; col < width; col++) {
-
-                int index = rowStart + col * EngineSetting.BYTES_PER_PIXEL_BGRA;
-
-                int b = pixelBuffer.get(index) & 0xFF;
-                int g = pixelBuffer.get(index + 1) & 0xFF;
-                int r = pixelBuffer.get(index + 2) & 0xFF;
-                int a = pixelBuffer.get(index + 3) & 0xFF;
-
-                pngPixels[destinationRow + col] = (a << 24) | (r << 16) | (g << 8) | b;
-            }
-        }
+        for (int row = 0; row < height; row++)
+            pixelInts.get(row * width, pngPixels, (height - 1 - row) * width, width);
 
         try {
             ImageIO.write(pngImage, EngineSetting.SCREENSHOT_STANDARD_FORMAT, file);

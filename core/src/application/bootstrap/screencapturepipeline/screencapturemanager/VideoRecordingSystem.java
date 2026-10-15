@@ -1,22 +1,26 @@
 package application.bootstrap.screencapturepipeline.screencapturemanager;
 
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
+import java.nio.ByteOrder;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import org.jcodec.api.awt.AWTSequenceEncoder;
+import org.jcodec.codecs.h264.H264Encoder;
+import org.jcodec.common.Codec;
+import org.jcodec.common.MuxerTrack;
+import org.jcodec.common.VideoCodecMeta;
+import org.jcodec.common.VideoEncoder;
+import org.jcodec.common.io.NIOUtils;
+import org.jcodec.common.io.SeekableByteChannel;
+import org.jcodec.common.model.ColorSpace;
+import org.jcodec.common.model.Packet;
+import org.jcodec.common.model.Picture;
+import org.jcodec.common.model.Size;
+import org.jcodec.containers.mp4.muxer.MP4Muxer;
 
 import application.bootstrap.renderpipeline.pbo.PBOInstance;
 import application.bootstrap.renderpipeline.pbomanager.PBOManager;
@@ -24,96 +28,93 @@ import application.kernel.threadpipeline.thread.ThreadHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 class VideoRecordingSystem extends SystemPackage {
 
     /*
-     * Owns a single toggled recording session. Captures a lossless AVI track
-     * in real time from the shared GPU readback — the same proven pipeline
-     * ScreenshotSystem relies on — and, once a session stops, hands the
-     * finished file to a background job that copies it and converts that
-     * copy into a standard MP4 on the video encode thread, so the main
-     * thread and the live capture path never touch MP4 encoding at all.
-     * Starting a new recording is refused while either the AVI finalize or
-     * the MP4 conversion of the previous session is still in flight.
+     * Owns a single toggled recording session and encodes it to MP4 live, so
+     * the file is finished the moment recording stops. The main thread only
+     * reads frames back through a PBO straight into a free slot of a small
+     * ring; the VideoWrite thread scales and converts each slot to YUV and
+     * the VideoEncode thread compresses and muxes it. Every frame carries the
+     * real time it was on screen, so playback always matches real time: when
+     * the encoder is busy no readback happens and the last frame is held.
      */
 
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter
             .ofPattern(EngineSetting.CAPTURE_TIMESTAMP_PATTERN);
 
+    // Internal
     private File recordingDirectory;
-    private ThreadHandle aviWriteThread;
-    private ThreadHandle videoEncodeThread;
+    private ThreadHandle convertThread;
+    private ThreadHandle encodeThread;
     private PBOManager pboManager;
     private PBOInstance pboInstance;
 
+    // Session
     private boolean recording;
     private String activeBaseName;
     private WindowInstance activeWindow;
-    private File activeAviFile;
-    private File activeMp4File;
+    private File activeFile;
     private int width;
     private int height;
 
     // Reference Clock
     private long recordingStartNanos;
-    private long masterCaptureIntervalNanos;
+    private long captureIntervalNanos;
     private long lastCaptureTick;
-    private ByteBuffer captureScratchBuffer;
+    private long queuedReadbackTick;
+    private boolean readbackQueued;
+    private long firstFrameTick;
 
-    // Lossless Track
-    private boolean aviActive;
-    private long aviCaptureIntervalNanos;
-    private final ByteBuffer[] aviFrameBuffers = new ByteBuffer[EngineSetting.RECORDING_LOSSLESS_BUFFER_COUNT];
-    private final Future<?>[] pendingAviWrites = new Future<?>[EngineSetting.RECORDING_LOSSLESS_BUFFER_COUNT];
-    private int aviActiveBufferIndex;
-    private int aviPendingBufferIndex;
-    private long aviLastAccountedTick;
-    private boolean aviStalled;
-    private volatile boolean aviHealthy = true;
-    private volatile String aviBackgroundFailureReason;
+    // Frame Ring
+    private final ByteBuffer[] frameBuffers = new ByteBuffer[EngineSetting.RECORDING_BUFFER_COUNT];
+    private final Picture[] framePictures = new Picture[EngineSetting.RECORDING_BUFFER_COUNT];
+    private final long[] framePts = new long[EngineSetting.RECORDING_BUFFER_COUNT];
+    private final long[] frameDurations = new long[EngineSetting.RECORDING_BUFFER_COUNT];
+    private final Runnable[] convertTasks = new Runnable[EngineSetting.RECORDING_BUFFER_COUNT];
+    private final Runnable[] encodeTasks = new Runnable[EngineSetting.RECORDING_BUFFER_COUNT];
+    private final Future<?>[] pendingConversions = new Future<?>[EngineSetting.RECORDING_BUFFER_COUNT];
+    private final Future<?>[] pendingEncodes = new Future<?>[EngineSetting.RECORDING_BUFFER_COUNT];
+    private int activeSlot;
+    private int heldSlot;
+    private long heldFrameTick;
 
-    private final byte[] aviScratch = new byte[Integer.BYTES];
-    private RandomAccessFile aviFile;
-    private long moviListSizeOffset;
-    private long moviIndexBaseOffset;
-    private long totalFramesFieldOffset;
-    private long streamLengthFieldOffset;
-    private final LongArrayList frameOffsets = new LongArrayList();
-    private final IntArrayList frameSizes = new IntArrayList();
+    // Scaling
+    private int encodeWidth;
+    private int encodeHeight;
+    private int scaleSourceWidth = EngineSetting.INDEX_NOT_FOUND;
+    private int scaleSourceHeight = EngineSetting.INDEX_NOT_FOUND;
+    private int[] columnByteOffsets;
+    private int[] rowByteOffsets;
 
-    // Standard Format Conversion
-    private Future<?> pendingAviFinalize;
-    private Future<?> pendingMp4Conversion;
-    private ByteBuffer mp4ConversionReadBuffer;
-    private byte[] mp4ConversionScratch;
-    private int mp4EncodeWidth;
-    private int mp4EncodeHeight;
-    private int mp4SourceWidthCached = EngineSetting.INDEX_NOT_FOUND;
-    private int mp4SourceHeightCached = EngineSetting.INDEX_NOT_FOUND;
-    private int[] mp4ColumnLookup;
-    private int[] mp4RowLookup;
-    private BufferedImage mp4FrameImage;
-    private int[] mp4FramePixels;
+    // Encoder
+    private SeekableByteChannel outputChannel;
+    private MP4Muxer muxer;
+    private MuxerTrack videoTrack;
+    private H264Encoder encoder;
+    private ByteBuffer encodeOutputBuffer;
+    private long encodedFrameCount;
+    private volatile boolean encoderHealthy = true;
+    private volatile String encoderFailureReason;
+    private Future<?> pendingFinalize;
 
     // Internal \\
 
     @Override
     protected void create() {
 
-        if (EngineSetting.RECORDING_LOSSLESS_FRAME_RATE % EngineSetting.RECORDING_STANDARD_FRAME_RATE != 0)
-            throwException(
-                    "RECORDING_LOSSLESS_FRAME_RATE must be an exact multiple of RECORDING_STANDARD_FRAME_RATE — "
-                            + "the mp4 conversion step samples the lossless track by simple decimation.");
-
         this.recordingDirectory = ScreenCaptureIOUtility.resolveCaptureDirectory(
                 internal.path, EngineSetting.RECORDING_OUTPUT_DIRECTORY);
-        this.aviWriteThread = getThreadHandleFromThreadName(EngineSetting.VIDEO_WRITE_THREAD_NAME);
-        this.videoEncodeThread = getThreadHandleFromThreadName(EngineSetting.VIDEO_ENCODE_THREAD_NAME);
-        this.masterCaptureIntervalNanos = EngineSetting.NANOS_PER_SECOND / EngineSetting.RECORDING_LOSSLESS_FRAME_RATE;
-        this.aviCaptureIntervalNanos = masterCaptureIntervalNanos;
+        this.convertThread = getThreadHandleFromThreadName(EngineSetting.VIDEO_WRITE_THREAD_NAME);
+        this.encodeThread = getThreadHandleFromThreadName(EngineSetting.VIDEO_ENCODE_THREAD_NAME);
+        this.captureIntervalNanos = EngineSetting.NANOS_PER_SECOND / EngineSetting.RECORDING_FRAME_RATE;
+
+        for (int i = 0; i < EngineSetting.RECORDING_BUFFER_COUNT; i++) {
+            int slot = i;
+            convertTasks[i] = () -> convertSlot(slot);
+            encodeTasks[i] = () -> encodeSlot(slot);
+        }
     }
 
     @Override
@@ -125,10 +126,10 @@ class VideoRecordingSystem extends SystemPackage {
 
     void flush() {
 
-        if (aviBackgroundFailureReason != null) {
-            String reason = aviBackgroundFailureReason;
-            aviBackgroundFailureReason = null;
-            handleAviFailure(reason);
+        if (encoderFailureReason != null) {
+            String reason = encoderFailureReason;
+            encoderFailureReason = null;
+            handleEncoderFailure(reason);
         }
 
         if (!recording)
@@ -161,7 +162,7 @@ class VideoRecordingSystem extends SystemPackage {
 
     private void startRecording(WindowInstance window) {
 
-        if (isFinalizing()) {
+        if (pendingFinalize != null && !pendingFinalize.isDone()) {
             errorLog("Video recording start request ignored — the previous recording is still finalizing.");
             return;
         }
@@ -171,91 +172,62 @@ class VideoRecordingSystem extends SystemPackage {
         this.height = window.getHeight();
         this.recordingStartNanos = System.nanoTime();
         this.lastCaptureTick = 0;
+        this.queuedReadbackTick = 0;
+        this.readbackQueued = false;
+        this.firstFrameTick = EngineSetting.INDEX_NOT_FOUND;
+        this.activeSlot = 0;
+        this.heldSlot = EngineSetting.INDEX_NOT_FOUND;
+        this.encoderHealthy = true;
+        this.encoderFailureReason = null;
 
-        this.aviActiveBufferIndex = 0;
-        this.aviPendingBufferIndex = EngineSetting.INDEX_NOT_FOUND;
-        this.aviLastAccountedTick = 0;
-        this.aviStalled = false;
-        this.aviHealthy = true;
-        this.aviBackgroundFailureReason = null;
-        this.frameOffsets.clear();
-        this.frameSizes.clear();
-
-        ensureCaptureScratchBuffer();
-        ensureAviBuffers();
+        computeEncodeDimensions();
+        ensureFrameBuffers();
 
         if (pboInstance == null)
             pboInstance = pboManager.createPbo(window, width, height);
 
         String timestamp = TIMESTAMP_FORMAT.format(LocalDateTime.now());
-        String baseName = EngineSetting.RECORDING_FILE_PREFIX + timestamp;
-        this.activeBaseName = baseName;
+        this.activeBaseName = EngineSetting.RECORDING_FILE_PREFIX + timestamp;
+        this.activeFile = new File(recordingDirectory, activeBaseName + "." + EngineSetting.RECORDING_EXTENSION);
 
-        this.activeAviFile = new File(recordingDirectory, baseName + "." + EngineSetting.RECORDING_LOSSLESS_EXTENSION);
-        this.activeMp4File = new File(recordingDirectory, baseName + "." + EngineSetting.RECORDING_STANDARD_EXTENSION);
-
-        this.aviActive = openAviFile(activeAviFile);
-
-        if (!aviActive) {
-            errorLog("Video recording failed to start — lossless output failed to open.");
-            this.activeWindow = null;
-            return;
-        }
+        File outputFile = activeFile;
+        executeAsync(encodeThread, () -> openEncoder(outputFile));
 
         this.recording = true;
-        timeStampLog("Started video recording: " + baseName);
+        timeStampLog("Started video recording: " + activeBaseName
+                + " (" + encodeWidth + "x" + encodeHeight + " at " + EngineSetting.RECORDING_FRAME_RATE + " fps)");
     }
 
     private void stopRecording() {
 
         this.recording = false;
 
-        timeStampLog("Stopped video recording: " + activeBaseName);
+        releaseHeldFrame();
 
-        finalizePendingAviFrame();
-        pendingAviFinalize = executeAsync(aviWriteThread, this::finalizeAvi);
-        this.aviActive = false;
-
-        log("Dispatched lossless finalize for: " + activeBaseName);
-
-        Future<?> aviFinalizeHandle = pendingAviFinalize;
-        File finishedAviFile = this.activeAviFile;
-        File finishedMp4File = this.activeMp4File;
-        int finishedWidth = this.width;
-        int finishedHeight = this.height;
-
-        pendingMp4Conversion = executeAsync(videoEncodeThread, () -> convertRecordingToMp4(
-                aviFinalizeHandle, finishedAviFile, finishedMp4File, finishedWidth, finishedHeight));
-
-        log("Dispatched standard format conversion for: " + activeBaseName);
+        String finishedBaseName = activeBaseName;
+        File finishedFile = activeFile;
+        pendingFinalize = executeAsync(encodeThread, () -> finalizeEncoder(finishedBaseName, finishedFile));
 
         this.activeWindow = null;
+
+        timeStampLog("Stopped video recording: " + finishedBaseName);
     }
 
-    private void finalizeAvi() {
-        if (aviFile == null)
-            return;
-        closeAviFile();
-        timeStampLog("Lossless recording finalized: " + activeAviFile.getName());
-    }
+    private void handleEncoderFailure(String reason) {
 
-    private boolean isFinalizing() {
-        return (pendingAviFinalize != null && !pendingAviFinalize.isDone())
-                || (pendingMp4Conversion != null && !pendingMp4Conversion.isDone());
-    }
-
-    private void handleAviFailure(String reason) {
-
-        if (!aviActive)
+        if (!recording)
             return;
 
         errorLog("Video recording \"" + activeBaseName + "\" stopped: " + reason);
         stopRecording();
     }
 
-    private void signalAviFailure(String reason) {
-        if (aviBackgroundFailureReason == null)
-            aviBackgroundFailureReason = reason;
+    private void signalEncoderFailure(String reason) {
+
+        encoderHealthy = false;
+
+        if (encoderFailureReason == null)
+            encoderFailureReason = reason;
     }
 
     // Shutdown \\
@@ -266,19 +238,13 @@ class VideoRecordingSystem extends SystemPackage {
         if (recording)
             stopRecording();
 
-        log("Waiting for pending video recording finalization before shutdown...");
-
-        awaitFinalize(pendingAviFinalize);
-        awaitFinalize(pendingMp4Conversion);
-    }
-
-    private void awaitFinalize(Future<?> future) {
-
-        if (future == null)
+        if (pendingFinalize == null)
             return;
 
+        log("Waiting for pending video recording finalization before shutdown...");
+
         try {
-            future.get();
+            pendingFinalize.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
@@ -290,559 +256,276 @@ class VideoRecordingSystem extends SystemPackage {
 
     private void captureFrame() {
 
-        long elapsedNanos = System.nanoTime() - recordingStartNanos;
-        long currentTick = elapsedNanos / masterCaptureIntervalNanos;
+        long currentTick = (System.nanoTime() - recordingStartNanos) / captureIntervalNanos;
 
         if (currentTick <= lastCaptureTick)
             return;
 
-        if (currentTick - lastCaptureTick > EngineSetting.RECORDING_CAPTURE_MAX_OWED_FRAMES) {
-            errorLog("Video recording \"" + activeBaseName + "\" stopped: GPU capture fell more than "
-                    + EngineSetting.RECORDING_CAPTURE_MAX_OWED_FRAMES + " ticks behind real time.");
-            stopRecording();
+        if (isSlotBusy(activeSlot))
             return;
-        }
 
         internal.windowPlatform.makeContextCurrent(activeWindow.getGLWindow());
-        boolean hasFrame = pboInstance.capture(activeWindow, width, height, captureScratchBuffer);
+        boolean hasFrame = pboInstance.capture(activeWindow, width, height, frameBuffers[activeSlot]);
         internal.windowPlatform.restoreMainContext();
 
-        if (!hasFrame)
-            return;
+        long frameTick = queuedReadbackTick;
+        boolean frameBelongsToSession = readbackQueued;
 
-        lastCaptureTick = currentTick;
+        this.queuedReadbackTick = currentTick;
+        this.readbackQueued = true;
+        this.lastCaptureTick = currentTick;
 
-        offerAviFrame(elapsedNanos);
+        if (hasFrame && frameBelongsToSession)
+            acceptFrame(frameTick);
     }
 
-    private void offerAviFrame(long elapsedNanos) {
+    private void acceptFrame(long frameTick) {
 
-        long currentTick = elapsedNanos / aviCaptureIntervalNanos;
+        if (firstFrameTick == EngineSetting.INDEX_NOT_FOUND)
+            firstFrameTick = frameTick;
 
-        if (currentTick <= aviLastAccountedTick)
-            return;
+        if (heldSlot != EngineSetting.INDEX_NOT_FOUND)
+            dispatchSlot(heldSlot, frameTick - heldFrameTick);
 
-        if (currentTick - aviLastAccountedTick > EngineSetting.RECORDING_LOSSLESS_MAX_OWED_FRAMES) {
-            handleAviFailure("write pipeline fell more than " + EngineSetting.RECORDING_LOSSLESS_MAX_OWED_FRAMES
-                    + " ticks behind real time and could not recover in time");
-            return;
-        }
-
-        if (isAviBufferBusy(aviActiveBufferIndex))
-            return;
-
-        captureScratchBuffer.rewind();
-        ByteBuffer slot = aviFrameBuffers[aviActiveBufferIndex];
-        slot.clear();
-        slot.put(captureScratchBuffer);
-        slot.flip();
-
-        if (aviPendingBufferIndex != EngineSetting.INDEX_NOT_FOUND) {
-            int repeatCount = (int) (currentTick - aviLastAccountedTick);
-            aviStalled = logTrackStall(aviStalled, repeatCount);
-            dispatchAviWrite(aviPendingBufferIndex, aviFrameBuffers[aviPendingBufferIndex], repeatCount);
-        }
-
-        aviPendingBufferIndex = aviActiveBufferIndex;
-        aviLastAccountedTick = currentTick;
-        aviActiveBufferIndex = (aviActiveBufferIndex + 1) % aviFrameBuffers.length;
+        this.heldSlot = activeSlot;
+        this.heldFrameTick = frameTick;
+        this.activeSlot = (activeSlot + 1) % EngineSetting.RECORDING_BUFFER_COUNT;
     }
 
-    private void finalizePendingAviFrame() {
+    private void releaseHeldFrame() {
 
-        if (aviPendingBufferIndex == EngineSetting.INDEX_NOT_FOUND)
+        if (heldSlot == EngineSetting.INDEX_NOT_FOUND)
             return;
 
-        long elapsedNanos = System.nanoTime() - recordingStartNanos;
-        long currentTick = elapsedNanos / aviCaptureIntervalNanos;
-        int repeatCount = (int) Math.min(
-                Math.max(1L, currentTick - aviLastAccountedTick),
-                EngineSetting.RECORDING_LOSSLESS_MAX_OWED_FRAMES);
+        long currentTick = (System.nanoTime() - recordingStartNanos) / captureIntervalNanos;
+        dispatchSlot(heldSlot, Math.max(1L, currentTick - heldFrameTick));
 
-        dispatchAviWrite(aviPendingBufferIndex, aviFrameBuffers[aviPendingBufferIndex], repeatCount);
-
-        aviPendingBufferIndex = EngineSetting.INDEX_NOT_FOUND;
-    }
-
-    private boolean logTrackStall(boolean currentlyStalled, int repeatCount) {
-
-        boolean isStalled = repeatCount > EngineSetting.RECORDING_LOSSLESS_FRAME_RATE;
-
-        if (isStalled && !currentlyStalled)
-            log("Lossless recording pipeline is falling behind real time — "
-                    + "holding the last captured frame longer than usual.");
-
-        return isStalled;
+        this.heldSlot = EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Dispatch \\
 
-    private void dispatchAviWrite(int bufferIndex, ByteBuffer buffer, int repeatCount) {
-        pendingAviWrites[bufferIndex] = executeAsync(aviWriteThread, () -> writeAviFrames(buffer, repeatCount));
+    private void dispatchSlot(int slot, long durationTicks) {
+
+        framePts[slot] = heldFrameTick - firstFrameTick;
+        frameDurations[slot] = durationTicks;
+
+        pendingConversions[slot] = executeAsync(convertThread, convertTasks[slot]);
+        pendingEncodes[slot] = executeAsync(encodeThread, encodeTasks[slot]);
     }
 
-    private boolean isAviBufferBusy(int index) {
-        Future<?> avi = pendingAviWrites[index];
-        return avi != null && !avi.isDone();
-    }
-
-    private void writeAviFrames(ByteBuffer buffer, int repeatCount) {
-
-        if (!aviHealthy)
-            return;
-
-        for (int i = 0; i < repeatCount; i++) {
-            buffer.rewind();
-            if (!writeAviFrame(buffer)) {
-                aviHealthy = false;
-                signalAviFailure("lossless recording write failed");
-                return;
-            }
-        }
+    private boolean isSlotBusy(int slot) {
+        Future<?> encode = pendingEncodes[slot];
+        return encode != null && !encode.isDone();
     }
 
     // Buffers \\
 
-    private void ensureCaptureScratchBuffer() {
+    private void ensureFrameBuffers() {
 
         int requiredCapacity = width * height * EngineSetting.BYTES_PER_PIXEL_BGRA;
 
-        if (captureScratchBuffer != null && captureScratchBuffer.capacity() == requiredCapacity)
-            return;
+        for (int i = 0; i < EngineSetting.RECORDING_BUFFER_COUNT; i++) {
 
-        this.captureScratchBuffer = ByteBuffer.allocateDirect(requiredCapacity);
+            if (frameBuffers[i] == null || frameBuffers[i].capacity() != requiredCapacity)
+                frameBuffers[i] = ByteBuffer.allocateDirect(requiredCapacity).order(ByteOrder.LITTLE_ENDIAN);
+
+            Picture picture = framePictures[i];
+
+            if (picture == null || picture.getWidth() != encodeWidth || picture.getHeight() != encodeHeight)
+                framePictures[i] = Picture.create(encodeWidth, encodeHeight, ColorSpace.YUV420J);
+        }
     }
 
-    private void ensureAviBuffers() {
+    // Scaling \\
 
-        int requiredCapacity = width * height * EngineSetting.BYTES_PER_PIXEL_BGRA;
+    private void computeEncodeDimensions() {
 
-        if (aviFrameBuffers[0] != null && aviFrameBuffers[0].capacity() == requiredCapacity)
+        if (width == scaleSourceWidth && height == scaleSourceHeight)
             return;
 
-        for (int i = 0; i < aviFrameBuffers.length; i++)
-            aviFrameBuffers[i] = ByteBuffer.allocateDirect(requiredCapacity);
+        int maxWidth = EngineSetting.RECORDING_MAX_WIDTH;
+
+        int targetWidth = width <= maxWidth ? width : maxWidth;
+        int targetHeight = width <= maxWidth ? height : Math.round(height * ((float) maxWidth / width));
+
+        this.encodeWidth = targetWidth & ~1;
+        this.encodeHeight = targetHeight & ~1;
+
+        int stride = width * EngineSetting.BYTES_PER_PIXEL_BGRA;
+
+        this.columnByteOffsets = new int[encodeWidth];
+        for (int x = 0; x < encodeWidth; x++)
+            columnByteOffsets[x] = Math.min(width - 1, x * width / encodeWidth) * EngineSetting.BYTES_PER_PIXEL_BGRA;
+
+        this.rowByteOffsets = new int[encodeHeight];
+        for (int y = 0; y < encodeHeight; y++)
+            rowByteOffsets[y] = (height - 1 - Math.min(height - 1, y * height / encodeHeight)) * stride;
+
+        this.scaleSourceWidth = width;
+        this.scaleSourceHeight = height;
     }
 
-    // AVI Container \\
+    // Convert \\
 
-    private boolean openAviFile(File file) {
+    private void convertSlot(int slot) {
+
+        ByteBuffer frame = frameBuffers[slot];
+        Picture picture = framePictures[slot];
+
+        byte[] lumaPlane = picture.getPlaneData(0);
+        byte[] blueChromaPlane = picture.getPlaneData(1);
+        byte[] redChromaPlane = picture.getPlaneData(2);
+        int lumaStride = picture.getPlaneWidth(0);
+        int chromaStride = picture.getPlaneWidth(1);
+
+        for (int y = 0; y < encodeHeight; y += 2) {
+
+            int sourceRowA = rowByteOffsets[y];
+            int sourceRowB = rowByteOffsets[y + 1];
+            int lumaRowA = y * lumaStride;
+            int lumaRowB = lumaRowA + lumaStride;
+            int chromaIndex = (y >> 1) * chromaStride;
+
+            for (int x = 0; x < encodeWidth; x += 2) {
+
+                int columnA = columnByteOffsets[x];
+                int columnB = columnByteOffsets[x + 1];
+
+                int pixelA = frame.getInt(sourceRowA + columnA);
+                int pixelB = frame.getInt(sourceRowA + columnB);
+                int pixelC = frame.getInt(sourceRowB + columnA);
+                int pixelD = frame.getInt(sourceRowB + columnB);
+
+                lumaPlane[lumaRowA + x] = toLuma(pixelA);
+                lumaPlane[lumaRowA + x + 1] = toLuma(pixelB);
+                lumaPlane[lumaRowB + x] = toLuma(pixelC);
+                lumaPlane[lumaRowB + x + 1] = toLuma(pixelD);
+
+                int red = ((pixelA >> 16) & 0xFF) + ((pixelB >> 16) & 0xFF)
+                        + ((pixelC >> 16) & 0xFF) + ((pixelD >> 16) & 0xFF);
+                int green = ((pixelA >> 8) & 0xFF) + ((pixelB >> 8) & 0xFF)
+                        + ((pixelC >> 8) & 0xFF) + ((pixelD >> 8) & 0xFF);
+                int blue = (pixelA & 0xFF) + (pixelB & 0xFF) + (pixelC & 0xFF) + (pixelD & 0xFF);
+
+                blueChromaPlane[chromaIndex] = toChroma(EngineSetting.YUV_BLUE_CHROMA_RED * red
+                        + EngineSetting.YUV_BLUE_CHROMA_GREEN * green + EngineSetting.YUV_BLUE_CHROMA_BLUE * blue);
+                redChromaPlane[chromaIndex] = toChroma(EngineSetting.YUV_RED_CHROMA_RED * red
+                        + EngineSetting.YUV_RED_CHROMA_GREEN * green + EngineSetting.YUV_RED_CHROMA_BLUE * blue);
+                chromaIndex++;
+            }
+        }
+    }
+
+    private byte toLuma(int pixel) {
+
+        int luma = (EngineSetting.YUV_LUMA_RED * ((pixel >> 16) & 0xFF)
+                + EngineSetting.YUV_LUMA_GREEN * ((pixel >> 8) & 0xFF)
+                + EngineSetting.YUV_LUMA_BLUE * (pixel & 0xFF)
+                + EngineSetting.YUV_ROUNDING) >> EngineSetting.YUV_FIXED_POINT_SHIFT;
+
+        return (byte) (luma + Byte.MIN_VALUE);
+    }
+
+    private byte toChroma(int weightedSum) {
+
+        int chroma = (weightedSum + EngineSetting.YUV_CHROMA_ROUNDING) >> EngineSetting.YUV_CHROMA_FIXED_POINT_SHIFT;
+
+        return (byte) Math.max(Byte.MIN_VALUE, Math.min(Byte.MAX_VALUE, chroma));
+    }
+
+    // Encode \\
+
+    private void openEncoder(File file) {
         try {
 
-            this.aviFile = new RandomAccessFile(file, "rw");
-            aviFile.setLength(0);
+            this.outputChannel = NIOUtils.writableChannel(file);
+            this.muxer = MP4Muxer.createMP4MuxerToChannel(outputChannel);
+            this.videoTrack = muxer.addVideoTrack(Codec.H264, VideoCodecMeta.createSimpleVideoCodecMeta(
+                    new Size(encodeWidth, encodeHeight), ColorSpace.YUV420J));
 
-            writeFourCC("RIFF");
-            writeIntLE(0);
-            writeFourCC("AVI ");
+            this.encoder = H264Encoder.createH264Encoder();
+            encoder.setMotionSearchRange(EngineSetting.RECORDING_MOTION_SEARCH_RANGE);
 
-            writeFourCC("LIST");
-            long hdrlSizeOffset = aviFile.getFilePointer();
-            writeIntLE(0);
-            writeFourCC("hdrl");
+            int requiredCapacity = encoder.estimateBufferSize(framePictures[0]);
 
-            writeFourCC("avih");
-            writeIntLE(EngineSetting.AVI_MAIN_HEADER_LENGTH_BYTES);
-            writeMainHeader();
+            if (encodeOutputBuffer == null || encodeOutputBuffer.capacity() < requiredCapacity)
+                this.encodeOutputBuffer = ByteBuffer.allocate(requiredCapacity);
 
-            writeFourCC("LIST");
-            long strlSizeOffset = aviFile.getFilePointer();
-            writeIntLE(0);
-            writeFourCC("strl");
+            this.encodedFrameCount = 0;
 
-            writeFourCC("strh");
-            writeIntLE(EngineSetting.AVI_STREAM_HEADER_LENGTH_BYTES);
-            writeStreamHeader();
-
-            writeFourCC("strf");
-            writeIntLE(EngineSetting.AVI_STREAM_FORMAT_LENGTH_BYTES);
-            writeStreamFormat();
-
-            patchListSize(strlSizeOffset);
-            patchListSize(hdrlSizeOffset);
-
-            writeFourCC("LIST");
-            this.moviListSizeOffset = aviFile.getFilePointer();
-            writeIntLE(0);
-            this.moviIndexBaseOffset = aviFile.getFilePointer();
-            writeFourCC("movi");
-
-            log("Opened lossless recording file: " + file.getName());
-
-            return true;
+            log("Opened recording file: " + file.getName());
         } catch (IOException e) {
-            errorLog("Failed to open lossless recording file: " + file.getAbsolutePath() + " — " + e.getMessage());
-            closeQuietly(this.aviFile);
-            this.aviFile = null;
+            NIOUtils.closeQuietly(outputChannel);
+            this.outputChannel = null;
+            this.muxer = null;
             file.delete();
-            return false;
+            signalEncoderFailure("could not open " + file.getAbsolutePath() + " — " + e.getMessage());
         }
     }
 
-    private void writeMainHeader() throws IOException {
+    private void encodeSlot(int slot) {
 
-        int microSecondsPerFrame = 1_000_000 / EngineSetting.RECORDING_LOSSLESS_FRAME_RATE;
-        int bytesPerFrame = width * height * EngineSetting.BYTES_PER_PIXEL_BGRA;
+        if (!awaitConversion(slot) || !encoderHealthy)
+            return;
 
-        writeIntLE(microSecondsPerFrame);
-        writeIntLE(bytesPerFrame * EngineSetting.RECORDING_LOSSLESS_FRAME_RATE);
-        writeIntLE(0);
-        writeIntLE(EngineSetting.AVI_FLAG_HAS_INDEX);
-        this.totalFramesFieldOffset = aviFile.getFilePointer();
-        writeIntLE(0);
-        writeIntLE(0);
-        writeIntLE(1);
-        writeIntLE(bytesPerFrame);
-        writeIntLE(width);
-        writeIntLE(height);
-        writeIntLE(0);
-        writeIntLE(0);
-        writeIntLE(0);
-        writeIntLE(0);
-    }
-
-    private void writeStreamHeader() throws IOException {
-
-        writeFourCC("vids");
-        writeFourCC(EngineSetting.AVI_UNCOMPRESSED_FOURCC);
-        writeIntLE(0);
-        writeShortLE((short) 0);
-        writeShortLE((short) 0);
-        writeIntLE(0);
-        writeIntLE(1);
-        writeIntLE(EngineSetting.RECORDING_LOSSLESS_FRAME_RATE);
-        writeIntLE(0);
-        this.streamLengthFieldOffset = aviFile.getFilePointer();
-        writeIntLE(0);
-        writeIntLE(width * height * EngineSetting.BYTES_PER_PIXEL_BGRA);
-        writeIntLE(-1);
-        writeIntLE(0);
-        writeShortLE((short) 0);
-        writeShortLE((short) 0);
-        writeShortLE((short) width);
-        writeShortLE((short) height);
-    }
-
-    private void writeStreamFormat() throws IOException {
-
-        writeIntLE(EngineSetting.AVI_STREAM_FORMAT_LENGTH_BYTES);
-        writeIntLE(width);
-        writeIntLE(height);
-        writeShortLE((short) 1);
-        writeShortLE((short) (EngineSetting.BYTES_PER_PIXEL_BGRA * 8));
-        writeIntLE(0);
-        writeIntLE(width * height * EngineSetting.BYTES_PER_PIXEL_BGRA);
-        writeIntLE(0);
-        writeIntLE(0);
-        writeIntLE(0);
-        writeIntLE(0);
-    }
-
-    private void patchListSize(long sizeFieldOffset) throws IOException {
-
-        long currentPosition = aviFile.getFilePointer();
-
-        aviFile.seek(sizeFieldOffset);
-        writeIntLE((int) (currentPosition - sizeFieldOffset - Integer.BYTES));
-        aviFile.seek(currentPosition);
-    }
-
-    private boolean writeAviFrame(ByteBuffer buffer) {
         try {
 
-            long chunkStart = aviFile.getFilePointer();
-            int frameBytes = buffer.remaining();
+            encodeOutputBuffer.clear();
+            VideoEncoder.EncodedFrame encodedFrame = encoder.encodeFrame(framePictures[slot], encodeOutputBuffer);
 
-            writeFourCC("00db");
-            writeIntLE(frameBytes);
+            videoTrack.addFrame(Packet.createPacket(
+                    encodedFrame.getData(),
+                    framePts[slot],
+                    EngineSetting.RECORDING_FRAME_RATE,
+                    frameDurations[slot],
+                    encodedFrameCount,
+                    encodedFrame.isKeyFrame() ? Packet.FrameType.KEY : Packet.FrameType.INTER,
+                    null));
 
-            FileChannel channel = aviFile.getChannel();
-            while (buffer.hasRemaining())
-                channel.write(buffer);
+            encodedFrameCount++;
+        } catch (IOException | RuntimeException e) {
+            signalEncoderFailure("encoding failed — " + e.getMessage());
+        }
+    }
 
-            if ((frameBytes & 1) != 0)
-                aviFile.write(0);
-
-            frameOffsets.add(chunkStart - moviIndexBaseOffset);
-            frameSizes.add(frameBytes);
-
+    private boolean awaitConversion(int slot) {
+        try {
+            pendingConversions[slot].get();
             return true;
-        } catch (IOException e) {
-            errorLog("Failed to write recorded frame to lossless file: " + e.getMessage());
-            return false;
-        }
-    }
-
-    private void writeIndex() throws IOException {
-
-        writeFourCC("idx1");
-        writeIntLE(frameOffsets.size() * EngineSetting.AVI_INDEX_ENTRY_LENGTH_BYTES);
-
-        for (int i = 0; i < frameOffsets.size(); i++) {
-            writeFourCC("00db");
-            writeIntLE(EngineSetting.AVI_INDEX_FLAG_KEYFRAME);
-            writeIntLE((int) frameOffsets.getLong(i));
-            writeIntLE(frameSizes.getInt(i));
-        }
-    }
-
-    private void closeAviFile() {
-
-        try {
-
-            long moviListEndOffset = aviFile.getFilePointer();
-
-            writeIndex();
-
-            long fileEndOffset = aviFile.getFilePointer();
-
-            aviFile.seek(4);
-            writeIntLE((int) (fileEndOffset - EngineSetting.RIFF_CHUNK_HEADER_LENGTH_BYTES));
-
-            aviFile.seek(moviListSizeOffset);
-            writeIntLE((int) (moviListEndOffset - moviListSizeOffset - Integer.BYTES));
-
-            int totalFrames = frameOffsets.size();
-
-            aviFile.seek(totalFramesFieldOffset);
-            writeIntLE(totalFrames);
-
-            aviFile.seek(streamLengthFieldOffset);
-            writeIntLE(totalFrames);
-
-            aviFile.close();
-        } catch (IOException e) {
-            errorLog("Failed to finalize lossless recording file: " + e.getMessage());
-        } finally {
-            this.aviFile = null;
-        }
-    }
-
-    private void writeFourCC(String tag) throws IOException {
-        aviFile.write(tag.getBytes(StandardCharsets.US_ASCII));
-    }
-
-    private void writeIntLE(int value) throws IOException {
-        aviScratch[0] = (byte) value;
-        aviScratch[1] = (byte) (value >>> 8);
-        aviScratch[2] = (byte) (value >>> 16);
-        aviScratch[3] = (byte) (value >>> 24);
-        aviFile.write(aviScratch, 0, Integer.BYTES);
-    }
-
-    private void writeShortLE(short value) throws IOException {
-        aviScratch[0] = (byte) value;
-        aviScratch[1] = (byte) (value >>> 8);
-        aviFile.write(aviScratch, 0, Short.BYTES);
-    }
-
-    // Standard Format Conversion \\
-
-    private void convertRecordingToMp4(
-            Future<?> aviFinalizeHandle,
-            File sourceAviFile,
-            File targetMp4File,
-            int sourceWidth,
-            int sourceHeight) {
-
-        try {
-            aviFinalizeHandle.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return;
+            return false;
         } catch (ExecutionException e) {
-            errorLog("Standard recording conversion skipped — lossless file failed to finalize: " + e.getCause());
-            return;
-        }
-
-        if (frameOffsets.isEmpty()) {
-            errorLog("Standard recording conversion skipped — no frames were captured for: "
-                    + sourceAviFile.getName());
-            return;
-        }
-
-        File workingCopy = new File(recordingDirectory,
-                sourceAviFile.getName() + EngineSetting.RECORDING_CONVERSION_TEMP_SUFFIX);
-
-        timeStampLog("Copying lossless recording for standard format conversion: " + sourceAviFile.getName());
-
-        try {
-            Files.copy(sourceAviFile.toPath(), workingCopy.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            errorLog("Standard recording conversion failed — could not copy lossless file: " + e.getMessage());
-            return;
-        }
-
-        try {
-            runMp4Conversion(workingCopy, targetMp4File, sourceWidth, sourceHeight);
-        } finally {
-            workingCopy.delete();
-            log("Removed temporary conversion copy: " + workingCopy.getName());
+            signalEncoderFailure("frame conversion failed — " + e.getCause());
+            return false;
         }
     }
 
-    private void runMp4Conversion(File sourceCopy, File targetMp4File, int sourceWidth, int sourceHeight) {
+    private void finalizeEncoder(String baseName, File file) {
 
-        computeMp4EncodeDimensions(sourceWidth, sourceHeight);
-        ensureMp4ConversionBuffers(sourceWidth, sourceHeight);
-
-        AWTSequenceEncoder encoder = openMp4Encoder(targetMp4File);
-
-        if (encoder == null)
+        if (muxer == null)
             return;
 
-        timeStampLog("Converting to standard format: " + targetMp4File.getName()
-                + " (" + mp4EncodeWidth + "x" + mp4EncodeHeight + ")");
-
-        boolean success = true;
-        int frameCount = frameOffsets.size();
-        int frameByteCount = sourceWidth * sourceHeight * EngineSetting.BYTES_PER_PIXEL_BGRA;
-
-        try (RandomAccessFile reader = new RandomAccessFile(sourceCopy, "r")) {
-
-            FileChannel channel = reader.getChannel();
-
-            for (int i = 0; i < frameCount && success; i++) {
-
-                if (i % EngineSetting.RECORDING_STANDARD_FRAME_SAMPLE_STRIDE != 0)
-                    continue;
-
-                int frameBytes = frameSizes.getInt(i);
-
-                if (frameBytes != frameByteCount)
-                    throwException("Corrupt lossless recording frame while converting to mp4 — expected "
-                            + frameByteCount + " bytes but found " + frameBytes);
-
-                long payloadOffset = moviIndexBaseOffset + frameOffsets.getLong(i)
-                        + EngineSetting.AVI_FRAME_CHUNK_HEADER_LENGTH_BYTES;
-
-                channel.position(payloadOffset);
-                mp4ConversionReadBuffer.clear();
-
-                while (mp4ConversionReadBuffer.hasRemaining()) {
-                    if (channel.read(mp4ConversionReadBuffer) == -1)
-                        throwException("Unexpected end of lossless recording file while converting to mp4.");
-                }
-
-                mp4ConversionReadBuffer.flip();
-                convertToMp4Pixels(mp4ConversionReadBuffer, sourceWidth);
-
-                try {
-                    encoder.encodeImage(mp4FrameImage);
-                } catch (IOException e) {
-                    errorLog("Standard recording conversion failed while encoding frame: " + e.getMessage());
-                    success = false;
-                }
-            }
-        } catch (IOException e) {
-            errorLog("Standard recording conversion failed — could not read lossless file: " + e.getMessage());
-            success = false;
-        }
+        boolean success = encoderHealthy && encodedFrameCount > 0;
 
         try {
-            encoder.finish();
+            if (success)
+                muxer.finish();
         } catch (IOException e) {
-            errorLog("Standard recording conversion failed while finalizing: " + e.getMessage());
+            errorLog("Failed to finalize recording \"" + baseName + "\": " + e.getMessage());
             success = false;
+        } finally {
+            NIOUtils.closeQuietly(outputChannel);
+            this.outputChannel = null;
+            this.muxer = null;
+            this.videoTrack = null;
+            this.encoder = null;
         }
 
         if (success)
-            timeStampLog("Converted recording to standard format: " + targetMp4File.getName());
-        else
-            targetMp4File.delete();
-    }
-
-    private AWTSequenceEncoder openMp4Encoder(File outputFile) {
-        try {
-            return AWTSequenceEncoder.createSequenceEncoder(outputFile, EngineSetting.RECORDING_STANDARD_FRAME_RATE);
-        } catch (IOException e) {
-            errorLog("Standard recording conversion failed — could not open encoder: " + outputFile.getAbsolutePath()
-                    + " — " + e.getMessage());
-            outputFile.delete();
-            return null;
-        }
-    }
-
-    private void computeMp4EncodeDimensions(int sourceWidth, int sourceHeight) {
-
-        if (sourceWidth == mp4SourceWidthCached && sourceHeight == mp4SourceHeightCached)
-            return;
-
-        int maxWidth = EngineSetting.RECORDING_STANDARD_MAX_WIDTH;
-
-        int encodeWidth = sourceWidth <= maxWidth ? sourceWidth : maxWidth;
-        int encodeHeight = sourceWidth <= maxWidth ? sourceHeight
-                : Math.round(sourceHeight * ((float) maxWidth / sourceWidth));
-
-        if ((encodeWidth & 1) != 0)
-            encodeWidth--;
-        if ((encodeHeight & 1) != 0)
-            encodeHeight--;
-
-        this.mp4EncodeWidth = encodeWidth;
-        this.mp4EncodeHeight = encodeHeight;
-
-        this.mp4ColumnLookup = new int[encodeWidth];
-        for (int x = 0; x < encodeWidth; x++)
-            mp4ColumnLookup[x] = Math.min(sourceWidth - 1, x * sourceWidth / encodeWidth);
-
-        this.mp4RowLookup = new int[encodeHeight];
-        for (int y = 0; y < encodeHeight; y++)
-            mp4RowLookup[y] = Math.min(sourceHeight - 1, y * sourceHeight / encodeHeight);
-
-        this.mp4FrameImage = new BufferedImage(encodeWidth, encodeHeight, BufferedImage.TYPE_INT_RGB);
-        this.mp4FramePixels = ((DataBufferInt) mp4FrameImage.getRaster().getDataBuffer()).getData();
-
-        this.mp4SourceWidthCached = sourceWidth;
-        this.mp4SourceHeightCached = sourceHeight;
-    }
-
-    private void ensureMp4ConversionBuffers(int sourceWidth, int sourceHeight) {
-
-        int requiredCapacity = sourceWidth * sourceHeight * EngineSetting.BYTES_PER_PIXEL_BGRA;
-
-        if (mp4ConversionReadBuffer == null || mp4ConversionReadBuffer.capacity() != requiredCapacity)
-            this.mp4ConversionReadBuffer = ByteBuffer.allocateDirect(requiredCapacity);
-
-        if (mp4ConversionScratch == null || mp4ConversionScratch.length != requiredCapacity)
-            this.mp4ConversionScratch = new byte[requiredCapacity];
-    }
-
-    private void convertToMp4Pixels(ByteBuffer buffer, int sourceWidth) {
-
-        buffer.rewind();
-        buffer.get(mp4ConversionScratch);
-
-        int stride = sourceWidth * EngineSetting.BYTES_PER_PIXEL_BGRA;
-
-        for (int destRow = 0; destRow < mp4EncodeHeight; destRow++) {
-
-            int sourceRow = mp4RowLookup[destRow];
-            int rowStart = sourceRow * stride;
-            int destinationRow = (mp4EncodeHeight - 1 - destRow) * mp4EncodeWidth;
-
-            for (int destCol = 0; destCol < mp4EncodeWidth; destCol++) {
-
-                int sourceCol = mp4ColumnLookup[destCol];
-                int index = rowStart + sourceCol * EngineSetting.BYTES_PER_PIXEL_BGRA;
-
-                int b = mp4ConversionScratch[index] & 0xFF;
-                int g = mp4ConversionScratch[index + 1] & 0xFF;
-                int r = mp4ConversionScratch[index + 2] & 0xFF;
-
-                mp4FramePixels[destinationRow + destCol] = (r << 16) | (g << 8) | b;
-            }
-        }
-    }
-
-    // Utility \\
-
-    private void closeQuietly(Closeable closeable) {
-        if (closeable == null)
-            return;
-        try {
-            closeable.close();
-        } catch (IOException ignored) {
-        }
+            timeStampLog("Video recording saved: " + file.getName() + " (" + encodedFrameCount + " frames)");
+        else if (file.delete())
+            errorLog("Discarded incomplete recording: " + file.getName());
     }
 }
