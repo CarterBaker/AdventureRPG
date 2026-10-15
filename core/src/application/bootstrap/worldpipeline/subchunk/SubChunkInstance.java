@@ -9,6 +9,8 @@ import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemPaletteHandle;
+import application.bootstrap.worldpipeline.worldspawn.WorldSpawnPaletteHandle;
+import application.bootstrap.worldpipeline.worldspawn.WorldSpawnStruct;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
@@ -27,7 +29,9 @@ public class SubChunkInstance extends WorldRenderInstance {
      * path for sub-block cells. Coverage lives in a palette of its own,
      * written only through setCoverage(), and a cell loses its coverage the
      * moment its block or sub-block mask changes, so a covering never
-     * outlives the face it grew over. Writes happen under the chunk's lock.
+     * outlives the face it grew over. The world spawn palette is made only
+     * when a spot someone lives at is first recorded here, so a subchunk
+     * nobody lives in carries none. Writes happen under the chunk's lock.
      */
 
     // Internal
@@ -36,6 +40,7 @@ public class SubChunkInstance extends WorldRenderInstance {
     private BlockPaletteHandle blockRotationPaletteHandle;
     private BlockPaletteHandle coveragePaletteHandle;
     private WorldItemPaletteHandle worldItemPaletteHandle;
+    private WorldSpawnPaletteHandle worldSpawnPaletteHandle;
     private BlockManager blockManager;
 
     // Storage — lazily realized
@@ -123,6 +128,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         releaseStorageIfPopulated();
 
         worldItemPaletteHandle.clear();
+        clearWorldSpawns();
         getQuadPacket().clear();
         containedBlockTypes.clear();
         Arrays.fill(blockTypeCounts, 0);
@@ -489,6 +495,31 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public WorldItemPaletteHandle getWorldItemPaletteHandle() {
         return worldItemPaletteHandle;
+    }
+
+    public WorldSpawnPaletteHandle getWorldSpawnPaletteHandle() {
+        return worldSpawnPaletteHandle;
+    }
+
+    public boolean hasWorldSpawns() {
+        return worldSpawnPaletteHandle != null && !worldSpawnPaletteHandle.isEmpty();
+    }
+
+    // Under the chunk's lock — the palette is made the first time a spawn is recorded here, and kept for reuse
+    public void addWorldSpawn(WorldSpawnStruct worldSpawnStruct) {
+
+        if (worldSpawnPaletteHandle == null) {
+            worldSpawnPaletteHandle = create(WorldSpawnPaletteHandle.class);
+            worldSpawnPaletteHandle.constructor();
+        }
+
+        worldSpawnPaletteHandle.addSpawn(worldSpawnStruct);
+    }
+
+    public void clearWorldSpawns() {
+
+        if (worldSpawnPaletteHandle != null)
+            worldSpawnPaletteHandle.clear();
     }
 
     public short getBlock(int x, int y, int z) {

@@ -2,6 +2,7 @@ package application.bootstrap.entitypipeline.inventory;
 
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
+import application.bootstrap.itempipeline.itemdefinition.EquipmentType;
 import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import engine.root.HandlePackage;
@@ -14,6 +15,7 @@ public class InventoryHandle extends HandlePackage {
      * tops up the matching stacks already carried when they have room for all
      * of it, and anything else goes into the backpack if it fits and otherwise
      * a free hand — so a give either takes the whole item or nothing at all.
+     * wear() puts an item on only in a free slot made for its kind.
      * takeOne() is the one path a single item leaves a slot, split off its
      * stack through ItemManager. The revision counts every change so views
      * know when to redraw. Lives on EntityInstance.
@@ -114,6 +116,24 @@ public class InventoryHandle extends HandlePackage {
     }
 
     // Carry \\
+
+    // Puts an item on where it is worn — the first free slot of its own type, so a weapon goes in the main hand and
+    // a shield in the off hand — false when no such slot is free
+    public boolean wear(ItemInstance itemInstance) {
+
+        EquipmentType equipmentType = itemInstance.getItemDefinitionHandle().getEquipmentType();
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
+
+            if (equipmentSlot.getEquipmentType() != equipmentType || !canEquip(equipmentSlot, itemInstance))
+                continue;
+
+            equip(equipmentSlot, itemInstance);
+            return true;
+        }
+
+        return false;
+    }
 
     public boolean give(ItemInstance itemInstance) {
 

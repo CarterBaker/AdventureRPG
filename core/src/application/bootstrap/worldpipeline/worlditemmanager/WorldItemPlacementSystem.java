@@ -5,8 +5,10 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
+import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
@@ -33,7 +35,8 @@ public class WorldItemPlacementSystem extends SystemPackage {
      * WorldItemRenderSystem on it; runtime placement stands an item on a spot
      * WorldItemSpaceSystem resolved, updating the subchunk, chunk palette and
      * renderer together. resolveItemInstance() keeps an item's real contents
-     * on its subchunk struct. composeTransform() is the one CPU-side
+     * on its subchunk struct, filling a container found furnished with loot
+     * the first time it is needed. composeTransform() is the one CPU-side
      * placement of a world item — its block-space model matrix relative to a
      * chunk, turned exactly as the item shader turns it.
      */
@@ -41,6 +44,7 @@ public class WorldItemPlacementSystem extends SystemPackage {
     // Internal
     private ItemDefinitionManager itemDefinitionManager;
     private ItemManager itemManager;
+    private LootTableManager lootTableManager;
     private ItemRotationBufferSystem itemRotationBufferSystem;
     private WorldItemRenderSystem worldItemRenderSystem;
     private WorldItemSpaceSystem worldItemSpaceSystem;
@@ -62,6 +66,7 @@ public class WorldItemPlacementSystem extends SystemPackage {
     protected void get() {
         this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.itemManager = get(ItemManager.class);
+        this.lootTableManager = get(LootTableManager.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
         this.worldItemRenderSystem = get(WorldItemRenderSystem.class);
         this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
@@ -112,7 +117,8 @@ public class WorldItemPlacementSystem extends SystemPackage {
                 / EngineSetting.CHUNK_SIZE;
 
         // 1. SubChunk
-        WorldItemStruct struct = new WorldItemStruct(packedPosition, def.getItemID(), itemInstance);
+        WorldItemStruct struct = new WorldItemStruct(
+                packedPosition, def.getItemID(), EngineSetting.LOOT_TABLE_NONE, itemInstance);
         SubChunkInstance subChunk = chunk.getSubChunk(subChunkCoordinate);
         subChunk.getWorldItemPaletteHandle().addItem(struct);
 
@@ -232,12 +238,35 @@ public class WorldItemPlacementSystem extends SystemPackage {
 
     // Contents \\
 
+    // The real item standing here, made the first time it is needed — a container found furnished with loot is
+    // filled from its table then
     public ItemInstance resolveItemInstance(WorldItemInstance instance) {
 
-        if (!instance.hasItemInstance())
-            instance.setItemInstance(itemManager.createItem(instance.getItemDefinitionHandle()));
+        if (instance.hasItemInstance())
+            return instance.getItemInstance();
 
-        return instance.getItemInstance();
+        ItemInstance itemInstance = itemManager.createItem(instance.getItemDefinitionHandle());
+
+        if (instance.getLootTableID() != EngineSetting.LOOT_TABLE_NONE)
+            lootTableManager.fillContainer(itemInstance, instance.getLootTableID(), resolveLootSeed(instance));
+
+        instance.setItemInstance(itemInstance);
+
+        return itemInstance;
+    }
+
+    // Salted by the world, the chunk and the spot the item stands at, so a container is found holding the same
+    // loot every session
+    private long resolveLootSeed(WorldItemInstance instance) {
+
+        long chunkCoordinate = instance.getChunkCoordinate();
+        long packedPosition = instance.getPackedPosition();
+        long chunkSeed = BiomeFieldUtility.hashCell(
+                worldStreamManager.getActiveWorldHandle().getSeed() ^ EngineSetting.LOOT_CONTAINER_SALT,
+                Coordinate2Long.unpackX(chunkCoordinate),
+                Coordinate2Long.unpackY(chunkCoordinate));
+
+        return BiomeFieldUtility.hashCell(chunkSeed, (int) packedPosition, (int) (packedPosition >>> 32));
     }
 
     // Build \\

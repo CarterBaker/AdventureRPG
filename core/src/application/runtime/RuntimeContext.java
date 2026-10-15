@@ -5,6 +5,7 @@ import application.runtime.inventory.InventoryRenderSystem;
 import application.runtime.menu.MainMenuSystem;
 import application.runtime.menu.MenuSystem;
 import application.runtime.menueventsmanager.MenuEventsManager;
+import application.runtime.npc.NpcSystem;
 import application.runtime.player.PlayerRenderSystem;
 import application.runtime.player.PlayerSystem;
 import application.runtime.postprocessing.PostProcessingManager;
@@ -49,6 +50,7 @@ public class RuntimeContext extends ContextPackage {
     private InventoryRenderSystem inventoryRenderSystem;
     private ProjectileSystem projectileSystem;
     private VehicleSystem vehicleSystem;
+    private NpcSystem npcSystem;
     private TreeSystem treeSystem;
 
     // Internal \\
@@ -74,6 +76,7 @@ public class RuntimeContext extends ContextPackage {
         this.inventoryRenderSystem = create(InventoryRenderSystem.class);
         this.projectileSystem = create(ProjectileSystem.class);
         this.vehicleSystem = create(VehicleSystem.class);
+        this.npcSystem = create(NpcSystem.class);
         this.treeSystem = create(TreeSystem.class);
     }
 }

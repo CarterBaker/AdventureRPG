@@ -8,6 +8,7 @@ import application.bootstrap.furnishingpipeline.FurnishingPipeline;
 import application.bootstrap.geometrypipeline.GeometryPipeline;
 import application.bootstrap.itempipeline.ItemPipeline;
 import application.bootstrap.lightingpipeline.LightingPipeline;
+import application.bootstrap.lootpipeline.LootPipeline;
 import application.bootstrap.mappipeline.MapPipeline;
 import application.bootstrap.menupipeline.MenuPipeline;
 import application.bootstrap.oceanpipeline.OceanPipeline;
@@ -38,6 +39,7 @@ public class ApplicationBootstrapAssembly extends AssemblyPackage {
         create(ScreenCapturePipeline.class);
         create(ItemPipeline.class);
         create(FurnishingPipeline.class);
+        create(LootPipeline.class);
         create(PhysicsPipeline.class);
         create(VehiclePipeline.class);
         create(EntityPipeline.class);

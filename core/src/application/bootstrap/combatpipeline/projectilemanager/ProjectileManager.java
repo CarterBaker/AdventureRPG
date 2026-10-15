@@ -14,7 +14,8 @@ public class ProjectileManager extends ManagerPackage {
     /*
      * Owns every thrown item in flight. launch() is the one path an item
      * takes to fly, whether a hand throws it, a cannon fires it, or an impact
-     * knocks it loose. Every fixed step ProjectileFlightBranch moves each
+     * knocks it loose; drop() launches an item let fall loose, which strikes
+     * no one on its way down. Every fixed step ProjectileFlightBranch moves each
      * projectile under gravity, drag and spin, striking entities and bouncing
      * off blocks until it comes to rest, ProjectileImpactBranch lets a hard
      * enough hit break the block it meets, and ProjectileLandingBranch snaps a
@@ -72,7 +73,7 @@ public class ProjectileManager extends ManagerPackage {
     // Management \\
 
     // An item set flying from a position in a chunk's frame — the thrower is never struck by it
-    public void launch(
+    public ProjectileInstance launch(
             EntityInstance thrower,
             ItemInstance itemInstance,
             long chunkCoordinate,
@@ -95,6 +96,24 @@ public class ProjectileManager extends ManagerPackage {
                 orientation);
 
         projectiles.add(projectile);
+
+        return projectile;
+    }
+
+    // An item let fall loose from a position in a chunk's frame, as something scatters what it carried — it lands
+    // like any thrown item but never strikes anyone
+    public void drop(
+            EntityInstance source,
+            ItemInstance itemInstance,
+            long chunkCoordinate,
+            Vector3 position,
+            Vector3 velocity,
+            Vector3 spinAxis,
+            float spinRate,
+            Quaternion orientation) {
+
+        launch(source, itemInstance, chunkCoordinate, position, velocity, spinAxis, spinRate, orientation)
+                .markStruck();
     }
 
     // Accessible \\

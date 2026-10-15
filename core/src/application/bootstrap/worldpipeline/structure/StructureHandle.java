@@ -144,6 +144,10 @@ public class StructureHandle extends HandlePackage {
         return structureData.getFurnishings();
     }
 
+    public ObjectArrayList<StructureSpawnStruct> getSpawns() {
+        return structureData.getSpawns();
+    }
+
     public StructureRulesStruct getRules() {
         return structureData.getRules();
     }

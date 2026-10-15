@@ -1,5 +1,6 @@
 package application.bootstrap.physicspipeline.movementmanager;
 
+import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
@@ -19,7 +20,8 @@ public class MovementManager extends ManagerPackage {
      * and facing. Vehicles are reached through VehicleRiderSystem, which
      * sweeps every move through their decks and keeps whoever rides them.
      * fly() is the physics-free path for free cameras, and face() turns a body
-     * without moving it.
+     * without moving it. writeMovementState() is the one place an entity's
+     * input decides how it moves on the ground, whoever drives it.
      */
 
     // Internal
@@ -60,6 +62,31 @@ public class MovementManager extends ManagerPackage {
     @Override
     protected void get() {
         this.vehicleRiderSystem = get(VehicleRiderSystem.class);
+    }
+
+    // Movement State \\
+
+    // On the ground, the input decides the gait — a walk while asked or held back, a run while asked and not
+    // attacking, else a stride, and standing when nothing moves it
+    public void writeMovementState(EntityInstance entity, boolean slowed, boolean attacking) {
+
+        EntityStateHandle state = entity.getEntityStateHandle();
+        EntityInputHandle input = entity.getEntityInputHandle();
+
+        if (!state.isGrounded())
+            return;
+
+        if (!input.hasHorizontalInput()) {
+            state.setMovementState(EntityState.IDLE);
+            return;
+        }
+
+        if (input.isWalk() || slowed)
+            state.setMovementState(EntityState.WALKING);
+        else if (input.isSprint() && !attacking)
+            state.setMovementState(EntityState.RUNNING);
+        else
+            state.setMovementState(EntityState.MOVING);
     }
 
     // Movement \\

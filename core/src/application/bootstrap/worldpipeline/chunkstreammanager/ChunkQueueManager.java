@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
+import application.bootstrap.entitypipeline.npcmanager.NpcManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
@@ -41,7 +42,8 @@ class ChunkQueueManager extends ManagerPackage {
      * invalidates any mega it fed. A live edit restreams only the grid's chunks
      * its region reaches, nearest first, and leaves every other chunk standing.
      * Every chunk leaves through clearChunk(), which takes back all it handed
-     * the renderers, its world items included. The moment a grid moves, every
+     * the renderers, its world items included, and sends the NPCs living in
+     * it out of the world with them. The moment a grid moves, every
      * chunk it left behind is queued to unload and every load it no longer
      * wants is dropped; unloads drain on their own budget, a chunk with an
      * async task still reserved waiting for it, and no fresh chunk is made
@@ -60,6 +62,7 @@ class ChunkQueueManager extends ManagerPackage {
     private ChunkStreamManager chunkStreamManager;
     private WorldRenderManager worldRenderManager;
     private WorldItemPlacementSystem worldItemPlacementSystem;
+    private NpcManager npcManager;
     private ThreadHandle worldStreamingThreadHandle;
 
     // Branches
@@ -170,6 +173,7 @@ class ChunkQueueManager extends ManagerPackage {
         this.chunkStreamManager = get(ChunkStreamManager.class);
         this.worldRenderManager = get(WorldRenderManager.class);
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
+        this.npcManager = get(NpcManager.class);
         this.worldStreamingThreadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
     }
 
@@ -527,8 +531,10 @@ class ChunkQueueManager extends ManagerPackage {
     // Under the chunk's lock — everything the chunk handed the renderers taken back, and its data let go
     private void clearChunk(long chunkCoordinate, ChunkInstance chunkInstance) {
 
-        if (chunkInstance.getChunkDataSyncContainer().getData()[itemRenderDataIndex])
+        if (chunkInstance.getChunkDataSyncContainer().getData()[itemRenderDataIndex]) {
             worldItemPlacementSystem.pullChunkFromRenderer(chunkCoordinate);
+            npcManager.despawnResidents(chunkCoordinate);
+        }
 
         worldRenderManager.removeChunkInstance(chunkCoordinate);
         worldRenderManager.removeChunkTrees(chunkCoordinate);

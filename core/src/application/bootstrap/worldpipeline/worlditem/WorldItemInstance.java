@@ -10,7 +10,8 @@ public class WorldItemInstance extends InstancePackage {
      * One placed world item at runtime: its definition, chunk, block and packed
      * sub-voxel position, the rough box around every cell its turned shape
      * claims, and its slot in the item type's composite buffer. The
-     * WorldItemStruct it was built from keeps the real item across palette
+     * WorldItemStruct it was built from keeps the real item, and the loot
+     * table it is filled from when it is first needed, across palette
      * rebuilds.
      */
 
@@ -69,6 +70,10 @@ public class WorldItemInstance extends InstancePackage {
 
     public void setItemInstance(ItemInstance itemInstance) {
         worldItemStruct.itemInstance = itemInstance;
+    }
+
+    public short getLootTableID() {
+        return worldItemStruct.lootTableID;
     }
 
     public ItemDefinitionHandle getItemDefinitionHandle() {

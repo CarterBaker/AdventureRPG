@@ -18,6 +18,8 @@ public class StructureData extends DataPackage {
      * whether any block is listed there and the top solid block with the map
      * colors distant terrain draws the column in. The front names the side
      * its entrance faces as authored, so a layout can turn it to face a road.
+     * Its furnishings are the places it comes furnished at and its spawns the
+     * spots NPCs live at, both measured from its origin.
      * Placement rolls are salted by the name seed, so a structure lands in
      * the same cells whatever order it loads in.
      */
@@ -64,6 +66,9 @@ public class StructureData extends DataPackage {
     // Furnishing
     private final ObjectArrayList<FurnishingSlotStruct> furnishings;
 
+    // Residents
+    private final ObjectArrayList<StructureSpawnStruct> spawns;
+
     // Placement
     private final StructureRulesStruct rules;
     private final StructureFrequencyStruct frequency;
@@ -100,6 +105,7 @@ public class StructureData extends DataPackage {
             boolean clearTerrain,
             Direction3Vector front,
             ObjectArrayList<FurnishingSlotStruct> furnishings,
+            ObjectArrayList<StructureSpawnStruct> spawns,
             StructureRulesStruct rules,
             StructureFrequencyStruct frequency,
             ObjectArrayList<StructureFixedPlacementStruct> fixedPlacements) {
@@ -145,6 +151,9 @@ public class StructureData extends DataPackage {
 
         // Furnishing
         this.furnishings = furnishings;
+
+        // Residents
+        this.spawns = spawns;
 
         // Placement
         this.rules = rules;
@@ -268,6 +277,10 @@ public class StructureData extends DataPackage {
 
     public ObjectArrayList<FurnishingSlotStruct> getFurnishings() {
         return furnishings;
+    }
+
+    public ObjectArrayList<StructureSpawnStruct> getSpawns() {
+        return spawns;
     }
 
     public StructureRulesStruct getRules() {

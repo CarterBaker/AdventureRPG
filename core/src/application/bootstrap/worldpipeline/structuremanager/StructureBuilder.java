@@ -3,10 +3,12 @@ package application.bootstrap.worldpipeline.structuremanager;
 import java.io.File;
 import java.util.Arrays;
 
+import application.bootstrap.entitypipeline.npcmanager.NpcManager;
 import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
 import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
 import application.bootstrap.furnishingpipeline.util.FurnishingArpgUtility;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
+import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
@@ -19,6 +21,7 @@ import application.bootstrap.worldpipeline.structure.StructureFrequencyStruct;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.structure.StructurePaletteEntryStruct;
 import application.bootstrap.worldpipeline.structure.StructureRulesStruct;
+import application.bootstrap.worldpipeline.structure.StructureSpawnStruct;
 import application.bootstrap.worldpipeline.structure.StructureSurfaceType;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
@@ -54,9 +57,11 @@ class StructureBuilder extends BuilderPackage {
      * "from"/"to" boxes, each naming a block or a palette key. Everything is
      * applied in order, so a later entry overwrites an earlier one at the
      * same cell. The "front" names the side its entrance faces, "furnishings"
-     * the places it comes furnished at, and "clear_terrain" whether the
-     * ground inside its footprint is carved away before it is laid. Every
-     * block, biome, table and value is resolved and validated here, so a
+     * the places it comes furnished at, "spawns" the spots NPCs live at, each
+     * naming its "npc", the block it stands in as an "offset" from the origin
+     * and the "chance" it is lived in, and "clear_terrain" whether the ground
+     * inside its footprint is carved away before it is laid. Every block,
+     * biome, table, NPC and value is resolved and validated here, so a
      * malformed structure fails at boot.
      */
 
@@ -66,6 +71,8 @@ class StructureBuilder extends BuilderPackage {
     private CoveringManager coveringManager;
     private BiomeManager biomeManager;
     private FurnishingManager furnishingManager;
+    private LootTableManager lootTableManager;
+    private NpcManager npcManager;
 
     // Palette
     private Object2ObjectOpenHashMap<String, StructurePaletteEntryStruct> key2PaletteEntry;
@@ -109,6 +116,8 @@ class StructureBuilder extends BuilderPackage {
         this.coveringManager = get(CoveringManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.furnishingManager = get(FurnishingManager.class);
+        this.lootTableManager = get(LootTableManager.class);
+        this.npcManager = get(NpcManager.class);
     }
 
     // Build \\
@@ -159,7 +168,8 @@ class StructureBuilder extends BuilderPackage {
 
         Direction3Vector front = parseFront(arpg, structureName);
         ObjectArrayList<FurnishingSlotStruct> furnishings = FurnishingArpgUtility.parseSlots(
-                arpg, "furnishings", structureName, furnishingManager);
+                arpg, "furnishings", structureName, furnishingManager, lootTableManager);
+        ObjectArrayList<StructureSpawnStruct> spawns = parseSpawns(arpg, structureName);
 
         StructureRulesStruct rules = parseRules(arpg, structureName);
         StructureFrequencyStruct frequency = parseFrequency(arpg, structureName);
@@ -174,7 +184,7 @@ class StructureBuilder extends BuilderPackage {
                 minOffsetX, maxOffsetX, min(offsetY), max(offsetY), minOffsetZ, maxOffsetZ, horizontalReachBlocks,
                 footprint, footprintTopOffsetY, footprintTopColors, footprintSideColors,
                 yOffsetBlocks, foundationBlockID, foundation, clearTerrain,
-                front, furnishings,
+                front, furnishings, spawns,
                 rules, frequency, fixedPlacements);
 
         StructureHandle structureHandle = create(StructureHandle.class);
@@ -724,6 +734,45 @@ class StructureBuilder extends BuilderPackage {
                     + (EngineSetting.STRUCTURE_QUARTER_TURN_COUNT - 1) + " clockwise quarter turns.");
 
         return new StructureFixedPlacementStruct(worldX, worldZ, worldY, hasWorldY, quarterTurns, enforceRules);
+    }
+
+    // Spawn Parsing \\
+
+    private ObjectArrayList<StructureSpawnStruct> parseSpawns(ArpgObjectStruct arpg, String structureName) {
+
+        ObjectArrayList<StructureSpawnStruct> spawns = new ObjectArrayList<>();
+
+        if (!ArpgUtility.hasArray(arpg, "spawns"))
+            return spawns;
+
+        for (ArpgElementStruct element : arpg.getAsArray("spawns"))
+            spawns.add(parseSpawn(element.getAsObject(), structureName));
+
+        return spawns;
+    }
+
+    private StructureSpawnStruct parseSpawn(ArpgObjectStruct entry, String structureName) {
+
+        String npcName = ArpgUtility.validateString(entry, "npc");
+        int[] offset = parseVector(entry, "offset");
+        float chance = ArpgUtility.getFloat(entry, "chance", 1f);
+
+        validateExtent(offset[0], structureName);
+        validateExtent(offset[1], structureName);
+        validateExtent(offset[2], structureName);
+
+        if (chance < 0f || chance > 1f)
+            throwException("Structure \"" + structureName + "\" spawns '" + npcName
+                    + "' with a chance outside 0 to 1.");
+
+        return new StructureSpawnStruct(
+                npcName,
+                npcManager.getNpcIDFromNpcName(npcName),
+                RegistryUtility.toNameSeed(npcName),
+                offset[0],
+                offset[1],
+                offset[2],
+                chance);
     }
 
     // Vector Parsing \\

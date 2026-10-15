@@ -22,8 +22,9 @@ public class EntityManager extends ManagerPackage {
     /*
      * Owns the entity template palette and drives the entity bootstrap pipeline.
      * Handles on-demand template loading and provides the spawnEntity() factory
-     * for creating runtime EntityInstances from template handles, each one
-     * entering combat as it spawns, and despawnEntity(), its mirror, which
+     * for creating runtime EntityInstances from template handles, in a random
+     * chunk of the active world or at a place given, each one entering combat
+     * as it spawns, and despawnEntity(), its mirror, which
      * takes the entity out of combat and off every vehicle. rerollEntity()
      * rolls an existing instance again in place — a new random chunk, size,
      * weight, base statistics, an empty inventory, and the template's default
@@ -100,19 +101,29 @@ public class EntityManager extends ManagerPackage {
 
     public EntityInstance spawnEntity(EntityHandle entityHandle) {
 
-        EntityData entityData = entityHandle.getEntityData();
         WorldHandle activeWorld = worldManager.getActiveWorld();
+
+        return spawnEntity(entityHandle, activeWorld, WorldPositionUtility.getRandomChunk(activeWorld), new Vector3());
+    }
+
+    // The one way an entity enters the world — standing at a chunk-local position in the chunk given
+    public EntityInstance spawnEntity(
+            EntityHandle entityHandle,
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            Vector3 position) {
+
+        EntityData entityData = entityHandle.getEntityData();
         BehaviorHandle behavior = behaviorManager.getBehaviorHandleFromBehaviorName(
                 entityData.getBehaviorName());
-        long randomChunk = WorldPositionUtility.getRandomChunk(activeWorld);
 
         EntityInstance entityInstance = create(EntityInstance.class);
         entityInstance.constructor(
                 entityData,
-                activeWorld,
+                worldHandle,
                 behavior,
-                new Vector3(),
-                randomChunk,
+                position,
+                chunkCoordinate,
                 entityData.getRandomSize(),
                 entityData.getRandomWeight());
 

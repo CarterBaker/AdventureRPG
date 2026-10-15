@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.chunkstreammanager;
 
+import application.bootstrap.entitypipeline.npcmanager.NpcManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkDataSyncContainer;
 import application.bootstrap.worldpipeline.chunk.ChunkDataUtility;
@@ -25,12 +26,15 @@ public class DumpBranch extends BranchPackage {
      * trees the chunk held are let go with it, and handed back when it
      * generates again. Trees taken off the GPU take their built flag with
      * them, since an uploaded tree packet keeps no CPU copy to upload again.
+     * World spawns are let go with the item structs, and the NPCs living at
+     * them leave the world as the chunk's items leave the renderer.
      */
 
     // Internal
     private WorldItemPlacementSystem worldItemPlacementSystem;
     private WorldRenderManager worldRenderManager;
     private TreeManager treeManager;
+    private NpcManager npcManager;
 
     // Internal \\
 
@@ -41,6 +45,7 @@ public class DumpBranch extends BranchPackage {
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.worldRenderManager = get(WorldRenderManager.class);
         this.treeManager = get(TreeManager.class);
+        this.npcManager = get(NpcManager.class);
     }
 
     // Dump \\
@@ -126,11 +131,14 @@ public class DumpBranch extends BranchPackage {
     private void dumpItemData(ChunkInstance chunkInstance) {
         chunkInstance.getWorldItemInstancePaletteHandle().clear();
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
-        for (SubChunkInstance subChunk : subChunks)
+        for (SubChunkInstance subChunk : subChunks) {
             subChunk.getWorldItemPaletteHandle().clear();
+            subChunk.clearWorldSpawns();
+        }
     }
 
     private void dumpItemRenderData(ChunkInstance chunkInstance) {
         worldItemPlacementSystem.pullChunkFromRenderer(chunkInstance.getCoordinate());
+        npcManager.despawnResidents(chunkInstance.getCoordinate());
     }
 }

@@ -1,5 +1,7 @@
 package application.bootstrap.vehiclepipeline.vehiclemanager;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
 import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
@@ -11,6 +13,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
+import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
@@ -46,7 +49,8 @@ public class VehicleCargoSystem extends SystemPackage {
      * swings open or a cannon is loaded, once the other fits there. stow()
      * furnishes a vehicle as it enters the world: every place it comes
      * furnished at draws one item from its shared furnishing table through
-     * FurnishingManager, which must fit there.
+     * FurnishingManager, which must fit there, and a container drawn for a
+     * place with loot is filled from its table through LootTableManager.
      */
 
     // Internal
@@ -55,6 +59,7 @@ public class VehicleCargoSystem extends SystemPackage {
     private ItemRotationBufferSystem itemRotationBufferSystem;
     private ItemManager itemManager;
     private FurnishingManager furnishingManager;
+    private LootTableManager lootTableManager;
 
     // Cast
     private VehicleCastStruct castStruct;
@@ -89,6 +94,7 @@ public class VehicleCargoSystem extends SystemPackage {
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
         this.itemManager = get(ItemManager.class);
         this.furnishingManager = get(FurnishingManager.class);
+        this.lootTableManager = get(LootTableManager.class);
     }
 
     // Cast \\
@@ -283,7 +289,13 @@ public class VehicleCargoSystem extends SystemPackage {
                         + "' from furnishing '" + slot.getFurnishingName() + "' at (" + slot.getCornerX() + ", "
                         + slot.getCornerY() + ", " + slot.getCornerZ() + "), where it does not fit.");
 
-            addCargo(vehicle, itemManager.createItem(item), slot.getOrientation());
+            ItemInstance itemInstance = itemManager.createItem(item);
+
+            if (slot.hasLoot())
+                lootTableManager.fillContainer(
+                        itemInstance, slot.getLootTableID(), ThreadLocalRandom.current().nextLong());
+
+            addCargo(vehicle, itemInstance, slot.getOrientation());
         }
     }
 

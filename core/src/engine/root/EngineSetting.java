@@ -191,10 +191,12 @@ public class EngineSetting {
     public static final ObjectArraySet<String> INCLUDE_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "glsl",
         "inc", "glslinc" });
     public static final String ITEM_PATH = "items";
+    public static final String LOOT_TABLE_PATH = "loottables";
     public static final String MATERIAL_PATH = "materials";
     public static final String MENU_PATH = "menus";
     public static final String MESH_PATH = "mesh";
     public static final String MOVESET_PATH = "movesets";
+    public static final String NPC_PATH = "npcs";
     public static final String PASS_PATH = "processingpasses";
     public static final String RIG_PATH = "rigs";
     public static final String ROAD_PATH = "roads";
@@ -1289,9 +1291,10 @@ public class EngineSetting {
     public static final long STRUCTURE_ROTATION_SALT = 0xA60C9E4F2D7B1853L;
 
     // Structure Content — the space a layer row leaves untouched, a footprint column with no solid block, and the
-    // salts a placed structure's furnishing rolls are drawn with
+    // salts a placed structure's furnishing and spawn rolls are drawn with
     public static final long STRUCTURE_FURNISHING_ITEM_SALT = 0x4F1C8A6E39D2B705L;
     public static final long STRUCTURE_FURNISHING_SALT = 0x93B6D0E47A215C8FL;
+    public static final long STRUCTURE_SPAWN_SALT = 0x6A3E91D75C08B24FL;
     public static final int STRUCTURE_FOOTPRINT_EMPTY = Integer.MIN_VALUE;
     public static final char STRUCTURE_LAYER_SKIP_CHARACTER = ' ';
 
@@ -1937,6 +1940,19 @@ public class EngineSetting {
     public static final float DEFAULT_ANIMATION_NODE_DELAY = 0f;
     public static final float DEFAULT_ANIMATION_NODE_RATE = 1f;
 
+    // Residents — how far an NPC wanders from its spot and how near counts as arrived, how long it idles and how
+    // long it walks before giving up, how far off it is drawn, and how what it drops is thrown clear of it
+    public static final float DEFAULT_NPC_WANDER_BLOCKS = 4f;
+    public static final float NPC_ARRIVE_DISTANCE_BLOCKS = 0.5f;
+    public static final float NPC_DROP_LIFT_BLOCKS = 0.5f;
+    public static final float NPC_DROP_LIFT_SPEED = 3f;
+    public static final float NPC_DROP_SPIN_RATE = 4f;
+    public static final float NPC_DROP_SPREAD_SPEED = 1.5f;
+    public static final float NPC_IDLE_MAX_SECONDS = 8f;
+    public static final float NPC_IDLE_MIN_SECONDS = 2f;
+    public static final int NPC_RENDER_CHUNK_RADIUS = 8;
+    public static final float NPC_WALK_MAX_SECONDS = 10f;
+
     // Combat
     public static final float AIM_RAISE_SECONDS = 0.3f;
     public static final float ARMOR_MITIGATION_SCALE = 50f;
@@ -2108,6 +2124,19 @@ public class EngineSetting {
     // Tools
     public static final int DEFAULT_TOOL_TIER = 0;
     public static final short TOOL_NONE = 0;
+
+    // Loot — the defaults of every optional table field, the table nothing names, and the salts a draw's rolls, its
+    // guaranteed entries, an entry's count and a found container's contents are drawn with
+    public static final int DEFAULT_LOOT_COUNT = 1;
+    public static final int DEFAULT_LOOT_ROLLS = 1;
+    public static final float DEFAULT_LOOT_WEIGHT = 1f;
+    public static final long LOOT_CONTAINER_SALT = 0xC4E07A93B1D6582FL;
+    public static final long LOOT_COUNT_SALT = 0x2D9B6F14E8A37C05L;
+    public static final long LOOT_GUARANTEED_SALT = 0x5E8A1C37F0B4D962L;
+    public static final long LOOT_ROLL_SALT = 0x7F35C2A9064BE1D8L;
+    public static final long LOOT_ROLLS_SALT = 0xB81E4D07C6A3925FL;
+    public static final String LOOT_TABLE_NAME_NONE = "";
+    public static final short LOOT_TABLE_NONE = REGISTRY_RESERVED_ID;
 
     // Block Pieces
     public static final String BLOCK_ITEM_TEXTURE_NONE = "";

@@ -312,7 +312,7 @@ public class PlayerManager extends ManagerPackage {
         }
 
         vehicleControlSystem.steer(player);
-        writeMovementState(player);
+        movementManager.writeMovementState(player, combatManager.isSlowed(player), combatManager.isAttacking(player));
         movementManager.move(player);
         player.updateAnimation(internal.getDeltaTime());
 
@@ -601,27 +601,6 @@ public class PlayerManager extends ManagerPackage {
     public boolean isFirstPerson(int windowID) {
         return !windowID2CharacterPreview.get(windowID)
                 && windowID2ZoomDistance.get(windowID) <= EngineSetting.CAMERA_FIRST_PERSON_THRESHOLD;
-    }
-
-    private void writeMovementState(EntityInstance player) {
-
-        EntityStateHandle state = player.getEntityStateHandle();
-        EntityInputHandle input = player.getEntityInputHandle();
-
-        if (!state.isGrounded())
-            return;
-
-        if (!input.hasHorizontalInput()) {
-            state.setMovementState(EntityState.IDLE);
-            return;
-        }
-
-        if (input.isWalk() || combatManager.isSlowed(player))
-            state.setMovementState(EntityState.WALKING);
-        else if (input.isSprint() && !combatManager.isAttacking(player))
-            state.setMovementState(EntityState.RUNNING);
-        else
-            state.setMovementState(EntityState.MOVING);
     }
 
     // Spawn Verification \\

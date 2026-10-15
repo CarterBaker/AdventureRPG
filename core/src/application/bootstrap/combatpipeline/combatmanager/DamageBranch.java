@@ -3,6 +3,7 @@ package application.bootstrap.combatpipeline.combatmanager;
 import application.bootstrap.entitypipeline.entity.CombatDirection;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.npcmanager.NpcManager;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemStat;
@@ -24,15 +25,17 @@ class DamageBranch extends BranchPackage {
      * winding up its own attack. Armor then turns part of the rest aside —
      * each point of it counts for less the more there is — and what gets
      * through comes off the entity's health and shoves it along the blow's
-     * horizontal direction. An entity brought to no health is defeated; for
-     * now defeat cuts its action short and restores it to full health where
-     * it stands.
+     * horizontal direction. An entity brought to no health is defeated, which
+     * cuts its action short: an NPC falls through NpcManager, scattering what
+     * it carried and its loot, while anything else is for now restored to
+     * full health where it stands.
      */
 
     // Internal
     private CombatManager combatManager;
     private AttackBranch attackBranch;
     private GuardBranch guardBranch;
+    private NpcManager npcManager;
 
     // Internal \\
 
@@ -43,6 +46,7 @@ class DamageBranch extends BranchPackage {
         this.combatManager = get(CombatManager.class);
         this.attackBranch = get(AttackBranch.class);
         this.guardBranch = get(GuardBranch.class);
+        this.npcManager = get(NpcManager.class);
     }
 
     // Damage \\
@@ -155,7 +159,12 @@ class DamageBranch extends BranchPackage {
     // Defeat \\
 
     private void defeat(EntityInstance target) {
+
         target.getEntityActionHandle().release();
+
+        if (npcManager.defeat(target))
+            return;
+
         target.getStatisticsHandle().setHealth(target.getMaxHealth());
     }
 }

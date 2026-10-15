@@ -6,6 +6,7 @@ import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingMana
 import application.bootstrap.furnishingpipeline.util.FurnishingArpgUtility;
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
+import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleData;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
@@ -41,8 +42,9 @@ class VehicleBuilder extends BuilderPackage {
      * handles; the draft and centre of mass height are sub-voxels of the model
      * grid. Each place in the optional "cargo" names the shared furnishing
      * table it is furnished from, the "corner" of the item's model grid in
-     * sub-voxels, its "spin" in quarter turns about the vertical, and the
-     * "chance" it is furnished at all. Geometry and the hull's physics
+     * sub-voxels, its "spin" in quarter turns about the vertical, the
+     * "chance" it is furnished at all, and the "loot" table a container stowed
+     * there is filled from. Geometry and the hull's physics
      * are worked out by VehicleGeometryBuilder and VehicleHullBuilder, so a
      * malformed vehicle fails at boot.
      */
@@ -51,6 +53,7 @@ class VehicleBuilder extends BuilderPackage {
     private VehicleGeometryBuilder vehicleGeometryBuilder;
     private VehicleHullBuilder vehicleHullBuilder;
     private FurnishingManager furnishingManager;
+    private LootTableManager lootTableManager;
 
     // Base \\
 
@@ -59,6 +62,7 @@ class VehicleBuilder extends BuilderPackage {
         this.vehicleGeometryBuilder = get(VehicleGeometryBuilder.class);
         this.vehicleHullBuilder = get(VehicleHullBuilder.class);
         this.furnishingManager = get(FurnishingManager.class);
+        this.lootTableManager = get(LootTableManager.class);
     }
 
     // Build \\
@@ -113,7 +117,7 @@ class VehicleBuilder extends BuilderPackage {
                 resolveBoundingRadius(bounds, hull.getCenterOfMass()),
                 hull,
                 parseHandling(arpg, hullArpg),
-                FurnishingArpgUtility.parseSlots(arpg, "cargo", vehicleName, furnishingManager));
+                FurnishingArpgUtility.parseSlots(arpg, "cargo", vehicleName, furnishingManager, lootTableManager));
 
         VehicleHandle vehicleHandle = create(VehicleHandle.class);
         vehicleHandle.constructor(vehicleData);

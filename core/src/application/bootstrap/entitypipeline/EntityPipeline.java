@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.animationtreemanager.AnimationTreeMa
 import application.bootstrap.entitypipeline.behaviormanager.BehaviorManager;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
+import application.bootstrap.entitypipeline.npcmanager.NpcManager;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import engine.root.PipelinePackage;
 
@@ -17,6 +18,8 @@ public class EntityPipeline extends PipelinePackage {
      * features against it while they load, and AnimationTreeManager is
      * registered before EntityManager for the same reason — every
      * character template resolves its animation tree while it loads.
+     * NpcManager is registered last, since every NPC resolves its entity
+     * template against EntityManager while it loads.
      */
 
     @Override
@@ -26,5 +29,6 @@ public class EntityPipeline extends PipelinePackage {
         create(AnimationTreeManager.class);
         create(EntityManager.class);
         create(PlayerManager.class);
+        create(NpcManager.class);
     }
 }

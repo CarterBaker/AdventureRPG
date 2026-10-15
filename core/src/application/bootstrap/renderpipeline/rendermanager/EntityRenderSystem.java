@@ -17,9 +17,11 @@ import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -29,10 +31,11 @@ public class EntityRenderSystem extends SystemPackage {
     /*
      * The single entry point for drawing animated characters. Resets the shared
      * skinned buffers once per frame, then pushCharacter() builds a character's
-     * model matrix from its footprint, yaw and size, packs its appearance into
-     * one instance row, and submits its body, head parts and worn equipment as
-     * skinned and rigid draws. Runtime code never touches the skinned buffers
-     * directly.
+     * model matrix from its footprint, yaw and size, placed relative to the
+     * chunk the viewer stands in across the world's wrap, packs its appearance
+     * into one instance row, and submits its body, head parts and worn
+     * equipment as skinned and rigid draws. Runtime code never touches the
+     * skinned buffers directly.
      */
 
     // Internal
@@ -98,6 +101,7 @@ public class EntityRenderSystem extends SystemPackage {
     public void pushCharacter(
             EntityInstance entity,
             boolean hideHead,
+            long viewerChunkCoordinate,
             FBOInstance targetFbo,
             WindowInstance window) {
 
@@ -108,7 +112,7 @@ public class EntityRenderSystem extends SystemPackage {
         MaterialInstance material = entityData.getCharacterMaterial();
         Matrix4[] skinningMatrices = entity.getAnimationStateHandle().getSkinningMatrices();
 
-        composeModelMatrix(entity);
+        composeModelMatrix(entity, viewerChunkCoordinate);
         resolveAppearance(entity, hideHead);
 
         if (!entity.hasAppearance()) {
@@ -251,20 +255,24 @@ public class EntityRenderSystem extends SystemPackage {
 
     // Model Matrix \\
 
-    private void composeModelMatrix(EntityInstance entity) {
+    private void composeModelMatrix(EntityInstance entity, long viewerChunkCoordinate) {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         Vector3 position = entity.getWorldPositionStruct().getPosition();
         Vector3 size = entity.getSize();
         float scale = size.y / entity.getEntityData().getModelHeight();
+        long delta = WorldWrapUtility.unwrapToGridCoordinate(
+                entity.getWorldHandle(),
+                viewerChunkCoordinate,
+                entity.getWorldPositionStruct().getChunkCoordinate());
 
         // Center the footprint on the entity's own bounding box, exactly like
         // PlayerManager centers its eye position — position is the box's
         // min corner, not its center.
         positionScratch.set(
-                position.x + size.x * 0.5f,
+                Coordinate2Long.unpackX(delta) * EngineSetting.CHUNK_SIZE + position.x + size.x * 0.5f,
                 position.y + state.getGroundOffset(),
-                position.z + size.z * 0.5f);
+                Coordinate2Long.unpackY(delta) * EngineSetting.CHUNK_SIZE + position.z + size.z * 0.5f);
         rotationScratch.set(0f, state.getBodyYaw(), 0f);
         scaleScratch.set(scale, scale, scale);
 

@@ -9,6 +9,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
+import application.bootstrap.worldpipeline.structure.StructureSpawnStruct;
 import application.bootstrap.worldpipeline.structure.StructureSurfaceType;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
@@ -17,6 +18,7 @@ import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemStruct;
+import application.bootstrap.worldpipeline.worldspawn.WorldSpawnStruct;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -37,9 +39,11 @@ class StructureStampBranch extends BranchPackage {
      * orientation and sub-block mask alike, a foundation is filled from its
      * lowest solid blocks down to the ground, or underground down through any
      * open cave to the first solid block, and every place it comes furnished at whose item corner falls in the
-     * chunk draws its furniture as a world item. Every roll is salted by the
-     * world, the structure and its anchor, so a structure furnishes alike in
-     * every chunk and every session.
+     * chunk draws its furniture as a world item, carrying the loot table a
+     * container found there is filled from. Every spot it is lived at whose
+     * block falls in the chunk records its NPC as a world spawn. Every roll is
+     * salted by the world, the structure and its anchor, so a structure
+     * furnishes and is lived in alike in every chunk and every session.
      */
 
     // Internal
@@ -107,6 +111,7 @@ class StructureStampBranch extends BranchPackage {
                 (int) anchorX, (int) anchorZ);
 
         furnish(subChunks, structureHandle, relativeX, relativeZ, anchorY, quarterTurns, placementSeed);
+        populate(subChunks, structureHandle, relativeX, relativeZ, anchorY, quarterTurns, placementSeed);
     }
 
     // Terrain \\
@@ -294,7 +299,50 @@ class StructureStampBranch extends BranchPackage {
             int orientation = itemRotationBufferSystem.turnOrientation(slot.getOrientation(), quarterTurns);
 
             subChunks[subY / subVoxelResolution / chunkSize].getWorldItemPaletteHandle().addItem(new WorldItemStruct(
-                    Coordinate4Long.pack((int) subX, subY, (int) subZ, orientation), item.getItemID(), null));
+                    Coordinate4Long.pack((int) subX, subY, (int) subZ, orientation),
+                    item.getItemID(),
+                    slot.getLootTableID(),
+                    null));
+        }
+    }
+
+    // Residents \\
+
+    // Every spot lived in by its chance records its NPC as a world spawn where its turned block falls
+    private void populate(
+            SubChunkInstance[] subChunks,
+            StructureHandle structureHandle,
+            long relativeX,
+            long relativeZ,
+            int anchorY,
+            int quarterTurns,
+            long placementSeed) {
+
+        ObjectArrayList<StructureSpawnStruct> spawns = structureHandle.getSpawns();
+        int worldHeightBlocks = EngineSetting.WORLD_HEIGHT * chunkSize;
+
+        for (int i = 0; i < spawns.size(); i++) {
+
+            StructureSpawnStruct spawn = spawns.get(i);
+
+            long localX = relativeX
+                    + StructurePlacementUtility.rotateX(spawn.getOffsetX(), spawn.getOffsetZ(), quarterTurns);
+            long localZ = relativeZ
+                    + StructurePlacementUtility.rotateZ(spawn.getOffsetX(), spawn.getOffsetZ(), quarterTurns);
+            int worldY = anchorY + spawn.getOffsetY();
+
+            if (localX < 0 || localX >= chunkSize || localZ < 0 || localZ >= chunkSize
+                    || worldY < 0 || worldY >= worldHeightBlocks)
+                continue;
+
+            long spawnSeed = BiomeFieldUtility.hashCell(
+                    placementSeed ^ EngineSetting.STRUCTURE_SPAWN_SALT, i, spawn.getNameSeed());
+
+            if (BiomeFieldUtility.hash01(spawnSeed) >= spawn.getChance())
+                continue;
+
+            subChunks[worldY / chunkSize].addWorldSpawn(
+                    new WorldSpawnStruct((int) localX, worldY, (int) localZ, spawn.getNpcID()));
         }
     }
 }
