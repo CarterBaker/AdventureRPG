@@ -194,6 +194,7 @@ public class EngineSetting {
     public static final String MATERIAL_PATH = "materials";
     public static final String MENU_PATH = "menus";
     public static final String MESH_PATH = "mesh";
+    public static final String MOVESET_PATH = "movesets";
     public static final String PASS_PATH = "processingpasses";
     public static final String RIG_PATH = "rigs";
     public static final String ROAD_PATH = "roads";
@@ -1939,21 +1940,48 @@ public class EngineSetting {
     // Combat
     public static final float AIM_RAISE_SECONDS = 0.3f;
     public static final float ARMOR_MITIGATION_SCALE = 50f;
+    public static final float ATTACK_ARC_MAX = 180f;
+    public static final int ATTACK_ARC_RAYS = 5;
+    public static final float ATTACK_BUFFER_SECONDS = 0.3f;
+    public static final float ATTACK_CHAIN_FRACTION = 0.5f;
+    public static final float ATTACK_COMMIT_SECONDS = 0.12f;
     public static final float BLOCK_ARC_COSINE = 0.5f;
-    public static final float BLOCK_MITIGATION_BASE = 0.3f;
     public static final float BLOCK_MITIGATION_MAX = 0.9f;
     public static final float BLOCK_MITIGATION_PER_ARMOR = 0.05f;
     public static final float BLOCK_MITIGATION_PER_WEIGHT = 0.06f;
-    public static final float BLOCK_RAISE_SECONDS = 0.2f;
+    public static final float DEFAULT_ATTACK_ARC = 0f;
+    public static final float DEFAULT_ATTACK_DAMAGE = 1f;
+    public static final float DEFAULT_ATTACK_REACH = 1f;
+    public static final float DEFAULT_ATTACK_STRIKE = 0.5f;
+    public static final float DEFAULT_GUARD_CATCH = 0.5f;
+    public static final float DEFAULT_GUARD_RAISE_SECONDS = 0.14f;
+    public static final float DEFAULT_GUARD_SHIFT_SECONDS = 0.1f;
     public static final float GESTURE_IMPACT = 0.5f;
+    public static final float GUARD_LOOK_SCALE = 0.4f;
     public static final float KNOCKBACK_SPEED = 4f;
     public static final float PICK_UP_GESTURE_SECONDS = 0.4f;
     public static final float PLACE_GESTURE_SECONDS = 0.3f;
+    public static final float REACTION_IMPACT = 1f;
+    public static final float RECOIL_SECONDS = 0.4f;
+    public static final float STAGGER_SECONDS = 0.35f;
     public static final float SWING_BASE_SECONDS = 0.4f;
     public static final float SWING_DAMAGE_PER_WEIGHT = 1.5f;
     public static final float SWING_IMPACT = 0.45f;
     public static final float SWING_MAX_SECONDS = 1f;
     public static final float SWING_SECONDS_PER_WEIGHT = 0.06f;
+    public static final String UNARMED_MOVESET = "Unarmed";
+
+    // Combat Gestures — swipes are measured in mouse pixels, whatever the look sensitivity
+    public static final float GESTURE_READ_LOOK_SCALE = 0f;
+    public static final float GESTURE_READ_SECONDS = 0.12f;
+    public static final float GESTURE_REST_SECONDS = 0.15f;
+    public static final float GESTURE_SWIPE_DECAY_SECONDS = 0.08f;
+    public static final float GESTURE_SWIPE_THRESHOLD = 22f;
+    public static final float LOOK_SCALE_FULL = 1f;
+
+    // Movesets
+    public static final String ITEM_MOVESET_NONE = "";
+    public static final short MOVESET_NONE = 0;
 
     // Throwing
     public static final float THROW_ARM_MASS = 1.5f;

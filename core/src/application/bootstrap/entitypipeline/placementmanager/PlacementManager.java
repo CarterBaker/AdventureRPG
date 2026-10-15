@@ -37,8 +37,10 @@ public class PlacementManager extends ManagerPackage {
      * the face it was hit on, so items stack into piles — containers included,
      * unless the container can open, since activating one that can opens it in
      * the runtime, never here. Otherwise the primary action swings whatever is
-     * held through CombatManager, whose strike lands back here on a block
-     * through strikeBlock(), and the activate action places the held item — a
+     * held through CombatManager — a weapon or bare hands attack there from
+     * the side the entity's input asks for instead — whose strike lands back
+     * here on a block through strikeBlock(), and the activate action places
+     * the held item — a
      * block piece as a sub-block, a seed into the ground as a tree of its
      * species, a sower or nurturer onto the block as the covering it tends,
      * anything else as a world item. A vehicle's
@@ -48,8 +50,9 @@ public class PlacementManager extends ManagerPackage {
      * the deck, and the activate action sets the held item down aboard, unless
      * it is a block piece or the cargo is a container that can open.
      * findTargetVehicle() is the one place that decides whether a vehicle
-     * stands in front. Nothing happens here while a stance is held: an aim's
-     * throw and a guard belong to CombatManager. findTargetItem() is the one
+     * stands in front. Nothing happens here while the entity is caught up in a
+     * fight — attacking, reeling, aiming or guarding all belong to
+     * CombatManager. findTargetItem() is the one
      * place that decides which world item an entity is aiming at, and where on
      * it.
      */
@@ -119,7 +122,7 @@ public class PlacementManager extends ManagerPackage {
 
         timeSinceLastPlacement += internal.getDeltaTime();
 
-        if (!(primaryAction || activateAction) || entity.getEntityActionHandle().isHolding())
+        if (!(primaryAction || activateAction) || combatManager.isEngaged(entity))
             return;
 
         if (timeSinceLastPlacement < placementInterval)

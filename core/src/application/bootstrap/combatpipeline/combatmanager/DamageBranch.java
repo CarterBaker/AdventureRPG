@@ -1,5 +1,6 @@
 package application.bootstrap.combatpipeline.combatmanager;
 
+import application.bootstrap.entitypipeline.entity.CombatDirection;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
@@ -14,18 +15,24 @@ class DamageBranch extends BranchPackage {
 
     /*
      * Applies a hit to an entity for CombatManager. A raised guard facing the
-     * blow catches part of it with whatever it is held up — anything blocks,
-     * bare hands included, and heavier or armored things block more — and
-     * softens the shove.
-     * Armor then turns part of the rest aside — each point of it counts for
-     * less the more there is — and what gets through comes off the entity's
-     * health and shoves it along the blow's horizontal direction. An entity
-     * brought to no health is defeated; for now defeat cuts its action short
-     * and restores it to full health where it stands.
+     * blow catches part of it — its moveset's share, more with whatever it is
+     * held up with, heavier or armored things adding more — and softens the
+     * shove. A blow from no side in particular, as a thrown item lands, meets
+     * any such guard; a weapon's blow from a side meets only a guard held
+     * toward that side's mirror, and one caught that way throws its attacker
+     * into recoil. A blow that gets past every guard staggers a target still
+     * winding up its own attack. Armor then turns part of the rest aside —
+     * each point of it counts for less the more there is — and what gets
+     * through comes off the entity's health and shoves it along the blow's
+     * horizontal direction. An entity brought to no health is defeated; for
+     * now defeat cuts its action short and restores it to full health where
+     * it stands.
      */
 
     // Internal
     private CombatManager combatManager;
+    private AttackBranch attackBranch;
+    private GuardBranch guardBranch;
 
     // Internal \\
 
@@ -34,6 +41,8 @@ class DamageBranch extends BranchPackage {
 
         // Internal
         this.combatManager = get(CombatManager.class);
+        this.attackBranch = get(AttackBranch.class);
+        this.guardBranch = get(GuardBranch.class);
     }
 
     // Damage \\
@@ -43,14 +52,40 @@ class DamageBranch extends BranchPackage {
         if (amount <= 0f)
             return;
 
+        land(target, amount, direction, isGuarding(target, direction) ? resolveGuard(target) : 0f);
+    }
+
+    void strike(
+            EntityInstance source,
+            EntityInstance target,
+            float amount,
+            Vector3 direction,
+            CombatDirection side) {
+
+        boolean caught = isGuarding(target, direction) && guardBranch.catches(target, side);
+
+        if (caught)
+            attackBranch.deflect(source);
+
+        if (amount <= 0f)
+            return;
+
+        land(target, amount, direction, caught ? resolveGuard(target) : 0f);
+    }
+
+    private void land(EntityInstance target, float amount, Vector3 direction, float guarded) {
+
         StatisticsHandle statisticsHandle = target.getStatisticsHandle();
-        float passed = 1f - resolveGuard(target, direction);
+        float passed = 1f - guarded;
         float armor = Math.max(0f, target.getStat(ItemStat.ARMOR));
         float dealt = amount * passed
                 * EngineSetting.ARMOR_MITIGATION_SCALE / (EngineSetting.ARMOR_MITIGATION_SCALE + armor);
         float health = Math.min(statisticsHandle.getHealth(), target.getMaxHealth()) - dealt;
 
         knockBack(target, direction, passed);
+
+        if (guarded <= 0f)
+            attackBranch.interrupt(target);
 
         if (health > 0f) {
             statisticsHandle.setHealth(health);
@@ -62,18 +97,21 @@ class DamageBranch extends BranchPackage {
 
     // Block \\
 
-    // The share of a blow a raised guard catches — none unless the guard is up and faces where the blow came from
-    private float resolveGuard(EntityInstance target, Vector3 direction) {
+    // True when the target's guard is up and faces where the blow came from
+    private boolean isGuarding(EntityInstance target, Vector3 direction) {
 
         if (target.getEntityActionHandle().getAction() != EntityAction.BLOCK
                 || !target.getEntityActionHandle().isRaised())
-            return 0f;
+            return false;
 
-        if (!isFacing(target, direction))
-            return 0f;
+        return isFacing(target, direction);
+    }
+
+    // The share of a blow a raised guard catches — its moveset's own, plus the heft and armor it is held up with
+    private float resolveGuard(EntityInstance target) {
 
         ItemInstance guardItem = combatManager.resolveGuardItem(target);
-        float guard = EngineSetting.BLOCK_MITIGATION_BASE;
+        float guard = guardBranch.resolveCatch(target);
 
         if (guardItem != null)
             guard += guardItem.getTotalWeight() * EngineSetting.BLOCK_MITIGATION_PER_WEIGHT

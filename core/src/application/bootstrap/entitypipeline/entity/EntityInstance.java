@@ -19,7 +19,8 @@ public class EntityInstance extends InstancePackage {
      * Runtime entity spawned by EntityManager, holding its template and all
      * per-instance state. setWeight() keeps weight and body build in step,
      * updateAnimation() is the one path that advances its animation tree,
-     * playing whatever action its hands are in over its movement, getStat()
+     * playing whatever action its hands are in over its movement — a
+     * moveset's own clip where the action carries one — getStat()
      * totals a statistic from base value and gear, and getEyePosition() is
      * the one place its eye — where it aims from — is placed.
      */
@@ -126,7 +127,8 @@ public class EntityInstance extends InstancePackage {
         animationStateHandle.update(
                 entityStateHandle.getMovementState(),
                 entityActionHandle.getAction(),
-                entityActionHandle.getProgress(),
+                entityActionHandle.getClip(),
+                entityActionHandle.getPhase(),
                 entityActionHandle.getSequence(),
                 deltaTime);
     }

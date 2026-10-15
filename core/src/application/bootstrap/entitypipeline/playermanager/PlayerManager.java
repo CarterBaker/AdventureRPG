@@ -1,13 +1,13 @@
 package application.bootstrap.entitypipeline.playermanager;
 
 import application.bootstrap.combatpipeline.combatmanager.CombatManager;
-import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
+import application.bootstrap.entitypipeline.player.PlayerGestureStruct;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleControlSystem;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
@@ -45,8 +45,12 @@ public class PlayerManager extends ManagerPackage {
      * despawnPlayer() mirrors spawnPlayer(), forgetting every per-window entry
      * and taking the player out of the world when its window closes.
      * After movement the player's input reaches the world through
-     * PlacementManager and its stances — aiming and blocking — through
-     * CombatManager; a raised guard holds the player to a walk. Aboard a
+     * PlacementManager and its fighting — attacks, aiming and blocking —
+     * through CombatManager, the side of each read from the mouse by
+     * PlayerGestureSystem; a raised guard or a stagger holds the player to a
+     * walk and an attack keeps it from sprinting. While a gesture reads, the
+     * view holds still, and behind a raised guard it turns slower, so a
+     * swipe steers the weapon instead of the camera. Aboard a
      * vehicle the view turns with the deck, a player at the helm steers with
      * its sideways input, and the activate binding works the vehicle control
      * the player faces before it reaches PlacementManager. A teleported
@@ -75,6 +79,7 @@ public class PlayerManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<CameraInstance> windowID2Camera;
     private Int2ObjectOpenHashMap<RawInputHandle> windowID2RawInput;
     private Int2ObjectOpenHashMap<WindowInstance> windowID2Window;
+    private Int2ObjectOpenHashMap<PlayerGestureStruct> windowID2Gesture;
     private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
     private Int2BooleanOpenHashMap windowID2FreeCamera;
 
@@ -108,6 +113,7 @@ public class PlayerManager extends ManagerPackage {
     protected void create() {
 
         this.playerInputSystem = create(PlayerInputSystem.class);
+        create(PlayerGestureSystem.class);
         this.internalBufferSystem = create(PlayerBufferSystem.class);
         this.placementManager = create(PlacementManager.class);
 
@@ -115,6 +121,7 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2Camera = new Int2ObjectOpenHashMap<>();
         this.windowID2RawInput = new Int2ObjectOpenHashMap<>();
         this.windowID2Window = new Int2ObjectOpenHashMap<>();
+        this.windowID2Gesture = new Int2ObjectOpenHashMap<>();
         this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
         this.windowID2FreeCamera = new Int2BooleanOpenHashMap();
 
@@ -179,6 +186,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2Camera.put(windowID, window.getActiveCamera());
         windowID2RawInput.put(windowID, rawInput);
         windowID2Window.put(windowID, window);
+        windowID2Gesture.put(windowID, new PlayerGestureStruct());
         windowID2VerifyPlayerPosition.put(windowID, true);
         windowID2FreeCamera.put(windowID, false);
         windowID2ZoomDistance.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
@@ -198,6 +206,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2Camera.remove(windowID);
         windowID2RawInput.remove(windowID);
         windowID2Window.remove(windowID);
+        windowID2Gesture.remove(windowID);
         windowID2VerifyPlayerPosition.remove(windowID);
         windowID2FreeCamera.remove(windowID);
         windowID2ZoomDistance.remove(windowID);
@@ -278,18 +287,23 @@ public class PlayerManager extends ManagerPackage {
             return;
         }
 
+        PlayerGestureStruct gesture = windowID2Gesture.get(windowID);
+
         if (windowID2CharacterPreview.get(windowID)) {
+            gesture.reset();
             updateCharacterPreview(windowID, player, camera);
             return;
         }
 
         turnWithDeck(player, camera);
 
-        if (windowID2Window.get(windowID).getMenuListHandle().isInputLocked())
+        if (windowID2Window.get(windowID).getMenuListHandle().isInputLocked()) {
+            gesture.reset();
             return;
+        }
 
         // Translate raw hardware → game intent before anything reads EntityInputHandle
-        playerInputSystem.translate(raw, player.getEntityInputHandle());
+        playerInputSystem.translate(raw, player.getEntityInputHandle(), gesture, combatManager.isArmed(player));
         player.getEntityInputHandle().setStrafe(isFirstPerson(windowID));
 
         if (windowID2FreeCamera.get(windowID)) {
@@ -602,9 +616,9 @@ public class PlayerManager extends ManagerPackage {
             return;
         }
 
-        if (input.isWalk() || player.getEntityActionHandle().getAction() == EntityAction.BLOCK)
+        if (input.isWalk() || combatManager.isSlowed(player))
             state.setMovementState(EntityState.WALKING);
-        else if (input.isSprint())
+        else if (input.isSprint() && !combatManager.isAttacking(player))
             state.setMovementState(EntityState.RUNNING);
         else
             state.setMovementState(EntityState.MOVING);
@@ -671,6 +685,21 @@ public class PlayerManager extends ManagerPackage {
 
     public CameraInstance getCameraForWindow(int windowID) {
         return windowID2Camera.get(windowID);
+    }
+
+    // How much of the mouse's travel turns the window's view — none while a gesture reads, less behind a guard
+    public float getLookScaleForWindow(int windowID) {
+
+        PlayerGestureStruct gesture = windowID2Gesture.get(windowID);
+        EntityInstance player = windowID2Player.get(windowID);
+
+        if (gesture == null || player == null)
+            return EngineSetting.LOOK_SCALE_FULL;
+
+        if (gesture.isReading())
+            return EngineSetting.GESTURE_READ_LOOK_SCALE;
+
+        return combatManager.isGuarding(player) ? EngineSetting.GUARD_LOOK_SCALE : EngineSetting.LOOK_SCALE_FULL;
     }
 
     public WorldPositionStruct getPlayerPositionForWindow(int windowID) {

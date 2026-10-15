@@ -126,6 +126,14 @@ public class ItemDefinitionHandle extends HandlePackage {
         return itemDefinitionData.getToolTier();
     }
 
+    public short getMovesetID() {
+        return itemDefinitionData.getMovesetID();
+    }
+
+    public boolean hasMoveset() {
+        return itemDefinitionData.hasMoveset();
+    }
+
     public int getStackSize() {
         return itemDefinitionData.getStackSize();
     }

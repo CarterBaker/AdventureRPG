@@ -18,6 +18,9 @@ public class EntityInputHandle extends HandlePackage {
      * activates what it faces or sets down what it holds. aimAction is the
      * moment an aim is raised and throwAction the moment a raised aim is let
      * fly; blockAction is held for as long as the guard stays up.
+     * attackAction is the moment a weapon attack is called for, from
+     * attackDirection, and guardDirection the side a guard is held toward —
+     * the player reads both from a mouse swipe, an AI sets them outright.
      */
 
     // Movement
@@ -36,6 +39,11 @@ public class EntityInputHandle extends HandlePackage {
     private boolean aimAction;
     private boolean throwAction;
     private boolean blockAction;
+    private boolean attackAction;
+
+    // Combat
+    private CombatDirection attackDirection;
+    private CombatDirection guardDirection;
 
     // Facing
     private Vector3 facingDirection;
@@ -44,6 +52,12 @@ public class EntityInputHandle extends HandlePackage {
 
     @Override
     protected void create() {
+
+        // Combat
+        this.attackDirection = CombatDirection.NEUTRAL;
+        this.guardDirection = CombatDirection.NEUTRAL;
+
+        // Facing
         this.facingDirection = new Vector3(0f, 0f, 1f);
     }
 
@@ -153,6 +167,30 @@ public class EntityInputHandle extends HandlePackage {
         blockAction = v;
     }
 
+    public boolean isAttackAction() {
+        return attackAction;
+    }
+
+    public void setAttackAction(boolean v) {
+        attackAction = v;
+    }
+
+    public CombatDirection getAttackDirection() {
+        return attackDirection;
+    }
+
+    public void setAttackDirection(CombatDirection direction) {
+        attackDirection = direction;
+    }
+
+    public CombatDirection getGuardDirection() {
+        return guardDirection;
+    }
+
+    public void setGuardDirection(CombatDirection direction) {
+        guardDirection = direction;
+    }
+
     public Vector3 getFacingDirection() {
         return facingDirection;
     }
@@ -183,6 +221,7 @@ public class EntityInputHandle extends HandlePackage {
         forward = back = left = right = false;
         jump = walk = sprint = strafe = false;
         primaryAction = activateAction = false;
-        aimAction = throwAction = blockAction = false;
+        aimAction = throwAction = blockAction = attackAction = false;
+        attackDirection = guardDirection = CombatDirection.NEUTRAL;
     }
 }

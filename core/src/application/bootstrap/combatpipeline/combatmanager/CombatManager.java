@@ -1,5 +1,7 @@
 package application.bootstrap.combatpipeline.combatmanager;
 
+import application.bootstrap.combatpipeline.movesetmanager.MovesetManager;
+import application.bootstrap.entitypipeline.entity.CombatDirection;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityActionHandle;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
@@ -22,30 +24,40 @@ public class CombatManager extends ManagerPackage {
      * Entity-agnostic combat. Every spawned entity is a combatant, and each
      * frame CombatManager advances every combatant's action and resolves it
      * the moment its effect lands: SwingBranch strikes with whatever is held,
-     * whether swung overhead or level as its tool type swings it, and
-     * ThrowBranch lets one held item fly. control() reads an entity's input
-     * each frame it is driven: an aim raises the held item and holds it back
-     * until the throw is called for, while letting the aim go or moving
-     * lowers it again; a guard stays up for as long as the entity holds it,
-     * with whatever is in hand or with bare hands. Any item swings and any
-     * item blocks. swing(), gesture() and control() are the only ways an action
-     * begins, and only while the hands are free — a heavier held item swings
-     * slower. findTarget() is the one place that decides which entity a ray
-     * meets, and damage() the one path health is lost, through DamageBranch.
-     * The player passes mouse input and an enemy would pass its own; the code
-     * path is the same.
+     * AttackBranch lands a weapon's attack, and ThrowBranch lets one held
+     * item fly. A weapon fights by the moveset its item names, and bare hands
+     * by the unarmed one: control() reads an entity's input each frame it is
+     * driven, starting the attack its moveset makes from the side the input
+     * asks for and raising a guard toward the side it holds it, which
+     * GuardBranch swings from side to side for as long as it stays up. A
+     * guard catches only a blow from the side it is held toward — the
+     * attack's mirror — and turns the attacker back into recoil. An item that
+     * is no weapon swings plainly through swing() instead, overhead or level
+     * as its tool type swings it, and a heavier one swings slower; any item
+     * can be thrown from a raised aim. swing(), gesture() and control() are
+     * the only ways an action begins, and only while the hands are free.
+     * findTarget() is the one place that decides which entity a ray meets,
+     * damage() and strike() the only paths health is lost, through
+     * DamageBranch. The player passes mouse input and an enemy would pass its
+     * own; the code path is the same.
      */
 
     // Internal
     private ToolTypeManager toolTypeManager;
+    private MovesetManager movesetManager;
 
     // Branches
     private SwingBranch swingBranch;
+    private AttackBranch attackBranch;
+    private GuardBranch guardBranch;
     private ThrowBranch throwBranch;
     private DamageBranch damageBranch;
 
     // Combatants
     private ObjectArrayList<EntityInstance> combatants;
+
+    // Movesets
+    private short unarmedMovesetID;
 
     // Targeting
     private float targetDistance;
@@ -57,6 +69,8 @@ public class CombatManager extends ManagerPackage {
 
         // Branches
         this.swingBranch = create(SwingBranch.class);
+        this.attackBranch = create(AttackBranch.class);
+        this.guardBranch = create(GuardBranch.class);
         this.throwBranch = create(ThrowBranch.class);
         this.damageBranch = create(DamageBranch.class);
 
@@ -67,6 +81,12 @@ public class CombatManager extends ManagerPackage {
     @Override
     protected void get() {
         this.toolTypeManager = get(ToolTypeManager.class);
+        this.movesetManager = get(MovesetManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        this.unarmedMovesetID = movesetManager.getMovesetIDFromMovesetName(EngineSetting.UNARMED_MOVESET);
     }
 
     // Update \\
@@ -91,6 +111,7 @@ public class CombatManager extends ManagerPackage {
 
         switch (action) {
             case SWING, CHOP -> swingBranch.strike(entity);
+            case ATTACK -> attackBranch.strike(entity);
             case THROW -> throwBranch.release(entity);
             default -> {
             }
@@ -111,9 +132,10 @@ public class CombatManager extends ManagerPackage {
 
     // Actions \\
 
+    // A plain swing with an item that is no weapon — a weapon or bare hands attack through control() instead
     public boolean swing(EntityInstance entity) {
 
-        if (!isReady(entity))
+        if (!isReady(entity) || isArmed(entity))
             return false;
 
         float duration = Math.min(
@@ -127,12 +149,7 @@ public class CombatManager extends ManagerPackage {
     // A tool its type swings level sweeps across from the side; anything else comes down overhead
     private EntityAction resolveSwingAction(EntityInstance entity) {
 
-        ItemInstance held = entity.getInventoryHandle().getMainHand();
-
-        if (held == null)
-            return EntityAction.SWING;
-
-        short toolTypeID = held.getItemDefinitionHandle().getToolTypeID();
+        short toolTypeID = entity.getInventoryHandle().getMainHand().getItemDefinitionHandle().getToolTypeID();
 
         if (toolTypeID == EngineSetting.TOOL_NONE)
             return EntityAction.SWING;
@@ -172,18 +189,25 @@ public class CombatManager extends ManagerPackage {
         switch (actionHandle.getAction()) {
             case NONE -> raiseStance(entity, input, actionHandle);
             case AIM -> controlAim(entity, input, actionHandle);
-            case BLOCK -> controlGuard(input, actionHandle);
+            case BLOCK -> guardBranch.control(entity, input);
+            case ATTACK -> attackBranch.control(entity, input);
+            case RECOIL, STAGGER -> attackBranch.queue(entity, input);
             default -> {
             }
         }
     }
 
+    // Free hands raise a guard, start the attack asked for now or still waiting in the queue, or raise an aim
     private void raiseStance(EntityInstance entity, EntityInputHandle input, EntityActionHandle actionHandle) {
 
         InventoryHandle inventoryHandle = entity.getInventoryHandle();
 
         if (input.isBlockAction())
-            actionHandle.hold(EntityAction.BLOCK, EngineSetting.BLOCK_RAISE_SECONDS);
+            guardBranch.raise(entity, input.getGuardDirection());
+        else if (input.isAttackAction())
+            attackBranch.attack(entity, input.getAttackDirection());
+        else if (actionHandle.isQueued())
+            attackBranch.attack(entity, actionHandle.getQueuedDirection());
         else if (input.isAimAction() && inventoryHandle.hasMainHand())
             actionHandle.hold(EntityAction.AIM, EngineSetting.AIM_RAISE_SECONDS);
     }
@@ -200,10 +224,23 @@ public class CombatManager extends ManagerPackage {
             actionHandle.begin(EntityAction.THROW, EngineSetting.THROW_SECONDS, EngineSetting.THROW_RELEASE);
     }
 
-    private void controlGuard(EntityInputHandle input, EntityActionHandle actionHandle) {
+    // Movesets \\
 
-        if (!input.isBlockAction())
-            actionHandle.release();
+    // The moveset an entity attacks with — its main hand's, bare hands' when that hand is empty, MOVESET_NONE when
+    // it holds something that is no weapon
+    short resolveAttackMoveset(EntityInstance entity) {
+
+        ItemInstance held = entity.getInventoryHandle().getMainHand();
+
+        return held != null ? held.getItemDefinitionHandle().getMovesetID() : unarmedMovesetID;
+    }
+
+    // The moveset an entity guards with — its weapon's, else bare hands'
+    short resolveGuardMoveset(EntityInstance entity) {
+
+        short movesetID = resolveAttackMoveset(entity);
+
+        return movesetID != EngineSetting.MOVESET_NONE ? movesetID : unarmedMovesetID;
     }
 
     // The item a guard is raised with — the off hand's, else the main hand's, null when it guards bare-handed
@@ -219,6 +256,41 @@ public class CombatManager extends ManagerPackage {
         ItemInstance held = entity.getInventoryHandle().getMainHand();
 
         return held != null ? held.getTotalWeight() : 0f;
+    }
+
+    // State \\
+
+    // True while an entity attacks by a moveset — a weapon in hand, or nothing at all
+    public boolean isArmed(EntityInstance entity) {
+        return resolveAttackMoveset(entity) != EngineSetting.MOVESET_NONE;
+    }
+
+    // True while an entity is caught up in a fight — attacking, reeling, or holding a stance — so its hands are not
+    // free for the world
+    public boolean isEngaged(EntityInstance entity) {
+
+        EntityActionHandle actionHandle = entity.getEntityActionHandle();
+
+        return actionHandle.isHolding() || switch (actionHandle.getAction()) {
+            case ATTACK, RECOIL, STAGGER -> true;
+            default -> false;
+        };
+    }
+
+    // True while an entity is held to a walk — behind its guard, or thrown off balance
+    public boolean isSlowed(EntityInstance entity) {
+        return switch (entity.getEntityActionHandle().getAction()) {
+            case BLOCK, RECOIL, STAGGER -> true;
+            default -> false;
+        };
+    }
+
+    public boolean isAttacking(EntityInstance entity) {
+        return entity.getEntityActionHandle().getAction() == EntityAction.ATTACK;
+    }
+
+    public boolean isGuarding(EntityInstance entity) {
+        return entity.getEntityActionHandle().getAction() == EntityAction.BLOCK;
     }
 
     // Targeting \\
@@ -286,7 +358,18 @@ public class CombatManager extends ManagerPackage {
 
     // Damage \\
 
+    // A blow from no side in particular — any raised guard facing it catches its share
     public void damage(EntityInstance target, float amount, Vector3 direction) {
         damageBranch.apply(target, amount, direction);
+    }
+
+    // A weapon's blow from a side of the source — only a guard held toward its mirror catches it
+    void strike(
+            EntityInstance source,
+            EntityInstance target,
+            float amount,
+            Vector3 direction,
+            CombatDirection side) {
+        damageBranch.strike(source, target, amount, direction, side);
     }
 }

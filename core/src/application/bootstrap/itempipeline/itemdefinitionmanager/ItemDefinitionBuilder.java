@@ -2,6 +2,7 @@ package application.bootstrap.itempipeline.itemdefinitionmanager;
 
 import java.io.File;
 
+import application.bootstrap.combatpipeline.movesetmanager.MovesetManager;
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
@@ -54,7 +55,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * across, so a block or an item anywhere in its way keeps it shut. An item
      * without a display name is titled from its local name split into words.
      * A tool names its tool type, whose model it is drawn with unless it names
-     * its own mesh, and the highest break tier it can break. A stackable item
+     * its own mesh, and the highest break tier it can break. A weapon names the
+     * moveset it is wielded with, loaded on demand. A stackable item
      * holds up to its stack size in one item, which a container cannot. An
      * item's "actions" each name a "trigger", optionally the item held "with"
      * it, whether it "consumes" one of that, and the model "parts" it must be
@@ -74,6 +76,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private MaterialManager materialManager;
     private SubVoxelManager subVoxelManager;
     private ToolTypeManager toolTypeManager;
+    private MovesetManager movesetManager;
     private CoveringManager coveringManager;
 
     // Directory
@@ -97,6 +100,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
         this.materialManager = get(MaterialManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
         this.toolTypeManager = get(ToolTypeManager.class);
+        this.movesetManager = get(MovesetManager.class);
         this.coveringManager = get(CoveringManager.class);
     }
 
@@ -144,6 +148,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
         short toolTypeID = parseToolType(itemArpg);
         int toolTier = parseToolTier(itemArpg, toolTypeID, itemName);
+        short movesetID = parseMoveset(itemArpg);
         int stackSize = parseStackSize(itemArpg, itemName);
 
         String meshPath = resolveMeshPath(itemArpg, toolTypeID, itemName);
@@ -195,6 +200,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 materialID,
                 toolTypeID,
                 toolTier,
+                movesetID,
                 stackSize,
                 EngineSetting.BLOCK_PIECE_NONE,
                 actions,
@@ -279,6 +285,18 @@ class ItemDefinitionBuilder extends BuilderPackage {
             throwException("Item '" + itemName + "' declares a negative \"tool_tier\".");
 
         return toolTier;
+    }
+
+    // Combat \\
+
+    private short parseMoveset(ArpgObjectStruct itemArpg) {
+
+        String movesetName = ArpgUtility.getString(itemArpg, "moveset", EngineSetting.ITEM_MOVESET_NONE);
+
+        if (movesetName.isEmpty())
+            return EngineSetting.MOVESET_NONE;
+
+        return movesetManager.getMovesetIDFromMovesetName(movesetName);
     }
 
     // Stacking \\

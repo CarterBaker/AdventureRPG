@@ -7,6 +7,7 @@ import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import engine.assets.camera.CameraInstance;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 
 public class InputSystem extends SystemPackage {
@@ -14,7 +15,9 @@ public class InputSystem extends SystemPackage {
     /*
      * Runtime input bridge for this context. Owns the context's RawInputHandle,
      * refreshed from InputManager each frame, and drives camera rotation and
-     * the player's facing direction. Movement bindings are translated by
+     * the player's facing direction. The view turns by as much of the mouse's
+     * travel as PlayerManager allows, so a combat swipe steers the weapon
+     * instead of the camera. Movement bindings are translated by
      * PlayerInputSystem inside PlayerManager.
      */
 
@@ -25,11 +28,15 @@ public class InputSystem extends SystemPackage {
     // Raw input — owned here, passed to PlayerManager at spawn
     private RawInputHandle rawInputHandle;
 
+    // Scratch
+    private Vector2 lookScratch;
+
     // Internal \\
 
     @Override
     protected void create() {
         this.rawInputHandle = create(RawInputHandle.class);
+        this.lookScratch = new Vector2();
     }
 
     @Override
@@ -60,7 +67,8 @@ public class InputSystem extends SystemPackage {
         CameraInstance camera = playerManager.getCameraForWindow(windowID);
         if (camera == null)
             return;
-        camera.setRotation(bootstrapInput.getMouseDelta(context.getWindow()));
+        lookScratch.set(bootstrapInput.getMouseDelta(context.getWindow()));
+        camera.setRotation(lookScratch.multiply(playerManager.getLookScaleForWindow(windowID)));
     }
 
     private void writeFacingDirection(int windowID) {

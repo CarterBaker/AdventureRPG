@@ -20,9 +20,12 @@ public class AnimationStateHandle extends HandlePackage {
      * from the bind pose, stacks override and additive layers through bone
      * masks, and writes the per-bone skinning matrices rendering consumes. A
      * layer with a node for the entity's current action plays it in place of
-     * its state node, its phase pinned to the action's progress so a swing's
+     * its state node, its phase pinned to the action's phase so a swing's
      * strike always lands on the strike frame; a new action on the node
-     * already playing fades in from the pose it left. All arrays are
+     * already playing fades in from the pose it left. An action carrying a
+     * moveset clip made for the tree's rig plays that clip in its node's
+     * place, and the layer fades out of it from a captured pose, so a weapon
+     * brings its own moves to any tree that maps the action. All arrays are
      * allocated once in constructor(), so updates never allocate.
      */
 
@@ -44,10 +47,12 @@ public class AnimationStateHandle extends HandlePackage {
     private boolean[] layerCaptured;
     private float[][] layerNodePhases;
 
-    // Actions — per layer, whether its current node follows the action, and the action it last followed
+    // Actions — per layer, whether its current node follows the action, the action it last followed, and the
+    // moveset clip its current node plays in place of its own
     private boolean[] layerActionDriven;
     private int[] layerActionSequences;
-    private float actionProgress;
+    private AnimationClipHandle[] layerMoveClips;
+    private float actionPhase;
 
     // Layer Pose — the offsets each layer last produced, per bone
     private Vector3[][] layerPositions;
@@ -114,6 +119,7 @@ public class AnimationStateHandle extends HandlePackage {
         // Actions
         this.layerActionDriven = new boolean[layerCount];
         this.layerActionSequences = new int[layerCount];
+        this.layerMoveClips = new AnimationClipHandle[layerCount];
 
         // Layer Pose and Capture
         this.layerPositions = new Vector3[layerCount][boneCount];
@@ -207,11 +213,13 @@ public class AnimationStateHandle extends HandlePackage {
     public void update(
             EntityState movementState,
             EntityAction action,
-            float actionProgress,
+            AnimationClipHandle actionClip,
+            float actionPhase,
             int actionSequence,
             float deltaTime) {
 
-        this.actionProgress = actionProgress;
+        this.actionPhase = actionPhase;
+        AnimationClipHandle moveClip = resolveMoveClip(actionClip);
 
         for (int l = 0; l < animationTreeHandle.getLayerCount(); l++) {
 
@@ -219,7 +227,7 @@ public class AnimationStateHandle extends HandlePackage {
             layerActionDriven[l] = layer.hasActionNode(action.ordinal());
 
             if (layerActionDriven[l])
-                resolveActionNode(l, layer.getActionNode(action.ordinal()), actionSequence, deltaTime);
+                resolveActionNode(l, layer.getActionNode(action.ordinal()), moveClip, actionSequence, deltaTime);
             else
                 resolveLayerNode(l, movementState.ordinal(), deltaTime);
 
@@ -258,8 +266,18 @@ public class AnimationStateHandle extends HandlePackage {
         layerActivations[layerIndex] = Math.min(1f, layerActivations[layerIndex] + fadeStep);
     }
 
+    // A moveset clip plays only on the rig it was made for
+    private AnimationClipHandle resolveMoveClip(AnimationClipHandle actionClip) {
+        return actionClip != null && actionClip.getRigHandle() == rigHandle ? actionClip : null;
+    }
+
     // An action takes its node at once; a fresh action on the node already playing fades in from where it left
-    private void resolveActionNode(int layerIndex, int actionNode, int actionSequence, float deltaTime) {
+    private void resolveActionNode(
+            int layerIndex,
+            int actionNode,
+            AnimationClipHandle moveClip,
+            int actionSequence,
+            float deltaTime) {
 
         AnimationLayerStruct layer = animationTreeHandle.getLayer(layerIndex);
         float fadeStep = layer.getBlendDuration() > 0f ? deltaTime / layer.getBlendDuration() : 1f;
@@ -271,6 +289,7 @@ public class AnimationStateHandle extends HandlePackage {
         else if (actionSequence != layerActionSequences[layerIndex])
             restartNode(layerIndex, actionNode);
 
+        layerMoveClips[layerIndex] = moveClip;
         layerActionSequences[layerIndex] = actionSequence;
         layerPendingNodes[layerIndex] = EngineSetting.INDEX_NOT_FOUND;
         layerActivations[layerIndex] = Math.min(1f, layerActivations[layerIndex] + fadeStep);
@@ -306,7 +325,7 @@ public class AnimationStateHandle extends HandlePackage {
         int outgoingNode = layerCurrentNodes[layerIndex];
         float blendDuration = crossFade ? layer.getTransitionBlend(outgoingNode, targetNode) : 0f;
 
-        if (blendDuration > 0f && isLayerBlending(layerIndex))
+        if (blendDuration > 0f && (isLayerBlending(layerIndex) || layerMoveClips[layerIndex] != null))
             captureLayer(layerIndex);
         else {
             layerPreviousNodes[layerIndex] = blendDuration > 0f ? outgoingNode : EngineSetting.INDEX_NOT_FOUND;
@@ -316,6 +335,7 @@ public class AnimationStateHandle extends HandlePackage {
         layerNodePhases[layerIndex][targetNode] = resolveEntryPhase(layerIndex, outgoingNode, targetNode);
         layerCurrentNodes[layerIndex] = targetNode;
         layerPendingNodes[layerIndex] = EngineSetting.INDEX_NOT_FOUND;
+        layerMoveClips[layerIndex] = null;
         layerBlendElapsed[layerIndex] = 0f;
         layerBlendDurations[layerIndex] = blendDuration;
     }
@@ -358,7 +378,9 @@ public class AnimationStateHandle extends HandlePackage {
             return;
 
         if (layerActionDriven[layerIndex])
-            layerNodePhases[layerIndex][layerCurrentNodes[layerIndex]] = actionProgress;
+            layerNodePhases[layerIndex][layerCurrentNodes[layerIndex]] = actionPhase;
+        else if (layerMoveClips[layerIndex] != null)
+            advanceMoveClip(layerIndex, deltaTime);
         else
             advanceNode(layerIndex, layerCurrentNodes[layerIndex], deltaTime);
 
@@ -392,6 +414,16 @@ public class AnimationStateHandle extends HandlePackage {
         layerNodePhases[layerIndex][nodeIndex] = node.isLooping()
                 ? phase - (float) Math.floor(phase)
                 : Math.min(phase, 1f);
+    }
+
+    // A moveset clip left playing once its action ends runs on to its last frame at its own pace
+    private void advanceMoveClip(int layerIndex, float deltaTime) {
+
+        int nodeIndex = layerCurrentNodes[layerIndex];
+
+        layerNodePhases[layerIndex][nodeIndex] = Math.min(
+                1f,
+                layerNodePhases[layerIndex][nodeIndex] + deltaTime / layerMoveClips[layerIndex].getDuration());
     }
 
     // A parameter past either end of a rate-scaled blend space plays its edge clip faster or slower in proportion
@@ -561,6 +593,11 @@ public class AnimationStateHandle extends HandlePackage {
 
         AnimationNodeStruct node = animationTreeHandle.getLayer(layerIndex).getNode(nodeIndex);
         float phase = layerNodePhases[layerIndex][nodeIndex];
+
+        if (nodeIndex == layerCurrentNodes[layerIndex] && layerMoveClips[layerIndex] != null) {
+            sampleClip(layerMoveClips[layerIndex], phase, boneIndex, outPosition, outRotation, outScale);
+            return;
+        }
 
         resolveBracket(node);
         sampleClip(node.getClip(bracketLow), phase, boneIndex, outPosition, outRotation, outScale);

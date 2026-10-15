@@ -18,7 +18,8 @@ public class ItemDefinitionData extends DataPackage {
      * its model without the lid, drawn in the world while it stands open, and
      * a pocket carries the box of walls its space is shown in, drawn only in
      * the inventory's menus. A tool names the tool type it is and the highest
-     * break tier it can break; a stackable item holds up to its stack size in
+     * break tier it can break; a weapon names the moveset it is wielded with;
+     * a stackable item holds up to its stack size in
      * one item; a block piece names the block it builds. An item may carry
      * actions that turn it into another item where it stands, and may be
      * picked up as another item, as an open door is picked up shut. A seed
@@ -61,6 +62,9 @@ public class ItemDefinitionData extends DataPackage {
     private final short toolTypeID;
     private final int toolTier;
 
+    // Combat — the moveset the item is wielded with, MOVESET_NONE for none
+    private final short movesetID;
+
     // Stacking
     private final int stackSize;
 
@@ -98,6 +102,7 @@ public class ItemDefinitionData extends DataPackage {
             int materialID,
             short toolTypeID,
             int toolTier,
+            short movesetID,
             int stackSize,
             short blockID,
             ObjectArrayList<ItemActionStruct> actions,
@@ -138,6 +143,9 @@ public class ItemDefinitionData extends DataPackage {
         // Tool
         this.toolTypeID = toolTypeID;
         this.toolTier = toolTier;
+
+        // Combat
+        this.movesetID = movesetID;
 
         // Stacking
         this.stackSize = stackSize;
@@ -243,6 +251,14 @@ public class ItemDefinitionData extends DataPackage {
 
     public int getToolTier() {
         return toolTier;
+    }
+
+    public short getMovesetID() {
+        return movesetID;
+    }
+
+    public boolean hasMoveset() {
+        return movesetID != EngineSetting.MOVESET_NONE;
     }
 
     public int getStackSize() {
