@@ -36,7 +36,8 @@ class DamageBranch extends BranchPackage {
      * turned partly aside by the target's armor — read against the source's
      * level too, so a much lower foe can barely break it. A source may land it
      * critically. The share wears the target's armor, sours the target on its
-     * source, shoves it along the blow's horizontal direction, less the more
+     * source and alarms the NPCs about it through NpcManager, shoves it along
+     * the blow's horizontal direction, less the more
      * poise it has, and comes off its health through ProgressionManager,
      * bleeding when its type bleeds. An entity brought to no health is
      * defeated, which cuts its action short and earns its source the kill: an
@@ -137,8 +138,10 @@ class DamageBranch extends BranchPackage {
         else
             attackBranch.interrupt(target);
 
-        if (source != null)
+        if (source != null) {
             progressionManager.shiftAffinity(target, source, -share * EngineSetting.AFFINITY_PER_WOUND);
+            npcManager.alarm(source, target, share);
+        }
 
         if (progressionManager.wound(target, share, damageType.isBleeding()))
             defeat(source, target);

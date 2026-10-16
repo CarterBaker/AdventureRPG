@@ -114,7 +114,7 @@ class SwingBranch extends BranchPackage {
 
         Vector3 eye = entity.getEyePosition(eyeScratch);
         long chunkCoordinate = entity.getWorldPositionStruct().getChunkCoordinate();
-        float reach = entity.getStatisticsHandle().getReach() * EngineSetting.REACH_SCALE * reachScale;
+        float reach = combatManager.resolvePlainReach(entity) * reachScale;
 
         direction.set(entity.getEntityInputHandle().getFacingDirection()).normalize();
 

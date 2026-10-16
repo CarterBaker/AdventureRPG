@@ -5,6 +5,7 @@ import application.bootstrap.entitypipeline.behaviormanager.BehaviorManager;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
+import application.bootstrap.entitypipeline.pathfindingmanager.PathfindingManager;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import engine.root.PipelinePackage;
 
@@ -18,7 +19,9 @@ public class EntityPipeline extends PipelinePackage {
      * features against it while they load, and AnimationTreeManager is
      * registered before EntityManager for the same reason — every
      * character template resolves its animation tree while it loads.
-     * NpcManager is registered last, since every NPC resolves its entity
+     * PathfindingManager is registered before NpcManager, so the search
+     * budget it renews each frame is fresh before any resident asks for a
+     * way. NpcManager is registered last, since every NPC resolves its entity
      * template against EntityManager while it loads.
      */
 
@@ -29,6 +32,7 @@ public class EntityPipeline extends PipelinePackage {
         create(AnimationTreeManager.class);
         create(EntityManager.class);
         create(PlayerManager.class);
+        create(PathfindingManager.class);
         create(NpcManager.class);
     }
 }

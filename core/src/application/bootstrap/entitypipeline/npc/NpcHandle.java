@@ -55,6 +55,10 @@ public class NpcHandle extends HandlePackage {
         return npcData.getWanderBlocks();
     }
 
+    public NpcTemperamentStruct getTemperament() {
+        return npcData.getTemperament();
+    }
+
     public short getProfessionID() {
         return npcData.getProfessionID();
     }

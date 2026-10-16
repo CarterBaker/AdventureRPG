@@ -1,6 +1,7 @@
 package application.bootstrap.entitypipeline.npc;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.pathfinding.PathStruct;
 import application.bootstrap.worldpipeline.worldspawn.WorldSpawnPaletteHandle;
 import application.bootstrap.worldpipeline.worldspawn.WorldSpawnStruct;
 import engine.root.InstancePackage;
@@ -15,7 +16,12 @@ public class NpcInstance extends InstancePackage {
      * empty. Home is the middle of the block its spot names, local to its home
      * chunk. It walks to targets about home, measured in the same frame, idles
      * between walks, and counts how long a walk has gone on so one it cannot
-     * finish is given up. A fallen NPC remembers what felled it, whose luck
+     * finish is given up. Its mind is what it is set on doing, its foe the
+     * being it fights or flees, and its provoker whatever last gave it cause
+     * to fight, for as long as that cause lasts; it looks about whenever its
+     * perception comes due. It walks every way it goes by its path, and keeps
+     * the fight in progress in its combat struct; a new mind or a new foe
+     * starts both afresh. A fallen NPC remembers what felled it, whose luck
      * its loot is drawn by.
      */
 
@@ -35,6 +41,17 @@ public class NpcInstance extends InstancePackage {
     private float idleSeconds;
     private float walkSeconds;
 
+    // Mind
+    private NpcMind mind;
+    private EntityInstance foe;
+    private EntityInstance provoker;
+    private float provokedSeconds;
+    private float perceptionSeconds;
+
+    // Way
+    private PathStruct pathStruct;
+    private NpcCombatStruct npcCombatStruct;
+
     // State
     private boolean fallen;
     private EntityInstance killer;
@@ -49,6 +66,10 @@ public class NpcInstance extends InstancePackage {
 
         // Wander
         this.wanderTarget = new Vector3();
+
+        // Way
+        this.pathStruct = new PathStruct();
+        this.npcCombatStruct = new NpcCombatStruct();
     }
 
     // Constructor \\
@@ -79,18 +100,30 @@ public class NpcInstance extends InstancePackage {
         this.idleSeconds = 0f;
         this.walkSeconds = 0f;
 
+        // Mind
+        this.mind = NpcMind.CALM;
+        this.foe = null;
+        this.provoker = null;
+        this.provokedSeconds = 0f;
+        this.perceptionSeconds = 0f;
+
+        // Way
+        this.pathStruct.clear();
+        this.npcCombatStruct.reset();
+
         // State
         this.fallen = false;
     }
 
     // Wander \\
 
-    // A walk toward a target, its clock started afresh
+    // A walk toward a target, its clock started afresh and the way to it still to be found
     public void beginWalk(float targetX, float targetZ) {
 
         wanderTarget.set(targetX, homePosition.y, targetZ);
         walking = true;
         walkSeconds = 0f;
+        pathStruct.clear();
     }
 
     // A walk ended, and the time to stand before the next
@@ -106,6 +139,60 @@ public class NpcInstance extends InstancePackage {
 
     public void advanceIdle(float deltaTime) {
         idleSeconds -= deltaTime;
+    }
+
+    // Mind \\
+
+    // A change of mind ends any walk, its clock started afresh, and forgets the way and the fight it was in
+    public void setMind(NpcMind mind) {
+
+        if (this.mind == mind)
+            return;
+
+        this.mind = mind;
+        walking = false;
+        walkSeconds = 0f;
+        pathStruct.clear();
+        npcCombatStruct.reset();
+    }
+
+    // A new foe, or none, forgets the way it was walking and the fight it was in
+    public void setFoe(EntityInstance foe) {
+
+        if (this.foe == foe)
+            return;
+
+        this.foe = foe;
+        pathStruct.clear();
+        npcCombatStruct.reset();
+    }
+
+    // Cause to fight a being, lasting some seconds
+    public void provoke(EntityInstance provoker, float seconds) {
+        this.provoker = provoker;
+        this.provokedSeconds = seconds;
+    }
+
+    public void forgetProvocation() {
+        provoker = null;
+        provokedSeconds = 0f;
+    }
+
+    public void advanceSenses(float deltaTime) {
+
+        perceptionSeconds -= deltaTime;
+
+        if (provoker == null)
+            return;
+
+        provokedSeconds -= deltaTime;
+
+        if (provokedSeconds <= 0f)
+            forgetProvocation();
+    }
+
+    public void restPerception(float seconds) {
+        perceptionSeconds = seconds;
     }
 
     // Accessible \\
@@ -148,6 +235,35 @@ public class NpcInstance extends InstancePackage {
 
     public float getWalkSeconds() {
         return walkSeconds;
+    }
+
+    public NpcMind getMind() {
+        return mind;
+    }
+
+    public EntityInstance getFoe() {
+        return foe;
+    }
+
+    public boolean hasFoe() {
+        return foe != null;
+    }
+
+    // True while the being given still gives it cause to fight
+    public boolean isProvokedBy(EntityInstance entity) {
+        return provoker != null && provoker == entity;
+    }
+
+    public boolean isPerceptionDue() {
+        return perceptionSeconds <= 0f;
+    }
+
+    public PathStruct getPathStruct() {
+        return pathStruct;
+    }
+
+    public NpcCombatStruct getNpcCombatStruct() {
+        return npcCombatStruct;
     }
 
     public boolean isFallen() {

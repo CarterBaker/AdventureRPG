@@ -8,9 +8,9 @@ public class NpcData extends DataPackage {
      * Immutable NPC definition loaded from ARPG: the entity template it walks
      * the world as, the loot tables it is dressed and armed from as it comes
      * into the world, the loot table it drops when it falls, how far from its
-     * spot it wanders, the profession it holds and the range of levels a
-     * resident of it is drawn from. Owned by NpcHandle for the engine
-     * lifetime.
+     * spot it wanders, the temper it fights with, the profession it holds and
+     * the range of levels a resident of it is drawn from. Owned by NpcHandle
+     * for the engine lifetime.
      */
 
     // Identity
@@ -26,6 +26,7 @@ public class NpcData extends DataPackage {
 
     // Behavior
     private final float wanderBlocks;
+    private final NpcTemperamentStruct temperament;
 
     // Progression
     private final short professionID;
@@ -41,6 +42,7 @@ public class NpcData extends DataPackage {
             short[] gearTableIDs,
             short lootTableID,
             float wanderBlocks,
+            NpcTemperamentStruct temperament,
             short professionID,
             int levelMin,
             int levelMax) {
@@ -58,6 +60,7 @@ public class NpcData extends DataPackage {
 
         // Behavior
         this.wanderBlocks = wanderBlocks;
+        this.temperament = temperament;
 
         // Progression
         this.professionID = professionID;
@@ -89,6 +92,10 @@ public class NpcData extends DataPackage {
 
     public float getWanderBlocks() {
         return wanderBlocks;
+    }
+
+    public NpcTemperamentStruct getTemperament() {
+        return temperament;
     }
 
     public short getProfessionID() {

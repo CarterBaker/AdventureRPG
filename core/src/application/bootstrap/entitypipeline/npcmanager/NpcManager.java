@@ -7,6 +7,7 @@ import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityData;
+import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
@@ -50,13 +51,23 @@ public class NpcManager extends ManagerPackage {
      * drawn from its race's palettes, and dressed and armed from its gear
      * tables at its own level and luck, anything drawn that no free slot is
      * made for left behind. Each frame every resident whose chunk has
-     * generated wanders through NpcWanderBranch, then moves and animates
-     * exactly as the player does. A resident brought to no health falls
-     * through defeat(): at the end of the frame it scatters everything it
-     * carried and one draw of its loot table at its level and by the luck of
-     * whatever felled it, and leaves the world, its spot left empty for as
-     * long as the chunk keeps its items. Every NPC is resolved in awake(),
-     * before any chunk generates. NPC IDs are assigned in registration order.
+     * generated takes stock of the beings about it through
+     * NpcPerceptionBranch, which settles its mind, and that mind writes what
+     * it wants into its input exactly as the player's keys and mouse would: a
+     * calm one wanders through NpcWanderBranch, a fighting or fleeing one
+     * fights or runs through NpcCombatBranch, and one whose fight is over
+     * walks home, every way walked through NpcSteerBranch along the paths
+     * PathfindingManager finds. It then moves, animates and fights exactly as
+     * the player does, through MovementManager and CombatManager.control(),
+     * its primary action only ever swinging what it holds. alarm() hears
+     * every blow that lands from a source, provoking the struck resident and
+     * any near enough that defends the struck. A resident brought to no
+     * health falls through defeat(): at the end of the frame it scatters
+     * everything it carried and one draw of its loot table at its level and
+     * by the luck of whatever felled it, and leaves the world, its spot left
+     * empty for as long as the chunk keeps its items. Every NPC is resolved
+     * in awake(), before any chunk generates. NPC IDs are assigned in
+     * registration order.
      */
 
     // Internal
@@ -68,7 +79,12 @@ public class NpcManager extends ManagerPackage {
     private WorldStreamManager worldStreamManager;
     private ProgressionManager progressionManager;
     private StatManager statManager;
+
+    // Branches
+    private NpcSteerBranch npcSteerBranch;
+    private NpcPerceptionBranch npcPerceptionBranch;
     private NpcWanderBranch npcWanderBranch;
+    private NpcCombatBranch npcCombatBranch;
 
     // Palette
     private Object2IntOpenHashMap<String> npcName2NpcID;
@@ -95,7 +111,10 @@ public class NpcManager extends ManagerPackage {
         create(NpcLoader.class);
 
         // Branches
+        this.npcSteerBranch = create(NpcSteerBranch.class);
+        this.npcPerceptionBranch = create(NpcPerceptionBranch.class);
         this.npcWanderBranch = create(NpcWanderBranch.class);
+        this.npcCombatBranch = create(NpcCombatBranch.class);
 
         // Systems
         create(NpcRenderSystem.class);
@@ -152,14 +171,32 @@ public class NpcManager extends ManagerPackage {
         }
     }
 
+    // The resident's mind writes its input, and its body moves, animates and fights by it exactly as the player's does
     private void step(NpcInstance resident, float deltaTime) {
 
         EntityInstance entity = resident.getEntityInstance();
+        EntityInputHandle input = entity.getEntityInputHandle();
 
-        npcWanderBranch.wander(resident, deltaTime);
+        npcPerceptionBranch.perceive(resident, deltaTime);
+        input.clear();
+        think(resident, deltaTime);
+
         movementManager.writeMovementState(entity, combatManager.isSlowed(entity), combatManager.isAttacking(entity));
         movementManager.move(entity);
         entity.updateAnimation(deltaTime);
+        combatManager.control(entity);
+
+        if (input.isPrimaryAction())
+            combatManager.swing(entity);
+    }
+
+    private void think(NpcInstance resident, float deltaTime) {
+        switch (resident.getMind()) {
+            case CALM -> npcWanderBranch.wander(resident, deltaTime);
+            case FIGHT -> npcCombatBranch.fight(resident, deltaTime);
+            case FLEE -> npcCombatBranch.flee(resident, deltaTime);
+            case RETURN -> npcWanderBranch.returnHome(resident, deltaTime);
+        }
     }
 
     // True while the chunk the entity stands in has generated, so it has ground to walk on
@@ -407,6 +444,29 @@ public class NpcManager extends ManagerPackage {
                 spinScratch,
                 EngineSetting.NPC_DROP_SPIN_RATE,
                 orientationScratch);
+    }
+
+    // Alarm \\
+
+    // A blow landed by a source on a target, the share of the target's health it took — the struck resident is
+    // provoked by it, and every other resident that defends may take the struck one's side
+    public void alarm(EntityInstance source, EntityInstance target, float share) {
+
+        if (source == target)
+            return;
+
+        NpcInstance struck = findResident(target);
+
+        if (struck != null && !struck.isFallen())
+            npcPerceptionBranch.provoke(struck, source, findResident(source));
+
+        for (int i = 0; i < residents.size(); i++) {
+
+            NpcInstance resident = residents.get(i);
+
+            if (resident != struck && !resident.isFallen())
+                npcPerceptionBranch.defend(resident, source, target, share);
+        }
     }
 
     private NpcInstance findResident(EntityInstance entityInstance) {

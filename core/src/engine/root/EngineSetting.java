@@ -2088,6 +2088,87 @@ public class EngineSetting {
     public static final int NPC_RENDER_CHUNK_RADIUS = 8;
     public static final float NPC_WALK_MAX_SECONDS = 10f;
 
+    // Resident Minds — what an NPC's temper defaults to, how often and how far it looks about and how long a blow
+    // provokes it, how near a defender must stand to take a side and how far that sours it, how long a way home may
+    // take, and how it fights: where it aims, the shares of its reach it closes, strikes and backs off within, when
+    // it runs, how it circles, how far a foe's blow is feared, how long its guard lingers, how much sooner its own
+    // blow must land to be traded, when it feints, how long it pauses between attacks, how many it chains, and how
+    // it runs
+    public static final float DEFAULT_NPC_AGGRESSION = 1f;
+    public static final float DEFAULT_NPC_COMBO_CHANCE = 0.3f;
+    public static final boolean DEFAULT_NPC_DEFENDS = false;
+    public static final float DEFAULT_NPC_FEINT_CHANCE = 0.1f;
+    public static final float DEFAULT_NPC_FLEE_HEALTH = 0.2f;
+    public static final float DEFAULT_NPC_GUARD_CHANCE = 0.5f;
+    public static final float DEFAULT_NPC_HOSTILITY = -10f;
+    public static final float DEFAULT_NPC_LEASH_BLOCKS = 24f;
+    public static final float DEFAULT_NPC_REACTION_SECONDS = 0.3f;
+    public static final float DEFAULT_NPC_SIGHT_BLOCKS = 16f;
+    public static final float NPC_AIM_HEIGHT_SHARE = 0.6f;
+    public static final float NPC_ALARM_BLOCKS = 16f;
+    public static final float NPC_ATTACK_PAUSE_MAX_SECONDS = 1.4f;
+    public static final float NPC_ATTACK_PAUSE_MIN_SECONDS = 0.5f;
+    public static final int NPC_COMBO_MAX = 2;
+    public static final float NPC_CROWD_REACH_SHARE = 0.3f;
+    public static final float NPC_DEFEND_AFFINITY_SHARE = 0.5f;
+    public static final float NPC_ENGAGE_REACH_SHARE = 1.1f;
+    public static final float NPC_FEINT_FOLLOW_SECONDS = 0.2f;
+    public static final float NPC_FEINT_LEAD_SECONDS = 0.25f;
+    public static final float NPC_FLEE_BLOCKS = 12f;
+    public static final float NPC_FLEE_SPREAD_DEGREES = 40f;
+    public static final float NPC_GUARD_LINGER_SECONDS = 0.2f;
+    public static final float NPC_PERCEPTION_JITTER_MAX = 1.5f;
+    public static final float NPC_PERCEPTION_JITTER_MIN = 0.5f;
+    public static final float NPC_PERCEPTION_SECONDS = 0.4f;
+    public static final float NPC_PROVOKED_SECONDS = 20f;
+    public static final float NPC_REACTION_JITTER_MAX = 1.3f;
+    public static final float NPC_REACTION_JITTER_MIN = 0.7f;
+    public static final float NPC_RETURN_MAX_SECONDS = 30f;
+    public static final int NPC_SEQUENCE_NONE = -1;
+    public static final float NPC_SIGHT_KEEP_SCALE = 1.5f;
+    public static final float NPC_SPRINT_GAP_BLOCKS = 5f;
+    public static final float NPC_STRAFE_MAX_SECONDS = 1.6f;
+    public static final float NPC_STRAFE_MIN_SECONDS = 0.6f;
+    public static final float NPC_STRAFE_STILL_CHANCE = 0.4f;
+    public static final float NPC_STRIKE_REACH_SHARE = 0.7f;
+    public static final float NPC_THREAT_REACH_SCALE = 1.15f;
+    public static final float NPC_TRADE_MARGIN_SECONDS = 0.08f;
+
+    // Pathfinding — how many searches a frame may run, how many nodes one may open and hold and how far it may
+    // reach, how many waypoints and obstacle layers are kept, how far a body climbs and drops between columns, how
+    // feet and height are read into layers, what each step costs and how hard the search leans to its goal, how near
+    // the goal counts as reached and how far it may drift before a search again, how searches are paced and a stuck
+    // walker found, and when a walker counts a waypoint reached or jumps for it
+    public static final float PATH_CLEARANCE_EPSILON = 0.01f;
+    public static final float PATH_CLIMB_COST_PER_LAYER = 0.5f;
+    public static final int PATH_CLIMB_LAYERS = SUB_BLOCK_DIVISIONS;
+    public static final float PATH_COLUMN_CENTER = 0.5f;
+    public static final float PATH_DIAGONAL_COST = 1.41421356f;
+    public static final float PATH_DROP_COST_PER_LAYER = 0.15f;
+    public static final int PATH_DROP_LAYERS = 3 * SUB_BLOCK_DIVISIONS;
+    public static final float PATH_FEET_LIFT_BLOCKS = 0.05f;
+    public static final int PATH_FLOOR_UNRESOLVED = -2;
+    public static final float PATH_GOAL_DRIFT_BLOCKS = 1.5f;
+    public static final int PATH_GOAL_LAYER_TOLERANCE = 2 * SUB_BLOCK_DIVISIONS;
+    public static final int PATH_GOAL_RADIUS_BLOCKS = 1;
+    public static final float PATH_HEURISTIC_WEIGHT = 1.2f;
+    public static final int PATH_JUMP_LAYERS = SUB_BLOCK_DIVISIONS;
+    public static final float PATH_JUMP_REACH_BLOCKS = 1.2f;
+    public static final int PATH_LAYER_NONE = -1;
+    public static final int PATH_NODE_CAPACITY = 4096;
+    public static final int PATH_NODE_LIMIT = 768;
+    public static final int PATH_NODE_NONE = -1;
+    public static final int PATH_OBSTACLE_CAPACITY = 2048;
+    public static final float PATH_REPATH_SECONDS = 0.75f;
+    public static final int PATH_SEARCH_HEIGHT_LAYERS = 8 * SUB_BLOCK_DIVISIONS;
+    public static final int PATH_SEARCH_RADIUS_BLOCKS = 24;
+    public static final int PATH_SEARCHES_PER_FRAME = 2;
+    public static final float PATH_STRAIGHT_COST = 1f;
+    public static final float PATH_STUCK_PROGRESS_BLOCKS = 0.25f;
+    public static final float PATH_STUCK_SECONDS = 1.2f;
+    public static final int PATH_WAYPOINT_CAPACITY = 64;
+    public static final float PATH_WAYPOINT_REACH_BLOCKS = 0.35f;
+
     // Combat
     public static final float AIM_RAISE_SECONDS = 0.3f;
     public static final float ARMOR_MITIGATION_SCALE = 50f;

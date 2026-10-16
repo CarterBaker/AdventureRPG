@@ -40,8 +40,9 @@ public class CombatManager extends ManagerPackage {
      * action begins, and only while the hands are free. findTarget() is the
      * one place that decides which entity a ray meets, damage() and strike()
      * the only paths a blow lands, through DamageBranch, each carrying its
-     * source and damage type. The player passes mouse input and an enemy would
-     * pass its own; the code path is the same.
+     * source and damage type. getAttackReach() is the one measure of how far
+     * a blow reaches. The player passes mouse input and an NPC the input its
+     * mind writes; the code path is the same.
      */
 
     // Internal
@@ -132,6 +133,14 @@ public class CombatManager extends ManagerPackage {
 
     public void removeCombatant(EntityInstance entity) {
         combatants.remove(entity);
+    }
+
+    public boolean isCombatant(EntityInstance entity) {
+        return combatants.contains(entity);
+    }
+
+    public ObjectArrayList<EntityInstance> getCombatants() {
+        return combatants;
     }
 
     // Actions \\
@@ -259,6 +268,23 @@ public class CombatManager extends ManagerPackage {
     // How much faster than its plain pace an entity swings and attacks
     float resolveAttackSpeed(EntityInstance entity) {
         return Math.max(EngineSetting.DIVISION_EPSILON, entity.getStat(statManager.getAttackSpeedStatID()));
+    }
+
+    // How far from its eye an entity's blow from a side reaches — its moveset's attack for a weapon or bare hands,
+    // a plain swing for anything that is no weapon
+    public float getAttackReach(EntityInstance entity, CombatDirection side) {
+
+        short movesetID = resolveAttackMoveset(entity);
+        float reachScale = movesetID != EngineSetting.MOVESET_NONE
+                ? movesetManager.getMovesetHandleFromMovesetID(movesetID).getAttack(side).getReach()
+                : EngineSetting.DEFAULT_ATTACK_REACH;
+
+        return resolvePlainReach(entity) * reachScale;
+    }
+
+    // How far from its eye an entity's plain strike reaches
+    float resolvePlainReach(EntityInstance entity) {
+        return entity.getStatisticsHandle().getReach() * EngineSetting.REACH_SCALE;
     }
 
     float resolveHeldWeight(EntityInstance entity) {

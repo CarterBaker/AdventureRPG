@@ -2,47 +2,42 @@ package application.bootstrap.entitypipeline.npcmanager;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import application.bootstrap.entitypipeline.entity.EntityInputHandle;
-import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.npc.NpcInstance;
-import application.bootstrap.worldpipeline.util.WorldPositionStruct;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.entitypipeline.npc.NpcMind;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
-import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 
 class NpcWanderBranch extends BranchPackage {
 
     /*
-     * The wandering mind of an NPC for NpcManager. It writes what the NPC
-     * wants into its EntityInputHandle exactly as the player's keys would and
-     * never moves it itself. A resident stands idle for a while, then walks
-     * toward a point drawn within its wander reach of home, measured across
-     * the world's wrap from its home chunk; it stands again once it is near
-     * enough, or once the walk has gone on longer than any walk should, as it
-     * does when something stands in its way.
+     * The wandering mind of an NPC for NpcManager. A calm resident stands idle
+     * for a while, then walks toward a point drawn within its wander reach of
+     * home, in its home chunk's frame, along the way NpcSteerBranch finds it;
+     * it stands again once it is near enough, or once the walk has gone on
+     * longer than any walk should, as it does when no way leads there.
+     * returnHome() walks a resident whose fight is over back to its spot, and
+     * calms it there, standing idle before it wanders again; one that cannot
+     * find its way home in NPC_RETURN_MAX_SECONDS calms wherever it stands,
+     * still wandering about its spot from there. Like every mind,
+     * it only writes what the NPC wants into its input.
      */
 
-    // Scratch
-    private Vector3 offsetScratch;
+    // Internal
+    private NpcSteerBranch npcSteerBranch;
 
     // Internal \\
 
     @Override
-    protected void create() {
+    protected void get() {
 
-        // Scratch
-        this.offsetScratch = new Vector3();
+        // Internal
+        this.npcSteerBranch = get(NpcSteerBranch.class);
     }
 
     // Wander \\
 
     void wander(NpcInstance resident, float deltaTime) {
-
-        EntityInputHandle input = resident.getEntityInstance().getEntityInputHandle();
-
-        input.clear();
 
         if (!resident.isWalking()) {
 
@@ -56,18 +51,23 @@ class NpcWanderBranch extends BranchPackage {
 
         resident.advanceWalk(deltaTime);
 
-        Vector3 offset = resolveOffset(resident);
-        float arrive = EngineSetting.NPC_ARRIVE_DISTANCE_BLOCKS;
+        Vector3 target = resident.getWanderTarget();
+        boolean walking = resident.getWalkSeconds() < EngineSetting.NPC_WALK_MAX_SECONDS
+                && npcSteerBranch.steer(
+                        resident,
+                        resident.getHomeChunkCoordinate(),
+                        target.x,
+                        target.y,
+                        target.z,
+                        EngineSetting.NPC_ARRIVE_DISTANCE_BLOCKS,
+                        deltaTime);
 
-        if (offset.x * offset.x + offset.z * offset.z <= arrive * arrive
-                || resident.getWalkSeconds() >= EngineSetting.NPC_WALK_MAX_SECONDS) {
+        if (!walking) {
             resident.beginIdle(drawIdleSeconds());
             return;
         }
 
-        input.setFacingDirection(offset.x, 0f, offset.z);
-        input.setForward(true);
-        input.setWalk(true);
+        resident.getEntityInstance().getEntityInputHandle().setWalk(true);
     }
 
     // A point drawn evenly over the disc of the resident's wander reach about home
@@ -88,22 +88,27 @@ class NpcWanderBranch extends BranchPackage {
                 * (EngineSetting.NPC_IDLE_MAX_SECONDS - EngineSetting.NPC_IDLE_MIN_SECONDS);
     }
 
-    // From the middle of the resident's footprint to its target, in blocks, in its home chunk's frame
-    private Vector3 resolveOffset(NpcInstance resident) {
+    // Return \\
 
-        EntityInstance entity = resident.getEntityInstance();
-        WorldPositionStruct worldPositionStruct = entity.getWorldPositionStruct();
-        long delta = WorldWrapUtility.unwrapToGridCoordinate(
-                entity.getWorldHandle(),
+    // Back to its spot at an even pace, calmed there — or wherever it stands once the way home has taken too long —
+    // and left standing for a while
+    void returnHome(NpcInstance resident, float deltaTime) {
+
+        Vector3 home = resident.getHomePosition();
+
+        resident.advanceWalk(deltaTime);
+
+        if (resident.getWalkSeconds() < EngineSetting.NPC_RETURN_MAX_SECONDS && npcSteerBranch.steer(
+                resident,
                 resident.getHomeChunkCoordinate(),
-                worldPositionStruct.getChunkCoordinate());
-        Vector3 position = worldPositionStruct.getPosition();
-        Vector3 size = entity.getSize();
-        Vector3 target = resident.getWanderTarget();
+                home.x,
+                home.y,
+                home.z,
+                EngineSetting.NPC_ARRIVE_DISTANCE_BLOCKS,
+                deltaTime))
+            return;
 
-        return offsetScratch.set(
-                target.x - (Coordinate2Long.unpackX(delta) * EngineSetting.CHUNK_SIZE + position.x + size.x * 0.5f),
-                0f,
-                target.z - (Coordinate2Long.unpackY(delta) * EngineSetting.CHUNK_SIZE + position.z + size.z * 0.5f));
+        resident.setMind(NpcMind.CALM);
+        resident.beginIdle(drawIdleSeconds());
     }
 }
