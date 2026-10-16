@@ -9,19 +9,19 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class StructureData extends DataPackage {
 
     /*
-     * Persistent structure record. Blocks are parallel arrays of origin-relative
-     * offsets with names already resolved to ID, orientation, sub-block mask,
-     * coverage and geometry, so stamping is a straight walk over primitives. Unlisted
-     * positions are left untouched; listed air carves, and a structure that
-     * clears terrain also carves the ground standing inside its footprint.
-     * The footprint grid spans the horizontal bounds and holds, per column,
-     * whether any block is listed there and the top solid block with the map
-     * colors distant terrain draws the column in. The front names the side
-     * its entrance faces as authored, so a layout can turn it to face a road.
-     * Its furnishings are the places it comes furnished at and its spawns the
-     * spots NPCs live at, both measured from its origin.
-     * Placement rolls are salted by the name seed, so a structure lands in
-     * the same cells whatever order it loads in.
+     * Persistent structure record. Blocks are parallel arrays of
+     * origin-relative offsets with names already resolved to ID, orientation,
+     * sub-block mask, coverage, content and geometry, so stamping is a straight
+     * walk over primitives. Unlisted positions are left untouched; listed air
+     * carves, and a structure that clears terrain also carves the ground
+     * standing inside its footprint. The footprint grid spans the horizontal
+     * bounds and holds, per column, whether any block is listed there and the
+     * top solid block with the map colors distant terrain draws the column in.
+     * The front names the side its entrance faces as authored, so a layout can
+     * turn it to face a road. Its furnishings are the places it comes furnished
+     * at and its spawns the spots NPCs live at, both measured from its origin.
+     * Placement rolls are salted by the name seed, so a structure lands in the
+     * same cells whatever order it loads in.
      */
 
     // Identity
@@ -37,6 +37,7 @@ public class StructureData extends DataPackage {
     private final short[] blockOrientations;
     private final byte[] blockMasks;
     private final short[] blockCoverages;
+    private final short[] blockContents;
     private final DynamicGeometryType[] blockGeometry;
 
     // Bounds
@@ -87,6 +88,7 @@ public class StructureData extends DataPackage {
             short[] blockOrientations,
             byte[] blockMasks,
             short[] blockCoverages,
+            short[] blockContents,
             DynamicGeometryType[] blockGeometry,
             int minOffsetX,
             int maxOffsetX,
@@ -123,6 +125,7 @@ public class StructureData extends DataPackage {
         this.blockOrientations = blockOrientations;
         this.blockMasks = blockMasks;
         this.blockCoverages = blockCoverages;
+        this.blockContents = blockContents;
         this.blockGeometry = blockGeometry;
 
         // Bounds
@@ -205,6 +208,10 @@ public class StructureData extends DataPackage {
 
     public short[] getBlockCoverages() {
         return blockCoverages;
+    }
+
+    public short[] getBlockContents() {
+        return blockContents;
     }
 
     public DynamicGeometryType[] getBlockGeometry() {

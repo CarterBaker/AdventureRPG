@@ -1,6 +1,8 @@
 package application.bootstrap.combatpipeline.projectilemanager;
 
 import application.bootstrap.combatpipeline.projectile.ProjectileInstance;
+import application.bootstrap.contentpipeline.content.ContentHandle;
+import application.bootstrap.contentpipeline.contentmanager.ContentManager;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
@@ -20,12 +22,14 @@ class ProjectileImpactBranch extends BranchPackage {
     /*
      * Lets a projectile break the block it strikes. The momentum it drives
      * into the face must reach the block's durability times the momentum
-     * each point of durability takes; an unbreakable block never gives. A
-     * block in one piece breaks whole and throws its eight pieces, a
-     * subdivided one loses only the sub-block struck and throws that one, and
-     * every piece is launched from where it stood through ProjectileManager,
-     * carrying a share of the projectile's speed and a scatter of its own, to
-     * bounce, land and be built back in as a sub-block like any thrown piece.
+     * each point of durability takes, the durability of the content it holds
+     * included; an unbreakable block never gives. A block in one piece breaks
+     * whole and throws its eight pieces, or the yield of its content's pieces
+     * when the content breaks into any, a subdivided one loses only the
+     * sub-block struck and throws that one, and every piece is launched from
+     * where it stood through ProjectileManager, carrying a share of the
+     * projectile's speed and a scatter of its own, to bounce and land like
+     * any thrown piece, a block piece to be built back in as a sub-block.
      * The projectile keeps the momentum the block did not take and flies on.
      */
 
@@ -35,6 +39,7 @@ class ProjectileImpactBranch extends BranchPackage {
     private BlockPlacementSystem blockPlacementSystem;
     private ItemDefinitionManager itemDefinitionManager;
     private ItemManager itemManager;
+    private ContentManager contentManager;
 
     // Block IDs
     private short airBlockID;
@@ -68,6 +73,7 @@ class ProjectileImpactBranch extends BranchPackage {
         this.blockPlacementSystem = get(BlockPlacementSystem.class);
         this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.itemManager = get(ItemManager.class);
+        this.contentManager = get(ContentManager.class);
     }
 
     @Override
@@ -91,8 +97,11 @@ class ProjectileImpactBranch extends BranchPackage {
         if (block == null || block.isUnbreakable() || impactSpeed <= 0f)
             return false;
 
+        ContentHandle content = contentManager.getContentHandleFromContent(
+                blockPlacementSystem.getContent(castStruct));
+        int durability = block.getDurability() + (content != null ? content.getDurability() : 0);
         float momentum = projectile.getItemInstance().getTotalWeight() * impactSpeed;
-        float required = block.getDurability() * EngineSetting.PROJECTILE_BREAK_MOMENTUM_PER_DURABILITY;
+        float required = durability * EngineSetting.PROJECTILE_BREAK_MOMENTUM_PER_DURABILITY;
 
         if (momentum < required)
             return false;
@@ -112,6 +121,8 @@ class ProjectileImpactBranch extends BranchPackage {
 
         if (subdivided)
             throwSubBlockPiece(projectile, block);
+        else if (content != null && content.hasPiece())
+            throwContentPieces(projectile, content);
         else
             throwBlockPieces(projectile, block);
 
@@ -125,6 +136,9 @@ class ProjectileImpactBranch extends BranchPackage {
     // The one sub-block struck, thrown from its own centre
     private void throwSubBlockPiece(ProjectileInstance projectile, BlockHandle block) {
 
+        if (!block.hasPiece())
+            return;
+
         float size = SubBlockUtility.SIZE;
 
         pieceScratch.set(
@@ -132,12 +146,16 @@ class ProjectileImpactBranch extends BranchPackage {
                 ((float) Math.floor(innerScratch.y / size) + 0.5f) * size,
                 ((float) Math.floor(innerScratch.z / size) + 0.5f) * size);
 
-        throwPiece(projectile, block, pieceScratch);
+        throwPiece(projectile, itemDefinitionManager.getBlockPieceHandle(block.getBlockID()), pieceScratch);
     }
 
     // Every sub-block of the whole block, each thrown from its own centre
     private void throwBlockPieces(ProjectileInstance projectile, BlockHandle block) {
 
+        if (!block.hasPiece())
+            return;
+
+        ItemDefinitionHandle piece = itemDefinitionManager.getBlockPieceHandle(block.getBlockID());
         float size = SubBlockUtility.SIZE;
         float blockX = (float) Math.floor(innerScratch.x);
         float blockY = (float) Math.floor(innerScratch.y);
@@ -150,18 +168,28 @@ class ProjectileImpactBranch extends BranchPackage {
                     blockY + (SubBlockUtility.getOctantY(octant) + 0.5f) * size,
                     blockZ + (SubBlockUtility.getOctantZ(octant) + 0.5f) * size);
 
-            throwPiece(projectile, block, pieceScratch);
+            throwPiece(projectile, piece, pieceScratch);
         }
     }
 
-    // One piece of the block launched from a point in the projectile's chunk, with a share of its speed and a
-    // scatter and tumble of its own
-    private void throwPiece(ProjectileInstance projectile, BlockHandle block, Vector3 position) {
+    // The content's yield of its pieces, each thrown from the centre of the block that held it
+    private void throwContentPieces(ProjectileInstance projectile, ContentHandle content) {
 
-        if (!block.hasPiece())
-            return;
+        ItemDefinitionHandle piece = itemDefinitionManager.getContentPieceHandle(content.getContentID());
 
-        ItemDefinitionHandle piece = itemDefinitionManager.getBlockPieceHandle(block.getBlockID());
+        pieceScratch.set(
+                (float) Math.floor(innerScratch.x) + 0.5f,
+                (float) Math.floor(innerScratch.y) + 0.5f,
+                (float) Math.floor(innerScratch.z) + 0.5f);
+
+        for (int i = 0; i < content.getYield(); i++)
+            throwPiece(projectile, piece, pieceScratch);
+    }
+
+    // One piece launched from a point in the projectile's chunk, with a share of its speed and a scatter and tumble
+    // of its own
+    private void throwPiece(ProjectileInstance projectile, ItemDefinitionHandle piece, Vector3 position) {
+
         Vector3 velocity = projectile.getVelocity();
         float share = EngineSetting.PROJECTILE_DEBRIS_SPEED_SHARE;
         float scatter = EngineSetting.PROJECTILE_DEBRIS_SCATTER;

@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.biomemanager;
 
+import application.bootstrap.contentpipeline.contentmanager.ContentManager;
 import application.bootstrap.weatherpipeline.seasonmanager.SeasonManager;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
@@ -25,19 +26,20 @@ class BiomeRebuildBranch extends BranchPackage {
     /*
      * Builds the handle for a live biome edit and proves it can go live
      * before anything changes. Once the boot loaders are released nothing can
-     * be loaded on demand, so every biome, block, covering, weather, season,
-     * tree, cave biome and architecture it names must already be registered, and every
-     * covering must host the ground it is laid on; its variants must not
-     * belong to another parent or chain back into it; and the last biome
-     * painted on the world map must keep its color. A biome keeps the ID its
-     * name was first registered under. Every refusal is a catchable
-     * InternalException.
+     * be loaded on demand, so every biome, block, covering, content, weather,
+     * season, tree, cave biome and architecture it names must already be
+     * registered, and every covering must host the ground it is laid on; its
+     * variants must not belong to another parent or chain back into it; and
+     * the last biome painted on the world map must keep its color. A biome
+     * keeps the ID its name was first registered under. Every refusal is a
+     * catchable InternalException.
      */
 
     // Internal
     private BiomeManager biomeManager;
     private BlockManager blockManager;
     private CoveringManager coveringManager;
+    private ContentManager contentManager;
     private WeatherManager weatherManager;
     private SeasonManager seasonManager;
     private TreeManager treeManager;
@@ -51,6 +53,7 @@ class BiomeRebuildBranch extends BranchPackage {
         this.biomeManager = get(BiomeManager.class);
         this.blockManager = get(BlockManager.class);
         this.coveringManager = get(CoveringManager.class);
+        this.contentManager = get(ContentManager.class);
         this.weatherManager = get(WeatherManager.class);
         this.seasonManager = get(SeasonManager.class);
         this.treeManager = get(TreeManager.class);
@@ -68,6 +71,7 @@ class BiomeRebuildBranch extends BranchPackage {
         validateVariants(biomeData);
         validateBlocks(biomeData);
         validateCoverings(biomeData);
+        validateVeins(biomeData);
         validateWeathers(biomeData);
         validateTrees(biomeData);
         validateCaveBiomes(biomeData);
@@ -112,11 +116,6 @@ class BiomeRebuildBranch extends BranchPackage {
         requireBlock(biomeData.getBiomeName(), biomeData.getSubsurfaceBlockName(), "subsurface_block");
         requireBlock(biomeData.getBiomeName(), biomeData.getUnderwaterBlockName(), "underwater_block");
         requireBlock(biomeData.getBiomeName(), biomeData.getRockBlockName(), "rock_block");
-
-        ObjectArrayList<BiomeVeinStruct> veins = biomeData.getVeins();
-
-        for (int i = 0; i < veins.size(); i++)
-            requireBlock(biomeData.getBiomeName(), veins.get(i).getBlockName(), "veins");
     }
 
     private void validateCoverings(BiomeData biomeData) {
@@ -127,6 +126,16 @@ class BiomeRebuildBranch extends BranchPackage {
         requireCovering(
                 biomeData, biomeData.getUnderwaterCovering(), biomeData.getUnderwaterBlockName(),
                 "underwater_covering");
+    }
+
+    private void validateVeins(BiomeData biomeData) {
+
+        ObjectArrayList<BiomeVeinStruct> veins = biomeData.getVeins();
+
+        for (int i = 0; i < veins.size(); i++)
+            if (!contentManager.hasContent(veins.get(i).getContentName()))
+                throw fail(biomeData.getBiomeName(), "\"veins\" names unknown content \""
+                        + veins.get(i).getContentName() + "\".");
     }
 
     private void validateWeathers(BiomeData biomeData) {

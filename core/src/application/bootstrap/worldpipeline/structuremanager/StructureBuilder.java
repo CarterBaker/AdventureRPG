@@ -3,6 +3,8 @@ package application.bootstrap.worldpipeline.structuremanager;
 import java.io.File;
 import java.util.Arrays;
 
+import application.bootstrap.contentpipeline.contentmanager.ContentManager;
+import application.bootstrap.contentpipeline.util.ContentUtility;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
 import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
 import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
@@ -49,8 +51,9 @@ class StructureBuilder extends BuilderPackage {
      * Parses structure ARPG into a StructureData and wraps it in a
      * StructureHandle. A structure may keep its own "palette" of blocks keyed
      * by single characters, each a block with its facing, spin and an
-     * optional sub-block "shape" or raw "mask" for a partial block, and an
-     * optional "covering" grown over it to its "coverage" level. Its
+     * optional sub-block "shape" or raw "mask" for a partial block, an
+     * optional "covering" grown over it to its "coverage" level, and an
+     * optional "content" a whole block holds. Its
      * "layers" lay those keys row by row, a row running along x and each row
      * one step along z, over one or more heights, with a space leaving a cell
      * untouched; its "blocks" then lay single "position"s or inclusive
@@ -69,6 +72,7 @@ class StructureBuilder extends BuilderPackage {
     private StructureManager structureManager;
     private BlockManager blockManager;
     private CoveringManager coveringManager;
+    private ContentManager contentManager;
     private BiomeManager biomeManager;
     private FurnishingManager furnishingManager;
     private LootTableManager lootTableManager;
@@ -85,6 +89,7 @@ class StructureBuilder extends BuilderPackage {
     private ShortArrayList blockOrientations;
     private ByteArrayList blockMasks;
     private ShortArrayList blockCoverages;
+    private ShortArrayList blockContents;
     private ObjectArrayList<DynamicGeometryType> blockGeometry;
     private Long2IntOpenHashMap position2BlockIndex;
 
@@ -104,6 +109,7 @@ class StructureBuilder extends BuilderPackage {
         this.blockOrientations = new ShortArrayList();
         this.blockMasks = new ByteArrayList();
         this.blockCoverages = new ShortArrayList();
+        this.blockContents = new ShortArrayList();
         this.blockGeometry = new ObjectArrayList<>();
         this.position2BlockIndex = new Long2IntOpenHashMap();
         this.position2BlockIndex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
@@ -114,6 +120,7 @@ class StructureBuilder extends BuilderPackage {
         this.structureManager = get(StructureManager.class);
         this.blockManager = get(BlockManager.class);
         this.coveringManager = get(CoveringManager.class);
+        this.contentManager = get(ContentManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.furnishingManager = get(FurnishingManager.class);
         this.lootTableManager = get(LootTableManager.class);
@@ -180,6 +187,7 @@ class StructureBuilder extends BuilderPackage {
                 offsetX.toIntArray(), offsetY.toIntArray(), offsetZ.toIntArray(),
                 blockIDs.toShortArray(), blockOrientations.toShortArray(), blockMasks.toByteArray(),
                 blockCoverages.toShortArray(),
+                blockContents.toShortArray(),
                 blockGeometry.toArray(new DynamicGeometryType[0]),
                 minOffsetX, maxOffsetX, min(offsetY), max(offsetY), minOffsetZ, maxOffsetZ, horizontalReachBlocks,
                 footprint, footprintTopOffsetY, footprintTopColors, footprintSideColors,
@@ -246,12 +254,14 @@ class StructureBuilder extends BuilderPackage {
         }
 
         BlockHandle blockHandle = blockManager.getBlockHandleFromBlockName(ArpgUtility.validateString(entry, "block"));
+        int mask = parseMask(entry, blockHandle, structureName);
 
         return new StructurePaletteEntryStruct(
                 blockHandle,
                 parseOrientation(entry, blockHandle, structureName),
-                parseMask(entry, blockHandle, structureName),
-                parseCoverage(entry, blockHandle, structureName));
+                mask,
+                parseCoverage(entry, blockHandle, structureName),
+                parseContent(entry, blockHandle, mask, structureName));
     }
 
     // Layer Parsing \\
@@ -310,6 +320,7 @@ class StructureBuilder extends BuilderPackage {
         blockOrientations.clear();
         blockMasks.clear();
         blockCoverages.clear();
+        blockContents.clear();
         blockGeometry.clear();
         position2BlockIndex.clear();
     }
@@ -396,6 +407,7 @@ class StructureBuilder extends BuilderPackage {
             blockOrientations.set(index, entry.getOrientation());
             blockMasks.set(index, (byte) entry.getMask());
             blockCoverages.set(index, entry.getCoverage());
+            blockContents.set(index, entry.getContent());
             blockGeometry.set(index, blockHandle.getGeometry());
             return;
         }
@@ -413,6 +425,7 @@ class StructureBuilder extends BuilderPackage {
         blockOrientations.add(entry.getOrientation());
         blockMasks.add((byte) entry.getMask());
         blockCoverages.add(entry.getCoverage());
+        blockContents.add(entry.getContent());
         blockGeometry.add(blockHandle.getGeometry());
     }
 
@@ -477,6 +490,24 @@ class StructureBuilder extends BuilderPackage {
                 ArpgUtility.getInt(entry, "coverage", CoverageUtility.LEVEL_MAX),
                 blockHandle.getBlockID(),
                 structureName);
+    }
+
+    // Content Parsing \\
+
+    // The content a whole block holds, NONE when it names none
+    private short parseContent(ArpgObjectStruct entry, BlockHandle blockHandle, int mask, String structureName) {
+
+        String contentName = ArpgUtility.getString(entry, "content", EngineSetting.STRUCTURE_CONTENT_NONE);
+
+        if (contentName.equals(EngineSetting.STRUCTURE_CONTENT_NONE))
+            return ContentUtility.NONE;
+
+        if (mask != SubBlockUtility.MASK_FULL)
+            throwException("Structure \"" + structureName + "\" block \"" + blockHandle.getBlockName()
+                    + "\" holds content \"" + contentName + "\" but is laid as sub-blocks — only a whole block "
+                    + "holds a content.");
+
+        return contentManager.resolveContent(contentName, blockHandle.getBlockID(), structureName);
     }
 
     // Mask Parsing \\
@@ -554,7 +585,8 @@ class StructureBuilder extends BuilderPackage {
 
             topOffsetY[column] = y;
             topColors[column] = coveringManager.resolveCoveredColor(
-                    blockHandle.getMapColorForFace(Direction3Vector.UP),
+                    contentManager.resolveContentColor(
+                            blockHandle.getMapColorForFace(Direction3Vector.UP), blockContents.getShort(i)),
                     blockCoverages.getShort(i),
                     EngineSetting.PACKED_COLOR_WHITE,
                     false);

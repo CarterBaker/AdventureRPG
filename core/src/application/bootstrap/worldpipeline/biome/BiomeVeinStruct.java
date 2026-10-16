@@ -7,14 +7,15 @@ import engine.util.registry.RegistryUtility;
 public class BiomeVeinStruct extends StructPackage {
 
     /*
-     * One mineral vein threading a biome's rock: the block it is made of, how
-     * much of the rock its seams reach, how thick they run, the band of
-     * heights it lies in and how deep below the ground it may run. The vein
-     * field is seeded by the block, so the same ore runs on unbroken across
-     * every biome that carries it.
+     * One vein threading a biome's ground: the content it sets into every
+     * block it runs through that can hold it — an ore through rock, stones or
+     * roots through soil — how much of the ground its seams reach, how thick
+     * they run, the band of heights it lies in and how deep below the ground
+     * it may run. The vein field is seeded by the content, so the same ore
+     * runs on unbroken across every biome that carries it.
      */
 
-    private final String blockName;
+    private final String contentName;
     private final long fieldSeed;
     private final float abundance;
     private final float thicknessBlocks;
@@ -23,15 +24,15 @@ public class BiomeVeinStruct extends StructPackage {
     private final int maxDepthBlocks;
 
     public BiomeVeinStruct(
-            String blockName,
+            String contentName,
             float abundance,
             float thicknessBlocks,
             int minHeightBlocks,
             int maxHeightBlocks,
             int maxDepthBlocks) {
 
-        this.blockName = blockName;
-        this.fieldSeed = RegistryUtility.toNameSeed(blockName) * EngineSetting.HASH_FINALIZER_MULTIPLIER_1;
+        this.contentName = contentName;
+        this.fieldSeed = RegistryUtility.toNameSeed(contentName) * EngineSetting.HASH_FINALIZER_MULTIPLIER_1;
         this.abundance = abundance;
         this.thicknessBlocks = thicknessBlocks;
         this.minHeightBlocks = minHeightBlocks;
@@ -41,8 +42,8 @@ public class BiomeVeinStruct extends StructPackage {
 
     // Accessible \\
 
-    public String getBlockName() {
-        return blockName;
+    public String getContentName() {
+        return contentName;
     }
 
     public long getFieldSeed() {

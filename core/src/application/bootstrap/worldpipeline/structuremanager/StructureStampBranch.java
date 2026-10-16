@@ -175,6 +175,7 @@ class StructureStampBranch extends BranchPackage {
         short[] blockOrientations = structureHandle.getBlockOrientations();
         byte[] blockMasks = structureHandle.getBlockMasks();
         short[] blockCoverages = structureHandle.getBlockCoverages();
+        short[] blockContents = structureHandle.getBlockContents();
         DynamicGeometryType[] blockGeometry = structureHandle.getBlockGeometry();
 
         boolean foundation = structureHandle.hasFoundation();
@@ -200,6 +201,7 @@ class StructureStampBranch extends BranchPackage {
                             quarterTurns),
                     geometry == DynamicGeometryType.LIQUID);
             ChunkWriteUtility.writeCoverage(subChunks, (int) localX, worldY, (int) localZ, blockCoverages[i]);
+            ChunkWriteUtility.writeContent(subChunks, (int) localX, worldY, (int) localZ, blockContents[i]);
 
             if (foundation && geometry != DynamicGeometryType.NONE && geometry != DynamicGeometryType.LIQUID) {
                 int columnIndex = (int) localZ * chunkSize + (int) localX;

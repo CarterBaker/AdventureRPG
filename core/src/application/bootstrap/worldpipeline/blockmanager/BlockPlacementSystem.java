@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.blockmanager;
 
+import application.bootstrap.contentpipeline.util.ContentUtility;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
@@ -32,7 +33,8 @@ public class BlockPlacementSystem extends SystemPackage {
      * again, so a cell built up from pieces stores like any other block.
      * editCoverage() changes only the coverage grown over a cell, which
      * touches no surface but the cell's own, so it rebuilds the cell's
-     * subchunk alone.
+     * subchunk alone. A cell's content is never edited here: it is set by
+     * generation and goes the moment its block is edited.
      */
 
     // Internal
@@ -379,6 +381,16 @@ public class BlockPlacementSystem extends SystemPackage {
             return CoverageUtility.NONE;
 
         return chunk.getSubChunk(castStruct.getSubChunkY()).getCoverage(toHitXYZ(castStruct));
+    }
+
+    public short getContent(BlockCastStruct castStruct) {
+
+        ChunkInstance chunk = worldStreamManager.getChunkInstance(castStruct.getChunkCoordinate());
+
+        if (chunk == null)
+            return ContentUtility.NONE;
+
+        return chunk.getSubChunk(castStruct.getSubChunkY()).getContent(toHitXYZ(castStruct));
     }
 
     public int getSubBlockMask(BlockCastStruct castStruct) {

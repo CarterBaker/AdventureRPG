@@ -29,7 +29,8 @@ class FullGeometryBranch extends BranchPackage {
      * A face that is not block-simple, and every face of a subdivided block,
      * belongs to PartialGeometryBranch instead, and expansion here never
      * crosses into one, so the two passes never emit the same surface. A
-     * quad only grows over blocks whose face carries the same coverage word.
+     * quad only grows over blocks whose face carries the same coverage word
+     * and that hold the same content.
      */
 
     // Internal
@@ -149,6 +150,7 @@ class FullGeometryBranch extends BranchPackage {
 
         short baseOrientation = rotationPaletteHandle.getBlock(xyz);
         int baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, xyz, direction3Vector);
+        short baseContentID = surfaceEmissionBranch.resolveContentID(subChunkInstance, xyz);
 
         accumulatedBatch.set(ChunkCoordinateUtility.getIndex(xyz));
 
@@ -169,6 +171,7 @@ class FullGeometryBranch extends BranchPackage {
                 blockHandle,
                 baseOrientation,
                 baseCoverageWord,
+                baseContentID,
                 accumulatedBatch,
                 batchReturn)) {
             accumulatedBatch.or(batchReturn);
@@ -191,6 +194,7 @@ class FullGeometryBranch extends BranchPackage {
                 blockHandle,
                 baseOrientation,
                 baseCoverageWord,
+                baseContentID,
                 accumulatedBatch,
                 batchReturn)) {
             accumulatedBatch.or(batchReturn);
@@ -230,6 +234,7 @@ class FullGeometryBranch extends BranchPackage {
             BlockHandle blockHandle,
             short baseOrientation,
             int baseCoverageWord,
+            short baseContentID,
             BitSet accumulatedBatch,
             BitSet batchReturn) {
 
@@ -262,6 +267,7 @@ class FullGeometryBranch extends BranchPackage {
                     orientationSensitive,
                     baseOrientation,
                     baseCoverageWord,
+                    baseContentID,
                     accumulatedBatch)) {
                 batchReturn.clear();
                 return false;
@@ -286,6 +292,7 @@ class FullGeometryBranch extends BranchPackage {
             boolean orientationSensitive,
             short baseOrientation,
             int baseCoverageWord,
+            short baseContentID,
             BitSet accumulatedBatch) {
 
         if (accumulatedBatch.get(ChunkCoordinateUtility.getIndex(checkXYZ)))
@@ -305,6 +312,9 @@ class FullGeometryBranch extends BranchPackage {
 
         if (surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, checkXYZ, direction3Vector)
                 != baseCoverageWord)
+            return false;
+
+        if (surfaceEmissionBranch.resolveContentID(subChunkInstance, checkXYZ) != baseContentID)
             return false;
 
         if (!blockHasFace(chunkInstance, subChunkInstance, checkXYZ, direction3Vector, blockHandle))

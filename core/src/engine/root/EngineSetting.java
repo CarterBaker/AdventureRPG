@@ -181,6 +181,7 @@ public class EngineSetting {
     public static final String CALENDAR_PATH = "calendars";
     public static final String CAVE_BIOME_PATH = "cavebiomes";
     public static final String CLOUD_PATH = "clouds";
+    public static final String CONTENT_PATH = "contents";
     public static final String COVERING_PATH = "coverings";
     public static final String DAMAGE_TYPE_PATH = "damagetypes";
     public static final String DEED_PATH = "deeds";
@@ -713,10 +714,11 @@ public class EngineSetting {
 
     // Quad Records — the packed per-quad records terrain and water draw from, pulled by their shaders from a buffer
     // texture with no vertex attributes. Word 0 of every layout is the quad's position in sub-blocks from its draw's
-    // origin, so merging shifts a record with one add. A solid record carries the geometry meta word, the coverage
-    // word beside the tile's atlas cell, then one stream of 24-bit words — four corner tints, four low and four high
-    // edge words — packed four words to three ints. A liquid record carries its face, extents, level and tidal flag
-    // in one word. Layouts must match includes/QuadRecord.glsl.
+    // origin, so merging shifts a record with one add. A solid record carries the geometry meta word, the content
+    // its block holds above the meta's flags, the coverage word beside the tile's atlas cell, then one stream of
+    // 24-bit words — four corner tints, four low and four high edge words — packed four words to three ints. A
+    // liquid record carries its face, extents, level and tidal flag in one word. Layouts must match
+    // includes/QuadRecord.glsl.
     public static final String QUAD_VAO = "util/vao/QuadVAO";
     public static final String UNIFORM_QUAD_BUFFER = "u_quadBuffer";
     public static final int ATLAS_CELL_AXIS_BITS = 8;
@@ -792,6 +794,23 @@ public class EngineSetting {
     public static final float DEFAULT_COVERING_TINT_STRENGTH = 1f;
     public static final String COVERING_DROP_NONE = "";
     public static final String COVERING_TEXTURE_NONE = "";
+
+    // Contents — the ore, rock or root a whole block holds, its ID one short per cell carried in the geometry meta
+    // word above the quad's flags, and the table the surface shader reads every content's overlay tile and baked
+    // approximation from
+    public static final int CONTENT_ID_BITS = 8;
+    public static final int CONTENT_ID_COUNT = 1 << CONTENT_ID_BITS;
+    public static final int CONTENT_ID_MASK = CONTENT_ID_COUNT - 1;
+    public static final short CONTENT_NONE = 0;
+    public static final String CONTENT_DATA_UBO = "ContentData";
+    public static final String UNIFORM_CONTENT_REVEAL = "u_contentReveal";
+    public static final String UNIFORM_CONTENT_TILES = "u_contentTiles";
+
+    // Content Defaults — every optional field of a content file
+    public static final int DEFAULT_CONTENT_BREAK_TIER = 0;
+    public static final int DEFAULT_CONTENT_DURABILITY = 0;
+    public static final int DEFAULT_CONTENT_YIELD = 1;
+    public static final String CONTENT_ITEM_TEXTURE_NONE = "";
 
     // Biome Coverings — the tint a biome lends the coverings that grow in it, and the optional coverings it lays
     public static final String DEFAULT_BIOME_COVERING_TINT = "#8CB85C";
@@ -1132,7 +1151,7 @@ public class EngineSetting {
     public static final float SPELEOTHEM_STALAGMITE_THICK_SHARE = 0.55f;
 
     // Veins
-    public static final int BIOME_MAX_VEINS = 8;
+    public static final int BIOME_MAX_VEINS = 12;
     public static final float DEFAULT_BIOME_VEIN_ABUNDANCE = 0.3f;
     public static final int DEFAULT_BIOME_VEIN_MAX_DEPTH_BLOCKS = 48;
     public static final int DEFAULT_BIOME_VEIN_MAX_HEIGHT_BLOCKS = TERRAIN_MAX_HEIGHT_BLOCKS;
@@ -1142,7 +1161,7 @@ public class EngineSetting {
     public static final long TERRAIN_VEIN_GATE_SEED_SALT = 0x0F5E9A27C3B81D64L;
     public static final float TERRAIN_VEIN_GATE_THRESHOLD = 0.6f;
     public static final double TERRAIN_VEIN_GATE_WAVELENGTH_BLOCKS = 96.0;
-    public static final int TERRAIN_VEIN_PALETTE_MAX = 32;
+    public static final int TERRAIN_VEIN_PALETTE_MAX = 48;
     public static final long TERRAIN_VEIN_SEED_SALT = 0x95A3D7E04C1B6F28L;
     public static final float TERRAIN_VEIN_SHEET_GRADIENT = 0.8f;
     public static final double TERRAIN_VEIN_WAVELENGTH_BLOCKS = 36.0;
@@ -1289,6 +1308,7 @@ public class EngineSetting {
     // Structure Generation
     public static final int DEFAULT_STRUCTURE_SEPARATION_BLOCKS = 0;
     public static final int DEFAULT_STRUCTURE_Y_OFFSET_BLOCKS = 0;
+    public static final String STRUCTURE_CONTENT_NONE = "";
     public static final String STRUCTURE_COVERING_NONE = "";
     public static final int STRUCTURE_CAVE_FOUNDATION_MAX_BLOCKS = 16;
     public static final long STRUCTURE_CHANCE_SALT = 0x3E9A71C45B0D82F6L;
@@ -2712,6 +2732,11 @@ public class EngineSetting {
     public static final int BLOCK_PIECE_SIZE = 2;
     public static final int BLOCK_PIECE_STACK_SIZE = MAX_ITEM_STACK_SIZE;
     public static final float BLOCK_PIECE_WEIGHT = 0.1f;
+
+    // Content Pieces — what a whole block hands out in place of its own pieces when the content it holds breaks
+    // into pieces, named after the content behind a reserved prefix no item file can produce
+    public static final String CONTENT_PIECE_DESCRIPTION = "Broken out of the rock that held it.";
+    public static final String CONTENT_PIECE_NAME_PREFIX = "content:";
 
     // Item Categories
     public static final String ITEM_CATEGORY_TITLE_ARMOR = "Armor";

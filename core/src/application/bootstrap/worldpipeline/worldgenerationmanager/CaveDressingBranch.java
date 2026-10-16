@@ -15,7 +15,9 @@ class CaveDressingBranch extends BranchPackage {
      * Async — dresses a carved subchunk with the cave biome lining each
      * stretch of it. Rock within a cave biome's lining becomes its rock,
      * floors, ceilings and the beds under still water take their own
-     * blocks, and floors, walls and ceilings take its coverings. Dry ceilings
+     * blocks, and floors, walls and ceilings take its coverings; the cave
+     * biome lining each cell is reported back so its veins can set their
+     * contents into whatever block the cell becomes. Dry ceilings
      * and floors grow small stalactites and stalagmites cut from octants,
      * thin spikes or a thick base tapering to a spike. Tall dry chambers
      * found down a few columns per chunk raise giant cones and columns
@@ -24,7 +26,6 @@ class CaveDressingBranch extends BranchPackage {
      */
 
     // Internal
-    private WorldGenerationManager worldGenerationManager;
     private CaveCarveBranch caveCarveBranch;
     private CaveRegionBranch caveRegionBranch;
 
@@ -44,7 +45,6 @@ class CaveDressingBranch extends BranchPackage {
 
     @Override
     protected void get() {
-        this.worldGenerationManager = get(WorldGenerationManager.class);
         this.caveCarveBranch = get(CaveCarveBranch.class);
         this.caveRegionBranch = get(CaveRegionBranch.class);
     }
@@ -425,8 +425,9 @@ class CaveDressingBranch extends BranchPackage {
 
     // Rock \\
 
-    // The block rock within a cave biome's lining becomes — its rock, a vein through it, or the block of the floor,
-    // ceiling or bed it forms — reporting the coverage laid over it through the volume
+    // The block rock within a cave biome's lining becomes — its rock, or the block of the floor, ceiling or bed it
+    // forms — reporting through the volume the coverage laid over it and the cave biome lining it, whose veins
+    // may set a content into it
     short resolveRock(
             WorldHandle worldHandle,
             long chunkCoordinate,
@@ -442,6 +443,7 @@ class CaveDressingBranch extends BranchPackage {
         int columnIndex = localZ * chunkSize + localX;
 
         volume.cellCoverage = CoverageUtility.NONE;
+        volume.cellProfile = null;
 
         if (blockID != stoneBlockID && blockID != column.columnRockBlockID[columnIndex])
             return blockID;
@@ -462,13 +464,9 @@ class CaveDressingBranch extends BranchPackage {
         if (profile == null || density <= -profile.shellBlocks)
             return blockID;
 
-        short resultBlockID = worldGenerationManager.resolveVeins(
-                column, profile.veins, profile.veinBlockIDs, localX, localZ, worldY,
-                volume.originY + CaveVolumeAsyncContainer.MARGIN, groundHeight, profile.rockBlockID);
+        volume.cellProfile = profile;
 
-        if (resultBlockID != profile.rockBlockID)
-            return resultBlockID;
-
+        short resultBlockID = profile.rockBlockID;
         short coverage;
         int variance;
 

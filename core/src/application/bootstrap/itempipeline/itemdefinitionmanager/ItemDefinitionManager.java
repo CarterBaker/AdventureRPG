@@ -1,5 +1,7 @@
 package application.bootstrap.itempipeline.itemdefinitionmanager;
 
+import application.bootstrap.contentpipeline.content.ContentHandle;
+import application.bootstrap.contentpipeline.contentmanager.ContentManager;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.worldpipeline.block.BlockHandle;
@@ -22,13 +24,16 @@ public class ItemDefinitionManager extends ManagerPackage {
      * name that only one item carries — ignoring case. Block pieces are not
      * loaded from files: getBlockPieceHandle() builds a block's piece through
      * BlockPieceBranch the first time it is needed, and a piece's name
-     * resolves to its block the same way. The farthest any registered item's
-     * shape reaches past the block its corner lies in, before it and after
-     * it, tells world queries how far around a block to look for items.
+     * resolves to its block the same way; content pieces are built and
+     * resolved through getContentPieceHandle() alike. The farthest any
+     * registered item's shape reaches past the block its corner lies in,
+     * before it and after it, tells world queries how far around a block to
+     * look for items.
      */
 
     // Internal
     private BlockManager blockManager;
+    private ContentManager contentManager;
     private BlockPieceBranch blockPieceBranch;
 
     // Palette
@@ -36,6 +41,7 @@ public class ItemDefinitionManager extends ManagerPackage {
     private ObjectArrayList<ItemDefinitionHandle> itemIndex2ItemHandle;
     private ObjectArrayList<ItemDefinitionHandle> itemHandles;
     private Int2ObjectOpenHashMap<ItemDefinitionHandle> blockID2BlockPieceHandle;
+    private Int2ObjectOpenHashMap<ItemDefinitionHandle> contentID2ContentPieceHandle;
 
     // Reach
     private int maxReachBefore;
@@ -51,6 +57,7 @@ public class ItemDefinitionManager extends ManagerPackage {
         this.itemIndex2ItemHandle = RegistryUtility.createPalette();
         this.itemHandles = new ObjectArrayList<>();
         this.blockID2BlockPieceHandle = new Int2ObjectOpenHashMap<>();
+        this.contentID2ContentPieceHandle = new Int2ObjectOpenHashMap<>();
         this.blockPieceBranch = create(BlockPieceBranch.class);
         create(ItemDefinitionLoader.class);
     }
@@ -58,6 +65,7 @@ public class ItemDefinitionManager extends ManagerPackage {
     @Override
     protected void get() {
         this.blockManager = get(BlockManager.class);
+        this.contentManager = get(ContentManager.class);
     }
 
     // Management \\
@@ -115,6 +123,39 @@ public class ItemDefinitionManager extends ManagerPackage {
         return true;
     }
 
+    // Content Pieces \\
+
+    public ItemDefinitionHandle getContentPieceHandle(short contentID) {
+
+        ItemDefinitionHandle contentPiece = contentID2ContentPieceHandle.get(contentID);
+
+        if (contentPiece != null)
+            return contentPiece;
+
+        contentPiece = blockPieceBranch.buildContentPiece(contentManager.getContentHandleFromContentID(contentID));
+        contentID2ContentPieceHandle.put(contentID, contentPiece);
+        addItem(contentPiece);
+
+        return contentPiece;
+    }
+
+    // A piece's name names its content — false when that content is unknown or breaks into no pieces
+    private boolean requestContentPiece(String itemName) {
+
+        String contentName = ItemRegistryUtility.toContentName(itemName);
+
+        if (!contentManager.hasContent(contentName))
+            return false;
+
+        ContentHandle contentHandle = contentManager.getContentHandleFromContentName(contentName);
+
+        if (!contentHandle.hasPiece())
+            return false;
+
+        getContentPieceHandle(contentHandle.getContentID());
+        return true;
+    }
+
     // Accessible \\
 
     private boolean isItemRegistered(String itemName) {
@@ -125,6 +166,9 @@ public class ItemDefinitionManager extends ManagerPackage {
 
         if (!isItemRegistered(itemName) && ItemRegistryUtility.isBlockPieceName(itemName))
             requestBlockPiece(itemName);
+
+        if (!isItemRegistered(itemName) && ItemRegistryUtility.isContentPieceName(itemName))
+            requestContentPiece(itemName);
 
         return isItemRegistered(itemName);
     }
@@ -198,6 +242,14 @@ public class ItemDefinitionManager extends ManagerPackage {
 
             if (!requestBlockPiece(itemName))
                 throwException("Block piece '" + itemName + "' names no breakable block.");
+
+            return;
+        }
+
+        if (ItemRegistryUtility.isContentPieceName(itemName)) {
+
+            if (!requestContentPiece(itemName))
+                throwException("Content piece '" + itemName + "' names no content that breaks into pieces.");
 
             return;
         }

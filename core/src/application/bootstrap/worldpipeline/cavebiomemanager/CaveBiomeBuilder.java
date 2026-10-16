@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.cavebiomemanager;
 
 import java.io.File;
 
+import application.bootstrap.contentpipeline.contentmanager.ContentManager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.biome.BiomeCoveringStruct;
 import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
@@ -27,14 +28,15 @@ class CaveBiomeBuilder extends BuilderPackage {
      * still water beds fall back to the rock, every block it lays must be a
      * whole FULL-geometry block, every covering must host the block it is
      * laid over, and coverings and veins are read exactly as a biome reads
-     * them. Everything is validated at load, so a malformed cave biome fails
-     * the boot.
+     * them, every content its veins set loaded on demand. Everything is
+     * validated at load, so a malformed cave biome fails the boot.
      */
 
     // Internal
     private CaveBiomeManager caveBiomeManager;
     private BlockManager blockManager;
     private CoveringManager coveringManager;
+    private ContentManager contentManager;
 
     // Base \\
 
@@ -43,6 +45,7 @@ class CaveBiomeBuilder extends BuilderPackage {
         this.caveBiomeManager = get(CaveBiomeManager.class);
         this.blockManager = get(BlockManager.class);
         this.coveringManager = get(CoveringManager.class);
+        this.contentManager = get(ContentManager.class);
     }
 
     // Build \\
@@ -87,7 +90,7 @@ class CaveBiomeBuilder extends BuilderPackage {
         requireHost(ceilingCovering, ceilingBlockName, "ceiling_covering", caveBiomeName);
 
         for (int i = 0; i < veins.size(); i++)
-            requireWholeBlock(veins.get(i).getBlockName(), "veins", caveBiomeName);
+            contentManager.getContentHandleFromContentName(veins.get(i).getContentName());
 
         // Speleothems
         CaveSpeleothemStruct speleothems = parseSpeleothems(arpg, caveBiomeName);

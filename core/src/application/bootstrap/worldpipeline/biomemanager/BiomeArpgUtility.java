@@ -713,7 +713,7 @@ public class BiomeArpgUtility extends EngineUtility {
 
     private static BiomeVeinStruct parseVein(ArpgObjectStruct veinArpg, String biomeName) {
 
-        String blockName = requireString(veinArpg, "block", biomeName, "veins");
+        String contentName = requireString(veinArpg, "content", biomeName, "veins");
 
         float abundance = ArpgUtility.getFloat(veinArpg, "abundance", EngineSetting.DEFAULT_BIOME_VEIN_ABUNDANCE);
         float thicknessBlocks = ArpgUtility.getFloat(
@@ -728,19 +728,19 @@ public class BiomeArpgUtility extends EngineUtility {
         requireUnit(abundance, biomeName, "veins", "abundance");
 
         if (thicknessBlocks <= 0f)
-            throw fail(biomeName, "\"veins\" entry \"" + blockName + "\" must have \"thickness_blocks\" "
+            throw fail(biomeName, "\"veins\" entry \"" + contentName + "\" must have \"thickness_blocks\" "
                     + "greater than 0.");
 
         if (maxHeightBlocks < minHeightBlocks)
-            throw fail(biomeName, "\"veins\" entry \"" + blockName + "\" has \"max_height_blocks\" "
+            throw fail(biomeName, "\"veins\" entry \"" + contentName + "\" has \"max_height_blocks\" "
                     + maxHeightBlocks + ", below its \"min_height_blocks\" " + minHeightBlocks + ".");
 
         if (maxDepthBlocks <= 0)
-            throw fail(biomeName, "\"veins\" entry \"" + blockName + "\" must have \"max_depth_blocks\" "
+            throw fail(biomeName, "\"veins\" entry \"" + contentName + "\" must have \"max_depth_blocks\" "
                     + "greater than 0.");
 
         return new BiomeVeinStruct(
-                blockName, abundance, thicknessBlocks, minHeightBlocks, maxHeightBlocks, maxDepthBlocks);
+                contentName, abundance, thicknessBlocks, minHeightBlocks, maxHeightBlocks, maxDepthBlocks);
     }
 
     // Terrain Shape \\

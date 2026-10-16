@@ -13,7 +13,8 @@ public final class ChunkWriteUtility extends EngineUtility {
      * through here. A write sets the block whole or as a sub-block mask, its
      * orientation, and fills or empties its liquid, and a write outside the
      * world's height is dropped, so a caller never checks the column's ends.
-     * Coverage is written after its block, since writing a block bares it.
+     * Coverage and content are written after their block, since writing a
+     * block bares and empties it.
      */
 
     // Settings
@@ -50,6 +51,15 @@ public final class ChunkWriteUtility extends EngineUtility {
             return;
 
         subChunks[worldY / CHUNK_SIZE].setCoverage(Coordinate3Int.pack(localX, worldY % CHUNK_SIZE, localZ), coverage);
+    }
+
+    // The content a whole block already written holds, NONE leaving it empty
+    public static void writeContent(SubChunkInstance[] subChunks, int localX, int worldY, int localZ, short content) {
+
+        if (worldY < 0 || worldY >= WORLD_HEIGHT_BLOCKS)
+            return;
+
+        subChunks[worldY / CHUNK_SIZE].setContent(Coordinate3Int.pack(localX, worldY % CHUNK_SIZE, localZ), content);
     }
 
     // A whole block, unturned and dry

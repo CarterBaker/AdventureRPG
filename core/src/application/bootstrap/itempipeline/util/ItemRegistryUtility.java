@@ -9,9 +9,10 @@ public class ItemRegistryUtility extends EngineUtility {
      * Builds item names and IDs. ItemDefinitionManager assigns every item a
      * sequential index in registration order; an ID holds that index in its
      * upper 16 bits, and the lower 16 bits are zero and reserved for
-     * enchantment values. A block piece is named after its block behind a
-     * reserved prefix no item file can produce, so its name alone says which
-     * block it builds.
+     * enchantment values. A block piece is named after its block, and a
+     * content piece after its content, each behind a reserved prefix no item
+     * file can produce, so its name alone says which block or content it
+     * came from.
      */
 
     // Naming \\
@@ -34,6 +35,18 @@ public class ItemRegistryUtility extends EngineUtility {
 
     public static String toBlockName(String blockPieceName) {
         return blockPieceName.substring(EngineSetting.BLOCK_PIECE_NAME_PREFIX.length());
+    }
+
+    public static String toContentPieceName(String contentName) {
+        return EngineSetting.CONTENT_PIECE_NAME_PREFIX + contentName;
+    }
+
+    public static boolean isContentPieceName(String itemName) {
+        return itemName.startsWith(EngineSetting.CONTENT_PIECE_NAME_PREFIX);
+    }
+
+    public static String toContentName(String contentPieceName) {
+        return contentPieceName.substring(EngineSetting.CONTENT_PIECE_NAME_PREFIX.length());
     }
 
     // IDs \\

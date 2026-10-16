@@ -63,6 +63,9 @@ public class CaveVolumeAsyncContainer extends AsyncContainerPackage {
     // Result — the coverage the last rock read laid over its cell
     short cellCoverage;
 
+    // Result — the cave biome lining the last rock read's cell, null where none lines it
+    TerrainCaveProfileStruct cellProfile;
+
     @Override
     protected void create() {
 

@@ -1,5 +1,6 @@
 package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
+import application.bootstrap.contentpipeline.util.ContentUtility;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
 import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
 import application.bootstrap.geometrypipeline.quadpacket.QuadRecordUtility;
@@ -24,16 +25,18 @@ class SurfaceEmissionBranch extends BranchPackage {
 
     /*
      * Turns one merged solid quad into its packed record at either
-     * resolution: its origin, the face, extents and flags in one meta word,
-     * the coverage word beside the tile's atlas cell, then its four corner
-     * tints and the column codes along each edge as 24-bit words, so the
-     * surface shader rebuilds its corners and the sub-cells around any vertex
-     * exactly as neighboring quads do. The coverage word carries the cell's
-     * covering and level on an upper face, on an upright face only when the
-     * covering has side tiles, and never on a lower face.
-     * resolveCoverageWord() is the one definition both merge passes compare,
-     * so a merged quad never spans two coverages. Every value is a local, so
-     * builder threads emit through it at once.
+     * resolution: its origin, the face, extents, flags and the content its
+     * block holds in one meta word, the coverage word beside the tile's
+     * atlas cell, then its four corner tints and the column codes along each
+     * edge as 24-bit words, so the surface shader rebuilds its corners and
+     * the sub-cells around any vertex exactly as neighboring quads do. The
+     * coverage word carries the cell's covering and level on an upper face,
+     * on an upright face only when the covering has side tiles, and never on
+     * a lower face; a content shows on every face of the block holding it.
+     * resolveCoverageWord() and resolveContentID() are the definitions both
+     * merge passes compare, so a merged quad never spans two coverages or two
+     * contents. Every value is a local, so builder threads emit through it at
+     * once.
      */
 
     // Internal
@@ -56,6 +59,7 @@ class SurfaceEmissionBranch extends BranchPackage {
     private int sizeBShift;
     private int naturalShift;
     private int edgeUnitShift;
+    private int contentShift;
     private int tileShift;
 
     // Internal \\
@@ -78,6 +82,7 @@ class SurfaceEmissionBranch extends BranchPackage {
         this.sizeBShift = sizeAShift + EngineSetting.GEOMETRY_META_SIZE_BITS;
         this.naturalShift = sizeBShift + EngineSetting.GEOMETRY_META_SIZE_BITS;
         this.edgeUnitShift = naturalShift + 1;
+        this.contentShift = edgeUnitShift + 1;
         this.tileShift = EngineSetting.QUAD_RECORD_TILE_SHIFT;
     }
 
@@ -136,7 +141,7 @@ class SurfaceEmissionBranch extends BranchPackage {
         int vert3Color = resolveVertColor(chunkInstance, subChunkInstance, vert3X, vert3Y, vert3Z,
                 biomeHandle, vertColorAccumulator);
 
-        // Texture, orientation and coverage
+        // Texture, orientation, coverage and content
         int cellXYZ = subCellSampleBranch.toCellXYZ(originSubX, originSubY, originSubZ);
         short baseOrientation = rotationPaletteHandle.getBlock(cellXYZ);
         int orientation = baseOrientation & 0xFFFF;
@@ -144,6 +149,7 @@ class SurfaceEmissionBranch extends BranchPackage {
         TextureHandle textureHandle = textureManager.getTextureHandleFromTileID(textureID);
         int encodedFace = resolveEncodedFace(blockHandle, faceDirection, orientation);
         int coverageWord = resolveCoverageWord(subChunkInstance, cellXYZ, faceDirection);
+        short contentID = resolveContentID(subChunkInstance, cellXYZ);
 
         // Edge columns
         int lastA = sizeA - 1;
@@ -170,7 +176,8 @@ class SurfaceEmissionBranch extends BranchPackage {
                 | ((lastA & sizeMask) << sizeAShift)
                 | ((lastB & sizeMask) << sizeBShift)
                 | ((blockHandle.isNatural() ? 1 : 0) << naturalShift)
-                | ((cellsPerEntry == divisions ? 1 : 0) << edgeUnitShift);
+                | ((cellsPerEntry == divisions ? 1 : 0) << edgeUnitShift)
+                | ContentUtility.toMetaBits(contentID, contentShift);
 
         IntArrayList records = quadPacket.getRecords(
                 blockHandle.getMaterialID(), EngineSetting.QUAD_RECORD_SOLID_INTS);
@@ -289,6 +296,13 @@ class SurfaceEmissionBranch extends BranchPackage {
             return CoverageUtility.NONE;
 
         return CoverageUtility.toVertexWord(coverage, true);
+    }
+
+    // Content \\
+
+    // The content every face of a cell shows — its block's, held only by a whole block
+    short resolveContentID(SubChunkInstance subChunkInstance, int cellXYZ) {
+        return subChunkInstance.getContent(cellXYZ);
     }
 
     // Vertex Color \\

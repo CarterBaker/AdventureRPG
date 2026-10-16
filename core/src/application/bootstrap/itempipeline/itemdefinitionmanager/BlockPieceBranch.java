@@ -1,5 +1,6 @@
 package application.bootstrap.itempipeline.itemdefinitionmanager;
 
+import application.bootstrap.contentpipeline.content.ContentHandle;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
@@ -25,8 +26,10 @@ class BlockPieceBranch extends BranchPackage {
      * sub-block becomes, a cube BLOCK_PIECE_SIZE sub-voxels wide drawn with
      * the block's item texture, stacking up to BLOCK_PIECE_STACK_SIZE. A piece
      * only ever lives in a container; in the world it is a sub-block again.
-     * Its model is generated here and registered as a mesh under the piece's
-     * own item name.
+     * A content piece — the ore, rock or root a whole block hands out in
+     * place of its own pieces — is built the same way from the content's
+     * item texture, but builds nothing back. Every model is generated here
+     * and registered as a mesh under the piece's own item name.
      */
 
     // Internal
@@ -53,17 +56,46 @@ class BlockPieceBranch extends BranchPackage {
             return throwException("Block '" + blockHandle.getBlockName()
                     + "' has no block piece — only breakable solid blocks with an item texture break into pieces.");
 
-        String itemName = ItemRegistryUtility.toBlockPieceName(blockHandle.getBlockName());
-        SubVoxelModelStruct model = buildModel(blockHandle.getItemTextureName());
+        return buildPiece(
+                ItemRegistryUtility.toBlockPieceName(blockHandle.getBlockName()),
+                blockHandle.getLocalName(),
+                blockHandle.getItemTextureName(),
+                EngineSetting.BLOCK_PIECE_DESCRIPTION,
+                blockHandle.getBlockID());
+    }
+
+    ItemDefinitionHandle buildContentPiece(ContentHandle contentHandle) {
+
+        if (!contentHandle.hasPiece())
+            return throwException("Content '" + contentHandle.getContentName()
+                    + "' has no content piece — only a content with an item texture breaks into pieces.");
+
+        return buildPiece(
+                ItemRegistryUtility.toContentPieceName(contentHandle.getContentName()),
+                contentHandle.getDisplayName(),
+                contentHandle.getItemTextureName(),
+                EngineSetting.CONTENT_PIECE_DESCRIPTION,
+                EngineSetting.BLOCK_PIECE_NONE);
+    }
+
+    // A cube of the item texture under the piece's own item name, building the block it names, if any
+    private ItemDefinitionHandle buildPiece(
+            String itemName,
+            String localName,
+            String itemTextureName,
+            String description,
+            short blockID) {
+
+        SubVoxelModelStruct model = buildModel(itemTextureName);
         MeshHandle meshHandle = subVoxelManager.createMeshHandle(itemName, model);
         int materialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.DEFAULT_ITEM_MATERIAL);
 
         ItemDefinitionData itemDefinitionData = new ItemDefinitionData(
                 itemName,
-                blockHandle.getLocalName(),
+                localName,
                 itemDefinitionManager.registerItemName(itemName),
-                blockHandle.getLocalName(),
-                EngineSetting.BLOCK_PIECE_DESCRIPTION,
+                localName,
+                description,
                 ItemCategory.MATERIAL,
                 EngineSetting.BLOCK_PIECE_WEIGHT,
                 false,
@@ -81,7 +113,7 @@ class BlockPieceBranch extends BranchPackage {
                 EngineSetting.MOVESET_NONE,
                 EngineSetting.SKILL_NONE,
                 EngineSetting.BLOCK_PIECE_STACK_SIZE,
-                blockHandle.getBlockID(),
+                blockID,
                 new ObjectArrayList<>(),
                 EngineSetting.ITEM_PICK_UP_AS_SELF,
                 EngineSetting.ITEM_PLANTS_NONE,

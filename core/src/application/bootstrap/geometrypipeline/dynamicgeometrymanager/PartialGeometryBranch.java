@@ -22,8 +22,8 @@ class PartialGeometryBranch extends BranchPackage {
     /*
      * Sub-block resolution pass. Owns every face of a subdivided block and
      * every whole-block face that is not block-simple, greedily merging
-     * sub-faces of matching block, biome, orientation and coverage word
-     * within the subchunk and the merge extent limit.
+     * sub-faces of matching block, biome, orientation, coverage word and
+     * content within the subchunk and the merge extent limit.
      */
 
     // Internal
@@ -146,6 +146,7 @@ class PartialGeometryBranch extends BranchPackage {
         short baseOrientation = rotationPaletteHandle.getBlock(baseCellXYZ);
         int baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(
                 subChunkInstance, baseCellXYZ, direction3Vector);
+        short baseContentID = surfaceEmissionBranch.resolveContentID(subChunkInstance, baseCellXYZ);
 
         subAccumulatedBatch.set(getSubIndex(subX, subY, subZ));
 
@@ -166,6 +167,7 @@ class PartialGeometryBranch extends BranchPackage {
                 blockHandle,
                 baseOrientation,
                 baseCoverageWord,
+                baseContentID,
                 subAccumulatedBatch,
                 subBatchReturn)) {
             subAccumulatedBatch.or(subBatchReturn);
@@ -188,6 +190,7 @@ class PartialGeometryBranch extends BranchPackage {
                 blockHandle,
                 baseOrientation,
                 baseCoverageWord,
+                baseContentID,
                 subAccumulatedBatch,
                 subBatchReturn)) {
             subAccumulatedBatch.or(subBatchReturn);
@@ -225,6 +228,7 @@ class PartialGeometryBranch extends BranchPackage {
             BlockHandle blockHandle,
             short baseOrientation,
             int baseCoverageWord,
+            short baseContentID,
             BitSet subAccumulatedBatch,
             BitSet subBatchReturn) {
 
@@ -254,6 +258,7 @@ class PartialGeometryBranch extends BranchPackage {
                     orientationSensitive,
                     baseOrientation,
                     baseCoverageWord,
+                    baseContentID,
                     subAccumulatedBatch)) {
                 subBatchReturn.clear();
                 return false;
@@ -278,6 +283,7 @@ class PartialGeometryBranch extends BranchPackage {
             boolean orientationSensitive,
             short baseOrientation,
             int baseCoverageWord,
+            short baseContentID,
             BitSet subAccumulatedBatch) {
 
         if (subAccumulatedBatch.get(getSubIndex(checkX, checkY, checkZ)))
@@ -304,6 +310,9 @@ class PartialGeometryBranch extends BranchPackage {
             return false;
 
         if (surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, cellXYZ, direction3Vector) != baseCoverageWord)
+            return false;
+
+        if (surfaceEmissionBranch.resolveContentID(subChunkInstance, cellXYZ) != baseContentID)
             return false;
 
         if (!subCellSampleBranch.hasSubFace(

@@ -7,6 +7,7 @@ flat in vec2  vUVOrigin;
 flat in float vOrient;
 in vec3 vColor;
 flat in float vCoverage;
+flat in float vContent;
 
 #include "includes/CameraData.glsl"
 #include "includes/SettingsData.glsl"
@@ -23,6 +24,7 @@ flat in float vCoverage;
 #include "surface/includes/SurfaceTierFlat.glsl"
 #include "surface/includes/CloudShadow.glsl"
 #include "surface/includes/Coverage.glsl"
+#include "surface/includes/Content.glsl"
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
@@ -32,15 +34,16 @@ layout(location = 2) out vec4 gMaterial;
  * Material detail follows the same detail strength the TES displaces with,
  * via getDetailStrength() (SurfaceTessellationTier.glsl) evaluated against
  * this fragment's own vLocalPos, so normal, specular and ambient occlusion
- * maps and the full draw of a covering fade out across exactly the band the
- * bevel and relief fade across. Every fragment first runs the flat tier for
- * its albedo; beyond the radius that is the whole material, with any
- * covering laid over it by its baked approximation, and within it the detail
- * tier and the covering's full draw take over, the base maps read only where
- * no covering texel shows. Inside the fade band both are drawn and blended,
- * so nothing pops. This selection governs material detail only — it has no
- * bearing on fog, which the deferred Lighting.fsh pass computes from the
- * fragment's reconstructed world position.
+ * maps and the full draw of a content or covering fade out across exactly
+ * the band the bevel and relief fade across. Every fragment first runs the
+ * flat tier for its albedo; beyond the radius that is the whole material,
+ * with the block's content and then any covering laid over it by their baked
+ * approximations, and within it the detail tier and the full draws take
+ * over: a covering texel over a content texel over the block, the base maps
+ * read only where neither shows. Inside the fade band both are drawn and
+ * blended, so nothing pops. This selection governs material detail only —
+ * it has no bearing on fog, which the deferred Lighting.fsh pass computes
+ * from the fragment's reconstructed world position.
  */
 
 // Sun visibility under the grid's cloud layers, written into gMaterial.r so
@@ -71,7 +74,9 @@ void main() {
     if (!shadeSurfaceFlat(tiledUV, vNormal, u_view, albedo, normalView, specular, ao))
     discard;
 
-    vec3 farAlbedo = detail < 1.0 ? approximateCoverage(albedo, vCoverage, vColor) : albedo;
+    vec3 farAlbedo = detail < 1.0
+        ? approximateCoverage(approximateContent(albedo, vContent), vCoverage, vColor)
+        : albedo;
 
     if (detail > 0.0) {
 
@@ -84,7 +89,11 @@ void main() {
             vUVLocalPos, tiledUV, vUVOrigin, vCoverage, vColor, vNormal, u_view,
             nearAlbedo, nearNormalView, nearSpecular, nearAO);
 
-        if (!covered) {
+        bool contained = !covered && sampleContentDetail(
+            tiledUV, vUVOrigin, vContent, vNormal, u_view,
+            nearAlbedo, nearNormalView, nearSpecular, nearAO);
+
+        if (!covered && !contained) {
             nearAlbedo = albedo;
             sampleSurfaceDetail(tiledUV, vNormal, u_view, nearNormalView, nearSpecular, nearAO);
         }

@@ -1,5 +1,7 @@
 package application.bootstrap.entitypipeline.placementmanager;
 
+import application.bootstrap.contentpipeline.content.ContentHandle;
+import application.bootstrap.contentpipeline.contentmanager.ContentManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
@@ -28,11 +30,14 @@ class BlockBranch extends BranchPackage {
      * block subdivided into sub-blocks breaks one sub-block at a time — the
      * one the strike met — each taking the block's full durability, and hands
      * out one block piece; a whole block breaks whole and hands out a piece
-     * for each of its eight sub-blocks. The pieces must fit in the striker's
-     * inventory, or the block holds. A whole block broken under a fully grown
-     * covering also hands out the covering's drop through CoverageBranch. A
-     * held piece is placed back as a sub-block of its block. Every world edit
-     * it makes goes through BlockPlacementSystem.
+     * for each of its eight sub-blocks. A whole block holding a content needs
+     * a tool of the content's tier too, takes the content's durability on top
+     * of its own, and, when the content breaks into pieces, hands out the
+     * content's yield of pieces in place of its own. The pieces must fit in
+     * the striker's inventory, or the block holds. A whole block broken under
+     * a fully grown covering also hands out the covering's drop through
+     * CoverageBranch. A held piece is placed back as a sub-block of its
+     * block. Every world edit it makes goes through BlockPlacementSystem.
      */
 
     // Internal
@@ -42,6 +47,7 @@ class BlockBranch extends BranchPackage {
     private ItemManager itemManager;
     private CoverageBranch coverageBranch;
     private StatManager statManager;
+    private ContentManager contentManager;
 
     // Block IDs
     private short airBlockID;
@@ -70,6 +76,7 @@ class BlockBranch extends BranchPackage {
         this.itemManager = get(ItemManager.class);
         this.coverageBranch = get(CoverageBranch.class);
         this.statManager = get(StatManager.class);
+        this.contentManager = get(ContentManager.class);
     }
 
     @Override
@@ -84,8 +91,10 @@ class BlockBranch extends BranchPackage {
     boolean tryBreak(EntityInstance entity, BlockCastStruct castStruct) {
 
         BlockHandle block = castStruct.getBlock();
+        ContentHandle content = contentManager.getContentHandleFromContent(
+                blockPlacementSystem.getContent(castStruct));
 
-        if (!canBreak(entity, block))
+        if (!canBreak(entity, block, content))
             return false;
 
         int packedTarget = Coordinate3Int.pack(
@@ -111,10 +120,10 @@ class BlockBranch extends BranchPackage {
 
         currentHits += Math.max(0f, entity.getStat(statManager.getWorkPowerStatID()));
 
-        if (currentHits < block.getDurability())
+        if (currentHits < resolveDurability(block, content))
             return true;
 
-        if (!givePieces(entity, block, subdivided ? 1 : SubBlockUtility.OCTANT_COUNT))
+        if (!givePieces(entity, block, content, subdivided ? 1 : SubBlockUtility.OCTANT_COUNT))
             return true;
 
         String coveringDrop = subdivided
@@ -137,7 +146,15 @@ class BlockBranch extends BranchPackage {
 
     // Pieces \\
 
-    private boolean givePieces(EntityInstance entity, BlockHandle block, int count) {
+    // The content's yield of its pieces when it breaks into any, otherwise a count of the block's own
+    private boolean givePieces(EntityInstance entity, BlockHandle block, ContentHandle content, int count) {
+
+        if (content != null && content.hasPiece()) {
+
+            ItemDefinitionHandle contentPiece = itemDefinitionManager.getContentPieceHandle(content.getContentID());
+
+            return entity.getInventoryHandle().give(itemManager.createStack(contentPiece, content.getYield()));
+        }
 
         if (!block.hasPiece())
             return true;
@@ -183,7 +200,12 @@ class BlockBranch extends BranchPackage {
 
     // Tool Helpers \\
 
-    private boolean canBreak(EntityInstance entity, BlockHandle block) {
+    // Strikes a block takes, more for the content it holds
+    private int resolveDurability(BlockHandle block, ContentHandle content) {
+        return block.getDurability() + (content != null ? content.getDurability() : 0);
+    }
+
+    private boolean canBreak(EntityInstance entity, BlockHandle block, ContentHandle content) {
 
         if (block.isUnbreakable())
             return false;
@@ -198,7 +220,11 @@ class BlockBranch extends BranchPackage {
 
         ItemDefinitionHandle tool = held.getItemDefinitionHandle();
 
+        int breakTier = content != null
+                ? Math.max(block.getBreakTier(), content.getBreakTier())
+                : block.getBreakTier();
+
         return tool.getToolTypeID() == block.getRequiredToolTypeID()
-                && tool.getToolTier() >= block.getBreakTier();
+                && tool.getToolTier() >= breakTier;
     }
 }

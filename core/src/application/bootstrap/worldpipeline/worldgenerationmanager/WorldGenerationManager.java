@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
+import application.bootstrap.contentpipeline.contentmanager.ContentManager;
+import application.bootstrap.contentpipeline.util.ContentUtility;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
@@ -44,25 +46,28 @@ public class WorldGenerationManager extends ManagerPackage {
      * the band its caves and sea caves may hollow, its veins and the lowest
      * cell the tide reaches, with a vein palette holding the veins of every
      * cave biome that can line the chunk's underground. A column's top block
-     * takes the coverage its biome lays over that ground, thinned per column
-     * by the covering's variance. generateSubChunk() fills subchunks, has
+     * takes the coverage its biome lays over that ground, thinned per column by
+     * the covering's variance. generateSubChunk() fills subchunks, has
      * CaveCarveBranch hollow them and CaveDressingBranch line their caves and
      * grow their speleothems, threads them with veins through world-aligned
-     * noise lattices, and leaves fully empty or uniform ones unrealized. The
-     * sea stands at sea level and rides the tide, carried into caves that open
-     * on it; still water keeps the level its biome declares, and an
-     * underground lake the level of its own basin. sampleSurface() gives the ground, the water
-     * over it and its colors at any point for distant macro terrain and maps,
-     * and sampleOpenWater() whether the sea covers it. Output is a pure
-     * function of seed and coordinate, so it is cached per chunk and agrees
-     * across chunk borders. Surface profiles are cached per biome and dropped
-     * whenever a biome is rebuilt live.
+     * noise lattices — a vein sets its content into every whole block it runs
+     * through that the content can be held by, the surface biome's veins before
+     * those of the cave biome lining the cell — and leaves fully empty or
+     * uniform ones unrealized. The sea stands at sea level and rides the tide,
+     * carried into caves that open on it; still water keeps the level its biome
+     * declares, and an underground lake the level of its own basin.
+     * sampleSurface() gives the ground, the water over it and its colors at any
+     * point for distant macro terrain and maps, and sampleOpenWater() whether
+     * the sea covers it. Output is a pure function of seed and coordinate, so
+     * it is cached per chunk and agrees across chunk borders. Surface profiles
+     * are cached per biome and dropped whenever a biome is rebuilt live.
      */
 
     // Internal
     private BlockManager blockManager;
     private BiomeManager biomeManager;
     private CoveringManager coveringManager;
+    private ContentManager contentManager;
     private CaveBiomeManager caveBiomeManager;
     private TideManager tideManager;
     private CaveCarveBranch caveCarveBranch;
@@ -112,6 +117,7 @@ public class WorldGenerationManager extends ManagerPackage {
         this.blockManager = get(BlockManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.coveringManager = get(CoveringManager.class);
+        this.contentManager = get(ContentManager.class);
         this.caveBiomeManager = get(CaveBiomeManager.class);
         this.tideManager = get(TideManager.class);
     }
@@ -712,54 +718,49 @@ public class WorldGenerationManager extends ManagerPackage {
 
     // Veins \\
 
-    // Maps the column's veins onto the chunk's palette slots, false when it carries none
-    private boolean resolveVeinSlots(TerrainColumnAsyncContainer column, int columnIndex) {
+    // Maps the column's veins onto the chunk's palette slots
+    private void resolveVeinSlots(TerrainColumnAsyncContainer column, int columnIndex) {
 
         BiomeVeinStruct[] veins = column.columnProfile[columnIndex].veins;
 
         for (int i = 0; i < veins.length; i++)
             column.veinSlots[i] = findVeinSlot(column, veins[i].getFieldSeed());
-
-        return veins.length > 0;
     }
 
-    // The surface biome's vein a block of its rock lies in, or the rock itself — its slots resolved first
-    private short resolveColumnVeins(
+    // The content a whole block holds: the first vein of the surface biome, then of the cave biome lining the cell,
+    // whose content the block can hold and that runs through it — the column's slots resolved first, NONE when none
+    private short resolveCellContent(
             TerrainColumnAsyncContainer column,
             int columnIndex,
+            TerrainCaveProfileStruct caveProfile,
             int localX, int localZ,
             int worldY,
             int latticeOriginY,
-            short rockBlockID) {
+            short blockID) {
 
         TerrainSurfaceProfileStruct profile = column.columnProfile[columnIndex];
         int groundHeight = column.groundHeightBlocks[columnIndex];
 
         for (int i = 0; i < profile.veins.length; i++)
-            if (isInVein(column, profile.veins[i], column.veinSlots[i],
-                    localX, localZ, worldY, latticeOriginY, groundHeight))
-                return profile.veinBlockIDs[i];
+            if (canHold(profile.veinContentIDs[i], blockID)
+                    && isInVein(column, profile.veins[i], column.veinSlots[i],
+                            localX, localZ, worldY, latticeOriginY, groundHeight))
+                return profile.veinContentIDs[i];
 
-        return rockBlockID;
+        if (caveProfile == null)
+            return ContentUtility.NONE;
+
+        for (int i = 0; i < caveProfile.veins.length; i++)
+            if (canHold(caveProfile.veinContentIDs[i], blockID)
+                    && isInVein(column, caveProfile.veins[i], findVeinSlot(column, caveProfile.veins[i].getFieldSeed()),
+                            localX, localZ, worldY, latticeOriginY, groundHeight))
+                return caveProfile.veinContentIDs[i];
+
+        return ContentUtility.NONE;
     }
 
-    // Any vein a block of rock lies in, or the rock itself, each vein found in the chunk's palette by its seed
-    short resolveVeins(
-            TerrainColumnAsyncContainer column,
-            BiomeVeinStruct[] veins,
-            short[] veinBlockIDs,
-            int localX, int localZ,
-            int worldY,
-            int latticeOriginY,
-            int groundHeight,
-            short rockBlockID) {
-
-        for (int i = 0; i < veins.length; i++)
-            if (isInVein(column, veins[i], findVeinSlot(column, veins[i].getFieldSeed()),
-                    localX, localZ, worldY, latticeOriginY, groundHeight))
-                return veinBlockIDs[i];
-
-        return rockBlockID;
+    private boolean canHold(short contentID, short blockID) {
+        return contentManager.getContentHandleFromContentID(contentID).canHost(blockID);
     }
 
     // latticeOriginY is the world Y of the vein lattice's first row
@@ -1200,12 +1201,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 biomeName, biomeHandle.getUnderwaterCovering(), underwaterBlockID);
         short rockCoverage = resolveProfileCoverage(biomeName, biomeHandle.getRockCovering(), rockBlockID);
 
-        ObjectArrayList<BiomeVeinStruct> veinList = biomeHandle.getVeins();
-        BiomeVeinStruct[] veins = veinList.toArray(new BiomeVeinStruct[0]);
-        short[] veinBlockIDs = new short[veins.length];
-
-        for (int i = 0; i < veins.length; i++)
-            veinBlockIDs[i] = (short) blockManager.getBlockIDFromBlockName(veins[i].getBlockName());
+        BiomeVeinStruct[] veins = biomeHandle.getVeins().toArray(new BiomeVeinStruct[0]);
 
         profile = new TerrainSurfaceProfileStruct(
                 biomeHandle,
@@ -1221,7 +1217,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 rockCoverage,
                 resolveProfileVariance(biomeHandle.getRockCovering()),
                 veins,
-                veinBlockIDs,
+                resolveVeinContentIDs(veins),
                 resolveCaveEntries(biomeHandle),
                 resolveCoveredMapColor(biomeHandle, surfaceBlockID, surfaceCoverage, Direction3Vector.UP),
                 resolveCoveredMapColor(biomeHandle, underwaterBlockID, underwaterCoverage, Direction3Vector.UP),
@@ -1234,6 +1230,18 @@ public class WorldGenerationManager extends ManagerPackage {
         biomeID2SurfaceProfile = next;
 
         return profile;
+    }
+
+    // The content each of a biome's or cave biome's veins sets into the blocks it runs through
+    private short[] resolveVeinContentIDs(BiomeVeinStruct[] veins) {
+
+        short[] veinContentIDs = new short[veins.length];
+
+        for (int i = 0; i < veins.length; i++)
+            veinContentIDs[i] = contentManager.getContentHandleFromContentName(veins[i].getContentName())
+                    .getContentID();
+
+        return veinContentIDs;
     }
 
     // The coverage a biome or cave biome lays over one kind of ground, NONE when it lays none there
@@ -1300,10 +1308,6 @@ public class WorldGenerationManager extends ManagerPackage {
                 || !isFullGeometry(profile.rockBlockID))
             return false;
 
-        for (int i = 0; i < profile.veinBlockIDs.length; i++)
-            if (!isFullGeometry(profile.veinBlockIDs[i]))
-                return false;
-
         return true;
     }
 
@@ -1349,12 +1353,7 @@ public class WorldGenerationManager extends ManagerPackage {
         short ceilingBlockID = (short) blockManager.getBlockIDFromBlockName(caveBiomeHandle.getCeilingBlockName());
         CaveSpeleothemStruct speleothems = caveBiomeHandle.getSpeleothems();
 
-        ObjectArrayList<BiomeVeinStruct> veinList = caveBiomeHandle.getVeins();
-        BiomeVeinStruct[] veins = veinList.toArray(new BiomeVeinStruct[0]);
-        short[] veinBlockIDs = new short[veins.length];
-
-        for (int i = 0; i < veins.length; i++)
-            veinBlockIDs[i] = (short) blockManager.getBlockIDFromBlockName(veins[i].getBlockName());
+        BiomeVeinStruct[] veins = caveBiomeHandle.getVeins().toArray(new BiomeVeinStruct[0]);
 
         profile = new TerrainCaveProfileStruct(
                 caveBiomeHandle,
@@ -1379,7 +1378,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 speleothems.getGiants(),
                 speleothems.getMaxGiantRadiusBlocks(),
                 veins,
-                veinBlockIDs);
+                resolveVeinContentIDs(veins));
 
         Short2ObjectOpenHashMap<TerrainCaveProfileStruct> next = new Short2ObjectOpenHashMap<>(
                 caveBiomeID2CaveProfile);
@@ -1471,8 +1470,9 @@ public class WorldGenerationManager extends ManagerPackage {
                 short topBlockID = column.columnTopBlockID[columnIndex];
                 short topCoverage = column.columnTopCoverage[columnIndex];
                 short fillBlockID = column.columnFillBlockID[columnIndex];
-                short rockBlockID = column.columnRockBlockID[columnIndex];
-                boolean columnVeins = veins && resolveVeinSlots(column, columnIndex);
+
+                if (veins)
+                    resolveVeinSlots(column, columnIndex);
 
                 for (int localY = 0; localY < CHUNK_SIZE; localY++) {
 
@@ -1549,13 +1549,10 @@ public class WorldGenerationManager extends ManagerPackage {
                             if (state == CaveVolumeAsyncContainer.STATE_PARTIAL)
                                 mask &= volume.getSolidMask(localX, worldY, localZ);
 
-                            if (columnVeins && (resultBlockID == stoneBlockId || resultBlockID == rockBlockID))
-                                resultBlockID = resolveColumnVeins(
-                                        column, columnIndex, localX, localZ, worldY, offsetY, resultBlockID);
-
                             short coverage = worldY == groundHeight && resultBlockID == topBlockID
                                     ? topCoverage
                                     : CoverageUtility.NONE;
+                            TerrainCaveProfileStruct caveProfile = null;
 
                             if (carves) {
                                 short dressedBlockID = caveDressingBranch.resolveRock(
@@ -1566,6 +1563,7 @@ public class WorldGenerationManager extends ManagerPackage {
                                     coverage = volume.cellCoverage;
 
                                 resultBlockID = dressedBlockID;
+                                caveProfile = volume.cellProfile;
 
                                 if (state == CaveVolumeAsyncContainer.STATE_PARTIAL) {
                                     int speleothemMask = caveDressingBranch.resolveSpeleothemMask(
@@ -1591,6 +1589,17 @@ public class WorldGenerationManager extends ManagerPackage {
 
                             if (mask != SubBlockUtility.MASK_EMPTY && CoverageUtility.isCovered(coverage)) {
                                 subChunkInstance.setCoverage(packedXYZ, coverage);
+                                isUniform = false;
+                            }
+
+                            short contentID = veins && mask == SubBlockUtility.MASK_FULL
+                                    ? resolveCellContent(
+                                            column, columnIndex, caveProfile, localX, localZ, worldY, offsetY,
+                                            resultBlockID)
+                                    : ContentUtility.NONE;
+
+                            if (ContentUtility.isContained(contentID)) {
+                                subChunkInstance.setContent(packedXYZ, contentID);
                                 isUniform = false;
                             }
                         }

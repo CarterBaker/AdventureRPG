@@ -12,8 +12,8 @@ class TerrainCaveProfileStruct extends StructPackage {
      * floors, ceilings and still water beds, the coverage it lays over
      * floors, walls and ceilings with how many levels a cell may fall short
      * of each, the stalactites and stalagmites it grows and its veins with
-     * their block IDs. Built once per cave biome by WorldGenerationManager
-     * and shared by every thread.
+     * the IDs of the contents they set. Built once per cave biome by
+     * WorldGenerationManager and shared by every thread.
      */
 
     final CaveBiomeHandle caveBiomeHandle;
@@ -36,7 +36,7 @@ class TerrainCaveProfileStruct extends StructPackage {
     final float giants;
     final int maxGiantRadiusBlocks;
     final BiomeVeinStruct[] veins;
-    final short[] veinBlockIDs;
+    final short[] veinContentIDs;
 
     TerrainCaveProfileStruct(
             CaveBiomeHandle caveBiomeHandle,
@@ -59,7 +59,7 @@ class TerrainCaveProfileStruct extends StructPackage {
             float giants,
             int maxGiantRadiusBlocks,
             BiomeVeinStruct[] veins,
-            short[] veinBlockIDs) {
+            short[] veinContentIDs) {
 
         this.caveBiomeHandle = caveBiomeHandle;
         this.rockBlockID = rockBlockID;
@@ -81,6 +81,6 @@ class TerrainCaveProfileStruct extends StructPackage {
         this.giants = giants;
         this.maxGiantRadiusBlocks = maxGiantRadiusBlocks;
         this.veins = veins;
-        this.veinBlockIDs = veinBlockIDs;
+        this.veinContentIDs = veinContentIDs;
     }
 }

@@ -11,10 +11,10 @@ class TerrainSurfaceProfileStruct extends StructPackage {
      * lays on land, under water and on faces too steep to hold soil, the
      * slope those faces start at, the coverage it lays over each of those
      * three with how many levels a column may fall short of it, its veins
-     * with their block IDs, the cave biomes it holds beneath it, and the map
-     * colors distant terrain draws it with, its coverings included. Built
-     * once per biome and revision by WorldGenerationManager and shared by
-     * every thread.
+     * with the IDs of the contents they set, the cave biomes it holds beneath
+     * it, and the map colors distant terrain draws it with, its coverings
+     * included. Built once per biome and revision by WorldGenerationManager
+     * and shared by every thread.
      */
 
     final BiomeHandle biomeHandle;
@@ -30,7 +30,7 @@ class TerrainSurfaceProfileStruct extends StructPackage {
     final short rockCoverage;
     final int rockCoverageVariance;
     final BiomeVeinStruct[] veins;
-    final short[] veinBlockIDs;
+    final short[] veinContentIDs;
     final TerrainCaveEntryStruct[] caveEntries;
     final int surfaceTopColor;
     final int underwaterTopColor;
@@ -51,7 +51,7 @@ class TerrainSurfaceProfileStruct extends StructPackage {
             short rockCoverage,
             int rockCoverageVariance,
             BiomeVeinStruct[] veins,
-            short[] veinBlockIDs,
+            short[] veinContentIDs,
             TerrainCaveEntryStruct[] caveEntries,
             int surfaceTopColor,
             int underwaterTopColor,
@@ -71,7 +71,7 @@ class TerrainSurfaceProfileStruct extends StructPackage {
         this.rockCoverage = rockCoverage;
         this.rockCoverageVariance = rockCoverageVariance;
         this.veins = veins;
-        this.veinBlockIDs = veinBlockIDs;
+        this.veinContentIDs = veinContentIDs;
         this.caveEntries = caveEntries;
         this.surfaceTopColor = surfaceTopColor;
         this.underwaterTopColor = underwaterTopColor;
