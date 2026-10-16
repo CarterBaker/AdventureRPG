@@ -220,6 +220,7 @@ class VehicleHullBranch extends BranchPackage {
     private void applyDrag(VehicleInstance vehicle, int columnIndex, float volume) {
 
         VehicleHandlingStruct handling = vehicle.getVehicleHandle().getHandling();
+        float surgeDrag = vehicle.getVehicleHandle().getHull().getSurgeDrag();
         Vector3 velocity = vehicle.getVelocity();
         Vector3 spin = vehicle.getAngularVelocity();
         float[] motion = vehicle.getColumnMotion();
@@ -232,7 +233,7 @@ class VehicleHullBranch extends BranchPackage {
         VehicleSpaceUtility.toModelDirection(vehicle, relativeX, relativeY, relativeZ, motionScratch);
 
         float linear = EngineSetting.VEHICLE_DRAG_LINEAR_SPEED;
-        float surge = -handling.getSurgeDrag() * volume * (Math.abs(motionScratch.x) + linear) * motionScratch.x;
+        float surge = -surgeDrag * volume * (Math.abs(motionScratch.x) + linear) * motionScratch.x;
         float heave = -handling.getHeaveDrag() * volume * (Math.abs(motionScratch.y) + linear) * motionScratch.y;
         float sway = -handling.getSwayDrag() * volume * (Math.abs(motionScratch.z) + linear) * motionScratch.z;
 

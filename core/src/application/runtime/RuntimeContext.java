@@ -11,6 +11,8 @@ import application.runtime.player.PlayerSystem;
 import application.runtime.postprocessing.PostProcessingManager;
 import application.runtime.projectile.ProjectileSystem;
 import application.runtime.recording.RecordingInputSystem;
+import application.runtime.shipwright.ShipwrightRenderSystem;
+import application.runtime.shipwright.ShipwrightSystem;
 import application.runtime.sky.SkySystem;
 import application.runtime.sky.SquintSystem;
 import application.runtime.tree.TreeSystem;
@@ -54,6 +56,8 @@ public class RuntimeContext extends ContextPackage {
     private VehicleSystem vehicleSystem;
     private NpcSystem npcSystem;
     private TreeSystem treeSystem;
+    private ShipwrightSystem shipwrightSystem;
+    private ShipwrightRenderSystem shipwrightRenderSystem;
 
     // Internal \\
 
@@ -81,5 +85,7 @@ public class RuntimeContext extends ContextPackage {
         this.vehicleSystem = create(VehicleSystem.class);
         this.npcSystem = create(NpcSystem.class);
         this.treeSystem = create(TreeSystem.class);
+        this.shipwrightSystem = create(ShipwrightSystem.class);
+        this.shipwrightRenderSystem = create(ShipwrightRenderSystem.class);
     }
 }

@@ -16,6 +16,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemCategory;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionData;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
+import application.bootstrap.itempipeline.itemdefinition.ItemStation;
 import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
@@ -71,7 +72,9 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * lays over the block it is used on and "nurtures" the levels it adds
      * there, which a sower must name; an item that only nurtures feeds
      * whatever already covers the block. A container carries no actions, so
-     * its contents are never lost. Bootstrap-only.
+     * its contents are never lost. "station" names the work an item opens
+     * where it stands, as a drafting table opens the shipwright, which a
+     * container cannot also be. Bootstrap-only.
      */
 
     // Internal
@@ -185,6 +188,11 @@ class ItemDefinitionBuilder extends BuilderPackage {
         String plantsTreeName = ArpgUtility.getString(itemArpg, "plants", EngineSetting.ITEM_PLANTS_NONE);
         String sowsCoveringName = parseSows(itemArpg, plantsTreeName, itemName);
         int nurtureLevels = parseNurtures(itemArpg, sowsCoveringName, itemName);
+        ItemStation station = ArpgUtility.getEnum(itemArpg, "station", ItemStation.class, ItemStation.NONE);
+
+        if (station != ItemStation.NONE && containerSpace != null)
+            throwException("Item '" + itemName + "' is both a container and a station; activating it could only "
+                    + "open one of them.");
 
         String materialPath = ArpgUtility.getString(
                 itemArpg, "material", EngineSetting.DEFAULT_ITEM_MATERIAL);
@@ -218,7 +226,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 ArpgUtility.getString(itemArpg, "pick_up_as", EngineSetting.ITEM_PICK_UP_AS_SELF),
                 plantsTreeName,
                 sowsCoveringName,
-                nurtureLevels);
+                nurtureLevels,
+                station);
 
         ItemDefinitionHandle item = create(ItemDefinitionHandle.class);
         item.constructor(itemDefinitionData);

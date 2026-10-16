@@ -36,8 +36,8 @@ public class PlacementManager extends ManagerPackage {
      * a door is swung or a cannon loaded and fired; otherwise the primary
      * action picks it up, and the activate action sets the held item against
      * the face it was hit on, so items stack into piles — containers included,
-     * unless the container can open, since activating one that can opens it in
-     * the runtime, never here. Otherwise the primary action swings whatever is
+     * unless activating the item opens something in the runtime, never here: a
+     * container that can open, or a station such as a drafting table. Otherwise the primary action swings whatever is
      * held through CombatManager — a weapon or bare hands attack there from
      * the side the entity's input asks for instead — whose strike lands back
      * here on a block through strikeBlock(), and the activate action places
@@ -49,7 +49,7 @@ public class PlacementManager extends ManagerPackage {
      * instead, through VehicleCargoSystem, by the same rules: cargo's own
      * actions come first, then the primary action picks cargo up or swings at
      * the deck, and the activate action sets the held item down aboard, unless
-     * it is a block piece or the cargo is a container that can open.
+     * it is a block piece or activating the cargo opens it in the runtime.
      * findTargetVehicle() is the one place that decides whether a vehicle
      * stands in front. Nothing happens here while the entity is caught up in a
      * fight — attacking, reeling, aiming or guarding all belong to
@@ -334,8 +334,7 @@ public class PlacementManager extends ManagerPackage {
     }
 
     // Against the vehicle VehicleCargoSystem last met — the primary action takes cargo up or swings at the deck, the
-    // activate action sets the held item down aboard, unless the cargo is a container that can open, which is
-    // opened instead
+    // activate action sets the held item down aboard, unless activating the cargo opens it in the runtime instead
     private void handleVehicleAction(
             EntityInstance entity,
             Vector3 direction,
@@ -359,7 +358,8 @@ public class PlacementManager extends ManagerPackage {
             return;
         }
 
-        if (activateAction && !vehicleCargoSystem.canOpenCastCargo() && vehicleCargoSystem.place(entity, direction)) {
+        if (activateAction && !vehicleCargoSystem.castCargoOpensInRuntime()
+                && vehicleCargoSystem.place(entity, direction)) {
             timeSinceLastPlacement = 0;
             combatManager.gesture(entity, EntityAction.PLACE);
         }
@@ -370,15 +370,15 @@ public class PlacementManager extends ManagerPackage {
         return primaryAction ? ItemActionTrigger.STRIKE : ItemActionTrigger.USE;
     }
 
-    // Against the item findTargetItem() last met — a block piece is a sub-block, which only builds on blocks, and a
-    // container that can open is opened instead
+    // Against the item findTargetItem() last met — a block piece is a sub-block, which only builds on blocks, and an
+    // item that opens in the runtime is opened instead
     private boolean handlePlaceOnItem(EntityInstance entity, Vector3 direction, WorldItemInstance targetItem) {
 
         ItemInstance held = entity.getInventoryHandle().getMainHand();
 
         if (held == null
                 || held.getItemDefinitionHandle().isBlockPiece()
-                || worldItemPlacementSystem.canOpen(targetItem))
+                || worldItemPlacementSystem.opensInRuntime(targetItem))
             return false;
 
         return itemBranch.placeOnItem(entity, direction, itemCastStruct);

@@ -343,6 +343,14 @@ public class VehicleCargoSystem extends SystemPackage {
         return castStruct.isCargoHit() && canOpen(castStruct.getVehicleInstance(), castStruct.getCargoInstance());
     }
 
+    // True when activating the cargo cast() last met opens something in the runtime — a container that can open,
+    // or a station
+    public boolean castCargoOpensInRuntime() {
+        return canOpenCastCargo()
+                || castStruct.isCargoHit()
+                        && castStruct.getCargoInstance().getItemInstance().getItemDefinitionHandle().isStation();
+    }
+
     public boolean canOpen(VehicleInstance vehicle, VehicleCargoInstance cargo) {
         return cargo.getItemInstance().getItemDefinitionHandle().isContainer() && isLidClear(vehicle, cargo);
     }

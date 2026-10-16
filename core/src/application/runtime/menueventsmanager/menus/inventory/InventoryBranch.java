@@ -1,5 +1,6 @@
 package application.runtime.menueventsmanager.menus.inventory;
 
+import application.bootstrap.entitypipeline.player.UseTargetStruct;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.menupipeline.element.ElementInstance;
@@ -37,8 +38,9 @@ public class InventoryBranch extends BranchPackage {
      * container and equipment branches settle and redraw what changed. A new
      * item handed in while the cursor is over the open inventory lands where
      * it points. findOpenableContainer() is the one place that decides which
-     * container the activate binding would open: the nearer of cargo aboard a
-     * vehicle and a world item. setCovered() hides every inventory menu that
+     * container the activate binding would open, from what PlayerManager says
+     * that binding would use: the nearer of cargo aboard a vehicle and a world
+     * item. setCovered() hides every inventory menu that
      * is showing while another menu, such as the character sheet, stands over
      * the inventory, and shows exactly those again once it is gone; the
      * inventory neither closes nor draws while covered.
@@ -61,7 +63,8 @@ public class InventoryBranch extends BranchPackage {
     // Cover — the menus setCovered() hid, shown again when uncovered
     private ObjectArrayList<MenuInstance> coveredMenus;
 
-    // Openable — the container findOpenableContainer() last found
+    // Openable — the container findOpenableContainer() last found, from what the activate binding would use
+    private UseTargetStruct useTarget;
     private WorldItemInstance openableWorldItem;
     private VehicleCargoInstance openableCargo;
     private VehicleInstance openableVehicle;
@@ -73,6 +76,9 @@ public class InventoryBranch extends BranchPackage {
 
         // Cover
         this.coveredMenus = new ObjectArrayList<>();
+
+        // Openable
+        this.useTarget = new UseTargetStruct();
     }
 
     @Override
@@ -150,36 +156,33 @@ public class InventoryBranch extends BranchPackage {
             openMenu(window, openableWorldItem, openableCargo, openableVehicle);
     }
 
-    // True when the player faces a container it could open where it lies — the nearer of cargo aboard a vehicle
-    // and a world item, kept as the openable container — false when it faces none or nothing is open to it now
+    // True when the player faces a container it could open where it lies — whatever the activate binding would
+    // use, kept as the openable container — false when it faces none or nothing is open to it now
     public boolean findOpenableContainer(WindowInstance window) {
 
         this.openableWorldItem = null;
         this.openableCargo = null;
         this.openableVehicle = null;
 
-        if (session != null || !canOpen(window))
+        if (session != null || !canOpen(window)
+                || !playerManager.findUseTargetForWindow(window.getWindowID(), useTarget))
             return false;
 
-        int windowID = window.getWindowID();
+        if (useTarget.isAboard()) {
 
-        if (playerManager.isAimingAtVehicleForWindow(windowID)) {
-
-            if (!vehicleCargoSystem.canOpenCastCargo())
+            if (!vehicleCargoSystem.canOpen(useTarget.getVehicle(), useTarget.getCargo()))
                 return false;
 
-            this.openableCargo = vehicleCargoSystem.getCastCargo();
-            this.openableVehicle = vehicleCargoSystem.getCastVehicle();
+            this.openableCargo = useTarget.getCargo();
+            this.openableVehicle = useTarget.getVehicle();
 
             return true;
         }
 
-        WorldItemInstance targetItem = playerManager.getTargetItemForWindow(windowID);
-
-        if (targetItem == null || !worldItemPlacementSystem.canOpen(targetItem))
+        if (!worldItemPlacementSystem.canOpen(useTarget.getWorldItem()))
             return false;
 
-        this.openableWorldItem = targetItem;
+        this.openableWorldItem = useTarget.getWorldItem();
 
         return true;
     }

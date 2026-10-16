@@ -6,8 +6,9 @@ public class VehicleHandlingStruct extends StructPackage {
 
     /*
      * How one vehicle type handles, as its data tunes it. The hull's drag
-     * through the water along, across and up its length, per block of hull
-     * under water; how fast water floods in once the deck edge goes under and
+     * through the water across and up its length, per block of hull under
+     * water, its drag along the length following from the shape of its bow
+     * and kept by its hull; how fast water floods in once the deck edge goes under and
      * how fast the crew pumps it out again; how hard its sails pull, how far
      * and how fast its yards brace and how fast a sail is set or taken in; how
      * far and how fast its rudder swings and how hard it bites; and how firmly
@@ -16,7 +17,6 @@ public class VehicleHandlingStruct extends StructPackage {
      */
 
     // Hull
-    private final float surgeDrag;
     private final float swayDrag;
     private final float heaveDrag;
     private final float floodRate;
@@ -40,7 +40,6 @@ public class VehicleHandlingStruct extends StructPackage {
     // Constructor \\
 
     public VehicleHandlingStruct(
-            float surgeDrag,
             float swayDrag,
             float heaveDrag,
             float floodRate,
@@ -56,7 +55,6 @@ public class VehicleHandlingStruct extends StructPackage {
             float anchorDrop) {
 
         // Hull
-        this.surgeDrag = surgeDrag;
         this.swayDrag = swayDrag;
         this.heaveDrag = heaveDrag;
         this.floodRate = floodRate;
@@ -79,10 +77,6 @@ public class VehicleHandlingStruct extends StructPackage {
     }
 
     // Accessible \\
-
-    public float getSurgeDrag() {
-        return surgeDrag;
-    }
 
     public float getSwayDrag() {
         return swayDrag;

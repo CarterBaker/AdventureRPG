@@ -20,6 +20,7 @@ import editor.itemeditor.ItemEditorContext;
 import editor.profiler.ProfilerContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
+import editor.shipwright.ShipwrightContext;
 import editor.textureviewer.TextureViewerContext;
 import editor.worldeditor.WorldEditorContext;
 import editor.worldmap.WorldMapContext;
@@ -115,6 +116,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openItemEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ITEM_EDITOR, ItemEditorContext.class, osWindow);
+    }
+
+    public TabHandle openShipwright(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_SHIPWRIGHT, ShipwrightContext.class, osWindow);
     }
 
     public TabHandle openTextureViewer(WindowInstance osWindow) {

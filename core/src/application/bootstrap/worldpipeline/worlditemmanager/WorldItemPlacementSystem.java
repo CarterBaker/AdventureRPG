@@ -191,6 +191,11 @@ public class WorldItemPlacementSystem extends SystemPackage {
         return instance.getItemDefinitionHandle().isContainer() && worldItemSpaceSystem.isLidClear(instance);
     }
 
+    // True when activating the item opens something in the runtime — a container that can open, or a station
+    public boolean opensInRuntime(WorldItemInstance instance) {
+        return canOpen(instance) || instance.getItemDefinitionHandle().isStation();
+    }
+
     // An open container claims its lid's clearance and is drawn open by whoever opened it
     public void setItemOpen(WorldItemInstance instance, boolean open) {
 

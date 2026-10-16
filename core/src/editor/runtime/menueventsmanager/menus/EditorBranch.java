@@ -62,6 +62,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openTextureViewer(window.getGLWindow());
     }
 
+    public void openShipwright(WindowInstance window) {
+        tabManager.openShipwright(window.getGLWindow());
+    }
+
     public void openWorldMap(WindowInstance window) {
         tabManager.openWorldMap(window.getGLWindow());
     }

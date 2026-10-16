@@ -2,15 +2,12 @@ package editor.dev.vehicle;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
-import application.bootstrap.vehiclepipeline.vehicle.VehicleData;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
-import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.runtime.EditorSetting;
-import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -20,27 +17,16 @@ public class DevVehicleSystem extends SystemPackage {
      * Spawns and removes vehicles around this Dev window's player for testing.
      * Driven by the command console's spawnvehicle command, which names a
      * vehicle by its full name or by a local or display name only one vehicle
-     * carries, and its removevehicle command. A vehicle spawns broadside in
-     * front of the player, clear of it, at anchor: its waterline on the water
-     * where there is water, its keel level with the player's feet where there
-     * is not. A free-flying window has no character to spawn beside.
+     * carries, and its removevehicle command. A vehicle is launched beside the
+     * player along its view through VehicleManager.spawnBeside(). A
+     * free-flying window has no character to spawn beside.
      */
 
     // Internal
     private PlayerManager playerManager;
     private VehicleManager vehicleManager;
 
-    // Scratch
-    private WorldPositionStruct spawnScratch;
-
     // Base \\
-
-    @Override
-    protected void create() {
-
-        // Scratch
-        this.spawnScratch = new WorldPositionStruct();
-    }
 
     @Override
     protected void get() {
@@ -67,32 +53,10 @@ public class DevVehicleSystem extends SystemPackage {
             return;
         }
 
-        EntityInstance player = playerManager.getPlayerForWindow(windowID);
-        Vector3 view = playerManager.getCameraForWindow(windowID).getDirection();
-        float viewLength = (float) Math.sqrt(view.x * view.x + view.z * view.z);
-        float forwardX = viewLength > 0f ? view.x / viewLength : 0f;
-        float forwardZ = viewLength > 0f ? view.z / viewLength : 1f;
-
-        VehicleData vehicleData = vehicleHandle.getVehicleData();
-        Vector3 centerOfMass = vehicleHandle.getHull().getCenterOfMass();
-        float halfBeam = (vehicleData.getMaxZ() - vehicleData.getMinZ()) * 0.5f / EngineSetting.SUB_VOXEL_RESOLUTION;
-        float distance = halfBeam + EditorSetting.DEV_VEHICLE_SPAWN_CLEARANCE;
-        Vector3 feet = player.getWorldPositionStruct().getPosition();
-        Vector3 size = player.getSize();
-
-        spawnScratch.setChunkCoordinate(player.getWorldPositionStruct().getChunkCoordinate());
-        spawnScratch.getPosition().set(
-                feet.x + size.x * 0.5f + forwardX * distance,
-                feet.y + centerOfMass.y,
-                feet.z + size.z * 0.5f + forwardZ * distance);
-        WorldPositionUtility.settleChunk(player.getWorldHandle(), spawnScratch);
-
-        vehicleManager.spawn(
+        vehicleManager.spawnBeside(
                 vehicleHandle,
-                player.getWorldHandle(),
-                spawnScratch.getChunkCoordinate(),
-                spawnScratch.getPosition(),
-                (float) Math.atan2(forwardX, forwardZ) + (float) Math.PI * 0.5f);
+                playerManager.getPlayerForWindow(windowID),
+                playerManager.getCameraForWindow(windowID).getDirection());
 
         log(window.getTitle() + EditorSetting.COMMAND_MESSAGE_VEHICLE_SPAWNED + vehicleHandle.getDisplayName());
     }

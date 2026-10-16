@@ -2,17 +2,15 @@ package application.runtime.menueventsmanager.menus.charactercreator;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.menueventsmanager.util.NameInputUtility;
 import engine.input.Input;
-import engine.input.Keys;
 import engine.root.BranchPackage;
 
 public class CreatorNameBranch extends BranchPackage {
 
     /*
-     * Types the character's name. Keys only ever produce letters, digits,
-     * single inner spaces, hyphens, and apostrophes — every name is also a
-     * valid save file name. Every key pressed in a frame is taken, so fast
-     * typing never drops a letter. The name field shows a blinking caret,
+     * Types the character's name through NameInputUtility, so every name is
+     * also a valid save file name. The name field shows a blinking caret,
      * and the status line under it reports why a name was refused until
      * typing resumes.
      */
@@ -21,61 +19,12 @@ public class CreatorNameBranch extends BranchPackage {
 
     void updateNameInput(CreatorSessionStruct session, Input rawInput) {
 
-        if (rawInput.isKeyClicked(Keys.BACKSPACE))
-            removeNameCharacter(session);
+        if (NameInputUtility.typeName(rawInput, session.getNameBuffer(), RuntimeSetting.CREATOR_NAME_MAX_LENGTH)) {
+            showStatus(session, "");
+            refreshName(session);
+        }
 
-        appendTypedCharacters(session, rawInput);
         updateCaret(session);
-    }
-
-    private void appendTypedCharacters(CreatorSessionStruct session, Input rawInput) {
-
-        boolean shift = rawInput.isKeyDown(Keys.SHIFT_LEFT) || rawInput.isKeyDown(Keys.SHIFT_RIGHT);
-
-        for (int key = Keys.A; key <= Keys.Z; key++)
-            if (rawInput.isKeyClicked(key))
-                appendNameCharacter(session, shift ? (char) key : Character.toLowerCase((char) key));
-
-        for (int key = Keys.NUM_0; key <= Keys.NUM_9; key++)
-            if (rawInput.isKeyClicked(key))
-                appendNameCharacter(session, (char) key);
-
-        if (rawInput.isKeyClicked(Keys.MINUS))
-            appendNameCharacter(session, '-');
-
-        if (rawInput.isKeyClicked(Keys.APOSTROPHE))
-            appendNameCharacter(session, '\'');
-
-        if (rawInput.isKeyClicked(Keys.SPACE) && canAppendSpace(session.getNameBuffer()))
-            appendNameCharacter(session, ' ');
-    }
-
-    private boolean canAppendSpace(StringBuilder nameBuffer) {
-        return nameBuffer.length() > 0 && nameBuffer.charAt(nameBuffer.length() - 1) != ' ';
-    }
-
-    private void appendNameCharacter(CreatorSessionStruct session, char character) {
-
-        StringBuilder nameBuffer = session.getNameBuffer();
-
-        if (nameBuffer.length() >= RuntimeSetting.CREATOR_NAME_MAX_LENGTH)
-            return;
-
-        nameBuffer.append(character);
-        showStatus(session, "");
-        refreshName(session);
-    }
-
-    private void removeNameCharacter(CreatorSessionStruct session) {
-
-        StringBuilder nameBuffer = session.getNameBuffer();
-
-        if (nameBuffer.length() == 0)
-            return;
-
-        nameBuffer.deleteCharAt(nameBuffer.length() - 1);
-        showStatus(session, "");
-        refreshName(session);
     }
 
     // Caret \\

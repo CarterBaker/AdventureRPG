@@ -1,9 +1,14 @@
 package application.bootstrap.vehiclepipeline.vehiclemanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleDesignStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleHullStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
+import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -31,6 +36,11 @@ public class VehicleManager extends ManagerPackage {
      * stepped, and every door swings toward open or shut. The helm, the
      * sails, the doors and the anchor change only through here, and an entity
      * leaving the world lets go of every vehicle through releaseEntity().
+     * Every vehicle type is assembled through assembleVehicle(), from a file
+     * at boot or from a drafting table while the game runs; a type drawn
+     * again under the same name replaces the old one, which keeps sailing
+     * where it already floats and frees its meshes once the last of it
+     * leaves the world. spawnBeside() launches a vehicle beside an entity.
      */
 
     // Internal
@@ -39,6 +49,7 @@ public class VehicleManager extends ManagerPackage {
     private VehicleCargoSystem vehicleCargoSystem;
 
     // Branches
+    private VehicleAssemblyBranch vehicleAssemblyBranch;
     private VehicleMotionBranch vehicleMotionBranch;
     private VehicleHullBranch vehicleHullBranch;
     private VehicleRigBranch vehicleRigBranch;
@@ -49,6 +60,9 @@ public class VehicleManager extends ManagerPackage {
     // Palette
     private Object2ObjectOpenHashMap<String, VehicleHandle> vehicleName2VehicleHandle;
     private ObjectArrayList<VehicleHandle> vehicleHandles;
+
+    // Retired — types replaced or removed while vehicles of them may still float
+    private ObjectArrayList<VehicleHandle> retiredHandles;
 
     // Vehicles
     private ObjectArrayList<VehicleInstance> vehicles;
@@ -61,6 +75,7 @@ public class VehicleManager extends ManagerPackage {
     private Vector3 offsetScratch;
     private Vector3 modelScratch;
     private Quaternion orientationScratch;
+    private WorldPositionStruct spawnScratch;
 
     // Base \\
 
@@ -70,9 +85,13 @@ public class VehicleManager extends ManagerPackage {
         // Palette
         this.vehicleName2VehicleHandle = new Object2ObjectOpenHashMap<>();
         this.vehicleHandles = new ObjectArrayList<>();
+        this.retiredHandles = new ObjectArrayList<>();
         create(VehicleLoader.class);
 
         // Branches
+        create(VehicleGeometryBranch.class);
+        create(VehicleHullFormBranch.class);
+        this.vehicleAssemblyBranch = create(VehicleAssemblyBranch.class);
         this.vehicleMotionBranch = create(VehicleMotionBranch.class);
         this.vehicleHullBranch = create(VehicleHullBranch.class);
         this.vehicleRigBranch = create(VehicleRigBranch.class);
@@ -98,6 +117,7 @@ public class VehicleManager extends ManagerPackage {
         this.offsetScratch = new Vector3();
         this.modelScratch = new Vector3();
         this.orientationScratch = new Quaternion();
+        this.spawnScratch = new WorldPositionStruct();
     }
 
     @Override
@@ -175,6 +195,90 @@ public class VehicleManager extends ManagerPackage {
         vehicleHandles.add(vehicleHandle);
     }
 
+    // The one way a vehicle type is made, from whatever it was written as
+    VehicleHandle assembleVehicle(VehicleDesignStruct design) {
+        return vehicleAssemblyBranch.assemble(design);
+    }
+
+    // Assembles a type drawn while the game runs and enters it in the palette, replacing any type of its name
+    public VehicleHandle registerVehicle(VehicleDesignStruct design) {
+
+        VehicleHandle vehicleHandle = vehicleAssemblyBranch.assemble(design);
+        VehicleHandle replaced = vehicleName2VehicleHandle.put(vehicleHandle.getVehicleName(), vehicleHandle);
+
+        if (replaced == null) {
+            vehicleHandles.add(vehicleHandle);
+            return vehicleHandle;
+        }
+
+        vehicleHandles.set(vehicleHandles.indexOf(replaced), vehicleHandle);
+        retire(replaced);
+
+        return vehicleHandle;
+    }
+
+    // Takes a type out of the palette; vehicles of it already afloat keep sailing until they leave the world
+    public void removeVehicle(String vehicleName) {
+
+        VehicleHandle removed = vehicleName2VehicleHandle.remove(vehicleName);
+
+        if (removed == null)
+            return;
+
+        vehicleHandles.remove(removed);
+        retire(removed);
+    }
+
+    private void retire(VehicleHandle vehicleHandle) {
+        retiredHandles.add(vehicleHandle);
+        releaseRetired();
+    }
+
+    // Frees every retired type no vehicle in the world is still made of
+    private void releaseRetired() {
+
+        for (int i = retiredHandles.size() - 1; i >= 0; i--) {
+
+            VehicleHandle retired = retiredHandles.get(i);
+
+            if (isAfloat(retired))
+                continue;
+
+            vehicleAssemblyBranch.release(retired);
+            retiredHandles.remove(i);
+        }
+    }
+
+    private boolean isAfloat(VehicleHandle vehicleHandle) {
+
+        for (int i = 0; i < vehicles.size(); i++)
+            if (vehicles.get(i).getVehicleHandle() == vehicleHandle)
+                return true;
+
+        return false;
+    }
+
+    // Survey \\
+
+    // The hull a set of parts would float as at a draft, worked out without entering anything in the palette
+    public VehicleHullStruct surveyHull(
+            String vehicleName,
+            ObjectArrayList<VehiclePartStruct> parts,
+            float draft,
+            float centerOfMassHeight) {
+        return vehicleAssemblyBranch.surveyHull(vehicleName, parts, draft, centerOfMassHeight);
+    }
+
+    // The triangles a set of parts draws once meshed, counted through the vehicle mesher without building a mesh
+    public int countTriangles(ObjectArrayList<VehiclePartStruct> parts) {
+        return vehicleAssemblyBranch.countTriangles(parts);
+    }
+
+    // The sub-voxels riders and cargo would collide with, laid exactly as an assembled vehicle lays them
+    public SubVoxelGridStruct buildSolidGrid(ObjectArrayList<VehiclePartStruct> parts) {
+        return vehicleAssemblyBranch.buildSolidGrid(parts);
+    }
+
     // Spawns a vehicle at anchor and furnished, level, its bow on the heading given and its centre of mass over the
     // position given, its design waterline on the water there — the one way a vehicle enters the world
     public VehicleInstance spawn(
@@ -200,6 +304,37 @@ public class VehicleManager extends ManagerPackage {
         return vehicle;
     }
 
+    // Launches a vehicle broadside in front of an entity along the direction given, clear of it by its half-beam
+    // and the spawn clearance, at anchor: its waterline on the water where there is water, its keel level with
+    // the entity's feet where there is not
+    public VehicleInstance spawnBeside(VehicleHandle vehicleHandle, EntityInstance entity, Vector3 direction) {
+
+        float directionLength = (float) Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+        float forwardX = directionLength > 0f ? direction.x / directionLength : 0f;
+        float forwardZ = directionLength > 0f ? direction.z / directionLength : 1f;
+
+        Vector3 centerOfMass = vehicleHandle.getHull().getCenterOfMass();
+        float halfBeam = (vehicleHandle.getMaxZ() - vehicleHandle.getMinZ()) * 0.5f
+                / EngineSetting.SUB_VOXEL_RESOLUTION;
+        float distance = halfBeam + EngineSetting.VEHICLE_SPAWN_CLEARANCE;
+        Vector3 feet = entity.getWorldPositionStruct().getPosition();
+        Vector3 size = entity.getSize();
+
+        spawnScratch.setChunkCoordinate(entity.getWorldPositionStruct().getChunkCoordinate());
+        spawnScratch.getPosition().set(
+                feet.x + size.x * 0.5f + forwardX * distance,
+                feet.y + centerOfMass.y,
+                feet.z + size.z * 0.5f + forwardZ * distance);
+        WorldPositionUtility.settleChunk(entity.getWorldHandle(), spawnScratch);
+
+        return spawn(
+                vehicleHandle,
+                entity.getWorldHandle(),
+                spawnScratch.getChunkCoordinate(),
+                spawnScratch.getPosition(),
+                (float) Math.atan2(forwardX, forwardZ) + (float) Math.PI * 0.5f);
+    }
+
     // The one way a vehicle leaves the world — its helmsman, riders and cargo go with it
     public void despawn(VehicleInstance vehicle) {
 
@@ -208,6 +343,7 @@ public class VehicleManager extends ManagerPackage {
 
         vehicle.setHelmsman(null);
         vehicleRiderSystem.releaseVehicle(vehicle);
+        releaseRetired();
     }
 
     // Helm \\

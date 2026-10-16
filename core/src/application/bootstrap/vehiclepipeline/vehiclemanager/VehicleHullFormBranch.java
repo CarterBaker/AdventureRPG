@@ -6,14 +6,14 @@ import application.bootstrap.vehiclepipeline.vehicle.VehicleColumnStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHullStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleLumpStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
-import engine.root.BuilderPackage;
+import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class VehicleHullBuilder extends BuilderPackage {
+class VehicleHullFormBranch extends BranchPackage {
 
     /*
      * Works out a hull from its watertight parts. Their boxes are laid onto a
@@ -29,7 +29,13 @@ class VehicleHullBuilder extends BuilderPackage {
      * every few layers, and the waterline mask samples the narrowest
      * half-beam around the design waterline at stations along the length,
      * out to the hull's outside less one dry cell so it never reaches past
-     * the planking yet keeps the sea off the inside of every wall.
+     * the planking yet keeps the sea off the inside of every wall. The bow
+     * below the waterline sets how hard the water drags along the length: from
+     * the fullest submerged station forward, how much of the box around it the
+     * entrance fills and how wide the angle it opens at, a fine wedge slipping
+     * through and a square bow pushing water ahead of it. Lives for the engine
+     * lifetime, so a vehicle designed while the game runs is worked out exactly
+     * as one loaded at boot.
      */
 
     // Settings
@@ -46,7 +52,7 @@ class VehicleHullBuilder extends BuilderPackage {
     private boolean[] walls;
     private boolean[] dry;
 
-    // Build \\
+    // Base \\
 
     @Override
     protected void create() {
@@ -55,6 +61,8 @@ class VehicleHullBuilder extends BuilderPackage {
         this.resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
         this.cellSize = EngineSetting.VEHICLE_DRY_CELL_SUB_VOXELS;
     }
+
+    // Build \\
 
     VehicleHullStruct build(
             String vehicleName,
@@ -73,6 +81,7 @@ class VehicleHullBuilder extends BuilderPackage {
         float mass = resolveMass(vehicleName, lumps, draft, centerOfMassHeight, centerOfMass);
         float[] maskHalfBeams = new float[EngineSetting.OCEAN_HULL_STATIONS];
         float[] maskExtent = resolveMask(draft, maskHalfBeams);
+        float[] form = resolveForm(draft);
 
         return new VehicleHullStruct(
                 mass,
@@ -95,7 +104,10 @@ class VehicleHullBuilder extends BuilderPackage {
                 maskExtent[2],
                 maskExtent[3],
                 maskExtent[4],
-                maskHalfBeams);
+                maskHalfBeams,
+                form[EngineSetting.VEHICLE_FORM_SURGE_DRAG],
+                form[EngineSetting.VEHICLE_FORM_ENTRANCE],
+                form[EngineSetting.VEHICLE_FORM_ENTRY_ANGLE]);
     }
 
     // Grid \\
@@ -601,6 +613,84 @@ class VehicleHullBuilder extends BuilderPackage {
             }
 
         return Math.max(0f, halfBeam);
+    }
+
+    // Form \\
+
+    // The surge drag, entrance coefficient and entry angle of the bow below the draft
+    private float[] resolveForm(float draft) {
+
+        float cellBlocks = (float) cellSize / resolution;
+        float[] stations = new float[cellsX];
+        int fullest = EngineSetting.INDEX_NOT_FOUND;
+        int foremost = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int x = 0; x < cellsX; x++) {
+
+            for (int z = 0; z < cellsZ; z++)
+                for (int y = 0; y < cellsY; y++)
+                    if (dry[toCellIndex(x, y, z)])
+                        stations[x] += Math.max(0f, Math.min(1f, (draft - toBlocks(originY, y)) / cellBlocks));
+
+            if (stations[x] <= 0f)
+                continue;
+
+            foremost = x;
+
+            if (fullest == EngineSetting.INDEX_NOT_FOUND || stations[x] >= stations[fullest])
+                fullest = x;
+        }
+
+        float[] form = new float[EngineSetting.VEHICLE_FORM_FLOATS];
+
+        if (fullest == EngineSetting.INDEX_NOT_FOUND) {
+            form[EngineSetting.VEHICLE_FORM_SURGE_DRAG] = EngineSetting.VEHICLE_SURGE_DRAG_BLUNT;
+            form[EngineSetting.VEHICLE_FORM_ENTRANCE] = 1f;
+            form[EngineSetting.VEHICLE_FORM_ENTRY_ANGLE] = (float) Math.PI * 0.5f;
+            return form;
+        }
+
+        float entranceArea = 0f;
+
+        for (int x = fullest; x <= foremost; x++)
+            entranceArea += stations[x];
+
+        int entranceStations = foremost - fullest + 1;
+        float entrance = entranceArea / (stations[fullest] * entranceStations);
+        float entryAngle = (float) Math.atan2(
+                resolveWaterlineHalfBeam(fullest, draft), entranceStations * cellBlocks);
+        float fineness = (entrance - EngineSetting.VEHICLE_ENTRANCE_COEFFICIENT_FINE)
+                / (1f - EngineSetting.VEHICLE_ENTRANCE_COEFFICIENT_FINE);
+        float bluntness = EngineSetting.VEHICLE_ENTRANCE_SHARE * Math.max(0f, Math.min(1f, fineness))
+                + (1f - EngineSetting.VEHICLE_ENTRANCE_SHARE) * (float) Math.sin(entryAngle);
+
+        form[EngineSetting.VEHICLE_FORM_SURGE_DRAG] = EngineSetting.VEHICLE_SURGE_DRAG_FINE
+                + (EngineSetting.VEHICLE_SURGE_DRAG_BLUNT - EngineSetting.VEHICLE_SURGE_DRAG_FINE) * bluntness;
+        form[EngineSetting.VEHICLE_FORM_ENTRANCE] = entrance;
+        form[EngineSetting.VEHICLE_FORM_ENTRY_ANGLE] = entryAngle;
+
+        return form;
+    }
+
+    // Half the width of the dry cells in the last layer under the draft at one station, in blocks
+    private float resolveWaterlineHalfBeam(int x, float draft) {
+
+        float cellBlocks = (float) cellSize / resolution;
+        int layer = Math.max(0, Math.min(cellsY - 1,
+                (int) Math.ceil((draft * resolution - originY) / cellSize) - 1));
+        int minZ = Integer.MAX_VALUE;
+        int maxZ = Integer.MIN_VALUE;
+
+        for (int z = 0; z < cellsZ; z++) {
+
+            if (!dry[toCellIndex(x, layer, z)])
+                continue;
+
+            minZ = Math.min(minZ, z);
+            maxZ = Math.max(maxZ, z);
+        }
+
+        return minZ == Integer.MAX_VALUE ? 0f : (maxZ - minZ + 1) * cellBlocks * 0.5f;
     }
 
     // Utility \\

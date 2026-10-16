@@ -44,8 +44,6 @@ class VehicleLoader extends LoaderPackage {
 
     @Override
     protected void create() {
-        create(VehicleGeometryBuilder.class);
-        create(VehicleHullBuilder.class);
         this.internalBuilder = create(VehicleBuilder.class);
     }
 

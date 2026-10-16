@@ -19,7 +19,9 @@ public final class FurnishingArpgUtility extends EngineUtility {
      * sub-voxels, its "spin" in quarter turns about the vertical, the
      * "chance" it is furnished at all, and the optional "loot" table a
      * container drawn there is found filled from. Every table is resolved
-     * here, so an owner naming an unknown table fails at boot.
+     * here, so an owner naming an unknown table fails at boot. createSlot()
+     * is the one way a place is made, so a place drawn at the drafting table
+     * is checked exactly as one read from a file.
      */
 
     // Slots \\
@@ -50,11 +52,33 @@ public final class FurnishingArpgUtility extends EngineUtility {
             FurnishingManager furnishingManager,
             LootTableManager lootTableManager) {
 
-        String furnishingName = ArpgUtility.validateString(slotArpg, "furnishing");
         ArpgArrayStruct cornerArpg = ArpgUtility.validateArray(slotArpg, "corner", EngineSetting.AXIS_COUNT);
-        int spin = ArpgUtility.getInt(slotArpg, "spin", 0);
-        float chance = ArpgUtility.getFloat(slotArpg, "chance", 1f);
-        String lootTableName = ArpgUtility.getString(slotArpg, "loot", EngineSetting.LOOT_TABLE_NAME_NONE);
+
+        return createSlot(
+                ownerName,
+                ArpgUtility.validateString(slotArpg, "furnishing"),
+                cornerArpg.get(0).getAsInt(),
+                cornerArpg.get(1).getAsInt(),
+                cornerArpg.get(2).getAsInt(),
+                ArpgUtility.getInt(slotArpg, "spin", 0),
+                ArpgUtility.getFloat(slotArpg, "chance", 1f),
+                ArpgUtility.getString(slotArpg, "loot", EngineSetting.LOOT_TABLE_NAME_NONE),
+                furnishingManager,
+                lootTableManager);
+    }
+
+    // The one way a furnished place is made, read from a file or drawn at the drafting table
+    public static FurnishingSlotStruct createSlot(
+            String ownerName,
+            String furnishingName,
+            int cornerX,
+            int cornerY,
+            int cornerZ,
+            int spin,
+            float chance,
+            String lootTableName,
+            FurnishingManager furnishingManager,
+            LootTableManager lootTableManager) {
 
         if (spin < 0 || spin >= EngineSetting.ENCODED_FACE_SPIN_COUNT)
             throwException("\"" + ownerName + "\" furnishes from '" + furnishingName + "' turned " + spin
@@ -67,9 +91,9 @@ public final class FurnishingArpgUtility extends EngineUtility {
         return new FurnishingSlotStruct(
                 furnishingName,
                 furnishingManager.getFurnishingIDFromFurnishingName(furnishingName),
-                cornerArpg.get(0).getAsInt(),
-                cornerArpg.get(1).getAsInt(),
-                cornerArpg.get(2).getAsInt(),
+                cornerX,
+                cornerY,
+                cornerZ,
                 EngineSetting.DEFAULT_BLOCK_ORIENTATION + spin,
                 chance,
                 lootTableName,

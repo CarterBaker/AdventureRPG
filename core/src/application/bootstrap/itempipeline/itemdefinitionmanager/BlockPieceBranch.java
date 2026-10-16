@@ -9,6 +9,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemCategory;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionData;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
+import application.bootstrap.itempipeline.itemdefinition.ItemStation;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.progressionpipeline.util.ValueMapStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
@@ -85,7 +86,8 @@ class BlockPieceBranch extends BranchPackage {
                 EngineSetting.ITEM_PICK_UP_AS_SELF,
                 EngineSetting.ITEM_PLANTS_NONE,
                 EngineSetting.ITEM_SOWS_NONE,
-                EngineSetting.ITEM_NURTURES_NONE);
+                EngineSetting.ITEM_NURTURES_NONE,
+                ItemStation.NONE);
 
         ItemDefinitionHandle item = create(ItemDefinitionHandle.class);
         item.constructor(itemDefinitionData);

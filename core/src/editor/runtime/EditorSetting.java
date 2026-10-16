@@ -78,6 +78,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
+    public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
@@ -126,7 +127,6 @@ public class EditorSetting {
     public static final String COMMAND_MESSAGE_VEHICLE_NONE_NEAR = ": no vehicle lies near enough to remove";
     public static final String COMMAND_MESSAGE_VEHICLE_NO_CHARACTER = ": free flying, so there is no character"
             + " to spawn beside: ";
-    public static final float DEV_VEHICLE_SPAWN_CLEARANCE = 6f;
     public static final float DEV_VEHICLE_REMOVE_REACH = 24f;
 
     // Commands — Teleport

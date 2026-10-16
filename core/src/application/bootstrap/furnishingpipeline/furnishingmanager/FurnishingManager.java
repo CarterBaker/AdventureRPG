@@ -100,6 +100,18 @@ public class FurnishingManager extends ManagerPackage {
         return handle;
     }
 
+    // Every furnishing table under a folder of the furnishing directory, in registration order
+    public void collectFurnishingNames(String folder, ObjectArrayList<String> out) {
+
+        for (int furnishingID = 1; furnishingID < furnishingID2FurnishingHandle.size(); furnishingID++) {
+
+            FurnishingHandle handle = furnishingID2FurnishingHandle.get(furnishingID);
+
+            if (handle != null && handle.getFurnishingName().startsWith(folder))
+                out.add(handle.getFurnishingName());
+        }
+    }
+
     public short getFurnishingIDFromFurnishingName(String furnishingName) {
         return getFurnishingHandleFromFurnishingName(furnishingName).getFurnishingID();
     }

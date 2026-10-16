@@ -21,6 +21,7 @@ import application.runtime.menueventsmanager.menus.inventory.InventoryEquipmentB
 import application.runtime.menueventsmanager.menus.settings.SettingsBindingBranch;
 import application.runtime.menueventsmanager.menus.settings.SettingsMenuBranch;
 import application.runtime.menueventsmanager.menus.settings.SettingsOptionBranch;
+import application.runtime.menueventsmanager.menus.shipwright.ShipwrightBranch;
 import application.runtime.menueventsmanager.util.GenericButtonBranch;
 import application.runtime.menueventsmanager.util.ProgressionDisplayBranch;
 import engine.root.ManagerPackage;
@@ -50,6 +51,7 @@ public class MenuEventsManager extends ManagerPackage {
         create(InventoryEquipmentBranch.class);
         create(InventoryContainerBranch.class);
         create(InventoryDragBranch.class);
+        create(ShipwrightBranch.class);
         create(CharacterBranch.class);
         create(CharacterAttributeBranch.class);
         create(CharacterProficiencyBranch.class);

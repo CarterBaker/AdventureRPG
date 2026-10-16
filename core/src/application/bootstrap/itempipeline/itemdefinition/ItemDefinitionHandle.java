@@ -215,4 +215,12 @@ public class ItemDefinitionHandle extends HandlePackage {
     public int getNurtureLevels() {
         return itemDefinitionData.getNurtureLevels();
     }
+
+    public ItemStation getStation() {
+        return itemDefinitionData.getStation();
+    }
+
+    public boolean isStation() {
+        return itemDefinitionData.isStation();
+    }
 }

@@ -444,6 +444,7 @@ public class EngineSetting {
     public static final String ORTHO_DATA_UBO = "OrthoData";
     public static final String PLAYER_POSITION_UBO = "PlayerPositionData";
     public static final int QUAD_INDEX_COUNT = 6;
+    public static final int QUAD_TRIANGLE_COUNT = 2;
     public static final int QUAD_VERTEX_COUNT = 4;
     public static final String SHADER_ALIAS_ALBEDO = "Albedo";
     public static final float SHADER_ALIAS_DEFAULT_ALPHA = 1.0f;
@@ -2278,6 +2279,20 @@ public class EngineSetting {
     public static final float VEHICLE_ROLL_GYRATION_RATIO = 0.38f;
     public static final float VEHICLE_YAW_GYRATION_RATIO = 0.27f;
 
+    // Vehicle Form — surge drag runs from a fine wedge bow to a square one, half from how full the entrance is and
+    // half from how wide it opens
+    public static final float VEHICLE_ENTRANCE_COEFFICIENT_FINE = 0.5f;
+    public static final float VEHICLE_ENTRANCE_SHARE = 0.5f;
+    public static final int VEHICLE_FORM_ENTRANCE = 1;
+    public static final int VEHICLE_FORM_ENTRY_ANGLE = 2;
+    public static final int VEHICLE_FORM_FLOATS = 3;
+    public static final int VEHICLE_FORM_SURGE_DRAG = 0;
+    public static final float VEHICLE_SURGE_DRAG_BLUNT = 0.012f;
+    public static final float VEHICLE_SURGE_DRAG_FINE = 0.002f;
+
+    // Vehicle Spawn — how far beyond its half-beam a vehicle launched beside an entity lies clear of it
+    public static final float VEHICLE_SPAWN_CLEARANCE = 6f;
+
     // Vehicle Ground
     public static final float VEHICLE_GROUND_DAMPING = 20f;
     public static final int VEHICLE_GROUND_ESCAPE_STEPS = 4;
@@ -2307,8 +2322,296 @@ public class EngineSetting {
     public static final float DEFAULT_VEHICLE_RUDDER_LIMIT_DEGREES = 35f;
     public static final float DEFAULT_VEHICLE_RUDDER_RATE_DEGREES = 15f;
     public static final float DEFAULT_VEHICLE_SAIL_FORCE = 20f;
-    public static final float DEFAULT_VEHICLE_SURGE_DRAG = 0.004f;
     public static final float DEFAULT_VEHICLE_SWAY_DRAG = 0.1f;
+
+    // Ships — ship files, where they are kept, and the vehicles they are registered as
+    public static final String SHIP_LINK_NONE = "";
+    public static final int SHIP_NAME_MAX_LENGTH = 24;
+    public static final String SHIP_NAME_NONE = "";
+    public static final String SHIP_PATH = "ships";
+    public static final String SHIP_PROBLEM_NONE = "";
+    public static final String SHIP_SAVE_DIRECTORY = "Ships";
+    public static final String SHIP_SAVED_VEHICLE_PREFIX = "saved/";
+    public static final int SHIP_TRIANGLE_LIMIT = 24000;
+    public static final String SHIP_VEHICLE_PREFIX = "ships/";
+
+    // Ship Grid — octants, the half-block partial blocks a ship is drawn in
+    public static final int SHIP_AFT_MARGIN = 4;
+    public static final int SHIP_DEFAULT_HALF_BREADTH = 8;
+    public static final int SHIP_DEFAULT_HEIGHT = 16;
+    public static final int SHIP_DEFAULT_LENGTH = 48;
+    public static final int SHIP_HEADROOM = 6;
+    public static final char SHIP_HULL_FILLED = '#';
+    public static final char SHIP_HULL_OPEN = '.';
+    public static final int SHIP_LEVEL_NONE = -1;
+    public static final int SHIP_MAX_HALF_BREADTH = 32;
+    public static final int SHIP_MAX_HEIGHT = 48;
+    public static final int SHIP_MAX_LENGTH = 192;
+    public static final int SHIP_MIN_HALF_BREADTH = 4;
+    public static final int SHIP_MIN_HEIGHT = 8;
+    public static final int SHIP_MIN_LENGTH = 16;
+    public static final int SHIP_OCTANT_SUB_VOXELS = SUB_VOXEL_RESOLUTION / SUB_BLOCK_DIVISIONS;
+
+    // Ship Cells — level, length, breadth and quarter turn packed into one int
+    public static final int SHIP_CELL_FIELDS = 4;
+    public static final int SHIP_CELL_LEVEL_MASK = 0xFF;
+    public static final int SHIP_CELL_LEVEL_SHIFT = 20;
+    public static final int SHIP_CELL_NONE = -1;
+    public static final int SHIP_CELL_SPIN_MASK = 0x3;
+    public static final int SHIP_CELL_X_MASK = 0x3FF;
+    public static final int SHIP_CELL_X_SHIFT = 10;
+    public static final int SHIP_CELL_Z_MASK = 0xFF;
+    public static final int SHIP_CELL_Z_SHIFT = 2;
+
+    // Ship Hull — octants unless named sub-voxels
+    public static final float SHIP_CENTER_OF_MASS_SHARE = 0.9f;
+    public static final int SHIP_DECKHOUSE_HEIGHT = 5;
+    public static final int SHIP_FITTING_OCTANTS = 2;
+    public static final int SHIP_MAX_RAIL_HEIGHT = 2;
+    public static final int SHIP_PORCH_DEPTH = 3;
+    public static final int SHIP_PORCH_RAIL_HEIGHT = 2;
+    public static final int SHIP_STAIR_MAX_RISE = 12;
+    public static final int SHIP_STAIR_WIDTH = 2;
+
+    // Ship Rig — octants unless named sub-voxels
+    public static final int SHIP_BOWSPRIT_DEPTH = 2;
+    public static final int SHIP_BOWSPRIT_INBOARD = 4;
+    public static final float SHIP_BOWSPRIT_LENGTH_SHARE = 0.2f;
+    public static final int SHIP_BOWSPRIT_MAX_LENGTH = 40;
+    public static final int SHIP_BOWSPRIT_MIN_LENGTH = 8;
+    public static final int SHIP_BOWSPRIT_RUN = 3;
+    public static final int SHIP_CROWS_NEST_GAP = 2;
+    public static final int SHIP_CROWS_NEST_RAIL = 8;
+    public static final int SHIP_CROWS_NEST_REACH = 2;
+    public static final int SHIP_MAST_HEAD = 3;
+    public static final float SHIP_MAST_HEIGHT_SHARE = 0.8f;
+    public static final int SHIP_MAST_MAX_HEIGHT = 128;
+    public static final int SHIP_MAST_MIN_HEIGHT = 12;
+    public static final String SHIP_MAST_NAME_PREFIX = "Mast";
+    public static final String SHIP_MAST_NAME_SINGLE = "Mainmast";
+    public static final String[] SHIP_MAST_NAMES = { "Foremast", "Mainmast", "Mizzenmast", "Jiggermast" };
+    public static final int SHIP_MAST_OCTANTS = 2;
+    public static final int SHIP_MAST_SPACING_OCTANTS = 6;
+    public static final int SHIP_MAX_MASTS = 5;
+    public static final int SHIP_SAIL_CLEARANCE = 5;
+    public static final int SHIP_SAIL_MIN_HALF_SPAN = 16;
+    public static final int SHIP_SAIL_OFFSET = 4;
+    public static final float SHIP_SAIL_SPAN_SHARE = 1f;
+    public static final float SHIP_SAIL_TAPER = 0.8f;
+    public static final String[] SHIP_SAIL_TIER_NAMES = { "Course", "Topsail", "Topgallant", "Royal" };
+    public static final int SHIP_SAIL_TIER_PITCH = 10;
+    public static final int SHIP_SHROUD_HALF_SPAN = 12;
+    public static final int SHIP_STAY_FOOT = 2;
+    public static final int SHIP_YARD_OVERHANG = 4;
+
+    // Ship Fittings — sub-voxels unless named octants
+    public static final int SHIP_CAPSTAN_BAR_REACH = 14;
+    public static final int SHIP_CAPSTAN_DRUM_HEIGHT = 12;
+    public static final String SHIP_DOOR_FURNISHING = "ship/Door";
+    public static final int SHIP_RUDDER_DEPTH = 2;
+    public static final int SHIP_RUDDER_HALF_THICKNESS = 3;
+    public static final int SHIP_RUDDER_RISE = 2;
+    public static final int SHIP_WHEEL_HANDLE_REACH = 12;
+    public static final int SHIP_WHEEL_HEIGHT = 16;
+    public static final int SHIP_WHEEL_RADIUS = 9;
+    public static final int SHIP_WHEEL_THICKNESS = 2;
+
+    // Ship Parts
+    public static final String SHIP_PART_BOWSPRIT = "Bowsprit";
+    public static final String SHIP_PART_CAPSTAN = "Capstan";
+    public static final String SHIP_PART_DECKS = "Decks";
+    public static final String SHIP_PART_HULL = "Hull";
+    public static final String SHIP_PART_PORCH = "Porch";
+    public static final String SHIP_PART_RAILS = "Rails";
+    public static final String SHIP_PART_RUDDER = "Rudder";
+    public static final String SHIP_PART_SHROUDS_SUFFIX = "Shrouds";
+    public static final String SHIP_PART_STAIRS = "Stairs";
+    public static final String SHIP_PART_STAYS = "Stays";
+    public static final String SHIP_PART_TOPS = "Tops";
+    public static final String SHIP_PART_WALLS = "Walls";
+    public static final String SHIP_PART_WEATHER_DECK = "WeatherDeck";
+    public static final String SHIP_PART_WHEEL = "Wheel";
+    public static final String SHIP_PART_WHEEL_STAND = "WheelStand";
+    public static final String SHIP_PART_YARD_SUFFIX = "Yard";
+
+    // Ship Textures
+    public static final String SHIP_TEXTURE_DECK = "items/standard/OakPlanks";
+    public static final String SHIP_TEXTURE_HULL = "items/standard/Oak";
+    public static final String SHIP_TEXTURE_ROPE = "items/standard/Leather";
+    public static final String SHIP_TEXTURE_SAIL = "items/standard/Canvas";
+    public static final String SHIP_TEXTURE_SPAR = "items/standard/PineHeartwood";
+    public static final String SHIP_TEXTURE_WALL = "items/standard/OakHeartwood";
+
+    // Shipwright — the drafting table the editor and the game share
+    public static final String SHIPWRIGHT_FURNISHING_FOLDER = "ship/";
+    public static final float SHIPWRIGHT_REFERENCE_WIND = DEFAULT_SEASON_BASE_WIND_SPEED;
+    public static final float SHIPWRIGHT_SURVEY_DELAY = 0.35f;
+    public static final String SHIPWRIGHT_TEMPLATE_SHIP = "Sloop";
+    public static final int SHIPWRIGHT_UNDO_DEPTH = 64;
+
+    // Shipwright Draft — texture sizes in texels, the views at their finest in sub-voxels per texel
+    public static final int SHIPWRIGHT_DECK_SHADE_MIN = 90;
+    public static final float SHIPWRIGHT_SAIL_PLAN_SHARE = 0.7f;
+    public static final int SHIPWRIGHT_SHEET_TEXELS_X = 256;
+    public static final int SHIPWRIGHT_SHEET_TEXELS_Y = 64;
+    public static final int SHIPWRIGHT_SIDE_TEXELS_X = 512;
+    public static final int SHIPWRIGHT_SIDE_TEXELS_Y = 384;
+    public static final int SHIPWRIGHT_TOP_TEXELS_X = 512;
+    public static final int SHIPWRIGHT_TOP_TEXELS_Y = 128;
+    public static final float SHIPWRIGHT_VIEW_SHADE_FAR = 0.55f;
+    public static final int SHIPWRIGHT_VIEW_SUB_VOXELS = 4;
+
+    // Shipwright Ink — RGBA, drawn over the sheet's paper
+    public static final int SHIPWRIGHT_INK_ABOVE = 0x8A2B2040;
+    public static final int SHIPWRIGHT_INK_BELOW = 0x1F3A6850;
+    public static final int SHIPWRIGHT_INK_DECK = 0x5A3A1EFF;
+    public static final int SHIPWRIGHT_INK_DOOR = 0xB0302AFF;
+    public static final int SHIPWRIGHT_INK_FITTING = 0xD07A1EFF;
+    public static final int SHIPWRIGHT_INK_FLOOR = 0xC8A876C0;
+    public static final int SHIPWRIGHT_INK_FURNITURE = 0x7A4C9AFF;
+    public static final int SHIPWRIGHT_INK_HULL = 0x1F3A68FF;
+    public static final int SHIPWRIGHT_INK_MAST = 0x101010FF;
+    public static final int SHIPWRIGHT_INK_OUTLINE = 0x1F3A6824;
+    public static final int SHIPWRIGHT_INK_PICKED = 0xE0B03040;
+    public static final int SHIPWRIGHT_INK_PICKED_MAST = 0xE0B030FF;
+    public static final int SHIPWRIGHT_INK_PROFILE = 0x1F3A6890;
+    public static final int SHIPWRIGHT_INK_RAIL = 0x4A3020FF;
+    public static final int SHIPWRIGHT_INK_SHELL = 0x2A2018FF;
+    public static final int SHIPWRIGHT_INK_STAIRS = 0x3E7A3AFF;
+    public static final int SHIPWRIGHT_INK_STAIR_FOOT = 0x5FB04FFF;
+    public static final int SHIPWRIGHT_INK_WALL = 0x6B4426FF;
+    public static final int SHIPWRIGHT_INK_WATERLINE = 0x2E7BC8B0;
+    public static final int SHIPWRIGHT_INK_WATERLINE_HULL = 0x2E7BC8FF;
+
+    // Shipwright Views — RGBA, every material a ship is built of drawn in its own colour
+    public static final int SHIPWRIGHT_COLOR_CARGO = 0x7A4C9AFF;
+    public static final int SHIPWRIGHT_COLOR_DEFAULT = 0x8A8A8AFF;
+    public static final int SHIPWRIGHT_COLOR_SAIL_PLAN = 0xC4B48CB0;
+    public static final int SHIPWRIGHT_COLOR_SEA = 0x4F86B060;
+    public static final int SHIPWRIGHT_COLOR_WATERLINE = 0x2E7BC8FF;
+    public static final int[] SHIPWRIGHT_VIEW_COLORS = {
+            0x6B4426FF, 0xB38B5AFF, 0x8A5A32FF, 0xC9A36AFF, 0xEDE3CCFF, 0x3A2A1AFF };
+    public static final String[] SHIPWRIGHT_VIEW_TEXTURES = {
+            SHIP_TEXTURE_HULL, SHIP_TEXTURE_DECK, SHIP_TEXTURE_WALL, SHIP_TEXTURE_SPAR, SHIP_TEXTURE_SAIL,
+            SHIP_TEXTURE_ROPE };
+
+    // Shipwright Tools
+    public static final String SHIPWRIGHT_TOOL_CAPSTAN = "Capstan";
+    public static final String SHIPWRIGHT_TOOL_DECKS = "Decks";
+    public static final String SHIPWRIGHT_TOOL_DOORS = "Doors";
+    public static final String SHIPWRIGHT_TOOL_FURNITURE = "Furniture";
+    public static final String SHIPWRIGHT_TOOL_HELM = "Helm";
+    public static final String SHIPWRIGHT_TOOL_HULL = "Hull";
+    public static final String SHIPWRIGHT_TOOL_MASTS = "Masts";
+    public static final String SHIPWRIGHT_TOOL_STAIRS = "Stairs";
+    public static final String SHIPWRIGHT_TOOL_WALLS = "Walls";
+
+    // Shipwright Problems — what keeps a ship from being built
+    public static final String SHIPWRIGHT_PROBLEM_CAPSTAN_FLOOR = "The capstan must stand on open floor";
+    public static final String SHIPWRIGHT_PROBLEM_CARGO_FIT = "No room to stand ";
+    public static final String SHIPWRIGHT_PROBLEM_DOOR_HEIGHT = "A door is taller than the room it opens into";
+    public static final String SHIPWRIGHT_PROBLEM_FURNISHING_UNKNOWN = "No furnishing is named ";
+    public static final String SHIPWRIGHT_PROBLEM_HELM_FLOOR = "The helm must stand on open floor";
+    public static final String SHIPWRIGHT_PROBLEM_MAST_NO_HULL = "A mast stands where there is no hull";
+    public static final String SHIPWRIGHT_PROBLEM_NO_HULL = "Draw the hull first";
+    public static final String SHIPWRIGHT_PROBLEM_PORCH = "There is no stern at the porch's level";
+    public static final String SHIPWRIGHT_PROBLEM_STAIRS_HULL = "A stair runs into the hull";
+    public static final String SHIPWRIGHT_PROBLEM_STAIRS_NO_FLOOR = "A stair has no floor above it to climb to";
+    public static final String SHIPWRIGHT_PROBLEM_WATERLINE = "The waterline is below the hull";
+
+    // Shipwright Refusals — why a change, a save or a launch was not made
+    public static final String SHIPWRIGHT_REFUSAL_CAPSTAN = "Place a capstan before saving";
+    public static final String SHIPWRIGHT_REFUSAL_HELM = "Place a helm before saving";
+    public static final String SHIPWRIGHT_REFUSAL_LAUNCH = "Save the ship before launching it";
+    public static final String SHIPWRIGHT_REFUSAL_NAME = "Name the ship before saving";
+    public static final String SHIPWRIGHT_REFUSAL_NAME_TAKEN = "A ship of that name is already kept";
+    public static final String SHIPWRIGHT_REFUSAL_TRIANGLES = "Too detailed: over the triangle limit of ";
+
+    // Shipwright Status
+    public static final String SHIPWRIGHT_STATUS_DISCARD = "Unsaved changes: press again to discard them";
+    public static final String SHIPWRIGHT_STATUS_LAUNCHED = "Launched ";
+    public static final String SHIPWRIGHT_STATUS_NEW = "New ship";
+    public static final String SHIPWRIGHT_STATUS_NONE = "";
+    public static final String SHIPWRIGHT_STATUS_NONE_KEPT = "No ships are kept here yet";
+    public static final String SHIPWRIGHT_STATUS_OPENED = "Opened ";
+    public static final String SHIPWRIGHT_STATUS_REDONE = "Redone";
+    public static final String SHIPWRIGHT_STATUS_SAVED = "Saved ";
+    public static final String SHIPWRIGHT_STATUS_SAVE_FAILED = "The ship could not be written";
+    public static final String SHIPWRIGHT_STATUS_UNDONE = "Undone";
+    public static final String SHIPWRIGHT_STATUS_UNREADABLE = "Could not read ";
+
+    // Shipwright Screen — drawn between the vitality overlay and the menus, the views on cards inside a margin
+    public static final float SHIPWRIGHT_CARD_MARGIN = 0.06f;
+    public static final int SHIPWRIGHT_DEPTH_PAPER = 1;
+    public static final int SHIPWRIGHT_DEPTH_TABLE = 0;
+    public static final String SHIPWRIGHT_FBO = "ShipwrightScene";
+    public static final int SHIPWRIGHT_LAYER = 9;
+    public static final int SHIPWRIGHT_MAST_STEP = 2;
+    public static final String SHIPWRIGHT_MATERIAL_PAPER = "shipwright/ShipwrightPaperMaterial";
+    public static final String SHIPWRIGHT_MESH_QUAD = "shipwright/ShipwrightQuad";
+    public static final float SHIPWRIGHT_MODE_CARD = 2f;
+    public static final float SHIPWRIGHT_MODE_SHEET = 1f;
+    public static final float SHIPWRIGHT_MODE_TABLE = 0f;
+
+    // Shipwright Uniforms
+    public static final String SHIPWRIGHT_UNIFORM_CELLS = "u_cells";
+    public static final String SHIPWRIGHT_UNIFORM_CONTENT_RECT = "u_contentRect";
+    public static final String SHIPWRIGHT_UNIFORM_CURSOR = "u_cursor";
+    public static final String SHIPWRIGHT_UNIFORM_INK_RECT = "u_inkRect";
+    public static final String SHIPWRIGHT_UNIFORM_INK_TEXTURE = "u_inkTexture";
+    public static final String SHIPWRIGHT_UNIFORM_MIRROR = "u_mirror";
+    public static final String SHIPWRIGHT_UNIFORM_MODE = "u_mode";
+    public static final String SHIPWRIGHT_UNIFORM_VIEW_RECT = "u_viewRect";
+
+    // Shipwright Menus — entry points in the order the table menu lists them
+    public static final int SHIPWRIGHT_ENTRY_ITEM = 6;
+    public static final int SHIPWRIGHT_ENTRY_LAYER = 5;
+    public static final int SHIPWRIGHT_ENTRY_NAME = 3;
+    public static final int SHIPWRIGHT_ENTRY_SAILS = 10;
+    public static final int SHIPWRIGHT_ENTRY_SHEET = 0;
+    public static final int SHIPWRIGHT_ENTRY_SIDE = 1;
+    public static final int SHIPWRIGHT_ENTRY_SIZE = 8;
+    public static final int SHIPWRIGHT_ENTRY_SPEED = 7;
+    public static final int SHIPWRIGHT_ENTRY_STATUS = 4;
+    public static final int SHIPWRIGHT_ENTRY_TOOL = 11;
+    public static final int SHIPWRIGHT_ENTRY_TOP = 2;
+    public static final int SHIPWRIGHT_ENTRY_TRIANGLES = 9;
+    public static final String SHIPWRIGHT_MENU_LEAVE = "Shipwright/Leave";
+    public static final String SHIPWRIGHT_MENU_TABLE = "Shipwright/Table";
+
+    // Shipwright Text
+    public static final String[] SHIPWRIGHT_FACINGS = { "Facing forward", "Facing starboard", "Facing aft",
+            "Facing port" };
+    public static final String SHIPWRIGHT_FORMAT_SIZE = "%.1f x %.1f blocks, draft %.1f, %.0f t";
+    public static final String SHIPWRIGHT_FORMAT_SPEED = "Speed %.2f blocks/s, bow entry %.0f deg";
+    public static final String SHIPWRIGHT_FORMAT_TRIANGLES = "Triangles %d of %d";
+    public static final String SHIPWRIGHT_HINT_MAST_NONE = "Left steps a mast or picks one, right takes it down";
+    public static final String[] SHIPWRIGHT_HINTS = {
+            "Left paints the layer, right erases, mirrored either side; the wheel steps the layer",
+            "Left lays a deck at a layer, right takes it up",
+            "Left paints walls on the level, right erases; the wheel steps the level",
+            "Left sets a door down or takes it up; Turn faces it",
+            "Left sets a stair's foot down or takes it up; Turn faces the way it climbs",
+            "Left sets the furniture picked below down or takes it up; Turn faces it",
+            "Left sets the helm down where the helmsman stands, right takes it up",
+            "Left sets the capstan down, right takes it up",
+            SHIPWRIGHT_HINT_MAST_NONE };
+    public static final String SHIPWRIGHT_NAME_CARET = "|";
+    public static final String SHIPWRIGHT_NAME_DIRTY = " *";
+    public static final String SHIPWRIGHT_NAME_UNNAMED = "Unnamed ship - click to name";
+    public static final String SHIPWRIGHT_TEXT_BLOCKS = " blocks";
+    public static final String SHIPWRIGHT_TEXT_COUNT_SEPARATOR = ": ";
+    public static final String SHIPWRIGHT_TEXT_LAYER = "Layer ";
+    public static final String SHIPWRIGHT_TEXT_LEVEL = "Level ";
+    public static final String SHIPWRIGHT_TEXT_MASTS = " masts";
+    public static final String SHIPWRIGHT_TEXT_NEST = "crow's nest";
+    public static final String SHIPWRIGHT_TEXT_NO_LEVEL = "No floor laid";
+    public static final String SHIPWRIGHT_TEXT_OF = " of ";
+    public static final String SHIPWRIGHT_TEXT_RIGGED = "rigged";
+    public static final String SHIPWRIGHT_TEXT_SAILS = " sails";
+    public static final String SHIPWRIGHT_TEXT_SAILS_TITLE = "Sails ";
+    public static final String SHIPWRIGHT_TEXT_SEPARATOR = "  |  ";
+    public static final String SHIPWRIGHT_TEXT_WATERLINE = "  (waterline)";
 
     // Appearance
     public static final float DEFAULT_BUILD_FACTOR = 1f;

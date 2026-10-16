@@ -8,7 +8,9 @@ import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import application.bootstrap.entitypipeline.player.PlayerGestureStruct;
+import application.bootstrap.entitypipeline.player.UseTargetStruct;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleControlSystem;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleRiderSystem;
@@ -73,6 +75,7 @@ public class PlayerManager extends ManagerPackage {
     private VehicleControlSystem vehicleControlSystem;
     private VehicleRiderSystem vehicleRiderSystem;
     private VehicleManager vehicleManager;
+    private VehicleCargoSystem vehicleCargoSystem;
 
     // Per-window
     private Int2ObjectOpenHashMap<EntityInstance> windowID2Player;
@@ -153,6 +156,7 @@ public class PlayerManager extends ManagerPackage {
         this.vehicleControlSystem = get(VehicleControlSystem.class);
         this.vehicleRiderSystem = get(VehicleRiderSystem.class);
         this.vehicleManager = get(VehicleManager.class);
+        this.vehicleCargoSystem = get(VehicleCargoSystem.class);
     }
 
     @Override
@@ -546,6 +550,28 @@ public class PlayerManager extends ManagerPackage {
         resolveEyePosition(player);
 
         return placementManager.findTargetVehicle(player, eyePosition, camera.getDirection());
+    }
+
+    // The item the window's player would use with the activate binding — cargo when it aims at a vehicle, a world
+    // item otherwise — written to the target given; false when it faces nothing it could use
+    public boolean findUseTargetForWindow(int windowID, UseTargetStruct out) {
+
+        out.clear();
+
+        if (isAimingAtVehicleForWindow(windowID)) {
+
+            if (vehicleCargoSystem.isCargoHit())
+                out.setCargo(vehicleCargoSystem.getCastVehicle(), vehicleCargoSystem.getCastCargo());
+
+            return out.hasTarget();
+        }
+
+        WorldItemInstance targetItem = getTargetItemForWindow(windowID);
+
+        if (targetItem != null)
+            out.setWorldItem(targetItem);
+
+        return out.hasTarget();
     }
 
     public WorldItemInstance getTargetItemForWindow(int windowID) {

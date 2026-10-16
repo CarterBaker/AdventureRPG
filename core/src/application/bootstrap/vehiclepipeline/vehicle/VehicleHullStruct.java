@@ -18,8 +18,10 @@ public class VehicleHullStruct extends StructPackage {
      * data sets, and it turns about it with the inertia its length and beam
      * give it. Contact points are where the hull's keel and ends meet the land.
      * The mask is the hull's outline at the waterline, sampled at stations
-     * along its length, that keeps the sea surface out of it. Positions are
-     * model blocks, mass is tonnes.
+     * along its length, that keeps the sea surface out of it. How hard the
+     * water drags along its length follows from the shape of its bow below the
+     * waterline: how full its entrance is and how wide its entry angle. Positions
+     * are model blocks, mass is tonnes, the entry angle radians.
      */
 
     // Mass
@@ -56,6 +58,11 @@ public class VehicleHullStruct extends StructPackage {
     private final float maskCenterZ;
     private final float[] maskHalfBeams;
 
+    // Form
+    private final float surgeDrag;
+    private final float entranceCoefficient;
+    private final float entryAngle;
+
     // Constructor \\
 
     public VehicleHullStruct(
@@ -79,7 +86,10 @@ public class VehicleHullStruct extends StructPackage {
             float maskBottom,
             float maskTop,
             float maskCenterZ,
-            float[] maskHalfBeams) {
+            float[] maskHalfBeams,
+            float surgeDrag,
+            float entranceCoefficient,
+            float entryAngle) {
 
         // Mass
         this.mass = mass;
@@ -114,6 +124,11 @@ public class VehicleHullStruct extends StructPackage {
         this.maskTop = maskTop;
         this.maskCenterZ = maskCenterZ;
         this.maskHalfBeams = maskHalfBeams;
+
+        // Form
+        this.surgeDrag = surgeDrag;
+        this.entranceCoefficient = entranceCoefficient;
+        this.entryAngle = entryAngle;
     }
 
     private static int countEdgeColumns(ObjectArrayList<VehicleColumnStruct> columns) {
@@ -208,5 +223,18 @@ public class VehicleHullStruct extends StructPackage {
 
     public float[] getMaskHalfBeams() {
         return maskHalfBeams;
+    }
+
+    public float getSurgeDrag() {
+        return surgeDrag;
+    }
+
+    // The underwater bow's volume over the box around it, 1 for a square bow and less the finer it runs
+    public float getEntranceCoefficient() {
+        return entranceCoefficient;
+    }
+
+    public float getEntryAngle() {
+        return entryAngle;
     }
 }

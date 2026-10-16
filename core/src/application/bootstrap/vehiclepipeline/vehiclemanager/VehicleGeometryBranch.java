@@ -2,13 +2,14 @@ package application.bootstrap.vehiclepipeline.vehiclemanager;
 
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
+import application.bootstrap.geometrypipeline.subvoxel.SubVoxelQuadListStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
-import engine.root.BuilderPackage;
+import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-class VehicleGeometryBuilder extends BuilderPackage {
+class VehicleGeometryBranch extends BranchPackage {
 
     /*
      * Turns a vehicle's parts into sub-voxels and meshes. Parts fill their
@@ -19,13 +20,29 @@ class VehicleGeometryBuilder extends BuilderPackage {
      * greedy mesher, which merges each part's faces across block boundaries
      * so a long plank is one quad end to end; a face carries only its part's
      * texture corner and the vehicle shader repeats the texture once per
-     * block. A mesh is cut before it passes the mesh vertex limit.
+     * block. A mesh is cut before it passes the mesh vertex limit. The
+     * triangles a set of parts would draw are counted through the same mesher
+     * without building a mesh, so a design is measured exactly as it will be
+     * drawn. Lives for the engine lifetime, so a vehicle designed while the
+     * game runs is meshed exactly as one loaded at boot.
      */
 
     // Internal
     private SubVoxelManager subVoxelManager;
 
+    // Scratch — main thread only
+    private SubVoxelGridStruct countGrid;
+    private SubVoxelQuadListStruct countQuads;
+
     // Base \\
+
+    @Override
+    protected void create() {
+
+        // Scratch
+        this.countGrid = new SubVoxelGridStruct();
+        this.countQuads = new SubVoxelQuadListStruct();
+    }
 
     @Override
     protected void get() {
@@ -95,6 +112,38 @@ class VehicleGeometryBuilder extends BuilderPackage {
                 part.addMesh(meshes.get(i));
         }
     }
+
+    // Count \\
+
+    // The triangles every part draws, its unmoving parts merged together and each moving part on its own
+    int countTriangles(ObjectArrayList<VehiclePartStruct> parts) {
+
+        countGrid.clear();
+
+        for (int partIndex = 0; partIndex < parts.size(); partIndex++)
+            if (parts.get(partIndex).getRole().isStatic())
+                rasterize(countGrid, parts.get(partIndex), partIndex);
+
+        subVoxelManager.meshGrid(countGrid, null, countQuads);
+        int quads = countQuads.size();
+
+        for (int partIndex = 0; partIndex < parts.size(); partIndex++) {
+
+            if (parts.get(partIndex).getRole().isStatic())
+                continue;
+
+            countGrid.clear();
+            rasterize(countGrid, parts.get(partIndex), partIndex);
+            subVoxelManager.meshGrid(countGrid, null, countQuads);
+            quads += countQuads.size();
+        }
+
+        countGrid.clear();
+
+        return quads * EngineSetting.QUAD_TRIANGLE_COUNT;
+    }
+
+    // Utility \\
 
     // The texture bounds of every part, four floats each
     private float[] resolveUVBounds(ObjectArrayList<VehiclePartStruct> parts) {

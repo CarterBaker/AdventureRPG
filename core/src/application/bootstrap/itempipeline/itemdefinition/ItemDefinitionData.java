@@ -29,7 +29,9 @@ public class ItemDefinitionData extends DataPackage {
      * seed names the tree it grows into once planted. An item may sow a
      * covering over the block it is used on and nurture what covers it by a
      * number of levels, as grass seed sows grass and a moisture pouch feeds
-     * moss. Owned by ItemDefinitionHandle for the engine lifetime.
+     * moss. An item may be a station, opened where it stands like a container
+     * is, as a drafting table opens the shipwright. Owned by
+     * ItemDefinitionHandle for the engine lifetime.
      */
 
     // Identity
@@ -86,6 +88,9 @@ public class ItemDefinitionData extends DataPackage {
     private final String sowsCoveringName;
     private final int nurtureLevels;
 
+    // Station — the work the item opens where it stands, NONE for none
+    private final ItemStation station;
+
     // Constructor \\
 
     public ItemDefinitionData(
@@ -116,7 +121,8 @@ public class ItemDefinitionData extends DataPackage {
             String pickUpAsName,
             String plantsTreeName,
             String sowsCoveringName,
-            int nurtureLevels) {
+            int nurtureLevels,
+            ItemStation station) {
 
         // Identity
         this.itemName = itemName;
@@ -171,6 +177,9 @@ public class ItemDefinitionData extends DataPackage {
         // Coverage
         this.sowsCoveringName = sowsCoveringName;
         this.nurtureLevels = nurtureLevels;
+
+        // Station
+        this.station = station;
     }
 
     // Accessible \\
@@ -341,5 +350,13 @@ public class ItemDefinitionData extends DataPackage {
 
     public int getNurtureLevels() {
         return nurtureLevels;
+    }
+
+    public ItemStation getStation() {
+        return station;
+    }
+
+    public boolean isStation() {
+        return station != ItemStation.NONE;
     }
 }
