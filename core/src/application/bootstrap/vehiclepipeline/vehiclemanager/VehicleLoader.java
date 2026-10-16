@@ -13,7 +13,9 @@ class VehicleLoader extends LoaderPackage {
     /*
      * Scans the vehicle ARPG directory and loads every vehicle type into
      * VehicleManager, one type per file, named by its path below the
-     * directory. Supports on-demand loading for a type not yet in the palette
+     * directory. The directory is optional: ships drawn at the drafting table
+     * are registered by the shipwright, so a game may keep no vehicle files
+     * at all. Supports on-demand loading for a type not yet in the palette
      * while the loader lives.
      */
 
@@ -33,7 +35,8 @@ class VehicleLoader extends LoaderPackage {
         this.root = new File(EngineSetting.VEHICLE_PATH);
         this.vehicleName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root, "Vehicle directory not found: " + root.getAbsolutePath());
+        if (!root.isDirectory())
+            return;
 
         for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS)) {
             String vehicleName = FileUtility.getPathWithFileNameWithoutExtension(root, file);

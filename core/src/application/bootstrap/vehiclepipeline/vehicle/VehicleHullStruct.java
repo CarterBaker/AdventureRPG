@@ -17,6 +17,8 @@ public class VehicleHullStruct extends StructPackage {
      * of mass lies over the centroid of that displacement at the height the
      * data sets, and it turns about it with the inertia its length and beam
      * give it. Contact points are where the hull's keel and ends meet the land.
+     * Columns are as wide as the hull's beam needs, a narrow hull cut finer so
+     * it feels the sea lift one side more than the other.
      * The mask is the hull's outline at the waterline, sampled at stations
      * along its length, that keeps the sea surface out of it. How hard the
      * water drags along its length follows from the shape of its bow below the
@@ -41,6 +43,7 @@ public class VehicleHullStruct extends StructPackage {
     private final float dryVolume;
 
     // Columns
+    private final float columnSize;
     private final ObjectArrayList<VehicleColumnStruct> columns;
     private final int edgeColumnCount;
 
@@ -78,6 +81,7 @@ public class VehicleHullStruct extends StructPackage {
             int dryCellsY,
             int dryCellsZ,
             float dryVolume,
+            float columnSize,
             ObjectArrayList<VehicleColumnStruct> columns,
             ObjectArrayList<VehicleLumpStruct> lumps,
             FloatArrayList contactPoints,
@@ -108,6 +112,7 @@ public class VehicleHullStruct extends StructPackage {
         this.dryVolume = dryVolume;
 
         // Columns
+        this.columnSize = columnSize;
         this.columns = columns;
         this.edgeColumnCount = countEdgeColumns(columns);
 
@@ -179,6 +184,11 @@ public class VehicleHullStruct extends StructPackage {
 
     public float getDryVolume() {
         return dryVolume;
+    }
+
+    // The side of one column and the height of one lump, in blocks
+    public float getColumnSize() {
+        return columnSize;
     }
 
     public ObjectArrayList<VehicleColumnStruct> getColumns() {

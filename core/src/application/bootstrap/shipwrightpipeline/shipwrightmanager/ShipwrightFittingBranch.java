@@ -13,6 +13,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipFurnitureStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartRole;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
@@ -28,14 +29,16 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     /*
      * Fits a blueprint out. The rudder hangs off the stern post from the keel
-     * to just above the waterline, hinged at the post. The helm is a wheel
-     * turning across the length on a two-posted stand at its place, and the
-     * capstan a drum, cap and bars at its place, both standing on that
-     * level's floor. Doors and furniture are cargo drawn from furnishing
-     * tables: each is turned the way it faces, sized to the octants its
-     * largest item takes up and centred in them, standing on its level's
-     * floor; a doorway is cut through whatever walls or planking it stands
-     * in before the hull is merged. Once every part is built, every item each
+     * up the stern, hinged at the post. The helm is a wheel turning across the
+     * length on a two-posted stand at its place, and the capstan a drum, cap
+     * and bars at its place, both standing on their deck's floor. A door or a
+     * window is cut through the first wall, bulwark or planking it faces,
+     * searching a little outward from where it was set down, a door full
+     * height and a window at chest height; one cut through the hull's side
+     * lowers the sill the sea comes aboard over. Doors and furniture are cargo
+     * drawn from furnishing tables: each is turned the way it faces, sized to
+     * the octants its largest item takes up and centred in them, standing on
+     * its deck's floor. Once every part is built, every item each
      * place could be furnished with must fit clear of every solid sub-voxel
      * and of every other place, exactly as a vehicle stows its cargo, so a
      * ship that compiles always furnishes.
@@ -71,40 +74,84 @@ class ShipwrightFittingBranch extends BranchPackage {
         this.vehicleManager = get(VehicleManager.class);
     }
 
-    // Doorways \\
+    // Openings \\
 
-    // Every door's opening cut through the walls and planking it stands in, before the hull is merged
-    void cutDoorways(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
+    // Every door and window cut through what it faces, before the hull is merged
+    void cutOpenings(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
         IntArrayList doors = blueprint.getDoors();
+        IntArrayList windows = blueprint.getWindows();
 
         for (int i = 0; i < doors.size(); i++) {
 
             int cell = doors.getInt(i);
 
             resolveFootprint(EngineSetting.SHIP_DOOR_FURNISHING, ShipCellUtility.unpackSpin(cell));
-            cutDoorway(layout, cell);
+            cutOpening(layout, cell, 1, footprint[EngineSetting.AXIS_Y], footprint[EngineSetting.AXIS_X],
+                    footprint[EngineSetting.AXIS_Z]);
         }
+
+        for (int i = 0; i < windows.size(); i++)
+            cutOpening(layout, windows.getInt(i), EngineSetting.SHIP_WINDOW_SILL, EngineSetting.SHIP_WINDOW_HEIGHT,
+                    1, 1);
     }
 
-    private void cutDoorway(ShipLayoutStruct layout, int cell) {
+    // An opening a footprint across, rising from a height over its deck's floor, cut through the first wall or
+    // planking along the way it faces in every column of its footprint
+    private void cutOpening(ShipLayoutStruct layout, int cell, int sill, int height, int sizeX, int sizeZ) {
 
         ShipOctantGridStruct grid = layout.getGrid();
-        int level = ShipCellUtility.unpackLevel(cell);
+        int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int spin = ShipCellUtility.unpackSpin(cell);
         int startX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
         int startZ = ShipCellUtility.unpackZ(cell);
+        boolean cut = false;
 
-        for (int y = level + 1; y <= level + footprint[EngineSetting.AXIS_Y]; y++)
-            for (int z = startZ; z < startZ + footprint[EngineSetting.AXIS_Z]; z++)
-                for (int x = startX; x < startX + footprint[EngineSetting.AXIS_X]; x++) {
+        for (int y = floor + sill; y < floor + sill + height; y++)
+            for (int z = startZ; z < startZ + sizeZ; z++)
+                for (int x = startX; x < startX + sizeX; x++) {
 
                     if (shipwrightHullBranch.isFloor(grid, x, y, z)) {
-                        layout.reportProblem(EngineSetting.SHIPWRIGHT_PROBLEM_DOOR_HEIGHT);
+                        layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_OPENING_HEIGHT);
                         return;
                     }
 
-                    grid.clear(x, y, z);
+                    if (cutThrough(layout, x, y, z, ShipCellUtility.stepX(spin), ShipCellUtility.stepZ(spin)))
+                        cut = true;
                 }
+
+        if (!cut)
+            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_OPENING_WALL);
+    }
+
+    // Walks out from an octant along a step, clearing the first run of wall or planking it meets; true when it cut
+    private boolean cutThrough(ShipLayoutStruct layout, int x, int y, int z, int stepX, int stepZ) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        boolean cut = false;
+
+        for (int reach = 0; reach <= EngineSetting.SHIP_OPENING_REACH; reach++) {
+
+            int atX = x + stepX * reach;
+            int atZ = z + stepZ * reach;
+            ShipPiece piece = grid.get(atX, y, atZ);
+
+            if (piece == null || !piece.isCuttable()) {
+
+                if (cut || piece != null)
+                    return cut;
+
+                continue;
+            }
+
+            if (piece != ShipPiece.WALLS)
+                layout.lowerOpeningSill(y * EngineSetting.SUB_BLOCK_SIZE);
+
+            grid.clear(atX, y, atZ);
+            cut = true;
+        }
+
+        return cut;
     }
 
     // Fittings \\
@@ -117,21 +164,21 @@ class ShipwrightFittingBranch extends BranchPackage {
         if (blueprint.hasCapstan())
             addCapstan(layout, blueprint.getCapstan());
 
-        addRudder(blueprint, layout);
+        addRudder(layout);
     }
 
     // A wheel turning across the length on a two-posted stand, its stand a fitting of it
     private void addHelm(ShipLayoutStruct layout, int cell) {
 
         if (!isOnFloor(layout, cell, 1, EngineSetting.SHIP_FITTING_OCTANTS)) {
-            layout.reportProblem(EngineSetting.SHIPWRIGHT_PROBLEM_HELM_FLOOR);
+            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_HELM_FLOOR);
             return;
         }
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int radius = EngineSetting.SHIP_WHEEL_RADIUS;
         int reach = EngineSetting.SHIP_WHEEL_HANDLE_REACH;
-        int floor = (ShipCellUtility.unpackLevel(cell) + 1) * octant;
+        int floor = (ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT + 1) * octant;
         int centerX = (layout.getOriginX() + ShipCellUtility.unpackX(cell)) * octant + octant / 2;
         int centerY = floor + EngineSetting.SHIP_WHEEL_HEIGHT;
         int centerZ = (ShipCellUtility.unpackZ(cell) + 1) * octant;
@@ -180,14 +227,14 @@ class ShipwrightFittingBranch extends BranchPackage {
         int size = EngineSetting.SHIP_FITTING_OCTANTS;
 
         if (!isOnFloor(layout, cell, size, size)) {
-            layout.reportProblem(EngineSetting.SHIPWRIGHT_PROBLEM_CAPSTAN_FLOOR);
+            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_CAPSTAN_FLOOR);
             return;
         }
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int minX = (layout.getOriginX() + ShipCellUtility.unpackX(cell)) * octant;
         int minZ = ShipCellUtility.unpackZ(cell) * octant;
-        int floor = (ShipCellUtility.unpackLevel(cell) + 1) * octant;
+        int floor = (ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT + 1) * octant;
         int span = size * octant;
         int middleX = minX + span / 2;
         int middleZ = minZ + span / 2;
@@ -205,18 +252,19 @@ class ShipwrightFittingBranch extends BranchPackage {
         layout.addPart(capstan);
     }
 
-    // A blade off the stern post from the keel to just above the waterline, hinged at the post
-    private void addRudder(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
+    // A blade off the stern post from the keel up the stern, no higher than a deck over the keel, hinged at the post
+    private void addRudder(ShipLayoutStruct layout) {
 
-        int center = blueprint.getHalfBreadth();
-        int post = findSternPost(blueprint, center);
+        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
+        int post = findSternPost(layout, center);
 
         if (post == EngineSetting.INDEX_NOT_FOUND)
             return;
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int keel = shipwrightHullBranch.findKeel(blueprint, post, center);
-        int top = Math.min(blueprint.getHeight(), blueprint.getWaterline() + EngineSetting.SHIP_RUDDER_RISE + 1);
+        int keel = shipwrightHullBranch.findKeel(layout, post, center);
+        int top = Math.min(keel + EngineSetting.SHIP_DECK_HEIGHT,
+                shipwrightHullBranch.findColumnTop(layout, post, center) + 1 + EngineSetting.SHIP_BULWARK_HEIGHT);
         int hingeX = (layout.getOriginX() + post) * octant;
         int middleZ = center * octant;
         float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
@@ -237,12 +285,12 @@ class ShipwrightFittingBranch extends BranchPackage {
         layout.addPart(rudder);
     }
 
-    // The aftmost octant along the length the hull reaches on the centre line at or below the waterline
-    private int findSternPost(ShipBlueprintStruct blueprint, int center) {
+    // The aftmost octant along the sheet the hull reaches on the centre line within a deck of its bottom
+    private int findSternPost(ShipLayoutStruct layout, int center) {
 
-        for (int x = 0; x < blueprint.getLength(); x++)
-            for (int y = 0; y <= blueprint.getWaterline(); y++)
-                if (blueprint.isVolume(x, y, center))
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+            for (int y = 0; y < Math.min(layout.getSectionLayers(), EngineSetting.SHIP_DECK_HEIGHT); y++)
+                if (layout.isVolume(x, y, center))
                     return x;
 
         return EngineSetting.INDEX_NOT_FOUND;
@@ -251,7 +299,7 @@ class ShipwrightFittingBranch extends BranchPackage {
     // True when every octant under a fitting's footprint is floor
     private boolean isOnFloor(ShipLayoutStruct layout, int cell, int sizeX, int sizeZ) {
 
-        int level = ShipCellUtility.unpackLevel(cell);
+        int level = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
         int startX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
         int startZ = ShipCellUtility.unpackZ(cell);
 
@@ -279,7 +327,8 @@ class ShipwrightFittingBranch extends BranchPackage {
             ShipFurnitureStruct piece = blueprint.getFurniture().get(i);
 
             if (!furnishingManager.hasFurnishing(piece.getFurnishingName())) {
-                layout.reportProblem(EngineSetting.SHIPWRIGHT_PROBLEM_FURNISHING_UNKNOWN + piece.getFurnishingName());
+                layout.reportBuildProblem(
+                        EngineSetting.SHIPWRIGHT_PROBLEM_FURNISHING_UNKNOWN + piece.getFurnishingName());
                 continue;
             }
 
@@ -289,7 +338,7 @@ class ShipwrightFittingBranch extends BranchPackage {
         verifyCargo(layout);
     }
 
-    // A furnished place standing on its level's floor, centred in the octants its largest item takes up
+    // A furnished place standing on its deck's floor, centred in the octants its largest item takes up
     private void addPlace(ShipBlueprintStruct blueprint, ShipLayoutStruct layout, String furnishingName, int cell) {
 
         int spin = ShipCellUtility.unpackSpin(cell);
@@ -301,7 +350,7 @@ class ShipwrightFittingBranch extends BranchPackage {
         resolveFootprint(furnishingName, spin);
 
         int minX = (layout.getOriginX() + ShipCellUtility.unpackX(cell)) * octant;
-        int minY = (ShipCellUtility.unpackLevel(cell) + 1) * octant;
+        int minY = (ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT + 1) * octant;
         int minZ = ShipCellUtility.unpackZ(cell) * octant;
         int maxX = minX + footprint[EngineSetting.AXIS_X] * octant;
         int maxY = minY + footprint[EngineSetting.AXIS_Y] * octant;
@@ -373,7 +422,7 @@ class ShipwrightFittingBranch extends BranchPackage {
 
             for (int i = 0; i < furnishing.getItems().length; i++)
                 if (!fits(solidGrid, slot, furnishing.getItems()[i].getShape())) {
-                    layout.reportProblem(EngineSetting.SHIPWRIGHT_PROBLEM_CARGO_FIT + slot.getFurnishingName());
+                    layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_CARGO_FIT + slot.getFurnishingName());
                     claimedCells.clear();
                     return;
                 }
@@ -425,6 +474,10 @@ class ShipwrightFittingBranch extends BranchPackage {
     }
 
     // Accessible \\
+
+    boolean isKnownFurnishing(String furnishingName) {
+        return furnishingManager.hasFurnishing(furnishingName);
+    }
 
     // The octants along x, up y and across z the footprint last resolved spans
     int getFootprint(int axis) {

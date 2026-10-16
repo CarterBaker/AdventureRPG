@@ -10,18 +10,28 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ShipLayoutStruct extends StructPackage {
 
     /*
-     * A ship blueprint compiled into what it is built of. Its octant grid
-     * holds every piece laid out in model octants, the blueprint's stern
+     * A ship blueprint compiled into what it is built of. Its sections are the
+     * hull's half-beam at every layer and octant along the sheet, every layer
+     * between two decks blended from the one below to the one above; its
+     * octant grid holds every piece laid out in model octants, the sheet
      * standing originX octants in from the grid's aft edge so a rudder and a
      * porch fit behind it; its vehicle parts are those pieces merged into
      * boxes and every spar, sail, rope and fitting, in the order they fill the
      * model grid; its cargo is every door and piece of furniture, each with
-     * the sub-voxel box it stands in. It knows every level a floor lies on,
-     * how many sails each mast carries, where its bowsprit's tip reaches, the
-     * design draft and the height of its centre of mass, both in blocks, and the first problem that keeps it
-     * from being built, if any. Owned by whoever compiled it and refilled in
-     * place each time.
+     * the sub-voxel box it stands in. It knows how many sails each mast
+     * carries and where its bowsprit's tip reaches; what the ship weighs, the
+     * ballast it is trimmed with, the height of its centre of mass and the
+     * draft it floats at; how high the sea may rise before it comes aboard;
+     * and how long, how broad and how sharp it is at its waterline. A problem
+     * in what was built — a stair or a piece of furniture with no room — is
+     * kept apart from one in the hull's shape, so a change can be refused for
+     * the first and the second only shown. Owned by whoever compiled it and
+     * refilled in place each time.
      */
+
+    // Sections — half-beams in octants, a layer of SHIP_SHEET_LENGTH after another
+    private final byte[] sections;
+    private int sectionLayers;
 
     // Grid
     private final ShipOctantGridStruct grid;
@@ -34,9 +44,6 @@ public class ShipLayoutStruct extends StructPackage {
     private final ObjectArrayList<FurnishingSlotStruct> cargoSlots;
     private final IntArrayList cargoBoxes;
 
-    // Levels — floor layers, sorted
-    private final IntArrayList levels;
-
     // Rig — sails per mast, from the stern forward
     private final IntArrayList mastSailCounts;
 
@@ -44,16 +51,32 @@ public class ShipLayoutStruct extends StructPackage {
     private int bowspritTipX;
     private int bowspritTipY;
 
-    // Hull — model blocks
-    private float draft;
+    // Weight — tonnes, the centre of mass height in model blocks
+    private float structureMass;
+    private float ballastMass;
     private float centerOfMassHeight;
 
-    // Problem
-    private String problem;
+    // Water — model blocks
+    private float draft;
+    private float sillHeight;
+    private float openingSill;
+
+    // Waterline — blocks, the entry angle in degrees
+    private float waterlineLength;
+    private float waterlineBeam;
+    private float entryDegrees;
+
+    // Problems
+    private String buildProblem;
+    private String shapeProblem;
 
     // Constructor \\
 
     public ShipLayoutStruct(ShipOctantGridStruct grid) {
+
+        // Sections
+        this.sections = new byte[EngineSetting.SHIP_MAX_DECKS * EngineSetting.SHIP_DECK_HEIGHT
+                * EngineSetting.SHIP_SHEET_LENGTH];
 
         // Grid
         this.grid = grid;
@@ -65,14 +88,12 @@ public class ShipLayoutStruct extends StructPackage {
         this.cargoSlots = new ObjectArrayList<>();
         this.cargoBoxes = new IntArrayList();
 
-        // Levels
-        this.levels = new IntArrayList();
-
         // Rig
         this.mastSailCounts = new IntArrayList();
 
-        // Problem
-        this.problem = EngineSetting.SHIP_PROBLEM_NONE;
+        // Problems
+        this.buildProblem = EngineSetting.SHIP_PROBLEM_NONE;
+        this.shapeProblem = EngineSetting.SHIP_PROBLEM_NONE;
     }
 
     // Management \\
@@ -80,17 +101,72 @@ public class ShipLayoutStruct extends StructPackage {
     public void clear(int originX) {
 
         this.originX = originX;
+        this.sectionLayers = 0;
         parts.clear();
         cargoSlots.clear();
         cargoBoxes.clear();
-        levels.clear();
         mastSailCounts.clear();
         this.bowspritTipX = EngineSetting.SHIP_LEVEL_NONE;
         this.bowspritTipY = EngineSetting.SHIP_LEVEL_NONE;
-        this.draft = 0f;
+        this.structureMass = 0f;
+        this.ballastMass = 0f;
         this.centerOfMassHeight = 0f;
-        this.problem = EngineSetting.SHIP_PROBLEM_NONE;
+        this.draft = 0f;
+        this.sillHeight = 0f;
+        this.openingSill = Float.MAX_VALUE;
+        this.waterlineLength = 0f;
+        this.waterlineBeam = 0f;
+        this.entryDegrees = 0f;
+        this.buildProblem = EngineSetting.SHIP_PROBLEM_NONE;
+        this.shapeProblem = EngineSetting.SHIP_PROBLEM_NONE;
     }
+
+    // Sections \\
+
+    public void setSectionLayers(int sectionLayers) {
+        this.sectionLayers = sectionLayers;
+    }
+
+    public void setSection(int x, int y, int halfBeam) {
+        sections[y * EngineSetting.SHIP_SHEET_LENGTH + x] = (byte) halfBeam;
+    }
+
+    // How many octants the hull reaches out from the centre line at a layer and an octant along the sheet
+    public int getSection(int x, int y) {
+
+        if (x < 0 || y < 0 || x >= EngineSetting.SHIP_SHEET_LENGTH || y >= sectionLayers)
+            return 0;
+
+        return sections[y * EngineSetting.SHIP_SHEET_LENGTH + x];
+    }
+
+    // The hull's half-beam where the water meets it at a layer: the section there, or inside the bulwarks of an open
+    // deck just below it
+    public int getWaterlineSection(int x, int y) {
+
+        for (int depth = 0; depth <= EngineSetting.SHIP_BULWARK_HEIGHT; depth++) {
+
+            int section = getSection(x, y - depth);
+
+            if (section > 0 && (depth == 0 || (y - depth) % EngineSetting.SHIP_DECK_HEIGHT == 0))
+                return section;
+        }
+
+        return 0;
+    }
+
+    // True when an octant across the sheet's full breadth lies inside the hull, the octant along the sheet given
+    public boolean isVolume(int x, int y, int z) {
+
+        int halfBreadth = EngineSetting.SHIP_SHEET_HALF_BREADTH;
+
+        if (z < 0 || z >= halfBreadth * 2)
+            return false;
+
+        return (z >= halfBreadth ? z - halfBreadth : halfBreadth - 1 - z) < getSection(x, y);
+    }
+
+    // Parts \\
 
     public void addPart(VehiclePartStruct part) {
         parts.add(part);
@@ -107,12 +183,6 @@ public class ShipLayoutStruct extends StructPackage {
         cargoBoxes.add(maxZ);
     }
 
-    public void addLevel(int level) {
-
-        if (levels.indexOf(level) == EngineSetting.INDEX_NOT_FOUND)
-            levels.add(level);
-    }
-
     public void addMastSailCount(int sailCount) {
         mastSailCounts.add(sailCount);
     }
@@ -122,16 +192,47 @@ public class ShipLayoutStruct extends StructPackage {
         this.bowspritTipY = bowspritTipY;
     }
 
-    public void setHull(float draft, float centerOfMassHeight) {
-        this.draft = draft;
+    // Weight & Water \\
+
+    public void setWeight(float structureMass, float ballastMass, float centerOfMassHeight) {
+        this.structureMass = structureMass;
+        this.ballastMass = ballastMass;
         this.centerOfMassHeight = centerOfMassHeight;
     }
 
-    // Keeps the first problem met; later ones follow from it
-    public void reportProblem(String problem) {
+    public void setDraft(float draft) {
+        this.draft = draft;
+    }
 
-        if (this.problem.isEmpty())
-            this.problem = problem;
+    public void setSillHeight(float sillHeight) {
+        this.sillHeight = sillHeight;
+    }
+
+    // Lowers the sill to the bottom of an opening cut through the hull's side, in model blocks
+    public void lowerOpeningSill(float height) {
+        this.openingSill = Math.min(openingSill, height);
+    }
+
+    public void setWaterline(float waterlineLength, float waterlineBeam, float entryDegrees) {
+        this.waterlineLength = waterlineLength;
+        this.waterlineBeam = waterlineBeam;
+        this.entryDegrees = entryDegrees;
+    }
+
+    // Problems \\
+
+    // Keeps the first problem met in what was built; later ones follow from it
+    public void reportBuildProblem(String problem) {
+
+        if (buildProblem.isEmpty())
+            this.buildProblem = problem;
+    }
+
+    // Keeps the first problem met in the hull's shape
+    public void reportShapeProblem(String problem) {
+
+        if (shapeProblem.isEmpty())
+            this.shapeProblem = problem;
     }
 
     // Accessible \\
@@ -142,6 +243,10 @@ public class ShipLayoutStruct extends StructPackage {
 
     public int getOriginX() {
         return originX;
+    }
+
+    public int getSectionLayers() {
+        return sectionLayers;
     }
 
     public ObjectArrayList<VehiclePartStruct> getParts() {
@@ -159,10 +264,6 @@ public class ShipLayoutStruct extends StructPackage {
     // One bound of a cargo slot's box: 0 to 2 its minimum on x, y and z, 3 to 5 its maximum
     public int getCargoBound(int slotIndex, int bound) {
         return cargoBoxes.getInt(slotIndex * EngineSetting.BOX_INT_STRIDE + bound);
-    }
-
-    public IntArrayList getLevels() {
-        return levels;
     }
 
     public IntArrayList getMastSailCounts() {
@@ -191,19 +292,67 @@ public class ShipLayoutStruct extends StructPackage {
         return bowspritTipY;
     }
 
-    public float getDraft() {
-        return draft;
+    public float getStructureMass() {
+        return structureMass;
+    }
+
+    public float getBallastMass() {
+        return ballastMass;
+    }
+
+    public float getMass() {
+        return structureMass + ballastMass;
     }
 
     public float getCenterOfMassHeight() {
         return centerOfMassHeight;
     }
 
-    public boolean hasProblem() {
-        return !problem.isEmpty();
+    public float getDraft() {
+        return draft;
     }
 
+    // True once the hull has been floated, so its draft and everything worked from it can be shown
+    public boolean isAfloat() {
+        return draft > 0f;
+    }
+
+    // How high the sea may rise, in model blocks, before it comes over the lowest bulwark aboard
+    public float getSillHeight() {
+        return sillHeight;
+    }
+
+    // How high the sea may rise, in model blocks, before it comes in through a door or window in the side
+    public float getOpeningSill() {
+        return openingSill;
+    }
+
+    public float getWaterlineLength() {
+        return waterlineLength;
+    }
+
+    public float getWaterlineBeam() {
+        return waterlineBeam;
+    }
+
+    public float getEntryDegrees() {
+        return entryDegrees;
+    }
+
+    public boolean hasProblem() {
+        return !buildProblem.isEmpty() || !shapeProblem.isEmpty();
+    }
+
+    public boolean hasBuildProblem() {
+        return !buildProblem.isEmpty();
+    }
+
+    public String getBuildProblem() {
+        return buildProblem;
+    }
+
+    // The problem to show first: one in what was built, then one in the hull's shape
     public String getProblem() {
-        return problem;
+        return buildProblem.isEmpty() ? shapeProblem : buildProblem;
     }
 }

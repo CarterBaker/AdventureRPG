@@ -269,6 +269,21 @@ public class VehicleManager extends ManagerPackage {
         return vehicleAssemblyBranch.surveyHull(vehicleName, parts, draft, centerOfMassHeight);
     }
 
+    // The tonnes of sea a set of parts displaces floating level at a draft in model blocks
+    public float resolveDisplacement(String vehicleName, ObjectArrayList<VehiclePartStruct> parts, float draft) {
+        return vehicleAssemblyBranch.resolveDisplacement(vehicleName, parts, draft);
+    }
+
+    // The draft a set of parts floats at carrying a mass in tonnes, VEHICLE_DRAFT_SINKS when it cannot float it
+    public float solveDraft(String vehicleName, ObjectArrayList<VehiclePartStruct> parts, float mass) {
+        return vehicleAssemblyBranch.solveDraft(vehicleName, parts, mass);
+    }
+
+    // How far a hull heeled by an angle in radians is pushed back upright, in blocks; negative rolls it over
+    public float resolveRightingArm(VehicleHullStruct hull, float heel) {
+        return vehicleAssemblyBranch.resolveRightingArm(hull, heel);
+    }
+
     // The triangles a set of parts draws once meshed, counted through the vehicle mesher without building a mesh
     public int countTriangles(ObjectArrayList<VehiclePartStruct> parts) {
         return vehicleAssemblyBranch.countTriangles(parts);

@@ -110,6 +110,18 @@ class VehicleAssemblyBranch extends BranchPackage {
         return vehicleHullFormBranch.build(vehicleName, parts, draft, centerOfMassHeight);
     }
 
+    float resolveDisplacement(String vehicleName, ObjectArrayList<VehiclePartStruct> parts, float draft) {
+        return vehicleHullFormBranch.resolveDisplacement(vehicleName, parts, draft);
+    }
+
+    float solveDraft(String vehicleName, ObjectArrayList<VehiclePartStruct> parts, float mass) {
+        return vehicleHullFormBranch.solveDraft(vehicleName, parts, mass);
+    }
+
+    float resolveRightingArm(VehicleHullStruct hull, float heel) {
+        return vehicleHullFormBranch.resolveRightingArm(hull, heel);
+    }
+
     int countTriangles(ObjectArrayList<VehiclePartStruct> parts) {
         return vehicleGeometryBranch.countTriangles(parts);
     }

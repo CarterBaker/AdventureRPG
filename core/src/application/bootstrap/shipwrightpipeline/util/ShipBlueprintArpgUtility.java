@@ -16,17 +16,15 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
     /*
      * The one reader and writer of ship files, shared by the loader at boot
      * and the drafting table's library while the game runs. A ship file keeps
-     * its display name, the octants its grid spans along the "length", out
-     * from the centre line across the "half_breadth" and up the "height", the
-     * design "waterline" layer and the "rails" height. Its "hull" lists every
-     * layer from the keel up as a row per octant out from the centre line,
-     * each a string of the length's octants, filled or open; "decks" lists the
-     * interior floor layers. "walls" list [level, x, z] cells and "doors" and
-     * "stairs" [level, x, z, spin] cells across the full breadth; "helm" and
-     * "capstan" are one cell each and the stern "porch" a level, all three
-     * optional, an empty cell or a porch at SHIP_LEVEL_NONE standing for
-     * none. Every piece of "furniture" names its furnishing table and its
-     * cell, and every mast its "x", "height", and whether it carries a
+     * its display name and its "decks" from the bottom up. Each deck keeps its
+     * "outline": the octants it reaches out from the centre line at every
+     * octant along the sheet from its "start", aft to fore; and everything
+     * standing on it, each at [x, z] across the full breadth, or [x, z, spin]
+     * where it faces a way: "walls", "half_walls", "doors", "windows",
+     * "stairs" and every piece of "furniture" naming its furnishing table and
+     * its "cell". The "helm" and "capstan" are one [deck, x, z] each, empty
+     * for none, the "porch" the deck it hangs at, SHIP_DECK_NONE for none, and
+     * every mast keeps its "x", "height", and whether it carries a
      * "crows_nest" and "rigging". findProblem() says what keeps a file from
      * being read, so a ship in the assets fails loudly and a ship in a
      * player's saves is skipped.
@@ -37,62 +35,34 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
     // What keeps a ship file from being read, SHIP_PROBLEM_NONE when it is sound
     public static String findProblem(ArpgObjectStruct arpg) {
 
-        if (!ArpgUtility.hasNumber(arpg, "length") || !ArpgUtility.hasNumber(arpg, "half_breadth")
-                || !ArpgUtility.hasNumber(arpg, "height") || !ArpgUtility.hasNumber(arpg, "waterline"))
-            return "it does not give its length, half-breadth, height and waterline";
+        if (!ArpgUtility.hasArray(arpg, "decks"))
+            return "it lists no decks";
 
-        int length = arpg.get("length").getAsInt();
-        int halfBreadth = arpg.get("half_breadth").getAsInt();
-        int height = arpg.get("height").getAsInt();
+        ArpgArrayStruct decksArpg = arpg.getAsArray("decks");
 
-        if (!isWithin(length, EngineSetting.SHIP_MIN_LENGTH, EngineSetting.SHIP_MAX_LENGTH)
-                || !isWithin(halfBreadth, EngineSetting.SHIP_MIN_HALF_BREADTH, EngineSetting.SHIP_MAX_HALF_BREADTH)
-                || !isWithin(height, EngineSetting.SHIP_MIN_HEIGHT, EngineSetting.SHIP_MAX_HEIGHT))
-            return "its grid of " + length + " by " + halfBreadth + " by " + height + " octants is outside the "
-                    + "sizes a ship may be drawn at";
+        if (decksArpg.size() < 1 || decksArpg.size() > EngineSetting.SHIP_MAX_DECKS)
+            return "it lists " + decksArpg.size() + " decks, outside the 1 to " + EngineSetting.SHIP_MAX_DECKS
+                    + " a ship may have";
 
-        if (!isWithin(arpg.get("waterline").getAsInt(), 0, height - 1))
-            return "its waterline lies outside its hull's layers";
+        for (ArpgElementStruct deckArpg : decksArpg) {
 
-        if (ArpgUtility.hasNumber(arpg, "rails")
-                && !isWithin(arpg.get("rails").getAsInt(), 0, EngineSetting.SHIP_MAX_RAIL_HEIGHT))
-            return "its rails are higher than a rail may be";
+            String deckProblem = deckArpg.isObject()
+                    ? findDeckProblem(deckArpg.getAsObject())
+                    : "a deck is not an object";
 
-        if (ArpgUtility.hasNumber(arpg, "porch") && arpg.get("porch").getAsInt() != EngineSetting.SHIP_LEVEL_NONE
-                && !isWithin(arpg.get("porch").getAsInt(), 0, height - 1))
-            return "its porch hangs at a level outside its hull";
+            if (!deckProblem.isEmpty())
+                return deckProblem;
+        }
 
-        String hullProblem = findHullProblem(arpg, length, halfBreadth, height);
+        int deckCount = decksArpg.size();
 
-        if (!hullProblem.isEmpty())
-            return hullProblem;
+        if (hasCell(arpg, "helm") && !isCellSound(arpg.getAsArray("helm"), deckCount)
+                || hasCell(arpg, "capstan") && !isCellSound(arpg.getAsArray("capstan"), deckCount))
+            return "its helm or capstan stands off its sheet";
 
-        if (ArpgUtility.hasArray(arpg, "decks"))
-            for (ArpgElementStruct deck : arpg.getAsArray("decks"))
-                if (!deck.isValue() || !isWithin(deck.getAsInt(), 0, height - 1))
-                    return "it lays a deck outside its hull's layers";
-
-        if (!areCellsSound(arpg, "walls", EngineSetting.SHIP_CELL_FIELDS - 1, length, halfBreadth, height)
-                || !areCellsSound(arpg, "doors", EngineSetting.SHIP_CELL_FIELDS, length, halfBreadth, height)
-                || !areCellsSound(arpg, "stairs", EngineSetting.SHIP_CELL_FIELDS, length, halfBreadth, height))
-            return "a wall, door or stair stands off its grid";
-
-        if (hasCell(arpg, "helm")
-                && !isCellSound(arpg.getAsArray("helm"), EngineSetting.SHIP_CELL_FIELDS - 1, length, halfBreadth,
-                        height)
-                || hasCell(arpg, "capstan")
-                        && !isCellSound(arpg.getAsArray("capstan"), EngineSetting.SHIP_CELL_FIELDS - 1, length,
-                                halfBreadth, height))
-            return "its helm or capstan stands off its grid";
-
-        if (ArpgUtility.hasArray(arpg, "furniture"))
-            for (ArpgElementStruct pieceArpg : arpg.getAsArray("furniture"))
-                if (!pieceArpg.isObject()
-                        || !ArpgUtility.hasString(pieceArpg.getAsObject(), "furnishing")
-                        || !ArpgUtility.hasArray(pieceArpg.getAsObject(), "cell")
-                        || !isCellSound(pieceArpg.getAsObject().getAsArray("cell"), EngineSetting.SHIP_CELL_FIELDS,
-                                length, halfBreadth, height))
-                    return "a piece of its furniture names no furnishing or stands off its grid";
+        if (ArpgUtility.hasNumber(arpg, "porch") && arpg.get("porch").getAsInt() != EngineSetting.SHIP_DECK_NONE
+                && !isWithin(arpg.get("porch").getAsInt(), 0, deckCount - 1))
+            return "its porch hangs at a deck it does not have";
 
         if (ArpgUtility.hasArray(arpg, "masts")) {
 
@@ -106,81 +76,89 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
                         || !ArpgUtility.hasNumber(mastArpg.getAsObject(), "x")
                         || !ArpgUtility.hasNumber(mastArpg.getAsObject(), "height")
                         || !isWithin(mastArpg.getAsObject().get("x").getAsInt(), 0,
-                                length - EngineSetting.SHIP_MAST_OCTANTS)
+                                EngineSetting.SHIP_SHEET_LENGTH - EngineSetting.SHIP_MAST_OCTANTS)
                         || !isWithin(mastArpg.getAsObject().get("height").getAsInt(),
                                 EngineSetting.SHIP_MAST_MIN_HEIGHT, EngineSetting.SHIP_MAST_MAX_HEIGHT))
-                    return "a mast stands off its grid or rises outside the heights a mast may";
+                    return "a mast stands off its sheet or rises outside the heights a mast may";
         }
 
         return EngineSetting.SHIP_PROBLEM_NONE;
     }
 
-    private static String findHullProblem(ArpgObjectStruct arpg, int length, int halfBreadth, int height) {
+    private static String findDeckProblem(ArpgObjectStruct deckArpg) {
 
-        if (!ArpgUtility.hasArray(arpg, "hull") || arpg.getAsArray("hull").size() != height)
-            return "its hull does not list one layer for each of its " + height + " layers";
+        if (!ArpgUtility.hasNumber(deckArpg, "start") || !ArpgUtility.hasArray(deckArpg, "outline"))
+            return "a deck does not give its start and outline";
 
-        for (ArpgElementStruct layerArpg : arpg.getAsArray("hull")) {
+        int start = deckArpg.get("start").getAsInt();
+        ArpgArrayStruct outlineArpg = deckArpg.getAsArray("outline");
 
-            if (!layerArpg.isArray() || layerArpg.getAsArray().size() != halfBreadth)
-                return "a layer of its hull does not list one row for each of its " + halfBreadth + " octants out";
+        if (start < 0 || start + outlineArpg.size() > EngineSetting.SHIP_SHEET_LENGTH)
+            return "a deck's outline runs off its sheet";
 
-            for (ArpgElementStruct rowArpg : layerArpg.getAsArray()) {
+        for (ArpgElementStruct halfBeam : outlineArpg)
+            if (!halfBeam.isValue() || !halfBeam.getAsValue().isNumber()
+                    || !isWithin(halfBeam.getAsInt(), 0, EngineSetting.SHIP_SHEET_HALF_BREADTH))
+                return "a deck's outline reaches wider than its sheet";
 
-                if (!rowArpg.isValue() || !rowArpg.getAsValue().isString())
-                    return "a row of its hull is not a string";
+        if (!areCellsSound(deckArpg, "walls", EngineSetting.SHIP_PLACE_FIELDS)
+                || !areCellsSound(deckArpg, "half_walls", EngineSetting.SHIP_PLACE_FIELDS)
+                || !areCellsSound(deckArpg, "doors", EngineSetting.SHIP_PLACE_FIELDS + 1)
+                || !areCellsSound(deckArpg, "windows", EngineSetting.SHIP_PLACE_FIELDS + 1)
+                || !areCellsSound(deckArpg, "stairs", EngineSetting.SHIP_PLACE_FIELDS + 1))
+            return "a wall, door, window or stair stands off its sheet";
 
-                String row = rowArpg.getAsString();
-
-                if (row.length() != length)
-                    return "a row of its hull is not " + length + " octants long";
-
-                for (int x = 0; x < row.length(); x++) {
-
-                    char mark = row.charAt(x);
-
-                    if (mark != EngineSetting.SHIP_HULL_FILLED && mark != EngineSetting.SHIP_HULL_OPEN)
-                        return "a row of its hull holds '" + mark + "', which is neither '"
-                                + EngineSetting.SHIP_HULL_FILLED + "' nor '" + EngineSetting.SHIP_HULL_OPEN + "'";
-                }
-            }
-        }
+        if (ArpgUtility.hasArray(deckArpg, "furniture"))
+            for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture"))
+                if (!pieceArpg.isObject()
+                        || !ArpgUtility.hasString(pieceArpg.getAsObject(), "furnishing")
+                        || !ArpgUtility.hasArray(pieceArpg.getAsObject(), "cell")
+                        || !isPlaceSound(pieceArpg.getAsObject().getAsArray("cell"),
+                                EngineSetting.SHIP_PLACE_FIELDS + 1))
+                    return "a piece of its furniture names no furnishing or stands off its sheet";
 
         return EngineSetting.SHIP_PROBLEM_NONE;
     }
 
-    private static boolean areCellsSound(
-            ArpgObjectStruct arpg,
-            String key,
-            int fields,
-            int length,
-            int halfBreadth,
-            int height) {
+    private static boolean areCellsSound(ArpgObjectStruct deckArpg, String key, int fields) {
 
-        if (!ArpgUtility.hasArray(arpg, key))
+        if (!ArpgUtility.hasArray(deckArpg, key))
             return true;
 
-        for (ArpgElementStruct cellArpg : arpg.getAsArray(key))
-            if (!cellArpg.isArray() || !isCellSound(cellArpg.getAsArray(), fields, length, halfBreadth, height))
+        for (ArpgElementStruct cellArpg : deckArpg.getAsArray(key))
+            if (!cellArpg.isArray() || !isPlaceSound(cellArpg.getAsArray(), fields))
                 return false;
 
         return true;
     }
 
-    private static boolean isCellSound(ArpgArrayStruct cellArpg, int fields, int length, int halfBreadth, int height) {
+    // An [x, z] or [x, z, spin] place on a deck's sheet
+    private static boolean isPlaceSound(ArpgArrayStruct placeArpg, int fields) {
 
-        if (cellArpg.size() != fields)
+        if (placeArpg.size() != fields || !areNumbers(placeArpg))
             return false;
 
-        for (int i = 0; i < fields; i++)
-            if (!cellArpg.get(i).isValue() || !cellArpg.get(i).getAsValue().isNumber())
+        return isWithin(placeArpg.get(0).getAsInt(), 0, EngineSetting.SHIP_SHEET_LENGTH - 1)
+                && isWithin(placeArpg.get(1).getAsInt(), 0, EngineSetting.SHIP_SHEET_BREADTH - 1)
+                && (fields == EngineSetting.SHIP_PLACE_FIELDS
+                        || isWithin(placeArpg.get(2).getAsInt(), 0, EngineSetting.ENCODED_FACE_SPIN_COUNT - 1));
+    }
+
+    // A [deck, x, z] cell on one of the ship's decks
+    private static boolean isCellSound(ArpgArrayStruct cellArpg, int deckCount) {
+        return cellArpg.size() == EngineSetting.SHIP_PLACE_FIELDS + 1 && areNumbers(cellArpg)
+                && isWithin(cellArpg.get(0).getAsInt(), 0, deckCount - 1)
+                && isWithin(cellArpg.get(1).getAsInt(), 0, EngineSetting.SHIP_SHEET_LENGTH - 1)
+                && isWithin(cellArpg.get(2).getAsInt(), 0, EngineSetting.SHIP_SHEET_BREADTH - 1);
+    }
+
+    private static boolean areNumbers(ArpgArrayStruct valuesArpg) {
+
+        for (int i = 0; i < valuesArpg.size(); i++)
+            if (!valuesArpg.get(i).isValue() || !valuesArpg.get(i).getAsValue().isNumber())
                 return false;
 
-        return isWithin(cellArpg.get(0).getAsInt(), 0, height - 1)
-                && isWithin(cellArpg.get(1).getAsInt(), 0, length - 1)
-                && isWithin(cellArpg.get(2).getAsInt(), 0, halfBreadth * 2 - 1)
-                && (fields < EngineSetting.SHIP_CELL_FIELDS
-                        || isWithin(cellArpg.get(3).getAsInt(), 0, EngineSetting.ENCODED_FACE_SPIN_COUNT - 1));
+        return true;
     }
 
     // True when a single cell is given; an empty one stands for none
@@ -208,34 +186,15 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
     // A sound ship file as a blueprint; findProblem() must have found nothing wrong with it
     public static ShipBlueprintStruct parse(ArpgObjectStruct arpg, String shipName) {
 
-        ShipBlueprintStruct blueprint = new ShipBlueprintStruct(
-                ArpgUtility.validateInt(arpg, "length"),
-                ArpgUtility.validateInt(arpg, "half_breadth"),
-                ArpgUtility.validateInt(arpg, "height"));
+        ShipBlueprintStruct blueprint = new ShipBlueprintStruct();
+        ArpgArrayStruct decksArpg = arpg.getAsArray("decks");
 
         blueprint.setShipName(shipName);
         blueprint.setDisplayName(ArpgUtility.getString(arpg, "display_name", shipName));
-        blueprint.setWaterline(ArpgUtility.validateInt(arpg, "waterline"));
-        blueprint.setRailHeight(ArpgUtility.getInt(arpg, "rails", 0));
-        blueprint.setPorchLevel(ArpgUtility.getInt(arpg, "porch", EngineSetting.SHIP_LEVEL_NONE));
+        blueprint.setDeckCount(decksArpg.size());
 
-        parseHull(arpg.getAsArray("hull"), blueprint);
-
-        if (ArpgUtility.hasArray(arpg, "decks"))
-            for (ArpgElementStruct deck : arpg.getAsArray("decks"))
-                if (!blueprint.hasDeck(deck.getAsInt()))
-                    blueprint.toggleDeck(deck.getAsInt());
-
-        if (ArpgUtility.hasArray(arpg, "walls"))
-            for (ArpgElementStruct cellArpg : arpg.getAsArray("walls"))
-                blueprint.setWall(
-                        cellArpg.getAsArray().get(0).getAsInt(),
-                        cellArpg.getAsArray().get(1).getAsInt(),
-                        cellArpg.getAsArray().get(2).getAsInt(),
-                        true);
-
-        parseCells(arpg, "doors", blueprint.getDoors());
-        parseCells(arpg, "stairs", blueprint.getStairs());
+        for (int deck = 0; deck < decksArpg.size(); deck++)
+            parseDeck(decksArpg.get(deck).getAsObject(), deck, blueprint);
 
         if (hasCell(arpg, "helm"))
             blueprint.setHelm(parseCell(arpg.getAsArray("helm")));
@@ -243,11 +202,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         if (hasCell(arpg, "capstan"))
             blueprint.setCapstan(parseCell(arpg.getAsArray("capstan")));
 
-        if (ArpgUtility.hasArray(arpg, "furniture"))
-            for (ArpgElementStruct pieceArpg : arpg.getAsArray("furniture"))
-                blueprint.getFurniture().add(new ShipFurnitureStruct(
-                        pieceArpg.getAsObject().get("furnishing").getAsString(),
-                        parseCell(pieceArpg.getAsObject().getAsArray("cell"))));
+        blueprint.setPorchDeck(ArpgUtility.getInt(arpg, "porch", EngineSetting.SHIP_DECK_NONE));
 
         if (ArpgUtility.hasArray(arpg, "masts"))
             for (ArpgElementStruct mastArpg : arpg.getAsArray("masts"))
@@ -260,42 +215,64 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         return blueprint;
     }
 
-    private static void parseHull(ArpgArrayStruct hullArpg, ShipBlueprintStruct blueprint) {
+    private static void parseDeck(ArpgObjectStruct deckArpg, int deck, ShipBlueprintStruct blueprint) {
 
-        for (int y = 0; y < hullArpg.size(); y++) {
+        int start = deckArpg.get("start").getAsInt();
+        ArpgArrayStruct outlineArpg = deckArpg.getAsArray("outline");
 
-            ArpgArrayStruct layerArpg = hullArpg.get(y).getAsArray();
+        for (int i = 0; i < outlineArpg.size(); i++)
+            blueprint.setOutline(deck, start + i, outlineArpg.get(i).getAsInt());
 
-            for (int halfZ = 0; halfZ < layerArpg.size(); halfZ++) {
+        parseWalls(deckArpg, "walls", deck, false, blueprint);
+        parseWalls(deckArpg, "half_walls", deck, true, blueprint);
+        parsePlaces(deckArpg, "doors", deck, blueprint.getDoors());
+        parsePlaces(deckArpg, "windows", deck, blueprint.getWindows());
+        parsePlaces(deckArpg, "stairs", deck, blueprint.getStairs());
 
-                String row = layerArpg.get(halfZ).getAsString();
-
-                for (int x = 0; x < row.length(); x++)
-                    blueprint.setHull(x, y, halfZ, row.charAt(x) == EngineSetting.SHIP_HULL_FILLED);
-            }
-        }
+        if (ArpgUtility.hasArray(deckArpg, "furniture"))
+            for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture"))
+                blueprint.getFurniture().add(new ShipFurnitureStruct(
+                        pieceArpg.getAsObject().get("furnishing").getAsString(),
+                        parsePlace(pieceArpg.getAsObject().getAsArray("cell"), deck)));
     }
 
-    private static void parseCells(ArpgObjectStruct arpg, String key, IntArrayList cells) {
+    private static void parseWalls(
+            ArpgObjectStruct deckArpg,
+            String key,
+            int deck,
+            boolean half,
+            ShipBlueprintStruct blueprint) {
 
-        if (!ArpgUtility.hasArray(arpg, key))
+        if (!ArpgUtility.hasArray(deckArpg, key))
             return;
 
-        for (ArpgElementStruct cellArpg : arpg.getAsArray(key)) {
+        for (ArpgElementStruct placeArpg : deckArpg.getAsArray(key))
+            blueprint.setWall(deck, placeArpg.getAsArray().get(0).getAsInt(),
+                    placeArpg.getAsArray().get(1).getAsInt(), true, half);
+    }
 
-            int cell = parseCell(cellArpg.getAsArray());
+    private static void parsePlaces(ArpgObjectStruct deckArpg, String key, int deck, IntArrayList cells) {
+
+        if (!ArpgUtility.hasArray(deckArpg, key))
+            return;
+
+        for (ArpgElementStruct placeArpg : deckArpg.getAsArray(key)) {
+
+            int cell = parsePlace(placeArpg.getAsArray(), deck);
 
             if (ShipBlueprintStruct.findPlacement(cells, cell) == EngineSetting.INDEX_NOT_FOUND)
                 ShipBlueprintStruct.togglePlacement(cells, cell);
         }
     }
 
+    private static int parsePlace(ArpgArrayStruct placeArpg, int deck) {
+        return ShipCellUtility.pack(deck, placeArpg.get(0).getAsInt(), placeArpg.get(1).getAsInt(),
+                placeArpg.size() > EngineSetting.SHIP_PLACE_FIELDS ? placeArpg.get(2).getAsInt() : 0);
+    }
+
     private static int parseCell(ArpgArrayStruct cellArpg) {
-        return ShipCellUtility.pack(
-                cellArpg.get(0).getAsInt(),
-                cellArpg.get(1).getAsInt(),
-                cellArpg.get(2).getAsInt(),
-                cellArpg.size() == EngineSetting.SHIP_CELL_FIELDS ? cellArpg.get(3).getAsInt() : 0);
+        return ShipCellUtility.pack(cellArpg.get(0).getAsInt(), cellArpg.get(1).getAsInt(),
+                cellArpg.get(2).getAsInt(), 0);
     }
 
     // Write \\
@@ -303,107 +280,103 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
     public static ArpgObjectStruct write(ShipBlueprintStruct blueprint) {
 
         ArpgObjectStruct arpg = new ArpgObjectStruct();
+        ArpgArrayStruct decksArpg = new ArpgArrayStruct();
+
+        for (int deck = 0; deck < blueprint.getDeckCount(); deck++)
+            decksArpg.add(writeDeck(blueprint, deck));
 
         arpg.addProperty("display_name", blueprint.getDisplayName());
-        arpg.addProperty("length", blueprint.getLength());
-        arpg.addProperty("half_breadth", blueprint.getHalfBreadth());
-        arpg.addProperty("height", blueprint.getHeight());
-        arpg.addProperty("waterline", blueprint.getWaterline());
-        arpg.addProperty("rails", blueprint.getRailHeight());
-
-        if (blueprint.hasPorch())
-            arpg.addProperty("porch", blueprint.getPorchLevel());
-
-        arpg.add("hull", writeHull(blueprint));
-        arpg.add("decks", writeInts(blueprint.getDecks()));
-        arpg.add("walls", writeCells(blueprint.getWalls(), EngineSetting.SHIP_CELL_FIELDS - 1));
-        arpg.add("doors", writeCells(blueprint.getDoors(), EngineSetting.SHIP_CELL_FIELDS));
-        arpg.add("stairs", writeCells(blueprint.getStairs(), EngineSetting.SHIP_CELL_FIELDS));
-
-        if (blueprint.hasHelm())
-            arpg.add("helm", writeCell(blueprint.getHelm(), EngineSetting.SHIP_CELL_FIELDS - 1));
-
-        if (blueprint.hasCapstan())
-            arpg.add("capstan", writeCell(blueprint.getCapstan(), EngineSetting.SHIP_CELL_FIELDS - 1));
-
-        arpg.add("furniture", writeFurniture(blueprint));
+        arpg.add("decks", decksArpg);
+        arpg.add("helm", writeCell(blueprint.getHelm()));
+        arpg.add("capstan", writeCell(blueprint.getCapstan()));
+        arpg.addProperty("porch", blueprint.getPorchDeck());
         arpg.add("masts", writeMasts(blueprint));
 
         return arpg;
     }
 
-    private static ArpgArrayStruct writeHull(ShipBlueprintStruct blueprint) {
+    private static ArpgObjectStruct writeDeck(ShipBlueprintStruct blueprint, int deck) {
 
-        ArpgArrayStruct hullArpg = new ArpgArrayStruct();
-        StringBuilder row = new StringBuilder(blueprint.getLength());
+        ArpgObjectStruct deckArpg = new ArpgObjectStruct();
+        ArpgArrayStruct outlineArpg = new ArpgArrayStruct();
+        int start = 0;
+        int end = 0;
 
-        for (int y = 0; y < blueprint.getHeight(); y++) {
-
-            ArpgArrayStruct layerArpg = new ArpgArrayStruct();
-
-            for (int halfZ = 0; halfZ < blueprint.getHalfBreadth(); halfZ++) {
-
-                row.setLength(0);
-
-                for (int x = 0; x < blueprint.getLength(); x++)
-                    row.append(blueprint.isHull(x, y, halfZ)
-                            ? EngineSetting.SHIP_HULL_FILLED
-                            : EngineSetting.SHIP_HULL_OPEN);
-
-                layerArpg.add(row.toString());
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+            if (blueprint.getOutline(deck, x) > 0) {
+                start = end == 0 ? x : start;
+                end = x + 1;
             }
 
-            hullArpg.add(layerArpg);
-        }
+        for (int x = start; x < end; x++)
+            outlineArpg.add(blueprint.getOutline(deck, x));
 
-        return hullArpg;
+        deckArpg.addProperty("start", start);
+        deckArpg.add("outline", outlineArpg);
+        deckArpg.add("walls", writePlaces(blueprint.getWalls(), deck, false));
+        deckArpg.add("half_walls", writePlaces(blueprint.getHalfWalls(), deck, false));
+        deckArpg.add("doors", writePlaces(blueprint.getDoors(), deck, true));
+        deckArpg.add("windows", writePlaces(blueprint.getWindows(), deck, true));
+        deckArpg.add("stairs", writePlaces(blueprint.getStairs(), deck, true));
+        deckArpg.add("furniture", writeFurniture(blueprint, deck));
+
+        return deckArpg;
     }
 
-    private static ArpgArrayStruct writeInts(IntArrayList values) {
+    private static ArpgArrayStruct writePlaces(IntArrayList cells, int deck, boolean facing) {
 
-        ArpgArrayStruct valuesArpg = new ArpgArrayStruct();
-
-        for (int i = 0; i < values.size(); i++)
-            valuesArpg.add(values.getInt(i));
-
-        return valuesArpg;
-    }
-
-    private static ArpgArrayStruct writeCells(IntArrayList cells, int fields) {
-
-        ArpgArrayStruct cellsArpg = new ArpgArrayStruct();
+        ArpgArrayStruct placesArpg = new ArpgArrayStruct();
 
         for (int i = 0; i < cells.size(); i++)
-            cellsArpg.add(writeCell(cells.getInt(i), fields));
+            if (ShipCellUtility.unpackLevel(cells.getInt(i)) == deck)
+                placesArpg.add(writePlace(cells.getInt(i), facing));
 
-        return cellsArpg;
+        return placesArpg;
     }
 
-    private static ArpgArrayStruct writeCell(int cell, int fields) {
+    private static ArpgArrayStruct writePlace(int cell, boolean facing) {
+
+        ArpgArrayStruct placeArpg = new ArpgArrayStruct();
+
+        placeArpg.add(ShipCellUtility.unpackX(cell));
+        placeArpg.add(ShipCellUtility.unpackZ(cell));
+
+        if (facing)
+            placeArpg.add(ShipCellUtility.unpackSpin(cell));
+
+        return placeArpg;
+    }
+
+    // A [deck, x, z] cell, empty for none
+    private static ArpgArrayStruct writeCell(int cell) {
 
         ArpgArrayStruct cellArpg = new ArpgArrayStruct();
+
+        if (cell == EngineSetting.SHIP_CELL_NONE)
+            return cellArpg;
 
         cellArpg.add(ShipCellUtility.unpackLevel(cell));
         cellArpg.add(ShipCellUtility.unpackX(cell));
         cellArpg.add(ShipCellUtility.unpackZ(cell));
 
-        if (fields == EngineSetting.SHIP_CELL_FIELDS)
-            cellArpg.add(ShipCellUtility.unpackSpin(cell));
-
         return cellArpg;
     }
 
-    private static ArpgArrayStruct writeFurniture(ShipBlueprintStruct blueprint) {
+    private static ArpgArrayStruct writeFurniture(ShipBlueprintStruct blueprint, int deck) {
 
         ArpgArrayStruct furnitureArpg = new ArpgArrayStruct();
 
         for (int i = 0; i < blueprint.getFurniture().size(); i++) {
 
             ShipFurnitureStruct piece = blueprint.getFurniture().get(i);
+
+            if (ShipCellUtility.unpackLevel(piece.getCell()) != deck)
+                continue;
+
             ArpgObjectStruct pieceArpg = new ArpgObjectStruct();
 
             pieceArpg.addProperty("furnishing", piece.getFurnishingName());
-            pieceArpg.add("cell", writeCell(piece.getCell(), EngineSetting.SHIP_CELL_FIELDS));
+            pieceArpg.add("cell", writePlace(piece.getCell(), true));
             furnitureArpg.add(pieceArpg);
         }
 

@@ -15,7 +15,6 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
-import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.shipwrightpipeline.shipwrightmanager.ShipwrightManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
@@ -30,7 +29,7 @@ public class ShipwrightRenderSystem extends SystemPackage {
      * Draws the drafting table in this window under its menus: the wooden
      * table across the whole window, the sheet in its area ruled in octants,
      * heavier every block, with the ink ShipwrightDraftBranch draws, the
-     * cursor and — while the hull is drawn — its mirror across the centre
+     * cursor and — while a deck is drawn — its mirror across the centre
      * line, and the side and top views each on a card fitted into its area.
      * The sheet is drawn and uploaded whenever the session changes, the views
      * whenever it compiles. Textures and the upload buffer are made the first
@@ -257,13 +256,9 @@ public class ShipwrightRenderSystem extends SystemPackage {
                 (float) session.getSheetHeight() / EngineSetting.SHIPWRIGHT_SHEET_TEXELS_Y);
         cells.set(session.getSheetWidth(), session.getSheetHeight());
 
-        if (session.isCursorShown())
-            cursorRect.set(session.getCursorU(), session.getCursorV(),
-                    session.getCursorU() + 1f, session.getCursorV() + 1f);
-        else
-            cursorRect.set(-1f, -1f, -1f, -1f);
-
-        mirror.set(session.getTool() == ShipwrightTool.HULL ? 1f : 0f, session.getSheetHeight() * 0.5f);
+        cursorRect.set(session.getCursorU(), session.getCursorV(),
+                session.getCursorU() + 1f, session.getCursorV() + 1f);
+        mirror.set(session.getTool().isMirrored() ? 1f : 0f, session.getSheetHeight() * 0.5f);
 
         material.setUniform(EngineSetting.SHIPWRIGHT_UNIFORM_VIEW_RECT, viewRect);
         material.setUniform(EngineSetting.SHIPWRIGHT_UNIFORM_CONTENT_RECT, contentRect);

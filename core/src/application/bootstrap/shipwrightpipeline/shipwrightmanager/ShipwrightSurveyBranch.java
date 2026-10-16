@@ -17,11 +17,16 @@ class ShipwrightSurveyBranch extends BranchPackage {
      * Measures a compiled ship the way the game will sail it. Its triangles
      * are counted through the vehicle mesher itself, so the count is what it
      * will draw. Its hull is worked out exactly as VehicleManager will float
-     * it, and its speed is where the reference wind's push on every sail set
-     * square, as VehicleRigBranch pushes a sail, comes level with the water's
-     * drag along the length on everything under the waterline, as
-     * VehicleHullBranch drags it — so a finer bow below the waterline is a
-     * faster ship here and at sea alike.
+     * it. Its speed is where a wind's push on every sail set square, as
+     * VehicleRigBranch pushes a sail, comes level with the water's drag along
+     * the length on everything under the waterline, as VehicleHullBranch
+     * drags it — so a finer bow below the waterline is a faster ship here and
+     * at sea alike — worked out for a fair breeze and for a gale. Its reserve
+     * is how much more sea its hull displaces sunk to its sill than it weighs.
+     * Its stability is how far it can be heeled, a few degrees at a time, and
+     * still be pushed back upright by the very lumps the sea lifts it by, so a
+     * ship too tall or too narrow for what it carries capsizes here as surely
+     * as it will once launched.
      */
 
     // Internal
@@ -40,26 +45,56 @@ class ShipwrightSurveyBranch extends BranchPackage {
 
         ObjectArrayList<VehiclePartStruct> parts = layout.getParts();
         int triangles = parts.isEmpty() ? 0 : vehicleManager.countTriangles(parts);
+        float length = resolveLength(blueprint);
+        float beam = resolveBeam(blueprint);
 
-        if (layout.hasProblem() || layout.getDraft() <= 0f) {
-            survey.set(triangles, 0f, 0f, 0f, 0f, 0f, layout.getSailCount(), 0f, 0f);
+        if (!layout.isAfloat()) {
+            survey.set(triangles, 0f, 0f, layout.getMass(), layout.getBallastMass(), length, beam, 0f, 0f, 0f, 0f,
+                    layout.getSailCount(), 0f);
             return;
         }
 
-        VehicleHullStruct hull = vehicleManager.surveyHull(
-                blueprint.getDisplayName(), parts, layout.getDraft(), layout.getCenterOfMassHeight());
-        float displaced = hull.getMass() / EngineSetting.VEHICLE_WATER_DENSITY;
+        String name = blueprint.getDisplayName();
+        float mass = layout.getMass();
+        VehicleHullStruct hull = vehicleManager.surveyHull(name, parts, layout.getDraft(),
+                layout.getCenterOfMassHeight());
+        float sailArea = resolveSailArea(parts);
+        float drag = hull.getSurgeDrag() * mass / EngineSetting.VEHICLE_WATER_DENSITY;
+        float capacity = vehicleManager.resolveDisplacement(name, parts, layout.getSillHeight());
 
         survey.set(
                 triangles,
-                resolveSpeed(resolveSailArea(parts), hull.getSurgeDrag() * displaced),
-                hull.getMass(),
-                resolveLength(blueprint),
-                resolveBeam(blueprint),
-                resolveDraft(blueprint),
+                resolveSpeed(sailArea, drag, EngineSetting.SHIPWRIGHT_BREEZE_WIND),
+                resolveSpeed(sailArea, drag, EngineSetting.SHIPWRIGHT_GALE_WIND),
+                mass,
+                layout.getBallastMass(),
+                length,
+                beam,
+                layout.getDraft(),
+                layout.getSillHeight() - layout.getDraft(),
+                Math.max(0f, capacity - mass) / Math.max(mass, EngineSetting.DIVISION_EPSILON),
+                resolveStableDegrees(hull),
                 layout.getSailCount(),
-                (float) Math.toDegrees(hull.getEntryAngle()),
-                hull.getEntranceCoefficient());
+                (float) Math.toDegrees(hull.getEntryAngle()));
+    }
+
+    // Stability \\
+
+    // The last heel, a step at a time, the hull is still pushed back upright from, 0 when it rolls over at once
+    private float resolveStableDegrees(VehicleHullStruct hull) {
+
+        float step = EngineSetting.SHIPWRIGHT_STABILITY_STEP_DEGREES;
+        float stable = 0f;
+
+        for (float heel = step; heel <= EngineSetting.SHIPWRIGHT_STABILITY_MAX_DEGREES; heel += step) {
+
+            if (vehicleManager.resolveRightingArm(hull, (float) Math.toRadians(heel)) <= 0f)
+                return stable;
+
+            stable = heel;
+        }
+
+        return stable;
     }
 
     // Speed \\
@@ -81,11 +116,10 @@ class ShipwrightSurveyBranch extends BranchPackage {
         return area;
     }
 
-    // The speed at which the wind's push on the canvas, by the square of the wind it still feels, equals the
-    // water's drag on the hull, quadratic with a linear tail at low speed
-    private float resolveSpeed(float sailArea, float drag) {
+    // The speed at which a wind's push on the canvas, by the square of the wind it still feels, equals the water's
+    // drag on the hull, quadratic with a linear tail at low speed
+    private float resolveSpeed(float sailArea, float drag, float wind) {
 
-        float wind = EngineSetting.SHIPWRIGHT_REFERENCE_WIND;
         float push = 0.5f * EngineSetting.VEHICLE_AIR_DENSITY * sailArea * EngineSetting.DEFAULT_VEHICLE_SAIL_FORCE;
         float linear = EngineSetting.VEHICLE_DRAG_LINEAR_SPEED;
 
@@ -113,44 +147,22 @@ class ShipwrightSurveyBranch extends BranchPackage {
 
     private float resolveLength(ShipBlueprintStruct blueprint) {
 
-        int first = Integer.MAX_VALUE;
-        int last = Integer.MIN_VALUE;
+        int[] bounds = new int[2];
 
-        for (int x = 0; x < blueprint.getLength(); x++)
-            for (int y = 0; y < blueprint.getHeight(); y++)
-                for (int halfZ = 0; halfZ < blueprint.getHalfBreadth(); halfZ++)
-                    if (blueprint.isHull(x, y, halfZ)) {
-                        first = Math.min(first, x);
-                        last = Math.max(last, x);
-                    }
+        if (!blueprint.resolveExtent(bounds))
+            return 0f;
 
-        return first > last ? 0f : (last - first + 1) * EngineSetting.SUB_BLOCK_SIZE;
+        return (bounds[1] - bounds[0] + 1) * EngineSetting.SUB_BLOCK_SIZE;
     }
 
     private float resolveBeam(ShipBlueprintStruct blueprint) {
 
-        int reach = 0;
+        int widest = 0;
 
-        for (int y = 0; y < blueprint.getHeight(); y++)
-            for (int halfZ = reach; halfZ < blueprint.getHalfBreadth(); halfZ++)
-                for (int x = 0; x < blueprint.getLength(); x++)
-                    if (blueprint.isHull(x, y, halfZ)) {
-                        reach = halfZ + 1;
-                        break;
-                    }
+        for (int deck = 0; deck < blueprint.getDeckCount(); deck++)
+            for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+                widest = Math.max(widest, blueprint.getOutline(deck, x));
 
-        return reach * 2 * EngineSetting.SUB_BLOCK_SIZE;
-    }
-
-    // From the bottom of the keel to the top of the waterline layer
-    private float resolveDraft(ShipBlueprintStruct blueprint) {
-
-        for (int y = 0; y < blueprint.getHeight(); y++)
-            for (int halfZ = 0; halfZ < blueprint.getHalfBreadth(); halfZ++)
-                for (int x = 0; x < blueprint.getLength(); x++)
-                    if (blueprint.isHull(x, y, halfZ))
-                        return Math.max(0, blueprint.getWaterline() + 1 - y) * EngineSetting.SUB_BLOCK_SIZE;
-
-        return 0f;
+        return widest * 2 * EngineSetting.SUB_BLOCK_SIZE;
     }
 }

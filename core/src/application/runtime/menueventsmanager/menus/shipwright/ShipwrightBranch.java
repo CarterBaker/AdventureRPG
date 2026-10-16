@@ -131,78 +131,36 @@ public class ShipwrightBranch extends BranchPackage {
         shipwrightManager.turn(session());
     }
 
-    // Layers \\
+    // Decks \\
 
-    public void layerUp() {
-        shipwrightManager.stepLayer(session(), 1);
+    public void deckUp() {
+        shipwrightManager.stepDeck(session(), 1);
     }
 
-    public void layerDown() {
-        shipwrightManager.stepLayer(session(), -1);
+    public void deckDown() {
+        shipwrightManager.stepDeck(session(), -1);
     }
 
-    public void copyBelow() {
-        shipwrightManager.copyLayer(session(), -1);
+    public void addDeck() {
+        shipwrightManager.addDeck(session());
     }
 
-    public void copyAbove() {
-        shipwrightManager.copyLayer(session(), 1);
-    }
-
-    public void clearLayer() {
-        shipwrightManager.clearLayer(session());
-    }
-
-    public void waterlineUp() {
-        shipwrightManager.stepWaterline(session(), 1);
-    }
-
-    public void waterlineDown() {
-        shipwrightManager.stepWaterline(session(), -1);
-    }
-
-    // Size \\
-
-    public void longer() {
-        shipwrightManager.resize(session(), 1, 0, 0);
-    }
-
-    public void shorter() {
-        shipwrightManager.resize(session(), -1, 0, 0);
-    }
-
-    public void wider() {
-        shipwrightManager.resize(session(), 0, 1, 0);
-    }
-
-    public void narrower() {
-        shipwrightManager.resize(session(), 0, -1, 0);
-    }
-
-    public void higher() {
-        shipwrightManager.resize(session(), 0, 0, 1);
-    }
-
-    public void lower() {
-        shipwrightManager.resize(session(), 0, 0, -1);
-    }
-
-    // Options \\
-
-    public void cycleRails() {
-        shipwrightManager.cycleRails(session());
+    public void removeDeck() {
+        shipwrightManager.removeDeck(session());
     }
 
     public void togglePorch() {
         shipwrightManager.togglePorch(session());
     }
 
-    public void nextFurnishing() {
-        shipwrightManager.stepFurnishing(session(), 1);
+    // Options \\
+
+    public void nextOption() {
+        shipwrightManager.stepOption(session(), 1);
     }
 
-    public void previousFurnishing() {
-        shipwrightManager.stepFurnishing(session(), -1);
+    public void previousOption() {
+        shipwrightManager.stepOption(session(), -1);
     }
 
     // Masts \\

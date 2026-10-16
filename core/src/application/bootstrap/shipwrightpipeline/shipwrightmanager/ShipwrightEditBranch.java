@@ -2,7 +2,9 @@ package application.bootstrap.shipwrightpipeline.shipwrightmanager;
 
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipFurnitureStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
@@ -13,17 +15,19 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 class ShipwrightEditBranch extends BranchPackage {
 
     /*
-     * Works every change a drafting table makes to its blueprint. A press on
-     * the sheet starts a stroke: a painted tool — the hull, mirrored either
-     * side of the centre line, or walls — works every octant the pointer
-     * crosses, any other tool works the octant pressed once, setting a thing
-     * down or taking up whatever already stands there. Every stroke, and
-     * every option worked from the menu, is one change: the blueprint as it
-     * stood is kept to undo, the blueprint is compiled, and a change that
-     * leaves the ship unbuildable when it was not is taken back and the
-     * reason shown; a ship drawing more triangles than a ship may is told so
-     * once it is surveyed, and cannot be saved until it draws fewer. Sheet
-     * octants arrive as texels, the plan's starboard drawn down.
+     * Works every change a drafting table makes to its blueprint, always on
+     * the deck picked. Holding draw or erase starts a stroke at the cursor: a
+     * deck's outline is drawn out to the cursor at every octant along the
+     * sheet it crosses, mirrored either side of the centre line, and walls are
+     * painted on the open floor it passes over; every other tool works the octant the stroke
+     * began on once, setting a thing down or taking up whatever already stands
+     * there. Every stroke, and every option worked from the menu, is one
+     * change: the blueprint as it stood is kept to undo and the blueprint is
+     * compiled. Redrawing a deck takes up whatever no longer stands on it and
+     * is always kept, its shape's problems only shown; any other change that
+     * leaves something built with no room to stand when nothing was is taken
+     * back and the reason shown. Sheet octants arrive as texels, the plan's
+     * starboard drawn down.
      */
 
     // Internal
@@ -39,10 +43,12 @@ class ShipwrightEditBranch extends BranchPackage {
     // Stroke \\
 
     void beginStroke(ShipwrightSessionInstance session, boolean erasing) {
-        session.beginStroke(erasing);
+
+        if (!session.isStroking())
+            session.beginStroke(erasing);
     }
 
-    // Works the octant under the pointer, once per octant for a painted tool and only the first for any other
+    // Works the octant under the cursor, once per octant for a painted tool and only the first for any other
     void strokeAt(ShipwrightSessionInstance session, int u, int v) {
 
         if (!session.isStroking() || !session.moveStroke(u, v))
@@ -63,51 +69,49 @@ class ShipwrightEditBranch extends BranchPackage {
         boolean changed = session.isStrokeChanged();
         ShipBlueprintStruct before = session.endStroke();
 
-        if (changed)
-            commit(session, before);
+        if (!changed)
+            return;
+
+        if (session.getTool() == ShipwrightTool.DECK) {
+            session.getBlueprint().prunePlacements();
+            commit(session, before, false);
+            return;
+        }
+
+        commit(session, before, true);
     }
 
     // One octant worked by the tool in hand, true when the blueprint changed
     private boolean apply(ShipwrightSessionInstance session, int u, int v, boolean erasing) {
 
-        ShipBlueprintStruct blueprint = session.getBlueprint();
         int x = u - EngineSetting.SHIP_AFT_MARGIN;
-        int z = session.getSheetHeight() - 1 - v;
+        int z = EngineSetting.SHIP_SHEET_BREADTH - 1 - v;
+
+        if (x < 0 || x >= EngineSetting.SHIP_SHEET_LENGTH || z < 0 || z >= EngineSetting.SHIP_SHEET_BREADTH)
+            return false;
+
+        ShipBlueprintStruct blueprint = session.getBlueprint();
 
         return switch (session.getTool()) {
-            case HULL -> paintHull(blueprint, x, session.getLayer(), z, erasing);
-            case DECKS -> toggleDeck(blueprint, v, erasing);
+            case DECK -> drawOutline(blueprint, session.getDeck(), x, z, erasing);
             case WALLS -> paintWall(session, x, z, erasing);
-            case DOORS -> togglePlacement(session, blueprint.getDoors(), x, z, erasing);
+            case OPENINGS -> togglePlacement(session,
+                    session.isWindows() ? blueprint.getWindows() : blueprint.getDoors(), x, z, erasing);
             case STAIRS -> togglePlacement(session, blueprint.getStairs(), x, z, erasing);
-            case FURNITURE -> toggleFurniture(session, x, z, erasing);
-            case HELM -> placeHelm(session, x, z, erasing);
-            case CAPSTAN -> placeCapstan(session, x, z, erasing);
             case MASTS -> pickMast(session, x, erasing);
+            case FURNITURE -> placeItem(session, x, z, erasing);
         };
     }
 
-    private boolean paintHull(ShipBlueprintStruct blueprint, int x, int y, int z, boolean erasing) {
+    // The deck's outline drawn out to the cursor at its octant along the sheet, or taken back to nothing there
+    private boolean drawOutline(ShipBlueprintStruct blueprint, int deck, int x, int z, boolean erasing) {
 
-        if (x < 0 || x >= blueprint.getLength() || z < 0 || z >= blueprint.getBreadth())
+        int halfBeam = erasing ? 0 : ShipCellUtility.toHalfBreadth(z) + 1;
+
+        if (blueprint.getOutline(deck, x) == halfBeam)
             return false;
 
-        int halfZ = ShipCellUtility.toHalfBreadth(z, blueprint.getHalfBreadth());
-
-        if (blueprint.isHull(x, y, halfZ) != erasing)
-            return false;
-
-        blueprint.setHull(x, y, halfZ, !erasing);
-
-        return true;
-    }
-
-    private boolean toggleDeck(ShipBlueprintStruct blueprint, int y, boolean erasing) {
-
-        if (y < 0 || y >= blueprint.getHeight() || erasing && !blueprint.hasDeck(y))
-            return false;
-
-        blueprint.toggleDeck(y);
+        blueprint.setOutline(deck, x, halfBeam);
 
         return true;
     }
@@ -115,13 +119,22 @@ class ShipwrightEditBranch extends BranchPackage {
     private boolean paintWall(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
-        int level = session.getLevel();
+        int deck = session.getDeck();
 
-        if (!isOnSheet(blueprint, x, z) || level == EngineSetting.SHIP_LEVEL_NONE
-                || blueprint.hasWall(level, x, z) != erasing)
+        if (erasing) {
+
+            if (!blueprint.hasWall(deck, x, z))
+                return false;
+
+            blueprint.setWall(deck, x, z, false, false);
+
+            return true;
+        }
+
+        if (!isOpenFloor(session, x, z) || blueprint.hasWallOf(deck, x, z, session.isHalfWalls()))
             return false;
 
-        blueprint.setWall(level, x, z, !erasing);
+        blueprint.setWall(deck, x, z, true, session.isHalfWalls());
 
         return true;
     }
@@ -134,63 +147,12 @@ class ShipwrightEditBranch extends BranchPackage {
             boolean erasing) {
 
         int cell = resolveCell(session, x, z);
+        boolean standing = ShipBlueprintStruct.findPlacement(cells, cell) != EngineSetting.INDEX_NOT_FOUND;
 
-        if (cell == EngineSetting.SHIP_CELL_NONE
-                || erasing && ShipBlueprintStruct.findPlacement(cells, cell) == EngineSetting.INDEX_NOT_FOUND)
+        if (erasing && !standing || !standing && !session.getBlueprint().isOnDeck(session.getDeck(), x, z))
             return false;
 
         ShipBlueprintStruct.togglePlacement(cells, cell);
-
-        return true;
-    }
-
-    private boolean toggleFurniture(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
-
-        ShipBlueprintStruct blueprint = session.getBlueprint();
-        int cell = resolveCell(session, x, z);
-
-        if (cell == EngineSetting.SHIP_CELL_NONE)
-            return false;
-
-        int index = blueprint.findFurniture(cell);
-
-        if (index != EngineSetting.INDEX_NOT_FOUND) {
-            blueprint.getFurniture().remove(index);
-            return true;
-        }
-
-        String furnishingName = shipwrightManager.getFurnishingName(session.getFurnishingIndex());
-
-        if (erasing || furnishingName == null)
-            return false;
-
-        blueprint.getFurniture().add(new ShipFurnitureStruct(furnishingName, cell));
-
-        return true;
-    }
-
-    private boolean placeHelm(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
-
-        ShipBlueprintStruct blueprint = session.getBlueprint();
-        int cell = erasing ? EngineSetting.SHIP_CELL_NONE : resolveCell(session, x, z);
-
-        if (!erasing && cell == EngineSetting.SHIP_CELL_NONE || cell == blueprint.getHelm())
-            return false;
-
-        blueprint.setHelm(cell);
-
-        return true;
-    }
-
-    private boolean placeCapstan(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
-
-        ShipBlueprintStruct blueprint = session.getBlueprint();
-        int cell = erasing ? EngineSetting.SHIP_CELL_NONE : resolveCell(session, x, z);
-
-        if (!erasing && cell == EngineSetting.SHIP_CELL_NONE || cell == blueprint.getCapstan())
-            return false;
-
-        blueprint.setCapstan(cell);
 
         return true;
     }
@@ -216,140 +178,181 @@ class ShipwrightEditBranch extends BranchPackage {
 
         int foot = x - EngineSetting.SHIP_MAST_OCTANTS / 2;
 
-        if (erasing || blueprint.getMasts().size() >= EngineSetting.SHIP_MAX_MASTS || !blueprint.canStepMast(foot))
+        if (erasing || !blueprint.canStepMast(foot)
+                || blueprint.findLowestDeck(foot) == EngineSetting.SHIP_DECK_NONE
+                || blueprint.findLowestDeck(foot + EngineSetting.SHIP_MAST_OCTANTS - 1) == EngineSetting.SHIP_DECK_NONE)
             return false;
 
-        int height = Math.max(EngineSetting.SHIP_MAST_MIN_HEIGHT, Math.min(EngineSetting.SHIP_MAST_MAX_HEIGHT,
-                Math.round(blueprint.getLength() * EngineSetting.SHIP_MAST_HEIGHT_SHARE)));
+        int height = shipwrightManager.resolveMastHeight(session);
 
-        session.setMastIndex(blueprint.addMast(new ShipMastStruct(foot, height, false, false)));
+        session.setMastIndex(blueprint.addMast(new ShipMastStruct(foot, height, false, true)));
 
         return true;
     }
 
-    // The packed cell at an octant on the level picked, facing the way set, SHIP_CELL_NONE when off the sheet
+    // Sets the helm, the capstan or a piece of furniture down at the cursor, or with erasing takes up whichever
+    // of them stands there
+    private boolean placeItem(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
+
+        ShipBlueprintStruct blueprint = session.getBlueprint();
+        int cell = resolveCell(session, x, z);
+        int place = ShipCellUtility.toPlace(cell);
+
+        if (erasing)
+            return takeUpItem(blueprint, cell, place);
+
+        if (!blueprint.isOnDeck(session.getDeck(), x, z))
+            return false;
+
+        int item = Math.floorMod(session.getItemIndex(), resolveItemCount());
+
+        if (item == EngineSetting.SHIPWRIGHT_ITEM_HELM) {
+
+            if (cell == blueprint.getHelm())
+                return false;
+
+            blueprint.setHelm(cell);
+
+            return true;
+        }
+
+        if (item == EngineSetting.SHIPWRIGHT_ITEM_CAPSTAN) {
+
+            if (cell == blueprint.getCapstan())
+                return false;
+
+            blueprint.setCapstan(cell);
+
+            return true;
+        }
+
+        if (blueprint.findFurniture(cell) != EngineSetting.INDEX_NOT_FOUND)
+            return false;
+
+        blueprint.getFurniture().add(new ShipFurnitureStruct(
+                shipwrightManager.getFurnishingName(item - EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS), cell));
+
+        return true;
+    }
+
+    private boolean takeUpItem(ShipBlueprintStruct blueprint, int cell, int place) {
+
+        int index = blueprint.findFurniture(cell);
+
+        if (index != EngineSetting.INDEX_NOT_FOUND) {
+            blueprint.getFurniture().remove(index);
+            return true;
+        }
+
+        if (blueprint.hasHelm() && ShipCellUtility.toPlace(blueprint.getHelm()) == place) {
+            blueprint.setHelm(EngineSetting.SHIP_CELL_NONE);
+            return true;
+        }
+
+        if (blueprint.hasCapstan() && ShipCellUtility.toPlace(blueprint.getCapstan()) == place) {
+            blueprint.setCapstan(EngineSetting.SHIP_CELL_NONE);
+            return true;
+        }
+
+        return false;
+    }
+
+    // True when the deck picked was built with open floor at an octant, so a wall dragged across its edge stops there
+    private boolean isOpenFloor(ShipwrightSessionInstance session, int x, int z) {
+
+        ShipLayoutStruct layout = session.getLayout();
+        ShipPiece piece = layout.getGrid().get(
+                layout.getOriginX() + x, session.getDeck() * EngineSetting.SHIP_DECK_HEIGHT, z);
+
+        return layout.getSectionLayers() > 0 && piece != null && piece.isFloor();
+    }
+
+    // The helm, the capstan and every furnishing table the drafting table offers
+    private int resolveItemCount() {
+        return EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS + shipwrightManager.getFurnishingCount();
+    }
+
+    // The packed cell at an octant on the deck picked, facing the way set
     private int resolveCell(ShipwrightSessionInstance session, int x, int z) {
-
-        int level = session.getLevel();
-
-        if (!isOnSheet(session.getBlueprint(), x, z) || level == EngineSetting.SHIP_LEVEL_NONE)
-            return EngineSetting.SHIP_CELL_NONE;
-
-        return ShipCellUtility.pack(level, x, z, session.getSpin());
+        return ShipCellUtility.pack(session.getDeck(), x, z, session.getSpin());
     }
 
-    private boolean isOnSheet(ShipBlueprintStruct blueprint, int x, int z) {
-        return x >= 0 && x < blueprint.getLength() && z >= 0 && z < blueprint.getBreadth();
+    // Decks \\
+
+    void stepDeck(ShipwrightSessionInstance session, int step) {
+        session.setDeck(clamp(session.getDeck() + step, 0, session.getBlueprint().getDeckCount() - 1));
     }
 
-    // Layers \\
+    // A deck laid on top of the stack, drawn as the deck under it to start from, and picked
+    void addDeck(ShipwrightSessionInstance session) {
 
-    // Steps the hull layer or the level the tool in hand works on
-    void stepLayer(ShipwrightSessionInstance session, int step) {
+        ShipBlueprintStruct blueprint = session.getBlueprint();
+        ShipBlueprintStruct before = blueprint.copy();
 
-        if (session.getTool().getSheet().isPlan() && session.getTool() != ShipwrightTool.HULL) {
-
-            int levels = session.getLayout().getLevels().size();
-
-            if (levels > 0)
-                session.setLevelIndex(Math.max(0, Math.min(levels - 1, session.getLevelIndex() + step)));
-
+        if (!blueprint.addDeck()) {
+            session.setStatus(EngineSetting.SHIPWRIGHT_REFUSAL_DECKS_FULL);
             return;
         }
 
-        session.setLayer(Math.max(0, Math.min(session.getBlueprint().getHeight() - 1, session.getLayer() + step)));
+        session.setDeck(blueprint.getDeckCount() - 1);
+        commit(session, before, false);
     }
 
-    void copyLayer(ShipwrightSessionInstance session, int step) {
+    // The deck picked taken out with everything standing on it, the decks above lowered into its place
+    void removeDeck(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
-        int from = session.getLayer() + step;
+        ShipBlueprintStruct before = blueprint.copy();
 
-        if (from < 0 || from >= blueprint.getHeight())
+        if (!blueprint.removeDeck(session.getDeck())) {
+            session.setStatus(EngineSetting.SHIPWRIGHT_REFUSAL_LAST_DECK);
             return;
+        }
 
-        ShipBlueprintStruct before = blueprint.copy();
-
-        blueprint.copyLayer(from, session.getLayer());
-        commit(session, before);
-    }
-
-    void clearLayer(ShipwrightSessionInstance session) {
-
-        ShipBlueprintStruct before = session.getBlueprint().copy();
-
-        session.getBlueprint().clearLayer(session.getLayer());
-        commit(session, before);
-    }
-
-    void stepWaterline(ShipwrightSessionInstance session, int step) {
-
-        ShipBlueprintStruct blueprint = session.getBlueprint();
-        ShipBlueprintStruct before = blueprint.copy();
-
-        blueprint.setWaterline(blueprint.getWaterline() + step);
-        commit(session, before);
-    }
-
-    // Size \\
-
-    void resize(ShipwrightSessionInstance session, int lengthStep, int halfBreadthStep, int heightStep) {
-
-        ShipBlueprintStruct blueprint = session.getBlueprint();
-        int length = clamp(blueprint.getLength() + lengthStep,
-                EngineSetting.SHIP_MIN_LENGTH, EngineSetting.SHIP_MAX_LENGTH);
-        int halfBreadth = clamp(blueprint.getHalfBreadth() + halfBreadthStep,
-                EngineSetting.SHIP_MIN_HALF_BREADTH, EngineSetting.SHIP_MAX_HALF_BREADTH);
-        int height = clamp(blueprint.getHeight() + heightStep,
-                EngineSetting.SHIP_MIN_HEIGHT, EngineSetting.SHIP_MAX_HEIGHT);
-
-        if (length == blueprint.getLength() && halfBreadth == blueprint.getHalfBreadth()
-                && height == blueprint.getHeight())
-            return;
-
-        ShipBlueprintStruct before = blueprint.copy();
-
-        blueprint.resize(length, halfBreadth, height);
-        session.setLayer(Math.min(session.getLayer(), height - 1));
-        commit(session, before);
+        blueprint.prunePlacements();
+        session.setDeck(Math.min(session.getDeck(), blueprint.getDeckCount() - 1));
+        commit(session, before, false);
     }
 
     // Options \\
 
-    void cycleRails(ShipwrightSessionInstance session) {
-
-        ShipBlueprintStruct blueprint = session.getBlueprint();
-        ShipBlueprintStruct before = blueprint.copy();
-
-        blueprint.setRailHeight((blueprint.getRailHeight() + 1) % (EngineSetting.SHIP_MAX_RAIL_HEIGHT + 1));
-        commit(session, before);
-    }
-
-    // Hangs the porch off the stern at the level picked, or takes it down when it already hangs there
+    // Hangs the porch off the stern at the deck picked, or takes it down when it already hangs there
     void togglePorch(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
-        int level = session.getLevel();
-
-        if (level == EngineSetting.SHIP_LEVEL_NONE)
-            return;
-
         ShipBlueprintStruct before = blueprint.copy();
+        int deck = session.getDeck();
 
-        blueprint.setPorchLevel(blueprint.getPorchLevel() == level ? EngineSetting.SHIP_LEVEL_NONE : level);
-        commit(session, before);
+        blueprint.setPorchDeck(blueprint.getPorchDeck() == deck ? EngineSetting.SHIP_DECK_NONE : deck);
+        commit(session, before, true);
     }
 
     void turn(ShipwrightSessionInstance session) {
         session.setSpin((session.getSpin() + 1) % EngineSetting.ENCODED_FACE_SPIN_COUNT);
     }
 
-    void stepFurnishing(ShipwrightSessionInstance session, int step) {
+    // Steps the option of the tool in hand: wall height, door or window, the furniture item, or the mast picked
+    void stepOption(ShipwrightSessionInstance session, int step) {
 
-        int count = shipwrightManager.getFurnishingCount();
+        switch (session.getTool()) {
+            case WALLS -> session.setHalfWalls(!session.isHalfWalls());
+            case OPENINGS -> session.setWindows(!session.isWindows());
+            case FURNITURE -> session.setItemIndex(Math.floorMod(session.getItemIndex() + step, resolveItemCount()));
+            case MASTS -> stepMast(session, step);
+            default -> stepDeck(session, step);
+        }
+    }
 
-        if (count > 0)
-            session.setFurnishingIndex(Math.floorMod(session.getFurnishingIndex() + step, count));
+    private void stepMast(ShipwrightSessionInstance session, int step) {
+
+        int count = session.getBlueprint().getMasts().size();
+
+        if (count == 0)
+            return;
+
+        int index = session.hasMastPicked() ? Math.floorMod(session.getMastIndex() + step, count) : 0;
+
+        session.setMastIndex(index);
     }
 
     // Masts \\
@@ -364,7 +367,7 @@ class ShipwrightEditBranch extends BranchPackage {
 
         mast.setHeight(clamp(mast.getHeight() + step,
                 EngineSetting.SHIP_MAST_MIN_HEIGHT, EngineSetting.SHIP_MAST_MAX_HEIGHT));
-        commit(session, before);
+        commit(session, before, true);
     }
 
     void toggleCrowsNest(ShipwrightSessionInstance session) {
@@ -376,7 +379,7 @@ class ShipwrightEditBranch extends BranchPackage {
         ShipMastStruct mast = session.getBlueprint().getMasts().get(session.getMastIndex());
 
         mast.setCrowsNest(!mast.hasCrowsNest());
-        commit(session, before);
+        commit(session, before, true);
     }
 
     void toggleRigging(ShipwrightSessionInstance session) {
@@ -388,7 +391,7 @@ class ShipwrightEditBranch extends BranchPackage {
         ShipMastStruct mast = session.getBlueprint().getMasts().get(session.getMastIndex());
 
         mast.setRigging(!mast.isRigged());
-        commit(session, before);
+        commit(session, before, true);
     }
 
     // Naming \\
@@ -404,7 +407,7 @@ class ShipwrightEditBranch extends BranchPackage {
         ShipBlueprintStruct before = session.getBlueprint().copy();
 
         session.getBlueprint().setDisplayName(displayName);
-        commit(session, before);
+        commit(session, before, false);
     }
 
     // History \\
@@ -429,17 +432,18 @@ class ShipwrightEditBranch extends BranchPackage {
 
     // Commit \\
 
-    // Keeps a change once it compiles no worse than the blueprint before it, or takes it back with the reason
-    private void commit(ShipwrightSessionInstance session, ShipBlueprintStruct before) {
+    // Keeps a change once compiled; a strict change that leaves something built with no room to stand when nothing
+    // was is taken back with the reason
+    private void commit(ShipwrightSessionInstance session, ShipBlueprintStruct before, boolean strict) {
 
-        boolean hadProblem = session.getLayout().hasProblem();
+        boolean hadBuildProblem = session.getLayout().hasBuildProblem();
 
         session.pushUndo(before);
         shipwrightManager.compileSession(session);
 
-        if (session.getLayout().hasProblem() && !hadProblem) {
+        if (strict && !hadBuildProblem && session.getLayout().hasBuildProblem()) {
 
-            String refusal = session.getLayout().getProblem();
+            String refusal = session.getLayout().getBuildProblem();
 
             session.discardLast();
             shipwrightManager.compileSession(session);

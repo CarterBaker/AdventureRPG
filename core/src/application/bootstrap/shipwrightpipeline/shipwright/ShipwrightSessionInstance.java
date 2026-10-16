@@ -11,14 +11,17 @@ public class ShipwrightSessionInstance extends InstancePackage {
      * blueprint on the sheet and the name it was last saved under, and the
      * history every change can be undone and redone through, one stroke or
      * press at a time. It holds the tool in hand and what it works on — the
-     * hull layer, the level, the mast picked, the furnishing and the quarter
-     * turn something is set down at — and the octant under the pointer. The
+     * deck picked, whether walls stand full or half height, whether an
+     * opening is a door or a window, the mast picked, the furniture item and
+     * the quarter turn something is set down at — and the cursor, the octant
+     * of the sheet the pointer or the movement bindings last put it on. The
      * blueprint compiles into this session's own layout whenever it changes,
-     * and is surveyed once it has rested, and the sheet and the top and side views are drawn into its
-     * own pixels: the sheet whenever anything shown changes, the views
-     * whenever it compiles, each with a revision its viewer uploads by; the
-     * cursor is laid over the sheet as it is drawn on screen. A name being
-     * typed is kept apart from the blueprint until it is confirmed.
+     * and is surveyed once it has rested, and the sheet and the top and side
+     * views are drawn into its own pixels: the sheet whenever anything shown
+     * changes, the views whenever it compiles, each with a revision its viewer
+     * uploads by; the cursor is laid over the sheet as it is drawn on screen.
+     * A name being typed is kept apart from the blueprint until it is
+     * confirmed.
      */
 
     // Storage
@@ -44,14 +47,14 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
     // Tool
     private ShipwrightTool tool;
-    private int layer;
-    private int levelIndex;
+    private int deck;
+    private boolean halfWalls;
+    private boolean windows;
     private int mastIndex;
-    private int furnishingIndex;
+    private int itemIndex;
     private int spin;
 
-    // Cursor — the octant under the pointer on the sheet
-    private boolean cursorShown;
+    // Cursor — the octant of the sheet the cursor stands on
     private int cursorU;
     private int cursorV;
 
@@ -123,9 +126,15 @@ public class ShipwrightSessionInstance extends InstancePackage {
         this.storage = storage;
 
         // Tool
-        this.tool = ShipwrightTool.HULL;
-        this.furnishingIndex = 0;
+        this.tool = ShipwrightTool.DECK;
+        this.halfWalls = false;
+        this.windows = false;
+        this.itemIndex = 0;
         this.spin = 0;
+
+        // Cursor
+        this.cursorU = EngineSetting.SHIP_AFT_MARGIN + EngineSetting.SHIP_SHEET_LENGTH / 2;
+        this.cursorV = EngineSetting.SHIP_SHEET_HALF_BREADTH;
 
         // Library
         this.libraryIndex = EngineSetting.INDEX_NOT_FOUND;
@@ -146,8 +155,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
         this.dirty = false;
         this.discardArmed = false;
         this.strokeSnapshot = null;
-        this.layer = blueprint.getWaterline();
-        this.levelIndex = 0;
+        this.deck = 0;
         this.mastIndex = EngineSetting.INDEX_NOT_FOUND;
         this.naming = false;
         undoStack.clear();
@@ -289,13 +297,18 @@ public class ShipwrightSessionInstance extends InstancePackage {
         markChanged();
     }
 
-    public void setLayer(int layer) {
-        this.layer = layer;
+    public void setDeck(int deck) {
+        this.deck = deck;
         markChanged();
     }
 
-    public void setLevelIndex(int levelIndex) {
-        this.levelIndex = levelIndex;
+    public void setHalfWalls(boolean halfWalls) {
+        this.halfWalls = halfWalls;
+        markChanged();
+    }
+
+    public void setWindows(boolean windows) {
+        this.windows = windows;
         markChanged();
     }
 
@@ -304,8 +317,8 @@ public class ShipwrightSessionInstance extends InstancePackage {
         markChanged();
     }
 
-    public void setFurnishingIndex(int furnishingIndex) {
-        this.furnishingIndex = furnishingIndex;
+    public void setItemIndex(int itemIndex) {
+        this.itemIndex = itemIndex;
         markChanged();
     }
 
@@ -316,15 +329,15 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
     // Cursor \\
 
-    // Moves the cursor, true when it moved
-    public boolean setCursor(boolean shown, int u, int v) {
+    // Moves the cursor onto an octant of the sheet, true when it moved
+    public boolean moveCursor(int u, int v) {
 
-        if (shown == cursorShown && (!shown || u == cursorU && v == cursorV))
+        if (u == cursorU && v == cursorV)
             return false;
 
-        this.cursorShown = shown;
         this.cursorU = u;
         this.cursorV = v;
+        markChanged();
 
         return true;
     }
@@ -432,21 +445,17 @@ public class ShipwrightSessionInstance extends InstancePackage {
         return tool;
     }
 
-    public int getLayer() {
-        return layer;
+    // The deck every tool works on, always one of the blueprint's
+    public int getDeck() {
+        return Math.min(deck, blueprint.getDeckCount() - 1);
     }
 
-    public int getLevelIndex() {
-        return levelIndex;
+    public boolean isHalfWalls() {
+        return halfWalls;
     }
 
-    // The floor layer the level tools work on, SHIP_LEVEL_NONE while no floor is laid
-    public int getLevel() {
-
-        if (layout.getLevels().isEmpty())
-            return EngineSetting.SHIP_LEVEL_NONE;
-
-        return layout.getLevels().getInt(Math.max(0, Math.min(layout.getLevels().size() - 1, levelIndex)));
+    public boolean isWindows() {
+        return windows;
     }
 
     public int getMastIndex() {
@@ -457,16 +466,13 @@ public class ShipwrightSessionInstance extends InstancePackage {
         return mastIndex >= 0 && mastIndex < blueprint.getMasts().size();
     }
 
-    public int getFurnishingIndex() {
-        return furnishingIndex;
+    // The furniture item picked: the helm, the capstan, then every furnishing table in the drafting table's list
+    public int getItemIndex() {
+        return itemIndex;
     }
 
     public int getSpin() {
         return spin;
-    }
-
-    public boolean isCursorShown() {
-        return cursorShown;
     }
 
     public int getCursorU() {

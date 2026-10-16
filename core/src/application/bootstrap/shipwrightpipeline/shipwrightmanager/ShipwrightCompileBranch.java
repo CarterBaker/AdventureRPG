@@ -8,6 +8,7 @@ import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleDesignStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandlingStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
@@ -17,17 +18,25 @@ class ShipwrightCompileBranch extends BranchPackage {
 
     /*
      * Compiles a blueprint into what it is built of, the one way a ship drawn
-     * at the drafting table becomes a ship. The octant grid is laid out round
-     * the hull with room aft for the rudder and the porch and headroom for
-     * deckhouses and rails; the hull, its decks, porch, walls, rails, stairs
-     * and doorways are laid into it through ShipwrightHullBranch and
-     * ShipwrightFittingBranch, and every piece merged into its part. The
+     * at the drafting table becomes a ship. Every deck must be drawn, and
+     * every piece of a deck above the bottom — a forecastle and a poop are two
+     * pieces of one deck — must rest on the deck below. The octant grid is laid out round
+     * the sheet with room aft for the rudder and the porch and headroom for
+     * deckhouses and bulwarks; the hull, its decks, porch, bulwarks, walls,
+     * stairs, doors and windows are laid into it through ShipwrightHullBranch
+     * and ShipwrightFittingBranch, and every piece merged into its part. The
      * bowsprit, helm, capstan, rudder and the whole rig are then built as
-     * parts of their own, and last the cargo is placed and checked against
-     * everything solid. The design draft is the top of the waterline layer,
-     * and the centre of mass sits a share of the way up to it. A compiled
-     * layout becomes a VehicleDesignStruct, named for the vehicle it is
-     * registered as, with every handling value at its default and the drag
+     * parts of their own, and the cargo is placed and checked against
+     * everything solid. Last the ship is weighed, every box by what it is
+     * made of, and floated: stone ballast is laid along its bottom until it
+     * sinks to its share of the height the sea may rise to before it comes
+     * aboard, no deeper than its share of its beam, or none when it is heavy
+     * enough already, and the draft it floats
+     * at follows from what it then weighs, so where the water sits is worked
+     * out, never drawn. A hull too short, too round or too blunt at its
+     * waterline to sail, or one that would sink, is a problem in its shape. A
+     * compiled layout becomes a VehicleDesignStruct, named for the vehicle it
+     * is registered as, with every handling value at its default and the drag
      * along its length left to the shape of its bow.
      */
 
@@ -35,6 +44,7 @@ class ShipwrightCompileBranch extends BranchPackage {
     private ShipwrightHullBranch shipwrightHullBranch;
     private ShipwrightRigBranch shipwrightRigBranch;
     private ShipwrightFittingBranch shipwrightFittingBranch;
+    private VehicleManager vehicleManager;
 
     // Base \\
 
@@ -43,6 +53,7 @@ class ShipwrightCompileBranch extends BranchPackage {
         this.shipwrightHullBranch = get(ShipwrightHullBranch.class);
         this.shipwrightRigBranch = get(ShipwrightRigBranch.class);
         this.shipwrightFittingBranch = get(ShipwrightFittingBranch.class);
+        this.vehicleManager = get(VehicleManager.class);
     }
 
     // Compile \\
@@ -52,33 +63,75 @@ class ShipwrightCompileBranch extends BranchPackage {
         layout.clear(EngineSetting.SHIP_AFT_MARGIN);
 
         if (!blueprint.hasHull()) {
-            layout.reportProblem(EngineSetting.SHIPWRIGHT_PROBLEM_NO_HULL);
+            layout.reportShapeProblem(EngineSetting.SHIPWRIGHT_PROBLEM_NO_HULL);
             return;
         }
 
+        verifyDecks(blueprint, layout);
+        shipwrightHullBranch.laySections(blueprint, layout);
         layout.getGrid().reset(
-                EngineSetting.SHIP_AFT_MARGIN + blueprint.getLength(),
-                blueprint.getHeight() + EngineSetting.SHIP_HEADROOM,
-                blueprint.getBreadth());
+                EngineSetting.SHIP_AFT_MARGIN + EngineSetting.SHIP_SHEET_LENGTH,
+                layout.getSectionLayers() + EngineSetting.SHIP_HEADROOM,
+                EngineSetting.SHIP_SHEET_BREADTH);
 
-        shipwrightHullBranch.layShell(blueprint, layout);
-        shipwrightHullBranch.layDecks(blueprint, layout);
+        shipwrightHullBranch.layShell(layout);
         shipwrightHullBranch.layPorch(blueprint, layout);
-        shipwrightHullBranch.collectLevels(layout);
+        shipwrightHullBranch.layBulwarks(layout);
         shipwrightHullBranch.layWalls(blueprint, layout);
-        shipwrightHullBranch.layRails(blueprint, layout);
         shipwrightHullBranch.layStairs(blueprint, layout);
-        shipwrightFittingBranch.cutDoorways(blueprint, layout);
+        shipwrightFittingBranch.cutOpenings(blueprint, layout);
 
         mergePieces(layout);
 
         shipwrightRigBranch.addBowsprit(blueprint, layout);
         shipwrightFittingBranch.addFittings(blueprint, layout);
         shipwrightRigBranch.addRig(blueprint, layout);
-
-        resolveHull(blueprint, layout);
         shipwrightFittingBranch.addCargo(blueprint, layout);
+
+        floatHull(blueprint, layout);
+        verifyWaterline(layout);
     }
+
+    // Decks \\
+
+    // Every deck drawn, and every piece of one above the bottom resting on the deck below it
+    private void verifyDecks(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
+
+        for (int deck = 0; deck < blueprint.getDeckCount(); deck++) {
+
+            String deckName = EngineSetting.SHIPWRIGHT_TEXT_DECK + (deck + 1);
+
+            if (!blueprint.isDeckDrawn(deck))
+                layout.reportShapeProblem(deckName + EngineSetting.SHIPWRIGHT_PROBLEM_DECK_EMPTY);
+            else if (deck > 0 && !restsOn(blueprint, deck))
+                layout.reportShapeProblem(deckName + EngineSetting.SHIPWRIGHT_PROBLEM_DECK_FLOATING);
+        }
+    }
+
+    // True when every run of a deck along the sheet shares an octant with the deck below it
+    private boolean restsOn(ShipBlueprintStruct blueprint, int deck) {
+
+        boolean inPiece = false;
+        boolean resting = false;
+
+        for (int x = 0; x <= EngineSetting.SHIP_SHEET_LENGTH; x++) {
+
+            boolean here = blueprint.getOutline(deck, x) > 0;
+
+            if (!here && inPiece && !resting)
+                return false;
+
+            if (!here || !inPiece)
+                resting = false;
+
+            inPiece = here;
+            resting |= here && blueprint.getOutline(deck - 1, x) > 0;
+        }
+
+        return true;
+    }
+
+    // Pieces \\
 
     // Every piece laid in the grid merged into boxes, one part per piece that has any
     private void mergePieces(ShipLayoutStruct layout) {
@@ -100,29 +153,151 @@ class ShipwrightCompileBranch extends BranchPackage {
         }
     }
 
-    // The draft at the top of the waterline layer, the centre of mass a share of the way up to it
-    private void resolveHull(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
+    // Float \\
 
-        if (!isAfloat(blueprint)) {
-            layout.reportProblem(EngineSetting.SHIPWRIGHT_PROBLEM_WATERLINE);
+    // The ship weighed, trimmed with ballast down to its share of the sill, and floated at whatever it then weighs
+    private void floatHull(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
+
+        ObjectArrayList<VehiclePartStruct> parts = layout.getParts();
+        float sill = layout.getSillHeight();
+        float[] weight = weighParts(parts);
+        float structure = weight[0];
+        float target = Math.min(sill * EngineSetting.SHIP_DRAFT_SHARE,
+                resolveBeam(layout) * EngineSetting.SHIP_DRAFT_BEAM_SHARE);
+        float ballast = Math.max(0f,
+                vehicleManager.resolveDisplacement(blueprint.getDisplayName(), parts, target) - structure);
+        float mass = structure + ballast;
+        float draft = ballast > 0f ? target : vehicleManager.solveDraft(blueprint.getDisplayName(), parts, mass);
+
+        float moment = weight[1] + ballast * resolveBallastHeight(blueprint, ballast);
+
+        layout.setWeight(structure, ballast, moment / Math.max(mass, EngineSetting.DIVISION_EPSILON));
+
+        if (draft == EngineSetting.VEHICLE_DRAFT_SINKS || draft >= sill) {
+            layout.reportShapeProblem(EngineSetting.SHIPWRIGHT_PROBLEM_SINKS);
             return;
         }
 
-        float draft = (blueprint.getWaterline() + 1) * EngineSetting.SUB_BLOCK_SIZE;
+        if (draft >= layout.getOpeningSill())
+            layout.reportShapeProblem(EngineSetting.SHIPWRIGHT_PROBLEM_OPENING_SUBMERGED);
 
-        layout.setHull(draft, draft * EngineSetting.SHIP_CENTER_OF_MASS_SHARE);
+        layout.setDraft(draft);
     }
 
-    // True when some of the hull lies at or below the waterline
-    private boolean isAfloat(ShipBlueprintStruct blueprint) {
+    // The tonnes every part weighs by what it is made of, then their moment about the keel in tonne-blocks
+    private float[] weighParts(ObjectArrayList<VehiclePartStruct> parts) {
 
-        for (int y = 0; y <= blueprint.getWaterline(); y++)
-            for (int z = 0; z < blueprint.getBreadth(); z++)
-                for (int x = 0; x < blueprint.getLength(); x++)
-                    if (blueprint.isVolume(x, y, z))
-                        return true;
+        float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
+        float mass = 0f;
+        float moment = 0f;
 
-        return false;
+        for (int i = 0; i < parts.size(); i++) {
+
+            VehiclePartStruct part = parts.get(i);
+            float density = resolveDensity(part.getTextureName());
+
+            for (int box = 0; box < part.getBoxCount(); box++) {
+
+                float sizeX = (part.getBoxBound(box, EngineSetting.BOX_MAX_X)
+                        - part.getBoxBound(box, EngineSetting.BOX_MIN_X)) * scale;
+                float sizeY = (part.getBoxBound(box, EngineSetting.BOX_MAX_Y)
+                        - part.getBoxBound(box, EngineSetting.BOX_MIN_Y)) * scale;
+                float sizeZ = (part.getBoxBound(box, EngineSetting.BOX_MAX_Z)
+                        - part.getBoxBound(box, EngineSetting.BOX_MIN_Z)) * scale;
+                float boxMass = sizeX * sizeY * sizeZ * density;
+                float middle = (part.getBoxBound(box, EngineSetting.BOX_MIN_Y)
+                        + part.getBoxBound(box, EngineSetting.BOX_MAX_Y)) * 0.5f * scale;
+
+                mass += boxMass;
+                moment += boxMass * middle;
+            }
+        }
+
+        return new float[] { mass, moment };
+    }
+
+    private float resolveDensity(String textureName) {
+
+        for (int i = 0; i < EngineSetting.SHIP_MATERIAL_TEXTURES.length; i++)
+            if (EngineSetting.SHIP_MATERIAL_TEXTURES[i].equals(textureName))
+                return EngineSetting.SHIP_MATERIAL_DENSITIES[i];
+
+        return EngineSetting.SHIP_MATERIAL_DENSITY_DEFAULT;
+    }
+
+    // The hull's greatest breadth anywhere, in blocks
+    private float resolveBeam(ShipLayoutStruct layout) {
+
+        int widest = 0;
+
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+            widest = Math.max(widest, shipwrightHullBranch.findWidestSection(layout, x));
+
+        return widest * 2 * EngineSetting.SUB_BLOCK_SIZE;
+    }
+
+    // The height of the middle of the ballast laid evenly over the bottom deck, in model blocks
+    private float resolveBallastHeight(ShipBlueprintStruct blueprint, float ballast) {
+
+        float octantArea = EngineSetting.SUB_BLOCK_SIZE * EngineSetting.SUB_BLOCK_SIZE;
+        float area = 0f;
+
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+            area += blueprint.getOutline(0, x) * 2 * octantArea;
+
+        float depth = ballast / EngineSetting.SHIP_BALLAST_DENSITY / Math.max(area, octantArea);
+
+        return EngineSetting.SUB_BLOCK_SIZE + depth * 0.5f;
+    }
+
+    // Waterline \\
+
+    // The hull's length, beam and bow at the layer its waterline crosses, each held to what a hull may sail with
+    private void verifyWaterline(ShipLayoutStruct layout) {
+
+        if (!layout.isAfloat())
+            return;
+
+        int layer = Math.max(0, Math.min(layout.getSectionLayers() - 1,
+                (int) Math.ceil(layout.getDraft() / EngineSetting.SUB_BLOCK_SIZE) - 1));
+        int stern = EngineSetting.INDEX_NOT_FOUND;
+        int stem = EngineSetting.INDEX_NOT_FOUND;
+        int fullest = EngineSetting.INDEX_NOT_FOUND;
+        int widest = 0;
+
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++) {
+
+            int halfBeam = layout.getWaterlineSection(x, layer);
+
+            if (halfBeam == 0)
+                continue;
+
+            if (stern == EngineSetting.INDEX_NOT_FOUND)
+                stern = x;
+
+            stem = x;
+
+            if (halfBeam >= widest) {
+                widest = halfBeam;
+                fullest = x;
+            }
+        }
+
+        if (stern == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        float length = (stem - stern + 1) * EngineSetting.SUB_BLOCK_SIZE;
+        float beam = widest * 2 * EngineSetting.SUB_BLOCK_SIZE;
+        float entry = (float) Math.toDegrees(Math.atan2(widest, stem - fullest + 1));
+
+        layout.setWaterline(length, beam, entry);
+
+        if (length < EngineSetting.SHIP_MIN_WATERLINE_LENGTH)
+            layout.reportShapeProblem(EngineSetting.SHIPWRIGHT_PROBLEM_TOO_SHORT);
+        else if (length < beam * EngineSetting.SHIP_MIN_LENGTH_BEAM_RATIO)
+            layout.reportShapeProblem(EngineSetting.SHIPWRIGHT_PROBLEM_TOO_ROUND);
+        else if (entry > EngineSetting.SHIP_MAX_ENTRY_DEGREES)
+            layout.reportShapeProblem(EngineSetting.SHIPWRIGHT_PROBLEM_TOO_BLUNT);
     }
 
     // Design \\

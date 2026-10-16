@@ -7,12 +7,12 @@ public class ShipCellUtility extends EngineUtility {
 
     /*
      * The one packing of a drafting-table cell into an int, shared by every
-     * placement a ship blueprint keeps: the level it stands on, its octant
+     * placement a ship blueprint keeps: the deck it stands on, its octant
      * along the length and across the full breadth, and its quarter turn.
      * Packed cells sort by level, then length, then breadth, so a sorted list
      * of them writes the same bytes every time it is saved. Also the one
-     * mapping between the breadth across the whole ship and the half-breadth
-     * a mirrored hull is drawn on.
+     * mapping between the breadth across the whole sheet and the half-breadth
+     * a mirrored deck is drawn on.
      */
 
     // Pack \\
@@ -47,17 +47,20 @@ public class ShipCellUtility extends EngineUtility {
 
     // Mirror \\
 
-    // The octant out from the centre line a cell across the full breadth lies on, either side alike
-    public static int toHalfBreadth(int z, int halfBreadth) {
+    // The octant out from the centre line a cell across the sheet's full breadth lies on, either side alike
+    public static int toHalfBreadth(int z) {
+
+        int halfBreadth = EngineSetting.SHIP_SHEET_HALF_BREADTH;
+
         return z >= halfBreadth ? z - halfBreadth : halfBreadth - 1 - z;
     }
 
-    public static int toStarboard(int halfZ, int halfBreadth) {
-        return halfBreadth + halfZ;
+    public static int toStarboard(int halfZ) {
+        return EngineSetting.SHIP_SHEET_HALF_BREADTH + halfZ;
     }
 
-    public static int toPort(int halfZ, int halfBreadth) {
-        return halfBreadth - 1 - halfZ;
+    public static int toPort(int halfZ) {
+        return EngineSetting.SHIP_SHEET_HALF_BREADTH - 1 - halfZ;
     }
 
     // Spin \\

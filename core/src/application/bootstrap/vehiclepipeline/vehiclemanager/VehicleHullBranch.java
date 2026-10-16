@@ -144,8 +144,7 @@ class VehicleHullBranch extends BranchPackage {
         float[] m = vehicle.getRotation().val;
         float gravity = EngineSetting.GRAVITY_FORCE * vehicle.getWorldHandle().getGravityMultiplier();
         float positionY = vehicle.getWorldPositionStruct().getPosition().y;
-        float reach = (float) EngineSetting.VEHICLE_COLUMN_SUB_VOXELS / EngineSetting.SUB_VOXEL_RESOLUTION * 0.5f
-                * (Math.abs(m[1]) + Math.abs(m[5]) + Math.abs(m[9]));
+        float reach = hull.getColumnSize() * 0.5f * (Math.abs(m[1]) + Math.abs(m[5]) + Math.abs(m[9]));
 
         ensureLumpScratch(lumps.size());
 

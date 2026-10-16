@@ -27,11 +27,12 @@ public class ShipwrightManager extends ManagerPackage {
      * ShipwrightCompileBranch at once and drawn through ShipwrightDraftBranch;
      * measuring it through ShipwrightSurveyBranch meshes the whole ship, so
      * that waits until the drawing has rested a moment, keeping every stroke
-     * and press free of a hitch. A new ship starts from the template
-     * ship in the assets. A ship must be named, buildable, within the triangle
-     * limit — at boot as at the table — and fitted with a helm and a capstan
-     * to be saved, and saved to be
-     * launched; opening or starting another ship over unsaved work asks twice.
+     * and press free of a hitch. A new ship starts as a blank sheet, its
+     * bottom deck waiting to be drawn. A ship must be named, buildable, within the triangle
+     * limit — at boot as at the table — and fitted with a helm to be saved,
+     * and saved to be launched; a ship that would capsize may still be saved,
+     * the table having said so. Opening or starting another ship over unsaved
+     * work asks twice.
      */
 
     // Internal
@@ -160,29 +161,11 @@ public class ShipwrightManager extends ManagerPackage {
 
         ShipwrightSessionInstance session = create(ShipwrightSessionInstance.class);
 
-        session.constructor(storage, createTemplate());
+        session.constructor(storage, new ShipBlueprintStruct());
         compileSession(session);
         surveySession(session);
 
         return session;
-    }
-
-    // The template ship from the assets, unnamed; an empty grid when there is none
-    private ShipBlueprintStruct createTemplate() {
-
-        if (!shipwrightLibraryBranch.hasShip(ShipwrightStorage.ASSETS, EngineSetting.SHIPWRIGHT_TEMPLATE_SHIP))
-            return new ShipBlueprintStruct(
-                    EngineSetting.SHIP_DEFAULT_LENGTH,
-                    EngineSetting.SHIP_DEFAULT_HALF_BREADTH,
-                    EngineSetting.SHIP_DEFAULT_HEIGHT);
-
-        ShipBlueprintStruct blueprint = shipwrightLibraryBranch.load(
-                ShipwrightStorage.ASSETS, EngineSetting.SHIPWRIGHT_TEMPLATE_SHIP);
-
-        blueprint.setShipName(EngineSetting.SHIP_NAME_NONE);
-        blueprint.setDisplayName(EngineSetting.SHIP_NAME_NONE);
-
-        return blueprint;
     }
 
     // The blueprint on a session's sheet compiled and its views drawn, its survey due once it rests
@@ -191,12 +174,6 @@ public class ShipwrightManager extends ManagerPackage {
         shipwrightCompileBranch.compile(session.getBlueprint(), session.getLayout());
         shipwrightDraftBranch.drawViews(session);
         session.scheduleSurvey(EngineSetting.SHIPWRIGHT_SURVEY_DELAY);
-
-        int levels = session.getLayout().getLevels().size();
-
-        if (session.getLevelIndex() >= levels)
-            session.setLevelIndex(Math.max(0, levels - 1));
-
         session.markChanged();
     }
 
@@ -222,7 +199,7 @@ public class ShipwrightManager extends ManagerPackage {
         shipwrightDraftBranch.drawSheet(session);
     }
 
-    // The octants the sheet for the session's tool spans, written to the session
+    // The octants the sheet spans, written to the session
     public void resolveSheetSize(ShipwrightSessionInstance session) {
         shipwrightDraftBranch.resolveSheetSize(session);
     }
@@ -234,7 +211,7 @@ public class ShipwrightManager extends ManagerPackage {
         if (!confirmDiscard(session))
             return;
 
-        session.load(createTemplate(), EngineSetting.SHIP_NAME_NONE);
+        session.load(new ShipBlueprintStruct(), EngineSetting.SHIP_NAME_NONE);
         session.setLibraryIndex(EngineSetting.INDEX_NOT_FOUND);
         compileSession(session);
         session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_NEW);
@@ -331,9 +308,6 @@ public class ShipwrightManager extends ManagerPackage {
         if (!blueprint.hasHelm())
             return EngineSetting.SHIPWRIGHT_REFUSAL_HELM;
 
-        if (!blueprint.hasCapstan())
-            return EngineSetting.SHIPWRIGHT_REFUSAL_CAPSTAN;
-
         return EngineSetting.SHIPWRIGHT_STATUS_NONE;
     }
 
@@ -371,28 +345,16 @@ public class ShipwrightManager extends ManagerPackage {
         shipwrightEditBranch.endStroke(session);
     }
 
-    public void stepLayer(ShipwrightSessionInstance session, int step) {
-        shipwrightEditBranch.stepLayer(session, step);
+    public void stepDeck(ShipwrightSessionInstance session, int step) {
+        shipwrightEditBranch.stepDeck(session, step);
     }
 
-    public void copyLayer(ShipwrightSessionInstance session, int step) {
-        shipwrightEditBranch.copyLayer(session, step);
+    public void addDeck(ShipwrightSessionInstance session) {
+        shipwrightEditBranch.addDeck(session);
     }
 
-    public void clearLayer(ShipwrightSessionInstance session) {
-        shipwrightEditBranch.clearLayer(session);
-    }
-
-    public void stepWaterline(ShipwrightSessionInstance session, int step) {
-        shipwrightEditBranch.stepWaterline(session, step);
-    }
-
-    public void resize(ShipwrightSessionInstance session, int lengthStep, int halfBreadthStep, int heightStep) {
-        shipwrightEditBranch.resize(session, lengthStep, halfBreadthStep, heightStep);
-    }
-
-    public void cycleRails(ShipwrightSessionInstance session) {
-        shipwrightEditBranch.cycleRails(session);
+    public void removeDeck(ShipwrightSessionInstance session) {
+        shipwrightEditBranch.removeDeck(session);
     }
 
     public void togglePorch(ShipwrightSessionInstance session) {
@@ -403,8 +365,12 @@ public class ShipwrightManager extends ManagerPackage {
         shipwrightEditBranch.turn(session);
     }
 
-    public void stepFurnishing(ShipwrightSessionInstance session, int step) {
-        shipwrightEditBranch.stepFurnishing(session, step);
+    public void stepOption(ShipwrightSessionInstance session, int step) {
+        shipwrightEditBranch.stepOption(session, step);
+    }
+
+    public void nextTool(ShipwrightSessionInstance session) {
+        session.setTool(session.getTool().next());
     }
 
     public void stepMastHeight(ShipwrightSessionInstance session, int step) {
@@ -437,9 +403,31 @@ public class ShipwrightManager extends ManagerPackage {
         return furnishingNames.size();
     }
 
-    // The furnishing table at an index of the drafting table's list, null when the list is empty
+    // The name of the furniture item at an index of the drafting table's list: the helm, the capstan, then every
+    // furnishing table by its own name
+    public String getItemName(int itemIndex) {
+
+        int item = Math.floorMod(itemIndex, EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS + furnishingNames.size());
+
+        if (item == EngineSetting.SHIPWRIGHT_ITEM_HELM)
+            return EngineSetting.SHIPWRIGHT_TEXT_HELM;
+
+        if (item == EngineSetting.SHIPWRIGHT_ITEM_CAPSTAN)
+            return EngineSetting.SHIPWRIGHT_TEXT_CAPSTAN;
+
+        String furnishingName = furnishingNames.get(item - EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS);
+
+        return furnishingName.substring(furnishingName.lastIndexOf(EngineSetting.PATH_SEPARATOR) + 1);
+    }
+
+    // The height a mast stepped on the session's ship rises above its deck, as the hull's length sets
+    public int resolveMastHeight(ShipwrightSessionInstance session) {
+        return shipwrightRigBranch.resolveMastHeight(session.getLayout());
+    }
+
+    // The furnishing table at an index of the drafting table's list of furnishings
     public String getFurnishingName(int index) {
-        return furnishingNames.isEmpty() ? null : furnishingNames.get(Math.floorMod(index, furnishingNames.size()));
+        return furnishingNames.get(index);
     }
 
     public String getMastName(ShipwrightSessionInstance session, int mastIndex) {

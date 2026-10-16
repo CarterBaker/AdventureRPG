@@ -9,7 +9,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
-import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSheet;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartRole;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
@@ -23,24 +23,24 @@ class ShipwrightDraftBranch extends BranchPackage {
     /*
      * Draws a drafting table's sheet and its top and side views into the
      * session's own pixels, one texel per octant on the sheet, the paper and
-     * its ruling left to the sheet's shader. A hull plan inks the layer being
-     * drawn, the layers under and over it faint and the whole hull's outline
-     * fainter still; a side elevation shows the hull's profile with every deck
-     * and the waterline ruled across it and the layer picked shaded; a level
-     * plan shows the floor of the level picked with its walls, shell, rails,
-     * stairs, doors, furniture, helm, capstan and masts, walls straight from
-     * the blueprint so a stroke shows as it is drawn; a deck plan shades the
-     * weather deck by height under the masts, the picked one marked. Plans run
-     * bow to the right and starboard down. The views are every part's boxes
-     * seen from starboard and from above, nearest drawn over farthest, shaded
-     * by depth and coloured by what they are made of, with the cargo in its
-     * places and the sea below the design waterline; the side view lays every
-     * sail out fore and aft behind the spars as a sail plan does; both are drawn at one
-     * scale, as fine as fits.
+     * its ruling left to the sheet's shader. The sheet is always the plan of
+     * the deck picked. While a deck is drawn its outline is inked, blue where
+     * it lies under the waterline, the decks under and over it faint, and the
+     * hull's outline where the water meets it ruled across; with any other
+     * tool it is the deck as it was built — floor, planking, bulwarks, stairs
+     * and hatches — with every wall, half wall, door, window, stair foot,
+     * piece of furniture, the helm and the capstan on it straight from the
+     * blueprint, so a stroke shows as it is drawn. Every mast is marked, the
+     * picked one brighter. Plans run bow to the right and starboard down. The
+     * views are every part's boxes seen from starboard and from above,
+     * nearest drawn over farthest, shaded by depth and coloured by what they
+     * are made of, with the cargo in its places and the sea below the
+     * waterline the ship floats at; the side view lays every sail out fore and
+     * aft behind the spars as a sail plan does; both are drawn at one scale,
+     * as fine as fits.
      */
 
     // Internal
-    private ShipwrightHullBranch shipwrightHullBranch;
     private ShipwrightFittingBranch shipwrightFittingBranch;
 
     // Scratch — main thread only
@@ -59,22 +59,15 @@ class ShipwrightDraftBranch extends BranchPackage {
 
     @Override
     protected void get() {
-        this.shipwrightHullBranch = get(ShipwrightHullBranch.class);
         this.shipwrightFittingBranch = get(ShipwrightFittingBranch.class);
     }
 
     // Sheet \\
 
-    // The octants the sheet for a tool spans across and up, written to the session
+    // The octants the sheet spans across and up, written to the session
     void resolveSheetSize(ShipwrightSessionInstance session) {
-
-        ShipBlueprintStruct blueprint = session.getBlueprint();
-        int width = EngineSetting.SHIP_AFT_MARGIN + blueprint.getLength();
-        int height = session.getTool().getSheet().isPlan()
-                ? blueprint.getBreadth()
-                : blueprint.getHeight() + EngineSetting.SHIP_HEADROOM;
-
-        session.setSheetSize(width, height);
+        session.setSheetSize(EngineSetting.SHIP_AFT_MARGIN + EngineSetting.SHIP_SHEET_LENGTH,
+                EngineSetting.SHIP_SHEET_BREADTH);
     }
 
     void drawSheet(ShipwrightSessionInstance session) {
@@ -83,111 +76,108 @@ class ShipwrightDraftBranch extends BranchPackage {
         Arrays.fill(session.getSheetPixels(), 0, session.getSheetWidth() * session.getSheetHeight()
                 * EngineSetting.COLOR_CHANNEL_COUNT, (byte) 0);
 
-        ShipwrightSheet sheet = session.getTool().getSheet();
+        if (session.getTool() == ShipwrightTool.DECK)
+            drawOutlines(session);
+        else
+            drawDeck(session);
 
-        switch (sheet) {
-            case HULL_PLAN -> drawHullPlan(session);
-            case SIDE_ELEVATION -> drawSideElevation(session);
-            case LEVEL_PLAN -> drawLevelPlan(session);
-            default -> drawDeckPlan(session);
-        }
+        drawMasts(session);
     }
 
-    // The layer being drawn inked, the layers under and over it faint, the whole hull fainter
-    private void drawHullPlan(ShipwrightSessionInstance session) {
+    // The deck picked inked, blue under the waterline, the decks under and over it faint, the waterline ruled
+    private void drawOutlines(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
-        int layer = session.getLayer();
+        ShipLayoutStruct layout = session.getLayout();
+        int deck = session.getDeck();
+        boolean submerged = layout.isAfloat()
+                && (deck * EngineSetting.SHIP_DECK_HEIGHT + 1) * EngineSetting.SUB_BLOCK_SIZE <= layout.getDraft();
 
-        for (int z = 0; z < blueprint.getBreadth(); z++)
-            for (int x = 0; x < blueprint.getLength(); x++) {
+        for (int z = 0; z < EngineSetting.SHIP_SHEET_BREADTH; z++)
+            for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++) {
 
                 int color;
 
-                if (blueprint.isVolume(x, layer, z))
-                    color = EngineSetting.SHIPWRIGHT_INK_HULL;
-                else if (blueprint.isVolume(x, layer - 1, z))
+                if (blueprint.isOnDeck(deck, x, z))
+                    color = submerged ? EngineSetting.SHIPWRIGHT_INK_SUBMERGED : EngineSetting.SHIPWRIGHT_INK_HULL;
+                else if (blueprint.isOnDeck(deck - 1, x, z))
                     color = EngineSetting.SHIPWRIGHT_INK_BELOW;
-                else if (blueprint.isVolume(x, layer + 1, z))
+                else if (blueprint.isOnDeck(deck + 1, x, z))
                     color = EngineSetting.SHIPWRIGHT_INK_ABOVE;
-                else if (hasColumn(blueprint, x, z))
-                    color = EngineSetting.SHIPWRIGHT_INK_OUTLINE;
                 else
                     continue;
 
                 writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, z, color);
             }
+
+        drawWaterline(session, layout);
     }
 
-    // The hull's profile from starboard, every deck and the waterline ruled across it, the layer picked shaded
-    private void drawSideElevation(ShipwrightSessionInstance session) {
+    // The ring where the water meets the hull at the waterline the ship floats at
+    private void drawWaterline(ShipwrightSessionInstance session, ShipLayoutStruct layout) {
 
-        ShipBlueprintStruct blueprint = session.getBlueprint();
+        if (!layout.isAfloat())
+            return;
 
-        for (int y = 0; y < blueprint.getHeight(); y++)
-            for (int x = 0; x < blueprint.getLength(); x++) {
+        int layer = Math.max(0, (int) Math.ceil(layout.getDraft() / EngineSetting.SUB_BLOCK_SIZE) - 1);
 
-                boolean profile = hasProfile(blueprint, x, y);
-                int color;
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++) {
 
-                if (profile && blueprint.hasDeck(y))
-                    color = EngineSetting.SHIPWRIGHT_INK_DECK;
-                else if (y == blueprint.getWaterline())
-                    color = profile
-                            ? EngineSetting.SHIPWRIGHT_INK_WATERLINE_HULL
-                            : EngineSetting.SHIPWRIGHT_INK_WATERLINE;
-                else if (profile)
-                    color = EngineSetting.SHIPWRIGHT_INK_PROFILE;
-                else if (y == session.getLayer())
-                    color = EngineSetting.SHIPWRIGHT_INK_PICKED;
-                else
-                    continue;
+            int halfBeam = layout.getWaterlineSection(x, layer);
+            int sternward = layout.getWaterlineSection(x - 1, layer);
+            int bowward = layout.getWaterlineSection(x + 1, layer);
 
-                writeTexel(session, EngineSetting.SHIP_AFT_MARGIN + x, y, color);
-            }
+            for (int halfZ = 0; halfZ < halfBeam; halfZ++)
+                if (halfZ == halfBeam - 1 || halfZ >= sternward || halfZ >= bowward) {
+                    writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, ShipCellUtility.toStarboard(halfZ),
+                            EngineSetting.SHIPWRIGHT_INK_WATERLINE);
+                    writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, ShipCellUtility.toPort(halfZ),
+                            EngineSetting.SHIPWRIGHT_INK_WATERLINE);
+                }
+        }
     }
 
-    // One level's floor and everything standing on it, seen from above
-    private void drawLevelPlan(ShipwrightSessionInstance session) {
+    // The deck picked as it was built, and everything set down on it
+    private void drawDeck(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
         ShipLayoutStruct layout = session.getLayout();
-        int level = session.getLevel();
+        int deck = session.getDeck();
 
-        if (level == EngineSetting.SHIP_LEVEL_NONE || layout.getParts().isEmpty())
-            return;
+        if (layout.getSectionLayers() > 0)
+            drawFloor(session, layout.getGrid(), deck * EngineSetting.SHIP_DECK_HEIGHT);
 
-        drawLevelGrid(session, layout.getGrid(), level);
-        drawWalls(session, blueprint, level);
-        drawDoors(session, blueprint, level);
-        drawFurniture(session, blueprint, level);
-        drawStairFeet(session, blueprint, level);
-        drawFitting(session, blueprint.getHelm(), level, 1, EngineSetting.SHIP_FITTING_OCTANTS);
-        drawFitting(session, blueprint.getCapstan(), level, EngineSetting.SHIP_FITTING_OCTANTS,
+        drawCells(session, blueprint.getWalls(), deck, EngineSetting.SHIPWRIGHT_INK_WALL);
+        drawCells(session, blueprint.getHalfWalls(), deck, EngineSetting.SHIPWRIGHT_INK_HALF_WALL);
+        drawCells(session, blueprint.getWindows(), deck, EngineSetting.SHIPWRIGHT_INK_WINDOW);
+        drawCells(session, blueprint.getStairs(), deck, EngineSetting.SHIPWRIGHT_INK_STAIR_FOOT);
+        drawDoors(session, blueprint, deck);
+        drawFurniture(session, blueprint, deck);
+        drawFitting(session, blueprint.getHelm(), deck, 1, EngineSetting.SHIP_FITTING_OCTANTS);
+        drawFitting(session, blueprint.getCapstan(), deck, EngineSetting.SHIP_FITTING_OCTANTS,
                 EngineSetting.SHIP_FITTING_OCTANTS);
-        drawMasts(session, blueprint, EngineSetting.SHIPWRIGHT_INK_MAST);
     }
 
-    private void drawLevelGrid(ShipwrightSessionInstance session, ShipOctantGridStruct grid, int level) {
+    private void drawFloor(ShipwrightSessionInstance session, ShipOctantGridStruct grid, int floor) {
 
         for (int z = 0; z < grid.getSizeZ(); z++)
             for (int x = 0; x < grid.getSizeX(); x++) {
 
-                ShipPiece floor = grid.get(x, level, z);
-                ShipPiece standing = grid.get(x, level + 1, z);
+                ShipPiece piece = grid.get(x, floor, z);
+                ShipPiece standing = grid.get(x, floor + 1, z);
                 int color;
 
                 if (standing == ShipPiece.STAIRS)
                     color = EngineSetting.SHIPWRIGHT_INK_STAIRS;
-                else if (standing == ShipPiece.RAILS)
+                else if (standing == ShipPiece.BULWARK || standing == ShipPiece.RAILS)
                     color = EngineSetting.SHIPWRIGHT_INK_RAIL;
                 else if (standing == ShipPiece.WALLS)
                     color = EngineSetting.SHIPWRIGHT_INK_WALL;
                 else if (standing != null)
                     color = EngineSetting.SHIPWRIGHT_INK_SHELL;
-                else if (floor != null && floor.isFloor())
+                else if (piece != null && piece.isFloor())
                     color = EngineSetting.SHIPWRIGHT_INK_FLOOR;
-                else if (floor != null)
+                else if (piece != null)
                     color = EngineSetting.SHIPWRIGHT_INK_SHELL;
                 else
                     continue;
@@ -196,24 +186,22 @@ class ShipwrightDraftBranch extends BranchPackage {
             }
     }
 
-    private void drawWalls(ShipwrightSessionInstance session, ShipBlueprintStruct blueprint, int level) {
+    private void drawCells(ShipwrightSessionInstance session, IntArrayList cells, int deck, int color) {
 
-        IntArrayList walls = blueprint.getWalls();
+        for (int i = 0; i < cells.size(); i++) {
 
-        for (int i = 0; i < walls.size(); i++) {
+            int cell = cells.getInt(i);
 
-            int cell = walls.getInt(i);
-
-            if (ShipCellUtility.unpackLevel(cell) == level)
+            if (ShipCellUtility.unpackLevel(cell) == deck)
                 writePlan(
                         session,
                         EngineSetting.SHIP_AFT_MARGIN + ShipCellUtility.unpackX(cell),
                         ShipCellUtility.unpackZ(cell),
-                        EngineSetting.SHIPWRIGHT_INK_WALL);
+                        color);
         }
     }
 
-    private void drawDoors(ShipwrightSessionInstance session, ShipBlueprintStruct blueprint, int level) {
+    private void drawDoors(ShipwrightSessionInstance session, ShipBlueprintStruct blueprint, int deck) {
 
         IntArrayList doors = blueprint.getDoors();
 
@@ -221,7 +209,7 @@ class ShipwrightDraftBranch extends BranchPackage {
 
             int cell = doors.getInt(i);
 
-            if (ShipCellUtility.unpackLevel(cell) != level)
+            if (ShipCellUtility.unpackLevel(cell) != deck)
                 continue;
 
             shipwrightFittingBranch.resolveFootprint(
@@ -230,7 +218,7 @@ class ShipwrightDraftBranch extends BranchPackage {
         }
     }
 
-    private void drawFurniture(ShipwrightSessionInstance session, ShipBlueprintStruct blueprint, int level) {
+    private void drawFurniture(ShipwrightSessionInstance session, ShipBlueprintStruct blueprint, int deck) {
 
         ObjectArrayList<ShipFurnitureStruct> furniture = blueprint.getFurniture();
 
@@ -238,7 +226,8 @@ class ShipwrightDraftBranch extends BranchPackage {
 
             ShipFurnitureStruct piece = furniture.get(i);
 
-            if (ShipCellUtility.unpackLevel(piece.getCell()) != level)
+            if (ShipCellUtility.unpackLevel(piece.getCell()) != deck
+                    || !shipwrightFittingBranch.isKnownFurnishing(piece.getFurnishingName()))
                 continue;
 
             shipwrightFittingBranch.resolveFootprint(
@@ -247,26 +236,9 @@ class ShipwrightDraftBranch extends BranchPackage {
         }
     }
 
-    private void drawStairFeet(ShipwrightSessionInstance session, ShipBlueprintStruct blueprint, int level) {
+    private void drawFitting(ShipwrightSessionInstance session, int cell, int deck, int sizeX, int sizeZ) {
 
-        IntArrayList stairs = blueprint.getStairs();
-
-        for (int i = 0; i < stairs.size(); i++) {
-
-            int cell = stairs.getInt(i);
-
-            if (ShipCellUtility.unpackLevel(cell) == level)
-                writePlan(
-                        session,
-                        EngineSetting.SHIP_AFT_MARGIN + ShipCellUtility.unpackX(cell),
-                        ShipCellUtility.unpackZ(cell),
-                        EngineSetting.SHIPWRIGHT_INK_STAIR_FOOT);
-        }
-    }
-
-    private void drawFitting(ShipwrightSessionInstance session, int cell, int level, int sizeX, int sizeZ) {
-
-        if (cell == EngineSetting.SHIP_CELL_NONE || ShipCellUtility.unpackLevel(cell) != level)
+        if (cell == EngineSetting.SHIP_CELL_NONE || ShipCellUtility.unpackLevel(cell) != deck)
             return;
 
         int startX = EngineSetting.SHIP_AFT_MARGIN + ShipCellUtility.unpackX(cell);
@@ -288,52 +260,24 @@ class ShipwrightDraftBranch extends BranchPackage {
                 writePlan(session, x, z, color);
     }
 
-    // The weather deck shaded by height, every mast on it, the picked one marked
-    private void drawDeckPlan(ShipwrightSessionInstance session) {
+    // Every mast on the centre line, the one picked brighter while masts are being stepped
+    private void drawMasts(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
+        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
+        boolean picking = session.getTool() == ShipwrightTool.MASTS;
 
-        for (int z = 0; z < blueprint.getBreadth(); z++)
-            for (int x = 0; x < blueprint.getLength(); x++) {
+        for (int i = 0; i < blueprint.getMasts().size(); i++) {
 
-                int top = shipwrightHullBranch.findColumnTop(blueprint, x, z);
+            ShipMastStruct mast = blueprint.getMasts().get(i);
+            int color = picking && i == session.getMastIndex()
+                    ? EngineSetting.SHIPWRIGHT_INK_PICKED_MAST
+                    : EngineSetting.SHIPWRIGHT_INK_MAST;
 
-                if (top == EngineSetting.SHIP_LEVEL_NONE)
-                    continue;
-
-                int alpha = EngineSetting.SHIPWRIGHT_DECK_SHADE_MIN + (255 - EngineSetting.SHIPWRIGHT_DECK_SHADE_MIN)
-                        * (top + 1) / blueprint.getHeight();
-
-                writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, z,
-                        (EngineSetting.SHIPWRIGHT_INK_FLOOR & ~0xFF) | alpha);
-            }
-
-        drawMasts(session, blueprint, EngineSetting.SHIPWRIGHT_INK_MAST);
-
-        if (!session.hasMastPicked())
-            return;
-
-        drawMast(session, blueprint, blueprint.getMasts().get(session.getMastIndex()),
-                EngineSetting.SHIPWRIGHT_INK_PICKED_MAST);
-    }
-
-    private void drawMasts(ShipwrightSessionInstance session, ShipBlueprintStruct blueprint, int color) {
-
-        for (int i = 0; i < blueprint.getMasts().size(); i++)
-            drawMast(session, blueprint, blueprint.getMasts().get(i), color);
-    }
-
-    private void drawMast(
-            ShipwrightSessionInstance session,
-            ShipBlueprintStruct blueprint,
-            ShipMastStruct mast,
-            int color) {
-
-        int center = blueprint.getHalfBreadth();
-
-        for (int z = center - 1; z <= center; z++)
-            for (int x = mast.getX(); x < mast.getX() + EngineSetting.SHIP_MAST_OCTANTS; x++)
-                writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, z, color);
+            for (int z = center - 1; z <= center; z++)
+                for (int x = mast.getX(); x < mast.getX() + EngineSetting.SHIP_MAST_OCTANTS; x++)
+                    writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, z, color);
+        }
     }
 
     // Views \\
@@ -345,7 +289,7 @@ class ShipwrightDraftBranch extends BranchPackage {
         ObjectArrayList<VehiclePartStruct> parts = layout.getParts();
         int maxX = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int maxY = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int maxZ = session.getBlueprint().getBreadth() * EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        int maxZ = EngineSetting.SHIP_SHEET_BREADTH * EngineSetting.SHIP_OCTANT_SUB_VOXELS;
 
         for (int i = 0; i < parts.size(); i++) {
             maxX = Math.max(maxX, parts.get(i).getMaxX());
@@ -371,7 +315,8 @@ class ShipwrightDraftBranch extends BranchPackage {
             int height, int maxZ) {
 
         byte[] pixels = session.getSidePixels();
-        int waterline = Math.round(layout.getDraft() * EngineSetting.SUB_VOXEL_RESOLUTION / scale);
+        int waterline = layout.isAfloat()
+                ? Math.round(layout.getDraft() * EngineSetting.SUB_VOXEL_RESOLUTION / scale) : 0;
 
         Arrays.fill(pixels, 0, width * height * EngineSetting.COLOR_CHANNEL_COUNT, (byte) 0);
         Arrays.fill(depthScratch, 0, width * height, Integer.MIN_VALUE);
@@ -496,8 +441,8 @@ class ShipwrightDraftBranch extends BranchPackage {
 
     private int resolveMaterialColor(String textureName) {
 
-        for (int i = 0; i < EngineSetting.SHIPWRIGHT_VIEW_TEXTURES.length; i++)
-            if (EngineSetting.SHIPWRIGHT_VIEW_TEXTURES[i].equals(textureName))
+        for (int i = 0; i < EngineSetting.SHIP_MATERIAL_TEXTURES.length; i++)
+            if (EngineSetting.SHIP_MATERIAL_TEXTURES[i].equals(textureName))
                 return EngineSetting.SHIPWRIGHT_VIEW_COLORS[i];
 
         return EngineSetting.SHIPWRIGHT_COLOR_DEFAULT;
@@ -542,19 +487,6 @@ class ShipwrightDraftBranch extends BranchPackage {
     }
 
     // Utility \\
-
-    private boolean hasColumn(ShipBlueprintStruct blueprint, int x, int z) {
-        return shipwrightHullBranch.findColumnTop(blueprint, x, z) != EngineSetting.SHIP_LEVEL_NONE;
-    }
-
-    private boolean hasProfile(ShipBlueprintStruct blueprint, int x, int y) {
-
-        for (int halfZ = 0; halfZ < blueprint.getHalfBreadth(); halfZ++)
-            if (blueprint.isHull(x, y, halfZ))
-                return true;
-
-        return false;
-    }
 
     private static int ceilDivide(int value, int divisor) {
         return (value + divisor - 1) / divisor;

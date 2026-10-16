@@ -3,6 +3,8 @@ package application.bootstrap.shipwrightpipeline.shipwrightmanager;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartRole;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import engine.root.BranchPackage;
@@ -14,10 +16,11 @@ class ShipwrightRigBranch extends BranchPackage {
 
     /*
      * Works out a blueprint's spars, canvas and rope. The bowsprit is worked
-     * out from the bow alone: it runs forward from just inboard of the stem
-     * over the deck there, rising an octant every few, as long as the hull's
-     * length sets. Every mast steps on the keel at its place on the centre
-     * line and rises its height above the deck it passes through. Its sails
+     * out from the bow alone once the ship carries a mast: it runs forward
+     * from just inboard of the stem over the deck there, rising an octant every
+     * few, as long as the hull's length sets. Every mast the player steps
+     * stands on the keel at its place on the centre line and rises its height
+     * above the highest deck it passes through. Its sails
      * follow from that height: the course clears the deck by a man's height
      * and each sail above stands a fixed pitch over the last under its own
      * yard, as many as fit under the mast's head, each narrower than the one
@@ -25,11 +28,12 @@ class ShipwrightRigBranch extends BranchPackage {
      * platform at the head of the lower mast, and lifts every sail above it
      * clear. A rigged mast's shrouds step down from its nest, or its head, to
      * the deck edge either side as ratlines the crew climb, two rope rails
-     * with a rung at every step, and a stay runs
-     * forward and down from its head to the foot of the next mast forward, or
-     * to the bowsprit's tip. Masts are named from the bow aft. Spars, canvas
-     * and rope are laid as boxes of their own in sub-voxels, rope and canvas a
-     * single sub-voxel thick, so the rig stays light however tall it stands.
+     * with a rung at every step, and a stay runs forward and down from its
+     * head to the foot of the next mast forward, or to the bowsprit's tip. A
+     * new mast is as tall as the hull's length sets. Masts are named from the
+     * bow aft. Spars, canvas and rope are laid as boxes of their own in
+     * sub-voxels, rope and canvas a single sub-voxel thick, so the rig stays
+     * light however tall it stands.
      */
 
     // Internal
@@ -44,29 +48,26 @@ class ShipwrightRigBranch extends BranchPackage {
 
     // Bowsprit \\
 
-    // How many octants the bowsprit reaches forward of the stem, none for a ship with no hull at its bow
-    int resolveBowspritLength(ShipBlueprintStruct blueprint) {
-
-        if (findStem(blueprint) == EngineSetting.INDEX_NOT_FOUND)
-            return 0;
-
+    // How many octants the bowsprit reaches forward of the stem, as the hull's length sets
+    private int resolveBowspritLength(ShipLayoutStruct layout) {
         return Math.max(EngineSetting.SHIP_BOWSPRIT_MIN_LENGTH, Math.min(EngineSetting.SHIP_BOWSPRIT_MAX_LENGTH,
-                Math.round(blueprint.getLength() * EngineSetting.SHIP_BOWSPRIT_LENGTH_SHARE)));
+                Math.round(resolveHullLength(layout) * EngineSetting.SHIP_BOWSPRIT_LENGTH_SHARE)));
     }
 
-    // Steps forward and up from inboard of the stem, a square spar an octant pair across, its tip kept for the stays
+    // Steps forward and up from inboard of the stem, a square spar an octant pair across, its tip kept for the stays;
+    // a ship with no mast carries none
     void addBowsprit(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
-        int stem = findStem(blueprint);
+        int stem = findStem(layout);
 
-        if (stem == EngineSetting.INDEX_NOT_FOUND)
+        if (stem == EngineSetting.INDEX_NOT_FOUND || blueprint.getMasts().isEmpty())
             return;
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int center = blueprint.getHalfBreadth();
-        int deck = shipwrightHullBranch.findColumnTop(blueprint, stem, center);
+        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
+        int deck = shipwrightHullBranch.findColumnTop(layout, stem, center);
         int startX = layout.getOriginX() + stem + 1 - EngineSetting.SHIP_BOWSPRIT_INBOARD;
-        int endX = layout.getOriginX() + stem + 1 + resolveBowspritLength(blueprint);
+        int endX = layout.getOriginX() + stem + 1 + resolveBowspritLength(layout);
         VehiclePartStruct bowsprit = createPart(
                 EngineSetting.SHIP_PART_BOWSPRIT, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_SPAR);
         int rise = 0;
@@ -89,15 +90,37 @@ class ShipwrightRigBranch extends BranchPackage {
         layout.setBowspritTip(endX * octant, (deck + rise + EngineSetting.SHIP_BOWSPRIT_DEPTH) * octant);
     }
 
-    // The foremost octant along the length the hull reaches on the centre line, INDEX_NOT_FOUND when none
-    private int findStem(ShipBlueprintStruct blueprint) {
+    // The foremost octant along the sheet the hull reaches on the centre line, INDEX_NOT_FOUND when none
+    private int findStem(ShipLayoutStruct layout) {
 
-        for (int x = blueprint.getLength() - 1; x >= 0; x--)
-            if (shipwrightHullBranch.findColumnTop(blueprint, x, blueprint.getHalfBreadth())
+        for (int x = EngineSetting.SHIP_SHEET_LENGTH - 1; x >= 0; x--)
+            if (shipwrightHullBranch.findColumnTop(layout, x, EngineSetting.SHIP_SHEET_HALF_BREADTH)
                     != EngineSetting.SHIP_LEVEL_NONE)
                 return x;
 
         return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // How many octants the hull runs from its stern to its stem
+    private int resolveHullLength(ShipLayoutStruct layout) {
+
+        int stem = findStem(layout);
+
+        if (stem == EngineSetting.INDEX_NOT_FOUND)
+            return 0;
+
+        for (int x = 0; x <= stem; x++)
+            if (shipwrightHullBranch.findColumnTop(layout, x, EngineSetting.SHIP_SHEET_HALF_BREADTH)
+                    != EngineSetting.SHIP_LEVEL_NONE)
+                return stem - x + 1;
+
+        return 0;
+    }
+
+    // The height a newly stepped mast rises above its deck, as the hull's length sets
+    int resolveMastHeight(ShipLayoutStruct layout) {
+        return Math.max(EngineSetting.SHIP_MAST_MIN_HEIGHT, Math.min(EngineSetting.SHIP_MAST_MAX_HEIGHT,
+                Math.round(resolveHullLength(layout) * EngineSetting.SHIP_MAST_HEIGHT_SHARE)));
     }
 
     // Rig \\
@@ -114,28 +137,31 @@ class ShipwrightRigBranch extends BranchPackage {
         for (int i = 0; i < masts.size(); i++) {
 
             ShipMastStruct mast = masts.get(i);
-            int deck = resolveDeckLayer(blueprint, mast);
+            int deck = resolveDeckLayer(layout, mast);
 
             if (deck == EngineSetting.SHIP_LEVEL_NONE) {
-                layout.reportProblem(EngineSetting.SHIPWRIGHT_PROBLEM_MAST_NO_HULL);
+                layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_MAST_NO_HULL);
                 layout.addMastSailCount(0);
                 continue;
             }
 
+            if (isBlocked(layout, mast, deck))
+                layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_MAST_BLOCKED);
+
             String mastName = resolveMastName(masts.size(), i);
             int tiers = resolveTierCount(mast);
 
-            layout.addPart(buildMast(blueprint, layout, mast, mastName, deck));
+            layout.addPart(buildMast(layout, mast, mastName, deck));
             layout.addMastSailCount(tiers);
-            addCanvas(blueprint, layout, mast, mastName, deck, tiers, canvas);
+            addCanvas(layout, mast, mastName, deck, tiers, canvas);
 
             if (mast.hasCrowsNest())
-                addTop(blueprint, layout, mast, deck, tiers, tops);
+                addTop(layout, mast, deck, tiers, tops);
 
             if (!mast.isRigged())
                 continue;
 
-            canvas.add(buildShrouds(blueprint, layout, mast, mastName, deck, tiers));
+            canvas.add(buildShrouds(layout, mast, mastName, deck, tiers));
             addStay(blueprint, layout, i, deck, stays);
         }
 
@@ -151,16 +177,11 @@ class ShipwrightRigBranch extends BranchPackage {
     }
 
     // A mast from its step on the keel to its head, pivoting about its centre on the deck it rises from
-    private VehiclePartStruct buildMast(
-            ShipBlueprintStruct blueprint,
-            ShipLayoutStruct layout,
-            ShipMastStruct mast,
-            String mastName,
-            int deck) {
+    private VehiclePartStruct buildMast(ShipLayoutStruct layout, ShipMastStruct mast, String mastName, int deck) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int center = blueprint.getHalfBreadth();
-        int keel = shipwrightHullBranch.findKeel(blueprint, mast.getX(), center);
+        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
+        int keel = shipwrightHullBranch.findKeel(layout, mast.getX(), center);
         int x = layout.getOriginX() + mast.getX();
         float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
         VehiclePartStruct part = new VehiclePartStruct(
@@ -186,9 +207,28 @@ class ShipwrightRigBranch extends BranchPackage {
         return part;
     }
 
+    // True when a stair or a wall stands anywhere a mast rises through, from its keel to its deck
+    private boolean isBlocked(ShipLayoutStruct layout, ShipMastStruct mast, int deck) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
+        int startX = layout.getOriginX() + mast.getX();
+
+        for (int y = 0; y <= deck + EngineSetting.SHIP_DECKHOUSE_HEIGHT; y++)
+            for (int z = center - 1; z <= center; z++)
+                for (int x = startX; x < startX + EngineSetting.SHIP_MAST_OCTANTS; x++) {
+
+                    ShipPiece piece = grid.get(x, y, z);
+
+                    if (piece == ShipPiece.STAIRS || piece == ShipPiece.WALLS)
+                        return true;
+                }
+
+        return false;
+    }
+
     // Each tier's yard on the mast's forward face and its sail hanging beneath it, a sub-voxel thick
     private void addCanvas(
-            ShipBlueprintStruct blueprint,
             ShipLayoutStruct layout,
             ShipMastStruct mast,
             String mastName,
@@ -197,9 +237,10 @@ class ShipwrightRigBranch extends BranchPackage {
             ObjectArrayList<VehiclePartStruct> canvas) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int center = blueprint.getHalfBreadth() * octant;
+        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH * octant;
         int fore = (layout.getOriginX() + mast.getX() + EngineSetting.SHIP_MAST_OCTANTS) * octant;
-        float span = resolveHalfBreadth(blueprint, mast.getX()) * octant * EngineSetting.SHIP_SAIL_SPAN_SHARE;
+        float span = shipwrightHullBranch.findWidestSection(layout, mast.getX()) * octant
+                * EngineSetting.SHIP_SAIL_SPAN_SHARE;
 
         for (int tier = 0; tier < tiers; tier++) {
 
@@ -229,7 +270,6 @@ class ShipwrightRigBranch extends BranchPackage {
 
     // A railed platform round the mast at the head of the lower mast
     private void addTop(
-            ShipBlueprintStruct blueprint,
             ShipLayoutStruct layout,
             ShipMastStruct mast,
             int deck,
@@ -238,7 +278,7 @@ class ShipwrightRigBranch extends BranchPackage {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int reach = EngineSetting.SHIP_CROWS_NEST_REACH;
-        int center = blueprint.getHalfBreadth();
+        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
         int x = layout.getOriginX() + mast.getX();
         int floor = resolveNestFloor(mast, deck, tiers);
         int minX = (x - reach) * octant;
@@ -258,7 +298,6 @@ class ShipwrightRigBranch extends BranchPackage {
 
     // Either side, a ladder stepping down and out from the nest or the mast's head to the deck edge
     private VehiclePartStruct buildShrouds(
-            ShipBlueprintStruct blueprint,
             ShipLayoutStruct layout,
             ShipMastStruct mast,
             String mastName,
@@ -269,18 +308,18 @@ class ShipwrightRigBranch extends BranchPackage {
                 mastName + EngineSetting.SHIP_PART_SHROUDS_SUFFIX, VehiclePartRole.LADDER,
                 EngineSetting.SHIP_TEXTURE_ROPE);
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int center = blueprint.getHalfBreadth();
-        int deckHalf = resolveDeckHalfBreadth(blueprint, mast.getX(), deck);
+        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
+        int deckHalf = layout.getSection(mast.getX(), deck);
         int steps = deckHalf - 1;
 
         if (steps < 1)
             return shrouds;
 
-        int edge = shipwrightHullBranch.findColumnTop(blueprint, mast.getX(), center + deckHalf - 1);
+        int edge = shipwrightHullBranch.findColumnTop(layout, mast.getX(), center + deckHalf - 1);
         int top = mast.hasCrowsNest()
                 ? resolveNestFloor(mast, deck, tiers)
                 : resolveMastTop(mast, deck) - EngineSetting.SHIP_MAST_HEAD * octant;
-        int bottom = (edge + 1 + blueprint.getRailHeight()) * octant;
+        int bottom = (edge + 1 + EngineSetting.SHIP_BULWARK_HEIGHT) * octant;
         int fall = top - bottom;
 
         if (fall <= 0)
@@ -341,7 +380,7 @@ class ShipwrightRigBranch extends BranchPackage {
         if (mastIndex + 1 < masts.size()) {
 
             ShipMastStruct forward = masts.get(mastIndex + 1);
-            int forwardDeck = resolveDeckLayer(blueprint, forward);
+            int forwardDeck = resolveDeckLayer(layout, forward);
 
             if (forwardDeck == EngineSetting.SHIP_LEVEL_NONE)
                 return;
@@ -357,7 +396,7 @@ class ShipwrightRigBranch extends BranchPackage {
 
         int steps = (endX - startX) / octant;
         int fall = top - bottom;
-        int z = blueprint.getHalfBreadth() * octant;
+        int z = EngineSetting.SHIP_SHEET_HALF_BREADTH * octant;
 
         if (steps < 1 || fall <= 0)
             return;
@@ -375,9 +414,9 @@ class ShipwrightRigBranch extends BranchPackage {
 
     // Mast \\
 
-    // The layer of the deck a mast rises from, SHIP_LEVEL_NONE when no hull stands under it
-    int resolveDeckLayer(ShipBlueprintStruct blueprint, ShipMastStruct mast) {
-        return shipwrightHullBranch.findColumnTop(blueprint, mast.getX(), blueprint.getHalfBreadth());
+    // The layer of the highest deck a mast rises through, SHIP_LEVEL_NONE when no hull stands under it
+    private int resolveDeckLayer(ShipLayoutStruct layout, ShipMastStruct mast) {
+        return shipwrightHullBranch.findColumnTop(layout, mast.getX(), EngineSetting.SHIP_SHEET_HALF_BREADTH);
     }
 
     // How many sails a mast carries: every tier that fits between the deck clearance and its head
@@ -427,33 +466,6 @@ class ShipwrightRigBranch extends BranchPackage {
             return EngineSetting.SHIP_MAST_NAMES[fromBow];
 
         return EngineSetting.SHIP_MAST_NAME_PREFIX + (fromBow + 1);
-    }
-
-    // Breadth \\
-
-    // The most octants the hull reaches out from the centre line at an octant along the length, at any layer
-    private int resolveHalfBreadth(ShipBlueprintStruct blueprint, int x) {
-
-        int reach = 0;
-
-        for (int y = 0; y < blueprint.getHeight(); y++)
-            for (int halfZ = reach; halfZ < blueprint.getHalfBreadth(); halfZ++)
-                if (blueprint.isHull(x, y, halfZ))
-                    reach = halfZ + 1;
-
-        return reach;
-    }
-
-    // How far out the deck reaches from the centre line at a mast
-    private int resolveDeckHalfBreadth(ShipBlueprintStruct blueprint, int x, int deck) {
-
-        int reach = 0;
-
-        for (int halfZ = 0; halfZ < blueprint.getHalfBreadth(); halfZ++)
-            if (blueprint.isHull(x, deck, halfZ))
-                reach = halfZ + 1;
-
-        return reach;
     }
 
     // Utility \\

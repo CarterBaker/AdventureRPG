@@ -21,7 +21,9 @@ class VehicleHullFormBranch extends BranchPackage {
      * layer is flooded in from its edge through open cells, and whatever the
      * sea cannot reach, the walls and everything they ring, is dry. Dry cells
      * gather into upright columns, each sampling the sea once, and each column
-     * into lumps the sea lifts; the hull's mass is the sea those lumps displace
+     * into lumps the sea lifts, as many columns across the beam as a narrow
+     * hull needs to feel its own righting; the hull's mass is the sea those
+     * lumps displace
      * at the design draft, and its centre of mass sits over the centroid of
      * that displacement at the height the data sets, so it floats level at its
      * draft. Inertia follows from the dry volume's length and
@@ -33,9 +35,11 @@ class VehicleHullFormBranch extends BranchPackage {
      * below the waterline sets how hard the water drags along the length: from
      * the fullest submerged station forward, how much of the box around it the
      * entrance fills and how wide the angle it opens at, a fine wedge slipping
-     * through and a square bow pushing water ahead of it. Lives for the engine
-     * lifetime, so a vehicle designed while the game runs is worked out exactly
-     * as one loaded at boot.
+     * through and a square bow pushing water ahead of it. The draft a hull
+     * floats at for a given mass, and how hard its lumps right it when heeled,
+     * are worked out the same way the sea lifts it, so a design can be judged
+     * before it is launched. Lives for the engine lifetime, so a vehicle
+     * designed while the game runs is worked out exactly as one loaded at boot.
      */
 
     // Settings
@@ -51,6 +55,9 @@ class VehicleHullFormBranch extends BranchPackage {
     private int cellsZ;
     private boolean[] walls;
     private boolean[] dry;
+
+    // Columns — dry cells along and across each column, and the lumps it is cut into
+    private int columnSpan;
 
     // Base \\
 
@@ -70,9 +77,7 @@ class VehicleHullFormBranch extends BranchPackage {
             float draft,
             float centerOfMassHeight) {
 
-        layOutGrid(vehicleName, parts);
-        layWalls(parts);
-        floodLayers();
+        layOutHull(vehicleName, parts);
 
         IntArrayList columnOrigins = new IntArrayList();
         ObjectArrayList<VehicleColumnStruct> columns = gatherColumns(columnOrigins);
@@ -96,6 +101,7 @@ class VehicleHullFormBranch extends BranchPackage {
                 cellsY,
                 cellsZ,
                 sumVolume(lumps),
+                resolveColumnSize(),
                 columns,
                 lumps,
                 gatherContactPoints(columns),
@@ -111,6 +117,19 @@ class VehicleHullFormBranch extends BranchPackage {
     }
 
     // Grid \\
+
+    // The dry cells of a hull's watertight parts, the columns they are cut into sized to its beam
+    private void layOutHull(String vehicleName, ObjectArrayList<VehiclePartStruct> parts) {
+
+        layOutGrid(vehicleName, parts);
+        layWalls(parts);
+        floodLayers();
+
+        int beamCells = cellsZ - 2;
+
+        this.columnSpan = Math.max(1, Math.min(EngineSetting.VEHICLE_COLUMN_SUB_VOXELS / cellSize,
+                beamCells / EngineSetting.VEHICLE_MIN_COLUMNS_ACROSS));
+    }
 
     // Cells around every watertight box, with one open cell of margin on every side the sea floods in from
     private void layOutGrid(String vehicleName, ObjectArrayList<VehiclePartStruct> parts) {
@@ -245,7 +264,7 @@ class VehicleHullFormBranch extends BranchPackage {
     // Every column holding a dry cell, its first cell column written to the origins given, two ints each
     private ObjectArrayList<VehicleColumnStruct> gatherColumns(IntArrayList columnOrigins) {
 
-        int span = Math.max(1, EngineSetting.VEHICLE_COLUMN_SUB_VOXELS / cellSize);
+        int span = columnSpan;
         int columnsX = (cellsX + span - 1) / span;
         int columnsZ = (cellsZ + span - 1) / span;
         boolean[] filled = new boolean[columnsX * columnsZ];
@@ -295,7 +314,7 @@ class VehicleHullFormBranch extends BranchPackage {
     // Each column cut into lumps a column wide and as tall, every lump the centroid and volume of its dry cells
     private ObjectArrayList<VehicleLumpStruct> gatherLumps(IntArrayList columnOrigins) {
 
-        int span = Math.max(1, EngineSetting.VEHICLE_COLUMN_SUB_VOXELS / cellSize);
+        int span = columnSpan;
         float cellBlocks = (float) cellSize / resolution;
         ObjectArrayList<VehicleLumpStruct> lumps = new ObjectArrayList<>();
 
@@ -380,6 +399,11 @@ class VehicleHullFormBranch extends BranchPackage {
                 && filled[columnX + columnZ * columnsX];
     }
 
+    // The side of one column, and the height of one lump, in blocks
+    private float resolveColumnSize() {
+        return (float) columnSpan * cellSize / resolution;
+    }
+
     private float sumVolume(ObjectArrayList<VehicleLumpStruct> lumps) {
 
         float volume = 0f;
@@ -401,7 +425,7 @@ class VehicleHullFormBranch extends BranchPackage {
             float centerOfMassHeight,
             Vector3 centerOfMass) {
 
-        float lumpHeight = (float) EngineSetting.VEHICLE_COLUMN_SUB_VOXELS / resolution;
+        float lumpHeight = resolveColumnSize();
         float displaced = 0f;
         float momentX = 0f;
         float momentZ = 0f;
@@ -409,8 +433,7 @@ class VehicleHullFormBranch extends BranchPackage {
         for (int i = 0; i < lumps.size(); i++) {
 
             VehicleLumpStruct lump = lumps.get(i);
-            float submerged = Math.max(0f, Math.min(1f, (draft - lump.getY()) / lumpHeight + 0.5f));
-            float volume = lump.getVolume() * submerged;
+            float volume = lump.getVolume() * resolveSubmerged(lump, draft, lumpHeight);
 
             displaced += volume;
             momentX += volume * lump.getX();
@@ -424,6 +447,142 @@ class VehicleHullFormBranch extends BranchPackage {
         centerOfMass.set(momentX / displaced, centerOfMassHeight, momentZ / displaced);
 
         return displaced * EngineSetting.VEHICLE_WATER_DENSITY;
+    }
+
+    // The share of a lump under a level waterline at a draft, by its height as a lump is lifted
+    private float resolveSubmerged(VehicleLumpStruct lump, float draft, float lumpHeight) {
+        return Math.max(0f, Math.min(1f, (draft - lump.getY()) / lumpHeight + 0.5f));
+    }
+
+    private float resolveDisplaced(ObjectArrayList<VehicleLumpStruct> lumps, float draft, float lumpHeight) {
+
+        float displaced = 0f;
+
+        for (int i = 0; i < lumps.size(); i++)
+            displaced += lumps.get(i).getVolume() * resolveSubmerged(lumps.get(i), draft, lumpHeight);
+
+        return displaced;
+    }
+
+    // Flotation \\
+
+    // The tonnes of sea the hull's lumps displace floating level at a draft
+    float resolveDisplacement(String vehicleName, ObjectArrayList<VehiclePartStruct> parts, float draft) {
+
+        ObjectArrayList<VehicleLumpStruct> lumps = layOutLumps(vehicleName, parts);
+
+        return resolveDisplaced(lumps, draft, resolveColumnSize()) * EngineSetting.VEHICLE_WATER_DENSITY;
+    }
+
+    // The draft at which the hull's lumps displace a mass of sea, VEHICLE_DRAFT_SINKS when all of them cannot
+    float solveDraft(String vehicleName, ObjectArrayList<VehiclePartStruct> parts, float mass) {
+
+        ObjectArrayList<VehicleLumpStruct> lumps = layOutLumps(vehicleName, parts);
+        float lumpHeight = resolveColumnSize();
+        float volume = mass / EngineSetting.VEHICLE_WATER_DENSITY;
+        float low = toBlocks(originY, 0) - lumpHeight;
+        float high = toBlocks(originY, cellsY) + lumpHeight;
+
+        if (resolveDisplaced(lumps, high, lumpHeight) < volume)
+            return EngineSetting.VEHICLE_DRAFT_SINKS;
+
+        for (int step = 0; step < EngineSetting.VEHICLE_FLOAT_SOLVE_STEPS; step++) {
+
+            float middle = (low + high) * 0.5f;
+
+            if (resolveDisplaced(lumps, middle, lumpHeight) < volume)
+                low = middle;
+            else
+                high = middle;
+        }
+
+        return (low + high) * 0.5f;
+    }
+
+    // The lumps a hull's watertight parts are cut into, laid out without anything else worked out
+    private ObjectArrayList<VehicleLumpStruct> layOutLumps(
+            String vehicleName,
+            ObjectArrayList<VehiclePartStruct> parts) {
+
+        layOutHull(vehicleName, parts);
+
+        IntArrayList columnOrigins = new IntArrayList();
+        gatherColumns(columnOrigins);
+
+        return gatherLumps(columnOrigins);
+    }
+
+    // Stability \\
+
+    // How far, in blocks, the sea lifting a hull heeled over by an angle in radians acts to the side of its centre of
+    // mass once it has settled to float its weight there: positive rights it, negative rolls it further. Every lump
+    // is lifted by its share under the surface exactly as VehicleHullBranch lifts it.
+    float resolveRightingArm(VehicleHullStruct hull, float heel) {
+
+        ObjectArrayList<VehicleLumpStruct> lumps = hull.getLumps();
+        Vector3 center = hull.getCenterOfMass();
+        float cos = (float) Math.cos(heel);
+        float sin = (float) Math.sin(heel);
+        float reach = hull.getColumnSize() * 0.5f * (Math.abs(cos) + Math.abs(sin));
+        float volume = hull.getMass() / EngineSetting.VEHICLE_WATER_DENSITY;
+        float low = Float.MAX_VALUE;
+        float high = -Float.MAX_VALUE;
+
+        for (int i = 0; i < lumps.size(); i++) {
+
+            float up = resolveHeeledUp(lumps.get(i), center, cos, sin);
+
+            low = Math.min(low, up - reach);
+            high = Math.max(high, up + reach);
+        }
+
+        for (int step = 0; step < EngineSetting.VEHICLE_FLOAT_SOLVE_STEPS; step++) {
+
+            float middle = (low + high) * 0.5f;
+
+            if (resolveHeeledLift(lumps, center, cos, sin, reach, middle, false) < volume)
+                low = middle;
+            else
+                high = middle;
+        }
+
+        float surface = (low + high) * 0.5f;
+        float lift = resolveHeeledLift(lumps, center, cos, sin, reach, surface, false);
+
+        if (lift <= 0f)
+            return 0f;
+
+        return resolveHeeledLift(lumps, center, cos, sin, reach, surface, true) / lift;
+    }
+
+    // The volume the heeled lumps displace under a surface, or with moment its moment toward the low side
+    private float resolveHeeledLift(
+            ObjectArrayList<VehicleLumpStruct> lumps,
+            Vector3 center,
+            float cos,
+            float sin,
+            float reach,
+            float surface,
+            boolean moment) {
+
+        float total = 0f;
+
+        for (int i = 0; i < lumps.size(); i++) {
+
+            VehicleLumpStruct lump = lumps.get(i);
+            float up = resolveHeeledUp(lump, center, cos, sin);
+            float submerged = Math.max(0f, Math.min(1f, (surface - (up - reach)) / (2f * reach)));
+            float lift = lump.getVolume() * submerged;
+
+            total += moment ? lift * ((lump.getY() - center.y) * sin + (lump.getZ() - center.z) * cos) : lift;
+        }
+
+        return total;
+    }
+
+    // A lump's height above the centre of mass once the hull rolls its starboard side down by an angle
+    private float resolveHeeledUp(VehicleLumpStruct lump, Vector3 center, float cos, float sin) {
+        return (lump.getY() - center.y) * cos - (lump.getZ() - center.z) * sin;
     }
 
     // Roll about the length, yaw about the vertical and pitch about the beam, each from its radius of gyration

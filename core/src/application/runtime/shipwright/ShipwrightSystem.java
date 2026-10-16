@@ -5,6 +5,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.ElementHitSystem;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipSurveyStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
@@ -29,15 +30,18 @@ public class ShipwrightSystem extends SystemPackage {
      * The drafting table in this window, the same in the game and the editor.
      * open() lays the table menu over the window, with its leave menu when the
      * table writes to the player's saves; the session it opens is kept, so a
-     * table opened again shows the ship left on it. Each frame the sheet is
-     * fitted into its area at whole square octants and the pointer read over
-     * it: the left button draws with the tool in hand and the right erases,
-     * a stroke at a time, and the wheel steps the layer or level. The rotate
-     * binding turns what is set down next, and undo, redo and save work as
-     * everywhere else; the pause binding walks away from a table in the game.
-     * While the name is typed the keys type it, Enter keeps it and the pause
-     * binding drops it. Whenever the session changes the
-     * labels are rewritten.
+     * table opened again shows the ship left on it. Everything is worked
+     * through a cursor on the sheet so the table can be driven without a
+     * pointer: the movement bindings step it an octant at a time, repeating
+     * while held, and the pointer moves it whenever it passes over the sheet.
+     * The jump binding or the left button draws with the tool in hand while
+     * held and the sprint binding or the right button erases, a stroke at a
+     * time; the activate binding takes up the next tool, the rotate binding
+     * turns what is set down next and the wheel steps the deck. Undo, redo
+     * and save work as everywhere else; the pause binding walks away from a
+     * table in the game. While the name is typed the keys type it, Enter keeps
+     * it and the pause binding drops it. Whenever the session changes the
+     * labels are rewritten, every measure of the ship among them.
      */
 
     // Internal
@@ -54,9 +58,16 @@ public class ShipwrightSystem extends SystemPackage {
     private MenuInstance tableMenu;
     private MenuInstance leaveMenu;
 
-    // Pointer
+    // Input — the bindings that opened the table are ignored the frame it opens
+    private boolean opening;
     private boolean focused;
     private boolean focusedLastFrame;
+    private float pointerX;
+    private float pointerY;
+
+    // Cursor — seconds until a held movement binding steps the cursor again
+    private float repeatCountdown;
+    private boolean stepping;
 
     // Sheet — the window rectangle the sheet's octants are drawn in, and the side of one octant in pixels
     private float sheetLeft;
@@ -106,8 +117,10 @@ public class ShipwrightSystem extends SystemPackage {
             this.leaveMenu = menuManager.openMenu(EngineSetting.SHIPWRIGHT_MENU_LEAVE, window);
 
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.opening = true;
         this.focused = false;
         this.focusedLastFrame = false;
+        this.stepping = false;
     }
 
     public void close() {
@@ -140,15 +153,21 @@ public class ShipwrightSystem extends SystemPackage {
         this.focusedLastFrame = focused;
         this.focused = windowManager.getFocusedWindow() == window;
 
-        if (session.isNaming())
+        shipwrightManager.resolveSheetSize(session);
+        fitSheet();
+
+        if (opening) {
+            this.opening = false;
+            this.pointerX = inputManager.getHoverMouseX(window);
+            this.pointerY = inputManager.getHoverMouseY(window);
+        } else if (session.isNaming())
             updateNaming(window, rawInput);
         else if (updateBindings(window))
             return;
+        else
+            updateCursor(window, rawInput);
 
         shipwrightManager.updateSurvey(session, internal.getDeltaTime());
-        shipwrightManager.resolveSheetSize(session);
-        fitSheet();
-        updatePointer(window, rawInput);
         refreshLabels();
     }
 
@@ -158,6 +177,11 @@ public class ShipwrightSystem extends SystemPackage {
         if (isClosable() && inputManager.bindingClicked(KeyBindings.PAUSE, window)) {
             close();
             return true;
+        }
+
+        if (inputManager.bindingClicked(KeyBindings.ACTIVATE, window)) {
+            shipwrightManager.endStroke(session);
+            shipwrightManager.nextTool(session);
         }
 
         if (inputManager.bindingClicked(KeyBindings.ROTATE_ITEM, window))
@@ -199,7 +223,7 @@ public class ShipwrightSystem extends SystemPackage {
             session.markChanged();
     }
 
-    // Pointer \\
+    // Cursor \\
 
     // The sheet's octants fitted into its area at the largest whole square that fits, centred
     private void fitSheet() {
@@ -215,44 +239,87 @@ public class ShipwrightSystem extends SystemPackage {
         this.sheetBottom = area.getComputedTop() + (area.getComputedH() - sheetHeight) * 0.5f;
     }
 
-    // Starts, carries and ends strokes with the pointer over the sheet, the wheel stepping the layer
-    private void updatePointer(WindowInstance window, Input rawInput) {
+    // Moves the cursor by the pointer and the movement bindings, then starts, carries and ends a stroke at it
+    private void updateCursor(WindowInstance window, Input rawInput) {
 
-        boolean drawing = rawInput.isMouseDown(Buttons.LEFT) || rawInput.isMouseDown(Buttons.RIGHT);
+        boolean pointerOver = updatePointer(window, rawInput);
 
-        if (session.isStroking() && !drawing) {
+        stepCursor(window);
+
+        boolean drawing = inputManager.bindingHeld(KeyBindings.JUMP, window)
+                || pointerOver && rawInput.isMouseDown(Buttons.LEFT);
+        boolean erasing = inputManager.bindingHeld(KeyBindings.SPRINT, window)
+                || pointerOver && rawInput.isMouseDown(Buttons.RIGHT);
+
+        if (session.isStroking() && !drawing && !erasing) {
             shipwrightManager.endStroke(session);
             return;
         }
 
+        if (!session.isStroking() && focusedLastFrame && (drawing || erasing))
+            shipwrightManager.beginStroke(session, erasing && !drawing);
+
+        if (session.isStroking())
+            shipwrightManager.strokeAt(session, session.getCursorU(), session.getCursorV());
+    }
+
+    // The cursor put on the octant under the pointer once it moves over the sheet, the wheel stepping the deck;
+    // true while the pointer lies over the sheet
+    private boolean updatePointer(WindowInstance window, Input rawInput) {
+
         float mouseX = inputManager.getHoverMouseX(window);
         float mouseY = inputManager.getHoverMouseY(window);
+        boolean moved = mouseX != pointerX || mouseY != pointerY;
         boolean over = isPointerFree(window) && cellSize > 0f
                 && mouseX >= sheetLeft && mouseX < sheetLeft + sheetWidth
                 && mouseY >= sheetBottom && mouseY < sheetBottom + sheetHeight;
-        int u = over ? (int) ((mouseX - sheetLeft) / cellSize) : EngineSetting.INDEX_NOT_FOUND;
-        int v = over ? (int) ((mouseY - sheetBottom) / cellSize) : EngineSetting.INDEX_NOT_FOUND;
 
-        session.setCursor(over, u, v);
+        this.pointerX = mouseX;
+        this.pointerY = mouseY;
 
         if (!over)
-            return;
+            return false;
+
+        if (moved || rawInput.isMouseDown(Buttons.LEFT) || rawInput.isMouseDown(Buttons.RIGHT))
+            session.moveCursor((int) ((mouseX - sheetLeft) / cellSize), (int) ((mouseY - sheetBottom) / cellSize));
 
         float wheel = rawInput.getScrollY();
 
         if (wheel != 0f)
-            shipwrightManager.stepLayer(session, wheel > 0f ? 1 : -1);
+            shipwrightManager.stepDeck(session, wheel > 0f ? 1 : -1);
 
-        if (!session.isStroking() && focusedLastFrame) {
+        return true;
+    }
 
-            if (rawInput.isMouseClicked(Buttons.LEFT))
-                shipwrightManager.beginStroke(session, false);
-            else if (rawInput.isMouseClicked(Buttons.RIGHT))
-                shipwrightManager.beginStroke(session, true);
+    // An octant a press of a movement binding, then again and again while it is held
+    private void stepCursor(WindowInstance window) {
+
+        int stepU = (inputManager.bindingHeld(KeyBindings.MOVE_RIGHT, window) ? 1 : 0)
+                - (inputManager.bindingHeld(KeyBindings.MOVE_LEFT, window) ? 1 : 0);
+        int stepV = (inputManager.bindingHeld(KeyBindings.MOVE_FORWARD, window) ? 1 : 0)
+                - (inputManager.bindingHeld(KeyBindings.MOVE_BACK, window) ? 1 : 0);
+
+        if (stepU == 0 && stepV == 0) {
+            this.stepping = false;
+            return;
         }
 
-        if (session.isStroking())
-            shipwrightManager.strokeAt(session, u, v);
+        if (stepping) {
+
+            repeatCountdown -= internal.getDeltaTime();
+
+            if (repeatCountdown > 0f)
+                return;
+
+            repeatCountdown += EngineSetting.SHIPWRIGHT_CURSOR_REPEAT_INTERVAL;
+        } else {
+            this.stepping = true;
+            this.repeatCountdown = EngineSetting.SHIPWRIGHT_CURSOR_REPEAT_DELAY;
+        }
+
+        session.moveCursor(
+                Math.max(0, Math.min(session.getSheetWidth() - 1, session.getCursorU() + stepU)),
+                Math.max(0, Math.min(session.getSheetHeight() - 1, session.getCursorV() + stepV)));
     }
 
     // True while this window is hovered and no menu element of its own lies under the pointer
@@ -278,8 +345,8 @@ public class ShipwrightSystem extends SystemPackage {
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_NAME, resolveName());
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_STATUS, session.getStatus());
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_TOOL, resolveToolHint());
-        setLabel(EngineSetting.SHIPWRIGHT_ENTRY_LAYER, resolveLayer());
-        setLabel(EngineSetting.SHIPWRIGHT_ENTRY_ITEM, resolveItem());
+        setLabel(EngineSetting.SHIPWRIGHT_ENTRY_DECK, resolveDeck());
+        setLabel(EngineSetting.SHIPWRIGHT_ENTRY_OPTION, resolveOption());
         writeSurvey();
     }
 
@@ -303,19 +370,61 @@ public class ShipwrightSystem extends SystemPackage {
     private String resolveToolHint() {
 
         text.setLength(0);
-        text.append(session.getTool().getTitle()).append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR);
 
-        if (session.getTool() == ShipwrightTool.MASTS)
-            return appendMast(text).toString();
+        return text.append(session.getTool().getTitle()).append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
+                .append(EngineSetting.SHIPWRIGHT_HINTS[session.getTool().ordinal()]).toString();
+    }
 
-        return text.append(EngineSetting.SHIPWRIGHT_HINTS[session.getTool().ordinal()]).toString();
+    // The deck picked, of how many, and whether its floor lies above or below the water
+    private String resolveDeck() {
+
+        text.setLength(0);
+        ShipLayoutStruct layout = session.getLayout();
+        int deck = session.getDeck();
+
+        text.append(EngineSetting.SHIPWRIGHT_TEXT_DECK).append(deck + 1)
+                .append(EngineSetting.SHIPWRIGHT_TEXT_OF).append(session.getBlueprint().getDeckCount());
+
+        if (!layout.isAfloat())
+            return text.toString();
+
+        boolean under = (deck * EngineSetting.SHIP_DECK_HEIGHT + 1) * EngineSetting.SUB_BLOCK_SIZE
+                <= layout.getDraft();
+
+        return text.append(under
+                ? EngineSetting.SHIPWRIGHT_TEXT_UNDER_WATER
+                : EngineSetting.SHIPWRIGHT_TEXT_ABOVE_WATER).toString();
+    }
+
+    // What the tool in hand sets down next and which way it faces
+    private String resolveOption() {
+
+        text.setLength(0);
+        ShipwrightTool tool = session.getTool();
+
+        return switch (tool) {
+            case WALLS -> text.append(session.isHalfWalls()
+                    ? EngineSetting.SHIPWRIGHT_TEXT_HALF_WALL : EngineSetting.SHIPWRIGHT_TEXT_FULL_WALL).toString();
+            case OPENINGS -> appendFacing(text.append(session.isWindows()
+                    ? EngineSetting.SHIPWRIGHT_TEXT_WINDOW : EngineSetting.SHIPWRIGHT_TEXT_DOOR)).toString();
+            case STAIRS -> appendFacing(text.append(EngineSetting.SHIPWRIGHT_TEXT_STAIR)).toString();
+            case FURNITURE -> appendFacing(text.append(shipwrightManager.getItemName(session.getItemIndex())))
+                    .toString();
+            case MASTS -> appendMast(text).toString();
+            default -> text.append(EngineSetting.SHIPWRIGHT_TEXT_MIRRORED).toString();
+        };
+    }
+
+    private StringBuilder appendFacing(StringBuilder out) {
+        return out.append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
+                .append(EngineSetting.SHIPWRIGHT_FACINGS[session.getSpin()]);
     }
 
     // The mast picked: its height, the sails it carries and its fittings
     private StringBuilder appendMast(StringBuilder out) {
 
         if (!session.hasMastPicked())
-            return out.append(EngineSetting.SHIPWRIGHT_HINT_MAST_NONE);
+            return out.append(EngineSetting.SHIPWRIGHT_TEXT_NO_MAST);
 
         ShipMastStruct mast = session.getBlueprint().getMasts().get(session.getMastIndex());
         IntArrayList sails = session.getLayout().getMastSailCounts();
@@ -337,72 +446,48 @@ public class ShipwrightSystem extends SystemPackage {
         return out;
     }
 
-    private String resolveLayer() {
-
-        text.setLength(0);
-        ShipBlueprintStruct blueprint = session.getBlueprint();
-        ShipwrightTool tool = session.getTool();
-
-        if (tool == ShipwrightTool.HULL || tool == ShipwrightTool.DECKS)
-            return text.append(EngineSetting.SHIPWRIGHT_TEXT_LAYER).append(session.getLayer() + 1)
-                    .append(EngineSetting.SHIPWRIGHT_TEXT_OF).append(blueprint.getHeight())
-                    .append(session.getLayer() == blueprint.getWaterline() ? EngineSetting.SHIPWRIGHT_TEXT_WATERLINE
-                            : EngineSetting.SHIPWRIGHT_STATUS_NONE)
-                    .toString();
-
-        if (tool == ShipwrightTool.MASTS)
-            return text.append(blueprint.getMasts().size()).append(EngineSetting.SHIPWRIGHT_TEXT_MASTS).toString();
-
-        int levels = session.getLayout().getLevels().size();
-
-        if (levels == 0)
-            return EngineSetting.SHIPWRIGHT_TEXT_NO_LEVEL;
-
-        return text.append(EngineSetting.SHIPWRIGHT_TEXT_LEVEL)
-                .append(Math.min(session.getLevelIndex(), levels - 1) + 1)
-                .append(EngineSetting.SHIPWRIGHT_TEXT_OF).append(levels).toString();
-    }
-
-    private String resolveItem() {
-
-        text.setLength(0);
-        String furnishingName = shipwrightManager.getFurnishingName(session.getFurnishingIndex());
-
-        if (furnishingName != null)
-            text.append(furnishingName.substring(furnishingName.lastIndexOf(EngineSetting.PATH_SEPARATOR) + 1));
-
-        return text.append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
-                .append(EngineSetting.SHIPWRIGHT_FACINGS[session.getSpin()]).toString();
-    }
+    // Survey \\
 
     private void writeSurvey() {
 
         ShipSurveyStruct survey = session.getSurvey();
+        ShipBlueprintStruct blueprint = session.getBlueprint();
 
-        setLabel(EngineSetting.SHIPWRIGHT_ENTRY_SPEED, String.format(EngineSetting.SHIPWRIGHT_FORMAT_SPEED,
-                survey.getSpeed(), survey.getEntryAngleDegrees()));
+        if (survey.getDraft() <= 0f) {
+            setLabel(EngineSetting.SHIPWRIGHT_ENTRY_WATER, EngineSetting.SHIPWRIGHT_TEXT_NOT_AFLOAT);
+            setLabel(EngineSetting.SHIPWRIGHT_ENTRY_BUOYANCY, String.format(EngineSetting.SHIPWRIGHT_FORMAT_WEIGHT,
+                    survey.getMass()));
+            setLabel(EngineSetting.SHIPWRIGHT_ENTRY_STABILITY, EngineSetting.SHIPWRIGHT_STATUS_NONE);
+            setLabel(EngineSetting.SHIPWRIGHT_ENTRY_SPEED, EngineSetting.SHIPWRIGHT_STATUS_NONE);
+        } else {
+            setLabel(EngineSetting.SHIPWRIGHT_ENTRY_WATER, String.format(EngineSetting.SHIPWRIGHT_FORMAT_WATER,
+                    survey.getDraft(), survey.getFreeboard()));
+            setLabel(EngineSetting.SHIPWRIGHT_ENTRY_BUOYANCY, String.format(EngineSetting.SHIPWRIGHT_FORMAT_BUOYANCY,
+                    survey.getMass(), survey.getBallast(), survey.getReserve() * 100f));
+            setLabel(EngineSetting.SHIPWRIGHT_ENTRY_STABILITY, resolveStability(survey));
+            setLabel(EngineSetting.SHIPWRIGHT_ENTRY_SPEED, String.format(EngineSetting.SHIPWRIGHT_FORMAT_SPEED,
+                    survey.getBreezeSpeed(), survey.getGaleSpeed()));
+        }
+
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_SIZE, String.format(EngineSetting.SHIPWRIGHT_FORMAT_SIZE,
-                survey.getLength(), survey.getBeam(), survey.getDraft(), survey.getMass()));
+                survey.getLength(), survey.getBeam(), blueprint.getDeckCount(), survey.getSailCount()));
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_TRIANGLES, String.format(EngineSetting.SHIPWRIGHT_FORMAT_TRIANGLES,
                 survey.getTriangles(), EngineSetting.SHIP_TRIANGLE_LIMIT));
-        setLabel(EngineSetting.SHIPWRIGHT_ENTRY_SAILS, resolveSails());
     }
 
-    // How many sails each mast carries, from the bow aft
-    private String resolveSails() {
+    // Whether the ship rolls over as launched, may be laid over by its canvas, or stands up well, and to how far
+    private String resolveStability(ShipSurveyStruct survey) {
 
-        text.setLength(0);
-        IntArrayList sails = session.getLayout().getMastSailCounts();
+        float stable = survey.getStableDegrees();
 
-        text.append(EngineSetting.SHIPWRIGHT_TEXT_SAILS_TITLE).append(session.getSurvey().getSailCount());
+        if (stable <= 0f)
+            return EngineSetting.SHIPWRIGHT_TEXT_CAPSIZES;
 
-        for (int i = sails.size() - 1; i >= 0; i--)
-            text.append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
-                    .append(shipwrightManager.getMastName(session, i))
-                    .append(EngineSetting.SHIPWRIGHT_TEXT_COUNT_SEPARATOR)
-                    .append(sails.getInt(i));
+        String format = stable < EngineSetting.SHIPWRIGHT_TENDER_DEGREES
+                ? EngineSetting.SHIPWRIGHT_FORMAT_TENDER
+                : EngineSetting.SHIPWRIGHT_FORMAT_STABLE;
 
-        return text.toString();
+        return String.format(format, stable);
     }
 
     private void setLabel(int entryPoint, String value) {

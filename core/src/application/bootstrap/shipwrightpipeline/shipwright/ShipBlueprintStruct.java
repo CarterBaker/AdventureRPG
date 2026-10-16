@@ -1,5 +1,7 @@
 package application.bootstrap.shipwrightpipeline.shipwright;
 
+import java.util.Arrays;
+
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
@@ -11,18 +13,16 @@ public class ShipBlueprintStruct extends StructPackage {
 
     /*
      * A ship as it is drawn at the drafting table, everything a ship file
-     * keeps. The hull is drawn in octants, the half-block partial blocks the
-     * engine builds with: one layer at a time from the keel up, each layer the
-     * hull's half-breadth out from the centre line along the length, mirrored
-     * to the other side, one bit per octant. The design waterline is a layer;
-     * interior decks are the layers a floor is laid at. Walls, doors, stairs,
-     * furniture, the helm and the capstan stand on a level, a layer some floor
-     * lies on, at an octant along the length and across the full breadth,
-     * each packed through ShipCellUtility; walls are kept sorted and every
-     * place holds at most one of each. Masts stand on the centre line, kept
-     * from the stern forward. Rails run round every open deck edge at their
-     * height, and a porch may hang off the stern at one level. Copied whole
-     * for undo; every list writes in a fixed order, so saving an unchanged
+     * keeps. A ship is a stack of decks from the bottom up, each drawn as its
+     * outline: how many octants it reaches out from the centre line at every
+     * octant along the sheet, mirrored to the other side. Walls, half walls,
+     * doors, windows, stairs and furniture stand on a deck at an octant along
+     * the length and across the full breadth, each packed through
+     * ShipCellUtility with its deck as its level; walls are kept sorted and a
+     * place holds at most one of each. The helm and the capstan are one
+     * placement each, masts stand on the centre line kept from the stern
+     * forward, and a porch may hang off the stern at one deck. Copied whole for
+     * undo; every list writes in a fixed order, so saving an unchanged
      * blueprint writes the same bytes.
      */
 
@@ -30,26 +30,18 @@ public class ShipBlueprintStruct extends StructPackage {
     private String shipName;
     private String displayName;
 
-    // Size — octants along the length, out from the centre line, and up from the keel
-    private int length;
-    private int halfBreadth;
-    private int height;
+    // Decks — the half-beam of every deck at every octant along the sheet, deck after deck
+    private final byte[] outlines;
+    private int deckCount;
 
-    // Hull — one bit per octant, x fastest, then half-breadth, then layer
-    private long[] hull;
-    private int waterline;
-
-    // Decks — interior floor layers, sorted
-    private final IntArrayList decks;
-
-    // Options
-    private int railHeight;
-    private int porchLevel;
-
-    // Placements — packed cells
+    // Rooms — packed cells, their level the deck they stand on
     private final IntArrayList walls;
+    private final IntArrayList halfWalls;
     private final IntArrayList doors;
+    private final IntArrayList windows;
     private final IntArrayList stairs;
+
+    // Fittings — packed cells
     private int helm;
     private int capstan;
 
@@ -59,34 +51,29 @@ public class ShipBlueprintStruct extends StructPackage {
     // Masts — from the stern forward
     private final ObjectArrayList<ShipMastStruct> masts;
 
+    // Porch — the deck it hangs off the stern at
+    private int porchDeck;
+
     // Constructor \\
 
-    public ShipBlueprintStruct(int length, int halfBreadth, int height) {
+    public ShipBlueprintStruct() {
 
         // Identity
         this.shipName = EngineSetting.SHIP_NAME_NONE;
         this.displayName = EngineSetting.SHIP_NAME_NONE;
 
-        // Size
-        this.length = length;
-        this.halfBreadth = halfBreadth;
-        this.height = height;
-
-        // Hull
-        this.hull = new long[resolveWordCount(length, halfBreadth, height)];
-        this.waterline = 0;
-
         // Decks
-        this.decks = new IntArrayList();
+        this.outlines = new byte[EngineSetting.SHIP_MAX_DECKS * EngineSetting.SHIP_SHEET_LENGTH];
+        this.deckCount = 1;
 
-        // Options
-        this.railHeight = 0;
-        this.porchLevel = EngineSetting.SHIP_LEVEL_NONE;
-
-        // Placements
+        // Rooms
         this.walls = new IntArrayList();
+        this.halfWalls = new IntArrayList();
         this.doors = new IntArrayList();
+        this.windows = new IntArrayList();
         this.stairs = new IntArrayList();
+
+        // Fittings
         this.helm = EngineSetting.SHIP_CELL_NONE;
         this.capstan = EngineSetting.SHIP_CELL_NONE;
 
@@ -95,11 +82,14 @@ public class ShipBlueprintStruct extends StructPackage {
 
         // Masts
         this.masts = new ObjectArrayList<>();
+
+        // Porch
+        this.porchDeck = EngineSetting.SHIP_DECK_NONE;
     }
 
     public ShipBlueprintStruct copy() {
 
-        ShipBlueprintStruct copy = new ShipBlueprintStruct(length, halfBreadth, height);
+        ShipBlueprintStruct copy = new ShipBlueprintStruct();
         copy.set(this);
 
         return copy;
@@ -112,30 +102,18 @@ public class ShipBlueprintStruct extends StructPackage {
         this.shipName = other.shipName;
         this.displayName = other.displayName;
 
-        // Size
-        this.length = other.length;
-        this.halfBreadth = other.halfBreadth;
-        this.height = other.height;
-
-        // Hull
-        this.hull = other.hull.clone();
-        this.waterline = other.waterline;
-
         // Decks
-        decks.clear();
-        decks.addAll(other.decks);
+        System.arraycopy(other.outlines, 0, outlines, 0, outlines.length);
+        this.deckCount = other.deckCount;
 
-        // Options
-        this.railHeight = other.railHeight;
-        this.porchLevel = other.porchLevel;
+        // Rooms
+        copyCells(other.walls, walls);
+        copyCells(other.halfWalls, halfWalls);
+        copyCells(other.doors, doors);
+        copyCells(other.windows, windows);
+        copyCells(other.stairs, stairs);
 
-        // Placements
-        walls.clear();
-        walls.addAll(other.walls);
-        doors.clear();
-        doors.addAll(other.doors);
-        stairs.clear();
-        stairs.addAll(other.stairs);
+        // Fittings
         this.helm = other.helm;
         this.capstan = other.capstan;
 
@@ -148,112 +126,88 @@ public class ShipBlueprintStruct extends StructPackage {
 
         for (int i = 0; i < other.masts.size(); i++)
             masts.add(other.masts.get(i).copy());
+
+        // Porch
+        this.porchDeck = other.porchDeck;
     }
 
-    private static int resolveWordCount(int length, int halfBreadth, int height) {
-        return (length * halfBreadth * height + Long.SIZE - 1) / Long.SIZE;
+    private static void copyCells(IntArrayList from, IntArrayList to) {
+        to.clear();
+        to.addAll(from);
     }
 
-    // Hull \\
+    // Decks \\
 
-    public boolean isHull(int x, int y, int halfZ) {
+    // How many octants a deck reaches out from the centre line at an octant along the sheet, 0 where it is not drawn
+    public int getOutline(int deck, int x) {
 
-        if (x < 0 || y < 0 || halfZ < 0 || x >= length || y >= height || halfZ >= halfBreadth)
-            return false;
+        if (deck < 0 || deck >= deckCount || x < 0 || x >= EngineSetting.SHIP_SHEET_LENGTH)
+            return 0;
 
-        int bit = toBitIndex(x, y, halfZ);
-
-        return (hull[bit >>> 6] & (1L << bit)) != 0;
+        return outlines[deck * EngineSetting.SHIP_SHEET_LENGTH + x];
     }
 
-    // True when an octant across the full breadth lies inside the hull's drawn volume
-    public boolean isVolume(int x, int y, int z) {
-        return z >= 0 && z < halfBreadth * 2 && isHull(x, y, ShipCellUtility.toHalfBreadth(z, halfBreadth));
-    }
+    public void setOutline(int deck, int x, int halfBeam) {
 
-    public void setHull(int x, int y, int halfZ, boolean filled) {
-
-        if (x < 0 || y < 0 || halfZ < 0 || x >= length || y >= height || halfZ >= halfBreadth)
+        if (deck < 0 || deck >= deckCount || x < 0 || x >= EngineSetting.SHIP_SHEET_LENGTH)
             return;
 
-        int bit = toBitIndex(x, y, halfZ);
-
-        if (filled)
-            hull[bit >>> 6] |= 1L << bit;
-        else
-            hull[bit >>> 6] &= ~(1L << bit);
+        outlines[deck * EngineSetting.SHIP_SHEET_LENGTH + x] = (byte) Math.max(0,
+                Math.min(EngineSetting.SHIP_SHEET_HALF_BREADTH, halfBeam));
     }
 
-    public void clearLayer(int y) {
-
-        for (int halfZ = 0; halfZ < halfBreadth; halfZ++)
-            for (int x = 0; x < length; x++)
-                setHull(x, y, halfZ, false);
+    // True when a deck's floor covers an octant across the full breadth
+    public boolean isOnDeck(int deck, int x, int z) {
+        return z >= 0 && z < EngineSetting.SHIP_SHEET_BREADTH
+                && ShipCellUtility.toHalfBreadth(z) < getOutline(deck, x);
     }
 
-    public void copyLayer(int fromY, int toY) {
+    public boolean isDeckDrawn(int deck) {
 
-        for (int halfZ = 0; halfZ < halfBreadth; halfZ++)
-            for (int x = 0; x < length; x++)
-                setHull(x, toY, halfZ, isHull(x, fromY, halfZ));
-    }
-
-    public boolean hasHull() {
-
-        for (int i = 0; i < hull.length; i++)
-            if (hull[i] != 0L)
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+            if (getOutline(deck, x) > 0)
                 return true;
 
         return false;
     }
 
-    private int toBitIndex(int x, int y, int halfZ) {
-        return (y * halfBreadth + halfZ) * length + x;
+    // A new deck on top of the stack, drawn as the deck under it to start from; false when the stack is full
+    public boolean addDeck() {
+
+        if (deckCount >= EngineSetting.SHIP_MAX_DECKS)
+            return false;
+
+        System.arraycopy(outlines, (deckCount - 1) * EngineSetting.SHIP_SHEET_LENGTH,
+                outlines, deckCount * EngineSetting.SHIP_SHEET_LENGTH, EngineSetting.SHIP_SHEET_LENGTH);
+        deckCount++;
+
+        return true;
     }
 
-    // Size \\
+    // Takes a deck out with everything standing on it, every deck above it lowered into its place; false for the last
+    public boolean removeDeck(int deck) {
 
-    // Redraws the blueprint on a grid of another size, keeping everything that still fits on it
-    public void resize(int newLength, int newHalfBreadth, int newHeight) {
+        if (deckCount <= 1 || deck < 0 || deck >= deckCount)
+            return false;
 
-        long[] resized = new long[resolveWordCount(newLength, newHalfBreadth, newHeight)];
+        int length = EngineSetting.SHIP_SHEET_LENGTH;
 
-        for (int y = 0; y < Math.min(height, newHeight); y++)
-            for (int halfZ = 0; halfZ < Math.min(halfBreadth, newHalfBreadth); halfZ++)
-                for (int x = 0; x < Math.min(length, newLength); x++) {
+        System.arraycopy(outlines, (deck + 1) * length, outlines, deck * length, (deckCount - deck - 1) * length);
+        Arrays.fill(outlines, (deckCount - 1) * length, deckCount * length, (byte) 0);
+        deckCount--;
 
-                    if (!isHull(x, y, halfZ))
-                        continue;
-
-                    int bit = (y * newHalfBreadth + halfZ) * newLength + x;
-                    resized[bit >>> 6] |= 1L << bit;
-                }
-
-        int oldHalfBreadth = halfBreadth;
-
-        this.hull = resized;
-        this.length = newLength;
-        this.halfBreadth = newHalfBreadth;
-        this.height = newHeight;
-        this.waterline = Math.min(waterline, newHeight - 1);
-
-        for (int i = decks.size() - 1; i >= 0; i--)
-            if (decks.getInt(i) >= newHeight)
-                decks.removeInt(i);
-
-        if (porchLevel >= newHeight)
-            this.porchLevel = EngineSetting.SHIP_LEVEL_NONE;
-
-        shiftCells(walls, oldHalfBreadth);
-        shiftCells(doors, oldHalfBreadth);
-        shiftCells(stairs, oldHalfBreadth);
-        this.helm = shiftCell(helm, oldHalfBreadth);
-        this.capstan = shiftCell(capstan, oldHalfBreadth);
+        removeDeckCells(walls, deck);
+        removeDeckCells(halfWalls, deck);
+        removeDeckCells(doors, deck);
+        removeDeckCells(windows, deck);
+        removeDeckCells(stairs, deck);
+        this.helm = removeDeckCell(helm, deck);
+        this.capstan = removeDeckCell(capstan, deck);
 
         for (int i = furniture.size() - 1; i >= 0; i--) {
 
             ShipFurnitureStruct piece = furniture.get(i);
-            int cell = shiftCell(piece.getCell(), oldHalfBreadth);
+            int cell = removeDeckCell(piece.getCell(), deck);
 
             if (cell == EngineSetting.SHIP_CELL_NONE)
                 furniture.remove(i);
@@ -261,76 +215,155 @@ public class ShipBlueprintStruct extends StructPackage {
                 furniture.set(i, new ShipFurnitureStruct(piece.getFurnishingName(), cell));
         }
 
-        for (int i = masts.size() - 1; i >= 0; i--)
-            if (masts.get(i).getX() + EngineSetting.SHIP_MAST_OCTANTS > newLength)
-                masts.remove(i);
+        if (porchDeck == deck)
+            this.porchDeck = EngineSetting.SHIP_DECK_NONE;
+        else if (porchDeck > deck)
+            this.porchDeck--;
+
+        return true;
     }
 
-    // Every cell moved out with the centre line as the breadth changes, those no longer on the grid dropped
-    private void shiftCells(IntArrayList cells, int oldHalfBreadth) {
+    // Every cell on a deck dropped, every cell above it lowered a deck
+    private static void removeDeckCells(IntArrayList cells, int deck) {
 
         for (int i = cells.size() - 1; i >= 0; i--) {
 
-            int cell = shiftCell(cells.getInt(i), oldHalfBreadth);
+            int cell = removeDeckCell(cells.getInt(i), deck);
 
             if (cell == EngineSetting.SHIP_CELL_NONE)
                 cells.removeInt(i);
             else
                 cells.set(i, cell);
         }
-
-        IntArrays.quickSort(cells.elements(), 0, cells.size());
     }
 
-    private int shiftCell(int cell, int oldHalfBreadth) {
+    private static int removeDeckCell(int cell, int deck) {
 
         if (cell == EngineSetting.SHIP_CELL_NONE)
             return cell;
 
         int level = ShipCellUtility.unpackLevel(cell);
-        int x = ShipCellUtility.unpackX(cell);
-        int z = ShipCellUtility.unpackZ(cell) + halfBreadth - oldHalfBreadth;
 
-        if (level >= height || x >= length || z < 0 || z >= halfBreadth * 2)
+        if (level == deck)
             return EngineSetting.SHIP_CELL_NONE;
 
-        return ShipCellUtility.pack(level, x, z, ShipCellUtility.unpackSpin(cell));
+        if (level < deck)
+            return cell;
+
+        return ShipCellUtility.pack(level - 1, ShipCellUtility.unpackX(cell), ShipCellUtility.unpackZ(cell),
+                ShipCellUtility.unpackSpin(cell));
     }
 
-    // Decks \\
+    // Everything standing off the deck it was set down on taken up, and every mast with no deck under it
+    public void prunePlacements() {
 
-    public boolean hasDeck(int y) {
-        return decks.indexOf(y) != EngineSetting.INDEX_NOT_FOUND;
+        pruneCells(walls);
+        pruneCells(halfWalls);
+        pruneCells(doors);
+        pruneCells(windows);
+        pruneCells(stairs);
+
+        if (!isCellOnDeck(helm))
+            this.helm = EngineSetting.SHIP_CELL_NONE;
+
+        if (!isCellOnDeck(capstan))
+            this.capstan = EngineSetting.SHIP_CELL_NONE;
+
+        for (int i = furniture.size() - 1; i >= 0; i--)
+            if (!isCellOnDeck(furniture.get(i).getCell()))
+                furniture.remove(i);
+
+        for (int i = masts.size() - 1; i >= 0; i--)
+            if (findLowestDeck(masts.get(i).getX()) == EngineSetting.SHIP_DECK_NONE)
+                masts.remove(i);
+
+        if (porchDeck >= deckCount)
+            this.porchDeck = EngineSetting.SHIP_DECK_NONE;
     }
 
-    public void toggleDeck(int y) {
+    private void pruneCells(IntArrayList cells) {
 
-        int index = decks.indexOf(y);
+        for (int i = cells.size() - 1; i >= 0; i--)
+            if (!isCellOnDeck(cells.getInt(i)))
+                cells.removeInt(i);
+    }
 
-        if (index != EngineSetting.INDEX_NOT_FOUND) {
-            decks.removeInt(index);
-            return;
-        }
+    private boolean isCellOnDeck(int cell) {
+        return cell == EngineSetting.SHIP_CELL_NONE || isOnDeck(
+                ShipCellUtility.unpackLevel(cell), ShipCellUtility.unpackX(cell), ShipCellUtility.unpackZ(cell));
+    }
 
-        decks.add(y);
-        IntArrays.quickSort(decks.elements(), 0, decks.size());
+    // The lowest deck drawn across the centre line at an octant along the sheet, SHIP_DECK_NONE when none is
+    public int findLowestDeck(int x) {
+
+        for (int deck = 0; deck < deckCount; deck++)
+            if (getOutline(deck, x) > 0)
+                return deck;
+
+        return EngineSetting.SHIP_DECK_NONE;
+    }
+
+    // The highest deck drawn across the centre line at an octant along the sheet, SHIP_DECK_NONE when none is
+    public int findHighestDeck(int x) {
+
+        for (int deck = deckCount - 1; deck >= 0; deck--)
+            if (getOutline(deck, x) > 0)
+                return deck;
+
+        return EngineSetting.SHIP_DECK_NONE;
+    }
+
+    // The first and last octant along the sheet any deck is drawn at, written to the bounds given; false when none
+    public boolean resolveExtent(int[] bounds) {
+
+        bounds[0] = Integer.MAX_VALUE;
+        bounds[1] = Integer.MIN_VALUE;
+
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+            if (findLowestDeck(x) != EngineSetting.SHIP_DECK_NONE) {
+                bounds[0] = Math.min(bounds[0], x);
+                bounds[1] = Math.max(bounds[1], x);
+            }
+
+        return bounds[0] <= bounds[1];
     }
 
     // Walls \\
 
     public boolean hasWall(int level, int x, int z) {
-        return findSorted(walls, ShipCellUtility.pack(level, x, z, 0)) >= 0;
+
+        int place = ShipCellUtility.pack(level, x, z, 0);
+
+        return findSorted(walls, place) >= 0 || findSorted(halfWalls, place) >= 0;
     }
 
-    public void setWall(int level, int x, int z, boolean standing) {
+    // Stands a full or half wall at a place, replacing whichever stood there, or with neither takes it down
+    public void setWall(int level, int x, int z, boolean standing, boolean half) {
 
-        int cell = ShipCellUtility.pack(level, x, z, 0);
-        int index = findSorted(walls, cell);
+        int place = ShipCellUtility.pack(level, x, z, 0);
 
-        if (standing && index < 0)
-            walls.add(-index - 1, cell);
-        else if (!standing && index >= 0)
-            walls.removeInt(index);
+        removeSorted(walls, place);
+        removeSorted(halfWalls, place);
+
+        if (!standing)
+            return;
+
+        IntArrayList cells = half ? halfWalls : walls;
+
+        cells.add(-findSorted(cells, place) - 1, place);
+    }
+
+    // True when the wall at a place stands at the height asked for
+    public boolean hasWallOf(int level, int x, int z, boolean half) {
+        return findSorted(half ? halfWalls : walls, ShipCellUtility.pack(level, x, z, 0)) >= 0;
+    }
+
+    private static void removeSorted(IntArrayList cells, int cell) {
+
+        int index = findSorted(cells, cell);
+
+        if (index >= 0)
+            cells.removeInt(index);
     }
 
     private static int findSorted(IntArrayList cells, int cell) {
@@ -409,10 +442,11 @@ public class ShipBlueprintStruct extends StructPackage {
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
-    // Steps a mast's foot clear of every other, false when there is no room for it
+    // True when a mast's foot fits on the sheet clear of every other
     public boolean canStepMast(int x) {
 
-        if (x < 0 || x + EngineSetting.SHIP_MAST_OCTANTS > length)
+        if (x < 0 || x + EngineSetting.SHIP_MAST_OCTANTS > EngineSetting.SHIP_SHEET_LENGTH
+                || masts.size() >= EngineSetting.SHIP_MAX_MASTS)
             return false;
 
         for (int i = 0; i < masts.size(); i++)
@@ -444,16 +478,9 @@ public class ShipBlueprintStruct extends StructPackage {
         this.displayName = displayName;
     }
 
-    public void setWaterline(int waterline) {
-        this.waterline = Math.max(0, Math.min(height - 1, waterline));
-    }
-
-    public void setRailHeight(int railHeight) {
-        this.railHeight = railHeight;
-    }
-
-    public void setPorchLevel(int porchLevel) {
-        this.porchLevel = porchLevel;
+    // Sets how many decks the stack holds, as a ship file is read
+    public void setDeckCount(int deckCount) {
+        this.deckCount = Math.max(1, Math.min(EngineSetting.SHIP_MAX_DECKS, deckCount));
     }
 
     public void setHelm(int helm) {
@@ -462,6 +489,10 @@ public class ShipBlueprintStruct extends StructPackage {
 
     public void setCapstan(int capstan) {
         this.capstan = capstan;
+    }
+
+    public void setPorchDeck(int porchDeck) {
+        this.porchDeck = porchDeck;
     }
 
     // Accessible \\
@@ -478,48 +509,28 @@ public class ShipBlueprintStruct extends StructPackage {
         return displayName;
     }
 
-    public int getLength() {
-        return length;
+    public int getDeckCount() {
+        return deckCount;
     }
 
-    public int getHalfBreadth() {
-        return halfBreadth;
-    }
-
-    public int getBreadth() {
-        return halfBreadth * 2;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-
-    public int getWaterline() {
-        return waterline;
-    }
-
-    public IntArrayList getDecks() {
-        return decks;
-    }
-
-    public int getRailHeight() {
-        return railHeight;
-    }
-
-    public int getPorchLevel() {
-        return porchLevel;
-    }
-
-    public boolean hasPorch() {
-        return porchLevel != EngineSetting.SHIP_LEVEL_NONE;
+    public boolean hasHull() {
+        return isDeckDrawn(0);
     }
 
     public IntArrayList getWalls() {
         return walls;
     }
 
+    public IntArrayList getHalfWalls() {
+        return halfWalls;
+    }
+
     public IntArrayList getDoors() {
         return doors;
+    }
+
+    public IntArrayList getWindows() {
+        return windows;
     }
 
     public IntArrayList getStairs() {
@@ -548,5 +559,13 @@ public class ShipBlueprintStruct extends StructPackage {
 
     public ObjectArrayList<ShipMastStruct> getMasts() {
         return masts;
+    }
+
+    public int getPorchDeck() {
+        return porchDeck;
+    }
+
+    public boolean hasPorch() {
+        return porchDeck != EngineSetting.SHIP_DECK_NONE;
     }
 }
