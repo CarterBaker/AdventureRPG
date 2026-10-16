@@ -5,6 +5,7 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
+import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -14,7 +15,9 @@ public class BlockManager extends ManagerPackage {
      * Owns the block palette by name and ID with a per-ID geometry type table,
      * the block orientation buffer, and BlockPlacementSystem, the single entry
      * point for world block edits. Block IDs are assigned in registration
-     * order, so every block name must be unique.
+     * order, so every block name must be unique. A material is drawn either
+     * by liquid or by solid quad records, never both, so a material shared
+     * across that line is refused when its second block registers.
      */
 
     // Internal
@@ -24,6 +27,7 @@ public class BlockManager extends ManagerPackage {
     private Object2IntOpenHashMap<String> blockName2BlockID;
     private ObjectArrayList<BlockHandle> blockID2BlockHandle;
     private DynamicGeometryType[] blockID2GeometryType;
+    private Int2BooleanOpenHashMap materialID2Liquid;
 
     // Base \\
 
@@ -33,6 +37,7 @@ public class BlockManager extends ManagerPackage {
         this.blockName2BlockID = RegistryUtility.createNameIndex();
         this.blockID2BlockHandle = RegistryUtility.createPalette();
         this.blockID2GeometryType = new DynamicGeometryType[EngineSetting.REGISTRY_SHORT_ID_COUNT];
+        this.materialID2Liquid = new Int2BooleanOpenHashMap();
 
         this.internalBufferSystem = create(BlockBufferSystem.class);
         create(BlockPlacementSystem.class);
@@ -55,8 +60,29 @@ public class BlockManager extends ManagerPackage {
             throwException("Duplicate block name: '" + blockHandle.getBlockName()
                     + "' is declared more than once — every block name must be unique");
 
+        registerBlockMaterial(blockHandle);
+
         blockID2BlockHandle.set(blockID, blockHandle);
         blockID2GeometryType[blockID] = blockHandle.getGeometry();
+    }
+
+    // Every block of one material shares its quad record layout, so liquid and solid blocks never share one
+    private void registerBlockMaterial(BlockHandle blockHandle) {
+
+        int materialID = blockHandle.getMaterialID();
+
+        if (materialID == -1)
+            return;
+
+        boolean liquid = blockHandle.getGeometry() == DynamicGeometryType.LIQUID;
+
+        if (materialID2Liquid.containsKey(materialID) && materialID2Liquid.get(materialID) != liquid)
+            throwException("Block '" + blockHandle.getBlockName() + "' is " + (liquid ? "a liquid" : "solid")
+                    + " but shares material ID " + materialID + " with " + (liquid ? "solid" : "liquid")
+                    + " blocks — liquid and solid quad records use different layouts, so a liquid block "
+                    + "needs a liquid material");
+
+        materialID2Liquid.put(materialID, liquid);
     }
 
     // On-Demand \\
