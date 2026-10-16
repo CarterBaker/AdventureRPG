@@ -3,12 +3,15 @@ package application.runtime.inventory;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.geometrypipeline.mesh.MeshData;
+import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.itempipeline.container.ContainerSlotStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
 import application.bootstrap.menupipeline.element.ElementInstance;
+import application.bootstrap.progressionpipeline.tier.TierHandle;
+import application.bootstrap.progressionpipeline.tiermanager.TierManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
@@ -22,9 +25,11 @@ import application.runtime.menueventsmanager.menus.inventory.InventoryHeldStruct
 import application.runtime.menueventsmanager.menus.inventory.InventorySessionStruct;
 import application.runtime.menueventsmanager.menus.inventory.InventoryViewStruct;
 import application.runtime.world.WorldSystem;
+import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -35,12 +40,15 @@ public class InventoryRenderSystem extends SystemPackage {
      * is drawn in its panel through the panel's own camera, into the
      * inventory's own target over the menus: its shell — a pocket's box of
      * walls, or the container's own model — and what it holds. A container
-     * opened where it lies is also drawn in the world target with the
-     * terrain, open without its lid, showing what it holds only when the
-     * space is inside its own model; a pocket is never seen in the world. A
-     * carried item's landing preview, tinted by fit, goes over its panel, as
-     * do equipment icons and a carried item following the cursor. All
-     * transforms come from InventoryViewUtility.
+     * opened where it lies is also drawn in the world target with the terrain,
+     * open without its lid, showing what it holds only when the space is
+     * inside its own model; a pocket is never seen in the world. A carried
+     * item's landing preview, tinted by fit, goes over its panel, as do
+     * equipment icons and a carried item following the cursor. Worn gear with
+     * a tier is framed in its slot by the tier frame shader, behind its icon,
+     * every effect of the frame read from the tier and animated by the
+     * system's own running time. Nothing is drawn while another menu covers
+     * the inventory. All transforms come from InventoryViewUtility.
      */
 
     // Internal
@@ -52,6 +60,8 @@ public class InventoryRenderSystem extends SystemPackage {
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
     private WorldSystem worldSystem;
+    private TierManager tierManager;
+    private MeshManager meshManager;
 
     // Render Target
     private FBOInstance inventoryFbo;
@@ -59,12 +69,20 @@ public class InventoryRenderSystem extends SystemPackage {
     // Resources
     private int itemMaterialID;
     private int worldMaterialID;
+    private int frameMaterialID;
+    private MeshData frameMesh;
+
+    // Frame
+    private float frameTime;
 
     // Scratch
     private Matrix4 iconProjection;
     private Matrix4 transform;
     private Matrix4 transformScratch;
     private Matrix4 worldContainer;
+    private Vector4 frameColor;
+    private Vector4 frameEffects;
+    private Vector2 frameMotion;
 
     // Base \\
 
@@ -76,6 +94,9 @@ public class InventoryRenderSystem extends SystemPackage {
         this.transform = new Matrix4();
         this.transformScratch = new Matrix4();
         this.worldContainer = new Matrix4();
+        this.frameColor = new Vector4();
+        this.frameEffects = new Vector4();
+        this.frameMotion = new Vector2();
     }
 
     @Override
@@ -88,6 +109,8 @@ public class InventoryRenderSystem extends SystemPackage {
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
+        this.tierManager = get(TierManager.class);
+        this.meshManager = get(MeshManager.class);
     }
 
     @Override
@@ -99,6 +122,13 @@ public class InventoryRenderSystem extends SystemPackage {
         // Resources
         this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(RuntimeSetting.MATERIAL_INVENTORY_ITEM);
         this.worldMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.EQUIPMENT_ITEM_MATERIAL);
+        this.frameMaterialID = materialManager.getMaterialIDFromMaterialName(RuntimeSetting.MATERIAL_INVENTORY_FRAME);
+        this.frameMesh = meshManager.getMeshHandleFromMeshName(RuntimeSetting.MESH_INVENTORY_FRAME).getMeshData();
+    }
+
+    @Override
+    protected void update() {
+        frameTime = (frameTime + internal.getDeltaTime()) % RuntimeSetting.INVENTORY_FRAME_TIME_PERIOD;
     }
 
     // Render \\
@@ -109,7 +139,7 @@ public class InventoryRenderSystem extends SystemPackage {
         InventorySessionStruct session = inventoryBranch.getSession();
         WindowInstance window = context.getWindow();
 
-        if (session == null)
+        if (session == null || session.isCovered())
             return;
 
         InventoryViewUtility.composeProjection(window.getWidth(), window.getHeight(), iconProjection);
@@ -238,6 +268,7 @@ public class InventoryRenderSystem extends SystemPackage {
             if (!inventory.hasItem(equipmentSlot) || !hasArea(slotElement))
                 continue;
 
+            pushFrame(inventory.getItem(equipmentSlot), slotElement, window);
             pushIcon(
                     inventory.getItem(equipmentSlot),
                     slotElement.getComputedLeft() + slotElement.getComputedW() * 0.5f,
@@ -247,6 +278,38 @@ public class InventoryRenderSystem extends SystemPackage {
                             : RuntimeSetting.INVENTORY_TINT_NONE,
                     window);
         }
+    }
+
+    // Frame \\
+
+    // A tiered piece of gear's frame, stretched over its slot and pushed behind every icon
+    private void pushFrame(ItemInstance itemInstance, ElementInstance slotElement, WindowInstance window) {
+
+        short tierID = itemInstance.getTierID();
+
+        if (tierID == EngineSetting.TIER_NONE)
+            return;
+
+        TierHandle tierHandle = tierManager.getTierHandleFromTierID(tierID);
+        Color color = tierHandle.getColor();
+        ModelInstance model = itemModelManager.acquireModel(frameMesh, frameMaterialID);
+
+        transform.set(
+                slotElement.getComputedW(), 0, 0, slotElement.getComputedLeft(),
+                0, slotElement.getComputedH(), 0, slotElement.getComputedTop(),
+                0, 0, 1, -RuntimeSetting.INVENTORY_DEPTH_RANGE * RuntimeSetting.INVENTORY_FRAME_DEPTH_SHARE,
+                0, 0, 0, 1);
+        frameColor.set(color.r, color.g, color.b, 1f);
+        frameEffects.set(tierHandle.getGlow(), tierHandle.getPulse(), tierHandle.getSweep(), tierHandle.getMotes());
+        frameMotion.set(tierHandle.getSheen(), frameTime);
+
+        model.getMaterial().setUniform(RuntimeSetting.UNIFORM_INVENTORY_PROJECTION, iconProjection);
+        model.getMaterial().setUniform(RuntimeSetting.UNIFORM_INVENTORY_MODEL, transform);
+        model.getMaterial().setUniform(RuntimeSetting.UNIFORM_FRAME_COLOR, frameColor);
+        model.getMaterial().setUniform(RuntimeSetting.UNIFORM_FRAME_EFFECTS, frameEffects);
+        model.getMaterial().setUniform(RuntimeSetting.UNIFORM_FRAME_MOTION, frameMotion);
+
+        renderManager.pushRenderCall(model, inventoryFbo, RuntimeSetting.INVENTORY_DRAW_DEPTH, window);
     }
 
     // Held \\

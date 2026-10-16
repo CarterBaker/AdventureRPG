@@ -2,6 +2,7 @@ package application.bootstrap.itempipeline.itemdefinition;
 
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.progressionpipeline.util.ValueMapStruct;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -11,22 +12,24 @@ public class ItemDefinitionData extends DataPackage {
     /*
      * Immutable item definition payload loaded from ARPG. Holds identity,
      * presentation, physical properties, the body slot it is worn in, the
-     * statistics it grants, the sub-voxel shape it takes up in a container
-     * and in the world, whether its rough box stops whoever walks into it,
-     * and render references for one item type. An item with a container space
+     * statistics it grants, the sub-voxel shape it takes up in a container and
+     * in the world, whether its rough box stops whoever walks into it, and
+     * render references for one item type. An item with a container space
      * holds its own container of that space. A container with a lid carries
      * its model without the lid, drawn in the world while it stands open, and
      * a pocket carries the box of walls its space is shown in, drawn only in
      * the inventory's menus. A tool names the tool type it is and the highest
      * break tier it can break; a weapon names the moveset it is wielded with;
-     * a stackable item holds up to its stack size in
-     * one item; a block piece names the block it builds. An item may carry
-     * actions that turn it into another item where it stands, and may be
-     * picked up as another item, as an open door is picked up shut. A seed
-     * names the tree it grows into once planted. An item may sow a covering
-     * over the block it is used on and nurture what covers it by a number of
-     * levels, as grass seed sows grass and a moisture pouch feeds moss. Owned
-     * by ItemDefinitionHandle for the engine lifetime.
+     * an item names the skill its use trains, and an item that grants stats,
+     * is worn, is a tool or is wielded by a moveset is gear, which carries a
+     * level, tier and condition of its own; a stackable item holds up to its
+     * stack size in one item; a block piece names the block it builds. An item
+     * may carry actions that turn it into another item where it stands, and
+     * may be picked up as another item, as an open door is picked up shut. A
+     * seed names the tree it grows into once planted. An item may sow a
+     * covering over the block it is used on and nurture what covers it by a
+     * number of levels, as grass seed sows grass and a moisture pouch feeds
+     * moss. Owned by ItemDefinitionHandle for the engine lifetime.
      */
 
     // Identity
@@ -46,7 +49,7 @@ public class ItemDefinitionData extends DataPackage {
 
     // Equipment
     private final EquipmentType equipmentType;
-    private final float[] stats;
+    private final ValueMapStruct stats;
 
     // Storage
     private final ItemShapeStruct shape;
@@ -64,6 +67,9 @@ public class ItemDefinitionData extends DataPackage {
 
     // Combat — the moveset the item is wielded with, MOVESET_NONE for none
     private final short movesetID;
+
+    // Skill — the skill using the item trains, SKILL_NONE for none
+    private final short skillID;
 
     // Stacking
     private final int stackSize;
@@ -93,7 +99,7 @@ public class ItemDefinitionData extends DataPackage {
             boolean twoHanded,
             boolean solid,
             EquipmentType equipmentType,
-            float[] stats,
+            ValueMapStruct stats,
             ItemShapeStruct shape,
             ContainerSpaceStruct containerSpace,
             MeshHandle meshHandle,
@@ -103,6 +109,7 @@ public class ItemDefinitionData extends DataPackage {
             short toolTypeID,
             int toolTier,
             short movesetID,
+            short skillID,
             int stackSize,
             short blockID,
             ObjectArrayList<ItemActionStruct> actions,
@@ -146,6 +153,9 @@ public class ItemDefinitionData extends DataPackage {
 
         // Combat
         this.movesetID = movesetID;
+
+        // Skill
+        this.skillID = skillID;
 
         // Stacking
         this.stackSize = stackSize;
@@ -205,8 +215,20 @@ public class ItemDefinitionData extends DataPackage {
         return equipmentType;
     }
 
-    public float getStat(ItemStat itemStat) {
-        return stats[itemStat.ordinal()];
+    public float getStat(short statID) {
+        return stats.find(statID, 0f);
+    }
+
+    public ValueMapStruct getStats() {
+        return stats;
+    }
+
+    // True for anything with a level of its own — whatever grants stats, is worn, is a tool or is wielded
+    public boolean isGear() {
+        return !stats.isEmpty()
+                || equipmentType != EquipmentType.NONE
+                || toolTypeID != EngineSetting.TOOL_NONE
+                || movesetID != EngineSetting.MOVESET_NONE;
     }
 
     public ItemShapeStruct getShape() {
@@ -255,6 +277,14 @@ public class ItemDefinitionData extends DataPackage {
 
     public short getMovesetID() {
         return movesetID;
+    }
+
+    public short getSkillID() {
+        return skillID;
+    }
+
+    public boolean hasSkill() {
+        return skillID != EngineSetting.SKILL_NONE;
     }
 
     public boolean hasMoveset() {

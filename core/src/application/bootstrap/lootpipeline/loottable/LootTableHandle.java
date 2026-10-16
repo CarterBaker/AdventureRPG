@@ -44,6 +44,18 @@ public class LootTableHandle extends HandlePackage {
         return lootTableData.getRollsMax();
     }
 
+    public int getLevelMin() {
+        return lootTableData.getLevelMin();
+    }
+
+    public int getLevelMax() {
+        return lootTableData.getLevelMax();
+    }
+
+    public float getTierBias() {
+        return lootTableData.getTierBias();
+    }
+
     public LootEntryStruct[] getGuaranteedEntries() {
         return lootTableData.getGuaranteedEntries();
     }

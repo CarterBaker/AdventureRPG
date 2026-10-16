@@ -21,6 +21,7 @@ public class RuntimeSetting {
     public static final String PASS_PRECIPITATION = "Precipitation";
     public static final String PASS_UNDERWATER = "Underwater";
     public static final String PASS_SQUINT = "Squint";
+    public static final String PASS_VITALITY = "Vitality";
     public static final String PASS_POST_PREFILTER = "PostPrefilter";
     public static final String PASS_POST_BLUR = "PostBlur";
     public static final String PASS_POST_COMPOSITE = "PostComposite";
@@ -36,6 +37,7 @@ public class RuntimeSetting {
     public static final String FBO_INVENTORY = "InventoryScene";
     public static final String FBO_WATER = "WaterScene";
     public static final String FBO_SQUINT = "SquintScene";
+    public static final String FBO_VITALITY = "VitalityScene";
     public static final String FBO_POST_SCENE = "PostScene";
     public static final String FBO_POST_PREFILTER = "PostPrefilterScene";
     public static final String FBO_POST_BLUR = "PostBlurScene";
@@ -48,6 +50,7 @@ public class RuntimeSetting {
     public static final int LAYER_WATER = 1;
     public static final int LAYER_PRECIPITATION = 5;
     public static final int LAYER_SQUINT = 7;
+    public static final int LAYER_VITALITY = 8;
     public static final int LAYER_UI = 10;
     public static final int LAYER_INVENTORY = 15;
 
@@ -78,6 +81,18 @@ public class RuntimeSetting {
     public static final float SQUINT_CLOSE_RATE = 6f;
     public static final float SQUINT_OPEN_RATE = 2.5f;
     public static final float SQUINT_VISIBLE_THRESHOLD = 0.005f;
+
+    // Vitality — the darkness closes in below a share of health, easing in toward death; it, the veins of bleeding
+    // and the level-up glow each follow their targets at their own rates, and nothing is drawn below a threshold
+    public static final String UNIFORM_VITALITY = "u_vitality";
+    public static final String UNIFORM_VITALITY_GLOW_COLOR = "u_glowColor";
+    public static final float VITALITY_BLEED_RATE = 3f;
+    public static final float VITALITY_DARKNESS_EASE = 1.25f;
+    public static final float VITALITY_DARKNESS_RATE = 4f;
+    public static final float VITALITY_DARKNESS_START = 0.7f;
+    public static final float VITALITY_GLOW_SECONDS = 2.2f;
+    public static final float VITALITY_TIME_PERIOD = 1000f;
+    public static final float VITALITY_VISIBLE_THRESHOLD = 0.005f;
 
     // Deferred Attachments
     public static final String ATTACHMENT_ALBEDO = "albedo";
@@ -153,7 +168,10 @@ public class RuntimeSetting {
     public static final String MENU_CREATOR_SWATCH_ROW = "CharacterCreator/swatch_row";
     public static final String MENU_CREATOR_SWATCH = "CharacterCreator/swatch";
     public static final String MENU_CREATOR_SLIDER_ROW = "CharacterCreator/slider_row";
-    public static final String MENU_CREATOR_PLACEHOLDER = "CharacterCreator/placeholder_note";
+    public static final String MENU_CREATOR_ATTRIBUTE_ROW = "CharacterCreator/attribute_row";
+    public static final String MENU_CREATOR_PROFESSION_ROW = "CharacterCreator/profession_row";
+    public static final String MENU_CREATOR_GENDER_ROW = "CharacterCreator/gender_row";
+    public static final String MENU_CREATOR_DETAIL_LINE = "CharacterCreator/detail_line";
     public static final String MENU_CREATOR_STAT_ROW = "CharacterCreator/stat_row";
 
     // Character Creator Entry Points
@@ -174,8 +192,6 @@ public class RuntimeSetting {
     public static final String ELEMENT_CREATOR_SLIDER_KNOB = "slider_knob";
     public static final String ELEMENT_CREATOR_SLIDER_LABEL = "slider_label";
     public static final String ELEMENT_CREATOR_SLIDER_VALUE = "slider_value";
-    public static final String ELEMENT_CREATOR_PLACEHOLDER_TITLE = "placeholder_title";
-    public static final String ELEMENT_CREATOR_PLACEHOLDER_TEXT = "placeholder_text";
     public static final String ELEMENT_CREATOR_STAT_NAME = "stat_name";
     public static final String ELEMENT_CREATOR_STAT_VALUE = "stat_value";
 
@@ -183,12 +199,8 @@ public class RuntimeSetting {
     public static final String CREATOR_TAB_APPEARANCE = "Appearance";
     public static final String CREATOR_TAB_HAIR = "Hair";
     public static final String CREATOR_TAB_BODY = "Body";
-    public static final String CREATOR_TAB_CLASS = "Class";
+    public static final String CREATOR_TAB_ATTRIBUTES = "Attributes";
     public static final String CREATOR_TAB_PROFESSION = "Profession";
-    public static final String CREATOR_TAB_SKILLS = "Skills";
-    public static final String CREATOR_PLACEHOLDER_CLASS = "Your calling will be chosen here.";
-    public static final String CREATOR_PLACEHOLDER_PROFESSION = "Your trade will be chosen here.";
-    public static final String CREATOR_PLACEHOLDER_SKILLS = "Your starting skills will be chosen here.";
 
     // Character Creator Sections
     public static final String CREATOR_SECTION_FEATURES = "Features";
@@ -197,6 +209,12 @@ public class RuntimeSetting {
     public static final String CREATOR_SECTION_HAIR_COLOR = "Hair Color";
     public static final String CREATOR_SECTION_BUILD = "Build";
     public static final String CREATOR_SECTION_HEAD_SHAPE = "Head Shape";
+    public static final String CREATOR_SECTION_GENDER = "Gender";
+    public static final String CREATOR_SECTION_PROFESSION = "Start Out As";
+    public static final String CREATOR_FORMAT_POINTS = "Points to spend: %d  -  at most %d in each";
+    public static final String CREATOR_FORMAT_STAT_BONUS = "%s  %+.0f%%";
+    public static final String CREATOR_FORMAT_TRADE_LEARNING = "Learns %s  x%.2f";
+    public static final String CREATOR_FORMAT_STARTING_TRADE = "Starts with %s  %.0f";
     public static final String CREATOR_FEATURE_NONE = "None";
     public static final String CREATOR_FEATURE_PATH_SEPARATOR = "/";
     public static final String CREATOR_WORD_BOUNDARY_PATTERN = "(?<=[a-z])(?=[A-Z])";
@@ -233,11 +251,6 @@ public class RuntimeSetting {
     public static final Color CREATOR_TAB_ACTIVE_LABEL_COLOR = new Color(0.463f, 0.086f, 0.071f, 1f);
     public static final Color CREATOR_SWATCH_SELECTED_COLOR = new Color(1f, 0.84f, 0.42f, 1f);
     public static final Color CREATOR_SWATCH_UNSELECTED_COLOR = new Color(1f, 1f, 1f, 0f);
-
-    // Character Creator Stats
-    public static final String[] CREATOR_STAT_NAMES = {
-            "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma" };
-    public static final String CREATOR_STAT_PLACEHOLDER_VALUE = "10";
 
     // Settings Menus
     public static final String MENU_SETTINGS = "Settings/Settings";
@@ -441,7 +454,13 @@ public class RuntimeSetting {
     public static final String INVENTORY_FORMAT_LOAD = "%.1f / %.0f kg";
     public static final String INVENTORY_FORMAT_STAT = "%.0f";
     public static final String INVENTORY_FORMAT_STAT_BONUS = "%.0f (%+.0f)";
-    public static final String INVENTORY_FORMAT_ITEM_STAT = "%s %+.0f";
+    public static final String INVENTORY_FORMAT_ITEM_STAT = "%s  %s";
+    public static final String INVENTORY_FORMAT_ITEM_BONUS = "%s  %s  (rolled)";
+    public static final String INVENTORY_FORMAT_ITEM_TIER = "%s tier";
+    public static final String INVENTORY_FORMAT_ITEM_LEVEL = "Level %d";
+    public static final String INVENTORY_FORMAT_ITEM_LEVEL_LOCKED = "Level %d  -  wield at level %d";
+    public static final String INVENTORY_FORMAT_ITEM_CONDITION = "Condition %.0f%%  -  %s";
+    public static final String INVENTORY_FORMAT_ITEM_SKILL = "Trains %s";
     public static final String INVENTORY_FORMAT_ITEM_KIND = "%s  -  %s";
     public static final String INVENTORY_FORMAT_ITEM_SPACE = "Holds %d x %d x %d";
     public static final String INVENTORY_FORMAT_ITEM_SIZE = "Size %d x %d x %d";
@@ -458,11 +477,95 @@ public class RuntimeSetting {
     public static final String INVENTORY_TEXT_NO_SELECTION = "Point at an item to see it.";
     public static final String INVENTORY_TEXT_SHOW_LIST = "Show List";
     public static final String INVENTORY_TEXT_HIDE_LIST = "Hide List";
+    public static final String INVENTORY_STAT_SECTION_CHARACTER = "Character";
     public static final String INVENTORY_STAT_SECTION_ATTRIBUTES = "Attributes";
-    public static final String INVENTORY_STAT_SECTION_COMBAT = "Combat";
+    public static final String INVENTORY_STAT_SECTION_COMBAT = "Stats";
+    public static final String INVENTORY_STAT_LEVEL = "Level";
+    public static final String INVENTORY_STAT_EXPERIENCE = "Experience";
+    public static final String INVENTORY_STAT_PROFESSION = "Profession";
+    public static final String INVENTORY_STAT_UNSPENT = "Points to Spend";
     public static final String INVENTORY_STAT_SECTION_LOAD = "Load";
     public static final String INVENTORY_STAT_CARRIED = "Carried";
     public static final String INVENTORY_STAT_ITEMS_WORN = "Items Worn";
+
+    // Character Sheet Menus
+    public static final String MENU_CHARACTER = "Character/Sheet";
+    public static final String MENU_CHARACTER_TAB = "Character/sheet_tab";
+    public static final String MENU_CHARACTER_SECTION_HEADER = "Character/section_header";
+    public static final String MENU_CHARACTER_SUMMARY_ROW = "Character/summary_row";
+    public static final String MENU_CHARACTER_VALUE_ROW = "Character/value_row";
+    public static final String MENU_CHARACTER_ATTRIBUTE_ROW = "Character/attribute_row";
+    public static final String MENU_CHARACTER_PROFESSION_ROW = "Character/profession_row";
+
+    // Character Sheet Entry Points
+    public static final int ENTRY_CHARACTER_TABS = 0;
+    public static final int ENTRY_CHARACTER_OPTIONS = 1;
+    public static final int ENTRY_CHARACTER_SUMMARY = 2;
+    public static final int ENTRY_CHARACTER_NOTICE = 3;
+
+    // Character Sheet Elements
+    public static final String ELEMENT_CHARACTER_TAB_LABEL = "tab_label";
+    public static final String ELEMENT_CHARACTER_ROW_NAME = "row_name";
+    public static final String ELEMENT_CHARACTER_ROW_VALUE = "row_value";
+    public static final String ELEMENT_CHARACTER_ROW_NOTE = "row_note";
+    public static final String ELEMENT_CHARACTER_ROW_LOWER = "row_lower";
+    public static final String ELEMENT_CHARACTER_ROW_RAISE = "row_raise";
+
+    // Character Sheet Text
+    public static final String CHARACTER_TAB_ATTRIBUTES = "Attributes";
+    public static final String CHARACTER_TAB_TRADES = "Trades";
+    public static final String CHARACTER_TAB_SKILLS = "Skills";
+    public static final String CHARACTER_TAB_PROFESSION = "Profession";
+    public static final String CHARACTER_SECTION_STATS = "Stats";
+    public static final String CHARACTER_SECTION_SKILLS = "Skills";
+    public static final String CHARACTER_SUMMARY_LEVEL = "Level";
+    public static final String CHARACTER_SUMMARY_EXPERIENCE = "Experience";
+    public static final String CHARACTER_SUMMARY_PROFESSION = "Profession";
+    public static final String CHARACTER_SUMMARY_GENDER = "Gender";
+    public static final String CHARACTER_SUMMARY_MORALITY = "Morality";
+    public static final String CHARACTER_SUMMARY_POINTS = "Points to Spend";
+    public static final String CHARACTER_PROFESSION_ACTIVE = "Active";
+    public static final String CHARACTER_PROFESSION_UNLOCKED = "Unlocked";
+    public static final String CHARACTER_PROFESSION_LOCKED = "Locked";
+    public static final String CHARACTER_FORMAT_POINTS = "Points to spend: %d  -  staged: %d";
+    public static final String CHARACTER_FORMAT_STAGED = "%d  +%d";
+    public static final String CHARACTER_FORMAT_PREVIEW = "%s  >  %s";
+    public static final String CHARACTER_FORMAT_PEAK = "peak %s";
+    public static final String CHARACTER_FORMAT_EFFECTIVE = "with trades %s";
+    public static final String CHARACTER_FORMAT_WAY = "Way %d";
+    public static final String CHARACTER_FORMAT_REQUIRE_LEVEL = "Level %d";
+    public static final String CHARACTER_FORMAT_REQUIRE_PROFICIENCY = "%s %d";
+    public static final String CHARACTER_FORMAT_REQUIRE_DEED = "%s  x%d";
+    public static final String CHARACTER_FORMAT_REQUIRE_PROFESSION = "Unlocked %s";
+    public static final String CHARACTER_FORMAT_REQUIRE_MORALITY_MIN = "Morality %d or more";
+    public static final String CHARACTER_FORMAT_REQUIRE_MORALITY_MAX = "Morality %d or less";
+    public static final String CHARACTER_FORMAT_REQUIRE_MORALITY_RANGE = "Morality %d to %d";
+    public static final String CHARACTER_FORMAT_SWITCHED = "You are now a %s.";
+    public static final String CHARACTER_TEXT_REQUIRE_GRANTED = "Granted in the world";
+    public static final String CHARACTER_TEXT_YES = "Yes";
+    public static final String CHARACTER_TEXT_NO = "No";
+    public static final String CHARACTER_TEXT_NONE = "";
+    public static final String CHARACTER_TEXT_NOTHING_STAGED = "Stage points with + first.";
+    public static final String CHARACTER_TEXT_CONFIRM_WARNING = "Spent points are for good. Confirm again to spend.";
+    public static final String CHARACTER_TEXT_CONFIRMED = "Points spent.";
+
+    // Character Sheet Colors
+    public static final Color CHARACTER_TAB_ACTIVE_COLOR = new Color(1f, 1f, 1f, 1f);
+    public static final Color CHARACTER_TAB_ACTIVE_LABEL_COLOR = new Color(0.463f, 0.086f, 0.071f, 1f);
+    public static final Color CHARACTER_INEPT_COLOR = new Color(0.62f, 0.12f, 0.08f, 1f);
+    public static final Color CHARACTER_MET_COLOR = new Color(0.18f, 0.42f, 0.14f, 1f);
+
+    // Progression Text — how stats, experience, morality and condition read on any screen
+    public static final float[] PROGRESSION_CONDITION_THRESHOLDS = { 0.9f, 0.6f, 0.3f };
+    public static final String[] PROGRESSION_CONDITION_WORDS = { "New", "Used", "Worn", "Old" };
+    public static final String PROGRESSION_FORMAT_DECIMAL = "%.2f";
+    public static final String PROGRESSION_FORMAT_EXPERIENCE = "%.0f / %.0f";
+    public static final String PROGRESSION_FORMAT_PERCENT = "%.1f%%";
+    public static final String PROGRESSION_FORMAT_WHOLE = "%.0f";
+    public static final float[] PROGRESSION_MORALITY_THRESHOLDS = { -0.6f, -0.3f, -0.1f, 0.1f, 0.3f, 0.6f };
+    public static final String[] PROGRESSION_MORALITY_WORDS = {
+            "Villainous", "Wicked", "Dishonest", "Neutral", "Decent", "Virtuous", "Saintly" };
+    public static final String PROGRESSION_TEXT_NO_PROFESSION = "None";
 
     // Inventory View
     public static final float INVENTORY_VIEW_DEFAULT_YAW_DEGREES = 0f;
@@ -497,9 +600,20 @@ public class RuntimeSetting {
     public static final String UNIFORM_INVENTORY_MODEL = "u_model";
     public static final String UNIFORM_INVENTORY_TINT = "u_tint";
 
+    // Inventory Frames — the material and mesh tier frames draw with, how far back behind the icons they sit as a
+    // share of the depth range, and the period their running time wraps at
+    public static final float INVENTORY_FRAME_DEPTH_SHARE = 0.98f;
+    public static final float INVENTORY_FRAME_TIME_PERIOD = 1000f;
+    public static final String MATERIAL_INVENTORY_FRAME = "items/TierFrameMaterial";
+    public static final String MESH_INVENTORY_FRAME = "util/BlitMesh";
+    public static final String UNIFORM_FRAME_COLOR = "u_frameColor";
+    public static final String UNIFORM_FRAME_EFFECTS = "u_frameEffects";
+    public static final String UNIFORM_FRAME_MOTION = "u_frameMotion";
+
     // Inventory Colors
     public static final Color INVENTORY_EYE_SHOWN_COLOR = new Color(1f, 1f, 1f, 1f);
     public static final Color INVENTORY_EYE_HIDDEN_COLOR = new Color(1f, 1f, 1f, 0f);
+    public static final Color INVENTORY_LOCKED_COLOR = new Color(1f, 0.45f, 0.36f, 1f);
     public static final Vector4 INVENTORY_TINT_NONE = new Vector4(1f, 1f, 1f, 0f);
     public static final Vector4 INVENTORY_TINT_HIDDEN = new Vector4(0.35f, 0.35f, 0.35f, 0.55f);
     public static final Vector4 INVENTORY_TINT_VALID = new Vector4(0.45f, 1f, 0.5f, 0.45f);

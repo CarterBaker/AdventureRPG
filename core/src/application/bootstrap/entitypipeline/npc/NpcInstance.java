@@ -11,11 +11,12 @@ public class NpcInstance extends InstancePackage {
     /*
      * One NPC living in the world, spawned by NpcManager: its definition, the
      * entity it walks as, the chunk it lives in and the world spawn it came
-     * from, which its fall takes out of that spawn's palette so the spot
-     * stays empty. Home is the middle of the block its spot names, local to
-     * its home chunk. It walks to targets about home, measured in the same
-     * frame, idles between walks, and counts how long a walk has gone on so
-     * one it cannot finish is given up.
+     * from, which its fall takes out of that spawn's palette so the spot stays
+     * empty. Home is the middle of the block its spot names, local to its home
+     * chunk. It walks to targets about home, measured in the same frame, idles
+     * between walks, and counts how long a walk has gone on so one it cannot
+     * finish is given up. A fallen NPC remembers what felled it, whose luck
+     * its loot is drawn by.
      */
 
     // Internal
@@ -36,6 +37,7 @@ public class NpcInstance extends InstancePackage {
 
     // State
     private boolean fallen;
+    private EntityInstance killer;
 
     // Internal \\
 
@@ -150,6 +152,14 @@ public class NpcInstance extends InstancePackage {
 
     public boolean isFallen() {
         return fallen;
+    }
+
+    public EntityInstance getKiller() {
+        return killer;
+    }
+
+    public void setKiller(EntityInstance killer) {
+        this.killer = killer;
     }
 
     public void setFallen(boolean fallen) {

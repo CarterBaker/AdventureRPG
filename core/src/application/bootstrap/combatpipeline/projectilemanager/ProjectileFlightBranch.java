@@ -5,10 +5,13 @@ import application.bootstrap.combatpipeline.projectile.ProjectileInstance;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.itempipeline.item.ItemInstance;
-import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.physicspipeline.util.SubBlockSampleUtility;
+import application.bootstrap.progressionpipeline.damagetypemanager.DamageTypeManager;
+import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
+import application.bootstrap.progressionpipeline.skillmanager.SkillManager;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCastStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
@@ -31,15 +34,17 @@ class ProjectileFlightBranch extends BranchPackage {
      * far heavier in liquid — and a tumble about its spin axis. Its path is
      * swept against solid sub-blocks, against the solid sub-voxels and cargo
      * of every vehicle, and against every entity but its thrower; the first
-     * entity in reach takes the item's thrown damage, once, and knocks it
-     * back. A hard enough hit breaks the block it meets through
-     * ProjectileImpactBranch and it flies on, slowed by the break; otherwise
-     * a block face reflects it with restitution and friction, and a
-     * slow enough fall onto the top of a block brings it to rest there; a
-     * vehicle's face does the same as the vehicle moves under it, and a slow
-     * enough fall onto its deck rests it on that vehicle.
-     * A projectile still airborne past the flight limit rests where it is. Its
-     * chunk must stay loaded; while it is not, the projectile waits.
+     * entity in reach takes the item's thrown damage — its damage read at the
+     * thrower's level, plus the momentum it carries — once, as a blunt blow
+     * from its thrower, knocks it back and trains the thrower's thrown skill.
+     * A hard enough hit breaks the block it meets through
+     * ProjectileImpactBranch and it flies on, slowed by the break; otherwise a
+     * block face reflects it with restitution and friction, and a slow enough
+     * fall onto the top of a block brings it to rest there; a vehicle's face
+     * does the same as the vehicle moves under it, and a slow enough fall onto
+     * its deck rests it on that vehicle. A projectile still airborne past the
+     * flight limit rests where it is. Its chunk must stay loaded; while it is
+     * not, the projectile waits.
      */
 
     // Internal
@@ -49,6 +54,13 @@ class ProjectileFlightBranch extends BranchPackage {
     private CombatManager combatManager;
     private VehicleCargoSystem vehicleCargoSystem;
     private ProjectileImpactBranch projectileImpactBranch;
+    private ProgressionManager progressionManager;
+    private StatManager statManager;
+    private SkillManager skillManager;
+    private DamageTypeManager damageTypeManager;
+
+    // Skills
+    private short thrownSkillID;
 
     // Scratch
     private BlockCastStruct castStruct;
@@ -84,6 +96,17 @@ class ProjectileFlightBranch extends BranchPackage {
         this.combatManager = get(CombatManager.class);
         this.vehicleCargoSystem = get(VehicleCargoSystem.class);
         this.projectileImpactBranch = get(ProjectileImpactBranch.class);
+        this.progressionManager = get(ProgressionManager.class);
+        this.statManager = get(StatManager.class);
+        this.skillManager = get(SkillManager.class);
+        this.damageTypeManager = get(DamageTypeManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Skills
+        this.thrownSkillID = skillManager.getSkillIDFromSkillName(EngineSetting.SKILL_THROWN);
     }
 
     // Step \\
@@ -298,8 +321,14 @@ class ProjectileFlightBranch extends BranchPackage {
         if (target == null)
             return;
 
-        combatManager.damage(target, resolveDamage(projectile, speed), direction);
+        EntityInstance thrower = projectile.getThrower();
+
+        combatManager.damage(
+                thrower, target, resolveDamage(projectile, speed), damageTypeManager.getBluntDamageTypeID(), direction);
         projectile.markStruck();
+
+        if (thrower != null)
+            progressionManager.practiceSkill(thrower, thrownSkillID, EngineSetting.SKILL_PRACTICE_PER_THROW);
 
         Vector3 velocity = projectile.getVelocity();
         velocity.set(
@@ -308,14 +337,16 @@ class ProjectileFlightBranch extends BranchPackage {
                 -velocity.z * EngineSetting.PROJECTILE_STRIKE_REBOUND);
     }
 
-    // The item's own damage plus the momentum it carries
+    // The item's own damage read at its thrower's level, plus the momentum it carries
     private float resolveDamage(ProjectileInstance projectile, float speed) {
 
         ItemInstance itemInstance = projectile.getItemInstance();
+        EntityInstance thrower = projectile.getThrower();
+        int level = thrower != null ? thrower.getLevel() : itemInstance.getLevel();
         float momentumDamage = itemInstance.getTotalWeight() * speed * EngineSetting.THROWN_DAMAGE_PER_MOMENTUM;
 
         return Math.max(
                 EngineSetting.THROWN_DAMAGE_MIN,
-                itemInstance.getItemDefinitionHandle().getStat(ItemStat.DAMAGE) + momentumDamage);
+                progressionManager.getItemStat(itemInstance, statManager.getDamageStatID(), level) + momentumDamage);
     }
 }

@@ -16,10 +16,13 @@ import application.bootstrap.itempipeline.itemdefinition.ItemCategory;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionData;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
-import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
+import application.bootstrap.progressionpipeline.skillmanager.SkillManager;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
+import application.bootstrap.progressionpipeline.util.ProgressionArpgUtility;
+import application.bootstrap.progressionpipeline.util.ValueMapStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
@@ -37,37 +40,38 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class ItemDefinitionBuilder extends BuilderPackage {
 
     /*
-     * Parses item definition ARPG files and builds ItemDefinitionHandle instances.
-     * Each ARPG file may contain multiple item entries under an 'items' array.
-     * Resolves mesh and material references from their respective managers,
-     * and reads the item's mesh file through SubVoxelManager — every item mesh
-     * must be a sub-voxel model. The shape an item claims in a container and
-     * in the world is the boxes its 'space' lists inside that model's grid, or
-     * the model's own cubes and walls when it lists none. That grid spans as
-     * many blocks as the model does, so furniture claims its full size. A
-     * container's model spans one block, and its space
-     * either lies inside that model at an offset, clear of its cubes, or is a
-     * pocket shown as its own box of walls; either must name the parts of its
-     * lid, left off its model while it stands open. The lid's clearance — the
-     * cells that must be empty before it opens — is the boxes the container's
-     * 'clearance' lists, or when it lists none the space the lid swings
-     * through: the cells over its upper surface, as high as the lid is short
-     * across, so a block or an item anywhere in its way keeps it shut. An item
-     * without a display name is titled from its local name split into words.
-     * A tool names its tool type, whose model it is drawn with unless it names
-     * its own mesh, and the highest break tier it can break. A weapon names the
-     * moveset it is wielded with, loaded on demand. A stackable item
-     * holds up to its stack size in one item, which a container cannot. An
-     * item's "actions" each name a "trigger", optionally the item held "with"
-     * it, whether it "consumes" one of that, and the model "parts" it must be
-     * aimed at, and the item it "becomes"; one may "fire" an item from a
-     * "muzzle" in model sub-voxels along an "aim" at a "speed". "pick_up_as"
-     * names the item it is picked up as, and "plants" the tree a seed grows
-     * into. "sows" names the covering an item lays over the block it is used
-     * on and "nurtures" the levels it adds there, which a sower must name; an
-     * item that only nurtures feeds whatever already covers the block. A
-     * container carries no actions, so its contents are never lost.
-     * Bootstrap-only.
+     * Parses item definition ARPG files and builds ItemDefinitionHandle
+     * instances. Each ARPG file may contain multiple item entries under an
+     * 'items' array. Resolves mesh and material references from their
+     * respective managers, and reads the item's mesh file through
+     * SubVoxelManager — every item mesh must be a sub-voxel model. The shape
+     * an item claims in a container and in the world is the boxes its 'space'
+     * lists inside that model's grid, or the model's own cubes and walls when
+     * it lists none. That grid spans as many blocks as the model does, so
+     * furniture claims its full size. A container's model spans one block, and
+     * its space either lies inside that model at an offset, clear of its
+     * cubes, or is a pocket shown as its own box of walls; either must name
+     * the parts of its lid, left off its model while it stands open. The lid's
+     * clearance — the cells that must be empty before it opens — is the boxes
+     * the container's 'clearance' lists, or when it lists none the space the
+     * lid swings through: the cells over its upper surface, as high as the lid
+     * is short across, so a block or an item anywhere in its way keeps it
+     * shut. An item without a display name is titled from its local name split
+     * into words. A tool names its tool type, whose model it is drawn with
+     * unless it names its own mesh, and the highest break tier it can break. A
+     * weapon names the moveset it is wielded with, loaded on demand. "stats"
+     * names what the item grants from the stat registry, and "skill" the skill
+     * its use trains. A stackable item holds up to its stack size in one item,
+     * which a container cannot. An item's "actions" each name a "trigger",
+     * optionally the item held "with" it, whether it "consumes" one of that,
+     * and the model "parts" it must be aimed at, and the item it "becomes";
+     * one may "fire" an item from a "muzzle" in model sub-voxels along an
+     * "aim" at a "speed". "pick_up_as" names the item it is picked up as, and
+     * "plants" the tree a seed grows into. "sows" names the covering an item
+     * lays over the block it is used on and "nurtures" the levels it adds
+     * there, which a sower must name; an item that only nurtures feeds
+     * whatever already covers the block. A container carries no actions, so
+     * its contents are never lost. Bootstrap-only.
      */
 
     // Internal
@@ -78,6 +82,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private ToolTypeManager toolTypeManager;
     private MovesetManager movesetManager;
     private CoveringManager coveringManager;
+    private StatManager statManager;
+    private SkillManager skillManager;
 
     // Directory
     private File meshRoot;
@@ -102,6 +108,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
         this.toolTypeManager = get(ToolTypeManager.class);
         this.movesetManager = get(MovesetManager.class);
         this.coveringManager = get(CoveringManager.class);
+        this.statManager = get(StatManager.class);
+        this.skillManager = get(SkillManager.class);
     }
 
     // Build \\
@@ -144,11 +152,13 @@ class ItemDefinitionBuilder extends BuilderPackage {
         boolean solid = ArpgUtility.getBoolean(itemArpg, "solid", true);
 
         EquipmentType equipmentType = ArpgUtility.getEnum(itemArpg, "equip", EquipmentType.class, EquipmentType.NONE);
-        float[] stats = parseStats(itemArpg);
+        ValueMapStruct stats = ProgressionArpgUtility.parseValueMap(
+                itemArpg, "stats", statManager::getStatIDFromStatName, "Item '" + itemName + "'");
 
         short toolTypeID = parseToolType(itemArpg);
         int toolTier = parseToolTier(itemArpg, toolTypeID, itemName);
         short movesetID = parseMoveset(itemArpg);
+        short skillID = parseSkill(itemArpg);
         int stackSize = parseStackSize(itemArpg, itemName);
 
         String meshPath = resolveMeshPath(itemArpg, toolTypeID, itemName);
@@ -201,6 +211,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 toolTypeID,
                 toolTier,
                 movesetID,
+                skillID,
                 stackSize,
                 EngineSetting.BLOCK_PIECE_NONE,
                 actions,
@@ -215,19 +226,11 @@ class ItemDefinitionBuilder extends BuilderPackage {
         return item;
     }
 
-    private float[] parseStats(ArpgObjectStruct itemArpg) {
+    private short parseSkill(ArpgObjectStruct itemArpg) {
 
-        float[] stats = new float[ItemStat.VALUES.length];
+        String skillName = ArpgUtility.getString(itemArpg, "skill", EngineSetting.ITEM_SKILL_NONE);
 
-        if (!ArpgUtility.hasObject(itemArpg, "stats"))
-            return stats;
-
-        ArpgObjectStruct statsArpg = itemArpg.getAsObject("stats");
-
-        for (String statName : statsArpg.keySet())
-            stats[ArpgUtility.toEnum(statName, ItemStat.class).ordinal()] = statsArpg.get(statName).getAsFloat();
-
-        return stats;
+        return skillName.isEmpty() ? EngineSetting.SKILL_NONE : skillManager.getSkillIDFromSkillName(skillName);
     }
 
     // Coverage \\

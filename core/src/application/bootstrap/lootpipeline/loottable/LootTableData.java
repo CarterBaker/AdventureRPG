@@ -10,8 +10,11 @@ public class LootTableData extends DataPackage {
      * roll may land on, and the running weight totals a roll picks among them
      * with, empty when nothing is rolled for. A table with an empty weight
      * carries one total past its last entry, and a roll landing there yields
-     * nothing. Every roll is salted by the name seed, so a table
-     * draws alike whatever order it loads in.
+     * nothing. Every roll is salted by the name seed, so a table draws alike
+     * whatever order it loads in. Gear a table gives is forged at the level of
+     * whoever it is drawn for, or, for a container found in the world, at a
+     * level drawn from the table's own range, its tier tilted by the table's
+     * bias.
      */
 
     // Identity
@@ -22,6 +25,11 @@ public class LootTableData extends DataPackage {
     // Rolls
     private final int rollsMin;
     private final int rollsMax;
+
+    // Gear
+    private final int levelMin;
+    private final int levelMax;
+    private final float tierBias;
 
     // Table
     private final LootEntryStruct[] guaranteedEntries;
@@ -36,6 +44,9 @@ public class LootTableData extends DataPackage {
             int nameSeed,
             int rollsMin,
             int rollsMax,
+            int levelMin,
+            int levelMax,
+            float tierBias,
             LootEntryStruct[] guaranteedEntries,
             LootEntryStruct[] entries,
             float[] cumulativeWeights) {
@@ -48,6 +59,11 @@ public class LootTableData extends DataPackage {
         // Rolls
         this.rollsMin = rollsMin;
         this.rollsMax = rollsMax;
+
+        // Gear
+        this.levelMin = levelMin;
+        this.levelMax = levelMax;
+        this.tierBias = tierBias;
 
         // Table
         this.guaranteedEntries = guaranteedEntries;
@@ -75,6 +91,18 @@ public class LootTableData extends DataPackage {
 
     public int getRollsMax() {
         return rollsMax;
+    }
+
+    public int getLevelMin() {
+        return levelMin;
+    }
+
+    public int getLevelMax() {
+        return levelMax;
+    }
+
+    public float getTierBias() {
+        return tierBias;
     }
 
     public LootEntryStruct[] getGuaranteedEntries() {

@@ -4,6 +4,9 @@ This is a custom, unconventional Java engine built on LWJGL. It has its own life
 hierarchy (see `README.md`). Do not apply generic Java, Spring, libGDX, or "standard game engine" patterns.
 When in doubt, find the closest existing system and mirror it exactly.
 
+Before touching levels, stats, gear, trades, skills, professions, morality or health, read
+`core/src/application/bootstrap/progressionpipeline/CLAUDE.md` (design: `docs/Progression.md`).
+
 ---
 
 ## Non-Negotiables

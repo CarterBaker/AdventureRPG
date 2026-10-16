@@ -6,7 +6,7 @@ import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import application.bootstrap.itempipeline.item.ItemInstance;
-import application.bootstrap.itempipeline.itemdefinition.ItemStat;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.quaternions.Quaternion;
@@ -16,10 +16,10 @@ import engine.util.mathematics.vectors.Vector3;
 class ThrowBranch extends BranchPackage {
 
     /*
-     * Lets a held item fly for CombatManager at the moment a throw releases.
-     * A stack throws one at a time, split off through the inventory. The
-     * throw is an impulse: the item leaves at a speed set by the thrower's
-     * strength over the item's mass plus the arm's own, adds the thrower's
+     * Lets a held item fly for CombatManager at the moment a throw releases. A
+     * stack throws one at a time, split off through the inventory. The throw
+     * is an impulse: the item leaves at a speed set by the thrower's throw
+     * power over the item's mass plus the arm's own, adds the thrower's
      * running speed, turns end over end about the throw's horizontal axis —
      * slower the heavier it is — and is handed to ProjectileManager just in
      * front of the eye, short of any block in the way.
@@ -28,6 +28,7 @@ class ThrowBranch extends BranchPackage {
     // Internal
     private PlacementManager placementManager;
     private ProjectileManager projectileManager;
+    private StatManager statManager;
 
     // Scratch
     private Vector3 eyeScratch;
@@ -55,6 +56,7 @@ class ThrowBranch extends BranchPackage {
         // Internal
         this.placementManager = get(PlacementManager.class);
         this.projectileManager = get(ProjectileManager.class);
+        this.statManager = get(StatManager.class);
     }
 
     // Release \\
@@ -94,11 +96,7 @@ class ThrowBranch extends BranchPackage {
     // Impulse over mass, plus the thrower's own run
     private void resolveVelocity(EntityInstance entity, ItemInstance itemInstance) {
 
-        float strength = Math.max(
-                EngineSetting.THROW_STRENGTH_MIN_FACTOR,
-                1f + (entity.getStat(ItemStat.STRENGTH) - EngineSetting.DEFAULT_ATTRIBUTE_VALUE)
-                        * EngineSetting.THROW_STRENGTH_SCALE);
-        float speed = EngineSetting.THROW_IMPULSE * strength
+        float speed = EngineSetting.THROW_IMPULSE * entity.getStat(statManager.getThrowPowerStatID())
                 / (itemInstance.getTotalWeight() + EngineSetting.THROW_ARM_MASS);
         Vector2 run = entity.getEntityStateHandle().getHorizontalVelocity();
 

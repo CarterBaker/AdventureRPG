@@ -6,6 +6,7 @@ import application.bootstrap.entitypipeline.behaviormanager.BehaviorManager;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -20,14 +21,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class EntityManager extends ManagerPackage {
 
     /*
-     * Owns the entity template palette and drives the entity bootstrap pipeline.
-     * Handles on-demand template loading and provides the spawnEntity() factory
-     * for creating runtime EntityInstances from template handles, in a random
-     * chunk of the active world or at a place given, each one entering combat
-     * as it spawns, and despawnEntity(), its mirror, which
-     * takes the entity out of combat and off every vehicle. rerollEntity()
-     * rolls an existing instance again in place — a new random chunk, size,
-     * weight, base statistics, an empty inventory, and the template's default
+     * Owns the entity template palette and drives the entity bootstrap
+     * pipeline. Handles on-demand template loading and provides the
+     * spawnEntity() factory for creating runtime EntityInstances from template
+     * handles, in a random chunk of the active world or at a place given, each
+     * one entering combat and progression as it spawns, starting at the first
+     * level, and despawnEntity(), its mirror, which takes the entity out of
+     * both and off every vehicle. rerollEntity() rolls an existing instance
+     * again in place — a new random chunk, size, weight, progression started
+     * over, an empty inventory, and the template's default gender and
      * appearance — for anything that holds the instance by reference and
      * cannot swap in a new one.
      */
@@ -37,6 +39,7 @@ public class EntityManager extends ManagerPackage {
     private BehaviorManager behaviorManager;
     private CombatManager combatManager;
     private VehicleManager vehicleManager;
+    private ProgressionManager progressionManager;
 
     // Palette
     private Object2IntOpenHashMap<String> templateName2TemplateID;
@@ -61,6 +64,7 @@ public class EntityManager extends ManagerPackage {
         this.behaviorManager = get(BehaviorManager.class);
         this.combatManager = get(CombatManager.class);
         this.vehicleManager = get(VehicleManager.class);
+        this.progressionManager = get(ProgressionManager.class);
     }
 
     // Management \\
@@ -128,6 +132,8 @@ public class EntityManager extends ManagerPackage {
                 entityData.getRandomWeight());
 
         combatManager.addCombatant(entityInstance);
+        progressionManager.addBeing(entityInstance);
+        progressionManager.resetBeing(entityInstance, EngineSetting.IDENTITY_NONE);
 
         return entityInstance;
     }
@@ -138,6 +144,7 @@ public class EntityManager extends ManagerPackage {
 
     public void despawnEntity(EntityInstance entityInstance) {
         combatManager.removeCombatant(entityInstance);
+        progressionManager.removeBeing(entityInstance);
         vehicleManager.releaseEntity(entityInstance);
     }
 
@@ -150,9 +157,10 @@ public class EntityManager extends ManagerPackage {
         entityInstance.setSize(entityData.getRandomSize());
         entityInstance.setWeight(entityData.getRandomWeight());
 
-        entityInstance.getStatisticsHandle().resetBaseStats();
+        entityInstance.setGenderID(entityData.getDefaultGenderID());
         entityInstance.getInventoryHandle().clear();
         entityInstance.getEntityActionHandle().release();
+        progressionManager.resetBeing(entityInstance, EngineSetting.IDENTITY_NONE);
 
         if (entityInstance.hasAppearance())
             entityInstance.getAppearanceHandle().resetToDefaults();

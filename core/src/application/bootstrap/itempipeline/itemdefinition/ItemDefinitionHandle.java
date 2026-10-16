@@ -2,6 +2,7 @@ package application.bootstrap.itempipeline.itemdefinition;
 
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.progressionpipeline.util.ValueMapStruct;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -78,8 +79,16 @@ public class ItemDefinitionHandle extends HandlePackage {
         return itemDefinitionData.getEquipmentType();
     }
 
-    public float getStat(ItemStat itemStat) {
-        return itemDefinitionData.getStat(itemStat);
+    public float getStat(short statID) {
+        return itemDefinitionData.getStat(statID);
+    }
+
+    public ValueMapStruct getStats() {
+        return itemDefinitionData.getStats();
+    }
+
+    public boolean isGear() {
+        return itemDefinitionData.isGear();
     }
 
     public ItemShapeStruct getShape() {
@@ -132,6 +141,14 @@ public class ItemDefinitionHandle extends HandlePackage {
 
     public boolean hasMoveset() {
         return itemDefinitionData.hasMoveset();
+    }
+
+    public short getSkillID() {
+        return itemDefinitionData.getSkillID();
+    }
+
+    public boolean hasSkill() {
+        return itemDefinitionData.hasSkill();
     }
 
     public int getStackSize() {

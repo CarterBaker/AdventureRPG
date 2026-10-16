@@ -8,7 +8,6 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.EquipmentType;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
-import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
@@ -16,8 +15,18 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.progressionpipeline.attribute.AttributeHandle;
+import application.bootstrap.progressionpipeline.attributemanager.AttributeManager;
+import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
+import application.bootstrap.progressionpipeline.skillmanager.SkillManager;
+import application.bootstrap.progressionpipeline.stat.StatHandle;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
+import application.bootstrap.progressionpipeline.tier.TierHandle;
+import application.bootstrap.progressionpipeline.tiermanager.TierManager;
+import application.bootstrap.progressionpipeline.util.ValueMapStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.menueventsmanager.util.ProgressionDisplayBranch;
 import engine.input.InputNameUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -32,11 +41,14 @@ public class InventoryEquipmentBranch extends BranchPackage {
      * ten ring slots in two rows of five under the preview, and the statistics
      * box beside them. The character faces out of its preview, so the slots
      * for its right side stand in the screen's left column. Every slot but a
-     * ring carries an eye that shows or hides its item on the character.
-     * Slots and statistics are redrawn only when the inventory or the
-     * backpack's contents change; the details under the statistics follow
-     * whatever item the cursor points at. A container opened where it lies
-     * shows no board.
+     * ring carries an eye that shows or hides its item on the character. Slots
+     * are redrawn only when the inventory or the backpack's contents change,
+     * and the statistics — level, experience and profession, every attribute,
+     * every stat the character page shows, and the load carried — only when
+     * the character or its progress through its level does; the details under
+     * the statistics follow whatever item the cursor points at, its name
+     * tinted by its tier, with its level, condition, skill and every stat it
+     * lends at its own level. A container opened where it lies shows no board.
      */
 
     // Slot columns, top to bottom
@@ -49,22 +61,22 @@ public class InventoryEquipmentBranch extends BranchPackage {
             EquipmentSlot.LEFT_SHOULDER, EquipmentSlot.LEFT_ARM, EquipmentSlot.LEFT_GLOVE,
             EquipmentSlot.LEFT_LEG, EquipmentSlot.LEFT_FOOT, EquipmentSlot.OFF_HAND };
 
-    // Statistics, in the order the box lists them
-    private static final ItemStat[] ATTRIBUTE_STATS = {
-            ItemStat.STRENGTH, ItemStat.DEXTERITY, ItemStat.CONSTITUTION,
-            ItemStat.INTELLIGENCE, ItemStat.WISDOM, ItemStat.CHARISMA };
-    private static final ItemStat[] COMBAT_STATS = {
-            ItemStat.HEALTH, ItemStat.STAMINA, ItemStat.ARMOR, ItemStat.DAMAGE };
-
     // Internal
     private MenuManager menuManager;
     private InventoryBranch inventoryBranch;
     private InventoryDragBranch inventoryDragBranch;
     private ToolTypeManager toolTypeManager;
+    private ProgressionManager progressionManager;
+    private AttributeManager attributeManager;
+    private StatManager statManager;
+    private SkillManager skillManager;
+    private TierManager tierManager;
+    private ProgressionDisplayBranch progressionDisplayBranch;
 
     // Colors
     private MenuColorStruct eyeShownColor;
     private MenuColorStruct eyeHiddenColor;
+    private MenuColorStruct lockedColor;
 
     // Layout
     private DimensionVector2Struct fillSize;
@@ -77,6 +89,7 @@ public class InventoryEquipmentBranch extends BranchPackage {
         // Colors
         this.eyeShownColor = new MenuColorStruct(RuntimeSetting.INVENTORY_EYE_SHOWN_COLOR);
         this.eyeHiddenColor = new MenuColorStruct(RuntimeSetting.INVENTORY_EYE_HIDDEN_COLOR);
+        this.lockedColor = new MenuColorStruct(RuntimeSetting.INVENTORY_LOCKED_COLOR);
 
         // Layout
         this.fillSize = new DimensionVector2Struct(
@@ -90,6 +103,12 @@ public class InventoryEquipmentBranch extends BranchPackage {
         this.inventoryBranch = get(InventoryBranch.class);
         this.inventoryDragBranch = get(InventoryDragBranch.class);
         this.toolTypeManager = get(ToolTypeManager.class);
+        this.progressionManager = get(ProgressionManager.class);
+        this.attributeManager = get(AttributeManager.class);
+        this.statManager = get(StatManager.class);
+        this.skillManager = get(SkillManager.class);
+        this.tierManager = get(TierManager.class);
+        this.progressionDisplayBranch = get(ProgressionDisplayBranch.class);
     }
 
     // Populate \\
@@ -159,10 +178,19 @@ public class InventoryEquipmentBranch extends BranchPackage {
                 || contentRevision != session.getShownContentRevision()) {
 
             refreshSlots(session);
-            refreshStats(session);
             session.setShownRevision(inventory.getRevision());
             session.setShownContentRevision(contentRevision);
             session.invalidateDetails();
+        }
+
+        EntityInstance player = session.getPlayer();
+        int statRevision = progressionDisplayBranch.getDisplayRevision(player);
+        double progress = player.getProgressionHandle().getProgress();
+
+        if (statRevision != session.getShownStatRevision() || progress != session.getShownProgress()) {
+            refreshStats(session);
+            session.setShownStatRevision(statRevision);
+            session.setShownProgress(progress);
         }
 
         if (!session.isDetailsShown() || session.getHoveredItem() != session.getDetailedItem())
@@ -227,19 +255,44 @@ public class InventoryEquipmentBranch extends BranchPackage {
 
         menuManager.ejectAll(menu, RuntimeSetting.ENTRY_INVENTORY_STATS);
 
+        injectStatHeader(menu, RuntimeSetting.INVENTORY_STAT_SECTION_CHARACTER);
+        injectStatRow(menu, RuntimeSetting.INVENTORY_STAT_LEVEL, String.valueOf(player.getLevel()));
+        injectStatRow(menu, RuntimeSetting.INVENTORY_STAT_EXPERIENCE,
+                progressionDisplayBranch.formatExperience(player));
+        injectStatRow(menu, RuntimeSetting.INVENTORY_STAT_PROFESSION,
+                progressionDisplayBranch.formatProfession(player));
+
+        if (player.getProgressionHandle().getUnspentPoints() > 0)
+            injectStatRow(menu, RuntimeSetting.INVENTORY_STAT_UNSPENT,
+                    String.valueOf(player.getProgressionHandle().getUnspentPoints()));
+
         injectStatHeader(menu, RuntimeSetting.INVENTORY_STAT_SECTION_ATTRIBUTES);
 
-        for (ItemStat itemStat : ATTRIBUTE_STATS)
-            injectStatRow(menu, itemStat.getTitle(), formatStat(player, itemStat));
+        for (short attributeID = EngineSetting.REGISTRY_RESERVED_ID + 1;
+                attributeID < attributeManager.getAttributeIDCount();
+                attributeID++) {
+
+            AttributeHandle attributeHandle = attributeManager.getAttributeHandleFromAttributeID(attributeID);
+
+            injectStatRow(menu, attributeHandle.getDisplayName(),
+                    String.valueOf(player.getProgressionHandle().getAttribute(attributeID)));
+        }
 
         injectStatHeader(menu, RuntimeSetting.INVENTORY_STAT_SECTION_COMBAT);
 
-        for (ItemStat itemStat : COMBAT_STATS)
-            injectStatRow(menu, itemStat.getTitle(), formatStat(player, itemStat));
+        for (short statID = EngineSetting.REGISTRY_RESERVED_ID + 1; statID < statManager.getStatIDCount(); statID++) {
+
+            StatHandle statHandle = statManager.getStatHandleFromStatID(statID);
+
+            if (statHandle.isShown())
+                injectStatRow(menu, statHandle.getDisplayName(), progressionDisplayBranch.formatStat(player, statID));
+        }
 
         injectStatHeader(menu, RuntimeSetting.INVENTORY_STAT_SECTION_LOAD);
         injectStatRow(menu, RuntimeSetting.INVENTORY_STAT_CARRIED, String.format(
-                RuntimeSetting.INVENTORY_FORMAT_LOAD, inventory.getCarriedWeight(), player.getCarryCapacity()));
+                RuntimeSetting.INVENTORY_FORMAT_LOAD,
+                inventory.getCarriedWeight(),
+                player.getStat(statManager.getCarryCapacityStatID())));
         injectStatRow(menu, RuntimeSetting.INVENTORY_STAT_ITEMS_WORN, String.valueOf(countWorn(inventory)));
     }
 
@@ -256,16 +309,6 @@ public class InventoryEquipmentBranch extends BranchPackage {
                     row.findChildById(RuntimeSetting.ELEMENT_INVENTORY_STAT_NAME).setFontText(name);
                     row.findChildById(RuntimeSetting.ELEMENT_INVENTORY_STAT_VALUE).setFontText(value);
                 });
-    }
-
-    private String formatStat(EntityInstance player, ItemStat itemStat) {
-
-        float bonus = player.getInventoryHandle().getStatBonus(itemStat);
-
-        if (bonus == 0f)
-            return String.format(RuntimeSetting.INVENTORY_FORMAT_STAT, player.getStat(itemStat));
-
-        return String.format(RuntimeSetting.INVENTORY_FORMAT_STAT_BONUS, player.getStat(itemStat), bonus);
     }
 
     private int countWorn(InventoryHandle inventory) {
@@ -296,8 +339,19 @@ public class InventoryEquipmentBranch extends BranchPackage {
         ItemDefinitionHandle item = itemInstance.getItemDefinitionHandle();
         ItemShapeStruct shape = item.getShape();
 
-        injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_TITLE, item.getDisplayName());
+        menuManager.inject(
+                menu, RuntimeSetting.ENTRY_INVENTORY_DETAILS, RuntimeSetting.MENU_INVENTORY_DETAIL_TITLE,
+                title -> {
+                    MenuColorStruct tierColor = progressionDisplayBranch.getTierColor(itemInstance.getTierID());
+                    title.setFontText(item.getDisplayName());
+
+                    if (tierColor != null)
+                        title.setColorOverride(tierColor);
+                });
         injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, toKindText(item));
+
+        if (item.isGear())
+            injectGearDetails(session, itemInstance);
         injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE,
                 String.format(RuntimeSetting.INVENTORY_FORMAT_ITEM_WEIGHT, itemInstance.getTotalWeight()));
         injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
@@ -324,13 +378,64 @@ public class InventoryEquipmentBranch extends BranchPackage {
         if (item.isTwoHanded())
             injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, RuntimeSetting.INVENTORY_TEXT_TWO_HANDED);
 
-        for (ItemStat itemStat : ItemStat.VALUES)
-            if (item.getStat(itemStat) != 0f)
-                injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
-                        RuntimeSetting.INVENTORY_FORMAT_ITEM_STAT, itemStat.getTitle(), item.getStat(itemStat)));
+        ValueMapStruct stats = item.getStats();
+
+        for (int i = 0; i < stats.size(); i++)
+            injectItemStat(menu, itemInstance, stats.getID(i), RuntimeSetting.INVENTORY_FORMAT_ITEM_STAT);
+
+        for (int i = 0; i < itemInstance.getBonusCount(); i++)
+            injectItemStat(
+                    menu, itemInstance, itemInstance.getBonusStatID(i), RuntimeSetting.INVENTORY_FORMAT_ITEM_BONUS);
 
         if (!item.getDescription().isEmpty())
             injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, item.getDescription());
+    }
+
+    // The tier, level and condition of a piece of gear, its level red while the player cannot yet wield it, and the
+    // skill it trains
+    private void injectGearDetails(InventorySessionStruct session, ItemInstance itemInstance) {
+
+        MenuInstance menu = session.getEquipmentMenu();
+        ItemDefinitionHandle item = itemInstance.getItemDefinitionHandle();
+        boolean wieldable = !session.getInventory().isAboveWieldLevel(itemInstance);
+
+        if (itemInstance.getTierID() != EngineSetting.TIER_NONE) {
+
+            TierHandle tierHandle = tierManager.getTierHandleFromTierID(itemInstance.getTierID());
+
+            injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
+                    RuntimeSetting.INVENTORY_FORMAT_ITEM_TIER, tierHandle.getDisplayName()));
+        }
+
+        menuManager.inject(
+                menu, RuntimeSetting.ENTRY_INVENTORY_DETAILS, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE,
+                line -> {
+                    line.setFontText(wieldable
+                            ? String.format(RuntimeSetting.INVENTORY_FORMAT_ITEM_LEVEL, itemInstance.getLevel())
+                            : String.format(
+                                    RuntimeSetting.INVENTORY_FORMAT_ITEM_LEVEL_LOCKED,
+                                    itemInstance.getLevel(),
+                                    progressionManager.getRequiredLevel(itemInstance.getLevel())));
+
+                    if (!wieldable)
+                        line.setColorOverride(lockedColor);
+                });
+        injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
+                RuntimeSetting.INVENTORY_FORMAT_ITEM_CONDITION,
+                itemInstance.getCondition() * EngineSetting.PERCENT_MAX,
+                progressionDisplayBranch.resolveConditionWord(itemInstance.getCondition())));
+
+        if (item.hasSkill())
+            injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
+                    RuntimeSetting.INVENTORY_FORMAT_ITEM_SKILL,
+                    skillManager.getSkillHandleFromSkillID(item.getSkillID()).getDisplayName()));
+    }
+
+    private void injectItemStat(MenuInstance menu, ItemInstance itemInstance, short statID, String format) {
+        injectDetail(menu, RuntimeSetting.MENU_INVENTORY_DETAIL_LINE, String.format(
+                format,
+                statManager.getStatHandleFromStatID(statID).getDisplayName(),
+                progressionDisplayBranch.formatItemStat(itemInstance, statID)));
     }
 
     private void injectDetail(MenuInstance menu, String masterKey, String text) {

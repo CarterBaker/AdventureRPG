@@ -8,9 +8,10 @@ import engine.root.StructPackage;
 public class CreatorSessionStruct extends StructPackage {
 
     /*
-     * One window's open character creator: the creator menu, the menu it
-     * was opened from and returns to, the player being shaped, the tab on
-     * show, and the name being typed with its caret state.
+     * One window's open character creator: the creator menu, the menu it was
+     * opened from and returns to, the player being shaped, the tab on show,
+     * the profession the character will start out in, and the name being typed
+     * with its caret state.
      */
 
     // Menus
@@ -23,6 +24,9 @@ public class CreatorSessionStruct extends StructPackage {
     // Tab
     private CreatorTab activeTab;
 
+    // Profession
+    private short professionID;
+
     // Name
     private final StringBuilder nameBuffer;
     private boolean caretVisible;
@@ -33,6 +37,7 @@ public class CreatorSessionStruct extends StructPackage {
             MenuInstance creatorMenu,
             MenuInstance parentMenu,
             EntityInstance player,
+            short professionID,
             String defaultName) {
 
         // Menus
@@ -41,6 +46,9 @@ public class CreatorSessionStruct extends StructPackage {
 
         // Character
         this.player = player;
+
+        // Profession
+        this.professionID = professionID;
 
         // Name
         this.nameBuffer = new StringBuilder(defaultName);
@@ -70,6 +78,14 @@ public class CreatorSessionStruct extends StructPackage {
 
     public void setActiveTab(CreatorTab activeTab) {
         this.activeTab = activeTab;
+    }
+
+    public short getProfessionID() {
+        return professionID;
+    }
+
+    public void setProfessionID(short professionID) {
+        this.professionID = professionID;
     }
 
     public StringBuilder getNameBuffer() {

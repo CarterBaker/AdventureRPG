@@ -9,8 +9,9 @@ public class AttackStruct extends StructPackage {
      * Immutable attack of a moveset from one CombatDirection: the clip it
      * plays and the fraction of that clip its blow lands on, how many seconds
      * it winds up before the blow lands and recovers after, how much harder
-     * and further it reaches than the entity's plain strike, and the arc in
-     * degrees its blow sweeps across, zero for a straight thrust.
+     * and further it reaches than the entity's plain strike, the arc in
+     * degrees its blow sweeps across, zero for a straight thrust, and the
+     * damage type its blow lands as.
      */
 
     // Animation
@@ -25,6 +26,7 @@ public class AttackStruct extends StructPackage {
     private final float damage;
     private final float reach;
     private final float arc;
+    private final short damageTypeID;
 
     // Constructor \\
 
@@ -35,7 +37,8 @@ public class AttackStruct extends StructPackage {
             float recovery,
             float damage,
             float reach,
-            float arc) {
+            float arc,
+            short damageTypeID) {
 
         // Animation
         this.clip = clip;
@@ -49,6 +52,7 @@ public class AttackStruct extends StructPackage {
         this.damage = damage;
         this.reach = reach;
         this.arc = arc;
+        this.damageTypeID = damageTypeID;
     }
 
     // Accessible \\
@@ -88,5 +92,9 @@ public class AttackStruct extends StructPackage {
 
     public float getArc() {
         return arc;
+    }
+
+    public short getDamageTypeID() {
+        return damageTypeID;
     }
 }

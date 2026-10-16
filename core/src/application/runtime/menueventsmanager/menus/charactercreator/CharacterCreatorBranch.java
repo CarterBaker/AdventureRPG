@@ -21,9 +21,11 @@ public class CharacterCreatorBranch extends BranchPackage {
      * Runs the character creator a main menu's New Game opens. Opening hides
      * that menu, rolls a fresh character through SaveManager, and turns the
      * window's player into the creator's live preview; Back returns to the
-     * menu, Create names the character and begins play. The option list shows
-     * one CreatorTab at a time — this branch owns the tabs and clears the list,
-     * and the section branches fill it. Enter creates and Escape backs out.
+     * menu, Create names the character, spends its staged creation points,
+     * takes up its chosen profession and begins play; backing out lets the
+     * staging go. The option list shows one CreatorTab at a time — this branch
+     * owns the tabs and clears the list, and the section branches fill it.
+     * Enter creates and Escape backs out.
      */
 
     // Internal
@@ -112,6 +114,7 @@ public class CharacterCreatorBranch extends BranchPackage {
                 menuManager.openMenu(RuntimeSetting.MENU_CREATOR, window),
                 parentMenu,
                 playerManager.getPlayerForWindow(windowID),
+                creatorProgressionBranch.resolveDefaultProfession(),
                 saveManager.getDefaultCharacterName());
 
         windowID2Session.put(windowID, session);
@@ -128,6 +131,7 @@ public class CharacterCreatorBranch extends BranchPackage {
         if (session == null)
             return;
 
+        creatorProgressionBranch.clear(session);
         menuManager.closeMenu(session.getCreatorMenu());
         playerManager.endCharacterPreview(window.getWindowID());
         session.getParentMenu().show();
@@ -154,6 +158,7 @@ public class CharacterCreatorBranch extends BranchPackage {
             return;
         }
 
+        creatorProgressionBranch.apply(session);
         windowID2Session.remove(window.getWindowID());
         playerManager.endCharacterPreview(window.getWindowID());
         menuManager.closeMenu(session.getCreatorMenu());
@@ -170,6 +175,7 @@ public class CharacterCreatorBranch extends BranchPackage {
         creatorAppearanceBranch.randomizeAppearance(session.getPlayer());
         creatorBodyBranch.randomizeBody(session.getPlayer());
         refreshOptions(session);
+        creatorProgressionBranch.populateStats(session);
     }
 
     // Preview \\
@@ -237,7 +243,8 @@ public class CharacterCreatorBranch extends BranchPackage {
             case APPEARANCE -> creatorAppearanceBranch.populateFeatures(session);
             case HAIR -> creatorAppearanceBranch.populateHair(session);
             case BODY -> creatorBodyBranch.populateBody(session);
-            case CLASS, PROFESSION, SKILLS -> creatorProgressionBranch.populatePlaceholder(session);
+            case ATTRIBUTES -> creatorProgressionBranch.populateAttributes(session);
+            case PROFESSION -> creatorProgressionBranch.populateProfessions(session);
         }
     }
 

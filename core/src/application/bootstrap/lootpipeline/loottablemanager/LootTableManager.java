@@ -6,6 +6,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.lootpipeline.loottable.LootEntryStruct;
 import application.bootstrap.lootpipeline.loottable.LootTableHandle;
+import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -22,14 +23,19 @@ public class LootTableManager extends ManagerPackage {
      * chunk generates. drawLoot() turns one draw of a table — every entry it
      * guarantees, then its rolls — into real items through ItemManager, each
      * salted by the seed it is given and the table's name seed, so the same
-     * seed always draws the same loot; fillContainer() packs one draw into a
-     * container item, topping up the stacks already inside first, and
-     * whatever finds no room is left out. Loot table IDs are assigned in
-     * registration order.
+     * seed always draws the same loot. Every piece of gear a draw gives is
+     * forged through ProgressionManager at the level it is drawn for, its tier
+     * tilted by the luck of whoever it is drawn for and the table's bias, and
+     * salted from the same seed, so it too comes out the same. fillContainer()
+     * packs one draw into a container item at a level drawn from the table's
+     * own range, topping up the stacks already inside first, and whatever
+     * finds no room is left out. Loot table IDs are assigned in registration
+     * order.
      */
 
     // Internal
     private ItemManager itemManager;
+    private ProgressionManager progressionManager;
 
     // Palette
     private Object2IntOpenHashMap<String> lootTableName2LootTableID;
@@ -56,6 +62,7 @@ public class LootTableManager extends ManagerPackage {
     @Override
     protected void get() {
         this.itemManager = get(ItemManager.class);
+        this.progressionManager = get(ProgressionManager.class);
     }
 
     @Override
@@ -90,16 +97,26 @@ public class LootTableManager extends ManagerPackage {
 
     // Draw \\
 
-    // Every item one draw of a table yields, appended to the list given — the same seed always draws the same
-    public void drawLoot(short lootTableID, long seed, ObjectArrayList<ItemInstance> out) {
+    // Every item one draw of a table yields for a level and a luck, appended to the list given — the same seed
+    // always draws the same
+    public void drawLoot(short lootTableID, long seed, int level, float luck, ObjectArrayList<ItemInstance> out) {
 
         LootTableHandle lootTableHandle = getLootTableHandleFromLootTableID(lootTableID);
         int nameSeed = lootTableHandle.getNameSeed();
+        int start = out.size();
 
         addGuaranteed(lootTableHandle.getGuaranteedEntries(), seed, nameSeed, out);
 
         if (lootTableHandle.hasRolls())
             addRolls(lootTableHandle, seed, nameSeed, out);
+
+        for (int i = start; i < out.size(); i++)
+            progressionManager.forgeGear(
+                    out.get(i),
+                    level,
+                    luck,
+                    lootTableHandle.getTierBias(),
+                    BiomeFieldUtility.hashCell(seed ^ EngineSetting.GEAR_FORGE_SALT, i - start, nameSeed));
     }
 
     private void addGuaranteed(
@@ -157,9 +174,14 @@ public class LootTableManager extends ManagerPackage {
             return;
 
         ContainerInstance containerInstance = containerItem.getContainerInstance();
+        LootTableHandle lootTableHandle = getLootTableHandleFromLootTableID(lootTableID);
+        int level = drawCount(
+                lootTableHandle.getLevelMin(),
+                lootTableHandle.getLevelMax(),
+                seed ^ EngineSetting.LOOT_LEVEL_SALT);
 
         lootScratch.clear();
-        drawLoot(lootTableID, seed, lootScratch);
+        drawLoot(lootTableID, seed, level, 0f, lootScratch);
 
         for (int i = 0; i < lootScratch.size(); i++) {
 

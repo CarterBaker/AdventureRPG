@@ -10,6 +10,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
@@ -19,6 +20,7 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.inventory.InventoryViewUtility;
+import application.runtime.menueventsmanager.util.ProgressionDisplayBranch;
 import engine.input.Input;
 import engine.input.InputNameUtility;
 import engine.root.BranchPackage;
@@ -32,13 +34,14 @@ public class InventoryContainerBranch extends BranchPackage {
      * Opens containers, each in its own panel: the worn bag on the left and,
      * on the right, a chest or bag opened where it lies. A panel shows its
      * container from above through its own camera, so the whole inside is in
-     * reach — tilted and turned by dragging beside it, brought closer with
-     * the wheel — and a list of its contents, grouped by category, toggles
-     * over it. A container opened where it lies, in the world or aboard a
-     * vehicle, is drawn open where it stands: its lid is left off, and only a
-     * space inside its own model is ever shown there, never a pocket. Every
-     * frame each open view is framed anew, and lists rebuild only when their
-     * container changes. Pressing an item in any panel picks it up.
+     * reach — tilted and turned by dragging beside it, brought closer with the
+     * wheel — and a list of its contents, grouped by category, toggles over
+     * it. A container opened where it lies, in the world or aboard a vehicle,
+     * is drawn open where it stands: its lid is left off, and only a space
+     * inside its own model is ever shown there, never a pocket. Every frame
+     * each open view is framed anew, and lists rebuild only when their
+     * container changes. Gear in a list is named in its tier's colour.
+     * Pressing an item in any panel picks it up.
      */
 
     // Internal
@@ -48,6 +51,7 @@ public class InventoryContainerBranch extends BranchPackage {
     private VehicleCargoSystem vehicleCargoSystem;
     private InventoryBranch inventoryBranch;
     private InventoryDragBranch inventoryDragBranch;
+    private ProgressionDisplayBranch progressionDisplayBranch;
 
     // State
     private boolean[] container2ListShown;
@@ -79,6 +83,7 @@ public class InventoryContainerBranch extends BranchPackage {
         this.vehicleCargoSystem = get(VehicleCargoSystem.class);
         this.inventoryBranch = get(InventoryBranch.class);
         this.inventoryDragBranch = get(InventoryDragBranch.class);
+        this.progressionDisplayBranch = get(ProgressionDisplayBranch.class);
     }
 
     // Update \\
@@ -351,11 +356,16 @@ public class InventoryContainerBranch extends BranchPackage {
         ElementInstance row = menuManager.inject(
                 view.getListMenu(), RuntimeSetting.ENTRY_LIST_ROWS, RuntimeSetting.MENU_INVENTORY_LIST_ROW,
                 element -> {
+                    ElementInstance name = element.findChildById(RuntimeSetting.ELEMENT_INVENTORY_ROW_NAME);
+                    MenuColorStruct tierColor = progressionDisplayBranch.getTierColor(itemInstance.getTierID());
+
                     element.setOnDragArgOverride(argument);
-                    element.findChildById(RuntimeSetting.ELEMENT_INVENTORY_ROW_NAME)
-                            .setFontText(toRowName(itemInstance));
+                    name.setFontText(toRowName(itemInstance));
                     element.findChildById(RuntimeSetting.ELEMENT_INVENTORY_ROW_WEIGHT).setFontText(
                             String.format(RuntimeSetting.INVENTORY_FORMAT_WEIGHT, itemInstance.getTotalWeight()));
+
+                    if (tierColor != null)
+                        name.setColorOverride(tierColor);
                 });
 
         view.addRow(itemInstance, row);

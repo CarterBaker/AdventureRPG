@@ -1,19 +1,26 @@
 package application.bootstrap.entitypipeline.statistics;
 
-import application.bootstrap.itempipeline.itemdefinition.ItemStat;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 
 public class StatisticsHandle extends HandlePackage {
 
     /*
-     * Per-entity runtime statistics. Holds movement speeds, jump height,
-     * reach, the entity's own base value for every item statistic — what it
-     * has before anything it wears is counted — and the health it has left,
-     * which combat wears down. No manager owns this —
-     * it lives directly on EntityInstance and is initialized to engine
-     * defaults on creation.
+     * Per-entity runtime statistics. Holds movement speeds, jump height and
+     * reach; every stat's resolved total, indexed by stat ID — a scaled stat
+     * relative to the entity's own level — with the revisions of everything it
+     * was resolved from, so it is rebuilt only once one of them moves; and the
+     * entity's vitality: the share of its health it has left, how freshly it
+     * bleeds, how long until it regenerates again, and whether it has been
+     * defeated. Health is kept as a share so a change in its maximum neither
+     * heals nor wounds. Only ProgressionManager resolves the stats and
+     * CombatManager and ProgressionManager move the vitality. Lives on
+     * EntityInstance.
      */
+
+    // Internal
+    private StatManager statManager;
 
     // Movement
     private float walkSpeed;
@@ -27,11 +34,19 @@ public class StatisticsHandle extends HandlePackage {
     // Interaction
     private float reach;
 
-    // Attributes
-    private float[] baseStats;
+    // Stats
+    private float[] stats;
+    private boolean resolved;
+    private int inventoryRevision;
+    private int progressionRevision;
+    private int proficiencyRevision;
+    private int careerRevision;
 
-    // Vitals
+    // Vitality
     private float health;
+    private float bleed;
+    private float regenerationDelay;
+    private boolean defeated;
 
     // Internal \\
 
@@ -50,35 +65,67 @@ public class StatisticsHandle extends HandlePackage {
         // Interaction
         this.reach = EngineSetting.DEFAULT_REACH;
 
-        // Attributes
-        this.baseStats = new float[ItemStat.VALUES.length];
-        resetBaseStats();
+        resetVitality();
     }
 
-    // Attributes \\
+    @Override
+    protected void get() {
 
-    public void resetBaseStats() {
-
-        for (ItemStat itemStat : ItemStat.VALUES)
-            baseStats[itemStat.ordinal()] = EngineSetting.DEFAULT_ATTRIBUTE_VALUE;
-
-        baseStats[ItemStat.ARMOR.ordinal()] = EngineSetting.DEFAULT_ARMOR;
-        baseStats[ItemStat.DAMAGE.ordinal()] = EngineSetting.DEFAULT_DAMAGE;
-        baseStats[ItemStat.HEALTH.ordinal()] = EngineSetting.DEFAULT_HEALTH;
-        baseStats[ItemStat.STAMINA.ordinal()] = EngineSetting.DEFAULT_STAMINA;
-
-        health = EngineSetting.DEFAULT_HEALTH;
+        // Internal
+        this.statManager = get(StatManager.class);
     }
 
-    public float getBaseStat(ItemStat itemStat) {
-        return baseStats[itemStat.ordinal()];
+    @Override
+    protected void awake() {
+
+        // Stats
+        this.stats = new float[statManager.getStatIDCount()];
     }
 
-    public void setBaseStat(ItemStat itemStat, float value) {
-        baseStats[itemStat.ordinal()] = value;
+    // Stats \\
+
+    // True when the stats were resolved from exactly these revisions
+    public boolean isResolved(
+            int inventoryRevision,
+            int progressionRevision,
+            int proficiencyRevision,
+            int careerRevision) {
+        return resolved
+                && this.inventoryRevision == inventoryRevision
+                && this.progressionRevision == progressionRevision
+                && this.proficiencyRevision == proficiencyRevision
+                && this.careerRevision == careerRevision;
     }
 
-    // Vitals \\
+    public void markResolved(
+            int inventoryRevision,
+            int progressionRevision,
+            int proficiencyRevision,
+            int careerRevision) {
+
+        this.resolved = true;
+        this.inventoryRevision = inventoryRevision;
+        this.progressionRevision = progressionRevision;
+        this.proficiencyRevision = proficiencyRevision;
+        this.careerRevision = careerRevision;
+    }
+
+    public void invalidate() {
+        resolved = false;
+    }
+
+    public float[] getStats() {
+        return stats;
+    }
+
+    // Vitality \\
+
+    public void resetVitality() {
+        this.health = EngineSetting.VITALITY_FULL;
+        this.bleed = 0f;
+        this.regenerationDelay = 0f;
+        this.defeated = false;
+    }
 
     public float getHealth() {
         return health;
@@ -86,6 +133,30 @@ public class StatisticsHandle extends HandlePackage {
 
     public void setHealth(float health) {
         this.health = health;
+    }
+
+    public float getBleed() {
+        return bleed;
+    }
+
+    public void setBleed(float bleed) {
+        this.bleed = bleed;
+    }
+
+    public float getRegenerationDelay() {
+        return regenerationDelay;
+    }
+
+    public void setRegenerationDelay(float regenerationDelay) {
+        this.regenerationDelay = regenerationDelay;
+    }
+
+    public boolean isDefeated() {
+        return defeated;
+    }
+
+    public void setDefeated(boolean defeated) {
+        this.defeated = defeated;
     }
 
     // Accessible \\

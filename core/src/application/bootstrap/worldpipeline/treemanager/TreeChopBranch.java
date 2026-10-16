@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import application.bootstrap.worldpipeline.tree.TreeCarveStruct;
 import application.bootstrap.worldpipeline.tree.TreeCastStruct;
 import application.bootstrap.worldpipeline.tree.TreeGrowthStruct;
@@ -24,19 +25,21 @@ class TreeChopBranch extends BranchPackage {
      * cluster off, now and then shaking a seed loose. Wood only gives to the
      * tool its species names, at its tier or better, and the swing is level:
      * each stroke bites a wedge flat into the wood where it struck, along the
-     * swing's heading, as wide as the wood is there and as deep as the
-     * tool's tier drives it, so strokes landing on one spot cut one notch
-     * ever deeper, sub-voxel by sub-voxel. When the notch leaves less than a
-     * share of the wood's cross-section standing, the wood there is cut
-     * through: everything beyond the cut falls free — an upright trunk
-     * toppling away from the one who cut it, a limb dropping straight down —
-     * and the stump stays behind with the notch's lower half in its top.
+     * swing's heading, as wide as the wood is there and as deep as the tool's
+     * tier and the striker's work power drive it, so strokes landing on one
+     * spot cut one notch ever deeper, sub-voxel by sub-voxel. When the notch
+     * leaves less than a share of the wood's cross-section standing, the wood
+     * there is cut through: everything beyond the cut falls free — an upright
+     * trunk toppling away from the one who cut it, a limb dropping straight
+     * down — and the stump stays behind with the notch's lower half in its
+     * top.
      */
 
     // Internal
     private TreeManager treeManager;
     private TreeRebuildBranch treeRebuildBranch;
     private TreeFallBranch treeFallBranch;
+    private StatManager statManager;
 
     // Settings
     private int resolution;
@@ -63,6 +66,7 @@ class TreeChopBranch extends BranchPackage {
         this.treeManager = get(TreeManager.class);
         this.treeRebuildBranch = get(TreeRebuildBranch.class);
         this.treeFallBranch = get(TreeFallBranch.class);
+        this.statManager = get(StatManager.class);
     }
 
     // Strike \\
@@ -130,7 +134,8 @@ class TreeChopBranch extends BranchPackage {
         int radius = node != EngineSetting.INDEX_NOT_FOUND ? nodes.getRadius(node) : EngineSetting.TREE_MIN_NODE_RADIUS;
         float[] heading = resolveHeading(cast, direction);
         int tier = entity.getInventoryHandle().getMainHand().getItemDefinitionHandle().getToolTier();
-        float depth = EngineSetting.TREE_CHOP_BITE_SUB_VOXELS + tier * EngineSetting.TREE_CHOP_TIER_BITE_SUB_VOXELS;
+        float depth = (EngineSetting.TREE_CHOP_BITE_SUB_VOXELS + tier * EngineSetting.TREE_CHOP_TIER_BITE_SUB_VOXELS)
+                * Math.max(0f, entity.getStat(statManager.getWorkPowerStatID()));
 
         // Sub-voxels from the centre of the root: the struck cell's middle, drawn back to the wood's surface
         float mouthX = cast.getCellX() + 0.5f - center - heading[0] * EngineSetting.TREE_CHOP_MOUTH_SUB_VOXELS;

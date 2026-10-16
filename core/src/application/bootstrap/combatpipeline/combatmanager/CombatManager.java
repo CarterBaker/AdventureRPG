@@ -11,6 +11,7 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.tooltype.ToolSwing;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.physicspipeline.util.RayBoxUtility;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -24,27 +25,29 @@ public class CombatManager extends ManagerPackage {
      * Entity-agnostic combat. Every spawned entity is a combatant, and each
      * frame CombatManager advances every combatant's action and resolves it
      * the moment its effect lands: SwingBranch strikes with whatever is held,
-     * AttackBranch lands a weapon's attack, and ThrowBranch lets one held
-     * item fly. A weapon fights by the moveset its item names, and bare hands
-     * by the unarmed one: control() reads an entity's input each frame it is
+     * AttackBranch lands a weapon's attack, and ThrowBranch lets one held item
+     * fly. A weapon fights by the moveset its item names, and bare hands by
+     * the unarmed one: control() reads an entity's input each frame it is
      * driven, starting the attack its moveset makes from the side the input
      * asks for and raising a guard toward the side it holds it, which
-     * GuardBranch swings from side to side for as long as it stays up. A
-     * guard catches only a blow from the side it is held toward — the
-     * attack's mirror — and turns the attacker back into recoil. An item that
-     * is no weapon swings plainly through swing() instead, overhead or level
-     * as its tool type swings it, and a heavier one swings slower; any item
-     * can be thrown from a raised aim. swing(), gesture() and control() are
-     * the only ways an action begins, and only while the hands are free.
-     * findTarget() is the one place that decides which entity a ray meets,
-     * damage() and strike() the only paths health is lost, through
-     * DamageBranch. The player passes mouse input and an enemy would pass its
-     * own; the code path is the same.
+     * GuardBranch swings from side to side for as long as it stays up. A guard
+     * catches only a blow from the side it is held toward — the attack's
+     * mirror — and turns the attacker back into recoil. An item that is no
+     * weapon swings plainly through swing() instead, overhead or level as its
+     * tool type swings it, and a heavier one swings slower; every swing and
+     * attack is quickened by the entity's attack speed; any item can be thrown
+     * from a raised aim. swing(), gesture() and control() are the only ways an
+     * action begins, and only while the hands are free. findTarget() is the
+     * one place that decides which entity a ray meets, damage() and strike()
+     * the only paths a blow lands, through DamageBranch, each carrying its
+     * source and damage type. The player passes mouse input and an enemy would
+     * pass its own; the code path is the same.
      */
 
     // Internal
     private ToolTypeManager toolTypeManager;
     private MovesetManager movesetManager;
+    private StatManager statManager;
 
     // Branches
     private SwingBranch swingBranch;
@@ -82,6 +85,7 @@ public class CombatManager extends ManagerPackage {
     protected void get() {
         this.toolTypeManager = get(ToolTypeManager.class);
         this.movesetManager = get(MovesetManager.class);
+        this.statManager = get(StatManager.class);
     }
 
     @Override
@@ -140,7 +144,8 @@ public class CombatManager extends ManagerPackage {
 
         float duration = Math.min(
                 EngineSetting.SWING_MAX_SECONDS,
-                EngineSetting.SWING_BASE_SECONDS + resolveHeldWeight(entity) * EngineSetting.SWING_SECONDS_PER_WEIGHT);
+                EngineSetting.SWING_BASE_SECONDS + resolveHeldWeight(entity) * EngineSetting.SWING_SECONDS_PER_WEIGHT)
+                / resolveAttackSpeed(entity);
 
         entity.getEntityActionHandle().begin(resolveSwingAction(entity), duration, EngineSetting.SWING_IMPACT);
         return true;
@@ -251,6 +256,11 @@ public class CombatManager extends ManagerPackage {
         return inventoryHandle.hasOffHand() ? inventoryHandle.getOffHand() : inventoryHandle.getMainHand();
     }
 
+    // How much faster than its plain pace an entity swings and attacks
+    float resolveAttackSpeed(EntityInstance entity) {
+        return Math.max(EngineSetting.DIVISION_EPSILON, entity.getStat(statManager.getAttackSpeedStatID()));
+    }
+
     float resolveHeldWeight(EntityInstance entity) {
 
         ItemInstance held = entity.getInventoryHandle().getMainHand();
@@ -358,9 +368,15 @@ public class CombatManager extends ManagerPackage {
 
     // Damage \\
 
-    // A blow from no side in particular — any raised guard facing it catches its share
-    public void damage(EntityInstance target, float amount, Vector3 direction) {
-        damageBranch.apply(target, amount, direction);
+    // A blow from no side in particular, by a source or by nothing at all — any raised guard facing it catches its
+    // share when its type can be guarded
+    public void damage(
+            EntityInstance source,
+            EntityInstance target,
+            float amount,
+            short damageTypeID,
+            Vector3 direction) {
+        damageBranch.apply(source, target, amount, damageTypeID, direction);
     }
 
     // A weapon's blow from a side of the source — only a guard held toward its mirror catches it
@@ -368,8 +384,9 @@ public class CombatManager extends ManagerPackage {
             EntityInstance source,
             EntityInstance target,
             float amount,
+            short damageTypeID,
             Vector3 direction,
             CombatDirection side) {
-        damageBranch.strike(source, target, amount, direction, side);
+        damageBranch.strike(source, target, amount, damageTypeID, direction, side);
     }
 }

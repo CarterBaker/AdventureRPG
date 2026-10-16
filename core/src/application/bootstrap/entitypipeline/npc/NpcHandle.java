@@ -54,4 +54,16 @@ public class NpcHandle extends HandlePackage {
     public float getWanderBlocks() {
         return npcData.getWanderBlocks();
     }
+
+    public short getProfessionID() {
+        return npcData.getProfessionID();
+    }
+
+    public int getLevelMin() {
+        return npcData.getLevelMin();
+    }
+
+    public int getLevelMax() {
+        return npcData.getLevelMax();
+    }
 }

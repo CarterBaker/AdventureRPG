@@ -15,6 +15,7 @@ import application.runtime.sky.SkySystem;
 import application.runtime.sky.SquintSystem;
 import application.runtime.tree.TreeSystem;
 import application.runtime.vehicle.VehicleSystem;
+import application.runtime.vitality.VitalitySystem;
 import application.runtime.weather.PrecipitationSystem;
 import application.runtime.water.WaterSystem;
 import application.runtime.weather.WeatherSystem;
@@ -47,6 +48,7 @@ public class RuntimeContext extends ContextPackage {
     private WaterSystem waterSystem;
     private PrecipitationSystem precipitationSystem;
     private SquintSystem squintSystem;
+    private VitalitySystem vitalitySystem;
     private InventoryRenderSystem inventoryRenderSystem;
     private ProjectileSystem projectileSystem;
     private VehicleSystem vehicleSystem;
@@ -73,6 +75,7 @@ public class RuntimeContext extends ContextPackage {
         this.waterSystem = create(WaterSystem.class);
         this.precipitationSystem = create(PrecipitationSystem.class);
         this.squintSystem = create(SquintSystem.class);
+        this.vitalitySystem = create(VitalitySystem.class);
         this.inventoryRenderSystem = create(InventoryRenderSystem.class);
         this.projectileSystem = create(ProjectileSystem.class);
         this.vehicleSystem = create(VehicleSystem.class);

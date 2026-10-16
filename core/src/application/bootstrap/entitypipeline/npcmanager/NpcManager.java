@@ -6,6 +6,7 @@ import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
+import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
@@ -15,9 +16,13 @@ import application.bootstrap.entitypipeline.npc.NpcInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
+import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
+import application.bootstrap.progressionpipeline.util.IdentityUtility;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.worldspawn.WorldSpawnPaletteHandle;
 import application.bootstrap.worldpipeline.worldspawn.WorldSpawnStruct;
@@ -36,18 +41,22 @@ public class NpcManager extends ManagerPackage {
     /*
      * Owns the NPC palette and every NPC living in the world; spawnResidents()
      * and despawnResidents() are the one way residents enter and leave it, as
-     * the items of the chunk they live in come into and go out of the world.
-     * A resident comes in standing in the block its spot names, as an entity
-     * of its template, its skin and hair drawn from its race's palettes, and
-     * dressed and armed from its gear tables, anything drawn that no free
-     * slot is made for left behind. Each frame every resident whose
-     * chunk has generated wanders through NpcWanderBranch, then moves and
-     * animates exactly as the player does. A resident brought to no health
-     * falls through defeat(): at the end of the frame it scatters everything
-     * it carried and one draw of its loot table, and leaves the world, its
-     * spot left empty for as long as the chunk keeps its items. Every NPC is
-     * resolved in awake(), before any chunk generates. NPC IDs are assigned
-     * in registration order.
+     * the items of the chunk they live in come into and go out of the world. A
+     * resident comes in standing in the block its spot names, as an entity of
+     * its template, known by an identity drawn from its spot, its level drawn
+     * from its definition's range and its gender from its race's, both by that
+     * identity so it is the same each time it returns; it is raised to that
+     * level in its profession through ProgressionManager, its skin and hair
+     * drawn from its race's palettes, and dressed and armed from its gear
+     * tables at its own level and luck, anything drawn that no free slot is
+     * made for left behind. Each frame every resident whose chunk has
+     * generated wanders through NpcWanderBranch, then moves and animates
+     * exactly as the player does. A resident brought to no health falls
+     * through defeat(): at the end of the frame it scatters everything it
+     * carried and one draw of its loot table at its level and by the luck of
+     * whatever felled it, and leaves the world, its spot left empty for as
+     * long as the chunk keeps its items. Every NPC is resolved in awake(),
+     * before any chunk generates. NPC IDs are assigned in registration order.
      */
 
     // Internal
@@ -57,6 +66,8 @@ public class NpcManager extends ManagerPackage {
     private CombatManager combatManager;
     private ProjectileManager projectileManager;
     private WorldStreamManager worldStreamManager;
+    private ProgressionManager progressionManager;
+    private StatManager statManager;
     private NpcWanderBranch npcWanderBranch;
 
     // Palette
@@ -110,6 +121,8 @@ public class NpcManager extends ManagerPackage {
         this.combatManager = get(CombatManager.class);
         this.projectileManager = get(ProjectileManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.progressionManager = get(ProgressionManager.class);
+        this.statManager = get(StatManager.class);
     }
 
     @Override
@@ -238,6 +251,8 @@ public class NpcManager extends ManagerPackage {
         entity.getWorldPositionStruct().getPosition().add(0.5f - size.x * 0.5f, 0f, 0.5f - size.z * 0.5f);
         WorldPositionUtility.settleChunk(entity.getWorldHandle(), entity.getWorldPositionStruct());
 
+        raise(entity, npcHandle, IdentityUtility.fromSpawn(
+                chunkInstance.getCoordinate(), spawn.getBlockX(), spawn.getBlockY(), spawn.getBlockZ()));
         varyAppearance(entity);
         dress(entity, npcHandle);
 
@@ -245,6 +260,24 @@ public class NpcManager extends ManagerPackage {
         resident.constructor(npcHandle, entity, chunkInstance.getCoordinate(), palette, spawn);
 
         residents.add(resident);
+    }
+
+    // Known by its spawn's identity, its gender and level drawn by that identity, and raised in its profession
+    private void raise(EntityInstance entity, NpcHandle npcHandle, long identity) {
+
+        EntityData entityData = entity.getEntityData();
+        int levelSpan = npcHandle.getLevelMax() - npcHandle.getLevelMin() + 1;
+        int level = npcHandle.getLevelMin()
+                + Math.min(levelSpan - 1, (int) (BiomeFieldUtility.hash01(identity ^ EngineSetting.NPC_LEVEL_SALT)
+                        * levelSpan));
+        int genderIndex = Math.min(
+                entityData.getGenderCount() - 1,
+                (int) (BiomeFieldUtility.hash01(identity ^ EngineSetting.NPC_GENDER_SALT)
+                        * entityData.getGenderCount()));
+
+        progressionManager.identify(entity, identity);
+        entity.setGenderID(entityData.getGenderID(genderIndex));
+        progressionManager.raiseBeing(entity, level, npcHandle.getProfessionID());
     }
 
     // Skin and hair drawn from the race's palettes, so no two residents look quite alike
@@ -266,16 +299,18 @@ public class NpcManager extends ManagerPackage {
         return palette[ThreadLocalRandom.current().nextInt(palette.length)];
     }
 
-    // Every gear table drawn once, and every item drawn put on where it is worn
+    // Every gear table drawn once at the resident's level and luck, and every item drawn put on where it is worn
     private void dress(EntityInstance entity, NpcHandle npcHandle) {
 
         short[] gearTableIDs = npcHandle.getGearTableIDs();
         InventoryHandle inventoryHandle = entity.getInventoryHandle();
+        float luck = entity.getStat(statManager.getLuckStatID());
 
         for (int i = 0; i < gearTableIDs.length; i++) {
 
             itemScratch.clear();
-            lootTableManager.drawLoot(gearTableIDs[i], ThreadLocalRandom.current().nextLong(), itemScratch);
+            lootTableManager.drawLoot(
+                    gearTableIDs[i], ThreadLocalRandom.current().nextLong(), entity.getLevel(), luck, itemScratch);
 
             for (int j = 0; j < itemScratch.size(); j++)
                 inventoryHandle.wear(itemScratch.get(j));
@@ -286,8 +321,9 @@ public class NpcManager extends ManagerPackage {
 
     // Defeat \\
 
-    // True when the entity is a resident, which falls at the end of the frame — anything else is left to recover
-    public boolean defeat(EntityInstance entityInstance) {
+    // True when the entity is a resident, which falls at the end of the frame remembering what felled it, if
+    // anything — anything else is left to its own context
+    public boolean defeat(EntityInstance entityInstance, EntityInstance killer) {
 
         NpcInstance resident = findResident(entityInstance);
 
@@ -295,6 +331,7 @@ public class NpcManager extends ManagerPackage {
             return false;
 
         resident.setFallen(true);
+        resident.setKiller(killer);
 
         return true;
     }
@@ -310,7 +347,12 @@ public class NpcManager extends ManagerPackage {
         collectCarried(entity.getInventoryHandle());
 
         if (npcHandle.hasLoot())
-            lootTableManager.drawLoot(npcHandle.getLootTableID(), ThreadLocalRandom.current().nextLong(), itemScratch);
+            lootTableManager.drawLoot(
+                    npcHandle.getLootTableID(),
+                    ThreadLocalRandom.current().nextLong(),
+                    entity.getLevel(),
+                    resolveKillerLuck(resident),
+                    itemScratch);
 
         for (int i = 0; i < itemScratch.size(); i++)
             throwDrop(entity, itemScratch.get(i), i, itemScratch.size());
@@ -319,6 +361,14 @@ public class NpcManager extends ManagerPackage {
 
         resident.getWorldSpawnPaletteHandle().removeSpawn(resident.getWorldSpawnStruct());
         entityManager.despawnEntity(entity);
+    }
+
+    // The luck of whatever felled the resident, none when nothing did or it has since left the world
+    private float resolveKillerLuck(NpcInstance resident) {
+
+        EntityInstance killer = resident.getKiller();
+
+        return killer != null ? killer.getStat(statManager.getLuckStatID()) : 0f;
     }
 
     private void collectCarried(InventoryHandle inventoryHandle) {

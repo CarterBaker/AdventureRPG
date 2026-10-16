@@ -5,6 +5,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector2;
@@ -16,11 +17,15 @@ public class MovementBranch extends BranchPackage {
      * Computes horizontal movement displacement each frame from the entity's
      * EntityInputHandle. Smoothly accelerates toward target velocity via lerp.
      * Y axis is not touched — owned by GravityBranch on land/air and by
-     * SwimBranch once genuinely submerged (see MovementManager). dragMultiplier
-     * scales the *target* speed rather than the resulting displacement, so
-     * accel/decel still ramps smoothly, just toward a lower terminal speed —
-     * see SwimBranch for how that multiplier is derived from viscosity.
+     * SwimBranch once genuinely submerged (see MovementManager).
+     * dragMultiplier scales the *target* speed rather than the resulting
+     * displacement, so accel/decel still ramps smoothly, just toward a lower
+     * terminal speed — see SwimBranch for how that multiplier is derived from
+     * viscosity. Every speed is scaled by the entity's move speed stat.
      */
+
+    // Internal
+    private StatManager statManager;
 
     // Settings
     private float movementAcceleration;
@@ -42,6 +47,13 @@ public class MovementBranch extends BranchPackage {
         // Cached Vectors
         this.forward = new Vector3();
         this.right = new Vector3();
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.statManager = get(StatManager.class);
     }
 
     // Movement \\
@@ -82,7 +94,10 @@ public class MovementBranch extends BranchPackage {
         }
 
         // Real-world speed scaled by movementScale and, in liquid, drag
-        float speed = selectSpeed(swimming, state.getMovementState(), stats) * movementScale * dragMultiplier;
+        float speed = selectSpeed(swimming, state.getMovementState(), stats)
+                * Math.max(0f, entity.getStat(statManager.getMoveSpeedStatID()))
+                * movementScale
+                * dragMultiplier;
         targetX *= speed;
         targetZ *= speed;
 

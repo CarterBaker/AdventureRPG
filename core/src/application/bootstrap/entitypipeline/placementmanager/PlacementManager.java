@@ -9,6 +9,7 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemActionTrigger;
 import application.bootstrap.physicspipeline.raycastmanager.RaycastManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
+import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
@@ -40,10 +41,10 @@ public class PlacementManager extends ManagerPackage {
      * held through CombatManager — a weapon or bare hands attack there from
      * the side the entity's input asks for instead — whose strike lands back
      * here on a block through strikeBlock(), and the activate action places
-     * the held item — a
-     * block piece as a sub-block, a seed into the ground as a tree of its
-     * species, a sower or nurturer onto the block as the covering it tends,
-     * anything else as a world item. A vehicle's
+     * the held item — a block piece as a sub-block, a seed into the ground as
+     * a tree of its species, a sower or nurturer onto the block as the
+     * covering it tends, anything else as a world item; a planting or tending
+     * that takes trains the skill of the item used up doing it. A vehicle's
      * deck or cargo nearer than anything in the world takes the action
      * instead, through VehicleCargoSystem, by the same rules: cargo's own
      * actions come first, then the primary action picks cargo up or swings at
@@ -52,9 +53,8 @@ public class PlacementManager extends ManagerPackage {
      * findTargetVehicle() is the one place that decides whether a vehicle
      * stands in front. Nothing happens here while the entity is caught up in a
      * fight — attacking, reeling, aiming or guarding all belong to
-     * CombatManager. findTargetItem() is the one
-     * place that decides which world item an entity is aiming at, and where on
-     * it.
+     * CombatManager. findTargetItem() is the one place that decides which
+     * world item an entity is aiming at, and where on it.
      */
 
     // Internal
@@ -64,6 +64,7 @@ public class PlacementManager extends ManagerPackage {
     private CombatManager combatManager;
     private VehicleCargoSystem vehicleCargoSystem;
     private TreeManager treeManager;
+    private ProgressionManager progressionManager;
 
     // Branches
     private BlockBranch blockBranch;
@@ -109,6 +110,7 @@ public class PlacementManager extends ManagerPackage {
         this.combatManager = get(CombatManager.class);
         this.vehicleCargoSystem = get(VehicleCargoSystem.class);
         this.treeManager = get(TreeManager.class);
+        this.progressionManager = get(ProgressionManager.class);
     }
 
     // Update \\
@@ -287,13 +289,24 @@ public class PlacementManager extends ManagerPackage {
         if (held.getItemDefinitionHandle().isBlockPiece())
             return blockBranch.tryPlacePiece(entity, castStruct);
 
+        short skillID = held.getItemDefinitionHandle().getSkillID();
+
         if (held.getItemDefinitionHandle().isSeed())
-            return plantSeed(entity, castStruct);
+            return practiced(entity, skillID, plantSeed(entity, castStruct));
 
         if (held.getItemDefinitionHandle().isSower() || held.getItemDefinitionHandle().isNurturer())
-            return coverageBranch.tryTend(entity, castStruct);
+            return practiced(entity, skillID, coverageBranch.tryTend(entity, castStruct));
 
         return itemBranch.place(entity, direction, castStruct);
+    }
+
+    // A planting or tending that took trains the skill of what was used up doing it
+    private boolean practiced(EntityInstance entity, short skillID, boolean done) {
+
+        if (done)
+            progressionManager.practiceSkill(entity, skillID, EngineSetting.SKILL_PRACTICE_PER_WORK);
+
+        return done;
     }
 
     // The seed in the main hand set into the top of the block that was hit, rooting a tree in the block above

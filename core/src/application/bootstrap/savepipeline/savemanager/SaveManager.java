@@ -2,7 +2,10 @@ package application.bootstrap.savepipeline.savemanager;
 
 import java.io.File;
 
+import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
+import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
+import application.bootstrap.progressionpipeline.util.IdentityUtility;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
@@ -16,14 +19,18 @@ public class SaveManager extends ManagerPackage {
 
     /*
      * Owns character saves; the world itself persists on disk. Creates,
-     * continues, loads and closes characters, writing the active one when it is
-     * created, replaced or its context tears down. Only the main window writes
-     * saves, and an unreadable save is logged and left untouched.
+     * continues, loads and closes characters, writing the active one when it
+     * is created, replaced or its context tears down. Only the main window
+     * writes saves, and an unreadable save is logged and left untouched. A
+     * character is known to the world by the identity its name gives it; until
+     * saves carry progression, a loaded character starts its progression
+     * afresh under that identity, alive and whole.
      */
 
     // Internal
     private WindowManager windowManager;
     private PlayerManager playerManager;
+    private ProgressionManager progressionManager;
     private PlayerSaveBranch playerSaveBranch;
     private PlayerRestoreBranch playerRestoreBranch;
 
@@ -52,6 +59,7 @@ public class SaveManager extends ManagerPackage {
     protected void get() {
         this.windowManager = get(WindowManager.class);
         this.playerManager = get(PlayerManager.class);
+        this.progressionManager = get(ProgressionManager.class);
     }
 
     // Management \\
@@ -119,7 +127,12 @@ public class SaveManager extends ManagerPackage {
     }
 
     private void activateCharacter(WindowInstance window, String characterName) {
+
         this.activeCharacterName = characterName;
+
+        progressionManager.identify(
+                playerManager.getPlayerForWindow(window.getWindowID()),
+                IdentityUtility.fromName(characterName));
         saveCharacter(window);
     }
 
@@ -128,10 +141,12 @@ public class SaveManager extends ManagerPackage {
     private boolean restore(WindowInstance window, File characterFile) {
 
         int windowID = window.getWindowID();
+        EntityInstance player = playerManager.getPlayerForWindow(windowID);
         ArpgObjectStruct characterArpg = ArpgUtility.tryLoadObject(characterFile);
 
-        if (characterArpg != null
-                && playerRestoreBranch.restore(characterArpg, playerManager.getPlayerForWindow(windowID))) {
+        progressionManager.resetBeing(player, IdentityUtility.fromName(FileUtility.getFileName(characterFile)));
+
+        if (characterArpg != null && playerRestoreBranch.restore(characterArpg, player)) {
             playerManager.verifyPlayerPositionForWindow(windowID);
             return true;
         }

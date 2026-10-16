@@ -25,8 +25,11 @@ class LootTableBuilder extends BuilderPackage {
      * every roll landing on one of the "entries" by its "weight", one by
      * default, or on nothing by the table's "empty_weight". An entry names its
      * "item" and gives from "count_min" to "count_max" of it. A table lists at
-     * least one entry of either kind, and every item and count is resolved
-     * and validated here, so a table naming an unknown item fails at boot.
+     * least one entry of either kind, and every item and count is resolved and
+     * validated here, so a table naming an unknown item fails at boot. Gear
+     * found in a container is forged at a level from "level_min" to
+     * "level_max", the first level by default, and "tier_bias" tilts every
+     * piece of gear the table gives toward rarer tiers, or away below zero.
      */
 
     // Internal
@@ -59,6 +62,13 @@ class LootTableBuilder extends BuilderPackage {
         if (emptyWeight < 0f)
             throwException("Loot table \"" + lootTableName + "\" has a negative empty weight.");
 
+        int levelMin = ArpgUtility.getInt(arpg, "level_min", EngineSetting.LEVEL_START);
+        int levelMax = ArpgUtility.getInt(arpg, "level_max", levelMin);
+
+        if (levelMin < EngineSetting.LEVEL_START || levelMax < levelMin)
+            throwException("Loot table \"" + lootTableName + "\" levels gear from " + levelMin + " to " + levelMax
+                    + " — levels must start at " + EngineSetting.LEVEL_START + " or more and never fall.");
+
         FloatArrayList weights = new FloatArrayList();
         LootEntryStruct[] guaranteedEntries = parseEntries(arpg, "guaranteed", null, lootTableName);
         LootEntryStruct[] entries = parseEntries(arpg, "entries", weights, lootTableName);
@@ -75,6 +85,9 @@ class LootTableBuilder extends BuilderPackage {
                 RegistryUtility.toNameSeed(lootTableName),
                 rollsMin,
                 rollsMax,
+                levelMin,
+                levelMax,
+                ArpgUtility.getFloat(arpg, "tier_bias", 0f),
                 guaranteedEntries,
                 entries,
                 weights.isEmpty() ? new float[0] : WeightedTableUtility.buildCumulative(weights, lootTableName));

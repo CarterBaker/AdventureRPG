@@ -3,22 +3,24 @@ package application.bootstrap.entitypipeline.inventory;
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.EquipmentType;
-import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
+import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 
 public class InventoryHandle extends HandlePackage {
 
     /*
      * Per-entity inventory: the item in every equipment slot and which slots
-     * are hidden. give() is the one path an item is handed over: a stack
-     * tops up the matching stacks already carried when they have room for all
-     * of it, and anything else goes into the backpack if it fits and otherwise
-     * a free hand — so a give either takes the whole item or nothing at all.
-     * wear() puts an item on only in a free slot made for its kind.
-     * takeOne() is the one path a single item leaves a slot, split off its
-     * stack through ItemManager. The revision counts every change so views
-     * know when to redraw. Lives on EntityInstance.
+     * are hidden. give() is the one path an item is handed over: a stack tops
+     * up the matching stacks already carried when they have room for all of
+     * it, and anything else goes into the backpack if it fits and otherwise a
+     * free hand — so a give either takes the whole item or nothing at all.
+     * wear() puts an item on only in a free slot made for its kind. Gear above
+     * the wield level — the highest item level its owner's level reaches — is
+     * never worn, though the hands still carry it. takeOne() is the one path a
+     * single item leaves a slot, split off its stack through ItemManager. The
+     * revision counts every change so views know when to redraw and stats when
+     * to rebuild. Lives on EntityInstance.
      */
 
     // Internal
@@ -27,6 +29,9 @@ public class InventoryHandle extends HandlePackage {
     // Equipment
     private ItemInstance[] slot2Item;
     private boolean[] slot2Hidden;
+
+    // Wield
+    private int wieldLevel;
 
     // Revision
     private int revision;
@@ -39,6 +44,9 @@ public class InventoryHandle extends HandlePackage {
         // Equipment
         this.slot2Item = new ItemInstance[EquipmentSlot.VALUES.length];
         this.slot2Hidden = new boolean[EquipmentSlot.VALUES.length];
+
+        // Wield
+        this.wieldLevel = EngineSetting.LEVEL_START;
     }
 
     @Override
@@ -53,6 +61,9 @@ public class InventoryHandle extends HandlePackage {
     public boolean canEquip(EquipmentSlot equipmentSlot, ItemInstance itemInstance) {
 
         if (hasItem(equipmentSlot) || !equipmentSlot.accepts(itemInstance.getItemDefinitionHandle()))
+            return false;
+
+        if (!equipmentSlot.isHand() && isAboveWieldLevel(itemInstance))
             return false;
 
         boolean twoHanded = itemInstance.getItemDefinitionHandle().isTwoHanded();
@@ -228,18 +239,21 @@ public class InventoryHandle extends HandlePackage {
         return hasItem(equipmentSlot) && !isHidden(equipmentSlot);
     }
 
-    // Totals \\
+    // Wield \\
 
-    public float getStatBonus(ItemStat itemStat) {
-
-        float bonus = 0f;
-
-        for (int i = 0; i < slot2Item.length; i++)
-            if (slot2Item[i] != null)
-                bonus += slot2Item[i].getItemDefinitionHandle().getStat(itemStat);
-
-        return bonus;
+    public boolean isAboveWieldLevel(ItemInstance itemInstance) {
+        return itemInstance.getItemDefinitionHandle().isGear() && itemInstance.getLevel() > wieldLevel;
     }
+
+    public int getWieldLevel() {
+        return wieldLevel;
+    }
+
+    public void setWieldLevel(int wieldLevel) {
+        this.wieldLevel = wieldLevel;
+    }
+
+    // Totals \\
 
     public float getCarriedWeight() {
 
@@ -250,6 +264,12 @@ public class InventoryHandle extends HandlePackage {
                 weight += slot2Item[i].getTotalWeight();
 
         return weight;
+    }
+
+    // Revision \\
+
+    public void markChanged() {
+        revision++;
     }
 
     // Accessible \\

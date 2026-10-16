@@ -9,8 +9,8 @@ import application.bootstrap.itempipeline.itemdefinition.ItemCategory;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionData;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
-import application.bootstrap.itempipeline.itemdefinition.ItemStat;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
+import application.bootstrap.progressionpipeline.util.ValueMapStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import engine.root.BranchPackage;
@@ -68,7 +68,7 @@ class BlockPieceBranch extends BranchPackage {
                 false,
                 true,
                 EquipmentType.NONE,
-                new float[ItemStat.VALUES.length],
+                ValueMapStruct.EMPTY,
                 new ItemShapeStruct(model),
                 null,
                 meshHandle,
@@ -78,6 +78,7 @@ class BlockPieceBranch extends BranchPackage {
                 EngineSetting.TOOL_NONE,
                 EngineSetting.DEFAULT_TOOL_TIER,
                 EngineSetting.MOVESET_NONE,
+                EngineSetting.SKILL_NONE,
                 EngineSetting.BLOCK_PIECE_STACK_SIZE,
                 blockHandle.getBlockID(),
                 new ObjectArrayList<>(),

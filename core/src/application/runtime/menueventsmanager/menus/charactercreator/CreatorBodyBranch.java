@@ -7,6 +7,7 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.DimensionVector2Struct;
+import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -16,17 +17,19 @@ import engine.util.mathematics.vectors.Vector3;
 public class CreatorBodyBranch extends BranchPackage {
 
     /*
-     * Fills the Body tab with a slider per CreatorSlider and applies each
-     * drag to the player. Height and weight span the ranges the entity
-     * template allows; the head sliders span the creator's head proportion
-     * range. A slider shows its value beside its name and moves its knob
-     * with the cursor while dragged.
+     * Fills the Body tab with the character's gender and a slider per
+     * CreatorSlider, and applies each choice to the player. The gender steps
+     * through only the genders the race allows. Height and weight span the
+     * ranges the entity template allows; the head sliders span the creator's
+     * head proportion range. A slider shows its value beside its name and
+     * moves its knob with the cursor while dragged.
      */
 
     // Internal
     private MenuManager menuManager;
     private InputManager inputManager;
     private CharacterCreatorBranch characterCreatorBranch;
+    private GenderManager genderManager;
 
     // Base \\
 
@@ -35,11 +38,15 @@ public class CreatorBodyBranch extends BranchPackage {
         this.menuManager = get(MenuManager.class);
         this.inputManager = get(InputManager.class);
         this.characterCreatorBranch = get(CharacterCreatorBranch.class);
+        this.genderManager = get(GenderManager.class);
     }
 
     // Populate \\
 
     void populateBody(CreatorSessionStruct session) {
+
+        characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_GENDER);
+        injectGenderRow(session);
 
         characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_BUILD);
         injectSlider(session, CreatorSlider.HEIGHT);
@@ -63,6 +70,49 @@ public class CreatorBodyBranch extends BranchPackage {
                     track.findChildById(RuntimeSetting.ELEMENT_CREATOR_SLIDER_LABEL).setFontText(slider.getLabel());
                     refreshSlider(track, slider, session.getPlayer());
                 });
+    }
+
+    // Gender \\
+
+    private void injectGenderRow(CreatorSessionStruct session) {
+
+        String genderName = genderManager.getGenderHandleFromGenderID(session.getPlayer().getGenderID())
+                .getDisplayName();
+
+        menuManager.inject(
+                session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_OPTIONS, RuntimeSetting.MENU_CREATOR_GENDER_ROW,
+                row -> {
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_LABEL)
+                            .setFontText(RuntimeSetting.CREATOR_SECTION_GENDER);
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_VALUE).setFontText(genderName);
+                });
+    }
+
+    public void previousGender(WindowInstance window) {
+        cycleGender(window, -1);
+    }
+
+    public void nextGender(WindowInstance window) {
+        cycleGender(window, 1);
+    }
+
+    private void cycleGender(WindowInstance window, int step) {
+
+        CreatorSessionStruct session = characterCreatorBranch.getSession(window);
+
+        if (session == null)
+            return;
+
+        EntityInstance player = session.getPlayer();
+        EntityData entityData = player.getEntityData();
+        int index = 0;
+
+        for (int i = 0; i < entityData.getGenderCount(); i++)
+            if (entityData.getGenderID(i) == player.getGenderID())
+                index = i;
+
+        player.setGenderID(entityData.getGenderID(Math.floorMod(index + step, entityData.getGenderCount())));
+        characterCreatorBranch.refreshOptions(session);
     }
 
     // Drag \\
@@ -175,6 +225,7 @@ public class CreatorBodyBranch extends BranchPackage {
 
         EntityData entityData = player.getEntityData();
 
+        player.setGenderID(entityData.getGenderID((int) (Math.random() * entityData.getGenderCount())));
         player.setSize(entityData.getRandomSize());
         player.setWeight(entityData.getRandomWeight());
 

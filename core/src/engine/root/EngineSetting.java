@@ -117,6 +117,8 @@ public class EngineSetting {
     public static final int PACKED_COLOR_WHITE = 0xFFFFFF;
     public static final int FNV_OFFSET_BASIS = 0x811c9dc5;
     public static final int FNV_PRIME = 0x01000193;
+    public static final long FNV64_OFFSET_BASIS = 0xcbf29ce484222325L;
+    public static final long FNV64_PRIME = 0x100000001b3L;
     public static final int GL_HANDLE_NONE = 0;
     public static final int GL_INVALID_INDEX = 0xFFFFFFFF;
     public static final int GL_INVALID_LOCATION = -1;
@@ -170,6 +172,7 @@ public class EngineSetting {
     public static final String ANIMATION_PATH = "animations";
     public static final String ANIMATION_TREE_PATH = "animationtrees";
     public static final String ARCHITECTURE_PATH = "architectures";
+    public static final String ATTRIBUTE_PATH = "attributes";
     public static final String BEHAVIOR_PATH = "behaviors";
     public static final String BIOME_PATH = "biomes";
     public static final String BLOCK_PATH = "blocks";
@@ -179,6 +182,8 @@ public class EngineSetting {
     public static final String CAVE_BIOME_PATH = "cavebiomes";
     public static final String CLOUD_PATH = "clouds";
     public static final String COVERING_PATH = "coverings";
+    public static final String DAMAGE_TYPE_PATH = "damagetypes";
+    public static final String DEED_PATH = "deeds";
     public static final String ENTITY_PATH = "entities";
     public static final String FEATURE_PATH = "features";
     public static final String FBO_CATALOG_PATH = "application/fbos";
@@ -190,6 +195,7 @@ public class EngineSetting {
         "frag", "fs", "fragment", "pixel" });
     public static final ObjectArraySet<String> INCLUDE_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "glsl",
         "inc", "glslinc" });
+    public static final String GENDER_PATH = "genders";
     public static final String ITEM_PATH = "items";
     public static final String LOOT_TABLE_PATH = "loottables";
     public static final String MATERIAL_PATH = "materials";
@@ -198,14 +204,19 @@ public class EngineSetting {
     public static final String MOVESET_PATH = "movesets";
     public static final String NPC_PATH = "npcs";
     public static final String PASS_PATH = "processingpasses";
+    public static final String PROFESSION_PATH = "professions";
     public static final String RIG_PATH = "rigs";
     public static final String ROAD_PATH = "roads";
     public static final String SEASON_PATH = "seasons";
     public static final String SETTLEMENT_PATH = "settlements";
     public static final String SHADER_PATH = "shaders";
+    public static final String SKILL_PATH = "skills";
     public static final String SPRITE_PATH = "sprites";
+    public static final String STAT_PATH = "stats";
     public static final String STRUCTURE_LIST_PATH = "structurelists";
     public static final String STRUCTURE_PATH = "structures";
+    public static final String TIER_PATH = "tiers";
+    public static final String TRADE_PATH = "trades";
     public static final String TREE_PATH = "trees";
     public static final ObjectArraySet<String> TCS_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "tcs",
         "tesc" });
@@ -1918,14 +1929,134 @@ public class EngineSetting {
     public static final int SKINNED_INSTANCE_FLOATS = SKINNED_INSTANCE_MODEL_FLOATS
             + SKINNED_INSTANCE_APPEARANCE_FLOATS;
 
-    // Attributes & Carrying
-    public static final float CARRY_CAPACITY_PER_STRENGTH = 2f;
-    public static final float DEFAULT_ARMOR = 0f;
-    public static final float DEFAULT_ATTRIBUTE_VALUE = 10f;
-    public static final float DEFAULT_CARRY_CAPACITY = 30f;
-    public static final float DEFAULT_DAMAGE = 1f;
-    public static final float DEFAULT_HEALTH = 100f;
-    public static final float DEFAULT_STAMINA = 100f;
+    // Progression Text
+    public static final String PROGRESSION_TEXT_NONE = "";
+
+    // Stats — the stats the engine reads by name, and the defaults of every optional stat field
+    public static final String STAT_ARMOR = "armor";
+    public static final String STAT_ATTACK_SPEED = "attack_speed";
+    public static final String STAT_CARRY_CAPACITY = "carry_capacity";
+    public static final String STAT_CRIT_CHANCE = "crit_chance";
+    public static final String STAT_DAMAGE = "damage";
+    public static final float STAT_DEFAULT_BASE = 0f;
+    public static final float STAT_DEFAULT_BONUS_VALUE = 0f;
+    public static final float STAT_DEFAULT_BONUS_WEIGHT = 0f;
+    public static final float STAT_DEFAULT_MAX = Float.MAX_VALUE;
+    public static final float STAT_DEFAULT_MIN = -Float.MAX_VALUE;
+    public static final String STAT_HEALTH = "health";
+    public static final String STAT_HEALTH_REGEN = "health_regen";
+    public static final String STAT_LEARNING = "learning";
+    public static final String STAT_LUCK = "luck";
+    public static final String STAT_MOVE_SPEED = "move_speed";
+    public static final String STAT_PERSUASION = "persuasion";
+    public static final String STAT_POISE = "poise";
+    public static final String STAT_RETENTION = "retention";
+    public static final String STAT_THROW_POWER = "throw_power";
+    public static final String STAT_WORK_POWER = "work_power";
+
+    // Levels & Experience — an even-level kill is worth experience per level it was made at, a level takes one more
+    // such kill than the level before, and the window above a level widens with it
+    public static final double EXPERIENCE_PER_KILL_LEVEL = 10.0;
+    public static final double KILLS_ADDED_PER_LEVEL = 1.0;
+    public static final double KILLS_FOR_FIRST_LEVEL = 10.0;
+    public static final int LEVEL_NONE = 0;
+    public static final int LEVEL_START = 1;
+    public static final int LEVEL_WINDOW_BASE = 2;
+    public static final float LEVEL_WINDOW_PER_LEVEL = 0.1f;
+
+    // Attributes — every attribute starts here, creation gives a pool capped per attribute, and each level one more
+    public static final int ATTRIBUTE_CREATION_MAX = 5;
+    public static final int ATTRIBUTE_CREATION_POINTS = 9;
+    public static final int ATTRIBUTE_POINTS_PER_LEVEL = 1;
+    public static final int ATTRIBUTE_START = 1;
+
+    // Power — the growth every level is worth, the widest level gap it is raised over, and how absolute values read
+    public static final String POWER_NEGATIVE_SIGN = "-";
+    public static final double POWER_GROWTH_PER_LEVEL = 1.05;
+    public static final int POWER_LEVEL_GAP_MAX = 1500;
+    public static final String POWER_SCIENTIFIC_FORMAT = "%.2fe%d";
+    public static final String POWER_SUFFIX_FORMAT = "%.1f%s";
+    public static final int POWER_SUFFIX_GROUP_LOG10 = 3;
+    public static final double POWER_SUFFIX_START_LOG10 = 4.0;
+    public static final String[] POWER_SUFFIXES = { "", "K", "M", "B", "T" };
+
+    // Proficiency — the range and rates trades and skills default to, how learning slows and relearning speeds, and
+    // how neglect wears them down over game days
+    public static final double PROFICIENCY_DECAY_GRACE_SECONDS = 172800.0;
+    public static final double PROFICIENCY_DECAY_PER_DAY = 1.0;
+    public static final double PROFICIENCY_DECAY_SOFTNESS = 40.0;
+    public static final float PROFICIENCY_DEFAULT_LEARN_RATE = 1f;
+    public static final float PROFICIENCY_DEFAULT_MAX = 100f;
+    public static final float PROFICIENCY_DEFAULT_MIN = -100f;
+    public static final float PROFICIENCY_LEARN_SOFTNESS = 50f;
+    public static final float PROFICIENCY_MEMORY_FLOOR = 0.25f;
+    public static final float PROFICIENCY_RELEARN_BOOST = 3f;
+    public static final float PROFICIENCY_RETENTION_MIN = 0.1f;
+    public static final double PROFICIENCY_SECONDS_PER_DAY = 86400.0;
+    public static final int PROFICIENCY_SETTLE_BEINGS_PER_FRAME = 4;
+
+    // Skills — the skill bare hands train, the share of fed trades a skill carries, and the practice each use gives
+    public static final String ITEM_SKILL_NONE = "";
+    public static final short SKILL_NONE = 0;
+    public static final float SKILL_PRACTICE_PER_GUARD = 0.2f;
+    public static final float SKILL_PRACTICE_PER_STRIKE = 0.2f;
+    public static final float SKILL_PRACTICE_PER_THROW = 0.2f;
+    public static final float SKILL_PRACTICE_PER_WORK = 0.1f;
+    public static final float SKILL_TRADE_CARRY = 0.25f;
+    public static final String SKILL_THROWN = "thrown";
+    public static final String SKILL_UNARMED = "unarmed";
+
+    // Conduct — morality and affinity ranges, how a kill weighs the victim's morality, how a wound sours regard, the
+    // deeds the engine performs by name, and the salts identities are hashed apart by
+    public static final float AFFINITY_MAX = 100f;
+    public static final float AFFINITY_MORALITY_SWAY = 10f;
+    public static final float AFFINITY_PER_WOUND = 20f;
+    public static final String DEED_KILL = "kill";
+    public static final String DEED_SKILL_ADVANCE = "skill_advance";
+    public static final String DEED_TRADE_ADVANCE = "trade_advance";
+    public static final String DEED_TRADE_PRACTICE = "trade_practice";
+    public static final long IDENTITY_NAME_SALT = 0x3C6EF372FE94F82BL;
+    public static final long IDENTITY_NONE = 0L;
+    public static final long IDENTITY_SPAWN_SALT = 0xA54FF53A5F1D36F1L;
+    public static final float KILL_MORALITY_SHARE = 0.05f;
+    public static final float MORALITY_MAX = 1000f;
+
+    // Professions and Genders
+    public static final String DEFAULT_RACE_GENDER = "asexual";
+    public static final int PROFESSION_DEFAULT_DEED_COUNT = 1;
+    public static final float NPC_TRADE_GROWTH_PER_LEVEL = 0.05f;
+
+    // Gear Tiers — tiers multiply nothing until gear is forged, and luck tilts every draw toward the rarer ranks
+    public static final int TIER_COLOR_CHANNEL_COUNT = 3;
+    public static final int TIER_DEFAULT_BONUS_COUNT = 0;
+    public static final float TIER_DEFAULT_MULTIPLIER = 1f;
+    public static final float TIER_DEFAULT_WEIGHT = 1f;
+    public static final float TIER_LUCK_TILT = 1f;
+    public static final short TIER_NONE = 0;
+    public static final long TIER_ROLL_SALT = 0x6A09E667F3BCC908L;
+
+    // Gear — condition from new to old, the share of its stats old gear keeps, how far each use wears it, and how
+    // rolled bonuses are drawn
+    public static final float ARMOR_WEAR_PER_WOUND = 0.05f;
+    public static final float CONDITION_FLOOR = 0.5f;
+    public static final float CONDITION_NEW = 1f;
+    public static final float CONDITION_WORN_OUT = 0f;
+    public static final short[] GEAR_BONUS_IDS_NONE = new short[0];
+    public static final float GEAR_BONUS_ROLL_MIN = 0.5f;
+    public static final long GEAR_BONUS_SALT = 0xBB67AE8584CAA73BL;
+    public static final long GEAR_BONUS_VALUE_SALT = 0x510E527FADE682D1L;
+    public static final float[] GEAR_BONUS_VALUES_NONE = new float[0];
+    public static final long GEAR_FORGE_SALT = 0x9B05688C2B3E6C1FL;
+    public static final float TOOL_WEAR_PER_WORK = 0.0005f;
+    public static final float WEAPON_WEAR_PER_STRIKE = 0.001f;
+
+    // Vitality — health is a share from none to full; a wound holds regeneration off and freshens bleeding, which
+    // fades with time and with health regained
+    public static final float BLEED_FADE_PER_SECOND = 0.04f;
+    public static final float BLEED_HEAL_SHARE = 1.5f;
+    public static final float BLEED_PER_WOUND = 2.5f;
+    public static final float REGENERATION_DELAY_SECONDS = 5f;
+    public static final float VITALITY_FULL = 1f;
 
     // Equipment
     public static final String EQUIPMENT_ITEM_MATERIAL = "items/EquipmentItemMaterial";
@@ -1941,8 +2072,12 @@ public class EngineSetting {
     public static final float DEFAULT_ANIMATION_NODE_RATE = 1f;
 
     // Residents — how far an NPC wanders from its spot and how near counts as arrived, how long it idles and how
-    // long it walks before giving up, how far off it is drawn, and how what it drops is thrown clear of it
+    // long it walks before giving up, how far off it is drawn, how what it drops is thrown clear of it, the profession
+    // it holds unless it names one, and the salts its level and gender are drawn from its spawn with
     public static final float DEFAULT_NPC_WANDER_BLOCKS = 4f;
+    public static final String NPC_DEFAULT_PROFESSION = "villager";
+    public static final long NPC_GENDER_SALT = 0x5BE0CD19137E2179L;
+    public static final long NPC_LEVEL_SALT = 0x428A2F98D728AE22L;
     public static final float NPC_ARRIVE_DISTANCE_BLOCKS = 0.5f;
     public static final float NPC_DROP_LIFT_BLOCKS = 0.5f;
     public static final float NPC_DROP_LIFT_SPEED = 3f;
@@ -1965,6 +2100,8 @@ public class EngineSetting {
     public static final float BLOCK_MITIGATION_MAX = 0.9f;
     public static final float BLOCK_MITIGATION_PER_ARMOR = 0.05f;
     public static final float BLOCK_MITIGATION_PER_WEIGHT = 0.06f;
+    public static final float CRIT_DAMAGE_MULTIPLIER = 2f;
+    public static final String DAMAGE_TYPE_BLUNT = "blunt";
     public static final float DEFAULT_ATTACK_ARC = 0f;
     public static final float DEFAULT_ATTACK_DAMAGE = 1f;
     public static final float DEFAULT_ATTACK_REACH = 1f;
@@ -2007,8 +2144,6 @@ public class EngineSetting {
     public static final float THROW_RELEASE_MARGIN = 0.05f;
     public static final float THROW_SECONDS = 0.35f;
     public static final float THROW_SPIN_RATE = 18f;
-    public static final float THROW_STRENGTH_MIN_FACTOR = 0.5f;
-    public static final float THROW_STRENGTH_SCALE = 0.05f;
     public static final float THROWN_DAMAGE_MIN = 1f;
     public static final float THROWN_DAMAGE_PER_MOMENTUM = 0.35f;
 
@@ -2133,6 +2268,7 @@ public class EngineSetting {
     public static final long LOOT_CONTAINER_SALT = 0xC4E07A93B1D6582FL;
     public static final long LOOT_COUNT_SALT = 0x2D9B6F14E8A37C05L;
     public static final long LOOT_GUARANTEED_SALT = 0x5E8A1C37F0B4D962L;
+    public static final long LOOT_LEVEL_SALT = 0x1F83D9ABFB41BD6BL;
     public static final long LOOT_ROLL_SALT = 0x7F35C2A9064BE1D8L;
     public static final long LOOT_ROLLS_SALT = 0xB81E4D07C6A3925FL;
     public static final String LOOT_TABLE_NAME_NONE = "";
@@ -2159,18 +2295,6 @@ public class EngineSetting {
     public static final String ITEM_CATEGORY_TITLE_MISC = "Miscellaneous";
     public static final String ITEM_CATEGORY_TITLE_TOOL = "Tools";
     public static final String ITEM_CATEGORY_TITLE_WEAPON = "Weapons";
-
-    // Item Stats
-    public static final String ITEM_STAT_TITLE_ARMOR = "Armor";
-    public static final String ITEM_STAT_TITLE_CHARISMA = "Charisma";
-    public static final String ITEM_STAT_TITLE_CONSTITUTION = "Constitution";
-    public static final String ITEM_STAT_TITLE_DAMAGE = "Damage";
-    public static final String ITEM_STAT_TITLE_DEXTERITY = "Dexterity";
-    public static final String ITEM_STAT_TITLE_HEALTH = "Health";
-    public static final String ITEM_STAT_TITLE_INTELLIGENCE = "Intelligence";
-    public static final String ITEM_STAT_TITLE_STAMINA = "Stamina";
-    public static final String ITEM_STAT_TITLE_STRENGTH = "Strength";
-    public static final String ITEM_STAT_TITLE_WISDOM = "Wisdom";
 
     // Container
     public static final int CONTAINER_MAX_CELLS = 65536;

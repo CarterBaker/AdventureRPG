@@ -18,19 +18,19 @@ import engine.util.mathematics.vectors.Vector3;
 public class InventorySessionStruct extends StructPackage {
 
     /*
-     * One window's open inventory — the character's own, or a container
-     * opened where it lies, in the world or aboard a vehicle. Holds the player
-     * it belongs to, the scene menu whose surface lies under every other
+     * One window's open inventory — the character's own, or a container opened
+     * where it lies, in the world or aboard a vehicle. Holds the player it
+     * belongs to, the scene menu whose surface lies under every other
      * inventory menu, the equipment menu and the slot element for every
      * equipment slot when the character is shown, a view for each container
      * that can be open, the world item or cargo opened if any, the item
-     * carried under the cursor, the drop that item would make where the
-     * cursor is, the item under the cursor, and the item whose details are on
-     * show. The shown revisions say which
-     * state of the inventory and the backpack's contents the slots and
-     * statistics show, and the preview's zoom and focus say how close and
-     * where the character is framed. The camera direction the inventory
-     * opened with is handed back when it closes.
+     * carried under the cursor, the drop that item would make where the cursor
+     * is, the item under the cursor, and the item whose details are on show.
+     * The shown revisions say which state of the inventory and the backpack's
+     * contents the slots show, and which state of the character and how far
+     * through its level the statistics show, and the preview's zoom and focus
+     * say how close and where the character is framed. The camera direction
+     * the inventory opened with is handed back when it closes.
      */
 
     // Window
@@ -46,6 +46,8 @@ public class InventorySessionStruct extends StructPackage {
     private final ElementInstance[] slot2Element;
     private int shownRevision;
     private int shownContentRevision;
+    private int shownStatRevision;
+    private double shownProgress;
 
     // Containers
     private final InventoryViewStruct[] views;
@@ -72,6 +74,9 @@ public class InventorySessionStruct extends StructPackage {
     // Preview — how far the character is zoomed in and the share of its height framed at the centre
     private float previewZoom;
     private float previewFocus;
+
+    // Cover — while another menu stands over the inventory
+    private boolean covered;
 
     // Close
     private boolean closeArmed;
@@ -101,6 +106,8 @@ public class InventorySessionStruct extends StructPackage {
         this.slot2Element = new ElementInstance[EquipmentSlot.VALUES.length];
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
         this.shownContentRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.shownStatRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.shownProgress = EngineSetting.INDEX_NOT_FOUND;
 
         // Containers
         this.views = new InventoryViewStruct[InventoryContainer.VALUES.length];
@@ -187,6 +194,30 @@ public class InventorySessionStruct extends StructPackage {
 
     public void setShownContentRevision(int shownContentRevision) {
         this.shownContentRevision = shownContentRevision;
+    }
+
+    public boolean isCovered() {
+        return covered;
+    }
+
+    public void setCovered(boolean covered) {
+        this.covered = covered;
+    }
+
+    public int getShownStatRevision() {
+        return shownStatRevision;
+    }
+
+    public void setShownStatRevision(int shownStatRevision) {
+        this.shownStatRevision = shownStatRevision;
+    }
+
+    public double getShownProgress() {
+        return shownProgress;
+    }
+
+    public void setShownProgress(double shownProgress) {
+        this.shownProgress = shownProgress;
     }
 
     public InventoryViewStruct getView(InventoryContainer inventoryContainer) {

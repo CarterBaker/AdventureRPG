@@ -5,11 +5,14 @@ import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
+import application.bootstrap.entitypipeline.progression.CareerHandle;
+import application.bootstrap.entitypipeline.progression.ConductHandle;
+import application.bootstrap.entitypipeline.progression.ProficiencyHandle;
+import application.bootstrap.entitypipeline.progression.ProgressionHandle;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
-import application.bootstrap.itempipeline.itemdefinition.ItemStat;
+import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
-import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -19,13 +22,17 @@ public class EntityInstance extends InstancePackage {
      * Runtime entity spawned by EntityManager, holding its template and all
      * per-instance state. setWeight() keeps weight and body build in step,
      * updateAnimation() is the one path that advances its animation tree,
-     * playing whatever action its hands are in over its movement — a
-     * moveset's own clip where the action carries one — getStat()
-     * totals a statistic from base value and gear, and getEyePosition() is
-     * the one place its eye — where it aims from — is placed.
+     * playing whatever action its hands are in over its movement — a moveset's
+     * own clip where the action carries one — getStat() reads a stat's total,
+     * resolved through ProgressionManager only once something it is built from
+     * has changed, and getEyePosition() is the one place its eye — where it
+     * aims from — is placed. Its level, attributes, trades, skills, conduct
+     * and professions live in their own handles, the same for a player as for
+     * any NPC, and it carries one of the genders its race allows.
      */
 
     // Internal
+    private ProgressionManager progressionManager;
     private EntityData entityData;
     private WorldHandle worldHandle;
     private BehaviorHandle behaviorHandle;
@@ -35,6 +42,12 @@ public class EntityInstance extends InstancePackage {
     private EntityActionHandle entityActionHandle;
     private StatisticsHandle statisticsHandle;
     private InventoryHandle inventoryHandle;
+
+    // Progression
+    private ProgressionHandle progressionHandle;
+    private ProficiencyHandle proficiencyHandle;
+    private ConductHandle conductHandle;
+    private CareerHandle careerHandle;
 
     // Input
     private EntityInputHandle EntityInputHandle;
@@ -51,6 +64,7 @@ public class EntityInstance extends InstancePackage {
     // Runtime
     private Vector3 size;
     private float weight;
+    private short genderID;
 
     // Internal \\
 
@@ -63,11 +77,24 @@ public class EntityInstance extends InstancePackage {
         this.statisticsHandle = create(StatisticsHandle.class);
         this.inventoryHandle = create(InventoryHandle.class);
 
+        // Progression
+        this.progressionHandle = create(ProgressionHandle.class);
+        this.proficiencyHandle = create(ProficiencyHandle.class);
+        this.conductHandle = create(ConductHandle.class);
+        this.careerHandle = create(CareerHandle.class);
+
         // Input
         this.EntityInputHandle = create(EntityInputHandle.class);
 
         // Physics
         this.worldPositionStruct = new WorldPositionStruct();
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.progressionManager = get(ProgressionManager.class);
     }
 
     // Constructor \\
@@ -93,6 +120,7 @@ public class EntityInstance extends InstancePackage {
         // Runtime
         this.size = size;
         this.weight = weight;
+        this.genderID = entityData.getDefaultGenderID();
 
         // Animation
         if (entityData.hasCharacterModel()) {
@@ -135,17 +163,12 @@ public class EntityInstance extends InstancePackage {
 
     // Statistics \\
 
-    public float getStat(ItemStat itemStat) {
-        return statisticsHandle.getBaseStat(itemStat) + inventoryHandle.getStatBonus(itemStat);
+    public float getStat(short statID) {
+        return progressionManager.resolveStats(this)[statID];
     }
 
-    public float getMaxHealth() {
-        return getStat(ItemStat.HEALTH);
-    }
-
-    public float getCarryCapacity() {
-        return EngineSetting.DEFAULT_CARRY_CAPACITY
-                + getStat(ItemStat.STRENGTH) * EngineSetting.CARRY_CAPACITY_PER_STRENGTH;
+    public int getLevel() {
+        return progressionHandle.getLevel();
     }
 
     // Accessible \\
@@ -180,6 +203,22 @@ public class EntityInstance extends InstancePackage {
 
     public InventoryHandle getInventoryHandle() {
         return inventoryHandle;
+    }
+
+    public ProgressionHandle getProgressionHandle() {
+        return progressionHandle;
+    }
+
+    public ProficiencyHandle getProficiencyHandle() {
+        return proficiencyHandle;
+    }
+
+    public ConductHandle getConductHandle() {
+        return conductHandle;
+    }
+
+    public CareerHandle getCareerHandle() {
+        return careerHandle;
     }
 
     public EntityInputHandle getEntityInputHandle() {
@@ -230,6 +269,18 @@ public class EntityInstance extends InstancePackage {
 
         if (appearanceHandle != null)
             appearanceHandle.setWeightRatio(entityData.getWeightRatio(weight));
+    }
+
+    public short getGenderID() {
+        return genderID;
+    }
+
+    public void setGenderID(short genderID) {
+
+        if (!entityData.allowsGender(genderID))
+            throwException("This race does not allow gender ID " + genderID + ".");
+
+        this.genderID = genderID;
     }
 
     public float getEyeHeight() {

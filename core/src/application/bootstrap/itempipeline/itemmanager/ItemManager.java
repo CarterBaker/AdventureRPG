@@ -8,13 +8,13 @@ import engine.root.ManagerPackage;
 public class ItemManager extends ManagerPackage {
 
     /*
-     * The one place real items are made. createItem() turns an item
-     * definition into an ItemInstance, giving a container item its own empty
-     * container; createStack() makes a stackable item standing for several,
-     * and splitStack() parts a stack in two; toCarried() is the item a placed
-     * item is picked up as, which may be another one, as an open door is
-     * picked up shut. Every item a player is given, finds, splits off, or
-     * restores from a save is created here.
+     * The one place real items are made. createItem() turns an item definition
+     * into an ItemInstance, giving a container item its own empty container;
+     * createStack() makes a stackable item standing for several, and
+     * splitStack() parts a stack in two, both halves keeping its gear;
+     * toCarried() is the item a placed item is picked up as, which may be
+     * another one, as an open door is picked up shut. Every item a player is
+     * given, finds, splits off, or restores from a save is created here.
      */
 
     // Internal
@@ -67,8 +67,11 @@ public class ItemManager extends ManagerPackage {
             throwException("Cannot split " + stackCount + " off a stack of " + itemInstance.getStackCount()
                     + " '" + itemInstance.getItemDefinitionHandle().getItemName() + "'.");
 
-        itemInstance.setStackCount(itemInstance.getStackCount() - stackCount);
+        ItemInstance split = createStack(itemInstance.getItemDefinitionHandle(), stackCount);
 
-        return createStack(itemInstance.getItemDefinitionHandle(), stackCount);
+        itemInstance.setStackCount(itemInstance.getStackCount() - stackCount);
+        split.copyGear(itemInstance);
+
+        return split;
     }
 }

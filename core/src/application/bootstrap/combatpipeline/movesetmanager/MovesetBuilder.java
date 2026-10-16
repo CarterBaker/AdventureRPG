@@ -9,6 +9,7 @@ import application.bootstrap.combatpipeline.moveset.MovesetData;
 import application.bootstrap.combatpipeline.moveset.MovesetHandle;
 import application.bootstrap.entitypipeline.entity.CombatDirection;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.progressionpipeline.damagetypemanager.DamageTypeManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgObjectStruct;
@@ -20,18 +21,21 @@ class MovesetBuilder extends BuilderPackage {
      * Parses one moveset ARPG file into a MovesetData and wraps it in a
      * MovesetHandle, under the short moveset ID MovesetManager assigns its
      * name. "attacks" and the guard's "clips" each name every CombatDirection
-     * by its lower-case name and nothing else. An attack names its "clip",
-     * the seconds it takes to "windup" and to "recovery", and optionally the
+     * by its lower-case name and nothing else. An attack names its "clip", the
+     * seconds it takes to "windup" and to "recovery", and optionally the
      * fraction of its clip its blow lands on ("strike"), its "damage" and
-     * "reach" against the entity's plain strike, and the "arc" in degrees it
-     * sweeps. The guard names how many seconds it takes to "raise" and to
-     * "shift" between sides, and the share of a blow it will "catch". Every clip is resolved here, plays once, and
-     * targets the same rig as the rest. Bootstrap-only.
+     * "reach" against the entity's plain strike, the "arc" in degrees it
+     * sweeps, and the "damage_type" its blow lands as, blunt unless it names
+     * one. The guard names how many seconds it takes to "raise" and to "shift"
+     * between sides, and the share of a blow it will "catch". Every clip is
+     * resolved here, plays once, and targets the same rig as the rest.
+     * Bootstrap-only.
      */
 
     // Internal
     private MovesetManager movesetManager;
     private AnimationManager animationManager;
+    private DamageTypeManager damageTypeManager;
 
     // Base \\
 
@@ -41,6 +45,7 @@ class MovesetBuilder extends BuilderPackage {
         // Internal
         this.movesetManager = get(MovesetManager.class);
         this.animationManager = get(AnimationManager.class);
+        this.damageTypeManager = get(DamageTypeManager.class);
     }
 
     // Build \\
@@ -119,6 +124,8 @@ class MovesetBuilder extends BuilderPackage {
         float damage = ArpgUtility.getFloat(attackArpg, "damage", EngineSetting.DEFAULT_ATTACK_DAMAGE);
         float reach = ArpgUtility.getFloat(attackArpg, "reach", EngineSetting.DEFAULT_ATTACK_REACH);
         float arc = ArpgUtility.getFloat(attackArpg, "arc", EngineSetting.DEFAULT_ATTACK_ARC);
+        short damageTypeID = damageTypeManager.getDamageTypeIDFromDamageTypeName(
+                ArpgUtility.getString(attackArpg, "damage_type", EngineSetting.DAMAGE_TYPE_BLUNT));
 
         if (strike <= 0f || strike >= 1f)
             throwException(owner + " must land its \"strike\" between 0 and 1. File: " + file.getName());
@@ -134,7 +141,7 @@ class MovesetBuilder extends BuilderPackage {
             throwException(owner + " sweeps an \"arc\" outside 0 to " + EngineSetting.ATTACK_ARC_MAX
                     + " degrees. File: " + file.getName());
 
-        return new AttackStruct(clip, strike, windup, recovery, damage, reach, arc);
+        return new AttackStruct(clip, strike, windup, recovery, damage, reach, arc, damageTypeID);
     }
 
     // Validation \\

@@ -20,6 +20,7 @@ import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.settings.KeyBindings;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class InventoryBranch extends BranchPackage {
 
@@ -30,14 +31,17 @@ public class InventoryBranch extends BranchPackage {
      * its panel beside it. Activating a chest or bag that lies in the world,
      * or aboard a vehicle, opens it where it lies instead, once nothing rests
      * in its lid's way, the camera left where it was: its panel on the right,
-     * the worn bag's on the left. Either closes on the inventory key or
-     * Pause, and a container also on being activated again or leaving where
-     * it lay, returning any carried item and the camera. Each frame the drag,
+     * the worn bag's on the left. Either closes on the inventory key or Pause,
+     * and a container also on being activated again or leaving where it lay,
+     * returning any carried item and the camera. Each frame the drag,
      * container and equipment branches settle and redraw what changed. A new
      * item handed in while the cursor is over the open inventory lands where
      * it points. findOpenableContainer() is the one place that decides which
-     * container the activate binding would open: the nearer of cargo aboard
-     * a vehicle and a world item.
+     * container the activate binding would open: the nearer of cargo aboard a
+     * vehicle and a world item. setCovered() hides every inventory menu that
+     * is showing while another menu, such as the character sheet, stands over
+     * the inventory, and shows exactly those again once it is gone; the
+     * inventory neither closes nor draws while covered.
      */
 
     // Internal
@@ -54,12 +58,22 @@ public class InventoryBranch extends BranchPackage {
     // State
     private InventorySessionStruct session;
 
+    // Cover — the menus setCovered() hid, shown again when uncovered
+    private ObjectArrayList<MenuInstance> coveredMenus;
+
     // Openable — the container findOpenableContainer() last found
     private WorldItemInstance openableWorldItem;
     private VehicleCargoInstance openableCargo;
     private VehicleInstance openableVehicle;
 
     // Base \\
+
+    @Override
+    protected void create() {
+
+        // Cover
+        this.coveredMenus = new ObjectArrayList<>();
+    }
 
     @Override
     protected void get() {
@@ -231,8 +245,45 @@ public class InventoryBranch extends BranchPackage {
         }
 
         menuManager.closeMenu(session.getSceneMenu());
+        coveredMenus.clear();
 
         this.session = null;
+    }
+
+    // Cover \\
+
+    public void setCovered(boolean covered) {
+
+        if (session == null || session.isCovered() == covered)
+            return;
+
+        session.setCovered(covered);
+
+        if (!covered) {
+
+            for (int i = 0; i < coveredMenus.size(); i++)
+                coveredMenus.get(i).show();
+
+            coveredMenus.clear();
+            return;
+        }
+
+        cover(session.getSceneMenu());
+        cover(session.getEquipmentMenu());
+
+        for (InventoryViewStruct view : session.getViews()) {
+            cover(view.getPanelMenu());
+            cover(view.getListMenu());
+        }
+    }
+
+    private void cover(MenuInstance menu) {
+
+        if (menu == null || !menu.isVisible())
+            return;
+
+        menu.hide();
+        coveredMenus.add(menu);
     }
 
     // Receive \\

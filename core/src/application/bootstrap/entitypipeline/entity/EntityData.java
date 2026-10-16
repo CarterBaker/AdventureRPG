@@ -18,7 +18,8 @@ public class EntityData extends DataPackage {
      * ranges, behavior, and the optional character model with its material,
      * animation tree, appearance, authored height and equipment anchors. The
      * material is resolved once per template and shared by every instance so
-     * characters batch together.
+     * characters batch together. A race allows one or more genders; the first
+     * is the one a new being of it starts with.
      */
 
     // Size
@@ -32,6 +33,9 @@ public class EntityData extends DataPackage {
 
     // Behavior
     private final String behaviorName;
+
+    // Genders
+    private final short[] genderIDs;
 
     // Model — optional
     private final MeshHandle characterMesh;
@@ -55,6 +59,7 @@ public class EntityData extends DataPackage {
             float weightMax,
             float eyeLevel,
             String behaviorName,
+            short[] genderIDs,
             MeshHandle characterMesh,
             MaterialInstance characterMaterial,
             AnimationTreeHandle animationTreeHandle,
@@ -73,6 +78,9 @@ public class EntityData extends DataPackage {
 
         // Behavior
         this.behaviorName = behaviorName;
+
+        // Genders
+        this.genderIDs = genderIDs;
 
         // Model
         this.characterMesh = characterMesh;
@@ -112,6 +120,27 @@ public class EntityData extends DataPackage {
 
     public String getBehaviorName() {
         return behaviorName;
+    }
+
+    public int getGenderCount() {
+        return genderIDs.length;
+    }
+
+    public short getGenderID(int index) {
+        return genderIDs[index];
+    }
+
+    public short getDefaultGenderID() {
+        return genderIDs[0];
+    }
+
+    public boolean allowsGender(short genderID) {
+
+        for (int i = 0; i < genderIDs.length; i++)
+            if (genderIDs[i] == genderID)
+                return true;
+
+        return false;
     }
 
     public boolean hasCharacterModel() {

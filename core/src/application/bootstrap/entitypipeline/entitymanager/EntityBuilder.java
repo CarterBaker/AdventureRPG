@@ -13,6 +13,8 @@ import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
+import application.bootstrap.progressionpipeline.util.ProgressionArpgUtility;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import engine.root.BuilderPackage;
@@ -29,7 +31,8 @@ class EntityBuilder extends BuilderPackage {
      * Parses entity template ARPG into EntityData wrapped in an EntityHandle,
      * defaulting size, weight and eye level. The optional model block resolves
      * mesh, shared material, rig and animation tree, plus appearance and
-     * equipment anchors. Bootstrap only.
+     * equipment anchors, and the genders the entity may be made as. Bootstrap
+     * only.
      */
 
     // Internal
@@ -37,6 +40,7 @@ class EntityBuilder extends BuilderPackage {
     private MaterialManager materialManager;
     private AnimationTreeManager animationTreeManager;
     private AppearanceBuilder appearanceBuilder;
+    private GenderManager genderManager;
 
     // Base \\
 
@@ -48,6 +52,7 @@ class EntityBuilder extends BuilderPackage {
         this.materialManager = get(MaterialManager.class);
         this.animationTreeManager = get(AnimationTreeManager.class);
         this.appearanceBuilder = get(AppearanceBuilder.class);
+        this.genderManager = get(GenderManager.class);
     }
 
     // Build \\
@@ -62,6 +67,7 @@ class EntityBuilder extends BuilderPackage {
         float weightMax = parseWeightMax(arpg);
         float eyeLevel = parseEyeLevel(arpg);
         String behaviorName = parseBehaviorName(arpg, file);
+        short[] genderIDs = parseGenders(arpg);
 
         MeshHandle characterMesh = null;
         MaterialInstance characterMaterial = null;
@@ -102,7 +108,7 @@ class EntityBuilder extends BuilderPackage {
         }
 
         EntityData entityData = new EntityData(
-                sizeMin, sizeMax, weightMin, weightMax, eyeLevel, behaviorName,
+                sizeMin, sizeMax, weightMin, weightMax, eyeLevel, behaviorName, genderIDs,
                 characterMesh, characterMaterial, animationTreeHandle, modelHeight, appearanceData,
                 equipmentAnchors);
 
@@ -110,6 +116,20 @@ class EntityBuilder extends BuilderPackage {
         entityHandle.constructor(entityData);
 
         return entityHandle;
+    }
+
+    // Gender Parsing \\
+
+    // The genders the race allows, the race default's alone when it names none
+    private short[] parseGenders(ArpgObjectStruct arpg) {
+
+        short[] genderIDs = ProgressionArpgUtility.parseNames(
+                arpg, "genders", genderManager::getGenderIDFromGenderName);
+
+        if (genderIDs.length > 0)
+            return genderIDs;
+
+        return new short[] { genderManager.getGenderIDFromGenderName(EngineSetting.DEFAULT_RACE_GENDER) };
     }
 
     // Model Parsing \\

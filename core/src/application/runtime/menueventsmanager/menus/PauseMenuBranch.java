@@ -3,7 +3,6 @@ package application.runtime.menueventsmanager.menus;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.savepipeline.savemanager.SaveManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -23,7 +22,6 @@ public class PauseMenuBranch extends BranchPackage {
     private MenuManager menuManager;
     private InputManager inputManager;
     private PlayerManager playerManager;
-    private SaveManager saveManager;
     private MainMenuBranch mainMenuBranch;
 
     // State
@@ -37,7 +35,6 @@ public class PauseMenuBranch extends BranchPackage {
         this.menuManager = get(MenuManager.class);
         this.inputManager = get(InputManager.class);
         this.playerManager = get(PlayerManager.class);
-        this.saveManager = get(SaveManager.class);
         this.mainMenuBranch = get(MainMenuBranch.class);
     }
 
@@ -83,7 +80,10 @@ public class PauseMenuBranch extends BranchPackage {
 
     public void quitToMainMenu(WindowInstance window) {
         closeMenu();
-        saveManager.closeCharacter(window);
-        mainMenuBranch.openMenu(window);
+        mainMenuBranch.returnToMainMenu(window);
+    }
+
+    public boolean isOpen() {
+        return pauseMenu != null;
     }
 }

@@ -8,6 +8,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
+import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockPlacementSystem;
@@ -20,17 +21,18 @@ class BlockBranch extends BranchPackage {
 
     /*
      * Handles block breaking and placement for PlacementManager. Tracks the
-     * current break target across strikes and counts each strike against
-     * block durability. A block that names a tool only takes strikes from that
-     * tool held in the main hand, at a tier at least its own. A block
-     * subdivided into sub-blocks breaks one sub-block at a time — the one the
-     * strike met — each taking the block's full durability, and hands out one
-     * block piece; a whole block breaks whole and hands out a piece for each
-     * of its eight sub-blocks. The pieces must fit in the striker's inventory,
-     * or the block holds. A whole block broken under a fully grown covering
-     * also hands out the covering's drop through CoverageBranch. A held piece
-     * is placed back as a sub-block of its block. Every world edit it makes
-     * goes through BlockPlacementSystem.
+     * current break target across strikes and counts each strike against block
+     * durability by the striker's work power, so a stronger worker breaks a
+     * block in fewer strikes. A block that names a tool only takes strikes
+     * from that tool held in the main hand, at a tier at least its own. A
+     * block subdivided into sub-blocks breaks one sub-block at a time — the
+     * one the strike met — each taking the block's full durability, and hands
+     * out one block piece; a whole block breaks whole and hands out a piece
+     * for each of its eight sub-blocks. The pieces must fit in the striker's
+     * inventory, or the block holds. A whole block broken under a fully grown
+     * covering also hands out the covering's drop through CoverageBranch. A
+     * held piece is placed back as a sub-block of its block. Every world edit
+     * it makes goes through BlockPlacementSystem.
      */
 
     // Internal
@@ -39,12 +41,13 @@ class BlockBranch extends BranchPackage {
     private ItemDefinitionManager itemDefinitionManager;
     private ItemManager itemManager;
     private CoverageBranch coverageBranch;
+    private StatManager statManager;
 
     // Block IDs
     private short airBlockID;
 
     // Break Tracking
-    private int currentHits;
+    private float currentHits;
     private long targetChunkCoord;
     private int targetPackedBlock;
     private int targetSubChunkY;
@@ -66,6 +69,7 @@ class BlockBranch extends BranchPackage {
         this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.itemManager = get(ItemManager.class);
         this.coverageBranch = get(CoverageBranch.class);
+        this.statManager = get(StatManager.class);
     }
 
     @Override
@@ -98,14 +102,14 @@ class BlockBranch extends BranchPackage {
                 && octantTarget == targetOctant;
 
         if (!sameTarget) {
-            currentHits = 0;
+            currentHits = 0f;
             targetChunkCoord = castStruct.getChunkCoordinate();
             targetPackedBlock = packedTarget;
             targetSubChunkY = castStruct.getSubChunkY();
             targetOctant = octantTarget;
         }
 
-        currentHits++;
+        currentHits += Math.max(0f, entity.getStat(statManager.getWorkPowerStatID()));
 
         if (currentHits < block.getDurability())
             return true;
@@ -170,7 +174,7 @@ class BlockBranch extends BranchPackage {
     // Break Target \\
 
     void resetBreakTarget() {
-        currentHits = 0;
+        currentHits = 0f;
         targetChunkCoord = Long.MIN_VALUE;
         targetPackedBlock = Integer.MIN_VALUE;
         targetSubChunkY = Integer.MIN_VALUE;

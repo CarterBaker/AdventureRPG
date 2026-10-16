@@ -14,15 +14,16 @@ class AttackBranch extends BranchPackage {
 
     /*
      * Runs moveset attacks for CombatManager. attack() starts the attack the
-     * entity's moveset makes from a side, its blow landing as its windup
-     * ends. While one plays, control() reads the entity's input: raising the
-     * guard before the blow is committed feints, dropping the attack for the
-     * guard, and an attack asked for meanwhile waits in the queue until the
-     * recovery is far enough along to cut in, so attacks flow one into the
-     * next without waiting each one out. strike() lands the blow through
-     * SwingBranch with the moveset the attack began with. deflect() throws an
-     * attacker whose blow a guard turned aside into recoil, and interrupt()
-     * staggers an attacker struck before its own blow could land.
+     * entity's moveset makes from a side, its blow landing as its windup ends,
+     * quickened by the entity's attack speed. While one plays, control() reads
+     * the entity's input: raising the guard before the blow is committed
+     * feints, dropping the attack for the guard, and an attack asked for
+     * meanwhile waits in the queue until the recovery is far enough along to
+     * cut in, so attacks flow one into the next without waiting each one out.
+     * strike() lands the blow through SwingBranch with the moveset the attack
+     * began with. deflect() throws an attacker whose blow a guard turned aside
+     * into recoil, and interrupt() staggers an attacker struck before its own
+     * blow could land.
      */
 
     // Internal
@@ -60,7 +61,7 @@ class AttackBranch extends BranchPackage {
                 direction,
                 movesetID,
                 attack.getClip(),
-                attack.getDuration(),
+                attack.getDuration() / combatManager.resolveAttackSpeed(entity),
                 attack.getImpact(),
                 attack.getStrike());
         return true;
