@@ -1,18 +1,24 @@
 package editor.bootstrap.worldeditorpipeline.worldeditormanager;
 
+import java.io.File;
+
 import application.bootstrap.mappipeline.mapmanager.MapManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.util.WorldElevationUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
+import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
+import editor.bootstrap.worldeditorpipeline.worldheight.WorldHeightEntryStruct;
 import editor.bootstrap.worldeditorpipeline.worldplacement.WorldPlacementEntryStruct;
 import editor.runtime.EditorSetting;
+import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -21,19 +27,23 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WorldEditorManager extends ManagerPackage {
 
     /*
-     * Owns the world editor's shared state: the active world's image, opened
-     * through ImageManager on the world's own pixels so the biome field reads
-     * every stroke at once, the palette of biomes the image can paint, the
-     * selected biome, tool and brush radius, and the status line. Each edited
-     * region is handed to MapManager, which regenerates only the map tiles it
-     * reaches, and to WorldStreamManager, which restreams only the preview and
-     * Dev terrain it reaches once the edits settle; the palette follows every
-     * live biome rebuild. Biome edits from the Info Panel reach the engine, and
-     * biome selection stays in step with the hierarchy, through
+     * Owns the world editor's shared state: the active world's two layers,
+     * its biome image and its height layer, each opened through ImageManager
+     * on the world's own pixels so generation reads every stroke at once, the
+     * layer being painted, the palette of biomes the image can paint, the
+     * selected biome, tool and brush radius, and the status line. The height
+     * layer's palette and selected level are kept through WorldHeightBranch.
+     * Each edited region of either layer is handed to MapManager, which
+     * regenerates only the map tiles it reaches, and to WorldStreamManager,
+     * which restreams only the preview and Dev terrain it reaches once the
+     * edits settle; the palette follows every live biome rebuild. Tools paint
+     * the active layer and history undoes it, while saving and reloading take
+     * both layers together. Biome edits from the Info Panel reach the engine,
+     * and biome selection stays in step with the hierarchy, through
      * WorldBiomeBranch, and tree species edits reach it through
-     * WorldTreeBranch. Settlements and structures hand-picked onto the
-     * world, and their palette, are kept through WorldPlacementBranch and
-     * saved and reloaded with the image.
+     * WorldTreeBranch. Settlements and structures hand-picked onto the world,
+     * and their palette, are kept through WorldPlacementBranch and saved and
+     * reloaded with the images.
      */
 
     // Internal
@@ -43,11 +53,14 @@ public class WorldEditorManager extends ManagerPackage {
     private WorldStreamManager worldStreamManager;
     private ImageManager imageManager;
     private WorldBiomeBranch worldBiomeBranch;
+    private WorldHeightBranch worldHeightBranch;
     private WorldPlacementBranch worldPlacementBranch;
 
     // World
     private WorldHandle worldHandle;
     private ImageDocumentInstance worldImage;
+    private ImageDocumentInstance heightImage;
+    private WorldEditorLayer activeLayer;
 
     // Palette
     private ObjectArrayList<WorldBiomeEntryStruct> palette;
@@ -73,8 +86,12 @@ public class WorldEditorManager extends ManagerPackage {
 
         // Internal
         this.worldBiomeBranch = create(WorldBiomeBranch.class);
+        this.worldHeightBranch = create(WorldHeightBranch.class);
         create(WorldTreeBranch.class);
         this.worldPlacementBranch = create(WorldPlacementBranch.class);
+
+        // World
+        this.activeLayer = WorldEditorLayer.BIOMES;
 
         // Palette
         this.palette = new ObjectArrayList<>();
@@ -108,26 +125,75 @@ public class WorldEditorManager extends ManagerPackage {
 
     public ImageDocumentInstance getWorldImage() {
 
+        syncWorld();
+        return worldImage;
+    }
+
+    public ImageDocumentInstance getHeightImage() {
+
+        syncWorld();
+        return heightImage;
+    }
+
+    // The image the active layer paints
+    public ImageDocumentInstance getActiveImage() {
+        return activeLayer == WorldEditorLayer.HEIGHTS ? getHeightImage() : getWorldImage();
+    }
+
+    private void syncWorld() {
+
         WorldHandle activeWorld = worldManager.getActiveWorld();
 
         if (activeWorld == worldHandle)
-            return worldImage;
-
-        String imageName = activeWorld.getWorldName();
-
-        if (!imageManager.hasImage(imageName))
-            imageManager.addEditListener(imageName, region -> {
-                mapManager.invalidateWorldPixels(
-                        activeWorld, region.getMinX(), region.getMinY(), region.getMaxX(), region.getMaxY());
-                worldStreamManager.requestLiveRebuild(
-                        activeWorld, region.getMinX(), region.getMinY(), region.getMaxX(), region.getMaxY());
-            });
+            return;
 
         this.worldHandle = activeWorld;
-        this.worldImage = imageManager.openImage(imageName, activeWorld.getWorldFile(), activeWorld.getWorld(), true);
+        this.worldImage = openLayerImage(
+                activeWorld,
+                activeWorld.getWorldName(),
+                activeWorld.getWorldFile(),
+                activeWorld.getWorld());
+        this.heightImage = openLayerImage(
+                activeWorld,
+                activeWorld.getWorldName() + EngineSetting.WORLD_HEIGHT_LAYER_SUFFIX,
+                activeWorld.getHeightFile(),
+                activeWorld.getHeightLayer());
         notifyChanged();
+    }
 
-        return worldImage;
+    // A layer opened on the world's own pixels, every region edited on it restreamed
+    private ImageDocumentInstance openLayerImage(
+            WorldHandle layerWorldHandle,
+            String imageName,
+            File file,
+            Pixmap pixmap) {
+
+        if (!imageManager.hasImage(imageName))
+            imageManager.addEditListener(imageName, region -> restreamPixels(
+                    layerWorldHandle, region.getMinX(), region.getMinY(), region.getMaxX(), region.getMaxY()));
+
+        return imageManager.openImage(imageName, file, pixmap, true);
+    }
+
+    // Every map tile and preview chunk a change to these world pixels can reach, regenerated
+    void restreamPixels(
+            WorldHandle editedWorldHandle,
+            int minPixelX,
+            int minPixelY,
+            int maxPixelX,
+            int maxPixelY) {
+
+        mapManager.invalidateWorldPixels(editedWorldHandle, minPixelX, minPixelY, maxPixelX, maxPixelY);
+        worldStreamManager.requestLiveRebuild(editedWorldHandle, minPixelX, minPixelY, maxPixelX, maxPixelY);
+    }
+
+    // Layers \\
+
+    public void toggleLayer() {
+
+        endStrokes();
+        this.activeLayer = activeLayer.toggle();
+        notifyPaletteChanged();
     }
 
     // Palette \\
@@ -199,6 +265,11 @@ public class WorldEditorManager extends ManagerPackage {
         worldBiomeBranch.selectBiomeAt(biomeWorldHandle, worldX, worldZ);
     }
 
+    public void selectHeightLevel(int level) {
+        if (worldHeightBranch.select(level))
+            notifyPaletteChanged();
+    }
+
     // Tools \\
 
     public void setTool(WorldEditorTool tool) {
@@ -217,7 +288,7 @@ public class WorldEditorManager extends ManagerPackage {
 
     public void beginStroke(int pixelX, int pixelY) {
 
-        ImageDocumentInstance image = getWorldImage();
+        ImageDocumentInstance image = getActiveImage();
 
         switch (activeTool) {
 
@@ -231,21 +302,44 @@ public class WorldEditorManager extends ManagerPackage {
                     imageManager.fill(image, pixelX, pixelY, brush.getColor());
             }
 
-            case PICK -> pickBiome(image, pixelX, pixelY);
+            case PICK -> {
+                if (activeLayer == WorldEditorLayer.HEIGHTS)
+                    pickHeight(image, pixelX, pixelY);
+                else
+                    pickBiome(image, pixelX, pixelY);
+            }
+
+            case SMOOTH -> {
+                if (refreshSmoothing())
+                    imageManager.beginStroke(image, pixelX, pixelY, brush);
+            }
+
+            default -> {
+            }
         }
     }
 
     public void continueStroke(int pixelX, int pixelY) {
 
-        if (activeTool == WorldEditorTool.BRUSH)
-            imageManager.continueStroke(getWorldImage(), pixelX, pixelY, brush);
+        if (activeTool == WorldEditorTool.BRUSH || activeTool == WorldEditorTool.SMOOTH)
+            imageManager.continueStroke(getActiveImage(), pixelX, pixelY, brush);
     }
 
     public void endStroke() {
+        imageManager.endStroke(getActiveImage());
+    }
+
+    private void endStrokes() {
         imageManager.endStroke(getWorldImage());
+        imageManager.endStroke(getHeightImage());
     }
 
     private boolean refreshBrush() {
+
+        if (activeLayer == WorldEditorLayer.HEIGHTS) {
+            brush.set(WorldElevationUtility.toLayerColor(worldHeightBranch.getSelectedLevel()), brushRadius);
+            return true;
+        }
 
         WorldBiomeEntryStruct entry = findEntry(selectedBiomeName);
 
@@ -255,6 +349,17 @@ public class WorldEditorManager extends ManagerPackage {
         }
 
         brush.set(toImageColor(entry.getMapColor()), brushRadius);
+        return true;
+    }
+
+    private boolean refreshSmoothing() {
+
+        if (activeLayer != WorldEditorLayer.HEIGHTS) {
+            setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_SMOOTH_HEIGHTS_ONLY);
+            return false;
+        }
+
+        brush.setSmoothing(brushRadius);
         return true;
     }
 
@@ -269,6 +374,14 @@ public class WorldEditorManager extends ManagerPackage {
 
         selectBiome(entry.getBiomeName());
         setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_PICKED + entry.getDisplayName());
+    }
+
+    private void pickHeight(ImageDocumentInstance image, int pixelX, int pixelY) {
+
+        int level = WorldElevationUtility.toLevel(imageManager.pickColor(image, pixelX, pixelY));
+
+        selectHeightLevel(level);
+        setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_PICKED + worldHeightBranch.describeLevel(level));
     }
 
     // World image pixels are RGBA8888 and always opaque; map colors are 0xRRGGBB
@@ -312,12 +425,12 @@ public class WorldEditorManager extends ManagerPackage {
     // History \\
 
     public void undo() {
-        if (!imageManager.undo(getWorldImage()))
+        if (!imageManager.undo(getActiveImage()))
             setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_TO_UNDO);
     }
 
     public void redo() {
-        if (!imageManager.redo(getWorldImage()))
+        if (!imageManager.redo(getActiveImage()))
             setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_TO_REDO);
     }
 
@@ -326,9 +439,15 @@ public class WorldEditorManager extends ManagerPackage {
     public void saveWorldImage() {
 
         ImageDocumentInstance image = getWorldImage();
+        ImageDocumentInstance height = getHeightImage();
 
         if (!imageManager.saveImage(image)) {
             setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_SAVE_FAILED + image.getImageName());
+            return;
+        }
+
+        if (!imageManager.saveImage(height)) {
+            setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_SAVE_FAILED + height.getImageName());
             return;
         }
 
@@ -337,12 +456,19 @@ public class WorldEditorManager extends ManagerPackage {
                 : EditorSetting.WORLD_EDITOR_MESSAGE_PLACEMENTS_SAVE_FAILED + image.getImageName());
     }
 
+    // A height layer never saved has no file to reload from, so it keeps what is painted on it
     public void reloadWorldImage() {
 
         ImageDocumentInstance image = getWorldImage();
+        ImageDocumentInstance height = getHeightImage();
 
         if (!imageManager.reloadImage(image)) {
             setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_RELOAD_FAILED + image.getImageName());
+            return;
+        }
+
+        if (height.getFile().exists() && !imageManager.reloadImage(height)) {
+            setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_RELOAD_FAILED + height.getImageName());
             return;
         }
 
@@ -371,13 +497,13 @@ public class WorldEditorManager extends ManagerPackage {
     public String getStatusText() {
 
         ImageDocumentInstance image = getWorldImage();
-        WorldBiomeEntryStruct entry = findEntry(selectedBiomeName);
         StringBuilder status = new StringBuilder(image.getImageName());
 
-        if (image.isDirty())
+        if (image.isDirty() || getHeightImage().isDirty())
             status.append(EditorSetting.WORLD_EDITOR_DIRTY_MARKER);
 
-        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeTool.getLabel());
+        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeLayer.getLabel())
+                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeTool.getLabel());
 
         if (activeTool.isPlacement())
             appendPlacementStatus(status);
@@ -385,12 +511,22 @@ public class WorldEditorManager extends ManagerPackage {
             status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(EditorSetting.WORLD_EDITOR_STATUS_RADIUS)
                     .append(brushRadius)
                     .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
-                    .append(entry != null ? entry.getDisplayName() : EditorSetting.WORLD_EDITOR_STATUS_NO_BIOME);
+                    .append(describeSelection());
 
         if (statusMessage != null)
             status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(statusMessage);
 
         return status.toString();
+    }
+
+    private String describeSelection() {
+
+        if (activeLayer == WorldEditorLayer.HEIGHTS)
+            return worldHeightBranch.describeLevel(worldHeightBranch.getSelectedLevel());
+
+        WorldBiomeEntryStruct entry = findEntry(selectedBiomeName);
+
+        return entry != null ? entry.getDisplayName() : EditorSetting.WORLD_EDITOR_STATUS_NO_BIOME;
     }
 
     private void appendPlacementStatus(StringBuilder status) {
@@ -408,18 +544,34 @@ public class WorldEditorManager extends ManagerPackage {
         WorldBiomeEntryStruct entry = findEntryForColor(
                 toMapColor(imageManager.pickColor(getWorldImage(), pixelX, pixelY)));
 
+        int level = WorldElevationUtility.toLevel(imageManager.pickColor(getHeightImage(), pixelX, pixelY));
+
         return EditorSetting.WORLD_EDITOR_STATUS_X + pixelX
                 + EditorSetting.WORLD_EDITOR_STATUS_Y + pixelY
                 + EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR
-                + (entry != null ? entry.getDisplayName() : EditorSetting.WORLD_EDITOR_STATUS_UNPAINTED);
+                + (entry != null ? entry.getDisplayName() : EditorSetting.WORLD_EDITOR_STATUS_UNPAINTED)
+                + EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR
+                + worldHeightBranch.describeLevel(level);
     }
 
     // Accessible \\
 
     public WorldHandle getWorldHandle() {
 
-        getWorldImage();
+        syncWorld();
         return worldHandle;
+    }
+
+    public WorldEditorLayer getLayer() {
+        return activeLayer;
+    }
+
+    public ObjectArrayList<WorldHeightEntryStruct> getHeightPalette() {
+        return worldHeightBranch.getPalette();
+    }
+
+    public int getSelectedHeightLevel() {
+        return worldHeightBranch.getSelectedLevel();
     }
 
     public ObjectArrayList<WorldBiomeEntryStruct> getPalette() {

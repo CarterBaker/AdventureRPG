@@ -9,10 +9,11 @@ import engine.root.BranchPackage;
 public class WorldEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the World Editor toolbar and biome palette.
-     * Every action works on the shared world image and its hand placements,
+     * Menu event handlers for the World Editor toolbar and palette. Every
+     * action works on the shared world images and their hand placements,
      * except the player marker toggle, which targets the editor its button
-     * was clicked in; palette rows carry their biome's name.
+     * was clicked in; biome rows carry their biome's name and height rows
+     * their level.
      */
 
     // Internal
@@ -43,6 +44,10 @@ public class WorldEditorBranch extends BranchPackage {
         worldEditorManager.redo();
     }
 
+    public void toggleLayer() {
+        worldEditorManager.toggleLayer();
+    }
+
     // Tools \\
 
     public void selectBrushTool() {
@@ -55,6 +60,10 @@ public class WorldEditorBranch extends BranchPackage {
 
     public void selectPickTool() {
         worldEditorManager.setTool(WorldEditorTool.PICK);
+    }
+
+    public void selectSmoothTool() {
+        worldEditorManager.setTool(WorldEditorTool.SMOOTH);
     }
 
     public void selectPlaceTool() {
@@ -94,5 +103,9 @@ public class WorldEditorBranch extends BranchPackage {
 
     public void selectBiome(String biomeName) {
         worldEditorManager.selectBiome(biomeName);
+    }
+
+    public void selectHeight(String level) {
+        worldEditorManager.selectHeightLevel(Integer.parseInt(level));
     }
 }

@@ -5,16 +5,19 @@ import editor.runtime.EditorSetting;
 public enum WorldEditorTool {
 
     /*
-     * What a world image click does: Brush paints the selected biome's color
-     * along the drag, Fill floods the run of one color under the pointer with
-     * it, Pick selects the biome that paints the pixel under the pointer,
-     * Place stands the selected settlement or structure on the block column
-     * under the pointer, and Clear takes away the hand placement nearest it.
+     * What a world image click does: Brush paints the selected biome's color,
+     * or on the height layer the selected level, along the drag, Fill floods
+     * the run of one color under the pointer with it, Pick selects the biome
+     * or level that paints the pixel under the pointer, Smooth softens the
+     * height layer along the drag, Place stands the selected settlement or
+     * structure on the block column under the pointer, and Clear takes away
+     * the hand placement nearest it.
      */
 
     BRUSH(EditorSetting.WORLD_EDITOR_TOOL_BRUSH, false),
     FILL(EditorSetting.WORLD_EDITOR_TOOL_FILL, false),
     PICK(EditorSetting.WORLD_EDITOR_TOOL_PICK, false),
+    SMOOTH(EditorSetting.WORLD_EDITOR_TOOL_SMOOTH, false),
     PLACE(EditorSetting.WORLD_EDITOR_TOOL_PLACE, true),
     CLEAR(EditorSetting.WORLD_EDITOR_TOOL_CLEAR, true);
 

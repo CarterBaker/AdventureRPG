@@ -23,7 +23,12 @@ public final class TerrainShapeUtility extends EngineUtility {
      * and plunge into deep water at their toe, fine detail roughens it all,
      * and still water floods the ground below its level within its reach and
      * holds a rim around it. Coverage masks decide where cliffs and sea cliffs
-     * stand, so they come and go along a range or a coastline.
+     * stand, so they come and go along a range or a coastline. The world's
+     * height layer then lifts or sinks each biome's macro height: land toward
+     * the height limit or the shore, the sea floor toward the surface or the
+     * bottom of the world, each only as far as its share of the way, and only
+     * where its own kind holds the position, so shores stay where the biome
+     * map draws them and islands still break the surface.
      */
 
     public static final LinearSpline DEFAULT_CONTINENTALNESS_SPLINE = new LinearSpline(
@@ -42,7 +47,8 @@ public final class TerrainShapeUtility extends EngineUtility {
 
     public static float computeMacroShapeBlocks(
             long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
-            BiomeBlendStruct blend) {
+            BiomeBlendStruct blend,
+            float elevation) {
 
         if (blend.isEmpty())
             return EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
@@ -77,6 +83,10 @@ public final class TerrainShapeUtility extends EngineUtility {
 
         float ridge = 1f - Math.abs(peaksValleysRaw);
 
+        float oceanWeight = blend.getOceanWeight();
+        float landReach = computeElevationReach(1f - oceanWeight);
+        float oceanReach = computeElevationReach(oceanWeight);
+
         float blendedHeight = 0f;
 
         for (int i = 0; i < blend.getCount(); i++) {
@@ -94,10 +104,60 @@ public final class TerrainShapeUtility extends EngineUtility {
             float biomeHeight = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS
                     + heightAboveSeaLevel * biome.getTerrainHeightScale();
 
-            blendedHeight += biomeHeight * blend.getWeight(i);
+            float elevatedHeight = biome.hasOceanWater()
+                    ? elevateOcean(biomeHeight, elevation * oceanReach)
+                    : elevateLand(biomeHeight, elevation * landReach);
+
+            blendedHeight += elevatedHeight * blend.getWeight(i);
         }
 
         return blendedHeight;
+    }
+
+    // Elevation \\
+
+    // 0 up to the shore, where a kind holds half the position, rising to 1 where it holds all of it
+    private static float computeElevationReach(float kindWeight) {
+
+        float start = EngineSetting.TERRAIN_ELEVATION_SHORE_FADE_START;
+
+        return smoothstep((kindWeight - start) / (1f - start));
+    }
+
+    private static float elevateLand(float heightBlocks, float elevation) {
+
+        if (elevation > 0f)
+            return pullToward(heightBlocks, EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS,
+                    elevation * EngineSetting.TERRAIN_ELEVATION_LAND_RAISE_SHARE);
+
+        return pullToward(heightBlocks,
+                EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + EngineSetting.TERRAIN_ELEVATION_LAND_FLOOR_BLOCKS,
+                -elevation * EngineSetting.TERRAIN_ELEVATION_LAND_LOWER_SHARE);
+    }
+
+    private static float elevateOcean(float heightBlocks, float elevation) {
+
+        if (elevation > 0f)
+            return pullToward(heightBlocks,
+                    EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS - EngineSetting.TERRAIN_ELEVATION_OCEAN_CEILING_BLOCKS,
+                    elevation * EngineSetting.TERRAIN_ELEVATION_OCEAN_RAISE_SHARE);
+
+        return pullToward(heightBlocks, EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS,
+                -elevation * EngineSetting.TERRAIN_ELEVATION_OCEAN_DEEPEN_SHARE);
+    }
+
+    // Moves a height a fraction of the way to a limit, never past it and never away from it, so ground already
+    // beyond the limit stays as it is and nothing is flattened against it
+    private static float pullToward(float heightBlocks, float limitBlocks, float fraction) {
+
+        if (fraction <= 0f)
+            return heightBlocks;
+
+        float pulled = heightBlocks + (limitBlocks - heightBlocks) * fraction;
+
+        return limitBlocks >= heightBlocks
+                ? Math.max(heightBlocks, pulled)
+                : Math.min(heightBlocks, pulled);
     }
 
     // Features \\

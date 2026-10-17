@@ -50,6 +50,14 @@ public class WorldHandle extends HandlePackage {
         return data.getWorldScale();
     }
 
+    public File getHeightFile() {
+        return data.getHeightFile();
+    }
+
+    public Pixmap getHeightLayer() {
+        return data.getHeightLayer();
+    }
+
     public float getGravityMultiplier() {
         return data.getGravityMultiplier();
     }

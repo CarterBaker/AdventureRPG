@@ -965,6 +965,22 @@ public class EngineSetting {
     public static final int TERRAIN_SEA_LEVEL_BLOCKS = 160;
     public static final int TERRAIN_SURFACE_DEPTH_BLOCKS = 4;
 
+    // Terrain Elevation — a world's height layer, a grey image beside its world image with one level per world
+    // pixel, neutral leaving the biomes as they are. Raising pulls land toward the height limit and the sea floor
+    // toward the surface, lowering pulls land toward the shore and the sea floor toward the bottom of the world, each
+    // by its share of the way there, and elevation fades in across the shore so the coastlines, islands and lakes
+    // the biome map draws keep their shape
+    public static final float TERRAIN_ELEVATION_LAND_FLOOR_BLOCKS = 6f;
+    public static final float TERRAIN_ELEVATION_LAND_LOWER_SHARE = 0.9f;
+    public static final float TERRAIN_ELEVATION_LAND_RAISE_SHARE = 0.5f;
+    public static final float TERRAIN_ELEVATION_OCEAN_CEILING_BLOCKS = 6f;
+    public static final float TERRAIN_ELEVATION_OCEAN_DEEPEN_SHARE = 0.9f;
+    public static final float TERRAIN_ELEVATION_OCEAN_RAISE_SHARE = 0.9f;
+    public static final float TERRAIN_ELEVATION_SHORE_FADE_START = 0.5f;
+    public static final int WORLD_HEIGHT_LAYER_MAX_LEVEL = 255;
+    public static final int WORLD_HEIGHT_LAYER_NEUTRAL_LEVEL = 128;
+    public static final String WORLD_HEIGHT_LAYER_SUFFIX = "_Height";
+
     // Terrain Features
     public static final float DEFAULT_BIOME_CLIFF_COVERAGE = 0.5f;
     public static final float DEFAULT_BIOME_CLIFF_STEP_BLOCKS = 10f;

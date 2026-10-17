@@ -25,6 +25,7 @@ import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
 import application.bootstrap.worldpipeline.util.TerrainFeatureStruct;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
+import application.bootstrap.worldpipeline.util.WorldElevationUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.graphics.color.Color;
@@ -41,8 +42,9 @@ public class WorldGenerationManager extends ManagerPackage {
 
     /*
      * Generates terrain per chunk column. computeColumn() samples the biome
-     * field on a macro grid, shapes the ground through cliffs, sea cliffs and
-     * still water, and resolves every block column's ground, dressing, water,
+     * field and the world's height layer on a macro grid, shapes the ground
+     * through cliffs, sea cliffs and still water, and resolves every block
+     * column's ground, dressing, water,
      * the band its caves and sea caves may hollow, its veins and the lowest
      * cell the tide reaches, with a vein palette holding the veins of every
      * cave biome that can line the chunk's underground. A column's top block
@@ -195,7 +197,8 @@ public class WorldGenerationManager extends ManagerPackage {
                         blend, column.macroFeatures[index]);
 
                 column.macroShapeGridBlocks[index] = TerrainShapeUtility.computeMacroShapeBlocks(
-                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks, blend);
+                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks, blend,
+                        WorldElevationUtility.sampleElevation(worldHandle, sampleWorldX, sampleWorldZ));
 
                 BiomeHandle dominantBiome = blend.getDominantBiome();
 
@@ -979,7 +982,8 @@ public class WorldGenerationManager extends ManagerPackage {
                 seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend, outFeatures);
 
         float macroShape = TerrainShapeUtility.computeMacroShapeBlocks(
-                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend);
+                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend,
+                WorldElevationUtility.sampleElevation(worldHandle, worldX, worldZ));
         float ridge = TerrainShapeUtility.computeRidgeBlocks(
                 seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outFeatures);
         float detail = TerrainShapeUtility.computeDetailBlocks(
@@ -1053,7 +1057,8 @@ public class WorldGenerationManager extends ManagerPackage {
                 seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend, outFeatures);
 
         float macroShape = TerrainShapeUtility.computeMacroShapeBlocks(
-                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend);
+                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend,
+                WorldElevationUtility.sampleElevation(worldHandle, worldX, worldZ));
 
         return TerrainShapeUtility.shapeGroundHeightBlocks(macroShape, 0f, 0f, outFeatures);
     }

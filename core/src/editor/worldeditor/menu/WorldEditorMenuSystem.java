@@ -7,8 +7,10 @@ import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
+import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
 import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
+import editor.bootstrap.worldeditorpipeline.worldheight.WorldHeightEntryStruct;
 import editor.runtime.EditorSetting;
 import editor.worldeditor.WorldEditorSetting;
 import editor.worldeditor.render.WorldEditorRenderSystem;
@@ -22,13 +24,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WorldEditorMenuSystem extends SystemPackage {
 
     /*
-     * Opens the World Editor toolbar and biome palette over the viewport. The
-     * status line names the image, tool, brush and biome, with the pixel and
-     * biome under the pointer, and rewrites only on change, as does the
-     * player marker button's label. When the palette
-     * moves it lists every biome the image can paint, one row per biome with
-     * its color swatch and name, the selected one highlighted and every row
-     * carrying its biome's name.
+     * Opens the World Editor toolbar and palette over the viewport. The status
+     * line names the image, layer, tool, brush and what it paints, with the
+     * pixel, biome and height under the pointer, and rewrites only on change,
+     * as do the player marker and layer buttons' labels. When the palette
+     * moves it lists what the active layer can paint under that layer's
+     * title: every biome, one row per biome with its color swatch and name,
+     * or every height level, one row per level with its grey swatch and its
+     * name, the selected one highlighted and every
+     * row carrying its biome's name or its level.
      */
 
     // Internal
@@ -42,12 +46,13 @@ public class WorldEditorMenuSystem extends SystemPackage {
     private MenuInstance toolbarMenu;
 
     // Palette
-    private ObjectArrayList<ElementInstance> biomeElements;
+    private ObjectArrayList<ElementInstance> paletteElements;
     private int shownPaletteRevision;
 
     // Status
     private String shownStatus;
     private String shownPlayers;
+    private WorldEditorLayer shownLayer;
 
     // Base \\
 
@@ -55,7 +60,7 @@ public class WorldEditorMenuSystem extends SystemPackage {
     protected void create() {
 
         // Palette
-        this.biomeElements = new ObjectArrayList<>();
+        this.paletteElements = new ObjectArrayList<>();
         this.shownPaletteRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
@@ -84,6 +89,7 @@ public class WorldEditorMenuSystem extends SystemPackage {
 
         refreshStatus();
         refreshPlayers();
+        refreshLayer();
 
         if (worldEditorManager.getPaletteRevision() == shownPaletteRevision)
             return;
@@ -106,11 +112,7 @@ public class WorldEditorMenuSystem extends SystemPackage {
             return;
 
         shownStatus = status;
-
-        ElementInstance statusLabel = toolbarMenu.getEntryPoint(WorldEditorSetting.ENTRY_STATUS);
-
-        if (statusLabel != null)
-            statusLabel.setFontText(status);
+        setEntryText(WorldEditorSetting.ENTRY_STATUS, status);
     }
 
     private void refreshPlayers() {
@@ -123,26 +125,52 @@ public class WorldEditorMenuSystem extends SystemPackage {
             return;
 
         shownPlayers = players;
+        setEntryText(WorldEditorSetting.ENTRY_PLAYERS_LABEL, players);
+    }
 
-        ElementInstance playersLabel = toolbarMenu.getEntryPoint(WorldEditorSetting.ENTRY_PLAYERS_LABEL);
+    private void refreshLayer() {
 
-        if (playersLabel != null)
-            playersLabel.setFontText(players);
+        WorldEditorLayer layer = worldEditorManager.getLayer();
+
+        if (layer == shownLayer)
+            return;
+
+        shownLayer = layer;
+        setEntryText(WorldEditorSetting.ENTRY_LAYER_LABEL, layer.getLabel());
+        setEntryText(WorldEditorSetting.ENTRY_PALETTE_TITLE, layer.getLabel());
+    }
+
+    private void setEntryText(int entry, String text) {
+
+        ElementInstance label = toolbarMenu.getEntryPoint(entry);
+
+        if (label != null)
+            label.setFontText(text);
     }
 
     // Palette \\
 
     private void refreshPalette() {
 
-        for (int i = 0; i < biomeElements.size(); i++)
-            menuManager.eject(toolbarMenu, WorldEditorSetting.ENTRY_BIOMES, biomeElements.get(i));
+        for (int i = 0; i < paletteElements.size(); i++)
+            menuManager.eject(toolbarMenu, WorldEditorSetting.ENTRY_BIOMES, paletteElements.get(i));
 
-        biomeElements.clear();
+        paletteElements.clear();
+
+        if (worldEditorManager.getLayer() == WorldEditorLayer.HEIGHTS) {
+
+            ObjectArrayList<WorldHeightEntryStruct> heightPalette = worldEditorManager.getHeightPalette();
+
+            for (int i = 0; i < heightPalette.size(); i++)
+                paletteElements.add(injectHeight(heightPalette.get(i)));
+
+            return;
+        }
 
         ObjectArrayList<WorldBiomeEntryStruct> palette = worldEditorManager.getPalette();
 
         for (int i = 0; i < palette.size(); i++)
-            biomeElements.add(injectBiome(palette.get(i)));
+            paletteElements.add(injectBiome(palette.get(i)));
     }
 
     private ElementInstance injectBiome(WorldBiomeEntryStruct entry) {
@@ -150,12 +178,7 @@ public class WorldEditorMenuSystem extends SystemPackage {
         String template = entry.getBiomeName().equals(worldEditorManager.getSelectedBiomeName())
                 ? WorldEditorSetting.TEMPLATE_BIOME_ROW_SELECTED
                 : WorldEditorSetting.TEMPLATE_BIOME_ROW;
-        int mapColor = entry.getMapColor();
-        MenuColorStruct swatchColor = new MenuColorStruct(new Color(
-                PackedColorUtility.red(mapColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
-                PackedColorUtility.green(mapColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
-                PackedColorUtility.blue(mapColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
-                EngineSetting.COLOR_CHANNEL_MAX));
+        MenuColorStruct swatchColor = toSwatchColor(entry.getMapColor());
 
         return menuManager.inject(
                 toolbarMenu, WorldEditorSetting.ENTRY_BIOMES, template,
@@ -171,5 +194,39 @@ public class WorldEditorMenuSystem extends SystemPackage {
                     if (label != null)
                         label.setFontText(entry.getDisplayName());
                 });
+    }
+
+    private ElementInstance injectHeight(WorldHeightEntryStruct entry) {
+
+        String template = entry.getLevel() == worldEditorManager.getSelectedHeightLevel()
+                ? WorldEditorSetting.TEMPLATE_HEIGHT_ROW_SELECTED
+                : WorldEditorSetting.TEMPLATE_HEIGHT_ROW;
+        int level = entry.getLevel();
+        MenuColorStruct swatchColor = toSwatchColor(PackedColorUtility.pack(level, level, level));
+
+        return menuManager.inject(
+                toolbarMenu, WorldEditorSetting.ENTRY_BIOMES, template,
+                element -> {
+                    element.setActionArgOverride(Integer.toString(entry.getLevel()));
+
+                    ElementInstance swatch = element.findChildById(WorldEditorSetting.ELEMENT_HEIGHT_SWATCH);
+                    ElementInstance label = element.findChildById(WorldEditorSetting.ELEMENT_HEIGHT_LABEL);
+
+                    if (swatch != null)
+                        swatch.setColorOverride(swatchColor);
+
+                    if (label != null)
+                        label.setFontText(entry.getDisplayName());
+                });
+    }
+
+    // Utility \\
+
+    private MenuColorStruct toSwatchColor(int packedColor) {
+        return new MenuColorStruct(new Color(
+                PackedColorUtility.red(packedColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                PackedColorUtility.green(packedColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                PackedColorUtility.blue(packedColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                EngineSetting.COLOR_CHANNEL_MAX));
     }
 }

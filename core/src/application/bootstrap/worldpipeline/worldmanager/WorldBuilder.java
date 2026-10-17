@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.worldmanager;
 import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
 
+import application.bootstrap.worldpipeline.util.WorldElevationUtility;
 import application.bootstrap.worldpipeline.util.WorldPlacementArpgUtility;
 import application.bootstrap.worldpipeline.world.WorldData;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -29,6 +30,9 @@ class WorldBuilder extends BuilderPackage {
      * same clock — the world keeps time from its epoch whether or not the
      * game is running. Its hand-picked settlement and structure placements,
      * and whether settlements also grow on their own, are read from it too.
+     * The height layer beside the world image is read with it and must match
+     * its size; a world without one gets a neutral layer, written to disk only
+     * once the editor saves what is painted on it.
      */
 
     // Internal
@@ -48,6 +52,8 @@ class WorldBuilder extends BuilderPackage {
         int worldID = worldManager.registerWorldName(worldName);
         Pixmap pixmap = new Pixmap(file);
         Vector2Int worldScale = calculateWorldScale(pixmap);
+        File heightFile = WorldElevationUtility.resolveHeightLayerFile(file);
+        Pixmap heightLayer = resolveHeightLayer(heightFile, pixmap);
 
         float gravityMultiplier = EngineSetting.DEFAULT_GRAVITY_MULTIPLIER;
         Vector3 gravityDirection = new Vector3(
@@ -103,6 +109,8 @@ class WorldBuilder extends BuilderPackage {
                 file,
                 pixmap,
                 worldScale,
+                heightFile,
+                heightLayer,
                 gravityMultiplier,
                 gravityDirection,
                 calendarName,
@@ -118,6 +126,24 @@ class WorldBuilder extends BuilderPackage {
         handle.constructor(data);
 
         return handle;
+    }
+
+    // Height \\
+
+    private Pixmap resolveHeightLayer(File heightFile, Pixmap world) {
+
+        if (!heightFile.exists())
+            return WorldElevationUtility.createNeutralLayer(world.getWidth(), world.getHeight());
+
+        Pixmap heightLayer = new Pixmap(heightFile);
+
+        if (heightLayer.getWidth() != world.getWidth() || heightLayer.getHeight() != world.getHeight())
+            throwException("Height layer \"" + heightFile.getPath() + "\" is " + heightLayer.getWidth() + "x"
+                    + heightLayer.getHeight() + " but its world image is " + world.getWidth() + "x"
+                    + world.getHeight() + " — a height layer holds one level per world pixel and must match "
+                    + "its world image's size exactly.");
+
+        return heightLayer;
     }
 
     // Seed \\

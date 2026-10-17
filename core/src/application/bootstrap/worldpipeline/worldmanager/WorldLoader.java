@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.worldmanager;
 
 import java.io.File;
 
+import application.bootstrap.worldpipeline.util.WorldElevationUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
@@ -13,7 +14,8 @@ class WorldLoader extends LoaderPackage {
     /*
      * Scans the world map directory for PNG files and loads each one into
      * WorldManager via WorldBuilder. World name is derived from the file
-     * stem. Companion ARPG is resolved by WorldBuilder if present.
+     * stem. Companion ARPG and height layer are resolved by WorldBuilder; a
+     * height layer image is never a world of its own.
      */
 
     // Internal
@@ -35,6 +37,10 @@ class WorldLoader extends LoaderPackage {
         FileUtility.verifyDirectory(root, "World directory not found: " + root.getAbsolutePath());
 
         for (File file : FileUtility.collectFiles(root, EngineSetting.TEXTURE_FILE_EXTENSIONS)) {
+
+            if (WorldElevationUtility.isHeightLayerFile(file))
+                continue;
+
             String worldName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
             worldName2File.put(worldName, file);
             queueFile(file);

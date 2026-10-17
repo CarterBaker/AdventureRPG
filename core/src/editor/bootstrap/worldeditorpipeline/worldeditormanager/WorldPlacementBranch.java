@@ -1,6 +1,5 @@
 package editor.bootstrap.worldeditorpipeline.worldeditormanager;
 
-import application.bootstrap.mappipeline.mapmanager.MapManager;
 import application.bootstrap.worldpipeline.settlement.SettlementHandle;
 import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
@@ -9,7 +8,6 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
-import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import editor.bootstrap.worldeditorpipeline.worldplacement.WorldPlacementEntryStruct;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -34,8 +32,6 @@ class WorldPlacementBranch extends BranchPackage {
     private WorldManager worldManager;
     private SettlementManager settlementManager;
     private StructureManager structureManager;
-    private MapManager mapManager;
-    private WorldStreamManager worldStreamManager;
     private WorldEditorManager worldEditorManager;
 
     // Palette
@@ -55,8 +51,6 @@ class WorldPlacementBranch extends BranchPackage {
         this.worldManager = get(WorldManager.class);
         this.settlementManager = get(SettlementManager.class);
         this.structureManager = get(StructureManager.class);
-        this.mapManager = get(MapManager.class);
-        this.worldStreamManager = get(WorldStreamManager.class);
         this.worldEditorManager = get(WorldEditorManager.class);
     }
 
@@ -157,8 +151,7 @@ class WorldPlacementBranch extends BranchPackage {
         int pixelX = (int) Math.floor(imageX);
         int pixelY = (int) Math.floor(imageY);
 
-        mapManager.invalidateWorldPixels(worldHandle, pixelX - reach, pixelY - reach, pixelX + reach, pixelY + reach);
-        worldStreamManager.requestLiveRebuild(
+        worldEditorManager.restreamPixels(
                 worldHandle, pixelX - reach, pixelY - reach, pixelX + reach, pixelY + reach);
     }
 
@@ -174,8 +167,7 @@ class WorldPlacementBranch extends BranchPackage {
         if (!worldManager.reloadPlacements(worldHandle))
             return false;
 
-        mapManager.invalidateWorldPixels(worldHandle, 0, 0, imageWidth - 1, imageHeight - 1);
-        worldStreamManager.requestLiveRebuild(worldHandle, 0, 0, imageWidth - 1, imageHeight - 1);
+        worldEditorManager.restreamPixels(worldHandle, 0, 0, imageWidth - 1, imageHeight - 1);
 
         return true;
     }

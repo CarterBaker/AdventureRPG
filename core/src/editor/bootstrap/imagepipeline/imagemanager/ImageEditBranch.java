@@ -3,7 +3,9 @@ package editor.bootstrap.imagepipeline.imagemanager;
 import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imageregion.ImageRegionStruct;
+import editor.runtime.EditorSetting;
 import engine.assets.image.Pixmap;
+import engine.graphics.color.PackedColorUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -13,7 +15,9 @@ class ImageEditBranch extends BranchPackage {
     /*
      * Performs every change to an image's pixels. A brush stamps a disc of
      * its radius, a stroke stamps every pixel along its path, and a fill
-     * floods the four-connected run of one color. Coordinates wrap on an
+     * floods the four-connected run of one color. A smoothing brush sets each
+     * pixel of its disc to the average of the square of pixels around it, so
+     * every stamp softens what it covers a little more. Coordinates wrap on an
      * image whose edges wrap and are clipped on any other. Every pixel that
      * actually changes is recorded for undo and grows the caller's region.
      */
@@ -73,10 +77,44 @@ class ImageEditBranch extends BranchPackage {
         int radius = brush.getRadius();
         int reachSq = radius * radius + radius;
 
-        for (int dy = -radius; dy <= radius; dy++)
-            for (int dx = -radius; dx <= radius; dx++)
-                if (dx * dx + dy * dy <= reachSq)
-                    writePixel(document, centerX + dx, centerY + dy, brush.getColor(), region);
+        for (int dy = -radius; dy <= radius; dy++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+
+                if (dx * dx + dy * dy > reachSq)
+                    continue;
+
+                int x = centerX + dx;
+                int y = centerY + dy;
+                int color = brush.isSmoothing() ? averagePixel(document, x, y) : brush.getColor();
+
+                writePixel(document, x, y, color, region);
+            }
+        }
+    }
+
+    // Each color channel averaged over the pixel's square, keeping the pixel's own alpha; pixels are RGBA8888
+    private int averagePixel(ImageDocumentInstance document, int x, int y) {
+
+        int reach = EditorSetting.IMAGE_SMOOTH_REACH_PIXELS;
+        float red = 0f;
+        float green = 0f;
+        float blue = 0f;
+        int count = 0;
+
+        for (int dy = -reach; dy <= reach; dy++) {
+            for (int dx = -reach; dx <= reach; dx++) {
+
+                int color = readPixel(document, x + dx, y + dy) >>> Byte.SIZE;
+
+                red += PackedColorUtility.red(color);
+                green += PackedColorUtility.green(color);
+                blue += PackedColorUtility.blue(color);
+                count++;
+            }
+        }
+
+        return (PackedColorUtility.pack(red / count, green / count, blue / count) << Byte.SIZE)
+                | (readPixel(document, x, y) & EngineSetting.PACKED_COLOR_CHANNEL_MASK);
     }
 
     // Fill \\

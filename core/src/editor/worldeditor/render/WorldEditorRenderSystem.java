@@ -20,6 +20,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
+import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.EditorSetting;
@@ -37,7 +38,10 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
     /*
      * Draws the world image into this window's scene target where the view
-     * places it, from the GPU texture ImageManager keeps current, then the
+     * places it, from the GPU texture ImageManager keeps current, then, while
+     * the height layer is painted, that layer over it pixel for pixel as the
+     * black and white heightmap it is, partly see-through so every level lines
+     * up with the land beneath. Then comes the
      * brush's outline over the pixels a stroke at the pointer would cover,
      * an arrow for every hand-placed settlement and structure facing the way
      * it is turned, and, while shown, an arrow for every player at their
@@ -62,6 +66,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
     // Models
     private ModelInstance imageModel;
+    private ModelInstance heightModel;
     private ModelInstance brushModel;
     private MeshHandle quadMesh;
     private int markerMaterialID;
@@ -119,8 +124,12 @@ public class WorldEditorRenderSystem extends SystemPackage {
         this.sceneFbo = fboManager.cloneFbo(EditorSetting.FBO_EDITOR_SCENE, context.getWindow());
         this.imageModel = modelManager.createModel(
                 quadMesh, materialManager.cloneMaterial(WorldEditorSetting.MATERIAL_IMAGE));
+        this.heightModel = modelManager.createModel(
+                quadMesh, materialManager.cloneMaterial(WorldEditorSetting.MATERIAL_HEIGHTS));
         this.brushModel = modelManager.createModel(
                 quadMesh, materialManager.cloneMaterial(WorldEditorSetting.MATERIAL_BRUSH));
+
+        fadeHeights();
     }
 
     // Update \\
@@ -134,6 +143,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
         if (texture != 0 && window.getWidth() > 0 && window.getHeight() > 0) {
             renderImage(window, image, texture);
+            renderHeights(window);
             renderBrush(window);
             renderMarkers(window);
         }
@@ -155,11 +165,40 @@ public class WorldEditorRenderSystem extends SystemPackage {
         renderManager.pushRenderCall(imageModel, sceneFbo, WorldEditorSetting.DEPTH_IMAGE, window);
     }
 
+    // Heights \\
+
+    // The overlay's opacity never changes, so it is set once on its own material
+    private void fadeHeights() {
+        heightModel.getMaterial().setUniform(
+                WorldEditorSetting.UNIFORM_OVERLAY_ALPHA, WorldEditorSetting.HEIGHT_OVERLAY_ALPHA);
+    }
+
+    // Laid over the whole image with the view rectangle the image was just drawn with
+    private void renderHeights(WindowInstance window) {
+
+        if (worldEditorManager.getLayer() != WorldEditorLayer.HEIGHTS)
+            return;
+
+        int texture = imageManager.useTexture(worldEditorManager.getHeightImage());
+
+        if (texture == 0)
+            return;
+
+        MaterialInstance material = heightModel.getMaterial();
+        material.setUniform(WorldEditorSetting.UNIFORM_VIEW_RECT, viewRect);
+        material.setUniform(WorldEditorSetting.UNIFORM_UV_RECT, uvRect);
+        material.setUniform(WorldEditorSetting.UNIFORM_TILE_TEXTURE, texture);
+
+        renderManager.pushRenderCall(heightModel, sceneFbo, WorldEditorSetting.DEPTH_HEIGHTS, window);
+    }
+
     // Brush \\
 
     private void renderBrush(WindowInstance window) {
 
-        if (!worldEditorToolSystem.isHovering() || worldEditorManager.getTool() != WorldEditorTool.BRUSH)
+        WorldEditorTool tool = worldEditorManager.getTool();
+
+        if (!worldEditorToolSystem.isHovering() || (tool != WorldEditorTool.BRUSH && tool != WorldEditorTool.SMOOTH))
             return;
 
         int radius = worldEditorManager.getBrushRadius();

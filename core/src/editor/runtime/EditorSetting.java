@@ -163,6 +163,7 @@ public class EditorSetting {
     public static final String IMAGE_TEMP_SUFFIX = ".tmp";
     public static final int IMAGE_HISTORY_MAX_STEPS = 64;
     public static final long IMAGE_HISTORY_MAX_PIXELS = 16777216L;
+    public static final int IMAGE_SMOOTH_REACH_PIXELS = 1;
 
     // World Editor
     public static final int WORLD_EDITOR_BRUSH_RADIUS_DEFAULT = 1;
@@ -173,6 +174,16 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_TOOL_PICK = "Pick";
     public static final String WORLD_EDITOR_TOOL_PLACE = "Place";
     public static final String WORLD_EDITOR_TOOL_CLEAR = "Clear";
+    public static final String WORLD_EDITOR_TOOL_SMOOTH = "Smooth";
+    public static final String WORLD_EDITOR_LAYER_BIOMES = "Biomes";
+    public static final String WORLD_EDITOR_LAYER_HEIGHTS = "Heights";
+    public static final int WORLD_EDITOR_HEIGHT_LEVEL_STEP = 16;
+    public static final float WORLD_EDITOR_HEIGHT_PERCENT_SCALE = 100f;
+    public static final String WORLD_EDITOR_HEIGHT_RAISE = "Raise ";
+    public static final String WORLD_EDITOR_HEIGHT_LOWER = "Lower ";
+    public static final String WORLD_EDITOR_HEIGHT_PERCENT = "%";
+    public static final String WORLD_EDITOR_HEIGHT_NEUTRAL = "Neutral";
+    public static final String WORLD_EDITOR_MESSAGE_SMOOTH_HEIGHTS_ONLY = "Smooth paints the height layer only";
     public static final double WORLD_EDITOR_CLEAR_RADIUS_BLOCKS = 384.0;
     public static final int WORLD_EDITOR_PLACEMENT_REACH_PIXELS = 5;
     public static final String WORLD_EDITOR_PLACEABLE_SETTLEMENT = "Settlement: ";

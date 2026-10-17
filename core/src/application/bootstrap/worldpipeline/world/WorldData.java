@@ -20,9 +20,12 @@ public class WorldData extends DataPackage {
      * world's calendar sat on its own start date and time, persisted in the
      * companion ARPG so the world's clock carries on between sessions. The
      * world file is the image the pixel map was read from, for tools that
-     * edit and save it. The placements are the settlements and structures
-     * picked by hand for this world as it was loaded, and naturalSettlements
-     * whether settlements also grow on their own wherever its biomes allow.
+     * edit and save it, and the height layer the grey image beside it that
+     * raises and lowers the ground the biomes shape, read from its own file
+     * or neutral everywhere until one is painted. The placements are the
+     * settlements and structures picked by hand for this world as it was
+     * loaded, and naturalSettlements whether settlements also grow on their
+     * own wherever its biomes allow.
      */
 
     // Identity
@@ -31,6 +34,10 @@ public class WorldData extends DataPackage {
     private final File worldFile;
     private final Pixmap world;
     private final Vector2Int worldScale;
+
+    // Height
+    private final File heightFile;
+    private final Pixmap heightLayer;
 
     // Gravity
     private final float gravityMultiplier;
@@ -68,6 +75,8 @@ public class WorldData extends DataPackage {
             File worldFile,
             Pixmap world,
             Vector2Int worldScale,
+            File heightFile,
+            Pixmap heightLayer,
             float gravityMultiplier,
             Vector3 gravityDirection,
             String calendarName,
@@ -85,6 +94,10 @@ public class WorldData extends DataPackage {
         this.worldFile = worldFile;
         this.world = world;
         this.worldScale = worldScale;
+
+        // Height
+        this.heightFile = heightFile;
+        this.heightLayer = heightLayer;
 
         // Gravity
         this.gravityMultiplier = gravityMultiplier;
@@ -131,6 +144,14 @@ public class WorldData extends DataPackage {
 
     public Vector2Int getWorldScale() {
         return worldScale;
+    }
+
+    public File getHeightFile() {
+        return heightFile;
+    }
+
+    public Pixmap getHeightLayer() {
+        return heightLayer;
     }
 
     public float getGravityMultiplier() {
