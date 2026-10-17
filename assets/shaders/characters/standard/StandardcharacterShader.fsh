@@ -10,6 +10,7 @@ flat in vec4 v_browsRegion;
 flat in vec4 v_mouthRegion;
 
 #include "characters/includes/CharactersStandard.glsl"
+#include "characters/includes/CharacterFace.glsl"
 
 uniform sampler2DArray u_texture;
 
@@ -21,33 +22,10 @@ layout(location = 2) out vec4 gMaterial;
  * Characters write the same G-buffer as the world surface so the deferred
  * lighting pass lights them identically. Normals are the flat face normal
  * rebuilt from screen-space derivatives — the low-poly look wants hard
- * facets, and the skinned mesh carries no normal attribute at all.
- *
- * The base texture is a near-white tile multiplied by this part's tint
- * (skin tone for body and head, hair color for hair). Fragments landing
- * inside the head's face tile are re-mapped to face-local 0..1 and every
- * chosen feature overlay (eyes, brows, mouth) is alpha-blended on top,
- * each sampled from its own tile rect in the same array. A zero-width
- * region means that slot is empty and is skipped.
+ * facets, and the skinned mesh carries no normal attribute at all. The
+ * tinted base and its face overlays come from CharacterFace.glsl.
  */
 const float CHARACTER_SPECULAR = 0.08;
-
-bool hasRegion(vec4 region) {
-    return region.z > region.x;
-}
-
-vec4 sampleRegion(vec4 region, vec2 localUV) {
-    vec2 uv = mix(region.xy, region.zw, clamp(localUV, 0.0, 1.0));
-    return texture(u_texture, vec3(uv, float(u_layer_albedo)));
-}
-
-vec3 applyOverlay(vec3 albedo, vec4 region, vec2 faceUV, vec3 tint) {
-    if (!hasRegion(region))
-    return albedo;
-
-    vec4 overlay = sampleRegion(region, faceUV);
-    return mix(albedo, overlay.rgb * tint, overlay.a);
-}
 
 void main() {
     vec4 base = texture(u_texture, vec3(v_uv, float(u_layer_albedo)));
@@ -55,18 +33,9 @@ void main() {
     if (base.a < 0.01)
     discard;
 
-    vec3 albedo = base.rgb * v_tint;
-
-    if (hasRegion(v_faceRegion)
-        && all(greaterThanEqual(v_uv, v_faceRegion.xy))
-        && all(lessThanEqual(v_uv, v_faceRegion.zw))) {
-
-        vec2 faceUV = (v_uv - v_faceRegion.xy) / (v_faceRegion.zw - v_faceRegion.xy);
-
-        albedo = applyOverlay(albedo, v_eyesRegion,  faceUV, vec3(1.0));
-        albedo = applyOverlay(albedo, v_browsRegion, faceUV, v_detailTint);
-        albedo = applyOverlay(albedo, v_mouthRegion, faceUV, vec3(1.0));
-    }
+    vec3 albedo = resolveCharacterAlbedo(
+        u_texture, u_layer_albedo, v_uv, base.rgb, v_tint, v_detailTint,
+        v_faceRegion, v_eyesRegion, v_browsRegion, v_mouthRegion);
 
     vec3 normalView = normalize(cross(dFdx(v_viewPosition), dFdy(v_viewPosition)));
 

@@ -6,6 +6,7 @@ import application.bootstrap.entitypipeline.behaviormanager.BehaviorManager;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
@@ -13,6 +14,7 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -103,6 +105,23 @@ public class EntityManager extends ManagerPackage {
         return getEntityHandleFromTemplateID(getTemplateIDFromTemplateName(templateName));
     }
 
+    // Every registered template whose character is posed on a rig, by name
+    public ObjectArrayList<String> getTemplateNamesForRig(RigHandle rigHandle) {
+
+        ObjectArrayList<String> templateNames = new ObjectArrayList<>();
+
+        for (String templateName : templateName2TemplateID.keySet()) {
+
+            EntityData entityData = getEntityHandleFromTemplateName(templateName).getEntityData();
+
+            if (entityData.hasCharacterModel() && entityData.getRigHandle() == rigHandle)
+                templateNames.add(templateName);
+        }
+
+        templateNames.sort(String.CASE_INSENSITIVE_ORDER);
+        return templateNames;
+    }
+
     public EntityInstance spawnEntity(EntityHandle entityHandle) {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
@@ -164,5 +183,12 @@ public class EntityManager extends ManagerPackage {
 
         if (entityInstance.hasAppearance())
             entityInstance.getAppearanceHandle().resetToDefaults();
+    }
+
+    // Preview \\
+
+    // Builds a template from an ARPG tree without registering it, so an editor can show an edit before it is saved
+    public EntityHandle buildPreviewTemplate(String templateName, ArpgObjectStruct templateArpg) {
+        return ((EntityLoader) internalLoader).buildPreview(templateName, templateArpg);
     }
 }

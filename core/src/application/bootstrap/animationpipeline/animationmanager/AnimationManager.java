@@ -3,6 +3,7 @@ package application.bootstrap.animationpipeline.animationmanager;
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -62,5 +63,12 @@ public class AnimationManager extends ManagerPackage {
 
     public AnimationClipHandle getClipHandleFromClipName(String clipName) {
         return getClipHandleFromClipID(getClipIDFromClipName(clipName));
+    }
+
+    // Preview \\
+
+    // Builds a clip from an ARPG tree without registering it, so an editor can play an edit before it is saved
+    public AnimationClipHandle buildPreviewClip(String clipName, ArpgObjectStruct clipArpg) {
+        return ((AnimationLoader) internalLoader).buildPreview(clipName, clipArpg);
     }
 }

@@ -34,7 +34,9 @@ class AnimationTreeBuilder extends BuilderPackage {
      * "states" or its "default". Any later layer may map EntityActions to
      * one-shot nodes through "actions"; such a node plays at the action's own
      * progress while the action lasts. A node's blend falls back to its
-     * layer's, and a layer's to the engine default. Bootstrap-only.
+     * layer's, and a layer's to the engine default. Bootstrap-only, apart
+     * from the unregistered preview builds an editor makes of a tree it is
+     * changing.
      */
 
     // Internal
@@ -54,18 +56,21 @@ class AnimationTreeBuilder extends BuilderPackage {
     // Build \\
 
     AnimationTreeHandle build(File file, String treeName) {
+        return build(ArpgUtility.loadObject(file), treeName, file.getName());
+    }
 
-        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+    AnimationTreeHandle build(ArpgObjectStruct arpg, String treeName, String sourceName) {
+
         RigHandle rigHandle = rigManager.getRigHandleFromRigName(ArpgUtility.validateString(arpg, "rig"));
         ArpgArrayStruct layersArpg = ArpgUtility.validateArray(arpg, "layers");
 
         if (layersArpg.size() == 0)
-            throwException("Animation tree \"" + treeName + "\" declares no layers. File: " + file.getName());
+            throwException("Animation tree \"" + treeName + "\" declares no layers. Source: " + sourceName);
 
         AnimationLayerStruct[] layers = new AnimationLayerStruct[layersArpg.size()];
 
         for (int i = 0; i < layers.length; i++)
-            layers[i] = parseLayer(layersArpg.get(i).getAsObject(), i == 0, rigHandle, file);
+            layers[i] = parseLayer(layersArpg.get(i).getAsObject(), i == 0, rigHandle, sourceName);
 
         AnimationTreeData animationTreeData = new AnimationTreeData(treeName, rigHandle, layers);
 
@@ -77,28 +82,32 @@ class AnimationTreeBuilder extends BuilderPackage {
 
     // Layer Parsing \\
 
-    private AnimationLayerStruct parseLayer(ArpgObjectStruct layerArpg, boolean base, RigHandle rigHandle, File file) {
+    private AnimationLayerStruct parseLayer(
+            ArpgObjectStruct layerArpg,
+            boolean base,
+            RigHandle rigHandle,
+            String sourceName) {
 
         String layerName = ArpgUtility.validateString(layerArpg, "name");
         AnimationBlendMode blendMode = ArpgUtility.hasString(layerArpg, "mode")
-                ? parseEnum(AnimationBlendMode.class, layerArpg.get("mode").getAsString(), layerName, file)
+                ? parseEnum(AnimationBlendMode.class, layerArpg.get("mode").getAsString(), layerName, sourceName)
                 : AnimationBlendMode.OVERRIDE;
         float weight = ArpgUtility.getFloat(layerArpg, "weight", EngineSetting.DEFAULT_ANIMATION_LAYER_WEIGHT);
         float blendDuration = ArpgUtility.getFloat(layerArpg, "blend", EngineSetting.ANIMATION_BLEND_SECONDS);
 
         if (weight < 0f || weight > 1f)
-            throwException("Layer \"" + layerName + "\" weight must be between 0 and 1. File: " + file.getName());
+            throwException("Layer \"" + layerName + "\" weight must be between 0 and 1. Source: " + sourceName);
 
         if (blendDuration < 0f)
-            throwException("Layer \"" + layerName + "\" has a negative \"blend\". File: " + file.getName());
+            throwException("Layer \"" + layerName + "\" has a negative \"blend\". Source: " + sourceName);
 
         if (base)
-            validateBaseLayer(layerArpg, layerName, blendMode, weight, file);
+            validateBaseLayer(layerArpg, layerName, blendMode, weight, sourceName);
 
         ArpgObjectStruct nodesArpg = ArpgUtility.validateObject(layerArpg, "nodes");
 
         if (nodesArpg.size() == 0)
-            throwException("Layer \"" + layerName + "\" declares no nodes. File: " + file.getName());
+            throwException("Layer \"" + layerName + "\" declares no nodes. Source: " + sourceName);
 
         AnimationNodeStruct[] nodes = new AnimationNodeStruct[nodesArpg.size()];
         Object2IntOpenHashMap<String> nodeName2NodeIndex = new Object2IntOpenHashMap<>();
@@ -113,7 +122,7 @@ class AnimationTreeBuilder extends BuilderPackage {
                     ArpgUtility.validateObject(nodesArpg, nodeName),
                     blendDuration,
                     rigHandle,
-                    file);
+                    sourceName);
             nodeName2NodeIndex.put(nodeName, nodeIndex);
         }
 
@@ -122,11 +131,11 @@ class AnimationTreeBuilder extends BuilderPackage {
                 blendMode,
                 weight,
                 blendDuration,
-                parseBoneMask(layerArpg, layerName, rigHandle, file),
+                parseBoneMask(layerArpg, layerName, rigHandle, sourceName),
                 nodes,
-                parseStateNodes(layerArpg, layerName, nodeName2NodeIndex, base, file),
-                parseActionNodes(layerArpg, layerName, nodes, nodeName2NodeIndex, file),
-                parseTransitionBlends(layerArpg, layerName, nodes, nodeName2NodeIndex, file));
+                parseStateNodes(layerArpg, layerName, nodeName2NodeIndex, base, sourceName),
+                parseActionNodes(layerArpg, layerName, nodes, nodeName2NodeIndex, sourceName),
+                parseTransitionBlends(layerArpg, layerName, nodes, nodeName2NodeIndex, sourceName));
     }
 
     private void validateBaseLayer(
@@ -134,25 +143,29 @@ class AnimationTreeBuilder extends BuilderPackage {
             String layerName,
             AnimationBlendMode blendMode,
             float weight,
-            File file) {
+            String sourceName) {
 
         if (blendMode != AnimationBlendMode.OVERRIDE)
-            throwException("Base layer \"" + layerName + "\" must use the override mode. File: " + file.getName());
+            throwException("Base layer \"" + layerName + "\" must use the override mode. Source: " + sourceName);
 
         if (layerArpg.has("mask"))
-            throwException("Base layer \"" + layerName + "\" cannot declare a \"mask\". File: " + file.getName());
+            throwException("Base layer \"" + layerName + "\" cannot declare a \"mask\". Source: " + sourceName);
 
         if (weight != EngineSetting.DEFAULT_ANIMATION_LAYER_WEIGHT)
-            throwException("Base layer \"" + layerName + "\" must play at full weight. File: " + file.getName());
+            throwException("Base layer \"" + layerName + "\" must play at full weight. Source: " + sourceName);
 
         if (layerArpg.has("actions"))
             throwException("Base layer \"" + layerName + "\" cannot declare \"actions\" — play them on a layer "
-                    + "above it. File: " + file.getName());
+                    + "above it. Source: " + sourceName);
     }
 
     // Mask Parsing \\
 
-    private float[] parseBoneMask(ArpgObjectStruct layerArpg, String layerName, RigHandle rigHandle, File file) {
+    private float[] parseBoneMask(
+            ArpgObjectStruct layerArpg,
+            String layerName,
+            RigHandle rigHandle,
+            String sourceName) {
 
         float[] boneMask = new float[rigHandle.getBoneCount()];
 
@@ -164,19 +177,19 @@ class AnimationTreeBuilder extends BuilderPackage {
         ArpgObjectStruct maskArpg = layerArpg.getAsObject("mask");
 
         if (maskArpg.size() == 0)
-            throwException("Layer \"" + layerName + "\" declares an empty \"mask\". File: " + file.getName());
+            throwException("Layer \"" + layerName + "\" declares an empty \"mask\". Source: " + sourceName);
 
         for (String boneName : maskArpg.keySet()) {
 
             if (!rigHandle.hasBone(boneName))
                 throwException("Layer \"" + layerName + "\" masks unknown bone \"" + boneName
-                        + "\". File: " + file.getName());
+                        + "\". Source: " + sourceName);
 
             float boneWeight = maskArpg.get(boneName).getAsFloat();
 
             if (boneWeight < 0f || boneWeight > 1f)
                 throwException("Layer \"" + layerName + "\" mask weight for bone \"" + boneName
-                        + "\" must be between 0 and 1. File: " + file.getName());
+                        + "\" must be between 0 and 1. Source: " + sourceName);
 
             boneMask[rigHandle.getBoneIndex(boneName)] = boneWeight;
         }
@@ -191,47 +204,47 @@ class AnimationTreeBuilder extends BuilderPackage {
             ArpgObjectStruct nodeArpg,
             float layerBlendDuration,
             RigHandle rigHandle,
-            File file) {
+            String sourceName) {
 
         boolean single = ArpgUtility.hasString(nodeArpg, "clip");
         ArpgArrayStruct clipsArpg = single ? null : ArpgUtility.validateArray(nodeArpg, "clips");
         int clipCount = single ? 1 : clipsArpg.size();
 
         if (clipCount == 0)
-            throwException("Node \"" + nodeName + "\" lists no clips. File: " + file.getName());
+            throwException("Node \"" + nodeName + "\" lists no clips. Source: " + sourceName);
 
         AnimationParameter parameter = ArpgUtility.hasString(nodeArpg, "parameter")
-                ? parseEnum(AnimationParameter.class, nodeArpg.get("parameter").getAsString(), nodeName, file)
+                ? parseEnum(AnimationParameter.class, nodeArpg.get("parameter").getAsString(), nodeName, sourceName)
                 : null;
 
         if (!single && parameter == null)
-            throwException("Node \"" + nodeName + "\" blends several clips but names no \"parameter\". File: "
-                    + file.getName());
+            throwException("Node \"" + nodeName + "\" blends several clips but names no \"parameter\". Source: "
+                    + sourceName);
 
         AnimationClipHandle[] clips = new AnimationClipHandle[clipCount];
         float[] values = new float[clipCount];
 
         if (single)
-            clips[0] = resolveClip(nodeArpg.get("clip").getAsString(), nodeName, rigHandle, file);
+            clips[0] = resolveClip(nodeArpg.get("clip").getAsString(), nodeName, rigHandle, sourceName);
         else
-            parseBlendSpace(clipsArpg, clips, values, nodeName, rigHandle, file);
+            parseBlendSpace(clipsArpg, clips, values, nodeName, rigHandle, sourceName);
 
-        boolean looping = resolveLooping(clips, nodeName, file);
+        boolean looping = resolveLooping(clips, nodeName, sourceName);
         float rate = ArpgUtility.getFloat(nodeArpg, "rate", EngineSetting.DEFAULT_ANIMATION_NODE_RATE);
         boolean rateScale = ArpgUtility.getBoolean(nodeArpg, "rate_scale", false);
         float blendDuration = ArpgUtility.getFloat(nodeArpg, "blend", layerBlendDuration);
         float delay = ArpgUtility.getFloat(nodeArpg, "delay", EngineSetting.DEFAULT_ANIMATION_NODE_DELAY);
 
         if (rate <= 0f)
-            throwException("Node \"" + nodeName + "\" must have a positive \"rate\". File: " + file.getName());
+            throwException("Node \"" + nodeName + "\" must have a positive \"rate\". Source: " + sourceName);
 
         if (rateScale && parameter == null)
-            throwException("Node \"" + nodeName + "\" uses \"rate_scale\" without a \"parameter\". File: "
-                    + file.getName());
+            throwException("Node \"" + nodeName + "\" uses \"rate_scale\" without a \"parameter\". Source: "
+                    + sourceName);
 
         if (blendDuration < 0f || delay < 0f)
-            throwException("Node \"" + nodeName + "\" has a negative \"blend\" or \"delay\". File: "
-                    + file.getName());
+            throwException("Node \"" + nodeName + "\" has a negative \"blend\" or \"delay\". Source: "
+                    + sourceName);
 
         return new AnimationNodeStruct(
                 nodeName,
@@ -251,40 +264,40 @@ class AnimationTreeBuilder extends BuilderPackage {
             float[] values,
             String nodeName,
             RigHandle rigHandle,
-            File file) {
+            String sourceName) {
 
         for (int i = 0; i < clips.length; i++) {
 
             ArpgObjectStruct entryArpg = clipsArpg.get(i).getAsObject();
 
-            clips[i] = resolveClip(ArpgUtility.validateString(entryArpg, "clip"), nodeName, rigHandle, file);
+            clips[i] = resolveClip(ArpgUtility.validateString(entryArpg, "clip"), nodeName, rigHandle, sourceName);
             values[i] = ArpgUtility.validateFloat(entryArpg, "value");
 
             if (i > 0 && values[i] <= values[i - 1])
                 throwException("Node \"" + nodeName + "\" clip " + i
-                        + " is out of order — values must be strictly increasing. File: " + file.getName());
+                        + " is out of order — values must be strictly increasing. Source: " + sourceName);
         }
     }
 
-    private AnimationClipHandle resolveClip(String clipName, String nodeName, RigHandle rigHandle, File file) {
+    private AnimationClipHandle resolveClip(String clipName, String nodeName, RigHandle rigHandle, String sourceName) {
 
         AnimationClipHandle clip = animationManager.getClipHandleFromClipName(clipName);
 
         if (clip.getRigHandle() != rigHandle)
             throwException("Node \"" + nodeName + "\" clip \"" + clipName
-                    + "\" targets a different rig than its tree. File: " + file.getName());
+                    + "\" targets a different rig than its tree. Source: " + sourceName);
 
         return clip;
     }
 
-    private boolean resolveLooping(AnimationClipHandle[] clips, String nodeName, File file) {
+    private boolean resolveLooping(AnimationClipHandle[] clips, String nodeName, String sourceName) {
 
         boolean looping = clips[0].isLooping();
 
         for (AnimationClipHandle clip : clips)
             if (clip.isLooping() != looping)
-                throwException("Node \"" + nodeName + "\" mixes looping and one-shot clips. File: "
-                        + file.getName());
+                throwException("Node \"" + nodeName + "\" mixes looping and one-shot clips. Source: "
+                        + sourceName);
 
         return looping;
     }
@@ -296,11 +309,11 @@ class AnimationTreeBuilder extends BuilderPackage {
             String layerName,
             Object2IntOpenHashMap<String> nodeName2NodeIndex,
             boolean base,
-            File file) {
+            String sourceName) {
 
         int[] stateNodes = new int[EntityState.VALUES.length];
         int defaultNode = ArpgUtility.hasString(layerArpg, "default")
-                ? resolveNodeIndex(layerArpg.get("default").getAsString(), layerName, nodeName2NodeIndex, file)
+                ? resolveNodeIndex(layerArpg.get("default").getAsString(), layerName, nodeName2NodeIndex, sourceName)
                 : EngineSetting.INDEX_NOT_FOUND;
 
         Arrays.fill(stateNodes, defaultNode);
@@ -311,13 +324,13 @@ class AnimationTreeBuilder extends BuilderPackage {
 
             for (String stateName : statesArpg.keySet()) {
 
-                EntityState state = parseEnum(EntityState.class, stateName, layerName, file);
+                EntityState state = parseEnum(EntityState.class, stateName, layerName, sourceName);
 
                 stateNodes[state.ordinal()] = resolveNodeIndex(
                         statesArpg.get(stateName).getAsString(),
                         layerName,
                         nodeName2NodeIndex,
-                        file);
+                        sourceName);
             }
         }
 
@@ -325,7 +338,7 @@ class AnimationTreeBuilder extends BuilderPackage {
             for (EntityState state : EntityState.VALUES)
                 if (stateNodes[state.ordinal()] == EngineSetting.INDEX_NOT_FOUND)
                     throwException("Base layer \"" + layerName + "\" has no node for state \""
-                            + state.name().toLowerCase() + "\" and no \"default\". File: " + file.getName());
+                            + state.name().toLowerCase() + "\" and no \"default\". Source: " + sourceName);
 
         return stateNodes;
     }
@@ -337,7 +350,7 @@ class AnimationTreeBuilder extends BuilderPackage {
             String layerName,
             AnimationNodeStruct[] nodes,
             Object2IntOpenHashMap<String> nodeName2NodeIndex,
-            File file) {
+            String sourceName) {
 
         int[] actionNodes = new int[EntityAction.VALUES.length];
         Arrays.fill(actionNodes, EngineSetting.INDEX_NOT_FOUND);
@@ -349,21 +362,21 @@ class AnimationTreeBuilder extends BuilderPackage {
 
         for (String actionName : actionsArpg.keySet()) {
 
-            EntityAction action = parseEnum(EntityAction.class, actionName, layerName, file);
+            EntityAction action = parseEnum(EntityAction.class, actionName, layerName, sourceName);
 
             if (action == EntityAction.NONE)
                 throwException("Layer \"" + layerName + "\" maps the \"none\" action — a layer falls back to "
-                        + "its states when no action plays. File: " + file.getName());
+                        + "its states when no action plays. Source: " + sourceName);
 
             int nodeIndex = resolveNodeIndex(
                     actionsArpg.get(actionName).getAsString(),
                     layerName,
                     nodeName2NodeIndex,
-                    file);
+                    sourceName);
 
             if (nodes[nodeIndex].isLooping())
                 throwException("Layer \"" + layerName + "\" plays action \"" + actionName
-                        + "\" with a looping node — an action plays once. File: " + file.getName());
+                        + "\" with a looping node — an action plays once. Source: " + sourceName);
 
             actionNodes[action.ordinal()] = nodeIndex;
         }
@@ -378,7 +391,7 @@ class AnimationTreeBuilder extends BuilderPackage {
             String layerName,
             AnimationNodeStruct[] nodes,
             Object2IntOpenHashMap<String> nodeName2NodeIndex,
-            File file) {
+            String sourceName) {
 
         float[][] transitionBlends = new float[nodes.length][nodes.length];
 
@@ -395,14 +408,14 @@ class AnimationTreeBuilder extends BuilderPackage {
 
             ArpgObjectStruct transitionArpg = transitionsArpg.get(i).getAsObject();
             int from = resolveNodeIndex(
-                    ArpgUtility.validateString(transitionArpg, "from"), layerName, nodeName2NodeIndex, file);
+                    ArpgUtility.validateString(transitionArpg, "from"), layerName, nodeName2NodeIndex, sourceName);
             int to = resolveNodeIndex(
-                    ArpgUtility.validateString(transitionArpg, "to"), layerName, nodeName2NodeIndex, file);
+                    ArpgUtility.validateString(transitionArpg, "to"), layerName, nodeName2NodeIndex, sourceName);
             float blendDuration = ArpgUtility.validateFloat(transitionArpg, "blend");
 
             if (blendDuration < 0f)
                 throwException("Layer \"" + layerName + "\" transition " + i
-                        + " has a negative \"blend\". File: " + file.getName());
+                        + " has a negative \"blend\". Source: " + sourceName);
 
             transitionBlends[from][to] = blendDuration;
         }
@@ -416,24 +429,24 @@ class AnimationTreeBuilder extends BuilderPackage {
             String nodeName,
             String layerName,
             Object2IntOpenHashMap<String> nodeName2NodeIndex,
-            File file) {
+            String sourceName) {
 
         int nodeIndex = nodeName2NodeIndex.getInt(nodeName);
 
         if (nodeIndex == EngineSetting.INDEX_NOT_FOUND)
             throwException("Layer \"" + layerName + "\" references unknown node \"" + nodeName
-                    + "\". File: " + file.getName());
+                    + "\". Source: " + sourceName);
 
         return nodeIndex;
     }
 
-    private <E extends Enum<E>> E parseEnum(Class<E> enumClass, String name, String owner, File file) {
+    private <E extends Enum<E>> E parseEnum(Class<E> enumClass, String name, String owner, String sourceName) {
 
         for (E constant : enumClass.getEnumConstants())
             if (constant.name().equalsIgnoreCase(name))
                 return constant;
 
         return throwException("\"" + owner + "\" names unknown " + enumClass.getSimpleName() + " \"" + name
-                + "\". File: " + file.getName());
+                + "\". Source: " + sourceName);
     }
 }

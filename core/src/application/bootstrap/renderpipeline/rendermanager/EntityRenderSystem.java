@@ -34,7 +34,8 @@ public class EntityRenderSystem extends SystemPackage {
      * model matrix from its footprint, yaw and size, placed relative to the
      * chunk the viewer stands in across the world's wrap, packs its appearance
      * into one instance row, and submits its body, head parts and worn
-     * equipment as skinned and rigid draws. Runtime code never touches the
+     * equipment as skinned and rigid draws. pushPreview() draws a posed
+     * character outside any world for editors. Runtime code never touches the
      * skinned buffers directly.
      */
 
@@ -109,29 +110,56 @@ public class EntityRenderSystem extends SystemPackage {
             return;
 
         EntityData entityData = entity.getEntityData();
-        MaterialInstance material = entityData.getCharacterMaterial();
         Matrix4[] skinningMatrices = entity.getAnimationStateHandle().getSkinningMatrices();
 
         composeModelMatrix(entity, viewerChunkCoordinate);
-        resolveAppearance(entity, hideHead);
+        resolveAppearance(entityData, entity.getAppearanceHandle(), hideHead);
+        pushBody(
+                entityData.getCharacterMesh(),
+                entity.getAppearanceHandle(),
+                entityData.getCharacterMaterial(),
+                skinningMatrices,
+                targetFbo,
+                window);
+        pushEquipment(entity, hideHead, skinningMatrices, targetFbo, window);
+    }
 
-        if (!entity.hasAppearance()) {
-            pushCharacterPart(entityData.getCharacterMesh(), material, skinningMatrices, targetFbo, window);
-            pushEquipment(entity, hideHead, skinningMatrices, targetFbo, window);
+    // A posed character outside any world — an editor's preview — at its own model matrix and without equipment,
+    // drawn with its own material so it never batches with the characters of a game view
+    public void pushPreview(
+            EntityData entityData,
+            AppearanceHandle appearance,
+            Matrix4[] skinningMatrices,
+            Matrix4 modelMatrix,
+            MaterialInstance material,
+            FBOInstance targetFbo,
+            WindowInstance window) {
+
+        modelMatrixScratch.set(modelMatrix);
+        resolveAppearance(entityData, appearance, false);
+        pushBody(entityData.getCharacterMesh(), appearance, material, skinningMatrices, targetFbo, window);
+    }
+
+    private void pushBody(
+            MeshHandle characterMesh,
+            AppearanceHandle appearance,
+            MaterialInstance material,
+            Matrix4[] skinningMatrices,
+            FBOInstance targetFbo,
+            WindowInstance window) {
+
+        if (appearance == null) {
+            pushCharacterPart(characterMesh, material, skinningMatrices, targetFbo, window);
             return;
         }
 
-        AppearanceHandle appearance = entity.getAppearanceHandle();
-
         appearanceScratch.setTint(appearance.getSkinColor());
-        pushCharacterPart(entityData.getCharacterMesh(), material, skinningMatrices, targetFbo, window);
+        pushCharacterPart(characterMesh, material, skinningMatrices, targetFbo, window);
         pushCharacterPart(appearance.getHeadMesh(), material, skinningMatrices, targetFbo, window);
         pushFeaturePart(appearance, FeatureSlot.NOSE, material, skinningMatrices, targetFbo, window);
 
         appearanceScratch.setTint(appearance.getHairColor());
         pushFeaturePart(appearance, FeatureSlot.HAIR, material, skinningMatrices, targetFbo, window);
-
-        pushEquipment(entity, hideHead, skinningMatrices, targetFbo, window);
     }
 
     private void pushFeaturePart(
@@ -283,17 +311,15 @@ public class EntityRenderSystem extends SystemPackage {
 
     // Appearance \\
 
-    private void resolveAppearance(EntityInstance entity, boolean hideHead) {
+    private void resolveAppearance(EntityData entityData, AppearanceHandle appearance, boolean hideHead) {
 
         appearanceScratch.reset();
-        appearanceScratch.setHiddenBone(hideHead && entity.hasAppearance()
-                ? (float) entity.getEntityData().getAppearanceData().getHeadBoneIndex()
+        appearanceScratch.setHiddenBone(hideHead && appearance != null
+                ? (float) entityData.getAppearanceData().getHeadBoneIndex()
                 : EngineSetting.SKINNED_HIDDEN_BONE_NONE);
 
-        if (!entity.hasAppearance())
+        if (appearance == null)
             return;
-
-        AppearanceHandle appearance = entity.getAppearanceHandle();
 
         appearanceScratch.setDetailTint(appearance.getHairColor());
         appearanceScratch.setFaceRegion(appearance.getFaceTexture());

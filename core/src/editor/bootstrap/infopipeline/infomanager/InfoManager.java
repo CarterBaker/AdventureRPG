@@ -35,7 +35,9 @@ public class InfoManager extends ManagerPackage {
      * reverted, saved or not — and delete listeners every entry removed, so
      * tools can preview edits live. A copy pins its source when it begins and
      * is only built once a new name and every unique value check out, so a
-     * stale or clashing copy aborts without touching any document.
+     * stale or clashing copy aborts without touching any document. Tools
+     * create, edit, revert and delete their files through the same paths, so
+     * the panels and every tool always agree.
      */
 
     // Internal
@@ -414,6 +416,29 @@ public class InfoManager extends ManagerPackage {
         setStatusMessage(EditorSetting.INFO_MESSAGE_CREATED + definitionName);
     }
 
+    // Creates a one-entry file for a tool and selects it
+    public void createDocument(String schemaName, String definitionName, Consumer<ArpgObjectStruct> customizer) {
+
+        InfoSchemaHandle schema = getSchema(schemaName);
+
+        if (schema.isArrayLayout())
+            throwException("Info schema '" + schemaName + "' keeps its entries in an array; create an entry instead.");
+
+        if (isDefinitionNameTaken(schema, definitionName))
+            throwException("Info file '" + definitionName + "' already exists under schema '" + schemaName + "'.");
+
+        ArpgObjectStruct root = infoEditBranch.createDefault(schema.getRootField()).getAsObject();
+
+        if (customizer != null)
+            customizer.accept(root);
+
+        InfoDocumentInstance document = openNewDocument(schema, definitionName, root);
+
+        select(schema, document, null, null);
+        notifyEntries(schemaName2ChangeListeners, schema, document);
+        setStatusMessage(EditorSetting.INFO_MESSAGE_CREATED + definitionName);
+    }
+
     private String resolveTargetDefinitionName() {
         return selectedDocument != null ? selectedDocument.getDefinitionName() : activeSchema.getDefaultFile();
     }
@@ -615,14 +640,30 @@ public class InfoManager extends ManagerPackage {
             return;
         }
 
-        InfoDocumentInstance document = selectedDocument;
+        deleteFile(selectedDocument);
+    }
+
+    public void deleteDocument(String schemaName, String definitionName) {
+
+        InfoDocumentInstance document = findDocument(getSchema(schemaName), definitionName);
+
+        if (document != null)
+            deleteFile(document);
+    }
+
+    private void deleteFile(InfoDocumentInstance document) {
+
+        InfoSchemaHandle schema = document.getSchema();
 
         if (document.isOnDisk())
             infoLibraryBranch.delete(document);
 
-        notifyEntries(schemaName2DeleteListeners, activeSchema, document);
-        getDocuments(activeSchema).remove(document);
-        select(activeSchema, null, null, emptyToNull(document.getFolderName()));
+        notifyEntries(schemaName2DeleteListeners, schema, document);
+        getDocuments(schema).remove(document);
+
+        if (document == selectedDocument)
+            select(schema, null, null, emptyToNull(document.getFolderName()));
+
         setStatusMessage(EditorSetting.INFO_MESSAGE_DELETED + document.getDefinitionName());
     }
 
@@ -690,34 +731,52 @@ public class InfoManager extends ManagerPackage {
 
     public void revertSelection() {
 
-        if (selectedDocument == null)
-            return;
+        if (selectedDocument != null)
+            revert(selectedDocument);
+    }
 
-        InfoDocumentInstance document = selectedDocument;
+    public void revertDocument(String schemaName, String definitionName) {
+
+        InfoDocumentInstance document = findDocument(getSchema(schemaName), definitionName);
+
+        if (document != null)
+            revert(document);
+    }
+
+    private void revert(InfoDocumentInstance document) {
+
+        InfoSchemaHandle schema = document.getSchema();
+        boolean selected = document == selectedDocument;
 
         if (!document.isOnDisk()) {
-            notifyEntries(schemaName2DeleteListeners, activeSchema, document);
-            getDocuments(activeSchema).remove(document);
-            select(activeSchema, null, null, emptyToNull(document.getFolderName()));
+            notifyEntries(schemaName2DeleteListeners, schema, document);
+            getDocuments(schema).remove(document);
+
+            if (selected)
+                select(schema, null, null, emptyToNull(document.getFolderName()));
+
             setStatusMessage(EditorSetting.INFO_MESSAGE_REVERTED + document.getDefinitionName());
             return;
         }
 
-        ArpgObjectStruct root = infoLibraryBranch.load(activeSchema, document.getDefinitionName());
+        ArpgObjectStruct root = infoLibraryBranch.load(schema, document.getDefinitionName());
 
         if (root == null)
             return;
 
         document.replaceRoot(root);
-        notifyEntries(schemaName2ChangeListeners, activeSchema, document);
+        notifyEntries(schemaName2ChangeListeners, schema, document);
 
-        String entryName = selectedEntryName != null
-                && document.findEntryIndex(selectedEntryName) != EngineSetting.INDEX_NOT_FOUND
-                        ? selectedEntryName
-                        : null;
+        if (selected)
+            select(schema, document, resolveRevertedEntryName(document), null);
 
-        select(activeSchema, document, entryName, null);
         setStatusMessage(EditorSetting.INFO_MESSAGE_REVERTED + document.getDefinitionName());
+    }
+
+    private String resolveRevertedEntryName(InfoDocumentInstance document) {
+        return selectedEntryName != null && document.findEntryIndex(selectedEntryName) != EngineSetting.INDEX_NOT_FOUND
+                ? selectedEntryName
+                : null;
     }
 
     // Fields \\
@@ -852,6 +911,37 @@ public class InfoManager extends ManagerPackage {
 
         infoEditBranch.addMapEntry(resolveSelected(path), key);
         markSelectionEdited();
+    }
+
+    // Applies a tool's edit to one entry in place, marking its file changed and telling every change listener
+    public void editEntry(
+            String schemaName,
+            String definitionName,
+            String entryName,
+            Consumer<ArpgObjectStruct> editor) {
+
+        InfoSchemaHandle schema = getSchema(schemaName);
+        InfoDocumentInstance document = findDocument(schema, definitionName);
+        ArpgObjectStruct entryArpg = document != null ? resolveEntryArpg(schema, document, entryName) : null;
+
+        if (entryArpg == null)
+            throwException("Info file '" + definitionName + "' holds no entry named '" + entryName + "'.");
+
+        editor.accept(entryArpg);
+        document.markEdited();
+
+        this.statusMessage = null;
+        notifyChanged();
+        notifyEntry(
+                schemaName2ChangeListeners,
+                new InfoEntryStruct(schemaName, definitionName, entryName, entryArpg));
+    }
+
+    private ArpgObjectStruct resolveEntryArpg(
+            InfoSchemaHandle schema,
+            InfoDocumentInstance document,
+            String entryName) {
+        return schema.isArrayLayout() ? document.findEntry(entryName) : document.getRoot();
     }
 
     private InfoTargetStruct resolveSelected(String path) {
@@ -1037,6 +1127,25 @@ public class InfoManager extends ManagerPackage {
 
         InfoDocumentInstance document = findDocument(getSchema(schemaName), definitionName);
         return document != null && document.findEntryIndex(entryName) != EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    public boolean hasDocument(String schemaName, String definitionName) {
+        return isDefinitionNameTaken(getSchema(schemaName), definitionName);
+    }
+
+    public boolean isDocumentDirty(String schemaName, String definitionName) {
+
+        InfoDocumentInstance document = findDocument(getSchema(schemaName), definitionName);
+        return document != null && document.isDirty();
+    }
+
+    public InfoEntryStruct findEntry(String schemaName, String definitionName, String entryName) {
+
+        InfoSchemaHandle schema = getSchema(schemaName);
+        InfoDocumentInstance document = findDocument(schema, definitionName);
+        ArpgObjectStruct entryArpg = document != null ? resolveEntryArpg(schema, document, entryName) : null;
+
+        return entryArpg != null ? new InfoEntryStruct(schemaName, definitionName, entryName, entryArpg) : null;
     }
 
     public ObjectArrayList<InfoEntryStruct> getEntries(String schemaName) {

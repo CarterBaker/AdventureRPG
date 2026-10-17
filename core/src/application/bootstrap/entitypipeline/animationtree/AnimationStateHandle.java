@@ -1,7 +1,7 @@
 package application.bootstrap.entitypipeline.animationtree;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
-import application.bootstrap.animationpipeline.animation.AnimationKeyframeStruct;
+import application.bootstrap.animationpipeline.animation.AnimationClipUtility;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
@@ -25,7 +25,8 @@ public class AnimationStateHandle extends HandlePackage {
      * already playing fades in from the pose it left. An action carrying a
      * moveset clip made for the tree's rig plays that clip in its node's
      * place, and the layer fades out of it from a captured pose, so a weapon
-     * brings its own moves to any tree that maps the action. All arrays are
+     * brings its own moves to any tree that maps the action. poseClip() and
+     * poseRest() pose the rig outside the tree for editors. All arrays are
      * allocated once in constructor(), so updates never allocate.
      */
 
@@ -480,11 +481,7 @@ public class AnimationStateHandle extends HandlePackage {
 
     private void evaluatePose() {
 
-        int boneCount = rigHandle.getBoneCount();
-
-        for (int i = 0; i < boneCount; i++) {
-
-            RigBoneStruct bone = rigHandle.getBone(i);
+        for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
             positionScratch.set(0f, 0f, 0f);
             rotationScratch.set(0f, 0f, 0f);
@@ -493,30 +490,66 @@ public class AnimationStateHandle extends HandlePackage {
             for (int l = 0; l < animationTreeHandle.getLayerCount(); l++)
                 applyLayer(l, i);
 
-            positionScratch.add(bone.getPosition());
-            rotationScratch.add(bone.getRotation());
-
-            if (!bone.isRoot())
-                positionScratch.multiply(boneProportions[bone.getParentIndex()]);
-
-            RigMathUtility.composeLocal(
-                    positionScratch, rotationScratch, scaleScratch,
-                    localScratch, matrixScratchA, matrixScratchB);
-
-            Matrix4 currentWorld = currentWorldMatrices[i];
-
-            if (bone.isRoot())
-                currentWorld.set(localScratch);
-            else
-                currentWorld.set(currentWorldMatrices[bone.getParentIndex()]).multiply(localScratch);
-
-            RigMathUtility.setScale(proportionScratch, boneProportions[i]);
-
-            skinningMatrices[i]
-                    .set(currentWorld)
-                    .multiply(proportionScratch)
-                    .multiply(rigHandle.getBindWorldInverseMatrix(i));
+            composeBone(i);
         }
+    }
+
+    // Poses the rig straight from one clip at a time in seconds, outside the tree — the still an editor scrubs
+    public void poseClip(AnimationClipHandle clip, float time) {
+
+        if (clip.getRigHandle() != rigHandle)
+            throwException("Clip \"" + clip.getClipName() + "\" targets a different rig than this pose.");
+
+        float phase = Math.max(0f, Math.min(1f, time / clip.getDuration()));
+
+        for (int i = 0; i < rigHandle.getBoneCount(); i++) {
+
+            AnimationClipUtility.sampleClip(clip, phase, i, positionScratch, rotationScratch, scaleScratch);
+            composeBone(i);
+        }
+    }
+
+    // Poses the rig in its bind pose, keeping its proportions
+    public void poseRest() {
+
+        for (int i = 0; i < rigHandle.getBoneCount(); i++) {
+
+            positionScratch.set(0f, 0f, 0f);
+            rotationScratch.set(0f, 0f, 0f);
+            scaleScratch.set(1f, 1f, 1f);
+
+            composeBone(i);
+        }
+    }
+
+    // Composes one bone from the offsets in the pose scratch over its bind pose, parent before child
+    private void composeBone(int boneIndex) {
+
+        RigBoneStruct bone = rigHandle.getBone(boneIndex);
+
+        positionScratch.add(bone.getPosition());
+        rotationScratch.add(bone.getRotation());
+
+        if (!bone.isRoot())
+            positionScratch.multiply(boneProportions[bone.getParentIndex()]);
+
+        RigMathUtility.composeLocal(
+                positionScratch, rotationScratch, scaleScratch,
+                localScratch, matrixScratchA, matrixScratchB);
+
+        Matrix4 currentWorld = currentWorldMatrices[boneIndex];
+
+        if (bone.isRoot())
+            currentWorld.set(localScratch);
+        else
+            currentWorld.set(currentWorldMatrices[bone.getParentIndex()]).multiply(localScratch);
+
+        RigMathUtility.setScale(proportionScratch, boneProportions[boneIndex]);
+
+        skinningMatrices[boneIndex]
+                .set(currentWorld)
+                .multiply(proportionScratch)
+                .multiply(rigHandle.getBindWorldInverseMatrix(boneIndex));
     }
 
     private void applyLayer(int layerIndex, int boneIndex) {
@@ -595,17 +628,23 @@ public class AnimationStateHandle extends HandlePackage {
         float phase = layerNodePhases[layerIndex][nodeIndex];
 
         if (nodeIndex == layerCurrentNodes[layerIndex] && layerMoveClips[layerIndex] != null) {
-            sampleClip(layerMoveClips[layerIndex], phase, boneIndex, outPosition, outRotation, outScale);
+            AnimationClipUtility.sampleClip(
+                    layerMoveClips[layerIndex],
+                    phase,
+                    boneIndex,
+                    outPosition,
+                    outRotation,
+                    outScale);
             return;
         }
 
         resolveBracket(node);
-        sampleClip(node.getClip(bracketLow), phase, boneIndex, outPosition, outRotation, outScale);
+        AnimationClipUtility.sampleClip(node.getClip(bracketLow), phase, boneIndex, outPosition, outRotation, outScale);
 
         if (bracketWeight <= 0f)
             return;
 
-        sampleClip(
+        AnimationClipUtility.sampleClip(
                 node.getClip(bracketHigh),
                 phase,
                 boneIndex,
@@ -616,149 +655,6 @@ public class AnimationStateHandle extends HandlePackage {
         lerpInto(outPosition, clipPositionScratch, bracketWeight);
         lerpInto(outRotation, clipRotationScratch, bracketWeight);
         lerpInto(outScale, clipScaleScratch, bracketWeight);
-    }
-
-    private void sampleClip(
-            AnimationClipHandle clip,
-            float phase,
-            int boneIndex,
-            Vector3 outPosition,
-            Vector3 outRotation,
-            Vector3 outScale) {
-
-        if (!clip.hasBoneTrack(boneIndex)) {
-            outPosition.set(0f, 0f, 0f);
-            outRotation.set(0f, 0f, 0f);
-            outScale.set(1f, 1f, 1f);
-            return;
-        }
-
-        AnimationKeyframeStruct[] keyframes = clip.getBoneTrack(boneIndex).getKeyframes();
-        int count = keyframes.length;
-        float time = phase * clip.getDuration();
-
-        if (count == 1 || time <= keyframes[0].getTime()) {
-            applyKeyframe(keyframes[0], outPosition, outRotation, outScale);
-            return;
-        }
-
-        if (time >= keyframes[count - 1].getTime()) {
-            applyKeyframe(keyframes[count - 1], outPosition, outRotation, outScale);
-            return;
-        }
-
-        int segment = findSegment(keyframes, time);
-        boolean looping = clip.isLooping();
-        float period = keyframes[count - 1].getTime() - keyframes[0].getTime();
-
-        AnimationKeyframeStruct a = keyframes[segment];
-        AnimationKeyframeStruct b = keyframes[segment + 1];
-        AnimationKeyframeStruct before = resolveBefore(keyframes, segment, looping);
-        AnimationKeyframeStruct after = resolveAfter(keyframes, segment + 1, looping);
-
-        float span = b.getTime() - a.getTime();
-        float t = (time - a.getTime()) / span;
-        float beforeTime = segment > 0 || !looping ? before.getTime() : before.getTime() - period;
-        float afterTime = segment + 1 < count - 1 || !looping ? after.getTime() : after.getTime() + period;
-        float inTangent = resolveTangentScale(span, beforeTime, b.getTime(), before == b);
-        float outTangent = resolveTangentScale(span, a.getTime(), afterTime, after == a);
-
-        sampleChannel(
-                before.getPosition(), a.getPosition(), b.getPosition(), after.getPosition(),
-                inTangent, outTangent, t, outPosition);
-        sampleChannel(
-                before.getRotation(), a.getRotation(), b.getRotation(), after.getRotation(),
-                inTangent, outTangent, t, outRotation);
-        sampleChannel(
-                before.getScale(), a.getScale(), b.getScale(), after.getScale(),
-                inTangent, outTangent, t, outScale);
-    }
-
-    private static void sampleChannel(
-            Vector3 before,
-            Vector3 a,
-            Vector3 b,
-            Vector3 after,
-            float inTangent,
-            float outTangent,
-            float t,
-            Vector3 out) {
-
-        out.set(
-                hermite(before.x, a.x, b.x, after.x, inTangent, outTangent, t),
-                hermite(before.y, a.y, b.y, after.y, inTangent, outTangent, t),
-                hermite(before.z, a.z, b.z, after.z, inTangent, outTangent, t));
-    }
-
-    private static int findSegment(AnimationKeyframeStruct[] keyframes, float time) {
-
-        for (int i = 0; i < keyframes.length - 2; i++)
-            if (time < keyframes[i + 1].getTime())
-                return i;
-
-        return keyframes.length - 2;
-    }
-
-    // A looping track's last key repeats its first, so the neighbour across the seam skips it
-    private static AnimationKeyframeStruct resolveBefore(
-            AnimationKeyframeStruct[] keyframes,
-            int index,
-            boolean looping) {
-
-        if (index > 0)
-            return keyframes[index - 1];
-
-        return looping ? keyframes[Math.max(0, keyframes.length - 2)] : keyframes[index + 1];
-    }
-
-    private static AnimationKeyframeStruct resolveAfter(
-            AnimationKeyframeStruct[] keyframes,
-            int index,
-            boolean looping) {
-
-        if (index < keyframes.length - 1)
-            return keyframes[index + 1];
-
-        return looping ? keyframes[Math.min(1, keyframes.length - 1)] : keyframes[index - 1];
-    }
-
-    // A mirrored neighbour at a one-shot's end gives a flat tangent, easing into and out of the hold
-    private static float resolveTangentScale(float span, float fromTime, float toTime, boolean flat) {
-
-        float range = toTime - fromTime;
-
-        return flat || range <= 0f ? 0f : span / range;
-    }
-
-    private static float hermite(
-            float before,
-            float a,
-            float b,
-            float after,
-            float inTangent,
-            float outTangent,
-            float t) {
-
-        float t2 = t * t;
-        float t3 = t2 * t;
-        float tangentA = (b - before) * inTangent;
-        float tangentB = (after - a) * outTangent;
-
-        return (2f * t3 - 3f * t2 + 1f) * a
-                + (t3 - 2f * t2 + t) * tangentA
-                + (-2f * t3 + 3f * t2) * b
-                + (t3 - t2) * tangentB;
-    }
-
-    private static void applyKeyframe(
-            AnimationKeyframeStruct keyframe,
-            Vector3 outPosition,
-            Vector3 outRotation,
-            Vector3 outScale) {
-
-        outPosition.set(keyframe.getPosition());
-        outRotation.set(keyframe.getRotation());
-        outScale.set(keyframe.getScale());
     }
 
     // Utility \\
@@ -794,5 +690,9 @@ public class AnimationStateHandle extends HandlePackage {
 
     public Matrix4 getSkinningMatrix(int boneIndex) {
         return skinningMatrices[boneIndex];
+    }
+
+    public Matrix4 getWorldMatrix(int boneIndex) {
+        return currentWorldMatrices[boneIndex];
     }
 }

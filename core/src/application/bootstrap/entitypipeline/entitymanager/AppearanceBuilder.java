@@ -1,7 +1,5 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
-import java.io.File;
-
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
@@ -38,15 +36,17 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Build \\
 
-    AppearanceData build(ArpgObjectStruct appearanceArpg, RigHandle rigHandle, File file) {
+    AppearanceData build(ArpgObjectStruct appearanceArpg, RigHandle rigHandle, String sourceName) {
 
         String headBoneName = ArpgUtility.validateString(appearanceArpg, "head_bone");
 
         if (!rigHandle.hasBone(headBoneName))
             throwException("Appearance \"head_bone\" \"" + headBoneName
-                    + "\" is not a bone of the character rig. File: " + file.getName());
+                    + "\" is not a bone of the character rig. Source: " + sourceName);
 
-        FeatureHandle[] defaultFeatures = parseFeatures(ArpgUtility.validateObject(appearanceArpg, "features"), file);
+        FeatureHandle[] defaultFeatures = parseFeatures(
+                ArpgUtility.validateObject(appearanceArpg, "features"),
+                sourceName);
         Color skinColor = parseColor(appearanceArpg, "skin_color");
         Color hairColor = parseColor(appearanceArpg, "hair_color");
         ArpgObjectStruct buildArpg = ArpgUtility.hasObject(appearanceArpg, "build")
@@ -58,25 +58,25 @@ class AppearanceBuilder extends BuilderPackage {
                 rigHandle.getBoneIndex(headBoneName),
                 skinColor,
                 hairColor,
-                parsePalette(appearanceArpg, "skin_palette", skinColor, file),
-                parsePalette(appearanceArpg, "hair_palette", hairColor, file),
+                parsePalette(appearanceArpg, "skin_palette", skinColor, sourceName),
+                parsePalette(appearanceArpg, "hair_palette", hairColor, sourceName),
                 defaultFeatures,
                 ArpgUtility.getFloat(buildArpg, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
                 ArpgUtility.getFloat(buildArpg, "heavy", EngineSetting.DEFAULT_BUILD_FACTOR),
-                parseGirthInfluence(buildArpg, rigHandle, file));
+                parseGirthInfluence(buildArpg, rigHandle, sourceName));
 
         for (FeatureHandle featureHandle : defaultFeatures)
             if (featureHandle != null && !appearanceData.isCompatible(featureHandle))
                 throwException("Default feature \"" + featureHandle.getFeatureName()
                         + "\" does not fit this character — its mesh must use the character's rig and its "
-                        + "textures must share the head's face texture array. File: " + file.getName());
+                        + "textures must share the head's face texture array. Source: " + sourceName);
 
         return appearanceData;
     }
 
     // Features \\
 
-    private FeatureHandle[] parseFeatures(ArpgObjectStruct featuresArpg, File file) {
+    private FeatureHandle[] parseFeatures(ArpgObjectStruct featuresArpg, String sourceName) {
 
         FeatureHandle[] features = new FeatureHandle[FeatureSlot.VALUES.length];
 
@@ -87,7 +87,7 @@ class AppearanceBuilder extends BuilderPackage {
             if (!ArpgUtility.hasString(featuresArpg, key)) {
 
                 if (featureSlot.isRequired())
-                    throwException("Appearance is missing required feature \"" + key + "\". File: " + file.getName());
+                    throwException("Appearance is missing required feature \"" + key + "\". Source: " + sourceName);
 
                 continue;
             }
@@ -98,14 +98,14 @@ class AppearanceBuilder extends BuilderPackage {
             if (featureHandle.getFeatureSlot() != featureSlot)
                 throwException("Feature \"" + featureHandle.getFeatureName() + "\" is a "
                         + featureHandle.getFeatureSlot() + " feature but is declared under \"" + key
-                        + "\". File: " + file.getName());
+                        + "\". Source: " + sourceName);
 
             features[featureSlot.ordinal()] = featureHandle;
         }
 
         for (String key : featuresArpg.keySet())
             if (!isSlotName(key))
-                throwException("Appearance declares unknown feature slot \"" + key + "\". File: " + file.getName());
+                throwException("Appearance declares unknown feature slot \"" + key + "\". Source: " + sourceName);
 
         return features;
     }
@@ -121,7 +121,7 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Build Curve \\
 
-    private float[] parseGirthInfluence(ArpgObjectStruct buildArpg, RigHandle rigHandle, File file) {
+    private float[] parseGirthInfluence(ArpgObjectStruct buildArpg, RigHandle rigHandle, String sourceName) {
 
         float[] girthInfluence = new float[rigHandle.getBoneCount()];
 
@@ -133,8 +133,8 @@ class AppearanceBuilder extends BuilderPackage {
         for (String boneName : bonesArpg.keySet()) {
 
             if (!rigHandle.hasBone(boneName))
-                throwException("Appearance build references unknown bone \"" + boneName + "\". File: "
-                        + file.getName());
+                throwException("Appearance build references unknown bone \"" + boneName + "\". Source: "
+                        + sourceName);
 
             girthInfluence[rigHandle.getBoneIndex(boneName)] = bonesArpg.get(boneName).getAsFloat();
         }
@@ -152,7 +152,7 @@ class AppearanceBuilder extends BuilderPackage {
         return toColor(ArpgUtility.validateArray(arpg, key, 3));
     }
 
-    private Color[] parsePalette(ArpgObjectStruct arpg, String key, Color defaultColor, File file) {
+    private Color[] parsePalette(ArpgObjectStruct arpg, String key, Color defaultColor, String sourceName) {
 
         if (!ArpgUtility.hasArray(arpg, key))
             return new Color[] { new Color(defaultColor) };
@@ -160,7 +160,7 @@ class AppearanceBuilder extends BuilderPackage {
         ArpgArrayStruct paletteArpg = arpg.getAsArray(key);
 
         if (paletteArpg.size() == 0)
-            throwException("Appearance \"" + key + "\" must list at least one color. File: " + file.getName());
+            throwException("Appearance \"" + key + "\" must list at least one color. Source: " + sourceName);
 
         Color[] palette = new Color[paletteArpg.size()];
 
@@ -169,7 +169,7 @@ class AppearanceBuilder extends BuilderPackage {
             ArpgArrayStruct color = paletteArpg.get(i).getAsArray();
 
             if (color.size() != 3)
-                throwException("Appearance \"" + key + "\" entry " + i + " must be [r, g, b]. File: " + file.getName());
+                throwException("Appearance \"" + key + "\" entry " + i + " must be [r, g, b]. Source: " + sourceName);
 
             palette[i] = toColor(color);
         }

@@ -4,6 +4,8 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeContext;
+import editor.animationeditor.AnimationEditorContext;
+import editor.animationtreeeditor.AnimationTreeEditorContext;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
@@ -11,6 +13,7 @@ import editor.bootstrap.tabpipeline.tab.TabContext;
 import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
+import editor.charactereditor.CharacterEditorContext;
 import editor.commandconsole.CommandConsoleContext;
 import editor.console.ConsoleContext;
 import editor.dev.DevContext;
@@ -116,6 +119,21 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openItemEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ITEM_EDITOR, ItemEditorContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_EDITOR, CharacterEditorContext.class, osWindow);
+    }
+
+    public TabHandle openAnimationEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_ANIMATION_EDITOR, AnimationEditorContext.class, osWindow);
+    }
+
+    public TabHandle openAnimationTreeEditor(WindowInstance osWindow) {
+        return openTab(
+                EditorSetting.TAB_TITLE_ANIMATION_TREE_EDITOR,
+                AnimationTreeEditorContext.class,
+                osWindow);
     }
 
     public TabHandle openShipwright(WindowInstance osWindow) {

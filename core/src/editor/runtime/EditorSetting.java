@@ -1,5 +1,6 @@
 package editor.runtime;
 
+import application.runtime.RuntimeSetting;
 import engine.input.Buttons;
 
 public class EditorSetting {
@@ -10,8 +11,10 @@ public class EditorSetting {
      * commands and the command drag between windows, the info pipeline's
      * schemas, hierarchy keys, and status text, the item editor's library and
      * status text, the image editing framework's history and files, the world
-     * map's status text and overlay toggles, and the world editor's brush and
-     * status text.
+     * map's status text and overlay toggles, the world editor's brush and
+     * status text, the character viewport shared by the character, animation
+     * and animation tree editors, and those editors' files, steps and status
+     * text.
      */
 
     // Cursors
@@ -70,9 +73,19 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_COPY_PREFIX = "Copy ";
     public static final String DIALOG_TITLE_COPY_SUFFIX = " as";
     public static final String DIALOG_TITLE_UNIQUE_PREFIX = "Unique ";
+    public static final String DIALOG_TITLE_EDIT_VALUE = "Edit Value";
+    public static final String DIALOG_TITLE_NEW_CLIP = "New Clip";
+    public static final String DIALOG_TITLE_NEW_TREE = "New Animation Tree";
+    public static final String DIALOG_TITLE_NEW_LAYER = "New Layer";
+    public static final String DIALOG_TITLE_RENAME_LAYER = "Rename Layer";
+    public static final String DIALOG_TITLE_NEW_NODE = "New Node";
+    public static final String DIALOG_TITLE_RENAME_NODE = "Rename Node";
 
     // Tabs
     public static final String TAB_TITLE_COMMAND_CONSOLE = "Command Console";
+    public static final String TAB_TITLE_ANIMATION_EDITOR = "Animation Editor";
+    public static final String TAB_TITLE_ANIMATION_TREE_EDITOR = "Animation Tree Editor";
+    public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
@@ -140,6 +153,387 @@ public class EditorSetting {
 
     // Viewports
     public static final String FBO_EDITOR_SCENE = "EditorScene";
+    public static final String FBO_EDITOR_OVERLAY = "EditorOverlay";
+
+    // Character View — meshes, materials and draw order
+    public static final String CHARACTER_VIEW_MESH_GRID = "editor/CharacterViewGrid";
+    public static final String CHARACTER_VIEW_MESH_MARKER = "editor/CharacterViewMarker";
+    public static final String CHARACTER_VIEW_MATERIAL_CHARACTER = "editor/CharacterViewCharacterMaterial";
+    public static final String CHARACTER_VIEW_MATERIAL_GRID = "editor/CharacterViewGridMaterial";
+    public static final String CHARACTER_VIEW_MATERIAL_MARKER = "editor/CharacterViewMarkerMaterial";
+    public static final String CHARACTER_VIEW_MATERIAL_MARKER_SELECTED = "editor/CharacterViewMarkerSelectedMaterial";
+    public static final String CHARACTER_VIEW_UNIFORM_MODEL = "u_model";
+    public static final int CHARACTER_VIEW_DEPTH_GRID = 0;
+    public static final int CHARACTER_VIEW_DEPTH_MARKER = 0;
+    public static final int CHARACTER_VIEW_DEPTH_SELECTED = 1;
+    public static final int CHARACTER_VIEW_LAYER_OVERLAY = RuntimeSetting.LAYER_WORLD + 1;
+
+    // Character View — markers, sizes in blocks
+    public static final float CHARACTER_VIEW_JOINT_SIZE = 0.035f;
+    public static final float CHARACTER_VIEW_JOINT_SELECTED_SIZE = 0.06f;
+
+    // Character View — the preview's build between thin (0) and heavy (1)
+    public static final float CHARACTER_VIEW_WEIGHT_RATIO = 0.5f;
+
+    // Character View — camera, the target a share of the model's height and the distances per block of it
+    public static final float CHARACTER_VIEW_ORBIT_TARGET_HEIGHT = 0.55f;
+    public static final float CHARACTER_VIEW_ORBIT_DISTANCE_DEFAULT = 1.6f;
+    public static final float CHARACTER_VIEW_ORBIT_DISTANCE_MIN = 0.35f;
+    public static final float CHARACTER_VIEW_ORBIT_DISTANCE_MAX = 5f;
+    public static final float CHARACTER_VIEW_ORBIT_ZOOM_STEP = 0.1f;
+    public static final float CHARACTER_VIEW_ORBIT_INITIAL_YAW_DEGREES = 25f;
+    public static final float CHARACTER_VIEW_ORBIT_INITIAL_PITCH_DEGREES = 15f;
+    public static final int CHARACTER_VIEW_BUTTON_ORBIT = Buttons.RIGHT;
+
+    // Character View — panel keys, numbers and text
+    public static final String CHARACTER_VIEW_KEY_SEPARATOR = ":";
+    public static final float CHARACTER_VIEW_DECIMAL_SCALE = 10000f;
+    public static final String CHARACTER_VIEW_ZERO_TEXT = "0";
+    public static final String[] CHARACTER_VIEW_AXIS_NAMES = { "x", "y", "z" };
+    public static final String[] CHARACTER_VIEW_AXIS_LABELS = { "X", "Y", "Z" };
+    public static final String[] CHARACTER_VIEW_CHANNEL_LABELS = { "Red", "Green", "Blue" };
+    public static final String CHARACTER_VIEW_LABEL_SPACE = " ";
+    public static final String CHARACTER_VIEW_PAIR_SEPARATOR = "  :  ";
+    public static final String CHARACTER_VIEW_COUNT_SEPARATOR = " / ";
+    public static final String CHARACTER_VIEW_NONE = "none";
+    public static final String CHARACTER_VIEW_YES = "Yes";
+    public static final String CHARACTER_VIEW_NO = "No";
+    public static final String CHARACTER_VIEW_DIRTY_MARKER = "*";
+    public static final String CHARACTER_VIEW_STATUS_SEPARATOR = "  |  ";
+    public static final String CHARACTER_VIEW_MESSAGE_PREVIEW_REFUSED = "Preview not rebuilt: ";
+
+    // Character Editor — template fields
+    public static final String CHARACTER_EDITOR_FIELD_MODEL = "model";
+    public static final String CHARACTER_EDITOR_FIELD_APPEARANCE = "appearance";
+    public static final String CHARACTER_EDITOR_FIELD_FEATURES = "features";
+    public static final String CHARACTER_EDITOR_FIELD_SKIN_COLOR = "skin_color";
+    public static final String CHARACTER_EDITOR_FIELD_HAIR_COLOR = "hair_color";
+    public static final String CHARACTER_EDITOR_FIELD_SKIN_PALETTE = "skin_palette";
+    public static final String CHARACTER_EDITOR_FIELD_HAIR_PALETTE = "hair_palette";
+    public static final String CHARACTER_EDITOR_FIELD_BUILD = "build";
+    public static final String CHARACTER_EDITOR_FIELD_THIN = "thin";
+    public static final String CHARACTER_EDITOR_FIELD_HEAVY = "heavy";
+    public static final String CHARACTER_EDITOR_FIELD_BONES = "bones";
+    public static final String CHARACTER_EDITOR_FIELD_EQUIPMENT = "equipment";
+    public static final String CHARACTER_EDITOR_FIELD_SLOT = "slot";
+    public static final String CHARACTER_EDITOR_FIELD_BONE = "bone";
+    public static final String CHARACTER_EDITOR_FIELD_POSITION = "position";
+    public static final String CHARACTER_EDITOR_FIELD_ROTATION = "rotation";
+    public static final String CHARACTER_EDITOR_FIELD_SIZE = "size";
+    public static final String CHARACTER_EDITOR_FIELD_HOLD = "hold";
+
+    // Character Editor — panel keys
+    public static final String CHARACTER_EDITOR_KEY_POSE = "pose";
+    public static final String CHARACTER_EDITOR_KEY_FEATURE = "feature";
+    public static final String CHARACTER_EDITOR_KEY_SKIN = "skin";
+    public static final String CHARACTER_EDITOR_KEY_HAIR = "hair";
+    public static final String CHARACTER_EDITOR_KEY_COLOR_SUFFIX = "_color";
+    public static final String CHARACTER_EDITOR_KEY_TONE_SUFFIX = "_tone";
+    public static final String CHARACTER_EDITOR_KEY_TONE_COLOR_SUFFIX = "_tone_color";
+    public static final String CHARACTER_EDITOR_KEY_ADD_TONE_SUFFIX = "_add_tone";
+    public static final String CHARACTER_EDITOR_KEY_REMOVE_TONE_SUFFIX = "_remove_tone";
+    public static final String CHARACTER_EDITOR_KEY_THIN = "thin";
+    public static final String CHARACTER_EDITOR_KEY_HEAVY = "heavy";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT = "weight";
+    public static final String CHARACTER_EDITOR_KEY_HEAD = "head";
+    public static final String CHARACTER_EDITOR_KEY_GIRTH = "girth";
+    public static final String CHARACTER_EDITOR_KEY_BONE = "bone";
+    public static final String CHARACTER_EDITOR_KEY_ANCHOR = "anchor";
+    public static final String CHARACTER_EDITOR_KEY_ANCHOR_SLOT = "anchor_slot";
+    public static final String CHARACTER_EDITOR_KEY_ANCHOR_BONE = "anchor_bone";
+    public static final String CHARACTER_EDITOR_KEY_ANCHOR_HOLD = "anchor_hold";
+    public static final String CHARACTER_EDITOR_KEY_ANCHOR_POSITION = "anchor_position";
+    public static final String CHARACTER_EDITOR_KEY_ANCHOR_ROTATION = "anchor_rotation";
+    public static final String CHARACTER_EDITOR_KEY_ANCHOR_SIZE = "anchor_size";
+    public static final String CHARACTER_EDITOR_KEY_ADD_ANCHOR = "add_anchor";
+    public static final String CHARACTER_EDITOR_KEY_DUPLICATE_ANCHOR = "duplicate_anchor";
+    public static final String CHARACTER_EDITOR_KEY_REMOVE_ANCHOR = "remove_anchor";
+
+    // Character Editor — steps and ranges
+    public static final float CHARACTER_EDITOR_COLOR_DEFAULT = 1f;
+    public static final float CHARACTER_EDITOR_COLOR_STEP = 0.02f;
+    public static final float CHARACTER_EDITOR_BUILD_FACTOR_STEP = 0.05f;
+    public static final float CHARACTER_EDITOR_BUILD_FACTOR_MIN = 0.1f;
+    public static final float CHARACTER_EDITOR_BUILD_FACTOR_MAX = 3f;
+    public static final float CHARACTER_EDITOR_WEIGHT_STEP = 0.1f;
+    public static final float CHARACTER_EDITOR_HEAD_STEP = 0.05f;
+    public static final float CHARACTER_EDITOR_GIRTH_STEP = 0.05f;
+    public static final float CHARACTER_EDITOR_GIRTH_MIN = 0f;
+    public static final float CHARACTER_EDITOR_GIRTH_MAX = 2f;
+    public static final float CHARACTER_EDITOR_POSITION_STEP = 0.005f;
+    public static final float CHARACTER_EDITOR_ROTATION_STEP = 5f;
+    public static final float CHARACTER_EDITOR_SIZE_STEP = 0.01f;
+    public static final float CHARACTER_EDITOR_ANCHOR_SIZE_MIN = 0.01f;
+    public static final float CHARACTER_EDITOR_ANCHOR_SIZE_DEFAULT = 0.2f;
+
+    // Character Editor — preview speeds, in blocks per second
+    public static final float CHARACTER_EDITOR_WALK_SPEED = 2.1f;
+    public static final float CHARACTER_EDITOR_RUN_SPEED = 8f;
+
+    // Character Editor — modes and poses
+    public static final String CHARACTER_EDITOR_MODE_APPEARANCE = "Appearance";
+    public static final String CHARACTER_EDITOR_MODE_BUILD = "Build";
+    public static final String CHARACTER_EDITOR_MODE_EQUIPMENT = "Equipment";
+    public static final String CHARACTER_EDITOR_POSE_REST = "Rest";
+    public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
+    public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
+    public static final String CHARACTER_EDITOR_POSE_RUN = "Run";
+
+    // Character Editor — panel text
+    public static final String CHARACTER_EDITOR_HEADER_PREVIEW = "Preview";
+    public static final String CHARACTER_EDITOR_HEADER_FEATURES = "Default Features";
+    public static final String CHARACTER_EDITOR_HEADER_NO_APPEARANCE = "No appearance block";
+    public static final String CHARACTER_EDITOR_HEADER_SKIN = "Skin";
+    public static final String CHARACTER_EDITOR_HEADER_HAIR = "Hair";
+    public static final String CHARACTER_EDITOR_HEADER_BONES = "Bones";
+    public static final String CHARACTER_EDITOR_HEADER_BUILD_CURVE = "Build Curve";
+    public static final String CHARACTER_EDITOR_HEADER_PREVIEW_BODY = "Preview Body";
+    public static final String CHARACTER_EDITOR_HEADER_ANCHORS = "Anchors";
+    public static final String CHARACTER_EDITOR_HEADER_ANCHOR = "Anchor";
+    public static final String CHARACTER_EDITOR_LABEL_POSE = "Pose";
+    public static final String CHARACTER_EDITOR_LABEL_TONE = "Tone Worn";
+    public static final String CHARACTER_EDITOR_LABEL_TONE_PREFIX = "Tone ";
+    public static final String CHARACTER_EDITOR_LABEL_ADD_TONE = "Add Tone";
+    public static final String CHARACTER_EDITOR_LABEL_REMOVE_TONE = "Remove Tone";
+    public static final String CHARACTER_EDITOR_LABEL_THIN = "Thin";
+    public static final String CHARACTER_EDITOR_LABEL_HEAVY = "Heavy";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT = "Weight";
+    public static final String CHARACTER_EDITOR_LABEL_HEAD = "Head";
+    public static final String CHARACTER_EDITOR_LABEL_GIRTH = "Girth";
+    public static final String CHARACTER_EDITOR_LABEL_SLOT = "Slot";
+    public static final String CHARACTER_EDITOR_LABEL_BONE = "Bone";
+    public static final String CHARACTER_EDITOR_LABEL_HOLD = "Held";
+    public static final String CHARACTER_EDITOR_LABEL_POSITION = "Position";
+    public static final String CHARACTER_EDITOR_LABEL_ROTATION = "Rotation";
+    public static final String CHARACTER_EDITOR_LABEL_SIZE = "Size";
+    public static final String CHARACTER_EDITOR_LABEL_ADD_ANCHOR = "Add Anchor";
+    public static final String CHARACTER_EDITOR_LABEL_DUPLICATE_ANCHOR = "Duplicate Anchor";
+    public static final String CHARACTER_EDITOR_LABEL_REMOVE_ANCHOR = "Remove Anchor";
+    public static final String CHARACTER_EDITOR_TONE_DEFAULT = "Default";
+
+    // Character Editor — status text
+    public static final String CHARACTER_EDITOR_STATUS_NO_TEMPLATE = "No character open."
+            + " Pick an entity in the Hierarchy.";
+    public static final String CHARACTER_EDITOR_MESSAGE_SAVED = "Saved ";
+    public static final String CHARACTER_EDITOR_MESSAGE_REVERTED = "Reverted ";
+    public static final String CHARACTER_EDITOR_MESSAGE_COPIED = "Copied as ";
+    public static final String CHARACTER_EDITOR_MESSAGE_DELETED = "Deleted ";
+    public static final String CHARACTER_EDITOR_MESSAGE_NO_MODEL = "This entity has no character model to show";
+
+    // Animation Editor — clip fields
+    public static final String ANIMATION_EDITOR_FIELD_RIG = "rig";
+    public static final String ANIMATION_EDITOR_FIELD_LOOP = "loop";
+    public static final String ANIMATION_EDITOR_FIELD_TRACKS = "tracks";
+    public static final String ANIMATION_EDITOR_FIELD_TIME = "time";
+    public static final String ANIMATION_EDITOR_FIELD_ROTATION = "rotation";
+    public static final String ANIMATION_EDITOR_FIELD_POSITION = "position";
+    public static final String ANIMATION_EDITOR_FIELD_SCALE = "scale";
+    public static final String ANIMATION_EDITOR_DEFAULT_RIG = "HumanoidRig";
+
+    // Animation Editor — panel keys; the channel rows are keyed by their fields
+    public static final String ANIMATION_EDITOR_KEY_BONE = "bone";
+    public static final String ANIMATION_EDITOR_KEY_CHARACTER = "character";
+    public static final String ANIMATION_EDITOR_KEY_LOOP = "loop";
+    public static final String ANIMATION_EDITOR_KEY_ADD_KEY = "add_key";
+    public static final String ANIMATION_EDITOR_KEY_DELETE_KEY = "delete_key";
+    public static final String ANIMATION_EDITOR_KEY_PREVIOUS_KEY = "previous_key";
+    public static final String ANIMATION_EDITOR_KEY_NEXT_KEY = "next_key";
+    public static final String ANIMATION_EDITOR_KEY_KEY_EARLIER = "key_earlier";
+    public static final String ANIMATION_EDITOR_KEY_KEY_LATER = "key_later";
+    public static final String ANIMATION_EDITOR_KEY_KEY_POSE = "key_pose";
+    public static final String ANIMATION_EDITOR_KEY_COPY_POSE = "copy_pose";
+    public static final String ANIMATION_EDITOR_KEY_PASTE_POSE = "paste_pose";
+    public static final String ANIMATION_EDITOR_KEY_MIRROR_POSE = "mirror_pose";
+
+    // Animation Editor — timing, steps and mirroring
+    public static final float ANIMATION_EDITOR_FRAME_RATE = 30f;
+    public static final float ANIMATION_EDITOR_TIMELINE_MIN_SPAN = 1f;
+    public static final float ANIMATION_EDITOR_KEY_EPSILON = 0.0005f;
+    public static final float ANIMATION_EDITOR_ROTATION_STEP = 5f;
+    public static final float ANIMATION_EDITOR_POSITION_STEP = 0.005f;
+    public static final float ANIMATION_EDITOR_SCALE_STEP = 0.05f;
+    public static final float ANIMATION_EDITOR_SCALE_MIN = 0.01f;
+    public static final String ANIMATION_EDITOR_LEFT_SUFFIX = "_l";
+    public static final String ANIMATION_EDITOR_RIGHT_SUFFIX = "_r";
+
+    // Animation Editor — panel text
+    public static final String ANIMATION_EDITOR_HEADER_CLIP = "Clip";
+    public static final String ANIMATION_EDITOR_HEADER_BONES = "Bones";
+    public static final String ANIMATION_EDITOR_HEADER_POSE = "Whole Pose";
+    public static final String ANIMATION_EDITOR_HEADER_KEY = "Key ";
+    public static final String ANIMATION_EDITOR_HEADER_NO_KEY = "No key at ";
+    public static final String ANIMATION_EDITOR_KEY_AT = " at ";
+    public static final String ANIMATION_EDITOR_KEY_COUNT_OPEN = "  (";
+    public static final String ANIMATION_EDITOR_KEY_COUNT_CLOSE = ")";
+    public static final String ANIMATION_EDITOR_LABEL_CHARACTER = "Character";
+    public static final String ANIMATION_EDITOR_LABEL_LOOP = "Loops";
+    public static final String ANIMATION_EDITOR_LABEL_ROTATION = "Rotation";
+    public static final String ANIMATION_EDITOR_LABEL_POSITION = "Position";
+    public static final String ANIMATION_EDITOR_LABEL_SCALE = "Scale";
+    public static final String ANIMATION_EDITOR_LABEL_ADD_KEY = "Add Key";
+    public static final String ANIMATION_EDITOR_LABEL_DELETE_KEY = "Delete Key";
+    public static final String ANIMATION_EDITOR_LABEL_PREVIOUS_KEY = "Previous Key";
+    public static final String ANIMATION_EDITOR_LABEL_NEXT_KEY = "Next Key";
+    public static final String ANIMATION_EDITOR_LABEL_KEY_EARLIER = "Key a Frame Earlier";
+    public static final String ANIMATION_EDITOR_LABEL_KEY_LATER = "Key a Frame Later";
+    public static final String ANIMATION_EDITOR_LABEL_KEY_POSE = "Key Pose";
+    public static final String ANIMATION_EDITOR_LABEL_COPY_POSE = "Copy Pose";
+    public static final String ANIMATION_EDITOR_LABEL_PASTE_POSE = "Paste Pose";
+    public static final String ANIMATION_EDITOR_LABEL_MIRROR_POSE = "Mirror Pose";
+
+    // Animation Editor — status text
+    public static final String ANIMATION_EDITOR_STATUS_NO_CLIP = "No clip open."
+            + " Pick an animation in the Hierarchy or press New.";
+    public static final String ANIMATION_EDITOR_STATUS_NO_RIG = "This clip names no rig the engine knows";
+    public static final String ANIMATION_EDITOR_STATUS_NO_CHARACTER = "No character is built on this clip's rig";
+    public static final String ANIMATION_EDITOR_STATUS_PLAYING = "Playing";
+    public static final String ANIMATION_EDITOR_STATUS_PAUSED = "Paused";
+    public static final String ANIMATION_EDITOR_TIME_SEPARATOR = " / ";
+    public static final String ANIMATION_EDITOR_TIME_SUFFIX = "s";
+    public static final String ANIMATION_EDITOR_MESSAGE_CREATED = "Created ";
+    public static final String ANIMATION_EDITOR_MESSAGE_SAVED = "Saved ";
+    public static final String ANIMATION_EDITOR_MESSAGE_REVERTED = "Reverted ";
+    public static final String ANIMATION_EDITOR_MESSAGE_DELETED = "Deleted ";
+    public static final String ANIMATION_EDITOR_MESSAGE_POSE_COPIED = "Pose copied";
+
+    // Animation Tree Editor — tree fields
+    public static final String ANIMATION_TREE_EDITOR_FIELD_RIG = "rig";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_LAYERS = "layers";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_NAME = "name";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_MODE = "mode";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_WEIGHT = "weight";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_BLEND = "blend";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_DEFAULT = "default";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_MASK = "mask";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_NODES = "nodes";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_CLIP = "clip";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_CLIPS = "clips";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_VALUE = "value";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_PARAMETER = "parameter";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_RATE = "rate";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_RATE_SCALE = "rate_scale";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_DELAY = "delay";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_STATES = "states";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_ACTIONS = "actions";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_TRANSITIONS = "transitions";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_FROM = "from";
+    public static final String ANIMATION_TREE_EDITOR_FIELD_TO = "to";
+    public static final String ANIMATION_TREE_EDITOR_BASE_LAYER = "base";
+
+    // Animation Tree Editor — panel keys
+    public static final String ANIMATION_TREE_EDITOR_KEY_CHARACTER = "character";
+    public static final String ANIMATION_TREE_EDITOR_KEY_SIMULATED_STATE = "simulated_state";
+    public static final String ANIMATION_TREE_EDITOR_KEY_SIMULATED_ACTION = "simulated_action";
+    public static final String ANIMATION_TREE_EDITOR_KEY_PARAMETER = "parameter";
+    public static final String ANIMATION_TREE_EDITOR_KEY_PLAY_ACTION = "play_action";
+    public static final String ANIMATION_TREE_EDITOR_KEY_LAYER = "layer";
+    public static final String ANIMATION_TREE_EDITOR_KEY_NODE = "node";
+    public static final String ANIMATION_TREE_EDITOR_KEY_ADD_LAYER = "add_layer";
+    public static final String ANIMATION_TREE_EDITOR_KEY_RENAME_LAYER = "rename_layer";
+    public static final String ANIMATION_TREE_EDITOR_KEY_REMOVE_LAYER = "remove_layer";
+    public static final String ANIMATION_TREE_EDITOR_KEY_LAYER_UP = "layer_up";
+    public static final String ANIMATION_TREE_EDITOR_KEY_LAYER_DOWN = "layer_down";
+    public static final String ANIMATION_TREE_EDITOR_KEY_LAYER_MODE = "layer_mode";
+    public static final String ANIMATION_TREE_EDITOR_KEY_LAYER_WEIGHT = "layer_weight";
+    public static final String ANIMATION_TREE_EDITOR_KEY_LAYER_BLEND = "layer_blend";
+    public static final String ANIMATION_TREE_EDITOR_KEY_LAYER_DEFAULT = "layer_default";
+    public static final String ANIMATION_TREE_EDITOR_KEY_ADD_NODE = "add_node";
+    public static final String ANIMATION_TREE_EDITOR_KEY_RENAME_NODE = "rename_node";
+    public static final String ANIMATION_TREE_EDITOR_KEY_REMOVE_NODE = "remove_node";
+    public static final String ANIMATION_TREE_EDITOR_KEY_NODE_KIND = "node_kind";
+    public static final String ANIMATION_TREE_EDITOR_KEY_NODE_CLIP = "node_clip";
+    public static final String ANIMATION_TREE_EDITOR_KEY_NODE_PARAMETER = "node_parameter";
+    public static final String ANIMATION_TREE_EDITOR_KEY_NODE_RATE = "node_rate";
+    public static final String ANIMATION_TREE_EDITOR_KEY_NODE_RATE_SCALE = "node_rate_scale";
+    public static final String ANIMATION_TREE_EDITOR_KEY_NODE_BLEND = "node_blend";
+    public static final String ANIMATION_TREE_EDITOR_KEY_NODE_DELAY = "node_delay";
+    public static final String ANIMATION_TREE_EDITOR_KEY_SPACE_CLIP = "space_clip";
+    public static final String ANIMATION_TREE_EDITOR_KEY_SPACE_VALUE = "space_value";
+    public static final String ANIMATION_TREE_EDITOR_KEY_ADD_SPACE_CLIP = "add_space_clip";
+    public static final String ANIMATION_TREE_EDITOR_KEY_REMOVE_SPACE_CLIP = "remove_space_clip";
+    public static final String ANIMATION_TREE_EDITOR_KEY_STATE = "state";
+    public static final String ANIMATION_TREE_EDITOR_KEY_ACTION = "action";
+    public static final String ANIMATION_TREE_EDITOR_KEY_MASK = "mask";
+    public static final String ANIMATION_TREE_EDITOR_KEY_CLEAR_MASK = "clear_mask";
+    public static final String ANIMATION_TREE_EDITOR_KEY_ADD_TRANSITION = "add_transition";
+    public static final String ANIMATION_TREE_EDITOR_KEY_REMOVE_TRANSITION = "remove_transition";
+    public static final String ANIMATION_TREE_EDITOR_KEY_TRANSITION_FROM = "transition_from";
+    public static final String ANIMATION_TREE_EDITOR_KEY_TRANSITION_TO = "transition_to";
+    public static final String ANIMATION_TREE_EDITOR_KEY_TRANSITION_BLEND = "transition_blend";
+
+    // Animation Tree Editor — steps and ranges; the parameter steps follow AnimationParameter's order
+    public static final float ANIMATION_TREE_EDITOR_WEIGHT_FULL = 1f;
+    public static final float ANIMATION_TREE_EDITOR_WEIGHT_STEP = 0.05f;
+    public static final float ANIMATION_TREE_EDITOR_BLEND_STEP = 0.02f;
+    public static final float ANIMATION_TREE_EDITOR_RATE_STEP = 0.05f;
+    public static final float ANIMATION_TREE_EDITOR_RATE_MIN = 0.05f;
+    public static final float ANIMATION_TREE_EDITOR_LOOK_PITCH_LIMIT = 90f;
+    public static final float ANIMATION_TREE_EDITOR_LOOK_YAW_LIMIT = 180f;
+    public static final float[] ANIMATION_TREE_EDITOR_PARAMETER_STEPS = { 0.5f, 0.5f, 30f, 10f, 15f };
+
+    // Animation Tree Editor — views and panel text
+    public static final String ANIMATION_TREE_EDITOR_VIEW_LAYER = "Layer";
+    public static final String ANIMATION_TREE_EDITOR_VIEW_NODE = "Node";
+    public static final String ANIMATION_TREE_EDITOR_VIEW_STATES = "States";
+    public static final String ANIMATION_TREE_EDITOR_VIEW_MASK = "Mask";
+    public static final String ANIMATION_TREE_EDITOR_VIEW_TRANSITIONS = "Transitions";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_SIMULATE = "Simulate";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_LAYERS = "Layers";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_NODES = "Nodes";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_BLEND = "Blend";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_PLAYBACK = "Playback";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_SPACE_CLIP = "Blend Clip ";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_STATES = "Movement States";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_ACTIONS = "Actions";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_MASK = "Bone Weights";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_NO_MASK = "Bone Weights (no mask: whole body)";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_BASE_MASK = "The base layer always moves the whole body";
+    public static final String ANIMATION_TREE_EDITOR_HEADER_TRANSITION = "Transition ";
+    public static final String ANIMATION_TREE_EDITOR_KIND_SINGLE = "Single Clip";
+    public static final String ANIMATION_TREE_EDITOR_KIND_BLEND_SPACE = "Blend Space";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_BASE = "base";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_OVERRIDE = "override";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_STATE = "State";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_ACTION = "Action";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_PLAY_ACTION = "Play Action";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_ADD_LAYER = "Add Layer";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_RENAME_LAYER = "Rename Layer";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_REMOVE_LAYER = "Remove Layer";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_LAYER_UP = "Move Layer Up";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_LAYER_DOWN = "Move Layer Down";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_MODE = "Mode";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_WEIGHT = "Weight";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_BLEND = "Blend";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_DEFAULT = "Default Node";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_ADD_NODE = "Add Node";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_RENAME_NODE = "Rename Node";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_REMOVE_NODE = "Remove Node";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_KIND = "Kind";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_CLIP = "Clip";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_VALUE = "Value";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_PARAMETER = "Parameter";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_RATE = "Rate";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_RATE_SCALE = "Rate Scale";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_DELAY = "Delay";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_ADD_SPACE_CLIP = "Add Blend Clip";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_REMOVE_SPACE_CLIP = "Remove Blend Clip";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_CLEAR_MASK = "Clear Mask";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_ADD_TRANSITION = "Add Transition";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_REMOVE_TRANSITION = "Remove Transition";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_FROM = "From";
+    public static final String ANIMATION_TREE_EDITOR_LABEL_TO = "To";
+
+    // Animation Tree Editor — status text
+    public static final String ANIMATION_TREE_EDITOR_STATUS_NO_TREE = "No tree open."
+            + " Pick an animation tree in the Hierarchy or press New.";
+    public static final String ANIMATION_TREE_EDITOR_STATUS_NO_RIG = "This tree names no rig the engine knows";
+    public static final String ANIMATION_TREE_EDITOR_STATUS_NO_CHARACTER = "No character is built on this tree's rig";
+    public static final String ANIMATION_TREE_EDITOR_MESSAGE_CREATED = "Created ";
+    public static final String ANIMATION_TREE_EDITOR_MESSAGE_SAVED = "Saved ";
+    public static final String ANIMATION_TREE_EDITOR_MESSAGE_REVERTED = "Reverted ";
+    public static final String ANIMATION_TREE_EDITOR_MESSAGE_DELETED = "Deleted ";
+    public static final String ANIMATION_TREE_EDITOR_MESSAGE_LAST_LAYER = "A tree needs at least its base layer";
+    public static final String ANIMATION_TREE_EDITOR_MESSAGE_NO_ACTION = "No layer plays the action ";
 
     // Texture Viewer
     public static final String TEXTURE_VIEWER_STATUS_HOVERED = "Texture: ";
@@ -229,6 +623,9 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_BIOMES = "Biomes";
     public static final String INFO_SCHEMA_ITEMS = "Items";
     public static final String INFO_SCHEMA_TREES = "Trees";
+    public static final String INFO_SCHEMA_ENTITIES = "Entities";
+    public static final String INFO_SCHEMA_ANIMATIONS = "Animations";
+    public static final String INFO_SCHEMA_ANIMATION_TREES = "AnimationTrees";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";

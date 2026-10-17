@@ -5,6 +5,7 @@ import java.io.File;
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -13,7 +14,8 @@ class AnimationLoader extends LoaderPackage {
     /*
      * Scans the animation ARPG directory and loads every clip into
      * AnimationManager. Supports on-demand loading for clips not yet in
-     * the palette at runtime.
+     * the palette at runtime, and unregistered preview builds of a clip
+     * still being edited.
      */
 
     // Internal
@@ -75,5 +77,11 @@ class AnimationLoader extends LoaderPackage {
             throwException("On-demand animation load failed — not found in scan registry: \"" + clipName + "\"");
 
         request(file);
+    }
+
+    // Preview \\
+
+    AnimationClipHandle buildPreview(String clipName, ArpgObjectStruct clipArpg) {
+        return internalBuilder.build(clipArpg, clipName, clipName);
     }
 }

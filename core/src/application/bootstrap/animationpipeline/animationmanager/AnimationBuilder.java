@@ -25,7 +25,8 @@ class AnimationBuilder extends BuilderPackage {
      * track must be supplied in strictly increasing time order. Duration is
      * derived, never authored — the latest keyframe time across every
      * track. Cross-fades are authored on the animation tree nodes that play
-     * a clip, never on the clip itself. Bootstrap-only.
+     * a clip, never on the clip itself. Bootstrap-only, apart from the
+     * unregistered preview builds an editor makes of a clip it is changing.
      */
 
     // Internal
@@ -41,8 +42,11 @@ class AnimationBuilder extends BuilderPackage {
     // Build \\
 
     AnimationClipHandle build(File file, String clipName) {
+        return build(ArpgUtility.loadObject(file), clipName, file.getName());
+    }
 
-        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+    AnimationClipHandle build(ArpgObjectStruct arpg, String clipName, String sourceName) {
+
         String rigName = ArpgUtility.validateString(arpg, "rig");
         RigHandle rigHandle = rigManager.getRigHandleFromRigName(rigName);
         boolean looping = arpg.has("loop") && arpg.get("loop").getAsBoolean();
@@ -59,11 +63,11 @@ class AnimationBuilder extends BuilderPackage {
 
                 if (!rigHandle.hasBone(boneName))
                     throwException("Clip \"" + clipName + "\" references unknown bone \"" + boneName
-                            + "\" for rig \"" + rigName + "\" in file: " + file.getName());
+                            + "\" for rig \"" + rigName + "\" in " + sourceName);
 
                 int boneIndex = rigHandle.getBoneIndex(boneName);
                 ArpgArrayStruct keyframesArpg = tracksArpg.getAsArray(boneName);
-                BoneTrackStruct track = parseTrack(keyframesArpg, boneName, file);
+                BoneTrackStruct track = parseTrack(keyframesArpg, boneName, sourceName);
 
                 boneTracks[boneIndex] = track;
                 duration = Math.max(duration, track.getKeyframe(track.getKeyframeCount() - 1).getTime());
@@ -71,7 +75,7 @@ class AnimationBuilder extends BuilderPackage {
         }
 
         if (duration <= 0f)
-            throwException("Clip \"" + clipName + "\" has no keyframes past time 0 in file: " + file.getName());
+            throwException("Clip \"" + clipName + "\" has no keyframes past time 0 in " + sourceName);
 
         AnimationClipData clipData = new AnimationClipData(
                 clipName,
@@ -88,10 +92,10 @@ class AnimationBuilder extends BuilderPackage {
 
     // Track Parsing \\
 
-    private BoneTrackStruct parseTrack(ArpgArrayStruct keyframesArpg, String boneName, File file) {
+    private BoneTrackStruct parseTrack(ArpgArrayStruct keyframesArpg, String boneName, String sourceName) {
 
         if (keyframesArpg.size() == 0)
-            throwException("Bone track \"" + boneName + "\" has no keyframes in file: " + file.getName());
+            throwException("Bone track \"" + boneName + "\" has no keyframes in " + sourceName);
 
         AnimationKeyframeStruct[] keyframes = new AnimationKeyframeStruct[keyframesArpg.size()];
         float previousTime = -1f;
@@ -102,22 +106,22 @@ class AnimationBuilder extends BuilderPackage {
 
             if (!keyframeArpg.has("time"))
                 throwException("Keyframe " + i + " on bone \"" + boneName
-                        + "\" missing \"time\" in file: " + file.getName());
+                        + "\" missing \"time\" in " + sourceName);
 
             float time = keyframeArpg.get("time").getAsFloat();
 
             if (time <= previousTime)
                 throwException("Keyframe " + i + " on bone \"" + boneName
-                        + "\" is out of order — keyframes must be strictly increasing in time. File: "
-                        + file.getName());
+                        + "\" is out of order — keyframes must be strictly increasing in time. Source: "
+                        + sourceName);
 
             previousTime = time;
 
             keyframes[i] = new AnimationKeyframeStruct(
                     time,
-                    parseVector3(keyframeArpg, "rotation", 0f, file),
-                    parseVector3(keyframeArpg, "position", 0f, file),
-                    parseVector3(keyframeArpg, "scale", 1f, file));
+                    parseVector3(keyframeArpg, "rotation", 0f, sourceName),
+                    parseVector3(keyframeArpg, "position", 0f, sourceName),
+                    parseVector3(keyframeArpg, "scale", 1f, sourceName));
         }
 
         return new BoneTrackStruct(keyframes);
@@ -125,7 +129,7 @@ class AnimationBuilder extends BuilderPackage {
 
     // Vector Parsing \\
 
-    private Vector3 parseVector3(ArpgObjectStruct arpg, String key, float defaultValue, File file) {
+    private Vector3 parseVector3(ArpgObjectStruct arpg, String key, float defaultValue, String sourceName) {
 
         if (!arpg.has(key) || arpg.get(key).isNull())
             return new Vector3(defaultValue, defaultValue, defaultValue);

@@ -32,7 +32,8 @@ class EntityBuilder extends BuilderPackage {
      * defaulting size, weight and eye level. The optional model block resolves
      * mesh, shared material, rig and animation tree, plus appearance and
      * equipment anchors, and the genders the entity may be made as. Bootstrap
-     * only.
+     * only, apart from the unregistered preview builds an editor makes of a
+     * template it is changing.
      */
 
     // Internal
@@ -58,15 +59,17 @@ class EntityBuilder extends BuilderPackage {
     // Build \\
 
     EntityHandle build(File file) {
+        return build(ArpgUtility.loadObject(file), file.getName());
+    }
 
-        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+    EntityHandle build(ArpgObjectStruct arpg, String sourceName) {
 
         Vector3 sizeMin = parseSizeMin(arpg);
         Vector3 sizeMax = parseSizeMax(arpg);
         float weightMin = parseWeightMin(arpg);
         float weightMax = parseWeightMax(arpg);
         float eyeLevel = parseEyeLevel(arpg);
-        String behaviorName = parseBehaviorName(arpg, file);
+        String behaviorName = parseBehaviorName(arpg, sourceName);
         short[] genderIDs = parseGenders(arpg);
 
         MeshHandle characterMesh = null;
@@ -86,16 +89,16 @@ class EntityBuilder extends BuilderPackage {
 
             if (!characterMesh.hasRig())
                 throwException("Entity model mesh \"" + meshName
-                        + "\" has no rig — cannot be used as a character model. File: " + file.getName());
+                        + "\" has no rig — cannot be used as a character model. Source: " + sourceName);
 
             characterMaterial = materialManager.cloneMaterial(materialName);
-            animationTreeHandle = parseAnimationTree(modelArpg, characterMesh, file);
+            animationTreeHandle = parseAnimationTree(modelArpg, characterMesh, sourceName);
 
             if (ArpgUtility.hasObject(modelArpg, "appearance"))
                 appearanceData = appearanceBuilder.build(
                         modelArpg.getAsObject("appearance"),
                         characterMesh.getRigHandle(),
-                        file);
+                        sourceName);
 
             modelHeight = resolveModelHeight(characterMesh, appearanceData);
 
@@ -104,7 +107,7 @@ class EntityBuilder extends BuilderPackage {
                         modelArpg.getAsArray("equipment"),
                         characterMesh.getRigHandle(),
                         equipmentAnchors,
-                        file);
+                        sourceName);
         }
 
         EntityData entityData = new EntityData(
@@ -134,14 +137,17 @@ class EntityBuilder extends BuilderPackage {
 
     // Model Parsing \\
 
-    private AnimationTreeHandle parseAnimationTree(ArpgObjectStruct modelArpg, MeshHandle characterMesh, File file) {
+    private AnimationTreeHandle parseAnimationTree(
+            ArpgObjectStruct modelArpg,
+            MeshHandle characterMesh,
+            String sourceName) {
 
         String treeName = ArpgUtility.validateString(modelArpg, "animation_tree");
         AnimationTreeHandle animationTreeHandle = animationTreeManager.getAnimationTreeHandleFromTreeName(treeName);
 
         if (animationTreeHandle.getRigHandle() != characterMesh.getRigHandle())
             throwException("Entity animation tree \"" + treeName
-                    + "\" targets a different rig than its model mesh. File: " + file.getName());
+                    + "\" targets a different rig than its model mesh. Source: " + sourceName);
 
         return animationTreeHandle;
     }
@@ -150,7 +156,7 @@ class EntityBuilder extends BuilderPackage {
             ArpgArrayStruct anchorsArpg,
             RigHandle rigHandle,
             ObjectArrayList<EquipmentAnchorStruct> equipmentAnchors,
-            File file) {
+            String sourceName) {
 
         for (int i = 0; i < anchorsArpg.size(); i++) {
 
@@ -161,7 +167,7 @@ class EntityBuilder extends BuilderPackage {
 
             if (!rigHandle.hasBone(boneName))
                 throwException("Entity equipment anchor for slot \"" + equipmentSlot
-                        + "\" names bone \"" + boneName + "\", which its rig does not have. File: " + file.getName());
+                        + "\" names bone \"" + boneName + "\", which its rig does not have. Source: " + sourceName);
 
             equipmentAnchors.add(new EquipmentAnchorStruct(
                     equipmentSlot,
@@ -250,10 +256,10 @@ class EntityBuilder extends BuilderPackage {
                 : EngineSetting.DEFAULT_EYE_LEVEL;
     }
 
-    private String parseBehaviorName(ArpgObjectStruct arpg, File file) {
+    private String parseBehaviorName(ArpgObjectStruct arpg, String sourceName) {
 
         if (!arpg.has("behavior"))
-            throwException("Entity ARPG missing 'behavior' field: " + file.getAbsolutePath());
+            throwException("Entity ARPG missing 'behavior' field: " + sourceName);
 
         return arpg.get("behavior").getAsString();
     }

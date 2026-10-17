@@ -2,6 +2,7 @@ package application.bootstrap.entitypipeline.animationtreemanager;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class AnimationTreeManager extends ManagerPackage {
@@ -53,5 +54,12 @@ public class AnimationTreeManager extends ManagerPackage {
             throwException("Animation tree could not be loaded: \"" + treeName + "\"");
 
         return handle;
+    }
+
+    // Preview \\
+
+    // Builds a tree from an ARPG tree without registering it, so an editor can play an edit before it is saved
+    public AnimationTreeHandle buildPreviewTree(String treeName, ArpgObjectStruct treeArpg) {
+        return ((AnimationTreeLoader) internalLoader).buildPreview(treeName, treeArpg);
     }
 }

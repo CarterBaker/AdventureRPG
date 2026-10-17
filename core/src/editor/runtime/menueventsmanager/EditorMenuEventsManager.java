@@ -1,5 +1,8 @@
 package editor.runtime.menueventsmanager;
 
+import editor.runtime.menueventsmanager.menus.AnimationEditorBranch;
+import editor.runtime.menueventsmanager.menus.AnimationTreeEditorBranch;
+import editor.runtime.menueventsmanager.menus.CharacterEditorBranch;
 import editor.runtime.menueventsmanager.menus.CommandConsoleBranch;
 import editor.runtime.menueventsmanager.menus.ConsoleBranch;
 import editor.runtime.menueventsmanager.menus.EditorBranch;
@@ -30,5 +33,8 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(ProfilerBranch.class);
         create(WorldMapBranch.class);
         create(WorldEditorBranch.class);
+        create(CharacterEditorBranch.class);
+        create(AnimationEditorBranch.class);
+        create(AnimationTreeEditorBranch.class);
     }
 }

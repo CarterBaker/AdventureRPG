@@ -5,6 +5,7 @@ import java.io.File;
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -14,7 +15,8 @@ class AnimationTreeLoader extends LoaderPackage {
      * Scans the animation tree ARPG directory and loads every tree into
      * AnimationTreeManager. Supports on-demand loading for trees not yet in
      * the palette — entity templates resolve their tree through that path
-     * while they load.
+     * while they load — and unregistered preview builds of a tree still
+     * being edited.
      */
 
     // Internal
@@ -76,5 +78,11 @@ class AnimationTreeLoader extends LoaderPackage {
             throwException("On-demand animation tree load failed — not found in scan registry: \"" + treeName + "\"");
 
         request(file);
+    }
+
+    // Preview \\
+
+    AnimationTreeHandle buildPreview(String treeName, ArpgObjectStruct treeArpg) {
+        return internalBuilder.build(treeArpg, treeName, treeName);
     }
 }

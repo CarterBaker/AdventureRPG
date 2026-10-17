@@ -5,6 +5,7 @@ import java.io.File;
 import application.bootstrap.entitypipeline.entity.EntityHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -13,7 +14,8 @@ class EntityLoader extends LoaderPackage {
     /*
      * Scans the entity template ARPG directory and loads all definitions into
      * EntityManager, which assigns each template its ID as it registers.
-     * Supports on-demand loading for templates not yet in the palette at runtime.
+     * Supports on-demand loading for templates not yet in the palette at runtime,
+     * and unregistered preview builds of a template still being edited.
      */
 
     // Internal
@@ -76,5 +78,11 @@ class EntityLoader extends LoaderPackage {
             throwException("On-demand entity load failed — not found in scan registry: \"" + templateName + "\"");
 
         request(file);
+    }
+
+    // Preview \\
+
+    EntityHandle buildPreview(String templateName, ArpgObjectStruct templateArpg) {
+        return internalBuilder.build(templateArpg, templateName);
     }
 }
