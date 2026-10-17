@@ -291,23 +291,33 @@ class ShaderBuilder extends BuilderPackage {
 
     private ShaderSourceStruct collectIncludes(ShaderSourceStruct assembly) {
 
-        ObjectArrayList<ShaderSourceStruct> visited = new ObjectArrayList<>();
-
-        collectPostOrder(assembly, assembly.getVert(), visited);
+        collectStageIncludes(assembly, assembly.getVert());
 
         if (assembly.getTCS() != null)
-            collectPostOrder(assembly, assembly.getTCS(), visited);
+            collectStageIncludes(assembly, assembly.getTCS());
 
         if (assembly.getTES() != null)
-            collectPostOrder(assembly, assembly.getTES(), visited);
+            collectStageIncludes(assembly, assembly.getTES());
 
-        collectPostOrder(assembly, assembly.getFrag(), visited);
+        collectStageIncludes(assembly, assembly.getFrag());
 
         return assembly;
     }
 
+    private void collectStageIncludes(ShaderSourceStruct assembly, ShaderSourceStruct stage) {
+
+        if (stage.getFlattenedIncludes().isEmpty())
+            collectPostOrder(stage, stage, new ObjectArrayList<>());
+
+        ObjectArrayList<ShaderSourceStruct> stageIncludes = stage.getFlattenedIncludes();
+
+        for (int i = 0; i < stageIncludes.size(); i++)
+            if (!assembly.getFlattenedIncludes().contains(stageIncludes.get(i)))
+                assembly.addFlattenedInclude(stageIncludes.get(i));
+    }
+
     private void collectPostOrder(
-            ShaderSourceStruct assembly,
+            ShaderSourceStruct target,
             ShaderSourceStruct source,
             ObjectArrayList<ShaderSourceStruct> visited) {
 
@@ -319,11 +329,11 @@ class ShaderBuilder extends BuilderPackage {
         ObjectArrayList<ShaderSourceStruct> directIncludes = source.getDirectIncludes();
 
         for (int i = 0; i < directIncludes.size(); i++)
-            collectPostOrder(assembly, directIncludes.get(i), visited);
+            collectPostOrder(target, directIncludes.get(i), visited);
 
         if (source.getShaderType() == ShaderType.INCLUDE &&
-                !assembly.getFlattenedIncludes().contains(source))
-            assembly.addFlattenedInclude(source);
+                !target.getFlattenedIncludes().contains(source))
+            target.addFlattenedInclude(source);
     }
 
     private int parsePatchVertexCount(ObjectArrayList<String> lines) {

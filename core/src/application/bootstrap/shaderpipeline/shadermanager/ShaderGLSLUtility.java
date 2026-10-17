@@ -21,8 +21,8 @@ class ShaderGLSLUtility extends EngineUtility {
 
     static int createShaderProgram(ShaderSourceStruct assembly) {
 
-        String vertSource = preprocessShaderSource(assembly, assembly.getVert());
-        String fragSource = preprocessShaderSource(assembly, assembly.getFrag());
+        String vertSource = preprocessShaderSource(assembly.getVert());
+        String fragSource = preprocessShaderSource(assembly.getFrag());
 
         int vertShader = compileShaderFromSource(
                 EngineSetting.GL_VERTEX_SHADER,
@@ -37,7 +37,7 @@ class ShaderGLSLUtility extends EngineUtility {
         int tesShader = 0;
 
         if (assembly.getTCS() != null) {
-            String tcsSource = preprocessShaderSource(assembly, assembly.getTCS());
+            String tcsSource = preprocessShaderSource(assembly.getTCS());
             tcsShader = compileShaderFromSource(
                     EngineSetting.GL_TESS_CONTROL_SHADER,
                     tcsSource,
@@ -45,7 +45,7 @@ class ShaderGLSLUtility extends EngineUtility {
         }
 
         if (assembly.getTES() != null) {
-            String tesSource = preprocessShaderSource(assembly, assembly.getTES());
+            String tesSource = preprocessShaderSource(assembly.getTES());
             tesShader = compileShaderFromSource(
                     EngineSetting.GL_TESS_EVALUATION_SHADER,
                     tesSource,
@@ -129,7 +129,7 @@ class ShaderGLSLUtility extends EngineUtility {
 
     // Source Preprocessing \\
 
-    static String preprocessShaderSource(ShaderSourceStruct assembly, ShaderSourceStruct source) {
+    static String preprocessShaderSource(ShaderSourceStruct source) {
 
         StringBuilder result = new StringBuilder();
 
@@ -138,7 +138,7 @@ class ShaderGLSLUtility extends EngineUtility {
         if (version != null && !version.isEmpty())
             result.append(version).append("\n\n");
 
-        ObjectArrayList<ShaderSourceStruct> includes = assembly.getFlattenedIncludes();
+        ObjectArrayList<ShaderSourceStruct> includes = source.getFlattenedIncludes();
 
         for (int i = 0; i < includes.size(); i++) {
             ShaderSourceStruct include = includes.get(i);
