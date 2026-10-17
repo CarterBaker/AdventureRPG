@@ -24,8 +24,10 @@ public class TreeInstance extends InstancePackage {
      * of it or a cluster of its leaves is knocked off, and published whole,
      * so chunk builds on any thread read it without a lock. The first wound
      * freezes its age, so it grows no further and every notch stays where it
-     * was struck. Every chunk its reach overlaps holds it, and the registry
-     * keeps the count.
+     * was struck. It is drawn in full only while its root lies within the
+     * tree detail distance of a player, and coarser beyond, the flag set when
+     * it is first grown and kept current by TreeDetailBranch. Every chunk its
+     * reach overlaps holds it, and the registry keeps the count.
      */
 
     // Identity
@@ -54,6 +56,9 @@ public class TreeInstance extends InstancePackage {
 
     // Shape
     private volatile TreeShapeStruct shape;
+
+    // Detail — whether the chunks drawing it grow it in full, read by builds on any thread
+    private volatile boolean detailed;
 
     // Lifetime — whether anything read the shape since the last idle check, and for how long nothing has
     private volatile boolean used;
@@ -310,6 +315,15 @@ public class TreeInstance extends InstancePackage {
 
     public float getMatureHeight() {
         return matureHeight;
+    }
+
+    // True while its root lies within the tree detail distance, so it is drawn in full
+    public boolean isDetailed() {
+        return detailed;
+    }
+
+    public void setDetailed(boolean detailed) {
+        this.detailed = detailed;
     }
 
     public float getAge() {

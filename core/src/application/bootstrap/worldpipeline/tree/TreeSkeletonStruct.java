@@ -14,7 +14,8 @@ public class TreeSkeletonStruct extends StructPackage {
      * at a depth counting forks from the trunk, and born at the age it first
      * appears. Its foliage is a list of leaf clusters, each an upright
      * ellipsoid held by one segment and born with it. Grown once per tree,
-     * then only read, so any thread may share it.
+     * then only read, so any thread may share it; a thread's own scratch
+     * skeleton is cleared and grown into again for each tree it draws coarse.
      */
 
     // Segments — positions and radii in blocks at maturity
@@ -120,6 +121,30 @@ public class TreeSkeletonStruct extends StructPackage {
 
     public void setMatureHeight(float matureHeight) {
         this.matureHeight = matureHeight;
+    }
+
+    // Every segment and leaf let go, the lists kept warm for the next tree grown into this one
+    public void clear() {
+
+        startX.clear();
+        startY.clear();
+        startZ.clear();
+        endX.clear();
+        endY.clear();
+        endZ.clear();
+        startRadius.clear();
+        endRadius.clear();
+        birth.clear();
+        attach.clear();
+        parent.clear();
+        depth.clear();
+        leafX.clear();
+        leafY.clear();
+        leafZ.clear();
+        leafRadiusH.clear();
+        leafRadiusV.clear();
+        leafSegment.clear();
+        this.matureHeight = 0f;
     }
 
     // Accessible \\

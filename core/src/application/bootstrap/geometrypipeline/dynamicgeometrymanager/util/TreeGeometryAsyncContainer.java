@@ -3,6 +3,8 @@ package application.bootstrap.geometrypipeline.dynamicgeometrymanager.util;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelQuadListStruct;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
+import application.bootstrap.worldpipeline.tree.TreeInstance;
+import application.bootstrap.worldpipeline.tree.TreeModelStruct;
 import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
 import engine.root.AsyncContainerPackage;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -12,15 +14,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class TreeGeometryAsyncContainer extends AsyncContainerPackage {
 
     /*
-     * Thread-local scratch for drawing the trees of one chunk: the shape each
-     * tree stood in when the build began, the grid the wood is laid on, the
-     * quads it merges into, the species in the order their wood parts were
-     * given out, the leaf clusters that hide wood, and the vertices each
-     * material collects. Kept warm between builds, so a build allocates
-     * nothing once the grid's cells are pooled.
+     * Thread-local scratch for drawing the trees of one chunk: every tree
+     * drawn in full with the shape it stood in when the build began, the grid
+     * the wood is laid on, the quads it merges into, the species in the order
+     * their wood parts were given out, the leaf clusters that hide wood, the
+     * model scratch the trees beyond the tree detail distance are drawn
+     * through, and the vertices each material collects. Kept warm between
+     * builds, so a build allocates nothing once the grid's cells are pooled.
      */
 
     // Shapes — read once per build, so a tree regrowing meanwhile is drawn whole either way
+    private ObjectArrayList<TreeInstance> grownTrees;
     private ObjectArrayList<TreeShapeStruct> shapes;
 
     // Wood
@@ -29,6 +33,9 @@ public class TreeGeometryAsyncContainer extends AsyncContainerPackage {
     private ObjectArrayList<TreeHandle> partSpecies;
     private FloatArrayList hiders;
 
+    // Model
+    private TreeModelStruct model;
+
     // Vertices — one list per material
     private Int2ObjectOpenHashMap<FloatArrayList> verts;
 
@@ -36,6 +43,7 @@ public class TreeGeometryAsyncContainer extends AsyncContainerPackage {
     protected void create() {
 
         // Shapes
+        this.grownTrees = new ObjectArrayList<>();
         this.shapes = new ObjectArrayList<>();
 
         // Wood
@@ -43,6 +51,9 @@ public class TreeGeometryAsyncContainer extends AsyncContainerPackage {
         this.quads = new SubVoxelQuadListStruct();
         this.partSpecies = new ObjectArrayList<>();
         this.hiders = new FloatArrayList();
+
+        // Model
+        this.model = new TreeModelStruct();
 
         // Vertices
         this.verts = new Int2ObjectOpenHashMap<>();
@@ -53,6 +64,7 @@ public class TreeGeometryAsyncContainer extends AsyncContainerPackage {
     @Override
     public void reset() {
 
+        grownTrees.clear();
         shapes.clear();
         grid.clear();
         quads.clear();
@@ -64,6 +76,10 @@ public class TreeGeometryAsyncContainer extends AsyncContainerPackage {
     }
 
     // Accessible \\
+
+    public ObjectArrayList<TreeInstance> getGrownTrees() {
+        return grownTrees;
+    }
 
     public ObjectArrayList<TreeShapeStruct> getShapes() {
         return shapes;
@@ -83,6 +99,10 @@ public class TreeGeometryAsyncContainer extends AsyncContainerPackage {
 
     public FloatArrayList getHiders() {
         return hiders;
+    }
+
+    public TreeModelStruct getModel() {
+        return model;
     }
 
     // The vertex list of one material, made the first time the material is drawn

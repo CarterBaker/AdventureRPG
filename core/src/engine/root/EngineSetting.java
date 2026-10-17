@@ -359,6 +359,8 @@ public class EngineSetting {
     public static final float MOUSE_SENSITIVITY_MIN = 0.01f;
     public static final int RENDER_DISTANCE_MAX = 112;
     public static final int RENDER_DISTANCE_MIN = 16;
+    public static final int TREE_DETAIL_DISTANCE_MAX = 6;
+    public static final int TREE_DETAIL_DISTANCE_MIN = 2;
 
     // User Settings — Post Processing
     public static final float BLOOM_INTENSITY_MAX = 1f;
@@ -1462,13 +1464,16 @@ public class EngineSetting {
     public static final int TREE_PART_CORNER_FLOATS = 2;
     public static final int TREE_WOOD_PART_COUNT = 2;
 
-    // Tree Mesh — how a wood vertex packs its face and edge kinds, and the slots it leaves empty
+    // Tree Mesh — how a wood vertex packs its face and edge kinds, the slots a wood and a leaf vertex leave empty,
+    // and how many upright leaf cards a cluster turns about its centre beside its level one
     public static final int TREE_EDGE_BITS = 2;
     public static final int TREE_HIDER_FLOATS = 5;
     public static final float TREE_LEAF_HIDE_SHARE = 0.66f;
     public static final int TREE_EDGE_CONCAVE = 2;
     public static final int TREE_EDGE_CONVEX = 1;
     public static final int TREE_EDGE_FLAT = 0;
+    public static final int TREE_LEAF_PADDING_FLOATS = 1;
+    public static final int TREE_LEAF_UPRIGHT_CARDS = 3;
     public static final int TREE_META_EDGE_SHIFT = 3;
     public static final int TREE_WOOD_PADDING_FLOATS = 5;
 
@@ -1623,7 +1628,43 @@ public class EngineSetting {
     // Tree Lifetime — how long a tree nothing has touched keeps its grown shape before letting it go
     public static final float TREE_SHAPE_IDLE_SECONDS = 30f;
 
-    // Tree Impostor — the few lumps and the trunk a mega draws for each tree rooted in it
+    // Tree Detail — how often every tree is judged against the tree detail distance besides whenever a grid moves
+    public static final float TREE_DETAIL_CHECK_SECONDS = 1f;
+
+    // Tree Model — how a tree drawn coarser than in full keeps its own wood and crown: how near a segment must set
+    // out to the last one's end to carry its trunk on, how far a trunk box runs before its top strays past a share
+    // of its foot's radius or thins below a share of its girth, the depth and girth of a limb that shows with the
+    // steps and boxes it takes, and the lattice its clusters merge on — cells across and tiers up for MODEL and for
+    // SKETCH, never smaller than a block, each merged cluster pulled in to a share of its bounds and its cell laid
+    // out as below
+    public static final int TREE_MODEL_CELL_MIN_X = 0;
+    public static final int TREE_MODEL_CELL_MIN_Y = 1;
+    public static final int TREE_MODEL_CELL_MIN_Z = 2;
+    public static final int TREE_MODEL_CELL_MAX_X = 3;
+    public static final int TREE_MODEL_CELL_MAX_Y = 4;
+    public static final int TREE_MODEL_CELL_MAX_Z = 5;
+    public static final int TREE_MODEL_CELL_COUNT = 6;
+    public static final int TREE_MODEL_CELL_ACCENTS = 7;
+    public static final int TREE_MODEL_CELL_SEED = 8;
+    public static final int TREE_MODEL_CELL_FLOATS = 9;
+    public static final int TREE_MODEL_CELLS_PER_AXIS = 3;
+    public static final float TREE_MODEL_JOIN_BLOCKS = 0.05f;
+    public static final int TREE_MODEL_LIMB_DEPTH = 1;
+    public static final float TREE_MODEL_LIMB_MIN_RADIUS_BLOCKS = 0.125f;
+    public static final int TREE_MODEL_LIMB_PIECES = 2;
+    public static final int TREE_MODEL_MAX_LIMB_BOXES = 10;
+    public static final int TREE_MODEL_MAX_TIERS = 5;
+    public static final int TREE_MODEL_MAX_CELLS = TREE_MODEL_CELLS_PER_AXIS * TREE_MODEL_CELLS_PER_AXIS
+            * TREE_MODEL_MAX_TIERS;
+    public static final float TREE_MODEL_MERGE_REACH_SHARE = 0.85f;
+    public static final float TREE_MODEL_MIN_CELL_BLOCKS = 1f;
+    public static final float TREE_MODEL_RUN_DRIFT_SHARE = 0.5f;
+    public static final float TREE_MODEL_RUN_GIRTH_SHARE = 0.7f;
+    public static final int TREE_SKETCH_CELLS_PER_AXIS = 2;
+    public static final int TREE_SKETCH_MAX_TIERS = 2;
+
+    // Tree Impostor — a tree's trunk and the few lumps its crown is judged as without growing it, what a far mega
+    // outlines and macro terrain shapes, and the salt each outlined lump's seed is rolled with
     public static final float TREE_IMPOSTOR_COLUMNAR_TAPER = 0.45f;
     public static final float TREE_IMPOSTOR_CONIFER_TAPER = 0.9f;
     public static final int TREE_IMPOSTOR_CONE_TIERS = 3;
@@ -1644,12 +1685,35 @@ public class EngineSetting {
     public static final float TREE_IMPOSTOR_TRUNK_REACH_SHARE = 0.5f;
     public static final int TREE_IMPOSTOR_TRUNK_TOP = 3;
 
-    // Tree Stand-In — the trees near macro terrain draws one by one, as a trunk box under the impostor's crown in
-    // flat colors, on every tile sampled at least this finely; coarser tiles lay the canopy instead. A lump's box
-    // keeps the share of its radii that covers what the lump's rounded cluster does
-    public static final int TREE_STAND_IN_BOX_CORNERS = 8;
-    public static final float TREE_STAND_IN_LUMP_SHARE = 0.886f;
-    public static final int TREE_STAND_IN_MIN_CELLS_PER_SIDE = 8;
+    // Tree Stand-In — the trees macro terrain draws one by one in flat colors on every tile sampled at least as
+    // finely as its coarsest tier, coarser tiles laying the canopy instead: the resolution each tier starts at, the
+    // sides its shapes turn with, the levels and reaches of a cone's, diamond's and dome's rings as shares of a
+    // lump's half-height and radius with the tip above and the foot below, how far up its crown a spire is widest,
+    // a trunk's reach from its box's half-width and its taper, and the salt every shape's turn is rolled with
+    public static final float[] TREE_STAND_IN_CONE_LEVELS = { -1f };
+    public static final float[] TREE_STAND_IN_CONE_REACHES = { 1f };
+    public static final float TREE_STAND_IN_CONE_FOOT = -0.6f;
+    public static final float TREE_STAND_IN_CONE_TIP = 1.4f;
+    public static final float[] TREE_STAND_IN_DIAMOND_LEVELS = { 0f };
+    public static final float[] TREE_STAND_IN_DIAMOND_REACHES = { 1f };
+    public static final float TREE_STAND_IN_DIAMOND_FOOT = -1f;
+    public static final float TREE_STAND_IN_DIAMOND_TIP = 1f;
+    public static final float[] TREE_STAND_IN_DOME_LEVELS = { 0.55f, -0.25f };
+    public static final float[] TREE_STAND_IN_DOME_REACHES = { 0.83f, 0.97f };
+    public static final float TREE_STAND_IN_DOME_FOOT = -0.85f;
+    public static final float TREE_STAND_IN_DOME_TIP = 1f;
+    public static final int TREE_STAND_IN_FACETED_CELLS_PER_SIDE = 32;
+    public static final int TREE_STAND_IN_FACETED_SIDES = 6;
+    public static final int TREE_STAND_IN_FACETED_TRUNK_SIDES = 4;
+    public static final int TREE_STAND_IN_MIN_CELLS_PER_SIDE = 4;
+    public static final int TREE_STAND_IN_PLAIN_CELLS_PER_SIDE = 16;
+    public static final int TREE_STAND_IN_PLAIN_SIDES = 4;
+    public static final int TREE_STAND_IN_PLAIN_TRUNK_SIDES = 3;
+    public static final float TREE_STAND_IN_SPIRE_POINTED_WAIST = 0.15f;
+    public static final float TREE_STAND_IN_SPIRE_ROUND_WAIST = 0.5f;
+    public static final float TREE_STAND_IN_TRUNK_REACH = 1.41f;
+    public static final float TREE_STAND_IN_TRUNK_TAPER = 0.55f;
+    public static final long TREE_STAND_IN_TURN_SALT = 0x5B17E2D94C08A63FL;
 
     // Tree Canopy — the jagged blanket distant macro terrain lays over its woods
     public static final float TREE_CANOPY_JITTER = 0.35f;

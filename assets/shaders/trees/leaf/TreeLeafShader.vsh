@@ -10,29 +10,35 @@ layout (location = 5) in vec4  aEdgeHigh;
 #include "includes/GridCoordinateData.glsl"
 #include "trees/includes/TreeLeaf.glsl"
 
-out vec3      vBoxPos;
-flat out vec3 vCenter;
-flat out vec3 vModelCenter;
-flat out vec2 vRadii;
+out vec3       vWorldPos;
+out vec2       vCard;
+flat out vec3  vCenter;
+flat out vec2  vRadii;
+flat out vec2  vCardRadii;
+flat out float vUnderside;
 flat out float vSeed;
-flat out vec2 vUVOrigin;
-flat out vec3 vColor;
+flat out vec2  vUVOrigin;
+flat out vec3  vColor;
 
 // Leaves standing in a chunk: positions are the chunk's own, placed by the grid slot they are drawn in, and the
-// cluster's centre is found from each vertex, so it stays right wherever a merge moves the box.
+// cluster's centre is found from each vertex, so every card of it sways as one.
 
 void main() {
-    vec3 boxPos = vec3(aPos.x + u_gridPosition.x, aPos.y, aPos.z + u_gridPosition.y);
-    vec3 center = boxPos + aEdgeLow.xyz;
-    vec3 sway   = resolveTreeLeafSway(center, aEdgeHigh.y);
+    vec3 position = vec3(aPos.x + u_gridPosition.x, aPos.y, aPos.z + u_gridPosition.y);
+    vec3 center   = position + aEdgeLow.xyz;
+    vec3 sway     = resolveTreeLeafSway(center, aEdgeHigh.y);
+    vec2 radii    = vec2(aEdgeLow.w, aEdgeHigh.x);
+    int  card     = int(aMeta);
 
-    vBoxPos      = boxPos + sway;
-    vCenter      = center + sway;
-    vModelCenter = aPos + aEdgeLow.xyz;
-    vRadii       = vec2(aEdgeLow.w, aEdgeHigh.x);
-    vSeed        = aEdgeHigh.y;
-    vUVOrigin    = aUVOrigin;
-    vColor       = unpackTreeColor(aColor);
+    vWorldPos  = position + sway;
+    vCard      = aEdgeHigh.zw;
+    vCenter    = center + sway;
+    vRadii     = radii;
+    vCardRadii = resolveTreeLeafCardRadii(card, radii);
+    vUnderside = resolveTreeLeafCardUnderside(card);
+    vSeed      = resolveTreeLeafCardSeed(aEdgeHigh.y, card);
+    vUVOrigin  = aUVOrigin;
+    vColor     = unpackTreeColor(aColor);
 
-    gl_Position = u_viewProjection * vec4(vBoxPos, 1.0);
+    gl_Position = u_viewProjection * vec4(vWorldPos, 1.0);
 }

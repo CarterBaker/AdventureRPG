@@ -12,29 +12,31 @@ layout (location = 5) in vec4  aEdgeHigh;
 // Carries the falling piece, in blocks from the centre of its tree's root, into the world.
 uniform mat4 u_model;
 
-out vec3      vBoxPos;
-flat out vec3 vCenter;
-flat out vec3 vModelCenter;
-flat out vec2 vRadii;
+out vec3       vWorldPos;
+out vec2       vCard;
+flat out vec3  vCenter;
+flat out vec2  vRadii;
+flat out vec2  vCardRadii;
+flat out float vUnderside;
 flat out float vSeed;
-flat out vec2 vUVOrigin;
-flat out vec3 vColor;
+flat out vec2  vUVOrigin;
+flat out vec3  vColor;
 
-// A falling clump keeps its own centre and radii; its box turns with the piece, so the box is grown to hold the
-// clump however it turns.
+// A falling cluster's cards turn with the piece about the cluster's own centre, so the sheaf falls whole.
 
 void main() {
-    vec3 modelCenter = aPos + aEdgeLow.xyz;
-    vec3 center      = (u_model * vec4(modelCenter, 1.0)).xyz;
-    float reach      = max(aEdgeLow.w, aEdgeHigh.x);
+    vec2 radii = vec2(aEdgeLow.w, aEdgeHigh.x);
+    int  card  = int(aMeta);
 
-    vBoxPos      = center + mat3(u_model) * (-aEdgeLow.xyz) * (reach / max(min(aEdgeLow.w, aEdgeHigh.x), 0.001));
-    vCenter      = center;
-    vModelCenter = modelCenter;
-    vRadii       = vec2(aEdgeLow.w, aEdgeHigh.x);
-    vSeed        = aEdgeHigh.y;
-    vUVOrigin    = aUVOrigin;
-    vColor       = unpackTreeColor(aColor);
+    vWorldPos  = (u_model * vec4(aPos, 1.0)).xyz;
+    vCard      = aEdgeHigh.zw;
+    vCenter    = (u_model * vec4(aPos + aEdgeLow.xyz, 1.0)).xyz;
+    vRadii     = radii;
+    vCardRadii = resolveTreeLeafCardRadii(card, radii);
+    vUnderside = resolveTreeLeafCardUnderside(card);
+    vSeed      = resolveTreeLeafCardSeed(aEdgeHigh.y, card);
+    vUVOrigin  = aUVOrigin;
+    vColor     = unpackTreeColor(aColor);
 
-    gl_Position = u_viewProjection * vec4(vBoxPos, 1.0);
+    gl_Position = u_viewProjection * vec4(vWorldPos, 1.0);
 }

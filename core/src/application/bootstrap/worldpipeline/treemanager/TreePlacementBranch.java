@@ -19,13 +19,15 @@ class TreePlacementBranch extends BranchPackage {
      * root within the widest reach of the chunk; here only the trees that
      * truly reach it are kept, and of those only the ones on dry ground. The
      * registry then hands every chunk a tree reaches the same instance, grown
-     * from the site's seed to the site's age. Every tree a hand planted that
+     * from the site's seed to the site's age and told how finely it is drawn.
+     * Every tree a hand planted that
      * reaches the chunk is held for it too.
      */
 
     // Internal
     private TreeManager treeManager;
     private TreeRegistryBranch treeRegistryBranch;
+    private TreeDetailBranch treeDetailBranch;
     private TreeSiteBranch treeSiteBranch;
     private WorldGenerationManager worldGenerationManager;
     private TreePlacementAsyncContainer placementContainer;
@@ -49,6 +51,7 @@ class TreePlacementBranch extends BranchPackage {
     protected void get() {
         this.treeManager = get(TreeManager.class);
         this.treeRegistryBranch = get(TreeRegistryBranch.class);
+        this.treeDetailBranch = get(TreeDetailBranch.class);
         this.treeSiteBranch = get(TreeSiteBranch.class);
         this.worldGenerationManager = get(WorldGenerationManager.class);
     }
@@ -139,6 +142,7 @@ class TreePlacementBranch extends BranchPackage {
         TreeInstance tree = create(TreeInstance.class);
         tree.constructor(treeHandle, scratch.worldHandle, site.getAnchorX(), site.getAnchorZ(), baseY,
                 site.getSeed(), plantedDay, false, scratch.currentDay);
+        treeDetailBranch.adopt(tree);
 
         return tree;
     }

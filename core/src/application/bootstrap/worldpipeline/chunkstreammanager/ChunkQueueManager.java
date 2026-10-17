@@ -32,7 +32,10 @@ import engine.util.queue.QueueItemHandle;
 class ChunkQueueManager extends ManagerPackage {
 
     /*
-     * Drives the per-frame chunk queue for every grid: scan, load, assess.
+     * Drives the per-frame chunk queue for every grid: scan, load, assess. Each
+     * frame first sweeps the grid's prioritized slots nearest first, so the
+     * ground around the player claims the pool and the upload budget before any
+     * farther chunk, and the round robin then walks only the chunks beyond it.
      * Admission and dispatch are both paced by the WorldStreaming pool's
      * capacity and per-frame budgets, and GPU uploads by their own budget, so
      * streaming never outruns the pipeline or stalls a frame. An upload the
@@ -42,17 +45,18 @@ class ChunkQueueManager extends ManagerPackage {
      * invalidates any mega it fed. A live edit restreams only the grid's chunks
      * its region reaches, nearest first, and leaves every other chunk standing.
      * Every chunk leaves through clearChunk(), which takes back all it handed
-     * the renderers, its world items included, and sends the NPCs living in
-     * it out of the world with them. The moment a grid moves, every
-     * chunk it left behind is queued to unload and every load it no longer
-     * wants is dropped; unloads drain on their own budget, a chunk with an
-     * async task still reserved waiting for it, and no fresh chunk is made
-     * while the grid already holds more than it streams, so travelling far
-     * and fast never holds more than the grid around the player. A removed
-     * grid keeps draining until its last chunk is pooled. A chunk's trees are
-     * a layer of their own: refreshTrees() redraws them alone, at once for a
-     * change the player made and through the stream for one the world made,
-     * never touching the chunk's terrain or its neighbors.
+     * the renderers, its world items included, and sends the NPCs living in it
+     * out of the world with them. The moment a grid moves, every chunk it left
+     * behind is queued to unload, its pending loads are dropped and the scan
+     * starts over from the nearest slot, so loads queue nearest first; unloads
+     * drain on their own budget, a chunk with an async task still reserved
+     * waiting for it, and no fresh chunk is made while the grid already holds
+     * more than it streams, so travelling far and fast never holds more than the
+     * grid around the player. A removed grid keeps draining until its last chunk
+     * is pooled. A chunk's trees are a layer of their own: refreshTrees()
+     * redraws them alone, at once for a change the player made and through the
+     * stream for one the world made, never touching the chunk's terrain or its
+     * neighbors.
      */
 
     // Internal
@@ -186,6 +190,7 @@ class ChunkQueueManager extends ManagerPackage {
     protected void update() {
         this.gpuUploadsThisFrame = 0;
         drainRetiredGrids();
+        sweepPriorityChunks();
         executeQueue();
     }
 
@@ -205,7 +210,7 @@ class ChunkQueueManager extends ManagerPackage {
             retiredGrids.add(grid);
     }
 
-    // Every chunk the grid left behind queued to unload, and every load it no longer wants dropped
+    // Every chunk the grid left behind queued to unload, and the loads requeued nearest first from a fresh scan
     void onGridMoved(GridInstance grid) {
 
         LongLinkedOpenHashSet unloadRequests = grid.getUnloadRequests();
@@ -219,11 +224,8 @@ class ChunkQueueManager extends ManagerPackage {
                 unloadRequests.add(chunkCoordinate);
         }
 
-        var loadIterator = grid.getLoadRequests().iterator();
-
-        while (loadIterator.hasNext())
-            if (grid.getGridSlotForChunk(loadIterator.nextLong()) == null)
-                loadIterator.remove();
+        grid.getLoadRequests().clear();
+        grid.restartScan();
     }
 
     // Restream \\
@@ -390,9 +392,42 @@ class ChunkQueueManager extends ManagerPackage {
         }
     }
 
+    // Priority Sweep \\
+
+    private void sweepPriorityChunks() {
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++)
+            sweepPriorityChunks((GridInstance) elements[i]);
+    }
+
+    // The prioritized slots walked in load order, so the nearest chunk with work always dispatches first
+    private void sweepPriorityChunks(GridInstance grid) {
+
+        Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
+        LongLinkedOpenHashSet unloadRequests = grid.getUnloadRequests();
+        int prioritySlotCount = grid.getPrioritySlotCount();
+
+        for (int i = 0; i < prioritySlotCount; i++) {
+
+            long gridCoordinate = grid.getGridCoordinate(i);
+            long chunkCoordinate = grid.getChunkCoordinateForSlot(gridCoordinate);
+            ChunkInstance chunkInstance = activeChunks.get(chunkCoordinate);
+
+            if (chunkInstance == null || unloadRequests.contains(chunkCoordinate))
+                continue;
+
+            executeOperation(grid, chunkCoordinate, chunkInstance, grid.getGridSlot(gridCoordinate));
+        }
+    }
+
     // Assessment \\
 
-    // Round robin from the front of the linked map; an assessed chunk moves to the back
+    // Round robin from the front of the linked map; an assessed chunk moves to the back, and a prioritized one
+    // is left to the sweep that already walked it this frame
     private void assessActiveChunks(GridInstance grid) {
 
         Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
@@ -420,6 +455,9 @@ class ChunkQueueManager extends ManagerPackage {
                 grid.getUnloadRequests().add(chunkCoordinate);
                 continue;
             }
+
+            if (gridSlotHandle.getDetailLevel().prioritized)
+                continue;
 
             executeOperation(grid, chunkCoordinate, chunkInstance, gridSlotHandle);
         }

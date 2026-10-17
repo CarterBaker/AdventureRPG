@@ -35,7 +35,9 @@ class MegaQueueManager extends ManagerPackage {
      * every mega it left behind is unloaded rather than waiting its turn, so
      * travel never keeps a mega the grid no longer reaches. A mega's tree
      * stand-ins are built and uploaded as a layer of their own once its
-     * terrain is on the GPU, and invalidateMegaTrees() rebuilds only them.
+     * terrain is on the GPU, and invalidateMegaTrees() rebuilds only them; a
+     * mega whose distance now calls for its trees at another detail builds
+     * them again the same way, the old ones drawn until the new ones land.
      */
 
     // Internal
@@ -284,7 +286,7 @@ class MegaQueueManager extends ManagerPackage {
                 continue;
             }
 
-            MegaQueueOperation op = determineOperation(grid, megaCoord, sync, gridSlotHandle);
+            MegaQueueOperation op = determineOperation(grid, mega, megaCoord, sync, gridSlotHandle);
 
             switch (op) {
                 case ASSESS -> assessBranch.assessMega(mega);
@@ -295,7 +297,8 @@ class MegaQueueManager extends ManagerPackage {
                     } else
                         deferredUploads.add(megaCoord);
                 }
-                case TREE_BUILD -> treeBuildBranch.buildTrees(mega);
+                case TREE_BUILD -> treeBuildBranch.buildTrees(
+                        mega, treeBuildBranch.resolveDetail(gridSlotHandle.getDetailLevel()));
                 case TREE_RENDER -> {
                     if (gpuUploadsThisFrame < megaGpuUploadBudget) {
                         treeRenderBranch.renderTrees(mega, sync);
@@ -315,6 +318,7 @@ class MegaQueueManager extends ManagerPackage {
 
     private MegaQueueOperation determineOperation(
             GridInstance grid,
+            MegaChunkInstance mega,
             long megaCoord,
             MegaDataSyncContainer sync,
             GridSlotHandle gridSlotHandle) {
@@ -324,6 +328,11 @@ class MegaQueueManager extends ManagerPackage {
 
         try {
             GridSlotDetailLevel slotLevel = gridSlotHandle.getDetailLevel();
+
+            // Trees built at a detail the mega's distance no longer calls for are built again
+            if (sync.getData()[MegaData.TREE_DATA.index]
+                    && mega.getTreeDetail() != treeBuildBranch.resolveDetail(slotLevel))
+                MegaDataUtility.cascadeClear(MegaData.TREE_DATA, sync.getData());
 
             MegaData toDump = MegaDataUtility.nextToDump(sync.getData(), slotLevel);
 

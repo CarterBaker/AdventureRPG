@@ -17,10 +17,11 @@ public class SettingsOptionBranch extends BranchPackage {
      * Fills the Display and Graphics tabs and the Controls tab's mouse
      * section, and writes each change into Settings. Display, field of view
      * and every post-processing effect take effect at once through
-     * SettingsSystem, and sensitivity is read live by InputManager. Render
-     * distance and terrain detail reshape how the world streams and shades —
-     * a distance change reloads every chunk — so they only mark the session,
-     * and SettingsMenuBranch applies them once when the menu closes.
+     * SettingsSystem, and sensitivity is read live by InputManager, as is the
+     * tree detail distance by the trees, which redraw only those crossing it.
+     * Render distance and terrain detail reshape how the world streams and
+     * shades — a distance change reloads every chunk — so they only mark the
+     * session, and SettingsMenuBranch applies them once when the menu closes.
      */
 
     // Internal
@@ -55,6 +56,7 @@ public class SettingsOptionBranch extends BranchPackage {
         settingsMenuBranch.injectSectionHeader(session, RuntimeSetting.SETTINGS_SECTION_WORLD);
         injectOptionRow(session, SettingsOption.RENDER_DISTANCE);
         injectOptionRow(session, SettingsOption.TERRAIN_DETAIL);
+        injectOptionRow(session, SettingsOption.TREE_DETAIL);
         settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_WORLD_APPLY);
 
         populateEffects(session);
@@ -158,6 +160,10 @@ public class SettingsOptionBranch extends BranchPackage {
                         EngineSetting.DETAIL_RADIUS_MAX);
                 session.markRenderSettingsChanged();
             }
+            case TREE_DETAIL -> settings.treeDetailDistance = Math.clamp(
+                    settings.treeDetailDistance + step * RuntimeSetting.SETTINGS_TREE_DETAIL_STEP,
+                    EngineSetting.TREE_DETAIL_DISTANCE_MIN,
+                    EngineSetting.TREE_DETAIL_DISTANCE_MAX);
             case OUTLINES -> {
                 settings.outlines = !settings.outlines;
                 settingsSystem.applyPostProcessing();
@@ -195,6 +201,7 @@ public class SettingsOptionBranch extends BranchPackage {
             case TERRAIN_DETAIL -> String.format(
                     RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
                     settings.detailRadius);
+            case TREE_DETAIL -> String.format(RuntimeSetting.SETTINGS_FORMAT_CHUNKS, settings.treeDetailDistance);
             case OUTLINES -> formatToggle(settings.outlines);
             case OUTLINE_THICKNESS -> String.format(RuntimeSetting.SETTINGS_FORMAT_PIXELS, settings.outlineThickness);
             case DEPTH_OF_FIELD -> formatToggle(settings.depthOfField);

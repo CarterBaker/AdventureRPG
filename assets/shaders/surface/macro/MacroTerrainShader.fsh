@@ -20,7 +20,9 @@ layout(location = 2) out vec4 gMaterial;
 // fills every chunk the grid has not drawn — beyond its footprint, along its rim, and wherever streaming has not caught
 // up — and never overlaps one. A tree stand-in is discarded whole once the grid draws the chunk its tree roots in,
 // since the grid then draws that tree itself. The facet normal comes from screen-space derivatives of the flat
-// position, which gives the low poly look without any normal data, and a heightfield never faces down. A gentle facet
+// position, which gives the low poly look without any normal data. A heightfield never faces down, while a tree
+// stand-in is a closed faceted shape, so its facet faces the camera and a crown's underside turns down into its
+// slope color. A gentle facet
 // shows its top color and a steep one turns to its slope color, the way a stepped voxel hillside shows more block sides
 // the steeper it climbs. Sun visibility under the cloud layers is the same the voxel surface writes, so cloud shadows
 // run on across the seam. All three targets must output alpha = 1.0, since this pass draws with blending enabled;
@@ -48,8 +50,11 @@ void main() {
     discard;
 
     vec3 normal = normalize(cross(dFdx(vLocalPos), dFdy(vLocalPos)));
+    bool facesAway = vCoverChunk >= 0
+        ? dot(normal, u_inverseView[3].xyz - vLocalPos) < 0.0
+        : normal.y < 0.0;
 
-    if (normal.y < 0.0)
+    if (facesAway)
     normal = -normal;
 
     float slope  = smoothstep(MACRO_SLOPE_START, MACRO_SLOPE_END, 1.0 - normal.y);

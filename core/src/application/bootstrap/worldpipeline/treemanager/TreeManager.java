@@ -33,10 +33,12 @@ public class TreeManager extends ManagerPackage {
      * that stands each tree in on its own. A tree stays virtual — its height
      * and age, nothing grown — until something near enough needs its shape,
      * and gives the shape back once nothing has for a while. Trees are drawn
-     * apart from the ground: in full by the chunks near the player, as
-     * stand-ins by the megas beyond them, as flat stand-ins by the macro
-     * terrain nearest them, and as a canopy by the macro terrain beyond that,
-     * so a tree that changes redraws only itself. It is the one way anything
+     * apart from the ground, coarser the farther they stand: in full while
+     * their root lies within the tree detail distance, as models of their own
+     * trunk, limbs and crown by the chunks beyond it, as sketches and then
+     * outlines by the megas past those, as faceted flat-colored stand-ins by
+     * the macro terrain nearest them, and as a canopy by the macro terrain
+     * beyond that, so a tree that changes redraws only itself. It is the one way anything
      * touches a tree: castTree() finds what a ray meets, strikeTree() lands a
      * swing on it, collectWoodBoxes() gives movement the wood to collide
      * with, and plant() roots a seed. Each frame it publishes the game day
@@ -49,6 +51,7 @@ public class TreeManager extends ManagerPackage {
     private ClockManager clockManager;
     private MaterialManager materialManager;
     private TreeRegistryBranch treeRegistryBranch;
+    private TreeDetailBranch treeDetailBranch;
     private TreeSiteBranch treeSiteBranch;
     private TreePlacementBranch treePlacementBranch;
     private TreeSpaceBranch treeSpaceBranch;
@@ -84,6 +87,7 @@ public class TreeManager extends ManagerPackage {
 
         create(TreeLoader.class);
         this.treeRegistryBranch = create(TreeRegistryBranch.class);
+        this.treeDetailBranch = create(TreeDetailBranch.class);
         this.treeSiteBranch = create(TreeSiteBranch.class);
         this.treePlacementBranch = create(TreePlacementBranch.class);
         this.treeSpaceBranch = create(TreeSpaceBranch.class);
@@ -123,6 +127,7 @@ public class TreeManager extends ManagerPackage {
 
         currentDay = clockHandle.getTotalDaysElapsed() + clockHandle.getDayProgress();
 
+        treeDetailBranch.update(deltaTime);
         treeGrowthBranch.update(deltaTime);
         treeFallBranch.update(deltaTime);
     }

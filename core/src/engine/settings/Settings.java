@@ -30,6 +30,7 @@ public class Settings {
     // Render
     public int maxRenderDistance = 32;
     public int detailRadius = 48;
+    public int treeDetailDistance = 4;
 
     // Post Processing — Outlines
     public boolean outlines = true;

@@ -25,6 +25,7 @@ class TreePlantBranch extends BranchPackage {
     // Internal
     private TreeManager treeManager;
     private TreeRegistryBranch treeRegistryBranch;
+    private TreeDetailBranch treeDetailBranch;
     private TreeRebuildBranch treeRebuildBranch;
     private WorldStreamManager worldStreamManager;
 
@@ -44,6 +45,7 @@ class TreePlantBranch extends BranchPackage {
     protected void get() {
         this.treeManager = get(TreeManager.class);
         this.treeRegistryBranch = get(TreeRegistryBranch.class);
+        this.treeDetailBranch = get(TreeDetailBranch.class);
         this.treeRebuildBranch = get(TreeRebuildBranch.class);
         this.worldStreamManager = get(WorldStreamManager.class);
     }
@@ -63,6 +65,7 @@ class TreePlantBranch extends BranchPackage {
 
         TreeInstance tree = create(TreeInstance.class);
         tree.constructor(treeHandle, worldHandle, wrappedX, wrappedZ, baseY, seed, currentDay, true, currentDay);
+        treeDetailBranch.adopt(tree);
 
         if (!treeRegistryBranch.plant(tree))
             return false;

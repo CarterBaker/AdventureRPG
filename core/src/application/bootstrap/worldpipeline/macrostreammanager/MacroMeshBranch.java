@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.macrostreammanager;
 
+import application.bootstrap.worldpipeline.macrochunk.MacroStandInStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -25,18 +26,13 @@ public class MacroMeshBranch extends BranchPackage {
      * drawn, so a forest's edge breaks off in jagged slopes into the land.
      * Settlements are a third grid laid the same way after the woods, their
      * structures, walls and bridges rising out of the land in their own
-     * colors. Nearer tiles lay their trees as boxes instead of a canopy, one
-     * per crown lump and per trunk, eight corners each, every crown before
-     * any trunk, so a tile crowded past what one mesh can index gives up
-     * trunks before crowns. Every vertex names the chunk of the tile it
-     * yields to once the chunk grid draws it: a tree's boxes name the chunk
-     * it roots in, and ground, canopy and settlements name none, yielding
-     * wherever they lie.
+     * colors. Nearer tiles lay their trees as faceted shapes instead of a
+     * canopy, whole shapes only and every crown before any trunk, so a tile
+     * crowded past what one mesh can index gives up trunks before crowns.
+     * Every vertex names the chunk of the tile it yields to once the chunk
+     * grid draws it: a tree's shapes name the chunk it roots in, and ground,
+     * canopy and settlements name none, yielding wherever they lie.
      */
-
-    // Box — each face's four corners counterclockwise from outside, a corner's bits picking its high x, y and z
-    private static final int[][] BOX_SIDE_FACES = { { 1, 3, 7, 5 }, { 0, 4, 6, 2 }, { 4, 5, 7, 6 }, { 0, 2, 3, 1 } };
-    private static final int[][] BOX_CAP_FACES = { { 2, 6, 7, 3 }, { 0, 1, 5, 4 } };
 
     // Settings
     private float tileSizeBlocks;
@@ -208,64 +204,49 @@ public class MacroMeshBranch extends BranchPackage {
 
     // Stand-Ins \\
 
-    // Every tree's boxes laid after the land and canopy in the same buffers, as many as one mesh can index
+    // Every tree's shapes laid after the land, canopy and settlements in the same buffers, as many as one mesh can
+    // index
     void assembleStandIns(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
 
-        if (pushBoxes(scratch.standInCrowns, true, vertices, indices))
-            pushBoxes(scratch.standInTrunks, false, vertices, indices);
+        MacroStandInStruct crowns = scratch.standInCrowns;
+        MacroStandInStruct trunks = scratch.standInTrunks;
+
+        vertices.ensureCapacity(vertices.size() + crowns.getVertices().size() + trunks.getVertices().size());
+        indices.ensureCapacity(indices.size() + crowns.getIndices().size() + trunks.getIndices().size());
+
+        if (pushShapes(crowns, vertices, indices))
+            pushShapes(trunks, vertices, indices);
     }
 
-    // False once the mesh can index no further box
-    private boolean pushBoxes(FloatArrayList boxes, boolean capped, FloatArrayList vertices, ShortArrayList indices) {
+    // Each whole shape copied in with its indices moved onto where its vertices land — false once the mesh can
+    // index no further shape
+    private boolean pushShapes(MacroStandInStruct standIns, FloatArrayList vertices, ShortArrayList indices) {
 
-        int cursor = 0;
+        float[] shapeVertices = standIns.getVertices().elements();
+        ShortArrayList shapeIndices = standIns.getIndices();
+        int vertexCursor = 0;
+        int indexCursor = 0;
 
-        while (cursor < boxes.size()) {
+        for (int shape = 0; shape < standIns.getShapeCount(); shape++) {
 
+            int vertexCount = standIns.getShapeVertexCount(shape);
+            int indexCount = standIns.getShapeIndexCount(shape);
             int base = vertices.size() / vertexFloatCount;
 
-            if (base + EngineSetting.TREE_STAND_IN_BOX_CORNERS > EngineSetting.MESH_VERT_LIMIT)
+            if (base + vertexCount > EngineSetting.MESH_VERT_LIMIT)
                 return false;
 
-            float minX = boxes.getFloat(cursor++);
-            float minY = boxes.getFloat(cursor++);
-            float minZ = boxes.getFloat(cursor++);
-            float maxX = boxes.getFloat(cursor++);
-            float maxY = boxes.getFloat(cursor++);
-            float maxZ = boxes.getFloat(cursor++);
-            float topColor = boxes.getFloat(cursor++);
-            float sideColor = boxes.getFloat(cursor++);
-            float cover = boxes.getFloat(cursor++);
+            vertices.addElements(
+                    vertices.size(), shapeVertices, vertexCursor * vertexFloatCount, vertexCount * vertexFloatCount);
 
-            for (int corner = 0; corner < EngineSetting.TREE_STAND_IN_BOX_CORNERS; corner++)
-                pushVertex(
-                        vertices,
-                        (corner & 1) != 0 ? maxX : minX,
-                        (corner & 2) != 0 ? maxY : minY,
-                        (corner & 4) != 0 ? maxZ : minZ,
-                        topColor,
-                        sideColor,
-                        cover);
+            for (int index = 0; index < indexCount; index++)
+                indices.add((short) (base + shapeIndices.getShort(indexCursor + index)));
 
-            pushFaces(indices, base, BOX_SIDE_FACES);
-
-            if (capped)
-                pushFaces(indices, base, BOX_CAP_FACES);
+            vertexCursor += vertexCount;
+            indexCursor += indexCount;
         }
 
         return true;
-    }
-
-    private void pushFaces(ShortArrayList indices, int base, int[][] faces) {
-
-        for (int[] face : faces) {
-            indices.add((short) (base + face[0]));
-            indices.add((short) (base + face[1]));
-            indices.add((short) (base + face[2]));
-            indices.add((short) (base + face[0]));
-            indices.add((short) (base + face[2]));
-            indices.add((short) (base + face[3]));
-        }
     }
 
     // Skirt \\

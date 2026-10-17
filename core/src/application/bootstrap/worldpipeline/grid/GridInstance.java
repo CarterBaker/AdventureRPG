@@ -41,7 +41,9 @@ public class GridInstance extends InstancePackage {
      * rebuild is diffed against the last one, and every chunk and mega whose
      * representation changed is promoted to the front of its assessment order
      * so the switch lands within frames instead of waiting out a full
-     * streaming pass.
+     * streaming pass. The leading prioritized slots of the load order are the
+     * ground the streams sweep nearest first every frame, and every move
+     * restarts the slot scan from the nearest slot.
      */
 
     // Focal
@@ -56,6 +58,7 @@ public class GridInstance extends InstancePackage {
     private int totalSlots;
     private long[] loadOrder;
     private int immediateSlotCount;
+    private int prioritySlotCount;
     private LongOpenHashSet gridCoordinates;
     private Long2ObjectOpenHashMap<GridSlotHandle> gridSlots;
     private float radiusSquared;
@@ -131,6 +134,7 @@ public class GridInstance extends InstancePackage {
             int totalSlots,
             long[] loadOrder,
             int immediateSlotCount,
+            int prioritySlotCount,
             LongOpenHashSet gridCoordinates,
             Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
             float radiusSquared,
@@ -162,7 +166,14 @@ public class GridInstance extends InstancePackage {
         this.waterTarget = null;
 
         // Grid
-        assignSlots(totalSlots, loadOrder, immediateSlotCount, gridCoordinates, gridSlots, radiusSquared);
+        assignSlots(
+                totalSlots,
+                loadOrder,
+                immediateSlotCount,
+                prioritySlotCount,
+                gridCoordinates,
+                gridSlots,
+                radiusSquared);
 
         // Active State
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
@@ -219,7 +230,7 @@ public class GridInstance extends InstancePackage {
         // Settings
         this.batchedChunks = EngineSetting.MEGA_CHUNK_SIZE * EngineSetting.MEGA_CHUNK_SIZE;
 
-        this.scanCursor = 0;
+        restartScan();
     }
 
     // Slots \\
@@ -228,12 +239,20 @@ public class GridInstance extends InstancePackage {
             int totalSlots,
             long[] loadOrder,
             int immediateSlotCount,
+            int prioritySlotCount,
             LongOpenHashSet gridCoordinates,
             Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
             float radiusSquared) {
 
-        assignSlots(totalSlots, loadOrder, immediateSlotCount, gridCoordinates, gridSlots, radiusSquared);
-        this.scanCursor = 0;
+        assignSlots(
+                totalSlots,
+                loadOrder,
+                immediateSlotCount,
+                prioritySlotCount,
+                gridCoordinates,
+                gridSlots,
+                radiusSquared);
+        restartScan();
         rebuildRenderQueue();
     }
 
@@ -241,6 +260,7 @@ public class GridInstance extends InstancePackage {
             int totalSlots,
             long[] loadOrder,
             int immediateSlotCount,
+            int prioritySlotCount,
             LongOpenHashSet gridCoordinates,
             Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
             float radiusSquared) {
@@ -248,6 +268,7 @@ public class GridInstance extends InstancePackage {
         this.totalSlots = totalSlots;
         this.loadOrder = loadOrder;
         this.immediateSlotCount = immediateSlotCount;
+        this.prioritySlotCount = prioritySlotCount;
         this.gridCoordinates = gridCoordinates;
         this.gridSlots = gridSlots;
         this.radiusSquared = radiusSquared;
@@ -407,6 +428,10 @@ public class GridInstance extends InstancePackage {
 
     // Scan Iteration \\
 
+    public void restartScan() {
+        this.scanCursor = 0;
+    }
+
     public GridSlotHandle getNextScanSlot() {
 
         if (scanCursor >= totalSlots)
@@ -475,6 +500,10 @@ public class GridInstance extends InstancePackage {
 
     public int getImmediateSlotCount() {
         return immediateSlotCount;
+    }
+
+    public int getPrioritySlotCount() {
+        return prioritySlotCount;
     }
 
     public long getGridCoordinate(int i) {

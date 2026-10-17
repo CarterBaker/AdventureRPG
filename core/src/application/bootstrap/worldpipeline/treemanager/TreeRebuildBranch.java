@@ -16,8 +16,9 @@ class TreeRebuildBranch extends BranchPackage {
      * loaded chunk holding it draws its trees again, and the mega its root
      * stands in rebuilds its stand-ins, while the ground around it is never
      * touched. A change the player made — a notch, a cut, a sapling — shows
-     * at once; one the world made, a tree growing or its species edited live,
-     * goes through the stream, the old tree standing until the new one lands.
+     * at once; one the world made, a tree growing, its species edited live or
+     * the player crossing the tree detail distance of it, goes through the
+     * stream, the old tree standing until the new one lands.
      * Every redraw goes through WorldStreamManager.
      */
 

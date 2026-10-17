@@ -22,13 +22,15 @@ public final class TreeMeshUtility extends EngineUtility {
      * shade its creases. Each edge is read along its whole length from the
      * grid and takes the kind most of it is. A quad lying wholly inside a leaf
      * cluster, within the smallest the clump's lumps ever shrink it to, can
-     * never be seen and is left out, so the twigs a crown hides cost nothing. A leaf cluster is the six faces
-     * of the box around its ellipsoid, each vertex carrying the way to the
-     * cluster's centre and its radii, so the leaf shader traces the rounded
-     * clump inside the box and every vertex stays correct wherever a merge
-     * moves the box. A distant stand-in draws its trunk as a plain box of
-     * wood, rounded at its upright edges, and its crown as a few clusters.
-     * Positions are in blocks in the caller's frame.
+     * never be seen and is left out, so the twigs a crown hides cost nothing.
+     * A leaf cluster is a sheaf of leaf cards through its centre: upright
+     * cards turned evenly about it from a start its seed rolls, and one level
+     * card across it. Each vertex carries the way to the cluster's centre, its
+     * radii, its seed and its corner on the card, so the leaf shader cuts the
+     * transparent sprigs out of each card and rounds the sheaf's light into a
+     * dome, and the wind carries the whole sheaf as one. A coarser tier draws
+     * its wood as boxes of bark rounded at their upright edges, capped where
+     * their ends show. Positions are in blocks in the caller's frame.
      */
 
     private static final float SCALE = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
@@ -83,13 +85,13 @@ public final class TreeMeshUtility extends EngineUtility {
                 out.add(localV);
                 out.add(quads.getWidth(quad));
                 out.add(quads.getHeight(quad));
-                addPadding(out);
+                addPadding(out, EngineSetting.TREE_WOOD_PADDING_FLOATS);
             }
         }
     }
 
-    // The four upright faces of a box of one wood part, in blocks of the caller's frame — its foot stands in the
-    // ground and its top in a crown, so neither is drawn, and its upright edges round over like any outer edge
+    // A box of one wood part, in blocks of the caller's frame — its four upright faces, rounded over at their
+    // upright edges, and its top and foot as well when capped, every edge then rounding over
     public static void emitWoodBox(
             float minX,
             float minY,
@@ -100,6 +102,7 @@ public final class TreeMeshUtility extends EngineUtility {
             float cornerU,
             float cornerV,
             float color,
+            boolean capped,
             FloatArrayList out) {
 
         float[] min = { minX, minY, minZ };
@@ -113,15 +116,15 @@ public final class TreeMeshUtility extends EngineUtility {
 
             int axis = SubVoxelMeshUtility.resolveAxis(face);
 
-            if (axis == EngineSetting.AXIS_Y)
+            if (axis == EngineSetting.AXIS_Y && !capped)
                 continue;
 
             int uAxis = (axis + 1) % EngineSetting.AXIS_COUNT;
             int vAxis = (axis + 2) % EngineSetting.AXIS_COUNT;
             float width = size[uAxis];
             float height = size[vAxis];
-            int uEdge = uAxis == EngineSetting.AXIS_Y ? EngineSetting.TREE_EDGE_FLAT : EngineSetting.TREE_EDGE_CONVEX;
-            int vEdge = vAxis == EngineSetting.AXIS_Y ? EngineSetting.TREE_EDGE_FLAT : EngineSetting.TREE_EDGE_CONVEX;
+            int uEdge = resolveBoxEdge(uAxis, capped);
+            int vEdge = resolveBoxEdge(vAxis, capped);
             int edges = uEdge
                     | uEdge << EngineSetting.TREE_EDGE_BITS
                     | vEdge << EngineSetting.TREE_EDGE_BITS * 2
@@ -149,9 +152,14 @@ public final class TreeMeshUtility extends EngineUtility {
                 out.add(localV);
                 out.add(width);
                 out.add(height);
-                addPadding(out);
+                addPadding(out, EngineSetting.TREE_WOOD_PADDING_FLOATS);
             }
         }
+    }
+
+    // A box's edge running along an axis rounds over unless it runs upright to an open end
+    private static int resolveBoxEdge(int axis, boolean capped) {
+        return axis == EngineSetting.AXIS_Y && !capped ? EngineSetting.TREE_EDGE_FLAT : EngineSetting.TREE_EDGE_CONVEX;
     }
 
     // A quad corner in grid sub-voxels, corners running low-low, high-low, high-high, low-high on the face's axes
@@ -338,7 +346,8 @@ public final class TreeMeshUtility extends EngineUtility {
         }
     }
 
-    // The six faces of the box around one cluster's ellipsoid
+    // The leaf cards of one cluster: its upright cards turned evenly about its centre from where its seed starts
+    // them, each as wide as the cluster and as tall, then its level card across it
     public static void emitCluster(
             float centerX,
             float centerY,
@@ -351,46 +360,74 @@ public final class TreeMeshUtility extends EngineUtility {
             float seed,
             FloatArrayList out) {
 
-        float[] radius = { radiusH, radiusV, radiusH };
-        float[] center = { centerX, centerY, centerZ };
-        float[] corner = new float[EngineSetting.AXIS_COUNT];
+        float turnStep = (float) Math.PI / EngineSetting.TREE_LEAF_UPRIGHT_CARDS;
 
-        for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++) {
+        for (int card = 0; card < EngineSetting.TREE_LEAF_UPRIGHT_CARDS; card++) {
 
-            int axis = SubVoxelMeshUtility.resolveAxis(face);
-            int uAxis = (axis + 1) % EngineSetting.AXIS_COUNT;
-            int vAxis = (axis + 2) % EngineSetting.AXIS_COUNT;
+            float turn = (seed + card) * turnStep;
+            float acrossX = (float) Math.cos(turn) * radiusH;
+            float acrossZ = (float) Math.sin(turn) * radiusH;
 
-            for (int vertex = 0; vertex < EngineSetting.QUAD_VERTEX_COUNT; vertex++) {
+            emitCard(
+                    centerX, centerY, centerZ, radiusH, radiusV, acrossX, acrossZ, 0f, radiusV, 0f,
+                    cornerU, cornerV, color, seed, card, out);
+        }
 
-                corner[axis] = center[axis] + radius[axis] * SubVoxelMeshUtility.getFaceNormal(face, axis);
-                corner[uAxis] = center[uAxis] + radius[uAxis] * (isHighU(vertex) ? 1f : -1f);
-                corner[vAxis] = center[vAxis] + radius[vAxis] * (isHighV(vertex) ? 1f : -1f);
+        emitCard(
+                centerX, centerY, centerZ, radiusH, radiusV, radiusH, 0f, 0f, 0f, radiusH,
+                cornerU, cornerV, color, seed, EngineSetting.TREE_LEAF_UPRIGHT_CARDS, out);
+    }
 
-                out.add(corner[0]);
-                out.add(corner[1]);
-                out.add(corner[2]);
-                out.add(cornerU);
-                out.add(cornerV);
-                out.add(face);
-                out.add(color);
-                out.add(center[0] - corner[0]);
-                out.add(center[1] - corner[1]);
-                out.add(center[2] - corner[2]);
-                out.add(radiusH);
-                out.add(radiusV);
-                out.add(seed);
-                out.add(0f);
-                out.add(0f);
-                out.add(0f);
-            }
+    // One card through the cluster's centre, reaching its level across half and its up half to either side
+    private static void emitCard(
+            float centerX,
+            float centerY,
+            float centerZ,
+            float radiusH,
+            float radiusV,
+            float acrossX,
+            float acrossZ,
+            float upX,
+            float upY,
+            float upZ,
+            float cornerU,
+            float cornerV,
+            int color,
+            float seed,
+            int card,
+            FloatArrayList out) {
+
+        for (int vertex = 0; vertex < EngineSetting.QUAD_VERTEX_COUNT; vertex++) {
+
+            float cardU = isHighU(vertex) ? 1f : -1f;
+            float cardV = isHighV(vertex) ? 1f : -1f;
+            float offsetX = acrossX * cardU + upX * cardV;
+            float offsetY = upY * cardV;
+            float offsetZ = acrossZ * cardU + upZ * cardV;
+
+            out.add(centerX + offsetX);
+            out.add(centerY + offsetY);
+            out.add(centerZ + offsetZ);
+            out.add(cornerU);
+            out.add(cornerV);
+            out.add(card);
+            out.add(color);
+            out.add(-offsetX);
+            out.add(-offsetY);
+            out.add(-offsetZ);
+            out.add(radiusH);
+            out.add(radiusV);
+            out.add(seed);
+            out.add(cardU);
+            out.add(cardV);
+            addPadding(out, EngineSetting.TREE_LEAF_PADDING_FLOATS);
         }
     }
 
     // Utility \\
 
-    private static void addPadding(FloatArrayList out) {
-        for (int slot = 0; slot < EngineSetting.TREE_WOOD_PADDING_FLOATS; slot++)
+    private static void addPadding(FloatArrayList out, int slots) {
+        for (int slot = 0; slot < slots; slot++)
             out.add(0f);
     }
 }

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import application.bootstrap.worldpipeline.tree.TreeCarveStruct;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeLeafStruct;
+import application.bootstrap.worldpipeline.tree.TreeModelStruct;
 import application.bootstrap.worldpipeline.tree.TreeNodeStruct;
 import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
 import application.bootstrap.worldpipeline.tree.TreeSkeletonStruct;
@@ -26,7 +27,9 @@ public final class TreeShapeUtility extends EngineUtility {
      * standing segments are laid out as block nodes, and each leaf cluster is
      * kept by the species' density and given the accent by its chance, both
      * rolled from the tree's seed and the cluster, so a cluster keeps its
-     * look as the tree grows and loses limbs.
+     * look as the tree grows and loses limbs. evaluateModel() reads the same
+     * wood and leaves off a skeleton nothing has cut, without laying out its
+     * nodes, for a tree drawn coarser than in full.
      */
 
     // Scale \\
@@ -117,14 +120,76 @@ public final class TreeShapeUtility extends EngineUtility {
                 root, rootShare, carves);
     }
 
+    // Everything standing at an age of a skeleton nothing has cut or broken, appended to the model: the segments
+    // and kept clusters evaluate() would build, scaled to the age, with no nodes laid out
+    public static void evaluateModel(
+            TreeHandle treeHandle,
+            long seed,
+            TreeSkeletonStruct skeleton,
+            float age,
+            TreeModelStruct model) {
+
+        float[] grown = model.getGrowth();
+        float[] severs = model.getSevers();
+        boolean[] brokenLeaves = model.getBrokenLeaves();
+        float scale = resolveScale(skeleton, age);
+        float minLeafRadius = EngineSetting.TREE_MIN_LEAF_RADIUS_BLOCKS;
+        float accentChance = treeHandle.getLeaves().getAccentChance();
+
+        computeGrowth(skeleton, age, severs, grown);
+
+        for (int segment = 0; segment < skeleton.getSegmentCount(); segment++) {
+
+            float share = grown[segment];
+
+            if (share <= 0f)
+                continue;
+
+            model.addSegment(
+                    scale * skeleton.getStartX(segment),
+                    scale * skeleton.getStartY(segment),
+                    scale * skeleton.getStartZ(segment),
+                    scale * along(skeleton.getStartX(segment), skeleton.getEndX(segment), share),
+                    scale * along(skeleton.getStartY(segment), skeleton.getEndY(segment), share),
+                    scale * along(skeleton.getStartZ(segment), skeleton.getEndZ(segment), share),
+                    Math.max(EngineSetting.TREE_MIN_RADIUS_BLOCKS, scale * skeleton.getStartRadius(segment)),
+                    Math.max(EngineSetting.TREE_MIN_RADIUS_BLOCKS, scale * along(
+                            skeleton.getStartRadius(segment), skeleton.getEndRadius(segment), share)),
+                    skeleton.getDepth(segment));
+        }
+
+        for (int leaf = 0; leaf < skeleton.getLeafCount(); leaf++) {
+
+            if (!isLeafAlive(treeHandle, seed, skeleton, grown, severs, brokenLeaves, leaf))
+                continue;
+
+            model.addLeaf(
+                    scale * skeleton.getLeafX(leaf),
+                    scale * skeleton.getLeafY(leaf),
+                    scale * skeleton.getLeafZ(leaf),
+                    Math.max(minLeafRadius, scale * skeleton.getLeafRadiusH(leaf)),
+                    Math.max(minLeafRadius, scale * skeleton.getLeafRadiusV(leaf)),
+                    rollLeaf(seed, EngineSetting.TREE_LEAF_SEED_SALT, leaf),
+                    rollLeaf(seed, EngineSetting.TREE_LEAF_ACCENT_SALT, leaf) < accentChance);
+        }
+    }
+
     // Growth \\
 
-    // How much of each segment has grown and is still attached, a share of its mature length — below zero when it
-    // has not sprouted or has been cut away
     private static float[] computeGrowth(TreeSkeletonStruct skeleton, float age, float[] severs) {
 
+        float[] grown = new float[skeleton.getSegmentCount()];
+
+        computeGrowth(skeleton, age, severs, grown);
+
+        return grown;
+    }
+
+    // How much of each segment has grown and is still attached, a share of its mature length — below zero when it
+    // has not sprouted or has been cut away — written into an array at least as long as the skeleton's segments
+    private static void computeGrowth(TreeSkeletonStruct skeleton, float age, float[] severs, float[] grown) {
+
         int count = skeleton.getSegmentCount();
-        float[] grown = new float[count];
 
         for (int segment = 0; segment < count; segment++) {
 
@@ -148,8 +213,6 @@ public final class TreeShapeUtility extends EngineUtility {
             if (share > EngineSetting.TREE_SHARE_EPSILON)
                 grown[segment] = share;
         }
-
-        return grown;
     }
 
     // Build \\

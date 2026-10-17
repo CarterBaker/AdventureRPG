@@ -120,6 +120,7 @@ class GridBuildSystem extends SystemPackage {
         populateCoveredSlots(gridSlots);
 
         int immediateSlotCount = countImmediateSlots(loadOrder, gridSlots);
+        int prioritySlotCount = countPrioritySlots(loadOrder, gridSlots);
 
         gridInstance.constructor(
                 focalEntity,
@@ -128,6 +129,7 @@ class GridBuildSystem extends SystemPackage {
                 totalSlots,
                 loadOrder,
                 immediateSlotCount,
+                prioritySlotCount,
                 gridCoordinates,
                 gridSlots,
                 radiusSquared,
@@ -173,6 +175,7 @@ class GridBuildSystem extends SystemPackage {
                 loadOrder.length,
                 loadOrder,
                 countImmediateSlots(loadOrder, gridSlots),
+                countPrioritySlots(loadOrder, gridSlots),
                 gridCoordinates,
                 gridSlots,
                 radius * radius);
@@ -350,6 +353,18 @@ class GridBuildSystem extends SystemPackage {
 
         while (count < loadOrder.length
                 && gridSlots.get(loadOrder[count]).getDetailLevel() == GridSlotDetailLevel.IMMEDIATE)
+            count++;
+
+        return count;
+    }
+
+    // Priority Range \\
+
+    private int countPrioritySlots(long[] loadOrder, Long2ObjectOpenHashMap<GridSlotHandle> gridSlots) {
+
+        int count = 0;
+
+        while (count < loadOrder.length && gridSlots.get(loadOrder[count]).getDetailLevel().prioritized)
             count++;
 
         return count;
