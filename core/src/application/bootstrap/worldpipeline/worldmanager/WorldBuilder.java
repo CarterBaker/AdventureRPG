@@ -25,11 +25,10 @@ class WorldBuilder extends BuilderPackage {
      * All fields are resolved before WorldData construction — the handle is
      * never mutated after constructor() is called. Bootstrap-only. The
      * companion file is also the durable home for the world's generation
-     * seed and its epoch start: once assigned, each is written back to disk
-     * immediately so every future load reproduces the same terrain and the
-     * same clock — the world keeps time from its epoch whether or not the
-     * game is running. Its hand-picked settlement and structure placements,
-     * and whether settlements also grow on their own, are read from it too.
+     * seed: once assigned, it is written back to disk immediately so every
+     * future load reproduces the same terrain. Its hand-picked settlement
+     * and structure placements, and whether settlements also grow on their
+     * own, are read from it too.
      * The height layer beside the world image is read with it and must match
      * its size; a world without one gets a neutral layer, written to disk only
      * once the editor saves what is painted on it.
@@ -101,7 +100,6 @@ class WorldBuilder extends BuilderPackage {
                 arpg, "natural_settlements", EngineSetting.DEFAULT_NATURAL_SETTLEMENTS);
 
         long seed = resolveWorldSeed(arpg, arpgFile);
-        long worldEpochStart = resolveWorldEpochStart(arpg, arpgFile);
 
         WorldData data = new WorldData(
                 worldName,
@@ -114,7 +112,6 @@ class WorldBuilder extends BuilderPackage {
                 gravityMultiplier,
                 gravityDirection,
                 calendarName,
-                worldEpochStart,
                 rotationSpeed,
                 axialTilt,
                 planetaryOffset,
@@ -158,20 +155,6 @@ class WorldBuilder extends BuilderPackage {
         ArpgUtility.writeObject(arpgFile, arpg);
 
         return seed;
-    }
-
-    // Epoch \\
-
-    private long resolveWorldEpochStart(ArpgObjectStruct arpg, File arpgFile) {
-
-        if (arpg.has("epoch_start"))
-            return arpg.get("epoch_start").getAsLong();
-
-        long worldEpochStart = System.currentTimeMillis();
-        arpg.addProperty("epoch_start", worldEpochStart);
-        ArpgUtility.writeObject(arpgFile, arpg);
-
-        return worldEpochStart;
     }
 
     // Helpers \\

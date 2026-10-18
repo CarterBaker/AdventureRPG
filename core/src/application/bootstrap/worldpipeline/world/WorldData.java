@@ -16,10 +16,7 @@ public class WorldData extends DataPackage {
      * planetary offset used to phase the day/night gradient across the
      * world's Y axis, and the generation seed. calendarName points to the
      * per-world calendar definition, which owns daysPerDay and every other
-     * day/year shape setting. worldEpochStart is the real instant the
-     * world's calendar sat on its own start date and time, persisted in the
-     * companion ARPG so the world's clock carries on between sessions. The
-     * world file is the image the pixel map was read from, for tools that
+     * day/year shape setting. The world file is the image the pixel map was read from, for tools that
      * edit and save it, and the height layer the grey image beside it that
      * raises and lowers the ground the biomes shape, read from its own file
      * or neutral everywhere until one is painted. The placements are the
@@ -45,7 +42,6 @@ public class WorldData extends DataPackage {
 
     // Time
     private final String calendarName;
-    private final long worldEpochStart;
 
     // Rotation
     private final float rotationSpeed;
@@ -80,7 +76,6 @@ public class WorldData extends DataPackage {
             float gravityMultiplier,
             Vector3 gravityDirection,
             String calendarName,
-            long worldEpochStart,
             float rotationSpeed,
             float axialTilt,
             float planetaryOffset,
@@ -105,7 +100,6 @@ public class WorldData extends DataPackage {
 
         // Time
         this.calendarName = calendarName;
-        this.worldEpochStart = worldEpochStart;
 
         // Rotation
         this.rotationSpeed = rotationSpeed;
@@ -164,10 +158,6 @@ public class WorldData extends DataPackage {
 
     public String getCalendarName() {
         return calendarName;
-    }
-
-    public long getWorldEpochStart() {
-        return worldEpochStart;
     }
 
     public float getRotationSpeed() {

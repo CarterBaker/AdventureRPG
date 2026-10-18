@@ -16,7 +16,7 @@ class CurrentTrackerBranch extends BranchPackage {
      * out of that single number, alongside the elapsed real seconds and the
      * same span in game seconds, which run daysPerDay times faster. The date
      * rolls over at exactly the instant dayProgress wraps to midnight, and
-     * any gap since the last session resolves in one step.
+     * any gap since the epoch resolves in one step.
      * computeVisualTimeOfDay() then localizes the shared solar time per grid,
      * bending it by season and latitude, the bend deepening toward the poles
      * so high latitudes see long winter nights and long summer days.

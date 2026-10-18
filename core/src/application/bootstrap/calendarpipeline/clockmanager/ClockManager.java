@@ -20,12 +20,15 @@ public class ClockManager extends ManagerPackage {
      * Drives the in-game clock for the active world. Owns the global
      * ClockHandle and calendar wiring; each grid holds its own
      * ClockInstance, handed out by this manager, so time of day resolves
-     * independently per location. The moon's place in its orbit advances
-     * with the clock. Loading and switching worlds share one wiring path,
-     * and the clock is solved immediately afterward so every value is
-     * already correct before the first frame reads it. Any place on the
-     * world can ask its visual time of day, so a map can shade the whole
-     * world by the same shared clock every grid follows.
+     * independently per location. A world is fresh every session, so its
+     * clock starts the moment it is wired, on its calendar's own start date
+     * and time, giving every session the same starting point. The moon's
+     * place in its orbit advances with the clock. Loading and switching
+     * worlds share one wiring path, and the clock is solved immediately
+     * afterward so every value is already correct before the first frame
+     * reads it. Any place on the world can ask its visual time of day, so a
+     * map can shade the whole world by the same shared clock every grid
+     * follows.
      */
 
     // Internal
@@ -76,12 +79,10 @@ public class ClockManager extends ManagerPackage {
     @Override
     protected void awake() {
 
-        WorldHandle activeWorld = worldManager.getActiveWorld();
-
-        clockHandle.constructor(new ClockData(activeWorld.getWorldEpochStart()));
+        clockHandle.constructor(new ClockData(internal.getTime()));
         internalBuffer.assignData(clockHandle);
 
-        wireData(activeWorld);
+        wireData(worldManager.getActiveWorld());
     }
 
     @Override
@@ -95,7 +96,7 @@ public class ClockManager extends ManagerPackage {
 
         this.calendarHandle = calendarManager.getCalendarHandleFromCalendarName(world.getCalendarName());
 
-        clockHandle.setWorldEpochStart(world.getWorldEpochStart());
+        clockHandle.setWorldEpochStart(internal.getTime());
         clockHandle.setCalendarHandle(calendarHandle);
 
         currentTracker.assignData(calendarHandle, clockHandle, world.getAxialTilt());

@@ -6,7 +6,7 @@ import engine.root.DataPackage;
 public class ClockData extends DataPackage {
 
     /*
-     * Global clock state for one world: the persisted epoch, the active
+     * Global clock state for one world: the epoch, the active
      * calendar, every current time value derived from them each frame, and
      * where the moon stands in its orbit. Location-specific time of day lives
      * in each grid's ClockInstance.

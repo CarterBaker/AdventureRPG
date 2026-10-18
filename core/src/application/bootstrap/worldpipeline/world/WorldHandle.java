@@ -70,10 +70,6 @@ public class WorldHandle extends HandlePackage {
         return data.getCalendarName();
     }
 
-    public long getWorldEpochStart() {
-        return data.getWorldEpochStart();
-    }
-
     public float getRotationSpeed() {
         return data.getRotationSpeed();
     }
