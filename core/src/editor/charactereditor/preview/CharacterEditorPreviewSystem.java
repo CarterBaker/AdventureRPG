@@ -9,6 +9,7 @@ import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
 import editor.charactereditor.CharacterEditorSetting;
 import editor.characterview.pose.CharacterViewPoseSystem;
@@ -26,8 +27,9 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * preview of the active template is put on its own animation tree; the
      * tone worn, the build and the head shape are applied whenever the
      * editor's state moves; and each frame the preview is posed — at rest or
-     * played in the chosen movement — and given the markers of the mode: the
-     * joints in Build, every equipment anchor in Equipment, the selected one
+     * played in the chosen movement, or held in the exact bind pose while its
+     * mesh is edited — and given the markers of the mode: the joints in Build,
+     * Mesh and Weights, every equipment anchor in Equipment, the selected one
      * highlighted.
      */
 
@@ -136,6 +138,11 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         CharacterEditorPose pose = characterEditorManager.getPose();
 
+        if (characterEditorManager.getMode() == CharacterEditorMode.MESH) {
+            characterViewPoseSystem.poseBind();
+            return;
+        }
+
         if (!pose.isPlayed()) {
             characterViewPoseSystem.poseRest();
             return;
@@ -150,7 +157,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     private void pushMarkers() {
 
         switch (characterEditorManager.getMode()) {
-            case BUILD -> pushJointMarkers();
+            case BUILD, MESH, WEIGHTS -> pushJointMarkers();
             case EQUIPMENT -> pushAnchorMarkers();
             default -> {
             }

@@ -17,8 +17,9 @@ public class CharacterViewPoseSystem extends SystemPackage {
      * Holds the character one character viewport shows: the template it is
      * built from, its pose on an animation tree, and its appearance at the
      * template's defaults. bind() puts a template's character on a tree; the
-     * tool driving the viewport strikes the pose every frame — at rest, from
-     * one clip at a time, or played through the tree.
+     * tool driving the viewport strikes the pose every frame — at rest, in
+     * the exact bind pose a mesh is authored in, from one clip at a time, or
+     * played through the tree.
      */
 
     // Subject
@@ -66,6 +67,19 @@ public class CharacterViewPoseSystem extends SystemPackage {
 
         if (animationStateHandle != null)
             animationStateHandle.poseRest();
+    }
+
+    // The bind pose at unit proportions, so every skinned vertex stands exactly where its mesh file puts it; the next
+    // appearance change applies the build and head shape again
+    public void poseBind() {
+
+        if (animationStateHandle == null)
+            return;
+
+        for (int i = 0; i < entityData.getRigHandle().getBoneCount(); i++)
+            animationStateHandle.setBoneProportion(i, 1f, 1f, 1f);
+
+        animationStateHandle.poseRest();
     }
 
     public void poseClip(AnimationClipHandle clip, float time) {

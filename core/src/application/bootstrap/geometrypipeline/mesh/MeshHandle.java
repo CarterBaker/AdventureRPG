@@ -10,11 +10,16 @@ import engine.util.mathematics.vectors.Vector3;
 public class MeshHandle extends HandlePackage {
 
     /*
-     * A GPU-resident static mesh assembled from ARPG, owned by MeshManager;
-     * callers receive ModelInstances built from its MeshData. A non-null rig
-     * marks meshes that carry bone attributes, whose raw extent scales them
-     * onto an entity's size.
+     * A GPU-resident static mesh assembled from ARPG, owned by MeshManager and
+     * known by the name it registered under; callers receive ModelInstances
+     * built from its MeshData. A non-null rig marks meshes that carry bone
+     * attributes, whose raw extent scales them onto an entity's size. A
+     * rigged mesh can be rebuilt in place through MeshManager, keeping its
+     * handles, so everything drawing it shows the change.
      */
+
+    // Identity
+    private String meshName;
 
     // Internal
     private VAOInstance vaoInstance;
@@ -28,12 +33,16 @@ public class MeshHandle extends HandlePackage {
     // Constructor \\
 
     public void constructor(
+            String meshName,
             VAOInstance vaoInstance,
             VBOHandle vboHandle,
             IBOHandle iboHandle,
             RigHandle rigHandle,
             Vector3 boundsMin,
             Vector3 boundsMax) {
+
+        // Identity
+        this.meshName = meshName;
 
         // Internal
         this.vaoInstance = vaoInstance;
@@ -51,6 +60,10 @@ public class MeshHandle extends HandlePackage {
     }
 
     // Accessible \\
+
+    public String getMeshName() {
+        return meshName;
+    }
 
     public VAOInstance getVAOInstance() {
         return vaoInstance;

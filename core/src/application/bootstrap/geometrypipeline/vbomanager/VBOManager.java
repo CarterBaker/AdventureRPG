@@ -107,6 +107,11 @@ public class VBOManager extends ManagerPackage {
         return VBOGLSLUtility.updateVertexData(vaoInstance, vboInstance, vertices.elements(), vertices.size());
     }
 
+    // Respecifies a registered buffer in place, so every VAO already built over it stays valid
+    public VBOHandle updateVBOHandle(VAOInstance vaoInstance, VBOHandle vboHandle, FloatArrayList vertices) {
+        return VBOGLSLUtility.updateVertexData(vaoInstance, vboHandle, vertices.elements(), vertices.size());
+    }
+
     // Removal \\
 
     public void removeVBO(VBOData vboData) {

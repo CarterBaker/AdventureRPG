@@ -30,12 +30,14 @@ class CharacterPropertyBranch extends BranchPackage {
      * values are read from the live ARPG and written through
      * CharacterEditBranch, clamped to the range the game reads them in;
      * preview values — the pose, the tone worn, the build and head shape —
-     * live on the manager and never touch the template.
+     * live on the manager and never touch the template. The keys of the
+     * Mesh and Weights panels pass straight to CharacterMeshPropertyBranch.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
     private CharacterEditBranch characterEditBranch;
+    private CharacterMeshPropertyBranch characterMeshPropertyBranch;
     private FeatureManager featureManager;
 
     // Base \\
@@ -44,6 +46,7 @@ class CharacterPropertyBranch extends BranchPackage {
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditBranch = get(CharacterEditBranch.class);
+        this.characterMeshPropertyBranch = get(CharacterMeshPropertyBranch.class);
         this.featureManager = get(FeatureManager.class);
     }
 
@@ -54,7 +57,9 @@ class CharacterPropertyBranch extends BranchPackage {
         String keyName = CharacterViewUtility.getKeyName(key);
         int index = CharacterViewUtility.getKeyIndex(key);
 
-        if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_BONE))
+        if (characterMeshPropertyBranch.handles(keyName))
+            characterMeshPropertyBranch.select(key);
+        else if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_BONE))
             characterEditorManager.selectBone(index);
         else if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR))
             characterEditorManager.selectAnchor(index);
@@ -64,6 +69,9 @@ class CharacterPropertyBranch extends BranchPackage {
 
     String getValueText(CharacterDocumentInstance document, String key) {
 
+        if (isMeshKey(key))
+            return characterMeshPropertyBranch.getValueText(key);
+
         if (isNumberKey(key))
             return CharacterViewUtility.formatNumber(getNumber(document, key));
 
@@ -71,17 +79,36 @@ class CharacterPropertyBranch extends BranchPackage {
     }
 
     boolean isValueValid(CharacterDocumentInstance document, String key, String text) {
+
+        if (isMeshKey(key))
+            return characterMeshPropertyBranch.isValueValid(key, text);
+
         return isNumberKey(key) && hasTarget(document, key) && CharacterViewUtility.isNumber(text);
     }
 
     void setValue(CharacterDocumentInstance document, String key, String text) {
+
+        if (isMeshKey(key)) {
+            characterMeshPropertyBranch.setValue(key, text);
+            return;
+        }
+
         writeNumber(document, key, CharacterViewUtility.parseNumber(text));
     }
 
     void step(CharacterDocumentInstance document, String key, int direction) {
 
+        if (isMeshKey(key)) {
+            characterMeshPropertyBranch.step(key, direction);
+            return;
+        }
+
         if (isNumberKey(key) && hasTarget(document, key))
             writeNumber(document, key, getNumber(document, key) + direction * getStep(key));
+    }
+
+    private boolean isMeshKey(String key) {
+        return characterMeshPropertyBranch.handles(CharacterViewUtility.getKeyName(key));
     }
 
     // Numbers \\
@@ -263,6 +290,11 @@ class CharacterPropertyBranch extends BranchPackage {
     // Choices \\
 
     void cycle(CharacterDocumentInstance document, String key, int direction) {
+
+        if (isMeshKey(key)) {
+            characterMeshPropertyBranch.cycle(key, direction);
+            return;
+        }
 
         String keyName = CharacterViewUtility.getKeyName(key);
         CharacterEditorColor color = CharacterEditorColor.fromKeyName(keyName);
@@ -567,6 +599,11 @@ class CharacterPropertyBranch extends BranchPackage {
     // Actions \\
 
     void act(CharacterDocumentInstance document, String key) {
+
+        if (isMeshKey(key)) {
+            characterMeshPropertyBranch.act(key);
+            return;
+        }
 
         String keyName = CharacterViewUtility.getKeyName(key);
         CharacterEditorColor color = CharacterEditorColor.fromKeyName(keyName);

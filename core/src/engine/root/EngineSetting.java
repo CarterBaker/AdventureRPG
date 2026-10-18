@@ -2136,6 +2136,12 @@ public class EngineSetting {
     public static final int SKINNED_NORMAL_FLOATS = 3;
     public static final float SKINNED_NORMAL_SMOOTH_COSINE = 0.5f;
     public static final float SKINNED_HIDDEN_BONE_NONE = -1f;
+    public static final int RIGGED_MESH_POSITION_FLOATS = 3;
+    public static final int RIGGED_MESH_UV_FLOATS = 2;
+    public static final int RIGGED_MESH_VERTEX_STRIDE = RIGGED_MESH_POSITION_FLOATS + RIGGED_MESH_UV_FLOATS
+            + MAX_BONE_INFLUENCES * 2 + SKINNED_NORMAL_FLOATS;
+    public static final int RIGGED_MESH_TILE_FLOATS = 6;
+    public static final float[] MESH_QUAD_DEFAULT_UVS = { 0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f };
     public static final int SKINNED_INSTANCE_APPEARANCE_FLOATS = 24;
     public static final int[] SKINNED_INSTANCE_ATTRIBUTE_SIZES = { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
     public static final int SKINNED_INSTANCE_INITIAL_CAPACITY = 64;

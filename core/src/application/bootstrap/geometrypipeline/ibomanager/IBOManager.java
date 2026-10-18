@@ -107,6 +107,11 @@ public class IBOManager extends ManagerPackage {
         return IBOGLSLUtility.updateIndexData(iboInstance, indices.elements(), indices.size());
     }
 
+    // Respecifies a registered buffer in place, so every VAO already built over it stays valid
+    public IBOHandle updateIBOHandle(IBOHandle iboHandle, ShortArrayList indices) {
+        return IBOGLSLUtility.updateIndexData(iboHandle, indices.elements(), indices.size());
+    }
+
     // Removal \\
 
     public void removeIBO(IBOData iboData) {

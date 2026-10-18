@@ -108,6 +108,20 @@ class VBOGLSLUtility extends EngineUtility {
         return vboInstance;
     }
 
+    static VBOHandle updateVertexData(
+            VAOInstance vaoInstance,
+            VBOHandle vboHandle,
+            float[] vertices,
+            int floatCount) {
+
+        VBOData oldData = vboHandle.getVBOData();
+        int vertStride = vaoInstance.getVAOData().getVertStride();
+        VBOData newData = reupload(oldData.getVertexHandle(), vertices, floatCount, vertStride);
+        vboHandle.constructor(newData);
+
+        return vboHandle;
+    }
+
     private static VBOData reupload(int vbo, float[] vertices, int floatCount, int vertStride) {
 
         GL20 gl20 = EngineContext.gl20;

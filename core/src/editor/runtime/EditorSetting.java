@@ -14,8 +14,8 @@ public class EditorSetting {
      * status text, the image editing framework's history and files, the world
      * map's status text and overlay toggles, the world editor's brush and
      * status text, the character viewport shared by the character, animation
-     * and animation tree editors, and those editors' files, steps and status
-     * text.
+     * and animation tree editors, those editors' files, steps and status
+     * text, and the character editor's mesh and weight tools.
      */
 
     // Cursors
@@ -333,6 +333,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_APPEARANCE = "Appearance";
     public static final String CHARACTER_EDITOR_MODE_BUILD = "Build";
     public static final String CHARACTER_EDITOR_MODE_EQUIPMENT = "Equipment";
+    public static final String CHARACTER_EDITOR_MODE_MESH = "Mesh";
+    public static final String CHARACTER_EDITOR_MODE_WEIGHTS = "Weights";
     public static final String CHARACTER_EDITOR_POSE_REST = "Rest";
     public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
     public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
@@ -378,6 +380,184 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MESSAGE_COPIED = "Copied as ";
     public static final String CHARACTER_EDITOR_MESSAGE_DELETED = "Deleted ";
     public static final String CHARACTER_EDITOR_MESSAGE_NO_MODEL = "This entity has no character model to show";
+
+    // Character Editor — mesh parts; a feature part is keyed by its slot's name
+    public static final String CHARACTER_EDITOR_PART_BODY = "body";
+
+    // Character Editor — mesh panel keys
+    public static final String CHARACTER_EDITOR_KEY_MESH_PART = "mesh_part";
+    public static final String CHARACTER_EDITOR_KEY_MESH_MIRROR = "mesh_mirror";
+    public static final String CHARACTER_EDITOR_KEY_MESH_XRAY = "mesh_xray";
+    public static final String CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL = "mesh_proportional";
+    public static final String CHARACTER_EDITOR_KEY_MESH_RADIUS = "mesh_radius";
+    public static final String CHARACTER_EDITOR_KEY_MESH_SNAP = "mesh_snap";
+    public static final String CHARACTER_EDITOR_KEY_MESH_CENTER = "mesh_center";
+    public static final String CHARACTER_EDITOR_KEY_MESH_SIZE = "mesh_size";
+    public static final String CHARACTER_EDITOR_KEY_MESH_ROTATE = "mesh_rotate";
+    public static final String CHARACTER_EDITOR_KEY_SELECT_ALL = "select_all";
+    public static final String CHARACTER_EDITOR_KEY_SELECT_NONE = "select_none";
+    public static final String CHARACTER_EDITOR_KEY_SELECT_INVERT = "select_invert";
+    public static final String CHARACTER_EDITOR_KEY_SELECT_LINKED = "select_linked";
+    public static final String CHARACTER_EDITOR_KEY_SELECT_MIRROR = "select_mirror";
+    public static final String CHARACTER_EDITOR_KEY_SELECT_BONE = "select_bone";
+    public static final String CHARACTER_EDITOR_KEY_GRAB = "grab";
+    public static final String CHARACTER_EDITOR_KEY_ROTATE = "rotate";
+    public static final String CHARACTER_EDITOR_KEY_SCALE = "scale";
+    public static final String CHARACTER_EDITOR_KEY_EXTRUDE = "extrude";
+    public static final String CHARACTER_EDITOR_KEY_DUPLICATE = "duplicate";
+    public static final String CHARACTER_EDITOR_KEY_DELETE_VERTICES = "delete_vertices";
+    public static final String CHARACTER_EDITOR_KEY_DELETE_FACES = "delete_faces";
+    public static final String CHARACTER_EDITOR_KEY_MAKE_FACE = "make_face";
+    public static final String CHARACTER_EDITOR_KEY_MERGE = "merge";
+    public static final String CHARACTER_EDITOR_KEY_SUBDIVIDE = "subdivide";
+    public static final String CHARACTER_EDITOR_KEY_SYMMETRIZE_POSITIVE = "symmetrize_positive";
+    public static final String CHARACTER_EDITOR_KEY_SYMMETRIZE_NEGATIVE = "symmetrize_negative";
+    public static final String CHARACTER_EDITOR_KEY_FACE_TEXTURE = "face_texture";
+    public static final String CHARACTER_EDITOR_KEY_PART_SHAPE = "part_shape";
+    public static final String CHARACTER_EDITOR_KEY_PART_SIZE = "part_size";
+    public static final String CHARACTER_EDITOR_KEY_PART_TEXTURE = "part_texture";
+    public static final String CHARACTER_EDITOR_KEY_ADD_PART = "add_part";
+    public static final String CHARACTER_EDITOR_KEY_UNDO = "undo";
+    public static final String CHARACTER_EDITOR_KEY_REDO = "redo";
+    public static final String CHARACTER_EDITOR_KEY_SAVE_MESH = "save_mesh";
+    public static final String CHARACTER_EDITOR_KEY_REVERT_MESH = "revert_mesh";
+
+    // Character Editor — weight panel keys; every weight action shares the prefix
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_PREFIX = "weight_";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_TOOL = "brush_tool";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_TARGET = "brush_weight";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH = "brush_strength";
+    public static final String CHARACTER_EDITOR_KEY_BRUSH_RADIUS = "brush_radius";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_ASSIGN = "weight_assign";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_ADD = "weight_add";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_SUBTRACT = "weight_subtract";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_REMOVE = "weight_remove";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_NORMALIZE = "weight_normalize";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_SMOOTH = "weight_smooth";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_POSITIVE = "weight_mirror_positive";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_NEGATIVE = "weight_mirror_negative";
+
+    // Character Editor — mesh steps and ranges, in blocks unless named otherwise
+    public static final float CHARACTER_EDITOR_MESH_RADIUS_DEFAULT = 0.1f;
+    public static final float CHARACTER_EDITOR_MESH_RADIUS_MIN = 0.005f;
+    public static final float CHARACTER_EDITOR_MESH_RADIUS_MAX = 2f;
+    public static final float CHARACTER_EDITOR_MESH_RADIUS_STEP = 0.01f;
+    public static final float CHARACTER_EDITOR_MESH_SNAP_DEFAULT = 0.005f;
+    public static final float CHARACTER_EDITOR_MESH_SNAP_MAX = 0.5f;
+    public static final float CHARACTER_EDITOR_MESH_SNAP_STEP = 0.005f;
+    public static final float CHARACTER_EDITOR_MESH_ROTATE_STEP = 15f;
+    public static final float CHARACTER_EDITOR_PART_SIZE_DEFAULT = 0.1f;
+    public static final float CHARACTER_EDITOR_PART_SIZE_MIN = 0.005f;
+    public static final float CHARACTER_EDITOR_PART_SIZE_MAX = 2f;
+    public static final float CHARACTER_EDITOR_WEIGHT_STEP_FINE = 0.05f;
+    public static final float CHARACTER_EDITOR_WEIGHT_STRENGTH_DEFAULT = 0.5f;
+    public static final float CHARACTER_EDITOR_BRUSH_RADIUS_DEFAULT = 40f;
+    public static final float CHARACTER_EDITOR_BRUSH_RADIUS_MIN = 4f;
+    public static final float CHARACTER_EDITOR_BRUSH_RADIUS_MAX = 400f;
+    public static final float CHARACTER_EDITOR_BRUSH_RADIUS_STEP = 5f;
+
+    // Character Mesh — geometry; positions key on the decimal grid in this many signed bits per axis
+    public static final int CHARACTER_MESH_KEY_BITS = 21;
+    public static final long CHARACTER_MESH_KEY_MASK = (1L << CHARACTER_MESH_KEY_BITS) - 1L;
+    public static final float CHARACTER_MESH_CENTER_TOLERANCE = 0.001f;
+    public static final float CHARACTER_MESH_SYMMETRIZE_REACH = 0.02f;
+    public static final float CHARACTER_MESH_SPAN_EPSILON = 0.0001f;
+    public static final float CHARACTER_MESH_WEIGHT_EPSILON = 0.0001f;
+    public static final float CHARACTER_MESH_BONE_SELECT_WEIGHT = 0.25f;
+    public static final int CHARACTER_MESH_HISTORY_MAX_STEPS = 64;
+    public static final int CHARACTER_MESH_SHAPE_SEGMENTS = 8;
+    public static final int CHARACTER_MESH_SHAPE_RINGS = 6;
+    public static final String CHARACTER_MESH_BONE_SUFFIX_LEFT = "_l";
+    public static final String CHARACTER_MESH_BONE_SUFFIX_RIGHT = "_r";
+
+    // Character Editor — mesh tools, shapes and transforms
+    public static final String CHARACTER_EDITOR_SHAPE_PLANE = "Plane";
+    public static final String CHARACTER_EDITOR_SHAPE_BOX = "Box";
+    public static final String CHARACTER_EDITOR_SHAPE_CYLINDER = "Cylinder";
+    public static final String CHARACTER_EDITOR_SHAPE_SPHERE = "Sphere";
+    public static final String CHARACTER_EDITOR_TRANSFORM_GRAB = "Grab";
+    public static final String CHARACTER_EDITOR_TRANSFORM_ROTATE = "Rotate";
+    public static final String CHARACTER_EDITOR_TRANSFORM_SCALE = "Scale";
+    public static final String CHARACTER_EDITOR_WEIGHT_TOOL_SELECT = "Select";
+    public static final String CHARACTER_EDITOR_WEIGHT_TOOL_PAINT = "Paint";
+    public static final String CHARACTER_EDITOR_WEIGHT_TOOL_SMOOTH = "Smooth";
+
+    // Character Editor — mesh panel text
+    public static final String CHARACTER_EDITOR_HEADER_PARTS = "Parts";
+    public static final String CHARACTER_EDITOR_HEADER_NO_MESH = "This part has no mesh file to edit";
+    public static final String CHARACTER_EDITOR_HEADER_OPTIONS = "Options";
+    public static final String CHARACTER_EDITOR_HEADER_SELECTION = "Selection";
+    public static final String CHARACTER_EDITOR_HEADER_TRANSFORM = "Transform";
+    public static final String CHARACTER_EDITOR_HEADER_GEOMETRY = "Geometry";
+    public static final String CHARACTER_EDITOR_HEADER_FACES = "Selected Faces";
+    public static final String CHARACTER_EDITOR_HEADER_NEW_PART = "New Part";
+    public static final String CHARACTER_EDITOR_HEADER_MESH_FILE = "Mesh File";
+    public static final String CHARACTER_EDITOR_HEADER_ACTIVE_VERTEX = "Active Vertex";
+    public static final String CHARACTER_EDITOR_LABEL_VERTICES = " vertices";
+    public static final String CHARACTER_EDITOR_LABEL_FACES = " faces";
+    public static final String CHARACTER_EDITOR_LABEL_SELECTED = " selected";
+    public static final String CHARACTER_EDITOR_LABEL_MIRROR = "Mirror X";
+    public static final String CHARACTER_EDITOR_LABEL_XRAY = "X-Ray";
+    public static final String CHARACTER_EDITOR_LABEL_PROPORTIONAL = "Proportional";
+    public static final String CHARACTER_EDITOR_LABEL_RADIUS = "Radius";
+    public static final String CHARACTER_EDITOR_LABEL_SNAP = "Snap (Ctrl)";
+    public static final String CHARACTER_EDITOR_LABEL_CENTER = "Center";
+    public static final String CHARACTER_EDITOR_LABEL_TURN = "Turn";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_ALL = "Select All  (A)";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_NONE = "Select None";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_INVERT = "Invert Selection";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_LINKED = "Select Linked  (L)";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_MIRROR = "Select Mirror";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_BONE = "Select Weighted to ";
+    public static final String CHARACTER_EDITOR_LABEL_GRAB = "Grab  (G)";
+    public static final String CHARACTER_EDITOR_LABEL_ROTATE = "Rotate  (R)";
+    public static final String CHARACTER_EDITOR_LABEL_SCALE = "Scale  (S)";
+    public static final String CHARACTER_EDITOR_LABEL_EXTRUDE = "Extrude  (E)";
+    public static final String CHARACTER_EDITOR_LABEL_DUPLICATE = "Duplicate  (Shift+D)";
+    public static final String CHARACTER_EDITOR_LABEL_MAKE_FACE = "Make Face  (F)";
+    public static final String CHARACTER_EDITOR_LABEL_MERGE = "Merge at Center  (M)";
+    public static final String CHARACTER_EDITOR_LABEL_SUBDIVIDE = "Subdivide Faces";
+    public static final String CHARACTER_EDITOR_LABEL_DELETE_VERTICES = "Delete Vertices  (X)";
+    public static final String CHARACTER_EDITOR_LABEL_DELETE_FACES = "Delete Faces";
+    public static final String CHARACTER_EDITOR_LABEL_SYMMETRIZE_POSITIVE = "Symmetrize  +X to -X";
+    public static final String CHARACTER_EDITOR_LABEL_SYMMETRIZE_NEGATIVE = "Symmetrize  -X to +X";
+    public static final String CHARACTER_EDITOR_LABEL_TEXTURE = "Texture";
+    public static final String CHARACTER_EDITOR_LABEL_SHAPE = "Shape";
+    public static final String CHARACTER_EDITOR_LABEL_ADD_PART = "Add at ";
+    public static final String CHARACTER_EDITOR_LABEL_UNDO = "Undo  (Ctrl+Z)";
+    public static final String CHARACTER_EDITOR_LABEL_REDO = "Redo  (Ctrl+Y)";
+    public static final String CHARACTER_EDITOR_LABEL_SAVE_MESH = "Save Mesh";
+    public static final String CHARACTER_EDITOR_LABEL_REVERT_MESH = "Revert Mesh";
+    public static final String CHARACTER_EDITOR_LABEL_TOOL = "Tool";
+    public static final String CHARACTER_EDITOR_LABEL_STRENGTH = "Strength";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_ASSIGN = "Assign Weight";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_ADD = "Add 0.05";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_SUBTRACT = "Subtract 0.05";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_REMOVE = "Remove Bone";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_NORMALIZE = "Normalize";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_SMOOTH = "Smooth Selected";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_POSITIVE = "Mirror Weights  +X to -X";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_NEGATIVE = "Mirror Weights  -X to +X";
+
+    // Character Editor — mesh status text
+    public static final String CHARACTER_EDITOR_STATUS_MESH_HINT = "Click or drag to select, Shift adds, Ctrl removes";
+    public static final String CHARACTER_EDITOR_STATUS_TRANSFORM_HINT = "X Y Z hold to an axis, Ctrl snaps, click or "
+            + "Enter confirms, right click or Esc cancels";
+    public static final String CHARACTER_EDITOR_MESSAGE_MESH_EMPTY = "A mesh needs at least one face";
+    public static final String CHARACTER_EDITOR_MESSAGE_MESH_LIMIT = "That edit would pass the mesh vertex limit";
+    public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_SAVED = "A mesh file could not be written";
+    public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_REVERTED = "The mesh file could not be read";
+    public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_EXTRUDE = "Select faces or edges to extrude";
+    public static final String CHARACTER_EDITOR_MESSAGE_NO_FACES = "Select whole faces first";
+    public static final String CHARACTER_EDITOR_MESSAGE_FACE_VERTICES = "Select 3 or 4 vertices to make a face";
+    public static final String CHARACTER_EDITOR_MESSAGE_FACE_FLAT = "Those vertices lie on one line";
+    public static final String CHARACTER_EDITOR_MESSAGE_MERGE_VERTICES = "Select 2 or more vertices to merge";
+    public static final String CHARACTER_EDITOR_MESSAGE_FLAT_SELECTION = "The selection has no size on that axis";
+    public static final String CHARACTER_EDITOR_MESSAGE_NO_TEXTURE = "No texture to make the part in";
+    public static final String CHARACTER_EDITOR_MESSAGE_UNDONE = "Undone";
+    public static final String CHARACTER_EDITOR_MESSAGE_REDONE = "Redone";
+    public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_UNDO = "Nothing to undo";
+    public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_REDO = "Nothing to redo";
 
     // Animation Editor — clip fields
     public static final String ANIMATION_EDITOR_FIELD_RIG = "rig";

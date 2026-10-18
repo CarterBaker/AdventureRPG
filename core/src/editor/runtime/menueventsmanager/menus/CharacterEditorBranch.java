@@ -13,7 +13,8 @@ public class CharacterEditorBranch extends BranchPackage {
      * action works on the shared active character. A copy is named through
      * the name dialog, deleting a character asks for its name to be typed
      * back as confirmation, and a number's value opens in the text dialog.
-     * Panel rows hand back the key of the value they show.
+     * Undo and redo step the history of the mesh being edited. Panel rows
+     * hand back the key of the value they show.
      */
 
     // Internal
@@ -76,6 +77,24 @@ public class CharacterEditorBranch extends BranchPackage {
 
     public void showEquipment() {
         characterEditorManager.setMode(CharacterEditorMode.EQUIPMENT);
+    }
+
+    public void showMesh() {
+        characterEditorManager.setMode(CharacterEditorMode.MESH);
+    }
+
+    public void showWeights() {
+        characterEditorManager.setMode(CharacterEditorMode.WEIGHTS);
+    }
+
+    // History \\
+
+    public void undoMesh() {
+        characterEditorManager.undo();
+    }
+
+    public void redoMesh() {
+        characterEditorManager.redo();
     }
 
     // Rows \\

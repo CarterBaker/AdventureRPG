@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.characterview.panel.CharacterViewRowStruct;
 import editor.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
@@ -19,15 +20,18 @@ class CharacterRowBranch extends BranchPackage {
     /*
      * Lists the rows of the character editor's two panels for its mode. The
      * left panel holds how the preview stands and what can be picked — the
-     * features in Appearance, the bones in Build, the anchors in Equipment —
-     * and the right panel the values of the mode and of what is picked.
-     * Every value shown is read through CharacterPropertyBranch, the same
-     * path that edits it.
+     * features in Appearance, the bones in Build, the anchors in Equipment,
+     * the worn parts and the bones in Mesh and Weights — and the right panel
+     * the values of the mode and of what is picked, the mesh modes' from
+     * CharacterMeshRowBranch. Every value shown is read through
+     * CharacterPropertyBranch, the same path that edits it. Mesh mode holds
+     * the bind pose, so it lists no pose.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
     private CharacterPropertyBranch characterPropertyBranch;
+    private CharacterMeshRowBranch characterMeshRowBranch;
 
     // Base \\
 
@@ -35,24 +39,34 @@ class CharacterRowBranch extends BranchPackage {
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterPropertyBranch = get(CharacterPropertyBranch.class);
+        this.characterMeshRowBranch = get(CharacterMeshRowBranch.class);
     }
 
     // List \\
 
     void buildListRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
 
-        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW));
-        addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_POSE, EditorSetting.CHARACTER_EDITOR_LABEL_POSE);
+        CharacterEditorMode mode = characterEditorManager.getMode();
+
+        if (mode != CharacterEditorMode.MESH) {
+            rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW));
+            addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_POSE,
+                    EditorSetting.CHARACTER_EDITOR_LABEL_POSE);
+        }
 
         RigHandle rigHandle = characterPropertyBranch.resolveRig(document);
 
         if (rigHandle == null)
             return;
 
-        switch (characterEditorManager.getMode()) {
+        switch (mode) {
             case APPEARANCE -> addFeatureRows(document, rows);
             case BUILD -> addBoneRows(rigHandle, rows);
             case EQUIPMENT -> addAnchorRows(rows);
+            case MESH, WEIGHTS -> {
+                characterMeshRowBranch.addPartRows(document, rows);
+                addBoneRows(rigHandle, rows);
+            }
         }
     }
 
@@ -119,6 +133,8 @@ class CharacterRowBranch extends BranchPackage {
             case APPEARANCE -> addColorRows(document, rows);
             case BUILD -> addBuildRows(document, rows);
             case EQUIPMENT -> addAnchorPropertyRows(document, rows);
+            case MESH -> characterMeshRowBranch.buildMeshRows(rows);
+            case WEIGHTS -> characterMeshRowBranch.buildWeightRows(rows);
         }
     }
 

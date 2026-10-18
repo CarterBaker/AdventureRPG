@@ -30,6 +30,8 @@ public class CharacterViewRenderSystem extends SystemPackage {
      * target. The markers its tool asks for during update — bone joints and
      * oriented boxes on a bone — go to an overlay above the scene, so they
      * show through the body. Marker models are pooled and only ever grow.
+     * Tools drawing more of their own into the viewport use the same scene
+     * and overlay targets.
      */
 
     // Internal
@@ -189,5 +191,15 @@ public class CharacterViewRenderSystem extends SystemPackage {
 
         markerCount = 0;
         selectedMarkerCount = 0;
+    }
+
+    // Accessible \\
+
+    public FBOInstance getSceneFbo() {
+        return sceneFbo;
+    }
+
+    public FBOInstance getOverlayFbo() {
+        return overlayFbo;
     }
 }

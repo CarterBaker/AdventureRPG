@@ -88,6 +88,15 @@ class IBOGLSLUtility extends EngineUtility {
         return iboInstance;
     }
 
+    static IBOHandle updateIndexData(IBOHandle iboHandle, short[] indices, int indexCount) {
+
+        IBOData oldData = iboHandle.getIBOData();
+        IBOData newData = reupload(oldData.getIndexHandle(), indices, indexCount);
+        iboHandle.constructor(newData);
+
+        return iboHandle;
+    }
+
     private static IBOData reupload(int ibo, short[] indices, int indexCount) {
 
         GL20 gl20 = EngineContext.gl20;
