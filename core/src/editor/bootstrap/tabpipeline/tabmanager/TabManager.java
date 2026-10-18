@@ -6,6 +6,7 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeContext;
 import editor.animationeditor.AnimationEditorContext;
 import editor.animationtreeeditor.AnimationTreeEditorContext;
+import editor.arpgviewer.ArpgViewerContext;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
@@ -168,6 +169,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openProfiler(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_PROFILER, ProfilerContext.class, osWindow);
+    }
+
+    public TabHandle openArpgViewer(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_ARPG_VIEWER, ArpgViewerContext.class, osWindow);
     }
 
     public TabHandle openTab(

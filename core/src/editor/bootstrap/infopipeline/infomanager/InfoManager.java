@@ -1,5 +1,6 @@
 package editor.bootstrap.infopipeline.infomanager;
 
+import java.io.File;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -1085,6 +1086,12 @@ public class InfoManager extends ManagerPackage {
             title.append(EditorSetting.INFO_TITLE_SEPARATOR).append(selectedEntryName);
 
         return title.toString();
+    }
+
+    public File getSelectedFile() {
+        return selectedDocument != null
+                ? infoLibraryBranch.getFile(selectedDocument.getSchema(), selectedDocument.getDefinitionName())
+                : null;
     }
 
     public String getStatusText() {

@@ -77,7 +77,7 @@ class InfoLibraryBranch extends BranchPackage {
         return getFile(schema, definitionName).exists();
     }
 
-    private File getFile(InfoSchemaHandle schema, String definitionName) {
+    File getFile(InfoSchemaHandle schema, String definitionName) {
         return ArpgUtility.resolveFile(new File(schema.getDirectory()), definitionName);
     }
 }

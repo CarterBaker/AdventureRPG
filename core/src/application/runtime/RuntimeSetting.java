@@ -72,12 +72,15 @@ public class RuntimeSetting {
 
     // Squint
     public static final String UNIFORM_SQUINT = "u_squint";
+    public static final String UNIFORM_SQUINT_SUN_SCREEN = "u_sunScreen";
     public static final float SQUINT_LOOK_INNER_DEGREES = 6f;
     public static final float SQUINT_LOOK_OUTER_DEGREES = 28f;
     public static final float SQUINT_SUN_ELEVATION_START = 0f;
     public static final float SQUINT_SUN_ELEVATION_END = 0.25f;
     public static final float SQUINT_OVERCAST_RELIEF = 0.9f;
     public static final float SQUINT_OCCLUSION_DISTANCE = 96f;
+    public static final float SQUINT_SCREEN_EDGE_START = 0.7f;
+    public static final float SQUINT_SCREEN_EDGE_END = 1f;
     public static final float SQUINT_CLOSE_RATE = 6f;
     public static final float SQUINT_OPEN_RATE = 2.5f;
     public static final float SQUINT_VISIBLE_THRESHOLD = 0.005f;

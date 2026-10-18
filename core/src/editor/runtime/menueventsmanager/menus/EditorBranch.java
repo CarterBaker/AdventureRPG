@@ -98,6 +98,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openProfiler(window.getGLWindow());
     }
 
+    public void openArpgViewer(WindowInstance window) {
+        tabManager.openArpgViewer(window.getGLWindow());
+    }
+
     // Layout Dropdown \\
 
     public void refreshLayoutList(MenuInstance menu) {

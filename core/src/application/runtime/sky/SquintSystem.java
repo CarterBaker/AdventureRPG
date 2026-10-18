@@ -7,15 +7,18 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
+import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.weatherpipeline.util.SkyColorUtility;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.water.WaterSystem;
+import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
 import engine.assets.camera.CameraInstance;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 
 public class SquintSystem extends SystemPackage {
@@ -23,12 +26,14 @@ public class SquintSystem extends SystemPackage {
     /*
      * Narrows this window's view while its player looks into the sun. Each
      * frame the glare is measured from how near the camera looks to the sun,
-     * how high the sun stands above the horizon, how clear this grid's sky
-     * is, and whether anything solid stands between the eye and the sun; no
-     * glare reaches an eye under the sea. The eyes close toward that glare
-     * quickly and open again slowly, and while they are narrowed a fullscreen
-     * pass darkens the top and bottom of the screen like closing lids. Nothing
-     * is drawn while the eyes are fully open.
+     * how high the sun stands above the horizon, how far inside the screen
+     * it sits, how clear this grid's sky is, and whether anything solid
+     * stands between the eye and the sun; no glare reaches an eye under the
+     * sea. The eyes close toward that glare quickly and open again slowly,
+     * and while they are narrowed a fullscreen pass darkens the top and
+     * bottom of the screen like closing lids, easing them open wherever the
+     * scene or the clouds hide the sun's disc. Nothing is drawn while the
+     * eyes are fully open.
      */
 
     // Internal
@@ -39,6 +44,7 @@ public class SquintSystem extends SystemPackage {
     private RaycastManager raycastManager;
     private WorldSystem worldSystem;
     private WaterSystem waterSystem;
+    private WeatherSystem weatherSystem;
 
     // Render Target
     private PassInstance squintPass;
@@ -50,6 +56,7 @@ public class SquintSystem extends SystemPackage {
 
     // Glare
     private final Vector3 sunDirection = new Vector3();
+    private final Vector2 sunScreen = new Vector2();
     private final BlockCastStruct castStruct = new BlockCastStruct();
     private float squint;
 
@@ -72,12 +79,20 @@ public class SquintSystem extends SystemPackage {
         this.raycastManager = get(RaycastManager.class);
         this.worldSystem = get(WorldSystem.class);
         this.waterSystem = get(WaterSystem.class);
+        this.weatherSystem = get(WeatherSystem.class);
     }
 
     @Override
     protected void awake() {
+
         this.squintPass = passManager.clonePass(RuntimeSetting.PASS_SQUINT);
         this.squintFbo = fboManager.cloneFbo(RuntimeSetting.FBO_SQUINT, context.getWindow());
+
+        MaterialInstance mat = squintPass.getModelInstance().getMaterial();
+        FBOInstance weatherFbo = weatherSystem.getWeatherFbo();
+
+        mat.setUniform(RuntimeSetting.UNIFORM_SCENE_DEPTH, worldSystem.getWorldFbo().getDepthTexture());
+        mat.setUniform(RuntimeSetting.UNIFORM_CLOUD_COLOR, weatherFbo.getColorTexture(RuntimeSetting.ATTACHMENT_COLOR));
     }
 
     @Override
@@ -95,8 +110,13 @@ public class SquintSystem extends SystemPackage {
         if (squint < RuntimeSetting.SQUINT_VISIBLE_THRESHOLD)
             return;
 
-        squintPass.getModelInstance().getMaterial().setUniform(RuntimeSetting.UNIFORM_SQUINT, squint);
+        MaterialInstance mat = squintPass.getModelInstance().getMaterial();
 
+        mat.setUniform(RuntimeSetting.UNIFORM_SQUINT, squint);
+        mat.setUniform(RuntimeSetting.UNIFORM_SQUINT_SUN_SCREEN, sunScreen);
+
+        renderManager.ensureFboRendered(worldSystem.getWorldFbo(), context.getWindow());
+        renderManager.ensureFboRendered(weatherSystem.getWeatherFbo(), context.getWindow());
         renderManager.pushRenderCall(
                 squintPass.getModelInstance(),
                 squintFbo,
@@ -117,7 +137,10 @@ public class SquintSystem extends SystemPackage {
 
         CelestialUtility.resolveSunDirection(grid.getClockInstance().getVisualTimeOfDay(), sunDirection);
 
-        float glare = resolveSunHeight() * resolveLook(camera.getDirection()) * resolveClearSky(grid);
+        float glare = resolveSunHeight()
+                * resolveLook(camera.getDirection())
+                * resolveOnScreen(camera)
+                * resolveClearSky(grid);
 
         if (glare <= 0f || isSunBlocked(grid, camera))
             return 0f;
@@ -139,6 +162,28 @@ public class SquintSystem extends SystemPackage {
                 + lookDirection.z * sunDirection.z) / lookDirection.length();
 
         return SkyColorUtility.smoothstep(lookOuter, lookInner, facing);
+    }
+
+    // Projects the sun onto the screen and fades the glare as it nears the screen's edge
+    private float resolveOnScreen(CameraInstance camera) {
+
+        float[] matrix = camera.getViewProjection().val;
+        float clipX = matrix[0] * sunDirection.x + matrix[4] * sunDirection.y + matrix[8] * sunDirection.z;
+        float clipY = matrix[1] * sunDirection.x + matrix[5] * sunDirection.y + matrix[9] * sunDirection.z;
+        float clipW = matrix[3] * sunDirection.x + matrix[7] * sunDirection.y + matrix[11] * sunDirection.z;
+
+        if (clipW <= 0f)
+            return 0f;
+
+        float ndcX = clipX / clipW;
+        float ndcY = clipY / clipW;
+
+        sunScreen.set(ndcX * 0.5f + 0.5f, ndcY * 0.5f + 0.5f);
+
+        return 1f - SkyColorUtility.smoothstep(
+                RuntimeSetting.SQUINT_SCREEN_EDGE_START,
+                RuntimeSetting.SQUINT_SCREEN_EDGE_END,
+                Math.max(Math.abs(ndcX), Math.abs(ndcY)));
     }
 
     private float resolveClearSky(GridInstance grid) {

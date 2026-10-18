@@ -87,6 +87,7 @@ public class EditorSetting {
 
     // Tabs
     public static final String TAB_TITLE_COMMAND_CONSOLE = "Command Console";
+    public static final String TAB_TITLE_ARPG_VIEWER = "ARPG Viewer";
     public static final String TAB_TITLE_ANIMATION_EDITOR = "Animation Editor";
     public static final String TAB_TITLE_ANIMATION_TREE_EDITOR = "Animation Tree Editor";
     public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
