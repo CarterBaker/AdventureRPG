@@ -57,7 +57,9 @@ public class WorldGenerationManager extends ManagerPackage {
      * those of the cave biome lining the cell — and leaves fully empty or
      * uniform ones unrealized. The sea stands at sea level and rides the tide,
      * carried into caves that open on it; still water keeps the level its biome
-     * declares, and an underground lake the level of its own basin.
+     * declares or, for a lake laid relative to its host, the level of the host
+     * ground at the heart of its patch, and an underground lake the level of
+     * its own basin.
      * sampleSurface() gives the ground, the water over it and its colors at any
      * point for distant macro terrain and maps, and sampleOpenWater() whether
      * the sea covers it. Output is a pure function of seed and coordinate, so
@@ -80,6 +82,7 @@ public class WorldGenerationManager extends ManagerPackage {
     private TerrainColumnAsyncContainer probeColumnContainer;
     private CaveVolumeAsyncContainer caveVolumeContainer;
     private CaveProbeAsyncContainer caveProbeContainer;
+    private StillWaterAsyncContainer stillWaterContainer;
     private volatile Short2ObjectOpenHashMap<TerrainSurfaceProfileStruct> biomeID2SurfaceProfile =
             new Short2ObjectOpenHashMap<>();
     private volatile int surfaceProfileRevision;
@@ -108,6 +111,7 @@ public class WorldGenerationManager extends ManagerPackage {
         this.probeColumnContainer = create(TerrainColumnAsyncContainer.class);
         this.caveVolumeContainer = create(CaveVolumeAsyncContainer.class);
         this.caveProbeContainer = create(CaveProbeAsyncContainer.class);
+        this.stillWaterContainer = create(StillWaterAsyncContainer.class);
         this.caveCarveBranch = create(CaveCarveBranch.class);
         create(CaveLakeBranch.class);
         this.caveRegionBranch = create(CaveRegionBranch.class);
@@ -190,7 +194,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
                 BiomeBlendStruct blend = column.macroBlend[index];
 
-                biomeManager.sampleBiomeField(worldHandle, sampleWorldX, sampleWorldZ, blend);
+                sampleTerrainField(worldHandle, sampleWorldX, sampleWorldZ, blend);
 
                 TerrainShapeUtility.resolveFeatures(
                         seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks,
@@ -977,7 +981,7 @@ public class WorldGenerationManager extends ManagerPackage {
         double worldWidthBlocks = worldHandle.getWorldScale().x;
         double worldHeightBlocks = worldHandle.getWorldScale().y;
 
-        biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, outBlend);
+        sampleTerrainField(worldHandle, worldX, worldZ, outBlend);
         TerrainShapeUtility.resolveFeatures(
                 seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend, outFeatures);
 
@@ -1052,7 +1056,7 @@ public class WorldGenerationManager extends ManagerPackage {
         double worldWidthBlocks = worldHandle.getWorldScale().x;
         double worldHeightBlocks = worldHandle.getWorldScale().y;
 
-        biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, outBlend);
+        sampleTerrainField(worldHandle, worldX, worldZ, outBlend);
         TerrainShapeUtility.resolveFeatures(
                 seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend, outFeatures);
 
@@ -1061,6 +1065,58 @@ public class WorldGenerationManager extends ManagerPackage {
                 WorldElevationUtility.sampleElevation(worldHandle, worldX, worldZ));
 
         return TerrainShapeUtility.shapeGroundHeightBlocks(macroShape, 0f, 0f, outFeatures);
+    }
+
+    // Still Water \\
+
+    // The biome field at a position with the level of every lake standing relative to its host resolved
+    private void sampleTerrainField(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
+
+        biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, outBlend);
+
+        for (int i = 0; i < outBlend.getCount(); i++)
+            if (outBlend.getBiome(i).hasRelativeStillWater())
+                outBlend.setWaterLevelBlocks(i, resolveLakeLevel(worldHandle, outBlend, i));
+    }
+
+    // The host ground the absolute biomes lay at the lake's heart, offset by the lake, memoized per worker
+    private int resolveLakeLevel(WorldHandle worldHandle, BiomeBlendStruct blend, int index) {
+
+        StillWaterAsyncContainer scratch = stillWaterContainer.getInstance();
+        long lakeHash = blend.getLakeHash(index);
+        int revision = biomeManager.getRevision();
+
+        for (int slot = 0; slot < StillWaterAsyncContainer.LEVEL_CACHE_SIZE; slot++)
+            if (scratch.lakeWorlds[slot] == worldHandle
+                    && scratch.lakeHashes[slot] == lakeHash
+                    && scratch.lakeRevisions[slot] == revision)
+                return scratch.lakeLevels[slot];
+
+        double centerX = WorldWrapUtility.wrapBlockX(worldHandle, blend.getLakeCenterX(index));
+        double centerZ = WorldWrapUtility.wrapBlockZ(worldHandle, blend.getLakeCenterZ(index));
+
+        biomeManager.sampleBiomeField(worldHandle, centerX, centerZ, scratch.blend);
+
+        float groundBlocks = TerrainShapeUtility.computeBaseShapeBlocks(
+                worldHandle.getSeed(), centerX, centerZ,
+                worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
+                scratch.blend,
+                WorldElevationUtility.sampleElevation(worldHandle, centerX, centerZ));
+
+        int level = Math.max(
+                EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS + 1,
+                Math.min(EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS - 1,
+                        Math.round(groundBlocks) + blend.getLakeOffsetBlocks(index)));
+
+        int slot = scratch.lakeNext;
+
+        scratch.lakeNext = (slot + 1) % StillWaterAsyncContainer.LEVEL_CACHE_SIZE;
+        scratch.lakeHashes[slot] = lakeHash;
+        scratch.lakeWorlds[slot] = worldHandle;
+        scratch.lakeRevisions[slot] = revision;
+        scratch.lakeLevels[slot] = level;
+
+        return level;
     }
 
     // Grid Interpolation \\

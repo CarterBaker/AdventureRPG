@@ -28,12 +28,15 @@ public class BiomeManager extends ManagerPackage {
      * reconstructed through a warped kernel so painted borders blend, probable
      * biomes scatter as shaped patches or sit at the center of their parent's
      * patches, chaining their own probable biomes to any depth, and land
-     * meets ocean through its declared beach. Biome IDs are assigned in
-     * registration order. Reads are lock-free: registries are copy-on-write
-     * snapshots and each worker memoizes map colors in its own scratch. Biomes
-     * can be rebuilt or retired live from an edited ARPG tree; the revision
-     * moves on every such change, so whatever derives from the field knows to
-     * refresh.
+     * meets ocean through its declared beach. Every biome's weight is also
+     * credited to the ground it stands on, its own or, for a relative biome,
+     * that of the absolute biome above it, and a biome holding still water
+     * relative to its host is scattered exclusively and tagged with the lake
+     * its chain belongs to. Biome IDs are assigned in registration order.
+     * Reads are lock-free: registries are copy-on-write snapshots and each
+     * worker memoizes map colors in its own scratch. Biomes can be rebuilt or
+     * retired live from an edited ARPG tree; the revision moves on every such
+     * change, so whatever derives from the field knows to refresh.
      */
 
     // Palette
@@ -275,10 +278,10 @@ public class BiomeManager extends ManagerPackage {
         scratch.mapWidth = map.getWidth();
         scratch.mapHeight = map.getHeight();
 
-        for (int i = 0; i < mapBiomeCount; i++)
-            accumulateChain(
-                    scratch, scratch.mapBiomes[i], scratch.mapBiomeWeights[i],
-                    0L, ProbablePatchStruct.NO_PATCH_SHAPE, 0f, outBlend);
+        for (int i = 0; i < mapBiomeCount; i++) {
+            resolveChainLink(scratch, 0).resetRoot(scratch.mapBiomes[i]);
+            accumulateChain(scratch, scratch.mapBiomes[i], scratch.mapBiomeWeights[i], 0, outBlend);
+        }
 
         outBlend.normalize();
         resolveShoreBuffers(outBlend);
@@ -317,46 +320,90 @@ public class BiomeManager extends ManagerPackage {
         return count;
     }
 
-    // Each probable biome claims what it covers of the share earlier entries left, then walks its own chain
+    // Each probable biome claims what it covers of the share earlier entries left, then walks its own chain; the
+    // link at this depth already describes the patch the biome fills
     private void accumulateChain(
             BiomeFieldAsyncContainer scratch,
             BiomeHandle biome,
             float weight,
-            long hostHash,
-            float hostShape,
-            float hostNoise,
+            int depth,
             BiomeBlendStruct outBlend) {
 
+        BiomeChainStruct link = scratch.chain.get(depth);
         ObjectArrayList<ProbableBiomeStruct> probableBiomes = biome.getProbableBiomes();
-        ProbablePatchStruct patch = scratch.probablePatch;
         float remaining = 1f;
 
         for (int i = 0; i < probableBiomes.size() && remaining > 0f; i++) {
 
             ProbableBiomeStruct probableBiome = probableBiomes.get(i);
+            BiomeChainStruct childLink = resolveChainLink(scratch, depth + 1);
+            ProbablePatchStruct patch = childLink.patch;
 
             if (probableBiome.isCentered())
-                BiomeFieldUtility.computeCenterCoverage(probableBiome, hostHash, hostShape, hostNoise, patch);
+                BiomeFieldUtility.computeCenterCoverage(probableBiome, link.patch, patch);
             else
-                BiomeFieldUtility.computeScatterCoverage(
-                        scratch.probableSeed, probableBiome,
-                        scratch.probablePixelX, scratch.probablePixelZ,
-                        scratch.mapWidth, scratch.mapHeight, patch);
+                computeScatterCoverage(scratch, probableBiome, false, patch);
 
-            float coverage = patch.getCoverage();
-
-            if (coverage <= 0f)
+            if (patch.getCoverage() <= 0f)
                 continue;
 
-            float share = remaining * coverage;
+            BiomeHandle variant = getBiomeHandleFromBiomeName(probableBiome.getBiomeName());
+
+            if (!link.lake && variant.hasRelativeStillWater()) {
+
+                if (!probableBiome.isCentered())
+                    computeScatterCoverage(scratch, probableBiome, true, patch);
+
+                if (patch.getCoverage() <= 0f)
+                    continue;
+
+                if (!patch.hasPatch())
+                    throwException("Biome \"" + variant.getBiomeName() + "\" holds still water relative to "
+                            + "its host, but \"" + biome.getBiomeName() + "\" lists it to cover more than "
+                            + EngineSetting.BIOME_PROBABLE_INVERTED_COVERAGE + " of what its earlier entries leave, "
+                            + "which makes it the ground with pockets rather than patches — a lake reads its level "
+                            + "at the heart of its patch, so lower its chance or chain it beneath a lake of its own.");
+            }
+
+            childLink.linkBeneath(link, variant);
+
+            float share = remaining * patch.getCoverage();
             remaining -= share;
 
-            accumulateChain(
-                    scratch, getBiomeHandleFromBiomeName(probableBiome.getBiomeName()), weight * share,
-                    patch.getPatchHash(), patch.getPatchShape(), patch.getPatchNoise(), outBlend);
+            accumulateChain(scratch, variant, weight * share, depth + 1, outBlend);
         }
 
-        outBlend.accumulate(biome, weight * remaining);
+        float ownWeight = weight * remaining;
+        int index = outBlend.accumulate(biome, ownWeight, link.patch.getCrest());
+
+        outBlend.accumulateBase(link.baseBiome, ownWeight);
+
+        if (index != BiomeBlendStruct.INDEX_NONE && link.lake && biome.hasRelativeStillWater())
+            outBlend.setLake(index, link.lakeHash, link.lakeCenterX, link.lakeCenterZ, link.lakeOffsetBlocks);
+    }
+
+    private void computeScatterCoverage(
+            BiomeFieldAsyncContainer scratch,
+            ProbableBiomeStruct probableBiome,
+            boolean exclusive,
+            ProbablePatchStruct outPatch) {
+
+        BiomeFieldUtility.computeScatterCoverage(
+                scratch.probableSeed, probableBiome,
+                scratch.probablePixelX, scratch.probablePixelZ,
+                scratch.mapWidth, scratch.mapHeight,
+                exclusive, outPatch);
+    }
+
+    // The link at a depth, grown once the first time a chain reaches that deep
+    private BiomeChainStruct resolveChainLink(BiomeFieldAsyncContainer scratch, int depth) {
+
+        ObjectArrayList<BiomeChainStruct> chain = scratch.chain;
+
+        while (chain.size() <= depth)
+            chain.add(new BiomeChainStruct());
+
+        return chain.get(depth);
     }
 
     private void resolveShoreBuffers(BiomeBlendStruct blend) {
@@ -377,6 +424,18 @@ public class BiomeManager extends ManagerPackage {
                 continue;
 
             blend.convertToBuffer(i, getBiomeHandleFromBiomeName(biome.getBeachBiomeName()), fraction);
+        }
+
+        int baseCount = blend.getBaseCount();
+
+        for (int i = 0; i < baseCount; i++) {
+
+            BiomeHandle baseBiome = blend.getBaseBiome(i);
+
+            if (baseBiome.hasOceanWater() || !baseBiome.hasBeachBiome())
+                continue;
+
+            blend.convertBaseToBuffer(i, getBiomeHandleFromBiomeName(baseBiome.getBeachBiomeName()), fraction);
         }
 
         blend.normalize();

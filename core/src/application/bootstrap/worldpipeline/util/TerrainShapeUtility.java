@@ -15,20 +15,24 @@ public final class TerrainShapeUtility extends EngineUtility {
     /*
      * Combines the continentalness, erosion and peaks-valleys noise fields with
      * the biome field to produce ground height. The noise is identical
-     * everywhere; only each biome's curves differ, weighted by its share at the
-     * position, plus blended small-scale detail and ridged layers. The ground
-     * is then shaped in a fixed order: cliff terraces break its smooth macro
-     * slopes into ledges and sheer risers before ridges are laid over them,
-     * sea cliffs lift sheer from that broad shoreline wherever the sea is near
-     * and plunge into deep water at their toe, fine detail roughens it all,
-     * and still water floods the ground below its level within its reach and
-     * holds a rim around it. Coverage masks decide where cliffs and sea cliffs
-     * stand, so they come and go along a range or a coastline. The world's
-     * height layer then lifts or sinks each biome's macro height: land toward
-     * the height limit or the shore, the sea floor toward the surface or the
-     * bottom of the world, each only as far as its share of the way, and only
-     * where its own kind holds the position, so shores stay where the biome
-     * map draws them and islands still break the surface.
+     * everywhere; only each biome's curves differ. Absolute biomes lay the
+     * ground, each weighted by the share of it it holds; relative biomes lay
+     * their curves as offsets over that ground, shaped across their patches by
+     * their crown and the crest of the patch, so hills roll up from their host,
+     * lake basins sink into it, and either breaks sharp only where its edge
+     * does. Blended small-scale detail and ridged layers follow. The ground is
+     * then shaped in a fixed order: cliff terraces break its smooth macro
+     * slopes into ledges and sheer risers before ridges are laid over them, sea
+     * cliffs lift sheer from that broad shoreline wherever the sea is near and
+     * plunge into deep water at their toe, fine detail roughens it all, and
+     * still water floods the ground below its level within its reach and holds
+     * a rim around it. Coverage masks decide where cliffs and sea cliffs stand,
+     * so they come and go along a range or a coastline. The world's height
+     * layer then lifts or sinks each biome's macro height: land toward the
+     * height limit or the shore, the sea floor toward the surface or the bottom
+     * of the world, each only as far as its share of the way, and only where
+     * its own kind holds the position, so shores stay where the biome map draws
+     * them and islands still break the surface.
      */
 
     public static final LinearSpline DEFAULT_CONTINENTALNESS_SPLINE = new LinearSpline(
@@ -49,6 +53,22 @@ public final class TerrainShapeUtility extends EngineUtility {
             long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
             BiomeBlendStruct blend,
             float elevation) {
+        return computeShapeBlocks(seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, blend, elevation, true);
+    }
+
+    // The ground the absolute biomes lay alone, with no relative biome's offset over it
+    public static float computeBaseShapeBlocks(
+            long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+            BiomeBlendStruct blend,
+            float elevation) {
+        return computeShapeBlocks(seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, blend, elevation, false);
+    }
+
+    private static float computeShapeBlocks(
+            long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+            BiomeBlendStruct blend,
+            float elevation,
+            boolean withRelief) {
 
         if (blend.isEmpty())
             return EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
@@ -87,31 +107,75 @@ public final class TerrainShapeUtility extends EngineUtility {
         float landReach = computeElevationReach(1f - oceanWeight);
         float oceanReach = computeElevationReach(oceanWeight);
 
-        float blendedHeight = 0f;
+        float seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+        float groundHeight = 0f;
 
-        for (int i = 0; i < blend.getCount(); i++) {
+        for (int i = 0; i < blend.getBaseCount(); i++) {
 
-            BiomeHandle biome = blend.getBiome(i);
-
-            float baseHeight = biome.getContinentalnessSpline().evaluate(continentalness);
-            float erosionAmplitude = biome.getErosionSpline().evaluate(erosion);
-            float peaksValleysContribution = biome.getPeaksValleysSpline().evaluate(ridge)
-                    * erosionAmplitude;
-
-            float heightAboveSeaLevel = (baseHeight - EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS)
-                    + peaksValleysContribution;
-
-            float biomeHeight = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS
-                    + heightAboveSeaLevel * biome.getTerrainHeightScale();
+            BiomeHandle biome = blend.getBaseBiome(i);
+            float biomeHeight = seaLevel + computeCurveBlocks(biome, continentalness, erosion, ridge, seaLevel);
 
             float elevatedHeight = biome.hasOceanWater()
                     ? elevateOcean(biomeHeight, elevation * oceanReach)
                     : elevateLand(biomeHeight, elevation * landReach);
 
-            blendedHeight += elevatedHeight * blend.getWeight(i);
+            groundHeight += elevatedHeight * blend.getBaseWeight(i);
         }
 
-        return blendedHeight;
+        if (!withRelief)
+            return groundHeight;
+
+        float height = groundHeight;
+
+        for (int i = 0; i < blend.getCount(); i++) {
+
+            BiomeHandle biome = blend.getBiome(i);
+
+            if (!biome.isRelative())
+                continue;
+
+            float crownHold = 1f - biome.getRelief().getCrown() * (1f - blend.getCrest(i));
+
+            height += computeReliefBlocks(blend, i, continentalness, erosion, ridge, groundHeight)
+                    * crownHold * blend.getWeight(i);
+        }
+
+        return height;
+    }
+
+    // A relative biome's offset over the ground; a lake's is measured from its own water instead, so its bed lies
+    // level beneath the surface however the ground it floods rises and falls
+    private static float computeReliefBlocks(
+            BiomeBlendStruct blend,
+            int index,
+            float continentalness,
+            float erosion,
+            float ridge,
+            float groundHeight) {
+
+        float offset = computeCurveBlocks(blend.getBiome(index), continentalness, erosion, ridge, 0f);
+        int waterLevel = blend.getWaterLevelBlocks(index);
+
+        if (!blend.getBiome(index).hasRelativeStillWater() || waterLevel == TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED)
+            return offset;
+
+        return offset + waterLevel - groundHeight;
+    }
+
+    // A biome's curves at the position measured from a datum, scaled by its height scale: blocks above sea level for
+    // an absolute biome, its offset over the host's ground for a relative one
+    private static float computeCurveBlocks(
+            BiomeHandle biome,
+            float continentalness,
+            float erosion,
+            float ridge,
+            float datumBlocks) {
+
+        float baseHeight = biome.getContinentalnessSpline().evaluate(continentalness);
+        float erosionAmplitude = biome.getErosionSpline().evaluate(erosion);
+        float peaksValleysContribution = biome.getPeaksValleysSpline().evaluate(ridge) * erosionAmplitude;
+
+        return (baseHeight - datumBlocks + peaksValleysContribution) * biome.getTerrainHeightScale();
     }
 
     // Elevation \\
@@ -329,7 +393,8 @@ public final class TerrainShapeUtility extends EngineUtility {
         outFeatures.caveEntrances = entrances;
     }
 
-    // Biomes sharing a level are one body of water, so the strongest level wins with the weight of every biome on it
+    // Biomes sharing a level are one body of water, so the strongest level wins with the weight of every biome on it;
+    // each biome's level is its own fixed one or the one resolved for the lake it belongs to
     private static void resolveLake(BiomeBlendStruct blend, TerrainFeatureStruct outFeatures) {
 
         int bestLevel = TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED;
@@ -337,16 +402,15 @@ public final class TerrainShapeUtility extends EngineUtility {
 
         for (int i = 0; i < blend.getCount(); i++) {
 
-            BiomeHandle biome = blend.getBiome(i);
+            int level = blend.getWaterLevelBlocks(i);
 
-            if (!biome.hasLakeWater())
+            if (level == TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED)
                 continue;
 
-            int level = biome.getWaterLevelBlocks();
             float levelWeight = 0f;
 
             for (int j = 0; j < blend.getCount(); j++)
-                if (blend.getBiome(j).getWaterLevelBlocks() == level)
+                if (blend.getWaterLevelBlocks(j) == level)
                     levelWeight += blend.getWeight(j);
 
             if (levelWeight > bestWeight) {

@@ -6,11 +6,13 @@ import application.bootstrap.worldpipeline.biome.BiomeCliffStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCoastStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCoveringStruct;
 import application.bootstrap.worldpipeline.biome.BiomeData;
+import application.bootstrap.worldpipeline.biome.BiomeReliefStruct;
 import application.bootstrap.worldpipeline.biome.BiomeRidgeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeTreeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.biome.ProbableBiomePlacement;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
+import application.bootstrap.worldpipeline.biome.ProbableEdgeStruct;
 import application.bootstrap.worldpipeline.tree.TreeDistribution;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
@@ -32,14 +34,14 @@ public class BiomeArpgUtility extends EngineUtility {
 
     /*
      * The single definition of the biome format: display name, weathers, map
-     * color, probable biomes with their placement, patch sizes and shapes,
-     * surface and rock blocks, the coverings laid over them and the tint
-     * every covering takes from the biome, ocean, still water and beach
-     * settings, the
-     * optional terrain shape splines and detail controls, each falling back
-     * to TerrainShapeUtility's defaults, and the optional cliffs, ridges,
-     * coast, caves, the cave biomes it holds beneath it, veins, trees and the
-     * architectures settlements on it are built in. Coverings and veins are
+     * color, probable biomes with their placement, patch sizes and shapes
+     * and the edge they meet their parent with, surface and rock blocks, the
+     * coverings laid over them and the tint every covering takes from the
+     * biome, ocean, still water and beach settings, the optional terrain
+     * shape splines and detail controls, each falling back to
+     * TerrainShapeUtility's defaults, its relief, and the optional cliffs,
+     * ridges, coast, caves, the cave biomes it holds beneath it, veins, trees
+     * and the architectures settlements on it are built in. Coverings and veins are
      * read the same way for cave biomes. A malformed field throws a
      * catchable InternalException naming the biome, so BiomeBuilder fails the
      * boot on it while a live rebuild from the editor reports it and keeps the
@@ -81,7 +83,10 @@ public class BiomeArpgUtility extends EngineUtility {
         BiomeCoveringStruct underwaterCovering = parseCovering(biomeArpg, "underwater_covering", biomeName);
 
         boolean oceanWater = ArpgUtility.getBoolean(biomeArpg, "ocean_water", false);
+        BiomeReliefStruct relief = parseRelief(biomeArpg, biomeName, oceanWater, mapColor);
         int waterLevelBlocks = parseWaterLevel(biomeArpg, biomeName, oceanWater);
+        int waterLevelOffsetBlocks = parseWaterLevelOffset(
+                biomeArpg, biomeName, oceanWater, relief, waterLevelBlocks);
         String beachBiomeName = parseBeachBiomeName(biomeArpg, biomeName, oceanWater);
 
         LinearSpline continentalnessSpline = parseSpline(
@@ -124,9 +129,9 @@ public class BiomeArpgUtility extends EngineUtility {
                 surfaceBlockName, subsurfaceBlockName, underwaterBlockName, rockBlockName, rockSlope,
                 surfaceCovering, rockCovering, underwaterCovering,
                 continentalnessSpline, erosionSpline, peaksValleysSpline,
-                detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale,
+                detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale, relief,
                 cliffs, ridges, coast, caves, caveBiomes, veins, trees, architectureNames,
-                oceanWater, waterLevelBlocks, beachBiomeName);
+                oceanWater, waterLevelBlocks, waterLevelOffsetBlocks, beachBiomeName);
     }
 
     // Display Name \\
@@ -355,9 +360,43 @@ public class BiomeArpgUtility extends EngineUtility {
                 ? chance
                 : computeScatterCoverage(chance, scatteredTotal);
 
+        ProbableEdgeStruct edge = parseEdge(entryArpg, biomeName, variantName);
+
         return new ProbableBiomeStruct(
                 variantName, placement, chance, coverage,
-                minSizeBlocks, maxSizeBlocks, minArms, maxArms, minCoreScale, maxCoreScale);
+                minSizeBlocks, maxSizeBlocks, minArms, maxArms, minCoreScale, maxCoreScale, edge);
+    }
+
+    // Omitted fields keep the engine's single soft fade; a sharp band alone defaults to the soft one
+    private static ProbableEdgeStruct parseEdge(ArpgObjectStruct entryArpg, String biomeName, String variantName) {
+
+        if (!entryArpg.has("edge") || entryArpg.get("edge").isNull())
+            return ProbableEdgeStruct.DEFAULT;
+
+        ArpgObjectStruct edgeArpg = entryArpg.getAsObject("edge");
+        String field = "probable_biomes entry \"" + variantName + "\" \"edge\"";
+
+        float softBand = ArpgUtility.getFloat(edgeArpg, "soft_band", EngineSetting.BIOME_PROBABLE_DEFAULT_EDGE_BAND);
+        float sharpBand = ArpgUtility.getFloat(edgeArpg, "sharp_band", softBand);
+        float sharpShare = ArpgUtility.getFloat(
+                edgeArpg, "sharp_share", EngineSetting.BIOME_PROBABLE_DEFAULT_EDGE_SHARP_SHARE);
+        float sharpWavelength = ArpgUtility.getFloat(
+                edgeArpg, "sharp_wavelength", EngineSetting.BIOME_PROBABLE_DEFAULT_EDGE_SHARP_WAVELENGTH);
+        float sharpRise = ArpgUtility.getFloat(
+                edgeArpg, "sharp_rise", EngineSetting.BIOME_PROBABLE_DEFAULT_EDGE_SHARP_RISE);
+        float roughness = ArpgUtility.getFloat(
+                edgeArpg, "roughness", EngineSetting.BIOME_PROBABLE_DEFAULT_EDGE_ROUGHNESS);
+
+        requireEdgeRange(softBand, false, biomeName, field, "soft_band");
+        requireEdgeRange(sharpBand, false, biomeName, field, "sharp_band");
+        requireEdgeRange(sharpShare, true, biomeName, field, "sharp_share");
+        requireEdgeRange(sharpRise, true, biomeName, field, "sharp_rise");
+        requireEdgeRange(roughness, true, biomeName, field, "roughness");
+
+        if (sharpWavelength <= 0f)
+            throw fail(biomeName, field + " \"sharp_wavelength\" must be greater than 0.");
+
+        return new ProbableEdgeStruct(softBand, sharpBand, sharpShare, sharpWavelength, sharpRise, roughness);
     }
 
     private static float computeScatterCoverage(float chance, float scatteredTotal) {
@@ -425,6 +464,80 @@ public class BiomeArpgUtility extends EngineUtility {
                     + ", exclusive.");
 
         return waterLevelBlocks;
+    }
+
+    // Still water standing a number of blocks above or below the host's ground at the heart of each lake patch
+    private static int parseWaterLevelOffset(
+            ArpgObjectStruct biomeArpg,
+            String biomeName,
+            boolean oceanWater,
+            BiomeReliefStruct relief,
+            int waterLevelBlocks) {
+
+        if (!biomeArpg.has("water_level_offset_blocks"))
+            return BiomeData.WATER_LEVEL_UNDEFINED;
+
+        int offsetBlocks = ArpgUtility.validateInt(biomeArpg, "water_level_offset_blocks");
+
+        if (oceanWater)
+            throw fail(biomeName, "is an ocean and declares \"water_level_offset_blocks\" " + offsetBlocks
+                    + " — the sea always stands at sea level and rides the tide.");
+
+        if (waterLevelBlocks != BiomeData.WATER_LEVEL_UNDEFINED)
+            throw fail(biomeName, "declares both \"water_level_blocks\" and \"water_level_offset_blocks\""
+                    + " — still water stands either at a fixed level or relative to its host, not both.");
+
+        if (!relief.isRelative())
+            throw fail(biomeName, "declares \"water_level_offset_blocks\" without relative \"relief\""
+                    + " — a lake reads its level from the host ground beneath it, so it must lay its basin "
+                    + "over that ground.");
+
+        int heightRangeBlocks = EngineSetting.TERRAIN_MAX_HEIGHT_BLOCKS - EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS;
+
+        if (Math.abs(offsetBlocks) >= heightRangeBlocks)
+            throw fail(biomeName, "has \"water_level_offset_blocks\" " + offsetBlocks
+                    + " — it must be smaller than the world's height range.");
+
+        return offsetBlocks;
+    }
+
+    // Relief \\
+
+    private static BiomeReliefStruct parseRelief(
+            ArpgObjectStruct biomeArpg,
+            String biomeName,
+            boolean oceanWater,
+            int mapColor) {
+
+        if (!biomeArpg.has("relief") || biomeArpg.get("relief").isNull())
+            return BiomeReliefStruct.NONE;
+
+        ArpgObjectStruct reliefArpg = biomeArpg.getAsObject("relief");
+
+        boolean relative = ArpgUtility.getBoolean(reliefArpg, "relative", false);
+        float crown = ArpgUtility.getFloat(reliefArpg, "crown", EngineSetting.DEFAULT_BIOME_RELIEF_CROWN);
+
+        requireUnit(crown, biomeName, "relief", "crown");
+
+        if (!relative) {
+
+            if (crown > 0f)
+                throw fail(biomeName, "\"relief\" has \"crown\" " + crown + " without \"relative\""
+                        + " — only an offset laid over a host can gather toward its patch's heart.");
+
+            return BiomeReliefStruct.NONE;
+        }
+
+        if (oceanWater)
+            throw fail(biomeName, "is an ocean with relative \"relief\" — the sea floor is laid absolutely, "
+                    + "so its water always meets the sea level.");
+
+        if (mapColor != BiomeData.MAP_COLOR_UNDEFINED)
+            throw fail(biomeName, "has relative \"relief\" and a \"map_color\" — a relative biome lays its "
+                    + "height over a host, so it must be chained into one through \"probable_biomes\" "
+                    + "rather than painted on the world map.");
+
+        return new BiomeReliefStruct(true, crown);
     }
 
     // Terrain Features \\
@@ -809,6 +922,18 @@ public class BiomeArpgUtility extends EngineUtility {
         if (value < 0f || value > 1f)
             throw fail(biomeName, "\"" + field + "\" \"" + key + "\" is " + value
                     + " — it must run from 0 to 1.");
+    }
+
+    private static void requireEdgeRange(
+            float value,
+            boolean allowZero,
+            String biomeName,
+            String field,
+            String key) {
+
+        if ((allowZero ? value < 0f : value <= 0f) || value > 1f)
+            throw fail(biomeName, field + " \"" + key + "\" is " + value + " — it must be "
+                    + (allowZero ? "from 0" : "greater than 0") + " and no more than 1.");
     }
 
     private static InternalException fail(String biomeName, String message) {

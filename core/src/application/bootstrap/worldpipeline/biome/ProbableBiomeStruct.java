@@ -9,7 +9,9 @@ public class ProbableBiomeStruct extends StructPackage {
 
     /*
      * One biome chained into a parent: its placement, chance, patch size and
-     * arm ranges, and core scales when centered. Coverage is the part of what
+     * arm ranges, core scales when centered, and the edge its patches meet the
+     * parent with, which sets how far beyond its outline a patch reaches.
+     * Coverage is the part of what
      * earlier entries leave that keeps the chance a share of the whole; past
      * the inverted coverage the biome becomes the ground and its patches the
      * parent's pockets. Scatter density and cell size are resolved once here,
@@ -28,10 +30,14 @@ public class ProbableBiomeStruct extends StructPackage {
     private final int maxArms;
     private final float minCoreScale;
     private final float maxCoreScale;
+    private final ProbableEdgeStruct edge;
 
     private final double sizeLogRatio;
     private final boolean inverted;
     private final double patchDensity;
+    private final float patchReach;
+    private final double shapeReachRadius;
+    private final double exclusiveReachRadius;
     private final double cellSizeBlocks;
 
     public ProbableBiomeStruct(
@@ -44,7 +50,8 @@ public class ProbableBiomeStruct extends StructPackage {
             int minArms,
             int maxArms,
             float minCoreScale,
-            float maxCoreScale) {
+            float maxCoreScale,
+            ProbableEdgeStruct edge) {
 
         this.biomeName = biomeName;
         this.nameSeed = RegistryUtility.toNameSeed(biomeName);
@@ -57,6 +64,7 @@ public class ProbableBiomeStruct extends StructPackage {
         this.maxArms = maxArms;
         this.minCoreScale = minCoreScale;
         this.maxCoreScale = maxCoreScale;
+        this.edge = edge;
 
         this.sizeLogRatio = Math.log((double) maxSizeBlocks / minSizeBlocks);
         this.inverted = coverage > EngineSetting.BIOME_PROBABLE_INVERTED_COVERAGE;
@@ -66,7 +74,12 @@ public class ProbableBiomeStruct extends StructPackage {
 
         this.patchDensity = BiomeFieldUtility.computePatchDensity(
                 inverted ? 1f - coverage : coverage, meanPatchAreaBlocks);
-        this.cellSizeBlocks = BiomeFieldUtility.computeScatterCellSizeBlocks(patchDensity, maxSizeBlocks);
+        this.patchReach = BiomeFieldUtility.computePatchReach(edge);
+        this.shapeReachRadius = BiomeFieldUtility.computeShapeReachRadius(patchReach);
+        this.exclusiveReachRadius = BiomeFieldUtility.computeShapeReachRadius(
+                patchReach + EngineSetting.BIOME_PROBABLE_EXCLUSIVE_DIVIDE);
+        this.cellSizeBlocks = BiomeFieldUtility.computeScatterCellSizeBlocks(
+                patchDensity, maxSizeBlocks, shapeReachRadius);
     }
 
     public String getBiomeName() {
@@ -117,6 +130,10 @@ public class ProbableBiomeStruct extends StructPackage {
         return maxCoreScale;
     }
 
+    public ProbableEdgeStruct getEdge() {
+        return edge;
+    }
+
     public double getSizeLogRatio() {
         return sizeLogRatio;
     }
@@ -127,6 +144,19 @@ public class ProbableBiomeStruct extends StructPackage {
 
     public double getPatchDensity() {
         return patchDensity;
+    }
+
+    public float getPatchReach() {
+        return patchReach;
+    }
+
+    public double getShapeReachRadius() {
+        return shapeReachRadius;
+    }
+
+    // How far a patch reaches when scattered exclusively, the divide beyond its outline included
+    public double getExclusiveReachRadius() {
+        return exclusiveReachRadius;
     }
 
     public double getCellSizeBlocks() {

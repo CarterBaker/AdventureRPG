@@ -144,6 +144,14 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getTerrainHeightScale();
     }
 
+    public BiomeReliefStruct getRelief() {
+        return biomeData.getRelief();
+    }
+
+    public boolean isRelative() {
+        return biomeData.getRelief().isRelative();
+    }
+
     public BiomeCliffStruct getCliffs() {
         return biomeData.getCliffs();
     }
@@ -182,6 +190,14 @@ public class BiomeHandle extends HandlePackage {
 
     public int getWaterLevelBlocks() {
         return biomeData.getWaterLevelBlocks();
+    }
+
+    public int getWaterLevelOffsetBlocks() {
+        return biomeData.getWaterLevelOffsetBlocks();
+    }
+
+    public boolean hasRelativeStillWater() {
+        return biomeData.hasRelativeStillWater();
     }
 
     public boolean hasLakeWater() {

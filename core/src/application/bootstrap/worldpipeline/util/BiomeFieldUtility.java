@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.util;
 
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
+import application.bootstrap.worldpipeline.biome.ProbableEdgeStruct;
 import application.bootstrap.worldpipeline.biome.ProbablePatchStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -14,26 +15,32 @@ public final class BiomeFieldUtility extends EngineUtility {
      * shapes probable biome patches. World-tiling cells each hold a random
      * number of patches: a body with arms, bent by a broad warp and broken by
      * two octaves of edge noise into natural, irregular outlines, merging
-     * where they overlap. Everything depends only on seed and position, so
-     * neighboring chunks agree exactly.
+     * where they overlap, unless they are exclusive: then a patch holds no
+     * share within the reach of one of lower hash and returns across a divide
+     * beyond it, so each stays a body of its own and the two part on ground
+     * neither holds. Each entry's edge decides how wide the fade across the
+     * outline runs, and a sharpness mask drawn per patch narrows it along
+     * stretches of the outline into cliffs that fade back into rolling
+     * ground. Everything depends only on seed and position, so neighboring
+     * chunks agree exactly.
      */
 
     public static final int MAP_SAMPLE_COUNT = EngineSetting.BIOME_MAP_SAMPLE_COUNT;
 
     private static final double BLOCKS_PER_PIXEL = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
-    private static final float PATCH_REACH = 1f
-            + EngineSetting.BIOME_PROBABLE_EDGE_BAND
-            + EngineSetting.BIOME_PROBABLE_EDGE_NOISE_STRENGTH;
     private static final double SHAPE_BOUND_RADIUS = 0.5;
     private static final double SHAPE_EXTENT_RADIUS = SHAPE_BOUND_RADIUS
             + EngineSetting.BIOME_PROBABLE_SHAPE_WARP_STRENGTH;
     private static final double SHAPE_MAX_CAPSULE_RADIUS = Math.max(
             EngineSetting.BIOME_PROBABLE_SHAPE_BODY_MAX_RADIUS,
             EngineSetting.BIOME_PROBABLE_SHAPE_ARM_MAX_RADIUS * EngineSetting.BIOME_PROBABLE_SHAPE_ARM_MAX_TAPER);
-    private static final double SHAPE_REACH_RADIUS = SHAPE_BOUND_RADIUS
-            + SHAPE_MAX_CAPSULE_RADIUS * (PATCH_REACH - 1f)
-            + EngineSetting.BIOME_PROBABLE_SHAPE_WARP_STRENGTH;
     private static final float[] SHAPE_AREA_BY_ARMS = measureShapeAreas();
+
+    // A patch's draws follow its hash in this order
+    private static final int DRAW_CENTER_X = 1;
+    private static final int DRAW_CENTER_Z = 2;
+    private static final int DRAW_DIAMETER = 3;
+    private static final int DRAW_ARMS = 4;
 
     // Border Warp \\
 
@@ -124,10 +131,25 @@ public final class BiomeFieldUtility extends EngineUtility {
         return -Math.log(1.0 - share) / meanPatchAreaBlocks;
     }
 
-    // At least a patch's reach, and wider for sparse patches so most positions only touch one cell
-    public static double computeScatterCellSizeBlocks(double patchDensity, float maxSizeBlocks) {
+    // How far past its outline, in its own outline metric, a patch with this edge still holds a share
+    public static float computePatchReach(ProbableEdgeStruct edge) {
+        return 1f + edge.getMaxBand() + edge.getRoughness();
+    }
 
-        double reachBlocks = maxSizeBlocks * SHAPE_REACH_RADIUS;
+    // The radius around its center, in patch diameters, beyond which a patch of that reach holds nothing
+    public static double computeShapeReachRadius(float patchReach) {
+        return SHAPE_BOUND_RADIUS
+                + SHAPE_MAX_CAPSULE_RADIUS * (patchReach - 1f)
+                + EngineSetting.BIOME_PROBABLE_SHAPE_WARP_STRENGTH;
+    }
+
+    // At least a patch's reach, and wider for sparse patches so most positions only touch one cell
+    public static double computeScatterCellSizeBlocks(
+            double patchDensity,
+            float maxSizeBlocks,
+            double shapeReachRadius) {
+
+        double reachBlocks = maxSizeBlocks * shapeReachRadius;
 
         if (patchDensity <= 0.0)
             return reachBlocks;
@@ -135,11 +157,13 @@ public final class BiomeFieldUtility extends EngineUtility {
         return Math.max(reachBlocks, Math.sqrt(EngineSetting.BIOME_PROBABLE_MAX_CELL_OCCUPANCY / patchDensity));
     }
 
+    // Exclusive patches never share ground with another of their biome, so each stays a body of its own
     public static void computeScatterCoverage(
             long seed,
             ProbableBiomeStruct probableBiome,
             double pixelX, double pixelZ,
             int mapWidth, int mapHeight,
+            boolean exclusive,
             ProbablePatchStruct outPatch) {
 
         outPatch.reset();
@@ -164,7 +188,8 @@ public final class BiomeFieldUtility extends EngineUtility {
         double blockX = pixelX * BLOCKS_PER_PIXEL;
         double blockZ = pixelZ * BLOCKS_PER_PIXEL;
 
-        double maxReachBlocks = probableBiome.getMaxSizeBlocks() * SHAPE_REACH_RADIUS;
+        double shapeReachRadius = probableBiome.getShapeReachRadius();
+        double maxReachBlocks = probableBiome.getMaxSizeBlocks() * shapeReachRadius;
 
         int firstCellX = floorToInt((blockX - maxReachBlocks) / cellWidthBlocks);
         int lastCellX = floorToInt((blockX + maxReachBlocks) / cellWidthBlocks);
@@ -172,83 +197,98 @@ public final class BiomeFieldUtility extends EngineUtility {
         int lastCellZ = floorToInt((blockZ + maxReachBlocks) / cellHeightBlocks);
 
         long scatterSeed = seed ^ mix64(probableBiome.getNameSeed());
+        ProbableEdgeStruct edge = probableBiome.getEdge();
 
         float uncovered = 1f;
         float bestMembership = 0f;
+        float membershipSum = 0f;
+        float crestSum = 0f;
 
         for (int cellZ = firstCellZ; cellZ <= lastCellZ; cellZ++) {
             for (int cellX = firstCellX; cellX <= lastCellX; cellX++) {
 
-                long draw = mix64(hashCell(scatterSeed, wrapIndex(cellX, cellCountX), wrapIndex(cellZ, cellCountZ)));
+                long draw = drawCell(scatterSeed, cellX, cellZ, cellCountX, cellCountZ);
                 int patchCount = drawPatchCount(draw, meanPatchesPerCell, emptyCellChance);
 
                 for (int patch = 0; patch < patchCount; patch++) {
 
                     long patchHash = mix64(draw + patch + 1);
-                    long patchDraw = mix64(patchHash);
-                    double offsetX = blockX - (cellX + (double) toUnit(patchDraw)) * cellWidthBlocks;
-                    patchDraw = mix64(patchDraw);
-                    double offsetZ = blockZ - (cellZ + (double) toUnit(patchDraw)) * cellHeightBlocks;
+                    double centerX = drawPatchCoordinate(cellX, patchHash, DRAW_CENTER_X, cellWidthBlocks);
+                    double centerZ = drawPatchCoordinate(cellZ, patchHash, DRAW_CENTER_Z, cellHeightBlocks);
+                    double offsetX = blockX - centerX;
+                    double offsetZ = blockZ - centerZ;
 
                     if (offsetX * offsetX + offsetZ * offsetZ >= maxReachBlocks * maxReachBlocks)
                         continue;
 
-                    patchDraw = mix64(patchDraw);
-                    double diameter = probableBiome.getMinSizeBlocks()
-                            * Math.exp(probableBiome.getSizeLogRatio() * toUnit(patchDraw));
+                    double diameter = drawPatchDiameter(probableBiome, patchHash);
 
                     double shapeX = offsetX / diameter;
                     double shapeZ = offsetZ / diameter;
 
-                    if (shapeX * shapeX + shapeZ * shapeZ >= SHAPE_REACH_RADIUS * SHAPE_REACH_RADIUS)
+                    if (shapeX * shapeX + shapeZ * shapeZ >= shapeReachRadius * shapeReachRadius)
                         continue;
 
-                    patchDraw = mix64(patchDraw);
-                    int arms = drawArms(patchDraw, probableBiome.getMinArms(), probableBiome.getMaxArms());
+                    int arms = drawPatchArms(probableBiome, patchHash);
                     long shapeHash = patchHash ^ EngineSetting.BIOME_PROBABLE_SHAPE_SEED;
 
                     float shape = computeShapeMetric(shapeHash, arms, shapeX, shapeZ);
 
-                    if (shape >= PATCH_REACH)
+                    if (shape >= probableBiome.getPatchReach())
                         continue;
 
                     float noise = computeEdgeNoise(shapeHash, shapeX, shapeZ);
+                    float edgeMetric = shape - noise * edge.getRoughness();
+                    float sharpness = computeSharpness(shapeHash, edge, shapeX, shapeZ);
+                    float membership = computeOutlineMembership(edgeMetric, edge, sharpness);
 
-                    float membership = computeOutlineMembership(shape, noise);
+                    if (exclusive && membership > 0f)
+                        membership *= computeExclusiveShare(
+                                scatterSeed, probableBiome,
+                                cellCountX, cellCountZ, cellWidthBlocks, cellHeightBlocks,
+                                meanPatchesPerCell, emptyCellChance,
+                                blockX, blockZ, patchHash);
 
                     if (membership <= 0f)
                         continue;
 
                     uncovered *= 1f - membership;
+                    membershipSum += membership;
+                    crestSum += membership * computeCrest(edgeMetric, edge, sharpness);
 
                     if (membership > bestMembership) {
                         bestMembership = membership;
-                        outPatch.set(0f, patchHash, shape, noise);
+                        outPatch.set(0f, patchHash, shape, noise, shapeX, shapeZ, centerX, centerZ);
                     }
                 }
             }
         }
 
-        if (probableBiome.isInverted())
-            outPatch.set(uncovered, 0L, ProbablePatchStruct.NO_PATCH_SHAPE, 0f);
-        else
-            outPatch.setCoverage(1f - uncovered);
+        if (probableBiome.isInverted()) {
+            outPatch.set(uncovered, 0L, ProbablePatchStruct.NO_PATCH_SHAPE, 0f, 0.0, 0.0, 0.0, 0.0);
+            return;
+        }
+
+        outPatch.setCoverage(1f - uncovered);
+
+        if (membershipSum > 0f)
+            outPatch.setCrest(crestSum / membershipSum);
     }
 
-    // A core inside the host patch, its outline the host's shrunk by a drawn scale
+    // A core inside the host patch, its outline the host's shrunk by a drawn scale, sharing the host's center
     public static void computeCenterCoverage(
             ProbableBiomeStruct probableBiome,
-            long hostHash,
-            float hostShape,
-            float hostNoise,
+            ProbablePatchStruct hostPatch,
             ProbablePatchStruct outPatch) {
 
         outPatch.reset();
 
-        if (hostShape == ProbablePatchStruct.NO_PATCH_SHAPE)
+        if (!hostPatch.hasPatch())
             return;
 
-        long coreHash = mix64(hostHash ^ mix64(probableBiome.getNameSeed()) ^ EngineSetting.BIOME_PROBABLE_CORE_SEED);
+        long coreHash = mix64(hostPatch.getPatchHash()
+                ^ mix64(probableBiome.getNameSeed())
+                ^ EngineSetting.BIOME_PROBABLE_CORE_SEED);
 
         if (toUnit(coreHash) >= probableBiome.getChance())
             return;
@@ -256,15 +296,119 @@ public final class BiomeFieldUtility extends EngineUtility {
         float scale = lerp(
                 probableBiome.getMinCoreScale(), probableBiome.getMaxCoreScale(), toUnit(mix64(coreHash)));
 
-        float coreShape = hostShape / scale;
-        float membership = computeOutlineMembership(coreShape, hostNoise);
+        ProbableEdgeStruct edge = probableBiome.getEdge();
+        float coreShape = hostPatch.getPatchShape() / scale;
+        double coreX = hostPatch.getPatchX() / scale;
+        double coreZ = hostPatch.getPatchZ() / scale;
+        float edgeMetric = coreShape - hostPatch.getPatchNoise() * edge.getRoughness();
+        float sharpness = computeSharpness(coreHash, edge, coreX, coreZ);
+        float membership = computeOutlineMembership(edgeMetric, edge, sharpness);
 
-        if (membership > 0f)
-            outPatch.set(membership, coreHash, coreShape, hostNoise);
+        if (membership <= 0f)
+            return;
+
+        outPatch.set(
+                membership, coreHash, coreShape, hostPatch.getPatchNoise(),
+                coreX, coreZ, hostPatch.getCenterX(), hostPatch.getCenterZ());
+        outPatch.setCrest(computeCrest(edgeMetric, edge, sharpness));
+    }
+
+    // The share a patch keeps against every patch of lower hash: none within their reach, returning across the
+    // divide beyond it
+    private static float computeExclusiveShare(
+            long scatterSeed,
+            ProbableBiomeStruct probableBiome,
+            int cellCountX, int cellCountZ,
+            double cellWidthBlocks, double cellHeightBlocks,
+            double meanPatchesPerCell, double emptyCellChance,
+            double blockX, double blockZ,
+            long patchHash) {
+
+        ProbableEdgeStruct edge = probableBiome.getEdge();
+        double reachRadius = probableBiome.getExclusiveReachRadius();
+        double maxReachBlocks = probableBiome.getMaxSizeBlocks() * reachRadius;
+        float divideStart = 1f + edge.getMaxBand();
+
+        int firstCellX = floorToInt((blockX - maxReachBlocks) / cellWidthBlocks);
+        int lastCellX = floorToInt((blockX + maxReachBlocks) / cellWidthBlocks);
+        int firstCellZ = floorToInt((blockZ - maxReachBlocks) / cellHeightBlocks);
+        int lastCellZ = floorToInt((blockZ + maxReachBlocks) / cellHeightBlocks);
+
+        float share = 1f;
+
+        for (int cellZ = firstCellZ; cellZ <= lastCellZ; cellZ++) {
+            for (int cellX = firstCellX; cellX <= lastCellX; cellX++) {
+
+                long draw = drawCell(scatterSeed, cellX, cellZ, cellCountX, cellCountZ);
+                int patchCount = drawPatchCount(draw, meanPatchesPerCell, emptyCellChance);
+
+                for (int patch = 0; patch < patchCount; patch++) {
+
+                    long otherHash = mix64(draw + patch + 1);
+
+                    if (otherHash >= patchHash)
+                        continue;
+
+                    double offsetX = blockX - drawPatchCoordinate(cellX, otherHash, DRAW_CENTER_X, cellWidthBlocks);
+                    double offsetZ = blockZ - drawPatchCoordinate(cellZ, otherHash, DRAW_CENTER_Z, cellHeightBlocks);
+
+                    if (offsetX * offsetX + offsetZ * offsetZ >= maxReachBlocks * maxReachBlocks)
+                        continue;
+
+                    double diameter = drawPatchDiameter(probableBiome, otherHash);
+                    double shapeX = offsetX / diameter;
+                    double shapeZ = offsetZ / diameter;
+
+                    if (shapeX * shapeX + shapeZ * shapeZ >= reachRadius * reachRadius)
+                        continue;
+
+                    long shapeHash = otherHash ^ EngineSetting.BIOME_PROBABLE_SHAPE_SEED;
+                    float shape = computeShapeMetric(
+                            shapeHash, drawPatchArms(probableBiome, otherHash), shapeX, shapeZ);
+                    float edgeMetric = shape - computeEdgeNoise(shapeHash, shapeX, shapeZ) * edge.getRoughness();
+
+                    share *= smoothstep((edgeMetric - divideStart) / EngineSetting.BIOME_PROBABLE_EXCLUSIVE_DIVIDE);
+
+                    if (share <= 0f)
+                        return 0f;
+                }
+            }
+        }
+
+        return share;
     }
 
     private static int computeScatterCellCount(double worldExtentBlocks, double cellSizeBlocks) {
         return Math.max(1, (int) (worldExtentBlocks / cellSizeBlocks));
+    }
+
+    private static long drawCell(long scatterSeed, int cellX, int cellZ, int cellCountX, int cellCountZ) {
+        return mix64(hashCell(scatterSeed, wrapIndex(cellX, cellCountX), wrapIndex(cellZ, cellCountZ)));
+    }
+
+    // The draw a patch takes at its place in the order, mixed on from its hash
+    private static long drawPatch(long patchHash, int order) {
+
+        long draw = patchHash;
+
+        for (int i = 0; i < order; i++)
+            draw = mix64(draw);
+
+        return draw;
+    }
+
+    private static double drawPatchCoordinate(int cell, long patchHash, int order, double cellSizeBlocks) {
+        return (cell + (double) toUnit(drawPatch(patchHash, order))) * cellSizeBlocks;
+    }
+
+    // Diameters drawn log-uniformly between the entry's two sizes
+    private static double drawPatchDiameter(ProbableBiomeStruct probableBiome, long patchHash) {
+        return probableBiome.getMinSizeBlocks()
+                * Math.exp(probableBiome.getSizeLogRatio() * toUnit(drawPatch(patchHash, DRAW_DIAMETER)));
+    }
+
+    private static int drawPatchArms(ProbableBiomeStruct probableBiome, long patchHash) {
+        return drawArms(drawPatch(patchHash, DRAW_ARMS), probableBiome.getMinArms(), probableBiome.getMaxArms());
     }
 
     // Poisson-distributed, so patches cluster and thin out the way scattered features do
@@ -291,12 +435,35 @@ public final class BiomeFieldUtility extends EngineUtility {
         return minArms + Math.min(range - 1, (int) (toUnit(draw) * range));
     }
 
-    private static float computeOutlineMembership(float shape, float noise) {
+    // Half the share at the outline whatever the band, so only the steepness of the fade follows sharpness
+    private static float computeOutlineMembership(float edgeMetric, ProbableEdgeStruct edge, float sharpness) {
 
-        float edge = shape - noise * EngineSetting.BIOME_PROBABLE_EDGE_NOISE_STRENGTH;
-        float band = EngineSetting.BIOME_PROBABLE_EDGE_BAND;
+        float band = lerp(edge.getSoftBand(), edge.getSharpBand(), sharpness);
 
-        return 1f - smoothstep((edge - (1f - band)) / (2f * band));
+        return 1f - smoothstep((edgeMetric - (1f - band)) / (2f * band));
+    }
+
+    // 0 where the outline rolls and 1 where it breaks sharp, fading from one to the other along the outline
+    private static float computeSharpness(long shapeHash, ProbableEdgeStruct edge, double x, double z) {
+
+        if (!edge.hasSharpStretches())
+            return 0f;
+
+        if (edge.getSharpShare() >= 1f)
+            return 1f;
+
+        double frequency = 1.0 / edge.getSharpWavelength();
+        float noise = NoiseUtility.noise2(
+                shapeHash ^ EngineSetting.BIOME_PROBABLE_EDGE_SHARP_SEED, x * frequency, z * frequency);
+        float threshold = (1f - 2f * edge.getSharpShare()) * EngineSetting.BIOME_PROBABLE_EDGE_SHARP_SPAN;
+
+        return smoothstep((noise - threshold) / EngineSetting.BIOME_PROBABLE_EDGE_SHARP_FADE + 0.5f);
+    }
+
+    // A dome gathered toward the patch's heart; wherever the outline breaks sharp it climbs its sharp rise at the
+    // outline at once and the dome carries on from there, so a scarp never leaves a level top behind it
+    private static float computeCrest(float edgeMetric, ProbableEdgeStruct edge, float sharpness) {
+        return 1f - (1f - smoothstep(1f - edgeMetric)) * (1f - sharpness * edge.getSharpRise());
     }
 
     // Patch Shape \\

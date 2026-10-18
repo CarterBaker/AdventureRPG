@@ -883,18 +883,25 @@ public class EngineSetting {
     public static final long BIOME_MATERIAL_DITHER_SEED = 0x7D2B5E0C93A6F418L;
     public static final float BIOME_OCEAN_FLOOD_THRESHOLD = 0.5f;
     public static final long BIOME_PROBABLE_CORE_SEED = 0x6B19E4D03C7A5F28L;
+    public static final float BIOME_PROBABLE_DEFAULT_EDGE_BAND = 0.3f;
+    public static final float BIOME_PROBABLE_DEFAULT_EDGE_ROUGHNESS = 0.25f;
+    public static final float BIOME_PROBABLE_DEFAULT_EDGE_SHARP_RISE = 0.6f;
+    public static final float BIOME_PROBABLE_DEFAULT_EDGE_SHARP_SHARE = 0f;
+    public static final float BIOME_PROBABLE_DEFAULT_EDGE_SHARP_WAVELENGTH = 0.3f;
     public static final int BIOME_PROBABLE_DEFAULT_MAX_ARMS = 3;
     public static final float BIOME_PROBABLE_DEFAULT_MAX_CORE_SCALE = 0.7f;
     public static final float BIOME_PROBABLE_DEFAULT_MAX_SIZE_BLOCKS = 1024f;
     public static final int BIOME_PROBABLE_DEFAULT_MIN_ARMS = 1;
     public static final float BIOME_PROBABLE_DEFAULT_MIN_CORE_SCALE = 0.4f;
     public static final float BIOME_PROBABLE_DEFAULT_MIN_SIZE_BLOCKS = 192f;
-    public static final float BIOME_PROBABLE_EDGE_BAND = 0.3f;
     public static final float BIOME_PROBABLE_EDGE_DETAIL_FREQUENCY = 6.5f;
     public static final float BIOME_PROBABLE_EDGE_DETAIL_WEIGHT = 0.45f;
     public static final float BIOME_PROBABLE_EDGE_NOISE_FREQUENCY = 2.4f;
     public static final long BIOME_PROBABLE_EDGE_NOISE_SEED = 0x2E8A5C71D94B0F63L;
-    public static final float BIOME_PROBABLE_EDGE_NOISE_STRENGTH = 0.25f;
+    public static final float BIOME_PROBABLE_EDGE_SHARP_FADE = 0.25f;
+    public static final long BIOME_PROBABLE_EDGE_SHARP_SEED = 0x71C4E9A03B5D28F6L;
+    public static final float BIOME_PROBABLE_EDGE_SHARP_SPAN = 0.6f;
+    public static final float BIOME_PROBABLE_EXCLUSIVE_DIVIDE = 0.35f;
     public static final float BIOME_PROBABLE_INVERTED_COVERAGE = 0.5f;
     public static final float BIOME_PROBABLE_MAX_CELL_OCCUPANCY = 0.45f;
     public static final int BIOME_PROBABLE_MAX_PATCHES_PER_CELL = 32;
@@ -923,6 +930,7 @@ public class EngineSetting {
     public static final float BIOME_SHORE_BUFFER_FULL_OCEAN_SHARE = 0.12f;
 
     // Terrain Generation
+    public static final float DEFAULT_BIOME_RELIEF_CROWN = 0f;
     public static final float DEFAULT_BIOME_TERRAIN_HEIGHT_SCALE = 1.0f;
     public static final String DEFAULT_STONE_BLOCK_NAME = "TerraArcanaBlocks/Stone Block";
     public static final String DEFAULT_SUBSURFACE_BLOCK_NAME = "TerraArcanaBlocks/Dirt Block";
@@ -1200,6 +1208,7 @@ public class EngineSetting {
 
     // Lakes
     public static final float LAKE_BED_DEPTH_PER_WEIGHT = 24f;
+    public static final int LAKE_LEVEL_CACHE_SIZE = 16;
     public static final int LAKE_LEVEL_UNDEFINED = Integer.MIN_VALUE;
     public static final int LAKE_RIM_BLOCKS = 1;
     public static final float LAKE_RIM_FULL_WEIGHT = 0.3f;

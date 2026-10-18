@@ -13,13 +13,15 @@ public class BiomeData extends DataPackage {
     /*
      * Persistent biome record: registry and display names and every curve world
      * generation shapes this biome with — continentalness, erosion and
-     * peaks-valleys splines, detail amplitude and wavelength, height scale —
+     * peaks-valleys splines, detail amplitude and wavelength, height scale,
+     * and whether they lay heights of their own or offsets over a host —
      * its cliffs, ridges, coast, caves, the cave biomes it holds beneath it
      * and its veins, the rock its steep faces
      * bare and the slope they bare it from, the coverings it lays over its
      * surface, rock and underwater ground and the tint it lends every
      * covering growing in it, plus its ocean flag, the level of
-     * its own still water, its beach biome and the probable biomes chained
+     * its own still water, fixed or relative to the host ground at the heart
+     * of each of its lakes, its beach biome and the probable biomes chained
      * into it, the trees it grows and how it spreads them, and the
      * architectures settlements on it may be built in, none letting no
      * settlement grow there on its own. Omitted curves default to
@@ -58,6 +60,7 @@ public class BiomeData extends DataPackage {
     private final float detailAmplitudeBlocks;
     private final float detailWavelengthBlocks;
     private final float terrainHeightScale;
+    private final BiomeReliefStruct relief;
 
     private final BiomeCliffStruct cliffs;
     private final BiomeRidgeStruct ridges;
@@ -70,6 +73,7 @@ public class BiomeData extends DataPackage {
 
     private final boolean oceanWater;
     private final int waterLevelBlocks;
+    private final int waterLevelOffsetBlocks;
     private final String beachBiomeName;
 
     public BiomeData(
@@ -96,6 +100,7 @@ public class BiomeData extends DataPackage {
             float detailAmplitudeBlocks,
             float detailWavelengthBlocks,
             float terrainHeightScale,
+            BiomeReliefStruct relief,
             BiomeCliffStruct cliffs,
             BiomeRidgeStruct ridges,
             BiomeCoastStruct coast,
@@ -106,6 +111,7 @@ public class BiomeData extends DataPackage {
             ObjectArrayList<String> architectureNames,
             boolean oceanWater,
             int waterLevelBlocks,
+            int waterLevelOffsetBlocks,
             String beachBiomeName) {
 
         this.biomeName = biomeName;
@@ -137,6 +143,7 @@ public class BiomeData extends DataPackage {
         this.detailAmplitudeBlocks = detailAmplitudeBlocks;
         this.detailWavelengthBlocks = detailWavelengthBlocks;
         this.terrainHeightScale = terrainHeightScale;
+        this.relief = relief;
 
         this.cliffs = cliffs;
         this.ridges = ridges;
@@ -149,6 +156,7 @@ public class BiomeData extends DataPackage {
 
         this.oceanWater = oceanWater;
         this.waterLevelBlocks = waterLevelBlocks;
+        this.waterLevelOffsetBlocks = waterLevelOffsetBlocks;
         this.beachBiomeName = beachBiomeName;
     }
 
@@ -252,6 +260,10 @@ public class BiomeData extends DataPackage {
         return terrainHeightScale;
     }
 
+    public BiomeReliefStruct getRelief() {
+        return relief;
+    }
+
     public BiomeCliffStruct getCliffs() {
         return cliffs;
     }
@@ -292,8 +304,16 @@ public class BiomeData extends DataPackage {
         return waterLevelBlocks;
     }
 
+    public int getWaterLevelOffsetBlocks() {
+        return waterLevelOffsetBlocks;
+    }
+
+    public boolean hasRelativeStillWater() {
+        return waterLevelOffsetBlocks != WATER_LEVEL_UNDEFINED;
+    }
+
     public boolean hasLakeWater() {
-        return waterLevelBlocks != WATER_LEVEL_UNDEFINED;
+        return waterLevelBlocks != WATER_LEVEL_UNDEFINED || hasRelativeStillWater();
     }
 
     public String getBeachBiomeName() {
