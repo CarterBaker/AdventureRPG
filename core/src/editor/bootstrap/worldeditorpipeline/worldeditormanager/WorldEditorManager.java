@@ -4,6 +4,7 @@ import java.io.File;
 
 import application.bootstrap.mappipeline.mapmanager.MapManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.rivermanager.RiverManager;
 import application.bootstrap.worldpipeline.util.WorldElevationUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
@@ -51,6 +52,7 @@ public class WorldEditorManager extends ManagerPackage {
     private BiomeManager biomeManager;
     private MapManager mapManager;
     private WorldStreamManager worldStreamManager;
+    private RiverManager riverManager;
     private ImageManager imageManager;
     private WorldBiomeBranch worldBiomeBranch;
     private WorldHeightBranch worldHeightBranch;
@@ -111,6 +113,7 @@ public class WorldEditorManager extends ManagerPackage {
         this.biomeManager = get(BiomeManager.class);
         this.mapManager = get(MapManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.riverManager = get(RiverManager.class);
         this.imageManager = get(ImageManager.class);
     }
 
@@ -175,7 +178,8 @@ public class WorldEditorManager extends ManagerPackage {
         return imageManager.openImage(imageName, file, pixmap, true);
     }
 
-    // Every map tile and preview chunk a change to these world pixels can reach, regenerated
+    // Every map tile and preview chunk a change to these world pixels can reach, regenerated, and the world drained
+    // again so its rivers follow the edit wherever they run
     void restreamPixels(
             WorldHandle editedWorldHandle,
             int minPixelX,
@@ -185,6 +189,7 @@ public class WorldEditorManager extends ManagerPackage {
 
         mapManager.invalidateWorldPixels(editedWorldHandle, minPixelX, minPixelY, maxPixelX, maxPixelY);
         worldStreamManager.requestLiveRebuild(editedWorldHandle, minPixelX, minPixelY, maxPixelX, maxPixelY);
+        riverManager.invalidateNetwork(editedWorldHandle);
     }
 
     // Layers \\

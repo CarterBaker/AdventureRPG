@@ -15,8 +15,8 @@ public class BiomeData extends DataPackage {
      * generation shapes this biome with — continentalness, erosion and
      * peaks-valleys splines, detail amplitude and wavelength, height scale,
      * and whether they lay heights of their own or offsets over a host —
-     * its cliffs, ridges, coast, caves, the cave biomes it holds beneath it
-     * and its veins, the rock its steep faces
+     * its cliffs, ridges, coast, rivers, caves, the cave biomes it holds
+     * beneath it and its veins, the rock its steep faces
      * bare and the slope they bare it from, the coverings it lays over its
      * surface, rock and underwater ground and the tint it lends every
      * covering growing in it, plus its ocean flag, the level of
@@ -65,6 +65,7 @@ public class BiomeData extends DataPackage {
     private final BiomeCliffStruct cliffs;
     private final BiomeRidgeStruct ridges;
     private final BiomeCoastStruct coast;
+    private final BiomeRiverStruct river;
     private final BiomeCaveStruct caves;
     private final ObjectArrayList<BiomeCaveBiomeStruct> caveBiomes;
     private final ObjectArrayList<BiomeVeinStruct> veins;
@@ -104,6 +105,7 @@ public class BiomeData extends DataPackage {
             BiomeCliffStruct cliffs,
             BiomeRidgeStruct ridges,
             BiomeCoastStruct coast,
+            BiomeRiverStruct river,
             BiomeCaveStruct caves,
             ObjectArrayList<BiomeCaveBiomeStruct> caveBiomes,
             ObjectArrayList<BiomeVeinStruct> veins,
@@ -148,6 +150,7 @@ public class BiomeData extends DataPackage {
         this.cliffs = cliffs;
         this.ridges = ridges;
         this.coast = coast;
+        this.river = river;
         this.caves = caves;
         this.caveBiomes = caveBiomes;
         this.veins = veins;
@@ -274,6 +277,10 @@ public class BiomeData extends DataPackage {
 
     public BiomeCoastStruct getCoast() {
         return coast;
+    }
+
+    public BiomeRiverStruct getRiver() {
+        return river;
     }
 
     public BiomeCaveStruct getCaves() {

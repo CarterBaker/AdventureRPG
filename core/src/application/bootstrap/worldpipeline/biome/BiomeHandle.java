@@ -164,6 +164,10 @@ public class BiomeHandle extends HandlePackage {
         return biomeData.getCoast();
     }
 
+    public BiomeRiverStruct getRiver() {
+        return biomeData.getRiver();
+    }
+
     public BiomeCaveStruct getCaves() {
         return biomeData.getCaves();
     }

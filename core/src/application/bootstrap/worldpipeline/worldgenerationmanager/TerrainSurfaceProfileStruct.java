@@ -9,7 +9,8 @@ class TerrainSurfaceProfileStruct extends StructPackage {
     /*
      * One biome's dressing resolved against the block palette: the blocks it
      * lays on land, under water and on faces too steep to hold soil, the
-     * slope those faces start at, the coverage it lays over each of those
+     * slope those faces start at, the blocks its rivers lay on their bed,
+     * their banks and the walls they cut, the coverage it lays over each of those
      * three with how many levels a column may fall short of it, its veins
      * with the IDs of the contents they set, the cave biomes it holds beneath
      * it, and the map colors distant terrain draws it with, its coverings
@@ -23,6 +24,9 @@ class TerrainSurfaceProfileStruct extends StructPackage {
     final short underwaterBlockID;
     final short rockBlockID;
     final float rockSlope;
+    final short riverBedBlockID;
+    final short riverBankBlockID;
+    final short riverWallBlockID;
     final short surfaceCoverage;
     final int surfaceCoverageVariance;
     final short underwaterCoverage;
@@ -44,6 +48,9 @@ class TerrainSurfaceProfileStruct extends StructPackage {
             short underwaterBlockID,
             short rockBlockID,
             float rockSlope,
+            short riverBedBlockID,
+            short riverBankBlockID,
+            short riverWallBlockID,
             short surfaceCoverage,
             int surfaceCoverageVariance,
             short underwaterCoverage,
@@ -64,6 +71,9 @@ class TerrainSurfaceProfileStruct extends StructPackage {
         this.underwaterBlockID = underwaterBlockID;
         this.rockBlockID = rockBlockID;
         this.rockSlope = rockSlope;
+        this.riverBedBlockID = riverBedBlockID;
+        this.riverBankBlockID = riverBankBlockID;
+        this.riverWallBlockID = riverWallBlockID;
         this.surfaceCoverage = surfaceCoverage;
         this.surfaceCoverageVariance = surfaceCoverageVariance;
         this.underwaterCoverage = underwaterCoverage;

@@ -8,6 +8,7 @@ import application.bootstrap.worldpipeline.biome.BiomeCoveringStruct;
 import application.bootstrap.worldpipeline.biome.BiomeData;
 import application.bootstrap.worldpipeline.biome.BiomeReliefStruct;
 import application.bootstrap.worldpipeline.biome.BiomeRidgeStruct;
+import application.bootstrap.worldpipeline.biome.BiomeRiverStruct;
 import application.bootstrap.worldpipeline.biome.BiomeTreeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.biome.ProbableBiomePlacement;
@@ -40,8 +41,8 @@ public class BiomeArpgUtility extends EngineUtility {
      * biome, ocean, still water and beach settings, the optional terrain
      * shape splines and detail controls, each falling back to
      * TerrainShapeUtility's defaults, its relief, and the optional cliffs,
-     * ridges, coast, caves, the cave biomes it holds beneath it, veins, trees
-     * and the architectures settlements on it are built in. Coverings and veins are
+     * ridges, coast, rivers, caves, the cave biomes it holds beneath it,
+     * veins, trees and the architectures settlements on it are built in. Coverings and veins are
      * read the same way for cave biomes. A malformed field throws a
      * catchable InternalException naming the biome, so BiomeBuilder fails the
      * boot on it while a live rebuild from the editor reports it and keeps the
@@ -116,6 +117,8 @@ public class BiomeArpgUtility extends EngineUtility {
         BiomeCliffStruct cliffs = parseCliffs(biomeArpg, biomeName);
         BiomeRidgeStruct ridges = parseRidges(biomeArpg, biomeName);
         BiomeCoastStruct coast = parseCoast(biomeArpg, biomeName, oceanWater);
+        BiomeRiverStruct river = parseRiver(
+                biomeArpg, biomeName, oceanWater, surfaceBlockName, underwaterBlockName, rockBlockName);
         BiomeCaveStruct caves = parseCaves(biomeArpg, biomeName);
         ObjectArrayList<BiomeCaveBiomeStruct> caveBiomes = parseCaveBiomes(biomeArpg, biomeName);
         ObjectArrayList<BiomeVeinStruct> veins = parseVeins(biomeArpg, biomeName, EngineSetting.BIOME_MAX_VEINS);
@@ -130,7 +133,7 @@ public class BiomeArpgUtility extends EngineUtility {
                 surfaceCovering, rockCovering, underwaterCovering,
                 continentalnessSpline, erosionSpline, peaksValleysSpline,
                 detailAmplitudeBlocks, detailWavelengthBlocks, terrainHeightScale, relief,
-                cliffs, ridges, coast, caves, caveBiomes, veins, trees, architectureNames,
+                cliffs, ridges, coast, river, caves, caveBiomes, veins, trees, architectureNames,
                 oceanWater, waterLevelBlocks, waterLevelOffsetBlocks, beachBiomeName);
     }
 
@@ -612,6 +615,74 @@ public class BiomeArpgUtility extends EngineUtility {
         return new BiomeCoastStruct(cliffHeightBlocks, coverage, overhangBlocks, seaCaves);
     }
 
+    // A river's blocks default to the biome's own: its underwater ground for the bed, its surface for the banks
+    // and its rock for the walls it cuts
+    private static BiomeRiverStruct parseRiver(
+            ArpgObjectStruct biomeArpg,
+            String biomeName,
+            boolean oceanWater,
+            String surfaceBlockName,
+            String underwaterBlockName,
+            String rockBlockName) {
+
+        boolean declared = biomeArpg.has("river") && !biomeArpg.get("river").isNull();
+
+        if (declared && oceanWater)
+            throw fail(biomeName, "is an ocean and declares \"river\" — rivers run only on land and end at the sea.");
+
+        ArpgObjectStruct riverArpg = declared ? biomeArpg.getAsObject("river") : new ArpgObjectStruct();
+
+        float runoff = ArpgUtility.getFloat(riverArpg, "runoff", EngineSetting.DEFAULT_BIOME_RIVER_RUNOFF);
+        float meander = ArpgUtility.getFloat(riverArpg, "meander", EngineSetting.DEFAULT_BIOME_RIVER_MEANDER);
+        int incisionBlocks = ArpgUtility.getInt(
+                riverArpg, "incision_blocks", EngineSetting.DEFAULT_BIOME_RIVER_INCISION_BLOCKS);
+        float wallSlope = ArpgUtility.getFloat(riverArpg, "wall_slope", EngineSetting.DEFAULT_BIOME_RIVER_WALL_SLOPE);
+        int floodplainBlocks = ArpgUtility.getInt(
+                riverArpg, "floodplain_blocks", EngineSetting.DEFAULT_BIOME_RIVER_FLOODPLAIN_BLOCKS);
+        float widthScale = ArpgUtility.getFloat(
+                riverArpg, "width_scale", EngineSetting.DEFAULT_BIOME_RIVER_WIDTH_SCALE);
+        float depthScale = ArpgUtility.getFloat(
+                riverArpg, "depth_scale", EngineSetting.DEFAULT_BIOME_RIVER_DEPTH_SCALE);
+        String bedBlockName = parseRiverBlockName(riverArpg, "bed_block", underwaterBlockName);
+        String bankBlockName = parseRiverBlockName(riverArpg, "bank_block", surfaceBlockName);
+        String wallBlockName = parseRiverBlockName(riverArpg, "wall_block", rockBlockName);
+        float underground = ArpgUtility.getFloat(
+                riverArpg, "underground", EngineSetting.DEFAULT_BIOME_RIVER_UNDERGROUND);
+        int tunnelHeadroomBlocks = ArpgUtility.getInt(
+                riverArpg, "tunnel_headroom_blocks", EngineSetting.DEFAULT_BIOME_RIVER_TUNNEL_HEADROOM_BLOCKS);
+
+        if (runoff < 0f)
+            throw fail(biomeName, "\"river\" \"runoff\" must not be negative.");
+
+        if (incisionBlocks < 0 || incisionBlocks > EngineSetting.RIVER_MAX_INCISION_BLOCKS)
+            throw fail(biomeName, "\"river\" \"incision_blocks\" is " + incisionBlocks
+                    + " — it must run from 0 to " + EngineSetting.RIVER_MAX_INCISION_BLOCKS + ".");
+
+        if (wallSlope <= 0f)
+            throw fail(biomeName, "\"river\" \"wall_slope\" must be greater than 0.");
+
+        if (floodplainBlocks < 0 || floodplainBlocks > EngineSetting.RIVER_MAX_FLOODPLAIN_BLOCKS)
+            throw fail(biomeName, "\"river\" \"floodplain_blocks\" is " + floodplainBlocks
+                    + " — it must run from 0 to " + EngineSetting.RIVER_MAX_FLOODPLAIN_BLOCKS + ".");
+
+        if (widthScale <= 0f)
+            throw fail(biomeName, "\"river\" \"width_scale\" must be greater than 0.");
+
+        if (depthScale <= 0f)
+            throw fail(biomeName, "\"river\" \"depth_scale\" must be greater than 0.");
+
+        if (tunnelHeadroomBlocks < EngineSetting.RIVER_TUNNEL_MIN_HEADROOM_BLOCKS)
+            throw fail(biomeName, "\"river\" \"tunnel_headroom_blocks\" must be at least "
+                    + EngineSetting.RIVER_TUNNEL_MIN_HEADROOM_BLOCKS + ".");
+
+        requireUnit(meander, biomeName, "river", "meander");
+        requireUnit(underground, biomeName, "river", "underground");
+
+        return new BiomeRiverStruct(
+                runoff, meander, incisionBlocks, wallSlope, floodplainBlocks, widthScale, depthScale,
+                bedBlockName, bankBlockName, wallBlockName, underground, tunnelHeadroomBlocks);
+    }
+
     private static BiomeCaveStruct parseCaves(ArpgObjectStruct biomeArpg, String biomeName) {
 
         if (!biomeArpg.has("caves") || biomeArpg.get("caves").isNull())
@@ -905,6 +976,14 @@ public class BiomeArpgUtility extends EngineUtility {
 
     private static String parseBlockName(ArpgObjectStruct biomeArpg, String field, String fallback) {
         return biomeArpg.has(field) ? biomeArpg.get(field).getAsString() : fallback;
+    }
+
+    // A river block left out or left empty takes the biome's own block
+    private static String parseRiverBlockName(ArpgObjectStruct riverArpg, String field, String fallback) {
+
+        String blockName = parseBlockName(riverArpg, field, fallback);
+
+        return blockName.isEmpty() ? fallback : blockName;
     }
 
     // Utility \\

@@ -1,6 +1,8 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
+import application.bootstrap.worldpipeline.river.RiverColumnStruct;
+import application.bootstrap.worldpipeline.river.RiverGatherStruct;
 import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
 import application.bootstrap.worldpipeline.util.TerrainFeatureStruct;
 import application.bootstrap.worldpipeline.util.TideUtility;
@@ -18,8 +20,10 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
      * raw, that drive sub-block edge smoothing, slope and shore distance.
      * Each block column carries its ground, dressing, water, the band its
      * caves and sea caves may hollow with how much of each kind of cave it
-     * holds and how far the sea is walled off below it, its veins and the
-     * lowest cell the tide reaches. The vein palette holds the surface's
+     * holds and how far the sea is walled off below it, its veins, the
+     * lowest cell the tide reaches and the tunnel a cave river hollows
+     * through it, with the reaches of river that touch the chunk gathered
+     * once and the column a river last shaped. The vein palette holds the surface's
      * veins and those of every cave biome lining the chunk's regions, each
      * with the heights it can reach. The cave and vein lattices are refilled
      * per subchunk. Filled once per chunk by computeColumn() and read by
@@ -105,6 +109,16 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     float[] columnSeaCaves;
     int[] columnTideFloorY;
 
+    // Per Block Column — Rivers
+    int[] columnTunnelFloorY;
+    int[] columnTunnelCeilingY;
+    int[] columnTunnelLevelY;
+    short[] columnTunnelBedBlockID;
+
+    // Rivers
+    RiverGatherStruct riverGather;
+    RiverColumnStruct riverColumn;
+
     // Whole Column
     int columnTopBlocks;
     int columnMinGroundHeightBlocks;
@@ -117,6 +131,8 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     boolean hasSeaFeatures;
     int veinMinY;
     int veinMaxY;
+    int riverMinY;
+    int riverMaxY;
 
     short biomeID;
     boolean allOceanWater;
@@ -186,6 +202,14 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
         this.columnOverhangBlocks = new float[COLUMN_COUNT];
         this.columnSeaCaves = new float[COLUMN_COUNT];
         this.columnTideFloorY = new int[COLUMN_COUNT];
+
+        this.columnTunnelFloorY = new int[COLUMN_COUNT];
+        this.columnTunnelCeilingY = new int[COLUMN_COUNT];
+        this.columnTunnelLevelY = new int[COLUMN_COUNT];
+        this.columnTunnelBedBlockID = new short[COLUMN_COUNT];
+
+        this.riverGather = new RiverGatherStruct();
+        this.riverColumn = new RiverColumnStruct();
 
         this.veinSeeds = new long[VEIN_PALETTE_MAX];
         this.veinSlotMinY = new int[VEIN_PALETTE_MAX];

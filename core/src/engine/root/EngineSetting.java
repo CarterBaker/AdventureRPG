@@ -294,6 +294,7 @@ public class EngineSetting {
     public static final int MAX_THREAD_POOL_SIZE = 32;
     public static final int MIN_AUTO_THREAD_POOL_SIZE = 2;
     public static final String WORLD_STREAMING_THREAD_NAME = "WorldStreaming";
+    public static final String GENERAL_THREAD_NAME = "General";
     public static final long NANOS_PER_MILLI = 1_000_000L;
     public static final long NANOS_PER_SECOND = 1_000_000_000L;
     public static final int TARGET_FRAME_RATE = 60;
@@ -1213,6 +1214,78 @@ public class EngineSetting {
     public static final int LAKE_RIM_BLOCKS = 1;
     public static final float LAKE_RIM_FULL_WEIGHT = 0.3f;
     public static final float LAKE_SHORE_WEIGHT = 0.5f;
+
+    // Rivers — a world drains over a grid of map cells, each shedding its biome's runoff down the lowest way to the
+    // sea; a cell whose gathered flow passes the threshold carries a river to the cell it drains into, traced over
+    // the real ground between their jittered hearts, wound across flat land and cut into the land by its biome. No
+    // river above ground runs below the highest tide, so where one meets the sea it pours over its lip whenever
+    // the tide falls, and a reach a biome sends underground runs as a cave river beneath the land
+    public static final float DEFAULT_BIOME_RIVER_DEPTH_SCALE = 1f;
+    public static final int DEFAULT_BIOME_RIVER_FLOODPLAIN_BLOCKS = 3;
+    public static final int DEFAULT_BIOME_RIVER_INCISION_BLOCKS = 2;
+    public static final float DEFAULT_BIOME_RIVER_MEANDER = 0.5f;
+    public static final float DEFAULT_BIOME_RIVER_RUNOFF = 1f;
+    public static final int DEFAULT_BIOME_RIVER_TUNNEL_HEADROOM_BLOCKS = 5;
+    public static final float DEFAULT_BIOME_RIVER_UNDERGROUND = 0f;
+    public static final float DEFAULT_BIOME_RIVER_WALL_SLOPE = 0.6f;
+    public static final float DEFAULT_BIOME_RIVER_WIDTH_SCALE = 1f;
+    public static final int RIVER_CACHE_CAPACITY = 768;
+    public static final int RIVER_CAVE_GUARD_BLOCKS = 3;
+    public static final int RIVER_CAVE_GUARD_DEPTH_BLOCKS = 6;
+    public static final int RIVER_CELL_PIXELS = 2;
+    public static final float RIVER_COARSE_WIDTH_GAIN = 16f;
+    public static final int RIVER_CURTAIN_BLOCKS = 2;
+    public static final float RIVER_DEPTH_PER_DOUBLING_BLOCKS = 0.5f;
+    public static final float RIVER_DISCHARGE_THRESHOLD = 24f;
+    public static final int RIVER_FILL_QUANTA_PER_BLOCK = 16;
+    public static final long RIVER_FLAT_SALT = 0x4E8A1D3F96C27B05L;
+    public static final int RIVER_FLAT_TIE_BITS = 15;
+    public static final float RIVER_HALF_WIDTH_PER_DOUBLING_BLOCKS = 1.25f;
+    public static final int RIVER_LEVEL_NONE = Short.MIN_VALUE;
+    public static final float RIVER_MAX_DEPTH_BLOCKS = 8f;
+    public static final int RIVER_MAX_FLOODPLAIN_BLOCKS = 24;
+    public static final float RIVER_MAX_HALF_WIDTH_BLOCKS = 28f;
+    public static final int RIVER_MAX_INCISION_BLOCKS = 160;
+    public static final float RIVER_MAX_VALLEY_BLOCKS = 128f;
+    public static final float RIVER_MEANDER_MAX_AMPLITUDE_BLOCKS = 160f;
+    public static final float RIVER_MEANDER_MAX_AMPLITUDE_PER_WAVELENGTH = 0.3f;
+    public static final float RIVER_MEANDER_MAX_WAVELENGTH_BLOCKS = 640f;
+    public static final float RIVER_MEANDER_MIN_WAVELENGTH_BLOCKS = 48f;
+    public static final float RIVER_MEANDER_OVERTONE_SHARE = 0.35f;
+    public static final float RIVER_MEANDER_RELIEF_BLOCKS = 24f;
+    public static final long RIVER_MEANDER_SALT = 0xD5486C2E19F7B3A0L;
+    public static final float RIVER_MEANDER_WAVELENGTH_PER_WIDTH = 12f;
+    public static final int RIVER_MIN_BANK_BLOCKS = 1;
+    public static final float RIVER_MIN_DEPTH_BLOCKS = 1f;
+    public static final float RIVER_MIN_HALF_WIDTH_BLOCKS = 1f;
+    public static final int RIVER_MOUTH_SEARCH_BLOCKS = 384;
+    public static final int RIVER_MOUTH_TRENCH_BLOCKS = 48;
+    public static final float RIVER_NODE_JITTER = 0.3f;
+    public static final long RIVER_NODE_SALT = 0x71C3E5A90B2D4F68L;
+    public static final double RIVER_PLANNED_SPACING_BLOCKS = 32.0;
+    public static final double RIVER_POINT_SPACING_BLOCKS = 4.0;
+    public static final float RIVER_PROXY_RIDGE = 0.7f;
+    public static final float RIVER_RIM_SLOPE = 6f;
+    public static final float RIVER_ROUGHNESS_BLOCKS = 8f;
+    public static final float RIVER_ROUGHNESS_LACUNARITY = 2.0f;
+    public static final int RIVER_ROUGHNESS_OCTAVES = 2;
+    public static final float RIVER_ROUGHNESS_PERSISTENCE = 0.5f;
+    public static final long RIVER_ROUGHNESS_SALT = 0x9A2C5F70E31B8D46L;
+    public static final double RIVER_ROUGHNESS_WAVELENGTH_BLOCKS = 5000.0;
+    public static final float RIVER_RIM_WIDTH_BLOCKS = 16f;
+    public static final int RIVER_SMOOTHING_PASSES = 3;
+    public static final int RIVER_STRENGTH_STEPS_PER_DOUBLING = 16;
+    public static final float RIVER_TRACE_CORRIDOR = 0.45f;
+    public static final int RIVER_TRACE_HEADINGS = 5;
+    public static final float RIVER_TRACE_MAX_STEP_FACTOR = 4f;
+    public static final float RIVER_TRACE_PULL_BLOCKS = 24f;
+    public static final double RIVER_TRACE_STEP_BLOCKS = 32.0;
+    public static final double RIVER_TRACE_TURN_RADIANS = 0.35;
+    public static final int RIVER_TUNNEL_MIN_COVER_BLOCKS = 4;
+    public static final int RIVER_TUNNEL_MIN_HEADROOM_BLOCKS = 2;
+    public static final int RIVER_TUNNEL_MIN_POINTS = 6;
+    public static final long RIVER_TUNNEL_SALT = 0x2B9F47D1C6E03A85L;
+    public static final int RIVER_WALL_DRESS_BLOCKS = 2;
 
     // Ocean & Tide
     public static final String OCEAN_DATA_UBO = "OceanData";

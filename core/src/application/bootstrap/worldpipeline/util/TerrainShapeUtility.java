@@ -73,35 +73,14 @@ public final class TerrainShapeUtility extends EngineUtility {
         if (blend.isEmpty())
             return EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
 
-        double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
+        double spatialAngle = toSpatialAngle(worldX, worldWidthBlocks);
         double cosAngle = Math.cos(spatialAngle);
         double sinAngle = Math.sin(spatialAngle);
 
-        float continentalness = TerrainNoiseUtility.sampleFractal(
-                seed ^ EngineSetting.TERRAIN_CONTINENTALNESS_SEED_SALT,
-                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
-                EngineSetting.TERRAIN_CONTINENTALNESS_WAVELENGTH_BLOCKS,
-                EngineSetting.TERRAIN_CONTINENTALNESS_OCTAVES,
-                EngineSetting.TERRAIN_CONTINENTALNESS_PERSISTENCE,
-                EngineSetting.TERRAIN_CONTINENTALNESS_LACUNARITY);
-
-        float erosion = TerrainNoiseUtility.sampleFractal(
-                seed ^ EngineSetting.TERRAIN_EROSION_SEED_SALT,
-                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
-                EngineSetting.TERRAIN_EROSION_WAVELENGTH_BLOCKS,
-                EngineSetting.TERRAIN_EROSION_OCTAVES,
-                EngineSetting.TERRAIN_EROSION_PERSISTENCE,
-                EngineSetting.TERRAIN_EROSION_LACUNARITY);
-
-        float peaksValleysRaw = TerrainNoiseUtility.sampleFractal(
-                seed ^ EngineSetting.TERRAIN_PV_SEED_SALT,
-                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
-                EngineSetting.TERRAIN_PV_WAVELENGTH_BLOCKS,
-                EngineSetting.TERRAIN_PV_OCTAVES,
-                EngineSetting.TERRAIN_PV_PERSISTENCE,
-                EngineSetting.TERRAIN_PV_LACUNARITY);
-
-        float ridge = 1f - Math.abs(peaksValleysRaw);
+        float continentalness = sampleContinentalness(
+                seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks);
+        float erosion = sampleErosion(seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks);
+        float ridge = sampleRidge(seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks);
 
         float oceanWeight = blend.getOceanWeight();
         float landReach = computeElevationReach(1f - oceanWeight);
@@ -141,6 +120,92 @@ public final class TerrainShapeUtility extends EngineUtility {
         }
 
         return height;
+    }
+
+    // Macro Fields \\
+
+    // Where a world X sits on the circle the macro noise rides, so the fields wrap around the world
+    public static double toSpatialAngle(double worldX, double worldWidthBlocks) {
+        return (worldX / worldWidthBlocks) * (Math.PI * 2.0);
+    }
+
+    public static float sampleContinentalness(
+            long seed,
+            double cosAngle, double sinAngle, double worldZ,
+            double worldWidthBlocks, double worldHeightBlocks) {
+        return TerrainNoiseUtility.sampleFractal(
+                seed ^ EngineSetting.TERRAIN_CONTINENTALNESS_SEED_SALT,
+                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                EngineSetting.TERRAIN_CONTINENTALNESS_WAVELENGTH_BLOCKS,
+                EngineSetting.TERRAIN_CONTINENTALNESS_OCTAVES,
+                EngineSetting.TERRAIN_CONTINENTALNESS_PERSISTENCE,
+                EngineSetting.TERRAIN_CONTINENTALNESS_LACUNARITY);
+    }
+
+    public static float sampleErosion(
+            long seed,
+            double cosAngle, double sinAngle, double worldZ,
+            double worldWidthBlocks, double worldHeightBlocks) {
+        return TerrainNoiseUtility.sampleFractal(
+                seed ^ EngineSetting.TERRAIN_EROSION_SEED_SALT,
+                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                EngineSetting.TERRAIN_EROSION_WAVELENGTH_BLOCKS,
+                EngineSetting.TERRAIN_EROSION_OCTAVES,
+                EngineSetting.TERRAIN_EROSION_PERSISTENCE,
+                EngineSetting.TERRAIN_EROSION_LACUNARITY);
+    }
+
+    // The peaks-valleys field folded into crests, 1 on a ridge line and 0 in a valley
+    public static float sampleRidge(
+            long seed,
+            double cosAngle, double sinAngle, double worldZ,
+            double worldWidthBlocks, double worldHeightBlocks) {
+
+        float peaksValleysRaw = TerrainNoiseUtility.sampleFractal(
+                seed ^ EngineSetting.TERRAIN_PV_SEED_SALT,
+                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                EngineSetting.TERRAIN_PV_WAVELENGTH_BLOCKS,
+                EngineSetting.TERRAIN_PV_OCTAVES,
+                EngineSetting.TERRAIN_PV_PERSISTENCE,
+                EngineSetting.TERRAIN_PV_LACUNARITY);
+
+        return 1f - Math.abs(peaksValleysRaw);
+    }
+
+    // Drainage \\
+
+    // A gentle swell in -1 to 1 over several drainage cells, so ground the macro fields leave as an even slope still
+    // gathers its water into valleys rather than sheeting it down in parallel
+    public static float sampleDrainageRoughness(
+            long seed,
+            double cosAngle, double sinAngle, double worldZ,
+            double worldWidthBlocks, double worldHeightBlocks) {
+        return TerrainNoiseUtility.sampleFractal(
+                seed ^ EngineSetting.RIVER_ROUGHNESS_SALT,
+                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                EngineSetting.RIVER_ROUGHNESS_WAVELENGTH_BLOCKS,
+                EngineSetting.RIVER_ROUGHNESS_OCTAVES,
+                EngineSetting.RIVER_ROUGHNESS_PERSISTENCE,
+                EngineSetting.RIVER_ROUGHNESS_LACUNARITY);
+    }
+
+    // The ground one biome lays alone as pure land, from the macro fields smooth enough to hold across a drainage
+    // cell: its continentalness and erosion, with a typical ridge standing in for peaks and valleys finer than the
+    // cell, then lifted or sunk by the height layer. Still water at a fixed level lies flat at that level
+    public static float computeDrainageHeightBlocks(
+            BiomeHandle biome,
+            float continentalness,
+            float erosion,
+            float elevation) {
+
+        if (biome.getWaterLevelBlocks() != TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED)
+            return biome.getWaterLevelBlocks();
+
+        float seaLevel = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
+        float biomeHeight = seaLevel + computeCurveBlocks(
+                biome, continentalness, erosion, EngineSetting.RIVER_PROXY_RIDGE, seaLevel);
+
+        return elevateLand(biomeHeight, elevation);
     }
 
     // A relative biome's offset over the ground; a lake's is measured from its own water instead, so its bed lies

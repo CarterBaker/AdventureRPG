@@ -134,7 +134,7 @@ public class MacroBuildBranch extends BranchPackage {
                 double sampleX = originX + x * cellSizeBlocks;
                 double sampleZ = originZ + z * cellSizeBlocks;
 
-                worldGenerationManager.sampleSurface(worldHandle, sampleX, sampleZ, sample);
+                worldGenerationManager.sampleSurface(worldHandle, sampleX, sampleZ, cellSizeBlocks, sample);
 
                 boolean lakeWater = sample.isLakeWater();
                 int topColor = resolveTopColor(sample);

@@ -8,6 +8,7 @@ import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.gridmanager.GridManager;
 import application.bootstrap.worldpipeline.layoutmanager.LayoutManager;
 import application.bootstrap.worldpipeline.liquidmanager.LiquidManager;
+import application.bootstrap.worldpipeline.rivermanager.RiverManager;
 import application.bootstrap.worldpipeline.roadmanager.RoadManager;
 import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
 import application.bootstrap.worldpipeline.structurelistmanager.StructureListManager;
@@ -34,6 +35,9 @@ public class WorldPipeline extends PipelinePackage {
      * current when rendering runs. WorldTickManager
      * is registered immediately after WorldStreamManager so its update() runs
      * later in the same frame, after that frame's wrap state is known.
+     * RiverManager follows WorldGenerationManager, whose bare land it plans
+     * rivers against and which carves them into every column, and its update
+     * restreams whatever a background drainage rebuild changed.
      * StructureManager follows WorldGenerationManager, whose terrain probe it
      * anchors structures against, and the settlement managers follow it in
      * the order they resolve one another: roads, the structure lists that
@@ -52,6 +56,7 @@ public class WorldPipeline extends PipelinePackage {
         create(BiomeManager.class);
         create(LiquidManager.class);
         create(WorldGenerationManager.class);
+        create(RiverManager.class);
         create(StructureManager.class);
         create(RoadManager.class);
         create(StructureListManager.class);

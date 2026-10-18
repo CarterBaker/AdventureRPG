@@ -9,8 +9,9 @@ public class GenerationCacheStruct extends StructPackage {
      * Per-chunk memo of computeColumn(): the identity biome and, per block
      * column, ground height, dressing blocks, sea reach and still water,
      * smoothing octants, the band its caves and sea caves may hollow with how
-     * much of each kind of cave it holds, its veins and the lowest cell the
-     * tide reaches, with the chunk's vein palette, the heights each vein
+     * much of each kind of cave it holds, its veins, the lowest cell the
+     * tide reaches and the tunnel a cave river hollows through it, with the
+     * chunk's vein palette, the heights each vein
      * reaches, and its carve ranges. Output is a pure function of seed and
      * coordinate, so this only skips recomputation on a reload; heights are
      * stored as shorts.
@@ -50,6 +51,12 @@ public class GenerationCacheStruct extends StructPackage {
     private final float[] seaCaves = new float[COLUMN_COUNT];
     private final int[] tideFloorY = new int[COLUMN_COUNT];
 
+    // Per Block Column — Rivers
+    private final short[] tunnelFloorY = new short[COLUMN_COUNT];
+    private final short[] tunnelCeilingY = new short[COLUMN_COUNT];
+    private final short[] tunnelLevelY = new short[COLUMN_COUNT];
+    private final short[] tunnelBedBlockID = new short[COLUMN_COUNT];
+
     // Whole Column
     private short columnMinGroundHeightBlocks;
     private short columnMaxGroundHeightBlocks;
@@ -62,6 +69,8 @@ public class GenerationCacheStruct extends StructPackage {
     private boolean hasSeaFeatures;
     private int veinMinY;
     private int veinMaxY;
+    private int riverMinY;
+    private int riverMaxY;
 
     private boolean allOceanWater;
     private boolean hasTidalColumns;
@@ -107,6 +116,14 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(column.columnSeaCaves, 0, seaCaves, 0, COLUMN_COUNT);
         System.arraycopy(column.columnTideFloorY, 0, tideFloorY, 0, COLUMN_COUNT);
 
+        for (int i = 0; i < COLUMN_COUNT; i++) {
+            this.tunnelFloorY[i] = (short) column.columnTunnelFloorY[i];
+            this.tunnelCeilingY[i] = (short) column.columnTunnelCeilingY[i];
+            this.tunnelLevelY[i] = (short) column.columnTunnelLevelY[i];
+        }
+
+        System.arraycopy(column.columnTunnelBedBlockID, 0, tunnelBedBlockID, 0, COLUMN_COUNT);
+
         this.columnMinGroundHeightBlocks = (short) column.columnMinGroundHeightBlocks;
         this.columnMaxGroundHeightBlocks = (short) column.columnMaxGroundHeightBlocks;
         this.columnTopBlocks = (short) column.columnTopBlocks;
@@ -118,6 +135,8 @@ public class GenerationCacheStruct extends StructPackage {
         this.hasSeaFeatures = column.hasSeaFeatures;
         this.veinMinY = column.veinMinY;
         this.veinMaxY = column.veinMaxY;
+        this.riverMinY = column.riverMinY;
+        this.riverMaxY = column.riverMaxY;
 
         this.allOceanWater = column.allOceanWater;
         this.hasTidalColumns = column.hasTidalColumns;
@@ -162,6 +181,14 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(seaCaves, 0, column.columnSeaCaves, 0, COLUMN_COUNT);
         System.arraycopy(tideFloorY, 0, column.columnTideFloorY, 0, COLUMN_COUNT);
 
+        for (int i = 0; i < COLUMN_COUNT; i++) {
+            column.columnTunnelFloorY[i] = tunnelFloorY[i];
+            column.columnTunnelCeilingY[i] = tunnelCeilingY[i];
+            column.columnTunnelLevelY[i] = tunnelLevelY[i];
+        }
+
+        System.arraycopy(tunnelBedBlockID, 0, column.columnTunnelBedBlockID, 0, COLUMN_COUNT);
+
         column.columnMinGroundHeightBlocks = columnMinGroundHeightBlocks;
         column.columnMaxGroundHeightBlocks = columnMaxGroundHeightBlocks;
         column.columnTopBlocks = columnTopBlocks;
@@ -173,6 +200,8 @@ public class GenerationCacheStruct extends StructPackage {
         column.hasSeaFeatures = hasSeaFeatures;
         column.veinMinY = veinMinY;
         column.veinMaxY = veinMaxY;
+        column.riverMinY = riverMinY;
+        column.riverMaxY = riverMaxY;
 
         column.allOceanWater = allOceanWater;
         column.hasTidalColumns = hasTidalColumns;

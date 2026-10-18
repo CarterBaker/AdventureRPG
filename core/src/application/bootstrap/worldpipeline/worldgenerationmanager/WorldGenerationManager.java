@@ -8,6 +8,7 @@ import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCaveBiomeStruct;
 import application.bootstrap.worldpipeline.biome.BiomeCoveringStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.biome.BiomeRiverStruct;
 import application.bootstrap.worldpipeline.biome.BiomeVeinStruct;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
@@ -17,6 +18,8 @@ import application.bootstrap.worldpipeline.cavebiome.CaveBiomeHandle;
 import application.bootstrap.worldpipeline.cavebiome.CaveSpeleothemStruct;
 import application.bootstrap.worldpipeline.cavebiomemanager.CaveBiomeManager;
 import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
+import application.bootstrap.worldpipeline.river.RiverColumnStruct;
+import application.bootstrap.worldpipeline.rivermanager.RiverManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
@@ -49,7 +52,11 @@ public class WorldGenerationManager extends ManagerPackage {
      * cell the tide reaches, with a vein palette holding the veins of every
      * cave biome that can line the chunk's underground. A column's top block
      * takes the coverage its biome lays over that ground, thinned per column by
-     * the covering's variance. generateSubChunk() fills subchunks, has
+     * the covering's variance. Rivers cut each column's ground and stand
+     * their still water over it before it is dressed, line their beds,
+     * banks and walls with their biome's blocks and keep caves clear of their
+     * water, and a cave river's tunnel is hollowed through the solid ground.
+     * generateSubChunk() fills subchunks, has
      * CaveCarveBranch hollow them and CaveDressingBranch line their caves and
      * grow their speleothems, threads them with veins through world-aligned
      * noise lattices — a vein sets its content into every whole block it runs
@@ -61,7 +68,8 @@ public class WorldGenerationManager extends ManagerPackage {
      * ground at the heart of its patch, and an underground lake the level of
      * its own basin.
      * sampleSurface() gives the ground, the water over it and its colors at any
-     * point for distant macro terrain and maps, and sampleOpenWater() whether
+     * point for distant macro terrain and maps, rivers included, sampleLand()
+     * the bare land rivers are planned against, and sampleOpenWater() whether
      * the sea covers it. Output is a pure function of seed and coordinate, so
      * it is cached per chunk and agrees across chunk borders. Surface profiles
      * are cached per biome and dropped whenever a biome is rebuilt live.
@@ -74,6 +82,7 @@ public class WorldGenerationManager extends ManagerPackage {
     private ContentManager contentManager;
     private CaveBiomeManager caveBiomeManager;
     private TideManager tideManager;
+    private RiverManager riverManager;
     private CaveCarveBranch caveCarveBranch;
     private CaveRegionBranch caveRegionBranch;
     private CaveDressingBranch caveDressingBranch;
@@ -126,6 +135,7 @@ public class WorldGenerationManager extends ManagerPackage {
         this.contentManager = get(ContentManager.class);
         this.caveBiomeManager = get(CaveBiomeManager.class);
         this.tideManager = get(TideManager.class);
+        this.riverManager = get(RiverManager.class);
     }
 
     @Override
@@ -160,7 +170,8 @@ public class WorldGenerationManager extends ManagerPackage {
         sampleMacroGrid(worldHandle, column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
         sampleDetailGrid(column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
         resolveCornerHeights(column);
-        resolveBlockColumns(column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
+        riverManager.gatherChunk(worldHandle, chunkCoordinate, column.riverGather);
+        resolveBlockColumns(worldHandle, column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
         resolveVeinPalette(worldHandle, column, worldOffsetX, worldOffsetZ);
         resolveTideFloors(worldHandle, chunkCoordinate, column);
 
@@ -280,6 +291,7 @@ public class WorldGenerationManager extends ManagerPackage {
     }
 
     private void resolveBlockColumns(
+            WorldHandle worldHandle,
             TerrainColumnAsyncContainer column,
             long seed,
             long worldOffsetX, long worldOffsetZ,
@@ -296,6 +308,8 @@ public class WorldGenerationManager extends ManagerPackage {
         column.maxCaveTunnels = 0f;
         column.maxCaveCaverns = 0f;
         column.maxCaveNoodles = 0f;
+        column.riverMinY = Integer.MAX_VALUE;
+        column.riverMaxY = Integer.MIN_VALUE;
 
         for (int localX = 0; localX < CHUNK_SIZE; localX++) {
             for (int localZ = 0; localZ < CHUNK_SIZE; localZ++) {
@@ -317,18 +331,30 @@ public class WorldGenerationManager extends ManagerPackage {
                         ? features.getLakeLevelBlocks()
                         : TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED;
 
+                int landHeight = groundHeight;
+
+                resolveColumnRiver(
+                        column, worldHandle, worldOffsetX + localX, worldOffsetZ + localZ, columnIndex, features, true);
+                groundHeight = column.groundHeightBlocks[columnIndex];
+
                 int macroCorner = pickMacroCorner(
                         seed, worldOffsetX + localX, worldOffsetZ + localZ, localX, localZ);
 
                 resolveColumnDressing(
                         column, seed, worldOffsetX + localX, worldOffsetZ + localZ,
                         localX, localZ, columnIndex, macroCorner, features);
+                resolveRiverDressing(column, columnIndex, landHeight);
                 resolveColumnSmoothing(column, localX, localZ, columnIndex, features);
                 resolveColumnCarving(
                         column, seed, worldOffsetX + localX, worldOffsetZ + localZ,
                         worldWidthBlocks, worldHeightBlocks, localX, localZ, columnIndex, features);
 
                 int top = resolveColumnTop(column, columnIndex, TideUtility.BAND_MAX_Y);
+
+                if (column.columnTunnelFloorY[columnIndex] != RiverColumnStruct.NONE) {
+                    column.riverMinY = Math.min(column.riverMinY, column.columnTunnelFloorY[columnIndex] - 1);
+                    column.riverMaxY = Math.max(column.riverMaxY, column.columnTunnelCeilingY[columnIndex]);
+                }
 
                 if (groundHeight > maxGroundHeight)
                     maxGroundHeight = groundHeight;
@@ -348,6 +374,105 @@ public class WorldGenerationManager extends ManagerPackage {
         column.columnMinGroundHeightBlocks = minGroundHeight;
         column.columnTopBlocks = columnTop;
         column.allOceanWater = allOceanWater;
+    }
+
+    // A river cuts the column's ground and stands its water before the column is dressed, so dressing, smoothing and
+    // caves all read the river's ground, and records the tunnel a cave river hollows through it
+    private void resolveColumnRiver(
+            TerrainColumnAsyncContainer column,
+            WorldHandle worldHandle,
+            long worldX,
+            long worldZ,
+            int columnIndex,
+            TerrainFeatureStruct features,
+            boolean chunkGathered) {
+
+        RiverColumnStruct river = resolveRiver(
+                column, worldHandle, worldX, worldZ, column.groundHeightBlocks[columnIndex], features, chunkGathered);
+
+        column.groundHeightBlocks[columnIndex] = river.getGroundHeightBlocks();
+
+        if (river.hasWater())
+            column.columnLakeLevelBlocks[columnIndex] = river.getWaterLevelBlocks();
+
+        column.columnTunnelFloorY[columnIndex] = river.getTunnelFloorY();
+        column.columnTunnelCeilingY[columnIndex] = river.getTunnelCeilingY();
+        column.columnTunnelLevelY[columnIndex] = river.getTunnelLevelY();
+        column.columnTunnelBedBlockID[columnIndex] = river.hasTunnel()
+                ? resolveSurfaceProfile(river.getBiome()).riverBedBlockID
+                : stoneBlockId;
+    }
+
+    // The rivers at one column, measured against the chunk's gathered reaches or, for a probe, its own; a column
+    // beside still water is never cut below its ground, so no river breaches a lake's rim
+    private RiverColumnStruct resolveRiver(
+            TerrainColumnAsyncContainer column,
+            WorldHandle worldHandle,
+            long worldX,
+            long worldZ,
+            int groundHeight,
+            TerrainFeatureStruct features,
+            boolean chunkGathered) {
+
+        boolean oceanWater = TerrainShapeUtility.isOceanReached(features);
+        boolean lakeWater = TerrainShapeUtility.isLakeCovered(features, groundHeight);
+        int lakeRimLevel = resolveLakeRimLevel(features, groundHeight);
+
+        if (chunkGathered)
+            riverManager.resolveColumn(column.riverGather, worldX, worldZ,
+                    groundHeight, oceanWater, lakeWater, lakeRimLevel, column.riverColumn);
+        else
+            riverManager.resolvePoint(worldHandle, worldX, worldZ,
+                    groundHeight, oceanWater, lakeWater, lakeRimLevel, column.riverColumn);
+
+        return column.riverColumn;
+    }
+
+    private int resolveLakeRimLevel(TerrainFeatureStruct features, int groundHeight) {
+        return features.hasLake() && groundHeight <= features.getLakeLevelBlocks() + EngineSetting.LAKE_RIM_BLOCKS
+                ? groundHeight
+                : RiverColumnStruct.NONE;
+    }
+
+    // A river lines its bed with its biome's bed block, its banks with the bank block, keeping the biome's surface
+    // coverage where that is the surface block, and bares the wall block on any wall it cut deep enough to show
+    private void resolveRiverDressing(TerrainColumnAsyncContainer column, int columnIndex, int landHeight) {
+
+        RiverColumnStruct river = column.riverColumn;
+        byte zone = river.getZone();
+
+        if (zone == RiverColumnStruct.ZONE_NONE || zone == RiverColumnStruct.ZONE_TUNNEL)
+            return;
+
+        if (zone == RiverColumnStruct.ZONE_WALL
+                && landHeight - column.groundHeightBlocks[columnIndex] < EngineSetting.RIVER_WALL_DRESS_BLOCKS)
+            return;
+
+        TerrainSurfaceProfileStruct profile = resolveSurfaceProfile(river.getBiome());
+
+        switch (zone) {
+
+            case RiverColumnStruct.ZONE_BANK -> {
+                boolean surface = profile.riverBankBlockID == profile.surfaceBlockID;
+                column.columnTopBlockID[columnIndex] = profile.riverBankBlockID;
+                column.columnFillBlockID[columnIndex] = surface ? profile.subsurfaceBlockID : profile.riverBankBlockID;
+                column.columnTopCoverage[columnIndex] = surface ? profile.surfaceCoverage : CoverageUtility.NONE;
+            }
+
+            case RiverColumnStruct.ZONE_WALL -> {
+                column.columnTopBlockID[columnIndex] = profile.riverWallBlockID;
+                column.columnFillBlockID[columnIndex] = profile.riverWallBlockID;
+                column.columnTopCoverage[columnIndex] = profile.riverWallBlockID == profile.rockBlockID
+                        ? profile.rockCoverage
+                        : CoverageUtility.NONE;
+            }
+
+            default -> {
+                column.columnTopBlockID[columnIndex] = profile.riverBedBlockID;
+                column.columnFillBlockID[columnIndex] = profile.riverBedBlockID;
+                column.columnTopCoverage[columnIndex] = CoverageUtility.NONE;
+            }
+        }
     }
 
     // Steep faces bare their rock; sand only lies under water, all the high tide floods included, and on gentle
@@ -449,8 +574,10 @@ public class WorldGenerationManager extends ManagerPackage {
 
         boolean besideStillWater = features.hasLake()
                 && groundHeight <= features.getLakeLevelBlocks() + EngineSetting.LAKE_RIM_BLOCKS;
+        byte riverZone = column.riverColumn.getZone();
+        boolean riverShaped = riverZone != RiverColumnStruct.ZONE_NONE && riverZone != RiverColumnStruct.ZONE_TUNNEL;
 
-        if (groundHeight > TideUtility.BAND_MAX_Y && !besideStillWater) {
+        if (groundHeight > TideUtility.BAND_MAX_Y && !besideStillWater && !riverShaped) {
 
             int cornersPerAxis = TerrainColumnAsyncContainer.CORNERS_PER_AXIS;
             float threshold = EngineSetting.SUB_BLOCK_SMOOTHING_THRESHOLD_BLOCKS;
@@ -477,8 +604,9 @@ public class WorldGenerationManager extends ManagerPackage {
 
     // Caves keep a roof under any water, including ground the high tide covers, and elsewhere one that thickens with
     // the slope so no face is left thin; they break the ground only where an entrance opens, and the sea's bed only
-    // where the sea floods them, and stay below the deepest bed still water can have wherever it is near. The sea
-    // floods caves near it and walls off the rest below its high tide
+    // where the sea floods them, and stay below the deepest bed still water can have wherever it is near, below a
+    // river's bed and above a cave river's water. The sea floods caves near it and walls off the rest below its high
+    // tide
     private void resolveColumnCarving(
             TerrainColumnAsyncContainer column,
             long seed,
@@ -522,9 +650,13 @@ public class WorldGenerationManager extends ManagerPackage {
             caveCeiling = Math.min(
                     caveCeiling, features.getLakeLevelBlocks() - EngineSetting.CAVE_SURFACE_LAKE_GUARD_DEPTH_BLOCKS);
 
+        caveCeiling = Math.min(caveCeiling, column.riverColumn.getCaveCeilingMaxY());
+
         int caveFloor = Math.max(
                 EngineSetting.CAVE_WORLD_FLOOR_BLOCKS,
                 Math.max(features.getCaveMinHeightBlocks(), groundHeight - features.getCaveMaxDepthBlocks()));
+
+        caveFloor = Math.max(caveFloor, column.riverColumn.getCaveFloorMinY());
 
         if (!features.hasCaves())
             caveCeiling = TerrainColumnAsyncContainer.NO_CARVE;
@@ -814,11 +946,14 @@ public class WorldGenerationManager extends ManagerPackage {
 
         TerrainColumnAsyncContainer probe = resolveProbeColumn(worldHandle, wrappedX, wrappedZ);
 
-        return TerrainShapeUtility.finalizeGroundHeightBlocks(resolveShapedHeight(
+        int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(resolveShapedHeight(
                 probe, (int) (wrappedX % CHUNK_SIZE), (int) (wrappedZ % CHUNK_SIZE)));
+
+        return resolveRiver(probe, worldHandle, wrappedX, wrappedZ, groundHeight, probe.features, false)
+                .getGroundHeightBlocks();
     }
 
-    // Under the sea or under still water
+    // Under the sea, under still water or in a river
     public boolean probeFlooded(WorldHandle worldHandle, long worldX, long worldZ) {
 
         long wrappedX = WorldWrapUtility.wrapBlockX(worldHandle, worldX);
@@ -829,8 +964,11 @@ public class WorldGenerationManager extends ManagerPackage {
         int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(resolveShapedHeight(
                 probe, (int) (wrappedX % CHUNK_SIZE), (int) (wrappedZ % CHUNK_SIZE)));
 
-        return (TerrainShapeUtility.isOceanReached(probe.features) && groundHeight < seaLevel)
-                || TerrainShapeUtility.isLakeCovered(probe.features, groundHeight);
+        if ((TerrainShapeUtility.isOceanReached(probe.features) && groundHeight < seaLevel)
+                || TerrainShapeUtility.isLakeCovered(probe.features, groundHeight))
+            return true;
+
+        return resolveRiver(probe, worldHandle, wrappedX, wrappedZ, groundHeight, probe.features, false).hasWater();
     }
 
     private TerrainColumnAsyncContainer resolveProbeColumn(WorldHandle worldHandle, long wrappedX, long wrappedZ) {
@@ -904,6 +1042,8 @@ public class WorldGenerationManager extends ManagerPackage {
                 : TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED;
         probe.hasSeaFeatures = false;
 
+        resolveColumnRiver(probe, worldHandle, wrappedX, wrappedZ, columnIndex, features, false);
+
         resolveColumnCarving(
                 probe, worldHandle.getSeed(), wrappedX, wrappedZ,
                 worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
@@ -943,6 +1083,39 @@ public class WorldGenerationManager extends ManagerPackage {
             double worldX,
             double worldZ,
             TerrainSurfaceSampleStruct outSample) {
+        sampleSurface(worldHandle, worldX, worldZ, 0.0, outSample);
+    }
+
+    // A sample standing for a span of the world as wide as its spacing: rivers too narrow to show at that spacing
+    // are left out, and a coarse sample reads them from the drainage without planning a reach
+    public void sampleSurface(
+            WorldHandle worldHandle,
+            double worldX,
+            double worldZ,
+            double spacingBlocks,
+            TerrainSurfaceSampleStruct outSample) {
+
+        sampleLand(worldHandle, worldX, worldZ, outSample);
+        overlayRiver(worldHandle, worldX, worldZ, spacingBlocks, outSample);
+
+        TerrainFeatureStruct features = outSample.getFeatures();
+        int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(outSample.groundHeightBlocks);
+        boolean lakeShore = features.hasLake()
+                && features.getLakeWeight() >= EngineSetting.LAKE_RIM_FULL_WEIGHT
+                && groundHeight <= features.getLakeLevelBlocks() + EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
+
+        resolveSurfaceColors(outSample, outSample.lakeWater || lakeShore
+                || (TerrainShapeUtility.isOceanReached(features)
+                        && groundHeight <= TideUtility.BAND_MAX_Y + EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS));
+    }
+
+    // The bare land at a point as terrain shapes it, the sea or still water over it, before any river cuts it and
+    // without colors — the land rivers are planned against
+    public void sampleLand(
+            WorldHandle worldHandle,
+            double worldX,
+            double worldZ,
+            TerrainSurfaceSampleStruct outSample) {
 
         TerrainFeatureStruct features = outSample.getFeatures();
         float shapedHeight = sampleShapedHeight(worldHandle, worldX, worldZ, outSample.getBlend(), features);
@@ -960,13 +1133,34 @@ public class WorldGenerationManager extends ManagerPackage {
             outSample.waterSurfaceBlocks = features.getLakeLevelBlocks();
         else
             outSample.waterSurfaceBlocks = shapedHeight;
+    }
 
-        boolean lakeShore = features.hasLake()
-                && features.getLakeWeight() >= EngineSetting.LAKE_RIM_FULL_WEIGHT
-                && groundHeight <= features.getLakeLevelBlocks() + EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS;
+    // A river's cut and its still water over a sampled point; the open sea keeps its own
+    private void overlayRiver(
+            WorldHandle worldHandle,
+            double worldX,
+            double worldZ,
+            double spacingBlocks,
+            TerrainSurfaceSampleStruct sample) {
 
-        resolveSurfaceColors(outSample, lakeWater || lakeShore || (oceanReached
-                && groundHeight <= TideUtility.BAND_MAX_Y + EngineSetting.TERRAIN_BEACH_HEIGHT_RANGE_BLOCKS));
+        if (sample.openWater)
+            return;
+
+        TerrainFeatureStruct features = sample.getFeatures();
+        int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(sample.groundHeightBlocks);
+        RiverColumnStruct river = probeColumnContainer.<TerrainColumnAsyncContainer>getInstance().riverColumn;
+
+        riverManager.resolveSample(worldHandle, worldX, worldZ, spacingBlocks, groundHeight,
+                TerrainShapeUtility.isOceanReached(features), sample.lakeWater,
+                resolveLakeRimLevel(features, groundHeight), river);
+
+        if (river.getGroundHeightBlocks() != groundHeight)
+            sample.groundHeightBlocks = river.getGroundHeightBlocks();
+
+        if (river.hasWater()) {
+            sample.lakeWater = true;
+            sample.waterSurfaceBlocks = river.getWaterLevelBlocks();
+        }
     }
 
     // The ground at a point shaped as terrain shapes it, leaving the point's blend and features filled
@@ -1263,6 +1457,7 @@ public class WorldGenerationManager extends ManagerPackage {
         short rockCoverage = resolveProfileCoverage(biomeName, biomeHandle.getRockCovering(), rockBlockID);
 
         BiomeVeinStruct[] veins = biomeHandle.getVeins().toArray(new BiomeVeinStruct[0]);
+        BiomeRiverStruct river = biomeHandle.getRiver();
 
         profile = new TerrainSurfaceProfileStruct(
                 biomeHandle,
@@ -1271,6 +1466,9 @@ public class WorldGenerationManager extends ManagerPackage {
                 underwaterBlockID,
                 rockBlockID,
                 biomeHandle.getRockSlope(),
+                (short) blockManager.getBlockIDFromBlockName(river.getBedBlockName()),
+                (short) blockManager.getBlockIDFromBlockName(river.getBankBlockName()),
+                (short) blockManager.getBlockIDFromBlockName(river.getWallBlockName()),
                 surfaceCoverage,
                 resolveProfileVariance(biomeHandle.getSurfaceCovering()),
                 underwaterCoverage,
@@ -1470,8 +1668,9 @@ public class WorldGenerationManager extends ManagerPackage {
 
         boolean carves = offsetY <= column.carveMaxY + lining && subChunkTopY >= column.carveMinY - lining;
         boolean veins = column.veinCount > 0 && offsetY <= column.veinMaxY && subChunkTopY >= column.veinMinY;
+        boolean tunnels = offsetY <= column.riverMaxY && subChunkTopY >= column.riverMinY;
 
-        if (!carves && !veins && subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
+        if (!carves && !veins && !tunnels && subChunkTopY + surfaceDepth <= column.columnMinGroundHeightBlocks) {
             subChunkInstance.markUniformFill(DynamicGeometryType.FULL, stoneBlockId);
             return true;
         }
@@ -1531,6 +1730,10 @@ public class WorldGenerationManager extends ManagerPackage {
                 short topBlockID = column.columnTopBlockID[columnIndex];
                 short topCoverage = column.columnTopCoverage[columnIndex];
                 short fillBlockID = column.columnFillBlockID[columnIndex];
+                int tunnelFloorY = column.columnTunnelFloorY[columnIndex];
+                int tunnelCeilingY = column.columnTunnelCeilingY[columnIndex];
+                int tunnelLevelY = column.columnTunnelLevelY[columnIndex];
+                boolean tunneled = tunnelFloorY != RiverColumnStruct.NONE;
 
                 if (veins)
                     resolveVeinSlots(column, columnIndex);
@@ -1566,6 +1769,14 @@ public class WorldGenerationManager extends ManagerPackage {
                         subChunkInstance.writeTidalLiquid(packedXYZ, waterBlockId, level);
                         if (level < EngineSetting.LIQUID_LEVEL_MAX)
                             isUniform = false;
+                    } else if (tunneled && worldY >= tunnelFloorY && worldY <= tunnelCeilingY) {
+                        hasAirOrWater = true;
+                        resultBlockID = airBlockId;
+                        if (worldY <= tunnelLevelY) {
+                            resultBlockID = waterBlockId;
+                            isUniform = false;
+                            subChunkInstance.writeStillLiquid(packedXYZ, waterBlockId);
+                        }
                     } else {
                         byte state = carves
                                 ? volume.getState(localX, worldY, localZ)
@@ -1602,6 +1813,8 @@ public class WorldGenerationManager extends ManagerPackage {
 
                             if (worldY == groundHeight)
                                 resultBlockID = topBlockID;
+                            else if (tunneled && worldY == tunnelFloorY - 1)
+                                resultBlockID = column.columnTunnelBedBlockID[columnIndex];
                             else if (worldY > groundHeight - surfaceDepth)
                                 resultBlockID = fillBlockID;
                             else

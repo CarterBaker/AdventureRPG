@@ -107,6 +107,7 @@ public class MapGenerationBranch extends BranchPackage {
                         worldHandle,
                         WorldWrapUtility.wrapBlockX(worldHandle, latticeX + x * spacing),
                         WorldWrapUtility.wrapBlockZ(worldHandle, latticeZ + z * spacing),
+                        spacing,
                         sample);
 
                 scratch.sampleHeights[index] = sample.getGroundHeightBlocks();

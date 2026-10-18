@@ -462,6 +462,16 @@ public class BiomeManager extends ManagerPackage {
         return getBiome(worldHandle, chunkCoordinate).getBiomeID();
     }
 
+    // The biome one world map pixel is painted with, wrapped around the map, before any blending or probable biome
+    public BiomeHandle getPaintedBiome(WorldHandle worldHandle, int pixelX, int pixelZ) {
+
+        Pixmap map = worldHandle.getWorld();
+
+        return getBiomeHandleForColor(
+                fieldContainer.getInstance(),
+                map.getPixelRGB(Math.floorMod(pixelX, map.getWidth()), Math.floorMod(pixelZ, map.getHeight())));
+    }
+
     private BiomeHandle getBiomeHandleForColor(BiomeFieldAsyncContainer scratch, int color) {
 
         ColorIndex index = colorIndex;
