@@ -14,11 +14,13 @@ import engine.root.EngineSetting;
 public class SettingsOptionBranch extends BranchPackage {
 
     /*
-     * Fills the Display and Graphics tabs and the Controls tab's mouse
-     * section, and writes each change into Settings. Display, field of view
-     * and every post-processing effect take effect at once through
+     * Fills the Display, Graphics and Gameplay tabs and the Controls tab's
+     * mouse section, and writes each change into Settings. Display, field of
+     * view and every post-processing effect take effect at once through
      * SettingsSystem, and sensitivity is read live by InputManager, as is the
-     * tree detail distance by the trees, which redraw only those crossing it.
+     * tree detail distance by the trees, which redraw only those crossing it,
+     * the third person depth of field by AutoFocusSystem, and the camera's
+     * shake and head bob by PlayerManager.
      * Render distance and terrain detail reshape how the world streams and
      * shades — a distance change reloads every chunk — so they only mark the
      * session, and SettingsMenuBranch applies them once when the menu closes.
@@ -74,6 +76,9 @@ public class SettingsOptionBranch extends BranchPackage {
         injectSlider(session, SettingsSlider.DEPTH_OF_FIELD_STRENGTH);
         injectSlider(session, SettingsSlider.DEPTH_OF_FIELD_BLUR);
         settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_AUTO_FOCUS);
+        injectOptionRow(session, SettingsOption.DEPTH_OF_FIELD_THIRD_PERSON);
+        injectSlider(session, SettingsSlider.DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH);
+        settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_THIRD_PERSON_FOCUS);
 
         settingsMenuBranch.injectSectionHeader(session, RuntimeSetting.SETTINGS_SECTION_IMAGE);
         injectOptionRow(session, SettingsOption.ANTI_ALIASING);
@@ -94,6 +99,14 @@ public class SettingsOptionBranch extends BranchPackage {
     void populateMouse(SettingsSessionStruct session) {
         settingsMenuBranch.injectSectionHeader(session, RuntimeSetting.SETTINGS_SECTION_MOUSE);
         injectSlider(session, SettingsSlider.MOUSE_SENSITIVITY);
+    }
+
+    void populateGameplay(SettingsSessionStruct session) {
+        settingsMenuBranch.injectSectionHeader(session, RuntimeSetting.SETTINGS_SECTION_CAMERA);
+        injectOptionRow(session, SettingsOption.CAMERA_SHAKE);
+        injectSlider(session, SettingsSlider.CAMERA_SHAKE_INTENSITY);
+        injectOptionRow(session, SettingsOption.HEAD_BOB);
+        settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_HEAD_BOB);
     }
 
     // Options \\
@@ -179,6 +192,7 @@ public class SettingsOptionBranch extends BranchPackage {
                 settings.depthOfField = !settings.depthOfField;
                 settingsSystem.applyPostProcessing();
             }
+            case DEPTH_OF_FIELD_THIRD_PERSON -> settings.depthOfFieldThirdPerson = !settings.depthOfFieldThirdPerson;
             case ANTI_ALIASING -> {
                 settings.antiAliasing = !settings.antiAliasing;
                 settingsSystem.applyPostProcessing();
@@ -187,6 +201,8 @@ public class SettingsOptionBranch extends BranchPackage {
                 settings.bloom = !settings.bloom;
                 settingsSystem.applyPostProcessing();
             }
+            case CAMERA_SHAKE -> settings.cameraShake = !settings.cameraShake;
+            case HEAD_BOB -> settings.headBob = !settings.headBob;
         }
     }
 
@@ -205,8 +221,11 @@ public class SettingsOptionBranch extends BranchPackage {
             case OUTLINES -> formatToggle(settings.outlines);
             case OUTLINE_THICKNESS -> String.format(RuntimeSetting.SETTINGS_FORMAT_PIXELS, settings.outlineThickness);
             case DEPTH_OF_FIELD -> formatToggle(settings.depthOfField);
+            case DEPTH_OF_FIELD_THIRD_PERSON -> formatToggle(settings.depthOfFieldThirdPerson);
             case ANTI_ALIASING -> formatToggle(settings.antiAliasing);
             case BLOOM -> formatToggle(settings.bloom);
+            case CAMERA_SHAKE -> formatToggle(settings.cameraShake);
+            case HEAD_BOB -> formatToggle(settings.headBob);
         };
     }
 
@@ -265,6 +284,7 @@ public class SettingsOptionBranch extends BranchPackage {
             case OUTLINE_STRENGTH -> settings.outlineStrength = value;
             case DEPTH_OF_FIELD_STRENGTH -> settings.depthOfFieldStrength = value;
             case DEPTH_OF_FIELD_BLUR -> settings.depthOfFieldBlur = value;
+            case DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH -> settings.depthOfFieldThirdPersonStrength = value;
             case BLOOM_INTENSITY -> settings.bloomIntensity = value;
             case BRIGHTNESS -> settings.brightness = value;
             case CONTRAST -> settings.contrast = value;
@@ -272,6 +292,7 @@ public class SettingsOptionBranch extends BranchPackage {
             case VIGNETTE -> settings.vignette = value;
             case CHROMATIC_ABERRATION -> settings.chromaticAberration = value;
             case FILM_GRAIN -> settings.filmGrain = value;
+            case CAMERA_SHAKE_INTENSITY -> settings.cameraShakeIntensity = value;
         }
     }
 
@@ -281,6 +302,7 @@ public class SettingsOptionBranch extends BranchPackage {
             case OUTLINE_STRENGTH -> settings.outlineStrength;
             case DEPTH_OF_FIELD_STRENGTH -> settings.depthOfFieldStrength;
             case DEPTH_OF_FIELD_BLUR -> settings.depthOfFieldBlur;
+            case DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH -> settings.depthOfFieldThirdPersonStrength;
             case BLOOM_INTENSITY -> settings.bloomIntensity;
             case BRIGHTNESS -> settings.brightness;
             case CONTRAST -> settings.contrast;
@@ -288,6 +310,7 @@ public class SettingsOptionBranch extends BranchPackage {
             case VIGNETTE -> settings.vignette;
             case CHROMATIC_ABERRATION -> settings.chromaticAberration;
             case FILM_GRAIN -> settings.filmGrain;
+            case CAMERA_SHAKE_INTENSITY -> settings.cameraShakeIntensity;
         };
     }
 
@@ -297,6 +320,7 @@ public class SettingsOptionBranch extends BranchPackage {
             case OUTLINE_STRENGTH -> EngineSetting.OUTLINE_STRENGTH_MIN;
             case DEPTH_OF_FIELD_STRENGTH -> EngineSetting.DEPTH_OF_FIELD_STRENGTH_MIN;
             case DEPTH_OF_FIELD_BLUR -> EngineSetting.DEPTH_OF_FIELD_BLUR_MIN;
+            case DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH -> EngineSetting.DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH_MIN;
             case BLOOM_INTENSITY -> EngineSetting.BLOOM_INTENSITY_MIN;
             case BRIGHTNESS -> EngineSetting.BRIGHTNESS_MIN;
             case CONTRAST -> EngineSetting.CONTRAST_MIN;
@@ -304,6 +328,7 @@ public class SettingsOptionBranch extends BranchPackage {
             case VIGNETTE -> EngineSetting.VIGNETTE_MIN;
             case CHROMATIC_ABERRATION -> EngineSetting.CHROMATIC_ABERRATION_MIN;
             case FILM_GRAIN -> EngineSetting.FILM_GRAIN_MIN;
+            case CAMERA_SHAKE_INTENSITY -> EngineSetting.CAMERA_SHAKE_INTENSITY_MIN;
         };
     }
 
@@ -313,6 +338,7 @@ public class SettingsOptionBranch extends BranchPackage {
             case OUTLINE_STRENGTH -> EngineSetting.OUTLINE_STRENGTH_MAX;
             case DEPTH_OF_FIELD_STRENGTH -> EngineSetting.DEPTH_OF_FIELD_STRENGTH_MAX;
             case DEPTH_OF_FIELD_BLUR -> EngineSetting.DEPTH_OF_FIELD_BLUR_MAX;
+            case DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH -> EngineSetting.DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH_MAX;
             case BLOOM_INTENSITY -> EngineSetting.BLOOM_INTENSITY_MAX;
             case BRIGHTNESS -> EngineSetting.BRIGHTNESS_MAX;
             case CONTRAST -> EngineSetting.CONTRAST_MAX;
@@ -320,14 +346,16 @@ public class SettingsOptionBranch extends BranchPackage {
             case VIGNETTE -> EngineSetting.VIGNETTE_MAX;
             case CHROMATIC_ABERRATION -> EngineSetting.CHROMATIC_ABERRATION_MAX;
             case FILM_GRAIN -> EngineSetting.FILM_GRAIN_MAX;
+            case CAMERA_SHAKE_INTENSITY -> EngineSetting.CAMERA_SHAKE_INTENSITY_MAX;
         };
     }
 
     private String formatSlider(SettingsSlider slider) {
         return switch (slider) {
             case MOUSE_SENSITIVITY -> String.format(RuntimeSetting.SETTINGS_FORMAT_SENSITIVITY, resolveValue(slider));
-            case OUTLINE_STRENGTH, DEPTH_OF_FIELD_STRENGTH, DEPTH_OF_FIELD_BLUR, BLOOM_INTENSITY, BRIGHTNESS,
-                    CONTRAST, SATURATION, VIGNETTE, CHROMATIC_ABERRATION, FILM_GRAIN -> String.format(
+            case OUTLINE_STRENGTH, DEPTH_OF_FIELD_STRENGTH, DEPTH_OF_FIELD_BLUR, DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH,
+                    BLOOM_INTENSITY, BRIGHTNESS, CONTRAST, SATURATION, VIGNETTE, CHROMATIC_ABERRATION, FILM_GRAIN,
+                    CAMERA_SHAKE_INTENSITY -> String.format(
                             RuntimeSetting.SETTINGS_FORMAT_PERCENT,
                             resolveValue(slider) * RuntimeSetting.SETTINGS_SLIDER_PERCENT_SCALE);
         };

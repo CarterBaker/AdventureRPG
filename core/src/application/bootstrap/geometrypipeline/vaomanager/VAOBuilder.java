@@ -17,10 +17,11 @@ public class VAOBuilder extends BuilderPackage {
      * Parses the 'vao' field from mesh ARPG and constructs a VAOHandle layout
      * template. Supports direct attribute size arrays and string references to
      * other registered VAOs; an empty array is an attribute-less layout, for
-     * meshes whose shader pulls its data by vertex index. When the mesh ARPG declares a "rig", two extra
-     * trailing attributes — bone indices and bone weights, each
-     * EngineSetting.MAX_BONE_INFLUENCES floats wide — are appended after the
-     * declared attributes. Bootstrap-only.
+     * meshes whose shader pulls its data by vertex index. When the mesh ARPG declares a "rig", three extra
+     * trailing attributes are appended after the declared attributes — bone
+     * indices and bone weights, each EngineSetting.MAX_BONE_INFLUENCES floats
+     * wide, and the smooth normal MeshBuilder bakes for every corner.
+     * Bootstrap-only.
      */
 
     // Internal
@@ -107,7 +108,7 @@ public class VAOBuilder extends BuilderPackage {
     private VAOHandle buildLayout(ArpgArrayStruct arpgArray, File file, boolean hasBones) {
 
         int declaredCount = arpgArray.size();
-        int totalCount = hasBones ? declaredCount + 2 : declaredCount;
+        int totalCount = hasBones ? declaredCount + 3 : declaredCount;
         int[] attrSizes = new int[totalCount];
 
         for (int i = 0; i < declaredCount; i++) {
@@ -119,6 +120,7 @@ public class VAOBuilder extends BuilderPackage {
         if (hasBones) {
             attrSizes[declaredCount] = EngineSetting.MAX_BONE_INFLUENCES;
             attrSizes[declaredCount + 1] = EngineSetting.MAX_BONE_INFLUENCES;
+            attrSizes[declaredCount + 2] = EngineSetting.SKINNED_NORMAL_FLOATS;
         }
 
         VAOHandle handle = create(VAOHandle.class);

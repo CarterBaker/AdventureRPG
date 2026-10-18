@@ -180,7 +180,8 @@ public class SettingsMenuBranch extends BranchPackage {
                 settingsOptionBranch.populateMouse(session);
                 settingsBindingBranch.populateBindings(session);
             }
-            case AUDIO, GAMEPLAY, ACCESSIBILITY -> injectPlaceholder(
+            case GAMEPLAY -> settingsOptionBranch.populateGameplay(session);
+            case AUDIO, ACCESSIBILITY -> injectPlaceholder(
                     session,
                     tab.getTitle(),
                     RuntimeSetting.SETTINGS_PLACEHOLDER_COMING_SOON,

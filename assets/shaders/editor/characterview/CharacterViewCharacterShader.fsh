@@ -2,6 +2,8 @@
 
 in vec2 v_uv;
 in vec3 v_viewPosition;
+in vec3 v_viewNormal;
+in float v_hiddenWeight;
 flat in vec3 v_tint;
 flat in vec3 v_detailTint;
 flat in vec4 v_faceRegion;
@@ -12,6 +14,8 @@ flat in vec4 v_mouthRegion;
 #include "includes/CameraData.glsl"
 #include "characters/includes/CharactersStandard.glsl"
 #include "characters/includes/CharacterFace.glsl"
+#include "characters/includes/CharacterHidden.glsl"
+#include "characters/includes/CharacterNormal.glsl"
 
 uniform sampler2DArray u_texture;
 uniform vec3  u_lightDirection;
@@ -20,9 +24,11 @@ uniform float u_ambient;
 out vec4 FragColor;
 
 // An editor viewport has no deferred lighting pass, so the character is lit here by one fixed light over an ambient
-// floor, on the same flat facets the game rebuilds from screen-space derivatives, with the same tint and face
-// overlays the game draws.
+// floor, on the same smooth normals the game shades with, with the same tint and face overlays the game draws.
 void main() {
+    if (isHiddenFragment(v_hiddenWeight))
+    discard;
+
     vec4 base = texture(u_texture, vec3(v_uv, float(u_layer_albedo)));
 
     if (base.a < 0.01)
@@ -32,7 +38,7 @@ void main() {
         u_texture, u_layer_albedo, v_uv, base.rgb, v_tint, v_detailTint,
         v_faceRegion, v_eyesRegion, v_browsRegion, v_mouthRegion);
 
-    vec3 normalView = normalize(cross(dFdx(v_viewPosition), dFdy(v_viewPosition)));
+    vec3 normalView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
     vec3 lightView  = normalize(mat3(u_view) * -u_lightDirection);
 
     float diffuse  = max(dot(normalView, lightView), 0.0);

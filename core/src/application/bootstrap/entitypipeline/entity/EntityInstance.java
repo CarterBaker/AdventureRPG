@@ -25,8 +25,9 @@ public class EntityInstance extends InstancePackage {
      * playing whatever action its hands are in over its movement — a moveset's
      * own clip where the action carries one — getStat() reads a stat's total,
      * resolved through ProgressionManager only once something it is built from
-     * has changed, and getEyePosition() is the one place its eye — where it
-     * aims from — is placed. Its level, attributes, trades, skills, conduct
+     * has changed, getEyePosition() is the one place its eye — where it aims
+     * from — is placed, and getModelPoint() sets a point of its body in the
+     * world just where it is drawn. Its level, attributes, trades, skills, conduct
      * and professions live in their own handles, the same for a player as for
      * any NPC, and it carries one of the genders its race allows.
      */
@@ -297,5 +298,21 @@ public class EntityInstance extends InstancePackage {
                 position.x + size.x * 0.5f,
                 position.y + entityStateHandle.getGroundOffset() + getEyeHeight(),
                 position.z + size.z * 0.5f);
+    }
+
+    // The chunk-local point a point of its model stands at — turned to its body yaw and scaled to its size about
+    // the centre of its footprint, on the ground it is drawn standing on, exactly as EntityRenderSystem draws it
+    public Vector3 getModelPoint(float modelX, float modelY, float modelZ, Vector3 out) {
+
+        Vector3 position = worldPositionStruct.getPosition();
+        float scale = size.y / entityData.getModelHeight();
+        double yaw = Math.toRadians(entityStateHandle.getBodyYaw());
+        float cos = (float) Math.cos(yaw);
+        float sin = (float) Math.sin(yaw);
+
+        return out.set(
+                position.x + size.x * 0.5f + (modelX * cos + modelZ * sin) * scale,
+                position.y + entityStateHandle.getGroundOffset() + modelY * scale,
+                position.z + size.z * 0.5f + (modelZ * cos - modelX * sin) * scale);
     }
 }

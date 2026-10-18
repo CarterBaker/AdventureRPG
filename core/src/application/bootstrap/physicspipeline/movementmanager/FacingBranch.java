@@ -13,8 +13,10 @@ public class FacingBranch extends BranchPackage {
     /*
      * Turns an entity's body smoothly toward its travel direction, or its
      * facing while strafing, at the behavior's turn responsiveness, and records
-     * a smoothed turn rate. Resolves look pitch and yaw relative to the body in
-     * degrees, using the render yaw convention.
+     * a smoothed turn rate. A twisting entity standing still keeps its feet
+     * planted while it looks around, turning only far enough to hold its look
+     * within the twist limit. Resolves look pitch and yaw relative to the body
+     * in degrees, using the render yaw convention.
      */
 
     // Update \\
@@ -44,7 +46,9 @@ public class FacingBranch extends BranchPackage {
             float bodyYaw) {
 
         if (input.isStrafe())
-            return facingYaw;
+            return input.isTwist() && !input.hasHorizontalInput()
+                    ? resolveTwistYaw(facingYaw, bodyYaw)
+                    : facingYaw;
 
         Vector2 velocity = state.getHorizontalVelocity();
         float speed = (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
@@ -53,6 +57,18 @@ public class FacingBranch extends BranchPackage {
             return bodyYaw;
 
         return toYaw(velocity.x, velocity.y);
+    }
+
+    // The nearest yaw to the body's that keeps the look within the twist limit
+    private float resolveTwistYaw(float facingYaw, float bodyYaw) {
+
+        float twist = wrapDegrees(facingYaw - bodyYaw);
+        float limit = EngineSetting.FACING_TWIST_LIMIT_DEGREES;
+
+        if (Math.abs(twist) <= limit)
+            return bodyYaw;
+
+        return wrapDegrees(facingYaw - Math.copySign(limit, twist));
     }
 
     private float resolveTurnRate(EntityStateHandle state, float step, float delta) {

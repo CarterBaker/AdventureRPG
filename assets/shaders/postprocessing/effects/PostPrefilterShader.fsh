@@ -12,9 +12,9 @@ layout(location = 1) out vec4 o_bloom;
  * takes the average of the four scene pixels it covers, and the circle of
  * confusion of the nearest of them, so a foreground edge keeps its own blur
  * instead of borrowing the background's; only a pixel covering nothing but
- * sky stays sharp as the sky. The bright parts of the scene are drawn out
- * beside it for bloom, rising softly over a knee rather than cutting in at
- * the threshold.
+ * sky stays sharp as the sky, and clouds keep sharp what they hide. The
+ * bright parts of the scene are drawn out beside it for bloom, rising softly
+ * over a knee rather than cutting in at the threshold.
  */
 
 // The composited scene of every layer.
@@ -28,12 +28,20 @@ const int   PREFILTER_TAPS  = 4;
 const ivec2 PREFILTER_OFFSETS[PREFILTER_TAPS] = ivec2[](ivec2(0, 0), ivec2(1, 0), ivec2(0, 1), ivec2(1, 1));
 
 float resolveNearestCoc(vec2 uv) {
-    float nearest = DOF_SKY_DEPTH;
+    ivec2 nearestTexel = resolveDepthTexel(uv, PREFILTER_OFFSETS[0]);
+    float nearest      = resolveSurfaceDepth(nearestTexel);
 
-    for (int i = 0; i < PREFILTER_TAPS; i++)
-    nearest = min(nearest, resolveSurfaceDepth(resolveDepthTexel(uv, PREFILTER_OFFSETS[i])));
+    for (int i = 1; i < PREFILTER_TAPS; i++) {
+        ivec2 texel = resolveDepthTexel(uv, PREFILTER_OFFSETS[i]);
+        float depth = resolveSurfaceDepth(texel);
 
-    return resolveSurfaceCoc(nearest);
+        if (depth < nearest) {
+            nearest      = depth;
+            nearestTexel = texel;
+        }
+    }
+
+    return resolveTexelCoc(nearestTexel, uv);
 }
 
 vec3 resolveBloomSource(vec3 color) {

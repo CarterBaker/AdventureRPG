@@ -42,6 +42,8 @@ public class Settings {
     public boolean depthOfField = true;
     public float depthOfFieldStrength = 0.2f;
     public float depthOfFieldBlur = 0.2f;
+    public boolean depthOfFieldThirdPerson = true;
+    public float depthOfFieldThirdPersonStrength = 0.6f;
     public boolean bloom = true;
     public float bloomIntensity = 0.2f;
 
@@ -57,6 +59,11 @@ public class Settings {
 
     // Input
     public float mouseSensitivity = 0.15f;
+
+    // Gameplay — Camera
+    public boolean cameraShake = true;
+    public float cameraShakeIntensity = 0.7f;
+    public boolean headBob = true;
 
     // Editor — Interface Colors
     public float[] uiColorBackground = { 0.075f, 0.082f, 0.098f, 1.0f };

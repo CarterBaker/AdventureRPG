@@ -25,7 +25,10 @@ public class AnimationStateHandle extends HandlePackage {
      * already playing fades in from the pose it left. An action carrying a
      * moveset clip made for the tree's rig plays that clip in its node's
      * place, and the layer fades out of it from a captured pose, so a weapon
-     * brings its own moves to any tree that maps the action. poseClip() and
+     * brings its own moves to any tree that maps the action. A posture —
+     * rotations set per bone by whoever poses the body by hand, as the first
+     * person view bends and twists the chest after the look — is laid over
+     * the blended tree and stays until it is set again. poseClip() and
      * poseRest() pose the rig outside the tree for editors. All arrays are
      * allocated once in constructor(), so updates never allocate.
      */
@@ -67,6 +70,9 @@ public class AnimationStateHandle extends HandlePackage {
 
     // Proportions — per bone, non-inherited
     private Vector3[] boneProportions;
+
+    // Posture — per bone, rotation in degrees laid over the tree's pose
+    private Vector3[] bonePostures;
 
     // Output — consumed by rendering
     private Matrix4[] skinningMatrices;
@@ -149,11 +155,13 @@ public class AnimationStateHandle extends HandlePackage {
 
         // Output
         this.boneProportions = new Vector3[boneCount];
+        this.bonePostures = new Vector3[boneCount];
         this.skinningMatrices = new Matrix4[boneCount];
         this.currentWorldMatrices = new Matrix4[boneCount];
 
         for (int i = 0; i < boneCount; i++) {
             boneProportions[i] = new Vector3(1f, 1f, 1f);
+            bonePostures[i] = new Vector3();
             skinningMatrices[i] = new Matrix4();
             currentWorldMatrices[i] = new Matrix4();
         }
@@ -207,6 +215,12 @@ public class AnimationStateHandle extends HandlePackage {
 
     public Vector3 getBoneProportion(int boneIndex) {
         return boneProportions[boneIndex];
+    }
+
+    // Posture \\
+
+    public void setBonePosture(int boneIndex, float x, float y, float z) {
+        bonePostures[boneIndex].set(x, y, z);
     }
 
     // Update \\
@@ -490,6 +504,7 @@ public class AnimationStateHandle extends HandlePackage {
             for (int l = 0; l < animationTreeHandle.getLayerCount(); l++)
                 applyLayer(l, i);
 
+            rotationScratch.add(bonePostures[i]);
             composeBone(i);
         }
     }

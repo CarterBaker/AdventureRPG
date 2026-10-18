@@ -46,6 +46,10 @@ public class CameraInstance extends InstancePackage {
         data.setFOV(fov);
     }
 
+    public void setShake(float yawDegrees, float pitchDegrees, float rollDegrees) {
+        data.setShake(yawDegrees, pitchDegrees, rollDegrees);
+    }
+
     // Accessible \\
 
     public CameraData getCameraData() {

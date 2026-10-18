@@ -4,6 +4,7 @@
 
 #include "includes/CameraData.glsl"
 #include "includes/GBufferData.glsl"
+#include "includes/GBufferNormal.glsl"
 #include "includes/PostProcessData.glsl"
 #include "postprocessing/includes/InverseDistance.glsl"
 
@@ -17,10 +18,13 @@
  * nearer side of an edge is inked, so every silhouette, the sky's included,
  * takes one clean line. A crease is a fold between two faces, found from how
  * far their normals turn; creases look one way only, so a fold is inked once
- * rather than on both faces. Outlines fade out far away before the terrain's
- * detail turns them to noise, and the ink is the surface's own lit color
- * pressed nearly to black, so lines read as drawn ink yet still take the fog
- * and clouds laid over them afterwards.
+ * rather than on both faces. A smooth surface (GBufferNormal.glsl) takes no
+ * crease against anything, and a smooth neighbour of a smooth fragment counts
+ * as the same surface carried on, so the folds between a character's facets
+ * never ink while its outline against anything else still does. Outlines fade
+ * out far away before the terrain's detail turns them to noise, and the ink
+ * is the surface's own lit color pressed nearly to black, so lines read as
+ * drawn ink yet still take the fog and clouds laid over them afterwards.
  */
 
 const float OUTLINE_EPSILON           = 0.000001;
@@ -37,9 +41,9 @@ const int   OUTLINE_NEIGHBOUR_COUNT   = 4;
 const ivec2 OUTLINE_NEIGHBOURS[OUTLINE_NEIGHBOUR_COUNT] = ivec2[](
     ivec2(1, 0), ivec2(0, 1), ivec2(-1, 0), ivec2(0, -1));
 
-// How far a fold turns between this fragment's normal and a neighbour's, 0 flat to 1 square.
-float resolveCrease(ivec2 neighbour, vec3 normalView) {
-    return 1.0 - dot(normalView, normalize(texelFetch(u_gNormal, neighbour, 0).rgb));
+// How far a fold turns between this fragment's normal and a neighbour's stored normal, 0 flat to 1 square.
+float resolveCrease(vec3 neighbourNormal, vec3 normalView) {
+    return 1.0 - dot(normalView, normalize(neighbourNormal));
 }
 
 // Ink coverage at one G-buffer texel, 0 to 1.
@@ -56,16 +60,20 @@ float resolveOutline(ivec2 texel, float rawDepth, vec3 normalView, float fragDis
     float centerInverse = resolveInverseDistance(rawDepth);
     float aroundInverse = 0.0;
     float crease        = 0.0;
+    bool  smoothCenter  = isSmoothNormal(texelFetch(u_gNormal, texel, 0).rgb);
 
     for (int i = 0; i < OUTLINE_NEIGHBOUR_COUNT; i++) {
-        ivec2 neighbour      = clamp(texel + OUTLINE_NEIGHBOURS[i] * u_outlineThickness, ivec2(0), limit);
-        float neighbourDepth = texelFetch(u_gDepth, neighbour, 0).r;
+        ivec2 neighbour       = clamp(texel + OUTLINE_NEIGHBOURS[i] * u_outlineThickness, ivec2(0), limit);
+        float neighbourDepth  = texelFetch(u_gDepth, neighbour, 0).r;
+        vec3  neighbourNormal = texelFetch(u_gNormal, neighbour, 0).rgb;
+        bool  sky             = neighbourDepth >= 1.0;
+        bool  neighbourSmooth = !sky && isSmoothNormal(neighbourNormal);
 
-        aroundInverse += resolveInverseDistance(neighbourDepth);
+        aroundInverse += smoothCenter && neighbourSmooth ? centerInverse : resolveInverseDistance(neighbourDepth);
 
         // The first two neighbours look right and up; the sky behind a silhouette has no normal.
-        if (i < OUTLINE_NEIGHBOUR_COUNT / 2 && neighbourDepth < 1.0)
-        crease = max(crease, resolveCrease(neighbour, normalView));
+        if (!smoothCenter && !neighbourSmooth && !sky && i < OUTLINE_NEIGHBOUR_COUNT / 2)
+        crease = max(crease, resolveCrease(neighbourNormal, normalView));
     }
 
     float silhouette = float(OUTLINE_NEIGHBOUR_COUNT) - aroundInverse / max(centerInverse, OUTLINE_EPSILON);

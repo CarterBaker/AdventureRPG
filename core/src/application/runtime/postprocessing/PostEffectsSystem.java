@@ -10,6 +10,7 @@ import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.water.WaterSystem;
+import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -24,7 +25,8 @@ public class PostEffectsSystem extends SystemPackage {
      * pushSceneLayer() instead of the screen, and the layers are blitted in
      * layer order during render, once every one of them is queued for the
      * frame. A half-resolution prefilter measures each pixel's blur against
-     * AutoFocusSystem's focus and draws out the bright parts, a
+     * AutoFocusSystem's focus, kept sharp on the player behind the camera and
+     * wherever the weather pass's clouds hide a surface, and draws out the bright parts, a
      * half-resolution blur gathers the depth of field and the bloom, and the
      * composite applies anti-aliasing, depth of field, bloom, color grading
      * and the lens effects at full resolution. Both half-resolution passes are
@@ -39,6 +41,7 @@ public class PostEffectsSystem extends SystemPackage {
     private FBORenderSystem fboRenderSystem;
     private WorldSystem worldSystem;
     private WaterSystem waterSystem;
+    private WeatherSystem weatherSystem;
     private AutoFocusSystem autoFocusSystem;
 
     // Render Target
@@ -75,6 +78,7 @@ public class PostEffectsSystem extends SystemPackage {
         this.fboRenderSystem = get(FBORenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
         this.waterSystem = get(WaterSystem.class);
+        this.weatherSystem = get(WeatherSystem.class);
         this.autoFocusSystem = get(AutoFocusSystem.class);
     }
 
@@ -167,21 +171,39 @@ public class PostEffectsSystem extends SystemPackage {
                 blurFbo.getColorTexture(RuntimeSetting.ATTACHMENT_BLOOM));
     }
 
-    // The water target is cloned after this system wakes, so the depths are bound as each frame renders
+    // The water and weather targets are cloned after this system wakes, so they are bound as each frame renders
     private void bindFocusData() {
         bindFocusData(prefilterPass.getMaterial());
         bindFocusData(compositePass.getMaterial());
     }
 
     private void bindFocusData(MaterialInstance material) {
-        material.setUniform(RuntimeSetting.UNIFORM_SCENE_DEPTH, worldSystem.getWorldFbo().getDepthTexture());
+
+        FBOInstance worldFbo = worldSystem.getWorldFbo();
+        FBOInstance weatherFbo = weatherSystem.getWeatherFbo();
+
+        material.setUniform(RuntimeSetting.UNIFORM_SCENE_DEPTH, worldFbo.getDepthTexture());
+        material.setUniform(
+                RuntimeSetting.UNIFORM_SCENE_NORMAL,
+                worldFbo.getColorTexture(RuntimeSetting.ATTACHMENT_NORMAL));
         material.setUniform(RuntimeSetting.UNIFORM_WATER_DEPTH, waterSystem.getWaterFbo().getDepthTexture());
+        material.setUniform(
+                RuntimeSetting.UNIFORM_CLOUD_COLOR,
+                weatherFbo.getColorTexture(RuntimeSetting.ATTACHMENT_COLOR));
+        material.setUniform(
+                RuntimeSetting.UNIFORM_CLOUD_DISTANCE,
+                weatherFbo.getColorTexture(RuntimeSetting.ATTACHMENT_DISTANCE));
         material.setUniform(RuntimeSetting.UNIFORM_FOCUS_INVERSE, autoFocusSystem.getFocusInverse());
+        material.setUniform(RuntimeSetting.UNIFORM_FOCUS_NEAR_APERTURE, autoFocusSystem.getNearAperture());
+        material.setUniform(RuntimeSetting.UNIFORM_FOCUS_FAR_APERTURE, autoFocusSystem.getFarAperture());
+        material.setUniform(RuntimeSetting.UNIFORM_SUBJECT_NEAR_INVERSE, autoFocusSystem.getSubjectNearInverse());
+        material.setUniform(RuntimeSetting.UNIFORM_SUBJECT_FAR_INVERSE, autoFocusSystem.getSubjectFarInverse());
     }
 
     private void queueFocusSources(WindowInstance window) {
         renderManager.ensureFboRendered(worldSystem.getWorldFbo(), window);
         renderManager.ensureFboRendered(waterSystem.getWaterFbo(), window);
+        renderManager.ensureFboRendered(weatherSystem.getWeatherFbo(), window);
     }
 
     // Passes \\

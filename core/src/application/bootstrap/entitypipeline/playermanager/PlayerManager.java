@@ -7,6 +7,7 @@ import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
+import application.bootstrap.entitypipeline.player.PlayerCameraStruct;
 import application.bootstrap.entitypipeline.player.PlayerGestureStruct;
 import application.bootstrap.entitypipeline.player.UseTargetStruct;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
@@ -40,7 +41,11 @@ public class PlayerManager extends ManagerPackage {
     /*
      * Owns and drives each window's player entity and camera. The camera trails
      * the eye at a smoothed third-person distance that scroll and the
-     * first-person toggle adjust; gameplay always aims from the eye. Only the
+     * first-person toggle adjust; gameplay always aims from the eye. Closing
+     * in, FirstPersonBranch seats the camera at the posed head's eyes and
+     * bends and twists the chest after the look, the feet staying planted
+     * while a still player looks around, and CameraShakeBranch shakes the
+     * view with the jolts the player takes while it is in play. Only the
      * hovered window's player updates, gated on its menu lock. Also handles
      * free-camera flight, rerolls, spawn verification, and character-creator
      * previews, and advances the player's animation after movement each frame.
@@ -70,6 +75,8 @@ public class PlayerManager extends ManagerPackage {
     // Systems
     private PlayerInputSystem playerInputSystem;
     private PlayerBufferSystem internalBufferSystem;
+    private FirstPersonBranch firstPersonBranch;
+    private CameraShakeBranch cameraShakeBranch;
     private PlacementManager placementManager;
     private CombatManager combatManager;
     private VehicleControlSystem vehicleControlSystem;
@@ -83,6 +90,7 @@ public class PlayerManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<RawInputHandle> windowID2RawInput;
     private Int2ObjectOpenHashMap<WindowInstance> windowID2Window;
     private Int2ObjectOpenHashMap<PlayerGestureStruct> windowID2Gesture;
+    private Int2ObjectOpenHashMap<PlayerCameraStruct> windowID2CameraState;
     private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
     private Int2BooleanOpenHashMap windowID2FreeCamera;
 
@@ -118,6 +126,8 @@ public class PlayerManager extends ManagerPackage {
         this.playerInputSystem = create(PlayerInputSystem.class);
         create(PlayerGestureSystem.class);
         this.internalBufferSystem = create(PlayerBufferSystem.class);
+        this.firstPersonBranch = create(FirstPersonBranch.class);
+        this.cameraShakeBranch = create(CameraShakeBranch.class);
         this.placementManager = create(PlacementManager.class);
 
         this.windowID2Player = new Int2ObjectOpenHashMap<>();
@@ -125,6 +135,7 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2RawInput = new Int2ObjectOpenHashMap<>();
         this.windowID2Window = new Int2ObjectOpenHashMap<>();
         this.windowID2Gesture = new Int2ObjectOpenHashMap<>();
+        this.windowID2CameraState = new Int2ObjectOpenHashMap<>();
         this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
         this.windowID2FreeCamera = new Int2BooleanOpenHashMap();
 
@@ -191,6 +202,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2RawInput.put(windowID, rawInput);
         windowID2Window.put(windowID, window);
         windowID2Gesture.put(windowID, new PlayerGestureStruct());
+        windowID2CameraState.put(windowID, new PlayerCameraStruct());
         windowID2VerifyPlayerPosition.put(windowID, true);
         windowID2FreeCamera.put(windowID, false);
         windowID2ZoomDistance.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
@@ -211,6 +223,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2RawInput.remove(windowID);
         windowID2Window.remove(windowID);
         windowID2Gesture.remove(windowID);
+        windowID2CameraState.remove(windowID);
         windowID2VerifyPlayerPosition.remove(windowID);
         windowID2FreeCamera.remove(windowID);
         windowID2ZoomDistance.remove(windowID);
@@ -283,9 +296,11 @@ public class PlayerManager extends ManagerPackage {
             RawInputHandle raw) {
 
         WorldPositionStruct worldPositionStruct = player.getWorldPositionStruct();
+        PlayerCameraStruct cameraState = windowID2CameraState.get(windowID);
         boolean verifyPlayerPosition = windowID2VerifyPlayerPosition.get(windowID);
 
         if (verifyPlayerPosition) {
+            cameraShakeBranch.calm(camera, cameraState);
             verifyPlayerPosition = verifyPlayerPosition(player, worldPositionStruct);
             windowID2VerifyPlayerPosition.put(windowID, verifyPlayerPosition);
             return;
@@ -295,6 +310,7 @@ public class PlayerManager extends ManagerPackage {
 
         if (windowID2CharacterPreview.get(windowID)) {
             gesture.reset();
+            cameraShakeBranch.calm(camera, cameraState);
             updateCharacterPreview(windowID, player, camera);
             return;
         }
@@ -303,14 +319,20 @@ public class PlayerManager extends ManagerPackage {
 
         if (windowID2Window.get(windowID).getMenuListHandle().isInputLocked()) {
             gesture.reset();
+            cameraShakeBranch.calm(camera, cameraState);
             return;
         }
 
         // Translate raw hardware → game intent before anything reads EntityInputHandle
-        playerInputSystem.translate(raw, player.getEntityInputHandle(), gesture, combatManager.isArmed(player));
-        player.getEntityInputHandle().setStrafe(isFirstPerson(windowID));
+        EntityInputHandle input = player.getEntityInputHandle();
+        boolean firstPerson = isFirstPerson(windowID);
+
+        playerInputSystem.translate(raw, input, gesture, combatManager.isArmed(player));
+        input.setStrafe(firstPerson);
+        input.setTwist(firstPerson && !combatManager.isEngaged(player));
 
         if (windowID2FreeCamera.get(windowID)) {
+            cameraShakeBranch.calm(camera, cameraState);
             calculateFreeCameraPosition(player, camera);
             return;
         }
@@ -318,27 +340,30 @@ public class PlayerManager extends ManagerPackage {
         vehicleControlSystem.steer(player);
         movementManager.writeMovementState(player, combatManager.isSlowed(player), combatManager.isAttacking(player));
         movementManager.move(player);
+
+        float distance = updateZoom(windowID, raw);
+        float eyeBlend = firstPersonBranch.resolveEyeBlend(distance);
+
+        firstPersonBranch.pose(player, eyeBlend);
         player.updateAnimation(internal.getDeltaTime());
 
         // Eye position — where gameplay (aiming, raycasts) actually happens,
         // regardless of where the visual camera ends up.
         resolveEyePosition(player);
 
-        float distance = updateZoom(windowID, raw);
-
-        // Visual camera — pulled back behind the eye along the view direction.
-        // distance == 0 puts it exactly at the eye (first person).
+        // Visual camera — seated at the posed head's eyes as it closes in on
+        // first person, and pulled back behind them along the view direction.
         Vector3 direction = camera.getDirection();
 
-        cameraPosition.set(eyePosition);
+        firstPersonBranch.resolveCameraOrigin(player, eyeBlend, eyePosition, cameraPosition);
         cameraPosition.subtract(
                 direction.x * distance,
                 direction.y * distance,
                 direction.z * distance);
 
         camera.setPosition(cameraPosition);
+        cameraShakeBranch.update(player, camera, cameraState);
 
-        EntityInputHandle input = player.getEntityInputHandle();
         boolean activated = input.isActivateAction()
                 && vehicleControlSystem.activate(player, eyePosition, camera.getDirection());
 
@@ -436,8 +461,10 @@ public class PlayerManager extends ManagerPackage {
         state.setSpeed(0f, 0f);
         input.setFacingDirection(facing.x, 0f, facing.z);
         input.setStrafe(true);
+        input.setTwist(false);
 
         movementManager.face(player);
+        firstPersonBranch.pose(player, 0f);
         player.updateAnimation(internal.getDeltaTime());
 
         Vector3 framing = windowID2PreviewFraming.get(windowID);

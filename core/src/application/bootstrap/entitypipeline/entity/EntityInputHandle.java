@@ -13,7 +13,9 @@ public class EntityInputHandle extends HandlePackage {
      * Disconnected from RawInputHandle by design — the translation from raw
      * hardware state to game intent happens in PlayerManager. strafe holds
      * the body to the facing direction instead of letting it turn toward
-     * wherever the entity is heading. primaryAction is held for as long as
+     * wherever the entity is heading; twist lets a strafing entity standing
+     * still turn its head and chest first, its feet following only once the
+     * look swings past the twist limit. primaryAction is held for as long as
      * the entity keeps attacking, and activateAction is the moment it
      * activates what it faces or sets down what it holds. aimAction is the
      * moment an aim is raised and throwAction the moment a raised aim is let
@@ -32,6 +34,7 @@ public class EntityInputHandle extends HandlePackage {
     private boolean walk;
     private boolean sprint;
     private boolean strafe;
+    private boolean twist;
 
     // Actions
     private boolean primaryAction;
@@ -125,6 +128,14 @@ public class EntityInputHandle extends HandlePackage {
 
     public void setStrafe(boolean v) {
         strafe = v;
+    }
+
+    public boolean isTwist() {
+        return twist;
+    }
+
+    public void setTwist(boolean v) {
+        twist = v;
     }
 
     public boolean isPrimaryAction() {

@@ -351,7 +351,28 @@ public class EngineSetting {
     public static final String INPUT_NAME_UNKNOWN = "Unbound";
     public static final String INPUT_NAME_WORD_SEPARATOR = " ";
 
+    // Camera Shake
+    public static final float CAMERA_SHAKE_DECAY = 1.6f;
+    public static final float CAMERA_SHAKE_FREQUENCY = 14f;
+    public static final float CAMERA_SHAKE_HIT_HEALTH_MIN = 0.01f;
+    public static final float CAMERA_SHAKE_HIT_TRAUMA_MIN = 0.4f;
+    public static final float CAMERA_SHAKE_HIT_TRAUMA_PER_HEALTH = 2f;
+    public static final float CAMERA_SHAKE_LAND_SPEED_MAX = 20f;
+    public static final float CAMERA_SHAKE_LAND_SPEED_MIN = 6f;
+    public static final float CAMERA_SHAKE_LAND_TRAUMA = 0.8f;
+    public static final float CAMERA_SHAKE_MAX_PITCH_DEGREES = 3f;
+    public static final float CAMERA_SHAKE_MAX_ROLL_DEGREES = 5f;
+    public static final float CAMERA_SHAKE_MAX_YAW_DEGREES = 3f;
+    public static final float CAMERA_SHAKE_RECOIL_TRAUMA = 0.45f;
+    public static final long CAMERA_SHAKE_SEED_PITCH = 2L;
+    public static final long CAMERA_SHAKE_SEED_ROLL = 3L;
+    public static final long CAMERA_SHAKE_SEED_YAW = 1L;
+    public static final float CAMERA_SHAKE_STAGGER_TRAUMA = 0.65f;
+    public static final float CAMERA_SHAKE_TIME_PERIOD = 1000f;
+
     // User Settings
+    public static final float CAMERA_SHAKE_INTENSITY_MAX = 1f;
+    public static final float CAMERA_SHAKE_INTENSITY_MIN = 0f;
     public static final int DETAIL_RADIUS_MAX = 128;
     public static final int DETAIL_RADIUS_MIN = 16;
     public static final float FIELD_OF_VIEW_MAX = 110f;
@@ -376,6 +397,8 @@ public class EngineSetting {
     public static final float DEPTH_OF_FIELD_BLUR_MIN = 0f;
     public static final float DEPTH_OF_FIELD_STRENGTH_MAX = 1f;
     public static final float DEPTH_OF_FIELD_STRENGTH_MIN = 0f;
+    public static final float DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH_MAX = 1f;
+    public static final float DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH_MIN = 0f;
     public static final float FILM_GRAIN_MAX = 1f;
     public static final float FILM_GRAIN_MIN = 0f;
     public static final float OUTLINE_STRENGTH_MAX = 1f;
@@ -443,6 +466,7 @@ public class EngineSetting {
     public static final int GL_TESS_EVALUATION_SHADER = 0x8E87;
     public static final String GRID_COORDINATE_UBO = "GridCoordinateData";
     public static final int MAX_RENDER_CALLS_PER_FRAME = 16384;
+    public static final float MESH_UV_EDGE_INSET_TEXELS = 0.05f;
     public static final int MESH_VERT_LIMIT = 32767;
     public static final String MOON_LIGHT_UBO = "MoonLightData";
     public static final String ORTHO_DATA_UBO = "OrthoData";
@@ -467,8 +491,12 @@ public class EngineSetting {
     public static final String UBO_TIME_DATA_NAME = "TimeData";
 
     // Camera
+    public static final float CAMERA_EYE_BLEND_DISTANCE = 1f;
+    public static final float CAMERA_EYE_FORWARD = 0.13f;
     public static final float CAMERA_FAR_PLANE = 10000f;
+    public static final float CAMERA_FIRST_PERSON_BEND_SHARE = 0.45f;
     public static final float CAMERA_FIRST_PERSON_THRESHOLD = 0.1f;
+    public static final float CAMERA_FIRST_PERSON_TWIST_SHARE = 0.15f;
     public static final float CAMERA_MAX_PITCH_DEGREES = 89f;
     public static final float CAMERA_MIN_FOV_DEGREES = 1f;
     public static final float CAMERA_MAX_FOV_DEGREES = 179f;
@@ -2098,12 +2126,15 @@ public class EngineSetting {
     public static final float DEFAULT_SWIM_SPEED = 2.4f;
     public static final float DEFAULT_TURN_RESPONSIVENESS = 12f;
     public static final float DEFAULT_WALK_SPEED = 1.4f;
+    public static final float FACING_TWIST_LIMIT_DEGREES = 60f;
     public static final float FACING_VELOCITY_EPSILON = 0.01f;
     public static final float FREE_CAMERA_FLIGHT_SPEED = 12f;
     public static final float FREE_CAMERA_SPRINT_MULTIPLIER = 4f;
     public static final float TURN_RATE_SMOOTHING = 8f;
     public static final int MAX_BONE_INFLUENCES = 4;
     public static final int SKINNED_BONE_TEXELS_PER_BONE = 3;
+    public static final int SKINNED_NORMAL_FLOATS = 3;
+    public static final float SKINNED_NORMAL_SMOOTH_COSINE = 0.5f;
     public static final float SKINNED_HIDDEN_BONE_NONE = -1f;
     public static final int SKINNED_INSTANCE_APPEARANCE_FLOATS = 24;
     public static final int[] SKINNED_INSTANCE_ATTRIBUTE_SIZES = { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };

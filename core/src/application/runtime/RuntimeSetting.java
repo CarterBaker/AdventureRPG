@@ -131,6 +131,11 @@ public class RuntimeSetting {
     public static final String ATTACHMENT_DEPTH_OF_FIELD = "depthOfField";
     public static final String UNIFORM_SCENE_COLOR = "u_sceneColor";
     public static final String UNIFORM_FOCUS_INVERSE = "u_focusInverse";
+    public static final String UNIFORM_FOCUS_NEAR_APERTURE = "u_focusNearAperture";
+    public static final String UNIFORM_FOCUS_FAR_APERTURE = "u_focusFarAperture";
+    public static final String UNIFORM_SUBJECT_NEAR_INVERSE = "u_subjectNearInverse";
+    public static final String UNIFORM_SUBJECT_FAR_INVERSE = "u_subjectFarInverse";
+    public static final String UNIFORM_SCENE_NORMAL = "u_sceneNormal";
     public static final String UNIFORM_PREFILTER_FOCUS = "u_prefilterFocus";
     public static final String UNIFORM_PREFILTER_BLOOM = "u_prefilterBloom";
     public static final String UNIFORM_BLUR_DEPTH_OF_FIELD = "u_blurDepthOfField";
@@ -144,6 +149,14 @@ public class RuntimeSetting {
     public static final float FOCUS_INFINITY_INVERSE = 0f;
     public static final float FOCUS_RATE = 6f;
     public static final float FOCUS_SUBJECT_CENTER = 0.5f;
+    public static final float FOCUS_FIRST_PERSON_NEAR_APERTURE = 0.5f;
+    public static final float FOCUS_FIRST_PERSON_FAR_APERTURE = 1f;
+    public static final float FOCUS_PORTRAIT_NEAR_APERTURE = 1f;
+    public static final float FOCUS_PORTRAIT_FAR_APERTURE = 1f;
+    public static final float FOCUS_THIRD_PERSON_NEAR_SHARE = 0.35f;
+    public static final float FOCUS_SUBJECT_RADIUS_SHARE = 0.5f;
+    public static final float FOCUS_SUBJECT_MARGIN = 0.25f;
+    public static final float FOCUS_SUBJECT_NONE_INVERSE = -1f;
 
     // Load Menu
     public static final String MENU_LOAD = "MainMenu/Load";
@@ -292,7 +305,6 @@ public class RuntimeSetting {
     public static final String SETTINGS_TAB_GAMEPLAY = "Gameplay";
     public static final String SETTINGS_TAB_ACCESSIBILITY = "Accessibility";
     public static final String SETTINGS_PLACEHOLDER_AUDIO = "Volume and sound options will be set here.";
-    public static final String SETTINGS_PLACEHOLDER_GAMEPLAY = "Difficulty and interface options will be set here.";
     public static final String SETTINGS_PLACEHOLDER_ACCESSIBILITY = "Text size and color options will be set here.";
     public static final String SETTINGS_PLACEHOLDER_COMING_SOON = "Coming soon";
     public static final String SETTINGS_PLACEHOLDER_GAME_WINDOW_ONLY = "Game window only";
@@ -311,8 +323,11 @@ public class RuntimeSetting {
     public static final String SETTINGS_SECTION_IMAGE = "Image";
     public static final String SETTINGS_SECTION_COLOR = "Color";
     public static final String SETTINGS_SECTION_LENS = "Lens";
+    public static final String SETTINGS_SECTION_CAMERA = "Camera";
     public static final String SETTINGS_NOTE_WORLD_APPLY = "World changes apply when you leave Settings";
     public static final String SETTINGS_NOTE_AUTO_FOCUS = "Focus follows whatever you look at";
+    public static final String SETTINGS_NOTE_THIRD_PERSON_FOCUS = "Your character always stays sharp in third person";
+    public static final String SETTINGS_NOTE_HEAD_BOB = "Head bob follows your stride in first person";
 
     // Settings Options
     public static final String SETTINGS_OPTION_FULLSCREEN = "Fullscreen";
@@ -325,11 +340,15 @@ public class RuntimeSetting {
     public static final String SETTINGS_OPTION_OUTLINE_THICKNESS = "Thickness";
     public static final String SETTINGS_OPTION_ANTI_ALIASING = "Anti-Aliasing";
     public static final String SETTINGS_OPTION_DEPTH_OF_FIELD = "Depth of Field";
+    public static final String SETTINGS_OPTION_DEPTH_OF_FIELD_THIRD_PERSON = "Third Person";
     public static final String SETTINGS_OPTION_BLOOM = "Bloom";
+    public static final String SETTINGS_OPTION_CAMERA_SHAKE = "Camera Shake";
+    public static final String SETTINGS_OPTION_HEAD_BOB = "Head Bob";
     public static final String SETTINGS_SLIDER_MOUSE_SENSITIVITY = "Sensitivity";
     public static final String SETTINGS_SLIDER_OUTLINE_STRENGTH = "Strength";
     public static final String SETTINGS_SLIDER_DEPTH_OF_FIELD_STRENGTH = "Strength";
     public static final String SETTINGS_SLIDER_DEPTH_OF_FIELD_BLUR = "Blur Size";
+    public static final String SETTINGS_SLIDER_DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH = "Third Person Strength";
     public static final String SETTINGS_SLIDER_BLOOM_INTENSITY = "Bloom Intensity";
     public static final String SETTINGS_SLIDER_BRIGHTNESS = "Brightness";
     public static final String SETTINGS_SLIDER_CONTRAST = "Contrast";
@@ -337,6 +356,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_SLIDER_VIGNETTE = "Vignette";
     public static final String SETTINGS_SLIDER_CHROMATIC_ABERRATION = "Chromatic Aberration";
     public static final String SETTINGS_SLIDER_FILM_GRAIN = "Film Grain";
+    public static final String SETTINGS_SLIDER_CAMERA_SHAKE_INTENSITY = "Shake Intensity";
     public static final String SETTINGS_VALUE_ON = "On";
     public static final String SETTINGS_VALUE_OFF = "Off";
     public static final String SETTINGS_FORMAT_BLOCKS = "%d blocks";

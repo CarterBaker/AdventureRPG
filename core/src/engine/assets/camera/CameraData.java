@@ -12,7 +12,9 @@ public class CameraData extends DataPackage {
      * Perspective camera state. Setters only mark the cached matrices stale;
      * projection, view and their inverses are rebuilt once, on the first
      * matrix read after a change, using scratch basis vectors so a frame of
-     * camera movement never allocates.
+     * camera movement never allocates. A shake turns the view matrix alone —
+     * the direction everything aims along and the pick ray stay steady, so a
+     * shaking view never throws off where the player looks.
      */
 
     // Matrices
@@ -37,6 +39,11 @@ public class CameraData extends DataPackage {
     private float fov;
     private final float nearPlane;
     private final float farPlane;
+
+    // Shake — radians the view turns about its own axes
+    private float shakeYaw;
+    private float shakePitch;
+    private float shakeRoll;
 
     // State
     private boolean dirty;
@@ -113,6 +120,21 @@ public class CameraData extends DataPackage {
         this.dirty = true;
     }
 
+    public void setShake(float yawDegrees, float pitchDegrees, float rollDegrees) {
+
+        float yaw = (float) Math.toRadians(yawDegrees);
+        float pitch = (float) Math.toRadians(pitchDegrees);
+        float roll = (float) Math.toRadians(rollDegrees);
+
+        if (yaw == shakeYaw && pitch == shakePitch && roll == shakeRoll)
+            return;
+
+        this.shakeYaw = yaw;
+        this.shakePitch = pitch;
+        this.shakeRoll = roll;
+        this.dirty = true;
+    }
+
     // Pick Ray \\
 
     public void getPickRay(float ndcX, float ndcY, Vector3 outOrigin, Vector3 outDirection) {
@@ -164,6 +186,7 @@ public class CameraData extends DataPackage {
     private void setLookAt(Matrix4 out, Vector3 pos) {
 
         resolveBasis(directionVec, upVec);
+        applyShake();
 
         Vector3 f = forwardScratch;
         Vector3 s = sideScratch;
@@ -191,6 +214,30 @@ public class CameraData extends DataPackage {
                 s.y * f.z - s.z * f.y,
                 s.z * f.x - s.x * f.z,
                 s.x * f.y - s.y * f.x);
+    }
+
+    // Turns the basis by the shake: pitch toward up, yaw toward the side, then roll about the turned forward
+    private void applyShake() {
+
+        if (shakeYaw == 0f && shakePitch == 0f && shakeRoll == 0f)
+            return;
+
+        rotatePair(forwardScratch, upScratch, shakePitch);
+        rotatePair(forwardScratch, sideScratch, shakeYaw);
+        rotatePair(sideScratch, upScratch, shakeRoll);
+    }
+
+    // Turns two axes of the basis within their own plane, the first toward the second
+    private static void rotatePair(Vector3 first, Vector3 second, float radians) {
+
+        float cos = (float) Math.cos(radians);
+        float sin = (float) Math.sin(radians);
+        float x = first.x;
+        float y = first.y;
+        float z = first.z;
+
+        first.set(x * cos + second.x * sin, y * cos + second.y * sin, z * cos + second.z * sin);
+        second.set(second.x * cos - x * sin, second.y * cos - y * sin, second.z * cos - z * sin);
     }
 
     private float getSafeFov() {

@@ -80,6 +80,10 @@ public class SettingsUtility extends EngineUtility {
                 settings.mouseSensitivity,
                 EngineSetting.MOUSE_SENSITIVITY_MIN,
                 EngineSetting.MOUSE_SENSITIVITY_MAX);
+        settings.cameraShakeIntensity = Math.clamp(
+                settings.cameraShakeIntensity,
+                EngineSetting.CAMERA_SHAKE_INTENSITY_MIN,
+                EngineSetting.CAMERA_SHAKE_INTENSITY_MAX);
 
         sanitizePostProcessing(settings);
         sanitizeColors(settings);
@@ -103,6 +107,10 @@ public class SettingsUtility extends EngineUtility {
                 settings.depthOfFieldBlur,
                 EngineSetting.DEPTH_OF_FIELD_BLUR_MIN,
                 EngineSetting.DEPTH_OF_FIELD_BLUR_MAX);
+        settings.depthOfFieldThirdPersonStrength = Math.clamp(
+                settings.depthOfFieldThirdPersonStrength,
+                EngineSetting.DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH_MIN,
+                EngineSetting.DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH_MAX);
         settings.bloomIntensity = Math.clamp(
                 settings.bloomIntensity,
                 EngineSetting.BLOOM_INTENSITY_MIN,
