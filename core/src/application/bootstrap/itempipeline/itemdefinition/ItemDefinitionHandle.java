@@ -135,12 +135,12 @@ public class ItemDefinitionHandle extends HandlePackage {
         return itemDefinitionData.getToolTier();
     }
 
-    public short getMovesetID() {
-        return itemDefinitionData.getMovesetID();
+    public short getWeaponID() {
+        return itemDefinitionData.getWeaponID();
     }
 
-    public boolean hasMoveset() {
-        return itemDefinitionData.hasMoveset();
+    public boolean hasWeapon() {
+        return itemDefinitionData.hasWeapon();
     }
 
     public short getSkillID() {

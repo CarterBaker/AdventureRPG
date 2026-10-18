@@ -58,15 +58,14 @@ public class NpcManager extends ManagerPackage {
      * fights or runs through NpcCombatBranch, and one whose fight is over
      * walks home, every way walked through NpcSteerBranch along the paths
      * PathfindingManager finds. It then moves, animates and fights exactly as
-     * the player does, through MovementManager and CombatManager.control(),
-     * its primary action only ever swinging what it holds. alarm() hears
-     * every blow that lands from a source, provoking the struck resident and
-     * any near enough that defends the struck. A resident brought to no
-     * health falls through defeat(): at the end of the frame it scatters
-     * everything it carried and one draw of its loot table at its level and
-     * by the luck of whatever felled it, and leaves the world, its spot left
-     * empty for as long as the chunk keeps its items. Every NPC is resolved
-     * in awake(), before any chunk generates. NPC IDs are assigned in
+     * the player does, through MovementManager and CombatManager.control().
+     * alarm() hears every blow that lands from a source, provoking the struck
+     * resident and any near enough that defends the struck. A resident brought
+     * to no health falls through defeat(): at the end of the frame it scatters
+     * everything it carried and one draw of its loot table at its level and by
+     * the luck of whatever felled it, and leaves the world, its spot left
+     * empty for as long as the chunk keeps its items. Every NPC is resolved in
+     * awake(), before any chunk generates. NPC IDs are assigned in
      * registration order.
      */
 
@@ -185,9 +184,6 @@ public class NpcManager extends ManagerPackage {
         movementManager.move(entity);
         entity.updateAnimation(deltaTime);
         combatManager.control(entity);
-
-        if (input.isPrimaryAction())
-            combatManager.swing(entity);
     }
 
     private void think(NpcInstance resident, float deltaTime) {

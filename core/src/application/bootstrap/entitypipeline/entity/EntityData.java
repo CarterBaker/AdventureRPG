@@ -15,11 +15,12 @@ public class EntityData extends DataPackage {
 
     /*
      * Immutable entity template loaded from ARPG: size, weight and eye level
-     * ranges, behavior, and the optional character model with its material,
-     * animation tree, appearance, authored height and equipment anchors. The
-     * material is resolved once per template and shared by every instance so
-     * characters batch together. A race allows one or more genders; the first
-     * is the one a new being of it starts with.
+     * ranges, behavior, the weapon its own body fights with when its hands
+     * hold nothing it can wield, and the optional character model with its
+     * material, animation tree, appearance, authored height and equipment
+     * anchors. The material is resolved once per template and shared by every
+     * instance so characters batch together. A race allows one or more
+     * genders; the first is the one a new being of it starts with.
      */
 
     // Size
@@ -36,6 +37,9 @@ public class EntityData extends DataPackage {
 
     // Genders
     private final short[] genderIDs;
+
+    // Combat
+    private final short weaponID;
 
     // Model — optional
     private final MeshHandle characterMesh;
@@ -60,6 +64,7 @@ public class EntityData extends DataPackage {
             float eyeLevel,
             String behaviorName,
             short[] genderIDs,
+            short weaponID,
             MeshHandle characterMesh,
             MaterialInstance characterMaterial,
             AnimationTreeHandle animationTreeHandle,
@@ -81,6 +86,9 @@ public class EntityData extends DataPackage {
 
         // Genders
         this.genderIDs = genderIDs;
+
+        // Combat
+        this.weaponID = weaponID;
 
         // Model
         this.characterMesh = characterMesh;
@@ -141,6 +149,10 @@ public class EntityData extends DataPackage {
                 return true;
 
         return false;
+    }
+
+    public short getWeaponID() {
+        return weaponID;
     }
 
     public boolean hasCharacterModel() {

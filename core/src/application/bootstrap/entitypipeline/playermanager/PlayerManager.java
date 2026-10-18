@@ -327,7 +327,7 @@ public class PlayerManager extends ManagerPackage {
         EntityInputHandle input = player.getEntityInputHandle();
         boolean firstPerson = isFirstPerson(windowID);
 
-        playerInputSystem.translate(raw, input, gesture, combatManager.isArmed(player));
+        playerInputSystem.translate(raw, input, gesture);
         input.setStrafe(firstPerson);
         input.setTwist(firstPerson && !combatManager.isEngaged(player));
 

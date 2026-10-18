@@ -13,7 +13,7 @@ public class DamageTypeManager extends ManagerPackage {
      * Owns the damage type palette: whether armor meets a blow of each kind,
      * whether a guard can catch it, and whether it bleeds. IDs are assigned in
      * registration order, and a name declared twice is rejected. Every damage
-     * type is resolved in awake(), before any moveset names one.
+     * type is resolved in awake(), before any weapon names one.
      */
 
     // Palette

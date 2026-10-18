@@ -202,7 +202,6 @@ public class EngineSetting {
     public static final String MATERIAL_PATH = "materials";
     public static final String MENU_PATH = "menus";
     public static final String MESH_PATH = "mesh";
-    public static final String MOVESET_PATH = "movesets";
     public static final String NPC_PATH = "npcs";
     public static final String PASS_PATH = "processingpasses";
     public static final String PROFESSION_PATH = "professions";
@@ -231,6 +230,7 @@ public class EngineSetting {
     public static final String VEHICLE_PATH = "vehicles";
     public static final ObjectArraySet<String> VERT_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "vsh",
         "vert", "vs", "vertex" });
+    public static final String WEAPON_PATH = "weapons";
     public static final String WEATHER_PATH = "weathers";
     public static final String WORLD_TEXTURE_PATH = "worlds";
 
@@ -2389,8 +2389,10 @@ public class EngineSetting {
     public static final int PATH_WAYPOINT_CAPACITY = 64;
     public static final float PATH_WAYPOINT_REACH_BLOCKS = 0.35f;
 
-    // Combat
+    // Combat — a blow's momentum is the mass it drives times its speed, and does a point of durability's work for
+    // every BLOW_MOMENTUM_PER_DURABILITY of it
     public static final float AIM_RAISE_SECONDS = 0.3f;
+    public static final float ARM_MASS = 1.5f;
     public static final float ARMOR_MITIGATION_SCALE = 50f;
     public static final float ATTACK_ARC_MAX = 180f;
     public static final int ATTACK_ARC_RAYS = 5;
@@ -2401,6 +2403,9 @@ public class EngineSetting {
     public static final float BLOCK_MITIGATION_MAX = 0.9f;
     public static final float BLOCK_MITIGATION_PER_ARMOR = 0.05f;
     public static final float BLOCK_MITIGATION_PER_WEIGHT = 0.06f;
+    public static final float BLOW_DAMAGE_MIN = 1f;
+    public static final float BLOW_DAMAGE_PER_MOMENTUM = 0.2f;
+    public static final float BLOW_MOMENTUM_PER_DURABILITY = 20f;
     public static final float CRIT_DAMAGE_MULTIPLIER = 2f;
     public static final String DAMAGE_TYPE_BLUNT = "blunt";
     public static final float DEFAULT_ATTACK_ARC = 0f;
@@ -2418,12 +2423,7 @@ public class EngineSetting {
     public static final float REACTION_IMPACT = 1f;
     public static final float RECOIL_SECONDS = 0.4f;
     public static final float STAGGER_SECONDS = 0.35f;
-    public static final float SWING_BASE_SECONDS = 0.4f;
-    public static final float SWING_DAMAGE_PER_WEIGHT = 1.5f;
-    public static final float SWING_IMPACT = 0.45f;
-    public static final float SWING_MAX_SECONDS = 1f;
-    public static final float SWING_SECONDS_PER_WEIGHT = 0.06f;
-    public static final String UNARMED_MOVESET = "Unarmed";
+    public static final float SWING_IMPULSE = 31.5f;
 
     // Combat Gestures — swipes are measured in mouse pixels, whatever the look sensitivity
     public static final float GESTURE_READ_LOOK_SCALE = 0f;
@@ -2433,27 +2433,26 @@ public class EngineSetting {
     public static final float GESTURE_SWIPE_THRESHOLD = 22f;
     public static final float LOOK_SCALE_FULL = 1f;
 
-    // Movesets
-    public static final String ITEM_MOVESET_NONE = "";
-    public static final short MOVESET_NONE = 0;
+    // Weapons
+    public static final String DEFAULT_ENTITY_WEAPON = "Unarmed";
+    public static final String DEFAULT_ITEM_WEAPON = "Improvised";
+    public static final float DEFAULT_WEAPON_MASS = 0.5f;
+    public static final String ITEM_WEAPON_NONE = "";
+    public static final short WEAPON_NONE = 0;
 
     // Throwing
-    public static final float THROW_ARM_MASS = 1.5f;
     public static final float THROW_IMPULSE = 36f;
     public static final float THROW_RELEASE = 0.3f;
     public static final float THROW_RELEASE_DISTANCE = 0.6f;
     public static final float THROW_RELEASE_MARGIN = 0.05f;
     public static final float THROW_SECONDS = 0.35f;
     public static final float THROW_SPIN_RATE = 18f;
-    public static final float THROWN_DAMAGE_MIN = 1f;
-    public static final float THROWN_DAMAGE_PER_MOMENTUM = 0.35f;
 
     // Projectiles
     public static final float PROJECTILE_AIR_DRAG = 0.05f;
     public static final float PROJECTILE_BOUNCE_FRICTION = 0.6f;
     public static final float PROJECTILE_BOUNCE_RESTITUTION = 0.25f;
     public static final float PROJECTILE_BOUNCE_SPIN_DAMPING = 0.5f;
-    public static final float PROJECTILE_BREAK_MOMENTUM_PER_DURABILITY = 40f;
     public static final float PROJECTILE_DEBRIS_SCATTER = 3f;
     public static final float PROJECTILE_DEBRIS_SPEED_SHARE = 0.4f;
     public static final float PROJECTILE_DEBRIS_SPIN_RATE = 9f;

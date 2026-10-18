@@ -12,17 +12,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ProjectileManager extends ManagerPackage {
 
     /*
-     * Owns every thrown item in flight. launch() is the one path an item
-     * takes to fly, whether a hand throws it, a cannon fires it, or an impact
-     * knocks it loose; drop() launches an item let fall loose, which strikes
-     * no one on its way down. Every fixed step ProjectileFlightBranch moves each
-     * projectile under gravity, drag and spin, striking entities and bouncing
-     * off blocks until it comes to rest, ProjectileImpactBranch lets a hard
-     * enough hit break the block it meets, and ProjectileLandingBranch snaps a
-     * resting one back into the world — a block piece as a sub-block, anything
-     * else as a world item on the nearest sub-voxel position and orientation.
-     * One that cannot settle yet waits where it rests and tries again.
-     * ProjectileRenderSystem draws them for every window.
+     * Owns every thrown item in flight. launch() is the one path an item takes
+     * to fly, whether a hand throws it or a cannon fires it; drop() launches
+     * an item let fall loose, which lands no blow on its way down. Every fixed
+     * step ProjectileFlightBranch moves each projectile under gravity, drag
+     * and spin, landing its blow on the entities, trees and blocks it meets
+     * through CombatManager and bouncing off them until it comes to rest, and
+     * ProjectileLandingBranch snaps a resting one back into the world — a
+     * block piece as a sub-block, anything else as a world item on the nearest
+     * sub-voxel position and orientation. One that cannot settle yet waits
+     * where it rests and tries again. ProjectileRenderSystem draws them for
+     * every window.
      */
 
     // Branches
@@ -43,7 +43,6 @@ public class ProjectileManager extends ManagerPackage {
         // Branches
         this.projectileFlightBranch = create(ProjectileFlightBranch.class);
         this.projectileLandingBranch = create(ProjectileLandingBranch.class);
-        create(ProjectileImpactBranch.class);
         create(ProjectileRenderSystem.class);
 
         // Projectiles
@@ -101,7 +100,7 @@ public class ProjectileManager extends ManagerPackage {
     }
 
     // An item let fall loose from a position in a chunk's frame, as something scatters what it carried — it lands
-    // like any thrown item but never strikes anyone
+    // like any thrown item but never lands a blow
     public void drop(
             EntityInstance source,
             ItemInstance itemInstance,
@@ -113,7 +112,7 @@ public class ProjectileManager extends ManagerPackage {
             Quaternion orientation) {
 
         launch(source, itemInstance, chunkCoordinate, position, velocity, spinAxis, spinRate, orientation)
-                .markStruck();
+                .markLoose();
     }
 
     // Accessible \\

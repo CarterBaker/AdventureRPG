@@ -2,7 +2,8 @@ package application.bootstrap.worldpipeline.treemanager;
 
 import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
-import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.combatpipeline.combat.BlowOutcome;
+import application.bootstrap.combatpipeline.combat.BlowStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.worldpipeline.tree.TreeCastStruct;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
@@ -40,7 +41,7 @@ public class TreeManager extends ManagerPackage {
      * the macro terrain nearest them, and as a canopy by the macro terrain
      * beyond that, so a tree that changes redraws only itself. It is the one way anything
      * touches a tree: castTree() finds what a ray meets, strikeTree() lands a
-     * swing on it, collectWoodBoxes() gives movement the wood to collide
+     * blow on it, collectWoodBoxes() gives movement the wood to collide
      * with, and plant() roots a seed. Each frame it publishes the game day
      * for the streaming threads, grows the trees whose stage has come, and
      * carries every felled piece through its fall. Tree IDs are assigned in
@@ -235,9 +236,9 @@ public class TreeManager extends ManagerPackage {
 
     // Interaction \\
 
-    // A landed swing against what castTree() last met — true when the strike counted
-    public boolean strikeTree(EntityInstance entity, TreeCastStruct cast, Vector3 direction) {
-        return treeChopBranch.strike(entity, cast, direction);
+    // A blow landing on what a cast met, swung or thrown
+    public BlowOutcome strikeTree(BlowStruct blow, TreeCastStruct cast) {
+        return treeChopBranch.strike(blow, cast);
     }
 
     // A seed of a species set into the ground, rooting in the block above — false when one already stands there

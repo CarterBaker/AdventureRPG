@@ -41,8 +41,4 @@ public class ToolTypeHandle extends HandlePackage {
     public String getDefaultModelPath() {
         return toolTypeData.getDefaultModelPath();
     }
-
-    public ToolSwing getSwing() {
-        return toolTypeData.getSwing();
-    }
 }

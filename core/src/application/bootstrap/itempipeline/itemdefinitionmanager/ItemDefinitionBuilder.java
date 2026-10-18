@@ -2,7 +2,7 @@ package application.bootstrap.itempipeline.itemdefinitionmanager;
 
 import java.io.File;
 
-import application.bootstrap.combatpipeline.movesetmanager.MovesetManager;
+import application.bootstrap.combatpipeline.weaponmanager.WeaponManager;
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
@@ -60,9 +60,10 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * shut. An item without a display name is titled from its local name split
      * into words. A tool names its tool type, whose model it is drawn with
      * unless it names its own mesh, and the highest break tier it can break. A
-     * weapon names the moveset it is wielded with, loaded on demand. "stats"
-     * names what the item grants from the stat registry, and "skill" the skill
-     * its use trains. A stackable item holds up to its stack size in one item,
+     * "weapon" names the weapon the item is wielded with, loaded on demand;
+     * one that names none fights with the default item weapon. "stats" names
+     * what the item grants from the stat registry, and "skill" the skill its
+     * use trains. A stackable item holds up to its stack size in one item,
      * which a container cannot. An item's "actions" each name a "trigger",
      * optionally the item held "with" it, whether it "consumes" one of that,
      * and the model "parts" it must be aimed at, and the item it "becomes";
@@ -83,7 +84,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private MaterialManager materialManager;
     private SubVoxelManager subVoxelManager;
     private ToolTypeManager toolTypeManager;
-    private MovesetManager movesetManager;
+    private WeaponManager weaponManager;
     private CoveringManager coveringManager;
     private StatManager statManager;
     private SkillManager skillManager;
@@ -109,7 +110,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
         this.materialManager = get(MaterialManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
         this.toolTypeManager = get(ToolTypeManager.class);
-        this.movesetManager = get(MovesetManager.class);
+        this.weaponManager = get(WeaponManager.class);
         this.coveringManager = get(CoveringManager.class);
         this.statManager = get(StatManager.class);
         this.skillManager = get(SkillManager.class);
@@ -160,7 +161,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
         short toolTypeID = parseToolType(itemArpg);
         int toolTier = parseToolTier(itemArpg, toolTypeID, itemName);
-        short movesetID = parseMoveset(itemArpg);
+        short weaponID = parseWeapon(itemArpg);
         short skillID = parseSkill(itemArpg);
         int stackSize = parseStackSize(itemArpg, itemName);
 
@@ -218,7 +219,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 materialID,
                 toolTypeID,
                 toolTier,
-                movesetID,
+                weaponID,
                 skillID,
                 stackSize,
                 EngineSetting.BLOCK_PIECE_NONE,
@@ -301,14 +302,14 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
     // Combat \\
 
-    private short parseMoveset(ArpgObjectStruct itemArpg) {
+    private short parseWeapon(ArpgObjectStruct itemArpg) {
 
-        String movesetName = ArpgUtility.getString(itemArpg, "moveset", EngineSetting.ITEM_MOVESET_NONE);
+        String weaponName = ArpgUtility.getString(itemArpg, "weapon", EngineSetting.ITEM_WEAPON_NONE);
 
-        if (movesetName.isEmpty())
-            return EngineSetting.MOVESET_NONE;
+        if (weaponName.isEmpty())
+            return EngineSetting.WEAPON_NONE;
 
-        return movesetManager.getMovesetIDFromMovesetName(movesetName);
+        return weaponManager.getWeaponIDFromWeaponName(weaponName);
     }
 
     // Stacking \\

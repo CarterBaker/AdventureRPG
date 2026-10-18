@@ -20,23 +20,22 @@ class NpcCombatBranch extends BranchPackage {
     /*
      * The fighting mind of an NPC for NpcManager. It writes what the NPC wants
      * into its EntityInputHandle exactly as the player's keys and mouse would
-     * — an attack from a side, a guard toward one, a plain swing for anything
-     * that is no weapon — and leaves every blow to CombatManager. Beyond reach
-     * it chases its foe along a path, running while the gap is wide. Within
-     * reach it faces the foe and strafes about it, stepping in when too far
-     * for a blow and back when crowded, circling toward a side drawn anew
-     * every little while. It watches the foe's hands: an attack it sees coming
-     * is answered after its reaction time by a guard raised toward the side
-     * it reads the blow from — the attack's mirror, read right at its guard
-     * chance — and held a moment past the blow, unless its own attack will
-     * land first, which it lets fly instead, since a blow landing on a foe
-     * still winding up staggers it. It presses attacks at a pace set by its
-     * aggression, each from a side the foe's raised guard does not cover, and
-     * at once while the foe reels from a guarded blow or a stagger; an attack
-     * may carry into others, each pressed once the last has recovered far
-     * enough to chain, or be feinted into a guard just before it commits.
-     * Flight runs from the foe for a point NPC_FLEE_BLOCKS beyond, drawing
-     * another once there or stuck.
+     * — an attack from a side with whatever it holds, a guard toward one — and
+     * leaves every blow to CombatManager. Beyond reach it chases its foe along
+     * a path, running while the gap is wide. Within reach it faces the foe and
+     * strafes about it, stepping in when too far for a blow and back when
+     * crowded, circling toward a side drawn anew every little while. It
+     * watches the foe's hands: an attack it sees coming is answered after its
+     * reaction time by a guard raised toward the side it reads the blow from —
+     * the attack's mirror, read right at its guard chance — and held a moment
+     * past the blow, unless its own attack will land first, which it lets fly
+     * instead, since a blow landing on a foe still winding up staggers it. It
+     * presses attacks at a pace set by its aggression, each from a side the
+     * foe's raised guard does not cover, and at once while the foe reels from
+     * a guarded blow or a stagger; an attack may carry into others, each
+     * pressed once the last has recovered far enough to chain, or be feinted
+     * into a guard just before it commits. Flight runs from the foe for a
+     * point NPC_FLEE_BLOCKS beyond, drawing another once there or stuck.
      */
 
     // Internal
@@ -272,12 +271,6 @@ class NpcCombatBranch extends BranchPackage {
 
         EntityInputHandle input = entity.getEntityInputHandle();
         float pause = drawPause(temperament);
-
-        if (!combatManager.isArmed(entity)) {
-            input.setPrimaryAction(true);
-            combat.beginExchange(pause, 0, false);
-            return;
-        }
 
         input.setAttackAction(true);
         input.setAttackDirection(chooseSide(foe, null));

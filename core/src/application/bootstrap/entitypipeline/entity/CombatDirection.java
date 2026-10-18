@@ -9,7 +9,10 @@ public enum CombatDirection {
      * face each other, so a blow from the attacker's left arrives on the
      * defender's right; mirror() turns one into the other, and a guard
      * catches a blow only when it is held toward the attack's mirror. A
-     * moveset names each by its lower-case name.
+     * weapon names each by its lower-case name and need not have them all:
+     * fallback() is the side asked for instead when it lacks one, and the
+     * fallbacks run through every side once, so following them always
+     * reaches one the weapon has.
      */
 
     NEUTRAL,
@@ -29,6 +32,17 @@ public enum CombatDirection {
             case LEFT -> RIGHT;
             case RIGHT -> LEFT;
             default -> this;
+        };
+    }
+
+    // The side asked for in place of this one — a thrust drops low, a low blow rises, an overhead swings across
+    public CombatDirection fallback() {
+        return switch (this) {
+            case NEUTRAL -> DOWN;
+            case DOWN -> UP;
+            case UP -> LEFT;
+            case LEFT -> RIGHT;
+            case RIGHT -> NEUTRAL;
         };
     }
 }

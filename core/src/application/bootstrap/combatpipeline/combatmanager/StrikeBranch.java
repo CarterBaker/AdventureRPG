@@ -1,11 +1,13 @@
 package application.bootstrap.combatpipeline.combatmanager;
 
-import application.bootstrap.combatpipeline.moveset.AttackStruct;
+import application.bootstrap.combatpipeline.combat.BlowOutcome;
+import application.bootstrap.combatpipeline.combat.BlowStruct;
+import application.bootstrap.combatpipeline.weapon.AttackStruct;
 import application.bootstrap.entitypipeline.entity.CombatDirection;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import application.bootstrap.itempipeline.item.ItemInstance;
-import application.bootstrap.progressionpipeline.damagetypemanager.DamageTypeManager;
+import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import application.bootstrap.worldpipeline.tree.TreeCastStruct;
@@ -14,24 +16,23 @@ import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
 
-class SwingBranch extends BranchPackage {
+class StrikeBranch extends BranchPackage {
 
     /*
-     * Lands a blow for CombatManager at the moment it strikes. Anything that
-     * can be held swings, and empty hands punch. The blow reaches from the
-     * entity's eye along where it faces and lands on whatever it meets first:
-     * an entity takes its damage — the entity's own damage stat, gear and
-     * skill included, plus the held item's heft — as a blunt blow, or as its
-     * attack's damage type for a moveset's attack; landing on an entity
-     * practices the skill of whatever was swung and wears the weapon, and a
-     * stroke that tells on a tree or a block does the same for the tool; a
-     * tree takes the hit through TreeManager, which knocks leaves off and
-     * decides whether the held tool cuts its wood; and a block takes it
-     * through PlacementManager, which decides whether the held tool can break
-     * it. A moveset's attack scales the damage and reach by its own, and its
-     * blade sweeps an arc as it comes in — across for a blow from either side
-     * or straight ahead, up and down for one from above or below — so it meets
-     * any entity within the arc; the world is struck straight ahead.
+     * Lands a weapon's attack for CombatManager at the moment it strikes —
+     * a sword, a pickaxe, a block or bare hands alike. The blow drives the
+     * mass of what is wielded, or of the entity's own weapon, at the speed
+     * the entity's work power drives it, so a heavier thing hits and works
+     * harder; it opens with the entity's own damage stat, gear and skill
+     * included, and the attack scales it and names its type. It reaches from
+     * the entity's eye along where it faces and lands through
+     * CombatManager.land() on whatever it meets first: the attack's blade
+     * sweeps an arc as it comes in — across for a blow from either side or
+     * straight ahead, up and down for one from above or below — so it meets
+     * any entity within the arc, while a tree or a block is struck straight
+     * ahead and gives only to the right tool. Landing on an entity practices
+     * the skill of whatever was swung and wears it, and a stroke that tells
+     * on a tree or a block does the same for the tool.
      */
 
     // Internal
@@ -40,14 +41,16 @@ class SwingBranch extends BranchPackage {
     private TreeManager treeManager;
     private ProgressionManager progressionManager;
     private StatManager statManager;
-    private DamageTypeManager damageTypeManager;
 
     // Scratch
+    private BlowStruct blow;
     private Vector3 eyeScratch;
     private Vector3 direction;
+    private Vector3 velocity;
     private Vector3 sweepAxis;
     private Vector3 sweepDirection;
     private TreeCastStruct treeCast;
+    private BlockCastStruct blockCast;
 
     // Sweep
     private float sweepDistance;
@@ -58,11 +61,14 @@ class SwingBranch extends BranchPackage {
     protected void create() {
 
         // Scratch
+        this.blow = new BlowStruct();
         this.eyeScratch = new Vector3();
         this.direction = new Vector3();
+        this.velocity = new Vector3();
         this.sweepAxis = new Vector3();
         this.sweepDirection = new Vector3();
         this.treeCast = new TreeCastStruct();
+        this.blockCast = new BlockCastStruct();
     }
 
     @Override
@@ -74,68 +80,63 @@ class SwingBranch extends BranchPackage {
         this.treeManager = get(TreeManager.class);
         this.progressionManager = get(ProgressionManager.class);
         this.statManager = get(StatManager.class);
-        this.damageTypeManager = get(DamageTypeManager.class);
     }
 
     // Strike \\
 
-    // A plain swing, straight ahead at the entity's own reach
-    void strike(EntityInstance entity) {
-
-        EntityInstance target = reach(
-                entity,
-                EngineSetting.DEFAULT_ATTACK_REACH,
-                EngineSetting.DEFAULT_ATTACK_ARC,
-                CombatDirection.NEUTRAL);
-
-        if (target == null)
-            return;
-
-        combatManager.damage(
-                entity, target, resolveDamage(entity), damageTypeManager.getBluntDamageTypeID(), direction);
-        practice(entity);
-    }
-
-    // A moveset's attack from a side
+    // An attack from a side, landing on the entity in its arc or the tree or block straight ahead, whichever is nearest
     void strike(EntityInstance entity, AttackStruct attack, CombatDirection side) {
-
-        EntityInstance target = reach(entity, attack.getReach(), attack.getArc(), side);
-
-        if (target == null)
-            return;
-
-        combatManager.strike(
-                entity, target, resolveDamage(entity) * attack.getDamage(), attack.getDamageTypeID(), direction, side);
-        practice(entity);
-    }
-
-    // The entity the blow meets before anything in the world, null when the world takes it instead
-    private EntityInstance reach(EntityInstance entity, float reachScale, float arc, CombatDirection side) {
 
         Vector3 eye = entity.getEyePosition(eyeScratch);
         long chunkCoordinate = entity.getWorldPositionStruct().getChunkCoordinate();
-        float reach = combatManager.resolvePlainReach(entity) * reachScale;
+        float reach = combatManager.resolvePlainReach(entity) * attack.getReach();
 
         direction.set(entity.getEntityInputHandle().getFacingDirection()).normalize();
+        fill(entity, attack, side);
 
-        EntityInstance target = sweep(entity, chunkCoordinate, eye, reach, arc, side);
-        float blockDistance = placementManager.findBlockDistance(entity, eye, direction);
+        EntityInstance target = sweep(entity, chunkCoordinate, eye, reach, attack.getArc(), side);
+        float blockDistance = placementManager.castBlock(entity, eye, direction, blockCast)
+                ? blockCast.getDistance()
+                : Float.MAX_VALUE;
 
         treeManager.castTree(entity.getWorldHandle(), chunkCoordinate, eye, direction, reach, treeCast);
 
         float treeDistance = treeCast.isHit() ? treeCast.getDistance() : Float.MAX_VALUE;
 
-        if (target != null && sweepDistance < Math.min(blockDistance, treeDistance))
-            return target;
+        if (target != null && sweepDistance < Math.min(blockDistance, treeDistance)) {
+            combatManager.land(blow, target);
+            practice(entity, EngineSetting.SKILL_PRACTICE_PER_STRIKE, EngineSetting.WEAPON_WEAR_PER_STRIKE);
+            return;
+        }
 
-        boolean worked = treeDistance < blockDistance
-                ? treeManager.strikeTree(entity, treeCast, direction)
-                : placementManager.strikeBlock(entity, eye, direction);
+        BlowOutcome outcome = treeDistance < blockDistance
+                ? combatManager.land(blow, treeCast)
+                : combatManager.land(blow, blockCast);
 
-        if (worked)
-            work(entity);
+        if (outcome != BlowOutcome.TURNED)
+            practice(entity, EngineSetting.SKILL_PRACTICE_PER_WORK, EngineSetting.TOOL_WEAR_PER_WORK);
+    }
 
-        return null;
+    // The blow the entity drives along its facing — what it wields swung as hard as its work power swings that mass
+    private void fill(EntityInstance entity, AttackStruct attack, CombatDirection side) {
+
+        float mass = combatManager.resolveBlowMass(entity);
+        float speed = combatManager.resolveDriveSpeed(
+                mass,
+                EngineSetting.SWING_IMPULSE,
+                entity.getStat(statManager.getWorkPowerStatID()));
+
+        velocity.set(direction).multiply(speed);
+        blow.set(
+                entity,
+                combatManager.resolveWielded(entity),
+                null,
+                mass,
+                velocity,
+                entity.getStat(statManager.getDamageStatID()),
+                attack.getDamage(),
+                attack.getDamageTypeID(),
+                side);
     }
 
     // Sweep \\
@@ -219,32 +220,16 @@ class SwingBranch extends BranchPackage {
                 direction.z * cos + crossZ * sin + sweepAxis.z * keep);
     }
 
-    // Damage \\
+    // Practice \\
 
-    private float resolveDamage(EntityInstance entity) {
-        return entity.getStat(statManager.getDamageStatID())
-                + combatManager.resolveHeldWeight(entity) * EngineSetting.SWING_DAMAGE_PER_WEIGHT;
-    }
+    // A blow that told trains whatever was swung and wears what was wielded
+    private void practice(EntityInstance entity, float practice, float wear) {
 
-    // A stroke that told on a tree or a block trains the tool swung and wears it
-    private void work(EntityInstance entity) {
+        ItemInstance wielded = blow.getItem();
 
-        ItemInstance held = entity.getInventoryHandle().getMainHand();
+        progressionManager.practiceHeldSkill(entity, practice);
 
-        progressionManager.practiceHeldSkill(entity, EngineSetting.SKILL_PRACTICE_PER_WORK);
-
-        if (held != null)
-            progressionManager.wearGear(entity, held, EngineSetting.TOOL_WEAR_PER_WORK);
-    }
-
-    // A blow landed on an entity trains whatever was swung and wears it
-    private void practice(EntityInstance entity) {
-
-        ItemInstance held = entity.getInventoryHandle().getMainHand();
-
-        progressionManager.practiceHeldSkill(entity, EngineSetting.SKILL_PRACTICE_PER_STRIKE);
-
-        if (held != null)
-            progressionManager.wearGear(entity, held, EngineSetting.WEAPON_WEAR_PER_STRIKE);
+        if (wielded != null)
+            progressionManager.wearGear(entity, wielded, wear);
     }
 }

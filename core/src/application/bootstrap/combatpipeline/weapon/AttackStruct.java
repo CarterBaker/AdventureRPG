@@ -1,22 +1,18 @@
-package application.bootstrap.combatpipeline.moveset;
+package application.bootstrap.combatpipeline.weapon;
 
-import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import engine.root.StructPackage;
 
 public class AttackStruct extends StructPackage {
 
     /*
-     * Immutable attack of a moveset from one CombatDirection: the clip it
-     * plays and the fraction of that clip its blow lands on, how many seconds
-     * it winds up before the blow lands and recovers after, how much harder
-     * and further it reaches than the entity's plain strike, the arc in
-     * degrees its blow sweeps across, zero for a straight thrust, and the
-     * damage type its blow lands as.
+     * Immutable attack of a weapon from one CombatDirection, the same for
+     * every body that wields it: how many seconds it winds up before the
+     * blow lands and recovers after, how much harder and further it reaches
+     * than the entity's plain strike, the arc in degrees its blow sweeps
+     * across, zero for a straight thrust, and the damage type its blow lands
+     * as. The clip each body plays it with lives on that body's
+     * WeaponRigStruct.
      */
-
-    // Animation
-    private final AnimationClipHandle clip;
-    private final float strike;
 
     // Timing
     private final float windup;
@@ -31,18 +27,12 @@ public class AttackStruct extends StructPackage {
     // Constructor \\
 
     public AttackStruct(
-            AnimationClipHandle clip,
-            float strike,
             float windup,
             float recovery,
             float damage,
             float reach,
             float arc,
             short damageTypeID) {
-
-        // Animation
-        this.clip = clip;
-        this.strike = strike;
 
         // Timing
         this.windup = windup;
@@ -56,14 +46,6 @@ public class AttackStruct extends StructPackage {
     }
 
     // Accessible \\
-
-    public AnimationClipHandle getClip() {
-        return clip;
-    }
-
-    public float getStrike() {
-        return strike;
-    }
 
     public float getWindup() {
         return windup;

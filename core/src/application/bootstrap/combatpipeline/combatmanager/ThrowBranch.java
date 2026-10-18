@@ -18,14 +18,16 @@ class ThrowBranch extends BranchPackage {
     /*
      * Lets a held item fly for CombatManager at the moment a throw releases. A
      * stack throws one at a time, split off through the inventory. The throw
-     * is an impulse: the item leaves at a speed set by the thrower's throw
-     * power over the item's mass plus the arm's own, adds the thrower's
+     * is an impulse: the item leaves at the speed CombatManager's one drive
+     * rule gives the thrower's throw power over the item's mass plus the
+     * arm's own — the same rule a swing is driven by — adds the thrower's
      * running speed, turns end over end about the throw's horizontal axis —
      * slower the heavier it is — and is handed to ProjectileManager just in
      * front of the eye, short of any block in the way.
      */
 
     // Internal
+    private CombatManager combatManager;
     private PlacementManager placementManager;
     private ProjectileManager projectileManager;
     private StatManager statManager;
@@ -54,6 +56,7 @@ class ThrowBranch extends BranchPackage {
     protected void get() {
 
         // Internal
+        this.combatManager = get(CombatManager.class);
         this.placementManager = get(PlacementManager.class);
         this.projectileManager = get(ProjectileManager.class);
         this.statManager = get(StatManager.class);
@@ -96,8 +99,10 @@ class ThrowBranch extends BranchPackage {
     // Impulse over mass, plus the thrower's own run
     private void resolveVelocity(EntityInstance entity, ItemInstance itemInstance) {
 
-        float speed = EngineSetting.THROW_IMPULSE * entity.getStat(statManager.getThrowPowerStatID())
-                / (itemInstance.getTotalWeight() + EngineSetting.THROW_ARM_MASS);
+        float speed = combatManager.resolveDriveSpeed(
+                itemInstance.getTotalWeight(),
+                EngineSetting.THROW_IMPULSE,
+                entity.getStat(statManager.getThrowPowerStatID()));
         Vector2 run = entity.getEntityStateHandle().getHorizontalVelocity();
 
         velocity.set(direction.x * speed + run.x, direction.y * speed, direction.z * speed + run.y);

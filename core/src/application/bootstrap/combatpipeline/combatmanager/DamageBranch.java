@@ -23,11 +23,11 @@ class DamageBranch extends BranchPackage {
      * Applies a hit to an entity for CombatManager. A blow's amount is
      * measured at its source's level and its type decides how it lands. A
      * raised guard facing a blow whose type can be guarded catches part of it
-     * — its moveset's share, more with whatever it is held up with, heavier or
-     * better-armored things adding more — and softens the shove. A blow from
+     * — its weapon's share, more with whatever it is held up with, heavier or
+     * better-armored things adding more — and softens the shove. A hit from
      * no side in particular, as a thrown item lands, meets any such guard; a
-     * weapon's blow from a side meets only a guard held toward that side's
-     * mirror, and one caught that way throws its attacker into recoil. A blow
+     * blow from a side meets only a guard held toward that side's mirror,
+     * and one caught that way throws its attacker into recoil. A blow
      * that gets past every guard staggers a target still winding up its own
      * attack, and a guard that catches part of one trains and wears whatever
      * it was held up with. The amount then becomes a share of the target's
@@ -71,19 +71,10 @@ class DamageBranch extends BranchPackage {
 
     // Damage \\
 
-    void apply(EntityInstance source, EntityInstance target, float amount, short damageTypeID, Vector3 direction) {
-
-        DamageTypeHandle damageType = damageTypeManager.getDamageTypeHandleFromDamageTypeID(damageTypeID);
-
-        if (amount <= 0f || target.getStatisticsHandle().isDefeated())
-            return;
-
-        boolean guarded = damageType.isGuardable() && isGuarding(target, direction);
-
-        land(source, target, amount, damageType, direction, guarded ? resolveGuard(target) : 0f);
-    }
-
-    void strike(
+    // A hit from a side of its source, or from no side in particular when that is null — a raised guard facing it
+    // catches it only when held toward the side's mirror, and a guard that catches one from a side throws its
+    // attacker into recoil
+    void apply(
             EntityInstance source,
             EntityInstance target,
             float amount,
@@ -98,9 +89,9 @@ class DamageBranch extends BranchPackage {
 
         boolean caught = damageType.isGuardable()
                 && isGuarding(target, direction)
-                && guardBranch.catches(target, side);
+                && (side == null || guardBranch.catches(target, side));
 
-        if (caught)
+        if (caught && side != null)
             attackBranch.deflect(source);
 
         if (amount <= 0f)
@@ -173,7 +164,7 @@ class DamageBranch extends BranchPackage {
         return isFacing(target, direction);
     }
 
-    // The share of a blow a raised guard catches — its moveset's own, plus the heft and armor it is held up with
+    // The share of a blow a raised guard catches — its weapon's own, plus the heft and armor it is held up with
     private float resolveGuard(EntityInstance target) {
 
         ItemInstance guardItem = combatManager.resolveGuardItem(target);

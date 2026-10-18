@@ -7,21 +7,20 @@ import engine.root.HandlePackage;
 public class EntityActionHandle extends HandlePackage {
 
     /*
-     * Per-entity action timeline: the action under way, how far through it
-     * the entity is, and the moment its effect lands — the strike of a swing
-     * or the release of a throw. begin() starts a timed action and hold() a
+     * Per-entity action timeline: the action under way, how far through it the
+     * entity is, and the moment its effect lands — the strike of an attack or
+     * the release of a throw. begin() starts a timed action and hold() a
      * stance, which rises over its duration and then stays up until it is
-     * released; every start counts up the sequence, so an animation can tell
-     * a second swing from the first one still fading. beginMove() and
-     * holdMove() do the same for a moveset's attack or guard, carrying the
-     * side it comes from, the moveset it was drawn from and the clip it
-     * plays, and shift() swings a raised guard to another side, its pose
-     * already up but not counted raised until the shift is done. getPhase()
-     * is where in its clip the action stands: a move's strike frame always
-     * lands on the moment its effect does. One attack asked for while
-     * another still plays waits in the queue until it can cut in or goes
-     * stale. Advanced by CombatManager and read by the entity's animation.
-     * Lives on EntityInstance.
+     * released; every start counts up the sequence, so an animation can tell a
+     * second attack from the first one still fading. beginMove() and
+     * holdMove() do the same for a weapon's attack or guard, carrying the side
+     * it comes from, the weapon it was drawn from and the clip it plays, and
+     * shift() swings a raised guard to another side, its pose already up but
+     * not counted raised until the shift is done. getPhase() is where in its
+     * clip the action stands: a move's strike frame always lands on the moment
+     * its effect does. One attack asked for while another still plays waits in
+     * the queue until it can cut in or goes stale. Advanced by CombatManager
+     * and read by the entity's animation. Lives on EntityInstance.
      */
 
     // Action
@@ -34,7 +33,7 @@ public class EntityActionHandle extends HandlePackage {
 
     // Move
     private CombatDirection direction;
-    private short movesetID;
+    private short weaponID;
     private AnimationClipHandle clip;
     private float strike;
     private boolean settled;
@@ -58,7 +57,7 @@ public class EntityActionHandle extends HandlePackage {
 
         // Move
         this.direction = CombatDirection.NEUTRAL;
-        this.movesetID = EngineSetting.MOVESET_NONE;
+        this.weaponID = EngineSetting.WEAPON_NONE;
 
         // Queue
         this.queuedDirection = CombatDirection.NEUTRAL;
@@ -73,16 +72,16 @@ public class EntityActionHandle extends HandlePackage {
             throwException("An action needs a kind and a positive duration.");
 
         start(action, duration, impact);
-        setMove(CombatDirection.NEUTRAL, EngineSetting.MOVESET_NONE, null, impact);
+        setMove(CombatDirection.NEUTRAL, EngineSetting.WEAPON_NONE, null, impact);
         this.resolved = false;
         this.held = false;
     }
 
-    // Starts a moveset's move from a side, its strike frame at a fraction of its clip landing with its effect
+    // Starts a weapon's move from a side, its strike frame at a fraction of its clip landing with its effect
     public void beginMove(
             EntityAction action,
             CombatDirection direction,
-            short movesetID,
+            short weaponID,
             AnimationClipHandle clip,
             float duration,
             float impact,
@@ -92,7 +91,7 @@ public class EntityActionHandle extends HandlePackage {
             throwException("A move needs a kind and a positive duration.");
 
         start(action, duration, impact);
-        setMove(direction, movesetID, clip, strike);
+        setMove(direction, weaponID, clip, strike);
         this.resolved = false;
         this.held = false;
         this.queued = false;
@@ -105,16 +104,16 @@ public class EntityActionHandle extends HandlePackage {
             throwException("A stance needs a kind and a positive duration.");
 
         start(action, duration, 1f);
-        setMove(CombatDirection.NEUTRAL, EngineSetting.MOVESET_NONE, null, 1f);
+        setMove(CombatDirection.NEUTRAL, EngineSetting.WEAPON_NONE, null, 1f);
         this.resolved = true;
         this.held = true;
     }
 
-    // Raises a moveset's stance toward a side over a duration in seconds and keeps it up until released
+    // Raises a weapon's stance toward a side over a duration in seconds and keeps it up until released
     public void holdMove(
             EntityAction action,
             CombatDirection direction,
-            short movesetID,
+            short weaponID,
             AnimationClipHandle clip,
             float duration) {
 
@@ -122,7 +121,7 @@ public class EntityActionHandle extends HandlePackage {
             throwException("A stance needs a kind and a positive duration.");
 
         start(action, duration, 1f);
-        setMove(direction, movesetID, clip, 1f);
+        setMove(direction, weaponID, clip, 1f);
         this.resolved = true;
         this.held = true;
         this.queued = false;
@@ -150,9 +149,9 @@ public class EntityActionHandle extends HandlePackage {
         this.sequence++;
     }
 
-    private void setMove(CombatDirection direction, short movesetID, AnimationClipHandle clip, float strike) {
+    private void setMove(CombatDirection direction, short weaponID, AnimationClipHandle clip, float strike) {
         this.direction = direction;
-        this.movesetID = movesetID;
+        this.weaponID = weaponID;
         this.clip = clip;
         this.strike = strike;
         this.settled = false;
@@ -277,8 +276,8 @@ public class EntityActionHandle extends HandlePackage {
         return direction;
     }
 
-    public short getMovesetID() {
-        return movesetID;
+    public short getWeaponID() {
+        return weaponID;
     }
 
     public AnimationClipHandle getClip() {

@@ -14,11 +14,13 @@ public class ProjectileInstance extends InstancePackage {
     /*
      * One thrown item in flight: the item, who threw it, where its centre is
      * and how it moves — velocity, orientation and the spin it tumbles with —
-     * and how long it has flown. Once it comes to rest it remembers the height
-     * of the ground under it until it can settle back into the world, or, on
-     * a vehicle's deck, that vehicle and the point it rests on in the
-     * vehicle's model blocks. Launched by ProjectileManager and owned by it
-     * until it lands.
+     * how long it has flown, whether it has struck anyone yet, and whether it
+     * was only let fall loose, so that it lands no blow on anyone or anything
+     * on its way down. Once it comes to rest it remembers the height of the
+     * ground under it until it can settle back into the world, or, on a
+     * vehicle's deck, that vehicle and the point it rests on in the vehicle's
+     * model blocks. Launched by ProjectileManager and owned by it until it
+     * lands.
      */
 
     // Internal
@@ -38,6 +40,7 @@ public class ProjectileInstance extends InstancePackage {
     // Flight
     private float flightTime;
     private boolean struck;
+    private boolean loose;
 
     // Rest
     private boolean resting;
@@ -99,6 +102,12 @@ public class ProjectileInstance extends InstancePackage {
 
     public void markStruck() {
         struck = true;
+    }
+
+    // Let fall loose rather than thrown — it strikes no one and lands no blow
+    public void markLoose() {
+        struck = true;
+        loose = true;
     }
 
     public void rest(float groundY) {
@@ -172,6 +181,10 @@ public class ProjectileInstance extends InstancePackage {
 
     public boolean hasStruck() {
         return struck;
+    }
+
+    public boolean isLoose() {
+        return loose;
     }
 
     public boolean isResting() {

@@ -337,7 +337,7 @@ class TreeFallBranch extends BranchPackage {
     }
 
     // One item thrown up and out from a point in blocks from the centre of a tree's root, in the frame of the
-    // root's chunk; whoever brought it down is the one it is thrown for, and is never struck by it
+    // root's chunk, let fall loose so it lands no blow; whoever brought it down is the one it is thrown for
     void throwDrop(TreeInstance tree, EntityInstance thrower, String itemName, float x, float y, float z, int index) {
 
         if (thrower == null)
@@ -358,7 +358,7 @@ class TreeFallBranch extends BranchPackage {
         spinScratch.set((float) Math.sin(angle), 0f, (float) Math.cos(angle));
         orientationScratch.set(1f, 0f, 0f, 0f);
 
-        projectileManager.launch(
+        projectileManager.drop(
                 thrower,
                 itemManager.createItem(itemName),
                 Coordinate2Long.pack(chunkX, chunkZ),

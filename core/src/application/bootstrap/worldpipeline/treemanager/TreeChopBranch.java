@@ -1,10 +1,11 @@
 package application.bootstrap.worldpipeline.treemanager;
 
+import application.bootstrap.combatpipeline.combat.BlowOutcome;
+import application.bootstrap.combatpipeline.combat.BlowStruct;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
-import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import application.bootstrap.worldpipeline.tree.TreeCarveStruct;
 import application.bootstrap.worldpipeline.tree.TreeCastStruct;
 import application.bootstrap.worldpipeline.tree.TreeGrowthStruct;
@@ -21,13 +22,13 @@ import engine.util.mathematics.vectors.Vector3;
 class TreeChopBranch extends BranchPackage {
 
     /*
-     * Main thread — a landed swing against a tree. Anything knocks a leaf
-     * cluster off, now and then shaking a seed loose. Wood only gives to the
-     * tool its species names, at its tier or better, and the swing is level:
-     * each stroke bites a wedge flat into the wood where it struck, along the
-     * swing's heading, as wide as the wood is there and as deep as the tool's
-     * tier and the striker's work power drive it, so strokes landing on one
-     * spot cut one notch ever deeper, sub-voxel by sub-voxel. When the notch
+     * Main thread — a blow landing on a tree, swung or thrown alike. Anything
+     * knocks a leaf cluster off, now and then shaking a seed loose. Wood only
+     * gives to the tool its species names, at its tier or better, and the
+     * stroke is level: each one bites a wedge flat into the wood where it
+     * struck, along the blow's heading, as wide as the wood is there and as
+     * deep as the tool's tier and the blow's work drive it, so strokes landing
+     * on one spot cut one notch ever deeper, sub-voxel by sub-voxel. When the notch
      * leaves less than a share of the wood's cross-section standing, the wood
      * there is cut through: everything beyond the cut falls free — an upright
      * trunk toppling away from the one who cut it, a limb dropping straight
@@ -39,7 +40,6 @@ class TreeChopBranch extends BranchPackage {
     private TreeManager treeManager;
     private TreeRebuildBranch treeRebuildBranch;
     private TreeFallBranch treeFallBranch;
-    private StatManager statManager;
 
     // Settings
     private int resolution;
@@ -66,36 +66,32 @@ class TreeChopBranch extends BranchPackage {
         this.treeManager = get(TreeManager.class);
         this.treeRebuildBranch = get(TreeRebuildBranch.class);
         this.treeFallBranch = get(TreeFallBranch.class);
-        this.statManager = get(StatManager.class);
     }
 
     // Strike \\
 
-    // True when the strike counted — wood the held tool cannot cut turns it aside
-    boolean strike(EntityInstance entity, TreeCastStruct cast, Vector3 direction) {
+    // Wood the blow's item cannot cut turns it aside, a leaf always gives, and wood cut through breaks
+    BlowOutcome strike(BlowStruct blow, TreeCastStruct cast) {
 
         if (!cast.isWood()) {
-            knockLeaf(entity, cast);
-            return true;
+            knockLeaf(blow.getSource(), cast);
+            return BlowOutcome.WORKED;
         }
 
         TreeInstance tree = cast.getTree();
 
-        if (!canCut(entity, tree.getTreeHandle().getWood()))
-            return false;
+        if (!canCut(blow.getItem(), tree.getTreeHandle().getWood()))
+            return BlowOutcome.TURNED;
 
-        notch(entity, tree, cast, direction);
-        return true;
+        return notch(blow, tree, cast) ? BlowOutcome.BROKEN : BlowOutcome.WORKED;
     }
 
-    private boolean canCut(EntityInstance entity, TreeWoodStruct wood) {
+    private boolean canCut(ItemInstance itemInstance, TreeWoodStruct wood) {
 
-        ItemInstance held = entity.getInventoryHandle().getMainHand();
-
-        if (held == null)
+        if (itemInstance == null)
             return false;
 
-        ItemDefinitionHandle tool = held.getItemDefinitionHandle();
+        ItemDefinitionHandle tool = itemInstance.getItemDefinitionHandle();
 
         return tool.getToolTypeID() == wood.getToolTypeID() && tool.getToolTier() >= wood.getToolTier();
     }
@@ -125,17 +121,17 @@ class TreeChopBranch extends BranchPackage {
 
     // Wood \\
 
-    // One stroke's wedge struck in, and the wood cut through when too little of it is left
-    private void notch(EntityInstance entity, TreeInstance tree, TreeCastStruct cast, Vector3 direction) {
+    // One stroke's wedge struck in, and the wood cut through when too little of it is left — true when it was
+    private boolean notch(BlowStruct blow, TreeInstance tree, TreeCastStruct cast) {
 
         TreeShapeStruct shape = tree.getShape();
         TreeNodeStruct nodes = shape.getNodes();
         int node = cast.getNode();
         int radius = node != EngineSetting.INDEX_NOT_FOUND ? nodes.getRadius(node) : EngineSetting.TREE_MIN_NODE_RADIUS;
-        float[] heading = resolveHeading(cast, direction);
-        int tier = entity.getInventoryHandle().getMainHand().getItemDefinitionHandle().getToolTier();
+        float[] heading = resolveHeading(cast, blow.getDirection());
+        int tier = blow.getItem().getItemDefinitionHandle().getToolTier();
         float depth = (EngineSetting.TREE_CHOP_BITE_SUB_VOXELS + tier * EngineSetting.TREE_CHOP_TIER_BITE_SUB_VOXELS)
-                * Math.max(0f, entity.getStat(statManager.getWorkPowerStatID()));
+                * blow.getWork();
 
         // Sub-voxels from the centre of the root: the struck cell's middle, drawn back to the wood's surface
         float mouthX = cast.getCellX() + 0.5f - center - heading[0] * EngineSetting.TREE_CHOP_MOUTH_SUB_VOXELS;
@@ -151,11 +147,12 @@ class TreeChopBranch extends BranchPackage {
         tree.addCarve(carve, treeManager.getCurrentDay());
 
         if (node != EngineSetting.INDEX_NOT_FOUND && isCutThrough(tree, node, carve)) {
-            sever(entity, tree, shape, nodes.getSegment(node), carve, heading);
-            return;
+            sever(blow.getSource(), tree, shape, nodes.getSegment(node), carve, heading);
+            return true;
         }
 
         treeRebuildBranch.rebuildTree(tree, true);
+        return false;
     }
 
     // Level and unit length: the swing's own heading, or straight into the face struck when it swings plumb

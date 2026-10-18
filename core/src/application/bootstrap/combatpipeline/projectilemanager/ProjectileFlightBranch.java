@@ -1,5 +1,7 @@
 package application.bootstrap.combatpipeline.projectilemanager;
 
+import application.bootstrap.combatpipeline.combat.BlowOutcome;
+import application.bootstrap.combatpipeline.combat.BlowStruct;
 import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.combatpipeline.projectile.ProjectileInstance;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
@@ -18,6 +20,8 @@ import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.tree.TreeCastStruct;
+import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -32,19 +36,24 @@ class ProjectileFlightBranch extends BranchPackage {
     /*
      * Flies a projectile one fixed step with real physics: gravity, air drag —
      * far heavier in liquid — and a tumble about its spin axis. Its path is
-     * swept against solid sub-blocks, against the solid sub-voxels and cargo
-     * of every vehicle, and against every entity but its thrower; the first
-     * entity in reach takes the item's thrown damage — its damage read at the
-     * thrower's level, plus the momentum it carries — once, as a blunt blow
-     * from its thrower, knocks it back and trains the thrower's thrown skill.
-     * A hard enough hit breaks the block it meets through
-     * ProjectileImpactBranch and it flies on, slowed by the break; otherwise a
-     * block face reflects it with restitution and friction, and a slow enough
-     * fall onto the top of a block brings it to rest there; a vehicle's face
-     * does the same as the vehicle moves under it, and a slow enough fall onto
-     * its deck rests it on that vehicle. A projectile still airborne past the
-     * flight limit rests where it is. Its chunk must stay loaded; while it is
-     * not, the projectile waits.
+     * swept against solid sub-blocks, against the wood and leaves of every
+     * tree, against the solid sub-voxels and cargo of every vehicle, and
+     * against every entity but its thrower. Whatever it meets takes its blow
+     * through CombatManager.land() exactly as a swing lands — the item's own
+     * damage read at the thrower's level, plus the momentum its weight carries
+     * at its speed, as a blunt blow from no side in particular. The first
+     * entity in reach takes it once, is knocked back and trains the thrower's
+     * thrown skill. A leaf it knocks off lets it fly on; wood takes the blow,
+     * cutting only for the right tool, and reflects it; a block takes it by
+     * the one rule every blow breaks by, and one it breaks lets it fly on,
+     * slowed by the share the break took, while one that holds reflects it
+     * with restitution and friction, and a slow enough fall onto the top of a
+     * block brings it to rest there. One only let fall loose lands no blow and
+     * passes through trees. A vehicle's face does the same as the vehicle
+     * moves under it, and a slow enough fall onto its deck rests it on that
+     * vehicle. A projectile still airborne past the flight limit rests where
+     * it is. Its chunk must stay loaded; while it is not, the projectile
+     * waits.
      */
 
     // Internal
@@ -52,8 +61,8 @@ class ProjectileFlightBranch extends BranchPackage {
     private BlockManager blockManager;
     private RaycastManager raycastManager;
     private CombatManager combatManager;
+    private TreeManager treeManager;
     private VehicleCargoSystem vehicleCargoSystem;
-    private ProjectileImpactBranch projectileImpactBranch;
     private ProgressionManager progressionManager;
     private StatManager statManager;
     private SkillManager skillManager;
@@ -63,12 +72,13 @@ class ProjectileFlightBranch extends BranchPackage {
     private short thrownSkillID;
 
     // Scratch
+    private BlowStruct blow;
     private BlockCastStruct castStruct;
+    private TreeCastStruct treeCast;
     private VehicleCastStruct vehicleCastStruct;
     private Vector3 direction;
     private Vector3 normalScratch;
     private Vector3 modelScratch;
-    private Vector3 hitScratch;
     private Quaternion spinScratch;
 
     // Internal \\
@@ -77,12 +87,13 @@ class ProjectileFlightBranch extends BranchPackage {
     protected void create() {
 
         // Scratch
+        this.blow = new BlowStruct();
         this.castStruct = new BlockCastStruct();
+        this.treeCast = new TreeCastStruct();
         this.vehicleCastStruct = new VehicleCastStruct();
         this.direction = new Vector3();
         this.normalScratch = new Vector3();
         this.modelScratch = new Vector3();
-        this.hitScratch = new Vector3();
         this.spinScratch = new Quaternion();
     }
 
@@ -94,8 +105,8 @@ class ProjectileFlightBranch extends BranchPackage {
         this.blockManager = get(BlockManager.class);
         this.raycastManager = get(RaycastManager.class);
         this.combatManager = get(CombatManager.class);
+        this.treeManager = get(TreeManager.class);
         this.vehicleCargoSystem = get(VehicleCargoSystem.class);
-        this.projectileImpactBranch = get(ProjectileImpactBranch.class);
         this.progressionManager = get(ProgressionManager.class);
         this.statManager = get(StatManager.class);
         this.skillManager = get(SkillManager.class);
@@ -203,8 +214,16 @@ class ProjectileFlightBranch extends BranchPackage {
         if (vehicleHit)
             reach = vehicleCastStruct.getDistance();
 
+        boolean treeHit = castTree(projectile, reach);
+
+        if (treeHit && treeCast.isWood())
+            reach = treeCast.getDistance();
+
         if (!projectile.hasStruck())
-            strikeEntity(projectile, reach, speed);
+            strikeEntity(projectile, reach);
+
+        if (treeHit && meetTree(projectile, reach))
+            return;
 
         if (vehicleHit) {
             meetVehicle(projectile, reach);
@@ -216,10 +235,8 @@ class ProjectileFlightBranch extends BranchPackage {
             return;
         }
 
-        hitScratch.set(position).add(direction.x * reach, direction.y * reach, direction.z * reach);
-
-        if (projectileImpactBranch.tryBreak(projectile, castStruct, hitScratch)) {
-            position.set(hitScratch);
+        if (breakBlock(projectile)) {
+            position.add(direction.x * reach, direction.y * reach, direction.z * reach);
             return;
         }
 
@@ -240,13 +257,21 @@ class ProjectileFlightBranch extends BranchPackage {
         Vector3 velocity = projectile.getVelocity();
         float normalSpeed = velocity.x * face.x + velocity.y * face.y + velocity.z * face.z;
 
-        if (normalSpeed >= 0f)
-            return;
-
-        if (face == Direction3Vector.UP && -normalSpeed < EngineSetting.PROJECTILE_LAND_SPEED) {
+        if (face == Direction3Vector.UP && normalSpeed < 0f && -normalSpeed < EngineSetting.PROJECTILE_LAND_SPEED) {
             projectile.rest(faceY);
             return;
         }
+
+        reflect(projectile, face);
+    }
+
+    private void reflect(ProjectileInstance projectile, Direction3Vector face) {
+
+        Vector3 velocity = projectile.getVelocity();
+        float normalSpeed = velocity.x * face.x + velocity.y * face.y + velocity.z * face.z;
+
+        if (normalSpeed >= 0f)
+            return;
 
         float tangentX = velocity.x - normalSpeed * face.x;
         float tangentY = velocity.y - normalSpeed * face.y;
@@ -306,9 +331,31 @@ class ProjectileFlightBranch extends BranchPackage {
         projectile.setSpinRate(projectile.getSpinRate() * EngineSetting.PROJECTILE_BOUNCE_SPIN_DAMPING);
     }
 
+    // Blow \\
+
+    // The blow the projectile carries as it flies — its item's own damage at its thrower's level and the momentum its
+    // weight carries at its speed, blunt and from no side in particular
+    private void fill(ProjectileInstance projectile) {
+
+        ItemInstance itemInstance = projectile.getItemInstance();
+        EntityInstance thrower = projectile.getThrower();
+        int level = thrower != null ? thrower.getLevel() : itemInstance.getLevel();
+
+        blow.set(
+                thrower,
+                itemInstance,
+                projectile,
+                itemInstance.getTotalWeight(),
+                projectile.getVelocity(),
+                progressionManager.getItemStat(itemInstance, statManager.getDamageStatID(), level),
+                1f,
+                damageTypeManager.getBluntDamageTypeID(),
+                null);
+    }
+
     // Strike \\
 
-    private void strikeEntity(ProjectileInstance projectile, float reach, float speed) {
+    private void strikeEntity(ProjectileInstance projectile, float reach) {
 
         WorldPositionStruct worldPosition = projectile.getWorldPositionStruct();
         EntityInstance target = combatManager.findTarget(
@@ -323,8 +370,8 @@ class ProjectileFlightBranch extends BranchPackage {
 
         EntityInstance thrower = projectile.getThrower();
 
-        combatManager.damage(
-                thrower, target, resolveDamage(projectile, speed), damageTypeManager.getBluntDamageTypeID(), direction);
+        fill(projectile);
+        combatManager.land(blow, target);
         projectile.markStruck();
 
         if (thrower != null)
@@ -337,16 +384,75 @@ class ProjectileFlightBranch extends BranchPackage {
                 -velocity.z * EngineSetting.PROJECTILE_STRIKE_REBOUND);
     }
 
-    // The item's own damage read at its thrower's level, plus the momentum it carries
-    private float resolveDamage(ProjectileInstance projectile, float speed) {
+    // Tree \\
 
-        ItemInstance itemInstance = projectile.getItemInstance();
-        EntityInstance thrower = projectile.getThrower();
-        int level = thrower != null ? thrower.getLevel() : itemInstance.getLevel();
-        float momentumDamage = itemInstance.getTotalWeight() * speed * EngineSetting.THROWN_DAMAGE_PER_MOMENTUM;
+    // True when a thrown projectile's path meets a tree within reach — one let fall loose passes through
+    private boolean castTree(ProjectileInstance projectile, float reach) {
 
-        return Math.max(
-                EngineSetting.THROWN_DAMAGE_MIN,
-                progressionManager.getItemStat(itemInstance, statManager.getDamageStatID(), level) + momentumDamage);
+        if (projectile.isLoose())
+            return false;
+
+        WorldPositionStruct worldPosition = projectile.getWorldPositionStruct();
+
+        treeManager.castTree(
+                projectile.getWorldHandle(),
+                worldPosition.getChunkCoordinate(),
+                worldPosition.getPosition(),
+                direction,
+                reach,
+                treeCast);
+
+        return treeCast.isHit();
+    }
+
+    // Lands the blow on the tree met — a leaf knocked off lets it fly on, wood reflects it where it struck, true then
+    private boolean meetTree(ProjectileInstance projectile, float reach) {
+
+        fill(projectile);
+        combatManager.land(blow, treeCast);
+
+        if (!treeCast.isWood())
+            return false;
+
+        Direction3Vector face = resolveTreeFace();
+        Vector3 position = projectile.getWorldPositionStruct().getPosition();
+        float offset = EngineSetting.PROJECTILE_SURFACE_OFFSET;
+
+        position.add(
+                direction.x * reach + face.x * offset,
+                direction.y * reach + face.y * offset,
+                direction.z * reach + face.z * offset);
+
+        reflect(projectile, face);
+        return true;
+    }
+
+    // The outward face of the wood the tree cast met
+    private Direction3Vector resolveTreeFace() {
+
+        int sign = treeCast.isFacePositive() ? 1 : -1;
+        int axis = treeCast.getFaceAxis();
+
+        return Direction3Vector.getDirection(
+                axis == EngineSetting.AXIS_X ? sign : 0,
+                axis == EngineSetting.AXIS_Y ? sign : 0,
+                axis == EngineSetting.AXIS_Z ? sign : 0);
+    }
+
+    // Block \\
+
+    // Lands the blow on the block met — true when it broke and the projectile flies on, slowed by what the break took
+    private boolean breakBlock(ProjectileInstance projectile) {
+
+        if (projectile.isLoose())
+            return false;
+
+        fill(projectile);
+
+        if (combatManager.land(blow, castStruct) != BlowOutcome.BROKEN)
+            return false;
+
+        projectile.getVelocity().multiply(blow.getRemaining());
+        return true;
     }
 }

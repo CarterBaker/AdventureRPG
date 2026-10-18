@@ -87,7 +87,7 @@ public class AnimationTreeEditorManager extends ManagerPackage {
         // Simulation
         this.movementState = EntityState.IDLE;
         this.parameters = new float[AnimationParameter.VALUES.length];
-        this.chosenAction = EntityAction.SWING;
+        this.chosenAction = EntityAction.ATTACK;
         this.playingAction = EntityAction.NONE;
     }
 

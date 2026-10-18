@@ -23,7 +23,7 @@ public class AnimationStateHandle extends HandlePackage {
      * its state node, its phase pinned to the action's phase so a swing's
      * strike always lands on the strike frame; a new action on the node
      * already playing fades in from the pose it left. An action carrying a
-     * moveset clip made for the tree's rig plays that clip in its node's
+     * weapon clip made for the tree's rig plays that clip in its node's
      * place, and the layer fades out of it from a captured pose, so a weapon
      * brings its own moves to any tree that maps the action. A posture —
      * rotations set per bone by whoever poses the body by hand, as the first
@@ -52,7 +52,7 @@ public class AnimationStateHandle extends HandlePackage {
     private float[][] layerNodePhases;
 
     // Actions — per layer, whether its current node follows the action, the action it last followed, and the
-    // moveset clip its current node plays in place of its own
+    // weapon clip its current node plays in place of its own
     private boolean[] layerActionDriven;
     private int[] layerActionSequences;
     private AnimationClipHandle[] layerMoveClips;
@@ -281,7 +281,7 @@ public class AnimationStateHandle extends HandlePackage {
         layerActivations[layerIndex] = Math.min(1f, layerActivations[layerIndex] + fadeStep);
     }
 
-    // A moveset clip plays only on the rig it was made for
+    // A weapon clip plays only on the rig it was made for
     private AnimationClipHandle resolveMoveClip(AnimationClipHandle actionClip) {
         return actionClip != null && actionClip.getRigHandle() == rigHandle ? actionClip : null;
     }
@@ -431,7 +431,7 @@ public class AnimationStateHandle extends HandlePackage {
                 : Math.min(phase, 1f);
     }
 
-    // A moveset clip left playing once its action ends runs on to its last frame at its own pace
+    // A weapon clip left playing once its action ends runs on to its last frame at its own pace
     private void advanceMoveClip(int layerIndex, float deltaTime) {
 
         int nodeIndex = layerCurrentNodes[layerIndex];

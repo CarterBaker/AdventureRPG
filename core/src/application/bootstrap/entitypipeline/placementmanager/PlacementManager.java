@@ -1,5 +1,7 @@
 package application.bootstrap.entitypipeline.placementmanager;
 
+import application.bootstrap.combatpipeline.combat.BlowOutcome;
+import application.bootstrap.combatpipeline.combat.BlowStruct;
 import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
@@ -37,22 +39,22 @@ public class PlacementManager extends ManagerPackage {
      * action picks it up, and the activate action sets the held item against
      * the face it was hit on, so items stack into piles — containers included,
      * unless activating the item opens something in the runtime, never here: a
-     * container that can open, or a station such as a drafting table. Otherwise the primary action swings whatever is
-     * held through CombatManager — a weapon or bare hands attack there from
-     * the side the entity's input asks for instead — whose strike lands back
-     * here on a block through strikeBlock(), and the activate action places
-     * the held item — a block piece as a sub-block, a seed into the ground as
-     * a tree of its species, a sower or nurturer onto the block as the
-     * covering it tends, anything else as a world item; a planting or tending
-     * that takes trains the skill of the item used up doing it. A vehicle's
-     * deck or cargo nearer than anything in the world takes the action
-     * instead, through VehicleCargoSystem, by the same rules: cargo's own
-     * actions come first, then the primary action picks cargo up or swings at
-     * the deck, and the activate action sets the held item down aboard, unless
-     * it is a block piece or activating the cargo opens it in the runtime.
-     * findTargetVehicle() is the one place that decides whether a vehicle
-     * stands in front. Nothing happens here while the entity is caught up in a
-     * fight — attacking, reeling, aiming or guarding all belong to
+     * container that can open, or a station such as a drafting table.
+     * Otherwise the primary action is left to CombatManager, where whatever is
+     * held attacks as a weapon from the side the entity's input asks for, and
+     * every blow that meets a block, swung or thrown, lands back here through
+     * strikeBlock(); the activate action places the held item — a block piece
+     * as a sub-block, a seed into the ground as a tree of its species, a sower
+     * or nurturer onto the block as the covering it tends, anything else as a
+     * world item; a planting or tending that takes trains the skill of the
+     * item used up doing it. A vehicle's deck or cargo nearer than anything in
+     * the world takes the action instead, through VehicleCargoSystem, by the
+     * same rules: cargo's own actions come first, then the primary action
+     * picks cargo up, and the activate action sets the held item down aboard,
+     * unless it is a block piece or activating the cargo opens it in the
+     * runtime. findTargetVehicle() is the one place that decides whether a
+     * vehicle stands in front. Nothing happens here while the entity is caught
+     * up in a fight — attacking, reeling, aiming or guarding all belong to
      * CombatManager. findTargetItem() is the one place that decides which
      * world item an entity is aiming at, and where on it.
      */
@@ -159,12 +161,7 @@ public class PlacementManager extends ManagerPackage {
             return;
         }
 
-        if (primaryAction) {
-            combatManager.swing(entity);
-            return;
-        }
-
-        if (!castFrom(entity, origin, direction))
+        if (primaryAction || !castFrom(entity, origin, direction))
             return;
 
         if (handlePlaceAction(entity, direction, castStruct)) {
@@ -175,15 +172,20 @@ public class PlacementManager extends ManagerPackage {
 
     // Strike \\
 
-    // A landed swing against the block the entity aims at — true when the strike counted
-    public boolean strikeBlock(EntityInstance entity, Vector3 origin, Vector3 direction) {
+    // A blow landing on the block a cast met, swung or thrown — one that met none lets the break target go
+    public BlowOutcome strikeBlock(BlowStruct blow, BlockCastStruct cast) {
 
-        if (!castFrom(entity, origin, direction)) {
+        if (!cast.isHit()) {
             blockBranch.resetBreakTarget();
-            return false;
+            return BlowOutcome.TURNED;
         }
 
-        return blockBranch.tryBreak(entity, castStruct);
+        return blockBranch.tryBreak(blow, cast);
+    }
+
+    // Casts the entity's reach for a block into a cast of the caller's own — true when it meets one
+    public boolean castBlock(EntityInstance entity, Vector3 origin, Vector3 direction, BlockCastStruct out) {
+        return castFrom(entity, origin, direction, out);
     }
 
     // How far the entity's reach meets a block, Float.MAX_VALUE when it meets none
@@ -264,6 +266,10 @@ public class PlacementManager extends ManagerPackage {
     }
 
     private boolean castFrom(EntityInstance entity, Vector3 origin, Vector3 direction) {
+        return castFrom(entity, origin, direction, castStruct);
+    }
+
+    private boolean castFrom(EntityInstance entity, Vector3 origin, Vector3 direction, BlockCastStruct out) {
 
         WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
 
@@ -272,9 +278,9 @@ public class PlacementManager extends ManagerPackage {
                 origin,
                 direction,
                 entity.getStatisticsHandle().getReach() * EngineSetting.REACH_SCALE,
-                castStruct);
+                out);
 
-        return castStruct.isHit();
+        return out.isHit();
     }
 
     // Routing \\
@@ -333,8 +339,8 @@ public class PlacementManager extends ManagerPackage {
         return true;
     }
 
-    // Against the vehicle VehicleCargoSystem last met — the primary action takes cargo up or swings at the deck, the
-    // activate action sets the held item down aboard, unless activating the cargo opens it in the runtime instead
+    // Against the vehicle VehicleCargoSystem last met — the primary action takes cargo up, the activate action sets
+    // the held item down aboard, unless activating the cargo opens it in the runtime instead
     private void handleVehicleAction(
             EntityInstance entity,
             Vector3 direction,
@@ -347,10 +353,8 @@ public class PlacementManager extends ManagerPackage {
             return;
         }
 
-        if (primaryAction && !vehicleCargoSystem.isCargoHit()) {
-            combatManager.swing(entity);
+        if (primaryAction && !vehicleCargoSystem.isCargoHit())
             return;
-        }
 
         if (primaryAction && vehicleCargoSystem.pickUp(entity)) {
             timeSinceLastPlacement = 0;

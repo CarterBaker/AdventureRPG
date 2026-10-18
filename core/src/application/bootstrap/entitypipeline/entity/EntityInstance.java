@@ -22,7 +22,7 @@ public class EntityInstance extends InstancePackage {
      * Runtime entity spawned by EntityManager, holding its template and all
      * per-instance state. setWeight() keeps weight and body build in step,
      * updateAnimation() is the one path that advances its animation tree,
-     * playing whatever action its hands are in over its movement — a moveset's
+     * playing whatever action its hands are in over its movement — a weapon's
      * own clip where the action carries one — getStat() reads a stat's total,
      * resolved through ProgressionManager only once something it is built from
      * has changed, getEyePosition() is the one place its eye — where it aims

@@ -19,19 +19,20 @@ public class ItemDefinitionData extends DataPackage {
      * its model without the lid, drawn in the world while it stands open, and
      * a pocket carries the box of walls its space is shown in, drawn only in
      * the inventory's menus. A tool names the tool type it is and the highest
-     * break tier it can break; a weapon names the moveset it is wielded with;
-     * an item names the skill its use trains, and an item that grants stats,
-     * is worn, is a tool or is wielded by a moveset is gear, which carries a
-     * level, tier and condition of its own; a stackable item holds up to its
-     * stack size in one item; a block piece names the block it builds. An item
-     * may carry actions that turn it into another item where it stands, and
-     * may be picked up as another item, as an open door is picked up shut. A
-     * seed names the tree it grows into once planted. An item may sow a
-     * covering over the block it is used on and nurture what covers it by a
-     * number of levels, as grass seed sows grass and a moisture pouch feeds
-     * moss. An item may be a station, opened where it stands like a container
-     * is, as a drafting table opens the shipwright. Owned by
-     * ItemDefinitionHandle for the engine lifetime.
+     * break tier it can break; an item names the weapon it is wielded with,
+     * fighting with the default item weapon when it names none; an item names
+     * the skill its use trains, and an item that grants stats, is worn, is a
+     * tool or names its own weapon is gear, which carries a level, tier and
+     * condition of its own; a stackable item holds up to its stack size in one
+     * item; a block piece names the block it builds. An item may carry actions
+     * that turn it into another item where it stands, and may be picked up as
+     * another item, as an open door is picked up shut. A seed names the tree
+     * it grows into once planted. An item may sow a covering over the block it
+     * is used on and nurture what covers it by a number of levels, as grass
+     * seed sows grass and a moisture pouch feeds moss. An item may be a
+     * station, opened where it stands like a container is, as a drafting table
+     * opens the shipwright. Owned by ItemDefinitionHandle for the engine
+     * lifetime.
      */
 
     // Identity
@@ -67,8 +68,8 @@ public class ItemDefinitionData extends DataPackage {
     private final short toolTypeID;
     private final int toolTier;
 
-    // Combat — the moveset the item is wielded with, MOVESET_NONE for none
-    private final short movesetID;
+    // Combat — the weapon the item is wielded with, WEAPON_NONE when it names none
+    private final short weaponID;
 
     // Skill — the skill using the item trains, SKILL_NONE for none
     private final short skillID;
@@ -113,7 +114,7 @@ public class ItemDefinitionData extends DataPackage {
             int materialID,
             short toolTypeID,
             int toolTier,
-            short movesetID,
+            short weaponID,
             short skillID,
             int stackSize,
             short blockID,
@@ -158,7 +159,7 @@ public class ItemDefinitionData extends DataPackage {
         this.toolTier = toolTier;
 
         // Combat
-        this.movesetID = movesetID;
+        this.weaponID = weaponID;
 
         // Skill
         this.skillID = skillID;
@@ -237,7 +238,7 @@ public class ItemDefinitionData extends DataPackage {
         return !stats.isEmpty()
                 || equipmentType != EquipmentType.NONE
                 || toolTypeID != EngineSetting.TOOL_NONE
-                || movesetID != EngineSetting.MOVESET_NONE;
+                || weaponID != EngineSetting.WEAPON_NONE;
     }
 
     public ItemShapeStruct getShape() {
@@ -284,8 +285,8 @@ public class ItemDefinitionData extends DataPackage {
         return toolTier;
     }
 
-    public short getMovesetID() {
-        return movesetID;
+    public short getWeaponID() {
+        return weaponID;
     }
 
     public short getSkillID() {
@@ -296,8 +297,8 @@ public class ItemDefinitionData extends DataPackage {
         return skillID != EngineSetting.SKILL_NONE;
     }
 
-    public boolean hasMoveset() {
-        return movesetID != EngineSetting.MOVESET_NONE;
+    public boolean hasWeapon() {
+        return weaponID != EngineSetting.WEAPON_NONE;
     }
 
     public int getStackSize() {

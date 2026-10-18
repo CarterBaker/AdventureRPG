@@ -23,7 +23,7 @@ public class ProgressionPipeline extends PipelinePackage {
      * trades, skills, conduct, profession and vitality by the same code,
      * player or not. The pipeline is created ahead of the item pipeline, whose
      * definitions name stats and skills, and of the combat pipeline, whose
-     * movesets name damage types.
+     * weapons name damage types.
      */
 
     @Override

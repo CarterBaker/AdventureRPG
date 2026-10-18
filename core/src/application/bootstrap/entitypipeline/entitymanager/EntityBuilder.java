@@ -2,6 +2,7 @@ package application.bootstrap.entitypipeline.entitymanager;
 
 import java.io.File;
 
+import application.bootstrap.combatpipeline.weaponmanager.WeaponManager;
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
 import application.bootstrap.entitypipeline.animationtreemanager.AnimationTreeManager;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
@@ -31,9 +32,11 @@ class EntityBuilder extends BuilderPackage {
      * Parses entity template ARPG into EntityData wrapped in an EntityHandle,
      * defaulting size, weight and eye level. The optional model block resolves
      * mesh, shared material, rig and animation tree, plus appearance and
-     * equipment anchors, and the genders the entity may be made as. Bootstrap
-     * only, apart from the unregistered preview builds an editor makes of a
-     * template it is changing.
+     * equipment anchors, and the genders the entity may be made as. "weapon"
+     * names what its own body fights with, bare hands unless it names another,
+     * and must be made for the model's rig. Bootstrap only, apart from the
+     * unregistered preview builds an editor makes of a template it is
+     * changing.
      */
 
     // Internal
@@ -42,6 +45,7 @@ class EntityBuilder extends BuilderPackage {
     private AnimationTreeManager animationTreeManager;
     private AppearanceBuilder appearanceBuilder;
     private GenderManager genderManager;
+    private WeaponManager weaponManager;
 
     // Base \\
 
@@ -54,6 +58,7 @@ class EntityBuilder extends BuilderPackage {
         this.animationTreeManager = get(AnimationTreeManager.class);
         this.appearanceBuilder = get(AppearanceBuilder.class);
         this.genderManager = get(GenderManager.class);
+        this.weaponManager = get(WeaponManager.class);
     }
 
     // Build \\
@@ -110,8 +115,10 @@ class EntityBuilder extends BuilderPackage {
                         sourceName);
         }
 
+        short weaponID = parseWeapon(arpg, characterMesh, sourceName);
+
         EntityData entityData = new EntityData(
-                sizeMin, sizeMax, weightMin, weightMax, eyeLevel, behaviorName, genderIDs,
+                sizeMin, sizeMax, weightMin, weightMax, eyeLevel, behaviorName, genderIDs, weaponID,
                 characterMesh, characterMaterial, animationTreeHandle, modelHeight, appearanceData,
                 equipmentAnchors);
 
@@ -133,6 +140,22 @@ class EntityBuilder extends BuilderPackage {
             return genderIDs;
 
         return new short[] { genderManager.getGenderIDFromGenderName(EngineSetting.DEFAULT_RACE_GENDER) };
+    }
+
+    // Combat Parsing \\
+
+    // The weapon the entity's own body fights with — made for its model's rig when it has one
+    private short parseWeapon(ArpgObjectStruct arpg, MeshHandle characterMesh, String sourceName) {
+
+        String weaponName = ArpgUtility.getString(arpg, "weapon", EngineSetting.DEFAULT_ENTITY_WEAPON);
+        short weaponID = weaponManager.getWeaponIDFromWeaponName(weaponName);
+
+        if (characterMesh != null
+                && !weaponManager.getWeaponHandleFromWeaponID(weaponID).hasRig(characterMesh.getRigHandle()))
+            throwException("Entity weapon \"" + weaponName
+                    + "\" has no animation for the entity's rig. Source: " + sourceName);
+
+        return weaponID;
     }
 
     // Model Parsing \\

@@ -1,35 +1,39 @@
 package application.bootstrap.combatpipeline.combatmanager;
 
-import application.bootstrap.combatpipeline.moveset.AttackStruct;
-import application.bootstrap.combatpipeline.movesetmanager.MovesetManager;
+import application.bootstrap.combatpipeline.weapon.AttackStruct;
+import application.bootstrap.combatpipeline.weapon.WeaponHandle;
+import application.bootstrap.combatpipeline.weaponmanager.WeaponManager;
 import application.bootstrap.entitypipeline.entity.CombatDirection;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityActionHandle;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 
 class AttackBranch extends BranchPackage {
 
     /*
-     * Runs moveset attacks for CombatManager. attack() starts the attack the
-     * entity's moveset makes from a side, its blow landing as its windup ends,
+     * Runs weapon attacks for CombatManager. attack() starts the attack the
+     * entity's weapon makes when asked for a side — that side, or the one it
+     * falls back to when the weapon lacks it — playing the clip the weapon
+     * has for the entity's rig, its blow landing as its windup ends,
      * quickened by the entity's attack speed. While one plays, control() reads
      * the entity's input: raising the guard before the blow is committed
      * feints, dropping the attack for the guard, and an attack asked for
      * meanwhile waits in the queue until the recovery is far enough along to
      * cut in, so attacks flow one into the next without waiting each one out.
-     * strike() lands the blow through SwingBranch with the moveset the attack
+     * strike() lands the blow through StrikeBranch with the weapon the attack
      * began with. deflect() throws an attacker whose blow a guard turned aside
      * into recoil, and interrupt() staggers an attacker struck before its own
      * blow could land.
      */
 
     // Internal
-    private MovesetManager movesetManager;
+    private WeaponManager weaponManager;
     private CombatManager combatManager;
-    private SwingBranch swingBranch;
+    private StrikeBranch strikeBranch;
     private GuardBranch guardBranch;
 
     // Internal \\
@@ -38,33 +42,30 @@ class AttackBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.movesetManager = get(MovesetManager.class);
+        this.weaponManager = get(WeaponManager.class);
         this.combatManager = get(CombatManager.class);
-        this.swingBranch = get(SwingBranch.class);
+        this.strikeBranch = get(StrikeBranch.class);
         this.guardBranch = get(GuardBranch.class);
     }
 
     // Attack \\
 
-    // False when the entity holds something that is no weapon — that swings plainly instead
-    boolean attack(EntityInstance entity, CombatDirection direction) {
+    void attack(EntityInstance entity, CombatDirection direction) {
 
-        short movesetID = combatManager.resolveAttackMoveset(entity);
-
-        if (movesetID == EngineSetting.MOVESET_NONE)
-            return false;
-
-        AttackStruct attack = movesetManager.getMovesetHandleFromMovesetID(movesetID).getAttack(direction);
+        short weaponID = combatManager.resolveWeapon(entity);
+        WeaponHandle weaponHandle = weaponManager.getWeaponHandleFromWeaponID(weaponID);
+        CombatDirection side = weaponHandle.resolveAttackSide(direction);
+        AttackStruct attack = weaponHandle.getAttack(side);
+        RigHandle rigHandle = entity.getEntityData().getRigHandle();
 
         entity.getEntityActionHandle().beginMove(
                 EntityAction.ATTACK,
-                direction,
-                movesetID,
-                attack.getClip(),
+                side,
+                weaponID,
+                weaponHandle.getAttackClip(rigHandle, side),
                 attack.getDuration() / combatManager.resolveAttackSpeed(entity),
                 attack.getImpact(),
-                attack.getStrike());
-        return true;
+                weaponHandle.getAttackStrike(rigHandle, side));
     }
 
     // Control \\
@@ -102,11 +103,10 @@ class AttackBranch extends BranchPackage {
     void strike(EntityInstance entity) {
 
         EntityActionHandle actionHandle = entity.getEntityActionHandle();
-        CombatDirection direction = actionHandle.getDirection();
-        AttackStruct attack = movesetManager.getMovesetHandleFromMovesetID(actionHandle.getMovesetID())
-                .getAttack(direction);
+        CombatDirection side = actionHandle.getDirection();
+        AttackStruct attack = weaponManager.getWeaponHandleFromWeaponID(actionHandle.getWeaponID()).getAttack(side);
 
-        swingBranch.strike(entity, attack, direction);
+        strikeBranch.strike(entity, attack, side);
     }
 
     // Reaction \\

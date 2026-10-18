@@ -104,7 +104,7 @@ file. None is hard-coded in logic.
 | damage | yes | Every blow and thrown item |
 | armor | yes | Mitigation |
 | health_regen | no | Share of health regained per second, after the regeneration delay |
-| attack_speed | no | Swing and moveset speed |
+| attack_speed | no | How fast every attack winds up and recovers |
 | move_speed | no | Walk, run, sprint and swim speed |
 | carry_capacity | no | Weight limit |
 | crit_chance | no | Chance a blow lands critically |
@@ -114,7 +114,7 @@ file. None is hard-coded in logic.
 | poise | no | Resists knockback |
 | persuasion | no | Affinity gains |
 | throw_power | no | Throw strength |
-| work_power | no | Mining, digging and felling speed |
+| work_power | no | How hard a swing drives its weight: blow momentum, mining, digging and felling |
 
 - **Total:** `(base + gear) × (1 + Σ attribute bonuses) × (1 + trade, skill and profession bonuses)`, clamped to the
   stat's range.
@@ -270,7 +270,7 @@ creator steps through the race's genders, and an NPC's gender is drawn from its 
 
 - **Health is hidden.** It is kept as a share of full health, so max health can change without healing or hurting.
 - **Damage types.** `assets/damagetypes/DamageTypes.arpg` lists them, and each says whether armor applies and whether
-  it bleeds. Movesets name each attack's `damage_type`; thrown items hit blunt.
+  it bleeds. Weapons name each attack's `damage_type`; thrown items hit blunt.
 
 | Type | Armor | Bleeds |
 |---|---|---|
@@ -281,6 +281,16 @@ creator steps through the race's genders, and an NPC's gender is drawn from its 
 | drowning | no | no |
 | asphyxiation | no | no |
 
+- **Every blow carries momentum**, `mass × speed`, swung or thrown alike.
+  - A swing drives the weight of what is wielded, or the body's own weapon's `mass`, at
+    `31.5 × work_power / (mass + 1.5)`.
+  - A throw leaves at `36 × throw_power / (weight + 1.5)` and lands with the item's weight at whatever speed it still
+    has.
+- **A blow's amount:** `max(1, opening + momentum × 0.2) × the attack's damage`. A swing opens with the striker's
+  damage stat; a throw opens with the item's own damage at the thrower's level.
+- **Breaking:** a blow does `momentum / 20` points of durability work on a block or a tree.
+  - The right tool, or any blow on a block that names no tool, adds its work up across strokes.
+  - Anything else breaks a block only by doing its whole durability in one blow.
 - **A blow:** `share = amount × 1.05^(source level − target level) / health`.
   - Armor turns part of it aside: `× 50 / (50 + armor × 1.05^(target level − source level))`.
   - A critical blow deals `× 2`.
@@ -349,7 +359,7 @@ creator steps through the race's genders, and an NPC's gender is drawn from its 
 Existing types gained fields:
 
 - **items:** `skill`, and `stats` naming entries of `Stats.arpg`;
-- **movesets:** each attack's `damage_type`;
+- **weapons:** each attack's `damage_type`;
 - **NPCs:** `profession`, `level_min`, `level_max`;
 - **loot tables:** `level_min`, `level_max`, `tier_bias`;
 - **entities:** `genders`.

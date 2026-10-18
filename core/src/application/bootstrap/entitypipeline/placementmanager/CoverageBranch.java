@@ -4,7 +4,6 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
-import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.blockmanager.BlockPlacementSystem;
 import application.bootstrap.worldpipeline.covering.CoveringHandle;
@@ -22,14 +21,14 @@ class CoverageBranch extends BranchPackage {
      * nurtures; an item that only nurtures, a moisture pouch, grows whatever
      * already covers the block. Either takes one of the held item, but only
      * once the coverage has changed, so a fully grown cell costs nothing. A
-     * whole block broken under a fully grown covering hands out the
-     * covering's drop. Every coverage edit goes through BlockPlacementSystem.
+     * whole block broken under a fully grown covering yields the covering's
+     * drop, which resolveDrop() names. Every coverage edit goes through
+     * BlockPlacementSystem.
      */
 
     // Internal
     private BlockPlacementSystem blockPlacementSystem;
     private CoveringManager coveringManager;
-    private ItemManager itemManager;
 
     // Internal \\
 
@@ -39,7 +38,6 @@ class CoverageBranch extends BranchPackage {
         // Internal
         this.blockPlacementSystem = get(BlockPlacementSystem.class);
         this.coveringManager = get(CoveringManager.class);
-        this.itemManager = get(ItemManager.class);
     }
 
     // Tend \\
@@ -99,14 +97,5 @@ class CoverageBranch extends BranchPackage {
             return EngineSetting.COVERING_DROP_NONE;
 
         return coveringHandle.getDropItemName();
-    }
-
-    // The drop handed to the breaker when their inventory has room for it, lost otherwise like the covering itself
-    void giveDrop(EntityInstance entity, String dropItemName) {
-
-        if (dropItemName.equals(EngineSetting.COVERING_DROP_NONE))
-            return;
-
-        entity.getInventoryHandle().give(itemManager.createItem(dropItemName));
     }
 }
