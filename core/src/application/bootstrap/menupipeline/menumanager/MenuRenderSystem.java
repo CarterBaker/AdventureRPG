@@ -32,7 +32,7 @@ public class MenuRenderSystem extends SystemPackage {
      * Renders every visible menu element tree each frame. Resolves each
      * element's active state, sprite and color, including hover, pointed and
      * themed colors, fits label text to its element, and poses animated
-     * elements from the menu's clock before drawing.
+     * elements from the menu's clock, and turns rotated ones, before drawing.
      */
 
     private RenderManager renderManager;
@@ -145,6 +145,8 @@ public class MenuRenderSystem extends SystemPackage {
 
         if (data.hasAnimation())
             applyAnimation(element, data.getAnimation());
+        else if (element.hasRotation())
+            element.applyRotation();
 
         MenuColorStruct color = resolveColor(element, activeState);
 

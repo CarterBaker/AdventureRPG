@@ -74,7 +74,10 @@ class DayTrackerBranch extends BranchPackage {
         // Calendar Offset
         this.startDayOffset = calculateStartDayOffset();
 
-        // Tracking
+        resetTracking();
+    }
+
+    void resetTracking() {
         this.lastDayElapsed = -1;
     }
 
@@ -207,5 +210,11 @@ class DayTrackerBranch extends BranchPackage {
 
     int getMonthFromDayOfYear(int dayOfYear) {
         return dayOfYearToMonth.get(dayOfYear);
+    }
+
+    // Accessible \\
+
+    long getStartDayOffset() {
+        return startDayOffset;
     }
 }

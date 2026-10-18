@@ -13,6 +13,7 @@ import engine.input.Input;
 import engine.input.InputListener;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CommandConsoleInputSystem extends SystemPackage implements InputListener {
 
@@ -20,7 +21,10 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
      * The command console's command line. While its window holds focus it
      * takes every character the editor font can draw, Backspace removes the
      * last one, Escape clears the line, and Enter hands it to CommandManager,
-     * which routes it to every open Dev window. While one of the tree's chunk
+     * which routes it to every open Dev window. Up and Down step back and
+     * forth through the lines sent before, and Tab completes the command name
+     * being typed, or lists every command it could still be. While one of the
+     * tree's chunk
      * fields is focused the same keys edit that field instead, and Escape
      * hands typing back to the line. Typed characters are read from whichever
      * OS window the console currently lives in, so the line keeps working
@@ -40,6 +44,10 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
     private Input textInput;
     private StringBuilder commandBuffer;
 
+    // History
+    private ObjectArrayList<String> commandHistory;
+    private int historyIndex;
+
     // Caret
     private float caretElapsed;
     private boolean caretVisible;
@@ -51,6 +59,10 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
 
         // Text Input
         this.commandBuffer = new StringBuilder();
+
+        // History
+        this.commandHistory = new ObjectArrayList<>();
+        this.historyIndex = 0;
     }
 
     @Override
@@ -92,8 +104,26 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
             return;
         }
 
-        if (rawInput.isKeyClicked(EditorSetting.KEY_BACKSPACE))
+        if (rawInput.isKeyClicked(EditorSetting.KEY_BACKSPACE)) {
             removeCharacter();
+            return;
+        }
+
+        if (commandConsoleChunkFieldSystem.hasFocus())
+            return;
+
+        if (rawInput.isKeyClicked(EditorSetting.KEY_TAB)) {
+            completeCommand();
+            return;
+        }
+
+        if (rawInput.isKeyClicked(EditorSetting.KEY_UP)) {
+            recallCommand(-1);
+            return;
+        }
+
+        if (rawInput.isKeyClicked(EditorSetting.KEY_DOWN))
+            recallCommand(1);
     }
 
     private void updateCaret() {
@@ -191,6 +221,7 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
 
         String commandLine = commandBuffer.toString();
 
+        recordCommand(commandLine.trim());
         clearCommand();
         commandManager.executeCommand(commandLine);
     }
@@ -219,6 +250,22 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
         restartCaret();
     }
 
+    private void replaceCommand(String commandLine) {
+
+        commandBuffer.setLength(0);
+        commandBuffer.append(commandLine, 0, Math.min(commandLine.length(), CommandConsoleSetting.COMMAND_MAX_LENGTH));
+        restartCaret();
+    }
+
+    // Completes the command name while it is the only word on the line
+    private void completeCommand() {
+
+        if (commandBuffer.indexOf(EditorSetting.COMMAND_TOKEN_SEPARATOR) != EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        replaceCommand(commandManager.completeCommandName(commandBuffer.toString()));
+    }
+
     private void refreshCommandLabel() {
 
         boolean lineCaretVisible = caretVisible && !commandConsoleChunkFieldSystem.hasFocus();
@@ -227,6 +274,37 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
                 ? commandBuffer + CommandConsoleSetting.COMMAND_CARET
                 : commandBuffer.toString());
         commandConsoleChunkFieldSystem.setCaretVisible(caretVisible);
+    }
+
+    // History \\
+
+    // Keeps a sent line, unless it repeats the last one, dropping the oldest past the limit
+    private void recordCommand(String commandLine) {
+
+        if (!commandLine.isEmpty()
+                && (commandHistory.isEmpty() || !commandHistory.get(commandHistory.size() - 1).equals(commandLine)))
+            commandHistory.add(commandLine);
+
+        if (commandHistory.size() > CommandConsoleSetting.COMMAND_HISTORY_LIMIT)
+            commandHistory.remove(0);
+
+        this.historyIndex = commandHistory.size();
+    }
+
+    // Steps through the lines sent before; stepping past the newest leaves an empty line
+    private void recallCommand(int direction) {
+
+        if (commandHistory.isEmpty())
+            return;
+
+        this.historyIndex = Math.max(0, Math.min(commandHistory.size(), historyIndex + direction));
+
+        if (historyIndex == commandHistory.size()) {
+            clearCommand();
+            return;
+        }
+
+        replaceCommand(commandHistory.get(historyIndex));
     }
 
     // Management \\

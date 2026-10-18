@@ -6,8 +6,10 @@ import editor.bootstrap.commandpipeline.command.CommandStruct;
 import editor.dev.freecamera.FreeCameraSystem;
 import editor.dev.item.DevItemSystem;
 import editor.dev.teleport.DevTeleportSystem;
+import editor.dev.time.DevTimeSystem;
 import editor.dev.vehicle.DevVehicleSystem;
 import editor.runtime.EditorSetting;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -26,6 +28,7 @@ public class DevCommandSystem extends SystemPackage {
     private DevItemSystem devItemSystem;
     private DevVehicleSystem devVehicleSystem;
     private DevTeleportSystem devTeleportSystem;
+    private DevTimeSystem devTimeSystem;
 
     // Palette
     private Object2ObjectOpenHashMap<String, Consumer<CommandStruct>> commandName2Action;
@@ -52,6 +55,7 @@ public class DevCommandSystem extends SystemPackage {
         this.devItemSystem = get(DevItemSystem.class);
         this.devVehicleSystem = get(DevVehicleSystem.class);
         this.devTeleportSystem = get(DevTeleportSystem.class);
+        this.devTimeSystem = get(DevTimeSystem.class);
     }
 
     private void registerActions() {
@@ -62,6 +66,16 @@ public class DevCommandSystem extends SystemPackage {
         commandName2Action.put(EditorSetting.COMMAND_REMOVE_VEHICLE, command -> devVehicleSystem.removeVehicle());
         commandName2Action.put(EditorSetting.COMMAND_TELEPORT,
                 command -> devTeleportSystem.teleport(command.getArgument(0), command.getArgument(1)));
+        commandName2Action.put(EditorSetting.COMMAND_TIME,
+                command -> devTimeSystem.advanceTime(command.getArgument(0), command.getArgument(1)));
+        commandName2Action.put(EditorSetting.COMMAND_DAWN,
+                command -> devTimeSystem.skipToTimeOfDay(EngineSetting.CLOCK_QUARTER));
+        commandName2Action.put(EditorSetting.COMMAND_NOON,
+                command -> devTimeSystem.skipToTimeOfDay(EngineSetting.CLOCK_NOON));
+        commandName2Action.put(EditorSetting.COMMAND_DUSK,
+                command -> devTimeSystem.skipToTimeOfDay(EngineSetting.CLOCK_THREE_QUARTERS));
+        commandName2Action.put(EditorSetting.COMMAND_MIDNIGHT,
+                command -> devTimeSystem.skipToTimeOfDay(EditorSetting.COMMAND_TIME_RAW_MIDNIGHT));
     }
 
     // Update \\

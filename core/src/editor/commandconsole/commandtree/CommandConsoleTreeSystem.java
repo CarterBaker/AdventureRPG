@@ -11,8 +11,10 @@ import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
 import editor.commandconsole.CommandConsoleSetting;
 import editor.commandconsole.chunkfield.CommandConsoleChunkFieldSystem;
+import editor.commandconsole.dial.CommandConsoleDialSystem;
 import editor.commandconsole.panel.CommandConsolePanelSystem;
 import editor.commandconsole.tilegrid.CommandConsoleTileGridSystem;
+import editor.dev.time.DevTimeUnit;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -25,11 +27,14 @@ public class CommandConsoleTreeSystem extends SystemPackage {
      * lists every command that takes no arguments first, each run with a
      * single click, then a section per item or vehicle category that holds
      * any, each a grid of tiles filled by the tile grid system, for every
-     * command that takes one, and a row of X and Y fields, filled by the chunk
-     * field system, for every command that takes a chunk. An item command
-     * heads its sections with its own name; a vehicle's tile is the command
-     * itself, so its sections sit straight under the group. A group with none
-     * of these is left out.
+     * command that takes one, a row of X and Y fields, filled by the chunk
+     * field system, for every command that takes a chunk, and a section of
+     * dials per group of the clock's units, filled by the dial system, for
+     * every command that takes a time unit and its value. An item or time
+     * command heads its sections with its own name; a vehicle's tile is the
+     * command itself, so its sections sit straight under the group. A group
+     * with none of these is left out. A unit the world's calendar does not
+     * have gets no dial.
      * Groups and categories start expanded and collapse on click; the tree is
      * laid out on the first frame and again only when one of them is toggled.
      */
@@ -40,6 +45,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     private CommandConsolePanelSystem commandConsolePanelSystem;
     private CommandConsoleTileGridSystem commandConsoleTileGridSystem;
     private CommandConsoleChunkFieldSystem commandConsoleChunkFieldSystem;
+    private CommandConsoleDialSystem commandConsoleDialSystem;
 
     // Tree
     private ObjectArrayList<ElementInstance> treeElements;
@@ -64,6 +70,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
         this.commandConsoleTileGridSystem = get(CommandConsoleTileGridSystem.class);
         this.commandConsoleChunkFieldSystem = get(CommandConsoleChunkFieldSystem.class);
+        this.commandConsoleDialSystem = get(CommandConsoleDialSystem.class);
     }
 
     // Update \\
@@ -87,6 +94,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
         commandConsoleTileGridSystem.clearGrids();
         commandConsoleChunkFieldSystem.clearFields();
+        commandConsoleDialSystem.clearDials();
 
         for (int i = 0; i < treeElements.size(); i++)
             menuManager.eject(commandConsoleMenu, CommandConsoleSetting.ENTRY_COMMAND_TREE, treeElements.get(i));
@@ -133,6 +141,8 @@ public class CommandConsoleTreeSystem extends SystemPackage {
                 injectVehicleCommand(commandConsoleMenu, commandHandle);
             else if (commandHandle.takesChunk())
                 injectChunkCommand(commandConsoleMenu, commandHandle);
+            else if (commandHandle.takesTime())
+                injectTimeCommand(commandConsoleMenu, commandHandle);
         }
     }
 
@@ -149,7 +159,11 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
     private void injectItemCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
 
-        injectTileHeader(commandConsoleMenu, commandHandle);
+        injectHeader(
+                commandConsoleMenu,
+                commandHandle,
+                CommandConsoleSetting.MENU_TILE_HEADER,
+                CommandConsoleSetting.ELEMENT_TILE_HEADER_LABEL);
 
         for (ItemCategory itemCategory : ItemCategory.VALUES) {
 
@@ -158,7 +172,11 @@ public class CommandConsoleTreeSystem extends SystemPackage {
             if (items.isEmpty())
                 continue;
 
-            ElementInstance grid = injectTileCategory(commandConsoleMenu, commandHandle, itemCategory.getTitle());
+            ElementInstance grid = injectCategory(
+                    commandConsoleMenu,
+                    commandHandle,
+                    itemCategory.getTitle(),
+                    CommandConsoleSetting.MENU_TILE_GRID);
 
             if (grid != null)
                 commandConsoleTileGridSystem.addItemGrid(grid, commandHandle, items);
@@ -173,7 +191,11 @@ public class CommandConsoleTreeSystem extends SystemPackage {
             if (vehicles.isEmpty())
                 continue;
 
-            ElementInstance grid = injectTileCategory(commandConsoleMenu, commandHandle, vehicleCategory.getTitle());
+            ElementInstance grid = injectCategory(
+                    commandConsoleMenu,
+                    commandHandle,
+                    vehicleCategory.getTitle(),
+                    CommandConsoleSetting.MENU_TILE_GRID);
 
             if (grid != null)
                 commandConsoleTileGridSystem.addVehicleGrid(grid, commandHandle, vehicles);
@@ -191,20 +213,55 @@ public class CommandConsoleTreeSystem extends SystemPackage {
                 }));
     }
 
-    private void injectTileHeader(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
+    private void injectTimeCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {
+
+        injectHeader(
+                commandConsoleMenu,
+                commandHandle,
+                CommandConsoleSetting.MENU_DIAL_HEADER,
+                CommandConsoleSetting.ELEMENT_DIAL_HEADER_LABEL);
+
+        String groupTitle = null;
+        ElementInstance row = null;
+
+        for (DevTimeUnit unit : DevTimeUnit.VALUES) {
+
+            if (!commandConsoleDialSystem.isAvailable(unit))
+                continue;
+
+            if (!unit.getGroupTitle().equals(groupTitle)) {
+                groupTitle = unit.getGroupTitle();
+                row = injectCategory(
+                        commandConsoleMenu,
+                        commandHandle,
+                        groupTitle,
+                        CommandConsoleSetting.MENU_DIAL_ROW);
+            }
+
+            if (row != null)
+                commandConsoleDialSystem.addDial(row, commandHandle, unit);
+        }
+    }
+
+    private void injectHeader(
+            MenuInstance commandConsoleMenu,
+            CommandHandle commandHandle,
+            String headerMenu,
+            String labelId) {
+
         treeElements.add(menuManager.inject(
                 commandConsoleMenu,
                 CommandConsoleSetting.ENTRY_COMMAND_TREE,
-                CommandConsoleSetting.MENU_TILE_HEADER,
-                element -> setChildText(element, CommandConsoleSetting.ELEMENT_TILE_HEADER_LABEL,
-                        commandHandle.getLabel())));
+                headerMenu,
+                element -> setChildText(element, labelId, commandHandle.getLabel())));
     }
 
-    // A category's header under its command, and the grid its tiles go in — null while it is collapsed
-    private ElementInstance injectTileCategory(
+    // A category's header under its command, and the container its contents go in — null while it is collapsed
+    private ElementInstance injectCategory(
             MenuInstance commandConsoleMenu,
             CommandHandle commandHandle,
-            String categoryTitle) {
+            String categoryTitle,
+            String contentMenu) {
 
         String categoryKey = commandHandle.getCommandName() + CommandConsoleSetting.CATEGORY_KEY_SEPARATOR
                 + categoryTitle;
@@ -223,14 +280,14 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         if (!expanded)
             return null;
 
-        ElementInstance grid = menuManager.inject(
+        ElementInstance content = menuManager.inject(
                 commandConsoleMenu,
                 CommandConsoleSetting.ENTRY_COMMAND_TREE,
-                CommandConsoleSetting.MENU_TILE_GRID);
+                contentMenu);
 
-        treeElements.add(grid);
+        treeElements.add(content);
 
-        return grid;
+        return content;
     }
 
     // Management \\
@@ -250,7 +307,8 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
         for (int i = 0; i < commandHandles.size(); i++)
             if (commandHandles.get(i).isArgumentFree() || commandHandles.get(i).takesItem()
-                    || commandHandles.get(i).takesVehicle() || commandHandles.get(i).takesChunk())
+                    || commandHandles.get(i).takesVehicle() || commandHandles.get(i).takesChunk()
+                    || commandHandles.get(i).takesTime())
                 return true;
 
         return false;

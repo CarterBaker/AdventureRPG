@@ -11,9 +11,9 @@ public class CommandConsoleBranch extends BranchPackage {
     /*
      * Menu event handlers for the command console tab. A command picked from
      * the command tree runs exactly as if it had been typed; a group or
-     * category toggles, an item or vehicle tile is picked up, and a chunk
-     * field is focused or its command run, in the command console paired with
-     * the window it was pressed in.
+     * category toggles, an item or vehicle tile is picked up, a chunk field is
+     * focused or its command run, and a time dial is turned or stepped, in the
+     * command console paired with the window it was pressed in.
      */
 
     // Internal
@@ -50,5 +50,20 @@ public class CommandConsoleBranch extends BranchPackage {
     public void runChunkCommand(String commandName, WindowInstance window) {
         if (window.getContext() instanceof CommandConsoleContext commandConsoleContext)
             commandConsoleContext.runChunkCommand(commandName);
+    }
+
+    public void turnDial(WindowInstance window, ElementInstance element) {
+        if (window.getContext() instanceof CommandConsoleContext commandConsoleContext)
+            commandConsoleContext.turnDial(element);
+    }
+
+    public void decreaseDial(String unitName, WindowInstance window) {
+        if (window.getContext() instanceof CommandConsoleContext commandConsoleContext)
+            commandConsoleContext.decreaseDial(unitName);
+    }
+
+    public void increaseDial(String unitName, WindowInstance window) {
+        if (window.getContext() instanceof CommandConsoleContext commandConsoleContext)
+            commandConsoleContext.increaseDial(unitName);
     }
 }

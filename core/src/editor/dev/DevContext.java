@@ -6,6 +6,7 @@ import editor.dev.command.DevCommandSystem;
 import editor.dev.freecamera.FreeCameraSystem;
 import editor.dev.item.DevItemSystem;
 import editor.dev.teleport.DevTeleportSystem;
+import editor.dev.time.DevTimeSystem;
 import editor.dev.vehicle.DevVehicleSystem;
 
 public class DevContext extends RuntimeContext {
@@ -16,7 +17,8 @@ public class DevContext extends RuntimeContext {
      * drives: a command system that receives what is typed or picked in it,
      * the free camera its fly command switches on, the item giver its give
      * command uses, the vehicle spawner its spawnvehicle and removevehicle
-     * commands use, and the teleporter its teleport command uses. The editor
+     * commands use, the teleporter its teleport command uses, and the clock
+     * mover its time, dawn, noon, dusk and midnight commands use. The editor
      * pairs it with a Dev Mode tab exactly as it does a preview. Dev-only
      * systems live beside it in the editor, never in runtime.
      */
@@ -27,6 +29,7 @@ public class DevContext extends RuntimeContext {
     private DevItemSystem devItemSystem;
     private DevVehicleSystem devVehicleSystem;
     private DevTeleportSystem devTeleportSystem;
+    private DevTimeSystem devTimeSystem;
 
     // Internal \\
 
@@ -41,6 +44,7 @@ public class DevContext extends RuntimeContext {
         this.devItemSystem = create(DevItemSystem.class);
         this.devVehicleSystem = create(DevVehicleSystem.class);
         this.devTeleportSystem = create(DevTeleportSystem.class);
+        this.devTimeSystem = create(DevTimeSystem.class);
     }
 
     // Management \\

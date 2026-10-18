@@ -18,7 +18,9 @@ class CommandBuilder extends BuilderPackage {
      * "commands". Every command needs a name, which must be a single word so
      * it can be typed; the label defaults to the name, and "arguments" lists
      * the argument names in the order they are typed. A command that takes
-     * no arguments runs with one click from the command console's tree.
+     * no arguments runs with one click from the command console's tree. A
+     * command marked "shared" acts on state every window shares, such as the
+     * world's clock, so it runs in one Dev window instead of each.
      */
 
     // Build \\
@@ -51,7 +53,8 @@ class CommandBuilder extends BuilderPackage {
                 label,
                 groupName,
                 argumentNames,
-                buildUsage(commandName, argumentNames));
+                buildUsage(commandName, argumentNames),
+                ArpgUtility.getBoolean(commandArpg, "shared", false));
 
         CommandHandle commandHandle = create(CommandHandle.class);
         commandHandle.constructor(commandData);

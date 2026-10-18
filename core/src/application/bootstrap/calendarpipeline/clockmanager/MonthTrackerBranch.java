@@ -38,7 +38,10 @@ class MonthTrackerBranch extends BranchPackage {
         // Internal
         this.clockHandle = clockHandle;
 
-        // Tracking
+        resetTracking();
+    }
+
+    void resetTracking() {
         this.lastMonth = -1;
     }
 

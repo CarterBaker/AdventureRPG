@@ -8,7 +8,8 @@ public class EditorSetting {
     /*
      * Editor-only constants — chrome menus, cursors, input keys, menu entry
      * point indices, layout persistence, tool tabs, the name dialog, console
-     * commands and the command drag between windows, the info pipeline's
+     * commands and the command drag between windows, the Dev window's time
+     * units, the info pipeline's
      * schemas, hierarchy keys, and status text, the item editor's library and
      * status text, the image editing framework's history and files, the world
      * map's status text and overlay toggles, the world editor's brush and
@@ -40,6 +41,9 @@ public class EditorSetting {
 
     // Keys
     public static final int KEY_BACKSPACE = 259;
+    public static final int KEY_TAB = 258;
+    public static final int KEY_UP = 265;
+    public static final int KEY_DOWN = 264;
     public static final int KEY_ENTER = 257;
     public static final int KEY_ENTER_NUMPAD = 335;
     public static final int KEY_ESCAPE = 256;
@@ -108,6 +112,8 @@ public class EditorSetting {
     public static final String COMMAND_MESSAGE_NO_DEV_WINDOWS = "No Dev window is open to run the command";
     public static final String COMMAND_MESSAGE_NO_ACTION = " has no action for command: ";
     public static final String COMMAND_MESSAGE_WINDOW_CRASHED = " has crashed and cannot run command: ";
+    public static final String COMMAND_MESSAGE_MATCHES = "Matching commands: ";
+    public static final String COMMAND_MESSAGE_LIST_SEPARATOR = ", ";
 
     // Commands — Drag
     public static final int COMMAND_DRAG_BUTTON = Buttons.LEFT;
@@ -150,6 +156,59 @@ public class EditorSetting {
     public static final String COMMAND_MESSAGE_TELEPORT_NO_PLAYER = ": no player to move";
     public static final String COMMAND_MESSAGE_TELEPORT_MOVED = ": moved to chunk ";
     public static final String COMMAND_MESSAGE_TELEPORT_SEPARATOR = ", ";
+
+    // Commands — Time
+    public static final String COMMAND_TIME = "time";
+    public static final String COMMAND_DAWN = "dawn";
+    public static final String COMMAND_NOON = "noon";
+    public static final String COMMAND_DUSK = "dusk";
+    public static final String COMMAND_MIDNIGHT = "midnight";
+    public static final String COMMAND_ARGUMENT_TIME_UNIT = "unit";
+    public static final String COMMAND_ARGUMENT_TIME_AMOUNT = "amount";
+    public static final double COMMAND_TIME_RAW_MIDNIGHT = 0.0;
+    public static final String COMMAND_MESSAGE_TIME_UNKNOWN_UNIT = ": no time unit is named ";
+    public static final String COMMAND_MESSAGE_TIME_UNIT_HINT = ", use one of: ";
+    public static final String COMMAND_MESSAGE_TIME_UNAVAILABLE = ": this world's calendar has no ";
+    public static final String COMMAND_MESSAGE_TIME_INVALID = ": time moves by a whole number, such as 3 or -3, not ";
+    public static final String COMMAND_MESSAGE_TIME_BEFORE_CALENDAR = ": cannot move the clock before the first day"
+            + " of the calendar's starting age";
+    public static final String COMMAND_MESSAGE_TIME_AFTER_CALENDAR = ": cannot move the clock past the last day of age ";
+    public static final String COMMAND_MESSAGE_TIME_MOVED = ": the clock now reads ";
+
+    // Dev Time — units, the groups the command console's dials sit in, and how the clock is described
+    public static final String DEV_TIME_UNIT_HOUR = "hour";
+    public static final String DEV_TIME_UNIT_MINUTE = "minute";
+    public static final String DEV_TIME_UNIT_WEEKDAY = "weekday";
+    public static final String DEV_TIME_UNIT_DAY = "day";
+    public static final String DEV_TIME_UNIT_MONTH = "month";
+    public static final String DEV_TIME_UNIT_SEASON = "season";
+    public static final String DEV_TIME_UNIT_YEAR = "year";
+    public static final String DEV_TIME_UNIT_AGE = "age";
+    public static final String DEV_TIME_UNIT_MOON = "moon";
+    public static final String DEV_TIME_TITLE_HOUR = "Hour";
+    public static final String DEV_TIME_TITLE_MINUTE = "Minute";
+    public static final String DEV_TIME_TITLE_WEEKDAY = "Weekday";
+    public static final String DEV_TIME_TITLE_DAY = "Day";
+    public static final String DEV_TIME_TITLE_MONTH = "Month";
+    public static final String DEV_TIME_TITLE_SEASON = "Season";
+    public static final String DEV_TIME_TITLE_YEAR = "Year";
+    public static final String DEV_TIME_TITLE_AGE = "Age";
+    public static final String DEV_TIME_TITLE_MOON = "Moon";
+    public static final String DEV_TIME_GROUP_TIME_OF_DAY = "Time of Day";
+    public static final String DEV_TIME_GROUP_CALENDAR = "Calendar";
+    public static final String DEV_TIME_GROUP_YEARS = "Years";
+    public static final String DEV_TIME_GROUP_MOON = "Moon";
+    public static final int DEV_TIME_AGE_SPAN = 999;
+    public static final String DEV_TIME_MINUTE_FORMAT = "%02d";
+    public static final String DEV_TIME_CLOCK_SEPARATOR = ":";
+    public static final String DEV_TIME_DATE_SEPARATOR = ", ";
+    public static final String DEV_TIME_WORD_SEPARATOR = " ";
+    public static final String DEV_TIME_YEAR_PREFIX = "year ";
+    public static final String DEV_TIME_AGE_PREFIX = " of age ";
+    public static final String DEV_TIME_MOON_SUFFIX = " moon";
+    public static final String[] DEV_TIME_MOON_PHASES = {
+            "New", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
+            "Full", "Waning Gibbous", "Last Quarter", "Waning Crescent" };
 
     // Viewports
     public static final String FBO_EDITOR_SCENE = "EditorScene";

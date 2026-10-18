@@ -62,6 +62,10 @@ public class CalendarHandle extends HandlePackage {
         return calendarData.getMonthDays().getByte(monthName);
     }
 
+    public int getDayOfYearZeroIndexed(int month, int dayOfMonth) {
+        return calendarData.getDayOfYearZeroIndexed(month, dayOfMonth);
+    }
+
     // Starting Point \\
 
     public int getStartYear() {

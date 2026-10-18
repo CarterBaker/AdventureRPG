@@ -15,7 +15,8 @@ public class ElementInstance extends InstancePackage {
      * Runtime instance of a UI element. Holds its computed layout, the hover,
      * pointed and click state ElementHitSystem sets, runtime overrides for
      * text, size and click arguments, and the pose applied to animated
-     * elements.
+     * elements. A runtime rotation, in degrees counter-clockwise about the
+     * element's pivot, turns it on top of any pose, as a dial's needle turns.
      */
 
     // Internal
@@ -47,6 +48,9 @@ public class ElementInstance extends InstancePackage {
 
     // Color
     private MenuColorStruct colorOverride;
+
+    // Rotation
+    private float rotation;
 
     // Children
     private ObjectArrayList<ElementInstance> children;
@@ -222,6 +226,10 @@ public class ElementInstance extends InstancePackage {
         this.colorOverride = color;
     }
 
+    public void setRotation(float rotation) {
+        this.rotation = rotation;
+    }
+
     // Effective Action Accessors \\
 
     public String getEffectiveActionClass() {
@@ -346,15 +354,24 @@ public class ElementInstance extends InstancePackage {
     // Pose \\
 
     public void applyPose(ElementPoseStruct pose) {
+        applyPose(pose.getOffsetX(), pose.getOffsetY(), pose.getScaleX(), pose.getScaleY(),
+                pose.getRotation() + rotation);
+    }
 
-        float pivotX = computedLeft + computedPivotX * computedW + pose.getOffsetX() * computedW;
-        float pivotY = computedTop + computedPivotY * computedH + pose.getOffsetY() * computedH;
-        float w = computedW * pose.getScaleX();
-        float h = computedH * pose.getScaleY();
+    public void applyRotation() {
+        applyPose(0f, 0f, 1f, 1f, rotation);
+    }
+
+    private void applyPose(float offsetX, float offsetY, float scaleX, float scaleY, float rotationDegrees) {
+
+        float pivotX = computedLeft + computedPivotX * computedW + offsetX * computedW;
+        float pivotY = computedTop + computedPivotY * computedH + offsetY * computedH;
+        float w = computedW * scaleX;
+        float h = computedH * scaleY;
         float localPivotX = computedPivotX * w;
         float localPivotY = computedPivotY * h;
 
-        double radians = Math.toRadians(pose.getRotation());
+        double radians = Math.toRadians(rotationDegrees);
         float cos = (float) Math.cos(radians);
         float sin = (float) Math.sin(radians);
 
@@ -613,6 +630,10 @@ public class ElementInstance extends InstancePackage {
 
     public boolean hasChildren() {
         return !children.isEmpty();
+    }
+
+    public boolean hasRotation() {
+        return rotation != 0f;
     }
 
     public String getText() {

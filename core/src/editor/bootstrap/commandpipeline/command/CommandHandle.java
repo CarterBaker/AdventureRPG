@@ -10,8 +10,9 @@ public class CommandHandle extends HandlePackage {
      * owned by CommandManager. Delegates all accessors through CommandData.
      * A command whose one argument is an item is picked from the command
      * console's item tiles, one whose one argument is a vehicle from its
-     * vehicle tiles, and one whose two arguments are a chunk's X and Y from
-     * its chunk fields.
+     * vehicle tiles, one whose two arguments are a chunk's X and Y from its
+     * chunk fields, and one whose two arguments are a time unit and an amount
+     * to move it by from its dials.
      */
 
     // Internal
@@ -55,6 +56,10 @@ public class CommandHandle extends HandlePackage {
         return commandData.getUsage();
     }
 
+    public boolean isShared() {
+        return commandData.isShared();
+    }
+
     public boolean isArgumentFree() {
         return commandData.getArgumentCount() == 0;
     }
@@ -73,5 +78,11 @@ public class CommandHandle extends HandlePackage {
         return commandData.getArgumentCount() == 2
                 && commandData.getArgumentName(0).equals(EditorSetting.COMMAND_ARGUMENT_CHUNK_X)
                 && commandData.getArgumentName(1).equals(EditorSetting.COMMAND_ARGUMENT_CHUNK_Y);
+    }
+
+    public boolean takesTime() {
+        return commandData.getArgumentCount() == 2
+                && commandData.getArgumentName(0).equals(EditorSetting.COMMAND_ARGUMENT_TIME_UNIT)
+                && commandData.getArgumentName(1).equals(EditorSetting.COMMAND_ARGUMENT_TIME_AMOUNT);
     }
 }

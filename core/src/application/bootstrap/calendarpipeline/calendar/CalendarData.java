@@ -174,7 +174,7 @@ public class CalendarData extends DataPackage {
 
         for (int i = 0; i < count; i++) {
             SeasonRangeStruct season = seasons.get(i);
-            int dayOfYear = dayOfYearZeroIndexed(season.getStartMonth(), season.getStartDayOfMonth());
+            int dayOfYear = getDayOfYearZeroIndexed(season.getStartMonth(), season.getStartDayOfMonth());
             startFractions[i] = dayOfYear / (double) totalDaysInYear;
         }
 
@@ -204,7 +204,7 @@ public class CalendarData extends DataPackage {
         return seasonKeyframes;
     }
 
-    private int dayOfYearZeroIndexed(int month, int dayOfMonth) {
+    public int getDayOfYearZeroIndexed(int month, int dayOfMonth) {
 
         int dayOfYear = 0;
 

@@ -28,7 +28,9 @@ public class ClockManager extends ManagerPackage {
      * afterward so every value is already correct before the first frame
      * reads it. Any place on the world can ask its visual time of day, so a
      * map can shade the whole world by the same shared clock every grid
-     * follows.
+     * follows. Moving the clock to another day and minute is one path too:
+     * every tracker forgets what it last saw and the clock is solved again at
+     * once, so a jump of any size lands on the right date in one step.
      */
 
     // Internal
@@ -163,6 +165,25 @@ public class ClockManager extends ManagerPackage {
             return null;
 
         return worldStreamManager.getActiveWorldHandle();
+    }
+
+    // Move \\
+
+    // totalDaysWithOffset counts from the first day of year 0 of the calendar's starting age
+    public void moveClock(long totalDaysWithOffset, int minuteOfDay) {
+
+        if (totalDaysWithOffset < 0)
+            throwException("Cannot move the clock to day " + totalDaysWithOffset
+                    + ", before the first day of the calendar's starting age.");
+
+        currentTracker.moveTo(totalDaysWithOffset - dayTracker.getStartDayOffset(), minuteOfDay);
+
+        currentTracker.resetTracking();
+        dayTracker.resetTracking();
+        monthTracker.resetTracking();
+        yearTracker.resetTracking();
+
+        advanceGameClock();
     }
 
     // World Switch \\

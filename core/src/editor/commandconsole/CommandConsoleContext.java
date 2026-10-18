@@ -2,6 +2,7 @@ package editor.commandconsole;
 
 import editor.commandconsole.chunkfield.CommandConsoleChunkFieldSystem;
 import editor.commandconsole.commandtree.CommandConsoleTreeSystem;
+import editor.commandconsole.dial.CommandConsoleDialSystem;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.commandconsole.input.CommandConsoleInputSystem;
@@ -19,8 +20,12 @@ public class CommandConsoleContext extends ContextPackage {
      * command that needs no arguments with a single click and any command
      * that takes an item or a vehicle from tiles grouped by category — clicked
      * for every Dev window, or dragged onto one Dev window to run there alone —
-     * and any command that takes a chunk from X and Y fields typed into.
-     * What each command reports lands in the log, shown by the Console tab.
+     * any command that takes a chunk from X and Y fields typed into, and the
+     * time command from a round dial per unit of the clock, turned by
+     * dragging around it or stepped by its minus and plus buttons. The
+     * command line recalls what was sent with Up and Down and completes a
+     * command's name with Tab. What each command reports lands in the log,
+     * shown by the Console tab.
      */
 
     // Internal
@@ -31,6 +36,7 @@ public class CommandConsoleContext extends ContextPackage {
     private CommandConsoleTileGridSystem commandConsoleTileGridSystem;
     private CommandConsoleTileRenderSystem commandConsoleTileRenderSystem;
     private CommandConsoleChunkFieldSystem commandConsoleChunkFieldSystem;
+    private CommandConsoleDialSystem commandConsoleDialSystem;
 
     // Internal \\
 
@@ -43,6 +49,7 @@ public class CommandConsoleContext extends ContextPackage {
         this.commandConsoleTileGridSystem = create(CommandConsoleTileGridSystem.class);
         this.commandConsoleTileRenderSystem = create(CommandConsoleTileRenderSystem.class);
         this.commandConsoleChunkFieldSystem = create(CommandConsoleChunkFieldSystem.class);
+        this.commandConsoleDialSystem = create(CommandConsoleDialSystem.class);
     }
 
     @Override
@@ -68,5 +75,17 @@ public class CommandConsoleContext extends ContextPackage {
     public void runChunkCommand(String commandName) {
         commandConsoleChunkFieldSystem.runCommand(commandName);
         commandConsoleInputSystem.restartCaret();
+    }
+
+    public void turnDial(ElementInstance faceElement) {
+        commandConsoleDialSystem.turnDial(faceElement);
+    }
+
+    public void decreaseDial(String unitName) {
+        commandConsoleDialSystem.stepDial(unitName, -CommandConsoleSetting.DIAL_STEP);
+    }
+
+    public void increaseDial(String unitName) {
+        commandConsoleDialSystem.stepDial(unitName, CommandConsoleSetting.DIAL_STEP);
     }
 }

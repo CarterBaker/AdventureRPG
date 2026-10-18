@@ -23,9 +23,11 @@ public class CommandManager extends ManagerPackage {
      * the log, parsed once into a CommandStruct, checked against its command's
      * definition, and queued on every Dev window that has not crashed, each of
      * which runs it inside its own frame — or on one Dev window alone, when a
-     * command is dropped onto it. Commands carried between windows belong to
+     * command is dropped onto it or acts on what every window shares. Commands carried between windows belong to
      * the drag branch. TabManager's open tabs are the only record of which Dev
-     * windows exist, so nothing registers here.
+     * windows exist, so nothing registers here. A command name being typed
+     * completes as far as every command it could still be agrees, and lists
+     * them when that is no further.
      */
 
     // Internal
@@ -36,6 +38,10 @@ public class CommandManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<String, CommandHandle> commandName2CommandHandle;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<CommandHandle>> groupName2CommandHandles;
     private ObjectArrayList<String> groupNames;
+    private ObjectArrayList<String> commandNames;
+
+    // Scratch
+    private ObjectArrayList<String> matchingCommandNames;
 
     // Base \\
 
@@ -46,6 +52,10 @@ public class CommandManager extends ManagerPackage {
         this.commandName2CommandHandle = new Object2ObjectOpenHashMap<>();
         this.groupName2CommandHandles = new Object2ObjectOpenHashMap<>();
         this.groupNames = new ObjectArrayList<>();
+        this.commandNames = new ObjectArrayList<>();
+
+        // Scratch
+        this.matchingCommandNames = new ObjectArrayList<>();
 
         create(CommandLoader.class);
         this.commandDragBranch = create(CommandDragBranch.class);
@@ -61,6 +71,7 @@ public class CommandManager extends ManagerPackage {
 
         internalLoader.requestAll();
         groupNames.sort(String.CASE_INSENSITIVE_ORDER);
+        commandNames.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
     // Management \\
@@ -75,6 +86,7 @@ public class CommandManager extends ManagerPackage {
                     + commandName2CommandHandle.get(commandName).getGroupName() + "' and group '" + groupName + "'.");
 
         commandName2CommandHandle.put(commandName, commandHandle);
+        commandNames.add(commandName);
 
         if (!groupName2CommandHandles.containsKey(groupName)) {
             groupName2CommandHandles.put(groupName, new ObjectArrayList<>());
@@ -110,6 +122,48 @@ public class CommandManager extends ManagerPackage {
 
     public void dragCommand(String commandLine, String label, WindowInstance window, ElementInstance element) {
         commandDragBranch.dragCommand(commandLine, label, window, element);
+    }
+
+    // The longest name every command starting with this prefix shares, followed by a separator once only one does
+    public String completeCommandName(String prefix) {
+
+        matchingCommandNames.clear();
+
+        for (int i = 0; i < commandNames.size(); i++)
+            if (commandNames.get(i).startsWith(prefix))
+                matchingCommandNames.add(commandNames.get(i));
+
+        if (matchingCommandNames.isEmpty())
+            return prefix;
+
+        if (matchingCommandNames.size() == 1)
+            return matchingCommandNames.get(0) + EditorSetting.COMMAND_TOKEN_SEPARATOR;
+
+        String completion = resolveSharedPrefix(matchingCommandNames);
+
+        if (completion.length() == prefix.length())
+            log(EditorSetting.COMMAND_MESSAGE_MATCHES
+                    + String.join(EditorSetting.COMMAND_MESSAGE_LIST_SEPARATOR, matchingCommandNames));
+
+        return completion;
+    }
+
+    private String resolveSharedPrefix(ObjectArrayList<String> names) {
+
+        String shared = names.get(0);
+
+        for (int i = 1; i < names.size(); i++) {
+
+            int length = 0;
+
+            while (length < shared.length() && length < names.get(i).length()
+                    && shared.charAt(length) == names.get(i).charAt(length))
+                length++;
+
+            shared = shared.substring(0, length);
+        }
+
+        return shared;
     }
 
     // Echoes the line to the log and checks it against its command, null when it cannot run
@@ -148,6 +202,7 @@ public class CommandManager extends ManagerPackage {
     private int dispatchCommand(CommandStruct command) {
 
         ObjectArrayList<TabHandle> openTabs = tabManager.getOpenTabs();
+        boolean shared = commandName2CommandHandle.get(command.getCommandName()).isShared();
         int receivers = 0;
 
         for (int i = 0; i < openTabs.size(); i++) {
@@ -158,6 +213,9 @@ public class CommandManager extends ManagerPackage {
 
             devContext.queueCommand(command);
             receivers++;
+
+            if (shared)
+                break;
         }
 
         return receivers;

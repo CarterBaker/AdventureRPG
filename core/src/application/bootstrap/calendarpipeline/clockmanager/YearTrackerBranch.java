@@ -37,7 +37,10 @@ class YearTrackerBranch extends BranchPackage {
         this.calendarHandle = calendarHandle;
         this.clockHandle = clockHandle;
 
-        // Tracking
+        resetTracking();
+    }
+
+    void resetTracking() {
         this.lastYear = -1;
     }
 
