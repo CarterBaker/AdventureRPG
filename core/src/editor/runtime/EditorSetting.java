@@ -938,7 +938,7 @@ public class EditorSetting {
     public static final String RECORDER_DIRECTORY = "Recordings";
     public static final String RECORDER_VIDEO_DIRECTORY = "Videos";
     public static final String RECORDER_DEFAULT_NAME_PREFIX = "Recording";
-    public static final String RECORDER_LAYER_NAME_PREFIX = "Layer ";
+    public static final String RECORDER_TAKE_NAME_PREFIX = "Take ";
     public static final String RECORDER_MARKER_NAME_PREFIX = "Marker ";
     public static final String RECORDER_KILL_MARKER_PREFIX = "Felled ";
     public static final String RECORDER_PLAYER_DISPLAY_NAME = "Player";
@@ -947,17 +947,36 @@ public class EditorSetting {
     public static final int RECORDER_LABEL_MAX_LENGTH = 48;
     public static final String RECORDER_VIDEO_NAME_SEPARATOR = "_";
     public static final String RECORDER_EXTENSION_SEPARATOR = ".";
-    public static final int RECORDER_FILE_VERSION = 1;
+    public static final int RECORDER_FILE_VERSION = 2;
+    public static final int RECORDER_FILE_VERSION_LAYERS = 1;
+    public static final String RECORDER_FILE_CHANNEL_WORLD = "world";
+
+    // Recorder — the tab's menu, and the lanes its drags land on, which every Recorder tab shares
+    public static final String RECORDER_MENU = "editor/Recorder/Recorder";
+    public static final int RECORDER_ENTRY_CLIP_LANES = 6;
 
     // Recorder — channels
     public static final String RECORDER_CHANNEL_LABEL_CAMERA = "Camera";
     public static final String RECORDER_CHANNEL_LABEL_PLAYER = "Player";
-    public static final String RECORDER_CHANNEL_LABEL_WORLD = "World";
-    public static final String RECORDER_CHANNEL_LABEL_TIME = "Time";
+    public static final String RECORDER_CHANNEL_LABEL_CHARACTERS = "Characters";
+    public static final String RECORDER_CHANNEL_LABEL_ITEMS = "Items";
+    public static final String RECORDER_CHANNEL_LABEL_VEHICLES = "Vehicles";
+    public static final String RECORDER_CHANNEL_LABEL_WEATHER = "Weather";
+    public static final String RECORDER_CHANNEL_LABEL_TIME = "Time and light";
+    public static final String RECORDER_CHANNEL_LABEL_INTERFACE = "Interface";
+
+    // Recorder — the timeline; clips stack on a fixed number of lanes, the highest playing over the rest
+    public static final int RECORDER_LANE_COUNT = 6;
+    public static final float RECORDER_MIN_TIMELINE_SECONDS = 1f;
+    public static final float RECORDER_DRAG_THRESHOLD_PIXELS = 4f;
+    public static final int RECORDER_RESUME_FRAMES = 2;
 
     // Recorder — sampling, in seconds; the camera, the player and the clock are sampled finer than the world
     public static final float RECORDER_SAMPLE_INTERVAL = 1f / 60f;
     public static final float RECORDER_WORLD_SAMPLE_INTERVAL = 1f / 30f;
+    public static final float RECORDER_WEATHER_SAMPLE_INTERVAL = 1f / 10f;
+    public static final float RECORDER_OVERLAY_SAMPLE_INTERVAL = 1f / 30f;
+    public static final int RECORDER_OVERLAY_KEYFRAME_INTERVAL = 30;
     public static final float RECORDER_SAMPLE_TOLERANCE = 0.001f;
     public static final float RECORDER_GAP_SECONDS = 0.25f;
     public static final float RECORDER_MIN_TAKE_SECONDS = 0.1f;
@@ -979,6 +998,11 @@ public class EditorSetting {
             + Integer.BYTES * 4;
     public static final int RECORDER_PROJECTILE_SAMPLE_BYTES = RECORDER_PLACE_SAMPLE_BYTES + Float.BYTES * 4;
     public static final int RECORDER_CLOCK_SAMPLE_BYTES = Float.BYTES + Long.BYTES;
+    public static final int RECORDER_WEATHER_SAMPLE_BYTES = Float.BYTES * 2 + Double.BYTES * 2;
+    public static final int RECORDER_VEHICLE_SAMPLE_BYTES = RECORDER_PLACE_SAMPLE_BYTES + Float.BYTES * 5
+            + Integer.BYTES;
+    public static final int RECORDER_VEHICLE_PART_BYTES = Float.BYTES;
+    public static final int RECORDER_OVERLAY_FRAME_BYTES = Float.BYTES + Integer.BYTES * 4;
 
     // Recorder — export choices, cycled in order; the first motion blur choice is none
     public static final int[] RECORDER_EXPORT_WIDTHS = { 1280, 1920, 2560, 3840 };
@@ -1103,6 +1127,9 @@ public class EditorSetting {
     public static final String RECORDER_MESSAGE_NO_TEMPLATE = "A recorded character's template no longer exists: ";
     public static final String RECORDER_MESSAGE_NO_ITEM = "A recorded item no longer exists: ";
     public static final String RECORDER_MESSAGE_LOOK_REFUSED = "A recorded look no longer fits its character: ";
+    public static final String RECORDER_MESSAGE_NO_VEHICLE = "A recorded vehicle type no longer exists: ";
+    public static final String RECORDER_MESSAGE_OVERLAY_UNREADABLE = "A recorded interface frame could not be read: ";
+    public static final String RECORDER_MESSAGE_FLUSH_FAILED = "An interface frame was lost finishing a take: ";
 
     // Recorder — status text
     public static final String RECORDER_STATUS_READY = "Ready";
@@ -1110,6 +1137,17 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_PLAYING = "Playing";
     public static final String RECORDER_STATUS_PAUSED = "Paused";
     public static final String RECORDER_STATUS_TAKE_SAVED = "Saved take ";
+    public static final String RECORDER_STATUS_SUSPENDED = "Paused with the game: close the pause menu to carry on";
+    public static final String RECORDER_STATUS_PLACED = "Placed ";
+    public static final String RECORDER_STATUS_MOVED = "Moved ";
+    public static final String RECORDER_STATUS_SPLIT = "Split ";
+    public static final String RECORDER_STATUS_STAMPED = "Stamped ";
+    public static final String RECORDER_STATUS_TRIMMED = "Trimmed ";
+    public static final String RECORDER_STATUS_CLIP_REMOVED = "Removed a clip of ";
+    public static final String RECORDER_STATUS_TAKE_DELETED = "Deleted take ";
+    public static final String RECORDER_STATUS_NO_CLIP = "Select a clip on the timeline first";
+    public static final String RECORDER_STATUS_OUTSIDE_CLIP = "Move the playhead inside the clip first";
+    public static final String RECORDER_STATUS_UPGRADED = "Opened and upgraded to takes and clips: ";
     public static final String RECORDER_STATUS_TAKE_TOO_SHORT = "Take too short to keep";
     public static final String RECORDER_STATUS_NOTHING_ARMED = "Arm at least one channel to record";
     public static final String RECORDER_STATUS_NOTHING_RECORDED = "Nothing recorded yet";
@@ -1132,11 +1170,16 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_EXPORT_FAILED = "Export failed: ";
     public static final String RECORDER_STATUS_EXPORT_CANCELLED = "Export cancelled";
 
-    // Recorder — the keys the Recorder tab's setting rows hand back
-    public static final String RECORDER_KEY_ARM_CAMERA = "arm_camera";
-    public static final String RECORDER_KEY_ARM_PLAYER = "arm_player";
-    public static final String RECORDER_KEY_ARM_WORLD = "arm_world";
-    public static final String RECORDER_KEY_ARM_TIME = "arm_time";
+    // Recorder — the keys the Recorder tab's setting rows hand back; channel rows add the channel's key to a prefix
+    public static final String RECORDER_KEY_ARM_PREFIX = "arm_";
+    public static final String RECORDER_KEY_CLIP_CHANNEL_PREFIX = "clip_channel_";
+    public static final String RECORDER_KEY_CLIP_MUTE = "clip_mute";
+    public static final String RECORDER_KEY_CLIP_RAMP = "clip_ramp";
+    public static final String RECORDER_KEY_CLIP_TRIM_START = "clip_trim_start";
+    public static final String RECORDER_KEY_CLIP_TRIM_END = "clip_trim_end";
+    public static final String RECORDER_KEY_CLIP_SPLIT = "clip_split";
+    public static final String RECORDER_KEY_CLIP_STAMP = "clip_stamp";
+    public static final String RECORDER_KEY_CLIP_REMOVE = "clip_remove";
     public static final String RECORDER_KEY_RESOLUTION = "resolution";
     public static final String RECORDER_KEY_FRAME_RATE = "frame_rate";
     public static final String RECORDER_KEY_FORMAT = "format";

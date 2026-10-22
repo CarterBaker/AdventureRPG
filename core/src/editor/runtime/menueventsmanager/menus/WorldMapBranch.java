@@ -1,7 +1,7 @@
 package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
-import editor.worldmap.WorldMapContext;
+import editor.runtime.worldmap.WorldMapContext;
 import engine.root.BranchPackage;
 
 public class WorldMapBranch extends BranchPackage {

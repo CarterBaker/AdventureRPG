@@ -1,5 +1,6 @@
 package application.bootstrap.weatherpipeline.windmanager;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.wind.WindData;
@@ -17,16 +18,22 @@ public class WindManager extends ManagerPackage {
      * Owns the global prevailing wind and each grid's local wind, blended per
      * frame from its season and weather by LocalWindBranch. Also pushes the
      * grid's ambient temperature into the same WindData UBO;
-     * WeatherPatternManager is registered first so both are current.
+     * WeatherPatternManager is registered first so both are current. Gusts
+     * run on their own time, which stands still while the game is paused and
+     * can be held at any moment so a recording replays them.
      */
 
     private UBOManager uboManager;
     private WorldStreamManager worldStreamManager;
+    private ClockManager clockManager;
 
     private GlobalWindBranch globalWindBranch;
     private LocalWindBranch localWindBranch;
 
     private WindHandle windHandle;
+
+    // Hold
+    private boolean gustHeld;
 
     @Override
     protected void create() {
@@ -42,6 +49,7 @@ public class WindManager extends ManagerPackage {
     protected void get() {
         this.uboManager = get(UBOManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.clockManager = get(ClockManager.class);
     }
 
     @Override
@@ -53,7 +61,7 @@ public class WindManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        float deltaTime = internal.getDeltaTime();
+        float deltaTime = gustHeld || clockManager.isPaused() ? 0f : internal.getDeltaTime();
         localWindBranch.advanceTime(deltaTime);
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
@@ -81,6 +89,21 @@ public class WindManager extends ManagerPackage {
         windData.updateUniform(EngineSetting.UNIFORM_TEMPERATURE, grid.getTemperatureInstance().getTemperature());
 
         uboManager.push(windData);
+    }
+
+    // Hold \\
+
+    public void holdGustTime(float gustTime) {
+        this.gustHeld = true;
+        localWindBranch.setElapsedTime(gustTime);
+    }
+
+    public void releaseGustTime() {
+        this.gustHeld = false;
+    }
+
+    public float getGustTime() {
+        return localWindBranch.getElapsedTime();
     }
 
     // Grid Factory \\

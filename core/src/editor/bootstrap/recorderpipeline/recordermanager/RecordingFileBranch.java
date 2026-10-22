@@ -6,21 +6,26 @@ import java.nio.ByteBuffer;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.bootstrap.recorderpipeline.recording.RecorderOverlay;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCameraTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClockTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
-import editor.bootstrap.recorderpipeline.recording.RecordingLayerStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingMarkerStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingOverlayStreamStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingVehicleTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingWeatherTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.VideoFormat;
 import editor.bootstrap.recorderpipeline.util.RecordingArpgUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.util.arpg.ArpgArrayStruct;
-import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -31,11 +36,20 @@ class RecordingFileBranch extends BranchPackage {
      * Writes a recording to its ARPG file and reads one back. The file keeps
      * the world it was made in, the movement states and actions by name so a
      * recording outlives either list changing, how it exports, its markers,
-     * and every layer with its tracks — each track's samples packed into one
-     * block by RecordingArpgUtility, a character's identity, clips and looks
-     * written plainly beside them. A file that cannot be read, or no longer
-     * fits the game, is logged and comes back null without touching anything.
+     * its bin of takes with their tracks — each track's samples packed into
+     * one block by RecordingArpgUtility, a character's identity, clips and
+     * looks written plainly beside them, an overlay's frames as one block of
+     * frame sizes and one of their packed bytes — and the clips on its
+     * timeline, each naming its take by its place in the bin. A file of the
+     * first version, which laid takes straight onto the timeline as layers,
+     * is read as a bin of those takes each placed once where it was
+     * recorded, and is saved in the new form from then on. A file that cannot
+     * be read, or no longer fits the game, is logged and comes back null
+     * without touching anything.
      */
+
+    // Read
+    private boolean upgraded;
 
     // Write \\
 
@@ -48,7 +62,8 @@ class RecordingFileBranch extends BranchPackage {
         recordingArpg.add("actions", buildEnumNames(EntityAction.VALUES));
         recordingArpg.add("export", buildExport(recording.getExportStruct()));
         recordingArpg.add("markers", buildMarkers(recording));
-        recordingArpg.add("layers", buildLayers(recording));
+        recordingArpg.add("takes", buildTakes(recording));
+        recordingArpg.add("clips", buildClips(recording));
 
         return ArpgUtility.tryWriteObject(file, recordingArpg);
     }
@@ -94,50 +109,60 @@ class RecordingFileBranch extends BranchPackage {
         return markersArpg;
     }
 
-    private ArpgArrayStruct buildLayers(RecordingInstance recording) {
+    private ArpgArrayStruct buildTakes(RecordingInstance recording) {
 
-        ArpgArrayStruct layersArpg = new ArpgArrayStruct();
+        ArpgArrayStruct takesArpg = new ArpgArrayStruct();
 
-        for (int i = 0; i < recording.getLayers().size(); i++)
-            layersArpg.add(buildLayer(recording.getLayers().get(i)));
+        for (int i = 0; i < recording.getTakes().size(); i++)
+            takesArpg.add(buildTake(recording.getTakes().get(i)));
 
-        return layersArpg;
+        return takesArpg;
     }
 
-    private ArpgObjectStruct buildLayer(RecordingLayerStruct layer) {
+    private ArpgObjectStruct buildTake(RecordingTakeStruct take) {
 
-        ArpgObjectStruct layerArpg = new ArpgObjectStruct();
-        layerArpg.addProperty("name", layer.getName());
-        layerArpg.add("channels", buildChannels(layer.getChannelMask()));
-        layerArpg.addProperty("start", layer.getStartTime());
-        layerArpg.addProperty("end", layer.getEndTime());
-        layerArpg.addProperty("muted", layer.isMuted());
-        layerArpg.addProperty("time_ramp", layer.getTimeRampSeconds());
+        ArpgObjectStruct takeArpg = new ArpgObjectStruct();
+        takeArpg.addProperty("name", take.getName());
+        takeArpg.add("channels", buildChannels(take.getChannelMask()));
+        takeArpg.addProperty("duration", take.getDuration());
 
-        if (layer.getCameraTrack() != null)
-            layerArpg.addProperty("camera", packCamera(layer.getCameraTrack()));
+        if (take.getCameraTrack() != null)
+            takeArpg.addProperty("camera", packCamera(take.getCameraTrack()));
 
-        if (layer.hasPlayerTrack())
-            layerArpg.add("player", buildBody(layer.getPlayerTrack()));
+        if (take.hasPlayerTrack())
+            takeArpg.add("player", buildBody(take.getPlayerTrack()));
 
         ArpgArrayStruct residentsArpg = new ArpgArrayStruct();
 
-        for (int i = 0; i < layer.getResidentTracks().size(); i++)
-            residentsArpg.add(buildBody(layer.getResidentTracks().get(i)));
+        for (int i = 0; i < take.getResidentTracks().size(); i++)
+            residentsArpg.add(buildBody(take.getResidentTracks().get(i)));
 
-        layerArpg.add("residents", residentsArpg);
+        takeArpg.add("residents", residentsArpg);
 
         ArpgArrayStruct projectilesArpg = new ArpgArrayStruct();
 
-        for (int i = 0; i < layer.getProjectileTracks().size(); i++)
-            projectilesArpg.add(buildProjectile(layer.getProjectileTracks().get(i)));
+        for (int i = 0; i < take.getProjectileTracks().size(); i++)
+            projectilesArpg.add(buildProjectile(take.getProjectileTracks().get(i)));
 
-        layerArpg.add("projectiles", projectilesArpg);
+        takeArpg.add("projectiles", projectilesArpg);
 
-        if (layer.getClockTrack() != null)
-            layerArpg.add("clock", buildClock(layer.getClockTrack()));
+        ArpgArrayStruct vehiclesArpg = new ArpgArrayStruct();
 
-        return layerArpg;
+        for (int i = 0; i < take.getVehicleTracks().size(); i++)
+            vehiclesArpg.add(buildVehicle(take.getVehicleTracks().get(i)));
+
+        takeArpg.add("vehicles", vehiclesArpg);
+
+        if (take.getWeatherTrack() != null)
+            takeArpg.addProperty("weather", packWeather(take.getWeatherTrack()));
+
+        if (take.getClockTrack() != null)
+            takeArpg.add("clock", buildClock(take.getClockTrack()));
+
+        if (take.getOverlayTrack() != null)
+            takeArpg.add("interface", buildOverlays(take.getOverlayTrack()));
+
+        return takeArpg;
     }
 
     private ArpgArrayStruct buildChannels(int channelMask) {
@@ -188,6 +213,17 @@ class RecordingFileBranch extends BranchPackage {
         return projectileArpg;
     }
 
+    private ArpgObjectStruct buildVehicle(RecordingVehicleTrackStruct track) {
+
+        ArpgObjectStruct vehicleArpg = new ArpgObjectStruct();
+        vehicleArpg.addProperty("vehicle", track.getVehicleName());
+        vehicleArpg.addProperty("masts", track.getMastCount());
+        vehicleArpg.addProperty("sails", track.getSailCount());
+        vehicleArpg.addProperty("doors", track.getDoorCount());
+        vehicleArpg.addProperty("samples", packVehicle(track));
+        return vehicleArpg;
+    }
+
     private ArpgObjectStruct buildClock(RecordingClockTrackStruct track) {
 
         ByteBuffer samples = RecordingArpgUtility.allocateBlock(
@@ -204,6 +240,49 @@ class RecordingFileBranch extends BranchPackage {
         clockArpg.addProperty("samples", RecordingArpgUtility.toText(samples));
         clockArpg.addProperty("jumps", RecordingArpgUtility.toText(jumps));
         return clockArpg;
+    }
+
+    private ArpgArrayStruct buildOverlays(RecordingOverlayTrackStruct track) {
+
+        ArpgArrayStruct overlaysArpg = new ArpgArrayStruct();
+
+        for (RecorderOverlay overlay : RecorderOverlay.VALUES) {
+
+            RecordingOverlayStreamStruct stream = track.getStream(overlay);
+
+            if (stream.isEmpty())
+                continue;
+
+            ArpgObjectStruct overlayArpg = new ArpgObjectStruct();
+            overlayArpg.addProperty("overlay", ArpgUtility.toEnumName(overlay));
+            overlayArpg.addProperty("frames", packOverlayFrames(stream));
+            overlayArpg.addProperty("data", RecordingArpgUtility.toText(packOverlayData(stream)));
+            overlaysArpg.add(overlayArpg);
+        }
+
+        return overlaysArpg;
+    }
+
+    private ArpgArrayStruct buildClips(RecordingInstance recording) {
+
+        ArpgArrayStruct clipsArpg = new ArpgArrayStruct();
+
+        for (int i = 0; i < recording.getClips().size(); i++) {
+
+            RecordingClipStruct clip = recording.getClips().get(i);
+            ArpgObjectStruct clipArpg = new ArpgObjectStruct();
+            clipArpg.addProperty("take", recording.getTakes().indexOf(clip.getTake()));
+            clipArpg.addProperty("lane", clip.getLane());
+            clipArpg.addProperty("start", clip.getStart());
+            clipArpg.addProperty("in", clip.getInPoint());
+            clipArpg.addProperty("out", clip.getOutPoint());
+            clipArpg.add("channels", buildChannels(clip.getChannelMask()));
+            clipArpg.addProperty("muted", clip.isMuted());
+            clipArpg.addProperty("time_ramp", clip.getTimeRampSeconds());
+            clipsArpg.add(clipArpg);
+        }
+
+        return clipsArpg;
     }
 
     // Pack \\
@@ -253,6 +332,66 @@ class RecordingFileBranch extends BranchPackage {
         return RecordingArpgUtility.toText(block);
     }
 
+    private String packVehicle(RecordingVehicleTrackStruct track) {
+
+        ByteBuffer block = RecordingArpgUtility.allocateBlock(track.size(), resolveVehicleSampleBytes(
+                track.getMastCount(), track.getSailCount(), track.getDoorCount()));
+        writePlaces(block, track);
+        RecordingArpgUtility.writeFloats(block, track.getOrientationsW());
+        RecordingArpgUtility.writeFloats(block, track.getOrientationsX());
+        RecordingArpgUtility.writeFloats(block, track.getOrientationsY());
+        RecordingArpgUtility.writeFloats(block, track.getOrientationsZ());
+        RecordingArpgUtility.writeFloats(block, track.getRudderAngles());
+        RecordingArpgUtility.writeInts(block, track.getAnchored());
+        RecordingArpgUtility.writeFloats(block, track.getBraceAngles());
+        RecordingArpgUtility.writeFloats(block, track.getSailHoists());
+        RecordingArpgUtility.writeFloats(block, track.getDoorOpenings());
+        return RecordingArpgUtility.toText(block);
+    }
+
+    private String packWeather(RecordingWeatherTrackStruct track) {
+
+        ByteBuffer block = RecordingArpgUtility.allocateBlock(
+                track.size(), EditorSetting.RECORDER_WEATHER_SAMPLE_BYTES);
+        RecordingArpgUtility.writeFloats(block, track.getTimes());
+        RecordingArpgUtility.writeDoubles(block, track.getFlowsX());
+        RecordingArpgUtility.writeDoubles(block, track.getFlowsZ());
+        RecordingArpgUtility.writeFloats(block, track.getGustTimes());
+        return RecordingArpgUtility.toText(block);
+    }
+
+    // Each frame's moment, size, kind and packed length, so the packed bytes beside it can be split back apart
+    private String packOverlayFrames(RecordingOverlayStreamStruct stream) {
+
+        ByteBuffer block = RecordingArpgUtility.allocateBlock(
+                stream.size(), EditorSetting.RECORDER_OVERLAY_FRAME_BYTES);
+        RecordingArpgUtility.writeFloats(block, stream.getTimes());
+        RecordingArpgUtility.writeInts(block, stream.getWidths());
+        RecordingArpgUtility.writeInts(block, stream.getHeights());
+        RecordingArpgUtility.writeInts(block, stream.getKeyframes());
+
+        for (int i = 0; i < stream.size(); i++)
+            block.putInt(stream.getFrame(i).length);
+
+        return RecordingArpgUtility.toText(block);
+    }
+
+    private byte[] packOverlayData(RecordingOverlayStreamStruct stream) {
+
+        byte[] data = new byte[Math.toIntExact(stream.getByteCount())];
+        int offset = 0;
+
+        for (int i = 0; i < stream.size(); i++) {
+
+            byte[] frame = stream.getFrame(i);
+
+            System.arraycopy(frame, 0, data, offset, frame.length);
+            offset += frame.length;
+        }
+
+        return data;
+    }
+
     private void writePlaces(ByteBuffer block, RecordingTrackStruct track) {
         RecordingArpgUtility.writeFloats(block, track.getTimes());
         RecordingArpgUtility.writeLongs(block, track.getChunkCoordinates());
@@ -261,12 +400,19 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.writeFloats(block, track.getPositionsZ());
     }
 
+    private int resolveVehicleSampleBytes(int mastCount, int sailCount, int doorCount) {
+        return EditorSetting.RECORDER_VEHICLE_SAMPLE_BYTES
+                + (mastCount + sailCount + doorCount) * EditorSetting.RECORDER_VEHICLE_PART_BYTES;
+    }
+
     // Read \\
 
     // The recording in the file, or null when it cannot be read or no longer fits the game
     RecordingInstance read(File file, String recordingName) {
 
         ArpgObjectStruct recordingArpg = ArpgUtility.tryLoadObject(file);
+
+        this.upgraded = false;
 
         if (recordingArpg == null)
             return null;
@@ -279,13 +425,23 @@ class RecordingFileBranch extends BranchPackage {
         }
     }
 
+    // True when the last file read was of the first version, so it is saved in the new form at once
+    boolean isUpgraded() {
+        return upgraded;
+    }
+
     private RecordingInstance parseRecording(ArpgObjectStruct recordingArpg, String recordingName) {
 
-        if (ArpgUtility.getInt(recordingArpg, "version", 0) != EditorSetting.RECORDER_FILE_VERSION
+        int version = ArpgUtility.getInt(recordingArpg, "version", 0);
+        boolean layered = version == EditorSetting.RECORDER_FILE_VERSION_LAYERS;
+
+        this.upgraded = layered;
+
+        if (version != EditorSetting.RECORDER_FILE_VERSION && !layered
                 || !ArpgUtility.hasString(recordingArpg, "world")
                 || !ArpgUtility.hasArray(recordingArpg, "states")
                 || !ArpgUtility.hasArray(recordingArpg, "actions")
-                || !ArpgUtility.hasArray(recordingArpg, "layers"))
+                || !ArpgUtility.hasArray(recordingArpg, layered ? "layers" : "takes"))
             return rejectFile(recordingName);
 
         RecordingInstance recording = create(RecordingInstance.class);
@@ -300,19 +456,13 @@ class RecordingFileBranch extends BranchPackage {
         if (ArpgUtility.hasArray(recordingArpg, "markers"))
             parseMarkers(recordingArpg.getAsArray("markers"), recording);
 
-        ArpgArrayStruct layersArpg = recordingArpg.getAsArray("layers");
+        boolean parsed = layered
+                ? parseLayers(recordingArpg.getAsArray("layers"), recording, states, actions)
+                : parseTakes(recordingArpg.getAsArray("takes"), recording, states, actions)
+                        && (!ArpgUtility.hasArray(recordingArpg, "clips")
+                                || parseClips(recordingArpg.getAsArray("clips"), recording));
 
-        for (int i = 0; i < layersArpg.size(); i++) {
-
-            RecordingLayerStruct layer = parseLayer(layersArpg.get(i).getAsObject(), states, actions);
-
-            if (layer == null)
-                return rejectFile(recordingName);
-
-            recording.addLayer(layer);
-        }
-
-        return recording;
+        return parsed ? recording : rejectFile(recordingName);
     }
 
     private RecordingInstance rejectFile(String recordingName) {
@@ -376,69 +526,189 @@ class RecordingFileBranch extends BranchPackage {
         }
     }
 
-    private RecordingLayerStruct parseLayer(ArpgObjectStruct layerArpg, IntArrayList states, IntArrayList actions) {
+    private boolean parseTakes(
+            ArpgArrayStruct takesArpg,
+            RecordingInstance recording,
+            IntArrayList states,
+            IntArrayList actions) {
 
-        if (!ArpgUtility.hasString(layerArpg, "name")
-                || !ArpgUtility.hasArray(layerArpg, "channels")
-                || !ArpgUtility.hasNumber(layerArpg, "start")
-                || !ArpgUtility.hasNumber(layerArpg, "end"))
-            return null;
+        for (int i = 0; i < takesArpg.size(); i++) {
 
-        RecordingLayerStruct layer = new RecordingLayerStruct(
-                layerArpg.get("name").getAsString(),
-                parseChannels(layerArpg.getAsArray("channels")),
-                layerArpg.get("start").getAsFloat());
+            ArpgObjectStruct takeArpg = takesArpg.get(i).getAsObject();
 
-        layer.setEndTime(layerArpg.get("end").getAsFloat());
-        layer.setMuted(ArpgUtility.getBoolean(layerArpg, "muted", false));
-        layer.setTimeRampSeconds(ArpgUtility.getFloat(layerArpg, "time_ramp", 0f));
+            if (!ArpgUtility.hasString(takeArpg, "name")
+                    || !ArpgUtility.hasArray(takeArpg, "channels")
+                    || !ArpgUtility.hasNumber(takeArpg, "duration"))
+                return false;
 
-        if (layer.getCameraTrack() != null
-                && (!ArpgUtility.hasString(layerArpg, "camera")
-                        || !unpackCamera(layerArpg.get("camera").getAsString(), layer.getCameraTrack())))
-            return null;
+            RecordingTakeStruct take = new RecordingTakeStruct(
+                    takeArpg.get("name").getAsString(),
+                    parseChannels(takeArpg.getAsArray("channels")));
 
-        if (ArpgUtility.hasObject(layerArpg, "player")) {
+            take.setDuration(takeArpg.get("duration").getAsFloat());
 
-            RecordingBodyTrackStruct playerTrack = parseBody(layerArpg.getAsObject("player"), states, actions);
+            if (!parseTracks(takeArpg, take, states, actions))
+                return false;
 
-            if (playerTrack == null)
-                return null;
-
-            layer.setPlayerTrack(playerTrack);
+            recording.addTake(take);
         }
 
-        if (ArpgUtility.hasArray(layerArpg, "residents") && !parseResidents(layerArpg, layer, states, actions))
-            return null;
-
-        if (ArpgUtility.hasArray(layerArpg, "projectiles") && !parseProjectiles(layerArpg, layer))
-            return null;
-
-        if (layer.getClockTrack() != null
-                && (!ArpgUtility.hasObject(layerArpg, "clock")
-                        || !unpackClock(layerArpg.getAsObject("clock"), layer.getClockTrack())))
-            return null;
-
-        return layer;
+        return true;
     }
 
+    private boolean parseClips(ArpgArrayStruct clipsArpg, RecordingInstance recording) {
+
+        for (int i = 0; i < clipsArpg.size(); i++) {
+
+            ArpgObjectStruct clipArpg = clipsArpg.get(i).getAsObject();
+
+            if (!ArpgUtility.hasNumber(clipArpg, "take")
+                    || !ArpgUtility.hasNumber(clipArpg, "start")
+                    || !ArpgUtility.hasNumber(clipArpg, "in")
+                    || !ArpgUtility.hasNumber(clipArpg, "out")
+                    || !ArpgUtility.hasArray(clipArpg, "channels"))
+                return false;
+
+            int takeIndex = clipArpg.get("take").getAsInt();
+
+            if (takeIndex < 0 || takeIndex >= recording.getTakes().size())
+                return false;
+
+            RecordingClipStruct clip = new RecordingClipStruct(
+                    recording.getTakes().get(takeIndex),
+                    clipArpg.get("in").getAsFloat(),
+                    clipArpg.get("out").getAsFloat(),
+                    Math.clamp(ArpgUtility.getInt(clipArpg, "lane", 0), 0, EditorSetting.RECORDER_LANE_COUNT - 1),
+                    clipArpg.get("start").getAsFloat(),
+                    parseChannels(clipArpg.getAsArray("channels")));
+
+            clip.setSpan(clip.getInPoint(), clip.getOutPoint());
+            clip.setMuted(ArpgUtility.getBoolean(clipArpg, "muted", false));
+            clip.setTimeRampSeconds(ArpgUtility.getFloat(clipArpg, "time_ramp", 0f));
+            recording.addClip(clip);
+        }
+
+        return true;
+    }
+
+    // Each first-version layer becomes a take of its own, timed from its own start, and one clip of it laid where
+    // the layer stood, on a lane of its own as high as the timeline allows
+    private boolean parseLayers(
+            ArpgArrayStruct layersArpg,
+            RecordingInstance recording,
+            IntArrayList states,
+            IntArrayList actions) {
+
+        for (int i = 0; i < layersArpg.size(); i++) {
+
+            ArpgObjectStruct layerArpg = layersArpg.get(i).getAsObject();
+
+            if (!ArpgUtility.hasString(layerArpg, "name")
+                    || !ArpgUtility.hasArray(layerArpg, "channels")
+                    || !ArpgUtility.hasNumber(layerArpg, "start")
+                    || !ArpgUtility.hasNumber(layerArpg, "end"))
+                return false;
+
+            float start = layerArpg.get("start").getAsFloat();
+            float end = layerArpg.get("end").getAsFloat();
+            RecordingTakeStruct take = new RecordingTakeStruct(
+                    layerArpg.get("name").getAsString(),
+                    parseChannels(layerArpg.getAsArray("channels")));
+
+            take.setDuration(Math.max(0f, end - start));
+
+            if (!parseTracks(layerArpg, take, states, actions))
+                return false;
+
+            take.shiftTimes(-start);
+            recording.addTake(take);
+
+            RecordingClipStruct clip = new RecordingClipStruct(
+                    take,
+                    0f,
+                    take.getDuration(),
+                    Math.min(i, EditorSetting.RECORDER_LANE_COUNT - 1),
+                    start,
+                    take.getChannelMask());
+
+            clip.setMuted(ArpgUtility.getBoolean(layerArpg, "muted", false));
+            clip.setTimeRampSeconds(ArpgUtility.getFloat(layerArpg, "time_ramp", 0f));
+            recording.addClip(clip);
+        }
+
+        return true;
+    }
+
+    // Channels by name; the first version's world was the residents and the thrown items together
     private int parseChannels(ArpgArrayStruct channelsArpg) {
 
         int channelMask = RecorderChannel.NONE;
 
-        for (int i = 0; i < channelsArpg.size(); i++)
-            channelMask |= ArpgUtility.toEnum(channelsArpg.get(i).getAsString(), RecorderChannel.class).getBit();
+        for (int i = 0; i < channelsArpg.size(); i++) {
+
+            String channelName = channelsArpg.get(i).getAsString();
+
+            if (channelName.equalsIgnoreCase(EditorSetting.RECORDER_FILE_CHANNEL_WORLD))
+                channelMask |= RecorderChannel.CHARACTERS.getBit() | RecorderChannel.ITEMS.getBit();
+            else
+                channelMask |= ArpgUtility.toEnum(channelName, RecorderChannel.class).getBit();
+        }
 
         return channelMask;
     }
 
-    private boolean parseResidents(
-            ArpgObjectStruct layerArpg,
-            RecordingLayerStruct layer,
+    private boolean parseTracks(
+            ArpgObjectStruct takeArpg,
+            RecordingTakeStruct take,
             IntArrayList states,
             IntArrayList actions) {
 
-        ArpgArrayStruct residentsArpg = layerArpg.getAsArray("residents");
+        if (take.getCameraTrack() != null
+                && (!ArpgUtility.hasString(takeArpg, "camera")
+                        || !unpackCamera(takeArpg.get("camera").getAsString(), take.getCameraTrack())))
+            return false;
+
+        if (ArpgUtility.hasObject(takeArpg, "player")) {
+
+            RecordingBodyTrackStruct playerTrack = parseBody(takeArpg.getAsObject("player"), states, actions);
+
+            if (playerTrack == null)
+                return false;
+
+            take.setPlayerTrack(playerTrack);
+        }
+
+        if (ArpgUtility.hasArray(takeArpg, "residents") && !parseResidents(takeArpg, take, states, actions))
+            return false;
+
+        if (ArpgUtility.hasArray(takeArpg, "projectiles") && !parseProjectiles(takeArpg, take))
+            return false;
+
+        if (ArpgUtility.hasArray(takeArpg, "vehicles") && !parseVehicles(takeArpg, take))
+            return false;
+
+        if (take.getWeatherTrack() != null
+                && (!ArpgUtility.hasString(takeArpg, "weather")
+                        || !unpackWeather(takeArpg.get("weather").getAsString(), take.getWeatherTrack())))
+            return false;
+
+        if (take.getClockTrack() != null
+                && (!ArpgUtility.hasObject(takeArpg, "clock")
+                        || !unpackClock(takeArpg.getAsObject("clock"), take.getClockTrack())))
+            return false;
+
+        return take.getOverlayTrack() == null
+                || !ArpgUtility.hasArray(takeArpg, "interface")
+                || parseOverlays(takeArpg.getAsArray("interface"), take.getOverlayTrack());
+    }
+
+    private boolean parseResidents(
+            ArpgObjectStruct takeArpg,
+            RecordingTakeStruct take,
+            IntArrayList states,
+            IntArrayList actions) {
+
+        ArpgArrayStruct residentsArpg = takeArpg.getAsArray("residents");
 
         for (int i = 0; i < residentsArpg.size(); i++) {
 
@@ -447,15 +717,15 @@ class RecordingFileBranch extends BranchPackage {
             if (track == null)
                 return false;
 
-            layer.getResidentTracks().add(track);
+            take.getResidentTracks().add(track);
         }
 
         return true;
     }
 
-    private boolean parseProjectiles(ArpgObjectStruct layerArpg, RecordingLayerStruct layer) {
+    private boolean parseProjectiles(ArpgObjectStruct takeArpg, RecordingTakeStruct take) {
 
-        ArpgArrayStruct projectilesArpg = layerArpg.getAsArray("projectiles");
+        ArpgArrayStruct projectilesArpg = takeArpg.getAsArray("projectiles");
 
         for (int i = 0; i < projectilesArpg.size(); i++) {
 
@@ -470,7 +740,59 @@ class RecordingFileBranch extends BranchPackage {
             if (!unpackProjectile(projectileArpg.get("samples").getAsString(), track))
                 return false;
 
-            layer.getProjectileTracks().add(track);
+            take.getProjectileTracks().add(track);
+        }
+
+        return true;
+    }
+
+    private boolean parseVehicles(ArpgObjectStruct takeArpg, RecordingTakeStruct take) {
+
+        ArpgArrayStruct vehiclesArpg = takeArpg.getAsArray("vehicles");
+
+        for (int i = 0; i < vehiclesArpg.size(); i++) {
+
+            ArpgObjectStruct vehicleArpg = vehiclesArpg.get(i).getAsObject();
+
+            if (!ArpgUtility.hasString(vehicleArpg, "vehicle")
+                    || !ArpgUtility.hasNumber(vehicleArpg, "masts")
+                    || !ArpgUtility.hasNumber(vehicleArpg, "sails")
+                    || !ArpgUtility.hasNumber(vehicleArpg, "doors")
+                    || !ArpgUtility.hasString(vehicleArpg, "samples"))
+                return false;
+
+            RecordingVehicleTrackStruct track = new RecordingVehicleTrackStruct(
+                    vehicleArpg.get("vehicle").getAsString(),
+                    vehicleArpg.get("masts").getAsInt(),
+                    vehicleArpg.get("sails").getAsInt(),
+                    vehicleArpg.get("doors").getAsInt());
+
+            if (track.getMastCount() < 0 || track.getSailCount() < 0 || track.getDoorCount() < 0
+                    || !unpackVehicle(vehicleArpg.get("samples").getAsString(), track))
+                return false;
+
+            take.getVehicleTracks().add(track);
+        }
+
+        return true;
+    }
+
+    private boolean parseOverlays(ArpgArrayStruct overlaysArpg, RecordingOverlayTrackStruct track) {
+
+        for (int i = 0; i < overlaysArpg.size(); i++) {
+
+            ArpgObjectStruct overlayArpg = overlaysArpg.get(i).getAsObject();
+
+            if (!ArpgUtility.hasString(overlayArpg, "overlay")
+                    || !ArpgUtility.hasString(overlayArpg, "frames")
+                    || !ArpgUtility.hasString(overlayArpg, "data"))
+                return false;
+
+            RecordingOverlayStreamStruct stream = track.getStream(
+                    ArpgUtility.toEnum(overlayArpg.get("overlay").getAsString(), RecorderOverlay.class));
+
+            if (!unpackOverlay(overlayArpg.get("frames").getAsString(), overlayArpg.get("data").getAsString(), stream))
+                return false;
         }
 
         return true;
@@ -612,6 +934,45 @@ class RecordingFileBranch extends BranchPackage {
         return true;
     }
 
+    private boolean unpackVehicle(String text, RecordingVehicleTrackStruct track) {
+
+        ByteBuffer block = RecordingArpgUtility.fromText(text, resolveVehicleSampleBytes(
+                track.getMastCount(), track.getSailCount(), track.getDoorCount()));
+
+        if (block == null)
+            return false;
+
+        int count = RecordingArpgUtility.readSampleCount(block);
+
+        readPlaces(block, count, track);
+        RecordingArpgUtility.readFloats(block, count, track.getOrientationsW());
+        RecordingArpgUtility.readFloats(block, count, track.getOrientationsX());
+        RecordingArpgUtility.readFloats(block, count, track.getOrientationsY());
+        RecordingArpgUtility.readFloats(block, count, track.getOrientationsZ());
+        RecordingArpgUtility.readFloats(block, count, track.getRudderAngles());
+        RecordingArpgUtility.readInts(block, count, track.getAnchored());
+        RecordingArpgUtility.readFloats(block, count * track.getMastCount(), track.getBraceAngles());
+        RecordingArpgUtility.readFloats(block, count * track.getSailCount(), track.getSailHoists());
+        RecordingArpgUtility.readFloats(block, count * track.getDoorCount(), track.getDoorOpenings());
+        return true;
+    }
+
+    private boolean unpackWeather(String text, RecordingWeatherTrackStruct track) {
+
+        ByteBuffer block = RecordingArpgUtility.fromText(text, EditorSetting.RECORDER_WEATHER_SAMPLE_BYTES);
+
+        if (block == null)
+            return false;
+
+        int count = RecordingArpgUtility.readSampleCount(block);
+
+        RecordingArpgUtility.readFloats(block, count, track.getTimes());
+        RecordingArpgUtility.readDoubles(block, count, track.getFlowsX());
+        RecordingArpgUtility.readDoubles(block, count, track.getFlowsZ());
+        RecordingArpgUtility.readFloats(block, count, track.getGustTimes());
+        return true;
+    }
+
     private boolean unpackClock(ArpgObjectStruct clockArpg, RecordingClockTrackStruct track) {
 
         if (!ArpgUtility.hasString(clockArpg, "samples") || !ArpgUtility.hasString(clockArpg, "jumps"))
@@ -633,6 +994,46 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.readFloats(jumps, jumpCount, track.getJumpTimes());
         RecordingArpgUtility.readLongs(jumps, jumpCount, track.getJumpMillis());
         return true;
+    }
+
+    // The frames split back apart from the packed bytes by their lengths, every byte accounted for
+    private boolean unpackOverlay(String framesText, String dataText, RecordingOverlayStreamStruct stream) {
+
+        ByteBuffer block = RecordingArpgUtility.fromText(framesText, EditorSetting.RECORDER_OVERLAY_FRAME_BYTES);
+        byte[] data = RecordingArpgUtility.fromText(dataText);
+
+        if (block == null || data == null)
+            return false;
+
+        int count = RecordingArpgUtility.readSampleCount(block);
+        int timesAt = EditorSetting.RECORDER_BLOCK_HEADER_BYTES;
+        int widthsAt = timesAt + count * Float.BYTES;
+        int heightsAt = widthsAt + count * Integer.BYTES;
+        int keyframesAt = heightsAt + count * Integer.BYTES;
+        int lengthsAt = keyframesAt + count * Integer.BYTES;
+        int offset = 0;
+
+        for (int i = 0; i < count; i++) {
+
+            int length = block.getInt(lengthsAt + i * Integer.BYTES);
+
+            if (length < 0 || offset + length > data.length)
+                return false;
+
+            byte[] frame = new byte[length];
+
+            System.arraycopy(data, offset, frame, 0, length);
+            offset += length;
+
+            stream.addFrame(
+                    block.getFloat(timesAt + i * Float.BYTES),
+                    block.getInt(widthsAt + i * Integer.BYTES),
+                    block.getInt(heightsAt + i * Integer.BYTES),
+                    block.getInt(keyframesAt + i * Integer.BYTES) != 0,
+                    frame);
+        }
+
+        return offset == data.length;
     }
 
     private void readPlaces(ByteBuffer block, int count, RecordingTrackStruct track) {

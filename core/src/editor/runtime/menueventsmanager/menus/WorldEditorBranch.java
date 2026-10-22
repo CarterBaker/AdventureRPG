@@ -3,7 +3,7 @@ package editor.runtime.menueventsmanager.menus;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
-import editor.worldeditor.WorldEditorContext;
+import editor.runtime.worldeditor.WorldEditorContext;
 import engine.root.BranchPackage;
 
 public class WorldEditorBranch extends BranchPackage {

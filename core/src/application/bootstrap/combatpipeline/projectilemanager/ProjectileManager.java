@@ -1,5 +1,6 @@
 package application.bootstrap.combatpipeline.projectilemanager;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.projectile.ProjectileInstance;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
@@ -23,8 +24,12 @@ public class ProjectileManager extends ManagerPackage {
      * sub-voxel position and orientation. One that cannot settle yet waits
      * where it rests and tries again. ProjectileRenderSystem draws them for
      * every window. While held — a recording plays back in their stead —
-     * nothing flies, settles or is drawn.
+     * nothing flies, settles or is drawn. While the game is paused every
+     * projectile hangs where it is, still drawn.
      */
+
+    // Internal
+    private ClockManager clockManager;
 
     // Branches
     private ProjectileFlightBranch projectileFlightBranch;
@@ -54,12 +59,17 @@ public class ProjectileManager extends ManagerPackage {
         this.timeStep = EngineSetting.FIXED_TIME_STEP;
     }
 
+    @Override
+    protected void get() {
+        this.clockManager = get(ClockManager.class);
+    }
+
     // Update \\
 
     @Override
     protected void fixedUpdate() {
 
-        if (held)
+        if (held || clockManager.isPaused())
             return;
 
         for (int i = projectiles.size() - 1; i >= 0; i--) {

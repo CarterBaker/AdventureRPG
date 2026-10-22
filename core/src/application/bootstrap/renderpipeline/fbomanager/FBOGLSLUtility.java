@@ -1,5 +1,7 @@
 package application.bootstrap.renderpipeline.fbomanager;
 
+import java.nio.ByteBuffer;
+
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -151,6 +153,16 @@ class FBOGLSLUtility extends EngineUtility {
         EngineContext.gl20.glBindTexture(
                 EngineSetting.GL_TEXTURE_2D,
                 EngineSetting.GL_HANDLE_NONE);
+    }
+
+    // Write \\
+
+    static void writeColorTexture(int texture, int width, int height, ByteBuffer bgraPixels) {
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, texture);
+        EngineContext.gl20.glTexSubImage2D(
+                EngineSetting.GL_TEXTURE_2D, 0, 0, 0,
+                width, height, EngineSetting.GL_BGRA, EngineSetting.GL_UNSIGNED_BYTE, bgraPixels);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
     }
 
     // Internal \\

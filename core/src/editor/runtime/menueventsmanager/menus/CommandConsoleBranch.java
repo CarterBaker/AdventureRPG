@@ -3,7 +3,7 @@ package editor.runtime.menueventsmanager.menus;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
-import editor.commandconsole.CommandConsoleContext;
+import editor.runtime.commandconsole.CommandConsoleContext;
 import engine.root.BranchPackage;
 
 public class CommandConsoleBranch extends BranchPackage {

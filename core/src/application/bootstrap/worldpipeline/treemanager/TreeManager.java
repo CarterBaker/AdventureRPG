@@ -44,8 +44,8 @@ public class TreeManager extends ManagerPackage {
      * blow on it, collectWoodBoxes() gives movement the wood to collide
      * with, and plant() roots a seed. Each frame it publishes the game day
      * for the streaming threads, grows the trees whose stage has come, and
-     * carries every felled piece through its fall. Tree IDs are assigned in
-     * registration order.
+     * carries every felled piece through its fall; while the game is paused
+     * nothing grows or falls. Tree IDs are assigned in registration order.
      */
 
     // Internal
@@ -129,6 +129,10 @@ public class TreeManager extends ManagerPackage {
         currentDay = clockHandle.getTotalDaysElapsed() + clockHandle.getDayProgress();
 
         treeDetailBranch.update(deltaTime);
+
+        if (clockManager.isPaused())
+            return;
+
         treeGrowthBranch.update(deltaTime);
         treeFallBranch.update(deltaTime);
     }

@@ -20,7 +20,9 @@ class WeatherFlowSystem extends SystemPackage {
      * straight back. Prevailing speed is a real-world kph figure converted
      * through the world's own scale (WeatherScaleUtility) and its rotation,
      * and a two-wave cross-stream meander swings the heading so storms do not
-     * always arrive from the same bearing.
+     * always arrive from the same bearing. While the game is paused the flow
+     * stands still; while held it stands wherever it was put, so a recording
+     * replays it, and once let go it snaps back onto the shared clock.
      */
 
     // Internal
@@ -32,6 +34,9 @@ class WeatherFlowSystem extends SystemPackage {
     private double flowSeconds;
     private double offsetXBlocks;
     private double offsetZBlocks;
+
+    // Hold
+    private boolean held;
 
     // Base \\
 
@@ -50,6 +55,9 @@ class WeatherFlowSystem extends SystemPackage {
 
     @Override
     protected void update() {
+
+        if (held || clockManager.isPaused())
+            return;
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
 
@@ -102,6 +110,19 @@ class WeatherFlowSystem extends SystemPackage {
         return (1.0 - secondaryWeight) / primaryOmega * Math.sin(primaryOmega * flowSeconds)
                 + secondaryWeight / secondaryOmega
                         * Math.sin(secondaryOmega * flowSeconds + EngineSetting.WEATHER_FLOW_MEANDER_SECONDARY_PHASE);
+    }
+
+    // Hold \\
+
+    void holdFlow(double offsetXBlocks, double offsetZBlocks) {
+        this.held = true;
+        this.offsetXBlocks = offsetXBlocks;
+        this.offsetZBlocks = offsetZBlocks;
+    }
+
+    void releaseFlow() {
+        this.held = false;
+        this.flowSynced = false;
     }
 
     // Accessible \\

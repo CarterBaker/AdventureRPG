@@ -12,6 +12,7 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.ManagerPackage;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ClockManager extends ManagerPackage {
@@ -33,7 +34,10 @@ public class ClockManager extends ManagerPackage {
      * once, so a jump of any size lands on the right date in one step. A
      * clock can also be held at any moment, to the millisecond, by the time
      * elapsed since its epoch — the one number every date and time falls out
-     * of — so a recording replays it smoothly.
+     * of — so a recording replays it smoothly. While any window holds the
+     * game paused, world time stands still: the clock keeps the moment the
+     * pause began, and every system that runs the world reads isPaused() and
+     * waits with it.
      */
 
     // Internal
@@ -54,6 +58,10 @@ public class ClockManager extends ManagerPackage {
     private ClockHandle clockHandle;
     private ClockInstance fallbackLocationTime;
 
+    // Pause
+    private IntOpenHashSet pausingWindowIDs;
+    private long pausedElapsedMillis;
+
     // Internal \\
 
     @Override
@@ -70,6 +78,9 @@ public class ClockManager extends ManagerPackage {
         // Clock
         this.clockHandle = create(ClockHandle.class);
         this.fallbackLocationTime = createClockInstance();
+
+        // Pause
+        this.pausingWindowIDs = new IntOpenHashSet();
     }
 
     @Override
@@ -92,6 +103,10 @@ public class ClockManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
+        if (isPaused())
+            clockHandle.setWorldEpochStart(internal.getTime() - pausedElapsedMillis);
+
         advanceGameClock();
     }
 
@@ -183,6 +198,7 @@ public class ClockManager extends ManagerPackage {
 
         resetTracking();
         advanceGameClock();
+        notePausedTime();
     }
 
     // Reads the milliseconds given since the epoch right now; landing on an earlier day, or more than a day on,
@@ -198,6 +214,7 @@ public class ClockManager extends ManagerPackage {
             resetTracking();
 
         advanceGameClock();
+        notePausedTime();
     }
 
     private void resetTracking() {
@@ -205,6 +222,32 @@ public class ClockManager extends ManagerPackage {
         dayTracker.resetTracking();
         monthTracker.resetTracking();
         yearTracker.resetTracking();
+    }
+
+    // Pause \\
+
+    // The one way the game pauses and resumes; it stays paused while any window still holds it
+    public void setPausedForWindow(int windowID, boolean paused) {
+
+        boolean wasPaused = isPaused();
+
+        if (paused)
+            pausingWindowIDs.add(windowID);
+        else
+            pausingWindowIDs.remove(windowID);
+
+        if (!wasPaused && isPaused())
+            this.pausedElapsedMillis = getElapsedMillis();
+    }
+
+    // A clock moved or held while paused stands still at its new moment
+    private void notePausedTime() {
+        if (isPaused())
+            this.pausedElapsedMillis = getElapsedMillis();
+    }
+
+    public boolean isPaused() {
+        return !pausingWindowIDs.isEmpty();
     }
 
     // World Switch \\

@@ -223,6 +223,21 @@ public class WindowManager extends ManagerPackage {
         this.contextWindow = null;
     }
 
+    // Makes the window's GL context current for work done outside its own pass, handing back the window whose
+    // context was current, null for the main one
+    public WindowInstance enterGLContext(WindowInstance window) {
+        WindowInstance previous = contextWindow;
+        internal.windowPlatform.makeContextCurrent(window.getGLWindow());
+        return previous;
+    }
+
+    public void exitGLContext(WindowInstance previous) {
+        if (previous != null)
+            internal.windowPlatform.makeContextCurrent(previous.getGLWindow());
+        else
+            internal.windowPlatform.restoreMainContext();
+    }
+
     // Capture \\
 
     public void captureLockWindow(WindowInstance window) {

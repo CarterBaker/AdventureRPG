@@ -4,10 +4,10 @@ public enum RecorderState {
 
     /*
      * Where the recorder's transport stands. Idle, the Dev window plays as it
-     * always does; recording, a new layer takes what is played live over the
-     * layers beneath; playing and paused, the recording drives the Dev window
-     * from its playhead; exporting, the recording renders frame by frame into
-     * a video.
+     * always does; recording, a new take records what is played live over
+     * the clips the timeline plays; playing and paused, the timeline drives
+     * the Dev window from its playhead; exporting, the timeline renders frame
+     * by frame into a video.
      */
 
     IDLE,

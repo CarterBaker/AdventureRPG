@@ -1,5 +1,6 @@
 package editor.runtime;
 
+import editor.runtime.dock.EditorDockSystem;
 import engine.root.ContextPackage;
 
 public class EditorSecondaryWindowContext extends ContextPackage {

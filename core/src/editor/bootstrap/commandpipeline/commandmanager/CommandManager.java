@@ -8,7 +8,7 @@ import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.bootstrap.commandpipeline.command.CommandStruct;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
-import editor.dev.DevContext;
+import editor.runtime.dev.DevContext;
 import editor.runtime.EditorSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;

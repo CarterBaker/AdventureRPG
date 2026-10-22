@@ -7,7 +7,7 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 public class RecordingProjectileTrackStruct extends RecordingTrackStruct {
 
     /*
-     * One item thrown or let fall in a recording: the item it was, and, sample
+     * One item thrown or let fall in a take: the item it was, and, sample
      * by sample, where its centre flew and how it was turned as it tumbled.
      */
 

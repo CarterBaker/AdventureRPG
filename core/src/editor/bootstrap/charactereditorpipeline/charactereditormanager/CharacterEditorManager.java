@@ -15,7 +15,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorWeightTool;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
-import editor.characterview.panel.CharacterViewRowStruct;
+import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;

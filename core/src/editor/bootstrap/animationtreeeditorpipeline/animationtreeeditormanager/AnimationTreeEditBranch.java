@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import application.bootstrap.entitypipeline.animationtree.AnimationBlendMode;
 import editor.bootstrap.animationtreeeditorpipeline.treedocument.TreeDocumentInstance;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
-import editor.characterview.util.CharacterViewUtility;
+import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.util.arpg.ArpgArrayStruct;

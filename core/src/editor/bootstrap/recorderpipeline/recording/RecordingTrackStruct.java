@@ -9,11 +9,12 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 public abstract class RecordingTrackStruct extends StructPackage {
 
     /*
-     * The samples every moving thing in a recording shares: when each was
-     * taken, on the recording's timeline in seconds, and where — a chunk
+     * The samples every moving thing in a take shares: when each was taken,
+     * in seconds from the start of the take, and where — a chunk
      * coordinate and a position local to that chunk. Each kind of track adds
      * its own columns beside these, one list per field, so a track of any
-     * length stores no object per sample.
+     * length stores no object per sample. shiftTimes() moves every sample
+     * along by the same seconds, as reading an older recording needs.
      */
 
     // Samples
@@ -47,6 +48,10 @@ public abstract class RecordingTrackStruct extends StructPackage {
         positionsX.add(x);
         positionsY.add(y);
         positionsZ.add(z);
+    }
+
+    public void shiftTimes(float seconds) {
+        RecordingSampleUtility.shiftTimes(times, seconds);
     }
 
     // The sample at or before the time, -1 before the first

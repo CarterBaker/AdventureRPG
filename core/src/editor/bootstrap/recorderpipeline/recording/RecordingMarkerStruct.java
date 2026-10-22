@@ -5,8 +5,11 @@ import engine.root.StructPackage;
 public class RecordingMarkerStruct extends StructPackage {
 
     /*
-     * A named moment on a recording's timeline — dropped by hand while
-     * recording or playing, or by the recorder itself where something fell.
+     * A named bookmark on a recording's timeline — dropped by hand with Mark
+     * at the playhead, or by the recorder itself wherever a resident fell
+     * during a take. Markers show as ticks on the ruler, the playhead jumps
+     * between them, and they can set the export range; they never change what
+     * plays.
      */
 
     // Marker

@@ -7,7 +7,7 @@ import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
-import editor.characterview.util.CharacterViewUtility;
+import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.util.arpg.ArpgArrayStruct;

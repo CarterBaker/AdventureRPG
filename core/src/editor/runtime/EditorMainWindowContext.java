@@ -1,5 +1,7 @@
 package editor.runtime;
 
+import editor.runtime.dock.EditorDockSystem;
+import editor.runtime.toolbar.EditorToolbarSystem;
 import engine.root.ContextPackage;
 
 public class EditorMainWindowContext extends ContextPackage {

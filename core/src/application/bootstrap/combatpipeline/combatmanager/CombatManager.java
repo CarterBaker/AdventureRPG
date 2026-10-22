@@ -1,5 +1,6 @@
 package application.bootstrap.combatpipeline.combatmanager;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.combat.BlowOutcome;
 import application.bootstrap.combatpipeline.combat.BlowStruct;
 import application.bootstrap.combatpipeline.weapon.WeaponHandle;
@@ -28,8 +29,8 @@ public class CombatManager extends ManagerPackage {
 
     /*
      * Entity-agnostic combat. Every spawned entity is a combatant, and each
-     * frame CombatManager advances every combatant's action and resolves it
-     * the moment its effect lands: AttackBranch lands a weapon's attack
+     * frame CombatManager advances every combatant's action — none while the
+     * game is paused — and resolves it the moment its effect lands: AttackBranch lands a weapon's attack
      * through StrikeBranch, and ThrowBranch lets one held item fly. Everything
      * fights as a weapon: a held item by the weapon it names, or the default
      * item weapon when it names none, and empty hands by the entity's own;
@@ -58,6 +59,7 @@ public class CombatManager extends ManagerPackage {
      */
 
     // Internal
+    private ClockManager clockManager;
     private WeaponManager weaponManager;
     private StatManager statManager;
     private PlacementManager placementManager;
@@ -96,6 +98,7 @@ public class CombatManager extends ManagerPackage {
 
     @Override
     protected void get() {
+        this.clockManager = get(ClockManager.class);
         this.weaponManager = get(WeaponManager.class);
         this.statManager = get(StatManager.class);
         this.placementManager = get(PlacementManager.class);
@@ -111,6 +114,9 @@ public class CombatManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
+        if (clockManager.isPaused())
+            return;
 
         float deltaTime = internal.getDeltaTime();
 

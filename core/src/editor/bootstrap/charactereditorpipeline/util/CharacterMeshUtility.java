@@ -1,7 +1,7 @@
 package editor.bootstrap.charactereditorpipeline.util;
 
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
-import editor.characterview.util.CharacterViewUtility;
+import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;

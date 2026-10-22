@@ -28,7 +28,8 @@ public class ProgressionManager extends ManagerPackage {
      * are. Stats, experience, attributes, trades and skills, deeds and regard,
      * professions, vitality and gear each run in their own branch; this
      * manager only routes to them. Time is game seconds from the world clock,
-     * which keeps running while a player is away.
+     * which keeps running while a player is away; nothing regenerates or
+     * settles while the game is paused.
      */
 
     // Internal
@@ -80,6 +81,9 @@ public class ProgressionManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
+        if (clockManager.isPaused())
+            return;
 
         float deltaTime = internal.getDeltaTime();
 

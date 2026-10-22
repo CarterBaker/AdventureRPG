@@ -1,7 +1,7 @@
 package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
-import editor.console.ConsoleContext;
+import editor.runtime.console.ConsoleContext;
 import engine.root.BranchPackage;
 
 public class ConsoleBranch extends BranchPackage {

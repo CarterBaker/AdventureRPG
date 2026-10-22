@@ -25,7 +25,8 @@ public class WeatherManager extends ManagerPackage {
      * which is built once per season, ordered calmest to most severe, and
      * cached by biome ID until the season turns or a biome is rebuilt live.
      * The answer is a pure function of position and shared world time, so
-     * every player sees the same weather.
+     * every player sees the same weather. The flow can be held where a
+     * recording puts it and let go again.
      */
 
     // Internal
@@ -219,6 +220,14 @@ public class WeatherManager extends ManagerPackage {
 
     public boolean hasActiveWeatherPool() {
         return activeSeason != null;
+    }
+
+    public void holdFlow(double offsetXBlocks, double offsetZBlocks) {
+        weatherFlowSystem.holdFlow(offsetXBlocks, offsetZBlocks);
+    }
+
+    public void releaseFlow() {
+        weatherFlowSystem.releaseFlow();
     }
 
     public double getFlowOffsetXBlocks() {

@@ -50,6 +50,14 @@ class LocalWindBranch extends BranchPackage {
         resolveActiveSeason();
     }
 
+    float getElapsedTime() {
+        return elapsedTime;
+    }
+
+    void setElapsedTime(float elapsedTime) {
+        this.elapsedTime = elapsedTime;
+    }
+
     private void resolveActiveSeason() {
 
         String currentSeasonName = clockManager.getClockHandle().getCurrentSeason();

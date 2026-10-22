@@ -34,7 +34,8 @@ public class VehicleRenderSystem extends SystemPackage {
      * while it is aboard, and every cargo item through the vehicle's transform
      * and its own placement on the vehicle's grid, save a container standing
      * open, which the inventory draws open where it lies. Every draw takes a
-     * model of its own from ItemModelManager.
+     * model of its own from ItemModelManager. Held vehicles are not drawn;
+     * pushVehicle() draws any one vehicle, a recording's puppets included.
      */
 
     // Internal
@@ -94,20 +95,30 @@ public class VehicleRenderSystem extends SystemPackage {
             FBOInstance targetFbo,
             WindowInstance window) {
 
+        if (vehicleManager.isHeld())
+            return;
+
         ObjectArrayList<VehicleInstance> vehicles = vehicleManager.getVehicles();
 
-        for (int i = 0; i < vehicles.size(); i++) {
+        for (int i = 0; i < vehicles.size(); i++)
+            pushVehicle(vehicles.get(i), worldHandle, viewerChunkCoordinate, targetFbo, window);
+    }
 
-            VehicleInstance vehicle = vehicles.get(i);
+    // The vehicle, when it floats in the viewer's world near enough to be seen
+    public void pushVehicle(
+            VehicleInstance vehicle,
+            WorldHandle worldHandle,
+            long viewerChunkCoordinate,
+            FBOInstance targetFbo,
+            WindowInstance window) {
 
-            if (vehicle.getWorldHandle() != worldHandle || !VehicleSpaceUtility.composeModelMatrix(
-                    vehicle, viewerChunkCoordinate, EngineSetting.VEHICLE_RENDER_CHUNK_RADIUS, vehicleMatrix))
-                continue;
+        if (vehicle.getWorldHandle() != worldHandle || !VehicleSpaceUtility.composeModelMatrix(
+                vehicle, viewerChunkCoordinate, EngineSetting.VEHICLE_RENDER_CHUNK_RADIUS, vehicleMatrix))
+            return;
 
-            pushHull(vehicle, targetFbo, window);
-            pushParts(vehicle, targetFbo, window);
-            pushCargo(vehicle, targetFbo, window);
-        }
+        pushHull(vehicle, targetFbo, window);
+        pushParts(vehicle, targetFbo, window);
+        pushCargo(vehicle, targetFbo, window);
     }
 
     private void pushHull(VehicleInstance vehicle, FBOInstance targetFbo, WindowInstance window) {

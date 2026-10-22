@@ -6,6 +6,7 @@ import java.util.Base64;
 
 import editor.runtime.EditorSetting;
 import engine.root.EngineUtility;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
@@ -18,7 +19,8 @@ public class RecordingArpgUtility extends EngineUtility {
      * little-endian block — a sample count, then each column whole, in the
      * order the caller writes them — and carried as Base64 text rather than
      * as one ARPG element per number. A block that is not valid Base64 or not
-     * the size its count calls for reads back as null.
+     * the size its count calls for reads back as null. Bytes that are already
+     * packed, as the interface's frames are, go to text and back whole.
      */
 
     // Write \\
@@ -48,24 +50,37 @@ public class RecordingArpgUtility extends EngineUtility {
             block.putInt(column.getInt(i));
     }
 
+    public static void writeDoubles(ByteBuffer block, DoubleArrayList column) {
+        for (int i = 0; i < column.size(); i++)
+            block.putDouble(column.getDouble(i));
+    }
+
     public static String toText(ByteBuffer block) {
-        return Base64.getEncoder().encodeToString(block.array());
+        return toText(block.array());
+    }
+
+    public static String toText(byte[] bytes) {
+        return Base64.getEncoder().encodeToString(bytes);
     }
 
     // Read \\
 
-    // The block behind the text, positioned on its first column, or null when it is malformed
-    public static ByteBuffer fromText(String text, int bytesPerSample) {
-
-        byte[] bytes;
+    // The bytes behind the text, or null when it is not valid Base64
+    public static byte[] fromText(String text) {
 
         try {
-            bytes = Base64.getDecoder().decode(text);
+            return Base64.getDecoder().decode(text);
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
 
-        if (bytes.length < EditorSetting.RECORDER_BLOCK_HEADER_BYTES)
+    // The block behind the text, positioned on its first column, or null when it is malformed
+    public static ByteBuffer fromText(String text, int bytesPerSample) {
+
+        byte[] bytes = fromText(text);
+
+        if (bytes == null || bytes.length < EditorSetting.RECORDER_BLOCK_HEADER_BYTES)
             return null;
 
         ByteBuffer block = ByteBuffer.wrap(bytes);
@@ -106,5 +121,13 @@ public class RecordingArpgUtility extends EngineUtility {
 
         for (int i = 0; i < sampleCount; i++)
             column.add(block.getInt());
+    }
+
+    public static void readDoubles(ByteBuffer block, int sampleCount, DoubleArrayList column) {
+
+        column.ensureCapacity(sampleCount);
+
+        for (int i = 0; i < sampleCount; i++)
+            column.add(block.getDouble());
     }
 }

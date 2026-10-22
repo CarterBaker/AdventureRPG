@@ -1,5 +1,6 @@
 package application.bootstrap.vehiclepipeline.vehiclemanager;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
@@ -41,10 +42,14 @@ public class VehicleManager extends ManagerPackage {
      * again under the same name replaces the old one, which keeps sailing
      * where it already floats and frees its meshes once the last of it
      * leaves the world. spawnBeside() launches a vehicle beside an entity.
+     * While the game is paused no vehicle steps. While held — a recording
+     * plays back in their stead — none steps or is drawn, and createPuppet()
+     * makes the drawn-only vehicles a recording poses instead.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
+    private ClockManager clockManager;
     private VehicleRiderSystem vehicleRiderSystem;
     private VehicleCargoSystem vehicleCargoSystem;
 
@@ -66,6 +71,7 @@ public class VehicleManager extends ManagerPackage {
 
     // Vehicles
     private ObjectArrayList<VehicleInstance> vehicles;
+    private boolean held;
 
     // Clock
     private float timeStep;
@@ -123,6 +129,7 @@ public class VehicleManager extends ManagerPackage {
     @Override
     protected void get() {
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.clockManager = get(ClockManager.class);
     }
 
     @Override
@@ -135,7 +142,7 @@ public class VehicleManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        if (vehicles.isEmpty()) {
+        if (vehicles.isEmpty() || held || clockManager.isPaused()) {
             accumulatedTime = 0f;
             return;
         }
@@ -359,6 +366,30 @@ public class VehicleManager extends ManagerPackage {
         vehicle.setHelmsman(null);
         vehicleRiderSystem.releaseVehicle(vehicle);
         releaseRetired();
+    }
+
+    // A vehicle drawn only, never part of the world, so nothing steps, carries or despawns it
+    public VehicleInstance createPuppet(
+            VehicleHandle vehicleHandle,
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            Vector3 position,
+            Quaternion orientation) {
+
+        VehicleInstance puppet = create(VehicleInstance.class);
+        puppet.constructor(vehicleHandle, worldHandle, position, chunkCoordinate, orientation);
+
+        return puppet;
+    }
+
+    // Hold \\
+
+    public void setHeld(boolean held) {
+        this.held = held;
+    }
+
+    public boolean isHeld() {
+        return held;
     }
 
     // Helm \\

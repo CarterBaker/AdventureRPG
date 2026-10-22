@@ -1,5 +1,7 @@
 package application.bootstrap.renderpipeline.fbomanager;
 
+import java.nio.ByteBuffer;
+
 import application.bootstrap.renderpipeline.fbo.AttachmentStruct;
 import application.bootstrap.renderpipeline.fbo.FBOData;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
@@ -19,7 +21,8 @@ public class FBOManager extends ManagerPackage {
      * every window-relative instance sized to its window. Only OS windows
      * resize global FBOs. Reparented windows rebuild their framebuffers in the
      * new GL context, and released clones are deleted a frame later inside the
-     * context that owns them.
+     * context that owns them. writeColor() fills a target's color from pixels
+     * read back earlier, so a recording can draw an overlay it captured.
      */
 
     // Internal
@@ -133,6 +136,18 @@ public class FBOManager extends ManagerPackage {
         }
 
         fbo.setSize(width, height);
+    }
+
+    // Write \\
+
+    // BGRA pixels into the target's first color attachment, the target sized to them first, in the window's context
+    public void writeColor(FBOInstance fbo, int width, int height, ByteBuffer bgraPixels, WindowInstance window) {
+
+        WindowInstance previous = enterContext(window);
+
+        resize(fbo, width, height);
+        FBOGLSLUtility.writeColorTexture(fbo.getTextures().getInt(0), width, height, bgraPixels);
+        exitContext(previous);
     }
 
     public void resize(String name, int width, int height) {

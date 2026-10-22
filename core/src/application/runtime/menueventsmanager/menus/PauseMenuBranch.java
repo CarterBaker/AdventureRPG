@@ -1,5 +1,6 @@
 package application.runtime.menueventsmanager.menus;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
@@ -15,13 +16,16 @@ public class PauseMenuBranch extends BranchPackage {
      * Runs the pause menu for this context's window. Opens on Pause while
      * playing, closes on Pause or Continue, opens Settings over itself, and on
      * Quit saves and releases the character and returns to the main menu. Pause
-     * closes it only after it has shown a full frame.
+     * closes it only after it has shown a full frame. While it is open the
+     * game is paused through ClockManager, so the world and everything in it
+     * waits behind the menu, and a window leaving with it open lets go.
      */
 
     // Internal
     private MenuManager menuManager;
     private InputManager inputManager;
     private PlayerManager playerManager;
+    private ClockManager clockManager;
     private MainMenuBranch mainMenuBranch;
 
     // State
@@ -35,6 +39,7 @@ public class PauseMenuBranch extends BranchPackage {
         this.menuManager = get(MenuManager.class);
         this.inputManager = get(InputManager.class);
         this.playerManager = get(PlayerManager.class);
+        this.clockManager = get(ClockManager.class);
         this.mainMenuBranch = get(MainMenuBranch.class);
     }
 
@@ -60,6 +65,12 @@ public class PauseMenuBranch extends BranchPackage {
         this.closeArmed = pauseMenu.isVisible();
     }
 
+    @Override
+    protected void dispose() {
+        if (pauseMenu != null)
+            clockManager.setPausedForWindow(context.getWindow().getWindowID(), false);
+    }
+
     // Open / Close \\
 
     private boolean canPause(WindowInstance window) {
@@ -70,9 +81,15 @@ public class PauseMenuBranch extends BranchPackage {
     private void openMenu(WindowInstance window) {
         this.pauseMenu = menuManager.openMenu(RuntimeSetting.MENU_PAUSE, window);
         this.closeArmed = false;
+        clockManager.setPausedForWindow(window.getWindowID(), true);
     }
 
     public void closeMenu() {
+
+        if (pauseMenu == null)
+            return;
+
+        clockManager.setPausedForWindow(pauseMenu.getWindowID(), false);
         this.pauseMenu = menuManager.closeMenu(pauseMenu);
     }
 

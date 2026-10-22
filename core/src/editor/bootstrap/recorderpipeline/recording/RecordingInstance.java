@@ -1,5 +1,6 @@
 package editor.bootstrap.recorderpipeline.recording;
 
+import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -7,17 +8,22 @@ public class RecordingInstance extends InstancePackage {
 
     /*
      * One recording open in the recorder: its name, the world it was made in,
-     * its layers bottom to top, its markers in time order, and how it
-     * exports. It runs as long as its longest layer reaches. For each channel
-     * the topmost unmuted layer covering a moment is the one that plays it.
+     * its bin of takes in the order they were recorded, the clips laid on its
+     * timeline, its markers in time order, and how it exports. It runs as
+     * long as its last clip reaches. For each channel the clip on the highest
+     * lane covering a moment is the one that plays it, the later laid of two
+     * on the same lane.
      */
 
     // Identity
     private String recordingName;
     private String worldName;
 
+    // Bin
+    private ObjectArrayList<RecordingTakeStruct> takes;
+
     // Timeline
-    private ObjectArrayList<RecordingLayerStruct> layers;
+    private ObjectArrayList<RecordingClipStruct> clips;
     private ObjectArrayList<RecordingMarkerStruct> markers;
 
     // Export
@@ -28,8 +34,11 @@ public class RecordingInstance extends InstancePackage {
     @Override
     protected void create() {
 
+        // Bin
+        this.takes = new ObjectArrayList<>();
+
         // Timeline
-        this.layers = new ObjectArrayList<>();
+        this.clips = new ObjectArrayList<>();
         this.markers = new ObjectArrayList<>();
     }
 
@@ -45,28 +54,81 @@ public class RecordingInstance extends InstancePackage {
         this.exportStruct = exportStruct;
     }
 
-    // Layers \\
+    // Takes \\
 
-    public void addLayer(RecordingLayerStruct layer) {
-        layers.add(layer);
+    public void addTake(RecordingTakeStruct take) {
+        takes.add(take);
     }
 
-    public void removeLayer(int index) {
-        layers.remove(index);
+    // The take leaves the bin, and every clip of it the timeline
+    public void removeTake(int index) {
+
+        RecordingTakeStruct take = takes.remove(index);
+
+        for (int i = clips.size() - 1; i >= 0; i--)
+            if (clips.get(i).getTake() == take)
+                clips.remove(i);
     }
 
-    // The topmost layer playing the channel at the time, leaving out the one given, null when none does
-    public RecordingLayerStruct findPlayingLayer(RecorderChannel channel, float time, RecordingLayerStruct excluded) {
+    public boolean hasTakeName(String takeName) {
 
-        for (int i = layers.size() - 1; i >= 0; i--) {
+        for (int i = 0; i < takes.size(); i++)
+            if (takes.get(i).getName().equals(takeName))
+                return true;
 
-            RecordingLayerStruct layer = layers.get(i);
+        return false;
+    }
 
-            if (layer != excluded && layer.covers(channel, time))
-                return layer;
+    public int countClips(RecordingTakeStruct take) {
+
+        int count = 0;
+
+        for (int i = 0; i < clips.size(); i++)
+            if (clips.get(i).getTake() == take)
+                count++;
+
+        return count;
+    }
+
+    // Clips \\
+
+    public int addClip(RecordingClipStruct clip) {
+        clips.add(clip);
+        return clips.size() - 1;
+    }
+
+    public void removeClip(int index) {
+        clips.remove(index);
+    }
+
+    // The clip playing the channel at the time — the highest lane, then the later laid — null when none does
+    public RecordingClipStruct findPlayingClip(RecorderChannel channel, float time) {
+
+        RecordingClipStruct playing = null;
+
+        for (int i = 0; i < clips.size(); i++) {
+
+            RecordingClipStruct clip = clips.get(i);
+
+            if (clip.covers(channel, time) && (playing == null || clip.getLane() >= playing.getLane()))
+                playing = clip;
         }
 
-        return null;
+        return playing;
+    }
+
+    // The clip drawn at the time on the lane — the later laid where two meet — -1 when none is
+    public int findClipAt(float time, int lane) {
+
+        for (int i = clips.size() - 1; i >= 0; i--) {
+
+            RecordingClipStruct clip = clips.get(i);
+
+            if (clip.getLane() == lane && time >= clip.getStart() && time <= clip.getEnd())
+                return i;
+        }
+
+        return EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Markers \\
@@ -101,8 +163,12 @@ public class RecordingInstance extends InstancePackage {
         return worldName;
     }
 
-    public ObjectArrayList<RecordingLayerStruct> getLayers() {
-        return layers;
+    public ObjectArrayList<RecordingTakeStruct> getTakes() {
+        return takes;
+    }
+
+    public ObjectArrayList<RecordingClipStruct> getClips() {
+        return clips;
     }
 
     public ObjectArrayList<RecordingMarkerStruct> getMarkers() {
@@ -117,8 +183,8 @@ public class RecordingInstance extends InstancePackage {
 
         float duration = 0f;
 
-        for (int i = 0; i < layers.size(); i++)
-            duration = Math.max(duration, layers.get(i).getEndTime());
+        for (int i = 0; i < clips.size(); i++)
+            duration = Math.max(duration, clips.get(i).getEnd());
 
         return duration;
     }

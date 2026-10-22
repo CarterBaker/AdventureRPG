@@ -6,7 +6,7 @@ import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.animationtreeeditorpipeline.treedocument.TreeDocumentInstance;
-import editor.characterview.util.CharacterViewUtility;
+import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;

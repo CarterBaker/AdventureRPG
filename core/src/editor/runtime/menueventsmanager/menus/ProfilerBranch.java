@@ -1,8 +1,8 @@
 package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
-import editor.profiler.ProfilerContext;
-import editor.profiler.panel.ProfilerView;
+import editor.runtime.profiler.ProfilerContext;
+import editor.runtime.profiler.panel.ProfilerView;
 import engine.root.BranchPackage;
 
 public class ProfilerBranch extends BranchPackage {

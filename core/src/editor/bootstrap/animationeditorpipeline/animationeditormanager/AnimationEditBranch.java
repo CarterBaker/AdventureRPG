@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
 import editor.bootstrap.animationeditorpipeline.util.AnimationEditorChannel;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
-import editor.characterview.util.CharacterViewUtility;
+import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;

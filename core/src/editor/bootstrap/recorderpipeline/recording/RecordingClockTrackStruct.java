@@ -10,7 +10,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 public class RecordingClockTrackStruct extends StructPackage {
 
     /*
-     * The world's clock through a recording, sample by sample, as the
+     * The world's clock through a take, sample by sample, as the
      * milliseconds elapsed since its epoch. Wherever the clock ran on further
      * than the real time between two samples — a time command moved it — the
      * jump is kept with how far it went, so playback can sweep through the
@@ -59,6 +59,11 @@ public class RecordingClockTrackStruct extends StructPackage {
     public void addJump(float time, long millis) {
         jumpTimes.add(time);
         jumpMillis.add(millis);
+    }
+
+    public void shiftTimes(float seconds) {
+        RecordingSampleUtility.shiftTimes(times, seconds);
+        RecordingSampleUtility.shiftTimes(jumpTimes, seconds);
     }
 
     // The clock at the time, blended between samples; every jump within the ramp before it is eased in instead

@@ -9,6 +9,7 @@ import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.mathematics.extras.Coordinate2Long;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
 public class RecordingSampleUtility extends EngineUtility {
@@ -21,7 +22,8 @@ public class RecordingSampleUtility extends EngineUtility {
      * blended, so a thing that left and came back does not slide across the
      * gap. Positions blend in the frame of the earlier sample's chunk, across
      * the world's wrap, and settle into the chunk they land in; angles blend
-     * the short way round. None of it allocates.
+     * the short way round. shiftTimes() moves a column of times along. None
+     * of it allocates.
      */
 
     // Samples \\
@@ -74,6 +76,12 @@ public class RecordingSampleUtility extends EngineUtility {
         return time - times.getFloat(sample) <= EditorSetting.RECORDER_GAP_SECONDS;
     }
 
+    // Moves every time in the column along by the same seconds
+    public static void shiftTimes(FloatArrayList times, float seconds) {
+        for (int i = 0; i < times.size(); i++)
+            times.set(i, times.getFloat(i) + seconds);
+    }
+
     // Values \\
 
     public static float blend(FloatArrayList values, int sample, float blend) {
@@ -84,6 +92,16 @@ public class RecordingSampleUtility extends EngineUtility {
             return from;
 
         return from + (values.getFloat(sample + 1) - from) * blend;
+    }
+
+    public static double blend(DoubleArrayList values, int sample, float blend) {
+
+        double from = values.getDouble(sample);
+
+        if (sample + 1 >= values.size())
+            return from;
+
+        return from + (values.getDouble(sample + 1) - from) * blend;
     }
 
     // Blends degrees the short way round

@@ -2,20 +2,26 @@ package editor.bootstrap.recorderpipeline.recordermanager;
 
 import java.io.File;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
+import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
+import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
-import editor.bootstrap.recorderpipeline.recording.RecordingLayerStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingMarkerStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.VideoFormat;
 import editor.bootstrap.recorderpipeline.util.FfmpegUtility;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
-import editor.dev.DevContext;
+import editor.runtime.dev.DevContext;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -27,28 +33,38 @@ public class RecorderManager extends ManagerPackage {
 
     /*
      * Owns the recorder: the recordings saved in the game's own directory, the
-     * one open, and its transport. A session — recording, playing, paused or
-     * exporting — drives the first Dev window that has not crashed, found
-     * among TabManager's open tabs as console commands find it, and that
-     * window's DevRecorderSystem carries the session out inside its own crash
-     * boundary from what this holds: which channels play from the recording,
-     * which the take records live, and the playhead. A take records the armed
-     * channels as a new layer from the playhead until stopped, the layers
-     * beneath playing every other channel; the player cannot be recorded
-     * without the camera that follows it. While a session plays the world,
-     * residents and thrown items are held. Stopping ends every session and
-     * the Dev window goes back to just where it was. Each structural change —
-     * a take, a layer or marker edit, an export setting — has one method here,
-     * marks the recording unsaved, and moves the revision the recorder tab
-     * redraws on. Takes save the recording at once.
+     * one open, its transport, and the editing of its bin and timeline. A
+     * session — recording, playing, paused or exporting — drives the first
+     * Dev window that has not crashed, found among TabManager's open tabs as
+     * console commands find it, and that window's DevRecorderSystem carries
+     * the session out inside its own crash boundary from what this holds:
+     * which channels play from the timeline, which the take records live,
+     * and the playhead. A take records the armed channels from the playhead
+     * until stopped, the clips beneath playing every other channel; it then
+     * joins the bin and is laid on the timeline where it was recorded, over
+     * every clip it was recorded against. Takes are laid again by dragging
+     * them from the bin, and clips are moved by dragging, split, trimmed,
+     * stamped, muted, given or stripped of channels, and removed, each by one
+     * method here. The player cannot be recorded without the camera that
+     * follows it. While a session plays the world, residents, thrown items
+     * and vehicles are held. While the game is paused the session is
+     * suspended — the playhead waits and a take records nothing — and it
+     * carries on a few frames after the pause ends, so the pause menu never
+     * reaches a take. Stopping ends every session and the Dev window goes
+     * back to just where it was. Each structural change marks the recording
+     * unsaved and moves the revision the recorder tab redraws on. Takes save
+     * the recording at once.
      */
 
     // Internal
     private TabManager tabManager;
     private WorldManager worldManager;
+    private ClockManager clockManager;
     private NpcManager npcManager;
     private ProjectileManager projectileManager;
+    private VehicleManager vehicleManager;
     private RecordingFileBranch recordingFileBranch;
+    private RecordingTimelineBranch recordingTimelineBranch;
 
     // Directory
     private File recordingDirectory;
@@ -62,13 +78,22 @@ public class RecorderManager extends ManagerPackage {
     private RecorderState state;
     private float playhead;
     private int armedChannels;
-    private RecordingLayerStruct takeLayer;
+    private RecordingTakeStruct take;
+    private float takeStart;
     private int takeCount;
     private DevContext devContext;
 
+    // Suspension
+    private boolean suspended;
+    private int resumeFrames;
+
     // Selection
-    private int selectedLayer;
+    private int selectedTake;
+    private int selectedClip;
     private int selectedMarker;
+
+    // Drag
+    private RecordingDragStruct drag;
 
     // Export
     private File exportFile;
@@ -86,6 +111,7 @@ public class RecorderManager extends ManagerPackage {
 
         // Internal
         this.recordingFileBranch = create(RecordingFileBranch.class);
+        this.recordingTimelineBranch = create(RecordingTimelineBranch.class);
 
         // Directory
         this.recordingDirectory = new File(internal.path, EditorSetting.RECORDER_DIRECTORY);
@@ -96,8 +122,10 @@ public class RecorderManager extends ManagerPackage {
         this.armedChannels = RecorderChannel.ALL;
 
         // Selection
-        this.selectedLayer = EngineSetting.INDEX_NOT_FOUND;
-        this.selectedMarker = EngineSetting.INDEX_NOT_FOUND;
+        clearSelection();
+
+        // Drag
+        this.drag = new RecordingDragStruct();
 
         // Status
         this.statusText = EditorSetting.RECORDER_STATUS_READY;
@@ -107,8 +135,10 @@ public class RecorderManager extends ManagerPackage {
     protected void get() {
         this.tabManager = get(TabManager.class);
         this.worldManager = get(WorldManager.class);
+        this.clockManager = get(ClockManager.class);
         this.npcManager = get(NpcManager.class);
         this.projectileManager = get(ProjectileManager.class);
+        this.vehicleManager = get(VehicleManager.class);
     }
 
     // Update \\
@@ -116,6 +146,7 @@ public class RecorderManager extends ManagerPackage {
     @Override
     protected void update() {
         releaseCrashedDevContext();
+        updateSuspension();
         advancePlayhead();
         holdWorld();
     }
@@ -125,9 +156,38 @@ public class RecorderManager extends ManagerPackage {
             stop();
     }
 
+    // A running session waits while the game is paused, and for a few frames after, so nothing of the pause is kept
+    private void updateSuspension() {
+
+        boolean wanted = state.isSession() && clockManager.isPaused();
+
+        if (wanted)
+            this.resumeFrames = EditorSetting.RECORDER_RESUME_FRAMES;
+        else if (resumeFrames > 0)
+            this.resumeFrames--;
+
+        boolean nowSuspended = state.isSession() && (wanted || resumeFrames > 0);
+
+        if (nowSuspended == suspended)
+            return;
+
+        this.suspended = nowSuspended;
+        setStatus(suspended ? EditorSetting.RECORDER_STATUS_SUSPENDED : resolveRunningStatus());
+    }
+
+    private String resolveRunningStatus() {
+        return switch (state) {
+            case RECORDING -> EditorSetting.RECORDER_STATUS_RECORDING + take.getName();
+            case PLAYING -> EditorSetting.RECORDER_STATUS_PLAYING;
+            case PAUSED -> EditorSetting.RECORDER_STATUS_PAUSED;
+            case EXPORTING -> EditorSetting.RECORDER_STATUS_EXPORTING + exportFile.getName();
+            case IDLE -> EditorSetting.RECORDER_STATUS_READY;
+        };
+    }
+
     private void advancePlayhead() {
 
-        if (state != RecorderState.RECORDING && state != RecorderState.PLAYING)
+        if (suspended || state != RecorderState.RECORDING && state != RecorderState.PLAYING)
             return;
 
         playhead += internal.getDeltaTime();
@@ -142,10 +202,11 @@ public class RecorderManager extends ManagerPackage {
     // The world is held whenever a session plays it rather than recording it live
     private void holdWorld() {
 
-        boolean held = devContext != null && RecorderChannel.WORLD.isIn(getPlayedChannels());
+        int played = devContext != null ? getPlayedChannels() : RecorderChannel.NONE;
 
-        npcManager.setHeld(held);
-        projectileManager.setHeld(held);
+        npcManager.setHeld(RecorderChannel.CHARACTERS.isIn(played));
+        projectileManager.setHeld(RecorderChannel.ITEMS.isIn(played));
+        vehicleManager.setHeld(RecorderChannel.VEHICLES.isIn(played));
     }
 
     // Session \\
@@ -200,15 +261,17 @@ public class RecorderManager extends ManagerPackage {
         if (!beginSession())
             return;
 
-        this.takeLayer = new RecordingLayerStruct(resolveLayerName(), armedChannels, playhead);
+        cancelDrag();
+        this.take = new RecordingTakeStruct(resolveTakeName(), armedChannels);
+        this.takeStart = playhead;
         this.takeCount++;
         this.state = RecorderState.RECORDING;
-        setStatus(EditorSetting.RECORDER_STATUS_RECORDING + takeLayer.getName());
+        setStatus(EditorSetting.RECORDER_STATUS_RECORDING + take.getName());
     }
 
     public void play() {
 
-        if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING || !hasTakes())
+        if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING || !hasClips())
             return;
 
         if (!beginSession())
@@ -235,10 +298,10 @@ public class RecorderManager extends ManagerPackage {
         }
     }
 
-    // Holds the Dev window at the playhead as the recording stands there
+    // Holds the Dev window at the playhead as the timeline stands there
     private void preview() {
 
-        if (!hasTakes() || !beginSession())
+        if (!hasClips() || !beginSession())
             return;
 
         this.state = RecorderState.PAUSED;
@@ -259,27 +322,36 @@ public class RecorderManager extends ManagerPackage {
         else if (state != RecorderState.RECORDING)
             setStatus(EditorSetting.RECORDER_STATUS_READY);
 
+        endSession();
+    }
+
+    private void endSession() {
         this.state = RecorderState.IDLE;
         this.devContext = null;
+        this.suspended = false;
+        this.resumeFrames = 0;
         holdWorld();
     }
 
+    // The take joins the bin and is laid where it was recorded, once the Dev window has handed over all it holds
     private void finishTake() {
 
-        takeLayer.setEndTime(playhead);
+        take.setDuration(playhead - takeStart);
+        devContext.finishTake();
 
-        if (takeLayer.getDuration() < EditorSetting.RECORDER_MIN_TAKE_SECONDS) {
+        if (take.getDuration() < EditorSetting.RECORDER_MIN_TAKE_SECONDS) {
             setStatus(EditorSetting.RECORDER_STATUS_TAKE_TOO_SHORT);
-            this.takeLayer = null;
+            this.take = null;
             return;
         }
 
-        recording.addLayer(takeLayer);
-        this.selectedLayer = recording.getLayers().size() - 1;
-        this.takeLayer = null;
+        recording.addTake(take);
+        this.selectedTake = recording.getTakes().size() - 1;
+        this.selectedClip = recordingTimelineBranch.placeRecordedTake(recording, take, takeStart);
+        this.take = null;
         markUnsaved();
         saveRecording();
-        setStatus(EditorSetting.RECORDER_STATUS_TAKE_SAVED + recording.getLayers().get(selectedLayer).getName());
+        setStatus(EditorSetting.RECORDER_STATUS_TAKE_SAVED + recording.getTakes().get(selectedTake).getName());
     }
 
     // Seek \\
@@ -297,7 +369,7 @@ public class RecorderManager extends ManagerPackage {
 
     public void scrub(float fraction) {
         if (recording != null)
-            seek(fraction * recording.getDuration());
+            seek(fraction * resolveTimelineSpan());
     }
 
     public void toStart() {
@@ -339,6 +411,17 @@ public class RecorderManager extends ManagerPackage {
             }
 
         toEnd();
+    }
+
+    // The timeline drawn runs the recording's length, and on while a take records past it
+    public float resolveTimelineSpan() {
+
+        float span = EditorSetting.RECORDER_MIN_TIMELINE_SECONDS;
+
+        if (recording != null)
+            span = Math.max(span, recording.getDuration());
+
+        return Math.max(span, playhead);
     }
 
     // Arming \\
@@ -404,7 +487,15 @@ public class RecorderManager extends ManagerPackage {
 
         closeRecording();
         activateRecording(opened);
-        setStatus(EditorSetting.RECORDER_STATUS_OPENED + recordingName);
+
+        if (!recordingFileBranch.isUpgraded()) {
+            setStatus(EditorSetting.RECORDER_STATUS_OPENED + recordingName);
+            return;
+        }
+
+        markUnsaved();
+        saveRecording();
+        setStatus(EditorSetting.RECORDER_STATUS_UPGRADED + recordingName);
     }
 
     public void saveRecording() {
@@ -458,6 +549,8 @@ public class RecorderManager extends ManagerPackage {
 
         this.recording = null;
         this.unsaved = false;
+        cancelDrag();
+        clearSelection();
         setStatus(EditorSetting.RECORDER_STATUS_DELETED + recordingName);
     }
 
@@ -476,67 +569,309 @@ public class RecorderManager extends ManagerPackage {
         this.recording = activated;
         this.unsaved = false;
         this.playhead = 0f;
-        this.selectedLayer = EngineSetting.INDEX_NOT_FOUND;
-        this.selectedMarker = EngineSetting.INDEX_NOT_FOUND;
+        cancelDrag();
+        clearSelection();
         revision++;
     }
 
-    // Layers \\
+    // Takes \\
 
-    public void selectLayer(int layerIndex) {
+    public void selectTake(int takeIndex) {
 
-        if (!isLayerIndex(layerIndex))
+        if (!isTakeIndex(takeIndex))
             return;
 
-        this.selectedLayer = layerIndex;
+        this.selectedTake = takeIndex;
         revision++;
     }
 
-    public void toggleLayerMute(int layerIndex) {
+    public void renameTake(int takeIndex, String takeName) {
 
-        if (!isLayerIndex(layerIndex) || state == RecorderState.EXPORTING)
+        if (!isTakeIndex(takeIndex) || !isLabelValid(takeName))
             return;
 
-        RecordingLayerStruct layer = recording.getLayers().get(layerIndex);
-        layer.setMuted(!layer.isMuted());
+        recording.getTakes().get(takeIndex).setName(takeName);
         markUnsaved();
     }
 
-    public void renameLayer(int layerIndex, String layerName) {
+    // The take leaves the bin and every clip of it the timeline
+    public void deleteTake(int takeIndex) {
 
-        if (!isLayerIndex(layerIndex) || !isLabelValid(layerName))
+        if (!isTakeIndex(takeIndex) || !canEditTimeline())
             return;
 
-        recording.getLayers().get(layerIndex).setName(layerName);
+        String takeName = recording.getTakes().get(takeIndex).getName();
+
+        recording.removeTake(takeIndex);
+        clearSelection();
+        this.playhead = Math.min(playhead, recording.getDuration());
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_TAKE_DELETED + takeName);
+    }
+
+    // The whole take laid from the playhead, on the lowest clear lane
+    public void placeTakeAtPlayhead(int takeIndex) {
+        placeTake(takeIndex, playhead, 0);
+    }
+
+    public void placeTake(int takeIndex, float start, int lane) {
+
+        if (!isTakeIndex(takeIndex) || !canEditTimeline())
+            return;
+
+        RecordingTakeStruct placed = recording.getTakes().get(takeIndex);
+
+        this.selectedTake = takeIndex;
+        this.selectedClip = recordingTimelineBranch.placeTake(recording, placed, start, lane);
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_PLACED + placed.getName());
+    }
+
+    // Clips \\
+
+    public void selectClip(int clipIndex) {
+
+        if (!isClipIndex(clipIndex))
+            return;
+
+        this.selectedClip = clipIndex;
+        this.selectedTake = recording.getTakes().indexOf(recording.getClips().get(clipIndex).getTake());
+        revision++;
+    }
+
+    public int findClipAt(float time, int lane) {
+        return recording == null ? EngineSetting.INDEX_NOT_FOUND : recording.findClipAt(time, lane);
+    }
+
+    public void moveClip(int clipIndex, float start, int lane) {
+
+        if (!isClipIndex(clipIndex) || !canEditTimeline())
+            return;
+
+        RecordingClipStruct clip = recording.getClips().get(clipIndex);
+
+        recordingTimelineBranch.moveClip(recording, clip, start, lane);
+        this.selectedClip = clipIndex;
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_MOVED + clip.getTake().getName());
+    }
+
+    // The selected clip plays the channel or stops playing it; only a channel its take recorded can be given
+    public void toggleClipChannel(RecorderChannel channel) {
+
+        RecordingClipStruct clip = requireSelectedClip();
+
+        if (clip == null || !clip.getTake().holds(channel))
+            return;
+
+        clip.setChannelMask(clip.getChannelMask() ^ channel.getBit());
         markUnsaved();
     }
 
-    // Steps the layer's clock jumps through each ramp in turn, back to a cut after the longest
-    public void cycleLayerTimeRamp(int layerIndex) {
+    public void toggleClipMute() {
 
-        if (!isLayerIndex(layerIndex) || state == RecorderState.EXPORTING)
+        RecordingClipStruct clip = requireSelectedClip();
+
+        if (clip == null)
             return;
 
-        RecordingLayerStruct layer = recording.getLayers().get(layerIndex);
+        clip.setMuted(!clip.isMuted());
+        markUnsaved();
+    }
+
+    // Steps the clip's clock jumps through each ramp in turn, back to a cut after the longest
+    public void cycleClipTimeRamp() {
+
+        RecordingClipStruct clip = requireSelectedClip();
+
+        if (clip == null)
+            return;
+
         float[] ramps = EditorSetting.RECORDER_TIME_RAMP_SECONDS;
         int index = 0;
 
-        while (index < ramps.length && ramps[index] != layer.getTimeRampSeconds())
+        while (index < ramps.length && ramps[index] != clip.getTimeRampSeconds())
             index++;
 
-        layer.setTimeRampSeconds(ramps[(index + 1) % ramps.length]);
+        clip.setTimeRampSeconds(ramps[(index + 1) % ramps.length]);
         markUnsaved();
     }
 
-    public void deleteLayer(int layerIndex) {
+    public void splitClip() {
 
-        if (!isLayerIndex(layerIndex) || state == RecorderState.RECORDING || state == RecorderState.EXPORTING)
+        RecordingClipStruct clip = requireSelectedClip();
+
+        if (clip == null)
             return;
 
-        recording.removeLayer(layerIndex);
-        this.selectedLayer = EngineSetting.INDEX_NOT_FOUND;
+        int split = recordingTimelineBranch.splitClip(recording, clip, playhead);
+
+        if (split == EngineSetting.INDEX_NOT_FOUND) {
+            setStatus(EditorSetting.RECORDER_STATUS_OUTSIDE_CLIP);
+            return;
+        }
+
+        this.selectedClip = split;
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_SPLIT + clip.getTake().getName());
+    }
+
+    public void trimClipStart() {
+        trimClip(true);
+    }
+
+    public void trimClipEnd() {
+        trimClip(false);
+    }
+
+    private void trimClip(boolean start) {
+
+        RecordingClipStruct clip = requireSelectedClip();
+
+        if (clip == null)
+            return;
+
+        boolean trimmed = start
+                ? recordingTimelineBranch.trimStart(clip, playhead)
+                : recordingTimelineBranch.trimEnd(clip, playhead);
+
+        if (!trimmed) {
+            setStatus(EditorSetting.RECORDER_STATUS_OUTSIDE_CLIP);
+            return;
+        }
+
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_TRIMMED + clip.getTake().getName());
+    }
+
+    // A copy of the selected clip laid from the playhead
+    public void stampClip() {
+
+        RecordingClipStruct clip = requireSelectedClip();
+
+        if (clip == null)
+            return;
+
+        this.selectedClip = recordingTimelineBranch.stampClip(recording, clip, playhead);
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_STAMPED + clip.getTake().getName());
+    }
+
+    // The selected clip leaves the timeline; its take stays in the bin
+    public void removeClip() {
+
+        RecordingClipStruct clip = requireSelectedClip();
+
+        if (clip == null)
+            return;
+
+        recording.removeClip(selectedClip);
+        this.selectedClip = EngineSetting.INDEX_NOT_FOUND;
         this.playhead = Math.min(playhead, recording.getDuration());
         markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_CLIP_REMOVED + clip.getTake().getName());
+    }
+
+    // The selected clip when the timeline can be edited, null after saying why not
+    private RecordingClipStruct requireSelectedClip() {
+
+        if (!canEditTimeline())
+            return null;
+
+        if (!isClipIndex(selectedClip)) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_CLIP);
+            return null;
+        }
+
+        return recording.getClips().get(selectedClip);
+    }
+
+    // Nothing on the timeline changes under a take or an export
+    private boolean canEditTimeline() {
+        return recording != null && state != RecorderState.RECORDING && state != RecorderState.EXPORTING;
+    }
+
+    // Drag \\
+
+    // A take picked up from the bin, to be laid where it is let go
+    public void beginTakeDrag(int takeIndex, WindowInstance window, float pressX, float pressY) {
+
+        if (drag.isActive() || !canEditTimeline() || !isTakeIndex(takeIndex))
+            return;
+
+        drag.begin(RecorderDragKind.TAKE, takeIndex, window, pressX, pressY, 0f);
+        revision++;
+    }
+
+    // A clip taken hold of at a moment within it, to be moved so that moment stays under the cursor
+    public void beginClipDrag(int clipIndex, float grabTime, WindowInstance window, float pressX, float pressY) {
+
+        if (drag.isActive() || !canEditTimeline() || !isClipIndex(clipIndex))
+            return;
+
+        drag.begin(RecorderDragKind.CLIP, clipIndex, window, pressX, pressY,
+                grabTime - recording.getClips().get(clipIndex).getStart());
+        revision++;
+    }
+
+    // Where the carried take or clip would land with the cursor where it is now
+    public void dragTo(float x, float y, boolean overLanes, float time, int lane) {
+
+        if (!drag.isActive())
+            return;
+
+        drag.travel(x, y, EditorSetting.RECORDER_DRAG_THRESHOLD_PIXELS);
+        drag.land(overLanes, Math.max(0f, time - drag.getGrabOffset()), lane);
+    }
+
+    // Letting go lays or moves what was carried where it landed; a press that never travelled selects it instead
+    public void endDrag() {
+
+        if (!drag.isActive())
+            return;
+
+        RecorderDragKind kind = drag.getKind();
+        int index = drag.getIndex();
+        boolean dropped = drag.isMoved() && drag.isOverLanes();
+        float landingStart = drag.getLandingStart();
+        int landingLane = drag.getLandingLane();
+
+        cancelDrag();
+
+        switch (kind) {
+            case TAKE -> {
+                if (dropped)
+                    placeTake(index, landingStart, landingLane);
+                else
+                    selectTake(index);
+            }
+            case CLIP -> {
+                if (dropped)
+                    moveClip(index, landingStart, landingLane);
+                else
+                    selectClip(index);
+            }
+            case NONE -> {
+            }
+        }
+    }
+
+    public void cancelDrag() {
+
+        if (!drag.isActive())
+            return;
+
+        drag.clear();
+        revision++;
+    }
+
+    // How long what is carried runs, so the tab can draw where it would land
+    public float resolveDragLength() {
+        return switch (drag.getKind()) {
+            case TAKE -> recording.getTakes().get(drag.getIndex()).getDuration();
+            case CLIP -> recording.getClips().get(drag.getIndex()).getLength();
+            case NONE -> 0f;
+        };
     }
 
     // Markers \\
@@ -719,7 +1054,7 @@ public class RecorderManager extends ManagerPackage {
     // Renders the export range into a new video beside the recordings, frame by frame in the Dev window
     public void export() {
 
-        if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING || !hasTakes())
+        if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING || !hasClips())
             return;
 
         RecordingExportStruct exportStruct = recording.getExportStruct();
@@ -732,6 +1067,7 @@ public class RecorderManager extends ManagerPackage {
         if (!beginSession())
             return;
 
+        cancelDrag();
         saveRecording();
         videoDirectory.mkdirs();
 
@@ -756,9 +1092,7 @@ public class RecorderManager extends ManagerPackage {
         if (state != RecorderState.EXPORTING)
             return;
 
-        this.state = RecorderState.IDLE;
-        this.devContext = null;
-        holdWorld();
+        endSession();
 
         if (!succeeded && exportFile.exists())
             exportFile.delete();
@@ -796,23 +1130,14 @@ public class RecorderManager extends ManagerPackage {
         return EditorSetting.RECORDER_DEFAULT_NAME_PREFIX + number;
     }
 
-    private String resolveLayerName() {
+    private String resolveTakeName() {
 
-        int number = recording.getLayers().size() + 1;
+        int number = recording.getTakes().size() + 1;
 
-        while (hasLayerName(EditorSetting.RECORDER_LAYER_NAME_PREFIX + number))
+        while (recording.hasTakeName(EditorSetting.RECORDER_TAKE_NAME_PREFIX + number))
             number++;
 
-        return EditorSetting.RECORDER_LAYER_NAME_PREFIX + number;
-    }
-
-    private boolean hasLayerName(String layerName) {
-
-        for (int i = 0; i < recording.getLayers().size(); i++)
-            if (recording.getLayers().get(i).getName().equals(layerName))
-                return true;
-
-        return false;
+        return EditorSetting.RECORDER_TAKE_NAME_PREFIX + number;
     }
 
     public boolean isRecordingNameAvailable(String recordingName) {
@@ -851,21 +1176,31 @@ public class RecorderManager extends ManagerPackage {
 
     // Utility \\
 
-    private boolean hasTakes() {
+    private boolean hasClips() {
 
-        if (recording != null && !recording.getLayers().isEmpty())
+        if (recording != null && !recording.getClips().isEmpty())
             return true;
 
         setStatus(EditorSetting.RECORDER_STATUS_NOTHING_RECORDED);
         return false;
     }
 
-    private boolean isLayerIndex(int layerIndex) {
-        return recording != null && layerIndex >= 0 && layerIndex < recording.getLayers().size();
+    private boolean isTakeIndex(int takeIndex) {
+        return recording != null && takeIndex >= 0 && takeIndex < recording.getTakes().size();
+    }
+
+    private boolean isClipIndex(int clipIndex) {
+        return recording != null && clipIndex >= 0 && clipIndex < recording.getClips().size();
     }
 
     private boolean isMarkerIndex(int markerIndex) {
         return recording != null && markerIndex >= 0 && markerIndex < recording.getMarkers().size();
+    }
+
+    private void clearSelection() {
+        this.selectedTake = EngineSetting.INDEX_NOT_FOUND;
+        this.selectedClip = EngineSetting.INDEX_NOT_FOUND;
+        this.selectedMarker = EngineSetting.INDEX_NOT_FOUND;
     }
 
     private void markUnsaved() {
@@ -884,13 +1219,18 @@ public class RecorderManager extends ManagerPackage {
         return devContext == context && state.isSession();
     }
 
-    // The channels a session plays from the recording — everything but what a take records live
+    // True while the game is paused under a running session, and for the few frames after
+    public boolean isSuspended() {
+        return suspended;
+    }
+
+    // The channels a session plays from the timeline — everything but what a take records live
     public int getPlayedChannels() {
         return state.isSession() ? RecorderChannel.ALL & ~getLiveChannels() : RecorderChannel.NONE;
     }
 
     public int getLiveChannels() {
-        return state == RecorderState.RECORDING ? takeLayer.getChannelMask() : RecorderChannel.NONE;
+        return state == RecorderState.RECORDING ? take.getChannelMask() : RecorderChannel.NONE;
     }
 
     public RecorderState getState() {
@@ -922,20 +1262,33 @@ public class RecorderManager extends ManagerPackage {
         return unsaved;
     }
 
-    public RecordingLayerStruct getTakeLayer() {
-        return takeLayer;
+    public RecordingTakeStruct getTake() {
+        return take;
+    }
+
+    // The take's own time at the playhead
+    public float getTakeTime() {
+        return playhead - takeStart;
     }
 
     public int getTakeCount() {
         return takeCount;
     }
 
-    public int getSelectedLayer() {
-        return selectedLayer;
+    public int getSelectedTake() {
+        return selectedTake;
+    }
+
+    public int getSelectedClip() {
+        return selectedClip;
     }
 
     public int getSelectedMarker() {
         return selectedMarker;
+    }
+
+    public RecordingDragStruct getDrag() {
+        return drag;
     }
 
     public File getExportFile() {

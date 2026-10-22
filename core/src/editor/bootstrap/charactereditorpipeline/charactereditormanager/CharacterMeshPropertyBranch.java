@@ -5,7 +5,7 @@ import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocum
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorWeightTool;
-import editor.characterview.util.CharacterViewUtility;
+import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;

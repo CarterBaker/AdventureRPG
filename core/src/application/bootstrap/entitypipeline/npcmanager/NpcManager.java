@@ -2,6 +2,7 @@ package application.bootstrap.entitypipeline.npcmanager;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
@@ -68,7 +69,8 @@ public class NpcManager extends ManagerPackage {
      * awake(), before any chunk generates. NPC IDs are assigned in
      * registration order. While held — a recording plays back in their
      * stead — residents still come and go with their chunks but neither think
-     * nor move, and are not drawn.
+     * nor move, and are not drawn. While the game is paused they wait where
+     * they stand, drawn as they were.
      */
 
     // Internal
@@ -80,6 +82,7 @@ public class NpcManager extends ManagerPackage {
     private WorldStreamManager worldStreamManager;
     private ProgressionManager progressionManager;
     private StatManager statManager;
+    private ClockManager clockManager;
 
     // Branches
     private NpcSteerBranch npcSteerBranch;
@@ -144,6 +147,7 @@ public class NpcManager extends ManagerPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.progressionManager = get(ProgressionManager.class);
         this.statManager = get(StatManager.class);
+        this.clockManager = get(ClockManager.class);
     }
 
     @Override
@@ -156,7 +160,7 @@ public class NpcManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        if (held)
+        if (held || clockManager.isPaused())
             return;
 
         float deltaTime = internal.getDeltaTime();

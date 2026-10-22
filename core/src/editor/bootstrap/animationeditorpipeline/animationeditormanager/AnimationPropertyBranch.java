@@ -5,7 +5,7 @@ import application.bootstrap.animationpipeline.animation.AnimationClipUtility;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
 import editor.bootstrap.animationeditorpipeline.util.AnimationEditorChannel;
-import editor.characterview.util.CharacterViewUtility;
+import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;

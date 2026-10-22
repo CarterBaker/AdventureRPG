@@ -6,7 +6,7 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 public class RecordingCameraTrackStruct extends RecordingTrackStruct {
 
     /*
-     * The view of a recording, sample by sample: the camera's position in the
+     * The view of a take, sample by sample: the camera's position in the
      * frame of the chunk the player stood in, the direction it looked along,
      * the shake it turned by in degrees, and its field of view.
      */

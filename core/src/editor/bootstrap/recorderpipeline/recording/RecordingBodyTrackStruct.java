@@ -4,6 +4,7 @@ import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.entitypipeline.entity.EntityActionHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
+import editor.bootstrap.recorderpipeline.util.RecordingSampleUtility;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgObjectStruct;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -13,7 +14,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecordingBodyTrackStruct extends RecordingTrackStruct {
 
     /*
-     * One character in a recording — the player or a resident. It knows the
+     * One character in a take — the player or a resident. It knows the
      * template, gender and name it was, the look it wore from each moment that
      * look changed, and, sample by sample, how it stood and moved: its
      * movement state, speeds, facing and ground offset, and the action its
@@ -114,6 +115,12 @@ public class RecordingBodyTrackStruct extends RecordingTrackStruct {
     public void addLook(float time, ArpgObjectStruct lookArpg) {
         lookTimes.add(time);
         looks.add(lookArpg);
+    }
+
+    @Override
+    public void shiftTimes(float seconds) {
+        super.shiftTimes(seconds);
+        RecordingSampleUtility.shiftTimes(lookTimes, seconds);
     }
 
     // The clip's place in this track's clip list, added on first sight, -1 for none
