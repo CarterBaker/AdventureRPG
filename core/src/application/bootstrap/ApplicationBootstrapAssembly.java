@@ -17,7 +17,6 @@ import application.bootstrap.physicspipeline.PhysicsPipeline;
 import application.bootstrap.progressionpipeline.ProgressionPipeline;
 import application.bootstrap.renderpipeline.RenderPipeline;
 import application.bootstrap.savepipeline.SavePipeline;
-import application.bootstrap.screencapturepipeline.ScreenCapturePipeline;
 import application.bootstrap.settingspipeline.SettingsPipeline;
 import application.bootstrap.shaderpipeline.ShaderPipeline;
 import application.bootstrap.shipwrightpipeline.ShipwrightPipeline;
@@ -39,7 +38,6 @@ public class ApplicationBootstrapAssembly extends AssemblyPackage {
         create(AnimationPipeline.class);
         create(ShaderPipeline.class);
         create(RenderPipeline.class);
-        create(ScreenCapturePipeline.class);
         create(ProgressionPipeline.class);
         create(ItemPipeline.class);
         create(FurnishingPipeline.class);

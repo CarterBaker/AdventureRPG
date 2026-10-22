@@ -95,10 +95,6 @@ public class Settings {
     public int[] bindInventory = { Keys.I };
     public int[] bindRotateItem = { Keys.R };
 
-    // Bindings — Screen Capture
-    public int[] bindScreenshot = { Keys.F12 };
-    public int[] bindRecordVideo = { Keys.F9 };
-
     // Bindings — Editor Single
     public int[] bindToggleInspector = { Keys.I };
     public int[] bindFocusSelected = { Keys.F };

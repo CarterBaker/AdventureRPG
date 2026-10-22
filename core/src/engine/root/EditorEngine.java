@@ -2,7 +2,6 @@ package engine.root;
 
 import application.bootstrap.ApplicationBootstrapAssembly;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
-import application.bootstrap.screencapturepipeline.screencapturemanager.ScreenCaptureManager;
 import application.kernel.ApplicationKernelAssembly;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.EditorBootstrapAssembly;
@@ -13,8 +12,7 @@ public class EditorEngine extends EnginePackage {
     /*
      * The editor engine. Registers the application kernel and the application
      * and editor bootstrap assemblies, pairs the main window with
-     * EditorMainWindowContext, and in draw() flushes the main window and runs
-     * the frame's screen capture, the only end-of-frame GPU work.
+     * EditorMainWindowContext, and in draw() flushes the main window.
      */
 
     // Kernel
@@ -30,7 +28,6 @@ public class EditorEngine extends EnginePackage {
     // Render
     private WindowManager windowManager;
     private RenderManager renderManager;
-    private ScreenCaptureManager screenCaptureManager;
 
     // Kernel \\
 
@@ -57,7 +54,6 @@ public class EditorEngine extends EnginePackage {
         // Render
         this.windowManager = get(WindowManager.class);
         this.renderManager = get(RenderManager.class);
-        this.screenCaptureManager = get(ScreenCaptureManager.class);
     }
 
     // Awake \\
@@ -72,6 +68,5 @@ public class EditorEngine extends EnginePackage {
     @Override
     protected void draw() {
         renderManager.draw();
-        screenCaptureManager.flush();
     }
 }

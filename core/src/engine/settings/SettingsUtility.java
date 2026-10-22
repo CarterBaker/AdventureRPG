@@ -305,8 +305,6 @@ public class SettingsUtility extends EngineUtility {
         KeyBindings.ACTIVATE.set(toInputCodes(settings.bindActivate));
         KeyBindings.INVENTORY.set(toInputCodes(settings.bindInventory));
         KeyBindings.ROTATE_ITEM.set(toInputCodes(settings.bindRotateItem));
-        KeyBindings.SCREENSHOT.set(toInputCodes(settings.bindScreenshot));
-        KeyBindings.RECORD_VIDEO.set(toInputCodes(settings.bindRecordVideo));
         KeyBindings.TOGGLE_INSPECTOR.set(toInputCodes(settings.bindToggleInspector));
         KeyBindings.FOCUS_SELECTED.set(toInputCodes(settings.bindFocusSelected));
         KeyBindings.DELETE_SELECTED.set(toInputCodes(settings.bindDeleteSelected));
@@ -330,8 +328,6 @@ public class SettingsUtility extends EngineUtility {
         settings.bindActivate = toCodes(KeyBindings.ACTIVATE);
         settings.bindInventory = toCodes(KeyBindings.INVENTORY);
         settings.bindRotateItem = toCodes(KeyBindings.ROTATE_ITEM);
-        settings.bindScreenshot = toCodes(KeyBindings.SCREENSHOT);
-        settings.bindRecordVideo = toCodes(KeyBindings.RECORD_VIDEO);
         settings.bindToggleInspector = toCodes(KeyBindings.TOGGLE_INSPECTOR);
         settings.bindFocusSelected = toCodes(KeyBindings.FOCUS_SELECTED);
         settings.bindDeleteSelected = toCodes(KeyBindings.DELETE_SELECTED);

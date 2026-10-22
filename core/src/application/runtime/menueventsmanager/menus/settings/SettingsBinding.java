@@ -36,11 +36,7 @@ public enum SettingsBinding {
     INVENTORY(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_INVENTORY,
             KeyBindings.INVENTORY),
     ROTATE_ITEM(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_ROTATE_ITEM,
-            KeyBindings.ROTATE_ITEM),
-    SCREENSHOT(RuntimeSetting.SETTINGS_SECTION_CAPTURE, RuntimeSetting.SETTINGS_BINDING_SCREENSHOT,
-            KeyBindings.SCREENSHOT),
-    RECORD_VIDEO(RuntimeSetting.SETTINGS_SECTION_CAPTURE, RuntimeSetting.SETTINGS_BINDING_RECORD_VIDEO,
-            KeyBindings.RECORD_VIDEO);
+            KeyBindings.ROTATE_ITEM);
 
     // Values
     public static final SettingsBinding[] VALUES = values();

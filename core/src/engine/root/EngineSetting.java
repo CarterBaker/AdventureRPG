@@ -79,6 +79,7 @@ public class EngineSetting {
     public static final int GL_VERTEX_SHADER = 0x8B31;
 
     // Buffers
+    public static final int BYTES_PER_PIXEL_BGRA = 4;
     public static final int SCRATCH_BUFFER_GROWTH_FACTOR = 2;
 
     // Uniform Components
@@ -3028,42 +3029,4 @@ public class EngineSetting {
     public static final String MENU_HIERARCHY = "util/Hierarchy/Hierarchy";
     public static final float MENU_SCROLL_PIXELS = 48f;
     public static final float MENU_THEME_ALPHA_DEFAULT = 1.0f;
-
-    // Screen Capture & Recording
-    public static final int BYTES_PER_PIXEL_BGRA = 4;
-    public static final String CAPTURE_ROOT_DIRECTORY = "Capture";
-    public static final String CAPTURE_TIMESTAMP_PATTERN = "yyyy-MM-dd_HH-mm-ss";
-    public static final int RECORDING_BUFFER_COUNT = 4;
-    public static final String RECORDING_EXTENSION = "mp4";
-    public static final String RECORDING_FILE_PREFIX = "Recording_";
-    public static final int RECORDING_FRAME_RATE = 30;
-    public static final int RECORDING_MAX_WIDTH = 1280;
-    public static final int RECORDING_MOTION_SEARCH_RANGE = 0;
-    public static final String RECORDING_OUTPUT_DIRECTORY = "Videos";
-    public static final String SCREENSHOT_FILE_PREFIX = "Screenshot_";
-    public static final String SCREENSHOT_LOSSLESS_EXTENSION = "tga";
-    public static final String SCREENSHOT_OUTPUT_DIRECTORY = "Images";
-    public static final String SCREENSHOT_STANDARD_FORMAT = "png";
-    public static final String SCREEN_CAPTURE_THREAD_NAME = "ScreenCapture";
-    public static final int TGA_HEADER_LENGTH_BYTES = 18;
-    public static final int TGA_IMAGE_DESCRIPTOR_BOTTOM_LEFT_ALPHA = 0x08;
-    public static final int TGA_IMAGE_TYPE_UNCOMPRESSED_TRUECOLOR = 2;
-    public static final int TGA_PIXEL_DEPTH_BITS = 32;
-    public static final String VIDEO_ENCODE_THREAD_NAME = "VideoEncode";
-    public static final String VIDEO_WRITE_THREAD_NAME = "VideoWrite";
-
-    // Screen Capture YUV (full-range BT.601, fixed point)
-    public static final int YUV_BLUE_CHROMA_BLUE = 128;
-    public static final int YUV_BLUE_CHROMA_GREEN = -85;
-    public static final int YUV_BLUE_CHROMA_RED = -43;
-    public static final int YUV_CHROMA_FIXED_POINT_SHIFT = 10;
-    public static final int YUV_CHROMA_ROUNDING = 512;
-    public static final int YUV_FIXED_POINT_SHIFT = 8;
-    public static final int YUV_LUMA_BLUE = 29;
-    public static final int YUV_LUMA_GREEN = 150;
-    public static final int YUV_LUMA_RED = 77;
-    public static final int YUV_RED_CHROMA_BLUE = -21;
-    public static final int YUV_RED_CHROMA_GREEN = -107;
-    public static final int YUV_RED_CHROMA_RED = 128;
-    public static final int YUV_ROUNDING = 128;
 }

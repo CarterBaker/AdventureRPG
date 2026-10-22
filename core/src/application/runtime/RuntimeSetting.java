@@ -320,7 +320,6 @@ public class RuntimeSetting {
     public static final String SETTINGS_SECTION_MOUSE = "Mouse";
     public static final String SETTINGS_SECTION_MOVEMENT = "Movement";
     public static final String SETTINGS_SECTION_ACTIONS = "Actions";
-    public static final String SETTINGS_SECTION_CAPTURE = "Capture";
     public static final String SETTINGS_SECTION_OUTLINES = "Outlines";
     public static final String SETTINGS_SECTION_DEPTH_OF_FIELD = "Depth of Field";
     public static final String SETTINGS_SECTION_IMAGE = "Image";
@@ -388,8 +387,6 @@ public class RuntimeSetting {
     public static final String SETTINGS_BINDING_BLOCK = "Block";
     public static final String SETTINGS_BINDING_INVENTORY = "Inventory";
     public static final String SETTINGS_BINDING_ROTATE_ITEM = "Rotate Item";
-    public static final String SETTINGS_BINDING_SCREENSHOT = "Screenshot";
-    public static final String SETTINGS_BINDING_RECORD_VIDEO = "Record Video";
     public static final String SETTINGS_BINDING_CAPTURE_PROMPT = "Press a key";
     public static final String SETTINGS_ACTION_RESET_BINDINGS = "Reset Controls";
 
