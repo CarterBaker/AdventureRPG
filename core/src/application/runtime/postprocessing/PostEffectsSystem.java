@@ -233,4 +233,10 @@ public class PostEffectsSystem extends SystemPackage {
                 RuntimeSetting.PASS_DRAW_DEPTH,
                 window);
     }
+
+    // Accessible \\
+
+    public FBOInstance getCompositeFbo() {
+        return compositeFbo;
+    }
 }

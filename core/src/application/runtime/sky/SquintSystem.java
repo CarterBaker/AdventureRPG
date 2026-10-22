@@ -13,6 +13,7 @@ import application.bootstrap.shaderpipeline.passmanager.PassManager;
 import application.bootstrap.weatherpipeline.util.SkyColorUtility;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.postprocessing.PostEffectsSystem;
 import application.runtime.water.WaterSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
@@ -31,9 +32,10 @@ public class SquintSystem extends SystemPackage {
      * stands between the eye and the sun; no glare reaches an eye under the
      * sea. The eyes close toward that glare quickly and open again slowly,
      * and while they are narrowed a fullscreen pass darkens the top and
-     * bottom of the screen like closing lids, easing them open wherever the
-     * scene or the clouds hide the sun's disc. Nothing is drawn while the
-     * eyes are fully open.
+     * bottom of the screen like closing lids and blurs the finished frame
+     * between them around a clear middle, easing open wherever the scene or
+     * the clouds hide the sun's disc. The sky's sun swirls by the same
+     * squint. Nothing is drawn while the eyes are fully open.
      */
 
     // Internal
@@ -45,6 +47,7 @@ public class SquintSystem extends SystemPackage {
     private WorldSystem worldSystem;
     private WaterSystem waterSystem;
     private WeatherSystem weatherSystem;
+    private PostEffectsSystem postEffectsSystem;
 
     // Render Target
     private PassInstance squintPass;
@@ -80,6 +83,7 @@ public class SquintSystem extends SystemPackage {
         this.worldSystem = get(WorldSystem.class);
         this.waterSystem = get(WaterSystem.class);
         this.weatherSystem = get(WeatherSystem.class);
+        this.postEffectsSystem = get(PostEffectsSystem.class);
     }
 
     @Override
@@ -93,6 +97,9 @@ public class SquintSystem extends SystemPackage {
 
         mat.setUniform(RuntimeSetting.UNIFORM_SCENE_DEPTH, worldSystem.getWorldFbo().getDepthTexture());
         mat.setUniform(RuntimeSetting.UNIFORM_CLOUD_COLOR, weatherFbo.getColorTexture(RuntimeSetting.ATTACHMENT_COLOR));
+        mat.setUniform(
+                RuntimeSetting.UNIFORM_SCENE_COLOR,
+                postEffectsSystem.getCompositeFbo().getColorTexture(RuntimeSetting.ATTACHMENT_COLOR));
     }
 
     @Override
@@ -105,7 +112,7 @@ public class SquintSystem extends SystemPackage {
     }
 
     @Override
-    protected void lateUpdate() {
+    protected void render() {
 
         if (squint < RuntimeSetting.SQUINT_VISIBLE_THRESHOLD)
             return;
@@ -117,6 +124,7 @@ public class SquintSystem extends SystemPackage {
 
         renderManager.ensureFboRendered(worldSystem.getWorldFbo(), context.getWindow());
         renderManager.ensureFboRendered(weatherSystem.getWeatherFbo(), context.getWindow());
+        renderManager.ensureFboRendered(postEffectsSystem.getCompositeFbo(), context.getWindow());
         renderManager.pushRenderCall(
                 squintPass.getModelInstance(),
                 squintFbo,
@@ -200,5 +208,11 @@ public class SquintSystem extends SystemPackage {
                 castStruct);
 
         return castStruct.isHit();
+    }
+
+    // Accessible \\
+
+    public float getSquint() {
+        return squint;
     }
 }

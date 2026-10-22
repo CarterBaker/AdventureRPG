@@ -21,7 +21,9 @@ public class SkySystem extends SystemPackage {
      * and Celestial UBO instances so sky color, the sun-side glow, the sun,
      * the moon in its phase, and the turning stars all reflect this grid's
      * own location and date. The sun, moon and star pictures are sprites,
-     * handed to the sky pass once on awake. The sky pass has no knowledge of
+     * handed to the sky pass once on awake. The sun swirls as much as this
+     * window's player squints, its flames turning faster and twisting into a
+     * whirl while the eyes narrow. The sky pass has no knowledge of
      * weather or clouds — that is handled entirely by the weather fullscreen
      * pass.
      */
@@ -33,10 +35,14 @@ public class SkySystem extends SystemPackage {
     private FBOManager fboManager;
     private PostEffectsSystem postEffectsSystem;
     private WorldSystem worldSystem;
+    private SquintSystem squintSystem;
 
     // Render Target
     private PassInstance skyPass;
     private FBOInstance skyFbo;
+
+    // Swirl
+    private float swirlPhase;
 
     @Override
     protected void get() {
@@ -48,6 +54,7 @@ public class SkySystem extends SystemPackage {
         this.fboManager = get(FBOManager.class);
         this.postEffectsSystem = get(PostEffectsSystem.class);
         this.worldSystem = get(WorldSystem.class);
+        this.squintSystem = get(SquintSystem.class);
     }
 
     @Override
@@ -62,6 +69,7 @@ public class SkySystem extends SystemPackage {
     protected void update() {
 
         bindGridLightingData();
+        bindSunSwirl();
 
         renderManager.pushRenderCall(
                 skyPass.getModelInstance(),
@@ -87,6 +95,20 @@ public class SkySystem extends SystemPackage {
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());
         mat.setUBO(grid.getCelestialDataUBO());
+    }
+
+    // Swirl \\
+
+    private void bindSunSwirl() {
+
+        float swirl = squintSystem.getSquint();
+        MaterialInstance mat = skyPass.getModelInstance().getMaterial();
+
+        swirlPhase = (swirlPhase + swirl * RuntimeSetting.SKY_SUN_SWIRL_SPEED * internal.getDeltaTime())
+                % RuntimeSetting.SKY_SUN_SWIRL_PERIOD;
+
+        mat.setUniform(RuntimeSetting.UNIFORM_SKY_SUN_SWIRL, swirl);
+        mat.setUniform(RuntimeSetting.UNIFORM_SKY_SUN_SWIRL_PHASE, swirlPhase);
     }
 
     // Sky Bodies \\
