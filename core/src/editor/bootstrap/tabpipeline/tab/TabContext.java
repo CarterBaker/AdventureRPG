@@ -128,10 +128,7 @@ public class TabContext extends ContextPackage {
 
         WindowInstance contentWindow = contentContext.getWindow();
 
-        if (cx == contentWindow.getCompositeX()
-                && cy == contentWindow.getCompositeY()
-                && cw == contentWindow.getCompositeW()
-                && ch == contentWindow.getCompositeH())
+        if (contentWindow.isPlacedAt(cx, cy, cw, ch))
             return;
 
         contentWindow.place(cx, cy, cw, ch);

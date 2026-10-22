@@ -15,6 +15,7 @@ import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.quaternions.Quaternion;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -25,7 +26,9 @@ public class ProjectileRenderSystem extends SystemPackage {
      * window's world target, each with its own pooled item model. A
      * projectile is placed relative to the viewer's chunk, its shape's centre
      * on its position and turned by its tumble, and one beyond the viewer's
-     * neighbouring chunks is skipped.
+     * neighbouring chunks is skipped. pushItem() is the one way a loose item
+     * is drawn, so a recording's thrown items look just as they flew. Held
+     * projectiles are not drawn.
      */
 
     // Internal
@@ -77,34 +80,60 @@ public class ProjectileRenderSystem extends SystemPackage {
             FBOInstance targetFbo,
             WindowInstance window) {
 
+        if (projectileManager.isHeld())
+            return;
+
         ObjectArrayList<ProjectileInstance> projectiles = projectileManager.getProjectiles();
 
         for (int i = 0; i < projectiles.size(); i++) {
 
             ProjectileInstance projectile = projectiles.get(i);
 
-            if (projectile.getWorldHandle() != worldHandle
-                    || !composeModelMatrix(projectile, worldHandle, viewerChunkCoordinate))
+            if (projectile.getWorldHandle() != worldHandle)
                 continue;
 
-            ItemDefinitionHandle item = projectile.getItemInstance().getItemDefinitionHandle();
-            ModelInstance model = itemModelManager.acquireModel(item.getMeshHandle(), equipmentMaterialID);
-
-            model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, modelScratch);
-            renderManager.pushRenderCall(model, targetFbo, EngineSetting.EQUIPMENT_RENDER_DEPTH, window);
+            pushItem(
+                    projectile.getItemInstance().getItemDefinitionHandle(),
+                    worldHandle,
+                    viewerChunkCoordinate,
+                    projectile.getWorldPositionStruct().getChunkCoordinate(),
+                    projectile.getWorldPositionStruct().getPosition(),
+                    projectile.getOrientation(),
+                    targetFbo,
+                    window);
         }
+    }
+
+    // One item loose in the world, its shape's centre on a position in a chunk's frame and turned by an orientation
+    public void pushItem(
+            ItemDefinitionHandle item,
+            WorldHandle worldHandle,
+            long viewerChunkCoordinate,
+            long chunkCoordinate,
+            Vector3 position,
+            Quaternion orientation,
+            FBOInstance targetFbo,
+            WindowInstance window) {
+
+        if (!composeModelMatrix(item, worldHandle, viewerChunkCoordinate, chunkCoordinate, position, orientation))
+            return;
+
+        ModelInstance model = itemModelManager.acquireModel(item.getMeshHandle(), equipmentMaterialID);
+
+        model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, modelScratch);
+        renderManager.pushRenderCall(model, targetFbo, EngineSetting.EQUIPMENT_RENDER_DEPTH, window);
     }
 
     // T(chunk offset + position) * R(tumble) * T(-shape centre) — false beyond the viewer's neighbouring chunks
     private boolean composeModelMatrix(
-            ProjectileInstance projectile,
+            ItemDefinitionHandle item,
             WorldHandle worldHandle,
-            long viewerChunkCoordinate) {
+            long viewerChunkCoordinate,
+            long chunkCoordinate,
+            Vector3 position,
+            Quaternion orientation) {
 
-        long delta = WorldWrapUtility.unwrapToGridCoordinate(
-                worldHandle,
-                viewerChunkCoordinate,
-                projectile.getWorldPositionStruct().getChunkCoordinate());
+        long delta = WorldWrapUtility.unwrapToGridCoordinate(worldHandle, viewerChunkCoordinate, chunkCoordinate);
         int deltaX = Coordinate2Long.unpackX(delta);
         int deltaZ = Coordinate2Long.unpackY(delta);
 
@@ -112,8 +141,7 @@ public class ProjectileRenderSystem extends SystemPackage {
                 || Math.abs(deltaZ) > EngineSetting.PROJECTILE_RENDER_CHUNK_RADIUS)
             return false;
 
-        Vector3 position = projectile.getWorldPositionStruct().getPosition();
-        ItemShapeStruct shape = projectile.getItemInstance().getItemDefinitionHandle().getShape();
+        ItemShapeStruct shape = item.getShape();
         float resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
 
         modelScratch.set(
@@ -121,7 +149,7 @@ public class ProjectileRenderSystem extends SystemPackage {
                 0, 1, 0, position.y,
                 0, 0, 1, deltaZ * EngineSetting.CHUNK_SIZE + position.z,
                 0, 0, 0, 1)
-                .multiply(projectile.getOrientation().toMatrix(rotationScratch))
+                .multiply(orientation.toMatrix(rotationScratch))
                 .multiply(
                         1, 0, 0, -(shape.getOffsetX() + shape.getSizeX() * 0.5f) / resolution,
                         0, 1, 0, -(shape.getOffsetY() + shape.getSizeY() * 0.5f) / resolution,

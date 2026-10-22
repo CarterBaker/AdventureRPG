@@ -15,7 +15,8 @@ public class EditorSetting {
      * map's status text and overlay toggles, the world editor's brush and
      * status text, the character viewport shared by the character, animation
      * and animation tree editors, those editors' files, steps and status
-     * text, and the character editor's mesh and weight tools.
+     * text, the character editor's mesh and weight tools, and the recorder's
+     * files, sampling, export, video containers and status text.
      */
 
     // Cursors
@@ -84,6 +85,10 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_RENAME_LAYER = "Rename Layer";
     public static final String DIALOG_TITLE_NEW_NODE = "New Node";
     public static final String DIALOG_TITLE_RENAME_NODE = "Rename Node";
+    public static final String DIALOG_TITLE_NEW_RECORDING = "New Recording";
+    public static final String DIALOG_TITLE_RENAME_RECORDING = "Rename Recording";
+    public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
+    public static final String DIALOG_TITLE_RENAME_MARKER = "Rename Marker";
 
     // Tabs
     public static final String TAB_TITLE_COMMAND_CONSOLE = "Command Console";
@@ -96,6 +101,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
+    public static final String TAB_TITLE_RECORDER = "Recorder";
     public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
@@ -927,6 +933,227 @@ public class EditorSetting {
     public static final String ITEM_EDITOR_MESSAGE_MESH_LIMIT = "Edit refused: the item would pass the vertex limit";
     public static final String ITEM_EDITOR_MESSAGE_LAST_PART = "An item needs at least one part";
     public static final String ITEM_EDITOR_MESSAGE_PART_LIMIT = "An item cannot hold any more parts";
+
+    // Recorder — files, in the game's own directory; videos go in their own folder beside the recordings
+    public static final String RECORDER_DIRECTORY = "Recordings";
+    public static final String RECORDER_VIDEO_DIRECTORY = "Videos";
+    public static final String RECORDER_DEFAULT_NAME_PREFIX = "Recording";
+    public static final String RECORDER_LAYER_NAME_PREFIX = "Layer ";
+    public static final String RECORDER_MARKER_NAME_PREFIX = "Marker ";
+    public static final String RECORDER_KILL_MARKER_PREFIX = "Felled ";
+    public static final String RECORDER_PLAYER_DISPLAY_NAME = "Player";
+    public static final int RECORDER_FIRST_NAME_NUMBER = 1;
+    public static final int RECORDER_NAME_MAX_LENGTH = 32;
+    public static final int RECORDER_LABEL_MAX_LENGTH = 48;
+    public static final String RECORDER_VIDEO_NAME_SEPARATOR = "_";
+    public static final String RECORDER_EXTENSION_SEPARATOR = ".";
+    public static final int RECORDER_FILE_VERSION = 1;
+
+    // Recorder — channels
+    public static final String RECORDER_CHANNEL_LABEL_CAMERA = "Camera";
+    public static final String RECORDER_CHANNEL_LABEL_PLAYER = "Player";
+    public static final String RECORDER_CHANNEL_LABEL_WORLD = "World";
+    public static final String RECORDER_CHANNEL_LABEL_TIME = "Time";
+
+    // Recorder — sampling, in seconds; the camera, the player and the clock are sampled finer than the world
+    public static final float RECORDER_SAMPLE_INTERVAL = 1f / 60f;
+    public static final float RECORDER_WORLD_SAMPLE_INTERVAL = 1f / 30f;
+    public static final float RECORDER_SAMPLE_TOLERANCE = 0.001f;
+    public static final float RECORDER_GAP_SECONDS = 0.25f;
+    public static final float RECORDER_MIN_TAKE_SECONDS = 0.1f;
+    public static final float RECORDER_MARKER_STEP_TOLERANCE = 0.01f;
+    public static final float RECORDER_TIME_UNSET = -1f;
+    public static final int RECORDER_NO_CLIP = -1;
+    public static final float RECORDER_FULL_TURN_DEGREES = 360f;
+    public static final int RECORDER_LOOK_HASH_PRIME = 31;
+
+    // Recorder — the clock; a clock moving this far past real time between samples was moved by a command
+    public static final long RECORDER_CLOCK_JUMP_MILLIS = 1000L;
+    public static final float[] RECORDER_TIME_RAMP_SECONDS = { 0f, 2f, 5f, 10f };
+
+    // Recorder — sample blocks: a count, then whole columns of 4-byte floats and ints and 8-byte chunk coordinates
+    public static final int RECORDER_BLOCK_HEADER_BYTES = Integer.BYTES;
+    public static final int RECORDER_PLACE_SAMPLE_BYTES = Float.BYTES + Long.BYTES + Float.BYTES * 3;
+    public static final int RECORDER_CAMERA_SAMPLE_BYTES = RECORDER_PLACE_SAMPLE_BYTES + Float.BYTES * 7;
+    public static final int RECORDER_BODY_SAMPLE_BYTES = RECORDER_PLACE_SAMPLE_BYTES + Float.BYTES * 8
+            + Integer.BYTES * 4;
+    public static final int RECORDER_PROJECTILE_SAMPLE_BYTES = RECORDER_PLACE_SAMPLE_BYTES + Float.BYTES * 4;
+    public static final int RECORDER_CLOCK_SAMPLE_BYTES = Float.BYTES + Long.BYTES;
+
+    // Recorder — export choices, cycled in order; the first motion blur choice is none
+    public static final int[] RECORDER_EXPORT_WIDTHS = { 1280, 1920, 2560, 3840 };
+    public static final int[] RECORDER_EXPORT_HEIGHTS = { 720, 1080, 1440, 2160 };
+    public static final int[] RECORDER_EXPORT_FRAME_RATES = { 24, 30, 60 };
+    public static final int[] RECORDER_EXPORT_MOTION_BLUR_SAMPLES = { 1, 2, 4, 8 };
+    public static final int RECORDER_EXPORT_DEFAULT_WIDTH = 1920;
+    public static final int RECORDER_EXPORT_DEFAULT_HEIGHT = 1080;
+    public static final int RECORDER_EXPORT_DEFAULT_FRAME_RATE = 60;
+    public static final int RECORDER_EXPORT_DEFAULT_MOTION_BLUR_SAMPLES = 1;
+    public static final int RECORDER_EXPORT_SUPERSAMPLE_SCALE = 2;
+
+    // Recorder — export rendering; a 180 degree shutter, and the frames streaming is given to settle
+    public static final float RECORDER_EXPORT_SHUTTER = 0.5f;
+    public static final int RECORDER_EXPORT_WARMUP_IDLE_FRAMES = 8;
+    public static final int RECORDER_EXPORT_WARMUP_LIMIT = 1800;
+    public static final int RECORDER_EXPORT_SETTLE_LIMIT = 120;
+    public static final int RECORDER_EXPORT_FRAME_SLOTS = 2;
+    public static final String RECORDER_CAPTURE_FBO = "RecorderCaptureScene";
+    public static final String RECORDER_ENCODING_THREAD_NAME = "VideoEncoding";
+    public static final int RECORDER_EXPORT_SCENE_LAYER_LIMIT = RuntimeSetting.LAYER_VITALITY;
+    public static final int RECORDER_EXPORT_HUD_LAYER_LIMIT = RuntimeSetting.LAYER_INVENTORY;
+    public static final int RECORDER_FRAME_BYTES_PER_PIXEL = 3;
+    public static final int RECORDER_BYTE_MASK = 0xFF;
+
+    // Recorder — video formats
+    public static final String RECORDER_VIDEO_EXTENSION_MP4 = "mp4";
+    public static final String RECORDER_VIDEO_EXTENSION_MOV = "mov";
+    public static final String RECORDER_VIDEO_EXTENSION_AVI = "avi";
+    public static final String RECORDER_VIDEO_LABEL_MP4 = "MP4  H.264";
+    public static final String RECORDER_VIDEO_LABEL_MOV = "MOV  ProRes 422 HQ";
+    public static final String RECORDER_VIDEO_LABEL_AVI = "AVI  Motion JPEG";
+
+    // Recorder — ffmpeg, found in the game directory's bin folder or on the system path, fed raw frames on its input
+    public static final String RECORDER_PATH_VARIABLE = "PATH";
+    public static final String[] RECORDER_FFMPEG_EXECUTABLES = { "ffmpeg.exe", "ffmpeg" };
+    public static final String[] RECORDER_FFMPEG_INPUT_ARGUMENTS = {
+            "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgr24" };
+    public static final String RECORDER_FFMPEG_SIZE_FLAG = "-s";
+    public static final String RECORDER_FFMPEG_SIZE_SEPARATOR = "x";
+    public static final String RECORDER_FFMPEG_RATE_FLAG = "-r";
+    public static final String RECORDER_FFMPEG_INPUT_FLAG = "-i";
+    public static final String RECORDER_FFMPEG_STANDARD_INPUT = "-";
+    public static final String[] RECORDER_FFMPEG_ARGUMENTS_MP4 = {
+            "-c:v", "libx264", "-preset", "slow", "-crf", "14", "-pix_fmt", "yuv420p", "-movflags", "+faststart" };
+    public static final String[] RECORDER_FFMPEG_ARGUMENTS_MOV = {
+            "-c:v", "prores_ks", "-profile:v", "3", "-vendor", "apl0", "-pix_fmt", "yuv422p10le" };
+    public static final String RECORDER_FFMPEG_LOG_SUFFIX = ".log";
+
+    // Recorder — Motion JPEG
+    public static final String RECORDER_JPEG_FORMAT = "jpeg";
+    public static final float RECORDER_JPEG_QUALITY = 0.95f;
+
+    // Recorder — the OpenDML AVI container, its chunk names, sizes in bytes, flags and segment limit
+    public static final String RECORDER_AVI_RIFF = "RIFF";
+    public static final String RECORDER_AVI_LIST = "LIST";
+    public static final String RECORDER_AVI_FORM_FIRST = "AVI ";
+    public static final String RECORDER_AVI_FORM_EXTENDED = "AVIX";
+    public static final String RECORDER_AVI_HEADER_LIST = "hdrl";
+    public static final String RECORDER_AVI_MAIN_HEADER = "avih";
+    public static final String RECORDER_AVI_STREAM_LIST = "strl";
+    public static final String RECORDER_AVI_STREAM_HEADER = "strh";
+    public static final String RECORDER_AVI_STREAM_FORMAT = "strf";
+    public static final String RECORDER_AVI_SUPER_INDEX = "indx";
+    public static final String RECORDER_AVI_EXTENDED_LIST = "odml";
+    public static final String RECORDER_AVI_EXTENDED_HEADER = "dmlh";
+    public static final String RECORDER_AVI_FRAME_LIST = "movi";
+    public static final String RECORDER_AVI_FRAME_CHUNK = "00dc";
+    public static final String RECORDER_AVI_STANDARD_INDEX = "ix00";
+    public static final String RECORDER_AVI_OLD_INDEX = "idx1";
+    public static final String RECORDER_AVI_VIDEO_STREAM = "vids";
+    public static final String RECORDER_AVI_CODEC = "MJPG";
+    public static final int RECORDER_AVI_CHUNK_HEADER_BYTES = 8;
+    public static final int RECORDER_AVI_LIST_HEADER_BYTES = 12;
+    public static final int RECORDER_AVI_RIFF_HEADER_BYTES = 12;
+    public static final int RECORDER_AVI_MAIN_HEADER_BYTES = 56;
+    public static final int RECORDER_AVI_MAIN_HEADER_RESERVED_BYTES = 16;
+    public static final int RECORDER_AVI_STREAM_HEADER_BYTES = 56;
+    public static final int RECORDER_AVI_BITMAP_HEADER_BYTES = 40;
+    public static final int RECORDER_AVI_BITMAP_TAIL_BYTES = 16;
+    public static final int RECORDER_AVI_SUPER_INDEX_ENTRIES = 256;
+    public static final int RECORDER_AVI_SUPER_INDEX_RESERVED_BYTES = 12;
+    public static final int RECORDER_AVI_SUPER_INDEX_BYTES = 24 + RECORDER_AVI_SUPER_INDEX_ENTRIES * 16;
+    public static final int RECORDER_AVI_EXTENDED_HEADER_BYTES = 248;
+    public static final int RECORDER_AVI_STREAM_LIST_BYTES = 4
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_STREAM_HEADER_BYTES
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_BITMAP_HEADER_BYTES
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_SUPER_INDEX_BYTES;
+    public static final int RECORDER_AVI_EXTENDED_LIST_BYTES = 4
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_EXTENDED_HEADER_BYTES;
+    public static final int RECORDER_AVI_HEADER_LIST_BYTES = RECORDER_AVI_LIST_HEADER_BYTES
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_MAIN_HEADER_BYTES
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_STREAM_LIST_BYTES
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_EXTENDED_LIST_BYTES;
+    public static final int RECORDER_AVI_STANDARD_INDEX_HEADER_BYTES = 24;
+    public static final int RECORDER_AVI_STANDARD_INDEX_ENTRY_BYTES = 8;
+    public static final int RECORDER_AVI_OLD_INDEX_ENTRY_BYTES = 16;
+    public static final short RECORDER_AVI_STANDARD_INDEX_LONGS_PER_ENTRY = 2;
+    public static final short RECORDER_AVI_SUPER_INDEX_LONGS_PER_ENTRY = 4;
+    public static final byte RECORDER_AVI_INDEX_OF_INDEXES = 0;
+    public static final byte RECORDER_AVI_INDEX_OF_CHUNKS = 1;
+    public static final int RECORDER_AVI_KEYFRAME_FLAG = 0x10;
+    public static final int RECORDER_AVI_HAS_INDEX_FLAG = 0x10;
+    public static final int RECORDER_AVI_STREAM_COUNT = 1;
+    public static final int RECORDER_AVI_DEFAULT_QUALITY = -1;
+    public static final short RECORDER_AVI_PLANES = 1;
+    public static final short RECORDER_AVI_BITS_PER_PIXEL = 24;
+    public static final int RECORDER_AVI_MICROS_PER_SECOND = 1_000_000;
+    public static final long RECORDER_AVI_SEGMENT_LIMIT_BYTES = 1L << 30;
+
+    // Recorder — messages
+    public static final String RECORDER_MESSAGE_UNREADABLE = "Recording is unreadable and was skipped: ";
+    public static final String RECORDER_MESSAGE_MALFORMED = "Recording is malformed or no longer fits the game: ";
+    public static final String RECORDER_MESSAGE_FFMPEG_START = "ffmpeg could not start: ";
+    public static final String RECORDER_MESSAGE_FFMPEG_WRITE = "ffmpeg stopped taking frames, see ";
+    public static final String RECORDER_MESSAGE_FFMPEG_EXIT = "ffmpeg failed with exit code ";
+    public static final String RECORDER_MESSAGE_SEE_LOG = ", see ";
+    public static final String RECORDER_MESSAGE_INTERRUPTED = "The export was interrupted";
+    public static final String RECORDER_MESSAGE_NO_JPEG = "This Java has no JPEG writer for AVI exports";
+    public static final String RECORDER_MESSAGE_WRITE_FAILED = "The video could not be written: ";
+    public static final String RECORDER_MESSAGE_AVI_TOO_LONG = "The video is too long for one AVI file";
+    public static final String RECORDER_MESSAGE_NO_TEMPLATE = "A recorded character's template no longer exists: ";
+    public static final String RECORDER_MESSAGE_NO_ITEM = "A recorded item no longer exists: ";
+    public static final String RECORDER_MESSAGE_LOOK_REFUSED = "A recorded look no longer fits its character: ";
+
+    // Recorder — status text
+    public static final String RECORDER_STATUS_READY = "Ready";
+    public static final String RECORDER_STATUS_RECORDING = "Recording ";
+    public static final String RECORDER_STATUS_PLAYING = "Playing";
+    public static final String RECORDER_STATUS_PAUSED = "Paused";
+    public static final String RECORDER_STATUS_TAKE_SAVED = "Saved take ";
+    public static final String RECORDER_STATUS_TAKE_TOO_SHORT = "Take too short to keep";
+    public static final String RECORDER_STATUS_NOTHING_ARMED = "Arm at least one channel to record";
+    public static final String RECORDER_STATUS_NOTHING_RECORDED = "Nothing recorded yet";
+    public static final String RECORDER_STATUS_NO_RECORDING = "Open or record a recording first";
+    public static final String RECORDER_STATUS_NO_DEV_WINDOW = "Open a Dev Mode tab to record or play";
+    public static final String RECORDER_STATUS_WRONG_WORLD = "This recording was made in another world: ";
+    public static final String RECORDER_STATUS_NAME_TAKEN = "That name is taken or not a valid file name: ";
+    public static final String RECORDER_STATUS_MISSING = "Recording no longer exists: ";
+    public static final String RECORDER_STATUS_UNREADABLE = "Recording could not be read: ";
+    public static final String RECORDER_STATUS_OPENED = "Opened ";
+    public static final String RECORDER_STATUS_SAVE_FAILED = "Could not save ";
+    public static final String RECORDER_STATUS_RENAMED = "Renamed to ";
+    public static final String RECORDER_STATUS_RENAME_FAILED = "Could not rename ";
+    public static final String RECORDER_STATUS_DELETED = "Deleted ";
+    public static final String RECORDER_STATUS_DELETE_FAILED = "Could not delete ";
+    public static final String RECORDER_STATUS_NO_FFMPEG =
+            "MP4 and MOV need ffmpeg on the system path or in the game folder's bin; AVI needs nothing";
+    public static final String RECORDER_STATUS_EXPORTING = "Exporting ";
+    public static final String RECORDER_STATUS_EXPORTED = "Exported ";
+    public static final String RECORDER_STATUS_EXPORT_FAILED = "Export failed: ";
+    public static final String RECORDER_STATUS_EXPORT_CANCELLED = "Export cancelled";
+
+    // Recorder — the keys the Recorder tab's setting rows hand back
+    public static final String RECORDER_KEY_ARM_CAMERA = "arm_camera";
+    public static final String RECORDER_KEY_ARM_PLAYER = "arm_player";
+    public static final String RECORDER_KEY_ARM_WORLD = "arm_world";
+    public static final String RECORDER_KEY_ARM_TIME = "arm_time";
+    public static final String RECORDER_KEY_RESOLUTION = "resolution";
+    public static final String RECORDER_KEY_FRAME_RATE = "frame_rate";
+    public static final String RECORDER_KEY_FORMAT = "format";
+    public static final String RECORDER_KEY_MOTION_BLUR = "motion_blur";
+    public static final String RECORDER_KEY_SUPERSAMPLE = "supersample";
+    public static final String RECORDER_KEY_HUD = "hud";
+    public static final String RECORDER_KEY_RANGE_START = "range_start";
+    public static final String RECORDER_KEY_RANGE_END = "range_end";
+    public static final String RECORDER_KEY_RANGE_CLEAR = "range_clear";
+    public static final String RECORDER_KEY_EXPORT = "export";
+    public static final String RECORDER_KEY_CANCEL_EXPORT = "cancel_export";
+
+    // Commands — Recorder
+    public static final String COMMAND_RECORD = "record";
+    public static final String COMMAND_PLAY = "play";
+    public static final String COMMAND_STOP = "stop";
+    public static final String COMMAND_MARK = "mark";
 
     // Tabs
     public static final float DIVIDER_HIT_TOLERANCE = 6f;

@@ -2,6 +2,7 @@ package application.bootstrap.renderpipeline.pbomanager;
 
 import java.nio.ByteBuffer;
 
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.pbo.PBOInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -13,8 +14,9 @@ public class PBOManager extends ManagerPackage {
     /*
      * Owns pixel-pack buffers and the asynchronous readback behind every
      * PBOInstance. Buffers are regenerated when the serving window changes and
-     * reallocated in place when only the size changes. Callers make the right
-     * context current first.
+     * reallocated in place when only the size changes. A capture reads the
+     * front buffer, or a render target's first color attachment. Callers make
+     * the right context current first.
      */
 
     private WindowManager windowManager;
@@ -59,6 +61,26 @@ public class PBOManager extends ManagerPackage {
             retrieveSlot(pbo, retrieveSlot, destination);
 
         queueSlot(pbo, pbo.getWriteSlot());
+        pbo.getPending()[pbo.getWriteSlot()] = true;
+        pbo.advanceWriteSlot();
+
+        return hasFrame;
+    }
+
+    // The render target's color as it last drew — the read queued now is retrieved by the next capture or retrieve
+    public boolean captureFbo(PBOInstance pbo, WindowInstance window, FBOInstance fbo, ByteBuffer destination) {
+
+        reconcile(pbo, window, fbo.getWidth(), fbo.getHeight());
+
+        int retrieveSlot = 1 - pbo.getWriteSlot();
+        boolean hasFrame = pbo.getPending()[retrieveSlot];
+
+        if (hasFrame)
+            retrieveSlot(pbo, retrieveSlot, destination);
+
+        PBOGLSLUtility.bindPackBuffer(pbo.getPboHandles()[pbo.getWriteSlot()]);
+        PBOGLSLUtility.queueFramebufferRead(fbo.getFramebuffers().getInt(0), pbo.getWidth(), pbo.getHeight());
+        PBOGLSLUtility.unbindPackBuffer();
         pbo.getPending()[pbo.getWriteSlot()] = true;
         pbo.advanceWriteSlot();
 

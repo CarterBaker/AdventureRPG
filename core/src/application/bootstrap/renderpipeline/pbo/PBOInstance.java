@@ -2,6 +2,7 @@ package application.bootstrap.renderpipeline.pbo;
 
 import java.nio.ByteBuffer;
 
+import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.pbomanager.PBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.InstancePackage;
@@ -11,7 +12,8 @@ public class PBOInstance extends InstancePackage {
     /*
      * Double-buffered pixel-pack buffer. Two slots alternate so capture() reads
      * the slot queued longest ago while queuing a fresh read into the other,
-     * never blocking the CPU. All GL work routes through PBOManager.
+     * of the screen or of a render target, never blocking the CPU. All GL work
+     * routes through PBOManager.
      */
 
     private PBOManager pboManager;
@@ -43,6 +45,10 @@ public class PBOInstance extends InstancePackage {
 
     public boolean capture(WindowInstance window, int width, int height, ByteBuffer destination) {
         return pboManager.capture(this, window, width, height, destination);
+    }
+
+    public boolean captureFbo(WindowInstance window, FBOInstance fbo, ByteBuffer destination) {
+        return pboManager.captureFbo(this, window, fbo, destination);
     }
 
     public void queue(WindowInstance window, int width, int height) {

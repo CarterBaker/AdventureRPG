@@ -23,6 +23,8 @@ public class WindowInstance extends InstancePackage {
      * logical window: the windows composited onto it go first, then its
      * context releases what its systems registered, then the cursor capture,
      * menus and render resources it held, before the dispose listener fires.
+     * A window given a fixed render size renders at that size wherever it is
+     * placed, shown fitted into its rect at its own aspect.
      */
 
     // Data
@@ -50,6 +52,15 @@ public class WindowInstance extends InstancePackage {
     private float compositeW;
     private float compositeH;
     private boolean compositeRect;
+
+    // Placement — the rect last asked for, and the size rendered at instead of its own while one is fixed
+    private float placedX;
+    private float placedY;
+    private float placedW;
+    private float placedH;
+    private boolean placed;
+    private int fixedRenderWidth;
+    private int fixedRenderHeight;
 
     // Input region — logical windows only, OS-window space like compositeRect
     private float inputX;
@@ -162,9 +173,50 @@ public class WindowInstance extends InstancePackage {
     }
 
     public void place(float x, float y, float w, float h) {
-        setCompositeRect(x, y, w, h);
-        resize((int) w, (int) h);
+
+        this.placedX = x;
+        this.placedY = y;
+        this.placedW = w;
+        this.placedH = h;
+        this.placed = true;
+
+        if (!hasFixedRenderSize()) {
+            setCompositeRect(x, y, w, h);
+            resize((int) w, (int) h);
+            renderManager.resizeWindowResources(this);
+            return;
+        }
+
+        float scale = Math.min(w / fixedRenderWidth, h / fixedRenderHeight);
+        float fittedW = fixedRenderWidth * scale;
+        float fittedH = fixedRenderHeight * scale;
+
+        setCompositeRect(x + (w - fittedW) * 0.5f, y + (h - fittedH) * 0.5f, fittedW, fittedH);
+        resize(fixedRenderWidth, fixedRenderHeight);
         renderManager.resizeWindowResources(this);
+    }
+
+    public boolean isPlacedAt(float x, float y, float w, float h) {
+        return placed && placedX == x && placedY == y && placedW == w && placedH == h;
+    }
+
+    // Fixed Render Size \\
+
+    public void setFixedRenderSize(int width, int height) {
+
+        this.fixedRenderWidth = width;
+        this.fixedRenderHeight = height;
+
+        if (placed)
+            place(placedX, placedY, placedW, placedH);
+    }
+
+    public void clearFixedRenderSize() {
+        setFixedRenderSize(0, 0);
+    }
+
+    public boolean hasFixedRenderSize() {
+        return fixedRenderWidth > 0 && fixedRenderHeight > 0;
     }
 
     public void setCompositeRect(float x, float y, float w, float h) {

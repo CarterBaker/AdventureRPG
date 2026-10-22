@@ -140,6 +140,11 @@ class CurrentTrackerBranch extends BranchPackage {
         clockHandle.setWorldEpochStart(internal.getTime() - (elapsedSinceStartDay - startMillisIntoDay));
     }
 
+    // The day a clock this many milliseconds past its epoch stands on
+    long resolveTotalDays(long elapsedSinceEpoch) {
+        return Math.floorDiv(elapsedSinceEpoch + startMillisIntoDay, millisPerGameDay);
+    }
+
     // Visual Year \\
 
     void advanceVisualYear() {

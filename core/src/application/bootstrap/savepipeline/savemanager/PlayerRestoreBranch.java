@@ -27,7 +27,8 @@ class PlayerRestoreBranch extends BranchPackage {
      * Applies a character save to a window's player in place. The save is fully
      * validated first, so a stale one changes nothing; the location is wrapped
      * into world bounds; inventory restores leniently, logging and skipping
-     * items that no longer exist or fit.
+     * items that no longer exist or fit. A look — a character and inventory
+     * without a place — restores onto any being the same way.
      */
 
     // Internal
@@ -54,6 +55,18 @@ class PlayerRestoreBranch extends BranchPackage {
         restoreLocation(ArpgUtility.validateObject(playerArpg, "location"), player);
         restoreCharacter(ArpgUtility.validateObject(playerArpg, "character"), player);
         restoreInventory(playerArpg, player.getInventoryHandle());
+
+        return true;
+    }
+
+    boolean restoreLook(ArpgObjectStruct lookArpg, EntityInstance entity) {
+
+        if (!ArpgUtility.hasObject(lookArpg, "character")
+                || !isCharacterValid(lookArpg.getAsObject("character"), entity))
+            return false;
+
+        restoreCharacter(lookArpg.getAsObject("character"), entity);
+        restoreInventory(lookArpg, entity.getInventoryHandle());
 
         return true;
     }

@@ -12,7 +12,8 @@ public class FrameRateManager extends ManagerPackage {
      * capFrameRate() — time left under the target interval is slept off in
      * bounded chunks, re-measured after each one so the OS scheduler's
      * coarser sleep granularity can never overshoot the deadline unnoticed,
-     * then the last stretch is spun out precisely. Measured FPS is a plain
+     * then the last stretch is spun out precisely; under a fixed clock frames
+     * are not paced at all. Measured FPS is a plain
      * one-second rolling count, cheap enough to update unconditionally every
      * frame with no allocation.
      */
@@ -42,7 +43,16 @@ public class FrameRateManager extends ManagerPackage {
         this.frameStartNanos = System.nanoTime();
     }
 
+    // A fixed clock already sets every frame's time, so its frames run as fast as they can be made
     public void capFrameRate() {
+
+        if (!internal.isFixedClock())
+            waitForDeadline();
+
+        recordFrame();
+    }
+
+    private void waitForDeadline() {
 
         long deadline = frameStartNanos + targetIntervalNanos;
         long remaining = deadline - System.nanoTime();
@@ -55,8 +65,6 @@ public class FrameRateManager extends ManagerPackage {
 
         while (System.nanoTime() < deadline)
             Thread.onSpinWait();
-
-        recordFrame();
     }
 
     private void sleepNanos(long nanos) {

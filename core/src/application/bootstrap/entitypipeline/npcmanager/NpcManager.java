@@ -66,7 +66,9 @@ public class NpcManager extends ManagerPackage {
      * the luck of whatever felled it, and leaves the world, its spot left
      * empty for as long as the chunk keeps its items. Every NPC is resolved in
      * awake(), before any chunk generates. NPC IDs are assigned in
-     * registration order.
+     * registration order. While held — a recording plays back in their
+     * stead — residents still come and go with their chunks but neither think
+     * nor move, and are not drawn.
      */
 
     // Internal
@@ -91,6 +93,7 @@ public class NpcManager extends ManagerPackage {
 
     // Residents
     private ObjectArrayList<NpcInstance> residents;
+    private boolean held;
 
     // Scratch
     private ObjectArrayList<ItemInstance> itemScratch;
@@ -152,6 +155,9 @@ public class NpcManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
+        if (held)
+            return;
 
         float deltaTime = internal.getDeltaTime();
 
@@ -472,6 +478,16 @@ public class NpcManager extends ManagerPackage {
                 return residents.get(i);
 
         return null;
+    }
+
+    // Hold \\
+
+    public void setHeld(boolean held) {
+        this.held = held;
+    }
+
+    public boolean isHeld() {
+        return held;
     }
 
     // Accessible \\

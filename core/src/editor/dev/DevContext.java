@@ -5,6 +5,8 @@ import editor.bootstrap.commandpipeline.command.CommandStruct;
 import editor.dev.command.DevCommandSystem;
 import editor.dev.freecamera.FreeCameraSystem;
 import editor.dev.item.DevItemSystem;
+import editor.dev.recorder.DevRecorderExportSystem;
+import editor.dev.recorder.DevRecorderSystem;
 import editor.dev.teleport.DevTeleportSystem;
 import editor.dev.time.DevTimeSystem;
 import editor.dev.vehicle.DevVehicleSystem;
@@ -18,9 +20,12 @@ public class DevContext extends RuntimeContext {
      * the free camera its fly command switches on, the item giver its give
      * command uses, the vehicle spawner its spawnvehicle and removevehicle
      * commands use, the teleporter its teleport command uses, and the clock
-     * mover its time, dawn, noon, dusk and midnight commands use. The editor
-     * pairs it with a Dev Mode tab exactly as it does a preview. Dev-only
-     * systems live beside it in the editor, never in runtime.
+     * mover its time, dawn, noon, dusk and midnight commands use. The
+     * recorder's systems carry out a recording session in this window —
+     * capturing and playing it back, and rendering its export — which its
+     * record, play, stop and mark commands drive too. The editor pairs it
+     * with a Dev Mode tab exactly as it does a preview. Dev-only systems live
+     * beside it in the editor, never in runtime.
      */
 
     // Dev
@@ -30,6 +35,10 @@ public class DevContext extends RuntimeContext {
     private DevVehicleSystem devVehicleSystem;
     private DevTeleportSystem devTeleportSystem;
     private DevTimeSystem devTimeSystem;
+
+    // Recorder — the export sets the playhead before the recorder plays it, so it is created first
+    private DevRecorderExportSystem devRecorderExportSystem;
+    private DevRecorderSystem devRecorderSystem;
 
     // Internal \\
 
@@ -45,6 +54,10 @@ public class DevContext extends RuntimeContext {
         this.devVehicleSystem = create(DevVehicleSystem.class);
         this.devTeleportSystem = create(DevTeleportSystem.class);
         this.devTimeSystem = create(DevTimeSystem.class);
+
+        // Recorder
+        this.devRecorderExportSystem = create(DevRecorderExportSystem.class);
+        this.devRecorderSystem = create(DevRecorderSystem.class);
     }
 
     // Management \\

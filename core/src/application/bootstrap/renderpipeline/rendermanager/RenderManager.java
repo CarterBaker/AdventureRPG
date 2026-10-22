@@ -25,8 +25,10 @@ public class RenderManager extends ManagerPackage {
     /*
      * Drives the draw phase across all registered windows — logical windows
      * queue into their OS window's blit queue, OS windows flush their full
-     * queue and swap buffers. Screen pass order 0 draws before FBO composite,
-     * order 1 after. Each OS window's full draw is one profiler GPU frame.
+     * queue and swap buffers, every capture target gathering its window's
+     * layers before the targets draw. Screen pass order 0 draws before FBO
+     * composite, order 1 after. Each OS window's full draw is one profiler
+     * GPU frame.
      */
 
     private CameraManager cameraManager;
@@ -97,6 +99,7 @@ public class RenderManager extends ManagerPackage {
         playerManager.pushPlayerPositionForWindow(window.getWindowID());
         cameraManager.pushCamera(window);
         fboManager.resizeWindowRelative(window, window.getWidth(), window.getHeight());
+        fboRenderSystem.pushCaptures(window);
         renderSystem.drawToMappedTargets(window);
         fboRenderSystem.pushBlits(window);
         drawFinal(window);

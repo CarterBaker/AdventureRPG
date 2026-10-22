@@ -22,6 +22,7 @@ import editor.hierarchy.HierarchyContext;
 import editor.infopanel.InfoPanelContext;
 import editor.itemeditor.ItemEditorContext;
 import editor.profiler.ProfilerContext;
+import editor.recorder.RecorderContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
 import editor.shipwright.ShipwrightContext;
@@ -173,6 +174,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openArpgViewer(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ARPG_VIEWER, ArpgViewerContext.class, osWindow);
+    }
+
+    public TabHandle openRecorder(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_RECORDER, RecorderContext.class, osWindow);
     }
 
     public TabHandle openTab(

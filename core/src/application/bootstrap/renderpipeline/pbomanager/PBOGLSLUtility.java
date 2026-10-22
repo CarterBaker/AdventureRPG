@@ -11,9 +11,10 @@ class PBOGLSLUtility extends EngineUtility {
     /*
      * Stateless OpenGL helpers for the PBO package. Covers pixel-pack
      * buffer generation, binding, storage allocation, the asynchronous
-     * front-buffer readback that starts a transfer without blocking, and
-     * the buffer-range mapping used to retrieve a transfer once the GPU
-     * has finished it. Package-private — only PBOManager may call these.
+     * front-buffer and framebuffer readbacks that start a transfer without
+     * blocking, and the buffer-range mapping used to retrieve a transfer once
+     * the GPU has finished it. Package-private — only PBOManager may call
+     * these.
      */
 
     static int genPackBuffer() {
@@ -38,6 +39,15 @@ class PBOGLSLUtility extends EngineUtility {
         EngineContext.gl20.glReadPixels(
                 0, 0, width, height,
                 EngineSetting.GL_BGRA, EngineSetting.GL_UNSIGNED_BYTE, 0L);
+    }
+
+    static void queueFramebufferRead(int framebuffer, int width, int height) {
+        EngineContext.gl30.glBindFramebuffer(EngineSetting.GL_FRAMEBUFFER, framebuffer);
+        EngineContext.gl20.glReadBuffer(EngineSetting.GL_COLOR_ATTACHMENT0);
+        EngineContext.gl20.glReadPixels(
+                0, 0, width, height,
+                EngineSetting.GL_BGRA, EngineSetting.GL_UNSIGNED_BYTE, 0L);
+        EngineContext.gl30.glBindFramebuffer(EngineSetting.GL_FRAMEBUFFER, EngineSetting.GL_HANDLE_NONE);
     }
 
     static void retrieve(int byteCount, ByteBuffer destination) {

@@ -306,4 +306,16 @@ public class CameraData extends DataPackage {
     public float getFarPlane() {
         return farPlane;
     }
+
+    public float getShakeYawDegrees() {
+        return (float) Math.toDegrees(shakeYaw);
+    }
+
+    public float getShakePitchDegrees() {
+        return (float) Math.toDegrees(shakePitch);
+    }
+
+    public float getShakeRollDegrees() {
+        return (float) Math.toDegrees(shakeRoll);
+    }
 }

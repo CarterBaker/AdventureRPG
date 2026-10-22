@@ -30,7 +30,10 @@ public class ClockManager extends ManagerPackage {
      * map can shade the whole world by the same shared clock every grid
      * follows. Moving the clock to another day and minute is one path too:
      * every tracker forgets what it last saw and the clock is solved again at
-     * once, so a jump of any size lands on the right date in one step.
+     * once, so a jump of any size lands on the right date in one step. A
+     * clock can also be held at any moment, to the millisecond, by the time
+     * elapsed since its epoch — the one number every date and time falls out
+     * of — so a recording replays it smoothly.
      */
 
     // Internal
@@ -178,12 +181,30 @@ public class ClockManager extends ManagerPackage {
 
         currentTracker.moveTo(totalDaysWithOffset - dayTracker.getStartDayOffset(), minuteOfDay);
 
+        resetTracking();
+        advanceGameClock();
+    }
+
+    // Reads the milliseconds given since the epoch right now; landing on an earlier day, or more than a day on,
+    // every tracker forgets what it last saw as a move does
+    public void holdClock(long elapsedMillis) {
+
+        long previousDay = clockHandle.getTotalDaysElapsed();
+        long day = currentTracker.resolveTotalDays(elapsedMillis);
+
+        clockHandle.setWorldEpochStart(internal.getTime() - elapsedMillis);
+
+        if (day < previousDay || day > previousDay + 1)
+            resetTracking();
+
+        advanceGameClock();
+    }
+
+    private void resetTracking() {
         currentTracker.resetTracking();
         dayTracker.resetTracking();
         monthTracker.resetTracking();
         yearTracker.resetTracking();
-
-        advanceGameClock();
     }
 
     // World Switch \\
@@ -202,6 +223,10 @@ public class ClockManager extends ManagerPackage {
 
     public ClockHandle getClockHandle() {
         return clockHandle;
+    }
+
+    public long getElapsedMillis() {
+        return internal.getTime() - clockHandle.getWorldEpochStart();
     }
 
     public CalendarHandle getCalendarHandle() {

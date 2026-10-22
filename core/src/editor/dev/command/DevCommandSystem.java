@@ -3,6 +3,7 @@ package editor.dev.command;
 import java.util.function.Consumer;
 
 import editor.bootstrap.commandpipeline.command.CommandStruct;
+import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.dev.freecamera.FreeCameraSystem;
 import editor.dev.item.DevItemSystem;
 import editor.dev.teleport.DevTeleportSystem;
@@ -20,7 +21,8 @@ public class DevCommandSystem extends SystemPackage {
      * Receives the commands the command console routes to this Dev window and
      * runs them during this window's own update, inside its crash boundary.
      * Every command this window can act on is mapped to its action once;
-     * a command it has no action for is reported against the window.
+     * a command it has no action for is reported against the window. The
+     * recorder's commands drive the one recorder every window shares.
      */
 
     // Internal
@@ -29,6 +31,7 @@ public class DevCommandSystem extends SystemPackage {
     private DevVehicleSystem devVehicleSystem;
     private DevTeleportSystem devTeleportSystem;
     private DevTimeSystem devTimeSystem;
+    private RecorderManager recorderManager;
 
     // Palette
     private Object2ObjectOpenHashMap<String, Consumer<CommandStruct>> commandName2Action;
@@ -56,6 +59,7 @@ public class DevCommandSystem extends SystemPackage {
         this.devVehicleSystem = get(DevVehicleSystem.class);
         this.devTeleportSystem = get(DevTeleportSystem.class);
         this.devTimeSystem = get(DevTimeSystem.class);
+        this.recorderManager = get(RecorderManager.class);
     }
 
     private void registerActions() {
@@ -76,6 +80,10 @@ public class DevCommandSystem extends SystemPackage {
                 command -> devTimeSystem.skipToTimeOfDay(EngineSetting.CLOCK_THREE_QUARTERS));
         commandName2Action.put(EditorSetting.COMMAND_MIDNIGHT,
                 command -> devTimeSystem.skipToTimeOfDay(EditorSetting.COMMAND_TIME_RAW_MIDNIGHT));
+        commandName2Action.put(EditorSetting.COMMAND_RECORD, command -> recorderManager.record());
+        commandName2Action.put(EditorSetting.COMMAND_PLAY, command -> recorderManager.play());
+        commandName2Action.put(EditorSetting.COMMAND_STOP, command -> recorderManager.stop());
+        commandName2Action.put(EditorSetting.COMMAND_MARK, command -> recorderManager.addMarker());
     }
 
     // Update \\

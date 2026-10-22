@@ -12,6 +12,7 @@ import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector4;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -24,6 +25,10 @@ public class FBORenderSystem extends SystemPackage {
      * through the blit material. pushFboToTarget() blits an FBO into another
      * FBO through the same material instead, its layer as the draw depth, so
      * a target can gather several FBOs in order before reaching the screen.
+     * A window given a capture target also has every layer it pushes up to a
+     * limit gathered into that target, in layer order, just before its OS
+     * window draws, so a recording can read back exactly what the window
+     * shows at whatever size it renders.
      */
 
     // Internal
@@ -35,6 +40,10 @@ public class FBORenderSystem extends SystemPackage {
     private Object2ObjectOpenHashMap<FBOInstance, ModelInstance> fbo2BlitModel;
     private Object2ObjectOpenHashMap<WindowInstance, ObjectArrayList<FBOInstance>> window2BlitQueue;
 
+    // Capture
+    private Object2ObjectOpenHashMap<WindowInstance, FBOInstance> window2CaptureTarget;
+    private Object2IntOpenHashMap<WindowInstance> window2CaptureLayerLimit;
+
     // Scratch
     private final Vector4 destRectScratch = new Vector4();
     private final Vector2 resolutionScratch = new Vector2();
@@ -45,6 +54,8 @@ public class FBORenderSystem extends SystemPackage {
     protected void create() {
         fbo2BlitModel = new Object2ObjectOpenHashMap<>();
         window2BlitQueue = new Object2ObjectOpenHashMap<>();
+        window2CaptureTarget = new Object2ObjectOpenHashMap<>();
+        window2CaptureLayerLimit = new Object2IntOpenHashMap<>();
     }
 
     @Override
@@ -141,6 +152,44 @@ public class FBORenderSystem extends SystemPackage {
 
     public void removeWindowResources(WindowInstance window) {
         window2BlitQueue.remove(window);
+        clearCaptureTarget(window);
+    }
+
+    // Capture \\
+
+    // Every layer up to the limit the window pushes from now on is also gathered into the target
+    public void setCaptureTarget(WindowInstance window, FBOInstance target, int layerLimit) {
+        window2CaptureTarget.put(window, target);
+        window2CaptureLayerLimit.put(window, layerLimit);
+    }
+
+    public void clearCaptureTarget(WindowInstance window) {
+        window2CaptureTarget.remove(window);
+        window2CaptureLayerLimit.removeInt(window);
+    }
+
+    // Queued just before the OS window's targets draw, so each capture target follows every layer it gathers
+    public void pushCaptures(WindowInstance window) {
+
+        if (window2CaptureTarget.isEmpty())
+            return;
+
+        ObjectArrayList<FBOInstance> queue = window2BlitQueue.get(window);
+
+        if (queue == null || queue.isEmpty())
+            return;
+
+        for (int i = 0; i < queue.size(); i++) {
+
+            FBOInstance fbo = queue.get(i);
+            WindowInstance source = fbo.getPushWindow();
+            FBOInstance target = window2CaptureTarget.get(source);
+
+            if (target == null || fbo.getPushLayer() > window2CaptureLayerLimit.getInt(source))
+                continue;
+
+            renderManager.pushRenderCall(bindBlitModel(fbo, null, source), target, fbo.getPushLayer(), source);
+        }
     }
 
     public void removeBlitModel(FBOInstance fbo) {

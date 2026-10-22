@@ -19,7 +19,8 @@ public class NpcRenderSystem extends SystemPackage {
      * resident within NPC_RENDER_CHUNK_RADIUS chunks of the viewer's chunk,
      * measured across the world's wrap, is handed to
      * EntityRenderSystem.pushCharacter() and placed relative to that chunk,
-     * so NPCs are drawn exactly as the player is.
+     * so NPCs are drawn exactly as the player is. Held residents are not
+     * drawn.
      */
 
     // Internal
@@ -41,6 +42,9 @@ public class NpcRenderSystem extends SystemPackage {
             long viewerChunkCoordinate,
             FBOInstance targetFbo,
             WindowInstance window) {
+
+        if (npcManager.isHeld())
+            return;
 
         ObjectArrayList<NpcInstance> residents = npcManager.getResidents();
 

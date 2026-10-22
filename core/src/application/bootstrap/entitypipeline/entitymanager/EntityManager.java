@@ -17,6 +17,7 @@ import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -33,7 +34,9 @@ public class EntityManager extends ManagerPackage {
      * again in place — a new random chunk, size, weight, progression started
      * over, an empty inventory, and the template's default gender and
      * appearance — for anything that holds the instance by reference and
-     * cannot swap in a new one.
+     * cannot swap in a new one. createPuppet() makes an entity that is only
+     * ever drawn — a recording's actor — and never enters combat or
+     * progression.
      */
 
     // Internal
@@ -105,6 +108,16 @@ public class EntityManager extends ManagerPackage {
         return getEntityHandleFromTemplateID(getTemplateIDFromTemplateName(templateName));
     }
 
+    // The name the template was registered under, null for one built only as a preview
+    public String getTemplateName(EntityData entityData) {
+
+        for (Object2IntMap.Entry<String> entry : templateName2TemplateID.object2IntEntrySet())
+            if (templateID2EntityHandle.get(entry.getIntValue()).getEntityData() == entityData)
+                return entry.getKey();
+
+        return null;
+    }
+
     // Every registered template whose character is posed on a rig, by name
     public ObjectArrayList<String> getTemplateNamesForRig(RigHandle rigHandle) {
 
@@ -159,6 +172,28 @@ public class EntityManager extends ManagerPackage {
 
     public EntityInstance spawnEntity(String templateName) {
         return spawnEntity(getEntityHandleFromTemplateName(templateName));
+    }
+
+    // An entity standing at a chunk-local position to be drawn only — it never fights, levels or acts on the world
+    public EntityInstance createPuppet(
+            EntityHandle entityHandle,
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            Vector3 position) {
+
+        EntityData entityData = entityHandle.getEntityData();
+        EntityInstance puppet = create(EntityInstance.class);
+
+        puppet.constructor(
+                entityData,
+                worldHandle,
+                behaviorManager.getBehaviorHandleFromBehaviorName(entityData.getBehaviorName()),
+                position,
+                chunkCoordinate,
+                entityData.getRandomSize(),
+                entityData.getRandomWeight());
+
+        return puppet;
     }
 
     public void despawnEntity(EntityInstance entityInstance) {

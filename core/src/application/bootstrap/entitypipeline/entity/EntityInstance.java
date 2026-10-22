@@ -1,5 +1,6 @@
 package application.bootstrap.entitypipeline.entity;
 
+import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
@@ -144,6 +145,21 @@ public class EntityInstance extends InstancePackage {
     // Animation \\
 
     public void updateAnimation(float deltaTime) {
+        updateAnimation(
+                entityActionHandle.getAction(),
+                entityActionHandle.getClip(),
+                entityActionHandle.getPhase(),
+                entityActionHandle.getSequence(),
+                deltaTime);
+    }
+
+    // Animates the entity's movement under an action given from outside — a recording replaying what it did
+    public void updateAnimation(
+            EntityAction action,
+            AnimationClipHandle clip,
+            float phase,
+            int sequence,
+            float deltaTime) {
 
         if (animationStateHandle == null)
             return;
@@ -155,10 +171,10 @@ public class EntityInstance extends InstancePackage {
         animationStateHandle.setParameter(AnimationParameter.LOOK_YAW, entityStateHandle.getLookYaw());
         animationStateHandle.update(
                 entityStateHandle.getMovementState(),
-                entityActionHandle.getAction(),
-                entityActionHandle.getClip(),
-                entityActionHandle.getPhase(),
-                entityActionHandle.getSequence(),
+                action,
+                clip,
+                phase,
+                sequence,
                 deltaTime);
     }
 

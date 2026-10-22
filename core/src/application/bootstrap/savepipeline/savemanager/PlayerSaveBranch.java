@@ -30,7 +30,8 @@ class PlayerSaveBranch extends BranchPackage {
      * The inventory records the item in every filled equipment slot, how
      * many a stack holds, the slots left hidden, and — for any container
      * item — everything packed inside it with where it rests, however deeply
-     * nested.
+     * nested. The look is the character and the inventory alone, without a
+     * place, for copying how any being appears.
      */
 
     // Management \\
@@ -43,6 +44,14 @@ class PlayerSaveBranch extends BranchPackage {
         playerArpg.add("inventory", buildInventory(player.getInventoryHandle()));
 
         ArpgUtility.writeObject(characterFile, playerArpg);
+    }
+
+    ArpgObjectStruct buildLook(EntityInstance entity) {
+
+        ArpgObjectStruct lookArpg = new ArpgObjectStruct();
+        lookArpg.add("character", buildCharacter(entity));
+        lookArpg.add("inventory", buildInventory(entity.getInventoryHandle()));
+        return lookArpg;
     }
 
     // Build \\

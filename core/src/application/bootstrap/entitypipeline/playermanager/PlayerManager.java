@@ -62,7 +62,9 @@ public class PlayerManager extends ManagerPackage {
      * its sideways input, and the activate binding works the vehicle control
      * the player faces before it reaches PlacementManager. A teleported
      * player lets go of any vehicle and is dropped onto the ground of the
-     * column it was sent to, by the same check that verifies a spawn.
+     * column it was sent to, by the same check that verifies a spawn. A held
+     * window's player and camera are left exactly as something else places
+     * them — a recording playing back — until the hold is let go.
      */
 
     // Internal
@@ -93,6 +95,7 @@ public class PlayerManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<PlayerCameraStruct> windowID2CameraState;
     private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
     private Int2BooleanOpenHashMap windowID2FreeCamera;
+    private Int2BooleanOpenHashMap windowID2Held;
 
     // Per-window zoom
     private Int2FloatOpenHashMap windowID2ZoomDistance;
@@ -138,6 +141,7 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2CameraState = new Int2ObjectOpenHashMap<>();
         this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
         this.windowID2FreeCamera = new Int2BooleanOpenHashMap();
+        this.windowID2Held = new Int2BooleanOpenHashMap();
 
         this.windowID2ZoomDistance = new Int2FloatOpenHashMap();
         this.windowID2ZoomTarget = new Int2FloatOpenHashMap();
@@ -186,7 +190,7 @@ public class PlayerManager extends ManagerPackage {
         CameraInstance camera = windowID2Camera.get(windowID);
         RawInputHandle raw = windowID2RawInput.get(windowID);
 
-        if (player == null || camera == null || raw == null)
+        if (player == null || camera == null || raw == null || windowID2Held.get(windowID))
             return;
 
         calculatePlayerPosition(windowID, player, camera, raw);
@@ -205,6 +209,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2CameraState.put(windowID, new PlayerCameraStruct());
         windowID2VerifyPlayerPosition.put(windowID, true);
         windowID2FreeCamera.put(windowID, false);
+        windowID2Held.put(windowID, false);
         windowID2ZoomDistance.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2ZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2FirstPersonToggled.put(windowID, false);
@@ -226,6 +231,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2CameraState.remove(windowID);
         windowID2VerifyPlayerPosition.remove(windowID);
         windowID2FreeCamera.remove(windowID);
+        windowID2Held.remove(windowID);
         windowID2ZoomDistance.remove(windowID);
         windowID2ZoomTarget.remove(windowID);
         windowID2FirstPersonToggled.remove(windowID);
@@ -258,6 +264,16 @@ public class PlayerManager extends ManagerPackage {
 
         if (!freeCamera)
             verifyPlayerPositionForWindow(windowID);
+    }
+
+    // Hold \\
+
+    public void setHeldForWindow(int windowID, boolean held) {
+        windowID2Held.put(windowID, held);
+    }
+
+    public boolean isHeldForWindow(int windowID) {
+        return windowID2Held.get(windowID);
     }
 
     // Teleport \\
@@ -704,13 +720,15 @@ public class PlayerManager extends ManagerPackage {
         return windowID2FreeCamera.get(windowID);
     }
 
-    // True while the window's player is in play — not flying free, not posed for a preview, no menu holding input
+    // True while the window's player is in play — not flying free, not held, not posed for a preview, no menu
+    // holding input
     public boolean isPlayingForWindow(int windowID) {
 
         WindowInstance window = windowID2Window.get(windowID);
 
         return window != null
                 && !windowID2FreeCamera.get(windowID)
+                && !windowID2Held.get(windowID)
                 && !windowID2CharacterPreview.get(windowID)
                 && !window.getMenuListHandle().isInputLocked();
     }

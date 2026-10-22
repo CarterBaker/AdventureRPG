@@ -22,7 +22,8 @@ public class ProjectileManager extends ManagerPackage {
      * block piece as a sub-block, anything else as a world item on the nearest
      * sub-voxel position and orientation. One that cannot settle yet waits
      * where it rests and tries again. ProjectileRenderSystem draws them for
-     * every window.
+     * every window. While held — a recording plays back in their stead —
+     * nothing flies, settles or is drawn.
      */
 
     // Branches
@@ -31,6 +32,7 @@ public class ProjectileManager extends ManagerPackage {
 
     // Projectiles
     private ObjectArrayList<ProjectileInstance> projectiles;
+    private boolean held;
 
     // Settings
     private float timeStep;
@@ -56,6 +58,9 @@ public class ProjectileManager extends ManagerPackage {
 
     @Override
     protected void fixedUpdate() {
+
+        if (held)
+            return;
 
         for (int i = projectiles.size() - 1; i >= 0; i--) {
 
@@ -113,6 +118,16 @@ public class ProjectileManager extends ManagerPackage {
 
         launch(source, itemInstance, chunkCoordinate, position, velocity, spinAxis, spinRate, orientation)
                 .markLoose();
+    }
+
+    // Hold \\
+
+    public void setHeld(boolean held) {
+        this.held = held;
+    }
+
+    public boolean isHeld() {
+        return held;
     }
 
     // Accessible \\

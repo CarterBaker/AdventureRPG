@@ -104,6 +104,18 @@ public class CameraInstance extends InstancePackage {
         return data.getFarPlane();
     }
 
+    public float getShakeYawDegrees() {
+        return data.getShakeYawDegrees();
+    }
+
+    public float getShakePitchDegrees() {
+        return data.getShakePitchDegrees();
+    }
+
+    public float getShakeRollDegrees() {
+        return data.getShakeRollDegrees();
+    }
+
     public void getPickRay(float ndcX, float ndcY, Vector3 outOrigin, Vector3 outDirection) {
         data.getPickRay(ndcX, ndcY, outOrigin, outDirection);
     }

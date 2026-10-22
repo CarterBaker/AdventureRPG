@@ -24,7 +24,9 @@ public class SaveManager extends ManagerPackage {
      * writes saves, and an unreadable save is logged and left untouched. A
      * character is known to the world by the identity its name gives it; until
      * saves carry progression, a loaded character starts its progression
-     * afresh under that identity, alive and whole.
+     * afresh under that identity, alive and whole. A being's look — its body,
+     * appearance and gear, without its place — is captured and applied by the
+     * same branches, so a copy of any being looks just as it does.
      */
 
     // Internal
@@ -155,6 +157,17 @@ public class SaveManager extends ManagerPackage {
                 + "' is unreadable, malformed, or no longer matches the game and was skipped: "
                 + characterFile.getAbsolutePath());
         return false;
+    }
+
+    // Look \\
+
+    public ArpgObjectStruct captureLook(EntityInstance entity) {
+        return playerSaveBranch.buildLook(entity);
+    }
+
+    // False, changing nothing, when the look no longer matches the being or the game
+    public boolean applyLook(ArpgObjectStruct lookArpg, EntityInstance entity) {
+        return playerRestoreBranch.restoreLook(lookArpg, entity);
     }
 
     // Utility \\

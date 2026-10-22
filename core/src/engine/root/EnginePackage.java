@@ -51,6 +51,12 @@ public class EnginePackage extends ManagerPackage {
     private float elapsedTime;
     private int maxSteps;
     private long frameTimeMillis;
+    private long frameTimeOffsetMillis;
+
+    // Fixed Clock — every frame steps the set time however long it takes, as a recording's export runs
+    private boolean fixedClock;
+    private float fixedFrameSeconds;
+    private double fixedTimeMillis;
 
     // Internal \\
 
@@ -402,7 +408,15 @@ public class EnginePackage extends ManagerPackage {
     // Game State \\
 
     public final void execute(float delta) {
-        this.deltaTime = delta;
+
+        if (fixedClock) {
+            this.deltaTime = fixedFrameSeconds;
+            this.fixedTimeMillis += fixedFrameSeconds * EngineSetting.MILLIS_PER_SECOND;
+        }
+
+        else
+            this.deltaTime = delta;
+
         execute();
     }
 
@@ -562,7 +576,36 @@ public class EnginePackage extends ManagerPackage {
     // Frame Time \\
 
     private final void stampFrameTime() {
-        this.frameTimeMillis = System.currentTimeMillis();
+        this.frameTimeMillis = fixedClock
+                ? (long) fixedTimeMillis
+                : System.currentTimeMillis() + frameTimeOffsetMillis;
+    }
+
+    // Fixed Clock \\
+
+    // From the next frame on every frame lasts the seconds given, the frame time counting on from where it stands
+    public final void beginFixedClock(float frameSeconds) {
+        this.fixedClock = true;
+        this.fixedFrameSeconds = frameSeconds;
+        this.fixedTimeMillis = frameTimeMillis;
+    }
+
+    public final void setFixedFrameSeconds(float frameSeconds) {
+        this.fixedFrameSeconds = frameSeconds;
+    }
+
+    // Real time runs again, carried on from the fixed clock's last frame so no clock jumps back or ahead
+    public final void endFixedClock() {
+
+        if (!fixedClock)
+            return;
+
+        this.fixedClock = false;
+        this.frameTimeOffsetMillis = (long) fixedTimeMillis - System.currentTimeMillis();
+    }
+
+    public final boolean isFixedClock() {
+        return this.fixedClock;
     }
 
     // Release \\

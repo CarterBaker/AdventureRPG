@@ -10,6 +10,7 @@ import editor.runtime.menueventsmanager.menus.InfoPanelBranch;
 import editor.runtime.menueventsmanager.menus.ItemEditorBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
 import editor.runtime.menueventsmanager.menus.ProfilerBranch;
+import editor.runtime.menueventsmanager.menus.RecorderBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
 import editor.runtime.menueventsmanager.menus.WorldEditorBranch;
 import editor.runtime.menueventsmanager.menus.WorldMapBranch;
@@ -36,5 +37,6 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(CharacterEditorBranch.class);
         create(AnimationEditorBranch.class);
         create(AnimationTreeEditorBranch.class);
+        create(RecorderBranch.class);
     }
 }
