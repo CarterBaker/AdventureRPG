@@ -6,6 +6,7 @@
 #include "includes/SkyColorData.glsl"
 #include "includes/CelestialData.glsl"
 #include "sky/util/SkyBodies.glsl"
+#include "sky/util/SkySunVisibility.glsl"
 
 /*
  * The sun: a round body ringed by tongues of flame. The ring is drawn twice,
@@ -13,18 +14,15 @@
  * the other, and every tongue sways and flickers on its own beat, more at
  * its tip than at its root, so the fire around the edge never sits still.
  * The flames only wake when the view turns toward the sun, fading in and
- * stretching from their roots the closer the gaze comes to its centre.
+ * stretching from their roots the closer the gaze comes to its centre, and
+ * only as much as the scene and the clouds leave the sun's disc in view.
  * The body breathes very slightly. Its size follows the distance of the
  * calendar's star, it warms toward orange as it sinks, fades under
- * overcast, and sets behind the horizon line. While the player squints the
- * sun swirls by that squint: both rings turn faster and twist into a whirl
- * from root to tip, and the body's face turns in a gentle eddy.
+ * overcast, and sets behind the horizon line.
  */
 
 uniform sampler2D u_sunTexture;
 uniform sampler2D u_sunFlameTexture;
-uniform float     u_sunSwirl;
-uniform float     u_sunSwirlPhase;
 
 const float SKY_SUN_RADIUS          = 0.075;
 const float SKY_SUN_PICTURE_FILL    = 0.92;
@@ -51,18 +49,14 @@ const float SKY_SUN_BREATH_SPEED    = 0.9;
 const vec3  SKY_SUN_LOW_TINT        = vec3(1.0, 0.68, 0.46);
 const float SKY_SUN_LOW_ELEVATION   = 0.35;
 const float SKY_SUN_OVERCAST_FADE   = 0.75;
-const float SKY_SUN_SWIRL_TWIST     = 2.4;
-const float SKY_SUN_SWIRL_SWAY      = 1.5;
-const float SKY_SUN_SWIRL_BODY      = 0.9;
 
 // ── Flames ─────────────────────────────────────────────────────────────────
 
 // One ring of flame at a point on the flame picture's plane, measured in the
 // picture's half size. Each tongue is bent sideways and stretched on its own
 // beat before the picture is read, the bend growing from root to tip. The
-// tongues are stretched out from their roots by stretch, a fraction of full,
-// and twisted by twist, in radians at the tip, while the eyes squint.
-vec4 sampleSunFlameRing(vec2 point, float spin, float twist, float beat, float stretch, float pixelSpan) {
+// tongues are stretched out from their roots by stretch, a fraction of full.
+vec4 sampleSunFlameRing(vec2 point, float spin, float beat, float stretch, float pixelSpan) {
     float radius = SKY_SUN_FLAME_ROOT + (length(point) - SKY_SUN_FLAME_ROOT) / stretch;
     float angle  = atan(point.y, point.x);
     float reach  = smoothstep(SKY_SUN_FLAME_ROOT, 1.0, radius);
@@ -72,7 +66,7 @@ vec4 sampleSunFlameRing(vec2 point, float spin, float twist, float beat, float s
     float flicker = 0.5 + 0.5 * sin(u_time * SKY_SUN_FLICKER_SPEED + beat * SKY_SUN_FLICKER_DRIFT
                   + angle * SKY_SUN_FLICKER_LOBES);
 
-    angle  += spin + twist * reach + SKY_SUN_SWAY_ANGLE * (1.0 + SKY_SUN_SWIRL_SWAY * u_sunSwirl) * reach * sway;
+    angle  += spin + SKY_SUN_SWAY_ANGLE * reach * sway;
     radius *= 1.0 + SKY_SUN_FLICKER_DEPTH * reach * flicker;
 
     vec2 uv = 0.5 + 0.5 * radius * vec2(cos(angle), sin(angle));
@@ -106,21 +100,18 @@ vec3 drawSun(vec3 color, vec3 dir, vec3 sunDir, float pixelAngle) {
 
     float gaze = resolveSunGaze(sunDir);
 
+    if (gaze > 0.0)
+        gaze *= resolveSunVisibility(resolveSunScreen(sunDir));
+
     if (gaze > 0.0) {
         vec2  flamePoint  = plane / flameExtent;
         float flameSpan   = pixelAngle / (2.0 * flameExtent);
         float flameLength = mix(SKY_SUN_FLAME_SHORT, 1.0, gaze);
-        float spin        = u_time * SKY_SUN_SPIN_SPEED + u_sunSwirlPhase;
-        float twist       = u_sunSwirl * SKY_SUN_SWIRL_TWIST;
+        float spin        = u_time * SKY_SUN_SPIN_SPEED;
 
         vec4 backRing  = sampleSunFlameRing(
-            flamePoint / SKY_SUN_BACK_SCALE,
-            SKY_SUN_BACK_OFFSET - spin,
-            -twist,
-            SKY_SUN_BACK_BEAT,
-            flameLength,
-            flameSpan);
-        vec4 frontRing = sampleSunFlameRing(flamePoint, spin, twist, 0.0, flameLength, flameSpan);
+            flamePoint / SKY_SUN_BACK_SCALE, SKY_SUN_BACK_OFFSET - spin, SKY_SUN_BACK_BEAT, flameLength, flameSpan);
+        vec4 frontRing = sampleSunFlameRing(flamePoint, spin, 0.0, flameLength, flameSpan);
 
         color = layerSkyBodyPicture(color, backRing, tint * SKY_SUN_BACK_TINT, visibility * gaze);
         color = layerSkyBodyPicture(color, frontRing, tint, visibility * gaze);
@@ -128,10 +119,7 @@ vec3 drawSun(vec3 color, vec3 dir, vec3 sunDir, float pixelAngle) {
 
     float breath = 1.0 + SKY_SUN_BREATH_DEPTH * sin(u_time * SKY_SUN_BREATH_SPEED);
     float extent = bodyExtent * breath;
-    vec2  face   = plane / extent;
-    float eddy   = u_sunSwirl * SKY_SUN_SWIRL_BODY * (1.0 - clamp(length(face), 0.0, 1.0)) + u_sunSwirlPhase;
-    face         = mat2(cos(eddy), sin(eddy), -sin(eddy), cos(eddy)) * face;
-    vec4  body   = sampleSkyBodyPicture(u_sunTexture, 0.5 + 0.5 * face, pixelAngle / (2.0 * extent));
+    vec4  body   = sampleSkyBodyPicture(u_sunTexture, 0.5 + 0.5 * plane / extent, pixelAngle / (2.0 * extent));
 
     return layerSkyBodyPicture(color, body, tint, visibility);
 }

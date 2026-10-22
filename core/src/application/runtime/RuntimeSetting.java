@@ -69,10 +69,7 @@ public class RuntimeSetting {
     public static final String UNIFORM_SKY_SUN_FLAME_TEXTURE = "u_sunFlameTexture";
     public static final String UNIFORM_SKY_MOON_TEXTURE = "u_moonTexture";
     public static final String UNIFORM_SKY_STAR_TEXTURE = "u_starTexture";
-    public static final String UNIFORM_SKY_SUN_SWIRL = "u_sunSwirl";
-    public static final String UNIFORM_SKY_SUN_SWIRL_PHASE = "u_sunSwirlPhase";
-    public static final float SKY_SUN_SWIRL_SPEED = 1.5f;
-    public static final float SKY_SUN_SWIRL_PERIOD = (float) (Math.PI * 2.0);
+    public static final String UNIFORM_SKY_SUN_SQUINT = "u_sunSquint";
 
     // Squint
     public static final String UNIFORM_SQUINT = "u_squint";

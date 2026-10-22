@@ -209,10 +209,4 @@ public class SquintSystem extends SystemPackage {
 
         return castStruct.isHit();
     }
-
-    // Accessible \\
-
-    public float getSquint() {
-        return squint;
-    }
 }

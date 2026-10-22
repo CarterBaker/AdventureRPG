@@ -7,11 +7,10 @@ out vec4 fragColor;
 uniform float u_squint;
 uniform vec2  u_sunScreen;
 
-uniform sampler2D u_sceneDepth;
-uniform sampler2D u_cloudColor;
 uniform sampler2D u_sceneColor;
 
 #include "includes/NoiseUtility.glsl"
+#include "sky/util/SkySunVisibility.glsl"
 
 /*
  * Narrowed eyes over the whole screen while looking into the sun. Two lids
@@ -22,10 +21,9 @@ uniform sampler2D u_sceneColor;
  * open middle dims a little with them. Between the lids the finished frame
  * is blurred, the clear part shrinking toward the very middle and the blur
  * widening as the eyes close, until at a full squint only the lids' solid
- * color, a blurred ring and a small clear centre remain. Taps across the
- * sun's disc on screen measure how much of it the scene and the clouds leave
- * in view, and the squint eases open as the sun is hidden. Written
- * premultiplied for the composite.
+ * color, a blurred ring and a small clear centre remain. The squint eases
+ * open as the scene or the clouds hide the sun's disc. Written premultiplied
+ * for the composite.
  */
 
 const float SQUINT_LID_CLOSURE   = 0.62;
@@ -34,10 +32,6 @@ const float SQUINT_LASH_SOFTNESS = 0.16;
 const float SQUINT_LASH_GROWTH   = 0.12;
 const float SQUINT_VIEW_DIMMING  = 0.15;
 const vec3  SQUINT_LID_COLOR     = vec3(0.10, 0.035, 0.02);
-const float SQUINT_SUN_RADIUS    = 0.025;
-const int   SQUINT_SUN_TAPS      = 8;
-const float SQUINT_SUN_HIDDEN    = 0.2;
-const float SQUINT_SUN_SHOWN     = 0.8;
 const float SQUINT_TAU           = 6.28318530718;
 const float SQUINT_CLEAR_OPEN    = 1.6;
 const float SQUINT_CLEAR_CLOSED  = 0.12;
@@ -45,32 +39,6 @@ const float SQUINT_CLEAR_FALLOFF = 0.45;
 const float SQUINT_BLUR_RADIUS   = 0.035;
 const int   SQUINT_BLUR_TAPS     = 24;
 const float SQUINT_GOLDEN_ANGLE  = 2.39996323;
-
-// How much of the sun at one point of the screen reaches the eye: none where
-// the scene stands in front of the sky, less where clouds cover it.
-float resolveSunTap(vec2 uv) {
-    uv = clamp(uv, vec2(0.0), vec2(1.0));
-
-    float sky = step(1.0, texture(u_sceneDepth, uv).r);
-
-    return sky * (1.0 - clamp(texture(u_cloudColor, uv).a, 0.0, 1.0));
-}
-
-// How much of the sun's disc is left in view, eased so a mostly hidden sun
-// brings no squint and a mostly visible one brings it all.
-float resolveSunVisibility() {
-    float aspect  = float(textureSize(u_sceneDepth, 0).y) / float(textureSize(u_sceneDepth, 0).x);
-    float visible = resolveSunTap(u_sunScreen);
-
-    for (int i = 0; i < SQUINT_SUN_TAPS; i++) {
-        float angle = SQUINT_TAU * float(i) / float(SQUINT_SUN_TAPS);
-        vec2  tap   = vec2(cos(angle) * aspect, sin(angle)) * SQUINT_SUN_RADIUS;
-
-        visible += resolveSunTap(u_sunScreen + tap);
-    }
-
-    return smoothstep(SQUINT_SUN_HIDDEN, SQUINT_SUN_SHOWN, visible / float(SQUINT_SUN_TAPS + 1));
-}
 
 // How much of one lid covers a point, given how far the point lies toward
 // that lid and across the screen, both in half screens from the centre.
@@ -110,7 +78,7 @@ vec3 sampleBlurredScene(vec2 uv, float aspect, float amount) {
 
 void main() {
     float aspect = float(textureSize(u_sceneColor, 0).y) / float(textureSize(u_sceneColor, 0).x);
-    float squint = clamp(u_squint, 0.0, 1.0) * resolveSunVisibility();
+    float squint = clamp(u_squint, 0.0, 1.0) * resolveSunVisibility(u_sunScreen);
     float lids   = max(
         resolveLid(v_screenPos.y, v_screenPos.x, squint),
         resolveLid(-v_screenPos.y, v_screenPos.x, squint));
