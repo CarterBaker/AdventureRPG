@@ -1,7 +1,8 @@
 package editor.bootstrap.recorderpipeline.recording;
 
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
-import editor.bootstrap.recorderpipeline.util.RecordingSampleUtility;
+import editor.bootstrap.recorderpipeline.util.RecordingCurveUtility;
+import editor.runtime.EditorSetting;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
@@ -13,7 +14,9 @@ public class RecordingVehicleTrackStruct extends RecordingTrackStruct {
      * how its rig stood — its turn, its rudder, whether it rode at anchor,
      * and every mast's brace, sail's hoist and door's opening, each kept in a
      * column of its own that holds one value per mast, sail or door per
-     * sample.
+     * sample. Its turn is carried on curves as a yaw, a pitch and a roll,
+     * and each mast, sail and door has a curve slot of its own after the
+     * rudder's.
      */
 
     // Identity
@@ -90,8 +93,80 @@ public class RecordingVehicleTrackStruct extends RecordingTrackStruct {
         return from + (column.getFloat((sample + 1) * partCount + partIndex) - from) * blend;
     }
 
-    public float blendRudder(int sample, float blend) {
-        return RecordingSampleUtility.blend(rudderAngles, sample, blend);
+    // Curves \\
+
+    @Override
+    public String getTrackLabel() {
+        return vehicleName;
+    }
+
+    @Override
+    protected RecorderCurveProperty[] getCurveProperties() {
+        return RecorderCurveProperty.VEHICLE;
+    }
+
+    @Override
+    public int getCurveCount() {
+        return RecorderCurveProperty.VEHICLE.length + mastCount + sailCount + doorCount;
+    }
+
+    @Override
+    public RecorderCurveProperty getCurveProperty(int slot) {
+
+        int partSlot = slot - RecorderCurveProperty.VEHICLE.length;
+
+        if (partSlot < 0)
+            return RecorderCurveProperty.VEHICLE[slot];
+
+        if (partSlot < mastCount)
+            return RecorderCurveProperty.BRACE;
+
+        return partSlot < mastCount + sailCount ? RecorderCurveProperty.HOIST : RecorderCurveProperty.DOOR;
+    }
+
+    @Override
+    public int getCurvePart(int slot) {
+
+        int partSlot = slot - RecorderCurveProperty.VEHICLE.length;
+
+        if (partSlot < 0)
+            return super.getCurvePart(slot);
+
+        if (partSlot < mastCount)
+            return partSlot;
+
+        return partSlot < mastCount + sailCount ? partSlot - mastCount : partSlot - mastCount - sailCount;
+    }
+
+    // A mast, sail or door is named with its number, counted from one
+    @Override
+    public String getCurveLabel(int slot) {
+
+        int part = getCurvePart(slot);
+
+        return part < 0
+                ? super.getCurveLabel(slot)
+                : String.format(EditorSetting.RECORDER_CURVE_PART_FORMAT, getCurveProperty(slot).getLabel(), part + 1);
+    }
+
+    @Override
+    public double readCurveSample(int slot, int sample) {
+
+        RecorderCurveProperty property = getCurveProperty(slot);
+
+        return switch (property) {
+            case YAW, PITCH, ROLL -> RecordingCurveUtility.toEulerAngle(
+                    property,
+                    orientationsW.getFloat(sample),
+                    orientationsX.getFloat(sample),
+                    orientationsY.getFloat(sample),
+                    orientationsZ.getFloat(sample));
+            case RUDDER -> rudderAngles.getFloat(sample);
+            case BRACE -> braceAngles.getFloat(sample * mastCount + getCurvePart(slot));
+            case HOIST -> sailHoists.getFloat(sample * sailCount + getCurvePart(slot));
+            case DOOR -> doorOpenings.getFloat(sample * doorCount + getCurvePart(slot));
+            default -> readPlaceSample(property, sample);
+        };
     }
 
     // Accessible \\

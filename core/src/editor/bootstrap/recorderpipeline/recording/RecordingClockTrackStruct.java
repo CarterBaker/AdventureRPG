@@ -3,18 +3,19 @@ package editor.bootstrap.recorderpipeline.recording;
 import editor.bootstrap.recorderpipeline.util.RecordingSampleUtility;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
-import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 
-public class RecordingClockTrackStruct extends StructPackage {
+public class RecordingClockTrackStruct extends RecordingCurveTrackStruct {
 
     /*
      * The world's clock through a take, sample by sample, as the
      * milliseconds elapsed since its epoch. Wherever the clock ran on further
      * than the real time between two samples — a time command moved it — the
      * jump is kept with how far it went, so playback can sweep through the
-     * skipped span instead of cutting to it.
+     * skipped span instead of cutting to it. Given a curve, the clock follows
+     * that instead, so the time of day and the seasons can be swept through
+     * however the curve bends.
      */
 
     // Samples
@@ -66,8 +67,15 @@ public class RecordingClockTrackStruct extends StructPackage {
         RecordingSampleUtility.shiftTimes(jumpTimes, seconds);
     }
 
-    // The clock at the time, blended between samples; every jump within the ramp before it is eased in instead
+    // The clock at the time: along its curve when it has one, else blended between samples with every jump within
+    // the ramp before it eased in
     public long evaluate(float time, float rampSeconds) {
+
+        int slot = findCurveSlot(RecorderCurveProperty.TIME);
+
+        if (hasCurve(slot))
+            return Math.round(getCurve(slot).evaluate(time));
+
         return Math.round(resolveRecorded(time) - resolveRampedJumps(time, rampSeconds));
     }
 
@@ -121,16 +129,26 @@ public class RecordingClockTrackStruct extends StructPackage {
         return remaining;
     }
 
+    // Curves \\
+
+    @Override
+    public String getTrackLabel() {
+        return EditorSetting.RECORDER_TRACK_LABEL_CLOCK;
+    }
+
+    @Override
+    protected RecorderCurveProperty[] getCurveProperties() {
+        return RecorderCurveProperty.CLOCK;
+    }
+
+    @Override
+    public double readCurveSample(int slot, int sample) {
+        return elapsedMillis.getLong(sample);
+    }
+
     // Accessible \\
 
-    public int size() {
-        return times.size();
-    }
-
-    public boolean isEmpty() {
-        return times.isEmpty();
-    }
-
+    @Override
     public FloatArrayList getTimes() {
         return times;
     }

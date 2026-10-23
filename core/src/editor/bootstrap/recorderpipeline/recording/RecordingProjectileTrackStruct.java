@@ -1,5 +1,6 @@
 package editor.bootstrap.recorderpipeline.recording;
 
+import editor.bootstrap.recorderpipeline.util.RecordingCurveUtility;
 import engine.util.mathematics.quaternions.Quaternion;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -8,7 +9,8 @@ public class RecordingProjectileTrackStruct extends RecordingTrackStruct {
 
     /*
      * One item thrown or let fall in a take: the item it was, and, sample
-     * by sample, where its centre flew and how it was turned as it tumbled.
+     * by sample, where its centre flew and how it was turned as it tumbled,
+     * its turn carried on curves as a yaw, a pitch and a roll.
      */
 
     // Identity
@@ -44,6 +46,34 @@ public class RecordingProjectileTrackStruct extends RecordingTrackStruct {
         orientationsX.add(orientation.getX());
         orientationsY.add(orientation.getY());
         orientationsZ.add(orientation.getZ());
+    }
+
+    // Curves \\
+
+    @Override
+    public String getTrackLabel() {
+        return itemName;
+    }
+
+    @Override
+    protected RecorderCurveProperty[] getCurveProperties() {
+        return RecorderCurveProperty.PROJECTILE;
+    }
+
+    @Override
+    public double readCurveSample(int slot, int sample) {
+
+        RecorderCurveProperty property = getCurveProperty(slot);
+
+        if (property.isPosition())
+            return readPlaceSample(property, sample);
+
+        return RecordingCurveUtility.toEulerAngle(
+                property,
+                orientationsW.getFloat(sample),
+                orientationsX.getFloat(sample),
+                orientationsY.getFloat(sample),
+                orientationsZ.getFloat(sample));
     }
 
     // Accessible \\

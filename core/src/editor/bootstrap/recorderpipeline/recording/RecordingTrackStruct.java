@@ -1,12 +1,11 @@
 package editor.bootstrap.recorderpipeline.recording;
 
 import editor.bootstrap.recorderpipeline.util.RecordingSampleUtility;
-import engine.root.StructPackage;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 
-public abstract class RecordingTrackStruct extends StructPackage {
+public abstract class RecordingTrackStruct extends RecordingCurveTrackStruct {
 
     /*
      * The samples every moving thing in a take shares: when each was taken,
@@ -14,7 +13,8 @@ public abstract class RecordingTrackStruct extends StructPackage {
      * coordinate and a position local to that chunk. Each kind of track adds
      * its own columns beside these, one list per field, so a track of any
      * length stores no object per sample. shiftTimes() moves every sample
-     * along by the same seconds, as reading an older recording needs.
+     * along by the same seconds, as reading an older recording needs. Its
+     * position is the first three slots any curve of it can carry.
      */
 
     // Samples
@@ -59,15 +59,19 @@ public abstract class RecordingTrackStruct extends StructPackage {
         return RecordingSampleUtility.findSample(times, time);
     }
 
+    // Curves \\
+
+    // The position at the sample within its own chunk; RecordingCurveUtility reads it across chunks
+    protected double readPlaceSample(RecorderCurveProperty property, int sample) {
+        return switch (property) {
+            case POSITION_X -> positionsX.getFloat(sample);
+            case POSITION_Y -> positionsY.getFloat(sample);
+            case POSITION_Z -> positionsZ.getFloat(sample);
+            default -> throwException("A place holds no " + property.getLabel() + ".");
+        };
+    }
+
     // Accessible \\
-
-    public int size() {
-        return times.size();
-    }
-
-    public boolean isEmpty() {
-        return times.isEmpty();
-    }
 
     public float getStartTime() {
         return times.getFloat(0);
@@ -97,6 +101,7 @@ public abstract class RecordingTrackStruct extends StructPackage {
         return positionsZ.getFloat(index);
     }
 
+    @Override
     public FloatArrayList getTimes() {
         return times;
     }

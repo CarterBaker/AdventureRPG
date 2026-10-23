@@ -1,11 +1,11 @@
 package editor.bootstrap.recorderpipeline.recording;
 
 import editor.bootstrap.recorderpipeline.util.RecordingSampleUtility;
-import engine.root.StructPackage;
+import editor.runtime.EditorSetting;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
-public class RecordingWeatherTrackStruct extends StructPackage {
+public class RecordingWeatherTrackStruct extends RecordingCurveTrackStruct {
 
     /*
      * The weather through a take, sample by sample: how far the weather had
@@ -13,7 +13,8 @@ public class RecordingWeatherTrackStruct extends StructPackage {
      * wind's gusts had run. Together with the season the clock gives, these
      * are all the weather is, so playing them back puts every storm, cloud
      * and gust where it was. Drift is kept to the full double the world reads
-     * it at, since it runs on for as long as the world does.
+     * it at, since it runs on for as long as the world does. Both drifts and
+     * the gusts can each be carried on a curve.
      */
 
     // Samples
@@ -55,16 +56,31 @@ public class RecordingWeatherTrackStruct extends StructPackage {
         return RecordingSampleUtility.resolveBlend(times, sample, time);
     }
 
+    // Curves \\
+
+    @Override
+    public String getTrackLabel() {
+        return EditorSetting.RECORDER_TRACK_LABEL_WEATHER;
+    }
+
+    @Override
+    protected RecorderCurveProperty[] getCurveProperties() {
+        return RecorderCurveProperty.WEATHER;
+    }
+
+    @Override
+    public double readCurveSample(int slot, int sample) {
+        return switch (getCurveProperty(slot)) {
+            case DRIFT_X -> flowsX.getDouble(sample);
+            case DRIFT_Z -> flowsZ.getDouble(sample);
+            case GUST -> gustTimes.getFloat(sample);
+            default -> throwException("The weather holds no " + getCurveProperty(slot).getLabel() + ".");
+        };
+    }
+
     // Accessible \\
 
-    public int size() {
-        return times.size();
-    }
-
-    public boolean isEmpty() {
-        return times.isEmpty();
-    }
-
+    @Override
     public FloatArrayList getTimes() {
         return times;
     }

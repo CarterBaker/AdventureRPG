@@ -21,7 +21,9 @@ public class RecordingBodyTrackStruct extends RecordingTrackStruct {
      * hands were in with that action's clip, phase and sequence. Clips are
      * kept once by name and sampled by index. While a take records it, it
      * remembers the last look it saw and whether it has fallen, neither of
-     * which is ever saved.
+     * which is ever saved. Its place, facing, look, speeds and ground offset
+     * can each be carried on a curve; its movement state and actions are
+     * nodes instead.
      */
 
     // Identity
@@ -148,6 +150,32 @@ public class RecordingBodyTrackStruct extends RecordingTrackStruct {
             look++;
 
         return looks.isEmpty() ? EngineSetting.INDEX_NOT_FOUND : look;
+    }
+
+    // Curves \\
+
+    @Override
+    public String getTrackLabel() {
+        return displayName;
+    }
+
+    @Override
+    protected RecorderCurveProperty[] getCurveProperties() {
+        return RecorderCurveProperty.BODY;
+    }
+
+    @Override
+    public double readCurveSample(int slot, int sample) {
+        return switch (getCurveProperty(slot)) {
+            case FACING -> bodyYaws.getFloat(sample);
+            case LOOK_YAW -> lookYaws.getFloat(sample);
+            case LOOK_PITCH -> lookPitches.getFloat(sample);
+            case GROUND_SPEED -> horizontalSpeeds.getFloat(sample);
+            case RISE_SPEED -> verticalSpeeds.getFloat(sample);
+            case TURN_RATE -> bodyYawRates.getFloat(sample);
+            case GROUND_OFFSET -> groundOffsets.getFloat(sample);
+            default -> readPlaceSample(getCurveProperty(slot), sample);
+        };
     }
 
     // Capture \\

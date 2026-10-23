@@ -35,6 +35,7 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.runtime.world.WorldSystem;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.bootstrap.recorderpipeline.recording.RecorderCurveProperty;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCameraTrackStruct;
@@ -44,6 +45,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruc
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingVehicleTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingWeatherTrackStruct;
+import editor.bootstrap.recorderpipeline.util.RecordingCurveUtility;
 import editor.bootstrap.recorderpipeline.util.RecordingSampleUtility;
 import editor.runtime.dev.DevContext;
 import editor.runtime.EditorSetting;
@@ -74,7 +76,9 @@ public class DevRecorderSystem extends SystemPackage {
      * dressed in the look they wore — and thrown items and vehicles are drawn
      * where they went; the weather is held where it had drifted; the clock is
      * held to the recording, and a time command used while it plays shifts
-     * it from there on. The interface plays through DevRecorderOverlaySystem.
+     * it from there on. Every value a track has a curve for is read from that
+     * curve instead of its samples. The interface plays through
+     * DevRecorderOverlaySystem.
      * A take records each live channel after the frame has moved, at the
      * take's own time: the camera, the player, the clock, the weather, and
      * every resident, thrown item and vehicle near the window, dropping a
@@ -388,12 +392,14 @@ public class DevRecorderSystem extends SystemPackage {
             return;
 
         RecordingBodyTrackStruct track = clip.getTake().getPlayerTrack();
-        int sample = Math.max(0, track.findSample(clip.toTakeTime(time)));
+        float takeTime = clip.toTakeTime(time);
+        int sample = Math.max(0, track.findSample(takeTime));
         EntityInstance player = playerManager.getPlayerForWindow(context.getWindow().getWindowID());
 
-        RecordingSampleUtility.resolvePlace(resolveWorld(), track, sample, 0f, placeScratch);
+        RecordingCurveUtility.resolvePlace(resolveWorld(), track, takeTime, sample, 0f, placeScratch);
         player.setLocation(placeScratch.getPosition(), placeScratch.getChunkCoordinate());
-        player.getEntityStateHandle().setBodyYaw(track.getBodyYaws().getFloat(sample), 0f);
+        player.getEntityStateHandle().setBodyYaw(RecordingCurveUtility.resolveFloat(
+                track, RecorderCurveProperty.FACING, takeTime, track.getBodyYaws(), sample, 0f), 0f);
     }
 
     private void handOverClock(RecordingClipStruct clip, float time) {
@@ -458,7 +464,7 @@ public class DevRecorderSystem extends SystemPackage {
         WorldHandle worldHandle = resolveWorld();
         WorldPositionStruct anchorPlace = anchor.getWorldPositionStruct();
 
-        RecordingSampleUtility.resolvePlace(worldHandle, track, sample, blend, placeScratch);
+        RecordingCurveUtility.resolvePlace(worldHandle, track, takeTime, sample, blend, placeScratch);
         anchor.getEyePosition(eyeScratch).subtract(anchorPlace.getPosition());
 
         long cameraChunk = placeScratch.getChunkCoordinate();
@@ -479,15 +485,16 @@ public class DevRecorderSystem extends SystemPackage {
                 0f,
                 Coordinate2Long.unpackY(delta) * EngineSetting.CHUNK_SIZE);
         camera.setPosition(cameraPosition);
-        camera.setDirection(directionScratch.set(
-                RecordingSampleUtility.blend(track.getDirectionsX(), sample, blend),
-                RecordingSampleUtility.blend(track.getDirectionsY(), sample, blend),
-                RecordingSampleUtility.blend(track.getDirectionsZ(), sample, blend)));
+        camera.setDirection(RecordingCurveUtility.resolveDirection(track, takeTime, sample, blend, directionScratch));
         camera.setShake(
-                RecordingSampleUtility.blend(track.getShakeYaws(), sample, blend),
-                RecordingSampleUtility.blend(track.getShakePitches(), sample, blend),
-                RecordingSampleUtility.blend(track.getShakeRolls(), sample, blend));
-        camera.setFOV(RecordingSampleUtility.blend(track.getFovs(), sample, blend));
+                RecordingCurveUtility.resolveFloat(
+                        track, RecorderCurveProperty.SHAKE_YAW, takeTime, track.getShakeYaws(), sample, blend),
+                RecordingCurveUtility.resolveFloat(
+                        track, RecorderCurveProperty.SHAKE_PITCH, takeTime, track.getShakePitches(), sample, blend),
+                RecordingCurveUtility.resolveFloat(
+                        track, RecorderCurveProperty.SHAKE_ROLL, takeTime, track.getShakeRolls(), sample, blend));
+        camera.setFOV(RecordingCurveUtility.resolveFloat(
+                track, RecorderCurveProperty.FIELD_OF_VIEW, takeTime, track.getFovs(), sample, blend));
     }
 
     private void playPlayer(RecordingClipStruct clip, float time, float animationDelta) {
@@ -545,9 +552,12 @@ public class DevRecorderSystem extends SystemPackage {
         float blend = track.resolveBlend(sample, takeTime);
 
         weatherManager.holdFlow(
-                RecordingSampleUtility.blend(track.getFlowsX(), sample, blend),
-                RecordingSampleUtility.blend(track.getFlowsZ(), sample, blend));
-        windManager.holdGustTime(RecordingSampleUtility.blend(track.getGustTimes(), sample, blend));
+                RecordingCurveUtility.resolveDouble(
+                        track, RecorderCurveProperty.DRIFT_X, takeTime, track.getFlowsX(), sample, blend),
+                RecordingCurveUtility.resolveDouble(
+                        track, RecorderCurveProperty.DRIFT_Z, takeTime, track.getFlowsZ(), sample, blend));
+        windManager.holdGustTime(RecordingCurveUtility.resolveFloat(
+                track, RecorderCurveProperty.GUST, takeTime, track.getGustTimes(), sample, blend));
         this.weatherHeld = true;
     }
 
@@ -596,19 +606,26 @@ public class DevRecorderSystem extends SystemPackage {
         float blend = RecordingSampleUtility.resolveBlend(track.getTimes(), sample, takeTime);
         EntityStateHandle state = puppet.getEntityStateHandle();
 
-        RecordingSampleUtility.resolvePlace(resolveWorld(), track, sample, blend, placeScratch);
+        RecordingCurveUtility.resolvePlace(resolveWorld(), track, takeTime, sample, blend, placeScratch);
         puppet.setLocation(placeScratch.getPosition(), placeScratch.getChunkCoordinate());
         state.setMovementState(EntityState.VALUES[track.getStates().getInt(sample)]);
         state.setSpeed(
-                RecordingSampleUtility.blend(track.getHorizontalSpeeds(), sample, blend),
-                RecordingSampleUtility.blend(track.getVerticalSpeeds(), sample, blend));
+                RecordingCurveUtility.resolveFloat(track, RecorderCurveProperty.GROUND_SPEED, takeTime,
+                        track.getHorizontalSpeeds(), sample, blend),
+                RecordingCurveUtility.resolveFloat(track, RecorderCurveProperty.RISE_SPEED, takeTime,
+                        track.getVerticalSpeeds(), sample, blend));
         state.setBodyYaw(
-                RecordingSampleUtility.blendDegrees(track.getBodyYaws(), sample, blend),
-                RecordingSampleUtility.blend(track.getBodyYawRates(), sample, blend));
+                RecordingCurveUtility.resolveFloat(track, RecorderCurveProperty.FACING, takeTime,
+                        track.getBodyYaws(), sample, blend),
+                RecordingCurveUtility.resolveFloat(track, RecorderCurveProperty.TURN_RATE, takeTime,
+                        track.getBodyYawRates(), sample, blend));
         state.setLook(
-                RecordingSampleUtility.blend(track.getLookPitches(), sample, blend),
-                RecordingSampleUtility.blendDegrees(track.getLookYaws(), sample, blend));
-        state.setGroundOffset(RecordingSampleUtility.blend(track.getGroundOffsets(), sample, blend));
+                RecordingCurveUtility.resolveFloat(track, RecorderCurveProperty.LOOK_PITCH, takeTime,
+                        track.getLookPitches(), sample, blend),
+                RecordingCurveUtility.resolveFloat(track, RecorderCurveProperty.LOOK_YAW, takeTime,
+                        track.getLookYaws(), sample, blend));
+        state.setGroundOffset(RecordingCurveUtility.resolveFloat(track, RecorderCurveProperty.GROUND_OFFSET, takeTime,
+                track.getGroundOffsets(), sample, blend));
 
         int clip = track.getClips().getInt(sample);
         boolean sameAction = sample + 1 < track.size()
@@ -715,12 +732,17 @@ public class DevRecorderSystem extends SystemPackage {
 
         float blend = RecordingSampleUtility.resolveBlend(track.getTimes(), sample, takeTime);
 
-        RecordingSampleUtility.resolvePlace(resolveWorld(), track, sample, blend, shownItemPlaces.get(slot));
-        shownItemOrientations.get(slot).set(
-                RecordingSampleUtility.blend(track.getOrientationsW(), sample, blend),
-                RecordingSampleUtility.blend(track.getOrientationsX(), sample, blend),
-                RecordingSampleUtility.blend(track.getOrientationsY(), sample, blend),
-                RecordingSampleUtility.blend(track.getOrientationsZ(), sample, blend)).normalize();
+        RecordingCurveUtility.resolvePlace(resolveWorld(), track, takeTime, sample, blend, shownItemPlaces.get(slot));
+        RecordingCurveUtility.resolveOrientation(
+                track,
+                takeTime,
+                track.getOrientationsW(),
+                track.getOrientationsX(),
+                track.getOrientationsY(),
+                track.getOrientationsZ(),
+                sample,
+                blend,
+                shownItemOrientations.get(slot));
         shownItems.add(item);
     }
 
@@ -760,25 +782,34 @@ public class DevRecorderSystem extends SystemPackage {
         float blend = RecordingSampleUtility.resolveBlend(track.getTimes(), sample, takeTime);
         VehicleHandle vehicleHandle = puppet.getVehicleHandle();
 
-        RecordingSampleUtility.resolvePlace(resolveWorld(), track, sample, blend, puppet.getWorldPositionStruct());
-        puppet.getOrientation().set(
-                RecordingSampleUtility.blend(track.getOrientationsW(), sample, blend),
-                RecordingSampleUtility.blend(track.getOrientationsX(), sample, blend),
-                RecordingSampleUtility.blend(track.getOrientationsY(), sample, blend),
-                RecordingSampleUtility.blend(track.getOrientationsZ(), sample, blend)).normalize();
+        RecordingCurveUtility.resolvePlace(
+                resolveWorld(), track, takeTime, sample, blend, puppet.getWorldPositionStruct());
+        RecordingCurveUtility.resolveOrientation(
+                track,
+                takeTime,
+                track.getOrientationsW(),
+                track.getOrientationsX(),
+                track.getOrientationsY(),
+                track.getOrientationsZ(),
+                sample,
+                blend,
+                puppet.getOrientation());
         puppet.refreshRotation();
-        puppet.setRudderAngle(track.blendRudder(sample, blend));
+        puppet.setRudderAngle(RecordingCurveUtility.resolveFloat(
+                track, RecorderCurveProperty.RUDDER, takeTime, track.getRudderAngles(), sample, blend));
         puppet.setAnchored(track.getAnchored().getInt(sample) != 0);
 
         for (int i = 0; i < Math.min(track.getMastCount(), vehicleHandle.getMastCount()); i++)
-            puppet.setBraceAngle(i, track.blendPart(track.getBraceAngles(), track.getMastCount(), i, sample, blend));
+            puppet.setBraceAngle(i, RecordingCurveUtility.resolvePart(track, RecorderCurveProperty.BRACE, i,
+                    takeTime, track.getBraceAngles(), track.getMastCount(), sample, blend));
 
         for (int i = 0; i < Math.min(track.getSailCount(), vehicleHandle.getSailCount()); i++)
-            puppet.setSailHoist(i, track.blendPart(track.getSailHoists(), track.getSailCount(), i, sample, blend));
+            puppet.setSailHoist(i, RecordingCurveUtility.resolvePart(track, RecorderCurveProperty.HOIST, i,
+                    takeTime, track.getSailHoists(), track.getSailCount(), sample, blend));
 
         for (int i = 0; i < Math.min(track.getDoorCount(), vehicleHandle.getDoorCount()); i++)
-            puppet.setDoorOpening(i,
-                    track.blendPart(track.getDoorOpenings(), track.getDoorCount(), i, sample, blend));
+            puppet.setDoorOpening(i, RecordingCurveUtility.resolvePart(track, RecorderCurveProperty.DOOR, i,
+                    takeTime, track.getDoorOpenings(), track.getDoorCount(), sample, blend));
 
         shownVehicles.add(puppet);
     }

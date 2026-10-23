@@ -1,5 +1,7 @@
 package editor.bootstrap.recorderpipeline.recording;
 
+import editor.bootstrap.recorderpipeline.util.RecordingCurveUtility;
+import editor.runtime.EditorSetting;
 import engine.assets.camera.CameraInstance;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
@@ -8,7 +10,8 @@ public class RecordingCameraTrackStruct extends RecordingTrackStruct {
     /*
      * The view of a take, sample by sample: the camera's position in the
      * frame of the chunk the player stood in, the direction it looked along,
-     * the shake it turned by in degrees, and its field of view.
+     * the shake it turned by in degrees, and its field of view. Its look is
+     * carried on curves as a yaw and a pitch.
      */
 
     // Samples
@@ -47,6 +50,33 @@ public class RecordingCameraTrackStruct extends RecordingTrackStruct {
         shakePitches.add(camera.getShakePitchDegrees());
         shakeRolls.add(camera.getShakeRollDegrees());
         fovs.add(camera.getFOV());
+    }
+
+    // Curves \\
+
+    @Override
+    public String getTrackLabel() {
+        return EditorSetting.RECORDER_TRACK_LABEL_CAMERA;
+    }
+
+    @Override
+    protected RecorderCurveProperty[] getCurveProperties() {
+        return RecorderCurveProperty.CAMERA;
+    }
+
+    @Override
+    public double readCurveSample(int slot, int sample) {
+        return switch (getCurveProperty(slot)) {
+            case YAW -> RecordingCurveUtility.toDirectionYaw(
+                    directionsX.getFloat(sample), directionsZ.getFloat(sample));
+            case PITCH -> RecordingCurveUtility.toDirectionPitch(
+                    directionsX.getFloat(sample), directionsY.getFloat(sample), directionsZ.getFloat(sample));
+            case FIELD_OF_VIEW -> fovs.getFloat(sample);
+            case SHAKE_YAW -> shakeYaws.getFloat(sample);
+            case SHAKE_PITCH -> shakePitches.getFloat(sample);
+            case SHAKE_ROLL -> shakeRolls.getFloat(sample);
+            default -> readPlaceSample(getCurveProperty(slot), sample);
+        };
     }
 
     // Accessible \\

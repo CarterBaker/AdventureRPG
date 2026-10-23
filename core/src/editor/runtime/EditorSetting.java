@@ -89,6 +89,7 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_RENAME_RECORDING = "Rename Recording";
     public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
     public static final String DIALOG_TITLE_RENAME_MARKER = "Rename Marker";
+    public static final String DIALOG_TITLE_KEY_VALUE = "Key Value";
 
     // Tabs
     public static final String TAB_TITLE_COMMAND_CONSOLE = "Command Console";
@@ -951,9 +952,12 @@ public class EditorSetting {
     public static final int RECORDER_FILE_VERSION_LAYERS = 1;
     public static final String RECORDER_FILE_CHANNEL_WORLD = "world";
 
-    // Recorder — the tab's menu, and the lanes its drags land on, which every Recorder tab shares
+    // Recorder — the tab's menu, and the lanes its drags land on and the ruler and graph its wheel zooms, which
+    // every Recorder tab shares
     public static final String RECORDER_MENU = "editor/Recorder/Recorder";
     public static final int RECORDER_ENTRY_CLIP_LANES = 6;
+    public static final int RECORDER_ENTRY_RULER = 7;
+    public static final int RECORDER_ENTRY_KEY_GRAPH = 18;
 
     // Recorder — channels
     public static final String RECORDER_CHANNEL_LABEL_CAMERA = "Camera";
@@ -965,11 +969,115 @@ public class EditorSetting {
     public static final String RECORDER_CHANNEL_LABEL_TIME = "Time and light";
     public static final String RECORDER_CHANNEL_LABEL_INTERFACE = "Interface";
 
-    // Recorder — the timeline; clips stack on a fixed number of lanes, the highest playing over the rest
+    // Recorder — the timeline; clips stack on a fixed number of lanes, the highest playing over the rest, and the
+    // timeline runs on past the recording's end so there is room to lay a clip after it
     public static final int RECORDER_LANE_COUNT = 6;
     public static final float RECORDER_MIN_TIMELINE_SECONDS = 1f;
+    public static final float RECORDER_TIMELINE_TAIL_SECONDS = 2f;
+    public static final float RECORDER_TIMELINE_TAIL_SHARE = 0.1f;
     public static final float RECORDER_DRAG_THRESHOLD_PIXELS = 4f;
     public static final int RECORDER_RESUME_FRAMES = 2;
+
+    // Recorder — a lane, as drawn and as pressed: a clip's name and gestures along its upper row, its movement below
+    public static final float RECORDER_LANE_PIXELS = 32f;
+    public static final float RECORDER_CLIP_BAR_INSET_PIXELS = 1f;
+    public static final float RECORDER_CLIP_NAME_ROW_PIXELS = 13f;
+
+    // Recorder — taking hold on the lanes; how near a press must be to a clip's edge or a node's notch, how near a
+    // drag snaps, and at most how much of a short clip's length its edges take up
+    public static final float RECORDER_EDGE_GRAB_PIXELS = 6f;
+    public static final float RECORDER_NOTCH_GRAB_PIXELS = 5f;
+    public static final float RECORDER_SNAP_PIXELS = 8f;
+    public static final float RECORDER_EDGE_GRAB_SHARE = 1f / 3f;
+
+    // Recorder — the view; each notch of the wheel zooms about the pointer, Shift with the wheel or a sideways scroll
+    // moves along by a share of the view, and a playhead leaving the view brings it back a share in from the left
+    public static final float RECORDER_MIN_VIEW_SECONDS = 0.25f;
+    public static final float RECORDER_ZOOM_STEP = 1.25f;
+    public static final float RECORDER_ZOOM_BUTTON_STEP = 2f;
+    public static final float RECORDER_SCROLL_SHARE = 0.1f;
+    public static final float RECORDER_REVEAL_SHARE = 0.1f;
+
+    // Recorder — nodes, named after the movement state or action they show, its words parted by spaces
+    public static final char RECORDER_NODE_NAME_SEPARATOR = '_';
+    public static final char RECORDER_NODE_WORD_SEPARATOR = ' ';
+
+    // Recorder — curves; a curve fitted to a take keeps this near what was recorded, read every so often, with no
+    // more keys than this or so many a second of the take, and a graph of one shows at least this span of its values
+    public static final double RECORDER_CURVE_DISTANCE_TOLERANCE = 0.02;
+    public static final double RECORDER_CURVE_ANGLE_TOLERANCE = 0.5;
+    public static final double RECORDER_CURVE_SCALAR_TOLERANCE = 0.01;
+    public static final double RECORDER_CURVE_CLOCK_TOLERANCE = 250.0;
+    public static final double RECORDER_CURVE_DISTANCE_SPAN = 0.5;
+    public static final double RECORDER_CURVE_ANGLE_SPAN = 5.0;
+    public static final double RECORDER_CURVE_SCALAR_SPAN = 0.1;
+    public static final double RECORDER_CURVE_CLOCK_SPAN = 60_000.0;
+    public static final float RECORDER_CURVE_FIT_INTERVAL = 1f / 20f;
+    public static final int RECORDER_CURVE_MAX_KEYS = 512;
+    public static final float RECORDER_CURVE_MAX_KEYS_PER_SECOND = 4f;
+    public static final float RECORDER_KEY_MIN_GAP_SECONDS = 0.01f;
+    public static final int RECORDER_CURVE_SOLVE_STEPS = 16;
+    public static final double RECORDER_CURVE_SOLVE_EPSILON = 1e-5;
+    public static final int RECORDER_GRAPH_FRAME_SAMPLES = 64;
+
+    // Recorder — curves, as the Keys tab names them; a mast, sail or door is named with its number
+    public static final String RECORDER_TRACK_LABEL_CAMERA = "Camera";
+    public static final String RECORDER_TRACK_LABEL_WEATHER = "Weather";
+    public static final String RECORDER_TRACK_LABEL_CLOCK = "Clock";
+    public static final String RECORDER_CURVE_PART_FORMAT = "%s %d";
+    public static final String RECORDER_CURVE_LABEL_POSITION_X = "Position X";
+    public static final String RECORDER_CURVE_LABEL_POSITION_Y = "Height";
+    public static final String RECORDER_CURVE_LABEL_POSITION_Z = "Position Z";
+    public static final String RECORDER_CURVE_LABEL_YAW = "Yaw";
+    public static final String RECORDER_CURVE_LABEL_PITCH = "Pitch";
+    public static final String RECORDER_CURVE_LABEL_ROLL = "Roll";
+    public static final String RECORDER_CURVE_LABEL_SHAKE_YAW = "Shake yaw";
+    public static final String RECORDER_CURVE_LABEL_SHAKE_PITCH = "Shake pitch";
+    public static final String RECORDER_CURVE_LABEL_SHAKE_ROLL = "Shake roll";
+    public static final String RECORDER_CURVE_LABEL_FIELD_OF_VIEW = "Field of view";
+    public static final String RECORDER_CURVE_LABEL_FACING = "Facing";
+    public static final String RECORDER_CURVE_LABEL_TURN_RATE = "Turn rate";
+    public static final String RECORDER_CURVE_LABEL_LOOK_YAW = "Look yaw";
+    public static final String RECORDER_CURVE_LABEL_LOOK_PITCH = "Look pitch";
+    public static final String RECORDER_CURVE_LABEL_GROUND_SPEED = "Ground speed";
+    public static final String RECORDER_CURVE_LABEL_RISE_SPEED = "Rise speed";
+    public static final String RECORDER_CURVE_LABEL_GROUND_OFFSET = "Ground offset";
+    public static final String RECORDER_CURVE_LABEL_RUDDER = "Rudder";
+    public static final String RECORDER_CURVE_LABEL_BRACE = "Mast brace";
+    public static final String RECORDER_CURVE_LABEL_HOIST = "Sail hoist";
+    public static final String RECORDER_CURVE_LABEL_DOOR = "Door opening";
+    public static final String RECORDER_CURVE_LABEL_DRIFT_X = "Drift X";
+    public static final String RECORDER_CURVE_LABEL_DRIFT_Z = "Drift Z";
+    public static final String RECORDER_CURVE_LABEL_GUST = "Gusts";
+    public static final String RECORDER_CURVE_LABEL_TIME = "Time and date";
+
+    // Recorder — values as the Keys tab writes them and the value dialog reads them back; the clock is a day counted
+    // from the calendar's first, and a time of day
+    public static final String RECORDER_VALUE_FORMAT_DISTANCE = "%.2f";
+    public static final String RECORDER_VALUE_FORMAT_DEGREES = "%.1f";
+    public static final String RECORDER_VALUE_FORMAT_SCALAR = "%.3f";
+    public static final String RECORDER_VALUE_FORMAT_CLOCK = "Day %d  %02d:%02d";
+    public static final String RECORDER_VALUE_FORMAT_CLOCK_INPUT = "%d %02d:%02d";
+    public static final String RECORDER_VALUE_WORD_PATTERN = "\\s+";
+    public static final String RECORDER_VALUE_CLOCK_SEPARATOR = ":";
+
+    // Recorder — the Keys tab; a row hands back its track's place and what it shows, a curve's slot or one of the
+    // rows below, and a press takes hold of a key or a handle this near it
+    public static final String RECORDER_KEY_ROW_SEPARATOR = ":";
+    public static final int RECORDER_KEY_ROW_TRACK = -1;
+    public static final int RECORDER_KEY_ROW_MOVEMENT = -2;
+    public static final int RECORDER_KEY_ROW_GESTURES = -3;
+    public static final float RECORDER_KEY_GRAB_PIXELS = 6f;
+    public static final float RECORDER_GRAPH_GRAB_PIXELS = 7f;
+    public static final double RECORDER_GRAPH_MARGIN_SHARE = 0.1;
+    public static final String RECORDER_KEY_STATUS_SEPARATOR = ": ";
+
+    // Recorder — key modes, as the Keys tab names them
+    public static final String RECORDER_KEY_MODE_LABEL_AUTO = "Auto";
+    public static final String RECORDER_KEY_MODE_LABEL_ALIGNED = "Aligned";
+    public static final String RECORDER_KEY_MODE_LABEL_FREE = "Free";
+    public static final String RECORDER_KEY_MODE_LABEL_LINEAR = "Linear";
+    public static final String RECORDER_KEY_MODE_LABEL_CONSTANT = "Hold";
 
     // Recorder — sampling, in seconds; the camera, the player and the clock are sampled finer than the world
     public static final float RECORDER_SAMPLE_INTERVAL = 1f / 60f;
@@ -998,6 +1106,7 @@ public class EditorSetting {
             + Integer.BYTES * 4;
     public static final int RECORDER_PROJECTILE_SAMPLE_BYTES = RECORDER_PLACE_SAMPLE_BYTES + Float.BYTES * 4;
     public static final int RECORDER_CLOCK_SAMPLE_BYTES = Float.BYTES + Long.BYTES;
+    public static final int RECORDER_CURVE_KEY_BYTES = Float.BYTES * 3 + Double.BYTES * 3 + Integer.BYTES;
     public static final int RECORDER_WEATHER_SAMPLE_BYTES = Float.BYTES * 2 + Double.BYTES * 2;
     public static final int RECORDER_VEHICLE_SAMPLE_BYTES = RECORDER_PLACE_SAMPLE_BYTES + Float.BYTES * 5
             + Integer.BYTES;
@@ -1140,9 +1249,25 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_SUSPENDED = "Paused with the game: close the pause menu to carry on";
     public static final String RECORDER_STATUS_PLACED = "Placed ";
     public static final String RECORDER_STATUS_MOVED = "Moved ";
-    public static final String RECORDER_STATUS_SPLIT = "Split ";
+    public static final String RECORDER_STATUS_CUT = "Cut ";
+    public static final String RECORDER_STATUS_CUT_TOOL_ON = "Cut tool on: click a clip to cut it there";
+    public static final String RECORDER_STATUS_CUT_TOOL_OFF = "Cut tool off";
+    public static final String RECORDER_STATUS_CUT_TOO_NEAR = "Too near the clip's end to cut there";
     public static final String RECORDER_STATUS_STAMPED = "Stamped ";
     public static final String RECORDER_STATUS_TRIMMED = "Trimmed ";
+    public static final String RECORDER_STATUS_RETIMED = "Retimed ";
+    public static final String RECORDER_STATUS_NODE_CHANGED = "Now ";
+    public static final String RECORDER_STATUS_NODE_REMOVED = "Removed ";
+    public static final String RECORDER_STATUS_NO_NODE = "Click a node on a clip first";
+    public static final String RECORDER_STATUS_ONLY_MOVEMENT = "The take moves only one way: change it instead";
+    public static final String RECORDER_STATUS_KEY_MOVED = "Moved a key of ";
+    public static final String RECORDER_STATUS_KEY_ADDED = "Keyed ";
+    public static final String RECORDER_STATUS_KEY_DELETED = "Deleted a key of ";
+    public static final String RECORDER_STATUS_KEY_CHANGED = "Changed a key of ";
+    public static final String RECORDER_STATUS_CURVE_REFIT = "Laid again from the recording: ";
+    public static final String RECORDER_STATUS_CURVE_REMOVED = "Playing as recorded: ";
+    public static final String RECORDER_STATUS_NO_CURVE = "Click a property on the Keys tab first";
+    public static final String RECORDER_STATUS_NO_KEY = "Click a key first";
     public static final String RECORDER_STATUS_CLIP_REMOVED = "Removed a clip of ";
     public static final String RECORDER_STATUS_TAKE_DELETED = "Deleted take ";
     public static final String RECORDER_STATUS_NO_CLIP = "Select a clip on the timeline first";
@@ -1180,6 +1305,15 @@ public class EditorSetting {
     public static final String RECORDER_KEY_CLIP_SPLIT = "clip_split";
     public static final String RECORDER_KEY_CLIP_STAMP = "clip_stamp";
     public static final String RECORDER_KEY_CLIP_REMOVE = "clip_remove";
+    public static final String RECORDER_KEY_NODE_NEXT = "node_next";
+    public static final String RECORDER_KEY_NODE_PREVIOUS = "node_previous";
+    public static final String RECORDER_KEY_NODE_REMOVE = "node_remove";
+    public static final String RECORDER_KEY_KEY_ADD = "key_add";
+    public static final String RECORDER_KEY_KEY_DELETE = "key_delete";
+    public static final String RECORDER_KEY_KEY_MODE = "key_mode";
+    public static final String RECORDER_KEY_KEY_VALUE = "key_value";
+    public static final String RECORDER_KEY_CURVE_REFIT = "curve_refit";
+    public static final String RECORDER_KEY_CURVE_REMOVE = "curve_remove";
     public static final String RECORDER_KEY_RESOLUTION = "resolution";
     public static final String RECORDER_KEY_FRAME_RATE = "frame_rate";
     public static final String RECORDER_KEY_FORMAT = "format";
