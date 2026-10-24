@@ -14,16 +14,17 @@ import engine.root.EngineSetting;
 public class SettingsOptionBranch extends BranchPackage {
 
     /*
-     * Fills the Display, Graphics and Gameplay tabs and the Controls tab's
-     * mouse section, and writes each change into Settings. Display, field of
-     * view and every post-processing effect take effect at once through
-     * SettingsSystem, and sensitivity is read live by InputManager, as is the
-     * tree detail distance by the trees, which redraw only those crossing it,
-     * the third person depth of field by AutoFocusSystem, and the camera's
-     * shake and head bob by PlayerManager.
-     * Render distance and terrain detail reshape how the world streams and
-     * shades — a distance change reloads every chunk — so they only mark the
-     * session, and SettingsMenuBranch applies them once when the menu closes.
+     * Fills the Display, Graphics, Main Menu and Gameplay tabs and the
+     * Controls tab's mouse section, and writes each change into Settings.
+     * Display, field of view, both tree detail distances and every
+     * post-processing effect take effect at once through SettingsSystem, the
+     * trees redrawing only those crossing the line, and sensitivity is read
+     * live by InputManager, as is the third person depth of field by
+     * AutoFocusSystem, and the camera's shake and head bob by PlayerManager.
+     * Render distance, terrain detail, distant terrain and the main menu's
+     * world reshape how the world streams and shades — a distance change
+     * reloads every chunk — so they only mark the session, and
+     * SettingsMenuBranch applies them once when the menu closes.
      */
 
     // Internal
@@ -59,9 +60,21 @@ public class SettingsOptionBranch extends BranchPackage {
         injectOptionRow(session, SettingsOption.RENDER_DISTANCE);
         injectOptionRow(session, SettingsOption.TERRAIN_DETAIL);
         injectOptionRow(session, SettingsOption.TREE_DETAIL);
+        injectOptionRow(session, SettingsOption.MACRO_TERRAIN);
+        settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_MACRO_TERRAIN);
         settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_WORLD_APPLY);
 
         populateEffects(session);
+    }
+
+    void populateMainMenu(SettingsSessionStruct session) {
+        settingsMenuBranch.injectSectionHeader(session, RuntimeSetting.SETTINGS_SECTION_MENU_WORLD);
+        injectOptionRow(session, SettingsOption.MENU_CHUNK_STREAMING);
+        injectOptionRow(session, SettingsOption.MENU_RENDER_DISTANCE);
+        injectOptionRow(session, SettingsOption.MENU_TREE_DETAIL);
+        injectOptionRow(session, SettingsOption.MENU_MACRO_TERRAIN);
+        settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_MENU_WORLD);
+        settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_WORLD_APPLY);
     }
 
     private void populateEffects(SettingsSessionStruct session) {
@@ -160,10 +173,7 @@ public class SettingsOptionBranch extends BranchPackage {
                 settingsSystem.applyFieldOfView();
             }
             case RENDER_DISTANCE -> {
-                settings.maxRenderDistance = Math.clamp(
-                        settings.maxRenderDistance + step * RuntimeSetting.SETTINGS_RENDER_DISTANCE_STEP,
-                        EngineSetting.RENDER_DISTANCE_MIN,
-                        EngineSetting.RENDER_DISTANCE_MAX);
+                settings.maxRenderDistance = stepRenderDistance(settings.maxRenderDistance, step);
                 session.markRenderSettingsChanged();
             }
             case TERRAIN_DETAIL -> {
@@ -173,10 +183,30 @@ public class SettingsOptionBranch extends BranchPackage {
                         EngineSetting.DETAIL_RADIUS_MAX);
                 session.markRenderSettingsChanged();
             }
-            case TREE_DETAIL -> settings.treeDetailDistance = Math.clamp(
-                    settings.treeDetailDistance + step * RuntimeSetting.SETTINGS_TREE_DETAIL_STEP,
-                    EngineSetting.TREE_DETAIL_DISTANCE_MIN,
-                    EngineSetting.TREE_DETAIL_DISTANCE_MAX);
+            case TREE_DETAIL -> {
+                settings.treeDetailDistance = stepTreeDetail(settings.treeDetailDistance, step);
+                settingsSystem.applyTreeDetail();
+            }
+            case MACRO_TERRAIN -> {
+                settings.macroTerrain = !settings.macroTerrain;
+                session.markRenderSettingsChanged();
+            }
+            case MENU_CHUNK_STREAMING -> {
+                settings.menuChunkStreaming = !settings.menuChunkStreaming;
+                session.markRenderSettingsChanged();
+            }
+            case MENU_RENDER_DISTANCE -> {
+                settings.menuRenderDistance = stepRenderDistance(settings.menuRenderDistance, step);
+                session.markRenderSettingsChanged();
+            }
+            case MENU_TREE_DETAIL -> {
+                settings.menuTreeDetailDistance = stepTreeDetail(settings.menuTreeDetailDistance, step);
+                settingsSystem.applyTreeDetail();
+            }
+            case MENU_MACRO_TERRAIN -> {
+                settings.menuMacroTerrain = !settings.menuMacroTerrain;
+                session.markRenderSettingsChanged();
+            }
             case OUTLINES -> {
                 settings.outlines = !settings.outlines;
                 settingsSystem.applyPostProcessing();
@@ -206,18 +236,37 @@ public class SettingsOptionBranch extends BranchPackage {
         }
     }
 
+    private int stepRenderDistance(int renderDistance, int step) {
+        return Math.clamp(
+                renderDistance + step * RuntimeSetting.SETTINGS_RENDER_DISTANCE_STEP,
+                EngineSetting.RENDER_DISTANCE_MIN,
+                EngineSetting.RENDER_DISTANCE_MAX);
+    }
+
+    private int stepTreeDetail(int treeDetailDistance, int step) {
+        return Math.clamp(
+                treeDetailDistance + step * RuntimeSetting.SETTINGS_TREE_DETAIL_STEP,
+                EngineSetting.TREE_DETAIL_DISTANCE_MIN,
+                EngineSetting.TREE_DETAIL_DISTANCE_MAX);
+    }
+
     private String formatOption(SettingsOption option) {
         return switch (option) {
             case FULLSCREEN -> formatToggle(settings.fullscreen);
             case VSYNC -> formatToggle(settings.vsync);
             case FIELD_OF_VIEW -> String.format(RuntimeSetting.SETTINGS_FORMAT_FIELD_OF_VIEW, settings.FOV);
-            case RENDER_DISTANCE -> String.format(
-                    RuntimeSetting.SETTINGS_FORMAT_CHUNKS,
-                    settings.maxRenderDistance / RuntimeSetting.SETTINGS_RENDER_DISTANCE_PER_RADIUS);
+            case RENDER_DISTANCE -> formatRenderDistance(settings.maxRenderDistance);
             case TERRAIN_DETAIL -> String.format(
                     RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
                     settings.detailRadius);
             case TREE_DETAIL -> String.format(RuntimeSetting.SETTINGS_FORMAT_CHUNKS, settings.treeDetailDistance);
+            case MACRO_TERRAIN -> formatToggle(settings.macroTerrain);
+            case MENU_CHUNK_STREAMING -> formatToggle(settings.menuChunkStreaming);
+            case MENU_RENDER_DISTANCE -> formatRenderDistance(settings.menuRenderDistance);
+            case MENU_TREE_DETAIL -> String.format(
+                    RuntimeSetting.SETTINGS_FORMAT_CHUNKS,
+                    settings.menuTreeDetailDistance);
+            case MENU_MACRO_TERRAIN -> formatToggle(settings.menuMacroTerrain);
             case OUTLINES -> formatToggle(settings.outlines);
             case OUTLINE_THICKNESS -> String.format(RuntimeSetting.SETTINGS_FORMAT_PIXELS, settings.outlineThickness);
             case DEPTH_OF_FIELD -> formatToggle(settings.depthOfField);
@@ -227,6 +276,12 @@ public class SettingsOptionBranch extends BranchPackage {
             case CAMERA_SHAKE -> formatToggle(settings.cameraShake);
             case HEAD_BOB -> formatToggle(settings.headBob);
         };
+    }
+
+    private String formatRenderDistance(int renderDistance) {
+        return String.format(
+                RuntimeSetting.SETTINGS_FORMAT_CHUNKS,
+                renderDistance / RuntimeSetting.SETTINGS_RENDER_DISTANCE_PER_RADIUS);
     }
 
     private String formatToggle(boolean enabled) {

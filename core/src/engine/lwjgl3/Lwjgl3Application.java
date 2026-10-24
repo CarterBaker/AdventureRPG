@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.PointerBuffer;
+import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
@@ -24,7 +25,12 @@ public class Lwjgl3Application {
      * context and runs the loop that pumps input and ticks the engine;
      * rendering and swapping are driven by RenderManager for every window
      * alike. The main window is fitted to its saved monitor's work area before
-     * it is shown, and fullscreen and vsync switch at runtime.
+     * it is shown, and fullscreen and vsync switch at runtime. The main window
+     * takes the configuration's frame — border, resizing and a transparent
+     * framebuffer — and every later window the defaults; a main window with
+     * its display mode locked never switches fullscreen. Once the loop ends
+     * every window, callback and GLFW itself is let go and the engine detaches
+     * its kernel, so another application can run in the same JVM.
      */
 
     // Internal
@@ -34,6 +40,7 @@ public class Lwjgl3Application {
     private final Lwjgl3Input input;
     private final int glMajor;
     private final int glMinor;
+    private final boolean displayModeLocked;
     private int swapInterval;
 
     // Secondary Windows
@@ -71,15 +78,17 @@ public class Lwjgl3Application {
 
         this.glMajor = config.getGlMajor();
         this.glMinor = config.getGlMinor();
+        this.displayModeLocked = config.isDisplayModeLocked();
         this.swapInterval = config.isVsync() ? 1 : 0;
         applyWindowHints(glMajor, glMinor);
+        applyFrameHints(config);
         GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
 
         long monitor = config.isFullscreen() ? GLFW.glfwGetPrimaryMonitor() : 0L;
         int createWidth = config.isFullscreen() ? config.getFullscreenWidth() : config.width;
         int createHeight = config.isFullscreen() ? config.getFullscreenHeight() : config.height;
         this.mainHandle = GLFW.glfwCreateWindow(createWidth, createHeight, config.title, monitor, 0L);
-        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_TRUE);
+        GLFW.glfwDefaultWindowHints();
 
         if (mainHandle == 0L) {
             GLFW.glfwTerminate();
@@ -124,14 +133,15 @@ public class Lwjgl3Application {
         loop();
 
         for (int i = 0; i < secondaryHandles.size(); i++)
-            GLFW.glfwDestroyWindow(secondaryHandles.getLong(i));
+            releaseWindow(secondaryHandles.getLong(i));
 
         for (Lwjgl3Input value : handle2Input.values())
             value.destroyCursors();
         input.destroyCursors();
 
-        GLFW.glfwDestroyWindow(mainHandle);
+        releaseWindow(mainHandle);
         GLFW.glfwTerminate();
+        engine.detachKernel();
     }
 
     // Internal \\
@@ -141,6 +151,19 @@ public class Lwjgl3Application {
         GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, glMinor);
         GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_PROFILE, GLFW.GLFW_OPENGL_CORE_PROFILE);
         GLFW.glfwWindowHint(GLFW.GLFW_OPENGL_FORWARD_COMPAT, GLFW.GLFW_TRUE);
+    }
+
+    private static void applyFrameHints(Lwjgl3Configuration config) {
+        GLFW.glfwWindowHint(GLFW.GLFW_DECORATED, config.isDecorated() ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
+        GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, config.isResizable() ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
+        GLFW.glfwWindowHint(
+                GLFW.GLFW_TRANSPARENT_FRAMEBUFFER,
+                config.isTransparentFramebuffer() ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
+    }
+
+    private static void releaseWindow(long handle) {
+        Callbacks.glfwFreeCallbacks(handle);
+        GLFW.glfwDestroyWindow(handle);
     }
 
     private void registerCallbacks(long handle, Lwjgl3Input inp, BooleanSupplier closeCallback) {
@@ -339,7 +362,7 @@ public class Lwjgl3Application {
 
     void setFullscreen(boolean fullscreen) {
 
-        if (display.isFullscreen() == fullscreen)
+        if (displayModeLocked || display.isFullscreen() == fullscreen)
             return;
 
         if (fullscreen)

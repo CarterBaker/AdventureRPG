@@ -1,9 +1,9 @@
 package application.bootstrap.entitypipeline.npcmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.entitymanager.EntityRenderSystem;
 import application.bootstrap.entitypipeline.npc.NpcInstance;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
-import application.bootstrap.renderpipeline.rendermanager.EntityRenderSystem;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.kernel.windowpipeline.window.WindowInstance;

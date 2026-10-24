@@ -269,8 +269,9 @@ public class InputManager extends ManagerPackage {
         return internal.windowPlatform.getCursorY(osWindow);
     }
 
+    // A window that never pins the cursor is only ever released, whoever asks
     public void captureCursor(boolean captured, WindowInstance window) {
-        cursorSystem.captureCursor(captured, window);
+        cursorSystem.captureCursor(captured && window.isCaptureEligible(), window);
     }
 
     public void setCursorSprite(SpriteHandle handle) {

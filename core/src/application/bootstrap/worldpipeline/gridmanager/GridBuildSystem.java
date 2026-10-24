@@ -15,6 +15,7 @@ import application.bootstrap.weatherpipeline.precipitationmanager.PrecipitationM
 import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
 import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.grid.GridRangeStruct;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -31,11 +32,12 @@ class GridBuildSystem extends SystemPackage {
 
     /*
      * Constructs a GridInstance and all GridSlotHandles for a given focal
-     * entity and window, including each window's own cloned clock, weather,
-     * wind, precipitation, ocean turbulence, and lighting UBO instances.
-     * Rebuilding re-lays an existing grid's slots for the current render
-     * distance in place and releases the slot UBOs it replaces, leaving the
-     * grid's per-window state untouched.
+     * entity, window and range, including each window's own cloned clock,
+     * weather, wind, precipitation, ocean turbulence, lighting and render
+     * settings UBO instances. Rebuilding re-lays an existing grid's slots for
+     * the range it follows in place and releases the slot UBOs it replaces,
+     * leaving the grid's per-window state untouched. The slots form a disc of
+     * the range's render distance, so a range of zero lays none.
      */
 
     // Internal
@@ -63,6 +65,7 @@ class GridBuildSystem extends SystemPackage {
     private UBOHandle windDataBase;
     private UBOHandle precipitationDataBase;
     private UBOHandle oceanDataBase;
+    private UBOHandle settingsDataBase;
 
     // Internal \\
 
@@ -96,16 +99,22 @@ class GridBuildSystem extends SystemPackage {
         this.windDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.WIND_DATA_UBO);
         this.precipitationDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.PRECIPITATION_DATA_UBO);
         this.oceanDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.OCEAN_DATA_UBO);
+        this.settingsDataBase = uboManager.getUBOHandleFromUBOName(EngineSetting.SETTINGS_UBO);
     }
 
     // Build \\
 
-    GridInstance buildGrid(EntityInstance focalEntity, WindowInstance windowInstance, FBOInstance renderTargetFbo) {
+    GridInstance buildGrid(
+            EntityInstance focalEntity,
+            WindowInstance windowInstance,
+            FBOInstance renderTargetFbo,
+            GridRangeStruct range) {
 
-        float radius = calculateRadius();
+        int renderDistance = range.getRenderDistance();
+        float radius = calculateRadius(renderDistance);
         float radiusSquared = radius * radius;
 
-        long[] loadOrder = assignLoadOrder(radius);
+        long[] loadOrder = assignLoadOrder(renderDistance);
         LongOpenHashSet gridCoordinates = collectGridCoordinates(loadOrder);
 
         int totalSlots = loadOrder.length;
@@ -133,6 +142,8 @@ class GridBuildSystem extends SystemPackage {
                 gridCoordinates,
                 gridSlots,
                 radiusSquared,
+                range,
+                uboManager.createUBOInstance(settingsDataBase),
                 maxChunks,
                 clockManager.createClockInstance(),
                 uboManager.createUBOInstance(timeDataBase),
@@ -152,6 +163,8 @@ class GridBuildSystem extends SystemPackage {
                 waveManager.createWaveInstance(),
                 uboManager.createUBOInstance(oceanDataBase));
 
+        pushRenderSettings(gridInstance);
+
         return gridInstance;
     }
 
@@ -161,8 +174,9 @@ class GridBuildSystem extends SystemPackage {
 
         releaseSlotUBOs(gridInstance);
 
-        float radius = calculateRadius();
-        long[] loadOrder = assignLoadOrder(radius);
+        int renderDistance = gridInstance.getRange().getRenderDistance();
+        float radius = calculateRadius(renderDistance);
+        long[] loadOrder = assignLoadOrder(renderDistance);
         LongOpenHashSet gridCoordinates = collectGridCoordinates(loadOrder);
 
         Long2ObjectOpenHashMap<GridSlotHandle> gridSlots = createGridSlotHandles(
@@ -179,6 +193,8 @@ class GridBuildSystem extends SystemPackage {
                 gridCoordinates,
                 gridSlots,
                 radius * radius);
+
+        pushRenderSettings(gridInstance);
     }
 
     private void releaseSlotUBOs(GridInstance gridInstance) {
@@ -186,22 +202,35 @@ class GridBuildSystem extends SystemPackage {
             uboManager.destroyInstance(gridSlotHandle.getSlotUBO());
     }
 
+    // Render Settings \\
+
+    // The grid's own reach for its shaders, so the fog's seam lands on the rim this grid actually draws
+    void pushRenderSettings(GridInstance gridInstance) {
+
+        UBOInstance settingsData = gridInstance.getSettingsDataUBO();
+
+        settingsData.updateUniform(EngineSetting.UNIFORM_RENDER_DISTANCE, (float) gridInstance.getRenderDistance());
+        settingsData.updateUniform(EngineSetting.UNIFORM_CHUNK_SIZE, (float) chunkSize);
+        settingsData.updateUniform(EngineSetting.UNIFORM_DETAIL_RADIUS, (float) settings.detailRadius);
+        uboManager.push(settingsData);
+    }
+
     // Radius \\
 
-    private float calculateRadius() {
-        return settings.maxRenderDistance / 2f;
+    private float calculateRadius(int renderDistance) {
+        return renderDistance / 2f;
     }
 
     // Load Order \\
 
-    private long[] assignLoadOrder(float radius) {
+    private long[] assignLoadOrder(int renderDistance) {
 
-        int maxRenderDistance = settings.maxRenderDistance;
-        int half = maxRenderDistance / 2;
+        int half = renderDistance / 2;
+        float radius = calculateRadius(renderDistance);
         float radiusSquared = radius * radius;
 
         LongArrayList coordinates = new LongArrayList();
-        long[] sortScratch = new long[maxRenderDistance * maxRenderDistance];
+        long[] sortScratch = new long[renderDistance * renderDistance];
         int count = 0;
 
         for (int x = -half; x < half; x++) {

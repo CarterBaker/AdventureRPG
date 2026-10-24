@@ -2,8 +2,7 @@ package application.bootstrap.settingspipeline.settingssystem;
 
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
-import application.bootstrap.worldpipeline.grid.GridInstance;
-import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
+import application.bootstrap.worldpipeline.grid.GridRangeStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import engine.root.EngineSetting;
@@ -20,29 +19,40 @@ public class SettingsSystem extends SystemPackage {
      * camera, render settings through onRenderSettingsChanged(), effect
      * settings through applyPostProcessing(), and saveSettings() for the
      * file. Owns the RenderSettingsData and PostProcessData UBOs — the single
-     * source of truth for render and effect settings on the GPU. The grid is
-     * only rebuilt when the render distance actually differs from the one
-     * last applied, since a rebuild reloads every chunk around the player.
+     * source of truth for render and effect settings on the GPU — and the two
+     * ranges grids follow: the play range, and the main menu's range. Either
+     * leaves out its chunks or its distant terrain as a reach of zero. A
+     * settings change edits both in place and raises the range revision,
+     * which WorldStreamManager follows, so settings never reach into the world
+     * and an engine without one runs them alone.
      */
 
     // Internal
     private UBOManager uboManager;
-    private WorldStreamManager worldStreamManager;
     private WindowManager windowManager;
 
     // UBO
     private UBOHandle renderSettingsData;
     private UBOHandle postProcessData;
 
-    // Render State
-    private int appliedRenderDistance;
+    // Ranges
+    private GridRangeStruct playRange;
+    private GridRangeStruct menuRange;
+    private int rangeRevision;
 
     // Internal \\
 
     @Override
+    protected void create() {
+
+        // Ranges
+        this.playRange = new GridRangeStruct();
+        this.menuRange = new GridRangeStruct();
+    }
+
+    @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
-        this.worldStreamManager = get(WorldStreamManager.class);
         this.windowManager = get(WindowManager.class);
     }
 
@@ -51,8 +61,8 @@ public class SettingsSystem extends SystemPackage {
 
         this.renderSettingsData = uboManager.getUBOHandleFromUBOName(EngineSetting.SETTINGS_UBO);
         this.postProcessData = uboManager.getUBOHandleFromUBOName(EngineSetting.POST_PROCESS_UBO);
-        this.appliedRenderDistance = settings.maxRenderDistance;
 
+        refreshRanges();
         pushEngineSettings();
         pushRenderSettings();
         applyPostProcessing();
@@ -76,21 +86,32 @@ public class SettingsSystem extends SystemPackage {
     }
 
     public void onRenderSettingsChanged() {
-
-        if (settings.maxRenderDistance != appliedRenderDistance)
-            rebuildGrids();
-
+        refreshRanges();
+        this.rangeRevision++;
         pushRenderSettings();
     }
 
-    private void rebuildGrids() {
+    // Ranges \\
 
-        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+    // Tree detail is read live by the trees, so only the ranges carrying it change
+    public void applyTreeDetail() {
+        refreshRanges();
+    }
 
-        for (int i = 0; i < grids.size(); i++)
-            worldStreamManager.rebuildGrid(grids.get(i));
+    private void refreshRanges() {
 
-        this.appliedRenderDistance = settings.maxRenderDistance;
+        int playMacros = settings.macroTerrain ? 1 : 0;
+        int menuChunks = settings.menuChunkStreaming ? 1 : 0;
+        int menuMacros = settings.menuMacroTerrain ? 1 : 0;
+
+        playRange.set(
+                settings.maxRenderDistance,
+                settings.treeDetailDistance,
+                EngineSetting.MACRO_RENDER_DISTANCE_BLOCKS * playMacros);
+        menuRange.set(
+                settings.menuRenderDistance * menuChunks,
+                settings.menuTreeDetailDistance,
+                EngineSetting.MACRO_RENDER_DISTANCE_BLOCKS * menuMacros);
     }
 
     // Post Processing \\
@@ -154,5 +175,19 @@ public class SettingsSystem extends SystemPackage {
     public void saveSettings() {
         SettingsUtility.flushBindings(settings);
         SettingsUtility.save(internal.settingsFile, settings);
+    }
+
+    // Accessible \\
+
+    public GridRangeStruct getPlayRange() {
+        return playRange;
+    }
+
+    public GridRangeStruct getMenuRange() {
+        return menuRange;
+    }
+
+    public int getRangeRevision() {
+        return rangeRevision;
     }
 }

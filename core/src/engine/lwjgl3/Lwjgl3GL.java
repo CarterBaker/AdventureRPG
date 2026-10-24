@@ -38,6 +38,10 @@ class Lwjgl3GL implements GL40 {
         GL11.glBlendFunc(src, dst);
     }
 
+    public void glBlendFuncSeparate(int srcRGB, int dstRGB, int srcAlpha, int dstAlpha) {
+        GL14.glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
+    }
+
     public void glCullFace(int mode) {
         GL11.glCullFace(mode);
     }

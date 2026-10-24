@@ -34,6 +34,18 @@ class CompositeRenderGLSLUtility extends EngineUtility {
                 EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
     }
 
+    // Straight color over the screen, its alpha laid over as coverage, so a transparent window reads premultiplied
+    static void beginScreenPass() {
+        EngineContext.gl20.glDisable(EngineSetting.GL_DEPTH_TEST);
+        EngineContext.gl20.glDepthMask(false);
+        EngineContext.gl20.glEnable(EngineSetting.GL_BLEND);
+        EngineContext.gl20.glBlendFuncSeparate(
+                EngineSetting.GL_SRC_ALPHA,
+                EngineSetting.GL_ONE_MINUS_SRC_ALPHA,
+                EngineSetting.GL_ONE,
+                EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
     static void endPass() {
         EngineContext.gl20.glEnable(EngineSetting.GL_DEPTH_TEST);
         EngineContext.gl20.glDepthMask(true);

@@ -14,18 +14,19 @@ public class LoadMenuBranch extends BranchPackage {
 
     /*
      * Handles the load menu opened from the main menu. Opening hides the menu
-     * it was opened from and lists every saved character, most recently played
-     * first, or a notice when there are none; Back closes it and shows that
-     * menu again. Choosing a character
-     * loads it into the window's player through SaveManager and closes both
-     * menus so play begins — a character that fails to load leaves the menu
-     * open. The hidden menu is tracked per window so every window's load menu
-     * returns to its own.
+     * it was opened from and lists every saved character, most recently
+     * played first, or a notice when there are none; Back closes it and shows
+     * that menu again. Choosing a character loads it into the window's player
+     * through SaveManager and closes both menus, the main menu through
+     * MainMenuBranch, so play begins — a character that fails to load leaves
+     * the menu open. The hidden menu is tracked per window so every window's
+     * load menu returns to its own.
      */
 
     // Internal
     private MenuManager menuManager;
     private SaveManager saveManager;
+    private MainMenuBranch mainMenuBranch;
 
     // Per-window
     private Int2ObjectOpenHashMap<MenuInstance> windowID2ParentMenu;
@@ -41,6 +42,7 @@ public class LoadMenuBranch extends BranchPackage {
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.saveManager = get(SaveManager.class);
+        this.mainMenuBranch = get(MainMenuBranch.class);
     }
 
     // Open / Close \\
@@ -71,7 +73,7 @@ public class LoadMenuBranch extends BranchPackage {
             return;
 
         menuManager.closeMenu(loadMenu);
-        menuManager.closeMenu(windowID2ParentMenu.remove(window.getWindowID()));
+        mainMenuBranch.closeMenu(windowID2ParentMenu.remove(window.getWindowID()));
     }
 
     // Character List \\

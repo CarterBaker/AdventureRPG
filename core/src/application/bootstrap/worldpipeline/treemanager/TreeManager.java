@@ -4,6 +4,7 @@ import application.bootstrap.calendarpipeline.clock.ClockHandle;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.combat.BlowOutcome;
 import application.bootstrap.combatpipeline.combat.BlowStruct;
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.worldpipeline.tree.TreeCastStruct;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
@@ -51,6 +52,7 @@ public class TreeManager extends ManagerPackage {
     // Internal
     private ClockManager clockManager;
     private MaterialManager materialManager;
+    private DynamicGeometryManager dynamicGeometryManager;
     private TreeRegistryBranch treeRegistryBranch;
     private TreeDetailBranch treeDetailBranch;
     private TreeSiteBranch treeSiteBranch;
@@ -105,6 +107,7 @@ public class TreeManager extends ManagerPackage {
     protected void get() {
         this.clockManager = get(ClockManager.class);
         this.materialManager = get(MaterialManager.class);
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
     }
 
     @Override
@@ -115,6 +118,8 @@ public class TreeManager extends ManagerPackage {
         // Materials
         this.barkMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.TREE_BARK_MATERIAL);
         this.leafMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.TREE_LEAF_MATERIAL);
+
+        dynamicGeometryManager.bindTreeManager(this);
     }
 
     // Update \\

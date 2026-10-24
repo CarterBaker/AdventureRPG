@@ -72,6 +72,14 @@ public class SettingsUtility extends EngineUtility {
                 settings.treeDetailDistance,
                 EngineSetting.TREE_DETAIL_DISTANCE_MIN,
                 EngineSetting.TREE_DETAIL_DISTANCE_MAX);
+        settings.menuRenderDistance = Math.clamp(
+                settings.menuRenderDistance,
+                EngineSetting.RENDER_DISTANCE_MIN,
+                EngineSetting.RENDER_DISTANCE_MAX);
+        settings.menuTreeDetailDistance = Math.clamp(
+                settings.menuTreeDetailDistance,
+                EngineSetting.TREE_DETAIL_DISTANCE_MIN,
+                EngineSetting.TREE_DETAIL_DISTANCE_MAX);
         settings.FOV = Math.clamp(
                 settings.FOV,
                 EngineSetting.FIELD_OF_VIEW_MIN,

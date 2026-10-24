@@ -1,9 +1,9 @@
 package application.runtime.player;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.entitymanager.EntityRenderSystem;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
-import application.bootstrap.renderpipeline.rendermanager.EntityRenderSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.SystemPackage;
 

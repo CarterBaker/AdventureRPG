@@ -36,6 +36,7 @@ class SubCellSampleBranch extends BranchPackage {
     static final int COLUMN_FRONT_SHIFT = 2;
 
     // Internal
+    private DynamicGeometryManager dynamicGeometryManager;
     private BlockManager blockManager;
     private BiomeManager biomeManager;
     private BlockHandle airBlockHandle;
@@ -60,15 +61,16 @@ class SubCellSampleBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.blockManager = get(BlockManager.class);
-        this.biomeManager = get(BiomeManager.class);
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
     }
 
     @Override
     protected void start() {
 
-        // Internal
-        this.airBlockHandle = blockManager.getBlockHandleFromBlockName(EngineSetting.AIR_BLOCK_NAME);
+        // Sources
+        this.blockManager = dynamicGeometryManager.getBlockManager();
+        this.biomeManager = dynamicGeometryManager.getBiomeManager();
+        this.airBlockHandle = dynamicGeometryManager.getAirBlockHandle();
     }
 
     // Lookup \\

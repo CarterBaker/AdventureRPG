@@ -112,10 +112,12 @@ public class CompositeRenderSystem extends SystemPackage {
         if (batches == null || batches.isEmpty())
             return;
 
-        if (fbo != null && !fbo.getDepthTextures().isEmpty())
+        if (fbo == null)
+            CompositeRenderGLSLUtility.beginScreenPass();
+        else if (!fbo.getDepthTextures().isEmpty())
             CompositeRenderGLSLUtility.beginScenePass();
         else
-            CompositeRenderGLSLUtility.beginUIPass(fbo != null && fbo.getFboData().isPremultipliedBlend());
+            CompositeRenderGLSLUtility.beginUIPass(fbo.getFboData().isPremultipliedBlend());
 
         Object[] batchElements = batches.elements();
         int batchCount = batches.size();

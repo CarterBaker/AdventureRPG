@@ -8,7 +8,8 @@ public interface WindowPlatform {
     /*
      * The platform contract the engine drives windows through: opening and
      * destroying windows, GL context switching, input lookup per OS window,
-     * cursor, placement, display mode and vsync.
+     * cursor, placement, display mode and vsync, and for a transparent
+     * window whether it lets the cursor through to whatever lies behind it.
      */
 
     void openWindow(WindowInstance window);
@@ -32,6 +33,12 @@ public interface WindowPlatform {
     void syncWindowSize(WindowInstance window);
 
     void placeWindow(WindowInstance window, int screenX, int screenY, int width, int height);
+
+    void moveWindow(WindowInstance window, int screenX, int screenY);
+
+    boolean isTransparent(WindowInstance window);
+
+    void setMousePassthrough(WindowInstance window, boolean passthrough);
 
     void setFullscreen(boolean fullscreen);
 

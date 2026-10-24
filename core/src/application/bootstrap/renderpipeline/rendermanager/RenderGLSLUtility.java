@@ -21,11 +21,6 @@ class RenderGLSLUtility extends EngineUtility {
 
     // Buffer \\
 
-    static void clearBuffer() {
-        EngineContext.gl20.glClearColor(0, 0, 0, 1);
-        EngineContext.gl20.glClear(EngineSetting.GL_COLOR_BUFFER_BIT | EngineSetting.GL_DEPTH_BUFFER_BIT);
-    }
-
     static void clearBuffer(float r, float g, float b, float a) {
         EngineContext.gl20.glClearColor(r, g, b, a);
         EngineContext.gl20.glClear(EngineSetting.GL_COLOR_BUFFER_BIT | EngineSetting.GL_DEPTH_BUFFER_BIT);
@@ -62,6 +57,16 @@ class RenderGLSLUtility extends EngineUtility {
     static void enableBlending() {
         EngineContext.gl20.glEnable(EngineSetting.GL_BLEND);
         EngineContext.gl20.glBlendFunc(EngineSetting.GL_SRC_ALPHA, EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    // Straight color over the screen, its alpha laid over as coverage, so a transparent window reads premultiplied
+    static void enableScreenBlending() {
+        EngineContext.gl20.glEnable(EngineSetting.GL_BLEND);
+        EngineContext.gl20.glBlendFuncSeparate(
+                EngineSetting.GL_SRC_ALPHA,
+                EngineSetting.GL_ONE_MINUS_SRC_ALPHA,
+                EngineSetting.GL_ONE,
+                EngineSetting.GL_ONE_MINUS_SRC_ALPHA);
     }
 
     static void enablePremultipliedBlending() {

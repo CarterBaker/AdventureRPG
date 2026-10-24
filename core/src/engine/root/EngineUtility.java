@@ -19,7 +19,8 @@ public abstract class EngineUtility {
      * Static base for every *Utility class. Provides engine-wide logging and
      * throwException(), and holds the kernel managers assigned during their
      * awake() so thread submission and camera creation are reachable without
-     * passing the engine around.
+     * passing the engine around, letting them go once the engine's
+     * application has ended.
      */
 
     // Internal \\
@@ -72,6 +73,16 @@ public abstract class EngineUtility {
             throwException("Illegal reassignment of profiler manager attempted during runtime");
 
         profilerManager = input;
+    }
+
+    // Only once the engine's application has ended, so the next engine in this JVM assigns its own kernel
+    static void detachEngine() {
+        engine = null;
+        inputManager = null;
+        threadManager = null;
+        windowManager = null;
+        frameRateManager = null;
+        profilerManager = null;
     }
 
     // Thread \\

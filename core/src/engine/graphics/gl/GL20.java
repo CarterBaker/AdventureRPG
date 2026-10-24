@@ -24,6 +24,8 @@ public interface GL20 {
 
     void glBlendFunc(int sfactor, int dfactor);
 
+    void glBlendFuncSeparate(int srcRGB, int dstRGB, int srcAlpha, int dstAlpha);
+
     void glCullFace(int mode);
 
     void glFrontFace(int mode);

@@ -11,7 +11,9 @@ public class Settings {
      * User-configurable runtime values. Serialized to and from disk via
      * SettingsUtility. Fields are public and mutable — patched at runtime and
      * flushed on close or settings change. Bindings hold stored input codes,
-     * so a binding may be a key or a mouse button.
+     * so a binding may be a key or a mouse button. The main menu streams the
+     * world behind it on its own distances apart from play, and either can
+     * leave out its chunks or its distant terrain.
      */
 
     // Debug
@@ -31,6 +33,13 @@ public class Settings {
     public int maxRenderDistance = 32;
     public int detailRadius = 48;
     public int treeDetailDistance = 4;
+    public boolean macroTerrain = true;
+
+    // Render — Main Menu
+    public boolean menuChunkStreaming = true;
+    public int menuRenderDistance = 16;
+    public int menuTreeDetailDistance = 2;
+    public boolean menuMacroTerrain = true;
 
     // Post Processing — Outlines
     public boolean outlines = true;

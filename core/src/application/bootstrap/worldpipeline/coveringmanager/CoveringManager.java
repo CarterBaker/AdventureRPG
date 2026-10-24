@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.coveringmanager;
 
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
 import application.bootstrap.worldpipeline.covering.CoveringHandle;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
@@ -25,6 +26,7 @@ public class CoveringManager extends ManagerPackage {
      */
 
     // Internal
+    private DynamicGeometryManager dynamicGeometryManager;
     private CoveringBufferSystem coveringBufferSystem;
 
     // Palette
@@ -47,9 +49,15 @@ public class CoveringManager extends ManagerPackage {
     }
 
     @Override
+    protected void get() {
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
+    }
+
+    @Override
     protected void awake() {
         internalLoader.requestAll();
         coveringBufferSystem.pushCoveringTable(coveringID2CoveringHandle);
+        dynamicGeometryManager.bindCoveringManager(this);
     }
 
     // Management \\

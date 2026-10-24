@@ -43,7 +43,10 @@ public class GridInstance extends InstancePackage {
      * so the switch lands within frames instead of waiting out a full
      * streaming pass. The leading prioritized slots of the load order are the
      * ground the streams sweep nearest first every frame, and every move
-     * restarts the slot scan from the nearest slot.
+     * restarts the slot scan from the nearest slot. The grid follows a
+     * GridRangeStruct and keeps a copy of the range it was last laid for,
+     * which everything measuring the grid's reach reads, along with its own
+     * render settings UBO carrying that reach to the shaders.
      */
 
     // Focal
@@ -62,6 +65,13 @@ public class GridInstance extends InstancePackage {
     private LongOpenHashSet gridCoordinates;
     private Long2ObjectOpenHashMap<GridSlotHandle> gridSlots;
     private float radiusSquared;
+
+    // Range — the profile followed, and the one the slots and macro ring were last laid for
+    private GridRangeStruct range;
+    private GridRangeStruct layoutRange;
+
+    // Render Settings UBO
+    private UBOInstance settingsDataUBO;
 
     // Active State
     private long activeChunkCoordinate;
@@ -138,6 +148,8 @@ public class GridInstance extends InstancePackage {
             LongOpenHashSet gridCoordinates,
             Long2ObjectOpenHashMap<GridSlotHandle> gridSlots,
             float radiusSquared,
+            GridRangeStruct range,
+            UBOInstance settingsDataUBO,
             int maxChunks,
             ClockInstance clockInstance,
             UBOInstance timeDataUBO,
@@ -174,6 +186,14 @@ public class GridInstance extends InstancePackage {
                 gridCoordinates,
                 gridSlots,
                 radiusSquared);
+
+        // Range
+        this.range = range;
+        this.layoutRange = new GridRangeStruct();
+        layoutRange.copy(range);
+
+        // Render Settings UBO
+        this.settingsDataUBO = settingsDataUBO;
 
         // Active State
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
@@ -252,6 +272,7 @@ public class GridInstance extends InstancePackage {
                 gridCoordinates,
                 gridSlots,
                 radiusSquared);
+        layoutRange.copy(range);
         restartScan();
         rebuildRenderQueue();
     }
@@ -524,6 +545,34 @@ public class GridInstance extends InstancePackage {
 
     public float getRadiusSquared() {
         return radiusSquared;
+    }
+
+    public GridRangeStruct getRange() {
+        return range;
+    }
+
+    public void setRange(GridRangeStruct range) {
+        this.range = range;
+    }
+
+    public boolean isLaidFor(GridRangeStruct range) {
+        return layoutRange.matchesLayout(range);
+    }
+
+    public int getRenderDistance() {
+        return layoutRange.getRenderDistance();
+    }
+
+    public float getMacroReachBlocks() {
+        return layoutRange.getMacroReachBlocks();
+    }
+
+    public int getTreeDetailDistance() {
+        return range.getTreeDetailDistance();
+    }
+
+    public UBOInstance getSettingsDataUBO() {
+        return settingsDataUBO;
     }
 
     public ClockInstance getClockInstance() {

@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.blockmanager;
 
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import engine.root.EngineSetting;
@@ -21,6 +22,7 @@ public class BlockManager extends ManagerPackage {
      */
 
     // Internal
+    private DynamicGeometryManager dynamicGeometryManager;
     private BlockBufferSystem internalBufferSystem;
 
     // Palette
@@ -43,6 +45,16 @@ public class BlockManager extends ManagerPackage {
         create(BlockPlacementSystem.class);
 
         create(BlockLoader.class);
+    }
+
+    @Override
+    protected void get() {
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        dynamicGeometryManager.bindBlockManager(this);
     }
 
     // Management \\

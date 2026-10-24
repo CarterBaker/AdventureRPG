@@ -48,6 +48,7 @@ class GeometryBuildManager extends ManagerPackage {
     private ComplexGeometryBranch complexGeometryBranch;
     private LiquidGeometryBranch liquidGeometryBranch;
     private TreeGeometryBranch treeGeometryBranch;
+    private DynamicGeometryManager dynamicGeometryManager;
     private BiomeManager biomeManager;
     private BlockManager blockManager;
 
@@ -78,8 +79,14 @@ class GeometryBuildManager extends ManagerPackage {
     protected void get() {
 
         // Internal
-        this.biomeManager = get(BiomeManager.class);
-        this.blockManager = get(BlockManager.class);
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
+    }
+
+    @Override
+    protected void start() {
+
+        this.biomeManager = dynamicGeometryManager.getBiomeManager();
+        this.blockManager = dynamicGeometryManager.getBlockManager();
     }
 
     // Chunk Geometry \\

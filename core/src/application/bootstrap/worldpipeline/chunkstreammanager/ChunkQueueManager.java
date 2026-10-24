@@ -315,7 +315,9 @@ class ChunkQueueManager extends ManagerPackage {
         if (loadRequests.size() >= maxQueuedLoadRequests)
             return;
 
-        for (int i = 0; i < EngineSetting.GRID_SLOTS_SCAN_PER_FRAME; i++) {
+        int scanCount = Math.min(EngineSetting.GRID_SLOTS_SCAN_PER_FRAME, grid.getTotalSlots());
+
+        for (int i = 0; i < scanCount; i++) {
             GridSlotHandle slot = grid.getNextScanSlot();
             long chunkCoordinate = slot.getChunkCoordinate();
             if (!activeChunks.containsKey(chunkCoordinate))

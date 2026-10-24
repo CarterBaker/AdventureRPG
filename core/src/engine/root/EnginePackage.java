@@ -11,6 +11,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import engine.assets.camera.CameraInstance;
 import engine.assets.camera.OrthographicCameraInstance;
 import engine.settings.Settings;
+import engine.util.io.AssetManifestStruct;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -21,7 +22,10 @@ public class EnginePackage extends ManagerPackage {
      * machine and the engine registry, and propagates every lifecycle phase to
      * its systems and to each active context. Contexts created with a crash
      * listener run inside an isolation boundary, so a failure stops only that
-     * context while the engine keeps running.
+     * context while the engine keeps running. Once its application has
+     * ended, the engine detaches its kernel so another engine can run after
+     * it in the same JVM. Every loader queues only the assets the engine's
+     * asset manifest admits.
      */
 
     // Core
@@ -35,6 +39,7 @@ public class EnginePackage extends ManagerPackage {
 
     // Internal
     private EngineState engineState;
+    private AssetManifestStruct assetManifest;
 
     // System Management
     Object2ObjectLinkedOpenHashMap<Class<?>, SystemPackage> internalRegistry;
@@ -497,6 +502,7 @@ public class EnginePackage extends ManagerPackage {
 
     private void internalKernel() {
 
+        this.assetManifest = assetManifest();
         this.setContext(SystemContext.KERNEL);
 
         kernel();
@@ -510,6 +516,17 @@ public class EnginePackage extends ManagerPackage {
     }
 
     protected void kernel() {
+    }
+
+    // Assets \\
+
+    // The assets this engine queues at bootstrap — every one unless an engine names its own manifest
+    protected AssetManifestStruct assetManifest() {
+        return AssetManifestStruct.EVERYTHING;
+    }
+
+    final boolean admitsAsset(File file) {
+        return assetManifest.admits(file);
     }
 
     // Bootstrap \\
@@ -777,5 +794,14 @@ public class EnginePackage extends ManagerPackage {
         this.engineState = EngineState.EXIT;
         this.windowPlatform.exit();
         execute(0f);
+    }
+
+    public final void detachKernel() {
+
+        if (this.engineState != EngineState.EXIT)
+            throwException("The kernel can only be detached once the engine has shut down.\n" +
+                    "Current state: " + this.engineState);
+
+        EngineUtility.detachEngine();
     }
 }

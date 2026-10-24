@@ -1,13 +1,13 @@
 package editor.runtime.characterview.render;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
+import application.bootstrap.entitypipeline.entitymanager.EntityRenderSystem;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.modelmanager.ModelManager;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
-import application.bootstrap.renderpipeline.rendermanager.EntityRenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;

@@ -122,7 +122,7 @@ class MacroWaterRenderSystem extends SystemPackage {
         if (water != null)
             return water;
 
-        int renderDistance = settings.maxRenderDistance;
+        int renderDistance = grid.getRenderDistance();
 
         buildPlane(renderDistance);
 
@@ -217,9 +217,9 @@ class MacroWaterRenderSystem extends SystemPackage {
         planeIndices.add((short) highNext);
     }
 
-    private void refreshPlane(MacroWaterInstance water) {
+    private void refreshPlane(MacroWaterInstance water, GridInstance grid) {
 
-        int renderDistance = settings.maxRenderDistance;
+        int renderDistance = grid.getRenderDistance();
 
         if (water.getPlaneRenderDistance() == renderDistance)
             return;
@@ -350,7 +350,7 @@ class MacroWaterRenderSystem extends SystemPackage {
         long activeChunkCoordinate = grid.getActiveChunkCoordinate();
         int activeX = Coordinate2Long.unpackX(activeChunkCoordinate);
         int activeZ = Coordinate2Long.unpackY(activeChunkCoordinate);
-        int gridHalf = settings.maxRenderDistance / 2;
+        int gridHalf = grid.getRenderDistance() / 2;
         int center = coverageSize / 2;
         byte drawn = (byte) EngineSetting.PACKED_COLOR_CHANNEL_MASK;
 
@@ -376,7 +376,7 @@ class MacroWaterRenderSystem extends SystemPackage {
         MacroWaterInstance water = resolveWater(grid);
 
         advanceOrigin(water, grid);
-        refreshPlane(water);
+        refreshPlane(water, grid);
         refreshCoverage(water, grid);
 
         ModelInstance modelInstance = water.getModelInstance();

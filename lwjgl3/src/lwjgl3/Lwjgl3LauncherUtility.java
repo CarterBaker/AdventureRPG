@@ -1,6 +1,7 @@
 package lwjgl3;
 
 import java.io.File;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import engine.lwjgl3.Lwjgl3Application;
@@ -18,10 +19,14 @@ import engine.util.log.LogUtility;
 class Lwjgl3LauncherUtility extends EngineUtility {
 
     /*
-     * Shared startup path for the game and editor launchers. Resolves the
-     * game directory, opens the session log, loads settings, builds the GLFW
-     * window configuration, and runs the engine the launcher supplies until
-     * the application exits, saving window placement on close.
+     * Shared startup path for the game, editor and launcher entry points.
+     * Resolves the game directory, opens the session log, loads settings,
+     * builds the GLFW window configuration, and runs the engine the entry
+     * point supplies until the application exits, handing the engine back. A
+     * windowed engine saves its window placement on close; a borderless one
+     * opens transparent, fixed and centred, never switches fullscreen, and
+     * leaves the game's placement alone, so engines can run one after another
+     * in the same JVM.
      */
 
     // Launch \\
@@ -31,11 +36,42 @@ class Lwjgl3LauncherUtility extends EngineUtility {
             System.setProperty(property[0], property[1]);
     }
 
-    static void launch(
+    static <T extends EnginePackage> T launch(
             String logSession,
             String settingsFileName,
             String title,
-            Supplier<EnginePackage> engineFactory,
+            Supplier<T> engineFactory,
+            String... requiredDirectories) {
+        return run(
+                logSession,
+                settingsFileName,
+                engineFactory,
+                settings -> buildConfig(settings, title),
+                true,
+                requiredDirectories);
+    }
+
+    static <T extends EnginePackage> T launchBorderless(
+            String logSession,
+            String settingsFileName,
+            String title,
+            int width,
+            int height,
+            Supplier<T> engineFactory) {
+        return run(
+                logSession,
+                settingsFileName,
+                engineFactory,
+                settings -> buildBorderlessConfig(settings, title, width, height),
+                false);
+    }
+
+    private static <T extends EnginePackage> T run(
+            String logSession,
+            String settingsFileName,
+            Supplier<T> engineFactory,
+            Function<Settings, Lwjgl3Configuration> configFactory,
+            boolean persistPlacement,
             String... requiredDirectories) {
 
         File baseGameDir = resolveDirectory(
@@ -51,18 +87,25 @@ class Lwjgl3LauncherUtility extends EngineUtility {
         Settings settings = SettingsUtility.load(settingsFile);
         SettingsUtility.applyBindings(settings);
 
-        Lwjgl3Configuration config = buildConfig(settings, title);
+        Lwjgl3Configuration config = configFactory.apply(settings);
         Lwjgl3WindowPlatform platform = new Lwjgl3WindowPlatform();
 
         config.setCloseCallback(() -> {
-            saveWindowInfoOnClose(settingsFile, settings);
+
+            if (persistPlacement)
+                saveWindowInfoOnClose(settingsFile, settings);
+
             platform.exit();
             return true;
         });
 
         EnginePackage.setupConstructor(settings, settingsFile, baseGameDir, platform);
-        new Lwjgl3Application(engineFactory.get(), config, platform);
+
+        T engine = engineFactory.get();
+        new Lwjgl3Application(engine, config, platform);
         LogUtility.closeSession();
+
+        return engine;
     }
 
     // Utility \\
@@ -92,6 +135,21 @@ class Lwjgl3LauncherUtility extends EngineUtility {
 
         if (settings.fullscreen)
             config.setFullscreenMode(Lwjgl3Configuration.getDisplayMode());
+
+        return config;
+    }
+
+    private static Lwjgl3Configuration buildBorderlessConfig(Settings settings, String title, int width, int height) {
+
+        Lwjgl3Configuration config = new Lwjgl3Configuration();
+        config.setOpenGLVersion(EngineSetting.OPENGL_VERSION_MAJOR, EngineSetting.OPENGL_VERSION_MINOR);
+        config.setTitle(title);
+        config.useVsync(settings.vsync);
+        config.setWindowedMode(width, height);
+        config.setDecorated(false);
+        config.setResizable(false);
+        config.setTransparentFramebuffer(true);
+        config.setDisplayModeLocked(true);
 
         return config;
     }

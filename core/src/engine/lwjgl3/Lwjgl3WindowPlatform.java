@@ -25,7 +25,8 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
      * Implements the WindowPlatform contract on GLFW for every window alike. GL
      * context binding is kept apart from input: only syncInputForWindow()
      * touches EngineContext.input. Display mode acts on the main window; vsync
-     * is reapplied to every OS window.
+     * is reapplied to every OS window. Transparency is read from the window
+     * itself, and mouse passthrough hands the cursor to whatever lies behind.
      */
 
     // Application
@@ -223,6 +224,37 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         syncWindowSize(window);
         syncScreenPosition(window);
+    }
+
+    @Override
+    public void moveWindow(WindowInstance window, int screenX, int screenY) {
+
+        if (!window.hasNativeHandle())
+            return;
+
+        GLFW.glfwSetWindowPos(window.getNativeHandle(), screenX, screenY);
+        syncScreenPosition(window);
+    }
+
+    // Transparency \\
+
+    @Override
+    public boolean isTransparent(WindowInstance window) {
+        return window.hasNativeHandle()
+                && GLFW.glfwGetWindowAttrib(window.getNativeHandle(), GLFW.GLFW_TRANSPARENT_FRAMEBUFFER)
+                        == GLFW.GLFW_TRUE;
+    }
+
+    @Override
+    public void setMousePassthrough(WindowInstance window, boolean passthrough) {
+
+        if (!window.hasNativeHandle())
+            return;
+
+        GLFW.glfwSetWindowAttrib(
+                window.getNativeHandle(),
+                GLFW.GLFW_MOUSE_PASSTHROUGH,
+                passthrough ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
     }
 
     // Display Mode \\

@@ -10,7 +10,7 @@ public class MenuListHandle extends HandlePackage {
      * Per-window list of open menus, owned by WindowInstance. Lock state is
      * derived live from what is open, and the lock release listener fires once
      * when the last lock_input menu closes so capture can be restored without a
-     * click.
+     * click. Answers whether a point lies on any menu the window shows.
      */
 
     private ObjectArrayList<MenuInstance> openMenus;
@@ -59,6 +59,15 @@ public class MenuListHandle extends HandlePackage {
     public boolean isRaycastLocked() {
         for (int i = 0; i < openMenus.size(); i++)
             if (openMenus.get(i).getMenuData().isRaycastInput())
+                return true;
+        return false;
+    }
+
+    // Hit \\
+
+    public boolean containsPoint(float x, float y) {
+        for (int i = 0; i < openMenus.size(); i++)
+            if (openMenus.get(i).containsPoint(x, y))
                 return true;
         return false;
     }

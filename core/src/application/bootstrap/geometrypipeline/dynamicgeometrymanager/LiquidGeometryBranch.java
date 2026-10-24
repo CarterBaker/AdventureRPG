@@ -33,6 +33,7 @@ class LiquidGeometryBranch extends BranchPackage {
      */
 
     // Internal
+    private DynamicGeometryManager dynamicGeometryManager;
     private BiomeManager biomeManager;
     private BlockManager blockManager;
     private SubChunkInstance ERROR;
@@ -50,8 +51,14 @@ class LiquidGeometryBranch extends BranchPackage {
 
     @Override
     protected void get() {
-        this.biomeManager = get(BiomeManager.class);
-        this.blockManager = get(BlockManager.class);
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
+    }
+
+    @Override
+    protected void start() {
+
+        this.biomeManager = dynamicGeometryManager.getBiomeManager();
+        this.blockManager = dynamicGeometryManager.getBlockManager();
     }
 
     // Build \\

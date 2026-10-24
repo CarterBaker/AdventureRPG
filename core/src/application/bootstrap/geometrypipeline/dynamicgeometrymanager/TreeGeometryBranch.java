@@ -42,6 +42,7 @@ class TreeGeometryBranch extends BranchPackage {
      */
 
     // Internal
+    private DynamicGeometryManager dynamicGeometryManager;
     private TreeManager treeManager;
     private SubVoxelManager subVoxelManager;
     private TreeGeometryAsyncContainer treeContainer;
@@ -69,8 +70,13 @@ class TreeGeometryBranch extends BranchPackage {
     protected void get() {
 
         // Internal
-        this.treeManager = get(TreeManager.class);
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
+    }
+
+    @Override
+    protected void start() {
+        this.treeManager = dynamicGeometryManager.getTreeManager();
     }
 
     // Build \\

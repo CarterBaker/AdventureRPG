@@ -760,10 +760,6 @@ public class ElementHitSystem extends SystemPackage {
     // Util \\
 
     private boolean isHit(ElementInstance element, float mouseX, float mouseY) {
-        float left = element.getComputedLeft();
-        float top = element.getComputedTop();
-        float right = left + element.getComputedW();
-        float bottom = top + element.getComputedH();
-        return mouseX >= left && mouseX <= right && mouseY >= top && mouseY <= bottom;
+        return element.containsPoint(mouseX, mouseY);
     }
 }

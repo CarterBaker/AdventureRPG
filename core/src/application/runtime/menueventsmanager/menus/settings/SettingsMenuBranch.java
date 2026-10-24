@@ -18,12 +18,14 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class SettingsMenuBranch extends BranchPackage {
 
     /*
-     * Runs the settings menu a main menu's Options opens. Opening hides that
-     * menu; Back or Escape applies any pending world change through
-     * SettingsSystem, saves the settings file, and shows that menu again. The
-     * option list shows one SettingsTab at a time — this branch owns the tabs
-     * and clears the list, and the section branches fill it. Display settings
-     * move the game's own window, so an editor preview shows a note instead.
+     * Runs the settings menu a main menu's, the pause menu's or the
+     * launcher's Options opens. Opening hides that menu; Back or Escape
+     * applies any pending world change through SettingsSystem, saves the
+     * settings file, and shows that menu again. The option list shows one
+     * SettingsTab at a time — this branch owns the tabs and clears the list,
+     * and the section branches fill it. Display settings move the game's own
+     * window, so an editor preview shows a note instead; the launcher's
+     * window keeps its frame, so there they wait for the game.
      */
 
     // Internal
@@ -176,6 +178,7 @@ public class SettingsMenuBranch extends BranchPackage {
         switch (tab) {
             case DISPLAY -> populateDisplay(session);
             case GRAPHICS -> settingsOptionBranch.populateGraphics(session);
+            case MAIN_MENU -> settingsOptionBranch.populateMainMenu(session);
             case CONTROLS -> {
                 settingsOptionBranch.populateMouse(session);
                 settingsBindingBranch.populateBindings(session);

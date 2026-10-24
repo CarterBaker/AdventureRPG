@@ -12,6 +12,7 @@ public abstract class LoaderPackage extends ManagerPackage {
      * them, and once the queue is empty it fires onComplete() and releases
      * itself and its builders in the next RELEASE phase. request() loads one
      * queued file immediately, for on-demand lookups while the loader lives.
+     * Only files the engine's asset manifest admits are ever queued.
      */
 
     // Queue
@@ -75,7 +76,9 @@ public abstract class LoaderPackage extends ManagerPackage {
     // Queue \\
 
     protected final void queueFile(File file) {
-        this.fileQueue.add(file);
+
+        if (internal.admitsAsset(file))
+            this.fileQueue.add(file);
     }
 
     public final void requestAll() {

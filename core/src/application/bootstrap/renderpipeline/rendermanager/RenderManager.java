@@ -1,6 +1,5 @@
 package application.bootstrap.renderpipeline.rendermanager;
 
-import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
@@ -28,12 +27,18 @@ public class RenderManager extends ManagerPackage {
      * queue and swap buffers, every capture target gathering its window's
      * layers before the targets draw. Screen pass order 0 draws before FBO
      * composite, order 1 after. Each OS window's full draw is one profiler
-     * GPU frame.
+     * GPU frame. Per-window state the renderer does not own — the player's
+     * position, say — is pushed by window draw steps its owners add, so the
+     * renderer never reaches past rendering.
      */
+
+    @FunctionalInterface
+    public interface WindowDrawStep {
+        void prepare(int windowID);
+    }
 
     private CameraManager cameraManager;
     private WindowManager windowManager;
-    private PlayerManager playerManager;
     private UBOManager uboManager;
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
@@ -42,18 +47,20 @@ public class RenderManager extends ManagerPackage {
 
     private RenderSystem renderSystem;
 
+    // Window Draw Steps
+    private ObjectArrayList<WindowDrawStep> windowDrawSteps;
+
     @Override
     protected void create() {
+        this.windowDrawSteps = new ObjectArrayList<>();
         create(CompositeRenderSystem.class);
         this.renderSystem = create(RenderSystem.class);
-        create(EntityRenderSystem.class);
     }
 
     @Override
     protected void get() {
         this.cameraManager = get(CameraManager.class);
         this.windowManager = get(WindowManager.class);
-        this.playerManager = get(PlayerManager.class);
         this.uboManager = get(UBOManager.class);
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
@@ -96,7 +103,7 @@ public class RenderManager extends ManagerPackage {
     public void draw(WindowInstance window) {
         profilerManager.beginGpuFrame(window);
         uboManager.bindBuffersForCurrentContext();
-        playerManager.pushPlayerPositionForWindow(window.getWindowID());
+        prepareWindow(window);
         cameraManager.pushCamera(window);
         fboManager.resizeWindowRelative(window, window.getWidth(), window.getHeight());
         fboRenderSystem.pushCaptures(window);
@@ -112,7 +119,7 @@ public class RenderManager extends ManagerPackage {
             return;
 
         uboManager.bindBuffersForCurrentContext();
-        playerManager.pushPlayerPositionForWindow(window.getWindowID());
+        prepareWindow(window);
         cameraManager.pushCamera(window);
         fboManager.resizeWindowRelative(window, window.getWidth(), window.getHeight());
         renderSystem.drawToMappedTargets(window);
@@ -128,6 +135,20 @@ public class RenderManager extends ManagerPackage {
         WindowInstance window = resolveDefaultWindow();
         if (window != null)
             drawFinal(window);
+    }
+
+    // Window Draw Steps \\
+
+    public void addWindowDrawStep(WindowDrawStep windowDrawStep) {
+        windowDrawSteps.add(windowDrawStep);
+    }
+
+    private void prepareWindow(WindowInstance window) {
+
+        int windowID = window.getWindowID();
+
+        for (int i = 0; i < windowDrawSteps.size(); i++)
+            windowDrawSteps.get(i).prepare(windowID);
     }
 
     // Render Calls \\

@@ -117,6 +117,19 @@ public class MenuInstance extends InstancePackage {
         this.visible = false;
     }
 
+    // True when the menu is shown and the point lies on one of its top-level elements
+    public boolean containsPoint(float x, float y) {
+
+        if (!visible)
+            return false;
+
+        for (int i = 0; i < elements.size(); i++)
+            if (elements.get(i).containsPoint(x, y))
+                return true;
+
+        return false;
+    }
+
     // Accessible \\
 
     public MenuData getMenuData() {

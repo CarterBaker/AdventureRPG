@@ -9,6 +9,7 @@ import application.bootstrap.savepipeline.savemanager.SaveManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.menueventsmanager.menus.MainMenuBranch;
 import engine.input.Input;
 import engine.input.Keys;
 import engine.root.BranchPackage;
@@ -19,13 +20,14 @@ public class CharacterCreatorBranch extends BranchPackage {
 
     /*
      * Runs the character creator a main menu's New Game opens. Opening hides
-     * that menu, rolls a fresh character through SaveManager, and turns the
-     * window's player into the creator's live preview; Back returns to the
-     * menu, Create names the character, spends its staged creation points,
-     * takes up its chosen profession and begins play; backing out lets the
-     * staging go. The option list shows one CreatorTab at a time — this branch
-     * owns the tabs and clears the list, and the section branches fill it.
-     * Enter creates and Escape backs out.
+     * that menu, streams the play world through MainMenuBranch, rolls a fresh
+     * character through SaveManager, and turns the window's player into the
+     * creator's live preview; Back returns to the menu and its own world,
+     * Create names the character, spends its staged creation points, takes up
+     * its chosen profession and begins play; backing out lets the staging go.
+     * The option list shows one CreatorTab at a time — this branch owns the
+     * tabs and clears the list, and the section branches fill it. Enter
+     * creates and Escape backs out.
      */
 
     // Internal
@@ -37,6 +39,7 @@ public class CharacterCreatorBranch extends BranchPackage {
     private CreatorAppearanceBranch creatorAppearanceBranch;
     private CreatorBodyBranch creatorBodyBranch;
     private CreatorProgressionBranch creatorProgressionBranch;
+    private MainMenuBranch mainMenuBranch;
 
     // Colors
     private MenuColorStruct activeTabColor;
@@ -76,6 +79,7 @@ public class CharacterCreatorBranch extends BranchPackage {
         this.creatorAppearanceBranch = get(CreatorAppearanceBranch.class);
         this.creatorBodyBranch = get(CreatorBodyBranch.class);
         this.creatorProgressionBranch = get(CreatorProgressionBranch.class);
+        this.mainMenuBranch = get(MainMenuBranch.class);
     }
 
     @Override
@@ -107,6 +111,7 @@ public class CharacterCreatorBranch extends BranchPackage {
             return;
 
         parentMenu.hide();
+        mainMenuBranch.streamPlayWorld();
         saveManager.newCharacter(window);
         playerManager.beginCharacterPreview(windowID);
 
@@ -134,6 +139,7 @@ public class CharacterCreatorBranch extends BranchPackage {
         creatorProgressionBranch.clear(session);
         menuManager.closeMenu(session.getCreatorMenu());
         playerManager.endCharacterPreview(window.getWindowID());
+        mainMenuBranch.streamMenuWorld();
         session.getParentMenu().show();
     }
 
@@ -162,7 +168,7 @@ public class CharacterCreatorBranch extends BranchPackage {
         windowID2Session.remove(window.getWindowID());
         playerManager.endCharacterPreview(window.getWindowID());
         menuManager.closeMenu(session.getCreatorMenu());
-        menuManager.closeMenu(session.getParentMenu());
+        mainMenuBranch.closeMenu(session.getParentMenu());
     }
 
     public void randomizeCharacter(WindowInstance window) {

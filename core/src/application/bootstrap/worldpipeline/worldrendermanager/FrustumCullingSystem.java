@@ -19,9 +19,10 @@ class FrustumCullingSystem extends SystemPackage {
 
     // Cached per awake
     private float megaAngularBleedBase;
-    private float fullCenterRadiusSq;
+    private float halfMega;
 
     // Cached per frame — refreshed once per grid per renderWorld call
+    private float fullCenterRadiusSq;
     private float cameraAngle;
     private float effectiveAngle;
     private float maxDistanceSq;
@@ -34,9 +35,7 @@ class FrustumCullingSystem extends SystemPackage {
         float megaSize = EngineSetting.MEGA_CHUNK_SIZE;
         this.megaAngularBleedBase = (float) Math.sqrt(megaSize * megaSize + megaSize * megaSize) / 2f;
 
-        float halfMega = megaSize / 2f;
-        float centerRadius = (settings.maxRenderDistance / 2f) + halfMega;
-        this.fullCenterRadiusSq = centerRadius * centerRadius;
+        this.halfMega = megaSize / 2f;
     }
 
     // Refresh \\
@@ -53,6 +52,8 @@ class FrustumCullingSystem extends SystemPackage {
         if (camera == null)
             return;
 
+        float centerRadius = (grid.getRenderDistance() / 2f) + halfMega;
+        this.fullCenterRadiusSq = centerRadius * centerRadius;
         this.cameraAngle = getCameraAngle(camera);
 
         float halfFov = getDiagonalHalfFov(camera);

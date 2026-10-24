@@ -15,6 +15,10 @@ public class Lwjgl3Configuration {
      * Lwjgl3Application construction — never read again at runtime. The
      * windowed size and position are kept even when starting fullscreen, so
      * leaving fullscreen at runtime restores the saved windowed placement.
+     * The frame flags shape the main window only: a borderless, fixed-size
+     * window with a transparent framebuffer shows the desktop wherever the
+     * engine draws nothing, and a locked display mode keeps that frame
+     * whatever the fullscreen setting is changed to.
      */
 
     // Identity
@@ -32,6 +36,12 @@ public class Lwjgl3Configuration {
     private boolean fullscreen;
     private boolean maximized;
     private boolean vsync = true;
+
+    // Frame
+    private boolean decorated = true;
+    private boolean resizable = true;
+    private boolean transparentFramebuffer;
+    private boolean displayModeLocked;
 
     // Position
     private int windowX = EngineSetting.WINDOW_POSITION_UNSET;
@@ -81,6 +91,22 @@ public class Lwjgl3Configuration {
         this.vsync = vsync;
     }
 
+    public void setDecorated(boolean decorated) {
+        this.decorated = decorated;
+    }
+
+    public void setResizable(boolean resizable) {
+        this.resizable = resizable;
+    }
+
+    public void setTransparentFramebuffer(boolean transparentFramebuffer) {
+        this.transparentFramebuffer = transparentFramebuffer;
+    }
+
+    public void setDisplayModeLocked(boolean displayModeLocked) {
+        this.displayModeLocked = displayModeLocked;
+    }
+
     public void setWindowPosition(int x, int y) {
         this.windowX = x;
         this.windowY = y;
@@ -116,6 +142,22 @@ public class Lwjgl3Configuration {
 
     public boolean isVsync() {
         return vsync;
+    }
+
+    public boolean isDecorated() {
+        return decorated;
+    }
+
+    public boolean isResizable() {
+        return resizable;
+    }
+
+    public boolean isTransparentFramebuffer() {
+        return transparentFramebuffer;
+    }
+
+    public boolean isDisplayModeLocked() {
+        return displayModeLocked;
     }
 
     public int getWindowX() {

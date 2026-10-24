@@ -8,6 +8,7 @@ import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -15,10 +16,10 @@ class TreeDetailBranch extends BranchPackage {
 
     /*
      * Decides which trees are drawn in full: those whose root chunk lies
-     * within the tree detail distance of the chunk a grid of their world is
-     * centred on, measured between chunks the way grid slots measure theirs.
-     * The anchors — every grid's world and active chunk, and the distance —
-     * are published on the main thread the frame any of them changes and read
+     * within a grid's own tree detail distance of the chunk that grid of their
+     * world is centred on, measured between chunks the way grid slots measure
+     * theirs. The anchors — every grid's world, active chunk and reach — are
+     * published on the main thread the frame any of them changes and read
      * under their lock on any thread, so a tree first grown on a streaming
      * thread starts with its flag set. Every registered tree is judged again
      * whenever the anchors change and once a check besides, and each one that
@@ -34,7 +35,7 @@ class TreeDetailBranch extends BranchPackage {
     // Anchors — all three guarded by anchorChunks
     private LongArrayList anchorChunks;
     private ObjectArrayList<WorldHandle> anchorWorlds;
-    private int appliedDistance;
+    private IntArrayList anchorReachesSq;
 
     // Walk
     private ObjectArrayList<TreeInstance> trees;
@@ -48,6 +49,7 @@ class TreeDetailBranch extends BranchPackage {
         // Anchors
         this.anchorChunks = new LongArrayList();
         this.anchorWorlds = new ObjectArrayList<>();
+        this.anchorReachesSq = new IntArrayList();
 
         // Walk
         this.trees = new ObjectArrayList<>();
@@ -92,42 +94,47 @@ class TreeDetailBranch extends BranchPackage {
 
     // Anchors \\
 
-    // True when a grid moved, came or went, or the distance changed, the anchors then published anew
+    // True when a grid moved, came or went, or its distance changed, the anchors then published anew
     private boolean publishAnchors() {
 
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
-        int distance = settings.treeDetailDistance;
 
         synchronized (anchorChunks) {
 
-            if (!hasChanged(grids, distance))
+            if (!hasChanged(grids))
                 return false;
 
             anchorChunks.clear();
             anchorWorlds.clear();
+            anchorReachesSq.clear();
 
             for (int i = 0; i < grids.size(); i++) {
-                anchorChunks.add(grids.get(i).getActiveChunkCoordinate());
-                anchorWorlds.add(grids.get(i).getWorldHandle());
-            }
 
-            this.appliedDistance = distance;
+                GridInstance grid = grids.get(i);
+                int distance = grid.getTreeDetailDistance();
+
+                anchorChunks.add(grid.getActiveChunkCoordinate());
+                anchorWorlds.add(grid.getWorldHandle());
+                anchorReachesSq.add(distance * distance);
+            }
 
             return true;
         }
     }
 
-    private boolean hasChanged(ObjectArrayList<GridInstance> grids, int distance) {
+    private boolean hasChanged(ObjectArrayList<GridInstance> grids) {
 
-        if (distance != appliedDistance || grids.size() != anchorChunks.size())
+        if (grids.size() != anchorChunks.size())
             return true;
 
         for (int i = 0; i < grids.size(); i++) {
 
             GridInstance grid = grids.get(i);
+            int distance = grid.getTreeDetailDistance();
 
             if (grid.getActiveChunkCoordinate() != anchorChunks.getLong(i)
-                    || grid.getWorldHandle() != anchorWorlds.get(i))
+                    || grid.getWorldHandle() != anchorWorlds.get(i)
+                    || distance * distance != anchorReachesSq.getInt(i))
                 return true;
         }
 
@@ -149,8 +156,6 @@ class TreeDetailBranch extends BranchPackage {
 
         synchronized (anchorChunks) {
 
-            int reachSq = appliedDistance * appliedDistance;
-
             for (int i = 0; i < anchorChunks.size(); i++) {
 
                 if (anchorWorlds.get(i) != worldHandle)
@@ -160,7 +165,7 @@ class TreeDetailBranch extends BranchPackage {
                 int deltaX = Coordinate2Long.unpackX(delta);
                 int deltaZ = Coordinate2Long.unpackY(delta);
 
-                if (deltaX * deltaX + deltaZ * deltaZ <= reachSq)
+                if (deltaX * deltaX + deltaZ * deltaZ <= anchorReachesSq.getInt(i))
                     return true;
             }
 

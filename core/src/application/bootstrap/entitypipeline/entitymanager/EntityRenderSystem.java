@@ -1,4 +1,4 @@
-package application.bootstrap.renderpipeline.rendermanager;
+package application.bootstrap.entitypipeline.entitymanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityData;
@@ -15,6 +15,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;

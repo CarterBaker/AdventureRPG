@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.biomemanager;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
@@ -49,6 +50,7 @@ public class BiomeManager extends ManagerPackage {
     private volatile ColorIndex colorIndex = ColorIndex.EMPTY;
 
     // Internal
+    private DynamicGeometryManager dynamicGeometryManager;
     private BiomeFieldAsyncContainer fieldContainer;
     private BiomeRebuildBranch biomeRebuildBranch;
 
@@ -75,6 +77,16 @@ public class BiomeManager extends ManagerPackage {
         create(BiomeLoader.class);
         this.fieldContainer = create(BiomeFieldAsyncContainer.class);
         this.biomeRebuildBranch = create(BiomeRebuildBranch.class);
+    }
+
+    @Override
+    protected void get() {
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        dynamicGeometryManager.bindBiomeManager(this);
     }
 
     // Management \\

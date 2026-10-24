@@ -18,21 +18,21 @@ public class MacroRingBranch extends BranchPackage {
     /*
      * Resolves the macro tiles a grid wants and what each should be built as.
      * Tile offsets around the active macro tile are sorted by distance once.
-     * The world is flat, so the ring reaches MACRO_RENDER_DISTANCE_BLOCKS in
-     * every direction and is rebuilt only when the active chunk moves; every
+     * The world is flat, so the ring reaches the grid's macro reach in every
+     * direction and is rebuilt only when the active chunk moves; every
      * candidate is measured against the chunk grid's settled footprint and
-     * that distance, and the survivors, wrapped around the world, become the
-     * grid's macro coordinates in near-to-far load order. A tile is left out
-     * only when it lies wholly inside the settled footprint, so the grid's
-     * streaming rim is always backed by macro terrain, and a tile's target is
-     * its lattice resolution by distance.
+     * that reach, a tile admitted only when it starts strictly inside it, so
+     * a reach of zero admits none. The survivors, wrapped around the world,
+     * become the grid's macro coordinates in near-to-far load order. A tile
+     * is left out only when it lies wholly inside the settled footprint, so
+     * the grid's streaming rim is always backed by macro terrain, and a
+     * tile's target is its lattice resolution by distance.
      */
 
     // Settings
     private int macroChunkSize;
     private int chunkSize;
     private float tileSizeBlocks;
-    private float renderDistanceBlocks;
 
     // Candidates — tile offsets sorted near to far
     private long[] candidateOffsets;
@@ -46,7 +46,6 @@ public class MacroRingBranch extends BranchPackage {
         this.macroChunkSize = EngineSetting.MACRO_CHUNK_SIZE;
         this.chunkSize = EngineSetting.CHUNK_SIZE;
         this.tileSizeBlocks = EngineSetting.MACRO_TILE_SIZE_BLOCKS;
-        this.renderDistanceBlocks = EngineSetting.MACRO_RENDER_DISTANCE_BLOCKS;
 
         // Candidates
         this.candidateOffsets = buildCandidateOffsets();
@@ -105,9 +104,10 @@ public class MacroRingBranch extends BranchPackage {
         int baseX = Math.floorDiv(activeX, macroChunkSize) * macroChunkSize;
         int baseZ = Math.floorDiv(activeZ, macroChunkSize) * macroChunkSize;
 
-        int settledHalf = MacroTerrainUtility.resolveSettledHalf(settings.maxRenderDistance);
-        float settledRadiusSq = MacroTerrainUtility.resolveSettledRadiusSq(settings.maxRenderDistance);
-        float renderDistanceChunks = renderDistanceBlocks / chunkSize;
+        int renderDistance = grid.getRenderDistance();
+        int settledHalf = MacroTerrainUtility.resolveSettledHalf(renderDistance);
+        float settledRadiusSq = MacroTerrainUtility.resolveSettledRadiusSq(renderDistance);
+        float reachChunks = grid.getMacroReachBlocks() / chunkSize;
 
         LongArrayList macroLoadOrder = grid.getMacroLoadOrder();
         LongOpenHashSet macroCoordinates = grid.getMacroCoordinates();
@@ -124,7 +124,7 @@ public class MacroRingBranch extends BranchPackage {
                     relativeX, relativeZ, macroChunkSize, settledHalf, settledRadiusSq))
                 continue;
 
-            if (MacroTerrainUtility.nearestDistanceChunks(relativeX, relativeZ, macroChunkSize) > renderDistanceChunks)
+            if (MacroTerrainUtility.nearestDistanceChunks(relativeX, relativeZ, macroChunkSize) >= reachChunks)
                 continue;
 
             long macroCoordinate = WorldWrapUtility.wrapAroundWorld(

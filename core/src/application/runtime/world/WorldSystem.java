@@ -3,7 +3,9 @@ package application.runtime.world;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.settingspipeline.settingssystem.SettingsSystem;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.grid.GridRangeStruct;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.runtime.RuntimeSetting;
 import engine.root.SystemPackage;
@@ -15,7 +17,9 @@ public class WorldSystem extends SystemPackage {
      * binding the world render target so chunk rendering composites
      * correctly. Retains the created GridInstance so other per-window
      * systems (lighting, sky) can read this window's own grid, and removes
-     * the grid from streaming when the context closes.
+     * the grid from streaming when the context closes. The grid follows the
+     * play range unless useRange() points it elsewhere; a range chosen before
+     * the grid exists is the one it is born on, so it is never laid twice.
      */
 
     // Internal
@@ -28,6 +32,7 @@ public class WorldSystem extends SystemPackage {
 
     // Grid
     private GridInstance gridInstance;
+    private GridRangeStruct range;
 
     @Override
     protected void get() {
@@ -36,6 +41,9 @@ public class WorldSystem extends SystemPackage {
         this.playerManager = get(PlayerManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.fboManager = get(FBOManager.class);
+
+        // Grid
+        this.range = get(SettingsSystem.class).getPlayRange();
     }
 
     @Override
@@ -46,12 +54,23 @@ public class WorldSystem extends SystemPackage {
         this.gridInstance = worldStreamManager.createGrid(
                 playerManager.getPlayerForWindow(windowID),
                 context.getWindow(),
-                worldFbo);
+                worldFbo,
+                range);
     }
 
     @Override
     protected void dispose() {
         worldStreamManager.removeGrid(gridInstance);
+    }
+
+    // Range \\
+
+    public void useRange(GridRangeStruct range) {
+
+        this.range = range;
+
+        if (gridInstance != null)
+            worldStreamManager.applyRange(gridInstance, range);
     }
 
     // Accessible \\

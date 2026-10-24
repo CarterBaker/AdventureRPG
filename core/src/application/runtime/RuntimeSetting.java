@@ -304,6 +304,7 @@ public class RuntimeSetting {
     // Settings Tabs
     public static final String SETTINGS_TAB_DISPLAY = "Display";
     public static final String SETTINGS_TAB_GRAPHICS = "Graphics";
+    public static final String SETTINGS_TAB_MAIN_MENU = "Main Menu";
     public static final String SETTINGS_TAB_CONTROLS = "Controls";
     public static final String SETTINGS_TAB_AUDIO = "Audio";
     public static final String SETTINGS_TAB_GAMEPLAY = "Gameplay";
@@ -318,6 +319,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_SECTION_WINDOW = "Window";
     public static final String SETTINGS_SECTION_VIEW = "View";
     public static final String SETTINGS_SECTION_WORLD = "World";
+    public static final String SETTINGS_SECTION_MENU_WORLD = "World Behind the Menu";
     public static final String SETTINGS_SECTION_MOUSE = "Mouse";
     public static final String SETTINGS_SECTION_MOVEMENT = "Movement";
     public static final String SETTINGS_SECTION_ACTIONS = "Actions";
@@ -328,6 +330,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_SECTION_LENS = "Lens";
     public static final String SETTINGS_SECTION_CAMERA = "Camera";
     public static final String SETTINGS_NOTE_WORLD_APPLY = "World changes apply when you leave Settings";
+    public static final String SETTINGS_NOTE_MACRO_TERRAIN = "Distant terrain fills the view beyond Distance";
+    public static final String SETTINGS_NOTE_MENU_WORLD = "Only the main menu's world, never play's";
     public static final String SETTINGS_NOTE_AUTO_FOCUS = "Focus follows whatever you look at";
     public static final String SETTINGS_NOTE_THIRD_PERSON_FOCUS = "Your character always stays sharp in third person";
     public static final String SETTINGS_NOTE_HEAD_BOB = "Head bob follows your stride in first person";
@@ -339,6 +343,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_OPTION_RENDER_DISTANCE = "Distance";
     public static final String SETTINGS_OPTION_TERRAIN_DETAIL = "Detail";
     public static final String SETTINGS_OPTION_TREE_DETAIL = "Tree Detail";
+    public static final String SETTINGS_OPTION_MACRO_TERRAIN = "Distant Terrain";
+    public static final String SETTINGS_OPTION_CHUNK_STREAMING = "Chunks";
     public static final String SETTINGS_OPTION_OUTLINES = "Outlines";
     public static final String SETTINGS_OPTION_OUTLINE_THICKNESS = "Thickness";
     public static final String SETTINGS_OPTION_ANTI_ALIASING = "Anti-Aliasing";

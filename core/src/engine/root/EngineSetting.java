@@ -167,12 +167,16 @@ public class EngineSetting {
     public static final String LOG_LINE_FORMAT = "[%s] [%s] %s";
     public static final String LOG_SESSION_EDITOR = "Editor";
     public static final String LOG_SESSION_GAME = "Game";
+    public static final String LOG_SESSION_LAUNCHER = "Launcher";
     public static final String LOG_TIME_PATTERN = "HH:mm:ss.SSS";
 
     // File Paths & Extensions
     public static final String ANIMATION_PATH = "animations";
     public static final String ANIMATION_TREE_PATH = "animationtrees";
     public static final String ARCHITECTURE_PATH = "architectures";
+    public static final String ASSET_MANIFEST_KEY_ASSETS = "assets";
+    public static final String ASSET_MANIFEST_PATH = "application/manifests";
+    public static final String ASSET_ROOT_PATH = ".";
     public static final String ATTRIBUTE_PATH = "attributes";
     public static final String BEHAVIOR_PATH = "behaviors";
     public static final String BIOME_PATH = "biomes";
@@ -332,6 +336,11 @@ public class EngineSetting {
     public static final String WINDOW_TITLE = "TerraArcana";
     public static final String LAUNCHER_WINDOW_TITLE = "AdventureRPG";
     public static final String LAUNCHER_EDITOR_WINDOW_TITLE = "AdventureRPG — Editor";
+    public static final String GAME_LAUNCHER_WINDOW_TITLE = "AdventureRPG — Launcher";
+    public static final int GAME_LAUNCHER_WINDOW_WIDTH = 860;
+    public static final int GAME_LAUNCHER_WINDOW_HEIGHT = 800;
+    public static final float SCREEN_CLEAR_ALPHA_OPAQUE = 1f;
+    public static final float SCREEN_CLEAR_ALPHA_TRANSPARENT = 0f;
     public static final int OPENGL_VERSION_MAJOR = 4;
     public static final int OPENGL_VERSION_MINOR = 1;
     public static final String USER_HOME_PROPERTY = "user.home";

@@ -26,17 +26,18 @@ public class EntityManager extends ManagerPackage {
     /*
      * Owns the entity template palette and drives the entity bootstrap
      * pipeline. Handles on-demand template loading and provides the
-     * spawnEntity() factory for creating runtime EntityInstances from template
-     * handles, in a random chunk of the active world or at a place given, each
-     * one entering combat and progression as it spawns, starting at the first
-     * level, and despawnEntity(), its mirror, which takes the entity out of
-     * both and off every vehicle. rerollEntity() rolls an existing instance
-     * again in place — a new random chunk, size, weight, progression started
-     * over, an empty inventory, and the template's default gender and
-     * appearance — for anything that holds the instance by reference and
-     * cannot swap in a new one. createPuppet() makes an entity that is only
-     * ever drawn — a recording's actor — and never enters combat or
-     * progression.
+     * spawnEntity() factory for creating runtime EntityInstances from
+     * template handles, in a random chunk of the active world or at a place
+     * given, each one entering combat and progression as it spawns, starting
+     * at the first level, and despawnEntity(), its mirror, which takes the
+     * entity out of both and off every vehicle. rerollEntity() rolls an
+     * existing instance again in place — a new random chunk, size, weight,
+     * progression started over, an empty inventory, and the template's
+     * default gender and appearance — for anything that holds the instance by
+     * reference and cannot swap in a new one. createPuppet() makes an entity
+     * that is only ever drawn — a recording's actor — and never enters combat
+     * or progression. Owns EntityRenderSystem, the one way characters are
+     * drawn, so rendering itself never reaches into entities or items.
      */
 
     // Internal
@@ -59,6 +60,7 @@ public class EntityManager extends ManagerPackage {
         this.templateName2TemplateID = RegistryUtility.createNameIndex();
         this.templateID2EntityHandle = RegistryUtility.createPalette();
         create(EntityLoader.class);
+        create(EntityRenderSystem.class);
     }
 
     @Override

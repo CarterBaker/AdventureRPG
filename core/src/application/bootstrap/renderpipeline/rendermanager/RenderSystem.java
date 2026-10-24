@@ -38,7 +38,10 @@ class RenderSystem extends SystemPackage {
      * Drives all draw submission and flushing for a window's render queue —
      * depth-sorted batches, screen passes, and skinned characters. Each render
      * target pass and each shader batch inside it is a profiler GPU scope,
-     * and every draw is counted against it.
+     * and every draw is counted against it. The screen clears to nothing on
+     * a transparent window and to black on any other, and screen passes lay
+     * their alpha over as coverage, so whatever a transparent window leaves
+     * undrawn shows the desktop behind it.
      */
 
     // Internal
@@ -123,9 +126,9 @@ class RenderSystem extends SystemPackage {
         profilerManager.beginGpuPass(window, EngineSetting.PROFILER_GPU_SCREEN_PASS);
         bindTarget(window, target);
         RenderGLSLUtility.enableDepth();
-        RenderGLSLUtility.enableBlending();
+        RenderGLSLUtility.enableScreenBlending();
         RenderGLSLUtility.disableCulling();
-        RenderGLSLUtility.clearBuffer();
+        RenderGLSLUtility.clearBuffer(0f, 0f, 0f, resolveScreenClearAlpha(window));
         RenderGLSLUtility.clearDepthBuffer();
 
         drawScreenPass(queue, window, EngineSetting.SCREEN_ORDER_BACKGROUND);
@@ -158,9 +161,15 @@ class RenderSystem extends SystemPackage {
         if (batchList == null)
             return;
         RenderGLSLUtility.disableDepth();
-        RenderGLSLUtility.enableBlending();
+        RenderGLSLUtility.enableScreenBlending();
         drawBatches(batchList, window);
         RenderGLSLUtility.enableDepth();
+    }
+
+    private float resolveScreenClearAlpha(WindowInstance window) {
+        return internal.windowPlatform.isTransparent(window)
+                ? EngineSetting.SCREEN_CLEAR_ALPHA_TRANSPARENT
+                : EngineSetting.SCREEN_CLEAR_ALPHA_OPAQUE;
     }
 
     private void drawBatches(ObjectArrayList<RenderBatchStruct> batchList, WindowInstance window) {

@@ -18,7 +18,8 @@ public class LightingSystem extends SystemPackage {
      * Deferred lighting pass. Reads the G-buffer and SSAO result, lays the
      * weather pass's clouds standing in front of each fragment and the fog of
      * a cloud the camera stands in over it, and writes LitScene. Binds this
-     * window's grid UBOs — sun, moon and sky color — and the weather targets
+     * window's grid UBOs — sun, moon, sky color and the render settings its
+     * fog seam meets the grid's rim by — and the weather targets
      * onto the pass each frame. The world, SSAO and weather targets are queued
      * ahead of this pass, so the lit world is always drawn with this frame's
      * camera, the same one the sky and clouds are drawn with.
@@ -96,6 +97,7 @@ public class LightingSystem extends SystemPackage {
         mat.setUBO(grid.getSunLightUBO());
         mat.setUBO(grid.getMoonLightUBO());
         mat.setUBO(grid.getSkyColorUBO());
+        mat.setUBO(grid.getSettingsDataUBO());
     }
 
     // Clouds \\

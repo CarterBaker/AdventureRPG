@@ -41,6 +41,7 @@ class SurfaceEmissionBranch extends BranchPackage {
 
     // Internal
     private TextureManager textureManager;
+    private DynamicGeometryManager dynamicGeometryManager;
     private CoveringManager coveringManager;
     private SubCellSampleBranch subCellSampleBranch;
 
@@ -91,8 +92,13 @@ class SurfaceEmissionBranch extends BranchPackage {
 
         // Internal
         this.textureManager = get(TextureManager.class);
-        this.coveringManager = get(CoveringManager.class);
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
         this.subCellSampleBranch = get(SubCellSampleBranch.class);
+    }
+
+    @Override
+    protected void start() {
+        this.coveringManager = dynamicGeometryManager.getCoveringManager();
     }
 
     // Emission \\

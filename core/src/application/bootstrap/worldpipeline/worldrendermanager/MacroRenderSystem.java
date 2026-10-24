@@ -274,7 +274,7 @@ class MacroRenderSystem extends SystemPackage {
                 grid.getActiveChunkCoordinate(),
                 coordinate);
 
-        int gridHalf = settings.maxRenderDistance / 2;
+        int gridHalf = grid.getRenderDistance() / 2;
         int deltaX = Coordinate2Long.unpackX(delta);
         int deltaZ = Coordinate2Long.unpackY(delta);
         int firstX = Math.max(-gridHalf - deltaX, 0);

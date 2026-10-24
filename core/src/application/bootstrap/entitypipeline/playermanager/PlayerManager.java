@@ -11,6 +11,7 @@ import application.bootstrap.entitypipeline.player.PlayerCameraStruct;
 import application.bootstrap.entitypipeline.player.PlayerGestureStruct;
 import application.bootstrap.entitypipeline.player.UseTargetStruct;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
+import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleControlSystem;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
@@ -39,8 +40,8 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 public class PlayerManager extends ManagerPackage {
 
     /*
-     * Owns and drives each window's player entity and camera. The camera trails
-     * the eye at a smoothed third-person distance that scroll and the
+     * Owns and drives each window's player entity and camera. The camera
+     * trails the eye at a smoothed third-person distance that scroll and the
      * first-person toggle adjust; gameplay always aims from the eye. Closing
      * in, FirstPersonBranch seats the camera at the posed head's eyes and
      * bends and twists the chest after the look, the feet staying planted
@@ -48,23 +49,24 @@ public class PlayerManager extends ManagerPackage {
      * view with the jolts the player takes while it is in play. Only the
      * hovered window's player updates, gated on its menu lock. Also handles
      * free-camera flight, rerolls, spawn verification, and character-creator
-     * previews, and advances the player's animation after movement each frame.
-     * despawnPlayer() mirrors spawnPlayer(), forgetting every per-window entry
-     * and taking the player out of the world when its window closes.
-     * After movement the player's input reaches the world through
+     * previews, and advances the player's animation after movement each
+     * frame. despawnPlayer() mirrors spawnPlayer(), forgetting every
+     * per-window entry and taking the player out of the world when its window
+     * closes. After movement the player's input reaches the world through
      * PlacementManager and its fighting — attacks, aiming and blocking —
      * through CombatManager, the side of each read from the mouse by
      * PlayerGestureSystem; a raised guard or a stagger holds the player to a
      * walk and an attack keeps it from sprinting. While a gesture reads, the
-     * view holds still, and behind a raised guard it turns slower, so a
-     * swipe steers the weapon instead of the camera. Aboard a
-     * vehicle the view turns with the deck, a player at the helm steers with
-     * its sideways input, and the activate binding works the vehicle control
-     * the player faces before it reaches PlacementManager. A teleported
-     * player lets go of any vehicle and is dropped onto the ground of the
-     * column it was sent to, by the same check that verifies a spawn. A held
-     * window's player and camera are left exactly as something else places
-     * them — a recording playing back — until the hold is let go.
+     * view holds still, and behind a raised guard it turns slower, so a swipe
+     * steers the weapon instead of the camera. Aboard a vehicle the view
+     * turns with the deck, a player at the helm steers with its sideways
+     * input, and the activate binding works the vehicle control the player
+     * faces before it reaches PlacementManager. A teleported player lets go
+     * of any vehicle and is dropped onto the ground of the column it was sent
+     * to, by the same check that verifies a spawn. A held window's player and
+     * camera are left exactly as something else places them — a recording
+     * playing back — until the hold is let go. Each window's player position
+     * reaches its draw through a window draw step added to RenderManager.
      */
 
     // Internal
@@ -73,6 +75,7 @@ public class PlayerManager extends ManagerPackage {
     private BlockManager blockManager;
     private WorldStreamManager worldStreamManager;
     private WindowManager windowManager;
+    private RenderManager renderManager;
 
     // Systems
     private PlayerInputSystem playerInputSystem;
@@ -167,11 +170,17 @@ public class PlayerManager extends ManagerPackage {
         this.blockManager = get(BlockManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.windowManager = get(WindowManager.class);
+        this.renderManager = get(RenderManager.class);
         this.combatManager = get(CombatManager.class);
         this.vehicleControlSystem = get(VehicleControlSystem.class);
         this.vehicleRiderSystem = get(VehicleRiderSystem.class);
         this.vehicleManager = get(VehicleManager.class);
         this.vehicleCargoSystem = get(VehicleCargoSystem.class);
+    }
+
+    @Override
+    protected void awake() {
+        renderManager.addWindowDrawStep(this::pushPlayerPositionForWindow);
     }
 
     @Override

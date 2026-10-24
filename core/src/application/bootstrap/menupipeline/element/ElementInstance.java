@@ -620,6 +620,11 @@ public class ElementInstance extends InstancePackage {
         return computedH;
     }
 
+    // True when the point, in the hover mouse's space, lies within the element's computed bounds
+    public boolean containsPoint(float x, float y) {
+        return x >= computedLeft && x <= computedLeft + computedW && y >= computedTop && y <= computedTop + computedH;
+    }
+
     public boolean hasSprite() {
         return spriteInstance != null;
     }
