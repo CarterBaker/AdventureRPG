@@ -5,7 +5,6 @@ import java.io.File;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
-import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
@@ -13,6 +12,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
+import editor.bootstrap.recorderpipeline.recording.RecorderExportResult;
 import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
@@ -28,7 +28,6 @@ import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
 import editor.bootstrap.recorderpipeline.recording.VideoFormat;
-import editor.bootstrap.recorderpipeline.util.FfmpegUtility;
 import editor.bootstrap.recorderpipeline.util.RecordingCurveUtility;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
@@ -75,9 +74,7 @@ public class RecorderManager extends ManagerPackage {
      * method here; a key or handle dragged changes its curve as it moves.
      * The player cannot be recorded without the camera that
      * follows it. While a session plays the world, residents, thrown items
-     * and vehicles are held, and while it plays the interface the Dev
-     * window's own menus are withheld, so only what was recorded shows and
-     * takes nothing in. While the game is paused the session is
+     * and vehicles are held. While the game is paused the session is
      * suspended — the playhead waits and a take records nothing — and it
      * carries on a few frames after the pause ends, so the pause menu never
      * reaches a take. Stopping ends every session and the Dev window goes
@@ -93,7 +90,6 @@ public class RecorderManager extends ManagerPackage {
     private NpcManager npcManager;
     private ProjectileManager projectileManager;
     private VehicleManager vehicleManager;
-    private MenuManager menuManager;
     private RecordingFileBranch recordingFileBranch;
     private RecordingTimelineBranch recordingTimelineBranch;
     private RecordingNodeBranch recordingNodeBranch;
@@ -163,6 +159,7 @@ public class RecorderManager extends ManagerPackage {
     private File exportFile;
     private int exportedFrames;
     private int exportFrameCount;
+    private RecorderExportResult exportResult;
 
     // Status
     private int revision;
@@ -207,6 +204,9 @@ public class RecorderManager extends ManagerPackage {
         this.openedTracks = new ReferenceOpenHashSet<>();
         clearCurveSelection();
 
+        // Export
+        this.exportResult = RecorderExportResult.NONE;
+
         // Status
         this.statusText = EditorSetting.RECORDER_STATUS_READY;
     }
@@ -219,7 +219,6 @@ public class RecorderManager extends ManagerPackage {
         this.npcManager = get(NpcManager.class);
         this.projectileManager = get(ProjectileManager.class);
         this.vehicleManager = get(VehicleManager.class);
-        this.menuManager = get(MenuManager.class);
     }
 
     // Update \\
@@ -232,7 +231,6 @@ public class RecorderManager extends ManagerPackage {
         updateView();
         updateKeyTracks();
         holdWorld();
-        holdInterface();
     }
 
     private void releaseCrashedDevContext() {
@@ -305,13 +303,6 @@ public class RecorderManager extends ManagerPackage {
         npcManager.setHeld(RecorderChannel.CHARACTERS.isIn(played));
         projectileManager.setHeld(RecorderChannel.ITEMS.isIn(played));
         vehicleManager.setHeld(RecorderChannel.VEHICLES.isIn(played));
-    }
-
-    // The Dev window's own menus are withheld whenever a session plays the interface rather than recording it live
-    private void holdInterface() {
-        if (devContext != null)
-            menuManager.setMenusWithheld(
-                    devContext.getWindow(), RecorderChannel.INTERFACE.isIn(getPlayedChannels()));
     }
 
     // Session \\
@@ -422,9 +413,10 @@ public class RecorderManager extends ManagerPackage {
         if (state == RecorderState.RECORDING)
             finishTake();
 
-        if (state == RecorderState.EXPORTING)
+        if (state == RecorderState.EXPORTING) {
+            this.exportResult = RecorderExportResult.CANCELLED;
             setStatus(EditorSetting.RECORDER_STATUS_EXPORT_CANCELLED);
-        else if (state != RecorderState.RECORDING)
+        } else if (state != RecorderState.RECORDING)
             setStatus(EditorSetting.RECORDER_STATUS_READY);
 
         endSession();
@@ -432,7 +424,6 @@ public class RecorderManager extends ManagerPackage {
 
     private void endSession() {
         this.state = RecorderState.IDLE;
-        holdInterface();
         this.devContext = null;
         this.suspended = false;
         this.resumeFrames = 0;
@@ -2106,21 +2097,29 @@ public class RecorderManager extends ManagerPackage {
 
     // Export \\
 
-    // Renders the export range into a new video beside the recordings, frame by frame in the Dev window
+    // Renders the export range into a new video beside the recordings, frame by frame in the Dev window; a refusal
+    // says why in the status
     public void export() {
 
-        if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING || !hasClips())
+        if (state == RecorderState.EXPORTING)
             return;
 
-        RecordingExportStruct exportStruct = recording.getExportStruct();
+        this.exportResult = RecorderExportResult.REFUSED;
 
-        if (exportStruct.getFormat().needsFfmpeg() && FfmpegUtility.findExecutable(internal.path) == null) {
-            setStatus(EditorSetting.RECORDER_STATUS_NO_FFMPEG);
+        if (state == RecorderState.RECORDING) {
+            setStatus(EditorSetting.RECORDER_STATUS_EXPORT_WHILE_RECORDING);
             return;
         }
 
-        if (!beginSession())
+        if (clockManager.isPaused()) {
+            setStatus(EditorSetting.RECORDER_STATUS_EXPORT_WHILE_PAUSED);
             return;
+        }
+
+        if (!hasClips() || !beginSession())
+            return;
+
+        RecordingExportStruct exportStruct = recording.getExportStruct();
 
         cancelDrag();
         saveRecording();
@@ -2134,6 +2133,7 @@ public class RecorderManager extends ManagerPackage {
         this.exportFrameCount = Math.max(1, Math.round(span * exportStruct.getFrameRate()));
         this.playhead = exportStruct.resolveStart(duration);
         this.state = RecorderState.EXPORTING;
+        this.exportResult = RecorderExportResult.EXPORTING;
         setStatus(EditorSetting.RECORDER_STATUS_EXPORTING + exportFile.getName());
     }
 
@@ -2148,6 +2148,7 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         endSession();
+        this.exportResult = succeeded ? RecorderExportResult.EXPORTED : RecorderExportResult.FAILED;
 
         if (!succeeded && exportFile.exists())
             exportFile.delete();
@@ -2444,6 +2445,10 @@ public class RecorderManager extends ManagerPackage {
 
     public int getExportFrameCount() {
         return exportFrameCount;
+    }
+
+    public RecorderExportResult getExportResult() {
+        return exportResult;
     }
 
     public int getRevision() {

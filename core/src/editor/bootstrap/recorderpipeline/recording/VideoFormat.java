@@ -5,16 +5,15 @@ import editor.runtime.EditorSetting;
 public enum VideoFormat {
 
     /*
-     * The videos a recording exports to. MP4 is H.264 for sharing, MOV is
-     * ProRes 422 HQ for editing, both encoded by an installed ffmpeg; AVI is
-     * Motion JPEG, written by the engine itself, and always available.
+     * The videos a recording exports to, every one written by the engine
+     * itself so an export never needs anything installed. MP4 is H.264 for
+     * sharing and watching, MOV is ProRes 422 HQ for editing, AVI is Motion
+     * JPEG.
      */
 
-    MP4(EditorSetting.RECORDER_VIDEO_EXTENSION_MP4, EditorSetting.RECORDER_VIDEO_LABEL_MP4,
-            EditorSetting.RECORDER_FFMPEG_ARGUMENTS_MP4),
-    MOV(EditorSetting.RECORDER_VIDEO_EXTENSION_MOV, EditorSetting.RECORDER_VIDEO_LABEL_MOV,
-            EditorSetting.RECORDER_FFMPEG_ARGUMENTS_MOV),
-    AVI(EditorSetting.RECORDER_VIDEO_EXTENSION_AVI, EditorSetting.RECORDER_VIDEO_LABEL_AVI, null);
+    MP4(EditorSetting.RECORDER_VIDEO_EXTENSION_MP4, EditorSetting.RECORDER_VIDEO_LABEL_MP4),
+    MOV(EditorSetting.RECORDER_VIDEO_EXTENSION_MOV, EditorSetting.RECORDER_VIDEO_LABEL_MOV),
+    AVI(EditorSetting.RECORDER_VIDEO_EXTENSION_AVI, EditorSetting.RECORDER_VIDEO_LABEL_AVI);
 
     // Values
     public static final VideoFormat[] VALUES = values();
@@ -22,14 +21,12 @@ public enum VideoFormat {
     // Internal
     private final String extension;
     private final String label;
-    private final String[] ffmpegArguments;
 
     // Constructor \\
 
-    VideoFormat(String extension, String label, String[] ffmpegArguments) {
+    VideoFormat(String extension, String label) {
         this.extension = extension;
         this.label = label;
-        this.ffmpegArguments = ffmpegArguments;
     }
 
     // Accessible \\
@@ -40,13 +37,5 @@ public enum VideoFormat {
 
     public String getLabel() {
         return label;
-    }
-
-    public boolean needsFfmpeg() {
-        return ffmpegArguments != null;
-    }
-
-    public String[] getFfmpegArguments() {
-        return ffmpegArguments;
     }
 }

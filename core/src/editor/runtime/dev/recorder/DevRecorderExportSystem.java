@@ -18,10 +18,10 @@ import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.VideoFormat;
-import editor.bootstrap.recorderpipeline.util.FfmpegUtility;
 import editor.bootstrap.recorderpipeline.util.VideoFrameUtility;
 import editor.bootstrap.recorderpipeline.video.AviVideoEncoderInstance;
-import editor.bootstrap.recorderpipeline.video.FfmpegVideoEncoderInstance;
+import editor.bootstrap.recorderpipeline.video.H264VideoEncoderInstance;
+import editor.bootstrap.recorderpipeline.video.ProresVideoEncoderInstance;
 import editor.bootstrap.recorderpipeline.video.VideoEncoderInstance;
 import editor.runtime.dev.DevContext;
 import editor.runtime.EditorSetting;
@@ -171,11 +171,8 @@ public class DevRecorderExportSystem extends SystemPackage {
 
         this.encoder = createEncoder(settings.getFormat());
 
-        if (encoder == null || !encoder.open(
-                recorderManager.getExportFile(), outputWidth, outputHeight, settings.getFrameRate())) {
-            recorderManager.finishExport(false, encoder == null
-                    ? EditorSetting.RECORDER_STATUS_NO_FFMPEG
-                    : encoder.getFailure());
+        if (!encoder.open(recorderManager.getExportFile(), outputWidth, outputHeight, settings.getFrameRate())) {
+            recorderManager.finishExport(false, encoder.getFailure());
             return false;
         }
 
@@ -217,18 +214,11 @@ public class DevRecorderExportSystem extends SystemPackage {
     }
 
     private VideoEncoderInstance createEncoder(VideoFormat format) {
-
-        if (!format.needsFfmpeg())
-            return create(AviVideoEncoderInstance.class);
-
-        File executable = FfmpegUtility.findExecutable(internal.path);
-
-        if (executable == null)
-            return null;
-
-        FfmpegVideoEncoderInstance ffmpegEncoder = create(FfmpegVideoEncoderInstance.class);
-        ffmpegEncoder.constructor(executable, format.getFfmpegArguments());
-        return ffmpegEncoder;
+        return switch (format) {
+            case MP4 -> create(H264VideoEncoderInstance.class);
+            case MOV -> create(ProresVideoEncoderInstance.class);
+            case AVI -> create(AviVideoEncoderInstance.class);
+        };
     }
 
     // Step \\

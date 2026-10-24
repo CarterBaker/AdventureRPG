@@ -39,12 +39,14 @@ public class RecorderBranch extends BranchPackage {
      * values it shows. The drag is read from the window the press began in
      * until the button is let go. Rows hand back the index of the take or
      * marker they show, Keys rows their track's place and what they show,
-     * and setting rows the key of what they change.
+     * and setting rows the key of what they change. Exporting goes through
+     * the export dialog, which holds the editor until the video is finished.
      */
 
     // Internal
     private RecorderManager recorderManager;
     private NameDialogBranch nameDialogBranch;
+    private ExportDialogBranch exportDialogBranch;
     private InputManager inputManager;
     private WindowManager windowManager;
 
@@ -54,6 +56,7 @@ public class RecorderBranch extends BranchPackage {
     protected void get() {
         this.recorderManager = get(RecorderManager.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
+        this.exportDialogBranch = get(ExportDialogBranch.class);
         this.inputManager = get(InputManager.class);
         this.windowManager = get(WindowManager.class);
     }
@@ -603,7 +606,7 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_RANGE_START -> recorderManager.setRangeStart();
             case EditorSetting.RECORDER_KEY_RANGE_END -> recorderManager.setRangeEnd();
             case EditorSetting.RECORDER_KEY_RANGE_CLEAR -> recorderManager.clearRange();
-            case EditorSetting.RECORDER_KEY_EXPORT -> recorderManager.export();
+            case EditorSetting.RECORDER_KEY_EXPORT -> exportDialogBranch.export(window);
             case EditorSetting.RECORDER_KEY_CANCEL_EXPORT -> recorderManager.stop();
             default -> throwException("Unknown recorder setting: " + settingKey);
         }

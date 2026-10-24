@@ -21,7 +21,6 @@ import editor.bootstrap.recorderpipeline.recording.RecordingMarkerStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
-import editor.bootstrap.recorderpipeline.util.FfmpegUtility;
 import editor.runtime.recorder.RecorderSetting;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -369,9 +368,6 @@ public class RecorderPanelSystem extends SystemPackage {
         }
 
         injectAction(RecorderSetting.ENTRY_SETTINGS, RecorderSetting.TEXT_EXPORT, EditorSetting.RECORDER_KEY_EXPORT);
-        injectText(RecorderSetting.ENTRY_SETTINGS, FfmpegUtility.findExecutable(internal.path) != null
-                ? RecorderSetting.TEXT_FFMPEG_FOUND
-                : RecorderSetting.TEXT_FFMPEG_MISSING);
     }
 
     void injectSetting(int entryPoint, String label, String value, String settingKey) {

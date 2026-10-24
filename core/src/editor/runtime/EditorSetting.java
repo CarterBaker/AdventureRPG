@@ -35,6 +35,7 @@ public class EditorSetting {
     public static final String MENU_EDITOR_SECONDARY = "editor/EditorWindow/Secondary";
     public static final String MENU_EDITOR_TOOLBAR = "editor/EditorWindow/Toolbar";
     public static final String MENU_EDITOR_NAME_DIALOG = "editor/EditorWindow/NameDialog";
+    public static final String MENU_EDITOR_EXPORT_DIALOG = "editor/EditorWindow/ExportDialog";
     public static final String MENU_EDITOR_LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";
 
     // Elements
@@ -61,6 +62,13 @@ public class EditorSetting {
     public static final int ENTRY_LAYOUTS_LIST = 0;
     public static final int ENTRY_NAME_DIALOG_LABEL = 0;
     public static final int ENTRY_NAME_DIALOG_TITLE = 1;
+    public static final int ENTRY_EXPORT_DIALOG_TITLE = 0;
+    public static final int ENTRY_EXPORT_DIALOG_FILE = 1;
+    public static final int ENTRY_EXPORT_DIALOG_FILL = 2;
+    public static final int ENTRY_EXPORT_DIALOG_FRAMES = 3;
+    public static final int ENTRY_EXPORT_DIALOG_TIME = 4;
+    public static final int ENTRY_EXPORT_DIALOG_MESSAGE = 5;
+    public static final int ENTRY_EXPORT_DIALOG_BUTTON = 6;
 
     // Name Dialog
     public static final int NAME_INPUT_MAX_LENGTH = 32;
@@ -90,6 +98,34 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
     public static final String DIALOG_TITLE_RENAME_MARKER = "Rename Marker";
     public static final String DIALOG_TITLE_KEY_VALUE = "Key Value";
+
+    // Export Dialog — the bar fills in fixed steps; the text refreshes a few times a second of real time, and the
+    // time left is estimated once a few frames have been made
+    public static final int EXPORT_DIALOG_FILL_STEPS = 200;
+    public static final long EXPORT_DIALOG_REFRESH_NANOS = 250_000_000L;
+    public static final int EXPORT_DIALOG_ESTIMATE_FRAMES = 3;
+    public static final long EXPORT_DIALOG_TIME_UNSET = -1L;
+    public static final int EXPORT_DIALOG_SECONDS_PER_MINUTE = 60;
+    public static final int EXPORT_DIALOG_SECONDS_PER_HOUR = 3600;
+    public static final String EXPORT_DIALOG_TITLE_EXPORTING = "Exporting video";
+    public static final String EXPORT_DIALOG_TITLE_EXPORTED = "Video exported";
+    public static final String EXPORT_DIALOG_TITLE_FAILED = "Export failed";
+    public static final String EXPORT_DIALOG_TITLE_CANCELLED = "Export cancelled";
+    public static final String EXPORT_DIALOG_TITLE_REFUSED = "Could not export";
+    public static final String EXPORT_DIALOG_BUTTON_CANCEL = "Cancel";
+    public static final String EXPORT_DIALOG_BUTTON_CLOSE = "OK";
+    public static final String EXPORT_DIALOG_TEXT_PREPARING = "Loading the world around the camera";
+    public static final String EXPORT_DIALOG_TEXT_ESTIMATING = "estimating";
+    public static final String EXPORT_DIALOG_TEXT_EMPTY = "";
+    public static final String EXPORT_DIALOG_TEXT_WAIT = "The editor is held until the video is finished";
+    public static final String EXPORT_DIALOG_TEXT_SAVED_IN = "Saved in ";
+    public static final String EXPORT_DIALOG_FORMAT_FILE = "%s   %d x %d   %d fps   %s";
+    public static final String EXPORT_DIALOG_FORMAT_FRAMES = "Frame %d of %d   %d%%";
+    public static final String EXPORT_DIALOG_FORMAT_FRAMES_DONE = "%d frames";
+    public static final String EXPORT_DIALOG_FORMAT_TIME = "Elapsed %s   Remaining %s";
+    public static final String EXPORT_DIALOG_FORMAT_TOOK = "Took %s";
+    public static final String EXPORT_DIALOG_FORMAT_MINUTES = "%d:%02d";
+    public static final String EXPORT_DIALOG_FORMAT_HOURS = "%d:%02d:%02d";
 
     // Tabs
     public static final String TAB_TITLE_COMMAND_CONSOLE = "Command Console";
@@ -1098,9 +1134,6 @@ public class EditorSetting {
     public static final long RECORDER_CLOCK_JUMP_MILLIS = 1000L;
     public static final float[] RECORDER_TIME_RAMP_SECONDS = { 0f, 2f, 5f, 10f };
 
-    // Recorder — the interface; while it plays, the Dev window's own is withheld from this layer up
-    public static final int RECORDER_INTERFACE_LIVE_LAYER = RuntimeSetting.LAYER_VITALITY;
-
     // Recorder — sample blocks: a count, then whole columns of 4-byte floats and ints and 8-byte chunk coordinates
     public static final int RECORDER_BLOCK_HEADER_BYTES = Integer.BYTES;
     public static final int RECORDER_PLACE_SAMPLE_BYTES = Float.BYTES + Long.BYTES + Float.BYTES * 3;
@@ -1148,21 +1181,51 @@ public class EditorSetting {
     public static final String RECORDER_VIDEO_LABEL_MOV = "MOV  ProRes 422 HQ";
     public static final String RECORDER_VIDEO_LABEL_AVI = "AVI  Motion JPEG";
 
-    // Recorder — ffmpeg, found in the game directory's bin folder or on the system path, fed raw frames on its input
-    public static final String RECORDER_PATH_VARIABLE = "PATH";
-    public static final String[] RECORDER_FFMPEG_EXECUTABLES = { "ffmpeg.exe", "ffmpeg" };
-    public static final String[] RECORDER_FFMPEG_INPUT_ARGUMENTS = {
-            "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgr24" };
-    public static final String RECORDER_FFMPEG_SIZE_FLAG = "-s";
-    public static final String RECORDER_FFMPEG_SIZE_SEPARATOR = "x";
-    public static final String RECORDER_FFMPEG_RATE_FLAG = "-r";
-    public static final String RECORDER_FFMPEG_INPUT_FLAG = "-i";
-    public static final String RECORDER_FFMPEG_STANDARD_INPUT = "-";
-    public static final String[] RECORDER_FFMPEG_ARGUMENTS_MP4 = {
-            "-c:v", "libx264", "-preset", "slow", "-crf", "14", "-pix_fmt", "yuv420p", "-movflags", "+faststart" };
-    public static final String[] RECORDER_FFMPEG_ARGUMENTS_MOV = {
-            "-c:v", "prores_ks", "-profile:v", "3", "-vendor", "apl0", "-pix_fmt", "yuv422p10le" };
-    public static final String RECORDER_FFMPEG_LOG_SUFFIX = ".log";
+    // Recorder — MP4 and MOV, encoded in the engine; pictures are whole macroblocks, the frame cropped from them,
+    // and each frame goes to the file as its own chunk, so one packet buffer serves every frame
+    public static final int RECORDER_MACROBLOCK_PIXELS = 16;
+    public static final int RECORDER_PACKET_BYTES_PER_PIXEL = 2;
+    public static final int RECORDER_FRAMES_PER_CHUNK = 1;
+
+    // Recorder — colour, studio-range BT.709 as HD video expects, as fixed point RGB-to-YCbCr weights that leave a
+    // grey with no colour; planes hold each value less 128, and the streams and files name BT.709 throughout
+    public static final int RECORDER_YUV_SHIFT = 16;
+    public static final int RECORDER_YUV_ROUNDING = 1 << (RECORDER_YUV_SHIFT - 1);
+    public static final int RECORDER_YUV_LUMA_BLACK = 16;
+    public static final int RECORDER_YUV_PLANE_OFFSET = 128;
+    public static final int RECORDER_YUV_LUMA_RED = 11966;
+    public static final int RECORDER_YUV_LUMA_GREEN = 40254;
+    public static final int RECORDER_YUV_LUMA_BLUE = 4064;
+    public static final int RECORDER_YUV_BLUE_RED = -6596;
+    public static final int RECORDER_YUV_BLUE_GREEN = -22188;
+    public static final int RECORDER_YUV_BLUE_BLUE = 28784;
+    public static final int RECORDER_YUV_RED_RED = 28784;
+    public static final int RECORDER_YUV_RED_GREEN = -26145;
+    public static final int RECORDER_YUV_RED_BLUE = -2639;
+    public static final int RECORDER_COLOR_BT709 = 1;
+
+    // Recorder — H.264, at a fixed high quality below the quantiser where deblocking begins, so the encoder predicts
+    // from exactly the pixels a decoder does; a macroblock is raised only as far as it must be to fit the packet,
+    // never past the last quantiser whose chroma the encoder rebuilds as a decoder does, and eased back once it fits
+    // with room to spare; a keyframe every second, and the lowest level whose frame size and macroblock rate hold
+    // the export
+    public static final int RECORDER_H264_INTRA_QP = 15;
+    public static final int RECORDER_H264_INTER_QP = 15;
+    public static final int RECORDER_H264_MAX_QP = 29;
+    public static final int RECORDER_H264_EASE_SHIFT = 3;
+    public static final int RECORDER_H264_KEYFRAME_SECONDS = 1;
+    public static final int RECORDER_H264_MOTION_SEARCH_RANGE = 32;
+    public static final int RECORDER_H264_VIDEO_FORMAT_UNSPECIFIED = 5;
+    public static final int RECORDER_H264_TICKS_PER_FRAME = 2;
+    public static final int[] RECORDER_H264_LEVELS = { 31, 32, 40, 42, 50, 51, 52 };
+    public static final int[] RECORDER_H264_LEVEL_FRAME_MACROBLOCKS = { 3600, 5120, 8192, 8704, 22080, 36864, 36864 };
+    public static final int[] RECORDER_H264_LEVEL_MACROBLOCK_RATES = {
+            108000, 216000, 245760, 522240, 589824, 983040, 2073600 };
+
+    // Recorder — ProRes 422 HQ; its frame header names the colour primaries, transfer and matrix at these bytes
+    public static final int RECORDER_PRORES_PRIMARIES_BYTE = 22;
+    public static final int RECORDER_PRORES_TRANSFER_BYTE = 23;
+    public static final int RECORDER_PRORES_MATRIX_BYTE = 24;
 
     // Recorder — Motion JPEG
     public static final String RECORDER_JPEG_FORMAT = "jpeg";
@@ -1228,10 +1291,6 @@ public class EditorSetting {
     // Recorder — messages
     public static final String RECORDER_MESSAGE_UNREADABLE = "Recording is unreadable and was skipped: ";
     public static final String RECORDER_MESSAGE_MALFORMED = "Recording is malformed or no longer fits the game: ";
-    public static final String RECORDER_MESSAGE_FFMPEG_START = "ffmpeg could not start: ";
-    public static final String RECORDER_MESSAGE_FFMPEG_WRITE = "ffmpeg stopped taking frames, see ";
-    public static final String RECORDER_MESSAGE_FFMPEG_EXIT = "ffmpeg failed with exit code ";
-    public static final String RECORDER_MESSAGE_SEE_LOG = ", see ";
     public static final String RECORDER_MESSAGE_INTERRUPTED = "The export was interrupted";
     public static final String RECORDER_MESSAGE_NO_JPEG = "This Java has no JPEG writer for AVI exports";
     public static final String RECORDER_MESSAGE_WRITE_FAILED = "The video could not be written: ";
@@ -1291,8 +1350,9 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_RENAME_FAILED = "Could not rename ";
     public static final String RECORDER_STATUS_DELETED = "Deleted ";
     public static final String RECORDER_STATUS_DELETE_FAILED = "Could not delete ";
-    public static final String RECORDER_STATUS_NO_FFMPEG =
-            "MP4 and MOV need ffmpeg on the system path or in the game folder's bin; AVI needs nothing";
+    public static final String RECORDER_STATUS_EXPORT_WHILE_RECORDING = "Stop the take before exporting";
+    public static final String RECORDER_STATUS_EXPORT_WHILE_PAUSED =
+            "Close the pause menu in the Dev Mode tab before exporting";
     public static final String RECORDER_STATUS_EXPORTING = "Exporting ";
     public static final String RECORDER_STATUS_EXPORTED = "Exported ";
     public static final String RECORDER_STATUS_EXPORT_FAILED = "Export failed: ";

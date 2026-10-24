@@ -6,6 +6,7 @@ import editor.runtime.menueventsmanager.menus.CharacterEditorBranch;
 import editor.runtime.menueventsmanager.menus.CommandConsoleBranch;
 import editor.runtime.menueventsmanager.menus.ConsoleBranch;
 import editor.runtime.menueventsmanager.menus.EditorBranch;
+import editor.runtime.menueventsmanager.menus.ExportDialogBranch;
 import editor.runtime.menueventsmanager.menus.InfoPanelBranch;
 import editor.runtime.menueventsmanager.menus.ItemEditorBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
@@ -25,6 +26,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
     @Override
     protected void create() {
         create(NameDialogBranch.class);
+        create(ExportDialogBranch.class);
         create(EditorBranch.class);
         create(TabBranch.class);
         create(ItemEditorBranch.class);

@@ -195,8 +195,6 @@ public class RecorderSetting {
     public static final String TEXT_CLEAR_RANGE = "Clear range";
     public static final String TEXT_EXPORT = "Export video";
     public static final String TEXT_CANCEL_EXPORT = "Cancel export";
-    public static final String TEXT_FFMPEG_FOUND = "ffmpeg found: every format is open";
-    public static final String TEXT_FFMPEG_MISSING = "No ffmpeg: AVI only, MP4 and MOV need it";
 
     // Formats
     public static final String FORMAT_TIME = "%d:%05.2f";
