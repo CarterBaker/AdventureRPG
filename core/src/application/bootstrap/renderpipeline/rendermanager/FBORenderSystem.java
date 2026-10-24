@@ -29,7 +29,8 @@ public class FBORenderSystem extends SystemPackage {
      * limit gathered into that target, in layer order, just before its OS
      * window draws, so a recording can read back exactly what the window
      * shows at whatever size it renders. findPushedFbo() answers which target
-     * a window has pushed on a layer so far this frame.
+     * a window has pushed on a layer so far this frame, and withdrawPushedFbos()
+     * takes back every target a window has pushed from a layer up.
      */
 
     // Internal
@@ -174,6 +175,24 @@ public class FBORenderSystem extends SystemPackage {
         }
 
         return null;
+    }
+
+    // Every target the window pushed this frame on the layer or above is taken back, so none of it is shown
+    public void withdrawPushedFbos(WindowInstance window, int fromLayer) {
+
+        WindowInstance target = window.hasCompositeTarget() ? window.getCompositeTarget() : window;
+        ObjectArrayList<FBOInstance> queue = window2BlitQueue.get(target);
+
+        if (queue == null)
+            return;
+
+        for (int i = queue.size() - 1; i >= 0; i--) {
+
+            FBOInstance fbo = queue.get(i);
+
+            if (fbo.getPushWindow() == window && fbo.getPushLayer() >= fromLayer)
+                queue.remove(i);
+        }
     }
 
     // Capture \\

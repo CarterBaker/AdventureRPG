@@ -30,7 +30,9 @@ public class MenuManager extends ManagerPackage {
      * focused window. openMenuWindow() and closeMenuWindow() are the single
      * pair for menus that live in their own logical window, and a window
      * leaving the engine closes every menu it still shows through
-     * releaseWindow().
+     * releaseWindow(). setMenusWithheld() is the one switch that withholds a
+     * window's menus, open but neither drawn nor hit, while something else
+     * shows in their place.
      */
 
     // Internal
@@ -84,7 +86,7 @@ public class MenuManager extends ManagerPackage {
         for (int i = 0; i < windowCount; i++) {
             WindowInstance window = windows.get(i);
             MenuListHandle menuList = window.getMenuListHandle();
-            if (menuList.isEmpty())
+            if (menuList.isEmpty() || menuList.isWithheld())
                 continue;
             FBOInstance menuTargetFbo = window2MenuTargetFbo.get(window);
             if (menuTargetFbo == null)
@@ -287,6 +289,11 @@ public class MenuManager extends ManagerPackage {
             return;
 
         instance.getWindow().dispose();
+    }
+
+    // The window's menus stay open but are neither drawn nor hit while withheld
+    public void setMenusWithheld(WindowInstance window, boolean withheld) {
+        window.getMenuListHandle().setWithheld(withheld);
     }
 
     public void releaseWindow(WindowInstance window) {

@@ -5,6 +5,7 @@ import java.io.File;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
+import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
@@ -74,7 +75,9 @@ public class RecorderManager extends ManagerPackage {
      * method here; a key or handle dragged changes its curve as it moves.
      * The player cannot be recorded without the camera that
      * follows it. While a session plays the world, residents, thrown items
-     * and vehicles are held. While the game is paused the session is
+     * and vehicles are held, and while it plays the interface the Dev
+     * window's own menus are withheld, so only what was recorded shows and
+     * takes nothing in. While the game is paused the session is
      * suspended — the playhead waits and a take records nothing — and it
      * carries on a few frames after the pause ends, so the pause menu never
      * reaches a take. Stopping ends every session and the Dev window goes
@@ -90,6 +93,7 @@ public class RecorderManager extends ManagerPackage {
     private NpcManager npcManager;
     private ProjectileManager projectileManager;
     private VehicleManager vehicleManager;
+    private MenuManager menuManager;
     private RecordingFileBranch recordingFileBranch;
     private RecordingTimelineBranch recordingTimelineBranch;
     private RecordingNodeBranch recordingNodeBranch;
@@ -215,6 +219,7 @@ public class RecorderManager extends ManagerPackage {
         this.npcManager = get(NpcManager.class);
         this.projectileManager = get(ProjectileManager.class);
         this.vehicleManager = get(VehicleManager.class);
+        this.menuManager = get(MenuManager.class);
     }
 
     // Update \\
@@ -227,6 +232,7 @@ public class RecorderManager extends ManagerPackage {
         updateView();
         updateKeyTracks();
         holdWorld();
+        holdInterface();
     }
 
     private void releaseCrashedDevContext() {
@@ -299,6 +305,13 @@ public class RecorderManager extends ManagerPackage {
         npcManager.setHeld(RecorderChannel.CHARACTERS.isIn(played));
         projectileManager.setHeld(RecorderChannel.ITEMS.isIn(played));
         vehicleManager.setHeld(RecorderChannel.VEHICLES.isIn(played));
+    }
+
+    // The Dev window's own menus are withheld whenever a session plays the interface rather than recording it live
+    private void holdInterface() {
+        if (devContext != null)
+            menuManager.setMenusWithheld(
+                    devContext.getWindow(), RecorderChannel.INTERFACE.isIn(getPlayedChannels()));
     }
 
     // Session \\
@@ -419,6 +432,7 @@ public class RecorderManager extends ManagerPackage {
 
     private void endSession() {
         this.state = RecorderState.IDLE;
+        holdInterface();
         this.devContext = null;
         this.suspended = false;
         this.resumeFrames = 0;

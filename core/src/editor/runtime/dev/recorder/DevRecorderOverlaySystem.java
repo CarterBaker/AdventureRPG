@@ -44,7 +44,10 @@ public class DevRecorderOverlaySystem extends SystemPackage {
      * a target made from the overlay's own definition, and pushed on the
      * overlay's own layer, so it composites exactly as it was drawn; the
      * frame last written stays up until the next is ready, and an export
-     * waits for it through prepare(). Renders after every other system of
+     * waits for it through prepare(). Nothing of the window's own interface
+     * shows while it plays: RecorderManager withholds its menus, and every
+     * target the window pushed over the world this frame is taken back
+     * before the recorded overlays are pushed. Renders after every other system of
      * the window, so every overlay it pushes this frame is known.
      */
 
@@ -481,10 +484,13 @@ public class DevRecorderOverlaySystem extends SystemPackage {
                 window);
     }
 
-    // Each overlay showing a frame is pushed on its own layer; one its window resized since is written again first
+    // The window's own interface is taken back, then each overlay showing a frame is pushed on its own layer; one
+    // its window resized since is written again first
     private void push() {
 
         WindowInstance window = context.getWindow();
+
+        fboRenderSystem.withdrawPushedFbos(window, EditorSetting.RECORDER_INTERFACE_LIVE_LAYER);
 
         for (int i = 0; i < playbacks.length; i++) {
 
