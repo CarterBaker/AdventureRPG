@@ -1171,8 +1171,6 @@ public class EditorSetting {
     public static final int RECORDER_EXPORT_FRAME_SLOTS = 2;
     public static final String RECORDER_CAPTURE_FBO = "RecorderCaptureScene";
     public static final String RECORDER_ENCODING_THREAD_NAME = "VideoEncoding";
-    public static final int RECORDER_EXPORT_SCENE_LAYER_LIMIT = RuntimeSetting.LAYER_VITALITY;
-    public static final int RECORDER_EXPORT_HUD_LAYER_LIMIT = RuntimeSetting.LAYER_INVENTORY;
     public static final int RECORDER_FRAME_BYTES_PER_PIXEL = 3;
     public static final int RECORDER_BYTE_MASK = 0xFF;
 
@@ -1385,7 +1383,6 @@ public class EditorSetting {
     public static final String RECORDER_KEY_FORMAT = "format";
     public static final String RECORDER_KEY_MOTION_BLUR = "motion_blur";
     public static final String RECORDER_KEY_SUPERSAMPLE = "supersample";
-    public static final String RECORDER_KEY_HUD = "hud";
     public static final String RECORDER_KEY_RANGE_START = "range_start";
     public static final String RECORDER_KEY_RANGE_END = "range_end";
     public static final String RECORDER_KEY_RANGE_CLEAR = "range_clear";

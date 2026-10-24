@@ -9,8 +9,8 @@ public class RecordingExportStruct extends StructPackage {
      * How a recording renders to video: the output size, the frames per
      * second, the file format, how many moments blend into each frame for
      * motion blur, whether each frame is rendered at twice the size and
-     * shrunk for clean edges, whether the HUD is drawn, and the span of the
-     * timeline exported — the whole recording while no range is set.
+     * shrunk for clean edges, and the span of the timeline exported — the
+     * whole recording while no range is set.
      */
 
     // Output
@@ -22,7 +22,6 @@ public class RecordingExportStruct extends StructPackage {
     // Quality
     private int motionBlurSamples;
     private boolean supersampled;
-    private boolean hud;
 
     // Range
     private float rangeStart;
@@ -115,14 +114,6 @@ public class RecordingExportStruct extends StructPackage {
 
     public void setSupersampled(boolean supersampled) {
         this.supersampled = supersampled;
-    }
-
-    public boolean isHud() {
-        return hud;
-    }
-
-    public void setHud(boolean hud) {
-        this.hud = hud;
     }
 
     public float getRangeStart() {

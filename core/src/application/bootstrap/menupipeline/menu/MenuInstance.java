@@ -12,8 +12,9 @@ public class MenuInstance extends InstancePackage {
     /*
      * Runtime menu opened by MenuManager. Holds the shared MenuData, the live
      * element tree, its window, an optional canvas, and a capped clock that
-     * drives element animation. Entry points resolve anywhere in the tree,
-     * including hover overlay roots.
+     * drives element animation. The clock starts over each time a hidden menu
+     * is shown again, so its animations replay as on opening. Entry points
+     * resolve anywhere in the tree, including hover overlay roots.
      */
 
     // Internal
@@ -103,6 +104,10 @@ public class MenuInstance extends InstancePackage {
         this.elapsed += Math.min(deltaTime, EngineSetting.MENU_ANIMATION_MAX_STEP_SECONDS);
     }
 
+    private void restart() {
+        this.elapsed = 0f;
+    }
+
     public float getElapsed() {
         return elapsed;
     }
@@ -110,6 +115,10 @@ public class MenuInstance extends InstancePackage {
     // Visibility \\
 
     public void show() {
+
+        if (!visible)
+            restart();
+
         this.visible = true;
     }
 

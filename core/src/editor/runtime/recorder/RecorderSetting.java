@@ -187,7 +187,6 @@ public class RecorderSetting {
     public static final String TEXT_FORMAT = "Format";
     public static final String TEXT_MOTION_BLUR = "Motion blur";
     public static final String TEXT_SUPERSAMPLE = "Supersample";
-    public static final String TEXT_HUD = "Interface";
     public static final String TEXT_RANGE_START = "Range start";
     public static final String TEXT_RANGE_END = "Range end";
     public static final String TEXT_RANGE_FROM_START = "Recording start";

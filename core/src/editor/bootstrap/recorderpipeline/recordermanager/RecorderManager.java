@@ -2035,16 +2035,6 @@ public class RecorderManager extends ManagerPackage {
         markUnsaved();
     }
 
-    public void toggleHud() {
-
-        if (!canEditExport())
-            return;
-
-        RecordingExportStruct exportStruct = recording.getExportStruct();
-        exportStruct.setHud(!exportStruct.isHud());
-        markUnsaved();
-    }
-
     public void setRangeStart() {
 
         if (!canEditExport())

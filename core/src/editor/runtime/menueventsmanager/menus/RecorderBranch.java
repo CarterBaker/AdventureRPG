@@ -602,7 +602,6 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_FORMAT -> recorderManager.cycleFormat();
             case EditorSetting.RECORDER_KEY_MOTION_BLUR -> recorderManager.cycleMotionBlur();
             case EditorSetting.RECORDER_KEY_SUPERSAMPLE -> recorderManager.toggleSupersample();
-            case EditorSetting.RECORDER_KEY_HUD -> recorderManager.toggleHud();
             case EditorSetting.RECORDER_KEY_RANGE_START -> recorderManager.setRangeStart();
             case EditorSetting.RECORDER_KEY_RANGE_END -> recorderManager.setRangeEnd();
             case EditorSetting.RECORDER_KEY_RANGE_CLEAR -> recorderManager.clearRange();

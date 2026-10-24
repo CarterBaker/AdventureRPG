@@ -344,8 +344,6 @@ public class RecorderPanelSystem extends SystemPackage {
                 EditorSetting.RECORDER_KEY_MOTION_BLUR);
         injectSetting(RecorderSetting.ENTRY_SETTINGS, RecorderSetting.TEXT_SUPERSAMPLE,
                 toOnOff(exportStruct.isSupersampled()), EditorSetting.RECORDER_KEY_SUPERSAMPLE);
-        injectSetting(RecorderSetting.ENTRY_SETTINGS, RecorderSetting.TEXT_HUD,
-                toOnOff(exportStruct.isHud()), EditorSetting.RECORDER_KEY_HUD);
         injectSetting(RecorderSetting.ENTRY_SETTINGS, RecorderSetting.TEXT_RANGE_START,
                 exportStruct.hasRangeStart()
                         ? formatTime(exportStruct.getRangeStart())

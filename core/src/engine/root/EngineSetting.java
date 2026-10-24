@@ -3033,7 +3033,7 @@ public class EngineSetting {
     public static final int MAIN_WINDOW_ID = 0;
     public static final int SCREEN_ORDER_BACKGROUND = 0;
     public static final int SCREEN_ORDER_FOREGROUND = 1;
-    public static final float MENU_ANIMATION_MAX_STEP_SECONDS = 1f / 30f;
+    public static final float MENU_ANIMATION_MAX_STEP_SECONDS = 0.1f;
     public static final float MENU_EASE_BACK_OVERSHOOT = 1.70158f;
     public static final String MENU_HIERARCHY = "util/Hierarchy/Hierarchy";
     public static final float MENU_SCROLL_PIXELS = 48f;

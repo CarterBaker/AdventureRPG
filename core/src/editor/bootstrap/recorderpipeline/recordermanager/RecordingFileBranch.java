@@ -97,7 +97,6 @@ class RecordingFileBranch extends BranchPackage {
         exportArpg.addProperty("format", ArpgUtility.toEnumName(exportStruct.getFormat()));
         exportArpg.addProperty("motion_blur", exportStruct.getMotionBlurSamples());
         exportArpg.addProperty("supersample", exportStruct.isSupersampled());
-        exportArpg.addProperty("hud", exportStruct.isHud());
         exportArpg.addProperty("range_start", exportStruct.getRangeStart());
         exportArpg.addProperty("range_end", exportStruct.getRangeEnd());
         return exportArpg;
@@ -564,7 +563,6 @@ class RecordingFileBranch extends BranchPackage {
         exportStruct.setMotionBlurSamples(
                 ArpgUtility.getInt(exportArpg, "motion_blur", exportStruct.getMotionBlurSamples()));
         exportStruct.setSupersampled(ArpgUtility.getBoolean(exportArpg, "supersample", false));
-        exportStruct.setHud(ArpgUtility.getBoolean(exportArpg, "hud", false));
         exportStruct.setRangeStart(ArpgUtility.getFloat(exportArpg, "range_start", EditorSetting.RECORDER_TIME_UNSET));
         exportStruct.setRangeEnd(ArpgUtility.getFloat(exportArpg, "range_end", EditorSetting.RECORDER_TIME_UNSET));
         return exportStruct;

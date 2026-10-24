@@ -38,12 +38,13 @@ public class DevRecorderExportSystem extends SystemPackage {
      * export's size whatever the size of its tab. Before the first frame the
      * world is given time to stream in around the camera, and before each
      * frame until the streaming threads have nothing left in flight, the clock
-     * standing still meanwhile. Every layer the window draws, up to the HUD
-     * when it is left out, is gathered into one capture target and read back
-     * a frame later without stalling. Motion blur renders several moments
-     * across a 180 degree shutter and supersampling renders at twice the size;
-     * both are averaged down into each video frame, which goes to the encoder
-     * on its own thread while the next renders. A frame also waits until the
+     * standing still meanwhile. Every layer the window draws, its interface
+     * included, is gathered into one capture target, so the video shows
+     * exactly what the window does, and read back a frame later without
+     * stalling. Motion blur renders several moments across a 180 degree
+     * shutter and supersampling renders at twice the size; both are averaged
+     * down into each video frame, which goes to the encoder on its own thread
+     * while the next renders. A frame also waits until the
      * recorded interface shows the moment it is rendered at, and nothing is
      * rendered while the game is paused under the export. This system updates
      * before DevRecorderSystem, so the playhead it sets is the one played that
@@ -185,9 +186,7 @@ public class DevRecorderExportSystem extends SystemPackage {
             this.pbo = pboManager.createPbo(window.getGLWindow(), renderWidth, renderHeight);
 
         fboManager.resize(captureFbo, renderWidth, renderHeight);
-        fboRenderSystem.setCaptureTarget(window, captureFbo, settings.isHud()
-                ? EditorSetting.RECORDER_EXPORT_HUD_LAYER_LIMIT
-                : EditorSetting.RECORDER_EXPORT_SCENE_LAYER_LIMIT);
+        fboRenderSystem.setCaptureTarget(window, captureFbo);
 
         int frameBytes = outputWidth * outputHeight * EditorSetting.RECORDER_FRAME_BYTES_PER_PIXEL;
 
