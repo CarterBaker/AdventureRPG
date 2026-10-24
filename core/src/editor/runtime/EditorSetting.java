@@ -1134,6 +1134,9 @@ public class EditorSetting {
     public static final long RECORDER_CLOCK_JUMP_MILLIS = 1000L;
     public static final float[] RECORDER_TIME_RAMP_SECONDS = { 0f, 2f, 5f, 10f };
 
+    // Recorder — the interface; while it plays, the Dev window's own is withheld from this layer up
+    public static final int RECORDER_INTERFACE_LIVE_LAYER = RuntimeSetting.LAYER_VITALITY;
+
     // Recorder — sample blocks: a count, then whole columns of 4-byte floats and ints and 8-byte chunk coordinates
     public static final int RECORDER_BLOCK_HEADER_BYTES = Integer.BYTES;
     public static final int RECORDER_PLACE_SAMPLE_BYTES = Float.BYTES + Long.BYTES + Float.BYTES * 3;
