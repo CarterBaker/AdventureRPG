@@ -8,6 +8,7 @@ import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
+import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
@@ -23,20 +24,21 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecorderKeysSystem extends SystemPackage {
 
     /*
-     * Shows the Keys tab in place of the bin, the selected clip and the
-     * markers whenever the recorder asks for it. Its outliner lists the
-     * selected clip's take track by track, each opened to a row for every
-     * value it holds and, for a character, a row of its movement and one of
-     * its gestures; every row's strip shows its keys or nodes across the
+     * Fills the Keys pane below the timeline while it shows. Its outliner
+     * lists the selected clip's take track by track, each opened to a row for
+     * every value it holds and, for a character, a row of its movement and one
+     * of its gestures; every row's strip shows its keys or nodes across the
      * stretch of the timeline in view, a closed track's strip every key of
-     * every curve it holds. As a graph it draws the selected curve across
-     * the view between the least and greatest values framed, its keys, and
-     * the handles of the selected key. Its inspector shows the selected
-     * curve, key or node and what can be done to it. The whole tab is drawn
-     * again when the recorder's revision, its keys or its view move; a key
-     * or handle being dragged redraws only its own strip, the graph and the
-     * inspector, and the playhead follows every frame from positions built
-     * once.
+     * every curve it holds. Beneath the rows the graph draws the selected
+     * curve across the same stretch, between the least and greatest values
+     * framed, with its keys and the handles of the selected key, from marks
+     * made once and placed again, so a mark that has not moved is left alone.
+     * Its inspector shows the selected curve, key or node and what can be
+     * done to it. The whole pane is drawn again when the recorder's revision,
+     * its keys or its view move; a key or handle being dragged moves only its
+     * own mark on its strip, the graph's marks that changed and the
+     * inspector's key, and the playhead follows every frame from positions
+     * built once.
      */
 
     // Internal
@@ -46,19 +48,15 @@ public class RecorderKeysSystem extends SystemPackage {
 
     // Menus
     private MenuInstance recorderMenu;
-    private ElementInstance keysPanel;
     private ElementInstance keysTitle;
-    private ElementInstance keyRows;
     private ElementInstance keyGraph;
-    private ElementInstance graphMarks;
     private ElementInstance keysPlayhead;
     private ElementInstance graphTop;
     private ElementInstance graphBottom;
-    private ElementInstance takesPanel;
-    private ElementInstance clipPanel;
-    private ElementInstance markersPanel;
-    private ElementInstance selectedStrip;
+    private ElementInstance selectedDiamond;
     private ElementInstance nowLabel;
+    private ElementInstance keyTimeLabel;
+    private ElementInstance keyValueLabel;
 
     // Strips
     private DimensionVector2Struct[] stripPositions;
@@ -69,9 +67,16 @@ public class RecorderKeysSystem extends SystemPackage {
     private DimensionVector2Struct playheadSize;
     private DimensionVector2Struct hiddenSize;
 
+    // Graph
+    private RecorderMarkPoolStruct segmentPool;
+    private RecorderMarkPoolStruct handleLinePool;
+    private RecorderMarkPoolStruct keyPool;
+    private RecorderMarkPoolStruct selectedKeyPool;
+    private RecorderMarkPoolStruct handlePool;
+    private RecorderMarkPoolStruct[] pools;
+
     // State
-    private boolean shownKeys;
-    private boolean shownGraph;
+    private boolean shown;
     private int shownRevision;
     private int shownKeysRevision;
     private int shownViewRevision;
@@ -109,8 +114,6 @@ public class RecorderKeysSystem extends SystemPackage {
                 DimensionValueStruct.ofAbsolute(0f));
 
         // State
-        this.shownKeys = true;
-        this.shownGraph = true;
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
@@ -125,19 +128,27 @@ public class RecorderKeysSystem extends SystemPackage {
     protected void awake() {
 
         this.recorderMenu = recorderPanelSystem.getRecorderMenu();
-        this.keysPanel = requireEntryPoint(RecorderSetting.ENTRY_KEYS_PANEL);
         this.keysTitle = requireEntryPoint(RecorderSetting.ENTRY_KEYS_TITLE);
-        this.keyRows = requireEntryPoint(RecorderSetting.ENTRY_KEY_ROWS);
         this.keyGraph = requireEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
-        this.graphMarks = requireEntryPoint(RecorderSetting.ENTRY_GRAPH_MARKS);
         this.keysPlayhead = requireEntryPoint(RecorderSetting.ENTRY_KEYS_PLAYHEAD);
         this.graphTop = requireEntryPoint(RecorderSetting.ENTRY_GRAPH_TOP);
         this.graphBottom = requireEntryPoint(RecorderSetting.ENTRY_GRAPH_BOTTOM);
-        this.takesPanel = requireEntryPoint(RecorderSetting.ENTRY_TAKES_PANEL);
-        this.clipPanel = requireEntryPoint(RecorderSetting.ENTRY_CLIP_PANEL);
-        this.markersPanel = requireEntryPoint(RecorderSetting.ENTRY_MARKERS_PANEL);
 
+        requireEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_ROWS);
         requireEntryPoint(RecorderSetting.ENTRY_KEY_INSPECTOR);
+
+        // Graph — lines lie under points
+        ElementInstance graphMarks = requireEntryPoint(RecorderSetting.ENTRY_GRAPH_MARKS);
+        ElementInstance graphLines = requireChild(graphMarks, RecorderSetting.ELEMENT_GRAPH_LINES);
+        ElementInstance graphPoints = requireChild(graphMarks, RecorderSetting.ELEMENT_GRAPH_POINTS);
+
+        this.segmentPool = new RecorderMarkPoolStruct(RecorderSetting.TEMPLATE_GRAPH_SEGMENT, graphLines);
+        this.handleLinePool = new RecorderMarkPoolStruct(RecorderSetting.TEMPLATE_GRAPH_HANDLE_LINE, graphLines);
+        this.keyPool = new RecorderMarkPoolStruct(RecorderSetting.TEMPLATE_GRAPH_KEY, graphPoints);
+        this.selectedKeyPool = new RecorderMarkPoolStruct(RecorderSetting.TEMPLATE_GRAPH_KEY_SELECTED, graphPoints);
+        this.handlePool = new RecorderMarkPoolStruct(RecorderSetting.TEMPLATE_GRAPH_HANDLE, graphPoints);
+        this.pools = new RecorderMarkPoolStruct[] {
+                segmentPool, handleLinePool, keyPool, selectedKeyPool, handlePool };
     }
 
     private ElementInstance requireEntryPoint(int entryPoint) {
@@ -151,14 +162,29 @@ public class RecorderKeysSystem extends SystemPackage {
         return element;
     }
 
+    private ElementInstance requireChild(ElementInstance parent, String childId) {
+
+        ElementInstance element = parent.findChildById(childId);
+
+        if (element == null)
+            throwException("Recorder menu '" + EditorSetting.RECORDER_MENU + "' has no element '" + childId + "'.");
+
+        return element;
+    }
+
     // Update \\
 
     @Override
     protected void update() {
 
-        showPanels();
+        boolean keys = recorderManager.getPane() == RecorderPane.KEYS;
 
-        if (!recorderManager.isKeysShown())
+        if (keys != shown) {
+            this.shown = keys;
+            this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
+        }
+
+        if (!keys)
             return;
 
         if (isStale())
@@ -174,35 +200,6 @@ public class RecorderKeysSystem extends SystemPackage {
         }
 
         movePlayhead();
-    }
-
-    // The bin, the clip and the markers give way to the Keys tab and back, and the graph to the strips
-    private void showPanels() {
-
-        boolean keys = recorderManager.isKeysShown();
-        boolean graph = keys && recorderManager.isGraphShown();
-
-        if (keys != shownKeys) {
-            this.shownKeys = keys;
-            place(keysPanel, keys);
-            place(takesPanel, !keys);
-            place(clipPanel, !keys);
-            place(markersPanel, !keys);
-            this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
-        }
-
-        if (graph != shownGraph) {
-            this.shownGraph = graph;
-            place(keyGraph, graph);
-            this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
-        }
-    }
-
-    private void place(ElementInstance element, boolean shown) {
-        if (shown)
-            element.clearPositionOverride();
-        else
-            element.setPositionOverride(hiddenPosition);
     }
 
     private boolean isStale() {
@@ -241,54 +238,48 @@ public class RecorderKeysSystem extends SystemPackage {
                 : RecorderSetting.TEXT_KEYS_TITLE);
 
         refreshRows(clip);
+        refreshGraphLabels(clip);
         refreshGraph(clip);
         refreshInspector(clip);
     }
 
-    // A key or handle being dragged: only its own strip, the graph and the inspector change
+    // A key or handle being dragged: only its own mark on its strip, the graph's marks and the inspector's key move
     private void refreshCurve() {
 
         RecordingClipStruct clip = recorderManager.getKeyClip();
-        RecordingCurveStruct curve = recorderManager.getSelectedCurve();
 
         this.shownCurveRevision = recorderManager.getCurveRevision();
 
-        if (selectedStrip != null && clip != null && curve != null) {
-            ejectChildren(selectedStrip);
-            injectKeys(selectedStrip, clip, curve, true);
-        }
-
+        moveSelectedDiamond(clip);
         refreshGraph(clip);
-        refreshInspector(clip);
+        refreshKey(clip);
     }
 
     // Rows \\
 
     private void refreshRows(RecordingClipStruct clip) {
 
-        menuManager.ejectAll(recorderMenu, RecorderSetting.ENTRY_KEY_ROWS);
-        this.selectedStrip = null;
+        menuManager.ejectAll(recorderMenu, EditorSetting.RECORDER_ENTRY_KEY_ROWS);
+        this.selectedDiamond = null;
 
         if (clip == null) {
-            recorderPanelSystem.injectText(RecorderSetting.ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_CLIP);
+            recorderPanelSystem.injectText(EditorSetting.RECORDER_ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_CLIP);
             return;
         }
 
         ObjectArrayList<RecordingCurveTrackStruct> tracks = recorderManager.getKeyTracks();
 
         if (tracks.isEmpty())
-            recorderPanelSystem.injectText(RecorderSetting.ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_TRACKS);
+            recorderPanelSystem.injectText(EditorSetting.RECORDER_ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_TRACKS);
 
         for (int i = 0; i < tracks.size(); i++)
             injectTrack(tracks.get(i), i, clip);
     }
 
-    // A track's own row with every key it holds, and, opened, its node rows and a row for every value it holds; the
-    // graph covers the strips, so while it shows they are left empty
+    // A track's own row with every key it holds, and, opened, its node rows and a row for every value it holds
     private void injectTrack(RecordingCurveTrackStruct track, int trackIndex, RecordingClipStruct clip) {
 
         boolean opened = recorderManager.isTrackOpened(track);
-        boolean strips = !recorderManager.isGraphShown();
         ElementInstance trackStrip = injectRow(
                 RecorderSetting.TEMPLATE_KEY_TRACK_ROW,
                 (opened ? RecorderSetting.TEXT_TRACK_OPENED : RecorderSetting.TEXT_TRACK_CLOSED)
@@ -297,7 +288,7 @@ public class RecorderKeysSystem extends SystemPackage {
 
         clearSteps();
 
-        for (int slot = 0; strips && slot < track.getCurveCount(); slot++)
+        for (int slot = 0; slot < track.getCurveCount(); slot++)
             if (track.hasCurve(slot))
                 injectSummary(trackStrip, clip, track.getCurve(slot));
 
@@ -305,16 +296,10 @@ public class RecorderKeysSystem extends SystemPackage {
             return;
 
         if (track instanceof RecordingBodyTrackStruct body) {
-
-            ElementInstance movementStrip = injectRow(RecorderSetting.TEMPLATE_KEY_NODE_ROW,
-                    RecorderSetting.TEXT_ROW_MOVEMENT, toRowKey(trackIndex, EditorSetting.RECORDER_KEY_ROW_MOVEMENT));
-            ElementInstance gestureStrip = injectRow(RecorderSetting.TEMPLATE_KEY_NODE_ROW,
-                    RecorderSetting.TEXT_ROW_GESTURES, toRowKey(trackIndex, EditorSetting.RECORDER_KEY_ROW_GESTURES));
-
-            if (strips) {
-                injectNodes(movementStrip, body, RecorderNodeKind.MOVEMENT);
-                injectNodes(gestureStrip, body, RecorderNodeKind.GESTURE);
-            }
+            injectNodes(injectRow(RecorderSetting.TEMPLATE_KEY_NODE_ROW, RecorderSetting.TEXT_ROW_MOVEMENT,
+                    toRowKey(trackIndex, EditorSetting.RECORDER_KEY_ROW_MOVEMENT)), body, RecorderNodeKind.MOVEMENT);
+            injectNodes(injectRow(RecorderSetting.TEMPLATE_KEY_NODE_ROW, RecorderSetting.TEXT_ROW_GESTURES,
+                    toRowKey(trackIndex, EditorSetting.RECORDER_KEY_ROW_GESTURES)), body, RecorderNodeKind.GESTURE);
         }
 
         for (int slot = 0; slot < track.getCurveCount(); slot++) {
@@ -325,18 +310,15 @@ public class RecorderKeysSystem extends SystemPackage {
                     track.getCurveLabel(slot),
                     toRowKey(trackIndex, slot));
 
-            if (strips && track.hasCurve(slot))
+            if (track.hasCurve(slot))
                 injectKeys(strip, clip, track.getCurve(slot), selected);
-
-            if (strips && selected)
-                this.selectedStrip = strip;
         }
     }
 
     // One row of the outliner, its name and its strip both handing back the row's key; its strip comes back
     private ElementInstance injectRow(String template, String label, String rowKey) {
 
-        ElementInstance row = menuManager.inject(recorderMenu, RecorderSetting.ENTRY_KEY_ROWS, template);
+        ElementInstance row = menuManager.inject(recorderMenu, EditorSetting.RECORDER_ENTRY_KEY_ROWS, template);
         ElementInstance name = row.findChildById(RecorderSetting.ELEMENT_KEY_NAME);
         ElementInstance strip = row.findChildById(RecorderSetting.ELEMENT_KEY_STRIP);
 
@@ -351,7 +333,7 @@ public class RecorderKeysSystem extends SystemPackage {
     }
 
     // Every key of the curve within its clip and the view, one mark however many share a step, the selected one
-    // always marked
+    // always marked and kept so a drag can move it alone
     private void injectKeys(
             ElementInstance strip,
             RecordingClipStruct clip,
@@ -370,9 +352,13 @@ public class RecorderKeysSystem extends SystemPackage {
                 continue;
 
             stepTaken[step] = true;
-            injectDiamond(strip, i == selectedKey
+
+            ElementInstance diamond = injectDiamond(strip, i == selectedKey
                     ? RecorderSetting.TEMPLATE_KEY_DIAMOND_SELECTED
                     : RecorderSetting.TEMPLATE_KEY_DIAMOND, step);
+
+            if (i == selectedKey)
+                this.selectedDiamond = diamond;
         }
     }
 
@@ -391,14 +377,30 @@ public class RecorderKeysSystem extends SystemPackage {
         }
     }
 
-    private void injectDiamond(ElementInstance strip, String template, int step) {
+    private ElementInstance injectDiamond(ElementInstance strip, String template, int step) {
 
         DimensionVector2Struct position = stripPositions[step];
 
-        menuManager.inject(strip, template, diamond -> {
+        return menuManager.inject(strip, template, diamond -> {
             diamond.setPositionOverride(position);
             diamond.setRotation(RecorderSetting.KEY_DIAMOND_DEGREES);
         });
+    }
+
+    // The selected key's mark follows its key along its strip, set aside while it lies outside its clip or the view
+    private void moveSelectedDiamond(RecordingClipStruct clip) {
+
+        RecordingCurveStruct curve = recorderManager.getSelectedCurve();
+        int key = recorderManager.getSelectedKey();
+
+        if (selectedDiamond == null || clip == null || curve == null || key < 0 || key >= curve.size())
+            return;
+
+        int step = resolveKeyStep(clip, curve.getTime(key));
+
+        selectedDiamond.setPositionOverride(step == EngineSetting.INDEX_NOT_FOUND
+                ? hiddenPosition
+                : stripPositions[step]);
     }
 
     // The step across the view a key of the take falls on, -1 outside its clip or the view
@@ -457,17 +459,12 @@ public class RecorderKeysSystem extends SystemPackage {
 
     // Graph \\
 
-    // The selected curve across the view as a line through its keys, a key too close to the last drawn left out
-    // unless selected, and the handles of the selected key drawn out
-    private void refreshGraph(RecordingClipStruct clip) {
-
-        ejectChildren(graphMarks);
+    // The greatest and least values framed, or how to begin when no curve is selected
+    private void refreshGraphLabels(RecordingClipStruct clip) {
 
         RecordingCurveStruct curve = recorderManager.getSelectedCurve();
-        float width = keyGraph.getComputedW();
-        float height = keyGraph.getComputedH();
 
-        if (!recorderManager.isGraphShown() || clip == null || curve == null || width <= 0f || height <= 0f) {
+        if (clip == null || curve == null) {
             graphTop.setFontText(RecorderSetting.TEXT_GRAPH_EMPTY);
             graphBottom.setFontText(RecorderSetting.TEXT_EMPTY);
             return;
@@ -477,8 +474,29 @@ public class RecorderKeysSystem extends SystemPackage {
                 curve.getProperty().getKind(), recorderManager.getGraphMaximum()));
         graphBottom.setFontText(recorderManager.formatValue(
                 curve.getProperty().getKind(), recorderManager.getGraphMinimum()));
+    }
 
-        injectCurveLine(clip, curve, width, height);
+    // The selected curve across the view as a line through its keys, a key too close to the last drawn left out
+    // unless selected, and the handles of the selected key drawn out
+    private void refreshGraph(RecordingClipStruct clip) {
+
+        for (int i = 0; i < pools.length; i++)
+            pools[i].begin();
+
+        RecordingCurveStruct curve = recorderManager.getSelectedCurve();
+        float width = keyGraph.getComputedW();
+        float height = keyGraph.getComputedH();
+
+        if (clip != null && curve != null && width > 0f && height > 0f)
+            placeCurve(clip, curve, width, height);
+
+        for (int i = 0; i < pools.length; i++)
+            setAsideUnused(pools[i]);
+    }
+
+    private void placeCurve(RecordingClipStruct clip, RecordingCurveStruct curve, float width, float height) {
+
+        placeCurveLine(clip, curve, width, height);
 
         int selectedKey = recorderManager.getSelectedKey();
         float lastX = Float.NEGATIVE_INFINITY;
@@ -501,22 +519,20 @@ public class RecorderKeysSystem extends SystemPackage {
             if (i == selectedKey && curve.getMode(i) != RecorderKeyMode.CONSTANT) {
 
                 if (i > 0)
-                    injectHandle(x, y, toGraphX(clip.toTimelineTime(curve.getTime(i) + curve.getInTime(i)), width),
+                    placeHandle(x, y, toGraphX(clip.toTimelineTime(curve.getTime(i) + curve.getInTime(i)), width),
                             toGraphY(curve.getValue(i) + curve.getInValue(i), height));
 
                 if (i < curve.size() - 1)
-                    injectHandle(x, y, toGraphX(clip.toTimelineTime(curve.getTime(i) + curve.getOutTime(i)), width),
+                    placeHandle(x, y, toGraphX(clip.toTimelineTime(curve.getTime(i) + curve.getOutTime(i)), width),
                             toGraphY(curve.getValue(i) + curve.getOutValue(i), height));
             }
 
-            injectPoint(i == selectedKey
-                    ? RecorderSetting.TEMPLATE_GRAPH_KEY_SELECTED
-                    : RecorderSetting.TEMPLATE_GRAPH_KEY, x, y);
+            placePoint(i == selectedKey ? selectedKeyPool : keyPool, x, y);
         }
     }
 
     // The curve sampled every few pixels across the part of its clip in view, each stretch a turned line
-    private void injectCurveLine(RecordingClipStruct clip, RecordingCurveStruct curve, float width, float height) {
+    private void placeCurveLine(RecordingClipStruct clip, RecordingCurveStruct curve, float width, float height) {
 
         RecordingViewStruct view = recorderManager.getView();
         float from = Math.max(view.getStart(), clip.getStart());
@@ -536,51 +552,81 @@ public class RecorderKeysSystem extends SystemPackage {
             float x = toGraphX(time, width);
             float y = toGraphY(curve.evaluate(clip.toTakeTime(time)), height);
 
-            injectLine(RecorderSetting.TEMPLATE_GRAPH_SEGMENT, lastX, lastY, x, y, RecorderSetting.GRAPH_LINE_PIXELS);
+            placeLine(segmentPool, lastX, lastY, x, y, RecorderSetting.GRAPH_LINE_PIXELS);
             lastX = x;
             lastY = y;
         }
     }
 
-    private void injectHandle(float keyX, float keyY, float handleX, float handleY) {
-        injectLine(RecorderSetting.TEMPLATE_GRAPH_HANDLE_LINE, keyX, keyY, handleX, handleY,
-                RecorderSetting.GRAPH_HANDLE_LINE_PIXELS);
-        injectPoint(RecorderSetting.TEMPLATE_GRAPH_HANDLE, handleX, handleY);
+    private void placeHandle(float keyX, float keyY, float handleX, float handleY) {
+        placeLine(handleLinePool, keyX, keyY, handleX, handleY, RecorderSetting.GRAPH_HANDLE_LINE_PIXELS);
+        placePoint(handlePool, handleX, handleY);
     }
 
     // A line from one point to another, laid from its start and turned toward its end
-    private void injectLine(String template, float fromX, float fromY, float toX, float toY, float thickness) {
+    private void placeLine(
+            RecorderMarkPoolStruct pool,
+            float fromX,
+            float fromY,
+            float toX,
+            float toY,
+            float thickness) {
 
         float length = (float) Math.hypot(toX - fromX, toY - fromY);
 
         if (length <= 0f)
             return;
 
-        DimensionVector2Struct position = new DimensionVector2Struct(
-                DimensionValueStruct.ofAbsolute(fromX),
-                DimensionValueStruct.ofAbsolute(fromY));
-        DimensionVector2Struct size = new DimensionVector2Struct(
-                DimensionValueStruct.ofAbsolute(length),
-                DimensionValueStruct.ofAbsolute(thickness));
         float degrees = (float) Math.toDegrees(Math.atan2(toY - fromY, toX - fromX));
+        int index = takeMark(pool);
 
-        menuManager.inject(graphMarks, template, line -> {
-            line.setPositionOverride(position);
-            line.setSizeOverride(size);
-            line.setRotation(degrees);
-        });
+        if (pool.isPlaced(index, fromX, fromY, length, degrees))
+            return;
+
+        ElementInstance line = pool.get(index);
+
+        line.setPositionOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(fromX),
+                DimensionValueStruct.ofAbsolute(fromY)));
+        line.setSizeOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(length),
+                DimensionValueStruct.ofAbsolute(thickness)));
+        line.setRotation(degrees);
     }
 
-    private void injectPoint(String template, float x, float y) {
+    private void placePoint(RecorderMarkPoolStruct pool, float x, float y) {
 
-        DimensionVector2Struct position = new DimensionVector2Struct(
+        int index = takeMark(pool);
+
+        if (pool.isPlaced(index, x, y, 0f, RecorderSetting.KEY_DIAMOND_DEGREES))
+            return;
+
+        ElementInstance point = pool.get(index);
+
+        point.setPositionOverride(new DimensionVector2Struct(
                 DimensionValueStruct.ofAbsolute(x),
-                DimensionValueStruct.ofAbsolute(y));
+                DimensionValueStruct.ofAbsolute(y)));
+        point.setRotation(RecorderSetting.KEY_DIAMOND_DEGREES);
+    }
 
-        menuManager.inject(graphMarks, template, point -> {
-            point.setPositionOverride(position);
-            point.setRotation(RecorderSetting.KEY_DIAMOND_DEGREES);
-        });
+    // The pool's next mark, made from its template the first time the pool runs short
+    private int takeMark(RecorderMarkPoolStruct pool) {
+
+        if (pool.isExhausted())
+            pool.add(menuManager.inject(pool.getContainer(), pool.getTemplate(), null));
+
+        return pool.next();
+    }
+
+    // The marks the last drawing used and this one did not, set aside off the graph
+    private void setAsideUnused(RecorderMarkPoolStruct pool) {
+
+        for (int i = pool.getUsed(); i < pool.getShown(); i++) {
+            pool.get(i).setPositionOverride(hiddenPosition);
+            pool.forget(i);
+        }
+
+        pool.setShown(pool.getUsed());
     }
 
     private float toGraphX(float time, float width) {
@@ -602,6 +648,8 @@ public class RecorderKeysSystem extends SystemPackage {
 
         menuManager.ejectAll(recorderMenu, RecorderSetting.ENTRY_KEY_INSPECTOR);
         this.nowLabel = null;
+        this.keyTimeLabel = null;
+        this.keyValueLabel = null;
 
         int entryPoint = RecorderSetting.ENTRY_KEY_INSPECTOR;
         RecordingCurveTrackStruct track = recorderManager.getSelectedTrack();
@@ -617,6 +665,8 @@ public class RecorderKeysSystem extends SystemPackage {
             recorderPanelSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_KEYS);
             recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_OPEN);
             recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_SELECT);
+            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_VIEW);
+            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_VALUES);
             return;
         }
 
@@ -624,7 +674,7 @@ public class RecorderKeysSystem extends SystemPackage {
                 track.getTrackLabel(), track.getCurveLabel(recorderManager.getSelectedSlot())));
 
         if (curve == null) {
-            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_CURVE_RECORDED);
+            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_CURVE_UNLAID);
             return;
         }
 
@@ -636,11 +686,10 @@ public class RecorderKeysSystem extends SystemPackage {
         int key = recorderManager.getSelectedKey();
 
         if (key >= 0 && key < curve.size()) {
-            recorderPanelSystem.injectHeader(entryPoint, String.format(RecorderSetting.FORMAT_KEY_HEADER,
-                    recorderPanelSystem.formatTime(clip.toTimelineTime(curve.getTime(key)))));
-            recorderPanelSystem.injectSetting(entryPoint, RecorderSetting.TEXT_KEY_VALUE,
-                    recorderManager.formatValue(curve.getProperty().getKind(), curve.getValue(key)),
-                    EditorSetting.RECORDER_KEY_KEY_VALUE);
+            this.keyTimeLabel = recorderPanelSystem.injectHeader(entryPoint, RecorderSetting.TEXT_EMPTY);
+            this.keyValueLabel = recorderPanelSystem.injectSetting(entryPoint, RecorderSetting.TEXT_KEY_VALUE,
+                    RecorderSetting.TEXT_EMPTY, EditorSetting.RECORDER_KEY_KEY_VALUE);
+            refreshKey(clip);
             recorderPanelSystem.injectSetting(entryPoint, RecorderSetting.TEXT_KEY_MODE,
                     curve.getMode(key).getLabel(), EditorSetting.RECORDER_KEY_KEY_MODE);
             recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_KEY_DELETE,
@@ -651,9 +700,23 @@ public class RecorderKeysSystem extends SystemPackage {
         recorderPanelSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_CURVE);
         recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_CURVE_REFIT,
                 EditorSetting.RECORDER_KEY_CURVE_REFIT);
-        recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_CURVE_REMOVE,
-                EditorSetting.RECORDER_KEY_CURVE_REMOVE);
+        recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_TAKE_REFIT,
+                EditorSetting.RECORDER_KEY_TAKE_REFIT);
         recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_CURVE_SHARED);
+    }
+
+    // The selected key's moment and value, kept up as it is dragged
+    private void refreshKey(RecordingClipStruct clip) {
+
+        RecordingCurveStruct curve = recorderManager.getSelectedCurve();
+        int key = recorderManager.getSelectedKey();
+
+        if (keyTimeLabel == null || clip == null || curve == null || key < 0 || key >= curve.size())
+            return;
+
+        keyTimeLabel.setFontText(String.format(RecorderSetting.FORMAT_KEY_HEADER,
+                recorderPanelSystem.formatTime(clip.toTimelineTime(curve.getTime(key)))));
+        keyValueLabel.setFontText(recorderManager.formatValue(curve.getProperty().getKind(), curve.getValue(key)));
     }
 
     // The selected curve's value at the playhead, kept up as it plays
@@ -675,15 +738,15 @@ public class RecorderKeysSystem extends SystemPackage {
     private void movePlayhead() {
 
         float time = recorderManager.getPlayhead();
-        boolean shown = recorderManager.getView().contains(time);
+        boolean inView = recorderManager.getView().contains(time);
 
-        if (shown != playheadShown) {
-            this.playheadShown = shown;
+        if (inView != playheadShown) {
+            this.playheadShown = inView;
             this.shownPlayheadStep = EngineSetting.INDEX_NOT_FOUND;
-            keysPlayhead.setSizeOverride(shown ? playheadSize : hiddenSize);
+            keysPlayhead.setSizeOverride(inView ? playheadSize : hiddenSize);
         }
 
-        if (!shown)
+        if (!inView)
             return;
 
         int step = toViewStep(time);
@@ -696,11 +759,6 @@ public class RecorderKeysSystem extends SystemPackage {
     }
 
     // Utility \\
-
-    private void ejectChildren(ElementInstance container) {
-        while (!container.getChildren().isEmpty())
-            menuManager.eject(container, container.getChildren().get(0));
-    }
 
     private int toViewStep(float time) {
 

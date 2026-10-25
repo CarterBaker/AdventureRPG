@@ -63,6 +63,23 @@ public class RecordingViewStruct extends StructPackage {
         return start != previousStart || span != previousSpan;
     }
 
+    // Shows the stretch from one moment to another, as far as the timeline and the closest zoom allow
+    public boolean frame(float from, float to, float timelineSpan) {
+
+        float previousStart = start;
+        float previousSpan = span;
+
+        this.span = Math.clamp(
+                to - from,
+                Math.min(EditorSetting.RECORDER_MIN_VIEW_SECONDS, timelineSpan),
+                timelineSpan);
+        this.start = from;
+        this.fitted = false;
+        resolve(timelineSpan);
+
+        return start != previousStart || span != previousSpan;
+    }
+
     // A fitted view already shows everything, so only a zoomed view moves along
     public boolean scrollTo(float start, float timelineSpan) {
 

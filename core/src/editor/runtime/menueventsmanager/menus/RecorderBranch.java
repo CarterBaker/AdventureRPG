@@ -7,12 +7,14 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.runtime.EditorSetting;
 import engine.input.Buttons;
 import engine.input.Input;
 import engine.input.Keys;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RecorderBranch extends BranchPackage {
@@ -20,27 +22,32 @@ public class RecorderBranch extends BranchPackage {
     /*
      * Menu event handlers for the Recorder tab. Every action works on the one
      * recorder all tabs share. New and renamed recordings are named through
-     * the name dialog, takes and markers through the text dialog, and deleting
-     * a recording or a take asks for its name to be typed back. Dragging along
-     * the ruler moves the playhead to the moment under the cursor. Pressing a
-     * take in the bin picks it up, and letting go over the lanes lays it there.
-     * A press on the lanes is handed to the recorder once, where it began, to
+     * the name dialog, takes through the text dialog, and deleting a recording
+     * or a take asks for its name to be typed back. Dragging along the ruler
+     * moves the playhead to the moment under the cursor. Pressing a take in
+     * the bin picks it up, and letting go over the lanes lays it there. A
+     * press on the lanes is handed to the recorder once, where it began, to
      * take hold of a clip's edge, a node, a clip or the empty lanes; letting
      * go trims, retimes, moves or scrolls, and a press that never travels
      * selects instead, or on an empty lane moves the playhead there. Holding
      * Shift lets a drag go free of the timeline's edges. While the cut tool is
-     * on, the recorder is told every frame where it would cut with the
-     * pointer over the lanes. The wheel over the
-     * lanes or the ruler zooms about the pointer, and with Shift, or scrolled
-     * sideways, moves the view along. On the Keys tab a name opens its track
-     * or selects its curve, a press on a row's strip or on the graph is
-     * handed to the recorder once to take hold of a key, a handle or a node,
-     * and the value under the cursor on the graph is read from the span of
-     * values it shows. The drag is read from the window the press began in
-     * until the button is let go. Rows hand back the index of the take or
-     * marker they show, Keys rows their track's place and what they show,
-     * and setting rows the key of what they change. Exporting goes through
-     * the export dialog, which holds the editor until the video is finished.
+     * on, the recorder is told every frame where it would cut with the pointer
+     * over the lanes. The wheel over the lanes, the ruler, the Keys rows'
+     * strips or the Keys graph zooms about the pointer, and with Shift, or
+     * scrolled sideways, moves the view along; with Ctrl on the graph it zooms
+     * the graph's values, and over the Keys rows' names it scrolls the rows.
+     * The toolbar shows the Keys, the Bin or the Assets below the timeline. On
+     * the Keys pane a name opens its track or selects its curve, a press on a
+     * row's strip or on the graph is handed to the recorder once to take hold
+     * of a key, a handle or a node, or on nothing to scroll the view as it
+     * travels, and the value under the cursor on the graph is read from the
+     * span of values it shows. On the Assets pane a section's head opens or
+     * closes it. The drag is read from the window the press began in until the
+     * button is let go. Rows hand back the index of the take they show, Keys
+     * rows their track's place and what they show, section heads their
+     * section, and setting rows the key of what they change. Exporting goes
+     * through the export dialog, which holds the editor until the video is
+     * finished.
      */
 
     // Internal
@@ -108,7 +115,9 @@ public class RecorderBranch extends BranchPackage {
                 !isShiftDown(window));
     }
 
-    // The wheel over the lanes or the ruler of the Recorder tab under the pointer
+    // The wheel works alike over the lanes, the ruler, the Keys rows' strips and the Keys graph: it zooms about the
+    // pointer, and with Shift, or scrolled sideways, moves the view along; with Ctrl on the graph it zooms its values
+    // instead. Over the Keys rows' names it scrolls the rows
     private void scrollTimeline() {
 
         WindowInstance window = windowManager.getHoveredWindow();
@@ -131,9 +140,19 @@ public class RecorderBranch extends BranchPackage {
         ElementInstance lanes = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_CLIP_LANES);
         ElementInstance ruler = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_RULER);
         ElementInstance graph = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
+        ElementInstance keyRows = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_ROWS);
+        boolean keys = recorderManager.getPane() == RecorderPane.KEYS;
+        boolean overGraph = keys && isUnderCursor(window, graph);
+        boolean overRows = keys && isUnderCursor(window, keyRows);
+
+        if (overRows && inputManager.getHoverMouseX(window) < graph.getComputedLeft()) {
+            keyRows.setScrollY(keyRows.getScrollY() - wheel * EngineSetting.MENU_SCROLL_PIXELS);
+            return;
+        }
+
         ElementInstance hovered = isUnderCursor(window, lanes) ? lanes
                 : isUnderCursor(window, ruler) ? ruler
-                        : recorderManager.isGraphShown() && isUnderCursor(window, graph) ? graph : null;
+                        : overGraph || overRows ? graph : null;
 
         if (hovered == null)
             return;
@@ -144,11 +163,14 @@ public class RecorderBranch extends BranchPackage {
         if (wheel == 0f)
             return;
 
+        float factor = (float) Math.pow(EditorSetting.RECORDER_ZOOM_STEP, -wheel);
+
         if (isShiftDown(window))
             recorderManager.scrollView(-wheel * EditorSetting.RECORDER_SCROLL_SHARE);
+        else if (overGraph && isControlDown(window))
+            recorderManager.zoomGraph(resolveValue(window, graph), factor);
         else
-            recorderManager.zoomView(
-                    resolveTime(window, hovered), (float) Math.pow(EditorSetting.RECORDER_ZOOM_STEP, -wheel));
+            recorderManager.zoomView(resolveTime(window, hovered), factor);
     }
 
     // Recordings \\
@@ -221,18 +243,6 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.toEnd();
     }
 
-    public void previousMarker() {
-        recorderManager.previousMarker();
-    }
-
-    public void nextMarker() {
-        recorderManager.nextMarker();
-    }
-
-    public void addMarker() {
-        recorderManager.addMarker();
-    }
-
     public void scrubTimeline(WindowInstance window, ElementInstance track) {
 
         if (track.getComputedW() > 0f)
@@ -257,26 +267,24 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.toggleCutTool();
     }
 
-    // Keys \\
-
-    public void showBin() {
-        recorderManager.showKeys(false);
-    }
+    // Panes \\
 
     public void showKeys() {
-        recorderManager.showKeys(true);
+        recorderManager.showPane(RecorderPane.KEYS);
     }
 
-    public void showSheet() {
-        recorderManager.showGraph(false);
+    public void showBin() {
+        recorderManager.showPane(RecorderPane.BIN);
     }
 
-    public void showGraph() {
-        recorderManager.showGraph(true);
+    public void showAssets() {
+        recorderManager.showPane(RecorderPane.ASSETS);
     }
 
-    public void frameGraph() {
-        recorderManager.frameGraph();
+    // Keys \\
+
+    public void frameKeys() {
+        recorderManager.frameKeys();
     }
 
     // A track's name opens or closes it, a curve's name selects it
@@ -524,6 +532,13 @@ public class RecorderBranch extends BranchPackage {
         return rawInput.isKeyDown(Keys.SHIFT_LEFT) || rawInput.isKeyDown(Keys.SHIFT_RIGHT);
     }
 
+    private boolean isControlDown(WindowInstance window) {
+
+        Input rawInput = inputManager.getRawInput(window);
+
+        return rawInput.isKeyDown(Keys.CONTROL_LEFT) || rawInput.isKeyDown(Keys.CONTROL_RIGHT);
+    }
+
     // The lanes of the Recorder tab open in the window, null when it shows none
     private ElementInstance findLanes(WindowInstance window) {
 
@@ -543,26 +558,10 @@ public class RecorderBranch extends BranchPackage {
         return null;
     }
 
-    // Markers \\
+    // Assets \\
 
-    public void selectMarker(String markerKey) {
-        recorderManager.selectMarker(Integer.parseInt(markerKey));
-    }
-
-    public void renameMarker(String markerKey, WindowInstance window) {
-
-        int markerIndex = Integer.parseInt(markerKey);
-
-        nameDialogBranch.openText(
-                window,
-                EditorSetting.DIALOG_TITLE_RENAME_MARKER,
-                recorderManager.getRecording().getMarkers().get(markerIndex).getName(),
-                recorderManager::isLabelValid,
-                markerName -> recorderManager.renameMarker(markerIndex, markerName));
-    }
-
-    public void deleteMarker(String markerKey) {
-        recorderManager.deleteMarker(Integer.parseInt(markerKey));
+    public void toggleAssetSection(String sectionKey) {
+        recorderManager.toggleAssetSection(Integer.parseInt(sectionKey));
     }
 
     // Settings \\
@@ -596,7 +595,7 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_KEY_MODE -> recorderManager.cycleKeyMode();
             case EditorSetting.RECORDER_KEY_KEY_VALUE -> openKeyValue(window);
             case EditorSetting.RECORDER_KEY_CURVE_REFIT -> recorderManager.refitCurve();
-            case EditorSetting.RECORDER_KEY_CURVE_REMOVE -> recorderManager.removeCurve();
+            case EditorSetting.RECORDER_KEY_TAKE_REFIT -> recorderManager.refitTake();
             case EditorSetting.RECORDER_KEY_RESOLUTION -> recorderManager.cycleResolution();
             case EditorSetting.RECORDER_KEY_FRAME_RATE -> recorderManager.cycleFrameRate();
             case EditorSetting.RECORDER_KEY_FORMAT -> recorderManager.cycleFormat();

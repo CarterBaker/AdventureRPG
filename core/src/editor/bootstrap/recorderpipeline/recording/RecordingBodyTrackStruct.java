@@ -20,10 +20,9 @@ public class RecordingBodyTrackStruct extends RecordingTrackStruct {
      * movement state, speeds, facing and ground offset, and the action its
      * hands were in with that action's clip, phase and sequence. Clips are
      * kept once by name and sampled by index. While a take records it, it
-     * remembers the last look it saw and whether it has fallen, neither of
-     * which is ever saved. Its place, facing, look, speeds and ground offset
-     * can each be carried on a curve; its movement state and actions are
-     * nodes instead.
+     * remembers the last look it saw, which is never saved. Its place, facing,
+     * look, speeds and ground offset can each be carried on a curve; its
+     * movement state and actions are nodes instead.
      */
 
     // Identity
@@ -54,7 +53,6 @@ public class RecordingBodyTrackStruct extends RecordingTrackStruct {
 
     // Capture
     private int lookSignature;
-    private boolean fallen;
 
     // Constructor \\
 
@@ -186,14 +184,6 @@ public class RecordingBodyTrackStruct extends RecordingTrackStruct {
 
     public void setLookSignature(int lookSignature) {
         this.lookSignature = lookSignature;
-    }
-
-    public boolean isFallen() {
-        return fallen;
-    }
-
-    public void setFallen(boolean fallen) {
-        this.fallen = fallen;
     }
 
     // Accessible \\

@@ -17,7 +17,6 @@ import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
-import editor.bootstrap.recorderpipeline.recording.RecordingMarkerStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayStreamStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
@@ -40,20 +39,19 @@ class RecordingFileBranch extends BranchPackage {
     /*
      * Writes a recording to its ARPG file and reads one back. The file keeps
      * the world it was made in, the movement states and actions by name so a
-     * recording outlives either list changing, how it exports, its markers,
-     * its bin of takes with their tracks — each track's samples packed into
-     * one block by RecordingArpgUtility, a character's identity, clips and
-     * looks written plainly beside them, an overlay's frames as one block of
-     * frame sizes and one of their packed bytes — and the clips on its
-     * timeline, each naming its take by its place in the bin. Beside each
-     * track lie the curves it has been given, each naming its property and
-     * part with its keys packed into one block, their modes named once for
-     * the whole file as the states and actions are. A file of the
-     * first version, which laid takes straight onto the timeline as layers,
-     * is read as a bin of those takes each placed once where it was
-     * recorded, and is saved in the new form from then on. A file that cannot
-     * be read, or no longer fits the game, is logged and comes back null
-     * without touching anything.
+     * recording outlives either list changing, how it exports, its bin of
+     * takes with their tracks — each track's samples packed into one block by
+     * RecordingArpgUtility, a character's identity, clips and looks written
+     * plainly beside them, an overlay's frames as one block of frame sizes and
+     * one of their packed bytes — and the clips on its timeline, each naming
+     * its take by its place in the bin. Beside each track lie the curves it
+     * has been given, each naming its property and part with its keys packed
+     * into one block, their modes named once for the whole file as the states
+     * and actions are. A file of the first version, which laid takes straight
+     * onto the timeline as layers, is read as a bin of those takes each placed
+     * once where it was recorded, and is saved in the new form from then on. A
+     * file that cannot be read, or no longer fits the game, is logged and
+     * comes back null without touching anything.
      */
 
     // Read
@@ -71,7 +69,6 @@ class RecordingFileBranch extends BranchPackage {
         recordingArpg.add("actions", buildEnumNames(EntityAction.VALUES));
         recordingArpg.add("key_modes", buildEnumNames(RecorderKeyMode.VALUES));
         recordingArpg.add("export", buildExport(recording.getExportStruct()));
-        recordingArpg.add("markers", buildMarkers(recording));
         recordingArpg.add("takes", buildTakes(recording));
         recordingArpg.add("clips", buildClips(recording));
 
@@ -100,22 +97,6 @@ class RecordingFileBranch extends BranchPackage {
         exportArpg.addProperty("range_start", exportStruct.getRangeStart());
         exportArpg.addProperty("range_end", exportStruct.getRangeEnd());
         return exportArpg;
-    }
-
-    private ArpgArrayStruct buildMarkers(RecordingInstance recording) {
-
-        ArpgArrayStruct markersArpg = new ArpgArrayStruct();
-
-        for (int i = 0; i < recording.getMarkers().size(); i++) {
-
-            RecordingMarkerStruct marker = recording.getMarkers().get(i);
-            ArpgObjectStruct markerArpg = new ArpgObjectStruct();
-            markerArpg.addProperty("time", marker.getTime());
-            markerArpg.addProperty("name", marker.getName());
-            markersArpg.add(markerArpg);
-        }
-
-        return markersArpg;
     }
 
     private ArpgArrayStruct buildTakes(RecordingInstance recording) {
@@ -509,9 +490,6 @@ class RecordingFileBranch extends BranchPackage {
                 ? resolveEnumOrdinals(recordingArpg.getAsArray("key_modes"), RecorderKeyMode.VALUES)
                 : new IntArrayList();
 
-        if (ArpgUtility.hasArray(recordingArpg, "markers"))
-            parseMarkers(recordingArpg.getAsArray("markers"), recording);
-
         boolean parsed = layered
                 ? parseLayers(recordingArpg.getAsArray("layers"), recording, states, actions)
                 : parseTakes(recordingArpg.getAsArray("takes"), recording, states, actions)
@@ -566,19 +544,6 @@ class RecordingFileBranch extends BranchPackage {
         exportStruct.setRangeStart(ArpgUtility.getFloat(exportArpg, "range_start", EditorSetting.RECORDER_TIME_UNSET));
         exportStruct.setRangeEnd(ArpgUtility.getFloat(exportArpg, "range_end", EditorSetting.RECORDER_TIME_UNSET));
         return exportStruct;
-    }
-
-    private void parseMarkers(ArpgArrayStruct markersArpg, RecordingInstance recording) {
-
-        for (int i = 0; i < markersArpg.size(); i++) {
-
-            ArpgObjectStruct markerArpg = markersArpg.get(i).getAsObject();
-
-            if (ArpgUtility.hasNumber(markerArpg, "time") && ArpgUtility.hasString(markerArpg, "name"))
-                recording.addMarker(new RecordingMarkerStruct(
-                        markerArpg.get("time").getAsFloat(),
-                        markerArpg.get("name").getAsString()));
-        }
     }
 
     private boolean parseTakes(

@@ -85,6 +85,11 @@ public class RecordingDragStruct extends StructPackage {
         this.pressValue = pressValue;
     }
 
+    // The value under the cursor where a press on nothing on the graph began, so the graph can follow the cursor
+    public void anchorValue(double pressValue) {
+        this.pressValue = pressValue;
+    }
+
     public void clear() {
         this.kind = RecorderDragKind.NONE;
         this.index = EngineSetting.INDEX_NOT_FOUND;

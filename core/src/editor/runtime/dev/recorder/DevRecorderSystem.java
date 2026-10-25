@@ -70,22 +70,20 @@ public class DevRecorderSystem extends SystemPackage {
      * and puts it all back when the session ends. Every frame it plays each
      * channel the session plays from the clip on the timeline's highest lane
      * covering the playhead, read at that clip's own moment of its take: the
-     * camera flies the window's player along as an unseen anchor, so the
-     * world streams and draws around the recorded view; the player and the
-     * residents are puppets — entities drawn only, posed sample by sample and
-     * dressed in the look they wore — and thrown items and vehicles are drawn
-     * where they went; the weather is held where it had drifted; the clock is
-     * held to the recording, and a time command used while it plays shifts
-     * it from there on. Every value a track has a curve for is read from that
-     * curve instead of its samples. The interface plays through
-     * DevRecorderOverlaySystem.
-     * A take records each live channel after the frame has moved, at the
-     * take's own time: the camera, the player, the clock, the weather, and
-     * every resident, thrown item and vehicle near the window, dropping a
-     * marker wherever a resident falls. Starting a take hands each live
-     * channel over from what was playing, so a performance carries on from
-     * where the timeline stood. While the session is suspended — the game
-     * paused — nothing is recorded, and what plays holds still.
+     * camera flies the window's player along as an unseen anchor, so the world
+     * streams and draws around the recorded view; the player and the residents
+     * are puppets — entities drawn only, posed sample by sample and dressed in
+     * the look they wore — and thrown items and vehicles are drawn where they
+     * went; the weather is held where it had drifted; the clock is held to the
+     * recording, and a time command used while it plays shifts it from there
+     * on. Every value a track has a curve for is read from that curve instead
+     * of its samples. The interface plays through DevRecorderOverlaySystem. A
+     * take records each live channel after the frame has moved, at the take's
+     * own time: the camera, the player, the clock, the weather, and every
+     * resident, thrown item and vehicle near the window. Starting a take hands
+     * each live channel over from what was playing, so a performance carries
+     * on from where the timeline stood. While the session is suspended — the
+     * game paused — nothing is recorded, and what plays holds still.
      */
 
     // Internal
@@ -951,8 +949,7 @@ public class DevRecorderSystem extends SystemPackage {
                     windManager.getGustTime());
     }
 
-    // Every resident near the window, each its own track from the first time it is seen; one that falls drops a
-    // marker on the timeline where it fell
+    // Every resident near the window, each its own track from the first time it is seen
     private void captureResidents(RecordingTakeStruct take, float time) {
 
         if (!take.holds(RecorderChannel.CHARACTERS))
@@ -984,13 +981,6 @@ public class DevRecorderSystem extends SystemPackage {
             }
 
             captureBody(track, entity, time);
-
-            if (resident.isFallen() && !track.isFallen()) {
-                track.setFallen(true);
-                recorderManager.addMarker(
-                        recorderManager.getPlayhead(),
-                        EditorSetting.RECORDER_KILL_MARKER_PREFIX + track.getDisplayName());
-            }
         }
     }
 

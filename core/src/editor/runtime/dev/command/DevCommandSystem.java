@@ -83,7 +83,6 @@ public class DevCommandSystem extends SystemPackage {
         commandName2Action.put(EditorSetting.COMMAND_RECORD, command -> recorderManager.record());
         commandName2Action.put(EditorSetting.COMMAND_PLAY, command -> recorderManager.play());
         commandName2Action.put(EditorSetting.COMMAND_STOP, command -> recorderManager.stop());
-        commandName2Action.put(EditorSetting.COMMAND_MARK, command -> recorderManager.addMarker());
     }
 
     // Update \\

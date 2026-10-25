@@ -2,7 +2,6 @@ package editor.bootstrap.recorderpipeline.recordermanager;
 
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
-import editor.bootstrap.recorderpipeline.recording.RecordingMarkerStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -12,20 +11,20 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RecordingTimelineBranch extends BranchPackage {
 
     /*
-     * Lays clips on a recording's timeline and edits them. A clip asked onto
-     * a lane where it would cover another lands on the nearest clear lane
-     * above, then below, and only when every lane is taken on the one asked
-     * for. A take just recorded lands above every clip it was recorded over,
-     * so it plays over them. Cutting a clip in two at a moment lays a copy
-     * of it where it lies and trims the clip's end and the copy's start to
-     * the moment, trimming moves one end of a clip to a moment, and stamping
-     * lays a copy of it at a moment; a cut being placed snaps as a drag
-     * does and keeps inside its clip. A clip's edges are found near a press, a dragged edge
-     * reaches no further than its take or the clips beside it on its lane,
-     * and what is dragged snaps to the nearest edge of the timeline — its
-     * start, the playhead, a marker or another clip's end — within a
-     * tolerance. Nothing here marks the recording changed; RecorderManager
-     * does, once, for each edit it makes through here.
+     * Lays clips on a recording's timeline and edits them. A clip asked onto a
+     * lane where it would cover another lands on the nearest clear lane above,
+     * then below, and only when every lane is taken on the one asked for. A
+     * take just recorded lands above every clip it was recorded over, so it
+     * plays over them. Cutting a clip in two at a moment lays a copy of it
+     * where it lies and trims the clip's end and the copy's start to the
+     * moment, trimming moves one end of a clip to a moment, and stamping lays
+     * a copy of it at a moment; a cut being placed snaps as a drag does and
+     * keeps inside its clip. A clip's edges are found near a press, a dragged
+     * edge reaches no further than its take or the clips beside it on its
+     * lane, and what is dragged snaps to the nearest edge of the timeline —
+     * its start, the playhead or another clip's end — within a tolerance.
+     * Nothing here marks the recording changed; RecorderManager does, once,
+     * for each edit it makes through here.
      */
 
     // Lanes \\
@@ -161,8 +160,8 @@ class RecordingTimelineBranch extends BranchPackage {
 
     // Snap \\
 
-    // The nearest edge of the timeline within the tolerance — its start, the playhead, a marker, or either end of
-    // any clip but the one ignored — else the moment itself
+    // The nearest edge of the timeline within the tolerance — its start, the playhead, or either end of any clip but
+    // the one ignored — else the moment itself
     float snapTime(
             RecordingInstance recording,
             float time,
@@ -181,18 +180,6 @@ class RecordingTimelineBranch extends BranchPackage {
         if (Math.abs(playhead - time) <= nearest) {
             snapped = playhead;
             nearest = Math.abs(playhead - time);
-        }
-
-        ObjectArrayList<RecordingMarkerStruct> markers = recording.getMarkers();
-
-        for (int i = 0; i < markers.size(); i++) {
-
-            float markerTime = markers.get(i).getTime();
-
-            if (Math.abs(markerTime - time) <= nearest) {
-                snapped = markerTime;
-                nearest = Math.abs(markerTime - time);
-            }
         }
 
         ObjectArrayList<RecordingClipStruct> clips = recording.getClips();

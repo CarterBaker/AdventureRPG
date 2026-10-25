@@ -3,11 +3,11 @@ package editor.runtime.recorder;
 public class RecorderSetting {
 
     /*
-     * Constants used only by RecorderContext — the row, clip, node,
-     * timeline and Keys templates its panels are filled from and their
-     * elements, its entry points, the timeline's fixed steps, its ruler's
-     * ticks, the sizes the timeline and the Keys tab draw at, how often the
-     * clock and export progress refresh, and every word the tab shows.
+     * Constants used only by RecorderContext — the row, clip, node, timeline,
+     * Keys and Assets templates its panels are filled from and their elements,
+     * its entry points, the timeline's fixed steps, its ruler's ticks, the
+     * sizes the timeline and the Keys tab draw at, how often the clock and
+     * export progress refresh, and every word the tab shows.
      */
 
     // Templates
@@ -19,12 +19,9 @@ public class RecorderSetting {
     public static final String TEMPLATE_ACTION_ROW = "editor/Recorder/recorder_action_row";
     public static final String TEMPLATE_TAKE_ROW = "editor/Recorder/recorder_take_row";
     public static final String TEMPLATE_TAKE_ROW_SELECTED = "editor/Recorder/recorder_take_row_selected";
-    public static final String TEMPLATE_MARKER_ROW = "editor/Recorder/recorder_marker_row";
-    public static final String TEMPLATE_MARKER_ROW_SELECTED = "editor/Recorder/recorder_marker_row_selected";
     public static final String TEMPLATE_CLIP_BAR = "editor/Recorder/recorder_clip_bar";
     public static final String TEMPLATE_CLIP_BAR_SELECTED = "editor/Recorder/recorder_clip_bar_selected";
     public static final String TEMPLATE_CLIP_BAR_MUTED = "editor/Recorder/recorder_clip_bar_muted";
-    public static final String TEMPLATE_MARKER_TICK = "editor/Recorder/recorder_marker_tick";
     public static final String TEMPLATE_RULER_TICK = "editor/Recorder/recorder_ruler_tick";
     public static final String TEMPLATE_NODE_MOVEMENT = "editor/Recorder/recorder_node_movement";
     public static final String TEMPLATE_NODE_MOVEMENT_SELECTED = "editor/Recorder/recorder_node_movement_selected";
@@ -46,6 +43,9 @@ public class RecorderSetting {
     public static final String TEMPLATE_GRAPH_KEY = "editor/Recorder/recorder_graph_key";
     public static final String TEMPLATE_GRAPH_KEY_SELECTED = "editor/Recorder/recorder_graph_key_selected";
     public static final String TEMPLATE_GRAPH_HANDLE = "editor/Recorder/recorder_graph_handle";
+    public static final String TEMPLATE_ASSET_SECTION_ROW = "editor/Recorder/recorder_asset_section_row";
+    public static final String TEMPLATE_ASSET_ROW = "editor/Recorder/recorder_asset_row";
+    public static final String TEMPLATE_ASSET_ROW_MISSING = "editor/Recorder/recorder_asset_row_missing";
 
     // Elements
     public static final String ELEMENT_ROW_LABEL = "recorder_row_label";
@@ -59,34 +59,37 @@ public class RecorderSetting {
     public static final String ELEMENT_RULER_LABEL = "recorder_ruler_label";
     public static final String ELEMENT_KEY_NAME = "recorder_key_name";
     public static final String ELEMENT_KEY_STRIP = "recorder_key_strip";
+    public static final String ELEMENT_GRAPH_LINES = "recorder_key_graph_lines";
+    public static final String ELEMENT_GRAPH_POINTS = "recorder_key_graph_points";
 
-    // Entry Points — the clip lanes, the ruler and the Keys graph are EditorSetting.RECORDER_ENTRY_CLIP_LANES,
-    // RECORDER_ENTRY_RULER and RECORDER_ENTRY_KEY_GRAPH, which the drags and the wheel share
+    // Entry Points — the clip lanes, the ruler, the Keys rows and the Keys graph are EditorSetting
+    // RECORDER_ENTRY_CLIP_LANES, RECORDER_ENTRY_RULER, RECORDER_ENTRY_KEY_ROWS and RECORDER_ENTRY_KEY_GRAPH, which the
+    // drags and the wheel share
     public static final int ENTRY_STATUS = 0;
     public static final int ENTRY_CLOCK = 1;
     public static final int ENTRY_RECORDINGS = 2;
     public static final int ENTRY_SETTINGS = 3;
     public static final int ENTRY_TAKES = 4;
-    public static final int ENTRY_MARKERS = 5;
-    public static final int ENTRY_PLAYHEAD = 8;
-    public static final int ENTRY_RANGE_START = 9;
-    public static final int ENTRY_RANGE_END = 10;
-    public static final int ENTRY_CLIP = 11;
-    public static final int ENTRY_DRAG_GHOST = 12;
-    public static final int ENTRY_LANE_PLAYHEAD = 13;
-    public static final int ENTRY_VIEW = 14;
-    public static final int ENTRY_KEYS_PANEL = 15;
-    public static final int ENTRY_KEYS_TITLE = 16;
-    public static final int ENTRY_KEY_ROWS = 17;
-    public static final int ENTRY_GRAPH_MARKS = 19;
-    public static final int ENTRY_KEYS_PLAYHEAD = 20;
-    public static final int ENTRY_GRAPH_TOP = 21;
-    public static final int ENTRY_GRAPH_BOTTOM = 22;
-    public static final int ENTRY_KEY_INSPECTOR = 23;
-    public static final int ENTRY_TAKES_PANEL = 24;
-    public static final int ENTRY_CLIP_PANEL = 25;
-    public static final int ENTRY_MARKERS_PANEL = 26;
-    public static final int ENTRY_CUT_LABEL = 27;
+    public static final int ENTRY_PLAYHEAD = 7;
+    public static final int ENTRY_RANGE_START = 8;
+    public static final int ENTRY_RANGE_END = 9;
+    public static final int ENTRY_CLIP = 10;
+    public static final int ENTRY_DRAG_GHOST = 11;
+    public static final int ENTRY_LANE_PLAYHEAD = 12;
+    public static final int ENTRY_VIEW = 13;
+    public static final int ENTRY_KEYS_PANEL = 14;
+    public static final int ENTRY_KEYS_TITLE = 15;
+    public static final int ENTRY_GRAPH_MARKS = 18;
+    public static final int ENTRY_KEYS_PLAYHEAD = 19;
+    public static final int ENTRY_GRAPH_TOP = 20;
+    public static final int ENTRY_GRAPH_BOTTOM = 21;
+    public static final int ENTRY_KEY_INSPECTOR = 22;
+    public static final int ENTRY_TAKES_PANEL = 23;
+    public static final int ENTRY_CLIP_PANEL = 24;
+    public static final int ENTRY_CUT_LABEL = 25;
+    public static final int ENTRY_ASSETS_PANEL = 26;
+    public static final int ENTRY_ASSETS_TITLE = 27;
+    public static final int ENTRY_ASSET_ROWS = 28;
 
     // Timeline — positions across the view as a percentage of it; a drag's ghost may reach a view's width past
     // either side, where the lanes' mask hides it
@@ -126,7 +129,6 @@ public class RecorderSetting {
     public static final String TEXT_EMPTY = "";
     public static final String TEXT_NO_RECORDINGS = "No recordings yet: press Record or New";
     public static final String TEXT_NO_TAKES = "No takes yet: arm channels and press Record";
-    public static final String TEXT_NO_MARKERS = "No markers: press Mark to bookmark the playhead";
     public static final String TEXT_NO_RECORDING = "No recording open";
     public static final String TEXT_NO_CLIP = "Click a clip on the timeline to edit it";
     public static final String TEXT_UNSAVED_SUFFIX = " *";
@@ -171,16 +173,18 @@ public class RecorderSetting {
     public static final String TEXT_GRAPH_EMPTY = "Click a value in the list to see its curve";
     public static final String TEXT_HEADER_KEYS = "Keys";
     public static final String TEXT_HEADER_CURVE = "Curve";
-    public static final String TEXT_KEYS_HINT_OPEN = "Click a name to open it: every value it holds gets a curve";
-    public static final String TEXT_KEYS_HINT_SELECT = "Click a value to edit its keys; Graph bends them";
-    public static final String TEXT_KEYS_HINT_KEY = "Click a key to edit it";
-    public static final String TEXT_CURVE_RECORDED = "Playing as recorded: click its name to lay a curve";
+    public static final String TEXT_KEYS_HINT_OPEN = "Click a name to open or close it";
+    public static final String TEXT_KEYS_HINT_SELECT = "Click a value to see its curve on the graph below";
+    public static final String TEXT_KEYS_HINT_VIEW = "Wheel zooms, Shift+wheel or dragging empty space scrolls";
+    public static final String TEXT_KEYS_HINT_VALUES = "Ctrl+wheel on the graph zooms its values";
+    public static final String TEXT_KEYS_HINT_KEY = "Click a key on its row or the graph to edit it";
+    public static final String TEXT_CURVE_UNLAID = "Its keys are laid once nothing records or exports";
     public static final String TEXT_KEY_ADD = "Add a key at the playhead";
     public static final String TEXT_KEY_VALUE = "Value";
     public static final String TEXT_KEY_MODE = "Handles";
     public static final String TEXT_KEY_DELETE = "Delete key";
     public static final String TEXT_CURVE_REFIT = "Lay again from the recording";
-    public static final String TEXT_CURVE_REMOVE = "Play as recorded";
+    public static final String TEXT_TAKE_REFIT = "Lay every value of the take again";
     public static final String TEXT_CURVE_SHARED = "Curves belong to the take, and every clip of it";
     public static final String TEXT_RESOLUTION = "Resolution";
     public static final String TEXT_FRAME_RATE = "Frame rate";
@@ -193,6 +197,10 @@ public class RecorderSetting {
     public static final String TEXT_RANGE_TO_END = "Recording end";
     public static final String TEXT_CLEAR_RANGE = "Clear range";
     public static final String TEXT_EXPORT = "Export video";
+
+    // Text — Assets
+    public static final String TEXT_ASSETS_TITLE = "Assets";
+    public static final String TEXT_ASSET_MISSING = "Missing";
     public static final String TEXT_CANCEL_EXPORT = "Cancel export";
 
     // Formats
@@ -206,7 +214,6 @@ public class RecorderSetting {
     public static final String FORMAT_TAKE_PLACED = "%s   %s   %s   x%d";
     public static final String FORMAT_CLIP_PLACE = "Lane %d   %s to %s";
     public static final String FORMAT_CLIP_SOURCE = "Plays %s to %s of the take";
-    public static final String FORMAT_MARKER = "%s   %s";
     public static final String FORMAT_NODE = "%s   %s to %s";
     public static final String FORMAT_VIEW = "%s to %s";
     public static final String FORMAT_NODE_HEADER = "%s: %s";
@@ -215,5 +222,7 @@ public class RecorderSetting {
     public static final String FORMAT_CURVE_NOW = "Now %s";
     public static final String FORMAT_CURVE_KEYS = "%d keys";
     public static final String FORMAT_KEY_HEADER = "Key at %s";
+    public static final String FORMAT_ASSETS_TITLE = "Assets: %s";
+    public static final String FORMAT_ASSET_OWNERS = "%s and %d more";
     public static final String FORMAT_PROGRESS = "Frame %d of %d";
 }

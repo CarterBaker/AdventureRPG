@@ -12,12 +12,12 @@ import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
+import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
-import editor.bootstrap.recorderpipeline.recording.RecordingMarkerStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
@@ -30,27 +30,28 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecorderPanelSystem extends SystemPackage {
 
     /*
-     * Binds this window to a UI render target and shows the recorder. When the
-     * recorder's revision moves it refills every panel — the recordings in
-     * the game's directory with the open one marked, the channels armed for
-     * the next take and the export settings, the bin of takes with their
-     * channels, length and how often each is laid, the clip selected with
-     * what it plays, the node selected on it and every edit it takes, every
-     * marker, and the stretch of the timeline in view: its ruler and marker
-     * ticks, its export range, and its clips on their lanes, highest on top,
-     * each with what the player does along it — the movement it is in along
-     * its lower row and every gesture of its hands along its upper row. Only
-     * what lies in view is drawn, cut at the view's edges, and the view's
+     * Binds this window to a UI render target and shows the recorder, with
+     * whichever pane below the timeline it asks for — the Keys, the Bin or the
+     * Assets — and the others set aside. When the recorder's revision moves it
+     * refills every panel — the recordings in the game's directory with the
+     * open one marked, the channels armed for the next take and the export
+     * settings, the bin of takes with their channels, length and how often
+     * each is laid, the clip selected with what it plays, the node selected on
+     * it and every edit it takes, and the stretch of the timeline in view: its
+     * ruler's ticks, its export range, and its clips on their lanes, highest
+     * on top, each with what the player does along it — the movement it is in
+     * along its lower row and every gesture of its hands along its upper row.
+     * Only what lies in view is drawn, cut at the view's edges, and the view's
      * zooming and scrolling redraws the timeline alone. Both playheads follow
      * the playhead every frame from positions built once, hidden while it is
      * out of view, and what is being dragged shows where it would land — a
      * span on the lane it would really take, or a line at the moment an edge,
-     * a cut or a node would move to — from positions built the first time
-     * each is needed, so neither playback nor a drag allocates; the cut tool
-     * shows the same line where it would cut under the pointer, and its
-     * button says whether it is on. The clock text, the export's progress, a
-     * timeline still growing under a take and a resized timeline refresh a
-     * few times a second.
+     * a cut or a node would move to — from positions built the first time each
+     * is needed, so neither playback nor a drag allocates; the cut tool shows
+     * the same line where it would cut under the pointer, and its button says
+     * whether it is on. The clock text, the export's progress, a timeline
+     * still growing under a take and a resized timeline refresh a few times a
+     * second.
      */
 
     // Internal
@@ -70,6 +71,14 @@ public class RecorderPanelSystem extends SystemPackage {
     private ElementInstance viewLabel;
     private ElementInstance cutLabel;
     private ElementInstance progressLabel;
+
+    // Panes
+    private ElementInstance keysPanel;
+    private ElementInstance takesPanel;
+    private ElementInstance clipPanel;
+    private ElementInstance assetsPanel;
+    private DimensionVector2Struct hiddenPosition;
+    private RecorderPane shownPane;
 
     // Timeline
     private DimensionVector2Struct[] timelinePositions;
@@ -135,6 +144,11 @@ public class RecorderPanelSystem extends SystemPackage {
         this.shownPlayheadStep = EngineSetting.INDEX_NOT_FOUND;
         this.playheadShown = true;
 
+        // Panes
+        this.hiddenPosition = new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(RecorderSetting.HIDDEN_PANEL_PIXELS),
+                DimensionValueStruct.ofAbsolute(0f));
+
         // View
         this.shownViewRevision = EngineSetting.INDEX_NOT_FOUND;
 
@@ -176,11 +190,14 @@ public class RecorderPanelSystem extends SystemPackage {
         this.dragGhost = requireEntryPoint(RecorderSetting.ENTRY_DRAG_GHOST);
         this.viewLabel = requireEntryPoint(RecorderSetting.ENTRY_VIEW);
         this.cutLabel = requireEntryPoint(RecorderSetting.ENTRY_CUT_LABEL);
+        this.keysPanel = requireEntryPoint(RecorderSetting.ENTRY_KEYS_PANEL);
+        this.takesPanel = requireEntryPoint(RecorderSetting.ENTRY_TAKES_PANEL);
+        this.clipPanel = requireEntryPoint(RecorderSetting.ENTRY_CLIP_PANEL);
+        this.assetsPanel = requireEntryPoint(RecorderSetting.ENTRY_ASSETS_PANEL);
 
         requireEntryPoint(RecorderSetting.ENTRY_RECORDINGS);
         requireEntryPoint(RecorderSetting.ENTRY_SETTINGS);
         requireEntryPoint(RecorderSetting.ENTRY_TAKES);
-        requireEntryPoint(RecorderSetting.ENTRY_MARKERS);
         requireEntryPoint(RecorderSetting.ENTRY_CLIP);
         requireEntryPoint(EditorSetting.RECORDER_ENTRY_RULER);
         requireEntryPoint(EditorSetting.RECORDER_ENTRY_CLIP_LANES);
@@ -201,6 +218,8 @@ public class RecorderPanelSystem extends SystemPackage {
 
     @Override
     protected void update() {
+
+        showPane();
 
         if (recorderManager.getRevision() != shownRevision) {
             this.shownRevision = recorderManager.getRevision();
@@ -230,9 +249,30 @@ public class RecorderPanelSystem extends SystemPackage {
         refreshSettings();
         refreshTakes();
         refreshClip();
-        refreshMarkers();
         refreshTimeline();
         refreshClock();
+    }
+
+    // The pane below the timeline the recorder asks for, every other set aside; the Bin is its takes and clip
+    private void showPane() {
+
+        RecorderPane pane = recorderManager.getPane();
+
+        if (pane == shownPane)
+            return;
+
+        this.shownPane = pane;
+        place(keysPanel, pane == RecorderPane.KEYS);
+        place(takesPanel, pane == RecorderPane.BIN);
+        place(clipPanel, pane == RecorderPane.BIN);
+        place(assetsPanel, pane == RecorderPane.ASSETS);
+    }
+
+    private void place(ElementInstance panel, boolean shown) {
+        if (shown)
+            panel.clearPositionOverride();
+        else
+            panel.setPositionOverride(hiddenPosition);
     }
 
     // Accessible \\
@@ -368,13 +408,16 @@ public class RecorderPanelSystem extends SystemPackage {
         injectAction(RecorderSetting.ENTRY_SETTINGS, RecorderSetting.TEXT_EXPORT, EditorSetting.RECORDER_KEY_EXPORT);
     }
 
-    void injectSetting(int entryPoint, String label, String value, String settingKey) {
+    // A row naming a setting and its value, pressed to change it; its value's label comes back
+    ElementInstance injectSetting(int entryPoint, String label, String value, String settingKey) {
 
         ElementInstance row = menuManager.inject(recorderMenu, entryPoint, RecorderSetting.TEMPLATE_SETTING_ROW);
+        ElementInstance valueLabel = row.findChildById(RecorderSetting.ELEMENT_ROW_VALUE);
 
         row.setActionArgOverride(settingKey);
         row.findChildById(RecorderSetting.ELEMENT_ROW_LABEL).setFontText(label);
-        row.findChildById(RecorderSetting.ELEMENT_ROW_VALUE).setFontText(value);
+        valueLabel.setFontText(value);
+        return valueLabel;
     }
 
     void injectAction(int entryPoint, String label, String settingKey) {
@@ -497,7 +540,7 @@ public class RecorderPanelSystem extends SystemPackage {
     }
 
     // The node selected on the clip: what its character does across it, and how it is changed; the Clip panel and the
-    // Keys tab's inspector both show it
+    // Keys pane's inspector both show it
     void refreshNode(int entryPoint) {
 
         int selected = recorderManager.getSelectedNode();
@@ -529,40 +572,6 @@ public class RecorderPanelSystem extends SystemPackage {
                     : RecorderSetting.TEXT_GESTURE_MOVE_HINT);
 
         injectText(entryPoint, RecorderSetting.TEXT_NODE_SHARED);
-    }
-
-    // Markers \\
-
-    private void refreshMarkers() {
-
-        menuManager.ejectAll(recorderMenu, RecorderSetting.ENTRY_MARKERS);
-
-        RecordingInstance recording = recorderManager.getRecording();
-
-        if (recording == null || recording.getMarkers().isEmpty()) {
-            injectText(RecorderSetting.ENTRY_MARKERS, RecorderSetting.TEXT_NO_MARKERS);
-            return;
-        }
-
-        ObjectArrayList<RecordingMarkerStruct> markers = recording.getMarkers();
-
-        for (int i = 0; i < markers.size(); i++) {
-
-            RecordingMarkerStruct marker = markers.get(i);
-            String markerKey = Integer.toString(i);
-            ElementInstance row = menuManager.inject(
-                    recorderMenu,
-                    RecorderSetting.ENTRY_MARKERS,
-                    i == recorderManager.getSelectedMarker()
-                            ? RecorderSetting.TEMPLATE_MARKER_ROW_SELECTED
-                            : RecorderSetting.TEMPLATE_MARKER_ROW);
-
-            row.findChildById(RecorderSetting.ELEMENT_ROW_LABEL).setFontText(String.format(
-                    RecorderSetting.FORMAT_MARKER, formatTime(marker.getTime()), marker.getName()));
-            row.findChildById(RecorderSetting.ELEMENT_ROW_SELECT).setActionArgOverride(markerKey);
-            row.findChildById(RecorderSetting.ELEMENT_ROW_RENAME).setActionArgOverride(markerKey);
-            row.findChildById(RecorderSetting.ELEMENT_ROW_DELETE).setActionArgOverride(markerKey);
-        }
     }
 
     // Timeline \\
@@ -613,22 +622,6 @@ public class RecorderPanelSystem extends SystemPackage {
 
         for (int i = 0; i < nodes.size(); i++)
             injectNode(nodes.get(i), i, recording, view, lanesWidth);
-
-        ObjectArrayList<RecordingMarkerStruct> markers = recording.getMarkers();
-
-        for (int i = 0; i < markers.size(); i++) {
-
-            if (!view.contains(markers.get(i).getTime()))
-                continue;
-
-            DimensionVector2Struct position = timelinePositions[toViewStep(markers.get(i).getTime())];
-
-            menuManager.inject(
-                    recorderMenu,
-                    EditorSetting.RECORDER_ENTRY_RULER,
-                    RecorderSetting.TEMPLATE_MARKER_TICK,
-                    tick -> tick.setPositionOverride(position));
-        }
 
         RecordingExportStruct exportStruct = recording.getExportStruct();
 
@@ -892,10 +885,13 @@ public class RecorderPanelSystem extends SystemPackage {
 
     // Utility \\
 
-    void injectHeader(int entryPoint, String text) {
-        menuManager.inject(recorderMenu, entryPoint, RecorderSetting.TEMPLATE_HEADER_ROW)
-                .findChildById(RecorderSetting.ELEMENT_ROW_LABEL)
-                .setFontText(text);
+    ElementInstance injectHeader(int entryPoint, String text) {
+
+        ElementInstance label = menuManager.inject(recorderMenu, entryPoint, RecorderSetting.TEMPLATE_HEADER_ROW)
+                .findChildById(RecorderSetting.ELEMENT_ROW_LABEL);
+
+        label.setFontText(text);
+        return label;
     }
 
     ElementInstance injectText(int entryPoint, String text) {

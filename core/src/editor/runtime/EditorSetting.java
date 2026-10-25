@@ -96,7 +96,6 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_NEW_RECORDING = "New Recording";
     public static final String DIALOG_TITLE_RENAME_RECORDING = "Rename Recording";
     public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
-    public static final String DIALOG_TITLE_RENAME_MARKER = "Rename Marker";
     public static final String DIALOG_TITLE_KEY_VALUE = "Key Value";
 
     // Export Dialog — the bar fills in fixed steps; the text refreshes a few times a second of real time, and the
@@ -1046,8 +1045,6 @@ public class EditorSetting {
     public static final String RECORDER_VIDEO_DIRECTORY = "Videos";
     public static final String RECORDER_DEFAULT_NAME_PREFIX = "Recording";
     public static final String RECORDER_TAKE_NAME_PREFIX = "Take ";
-    public static final String RECORDER_MARKER_NAME_PREFIX = "Marker ";
-    public static final String RECORDER_KILL_MARKER_PREFIX = "Felled ";
     public static final String RECORDER_PLAYER_DISPLAY_NAME = "Player";
     public static final int RECORDER_FIRST_NAME_NUMBER = 1;
     public static final int RECORDER_NAME_MAX_LENGTH = 32;
@@ -1061,9 +1058,10 @@ public class EditorSetting {
     // Recorder — the tab's menu, and the lanes its drags land on and the ruler and graph its wheel zooms, which
     // every Recorder tab shares
     public static final String RECORDER_MENU = "editor/Recorder/Recorder";
-    public static final int RECORDER_ENTRY_CLIP_LANES = 6;
-    public static final int RECORDER_ENTRY_RULER = 7;
-    public static final int RECORDER_ENTRY_KEY_GRAPH = 18;
+    public static final int RECORDER_ENTRY_CLIP_LANES = 5;
+    public static final int RECORDER_ENTRY_RULER = 6;
+    public static final int RECORDER_ENTRY_KEY_ROWS = 16;
+    public static final int RECORDER_ENTRY_KEY_GRAPH = 17;
 
     // Recorder — channels
     public static final String RECORDER_CHANNEL_LABEL_CAMERA = "Camera";
@@ -1109,10 +1107,11 @@ public class EditorSetting {
     public static final char RECORDER_NODE_WORD_SEPARATOR = ' ';
 
     // Recorder — curves; a curve fitted to a take keeps this near what was recorded, read every so often, with no
-    // more keys than this or so many a second of the take, and a graph of one shows at least this span of its values
-    public static final double RECORDER_CURVE_DISTANCE_TOLERANCE = 0.02;
-    public static final double RECORDER_CURVE_ANGLE_TOLERANCE = 0.5;
-    public static final double RECORDER_CURVE_SCALAR_TOLERANCE = 0.01;
+    // more keys than this or so many a second of the take, each key's slope pulled this slightly toward the slope
+    // through its neighbours, and a graph of one shows at least this span of its values
+    public static final double RECORDER_CURVE_DISTANCE_TOLERANCE = 0.05;
+    public static final double RECORDER_CURVE_ANGLE_TOLERANCE = 1.0;
+    public static final double RECORDER_CURVE_SCALAR_TOLERANCE = 0.03;
     public static final double RECORDER_CURVE_CLOCK_TOLERANCE = 250.0;
     public static final double RECORDER_CURVE_DISTANCE_SPAN = 0.5;
     public static final double RECORDER_CURVE_ANGLE_SPAN = 5.0;
@@ -1121,6 +1120,7 @@ public class EditorSetting {
     public static final float RECORDER_CURVE_FIT_INTERVAL = 1f / 20f;
     public static final int RECORDER_CURVE_MAX_KEYS = 512;
     public static final float RECORDER_CURVE_MAX_KEYS_PER_SECOND = 4f;
+    public static final double RECORDER_CURVE_FIT_STEADINESS = 1e-3;
     public static final float RECORDER_KEY_MIN_GAP_SECONDS = 0.01f;
     public static final int RECORDER_CURVE_SOLVE_STEPS = 16;
     public static final double RECORDER_CURVE_SOLVE_EPSILON = 1e-5;
@@ -1128,8 +1128,8 @@ public class EditorSetting {
 
     // Recorder — curves, as the Keys tab names them; a mast, sail or door is named with its number
     public static final String RECORDER_TRACK_LABEL_CAMERA = "Camera";
-    public static final String RECORDER_TRACK_LABEL_WEATHER = "Weather";
-    public static final String RECORDER_TRACK_LABEL_CLOCK = "Clock";
+    public static final String RECORDER_TRACK_LABEL_WEATHER = "World weather";
+    public static final String RECORDER_TRACK_LABEL_CLOCK = "World time";
     public static final String RECORDER_CURVE_PART_FORMAT = "%s %d";
     public static final String RECORDER_CURVE_LABEL_POSITION_X = "Position X";
     public static final String RECORDER_CURVE_LABEL_POSITION_Y = "Height";
@@ -1174,11 +1174,26 @@ public class EditorSetting {
     public static final int RECORDER_KEY_ROW_MOVEMENT = -2;
     public static final int RECORDER_KEY_ROW_GESTURES = -3;
     public static final float RECORDER_KEY_GRAB_PIXELS = 6f;
-    public static final float RECORDER_GRAPH_GRAB_PIXELS = 7f;
+    public static final float RECORDER_GRAPH_GRAB_PIXELS = 9f;
     public static final double RECORDER_GRAPH_MARGIN_SHARE = 0.1;
     public static final String RECORDER_KEY_STATUS_SEPARATOR = ": ";
 
-    // Recorder — key modes, as the Keys tab names them
+    // Recorder — asset sections, as the Assets pane names them
+    public static final String RECORDER_ASSET_LABEL_WORLD = "World";
+    public static final String RECORDER_ASSET_LABEL_CALENDAR = "Calendar";
+    public static final String RECORDER_ASSET_LABEL_CHARACTERS = "Characters";
+    public static final String RECORDER_ASSET_LABEL_GENDERS = "Genders";
+    public static final String RECORDER_ASSET_LABEL_FEATURES = "Features";
+    public static final String RECORDER_ASSET_LABEL_ITEMS = "Items";
+    public static final String RECORDER_ASSET_LABEL_VEHICLES = "Vehicles";
+    public static final String RECORDER_ASSET_LABEL_MODELS = "Models";
+    public static final String RECORDER_ASSET_LABEL_TEXTURES = "Textures";
+    public static final String RECORDER_ASSET_LABEL_MATERIALS = "Materials";
+    public static final String RECORDER_ASSET_LABEL_ANIMATION_TREES = "Animation trees";
+    public static final String RECORDER_ASSET_LABEL_ANIMATIONS = "Animations";
+    public static final String RECORDER_ASSET_LABEL_INTERFACE = "Interface";
+
+    // Recorder — key modes, as the Keys pane names them
     public static final String RECORDER_KEY_MODE_LABEL_AUTO = "Auto";
     public static final String RECORDER_KEY_MODE_LABEL_ALIGNED = "Aligned";
     public static final String RECORDER_KEY_MODE_LABEL_FREE = "Free";
@@ -1194,7 +1209,6 @@ public class EditorSetting {
     public static final float RECORDER_SAMPLE_TOLERANCE = 0.001f;
     public static final float RECORDER_GAP_SECONDS = 0.25f;
     public static final float RECORDER_MIN_TAKE_SECONDS = 0.1f;
-    public static final float RECORDER_MARKER_STEP_TOLERANCE = 0.01f;
     public static final float RECORDER_TIME_UNSET = -1f;
     public static final int RECORDER_NO_CLIP = -1;
     public static final float RECORDER_FULL_TURN_DEGREES = 360f;
@@ -1398,8 +1412,9 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_KEY_DELETED = "Deleted a key of ";
     public static final String RECORDER_STATUS_KEY_CHANGED = "Changed a key of ";
     public static final String RECORDER_STATUS_CURVE_REFIT = "Laid again from the recording: ";
-    public static final String RECORDER_STATUS_CURVE_REMOVED = "Playing as recorded: ";
-    public static final String RECORDER_STATUS_NO_CURVE = "Click a property on the Keys tab first";
+    public static final String RECORDER_STATUS_TAKE_REFIT = "Laying every value again from the recording: ";
+    public static final String RECORDER_STATUS_LAST_KEY = "A value keeps at least one key: change its value instead";
+    public static final String RECORDER_STATUS_NO_CURVE = "Click a value on the Keys pane first";
     public static final String RECORDER_STATUS_NO_KEY = "Click a key first";
     public static final String RECORDER_STATUS_CLIP_REMOVED = "Removed a clip of ";
     public static final String RECORDER_STATUS_TAKE_DELETED = "Deleted take ";
@@ -1409,7 +1424,6 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_TAKE_TOO_SHORT = "Take too short to keep";
     public static final String RECORDER_STATUS_NOTHING_ARMED = "Arm at least one channel to record";
     public static final String RECORDER_STATUS_NOTHING_RECORDED = "Nothing recorded yet";
-    public static final String RECORDER_STATUS_NO_RECORDING = "Open or record a recording first";
     public static final String RECORDER_STATUS_NO_DEV_WINDOW = "Open a Dev Mode tab to record or play";
     public static final String RECORDER_STATUS_WRONG_WORLD = "This recording was made in another world: ";
     public static final String RECORDER_STATUS_NAME_TAKEN = "That name is taken or not a valid file name: ";
@@ -1447,7 +1461,7 @@ public class EditorSetting {
     public static final String RECORDER_KEY_KEY_MODE = "key_mode";
     public static final String RECORDER_KEY_KEY_VALUE = "key_value";
     public static final String RECORDER_KEY_CURVE_REFIT = "curve_refit";
-    public static final String RECORDER_KEY_CURVE_REMOVE = "curve_remove";
+    public static final String RECORDER_KEY_TAKE_REFIT = "take_refit";
     public static final String RECORDER_KEY_RESOLUTION = "resolution";
     public static final String RECORDER_KEY_FRAME_RATE = "frame_rate";
     public static final String RECORDER_KEY_FORMAT = "format";
@@ -1463,7 +1477,6 @@ public class EditorSetting {
     public static final String COMMAND_RECORD = "record";
     public static final String COMMAND_PLAY = "play";
     public static final String COMMAND_STOP = "stop";
-    public static final String COMMAND_MARK = "mark";
 
     // Tabs
     public static final float DIVIDER_HIT_TOLERANCE = 6f;

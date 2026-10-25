@@ -109,6 +109,17 @@ public class RecordingCurveStruct extends StructPackage {
         outValues.add(index, outValue);
     }
 
+    // Every key let go, as a fit laying the curve again begins
+    public void clear() {
+        times.clear();
+        values.clear();
+        modes.clear();
+        inTimes.clear();
+        inValues.clear();
+        outTimes.clear();
+        outValues.clear();
+    }
+
     public void removeKey(int index) {
 
         times.removeFloat(index);

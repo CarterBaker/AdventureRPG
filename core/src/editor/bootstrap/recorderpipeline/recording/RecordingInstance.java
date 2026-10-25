@@ -9,10 +9,9 @@ public class RecordingInstance extends InstancePackage {
     /*
      * One recording open in the recorder: its name, the world it was made in,
      * its bin of takes in the order they were recorded, the clips laid on its
-     * timeline, its markers in time order, and how it exports. It runs as
-     * long as its last clip reaches. For each channel the clip on the highest
-     * lane covering a moment is the one that plays it, the later laid of two
-     * on the same lane.
+     * timeline, and how it exports. It runs as long as its last clip reaches.
+     * For each channel the clip on the highest lane covering a moment is the
+     * one that plays it, the later laid of two on the same lane.
      */
 
     // Identity
@@ -24,7 +23,6 @@ public class RecordingInstance extends InstancePackage {
 
     // Timeline
     private ObjectArrayList<RecordingClipStruct> clips;
-    private ObjectArrayList<RecordingMarkerStruct> markers;
 
     // Export
     private RecordingExportStruct exportStruct;
@@ -39,7 +37,6 @@ public class RecordingInstance extends InstancePackage {
 
         // Timeline
         this.clips = new ObjectArrayList<>();
-        this.markers = new ObjectArrayList<>();
     }
 
     // Constructor \\
@@ -131,24 +128,6 @@ public class RecordingInstance extends InstancePackage {
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
-    // Markers \\
-
-    // Kept in time order, a marker at the same moment as another going after it
-    public int addMarker(RecordingMarkerStruct marker) {
-
-        int index = 0;
-
-        while (index < markers.size() && markers.get(index).getTime() <= marker.getTime())
-            index++;
-
-        markers.add(index, marker);
-        return index;
-    }
-
-    public void removeMarker(int index) {
-        markers.remove(index);
-    }
-
     // Accessible \\
 
     public String getRecordingName() {
@@ -169,10 +148,6 @@ public class RecordingInstance extends InstancePackage {
 
     public ObjectArrayList<RecordingClipStruct> getClips() {
         return clips;
-    }
-
-    public ObjectArrayList<RecordingMarkerStruct> getMarkers() {
-        return markers;
     }
 
     public RecordingExportStruct getExportStruct() {
