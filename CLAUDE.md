@@ -23,26 +23,31 @@ When in doubt, find the closest existing system and mirror it exactly.
 ## Documentation
 
 The detailed rules live in `docs/`, one Markdown file per topic and one per pipeline. They apply as fully as this
-file. Read the ones a task touches before starting, small tasks included. The Markdown files are written for Claude;
-the owner's own documents in `docs/` (`.docx`) are not part of these instructions.
+file. The Markdown files are written for Claude; the owner's own documents in `docs/` (`.docx`) are not part of
+these instructions.
 
-- `docs/Engine.md`: class roles, naming, folder layout, lifecycle, settings, registry IDs, threads, errors,
-  collections and visibility. Imported below, so it loads with this file.
-- `docs/Style.md`: indentation, spacing, comments, field groups, section headers and the reference class shape.
-  Imported below, so it loads with this file.
-- `docs/Performance.md`: zero steady-state garbage, releasing storage, footprint, greedy meshing and measuring. Read
-  before any change to rendering, meshing, world generation, per-frame or async work, or bulk data.
-- `docs/ARPG.md`: the `.arpg` format, `ArpgUtility`, the text form, content types, the ARPG tool and producing
-  assets. Read before touching any `.arpg` file or `engine.util.arpg`. Never hand-write or hex-edit `.arpg` bytes.
-- `docs/Build.md`: compiling and running tools directly when Gradle cannot start.
+- **Topics.** Imported below, so each loads with this file:
+  - `docs/Engine.md`: class roles, naming, folder layout, lifecycle, settings, registry IDs, threads, errors,
+    collections and visibility.
+  - `docs/Style.md`: indentation, spacing, comments, field groups, section headers and the reference class shape.
+  - `docs/Performance.md`: zero steady-state garbage, releasing storage, footprint, greedy meshing and measuring.
+  - `docs/ARPG.md`: the `.arpg` format, `ArpgUtility`, the text form, content types, the ARPG tool and producing
+    assets.
+  - `docs/Build.md`: compiling and running tools directly when Gradle cannot start.
 - **Pipelines.** Each pipeline has its own file named after it without the suffix (`ProgressionPipeline` is
-  `docs/Progression.md`). Before working in a pipeline, read its file and its folder's `CLAUDE.md` when they exist.
-  Before touching levels, stats, gear, trades, skills, professions, morality or health, read
+  `docs/Progression.md`). Before working in a pipeline, read its file and its folder's `CLAUDE.md` when they exist,
+  small tasks included. Before touching levels, stats, gear, trades, skills, professions, morality or health, read
   `core/src/application/bootstrap/progressionpipeline/CLAUDE.md` (design: `docs/Progression.md`).
 
 @docs/Engine.md
 
 @docs/Style.md
+
+@docs/Performance.md
+
+@docs/ARPG.md
+
+@docs/Build.md
 
 ---
 
