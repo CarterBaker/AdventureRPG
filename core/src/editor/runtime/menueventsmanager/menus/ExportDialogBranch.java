@@ -110,6 +110,10 @@ public class ExportDialogBranch extends BranchPackage {
         open(window);
     }
 
+    public boolean isOpen() {
+        return dialog != null;
+    }
+
     // Dialog Events \\
 
     // Cancels a running export, or closes the dialog once it has ended

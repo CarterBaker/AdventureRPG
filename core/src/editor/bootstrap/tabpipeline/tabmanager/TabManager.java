@@ -83,10 +83,7 @@ public class TabManager extends ManagerPackage {
         dockLayoutSystem = get(DockLayoutSystem.class);
         inputManager = get(InputManager.class);
         layoutManager = get(LayoutManager.class);
-        inputManager.setAuthorityResolver(window -> {
-            TabHandle tab = getTabHandleForWindow(window);
-            return tab != null ? tab.getWindow() : window;
-        });
+        inputManager.setAuthorityResolver(this::resolveContentWindow);
     }
 
     @Override
@@ -394,6 +391,12 @@ public class TabManager extends ManagerPackage {
                 return h;
         }
         return null;
+    }
+
+    // The window a tab's content runs in for its chrome, else the window itself
+    public WindowInstance resolveContentWindow(WindowInstance window) {
+        TabHandle tab = getTabHandleForWindow(window);
+        return tab != null ? tab.getWindow() : window;
     }
 
     public boolean hasTab(String name) {

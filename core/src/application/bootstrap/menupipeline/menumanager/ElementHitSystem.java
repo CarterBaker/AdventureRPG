@@ -27,7 +27,8 @@ public class ElementHitSystem extends SystemPackage {
      * menu ARPG and are resolved once, then invoked on the instance registered
      * in the clicked window's context, inside that context's crash boundary. A
      * method receives whichever of String, MenuInstance, WindowInstance and
-     * ElementInstance it declares.
+     * ElementInstance it declares. Actions run from outside a menu, such as a
+     * shortcut, take the same path with no menu or element to hand over.
      */
 
     // Internal
@@ -630,6 +631,15 @@ public class ElementHitSystem extends SystemPackage {
     }
 
     // Callbacks \\
+
+    public void executeAction(String actionClass, String actionMethod, String actionArg, WindowInstance window) {
+        executeCallback(actionClass, actionMethod, actionArg, null, window, null);
+    }
+
+    // Resolves an action ahead of its first use, so a bad class or method fails where it is declared
+    public void verifyAction(String actionClass, String actionMethod) {
+        getResolvedCallback(actionClass, actionMethod);
+    }
 
     private void executeCallback(
             String actionClass, String actionMethod, String actionArg,

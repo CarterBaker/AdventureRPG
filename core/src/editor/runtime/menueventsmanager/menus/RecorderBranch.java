@@ -9,10 +9,10 @@ import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
+import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.runtime.EditorSetting;
 import engine.input.Buttons;
 import engine.input.Input;
-import engine.input.Keys;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -30,7 +30,9 @@ public class RecorderBranch extends BranchPackage {
      * take hold of a clip's edge, a node, a clip or the empty lanes; letting
      * go trims, retimes, moves or scrolls, and a press that never travels
      * selects instead, or on an empty lane moves the playhead there. Holding
-     * Shift lets a drag go free of the timeline's edges. While the cut tool is
+     * Shift lets a drag go free of the timeline's edges. Every modifier a drag
+     * or the wheel reads is a held shortcut, resolved once from its name, so
+     * each is bound in the Recorder's shortcut file. While the cut tool is
      * on, the recorder is told every frame where it would cut with the pointer
      * over the lanes. The wheel over the lanes, the ruler, the Keys rows'
      * strips or the Keys graph zooms about the pointer, and with Shift, or
@@ -40,14 +42,17 @@ public class RecorderBranch extends BranchPackage {
      * the Keys pane a name opens its track or selects its curve, a press on a
      * row's strip or on the graph is handed to the recorder once to take hold
      * of a key, a handle or a node, or on nothing to scroll the view as it
-     * travels, and the value under the cursor on the graph is read from the
+     * travels; with Shift a key pressed joins the keys selected and a press
+     * on nothing boxes keys to add, with Ctrl to take away. The value under
+     * the cursor on the graph is read from the
      * span of values it shows. On the Assets pane a section's head opens or
      * closes it. The drag is read from the window the press began in until the
      * button is let go. Rows hand back the index of the take they show, Keys
      * rows their track's place and what they show, section heads their
      * section, and setting rows the key of what they change. Exporting goes
      * through the export dialog, which holds the editor until the video is
-     * finished.
+     * finished. Deleting removes whatever is selected, keys before a node
+     * before a clip.
      */
 
     // Internal
@@ -56,6 +61,14 @@ public class RecorderBranch extends BranchPackage {
     private ExportDialogBranch exportDialogBranch;
     private InputManager inputManager;
     private WindowManager windowManager;
+    private ShortcutManager shortcutManager;
+
+    // Shortcuts
+    private int freeDragShortcutID;
+    private int scrollViewShortcutID;
+    private int zoomValuesShortcutID;
+    private int extendSelectionShortcutID;
+    private int subtractSelectionShortcutID;
 
     // Base \\
 
@@ -66,6 +79,23 @@ public class RecorderBranch extends BranchPackage {
         this.exportDialogBranch = get(ExportDialogBranch.class);
         this.inputManager = get(InputManager.class);
         this.windowManager = get(WindowManager.class);
+        this.shortcutManager = get(ShortcutManager.class);
+    }
+
+    @Override
+    protected void start() {
+
+        // Shortcuts
+        this.freeDragShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                EditorSetting.RECORDER_SHORTCUT_FREE_DRAG);
+        this.scrollViewShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                EditorSetting.RECORDER_SHORTCUT_SCROLL_VIEW);
+        this.zoomValuesShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                EditorSetting.RECORDER_SHORTCUT_ZOOM_VALUES);
+        this.extendSelectionShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                EditorSetting.RECORDER_SHORTCUT_EXTEND_SELECTION);
+        this.subtractSelectionShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                EditorSetting.RECORDER_SHORTCUT_SUBTRACT_SELECTION);
     }
 
     @Override
@@ -112,7 +142,7 @@ public class RecorderBranch extends BranchPackage {
                 resolveTime(window, lanes),
                 resolveLane(window, lanes),
                 resolveSecondsPerPixel(lanes),
-                !isShiftDown(window));
+                isSnapping(window));
     }
 
     // The wheel works alike over the lanes, the ruler, the Keys rows' strips and the Keys graph: it zooms about the
@@ -165,9 +195,9 @@ public class RecorderBranch extends BranchPackage {
 
         float factor = (float) Math.pow(EditorSetting.RECORDER_ZOOM_STEP, -wheel);
 
-        if (isShiftDown(window))
+        if (shortcutManager.isHeld(scrollViewShortcutID, window))
             recorderManager.scrollView(-wheel * EditorSetting.RECORDER_SCROLL_SHARE);
-        else if (overGraph && isControlDown(window))
+        else if (overGraph && shortcutManager.isHeld(zoomValuesShortcutID, window))
             recorderManager.zoomGraph(resolveValue(window, graph), factor);
         else
             recorderManager.zoomView(resolveTime(window, hovered), factor);
@@ -231,6 +261,10 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.pause();
     }
 
+    public void togglePlayback() {
+        recorderManager.togglePlayback();
+    }
+
     public void stop() {
         recorderManager.stop();
     }
@@ -287,6 +321,14 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.frameKeys();
     }
 
+    public void selectAllKeys() {
+        recorderManager.selectAllKeys();
+    }
+
+    public void deleteSelection() {
+        recorderManager.deleteSelection();
+    }
+
     // A track's name opens or closes it, a curve's name selects it
     public void pressKeyName(String rowKey) {
 
@@ -311,6 +353,8 @@ public class RecorderBranch extends BranchPackage {
                     resolveKeyRow(rowKey),
                     resolveTime(window, strip),
                     resolveSecondsPerPixel(strip),
+                    shortcutManager.isHeld(extendSelectionShortcutID, window),
+                    shortcutManager.isHeld(subtractSelectionShortcutID, window),
                     window,
                     inputManager.getHoverMouseX(window),
                     inputManager.getHoverMouseY(window));
@@ -321,7 +365,7 @@ public class RecorderBranch extends BranchPackage {
                 resolveTime(window, strip),
                 0.0,
                 resolveSecondsPerPixel(strip),
-                !isShiftDown(window));
+                isSnapping(window));
     }
 
     public void dragGraph(WindowInstance window, ElementInstance graph) {
@@ -335,6 +379,8 @@ public class RecorderBranch extends BranchPackage {
                     resolveValue(window, graph),
                     resolveSecondsPerPixel(graph),
                     (recorderManager.getGraphMaximum() - recorderManager.getGraphMinimum()) / graph.getComputedH(),
+                    shortcutManager.isHeld(extendSelectionShortcutID, window),
+                    shortcutManager.isHeld(subtractSelectionShortcutID, window),
                     window,
                     inputManager.getHoverMouseX(window),
                     inputManager.getHoverMouseY(window));
@@ -345,7 +391,7 @@ public class RecorderBranch extends BranchPackage {
                 resolveTime(window, graph),
                 resolveValue(window, graph),
                 resolveSecondsPerPixel(graph),
-                !isShiftDown(window));
+                isSnapping(window));
     }
 
     // The value under the cursor on the graph, the bottom of the graph its least and the top its greatest
@@ -465,7 +511,7 @@ public class RecorderBranch extends BranchPackage {
                 resolveTime(window, lanes),
                 resolveLane(window, lanes),
                 resolveSecondsPerPixel(lanes),
-                !isShiftDown(window));
+                isSnapping(window));
     }
 
     // How far along the element the cursor stands, 0 to 1
@@ -525,18 +571,9 @@ public class RecorderBranch extends BranchPackage {
                 && y >= element.getComputedTop() && y <= element.getComputedTop() + element.getComputedH();
     }
 
-    private boolean isShiftDown(WindowInstance window) {
-
-        Input rawInput = inputManager.getRawInput(window);
-
-        return rawInput.isKeyDown(Keys.SHIFT_LEFT) || rawInput.isKeyDown(Keys.SHIFT_RIGHT);
-    }
-
-    private boolean isControlDown(WindowInstance window) {
-
-        Input rawInput = inputManager.getRawInput(window);
-
-        return rawInput.isKeyDown(Keys.CONTROL_LEFT) || rawInput.isKeyDown(Keys.CONTROL_RIGHT);
+    // What is dragged snaps to the timeline's edges unless the free drag is held
+    private boolean isSnapping(WindowInstance window) {
+        return !shortcutManager.isHeld(freeDragShortcutID, window);
     }
 
     // The lanes of the Recorder tab open in the window, null when it shows none
@@ -591,7 +628,7 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_NODE_PREVIOUS -> recorderManager.previousNodeState();
             case EditorSetting.RECORDER_KEY_NODE_REMOVE -> recorderManager.removeNode();
             case EditorSetting.RECORDER_KEY_KEY_ADD -> recorderManager.addKeyAtPlayhead();
-            case EditorSetting.RECORDER_KEY_KEY_DELETE -> recorderManager.deleteKey();
+            case EditorSetting.RECORDER_KEY_KEY_DELETE -> recorderManager.deleteKeys();
             case EditorSetting.RECORDER_KEY_KEY_MODE -> recorderManager.cycleKeyMode();
             case EditorSetting.RECORDER_KEY_KEY_VALUE -> openKeyValue(window);
             case EditorSetting.RECORDER_KEY_CURVE_REFIT -> recorderManager.refitCurve();

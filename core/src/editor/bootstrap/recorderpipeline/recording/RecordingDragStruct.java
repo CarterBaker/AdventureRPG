@@ -12,9 +12,11 @@ public class RecordingDragStruct extends StructPackage {
      * in, where and at what moment the press began so a press that never
      * travelled reads as a click, how far into the carried span the cursor
      * took hold, where the view started so a scroll can follow the cursor,
-     * the key taken hold of and the value under the cursor when it was, and
-     * where it would land now — its start and lane, and whether the cursor
-     * is over the lanes at all.
+     * the key taken hold of and the value under the cursor when it was,
+     * whether the press adds to the keys selected or takes from them and
+     * whether the key pressed was among them already, the moment and value a
+     * box reaches to, and where it would land now — its start and lane, and
+     * whether the cursor is over the lanes at all.
      */
 
     // Carried
@@ -35,6 +37,13 @@ public class RecordingDragStruct extends StructPackage {
     private float keyTime;
     private double keyValue;
     private double pressValue;
+
+    // Selection
+    private boolean extending;
+    private boolean subtracting;
+    private boolean keySelected;
+    private float reachTime;
+    private double reachValue;
 
     // Landing
     private boolean overLanes;
@@ -90,6 +99,19 @@ public class RecordingDragStruct extends StructPackage {
         this.pressValue = pressValue;
     }
 
+    // Whether the press adds to the keys selected or takes from them, and whether the key pressed was selected already
+    public void anchorSelection(boolean extending, boolean subtracting, boolean keySelected) {
+        this.extending = extending;
+        this.subtracting = subtracting;
+        this.keySelected = keySelected;
+    }
+
+    // The moment and value a box reaches to from where it began
+    public void reach(float reachTime, double reachValue) {
+        this.reachTime = reachTime;
+        this.reachValue = reachValue;
+    }
+
     public void clear() {
         this.kind = RecorderDragKind.NONE;
         this.index = EngineSetting.INDEX_NOT_FOUND;
@@ -97,6 +119,9 @@ public class RecordingDragStruct extends StructPackage {
         this.window = null;
         this.overLanes = false;
         this.moved = false;
+        this.extending = false;
+        this.subtracting = false;
+        this.keySelected = false;
     }
 
     // Travel past the threshold from where the press began makes it a drag for good
@@ -159,6 +184,26 @@ public class RecordingDragStruct extends StructPackage {
 
     public double getPressValue() {
         return pressValue;
+    }
+
+    public boolean isExtending() {
+        return extending;
+    }
+
+    public boolean isSubtracting() {
+        return subtracting;
+    }
+
+    public boolean isKeySelected() {
+        return keySelected;
+    }
+
+    public float getReachTime() {
+        return reachTime;
+    }
+
+    public double getReachValue() {
+        return reachValue;
     }
 
     public boolean isMoved() {

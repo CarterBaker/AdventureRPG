@@ -8,6 +8,7 @@ import editor.bootstrap.imagepipeline.ImagePipeline;
 import editor.bootstrap.infopipeline.InfoPipeline;
 import editor.bootstrap.itemeditorpipeline.ItemEditorPipeline;
 import editor.bootstrap.recorderpipeline.RecorderPipeline;
+import editor.bootstrap.shortcutpipeline.ShortcutPipeline;
 import editor.bootstrap.tabpipeline.TabPipeline;
 import editor.bootstrap.worldeditorpipeline.WorldEditorPipeline;
 import editor.runtime.menueventsmanager.EditorMenuEventsManager;
@@ -24,8 +25,9 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
      * character, animation and animation tree editor pipelines, the command
      * pipeline that routes console commands to every Dev window, the
      * recorder pipeline that records, plays back and exports from a Dev
-     * window, and the one set of editor menu branches the toolbar, every
-     * tab's chrome, and every tool route their callbacks to.
+     * window, the shortcut pipeline that runs every tool's keys, and the one
+     * set of editor menu branches the toolbar, every tab's chrome, and every
+     * tool route their callbacks to.
      */
 
     // Internal \\
@@ -42,6 +44,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(AnimationTreeEditorPipeline.class);
         create(CommandPipeline.class);
         create(RecorderPipeline.class);
+        create(ShortcutPipeline.class);
         create(EditorMenuEventsManager.class);
     }
 }

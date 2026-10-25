@@ -35,25 +35,15 @@ public class CharacterEditorSetting {
     // Markers — the box shown for a held anchor, in blocks
     public static final float HELD_ANCHOR_MARKER_SIZE = 0.06f;
 
-    // Mesh Input — buttons and the GLFW keys of the mesh modes
+    // Mesh Input — buttons and the GLFW keys a transform locks its axis with
     public static final int BUTTON_SELECT = Buttons.LEFT;
     public static final int BUTTON_CANCEL = Buttons.RIGHT;
-    public static final int KEY_LEFT_CONTROL = 341;
-    public static final int KEY_RIGHT_CONTROL = 345;
-    public static final int KEY_DELETE = 261;
-    public static final int KEY_SELECT_ALL = 65;
-    public static final int KEY_DUPLICATE = 68;
-    public static final int KEY_EXTRUDE = 69;
-    public static final int KEY_MAKE_FACE = 70;
-    public static final int KEY_GRAB = 71;
-    public static final int KEY_SELECT_LINKED = 76;
-    public static final int KEY_MERGE = 77;
-    public static final int KEY_ROTATE = 82;
-    public static final int KEY_SCALE = 83;
-    public static final int KEY_DELETE_ALTERNATE = 88;
-    public static final int KEY_REDO = 89;
-    public static final int KEY_UNDO = 90;
     public static final int[] KEY_AXES = { 88, 89, 90 };
+
+    // Mesh Input — the held shortcuts a selection and a transform read, named in shortcuts/CharacterEditor
+    public static final String SHORTCUT_ADD_SELECTION = "CharacterEditor/AddSelection";
+    public static final String SHORTCUT_SUBTRACT_SELECTION = "CharacterEditor/SubtractSelection";
+    public static final String SHORTCUT_SNAP = "CharacterEditor/Snap";
 
     // Mesh Input — pointer distances in pixels, the brush rate per second and transform snapping
     public static final float PICK_RADIUS_PIXELS = 10f;

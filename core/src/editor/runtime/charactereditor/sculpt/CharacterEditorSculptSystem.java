@@ -5,6 +5,7 @@ import editor.bootstrap.charactereditorpipeline.charactereditormanager.Character
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
+import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.input.EditorInputSystem;
@@ -22,17 +23,26 @@ public class CharacterEditorSculptSystem extends SystemPackage {
      * Turns this tab's pointer and keys into mesh edits while a mesh mode is
      * open. A click picks the vertex under the pointer and a drag selects a
      * box, Shift adding and Ctrl taking away; in Weights mode a brush tool
-     * paints or smooths instead. G, R and S — or a transform the panel asks
-     * for — hold the selection to the pointer: X, Y and Z lock it to an axis,
-     * Ctrl snaps it, a click or Enter confirms and a right click or Escape
-     * puts it back. The other keys run the panel's own actions by their row
-     * keys, so a key and its button do exactly the same thing.
+     * paints or smooths instead. A transform the panel asks for — by its
+     * button or its shortcut, G, R or S — holds the selection to the
+     * pointer: X, Y and Z lock it to an axis, Ctrl snaps it, a click or Enter
+     * confirms and a right click or Escape puts it back. The tab's shortcuts
+     * run here only with the pointer over the view and nothing under way,
+     * each the panel's own action by its row key, so a key and its button do
+     * exactly the same thing; the modifiers a selection and a transform read
+     * are held shortcuts too.
      */
 
     // Internal
     private EditorInputSystem editorInputSystem;
     private CharacterEditorManager characterEditorManager;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
+    private ShortcutManager shortcutManager;
+
+    // Shortcuts
+    private int addSelectionShortcutID;
+    private int subtractSelectionShortcutID;
+    private int snapShortcutID;
 
     // Selection
     private boolean pressed;
@@ -89,6 +99,18 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         this.editorInputSystem = get(EditorInputSystem.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
+        this.shortcutManager = get(ShortcutManager.class);
+    }
+
+    @Override
+    protected void start() {
+
+        // Shortcuts
+        this.addSelectionShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                CharacterEditorSetting.SHORTCUT_ADD_SELECTION);
+        this.subtractSelectionShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                CharacterEditorSetting.SHORTCUT_SUBTRACT_SELECTION);
+        this.snapShortcutID = shortcutManager.getShortcutIDFromShortcutName(CharacterEditorSetting.SHORTCUT_SNAP);
     }
 
     // Update \\
@@ -128,9 +150,6 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         if (!editorInputSystem.isPointerActive() || rawInput.isButtonHeld(EditorSetting.CHARACTER_VIEW_BUTTON_ORBIT))
             return;
 
-        if (handleKeys(rawInput))
-            return;
-
         if (editorInputSystem.isClicked(CharacterEditorSetting.BUTTON_SELECT))
             press(rawInput);
     }
@@ -150,86 +169,35 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         this.boxSelecting = false;
     }
 
-    // Keys \\
+    // Shortcuts \\
 
-    // Runs the key pressed this frame; true when one ran
-    private boolean handleKeys(RawInputHandle rawInput) {
+    // One of the panel's actions by its row key, in either mesh mode
+    public void act(String key) {
+        if (isReady())
+            characterEditorManager.act(key);
+    }
 
-        boolean control = isControlHeld(rawInput);
-        boolean shift = rawInput.isKeyHeld(EditorSetting.KEY_LEFT_SHIFT)
-                || rawInput.isKeyHeld(EditorSetting.KEY_RIGHT_SHIFT);
+    // One of the panel's actions on the mesh itself by its row key, only while the mesh is edited
+    public void actMesh(String key) {
+        if (isReady() && characterEditorManager.getMode() == CharacterEditorMode.MESH)
+            characterEditorManager.act(key);
+    }
 
-        if (control && rawInput.isKeyClicked(CharacterEditorSetting.KEY_UNDO)) {
-
-            if (shift)
-                characterEditorManager.redo();
-            else
-                characterEditorManager.undo();
-
-            return true;
-        }
-
-        if (control && rawInput.isKeyClicked(CharacterEditorSetting.KEY_REDO)) {
-            characterEditorManager.redo();
-            return true;
-        }
-
-        if (control)
-            return false;
-
-        if (rawInput.isKeyClicked(CharacterEditorSetting.KEY_SELECT_ALL)) {
+    // Everything selected when nothing is, nothing otherwise
+    public void toggleSelection() {
+        if (isReady())
             characterEditorManager.toggleSelection();
-            return true;
-        }
-
-        if (rawInput.isKeyClicked(CharacterEditorSetting.KEY_SELECT_LINKED))
-            return act(EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LINKED);
-
-        if (characterEditorManager.getMode() != CharacterEditorMode.MESH)
-            return false;
-
-        if (rawInput.isKeyClicked(CharacterEditorSetting.KEY_GRAB)) {
-            startTransform(CharacterEditorTransform.GRAB, rawInput);
-            return true;
-        }
-
-        if (rawInput.isKeyClicked(CharacterEditorSetting.KEY_ROTATE)) {
-            startTransform(CharacterEditorTransform.ROTATE, rawInput);
-            return true;
-        }
-
-        if (rawInput.isKeyClicked(CharacterEditorSetting.KEY_SCALE)) {
-            startTransform(CharacterEditorTransform.SCALE, rawInput);
-            return true;
-        }
-
-        if (shift && rawInput.isKeyClicked(CharacterEditorSetting.KEY_DUPLICATE))
-            return act(EditorSetting.CHARACTER_EDITOR_KEY_DUPLICATE);
-
-        if (rawInput.isKeyClicked(CharacterEditorSetting.KEY_EXTRUDE))
-            return act(EditorSetting.CHARACTER_EDITOR_KEY_EXTRUDE);
-
-        if (rawInput.isKeyClicked(CharacterEditorSetting.KEY_DELETE)
-                || rawInput.isKeyClicked(CharacterEditorSetting.KEY_DELETE_ALTERNATE))
-            return act(EditorSetting.CHARACTER_EDITOR_KEY_DELETE_VERTICES);
-
-        if (rawInput.isKeyClicked(CharacterEditorSetting.KEY_MAKE_FACE))
-            return act(EditorSetting.CHARACTER_EDITOR_KEY_MAKE_FACE);
-
-        if (rawInput.isKeyClicked(CharacterEditorSetting.KEY_MERGE))
-            return act(EditorSetting.CHARACTER_EDITOR_KEY_MERGE);
-
-        return false;
     }
 
-    private boolean act(String key) {
-        characterEditorManager.act(key);
-        return true;
+    // A shortcut acts only with the pointer over the view while nothing is pressed, painted, held or orbited
+    private boolean isReady() {
+        return characterEditorManager.getMode().isMeshMode() && characterEditorMeshViewSystem.hasActiveDocument()
+                && transform == null && !stroking && !pressed && editorInputSystem.isPointerActive()
+                && !editorInputSystem.getRawInputHandle().isButtonHeld(EditorSetting.CHARACTER_VIEW_BUTTON_ORBIT);
     }
 
-    private boolean isControlHeld(RawInputHandle rawInput) {
-        return rawInput.isKeyHeld(CharacterEditorSetting.KEY_LEFT_CONTROL)
-                || rawInput.isKeyHeld(CharacterEditorSetting.KEY_RIGHT_CONTROL);
+    private boolean isShortcutHeld(int shortcutID) {
+        return shortcutManager.isHeld(shortcutID, context.getWindow());
     }
 
     // Selection \\
@@ -267,9 +235,8 @@ public class CharacterEditorSculptSystem extends SystemPackage {
             return;
         }
 
-        boolean shift = rawInput.isKeyHeld(EditorSetting.KEY_LEFT_SHIFT)
-                || rawInput.isKeyHeld(EditorSetting.KEY_RIGHT_SHIFT);
-        boolean control = isControlHeld(rawInput);
+        boolean shift = isShortcutHeld(addSelectionShortcutID);
+        boolean control = isShortcutHeld(subtractSelectionShortcutID);
 
         if (boxSelecting) {
             characterEditorMeshViewSystem.collectBox(pressX, pressY, mouseX, mouseY, hits);
@@ -412,7 +379,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
         float mouseX = rawInput.getMouseX();
         float mouseY = rawInput.getMouseY();
-        boolean snap = isControlHeld(rawInput);
+        boolean snap = isShortcutHeld(snapShortcutID);
 
         switch (transform) {
             case GRAB -> applyGrab(mouseX, mouseY, snap);

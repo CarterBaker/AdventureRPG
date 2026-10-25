@@ -9,10 +9,11 @@ public enum RecorderDragKind {
      * dragged to trim it, a cut being placed through a clip, a node on a clip
      * being retimed or moved, the empty lanes being dragged to scroll the view
      * along, a key being retimed on its row of the Keys tab or moved in time
-     * and value on its graph, one of a key's handles being bent, or a press on
+     * and value on its graph, one of a key's handles being bent, a press on
      * nothing on the Keys pane's rows or graph, which scrolls the view along
      * as it travels — on the graph its values too — or else moves the
-     * playhead.
+     * playhead, or a box drawn with Shift or Ctrl across a curve's row or its
+     * graph to select the keys within it, or take them out.
      */
 
     NONE,
@@ -28,7 +29,9 @@ public enum RecorderDragKind {
     HANDLE_IN,
     HANDLE_OUT,
     KEYS_PRESS,
-    GRAPH_PRESS;
+    GRAPH_PRESS,
+    KEYS_BOX,
+    GRAPH_BOX;
 
     // Accessible \\
 
@@ -50,5 +53,10 @@ public enum RecorderDragKind {
     // True for a press on nothing on the Keys pane, which scrolls the view as it travels
     public boolean isPress() {
         return this == KEYS_PRESS || this == GRAPH_PRESS;
+    }
+
+    // True for a box drawn on the Keys pane to select keys by
+    public boolean isBox() {
+        return this == KEYS_BOX || this == GRAPH_BOX;
     }
 }

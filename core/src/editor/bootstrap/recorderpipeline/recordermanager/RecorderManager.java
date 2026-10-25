@@ -1,6 +1,7 @@
 package editor.bootstrap.recorderpipeline.recordermanager;
 
 import java.io.File;
+import java.util.Arrays;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
@@ -39,6 +40,9 @@ import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 
@@ -75,7 +79,12 @@ public class RecorderManager extends ManagerPackage {
      * selected. Keys are added, deleted, retimed on their rows, moved and bent
      * by their handles on the graph, given a mode or a typed value, and a
      * curve is laid again from the recording, each by one method here; a key
-     * or handle dragged changes its curve as it moves. The Assets pane lists
+     * or handle dragged changes its curve as it moves. Any number of a curve's
+     * keys are selected at once — picked one by one or boxed on the graph or
+     * a row, added to or taken away from — and move and delete together; the
+     * last picked is the one the inspector shows and whose handles are drawn.
+     * What is selected is deleted as one: the keys, else the node, else the
+     * clip. The Assets pane lists
      * every asset the whole recording uses, section by section, each section
      * opened or closed here. The player cannot be recorded without the camera
      * that follows it. While a session plays the world, residents, thrown
@@ -156,6 +165,9 @@ public class RecorderManager extends ManagerPackage {
     private RecordingCurveTrackStruct selectedTrack;
     private int selectedSlot;
     private int selectedKey;
+    private IntArrayList selectedKeys;
+    private FloatArrayList draggedKeyTimes;
+    private DoubleArrayList draggedKeyValues;
     private double graphMinimum;
     private double graphMaximum;
     private int keysRevision;
@@ -222,6 +234,9 @@ public class RecorderManager extends ManagerPackage {
         // Keys
         this.keyTracks = new ObjectArrayList<>();
         this.openedTracks = new ReferenceOpenHashSet<>();
+        this.selectedKeys = new IntArrayList();
+        this.draggedKeyTimes = new FloatArrayList();
+        this.draggedKeyValues = new DoubleArrayList();
         clearCurveSelection();
 
         // Curves
@@ -425,6 +440,15 @@ public class RecorderManager extends ManagerPackage {
             default -> {
             }
         }
+    }
+
+    // Plays on from the playhead, or pauses what is playing
+    public void togglePlayback() {
+
+        if (state == RecorderState.PLAYING)
+            pause();
+        else
+            play();
     }
 
     // Holds the Dev window at the playhead as the timeline stands there
@@ -1152,7 +1176,7 @@ public class RecorderManager extends ManagerPackage {
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
             case PAN -> panView(x, secondsPerPixel);
-            case KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS, NONE -> {
+            case KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS, KEYS_BOX, GRAPH_BOX, NONE -> {
             }
         }
     }
@@ -1219,6 +1243,12 @@ public class RecorderManager extends ManagerPackage {
         float pressTime = drag.getPressTime();
         float landingStart = drag.getLandingStart();
         int landingLane = drag.getLandingLane();
+        boolean extending = drag.isExtending();
+        boolean subtracting = drag.isSubtracting();
+        boolean keySelected = drag.isKeySelected();
+        float reachTime = drag.getReachTime();
+        double pressValue = drag.getPressValue();
+        double reachValue = drag.getReachValue();
 
         cancelDrag();
 
@@ -1257,7 +1287,15 @@ public class RecorderManager extends ManagerPackage {
                 if (!moved)
                     seek(pressTime);
             }
-            case KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT -> {
+            case KEY, GRAPH_KEY -> {
+                if (moved && !subtracting)
+                    finishKeyEdit(selectedKeys.size() == 1
+                            ? EditorSetting.RECORDER_STATUS_KEY_MOVED
+                            : EditorSetting.RECORDER_STATUS_KEYS_MOVED);
+                else if (!moved)
+                    pickKey(index, extending, subtracting, keySelected);
+            }
+            case HANDLE_IN, HANDLE_OUT -> {
                 if (moved)
                     finishKeyEdit(EditorSetting.RECORDER_STATUS_KEY_MOVED);
                 else
@@ -1268,6 +1306,15 @@ public class RecorderManager extends ManagerPackage {
                     selectNode(nodeIndex);
                 else if (!moved)
                     releaseKeyAt(pressTime);
+            }
+            case KEYS_BOX, GRAPH_BOX -> {
+                if (moved && kind == RecorderDragKind.GRAPH_BOX)
+                    boxKeys(pressTime, reachTime, Math.min(pressValue, reachValue),
+                            Math.max(pressValue, reachValue), subtracting);
+                else if (moved)
+                    boxKeys(pressTime, reachTime, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, subtracting);
+                else
+                    seek(pressTime);
             }
             case NONE -> {
             }
@@ -1289,13 +1336,13 @@ public class RecorderManager extends ManagerPackage {
             case TAKE -> recording.getTakes().get(drag.getIndex()).getDuration();
             case CLIP -> recording.getClips().get(drag.getIndex()).getLength();
             case TRIM_START, TRIM_END, CUT, NODE, PAN, KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS,
-                    NONE -> 0f;
+                    KEYS_BOX, GRAPH_BOX, NONE -> 0f;
         };
     }
 
     // Nodes \\
 
-    // Selecting a node selects the clip it lies on
+    // Selecting a node selects the clip it lies on, and lets every selected key go
     public void selectNode(int nodeIndex) {
 
         if (!isNodeIndex(nodeIndex))
@@ -1306,6 +1353,8 @@ public class RecorderManager extends ManagerPackage {
         selectClip(node.getClipIndex());
         anchorNode(node, node.getTakeStart());
         this.selectedNode = nodeIndex;
+        clearKeySelection();
+        keysRevision++;
     }
 
     public void nextNodeState() {
@@ -1421,6 +1470,24 @@ public class RecorderManager extends ManagerPackage {
                 ? recordingNodeBranch.findNode(
                         nodes, selectedNodeClip, selectedNodeTrack, selectedNodeKind, selectedNodeTime)
                 : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // Selection \\
+
+    // What is selected removed as one: the keys on the Keys pane, else the node, else the clip
+    public void deleteSelection() {
+
+        if (pane == RecorderPane.KEYS && !selectedKeys.isEmpty()) {
+            deleteKeys();
+            return;
+        }
+
+        if (isNodeIndex(selectedNode)) {
+            removeNode();
+            return;
+        }
+
+        removeClip();
     }
 
     // Pane \\
@@ -1583,11 +1650,12 @@ public class RecorderManager extends ManagerPackage {
 
         this.selectedTrack = track;
         this.selectedSlot = slot;
-        this.selectedKey = EngineSetting.INDEX_NOT_FOUND;
+        clearKeySelection();
         frameGraph();
         keysRevision++;
     }
 
+    // The key selected alone
     public void selectKey(int keyIndex) {
 
         RecordingCurveStruct curve = getSelectedCurve();
@@ -1595,18 +1663,89 @@ public class RecorderManager extends ManagerPackage {
         if (curve == null || keyIndex < 0 || keyIndex >= curve.size())
             return;
 
-        this.selectedKey = keyIndex;
+        clearKeySelection();
+        addKeyToSelection(keyIndex);
         keysRevision++;
     }
 
-    // What a press on a row of the Keys tab takes hold of: a key on a curve's row to retime it, or a node on a
-    // character's movement or gesture row to retime or move it; anywhere else it selects what it lies on, or with
+    // Every key of the selected curve, the one last picked still the one shown
+    public void selectAllKeys() {
+
+        RecordingCurveStruct curve = requireSelectedCurve();
+
+        if (curve == null || curve.isEmpty())
+            return;
+
+        int shownKey = selectedKey;
+
+        selectedKeys.clear();
+
+        for (int i = 0; i < curve.size(); i++)
+            selectedKeys.add(i);
+
+        this.selectedKey = shownKey != EngineSetting.INDEX_NOT_FOUND ? shownKey : curve.size() - 1;
+        releaseNode();
+        keysRevision++;
+    }
+
+    // A key clicked without moving: alone, or with Shift added to the keys or taken back out if it was among them
+    // already, or with Ctrl taken out of them
+    private void pickKey(int keyIndex, boolean extending, boolean subtracting, boolean keySelected) {
+
+        RecordingCurveStruct curve = getSelectedCurve();
+
+        if (curve == null || keyIndex < 0 || keyIndex >= curve.size())
+            return;
+
+        if (subtracting || extending && keySelected)
+            removeKeyFromSelection(keyIndex);
+        else if (!extending)
+            selectKey(keyIndex);
+
+        keysRevision++;
+    }
+
+    // Every key of the selected curve within the moments, and the values when boxed on the graph, added to the keys
+    // selected, or with Ctrl taken out of them
+    private void boxKeys(float fromTime, float toTime, double lowest, double highest, boolean subtracting) {
+
+        RecordingClipStruct clip = getSelectedClipStruct();
+        RecordingCurveStruct curve = getSelectedCurve();
+
+        if (clip == null || curve == null)
+            return;
+
+        float from = Math.max(Math.min(fromTime, toTime), clip.getStart());
+        float to = Math.min(Math.max(fromTime, toTime), clip.getEnd());
+
+        for (int i = 0; i < curve.size(); i++) {
+
+            float time = clip.toTimelineTime(curve.getTime(i));
+            double value = curve.getValue(i);
+
+            if (time < from || time > to || value < lowest || value > highest)
+                continue;
+
+            if (subtracting)
+                removeKeyFromSelection(i);
+            else
+                addKeyToSelection(i);
+        }
+
+        keysRevision++;
+    }
+
+    // What a press on a row of the Keys tab takes hold of: a key on a curve's row to retime it with every key
+    // selected, or a node on a character's movement or gesture row to retime or move it; on nothing on a curve's row
+    // with Shift or Ctrl it boxes the moments it travels over, and anywhere else it selects what it lies on, or with
     // nothing there moves the playhead
     public void pressKeyRow(
             int trackIndex,
             int row,
             float time,
             float secondsPerPixel,
+            boolean extending,
+            boolean subtracting,
             WindowInstance window,
             float pressX,
             float pressY) {
@@ -1629,7 +1768,13 @@ public class RecorderManager extends ManagerPackage {
                     : EngineSetting.INDEX_NOT_FOUND;
 
             if (key != EngineSetting.INDEX_NOT_FOUND) {
-                beginKeyDrag(RecorderDragKind.KEY, curve, key, 0.0, window, pressX, pressY, time);
+                beginKeyDrag(RecorderDragKind.KEY, curve, key, 0.0, extending, subtracting,
+                        window, pressX, pressY, time);
+                return;
+            }
+
+            if (curve != null && canEditTimeline() && (extending || subtracting)) {
+                beginBoxDrag(RecorderDragKind.KEYS_BOX, time, 0.0, extending, subtracting, window, pressX, pressY);
                 return;
             }
         }
@@ -1657,14 +1802,16 @@ public class RecorderManager extends ManagerPackage {
                 window, pressX, pressY, time, 0f);
     }
 
-    // What a press on the graph takes hold of: a handle of the selected key, else the key nearest it, each within
-    // reach in pixels; anywhere else it scrolls the graph as it travels, or never travelling lets the key go and moves
-    // the playhead
+    // What a press on the graph takes hold of: a handle of the key shown, else the key nearest it, each within reach
+    // in pixels; on nothing with Shift or Ctrl it boxes keys to add or take away, and anywhere else it scrolls the
+    // graph as it travels, or never travelling lets the keys go and moves the playhead
     public void pressGraph(
             float time,
             double value,
             float secondsPerPixel,
             double valuePerPixel,
+            boolean extending,
+            boolean subtracting,
             WindowInstance window,
             float pressX,
             float pressY) {
@@ -1677,7 +1824,7 @@ public class RecorderManager extends ManagerPackage {
 
         float takeTime = clip.toTakeTime(time);
 
-        if (canEditTimeline() && selectedKey >= 0 && selectedKey < curve.size()
+        if (canEditTimeline() && !extending && !subtracting && selectedKey >= 0 && selectedKey < curve.size()
                 && curve.getMode(selectedKey) != RecorderKeyMode.CONSTANT) {
 
             float keyTime = curve.getTime(selectedKey);
@@ -1685,13 +1832,15 @@ public class RecorderManager extends ManagerPackage {
 
             if (selectedKey > 0 && isWithinGrab(keyTime + curve.getInTime(selectedKey),
                     keyValue + curve.getInValue(selectedKey), takeTime, value, secondsPerPixel, valuePerPixel)) {
-                beginKeyDrag(RecorderDragKind.HANDLE_IN, curve, selectedKey, value, window, pressX, pressY, time);
+                beginKeyDrag(RecorderDragKind.HANDLE_IN, curve, selectedKey, value, false, false,
+                        window, pressX, pressY, time);
                 return;
             }
 
             if (selectedKey < curve.size() - 1 && isWithinGrab(keyTime + curve.getOutTime(selectedKey),
                     keyValue + curve.getOutValue(selectedKey), takeTime, value, secondsPerPixel, valuePerPixel)) {
-                beginKeyDrag(RecorderDragKind.HANDLE_OUT, curve, selectedKey, value, window, pressX, pressY, time);
+                beginKeyDrag(RecorderDragKind.HANDLE_OUT, curve, selectedKey, value, false, false,
+                        window, pressX, pressY, time);
                 return;
             }
         }
@@ -1712,7 +1861,13 @@ public class RecorderManager extends ManagerPackage {
         }
 
         if (nearest != EngineSetting.INDEX_NOT_FOUND) {
-            beginKeyDrag(RecorderDragKind.GRAPH_KEY, curve, nearest, value, window, pressX, pressY, time);
+            beginKeyDrag(RecorderDragKind.GRAPH_KEY, curve, nearest, value, extending, subtracting,
+                    window, pressX, pressY, time);
+            return;
+        }
+
+        if (canEditTimeline() && (extending || subtracting)) {
+            beginBoxDrag(RecorderDragKind.GRAPH_BOX, time, value, extending, subtracting, window, pressX, pressY);
             return;
         }
 
@@ -1733,24 +1888,67 @@ public class RecorderManager extends ManagerPackage {
                 <= EditorSetting.RECORDER_GRAPH_GRAB_PIXELS;
     }
 
+    // A key pressed joins the keys selected — alone, or with Shift beside them — unless Ctrl is to take it out, and
+    // every key selected is held as it stood so they all move together by how far it travels
     private void beginKeyDrag(
             RecorderDragKind kind,
             RecordingCurveStruct curve,
             int keyIndex,
             double pressValue,
+            boolean extending,
+            boolean subtracting,
             WindowInstance window,
             float pressX,
             float pressY,
             float time) {
 
-        this.selectedKey = keyIndex;
+        boolean keySelected = selectedKeys.contains(keyIndex);
+
+        if (!keySelected && !subtracting && !extending)
+            clearKeySelection();
+
+        if (!subtracting)
+            addKeyToSelection(keyIndex);
+
         beginDrag(kind, keyIndex, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, time, 0f);
         drag.anchorKey(curve.getTime(keyIndex), curve.getValue(keyIndex), pressValue);
+        drag.anchorSelection(extending, subtracting, keySelected);
+        anchorSelectedKeys(curve);
         keysRevision++;
     }
 
-    // A key or handle carried on the Keys pane follows the cursor, its curve changing as it moves; a node carried
-    // there lands as it does on the lanes, and a press on nothing scrolls the view, on the graph its values too
+    // A box begun on nothing, carried to wherever the cursor travels
+    private void beginBoxDrag(
+            RecorderDragKind kind,
+            float time,
+            double value,
+            boolean extending,
+            boolean subtracting,
+            WindowInstance window,
+            float pressX,
+            float pressY) {
+
+        beginDrag(kind, EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
+                window, pressX, pressY, time, 0f);
+        drag.anchorValue(value);
+        drag.anchorSelection(extending, subtracting, false);
+        drag.reach(time, value);
+    }
+
+    private void anchorSelectedKeys(RecordingCurveStruct curve) {
+
+        draggedKeyTimes.clear();
+        draggedKeyValues.clear();
+
+        for (int i = 0; i < selectedKeys.size(); i++) {
+            draggedKeyTimes.add(curve.getTime(selectedKeys.getInt(i)));
+            draggedKeyValues.add(curve.getValue(selectedKeys.getInt(i)));
+        }
+    }
+
+    // A key or handle carried on the Keys pane follows the cursor, its curve changing as it moves, and every other
+    // key selected moves with the key carried; a node carried there lands as it does on the lanes, a box reaches to
+    // the cursor, and a press on nothing scrolls the view, on the graph its values too
     public void dragKeysTo(float x, float y, float time, double value, float secondsPerPixel, boolean snapping) {
 
         if (!drag.isActive())
@@ -1777,7 +1975,13 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
-        if (!drag.getKind().isKey() || !drag.isMoved() || clip == null || curve == null
+        if (drag.getKind().isBox()) {
+            drag.reach(time, value);
+            curveRevision++;
+            return;
+        }
+
+        if (!drag.getKind().isKey() || !drag.isMoved() || drag.isSubtracting() || clip == null || curve == null
                 || drag.getIndex() >= curve.size())
             return;
 
@@ -1796,10 +2000,24 @@ public class RecorderManager extends ManagerPackage {
             landing = recordingTimelineBranch.snapTime(recording, landing, playhead,
                     EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel, null);
 
-        curve.moveKey(keyIndex, clip.toTakeTime(landing), drag.getKind() == RecorderDragKind.GRAPH_KEY
-                ? drag.getKeyValue() + value - drag.getPressValue()
-                : curve.getValue(keyIndex));
+        moveSelectedKeys(curve, clip.toTakeTime(landing) - drag.getKeyTime(),
+                drag.getKind() == RecorderDragKind.GRAPH_KEY ? value - drag.getPressValue() : 0.0);
         curveRevision++;
+    }
+
+    // Every key selected moved by the same time and value from where it stood, the one furthest along the way first
+    // so each still has room beside the next
+    private void moveSelectedKeys(RecordingCurveStruct curve, float shift, double rise) {
+
+        int count = selectedKeys.size();
+
+        for (int i = 0; i < count; i++) {
+
+            int slot = shift > 0f ? count - 1 - i : i;
+
+            curve.moveKey(selectedKeys.getInt(slot), draggedKeyTimes.getFloat(slot) + shift,
+                    draggedKeyValues.getDouble(slot) + rise);
+        }
     }
 
     public void addKeyAtPlayhead() {
@@ -1812,26 +2030,36 @@ public class RecorderManager extends ManagerPackage {
         RecordingClipStruct clip = getSelectedClipStruct();
         float takeTime = Math.clamp(clip.toTakeTime(playhead), 0f, clip.getTake().getDuration());
 
-        this.selectedKey = curve.addKey(takeTime, curve.evaluate(takeTime), RecorderKeyMode.AUTO);
+        int keyIndex = curve.addKey(takeTime, curve.evaluate(takeTime), RecorderKeyMode.AUTO);
+
+        clearKeySelection();
+        addKeyToSelection(keyIndex);
         finishKeyEdit(EditorSetting.RECORDER_STATUS_KEY_ADDED);
     }
 
-    // The selected key leaves its curve; a curve keeps its last key, so every value always plays from keys
-    public void deleteKey() {
+    // Every selected key leaves its curve, the last first so the rest keep their places; a curve keeps at least one
+    // key, so every value always plays from keys
+    public void deleteKeys() {
 
         RecordingCurveStruct curve = requireSelectedKey();
 
         if (curve == null)
             return;
 
-        if (curve.size() == 1) {
+        int count = selectedKeys.size();
+
+        if (count >= curve.size()) {
             setStatus(EditorSetting.RECORDER_STATUS_LAST_KEY);
             return;
         }
 
-        curve.removeKey(selectedKey);
-        this.selectedKey = EngineSetting.INDEX_NOT_FOUND;
-        finishKeyEdit(EditorSetting.RECORDER_STATUS_KEY_DELETED);
+        for (int i = count - 1; i >= 0; i--)
+            curve.removeKey(selectedKeys.getInt(i));
+
+        clearKeySelection();
+        finishKeyEdit(count == 1
+                ? EditorSetting.RECORDER_STATUS_KEY_DELETED
+                : EditorSetting.RECORDER_STATUS_KEYS_DELETED);
     }
 
     // The selected key's handles stand in the next mode in turn
@@ -1896,7 +2124,7 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         recordingCurveBranch.refitCurve(selectedTrack, selectedSlot, resolveFitWorld());
-        this.selectedKey = EngineSetting.INDEX_NOT_FOUND;
+        clearKeySelection();
         frameGraph();
         finishKeyEdit(EditorSetting.RECORDER_STATUS_CURVE_REFIT);
     }
@@ -1982,7 +2210,7 @@ public class RecorderManager extends ManagerPackage {
             unlaidTracks.add(track);
         }
 
-        this.selectedKey = EngineSetting.INDEX_NOT_FOUND;
+        clearKeySelection();
         keysRevision++;
         setStatus(EditorSetting.RECORDER_STATUS_TAKE_REFIT + keyTake.getName());
     }
@@ -2026,9 +2254,9 @@ public class RecorderManager extends ManagerPackage {
         return curve;
     }
 
-    // A press on nothing lets the selected key go and moves the playhead to where it was
+    // A press on nothing lets the selected keys go and moves the playhead to where it was
     private void releaseKeyAt(float time) {
-        this.selectedKey = EngineSetting.INDEX_NOT_FOUND;
+        clearKeySelection();
         keysRevision++;
         seek(time);
     }
@@ -2036,7 +2264,45 @@ public class RecorderManager extends ManagerPackage {
     private void clearCurveSelection() {
         this.selectedTrack = null;
         this.selectedSlot = EngineSetting.INDEX_NOT_FOUND;
+        clearKeySelection();
+    }
+
+    // The keys selected kept in order; the one last added is the key shown, and a key joining lets any node go
+    private void addKeyToSelection(int keyIndex) {
+
+        int slot = Arrays.binarySearch(selectedKeys.elements(), 0, selectedKeys.size(), keyIndex);
+
+        if (slot < 0)
+            selectedKeys.add(-slot - 1, keyIndex);
+
+        this.selectedKey = keyIndex;
+        releaseNode();
+    }
+
+    // Keys selected let any selected node go, so Delete always knows which of them it removes
+    private void releaseNode() {
+
+        if (selectedNodeKind == null)
+            return;
+
+        clearNodeSelection();
+        revision++;
+    }
+
+    // A key taken out of the keys selected; the key shown, if it was the one, becomes the last still selected
+    private void removeKeyFromSelection(int keyIndex) {
+
+        selectedKeys.rem(keyIndex);
+
+        if (selectedKey == keyIndex)
+            this.selectedKey = selectedKeys.isEmpty()
+                    ? EngineSetting.INDEX_NOT_FOUND
+                    : selectedKeys.getInt(selectedKeys.size() - 1);
+    }
+
+    private void clearKeySelection() {
         this.selectedKey = EngineSetting.INDEX_NOT_FOUND;
+        selectedKeys.clear();
     }
 
     // Positions are read across the world the recording was made in; in another world chunks are counted as they lie
@@ -2491,6 +2757,11 @@ public class RecorderManager extends ManagerPackage {
 
     public int getSelectedKey() {
         return selectedKey;
+    }
+
+    // The indices of every key selected on the selected curve, in order
+    public IntArrayList getSelectedKeys() {
+        return selectedKeys;
     }
 
     public RecordingClipStruct getKeyClip() {

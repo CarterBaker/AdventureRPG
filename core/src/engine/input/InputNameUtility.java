@@ -5,7 +5,9 @@ import java.lang.reflect.Modifier;
 
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 public class InputNameUtility extends EngineUtility {
 
@@ -14,7 +16,8 @@ public class InputNameUtility extends EngineUtility {
      * player sees what an action is bound to. Names come from the Keys and
      * Buttons constant names, so every code either class declares is named
      * with no table to keep in step — SHIFT_LEFT reads "Shift Left" and a
-     * mouse button reads "Mouse Right".
+     * mouse button reads "Mouse Right". A key is found again by its name,
+     * ignoring case, so data names keys exactly as they are shown.
      */
 
     // Names
@@ -22,6 +25,7 @@ public class InputNameUtility extends EngineUtility {
     private static final Int2ObjectOpenHashMap<String> button2Name = collectNames(
             Buttons.class,
             EngineSetting.INPUT_NAME_MOUSE_PREFIX);
+    private static final Object2IntOpenHashMap<String> name2Key = invertNames(key2Name);
 
     // Accessible \\
 
@@ -52,6 +56,11 @@ public class InputNameUtility extends EngineUtility {
         return name.toString();
     }
 
+    // The key a name reads as, ignoring case, INDEX_NOT_FOUND for none
+    public static int findKey(String name) {
+        return name2Key.getInt(name.toLowerCase());
+    }
+
     // Internal \\
 
     private static String resolveName(InputCode inputCode) {
@@ -77,6 +86,17 @@ public class InputNameUtility extends EngineUtility {
         }
 
         return code2Name;
+    }
+
+    private static Object2IntOpenHashMap<String> invertNames(Int2ObjectOpenHashMap<String> code2Name) {
+
+        Object2IntOpenHashMap<String> name2Code = new Object2IntOpenHashMap<>(code2Name.size());
+        name2Code.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+
+        for (Int2ObjectMap.Entry<String> entry : code2Name.int2ObjectEntrySet())
+            name2Code.put(entry.getValue().toLowerCase(), entry.getIntKey());
+
+        return name2Code;
     }
 
     private static String toTitle(String constantName) {

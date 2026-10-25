@@ -43,6 +43,7 @@ public class RecorderSetting {
     public static final String TEMPLATE_GRAPH_KEY = "editor/Recorder/recorder_graph_key";
     public static final String TEMPLATE_GRAPH_KEY_SELECTED = "editor/Recorder/recorder_graph_key_selected";
     public static final String TEMPLATE_GRAPH_HANDLE = "editor/Recorder/recorder_graph_handle";
+    public static final String TEMPLATE_GRAPH_BOX = "editor/Recorder/recorder_graph_box";
     public static final String TEMPLATE_ASSET_SECTION_ROW = "editor/Recorder/recorder_asset_section_row";
     public static final String TEMPLATE_ASSET_ROW = "editor/Recorder/recorder_asset_row";
     public static final String TEMPLATE_ASSET_ROW_MISSING = "editor/Recorder/recorder_asset_row_missing";
@@ -113,6 +114,7 @@ public class RecorderSetting {
     public static final float GRAPH_SEGMENT_PIXELS = 4f;
     public static final float GRAPH_LINE_PIXELS = 2f;
     public static final float GRAPH_HANDLE_LINE_PIXELS = 1f;
+    public static final float GRAPH_BOX_LINE_PIXELS = 1f;
     public static final float GRAPH_KEY_SPACING_PIXELS = 3f;
 
     // Ruler — the spacing of its ticks in seconds, the closest at least this many pixels apart that fits
@@ -177,7 +179,8 @@ public class RecorderSetting {
     public static final String TEXT_KEYS_HINT_SELECT = "Click a value to see its curve on the graph below";
     public static final String TEXT_KEYS_HINT_VIEW = "Wheel zooms, Shift+wheel or dragging empty space scrolls";
     public static final String TEXT_KEYS_HINT_VALUES = "Ctrl+wheel on the graph zooms its values";
-    public static final String TEXT_KEYS_HINT_KEY = "Click a key on its row or the graph to edit it";
+    public static final String TEXT_KEYS_HINT_KEY =
+            "Click a key to edit it: Shift adds, Ctrl removes, and dragging on nothing with either boxes keys";
     public static final String TEXT_CURVE_UNLAID = "Its keys are laid once nothing records or exports";
     public static final String TEXT_KEY_ADD = "Add a key at the playhead";
     public static final String TEXT_KEY_VALUE = "Value";
@@ -221,6 +224,7 @@ public class RecorderSetting {
     public static final String FORMAT_CURVE_HEADER = "%s: %s";
     public static final String FORMAT_CURVE_NOW = "Now %s";
     public static final String FORMAT_CURVE_KEYS = "%d keys";
+    public static final String FORMAT_KEYS_SELECTED = "%d keys selected";
     public static final String FORMAT_KEY_HEADER = "Key at %s";
     public static final String FORMAT_ASSETS_TITLE = "Assets: %s";
     public static final String FORMAT_ASSET_OWNERS = "%s and %d more";

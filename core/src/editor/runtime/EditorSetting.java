@@ -9,7 +9,7 @@ public class EditorSetting {
      * Editor-only constants — chrome menus, cursors, input keys, menu entry
      * point indices, layout persistence, tool tabs, the name dialog, console
      * commands and the command drag between windows, the Dev window's time
-     * units, the info pipeline's
+     * units, editor shortcuts, the info pipeline's
      * schemas, hierarchy keys, and status text, the item editor's library and
      * status text, the image editing framework's history and files, the world
      * map's status text and overlay toggles, the world editor's brush and
@@ -142,6 +142,10 @@ public class EditorSetting {
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
+
+    // Shortcuts
+    public static final String SHORTCUT_PATH = "shortcuts";
+    public static final String SHORTCUT_NAME_SEPARATOR = "/";
 
     // Commands
     public static final String COMMAND_PATH = "commands";
@@ -1408,8 +1412,10 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_NO_NODE = "Click a node on a clip first";
     public static final String RECORDER_STATUS_ONLY_MOVEMENT = "The take moves only one way: change it instead";
     public static final String RECORDER_STATUS_KEY_MOVED = "Moved a key of ";
+    public static final String RECORDER_STATUS_KEYS_MOVED = "Moved keys of ";
     public static final String RECORDER_STATUS_KEY_ADDED = "Keyed ";
     public static final String RECORDER_STATUS_KEY_DELETED = "Deleted a key of ";
+    public static final String RECORDER_STATUS_KEYS_DELETED = "Deleted keys of ";
     public static final String RECORDER_STATUS_KEY_CHANGED = "Changed a key of ";
     public static final String RECORDER_STATUS_CURVE_REFIT = "Laid again from the recording: ";
     public static final String RECORDER_STATUS_TAKE_REFIT = "Laying every value again from the recording: ";
@@ -1442,6 +1448,13 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_EXPORTED = "Exported ";
     public static final String RECORDER_STATUS_EXPORT_FAILED = "Export failed: ";
     public static final String RECORDER_STATUS_EXPORT_CANCELLED = "Export cancelled";
+
+    // Recorder — the held shortcuts its drags and wheel read, named in shortcuts/Recorder
+    public static final String RECORDER_SHORTCUT_FREE_DRAG = "Recorder/FreeDrag";
+    public static final String RECORDER_SHORTCUT_SCROLL_VIEW = "Recorder/ScrollView";
+    public static final String RECORDER_SHORTCUT_ZOOM_VALUES = "Recorder/ZoomValues";
+    public static final String RECORDER_SHORTCUT_EXTEND_SELECTION = "Recorder/ExtendSelection";
+    public static final String RECORDER_SHORTCUT_SUBTRACT_SELECTION = "Recorder/SubtractSelection";
 
     // Recorder — the keys the Recorder tab's setting rows hand back; channel rows add the channel's key to a prefix
     public static final String RECORDER_KEY_ARM_PREFIX = "arm_";
