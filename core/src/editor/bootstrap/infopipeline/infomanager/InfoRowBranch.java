@@ -10,6 +10,7 @@ import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 class InfoRowBranch extends BranchPackage {
 
@@ -18,12 +19,18 @@ class InfoRowBranch extends BranchPackage {
      * an object is listed in schema order, an absent optional one as a
      * MISSING row, followed by any keys the schema does not name. Groups list
      * their children beneath them while expanded; array elements are labelled
-     * by index and, for objects, by their first summary field.
+     * by index and, for objects, by their first summary field. A row whose
+     * path holds an error, or lies above one, is marked as holding it, and a
+     * row the game ignores is marked as ignored.
      */
 
     // Internal
     private InfoManager infoManager;
     private InfoEditBranch infoEditBranch;
+
+    // Rows — main thread only
+    private ObjectOpenHashSet<String> errorPaths;
+    private ObjectOpenHashSet<String> ignoredPaths;
 
     // Base \\
 
@@ -35,8 +42,18 @@ class InfoRowBranch extends BranchPackage {
 
     // Rows \\
 
-    void buildRows(ArpgObjectStruct entryArpg, InfoFieldStruct rootField, ObjectArrayList<InfoRowStruct> rows) {
+    void buildRows(
+            ArpgObjectStruct entryArpg,
+            InfoFieldStruct rootField,
+            ObjectOpenHashSet<String> errorPaths,
+            ObjectOpenHashSet<String> ignoredPaths,
+            ObjectArrayList<InfoRowStruct> rows) {
+
+        this.errorPaths = errorPaths;
+        this.ignoredPaths = ignoredPaths;
         addObjectRows(entryArpg, rootField, "", 0, rows);
+        this.errorPaths = null;
+        this.ignoredPaths = null;
     }
 
     private void addObjectRows(
@@ -68,7 +85,9 @@ class InfoRowBranch extends BranchPackage {
         ArpgElementStruct value = arpg.get(field.getKey());
 
         if (value == null) {
-            rows.add(new InfoRowStruct(path, field.getKey(), depth, InfoRowKind.MISSING, "", false, false, false));
+            rows.add(new InfoRowStruct(
+                    path, field.getKey(), depth, InfoRowKind.MISSING, "", false, false, false,
+                    errorPaths.contains(path), false));
             return;
         }
 
@@ -90,7 +109,8 @@ class InfoRowBranch extends BranchPackage {
 
         if (!type.isGroup()) {
             rows.add(new InfoRowStruct(
-                    path, label, depth, InfoRowKind.VALUE, toPreview(value, type), false, false, removable));
+                    path, label, depth, InfoRowKind.VALUE, toPreview(value, type), false, false, removable,
+                    errorPaths.contains(path), ignoredPaths.contains(path)));
             return;
         }
 
@@ -99,7 +119,7 @@ class InfoRowBranch extends BranchPackage {
 
         rows.add(new InfoRowStruct(
                 path, label + toGroupSuffix(type, value), depth, InfoRowKind.GROUP, "",
-                expanded, addable, removable));
+                expanded, addable, removable, errorPaths.contains(path), ignoredPaths.contains(path)));
 
         if (expanded)
             addGroupChildren(value, field, type, path, depth + 1, rows);

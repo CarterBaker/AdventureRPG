@@ -25,7 +25,7 @@ public class WorldManager extends ManagerPackage {
      * companion file on first use and changed only through here: generation
      * threads read an immutable snapshot, every change bumps the placement
      * revision so whatever was planned from the old ones is planned again,
-     * and saving writes them back into the companion file.
+     * and reloading reads them back from the companion file.
      */
 
     // Palette
@@ -199,22 +199,6 @@ public class WorldManager extends ManagerPackage {
         }
 
         return true;
-    }
-
-    // The placements written into the companion file, every other field of it kept as it was
-    public boolean savePlacements(WorldHandle worldHandle) {
-
-        File companionFile = resolveCompanionFile(worldHandle);
-        ArpgObjectStruct worldArpg = companionFile.exists()
-                ? ArpgUtility.tryLoadObject(companionFile)
-                : new ArpgObjectStruct();
-
-        if (worldArpg == null)
-            return false;
-
-        WorldPlacementArpgUtility.writePlacements(worldArpg, getPlacements(worldHandle));
-
-        return ArpgUtility.tryWriteObject(companionFile, worldArpg);
     }
 
     private void publishPlacements(WorldHandle worldHandle, WorldPlacementStruct[] placements) {

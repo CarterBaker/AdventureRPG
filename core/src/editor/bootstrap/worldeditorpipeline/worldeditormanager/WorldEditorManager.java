@@ -458,7 +458,7 @@ public class WorldEditorManager extends ManagerPackage {
 
         setStatusMessage(worldPlacementBranch.save(worldHandle)
                 ? EditorSetting.WORLD_EDITOR_MESSAGE_SAVED + image.getImageName()
-                : EditorSetting.WORLD_EDITOR_MESSAGE_PLACEMENTS_SAVE_FAILED + image.getImageName());
+                : worldPlacementBranch.getSaveRefusal());
     }
 
     // A height layer never saved has no file to reload from, so it keeps what is painted on it

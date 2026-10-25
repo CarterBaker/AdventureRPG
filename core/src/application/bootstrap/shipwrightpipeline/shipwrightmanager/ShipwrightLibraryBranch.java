@@ -22,11 +22,16 @@ class ShipwrightLibraryBranch extends BranchPackage {
      * into one PascalCase word, its file that name. A ship in the assets that
      * cannot be read stops the game, as any broken content does; one in the
      * saves is logged and passed over, and writing one never stops the game.
+     * A ship for the assets goes to the asset writer when one is set, which
+     * may refuse it with the reason why.
      */
 
     // Directory
     private File assetRoot;
     private File saveRoot;
+
+    // Writer
+    private ShipwrightManager.ShipwrightAssetWriter assetWriter;
 
     // Base \\
 
@@ -111,18 +116,27 @@ class ShipwrightLibraryBranch extends BranchPackage {
 
     // Save \\
 
-    // True once the ship is written to its storage under its resource name
-    boolean save(ShipwrightStorage storage, ShipBlueprintStruct blueprint) {
+    void setAssetWriter(ShipwrightManager.ShipwrightAssetWriter assetWriter) {
+        this.assetWriter = assetWriter;
+    }
+
+    // Why the ship could not be written to its storage under its resource name, empty once it is
+    String save(ShipwrightStorage storage, ShipBlueprintStruct blueprint) {
 
         File file = resolveFile(storage, blueprint.getShipName());
         ArpgObjectStruct arpg = ShipBlueprintArpgUtility.write(blueprint);
 
+        if (storage == ShipwrightStorage.ASSETS && assetWriter != null)
+            return assetWriter.write(blueprint.getShipName(), arpg);
+
         if (storage == ShipwrightStorage.ASSETS) {
             ArpgUtility.writeObject(file, arpg);
-            return true;
+            return EngineSetting.SHIPWRIGHT_STATUS_NONE;
         }
 
-        return ArpgUtility.tryWriteObject(file, arpg);
+        return ArpgUtility.tryWriteObject(file, arpg)
+                ? EngineSetting.SHIPWRIGHT_STATUS_NONE
+                : EngineSetting.SHIPWRIGHT_STATUS_SAVE_FAILED;
     }
 
     // Utility \\

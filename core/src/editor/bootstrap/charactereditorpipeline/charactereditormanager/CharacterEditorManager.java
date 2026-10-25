@@ -241,14 +241,14 @@ public class CharacterEditorManager extends ManagerPackage {
         if (activeDocument == null)
             return;
 
-        infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ENTITIES, activeDocument.getTemplateName());
-
         if (!saveDirtyMeshes()) {
             setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_MESH_NOT_SAVED);
             return;
         }
 
-        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_SAVED + activeDocument.getTemplateName());
+        setStatusMessage(infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ENTITIES, activeDocument.getTemplateName())
+                ? EditorSetting.CHARACTER_EDITOR_MESSAGE_SAVED + activeDocument.getTemplateName()
+                : infoManager.getRefusal());
     }
 
     public void revertActiveTemplate() {
@@ -277,8 +277,9 @@ public class CharacterEditorManager extends ManagerPackage {
 
         String templateName = activeDocument.getTemplateName();
 
-        infoManager.deleteDocument(EditorSetting.INFO_SCHEMA_ENTITIES, templateName);
-        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_DELETED + templateName);
+        setStatusMessage(infoManager.deleteDocument(EditorSetting.INFO_SCHEMA_ENTITIES, templateName)
+                ? EditorSetting.CHARACTER_EDITOR_MESSAGE_DELETED + templateName
+                : infoManager.getRefusal());
     }
 
     public boolean isTemplateNameAvailable(String localName) {

@@ -8,6 +8,8 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.DimensionVector2Struct;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.menupipeline.util.ThemeColor;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -19,13 +21,24 @@ class HierarchyLayoutBranch extends BranchPackage {
      * then injects one tab per provider and one indented row per visible node,
      * each carrying its node key as the click argument. Tabs wrap onto as many
      * rows as the panel's width needs, so every tab stays visible; the tab bar
-     * grows to hold them and the node list shrinks beneath it.
+     * grows to hold them and the node list shrinks beneath it. A tab or node
+     * holding a problem has its label drawn in the danger color.
      */
 
     // Internal
     private MenuManager menuManager;
 
+    // Colors
+    private MenuColorStruct problemColor;
+
     // Base \\
+
+    @Override
+    protected void create() {
+
+        // Colors
+        this.problemColor = new MenuColorStruct(ThemeColor.DANGER, EngineSetting.COLOR_CHANNEL_MAX);
+    }
 
     @Override
     protected void get() {
@@ -92,12 +105,13 @@ class HierarchyLayoutBranch extends BranchPackage {
                 hierarchy.getTabElements().add(tabRow);
             }
 
-            injectTab(hierarchy, tabRow, providers.get(i).getTabName());
+            injectTab(hierarchy, tabRow, providers.get(i));
         }
     }
 
-    private void injectTab(HierarchyInstance hierarchy, ElementInstance tabRow, String tabName) {
+    private void injectTab(HierarchyInstance hierarchy, ElementInstance tabRow, HierarchyTabProvider provider) {
 
+        String tabName = provider.getTabName();
         String template = tabName.equals(hierarchy.getActiveTabName())
                 ? EngineSetting.HIERARCHY_TAB_ACTIVE_TEMPLATE
                 : EngineSetting.HIERARCHY_TAB_TEMPLATE;
@@ -107,6 +121,11 @@ class HierarchyLayoutBranch extends BranchPackage {
                 element -> {
                     element.setActionArgOverride(tabName);
                     setChildText(element, EngineSetting.HIERARCHY_ELEMENT_TAB_LABEL, tabName);
+
+                    ElementInstance label = element.findChildById(EngineSetting.HIERARCHY_ELEMENT_TAB_LABEL);
+
+                    if (label != null && provider.hasProblem())
+                        label.setColorOverride(problemColor);
                 });
     }
 
@@ -170,6 +189,9 @@ class HierarchyLayoutBranch extends BranchPackage {
 
                     if (label != null)
                         label.setPositionOverride(toOffset(indent + EngineSetting.HIERARCHY_TOGGLE_WIDTH_PIXELS));
+
+                    if (label != null && node.hasProblem())
+                        label.setColorOverride(problemColor);
 
                     setChildText(element, EngineSetting.HIERARCHY_ELEMENT_TOGGLE_LABEL, resolveMarker(hierarchy, node));
                     setChildText(element, EngineSetting.HIERARCHY_ELEMENT_LABEL, node.getLabel());

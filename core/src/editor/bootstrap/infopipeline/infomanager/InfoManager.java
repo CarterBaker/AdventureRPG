@@ -8,19 +8,23 @@ import application.bootstrap.menupipeline.hierarchy.HierarchyNodeStruct;
 import application.bootstrap.menupipeline.hierarchymanager.HierarchyManager;
 import editor.bootstrap.infopipeline.infodocument.InfoDocumentInstance;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
+import editor.bootstrap.infopipeline.infoissue.InfoIssueStruct;
 import editor.bootstrap.infopipeline.inforow.InfoRowStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
 import editor.bootstrap.infopipeline.infotab.InfoTabInstance;
 import editor.bootstrap.infopipeline.infotarget.InfoTargetStruct;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
+import editor.bootstrap.infopipeline.util.InfoIssueSeverity;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.arpg.ArpgValueStruct;
 import engine.util.io.FileUtility;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
@@ -31,14 +35,20 @@ public class InfoManager extends ManagerPackage {
      * Owns the editor's ARPG content: every schema, the files opened under it,
      * and the single selection shared by the hierarchy and info panels. Files
      * load on first view and keep edits until saved or reverted; disk access,
-     * edits, rows and hierarchy nodes each live in their own branch. Change
-     * listeners hear every entry whose content moves — edited, created or
-     * reverted, saved or not — and delete listeners every entry removed, so
+     * edits, rows, hierarchy nodes, validation, names and integrity each live
+     * in their own branch. Every change to a file's content, from a panel or
+     * a tool, goes through commit(), and every write to disk through
+     * writeDocuments(), so nothing reaches disk that the game could not load:
+     * a file with a problem, one naming an entry not yet saved, or one taking
+     * away a name a saved file still uses is refused with the reason, and
+     * nothing anything names can be deleted. A file's problems are found once
+     * per change that can reach them and shown in red wherever it appears;
+     * keys the game never reads are shown muted, kept, and never stop a save.
+     * Change listeners hear every entry whose content moves — edited, created
+     * or reverted, saved or not — and delete listeners every entry removed, so
      * tools can preview edits live. A copy pins its source when it begins and
      * is only built once a new name and every unique value check out, so a
-     * stale or clashing copy aborts without touching any document. Tools
-     * create, edit, revert and delete their files through the same paths, so
-     * the panels and every tool always agree.
+     * stale or clashing copy aborts without touching any document.
      */
 
     // Internal
@@ -47,6 +57,9 @@ public class InfoManager extends ManagerPackage {
     private InfoEditBranch infoEditBranch;
     private InfoRowBranch infoRowBranch;
     private InfoHierarchyBranch infoHierarchyBranch;
+    private InfoReferenceBranch infoReferenceBranch;
+    private InfoValidationBranch infoValidationBranch;
+    private InfoIntegrityBranch infoIntegrityBranch;
 
     // Palette
     private Object2ObjectOpenHashMap<String, InfoSchemaHandle> schemaName2InfoSchemaHandle;
@@ -54,6 +67,10 @@ public class InfoManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2Listeners;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2ChangeListeners;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2DeleteListeners;
+
+    // Dependencies
+    private Object2ObjectOpenHashMap<String, ObjectArrayList<InfoSchemaHandle>> schemaName2ReferrerSchemas;
+    private Object2ObjectOpenHashMap<String, ObjectArrayList<InfoSchemaHandle>> directory2ReferrerSchemas;
 
     // Selection
     private InfoSchemaHandle activeSchema;
@@ -69,8 +86,15 @@ public class InfoManager extends ManagerPackage {
     // Expansion
     private ObjectOpenHashSet<String> toggledPaths;
 
+    // Revisions
+    private Object2IntOpenHashMap<String> schemaName2UniqueRevision;
+    private int nameRevision;
+    private int dependencyRevision;
+
     // Status
     private String statusMessage;
+    private boolean statusRefused;
+    private String refusal;
     private int revision;
 
     // Base \\
@@ -83,6 +107,9 @@ public class InfoManager extends ManagerPackage {
         this.infoEditBranch = create(InfoEditBranch.class);
         this.infoRowBranch = create(InfoRowBranch.class);
         this.infoHierarchyBranch = create(InfoHierarchyBranch.class);
+        this.infoReferenceBranch = create(InfoReferenceBranch.class);
+        this.infoValidationBranch = create(InfoValidationBranch.class);
+        this.infoIntegrityBranch = create(InfoIntegrityBranch.class);
 
         // Palette
         this.schemaName2InfoSchemaHandle = new Object2ObjectOpenHashMap<>();
@@ -91,8 +118,18 @@ public class InfoManager extends ManagerPackage {
         this.schemaName2ChangeListeners = new Object2ObjectOpenHashMap<>();
         this.schemaName2DeleteListeners = new Object2ObjectOpenHashMap<>();
 
+        // Dependencies
+        this.schemaName2ReferrerSchemas = new Object2ObjectOpenHashMap<>();
+        this.directory2ReferrerSchemas = new Object2ObjectOpenHashMap<>();
+
         // Expansion
         this.toggledPaths = new ObjectOpenHashSet<>();
+
+        // Revisions
+        this.schemaName2UniqueRevision = new Object2IntOpenHashMap<>();
+
+        // Status
+        this.refusal = EditorSetting.INFO_REFUSAL_NONE;
 
         create(InfoSchemaLoader.class);
     }
@@ -106,7 +143,38 @@ public class InfoManager extends ManagerPackage {
     protected void awake() {
 
         internalLoader.requestAll();
+        registerDependencies();
         registerTabs();
+    }
+
+    // Every schema a field names verified, and each schema and directory given the schemas whose entries name it
+    private void registerDependencies() {
+
+        for (InfoSchemaHandle schema : schemaName2InfoSchemaHandle.values())
+            schemaName2ReferrerSchemas.put(schema.getSchemaName(), new ObjectArrayList<>());
+
+        for (InfoSchemaHandle schema : schemaName2InfoSchemaHandle.values()) {
+
+            ObjectArrayList<String> referencedSchemaNames = schema.getReferencedSchemaNames();
+            ObjectArrayList<String> referencedDirectories = schema.getReferencedDirectories();
+
+            for (int i = 0; i < referencedSchemaNames.size(); i++) {
+
+                ObjectArrayList<InfoSchemaHandle> referrers = schemaName2ReferrerSchemas.get(
+                        referencedSchemaNames.get(i));
+
+                if (referrers == null)
+                    throwException("Info schema '" + schema.getSchemaName() + "' references unknown schema '"
+                            + referencedSchemaNames.get(i) + "'.");
+
+                referrers.add(schema);
+            }
+
+            for (int i = 0; i < referencedDirectories.size(); i++)
+                directory2ReferrerSchemas
+                        .computeIfAbsent(referencedDirectories.get(i), directory -> new ObjectArrayList<>())
+                        .add(schema);
+        }
     }
 
     private void registerTabs() {
@@ -197,7 +265,14 @@ public class InfoManager extends ManagerPackage {
 
         documents.add(document);
         documents.sort((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(a.getDefinitionName(), b.getDefinitionName()));
+        notifyDocumentsChanged(schema);
         return document;
+    }
+
+    private void closeDocument(InfoDocumentInstance document) {
+
+        getDocuments(document.getSchema()).remove(document);
+        notifyDocumentsChanged(document.getSchema());
     }
 
     private InfoDocumentInstance findDocument(InfoSchemaHandle schema, String definitionName) {
@@ -213,6 +288,65 @@ public class InfoManager extends ManagerPackage {
 
     private boolean isDefinitionNameTaken(InfoSchemaHandle schema, String definitionName) {
         return findDocument(schema, definitionName) != null || infoLibraryBranch.exists(schema, definitionName);
+    }
+
+    // Commit \\
+
+    // The one path every change to a file's content goes through, from a panel or a tool: it marks the file and moves
+    // every revision the change can reach, so its problems, and those of every file naming it, are found again
+    private void commit(InfoDocumentInstance document) {
+
+        document.markEdited();
+        refreshDependents(document);
+
+        this.statusMessage = null;
+        this.statusRefused = false;
+        notifyChanged();
+    }
+
+    // A file's tree replaced whole by a tool's write, or put back when the write was refused
+    private void replaceContent(InfoDocumentInstance document, ArpgObjectStruct root, boolean dirty) {
+
+        document.restoreRoot(root, dirty);
+        notifyContentReplaced(document);
+    }
+
+    // Moves every revision a commit moves, for a tree replaced whole rather than edited
+    private void notifyContentReplaced(InfoDocumentInstance document) {
+
+        refreshDependents(document);
+        notifyChanged();
+    }
+
+    // Names moved anywhere make every file look again for what it names; unique values moved, every file of the schema
+    private void refreshDependents(InfoDocumentInstance document) {
+
+        if (document.refreshEntryNames())
+            notifyNamesChanged();
+
+        if (document.refreshUniqueSignature())
+            schemaName2UniqueRevision.addTo(document.getSchema().getSchemaName(), 1);
+    }
+
+    // A file opened or closed, so its schema's names and unique values change with it
+    private void notifyDocumentsChanged(InfoSchemaHandle schema) {
+
+        schemaName2UniqueRevision.addTo(schema.getSchemaName(), 1);
+        notifyNamesChanged();
+    }
+
+    private void notifyNamesChanged() {
+
+        nameRevision++;
+        dependencyRevision++;
+    }
+
+    // A tool wrote or removed a resource file, so every name of one is looked for again
+    public void notifyResourcesChanged() {
+
+        infoReferenceBranch.forgetResources();
+        dependencyRevision++;
+        notifyChanged();
     }
 
     // Selection \\
@@ -275,6 +409,7 @@ public class InfoManager extends ManagerPackage {
         this.selectedEntryName = entryName;
         this.selectedFolderName = folderName;
         this.statusMessage = null;
+        this.statusRefused = false;
         notifyChanged();
         notifyListeners();
     }
@@ -310,12 +445,10 @@ public class InfoManager extends ManagerPackage {
         if (entryArpg == null)
             return null;
 
-        String entryName = activeSchema.isArrayLayout() ? selectedEntryName : selectedDocument.getDefinitionName();
-
         return new InfoEntryStruct(
                 activeSchema.getSchemaName(),
                 selectedDocument.getDefinitionName(),
-                entryName,
+                getSelectedIssueEntryName(),
                 entryArpg);
     }
 
@@ -328,6 +461,11 @@ public class InfoManager extends ManagerPackage {
             return selectedDocument.getRoot();
 
         return selectedEntryName != null ? selectedDocument.findEntry(selectedEntryName) : null;
+    }
+
+    // The entry name the selected entry's issues are filed under: its file's name when the file is the entry
+    private String getSelectedIssueEntryName() {
+        return activeSchema.isArrayLayout() ? selectedEntryName : selectedDocument.getDefinitionName();
     }
 
     // Create \\
@@ -391,7 +529,7 @@ public class InfoManager extends ManagerPackage {
             customizer.accept(entryArpg);
 
         document.requireEntryArray().add(entryArpg);
-        document.markEdited();
+        commit(document);
 
         select(schema, document, entryName, null);
         notifyEntry(schemaName2ChangeListeners, getSelectedEntry());
@@ -407,10 +545,11 @@ public class InfoManager extends ManagerPackage {
         ArpgObjectStruct root = activeSchema.isArrayLayout()
                 ? new ArpgObjectStruct()
                 : infoEditBranch.createDefault(activeSchema.getRootField()).getAsObject();
-        InfoDocumentInstance document = openNewDocument(activeSchema, definitionName, root);
 
         if (activeSchema.isArrayLayout())
-            document.requireEntryArray();
+            root.add(activeSchema.getEntriesKey(), new ArpgArrayStruct());
+
+        InfoDocumentInstance document = openNewDocument(activeSchema, definitionName, root);
 
         select(activeSchema, document, null, null);
         notifyEntries(schemaName2ChangeListeners, activeSchema, document);
@@ -543,7 +682,7 @@ public class InfoManager extends ManagerPackage {
 
             copyArpg.addProperty(schema.getNameField(), copyName);
             sourceDocument.requireEntryArray().add(copyArpg);
-            sourceDocument.markEdited();
+            commit(sourceDocument);
 
             select(schema, sourceDocument, copyName, null);
             notifyEntry(schemaName2ChangeListeners, getSelectedEntry());
@@ -588,24 +727,7 @@ public class InfoManager extends ManagerPackage {
     }
 
     private boolean isValueTaken(String key, ArpgValueStruct value) {
-
-        ObjectArrayList<InfoEntryStruct> entries = getEntries(copySchema.getSchemaName());
-
-        for (int i = 0; i < entries.size(); i++) {
-
-            ArpgElementStruct existing = entries.get(i).getArpg().get(key);
-
-            if (existing != null && existing.isValue() && isSameValue(existing.getAsValue(), value))
-                return true;
-        }
-
-        return false;
-    }
-
-    private boolean isSameValue(ArpgValueStruct existing, ArpgValueStruct value) {
-        return existing.isString() && value.isString()
-                ? existing.getAsString().equalsIgnoreCase(value.getAsString())
-                : existing.equals(value);
+        return infoReferenceBranch.countUniqueValue(copySchema, key, value) > 0;
     }
 
     private void endCopy() {
@@ -644,15 +766,19 @@ public class InfoManager extends ManagerPackage {
         deleteFile(selectedDocument);
     }
 
-    public void deleteDocument(String schemaName, String definitionName) {
+    // True once the file is gone; refused, with the reason kept, while anything still names it
+    public boolean deleteDocument(String schemaName, String definitionName) {
 
         InfoDocumentInstance document = findDocument(getSchema(schemaName), definitionName);
-
-        if (document != null)
-            deleteFile(document);
+        return document != null && deleteFile(document);
     }
 
-    private void deleteFile(InfoDocumentInstance document) {
+    private boolean deleteFile(InfoDocumentInstance document) {
+
+        String deleteRefusal = infoIntegrityBranch.findDeleteRefusal(document, null);
+
+        if (!deleteRefusal.isEmpty())
+            return refuse(deleteRefusal);
 
         InfoSchemaHandle schema = document.getSchema();
 
@@ -660,32 +786,40 @@ public class InfoManager extends ManagerPackage {
             infoLibraryBranch.delete(document);
 
         notifyEntries(schemaName2DeleteListeners, schema, document);
-        getDocuments(schema).remove(document);
+        closeDocument(document);
 
         if (document == selectedDocument)
             select(schema, null, null, emptyToNull(document.getFolderName()));
 
         setStatusMessage(EditorSetting.INFO_MESSAGE_DELETED + document.getDefinitionName());
+        return true;
     }
 
-    public void deleteEntry(String schemaName, String definitionName, String entryName) {
+    // True once the entry is gone from its file; refused, with the reason kept, while anything still names it
+    public boolean deleteEntry(String schemaName, String definitionName, String entryName) {
 
         InfoSchemaHandle schema = getSchema(schemaName);
         InfoDocumentInstance document = findDocument(schema, definitionName);
         int entryIndex = document != null ? document.findEntryIndex(entryName) : EngineSetting.INDEX_NOT_FOUND;
 
         if (entryIndex == EngineSetting.INDEX_NOT_FOUND)
-            return;
+            return false;
+
+        String deleteRefusal = infoIntegrityBranch.findDeleteRefusal(document, entryName);
+
+        if (!deleteRefusal.isEmpty())
+            return refuse(deleteRefusal);
 
         notifyEntry(schemaName2DeleteListeners, new InfoEntryStruct(
                 schemaName, definitionName, entryName, document.findEntry(entryName)));
         document.requireEntryArray().remove(entryIndex);
-        document.markEdited();
+        commit(document);
 
         if (document == selectedDocument && entryName.equals(selectedEntryName))
             select(schema, document, null, null);
 
         setStatusMessage(EditorSetting.INFO_MESSAGE_DELETED + entryName);
+        return true;
     }
 
     // Save \\
@@ -696,38 +830,123 @@ public class InfoManager extends ManagerPackage {
             save(selectedDocument);
     }
 
-    public void saveDocument(String schemaName, String definitionName) {
+    // True once the file is on disk; refused, with the reason kept, when the game could not load it
+    public boolean saveDocument(String schemaName, String definitionName) {
 
         InfoDocumentInstance document = findDocument(getSchema(schemaName), definitionName);
-
-        if (document != null)
-            save(document);
+        return document != null && save(document);
     }
 
     public void saveAll() {
 
-        boolean saved = false;
+        ObjectArrayList<InfoDocumentInstance> dirtyDocuments = new ObjectArrayList<>();
 
         for (ObjectArrayList<InfoDocumentInstance> documents : schemaName2Documents.values())
             for (int i = 0; i < documents.size(); i++)
-                if (documents.get(i).isDirty()) {
-                    write(documents.get(i));
-                    saved = true;
-                }
+                if (documents.get(i).isDirty())
+                    dirtyDocuments.add(documents.get(i));
 
-        setStatusMessage(saved ? EditorSetting.INFO_MESSAGE_SAVED_ALL : EditorSetting.INFO_MESSAGE_NOTHING_TO_SAVE);
+        if (dirtyDocuments.isEmpty()) {
+            setStatusMessage(EditorSetting.INFO_MESSAGE_NOTHING_TO_SAVE);
+            return;
+        }
+
+        int written = writeDocuments(dirtyDocuments);
+
+        if (written == dirtyDocuments.size()) {
+            setStatusMessage(EditorSetting.INFO_MESSAGE_SAVED_ALL);
+            return;
+        }
+
+        refuse(EditorSetting.INFO_MESSAGE_SAVED + written + EditorSetting.INFO_MESSAGE_SAVED_OF
+                + dirtyDocuments.size() + EditorSetting.INFO_MESSAGE_SAVED_SUFFIX + refusal);
     }
 
-    private void save(InfoDocumentInstance document) {
+    private boolean save(InfoDocumentInstance document) {
 
-        write(document);
+        ObjectArrayList<InfoDocumentInstance> documents = new ObjectArrayList<>(1);
+        documents.add(document);
+
+        if (writeDocuments(documents) == 0)
+            return refuse(refusal);
+
         setStatusMessage(EditorSetting.INFO_MESSAGE_SAVED + document.getDefinitionName());
+        return true;
     }
 
-    private void write(InfoDocumentInstance document) {
+    // The one path every content file reaches disk through. Resources are looked for afresh, then every document the
+    // game could load once the rest are written is written; a document refused takes those depending on it along,
+    // and the first refusal is kept. Returns how many were written.
+    private int writeDocuments(ObjectArrayList<InfoDocumentInstance> candidates) {
 
-        infoLibraryBranch.save(document);
-        document.markSaved();
+        ObjectArrayList<InfoDocumentInstance> writable = new ObjectArrayList<>(candidates);
+        ObjectArrayList<InfoDocumentInstance> refused = new ObjectArrayList<>();
+
+        infoReferenceBranch.forgetResources();
+        this.refusal = EditorSetting.INFO_REFUSAL_NONE;
+
+        do {
+
+            refused.clear();
+            infoIntegrityBranch.beginSave(writable);
+
+            for (int i = 0; i < writable.size(); i++) {
+
+                String documentRefusal = infoIntegrityBranch.findSaveRefusal(writable.get(i));
+
+                if (documentRefusal.isEmpty())
+                    continue;
+
+                refused.add(writable.get(i));
+
+                if (refusal.isEmpty())
+                    this.refusal = documentRefusal;
+            }
+
+            infoIntegrityBranch.endSave();
+            writable.removeAll(refused);
+        } while (!refused.isEmpty() && !writable.isEmpty());
+
+        for (int i = 0; i < writable.size(); i++) {
+            infoLibraryBranch.save(writable.get(i));
+            writable.get(i).markSaved();
+        }
+
+        notifyChanged();
+        return writable.size();
+    }
+
+    // Writes a tool's whole content for one file through the same checks as every save, leaving the editor's copy as
+    // it was when the game could not load the content
+    public boolean writeDocument(String schemaName, String definitionName, ArpgObjectStruct root) {
+
+        InfoSchemaHandle schema = getSchema(schemaName);
+
+        if (schema.isArrayLayout())
+            throwException("Info schema '" + schemaName + "' keeps its entries in an array; write an entry instead.");
+
+        InfoDocumentInstance document = findDocument(schema, definitionName);
+        boolean created = document == null;
+        ArpgObjectStruct previousRoot = created ? null : document.getRoot();
+        boolean previousDirty = !created && document.isDirty();
+
+        if (created)
+            document = openNewDocument(schema, definitionName, root);
+        else
+            replaceContent(document, root, true);
+
+        if (!save(document)) {
+
+            if (created)
+                closeDocument(document);
+            else
+                replaceContent(document, previousRoot, previousDirty);
+
+            return refuse(refusal);
+        }
+
+        notifyEntries(schemaName2ChangeListeners, schema, document);
+        return true;
     }
 
     public void revertSelection() {
@@ -751,7 +970,7 @@ public class InfoManager extends ManagerPackage {
 
         if (!document.isOnDisk()) {
             notifyEntries(schemaName2DeleteListeners, schema, document);
-            getDocuments(schema).remove(document);
+            closeDocument(document);
 
             if (selected)
                 select(schema, null, null, emptyToNull(document.getFolderName()));
@@ -766,6 +985,7 @@ public class InfoManager extends ManagerPackage {
             return;
 
         document.replaceRoot(root);
+        notifyContentReplaced(document);
         notifyEntries(schemaName2ChangeListeners, schema, document);
 
         if (selected)
@@ -821,7 +1041,7 @@ public class InfoManager extends ManagerPackage {
         if (isNamePath(path))
             this.selectedEntryName = value.getAsString();
 
-        markSelectionEdited();
+        commitSelection();
     }
 
     public void toggleValue(String path) {
@@ -832,7 +1052,7 @@ public class InfoManager extends ManagerPackage {
             return;
 
         infoEditBranch.toggle(target);
-        markSelectionEdited();
+        commitSelection();
     }
 
     public void cycleValue(String path) {
@@ -843,7 +1063,7 @@ public class InfoManager extends ManagerPackage {
             return;
 
         infoEditBranch.cycle(target);
-        markSelectionEdited();
+        commitSelection();
     }
 
     public void addField(String path) {
@@ -854,7 +1074,7 @@ public class InfoManager extends ManagerPackage {
             return;
 
         infoEditBranch.addField(target);
-        markSelectionEdited();
+        commitSelection();
     }
 
     public void removeValue(String path) {
@@ -872,7 +1092,7 @@ public class InfoManager extends ManagerPackage {
         }
 
         target.remove();
-        markSelectionEdited();
+        commitSelection();
     }
 
     public boolean isMap(String path) {
@@ -892,7 +1112,7 @@ public class InfoManager extends ManagerPackage {
         }
 
         infoEditBranch.addElement(target);
-        markSelectionEdited();
+        commitSelection();
     }
 
     public boolean isMapKeyValid(String path, String key) {
@@ -911,7 +1131,7 @@ public class InfoManager extends ManagerPackage {
             return;
 
         infoEditBranch.addMapEntry(resolveSelected(path), key);
-        markSelectionEdited();
+        commitSelection();
     }
 
     // Applies a tool's edit to one entry in place, marking its file changed and telling every change listener
@@ -929,10 +1149,8 @@ public class InfoManager extends ManagerPackage {
             throwException("Info file '" + definitionName + "' holds no entry named '" + entryName + "'.");
 
         editor.accept(entryArpg);
-        document.markEdited();
+        commit(document);
 
-        this.statusMessage = null;
-        notifyChanged();
         notifyEntry(
                 schemaName2ChangeListeners,
                 new InfoEntryStruct(schemaName, definitionName, entryName, entryArpg));
@@ -973,11 +1191,9 @@ public class InfoManager extends ManagerPackage {
                 && selectedDocument.findEntryIndex(entryName) == EngineSetting.INDEX_NOT_FOUND;
     }
 
-    private void markSelectionEdited() {
+    private void commitSelection() {
 
-        selectedDocument.markEdited();
-        this.statusMessage = null;
-        notifyChanged();
+        commit(selectedDocument);
         notifyListeners();
         notifyEntry(schemaName2ChangeListeners, getSelectedEntry());
     }
@@ -1010,6 +1226,135 @@ public class InfoManager extends ManagerPackage {
         if (listeners != null)
             for (int i = 0; i < listeners.size(); i++)
                 listeners.get(i).accept(entry);
+    }
+
+    // Issues \\
+
+    // A document's problems, found again only once a change has reached it
+    ObjectArrayList<InfoIssueStruct> getIssues(InfoDocumentInstance document) {
+
+        if (!document.hasIssuesAt(document.getEditRevision(), toDependencyStamp(document)))
+            refreshIssues(document);
+
+        return document.getIssues();
+    }
+
+    // A document's problems found again now, whatever has moved, for a save that must judge it as it stands
+    ObjectArrayList<InfoIssueStruct> refreshIssues(InfoDocumentInstance document) {
+
+        document.setIssues(
+                infoValidationBranch.validate(document), document.getEditRevision(), toDependencyStamp(document));
+        return document.getIssues();
+    }
+
+    // What a document's problems hang on beyond its own edits: names and resources anywhere, and its schema's
+    // unique values; both only ever count up, so their sum moves whenever either does
+    private int toDependencyStamp(InfoDocumentInstance document) {
+        return dependencyRevision + getUniqueRevision(document.getSchema());
+    }
+
+    // True when any file of a schema holds an error, so its tab shows it
+    public boolean hasProblem(InfoSchemaHandle schema) {
+
+        ObjectArrayList<InfoDocumentInstance> documents = getDocuments(schema);
+
+        for (int i = 0; i < documents.size(); i++)
+            if (hasErrors(documents.get(i)))
+                return true;
+
+        return false;
+    }
+
+    boolean hasErrors(InfoDocumentInstance document) {
+
+        getIssues(document);
+        return document.hasErrors();
+    }
+
+    boolean hasEntryErrors(InfoDocumentInstance document, String entryName) {
+
+        ObjectArrayList<InfoIssueStruct> issues = getIssues(document);
+
+        for (int i = 0; i < issues.size(); i++)
+            if (issues.get(i).isError() && entryName.equals(issues.get(i).getEntryName()))
+                return true;
+
+        return false;
+    }
+
+    // Every row path of the selected entry at or above an issue of a severity, so a collapsed group shows what lies
+    // inside it
+    private ObjectOpenHashSet<String> collectSelectedIssuePaths(InfoIssueSeverity severity) {
+
+        ObjectOpenHashSet<String> issuePaths = new ObjectOpenHashSet<>();
+        ObjectArrayList<InfoIssueStruct> issues = getSelectedIssues();
+
+        for (int i = 0; i < issues.size(); i++) {
+
+            if (issues.get(i).getSeverity() != severity)
+                continue;
+
+            String path = issues.get(i).getPath();
+
+            while (!path.isEmpty() && issuePaths.add(path)) {
+
+                int separator = path.lastIndexOf(EditorSetting.INFO_PATH_SEPARATOR);
+                path = separator != EngineSetting.INDEX_NOT_FOUND ? path.substring(0, separator) : "";
+            }
+        }
+
+        return issuePaths;
+    }
+
+    // The issues of the selected entry, or of the selected file as a whole when no entry of it is selected, its
+    // errors first
+    private ObjectArrayList<InfoIssueStruct> getSelectedIssues() {
+
+        ObjectArrayList<InfoIssueStruct> selectedIssues = new ObjectArrayList<>();
+
+        if (selectedDocument == null)
+            return selectedIssues;
+
+        ObjectArrayList<InfoIssueStruct> issues = getIssues(selectedDocument);
+        String entryName = getSelectedEntryArpg() != null ? getSelectedIssueEntryName() : null;
+
+        for (int i = 0; i < issues.size(); i++)
+            if (entryName == null || entryName.equals(issues.get(i).getEntryName()))
+                selectedIssues.add(issues.get(i));
+
+        selectedIssues.sort((a, b) -> Boolean.compare(b.isError(), a.isError()));
+        return selectedIssues;
+    }
+
+    private int countErrors(ObjectArrayList<InfoIssueStruct> issues) {
+
+        int errors = 0;
+
+        for (int i = 0; i < issues.size(); i++)
+            if (issues.get(i).isError())
+                errors++;
+
+        return errors;
+    }
+
+    String describeIssue(InfoIssueStruct issue) {
+
+        String location = issue.getPath().isEmpty()
+                ? issue.getEntryName() != null ? issue.getEntryName() : ""
+                : toDisplayPath(issue.getPath());
+
+        return location.isEmpty()
+                ? issue.getMessage()
+                : location + EditorSetting.INFO_ISSUE_SEPARATOR + issue.getMessage();
+    }
+
+    String toDisplayPath(String path) {
+        return path.replace(EditorSetting.INFO_PATH_SEPARATOR, EditorSetting.INFO_ISSUE_PATH_SEPARATOR);
+    }
+
+    // True when any content, live or on disk, names a file of a resource directory, so a tool may not remove it
+    public boolean isResourceNamed(String directory, String name) {
+        return infoIntegrityBranch.isResourceNamed(directory, name);
     }
 
     // Expansion \\
@@ -1049,7 +1394,12 @@ public class InfoManager extends ManagerPackage {
         ArpgObjectStruct entryArpg = getSelectedEntryArpg();
 
         if (entryArpg != null)
-            infoRowBranch.buildRows(entryArpg, activeSchema.getRootField(), rows);
+            infoRowBranch.buildRows(
+                    entryArpg,
+                    activeSchema.getRootField(),
+                    collectSelectedIssuePaths(InfoIssueSeverity.ERROR),
+                    collectSelectedIssuePaths(InfoIssueSeverity.IGNORED),
+                    rows);
     }
 
     // Status \\
@@ -1061,7 +1411,22 @@ public class InfoManager extends ManagerPackage {
     private void setStatusMessage(String statusMessage) {
 
         this.statusMessage = statusMessage;
+        this.statusRefused = false;
         notifyChanged();
+    }
+
+    // Keeps why an action was refused, for the panel and for the tool that asked, and reports it was not done
+    private boolean refuse(String reason) {
+
+        this.refusal = reason;
+        setStatusMessage(reason);
+        this.statusRefused = true;
+        return false;
+    }
+
+    // Why the last save, write or delete asked for was refused
+    public String getRefusal() {
+        return refusal;
     }
 
     public String getTitleText() {
@@ -1105,11 +1470,29 @@ public class InfoManager extends ManagerPackage {
         if (selectedDocument == null)
             return EditorSetting.INFO_STATUS_NO_SELECTION;
 
+        ObjectArrayList<InfoIssueStruct> issues = getSelectedIssues();
+        int errors = countErrors(issues);
+
+        if (errors > 0)
+            return errors + (errors == 1
+                    ? EditorSetting.INFO_STATUS_PROBLEM
+                    : EditorSetting.INFO_STATUS_PROBLEMS) + describeIssue(issues.get(0));
+
+        if (!issues.isEmpty())
+            return issues.size() + (issues.size() == 1
+                    ? EditorSetting.INFO_STATUS_IGNORED
+                    : EditorSetting.INFO_STATUS_IGNORED_PLURAL) + describeIssue(issues.get(0));
+
         if (getSelectedEntryArpg() == null)
             return EditorSetting.INFO_STATUS_FILE_SELECTED;
 
         return activeSchema.getDirectory() + EditorSetting.INFO_FOLDER_SEPARATOR
                 + ArpgUtility.toFileName(selectedDocument.getDefinitionName());
+    }
+
+    // True when the status line reports a refusal or an error of the selection, so the panel shows it in red
+    public boolean hasStatusProblem() {
+        return statusMessage != null ? statusRefused : countErrors(getSelectedIssues()) > 0;
     }
 
     // Utility \\
@@ -1120,7 +1503,7 @@ public class InfoManager extends ManagerPackage {
 
     // Accessible \\
 
-    private InfoSchemaHandle getSchema(String schemaName) {
+    InfoSchemaHandle getSchema(String schemaName) {
 
         InfoSchemaHandle schema = schemaName2InfoSchemaHandle.get(schemaName);
 
@@ -1128,6 +1511,24 @@ public class InfoManager extends ManagerPackage {
             throwException("Unknown info schema '" + schemaName + "'.");
 
         return schema;
+    }
+
+    ObjectArrayList<InfoSchemaHandle> getReferrerSchemas(String schemaName) {
+        return schemaName2ReferrerSchemas.get(schemaName);
+    }
+
+    ObjectArrayList<InfoSchemaHandle> getResourceReferrerSchemas(String directory) {
+
+        ObjectArrayList<InfoSchemaHandle> referrers = directory2ReferrerSchemas.get(directory);
+        return referrers != null ? referrers : new ObjectArrayList<>();
+    }
+
+    int getUniqueRevision(InfoSchemaHandle schema) {
+        return schemaName2UniqueRevision.getInt(schema.getSchemaName());
+    }
+
+    int getNameRevision() {
+        return nameRevision;
     }
 
     public boolean hasEntry(String schemaName, String definitionName, String entryName) {

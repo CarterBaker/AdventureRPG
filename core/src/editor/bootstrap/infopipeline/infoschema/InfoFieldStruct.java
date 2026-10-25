@@ -14,7 +14,10 @@ public class InfoFieldStruct extends StructPackage {
      * a newly added primitive starts from; groups start from their structure.
      * A fixed length pins an array's size, so its elements can be edited but
      * never added or removed. A unique field must differ from every other
-     * entry of its schema, so a copy has to be given a new value for it.
+     * entry of its schema, so a copy has to be given a new value for it, and a
+     * distinct field from the same field of every other element of its array.
+     * A reference says what a string must name, a key reference what every
+     * key of a map must name, and its rule what else its value must pass.
      */
 
     // Identity
@@ -22,10 +25,16 @@ public class InfoFieldStruct extends StructPackage {
     private final InfoFieldType type;
     private final boolean required;
     private final boolean unique;
+    private final boolean distinct;
 
     // Value
     private final ArpgElementStruct defaultValue;
     private final ObjectArrayList<String> values;
+
+    // Rules
+    private final InfoReferenceStruct reference;
+    private final InfoReferenceStruct keyReference;
+    private final InfoRuleStruct rule;
 
     // Structure
     private final ObjectArrayList<InfoFieldStruct> fields;
@@ -39,8 +48,12 @@ public class InfoFieldStruct extends StructPackage {
             InfoFieldType type,
             boolean required,
             boolean unique,
+            boolean distinct,
             ArpgElementStruct defaultValue,
             ObjectArrayList<String> values,
+            InfoReferenceStruct reference,
+            InfoReferenceStruct keyReference,
+            InfoRuleStruct rule,
             ObjectArrayList<InfoFieldStruct> fields,
             InfoFieldStruct element,
             int length) {
@@ -50,10 +63,16 @@ public class InfoFieldStruct extends StructPackage {
         this.type = type;
         this.required = required;
         this.unique = unique;
+        this.distinct = distinct;
 
         // Value
         this.defaultValue = defaultValue;
         this.values = values;
+
+        // Rules
+        this.reference = reference;
+        this.keyReference = keyReference;
+        this.rule = rule;
 
         // Structure
         this.fields = fields;
@@ -76,6 +95,17 @@ public class InfoFieldStruct extends StructPackage {
         return length > 0;
     }
 
+    // Rules \
+
+    public boolean hasReference() {
+        return reference != null;
+    }
+
+    public boolean hasKeyReference() {
+        return keyReference != null;
+    }
+
+
     // Accessible \\
 
     public String getKey() {
@@ -94,12 +124,28 @@ public class InfoFieldStruct extends StructPackage {
         return unique;
     }
 
+    public boolean isDistinct() {
+        return distinct;
+    }
+
     public ArpgElementStruct getDefaultValue() {
         return defaultValue;
     }
 
     public ObjectArrayList<String> getValues() {
         return values;
+    }
+
+    public InfoReferenceStruct getReference() {
+        return reference;
+    }
+
+    public InfoReferenceStruct getKeyReference() {
+        return keyReference;
+    }
+
+    public InfoRuleStruct getRule() {
+        return rule;
     }
 
     public ObjectArrayList<InfoFieldStruct> getFields() {

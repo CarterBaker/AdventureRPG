@@ -54,4 +54,9 @@ public class InfoTabInstance extends InstancePackage implements HierarchyTabProv
     public void selectNode(String nodeKey) {
         infoManager.selectNode(schema, nodeKey);
     }
+
+    @Override
+    public boolean hasProblem() {
+        return infoManager.hasProblem(schema);
+    }
 }

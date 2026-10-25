@@ -10,8 +10,12 @@ public class InfoSchemaData extends DataPackage {
      * appears under, the asset directory its files live in, and the fields an
      * entry allows. With an entries key every file holds many named entries in
      * that array, and new entries land in the default file when none is
-     * chosen; without one every file is a single entry. Unique keys name the
-     * top-level fields no two entries may share.
+     * chosen; without one every file is a single entry. Entries of an array
+     * layout are referenced by their file and name, or by their name alone
+     * when the game registers them so, and required names are the entries the
+     * game cannot start without. Unique keys name the top-level fields
+     * no two entries may share, and the schemas and resource directories its
+     * fields reference are what its entries depend on.
      */
 
     // Identity
@@ -24,10 +28,16 @@ public class InfoSchemaData extends DataPackage {
     private final String entriesKey;
     private final String nameField;
     private final String defaultFile;
+    private final boolean referencedByName;
+    private final ObjectArrayList<String> requiredNames;
 
     // Fields
     private final InfoFieldStruct rootField;
     private final ObjectArrayList<String> uniqueKeys;
+
+    // Dependencies
+    private final ObjectArrayList<String> referencedSchemaNames;
+    private final ObjectArrayList<String> referencedDirectories;
 
     // Constructor \\
 
@@ -39,8 +49,12 @@ public class InfoSchemaData extends DataPackage {
             String entriesKey,
             String nameField,
             String defaultFile,
+            boolean referencedByName,
+            ObjectArrayList<String> requiredNames,
             InfoFieldStruct rootField,
-            ObjectArrayList<String> uniqueKeys) {
+            ObjectArrayList<String> uniqueKeys,
+            ObjectArrayList<String> referencedSchemaNames,
+            ObjectArrayList<String> referencedDirectories) {
 
         // Identity
         this.schemaName = schemaName;
@@ -52,10 +66,16 @@ public class InfoSchemaData extends DataPackage {
         this.entriesKey = entriesKey;
         this.nameField = nameField;
         this.defaultFile = defaultFile;
+        this.referencedByName = referencedByName;
+        this.requiredNames = requiredNames;
 
         // Fields
         this.rootField = rootField;
         this.uniqueKeys = uniqueKeys;
+
+        // Dependencies
+        this.referencedSchemaNames = referencedSchemaNames;
+        this.referencedDirectories = referencedDirectories;
     }
 
     // Accessible \\
@@ -88,12 +108,28 @@ public class InfoSchemaData extends DataPackage {
         return defaultFile;
     }
 
+    public boolean isReferencedByName() {
+        return referencedByName;
+    }
+
+    public ObjectArrayList<String> getRequiredNames() {
+        return requiredNames;
+    }
+
     public InfoFieldStruct getRootField() {
         return rootField;
     }
 
     public ObjectArrayList<String> getUniqueKeys() {
         return uniqueKeys;
+    }
+
+    public ObjectArrayList<String> getReferencedSchemaNames() {
+        return referencedSchemaNames;
+    }
+
+    public ObjectArrayList<String> getReferencedDirectories() {
+        return referencedDirectories;
     }
 
     public boolean isArrayLayout() {

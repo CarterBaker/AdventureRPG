@@ -5,6 +5,8 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.DimensionVector2Struct;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.menupipeline.util.ThemeColor;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -23,6 +25,8 @@ public class InfoPanelSystem extends SystemPackage {
      * the title and status lines and injects one row per value, group, and
      * missing optional field, indented by depth, with every button carrying
      * its row's path and the add and remove buttons kept only where allowed.
+     * A row holding an error, and a status line reporting one, are drawn in
+     * the danger color; a row the game ignores is drawn muted.
      */
 
     // Internal
@@ -33,6 +37,10 @@ public class InfoPanelSystem extends SystemPackage {
     // Menus
     private MenuInstance panelMenu;
 
+    // Colors
+    private MenuColorStruct problemColor;
+    private MenuColorStruct ignoredColor;
+
     // Rows
     private ObjectArrayList<InfoRowStruct> rows;
     private ObjectArrayList<ElementInstance> rowElements;
@@ -42,6 +50,10 @@ public class InfoPanelSystem extends SystemPackage {
 
     @Override
     protected void create() {
+
+        // Colors
+        this.problemColor = new MenuColorStruct(ThemeColor.DANGER, EngineSetting.COLOR_CHANNEL_MAX);
+        this.ignoredColor = new MenuColorStruct(ThemeColor.TEXT_MUTED, EngineSetting.COLOR_CHANNEL_MAX);
 
         // Rows
         this.rows = new ObjectArrayList<>();
@@ -77,6 +89,7 @@ public class InfoPanelSystem extends SystemPackage {
 
         setEntryText(InfoPanelSetting.ENTRY_TITLE, infoManager.getTitleText());
         setEntryText(InfoPanelSetting.ENTRY_STATUS, infoManager.getStatusText());
+        setEntryColor(InfoPanelSetting.ENTRY_STATUS, infoManager.hasStatusProblem() ? problemColor : null);
         refreshRows();
     }
 
@@ -116,6 +129,7 @@ public class InfoPanelSystem extends SystemPackage {
         bindChild(element, InfoPanelSetting.ELEMENT_VALUE_BUTTON, row.getPath(), true);
         bindChild(element, InfoPanelSetting.ELEMENT_REMOVE_BUTTON, row.getPath(), row.isRemovable());
         setChildText(element, InfoPanelSetting.ELEMENT_VALUE_LABEL, row.getValueText());
+        markIssue(element, InfoPanelSetting.ELEMENT_VALUE_LABEL, row);
     }
 
     private void fillGroupRow(ElementInstance element, InfoRowStruct row) {
@@ -151,6 +165,7 @@ public class InfoPanelSystem extends SystemPackage {
 
         keyLabel.setPositionOverride(toOffset(toIndent(row) + InfoPanelSetting.TOGGLE_WIDTH_PIXELS));
         keyLabel.setFontText(row.getLabel());
+        markIssue(element, InfoPanelSetting.ELEMENT_KEY_LABEL, row);
     }
 
     // Utility \\
@@ -176,12 +191,33 @@ public class InfoPanelSystem extends SystemPackage {
             child.setFontText(text);
     }
 
+    private void markIssue(ElementInstance element, String childId, InfoRowStruct row) {
+
+        ElementInstance child = element.findChildById(childId);
+
+        if (child == null)
+            return;
+
+        if (row.hasProblem())
+            child.setColorOverride(problemColor);
+        else if (row.isIgnored())
+            child.setColorOverride(ignoredColor);
+    }
+
     private void setEntryText(int entryPoint, String text) {
 
         ElementInstance label = panelMenu.getEntryPoint(entryPoint);
 
         if (label != null)
             label.setFontText(text);
+    }
+
+    private void setEntryColor(int entryPoint, MenuColorStruct color) {
+
+        ElementInstance label = panelMenu.getEntryPoint(entryPoint);
+
+        if (label != null)
+            label.setColorOverride(color);
     }
 
     private float toIndent(InfoRowStruct row) {

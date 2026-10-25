@@ -15,7 +15,8 @@ class InfoHierarchyBranch extends BranchPackage {
      * Builds one schema's hierarchy tab: every file under the folders it sits
      * in, marked while it holds unsaved edits, and in an array layout every
      * named entry beneath its file. Node keys name the folder, file, or entry
-     * so a click can be routed back to InfoManager.
+     * so a click can be routed back to InfoManager. A file holding an error is
+     * marked, with every folder above it, and so is each entry holding one.
      */
 
     // Internal
@@ -49,6 +50,26 @@ class InfoHierarchyBranch extends BranchPackage {
 
             if (schema.isArrayLayout())
                 addEntryNodes(fileNode, document);
+
+            if (infoManager.hasErrors(document))
+                markProblem(fileNode, document.getFolderName(), folderName2FolderNode);
+        }
+    }
+
+    // A file node and every folder above it marked as holding a problem
+    private void markProblem(
+            HierarchyNodeStruct fileNode,
+            String folderName,
+            Object2ObjectOpenHashMap<String, HierarchyNodeStruct> folderName2FolderNode) {
+
+        fileNode.markProblem();
+
+        while (!folderName.isEmpty()) {
+
+            folderName2FolderNode.get(folderName).markProblem();
+
+            int separator = folderName.lastIndexOf(EditorSetting.INFO_FOLDER_SEPARATOR);
+            folderName = separator != EngineSetting.INDEX_NOT_FOUND ? folderName.substring(0, separator) : "";
         }
     }
 
@@ -103,11 +124,18 @@ class InfoHierarchyBranch extends BranchPackage {
 
         ObjectArrayList<String> entryNames = document.getEntryNames();
 
-        for (int i = 0; i < entryNames.size(); i++)
-            fileNode.addChild(new HierarchyNodeStruct(
+        for (int i = 0; i < entryNames.size(); i++) {
+
+            HierarchyNodeStruct entryNode = new HierarchyNodeStruct(
                     EditorSetting.HIERARCHY_ENTRY_KEY_PREFIX + document.getDefinitionName()
                             + EditorSetting.HIERARCHY_KEY_SEPARATOR + entryNames.get(i),
                     entryNames.get(i),
-                    infoManager.isEntrySelected(document, entryNames.get(i))));
+                    infoManager.isEntrySelected(document, entryNames.get(i)));
+
+            if (infoManager.hasEntryErrors(document, entryNames.get(i)))
+                entryNode.markProblem();
+
+            fileNode.addChild(entryNode);
+        }
     }
 }

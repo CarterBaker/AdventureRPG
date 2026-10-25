@@ -7,7 +7,9 @@ import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
+import application.bootstrap.worldpipeline.util.WorldPlacementArpgUtility;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.worldeditorpipeline.worldplacement.WorldPlacementEntryStruct;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -25,10 +27,12 @@ class WorldPlacementBranch extends BranchPackage {
      * to WorldManager at once and restreams the map and the preview terrain
      * it can reach, since a settlement's roads run out to its neighbours.
      * Placements are saved into and reloaded from the world's companion file
-     * alongside the world image.
+     * alongside the world image, through the world's content in InfoManager,
+     * so they are checked as every other save is and the Info Panel shows them.
      */
 
     // Internal
+    private InfoManager infoManager;
     private WorldManager worldManager;
     private SettlementManager settlementManager;
     private StructureManager structureManager;
@@ -48,6 +52,7 @@ class WorldPlacementBranch extends BranchPackage {
 
     @Override
     protected void get() {
+        this.infoManager = get(InfoManager.class);
         this.worldManager = get(WorldManager.class);
         this.settlementManager = get(SettlementManager.class);
         this.structureManager = get(StructureManager.class);
@@ -157,12 +162,28 @@ class WorldPlacementBranch extends BranchPackage {
 
     // Disk \\
 
+    // The placements written into the world's content, every other field of it kept, and saved with it
     boolean save(WorldHandle worldHandle) {
-        return worldManager.savePlacements(worldHandle);
+
+        WorldPlacementStruct[] placements = worldManager.getPlacements(worldHandle);
+
+        infoManager.editEntry(
+                EditorSetting.INFO_SCHEMA_WORLDS,
+                worldHandle.getWorldName(),
+                worldHandle.getWorldName(),
+                worldArpg -> WorldPlacementArpgUtility.writePlacements(worldArpg, placements));
+
+        return infoManager.saveDocument(EditorSetting.INFO_SCHEMA_WORLDS, worldHandle.getWorldName());
+    }
+
+    String getSaveRefusal() {
+        return infoManager.getRefusal();
     }
 
     // The placements read back from disk, every map tile and preview chunk of the world regenerated
     boolean reload(WorldHandle worldHandle, int imageWidth, int imageHeight) {
+
+        infoManager.revertDocument(EditorSetting.INFO_SCHEMA_WORLDS, worldHandle.getWorldName());
 
         if (!worldManager.reloadPlacements(worldHandle))
             return false;

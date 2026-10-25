@@ -9,7 +9,8 @@ public class HierarchyNodeStruct extends StructPackage {
      * One entry in a hierarchy tree. The node key is the provider's identity for
      * the entry, handed back on click and used to remember expansion, so it must
      * stay stable across rebuilds. A node may start expanded; panels only
-     * remember the nodes a user has toggled away from that default.
+     * remember the nodes a user has toggled away from that default. A node a
+     * provider marks as holding a problem is drawn in the danger color.
      */
 
     // Identity
@@ -19,6 +20,7 @@ public class HierarchyNodeStruct extends StructPackage {
     // State
     private final boolean selected;
     private final boolean expandedByDefault;
+    private boolean problem;
 
     // Tree
     private final ObjectArrayList<HierarchyNodeStruct> children;
@@ -49,6 +51,12 @@ public class HierarchyNodeStruct extends StructPackage {
         children.add(child);
     }
 
+    // State \
+
+    public void markProblem() {
+        this.problem = true;
+    }
+
     // Accessible \\
 
     public String getNodeKey() {
@@ -65,6 +73,10 @@ public class HierarchyNodeStruct extends StructPackage {
 
     public boolean isExpandedByDefault() {
         return expandedByDefault;
+    }
+
+    public boolean hasProblem() {
+        return problem;
     }
 
     public ObjectArrayList<HierarchyNodeStruct> getChildren() {

@@ -267,6 +267,17 @@ Each editor schema in `assets/schemas/<Type>.arpg` is the authoritative field li
 field's `key`, `type` (`string`, `int`, `float`, `boolean`, `enum`, `object`, `array`, `map`, `raw`), `required`,
 `default`, enum `values`, and fixed `length`. The type's Builder is the final authority on how fields are read.
 
+Schemas also carry every rule the Builder enforces, so the editor refuses to save content the game would refuse to
+load (`InfoValidationBranch` checks, `InfoIntegrityBranch` gates every save and delete). A string names other content
+with `reference` (a schema; or `{"by": sibling, "schemas": {value: schema}}`), `resource` (`{"directory", "naming":
+"stem"|"file"|"tile"}`) or `local` (a path in the same entry: `a[]` any element, `a[.]` the referring value's own
+element, `m{}` a map's keys), with `allow` listing accepted values such as `""` for none; a map names content with
+`key_reference`. Numbers take `min`/`max` (inclusive) or `above`/`below` (exclusive) and `at_least_field`; lists take
+`min_count`/`max_count`; fields take `required_unless`, `required_when` (`{"key", "values"}`), `conflicts_with`,
+`distinct` (inside array elements) and `unique` (top level). A schema may set `reference_form: "name"` (entries
+registered by bare name) and `required_names` (entries the game cannot start without). When a Builder gains a rule,
+add it to the schema in the same change. Keys a schema does not declare are shown as ignored and never block a save.
+
 | Schema | Directory under `assets/` | Layout |
 |---|---|---|
 | AnimationTrees, Animations, Architectures, Behaviors, Biomes, Calendars, Clouds, Entities, Features, Furnishings, Materials, Passes, Rigs, Roads, Seasons, Settlements, Shaders, Sprites, StructureLists, Structures, TextureAliases, UBOs, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |

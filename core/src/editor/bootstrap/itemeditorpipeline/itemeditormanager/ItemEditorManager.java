@@ -24,10 +24,13 @@ public class ItemEditorManager extends ManagerPackage {
      * tool, and brush texture, and the status line. Items themselves are ARPG
      * entries owned by InfoManager: selecting one there opens the mesh it
      * names here, starting a fresh model when that mesh has no file yet, and
-     * new and deleted items go through it. Meshes stay open with their edits
-     * until saved, deleted, or the editor closes. New items join the active
-     * item's definition file, or the editor's own when nothing is open. Disk
-     * access and model edits each live in their own branch.
+     * new and deleted items go through it, as do their saves, so an item the
+     * game could not load is refused there and an item still in use cannot be
+     * deleted. A mesh is saved before the definition naming it, and its file
+     * is only removed once no content names it. Meshes stay open with their
+     * edits until saved, deleted, or the editor closes. New items join the
+     * active item's definition file, or the editor's own when nothing is open.
+     * Disk access and model edits each live in their own branch.
      */
 
     // Internal
@@ -144,11 +147,15 @@ public class ItemEditorManager extends ManagerPackage {
         ItemEntryStruct entry = activeDocument.getEntry();
 
         itemLibraryBranch.save(activeDocument);
-
-        if (hasItemDefinition(entry))
-            infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName());
-
+        infoManager.notifyResourcesChanged();
         activeDocument.markClean();
+
+        if (hasItemDefinition(entry)
+                && !infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName())) {
+            setStatusMessage(infoManager.getRefusal());
+            return;
+        }
+
         setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_SAVED + activeDocument.getItemName());
     }
 
@@ -183,18 +190,29 @@ public class ItemEditorManager extends ManagerPackage {
             return;
 
         ItemEntryStruct entry = activeDocument.getEntry();
+        boolean definitionSaved = true;
 
         if (hasItemDefinition(entry)) {
-            infoManager.deleteEntry(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName(), entry.getLocalName());
-            infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName());
+
+            if (!infoManager.deleteEntry(
+                    EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName(), entry.getLocalName())) {
+                setStatusMessage(infoManager.getRefusal());
+                return;
+            }
+
+            definitionSaved = infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName());
         }
 
-        if (!isMeshReferenced(entry.getMeshName()))
+        if (definitionSaved && !isMeshReferenced(entry.getMeshName())) {
             itemLibraryBranch.deleteMesh(entry.getMeshName());
+            infoManager.notifyResourcesChanged();
+        }
 
         meshName2ItemDocument.remove(entry.getMeshName());
         activate(null);
-        setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_DELETED + entry.getItemName());
+        setStatusMessage(definitionSaved
+                ? EditorSetting.ITEM_EDITOR_MESSAGE_DELETED + entry.getItemName()
+                : infoManager.getRefusal());
     }
 
     public boolean isItemNameAvailable(String localName) {
@@ -256,15 +274,9 @@ public class ItemEditorManager extends ManagerPackage {
         return infoManager.hasEntry(EditorSetting.INFO_SCHEMA_ITEMS, entry.getDefinitionName(), entry.getLocalName());
     }
 
+    // True while any content, an item or anything else, live or on disk, names the mesh
     private boolean isMeshReferenced(String meshName) {
-
-        ObjectArrayList<InfoEntryStruct> itemEntries = infoManager.getEntries(EditorSetting.INFO_SCHEMA_ITEMS);
-
-        for (int i = 0; i < itemEntries.size(); i++)
-            if (toMeshName(itemEntries.get(i)).equals(meshName))
-                return true;
-
-        return false;
+        return infoManager.isResourceNamed(EngineSetting.MESH_PATH, meshName);
     }
 
     private String toMeshName(InfoEntryStruct itemEntry) {

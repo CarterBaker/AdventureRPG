@@ -9,7 +9,9 @@ public class InfoRowStruct extends StructPackage {
      * One row of the info panel, flattened from the selected entry. The path
      * addresses the value inside the entry and is handed back on every click.
      * Groups report whether they are expanded and whether elements can be
-     * added to them; any row outside a required field can be removed.
+     * added to them; any row outside a required field can be removed. A row
+     * holding an error, or a group holding one beneath it, is marked so the
+     * panel shows it in red, and a row the game ignores so it is shown muted.
      */
 
     // Identity
@@ -26,6 +28,10 @@ public class InfoRowStruct extends StructPackage {
     private final boolean addable;
     private final boolean removable;
 
+    // Validation
+    private final boolean problem;
+    private final boolean ignored;
+
     // Constructor \\
 
     public InfoRowStruct(
@@ -36,7 +42,9 @@ public class InfoRowStruct extends StructPackage {
             String valueText,
             boolean expanded,
             boolean addable,
-            boolean removable) {
+            boolean removable,
+            boolean problem,
+            boolean ignored) {
 
         // Identity
         this.path = path;
@@ -51,6 +59,10 @@ public class InfoRowStruct extends StructPackage {
         this.expanded = expanded;
         this.addable = addable;
         this.removable = removable;
+
+        // Validation
+        this.problem = problem;
+        this.ignored = ignored;
     }
 
     // Accessible \\
@@ -85,5 +97,13 @@ public class InfoRowStruct extends StructPackage {
 
     public boolean isRemovable() {
         return removable;
+    }
+
+    public boolean hasProblem() {
+        return problem;
+    }
+
+    public boolean isIgnored() {
+        return ignored;
     }
 }

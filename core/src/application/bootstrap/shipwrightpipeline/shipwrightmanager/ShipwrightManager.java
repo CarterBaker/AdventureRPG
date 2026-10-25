@@ -11,6 +11,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -32,8 +33,15 @@ public class ShipwrightManager extends ManagerPackage {
      * limit — at boot as at the table — and fitted with a helm to be saved,
      * and saved to be launched; a ship that would capsize may still be saved,
      * the table having said so. Opening or starting another ship over unsaved
-     * work asks twice.
+     * work asks twice. A table writing to the assets hands each ship to the
+     * asset writer set on it, so the editor checks and records the write as it
+     * does every content file; with none set the file is written directly.
      */
+
+    @FunctionalInterface
+    public interface ShipwrightAssetWriter {
+        String write(String shipName, ArpgObjectStruct shipArpg);
+    }
 
     // Internal
     private VehicleManager vehicleManager;
@@ -88,6 +96,11 @@ public class ShipwrightManager extends ManagerPackage {
         furnishingManager.collectFurnishingNames(EngineSetting.SHIPWRIGHT_FURNISHING_FOLDER, furnishingNames);
         internalLoader.requestAll();
         registerSavedShips();
+    }
+
+    // Writes every ship a table keeps in the assets through the writer given, in place of writing its file directly
+    public void setAssetWriter(ShipwrightAssetWriter assetWriter) {
+        shipwrightLibraryBranch.setAssetWriter(assetWriter);
     }
 
     // Registration \\
@@ -276,8 +289,10 @@ public class ShipwrightManager extends ManagerPackage {
 
         blueprint.setShipName(shipName);
 
-        if (!shipwrightLibraryBranch.save(session.getStorage(), blueprint)) {
-            session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_SAVE_FAILED);
+        String writeRefusal = shipwrightLibraryBranch.save(session.getStorage(), blueprint);
+
+        if (!writeRefusal.isEmpty()) {
+            session.setStatus(writeRefusal);
             return;
         }
 

@@ -229,8 +229,10 @@ public class AnimationTreeEditorManager extends ManagerPackage {
         if (activeDocument == null)
             return;
 
-        infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ANIMATION_TREES, activeDocument.getTreeName());
-        setStatusMessage(EditorSetting.ANIMATION_TREE_EDITOR_MESSAGE_SAVED + activeDocument.getTreeName());
+        setStatusMessage(
+                infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ANIMATION_TREES, activeDocument.getTreeName())
+                        ? EditorSetting.ANIMATION_TREE_EDITOR_MESSAGE_SAVED + activeDocument.getTreeName()
+                        : infoManager.getRefusal());
     }
 
     public void revertActiveTree() {
@@ -249,8 +251,9 @@ public class AnimationTreeEditorManager extends ManagerPackage {
 
         String treeName = activeDocument.getTreeName();
 
-        infoManager.deleteDocument(EditorSetting.INFO_SCHEMA_ANIMATION_TREES, treeName);
-        setStatusMessage(EditorSetting.ANIMATION_TREE_EDITOR_MESSAGE_DELETED + treeName);
+        setStatusMessage(infoManager.deleteDocument(EditorSetting.INFO_SCHEMA_ANIMATION_TREES, treeName)
+                ? EditorSetting.ANIMATION_TREE_EDITOR_MESSAGE_DELETED + treeName
+                : infoManager.getRefusal());
     }
 
     public boolean isTreeNameAvailable(String localName) {

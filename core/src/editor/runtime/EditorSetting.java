@@ -870,7 +870,6 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_MESSAGE_PLACED = "Placed ";
     public static final String WORLD_EDITOR_MESSAGE_CLEARED = "Cleared ";
     public static final String WORLD_EDITOR_MESSAGE_NOTHING_TO_CLEAR = "No placement near the pointer";
-    public static final String WORLD_EDITOR_MESSAGE_PLACEMENTS_SAVE_FAILED = "Could not save placements of ";
     public static final String WORLD_EDITOR_MESSAGE_PLACEMENTS_RELOAD_FAILED = "Could not reload placements of ";
     public static final String WORLD_EDITOR_PLAYERS_ON = "Players On";
     public static final String WORLD_EDITOR_PLAYERS_OFF = "Players Off";
@@ -909,6 +908,8 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_ENTITIES = "Entities";
     public static final String INFO_SCHEMA_ANIMATIONS = "Animations";
     public static final String INFO_SCHEMA_ANIMATION_TREES = "AnimationTrees";
+    public static final String INFO_SCHEMA_WORLDS = "Worlds";
+    public static final String INFO_SCHEMA_SHIPS = "Ships";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";
@@ -946,6 +947,75 @@ public class EditorSetting {
     public static final String INFO_MESSAGE_COPY_ABORTED = "Copy aborted: the source or a unique value changed";
     public static final String INFO_MESSAGE_REQUIRED = "Required fields cannot be removed";
     public static final String INFO_MESSAGE_FIXED_LENGTH = "This list has a fixed length";
+    public static final String INFO_MESSAGE_SAVED_OF = " of ";
+    public static final String INFO_MESSAGE_SAVED_SUFFIX = " changed files  |  ";
+    public static final String INFO_STATUS_PROBLEM = " problem  |  ";
+    public static final String INFO_STATUS_PROBLEMS = " problems  |  ";
+    public static final String INFO_STATUS_IGNORED = " key the game ignores  |  ";
+    public static final String INFO_STATUS_IGNORED_PLURAL = " keys the game ignores  |  ";
+    public static final String INFO_ISSUE_SEPARATOR = ": ";
+    public static final String INFO_ISSUE_PATH_SEPARATOR = ".";
+
+    // Info Rules
+    public static final String INFO_REFERENCE_FORM_PATH = "path";
+    public static final String INFO_REFERENCE_FORM_NAME = "name";
+    public static final String INFO_REFERENCE_SEPARATOR = "/";
+    public static final String INFO_LOCAL_SEPARATOR = ".";
+    public static final String INFO_LOCAL_ANY_ELEMENT = "[]";
+    public static final String INFO_LOCAL_SAME_ELEMENT = "[.]";
+    public static final String INFO_LOCAL_MAP_KEYS = "{}";
+    public static final String INFO_TILE_ALIAS_SEPARATOR = "_";
+    public static final String INFO_VALUE_KEY_STRING = "s:";
+    public static final String INFO_VALUE_KEY_OTHER = "v:";
+
+    // Info Problems
+    public static final String INFO_PROBLEM_MISSING = "Required: the game cannot load this entry without it";
+    public static final String INFO_PROBLEM_UNKNOWN_FIELD = "Ignored by the game; kept as it is";
+    public static final String INFO_PROBLEM_UNKNOWN_KEY = "Ignored by the game; kept as it is: ";
+    public static final String INFO_PROBLEM_NO_ENTRIES = "Holds no list of entries under ";
+    public static final String INFO_PROBLEM_ENTRY_NOT_OBJECT = "Holds a value that is not an entry at index ";
+    public static final String INFO_PROBLEM_ENTRY_UNNAMED = "Holds an entry without a name at index ";
+    public static final String INFO_PROBLEM_NAME_IN_FILE = "Another entry in this file has this name";
+    public static final String INFO_PROBLEM_NAME_IN_SCHEMA = "Another entry has this name in ";
+    public static final String INFO_PROBLEM_UNIQUE = "Another entry already uses this value";
+    public static final String INFO_PROBLEM_TYPE = "Must be of type ";
+    public static final String INFO_PROBLEM_WHOLE_NUMBER = "Must be a whole number";
+    public static final String INFO_PROBLEM_ENUM = "Must be one of: ";
+    public static final String INFO_PROBLEM_LIST_SEPARATOR = ", ";
+    public static final String INFO_PROBLEM_LENGTH_PREFIX = "Must hold exactly ";
+    public static final String INFO_PROBLEM_LENGTH_SUFFIX = " values";
+    public static final String INFO_PROBLEM_DISTINCT = "Repeats a value an earlier element already holds";
+    public static final String INFO_PROBLEM_MUST_BE = "Must be ";
+    public static final String INFO_PROBLEM_BOUND_FROM = "from ";
+    public static final String INFO_PROBLEM_BOUND_TO = " to ";
+    public static final String INFO_PROBLEM_BOUND_AT_LEAST = "at least ";
+    public static final String INFO_PROBLEM_BOUND_AT_MOST = "at most ";
+    public static final String INFO_PROBLEM_BOUND_ABOVE = "above ";
+    public static final String INFO_PROBLEM_BOUND_BELOW = "below ";
+    public static final String INFO_PROBLEM_BOUND_AND = " and ";
+    public static final String INFO_PROBLEM_BELOW_FIELD = "Must not be below ";
+    public static final String INFO_PROBLEM_CONFLICT = "Cannot be set together with ";
+    public static final String INFO_PROBLEM_MIN_COUNT_PREFIX = "Must hold at least ";
+    public static final String INFO_PROBLEM_MAX_COUNT_PREFIX = "Must hold at most ";
+    public static final String INFO_PROBLEM_REQUIRED_NAME = "The game cannot start without an entry named ";
+    public static final String INFO_PROBLEM_NAMES_NOTHING = "Names nothing: choose one of ";
+    public static final String INFO_PROBLEM_QUOTE = "'";
+    public static final String INFO_PROBLEM_NOT_IN = "' is not in ";
+    public static final String INFO_PROBLEM_NO_FILE = "' is not a file in ";
+    public static final String INFO_PROBLEM_NOT_LOCAL = "' is not one of this entry's ";
+
+    // Info Refusals
+    public static final String INFO_REFUSAL_NONE = "";
+    public static final String INFO_REFUSAL_PREFIX = "Not saved: ";
+    public static final String INFO_REFUSAL_HAS = " has ";
+    public static final String INFO_REFUSAL_NAMES = " names '";
+    public static final String INFO_REFUSAL_IN = "' in ";
+    public static final String INFO_REFUSAL_NOT_SAVED = ", which is not saved yet; save it first or use Save All";
+    public static final String INFO_REFUSAL_TAKES = " would take away '";
+    public static final String INFO_REFUSAL_STILL_NAMED = "', which is still named by ";
+    public static final String INFO_REFUSAL_AT = " at ";
+    public static final String INFO_REFUSAL_DELETE_PREFIX = "Not deleted: '";
+    public static final String INFO_REFUSAL_REQUIRED = "', which the game cannot start without";
 
     // Item Status
     public static final String ITEM_EDITOR_DIRTY_MARKER = "*";

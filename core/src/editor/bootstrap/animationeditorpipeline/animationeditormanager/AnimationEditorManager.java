@@ -210,8 +210,9 @@ public class AnimationEditorManager extends ManagerPackage {
         if (activeDocument == null)
             return;
 
-        infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ANIMATIONS, activeDocument.getClipName());
-        setStatusMessage(EditorSetting.ANIMATION_EDITOR_MESSAGE_SAVED + activeDocument.getClipName());
+        setStatusMessage(infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ANIMATIONS, activeDocument.getClipName())
+                ? EditorSetting.ANIMATION_EDITOR_MESSAGE_SAVED + activeDocument.getClipName()
+                : infoManager.getRefusal());
     }
 
     public void revertActiveClip() {
@@ -230,8 +231,9 @@ public class AnimationEditorManager extends ManagerPackage {
 
         String clipName = activeDocument.getClipName();
 
-        infoManager.deleteDocument(EditorSetting.INFO_SCHEMA_ANIMATIONS, clipName);
-        setStatusMessage(EditorSetting.ANIMATION_EDITOR_MESSAGE_DELETED + clipName);
+        setStatusMessage(infoManager.deleteDocument(EditorSetting.INFO_SCHEMA_ANIMATIONS, clipName)
+                ? EditorSetting.ANIMATION_EDITOR_MESSAGE_DELETED + clipName
+                : infoManager.getRefusal());
     }
 
     public boolean isClipNameAvailable(String localName) {

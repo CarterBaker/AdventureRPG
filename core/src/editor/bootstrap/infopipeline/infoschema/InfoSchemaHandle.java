@@ -55,12 +55,32 @@ public class InfoSchemaHandle extends HandlePackage {
         return infoSchemaData.getDefaultFile();
     }
 
+    public boolean isReferencedByName() {
+        return infoSchemaData.isReferencedByName();
+    }
+
+    public ObjectArrayList<String> getRequiredNames() {
+        return infoSchemaData.getRequiredNames();
+    }
+
     public InfoFieldStruct getRootField() {
         return infoSchemaData.getRootField();
     }
 
     public ObjectArrayList<String> getUniqueKeys() {
         return infoSchemaData.getUniqueKeys();
+    }
+
+    public boolean hasUniqueKeys() {
+        return !infoSchemaData.getUniqueKeys().isEmpty();
+    }
+
+    public ObjectArrayList<String> getReferencedSchemaNames() {
+        return infoSchemaData.getReferencedSchemaNames();
+    }
+
+    public ObjectArrayList<String> getReferencedDirectories() {
+        return infoSchemaData.getReferencedDirectories();
     }
 
     public boolean isArrayLayout() {
