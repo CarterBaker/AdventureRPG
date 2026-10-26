@@ -42,11 +42,13 @@ public class TabManager extends ManagerPackage {
     /*
      * Coordinates tabs across every editor OS window, main and secondary alike.
      * Each structural operation has one owner: openTab(), closeTab(),
-     * dockTab(), openSecondaryOsWindow() and closeOsWindowIfEmpty(). Tab
-     * content runs isolated, so a crashing tab closes instead of taking the
-     * editor down. pushRects() and notifyLayoutChanged() are the single call
-     * sites for rect propagation and layout saving and no-op while a batch is
-     * open. Tab IDs are assigned in registration order and never reused.
+     * dockTab(), activateTab(), openSecondaryOsWindow() and
+     * closeOsWindowIfEmpty(). Each leaf shows one tab of its stack and the rest
+     * wait withdrawn behind it. Tab content runs isolated, so a crashing tab
+     * closes instead of taking the editor down. pushRects() and
+     * notifyLayoutChanged() are the single call sites for rect propagation and
+     * layout saving and no-op while a batch is open. Tab IDs are assigned in
+     * registration order and never reused.
      */
     // Palette
     private Object2IntOpenHashMap<String> tabName2TabID;
@@ -279,6 +281,19 @@ public class TabManager extends ManagerPackage {
         dockTab(handle, openSecondaryOsWindow(), null, null);
     }
 
+    public void activateTab(TabHandle handle) {
+        if (handle == null || !handle.isOpen())
+            throwException("Cannot show a tab that is not open.");
+        DockNodeStruct leaf = dockLayoutSystem.findLeaf(handle.getTabContext().getWindow().getGLWindow(), handle);
+        if (leaf == null)
+            throwException("Cannot show tab '" + handle.getTabTitle() + "' while it is out of every dock.");
+        dockLayoutSystem.activateTab(leaf, handle);
+        handle.getTabContext().bringToFront();
+        windowManager.setFocusedWindow(handle.getWindow());
+        pushRects();
+        notifyLayoutChanged();
+    }
+
     // OS Window Lifecycle \\
     public WindowInstance openSecondaryOsWindow() {
         WindowInstance osWindow = windowManager.openWindow(
@@ -352,12 +367,9 @@ public class TabManager extends ManagerPackage {
         int size = openTabs.size();
         for (int i = 0; i < size; i++) {
             TabHandle h = (TabHandle) elements[i];
-            WindowInstance osWindow = h.getTabContext().getWindow().getGLWindow();
-            float x = dockLayoutSystem.getTabX(osWindow, h);
-            float y = dockLayoutSystem.getTabY(osWindow, h);
-            float w = dockLayoutSystem.getTabW(osWindow, h);
-            float hh = dockLayoutSystem.getTabH(osWindow, h);
-            h.getTabContext().placeAt(x, y, w, hh);
+            DockNodeStruct leaf = dockLayoutSystem.findLeaf(h.getTabContext().getWindow().getGLWindow(), h);
+            if (leaf != null)
+                h.getTabContext().dockIn(leaf);
         }
     }
 

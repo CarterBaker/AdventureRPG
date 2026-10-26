@@ -1,25 +1,31 @@
 package editor.bootstrap.tabpipeline.tab;
 
-import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.menupipeline.util.ThemeColor;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
+import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.EditorSetting;
 import engine.root.ContextPackage;
+import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TabContext extends ContextPackage {
 
     /*
      * One editor tab: a chrome window with its menu, plus the content context
-     * living in its canvas. Placement, content sync, reparenting and z-ordering
-     * all go through here, and dispose() is the single teardown path however
-     * the tab closes.
+     * living in its canvas. Placement, content sync, reparenting, z-ordering
+     * and the tab strip all go through here. The tab a stack shows is placed
+     * on its leaf with a strip listing the whole stack, rebuilt only when the
+     * stack changes; every other tab in it is withdrawn with its content.
+     * dispose() is the single teardown path however the tab closes.
      */
 
     // Internal
@@ -41,7 +47,23 @@ public class TabContext extends ContextPackage {
     // without TabManager needing to know anything about teardown order.
     private TabHandle ownerHandle;
 
+    // Strip — the stack it lists, and this tab alone for while it is out of every stack
+    private ObjectArrayList<TabHandle> stripTabs;
+    private ObjectArrayList<TabHandle> loneStrip;
+    private MenuColorStruct activeStripColor;
+    private MenuColorStruct activeStripAccentColor;
+
     // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Strip
+        this.stripTabs = new ObjectArrayList<>();
+        this.loneStrip = new ObjectArrayList<>(1);
+        this.activeStripColor = new MenuColorStruct(ThemeColor.ACCENT, EditorSetting.TAB_STRIP_ACTIVE_ALPHA);
+        this.activeStripAccentColor = new MenuColorStruct(ThemeColor.ACCENT, EngineSetting.MENU_THEME_ALPHA_DEFAULT);
+    }
 
     @Override
     protected void get() {
@@ -87,7 +109,8 @@ public class TabContext extends ContextPackage {
 
     public void setOwnerHandle(TabHandle handle) {
         this.ownerHandle = handle;
-        showTitle(handle.getTabTitle());
+        loneStrip.add(handle);
+        showStrip(loneStrip);
     }
 
     public void bringToFront() {
@@ -97,6 +120,22 @@ public class TabContext extends ContextPackage {
 
         windowManager.bringToFront(getWindow());
         windowManager.bringToFront(contentContext.getWindow());
+    }
+
+    // The stack's shown tab fills its leaf; any other tab in it waits withdrawn behind that one
+    public void dockIn(DockNodeStruct leaf) {
+
+        if (leaf.getActiveTab() != ownerHandle) {
+            withdraw();
+            return;
+        }
+
+        placeAt(leaf.getX(), leaf.getY(), leaf.getW(), leaf.getH());
+        showStrip(leaf.getTabs());
+    }
+
+    public void undock() {
+        showStrip(loneStrip);
     }
 
     public void placeAt(float x, float y, float w, float h) {
@@ -141,12 +180,43 @@ public class TabContext extends ContextPackage {
 
     // Utility \\
 
-    private void showTitle(String title) {
+    private void withdraw() {
 
-        ElementInstance titleLabel = chromeMenu.getEntryPoint(EditorSetting.TAB_ENTRY_TITLE);
+        WindowInstance contentWindow = contentContext.getWindow();
 
-        if (titleLabel != null)
-            titleLabel.setFontText(title);
+        getWindow().withdraw();
+        contentWindow.withdraw();
+        inputManager.releaseWindow(contentWindow);
+    }
+
+    private void showStrip(ObjectArrayList<TabHandle> tabs) {
+
+        if (stripTabs.equals(tabs))
+            return;
+
+        stripTabs.clear();
+        stripTabs.addAll(tabs);
+        menuManager.ejectAll(chromeMenu, EditorSetting.TAB_ENTRY_STRIP);
+
+        for (int i = 0; i < tabs.size(); i++)
+            injectStripEntry(tabs.get(i));
+    }
+
+    private void injectStripEntry(TabHandle tab) {
+        menuManager.inject(
+                chromeMenu, EditorSetting.TAB_ENTRY_STRIP, EditorSetting.MENU_TAB_STRIP_ENTRY,
+                entry -> {
+                    entry.setOnDragArgOverride(tab.getTabTitle());
+                    entry.findChildById(EditorSetting.ELEMENT_TAB_STRIP_LABEL).setFontText(tab.getTabTitle());
+                    entry.findChildById(EditorSetting.ELEMENT_TAB_STRIP_CLOSE).setActionArgOverride(tab.getTabTitle());
+
+                    if (tab != ownerHandle)
+                        return;
+
+                    entry.setColorOverride(activeStripColor);
+                    entry.findChildById(EditorSetting.ELEMENT_TAB_STRIP_ACCENT)
+                            .setColorOverride(activeStripAccentColor);
+                });
     }
 
     // Accessible \\

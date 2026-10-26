@@ -3,13 +3,15 @@ package editor.bootstrap.tabpipeline.docknode;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.runtime.EditorSetting;
 import engine.root.StructPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class DockNodeStruct extends StructPackage {
 
     /*
-     * One node of a dock BSP tree. A leaf holds exactly one tab; a split holds
-     * two children and the divider ratio, clamped by DockLayoutSystem so
-     * neither side collapses. Bounds are recomputed top-down every frame.
+     * One node of a dock BSP tree. A leaf holds a stack of tabs in strip order
+     * and the one of them shown; a split holds two children and the divider
+     * ratio, clamped by DockLayoutSystem so neither side collapses. Bounds are
+     * recomputed top-down every frame.
      */
 
     // Bounds
@@ -26,7 +28,8 @@ public class DockNodeStruct extends StructPackage {
     private float ratio = EditorSetting.RATIO_DEFAULT;
 
     // Leaf
-    private TabHandle tab;
+    private final ObjectArrayList<TabHandle> tabs = new ObjectArrayList<>();
+    private TabHandle activeTab;
 
     // Bounds \\
 
@@ -106,11 +109,15 @@ public class DockNodeStruct extends StructPackage {
 
     // Leaf \\
 
-    public TabHandle getTab() {
-        return tab;
+    public ObjectArrayList<TabHandle> getTabs() {
+        return tabs;
     }
 
-    public void setTab(TabHandle tab) {
-        this.tab = tab;
+    public TabHandle getActiveTab() {
+        return activeTab;
+    }
+
+    public void setActiveTab(TabHandle activeTab) {
+        this.activeTab = activeTab;
     }
 }

@@ -20,11 +20,13 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class TabDragManager extends ManagerPackage {
 
     /*
-     * Owns the tab drag lifecycle. On latch the tab leaves the BSP and floats
-     * to the front; each frame it follows the cursor while the drop target and
-     * zone resolve from the hovered OS window, previewed by a zone ghost. Every
-     * drop routes through TabManager, docking into a leaf or opening a new
-     * window.
+     * Owns the tab press and drag lifecycle. A pressed tab let go before the
+     * cursor moves past the drag threshold is a click and is shown in its
+     * stack. Past the threshold the drag latches: the tab leaves the BSP and
+     * floats to the front, and each frame it follows the cursor while the drop
+     * target and zone resolve from the hovered OS window, previewed by a zone
+     * ghost. Every drop routes through TabManager, splitting off beside a
+     * leaf, stacking into it, or opening a new window.
      */
     // Internal
     private WindowManager windowManager;
@@ -33,6 +35,10 @@ public class TabDragManager extends ManagerPackage {
     private InputManager inputManager;
     private DockLayoutSystem dockLayoutSystem;
     private TabDragLayoutStruct tabDragLayoutStruct;
+    // Press
+    private TabHandle pressedHandle;
+    private float pressX;
+    private float pressY;
     // Drag
     private TabHandle draggedHandle;
     private DropTargetStruct lastDropTarget;
@@ -57,6 +63,11 @@ public class TabDragManager extends ManagerPackage {
     @Override
     protected void update() {
 
+        if (pressedHandle != null) {
+            updatePress();
+            return;
+        }
+
         if (draggedHandle == null)
             return;
 
@@ -80,29 +91,55 @@ public class TabDragManager extends ManagerPackage {
     }
 
     // Entry Point \\
-    public void onTabDragUpdate(WindowInstance chromeWindow) {
+    public void onTabPressed(TabHandle handle) {
 
-        if (draggedHandle != null)
+        if (handle == null || pressedHandle != null || draggedHandle != null)
             return;
 
-        if (inputManager.getRawInput(chromeWindow).isMouseReleased(Buttons.LEFT))
+        WindowInstance osWindow = handle.getTabContext().getWindow().getGLWindow();
+
+        if (!inputManager.getRawInput(osWindow).isMouseDown(Buttons.LEFT))
             return;
 
-        latchDrag(chromeWindow);
+        pressedHandle = handle;
+        pressX = inputManager.getGlobalMouseX(osWindow);
+        pressY = inputManager.getGlobalMouseY(osWindow);
+    }
+
+    // Press \\
+    private void updatePress() {
+
+        TabHandle handle = pressedHandle;
+
+        if (!handle.isOpen()) {
+            pressedHandle = null;
+            return;
+        }
+
+        WindowInstance osWindow = handle.getTabContext().getWindow().getGLWindow();
+
+        if (!inputManager.getRawInput(osWindow).isMouseDown(Buttons.LEFT)) {
+            pressedHandle = null;
+            tabManager.activateTab(handle);
+            return;
+        }
+
+        float dx = inputManager.getGlobalMouseX(osWindow) - pressX;
+        float dy = inputManager.getGlobalMouseY(osWindow) - pressY;
+        float threshold = EditorSetting.TAB_DRAG_THRESHOLD;
+
+        if (dx * dx + dy * dy < threshold * threshold)
+            return;
+
+        pressedHandle = null;
+        latchDrag(handle, osWindow);
     }
 
     // Drag Start \\
-    private void latchDrag(WindowInstance chromeWindow) {
-
-        TabHandle handle = tabManager.getTabHandleForWindow(chromeWindow);
-
-        if (handle == null)
-            return;
-
-        WindowInstance osWindow = chromeWindow.getGLWindow();
-
+    private void latchDrag(TabHandle handle, WindowInstance osWindow) {
         draggedHandle = handle;
         handle.getTabContext().bringToFront();
+        handle.getTabContext().undock();
         dockLayoutSystem.removeTab(osWindow, handle);
         tabManager.pushRects();
         updateDraggedTab(osWindow);
@@ -188,11 +225,7 @@ public class TabDragManager extends ManagerPackage {
             return DropZone.TOP;
         if (relY > 1f - edge)
             return DropZone.BOTTOM;
-        float minH = Math.min(relX, 1f - relX);
-        float minV = Math.min(relY, 1f - relY);
-        if (minH <= minV)
-            return relX < 1f - relX ? DropZone.LEFT : DropZone.RIGHT;
-        return relY < 1f - relY ? DropZone.TOP : DropZone.BOTTOM;
+        return DropZone.CENTER;
     }
 
     // Drop Execution \\
@@ -214,6 +247,7 @@ public class TabDragManager extends ManagerPackage {
 
     private void clearState() {
         closeZoneGhost();
+        pressedHandle = null;
         draggedHandle = null;
         lastDropTarget = null;
     }

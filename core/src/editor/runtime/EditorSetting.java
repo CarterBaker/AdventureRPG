@@ -1600,15 +1600,21 @@ public class EditorSetting {
 
     // Tabs
     public static final float DIVIDER_HIT_TOLERANCE = 6f;
+    public static final String ELEMENT_TAB_STRIP_ACCENT = "tab_strip_accent";
+    public static final String ELEMENT_TAB_STRIP_CLOSE = "tab_strip_close";
+    public static final String ELEMENT_TAB_STRIP_LABEL = "tab_strip_label";
     public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
     public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
+    public static final String MENU_TAB_STRIP_ENTRY = "editor/TabFrame/tab_strip_entry";
     public static final float RATIO_DEFAULT = 0.5f;
     public static final float RATIO_MAX = 0.9f;
     public static final float RATIO_MIN = 0.1f;
     public static final float TAB_DRAG_EDGE_FRACTION = 0.25f;
     public static final int TAB_DRAG_PREVIEW_H = 144;
     public static final int TAB_DRAG_PREVIEW_W = 256;
-    public static final int TAB_ENTRY_TITLE = 0;
+    public static final float TAB_DRAG_THRESHOLD = 6f;
+    public static final int TAB_ENTRY_STRIP = 0;
+    public static final float TAB_STRIP_ACTIVE_ALPHA = 0.32f;
     public static final String TAB_TITLE_DEV = "Dev Mode";
     public static final String TAB_TITLE_PREVIEW = "Preview";
     public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";

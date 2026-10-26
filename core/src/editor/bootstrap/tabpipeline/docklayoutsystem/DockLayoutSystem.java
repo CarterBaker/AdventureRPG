@@ -7,15 +7,17 @@ import editor.bootstrap.tabpipeline.util.DropZone;
 import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class DockLayoutSystem extends SystemPackage {
 
     /*
-     * Keeps one BSP dock tree per OS window, one tab per leaf. Adds, splits and
-     * removes leaves, propagates dock bounds into leaf rects each frame, and
-     * resolves dividers and leaves for window-local coordinates. Split ratios
-     * are clamped, and collapse() is the one rule for a split that lost a
-     * child.
+     * Keeps one BSP dock tree per OS window, each leaf a stack of tabs with
+     * one of them shown. Adds, splits, stacks and removes leaves and tabs,
+     * propagates dock bounds into leaf rects each frame, and resolves dividers
+     * and leaves for window-local coordinates. Split ratios are clamped,
+     * collapse() is the one rule for a split that lost a child, and a stack
+     * losing its shown tab shows the neighbour that took its place.
      */
 
     // Per-OS-window BSP roots — null root means window is registered but empty.
@@ -58,7 +60,25 @@ public class DockLayoutSystem extends SystemPackage {
         if (leaf == null || handle == null || zone == null)
             return;
 
+        if (zone == DropZone.CENTER) {
+            stackTab(leaf, handle);
+            return;
+        }
+
         splitNode(leaf, handle, zone);
+    }
+
+    public void stackTab(DockNodeStruct leaf, TabHandle handle) {
+        leaf.getTabs().add(handle);
+        leaf.setActiveTab(handle);
+    }
+
+    public void activateTab(DockNodeStruct leaf, TabHandle handle) {
+
+        if (!leaf.getTabs().contains(handle))
+            throwException("Cannot show tab '" + handle.getTabTitle() + "' in a stack that does not hold it.");
+
+        leaf.setActiveTab(handle);
     }
 
     public void removeTab(WindowInstance osWindow, TabHandle handle) {
@@ -84,24 +104,9 @@ public class DockLayoutSystem extends SystemPackage {
         propagateRect(root, x, y, w, h);
     }
 
-    public float getTabX(WindowInstance osWindow, TabHandle handle) {
-        DockNodeStruct node = findLeaf(roots.get(osWindow), handle);
-        return node != null ? node.getX() : 0f;
-    }
-
-    public float getTabY(WindowInstance osWindow, TabHandle handle) {
-        DockNodeStruct node = findLeaf(roots.get(osWindow), handle);
-        return node != null ? node.getY() : 0f;
-    }
-
-    public float getTabW(WindowInstance osWindow, TabHandle handle) {
-        DockNodeStruct node = findLeaf(roots.get(osWindow), handle);
-        return node != null ? node.getW() : 0f;
-    }
-
-    public float getTabH(WindowInstance osWindow, TabHandle handle) {
-        DockNodeStruct node = findLeaf(roots.get(osWindow), handle);
-        return node != null ? node.getH() : 0f;
+    // The leaf stacking the tab, null while the tab is out of the tree
+    public DockNodeStruct findLeaf(WindowInstance osWindow, TabHandle handle) {
+        return findLeaf(roots.get(osWindow), handle);
     }
 
     // Divider \\
@@ -196,7 +201,7 @@ public class DockLayoutSystem extends SystemPackage {
             return null;
 
         if (!node.isSplit())
-            return node.getTab() == handle ? node : null;
+            return node.getTabs().contains(handle) ? node : null;
 
         DockNodeStruct result = findLeaf(node.getFirst(), handle);
         return result != null ? result : findLeaf(node.getSecond(), handle);
@@ -236,12 +241,12 @@ public class DockLayoutSystem extends SystemPackage {
         boolean splitHorizontal = zone == DropZone.TOP || zone == DropZone.BOTTOM;
         boolean incomingIsSecond = zone == DropZone.RIGHT || zone == DropZone.BOTTOM;
 
-        DockNodeStruct preserved = createLeaf(leaf.getTab());
+        DockNodeStruct preserved = new DockNodeStruct();
         DockNodeStruct created = createLeaf(incoming);
 
+        moveTabs(leaf, preserved);
         leaf.setSplit(true);
         leaf.setSplitHorizontal(splitHorizontal);
-        leaf.setTab(null);
         leaf.setRatio(EditorSetting.RATIO_DEFAULT);
 
         if (incomingIsSecond) {
@@ -258,13 +263,36 @@ public class DockLayoutSystem extends SystemPackage {
         if (node == null)
             return null;
 
-        if (!node.isSplit())
-            return node.getTab() == handle ? null : node;
+        if (!node.isSplit()) {
+            unstackTab(node, handle);
+            return node.getTabs().isEmpty() ? null : node;
+        }
 
         node.setFirst(pruneTab(node.getFirst(), handle));
         node.setSecond(pruneTab(node.getSecond(), handle));
 
         return collapse(node);
+    }
+
+    private void moveTabs(DockNodeStruct source, DockNodeStruct target) {
+        target.getTabs().addAll(source.getTabs());
+        target.setActiveTab(source.getActiveTab());
+        source.getTabs().clear();
+        source.setActiveTab(null);
+    }
+
+    private void unstackTab(DockNodeStruct leaf, TabHandle handle) {
+
+        ObjectArrayList<TabHandle> tabs = leaf.getTabs();
+        int index = tabs.indexOf(handle);
+
+        if (index < 0)
+            return;
+
+        tabs.remove(index);
+
+        if (leaf.getActiveTab() == handle)
+            leaf.setActiveTab(tabs.isEmpty() ? null : tabs.get(Math.min(index, tabs.size() - 1)));
     }
 
     private DockNodeStruct collapse(DockNodeStruct node) {
@@ -287,7 +315,7 @@ public class DockLayoutSystem extends SystemPackage {
     public DockNodeStruct createLeaf(TabHandle handle) {
 
         DockNodeStruct leaf = new DockNodeStruct();
-        leaf.setTab(handle);
+        stackTab(leaf, handle);
 
         return leaf;
     }

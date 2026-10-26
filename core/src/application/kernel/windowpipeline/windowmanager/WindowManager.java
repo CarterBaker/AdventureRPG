@@ -13,8 +13,10 @@ public class WindowManager extends ManagerPackage {
     /*
      * Owns every engine window and rebuilds the hovered window list each frame,
      * sorted by zOrder then area, locating logical windows through their OS
-     * window's own input. Focus changes only through setFocusedWindow() from
-     * InputManager.
+     * window's own input. An OS window is hovered only while the platform
+     * reports it uppermost under the cursor, so OS windows stacked over one
+     * another never share it. Focus changes only through setFocusedWindow()
+     * from InputManager.
      */
 
     private ObjectArrayList<WindowInstance> windows;
@@ -93,6 +95,9 @@ public class WindowManager extends ManagerPackage {
             float ly = cursorPosScratch[1];
 
             if (lx < 0 || lx >= w.getWidth() || ly < 0 || ly >= w.getHeight())
+                continue;
+
+            if (!internal.windowPlatform.isWindowHovered(w))
                 continue;
 
             hoveredWindows.add(w);

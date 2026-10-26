@@ -46,7 +46,9 @@ public class DevRecorderExportSystem extends SystemPackage {
      * down into each video frame, which goes to the encoder on its own thread
      * while the next renders. A frame also waits until the
      * recorded interface shows the moment it is rendered at, and nothing is
-     * rendered while the game is paused under the export. This system updates
+     * rendered while the game is paused under the export or while the Dev tab
+     * waits hidden behind another in its stack, since it then shows nothing to
+     * capture. This system updates
      * before DevRecorderSystem, so the playhead it sets is the one played that
      * frame.
      */
@@ -235,7 +237,7 @@ public class DevRecorderExportSystem extends SystemPackage {
         recorderManager.setExportPlayhead(time);
         this.renderedCapture = false;
 
-        if (recorderManager.isSuspended()) {
+        if (recorderManager.isSuspended() || context.getWindow().isWithdrawn()) {
             internal.setFixedFrameSeconds(0f);
             return;
         }

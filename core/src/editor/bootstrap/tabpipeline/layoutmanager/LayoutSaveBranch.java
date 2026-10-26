@@ -20,8 +20,9 @@ public class LayoutSaveBranch extends BranchPackage {
     /*
      * Captures the editor's current arrangement as an ARPG layout and writes it to
      * disk. Every open tab is listed once by id, every OS window records its
-     * dock tree with leaves referencing those ids, and secondary windows also
-     * record their screen position and size.
+     * dock tree with each leaf listing its stack by those ids and naming the
+     * one shown, and secondary windows also record their screen position and
+     * size.
      */
 
     // Internal
@@ -110,7 +111,8 @@ public class LayoutSaveBranch extends BranchPackage {
         nodeArpg.addProperty("split", node.isSplit());
 
         if (!node.isSplit()) {
-            nodeArpg.addProperty("tab", node.getTab().getTabID());
+            nodeArpg.addProperty("tab", node.getActiveTab().getTabID());
+            nodeArpg.add("tabs", buildStack(node.getTabs()));
             return nodeArpg;
         }
 
@@ -119,5 +121,15 @@ public class LayoutSaveBranch extends BranchPackage {
         nodeArpg.add("first", buildNode(node.getFirst()));
         nodeArpg.add("second", buildNode(node.getSecond()));
         return nodeArpg;
+    }
+
+    private ArpgArrayStruct buildStack(ObjectArrayList<TabHandle> tabs) {
+
+        ArpgArrayStruct stackArpg = new ArpgArrayStruct();
+
+        for (int i = 0; i < tabs.size(); i++)
+            stackArpg.add(tabs.get(i).getTabID());
+
+        return stackArpg;
     }
 }

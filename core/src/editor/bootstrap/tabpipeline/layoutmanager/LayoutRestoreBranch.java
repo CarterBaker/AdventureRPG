@@ -21,8 +21,10 @@ public class LayoutRestoreBranch extends BranchPackage {
      * closes, so a malformed layout leaves the editor untouched. Every tab and
      * secondary window then closes, each saved window reopens at its saved
      * bounds with its tabs opened directly on it, and its dock tree is rebuilt
-     * from their ids. A tab whose content class no longer exists is skipped and
-     * the split above it collapses through DockLayoutSystem.
+     * from their ids, each leaf restacked in order and showing the tab it
+     * showed. A leaf saved before stacks holds just its one tab. A tab whose
+     * content class no longer exists is skipped, and a leaf left with none
+     * collapses the split above it through DockLayoutSystem.
      */
 
     // Internal
@@ -120,7 +122,18 @@ public class LayoutRestoreBranch extends BranchPackage {
             return;
         }
 
-        int tabId = ArpgUtility.validateInt(nodeArpg, "tab");
+        ArpgArrayStruct stackArpg = readStack(nodeArpg);
+
+        for (int i = 0; i < stackArpg.size(); i++)
+            openStackedTab(stackArpg.get(i).getAsInt(), tabId2TabArpg, osWindow, tabId2TabHandle);
+    }
+
+    private void openStackedTab(
+            int tabId,
+            Int2ObjectOpenHashMap<ArpgObjectStruct> tabId2TabArpg,
+            WindowInstance osWindow,
+            Int2ObjectOpenHashMap<TabHandle> tabId2TabHandle) {
+
         ArpgObjectStruct tabArpg = tabId2TabArpg.get(tabId);
 
         if (tabArpg == null)
@@ -163,16 +176,50 @@ public class LayoutRestoreBranch extends BranchPackage {
 
     private DockNodeStruct buildNode(ArpgObjectStruct nodeArpg, Int2ObjectOpenHashMap<TabHandle> tabId2TabHandle) {
 
-        if (!ArpgUtility.validateBoolean(nodeArpg, "split")) {
-            TabHandle tabHandle = tabId2TabHandle.get(ArpgUtility.validateInt(nodeArpg, "tab"));
-            return tabHandle != null ? dockLayoutSystem.createLeaf(tabHandle) : null;
-        }
+        if (!ArpgUtility.validateBoolean(nodeArpg, "split"))
+            return buildLeaf(nodeArpg, tabId2TabHandle);
 
         return dockLayoutSystem.createSplit(
                 buildNode(ArpgUtility.validateObject(nodeArpg, "first"), tabId2TabHandle),
                 buildNode(ArpgUtility.validateObject(nodeArpg, "second"), tabId2TabHandle),
                 ArpgUtility.validateBoolean(nodeArpg, "splitHorizontal"),
                 ArpgUtility.validateFloat(nodeArpg, "ratio"));
+    }
+
+    private DockNodeStruct buildLeaf(ArpgObjectStruct nodeArpg, Int2ObjectOpenHashMap<TabHandle> tabId2TabHandle) {
+
+        ArpgArrayStruct stackArpg = readStack(nodeArpg);
+        DockNodeStruct leaf = new DockNodeStruct();
+
+        for (int i = 0; i < stackArpg.size(); i++) {
+
+            TabHandle tabHandle = tabId2TabHandle.get(stackArpg.get(i).getAsInt());
+
+            if (tabHandle != null)
+                dockLayoutSystem.stackTab(leaf, tabHandle);
+        }
+
+        if (leaf.getTabs().isEmpty())
+            return null;
+
+        TabHandle activeTab = tabId2TabHandle.get(ArpgUtility.validateInt(nodeArpg, "tab"));
+
+        if (activeTab != null)
+            dockLayoutSystem.activateTab(leaf, activeTab);
+
+        return leaf;
+    }
+
+    // A leaf's stack in strip order, or for a leaf saved before stacks the one tab it held
+    private ArpgArrayStruct readStack(ArpgObjectStruct nodeArpg) {
+
+        if (nodeArpg.has("tabs"))
+            return ArpgUtility.validateArray(nodeArpg, "tabs");
+
+        ArpgArrayStruct stackArpg = new ArpgArrayStruct();
+        stackArpg.add(ArpgUtility.validateInt(nodeArpg, "tab"));
+
+        return stackArpg;
     }
 
     // Validation \\
@@ -219,7 +266,7 @@ public class LayoutRestoreBranch extends BranchPackage {
             return false;
 
         if (!nodeArpg.get("split").getAsBoolean())
-            return ArpgUtility.hasNumber(nodeArpg, "tab");
+            return ArpgUtility.hasNumber(nodeArpg, "tab") && isStackValid(nodeArpg);
 
         return ArpgUtility.hasBoolean(nodeArpg, "splitHorizontal")
                 && ArpgUtility.hasNumber(nodeArpg, "ratio")
@@ -227,5 +274,28 @@ public class LayoutRestoreBranch extends BranchPackage {
                 && ArpgUtility.hasObject(nodeArpg, "second")
                 && isNodeValid(nodeArpg.getAsObject("first"))
                 && isNodeValid(nodeArpg.getAsObject("second"));
+    }
+
+    // A stack lists whole tab ids, the shown tab among them
+    private boolean isStackValid(ArpgObjectStruct nodeArpg) {
+
+        if (!nodeArpg.has("tabs"))
+            return true;
+
+        if (!ArpgUtility.hasArray(nodeArpg, "tabs"))
+            return false;
+
+        int tabId = nodeArpg.get("tab").getAsInt();
+        boolean holdsTab = false;
+
+        for (ArpgElementStruct tabElement : nodeArpg.getAsArray("tabs")) {
+
+            if (!tabElement.isValue() || !tabElement.getAsValue().isInteger())
+                return false;
+
+            holdsTab |= tabElement.getAsInt() == tabId;
+        }
+
+        return holdsTab;
     }
 }

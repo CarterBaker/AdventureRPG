@@ -25,8 +25,10 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
      * Implements the WindowPlatform contract on GLFW for every window alike. GL
      * context binding is kept apart from input: only syncInputForWindow()
      * touches EngineContext.input. Display mode acts on the main window; vsync
-     * is reapplied to every OS window. Transparency is read from the window
-     * itself, and mouse passthrough hands the cursor to whatever lies behind.
+     * is reapplied to every OS window. Hover is the OS's own answer, so a
+     * window covered by another never claims the cursor. Transparency is read
+     * from the window itself, and mouse passthrough hands the cursor to
+     * whatever lies behind.
      */
 
     // Application
@@ -112,6 +114,20 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
             return false;
 
         return GLFW.glfwGetWindowAttrib(window.getNativeHandle(), GLFW.GLFW_FOCUSED) == GLFW.GLFW_TRUE;
+    }
+
+    // The OS answers for the window uppermost under the cursor; one letting the cursor through never is, so it
+    // keeps the cursor wherever its own rect holds it
+    @Override
+    public boolean isWindowHovered(WindowInstance window) {
+
+        if (!window.hasNativeHandle())
+            return false;
+
+        long handle = window.getNativeHandle();
+
+        return GLFW.glfwGetWindowAttrib(handle, GLFW.GLFW_HOVERED) == GLFW.GLFW_TRUE
+                || GLFW.glfwGetWindowAttrib(handle, GLFW.GLFW_MOUSE_PASSTHROUGH) == GLFW.GLFW_TRUE;
     }
 
     @Override

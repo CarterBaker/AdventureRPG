@@ -24,7 +24,9 @@ public class WindowInstance extends InstancePackage {
      * context releases what its systems registered, then the cursor capture,
      * menus and render resources it held, before the dispose listener fires.
      * A window given a fixed render size renders at that size wherever it is
-     * placed, shown fitted into its rect at its own aspect.
+     * placed, shown fitted into its rect at its own aspect. A logical window
+     * withdrawn from its OS window, or never yet placed on it, draws nothing
+     * and takes no input until it is placed.
      */
 
     // Data
@@ -198,6 +200,16 @@ public class WindowInstance extends InstancePackage {
 
     public boolean isPlacedAt(float x, float y, float w, float h) {
         return placed && placedX == x && placedY == y && placedW == w && placedH == h;
+    }
+
+    // Takes a logical window off its OS window until it is placed again: nothing it draws is shown and nothing hits it
+    public void withdraw() {
+        this.placed = false;
+        clearCompositeRect();
+    }
+
+    public boolean isWithdrawn() {
+        return hasCompositeTarget() && !compositeRect;
     }
 
     // Fixed Render Size \\

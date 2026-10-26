@@ -7,7 +7,8 @@ public class TabDragLayoutStruct extends StructPackage {
     /*
      * Pure rect math for drop zone positioning. Computes the screen-space
      * origin and dimensions of the half-panel a tab would occupy after a
-     * directed split into a given leaf. No allocation, no state.
+     * directed split into a given leaf, or the whole leaf when it would stack
+     * there. No allocation, no state.
      */
 
     // Internal \\

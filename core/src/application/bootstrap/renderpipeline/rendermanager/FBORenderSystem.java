@@ -84,7 +84,7 @@ public class FBORenderSystem extends SystemPackage {
         if (fbo == null || window == null)
             return;
 
-        if (window.hasCompositeTarget() && !window.hasCompositeRect())
+        if (window.isWithdrawn())
             return;
 
         WindowInstance target = window.hasCompositeTarget() ? window.getCompositeTarget() : window;

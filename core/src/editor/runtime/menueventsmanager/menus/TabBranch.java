@@ -1,13 +1,11 @@
 package editor.runtime.menueventsmanager.menus;
 
-import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.shaderpipeline.sprite.SpriteHandle;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
-import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabdragmanager.TabDragManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.EditorSetting;
@@ -19,9 +17,10 @@ public class TabBranch extends BranchPackage {
     /*
      * Menu callbacks for tab chrome. Every gesture receives the window it
      * happened on from ElementHitSystem. Frame drags resize the BSP divider
-     * found under the press and persist the ratio on release; toolbar drags
-     * hand off to TabDragManager; hover callbacks keep the resize cursor in
-     * sync.
+     * found under the press and persist the ratio on release; presses on a
+     * strip entry or the toolbar behind it hand that tab to TabDragManager,
+     * which shows it on a click and moves it on a drag; strip close buttons
+     * name the tab they close; hover callbacks keep the resize cursor in sync.
      */
 
     // Internal
@@ -66,11 +65,9 @@ public class TabBranch extends BranchPackage {
 
     // Tab Events \\
 
-    public void closeTab(MenuInstance menu) {
-        TabHandle handle = tabManager.getTabHandleForWindow(menu.getWindow());
-        if (handle == null)
-            return;
-        tabManager.closeTab(handle);
+    public void closeTab(String tabTitle) {
+        if (tabManager.hasTab(tabTitle))
+            tabManager.closeTab(tabManager.getTabHandleFromTabName(tabTitle));
     }
 
     public void onTabFrameHover(WindowInstance window) {
@@ -114,11 +111,17 @@ public class TabBranch extends BranchPackage {
         handleDividerDrag(released);
     }
 
-    // tab_toolbar drag — tab repositioning only.
-    // TabDragManager latches the handle on the first call and then owns the
-    // drag loop via update(); subsequent callbacks are no-ops.
+    // tab_strip_entry and tab_toolbar presses — TabDragManager takes the tab
+    // on the first call and then owns the press and drag via update();
+    // subsequent callbacks are no-ops. The toolbar behind the strip stands
+    // for the tab it shows.
+    public void onTabStripDrag(String tabTitle) {
+        if (tabManager.hasTab(tabTitle))
+            tabDragManager.onTabPressed(tabManager.getTabHandleFromTabName(tabTitle));
+    }
+
     public void onTabToolbarDrag(WindowInstance window) {
-        tabDragManager.onTabDragUpdate(window);
+        tabDragManager.onTabPressed(tabManager.getTabHandleForWindow(window));
     }
 
     // Divider Drag \\

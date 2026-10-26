@@ -8,8 +8,9 @@ public interface WindowPlatform {
     /*
      * The platform contract the engine drives windows through: opening and
      * destroying windows, GL context switching, input lookup per OS window,
-     * cursor, placement, display mode and vsync, and for a transparent
-     * window whether it lets the cursor through to whatever lies behind it.
+     * cursor, placement, display mode and vsync, whether a window is the one
+     * uppermost under the cursor, and for a transparent window whether it lets
+     * the cursor through to whatever lies behind it.
      */
 
     void openWindow(WindowInstance window);
@@ -19,6 +20,8 @@ public interface WindowPlatform {
     boolean shouldClose(WindowInstance window);
 
     boolean isWindowFocused(WindowInstance window);
+
+    boolean isWindowHovered(WindowInstance window);
 
     void makeContextCurrent(WindowInstance window);
 
