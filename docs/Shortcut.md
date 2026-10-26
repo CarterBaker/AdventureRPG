@@ -8,10 +8,12 @@ modifier in any editor tool. The root `CLAUDE.md` still applies in full.
 ## 1. Principles
 
 - **Every editor key is data.** A tool's keys live in one file, `assets/shortcuts/<Tool>.arpg`, editable in the
-  editor's own Hierarchy and Info Panel (the Shortcuts tab). Editor code never reads a key or a modifier with
-  `isKeyClicked`, `isKeyDown` or `isKeyHeld` to act on it; it adds a shortcut instead. The only exceptions are text
-  entry (the name dialog, the command console), a dialog's own Enter and Escape, and the keys of a modal gesture
-  already under way (a transform's X, Y, Z, Enter and Escape).
+  editor's own Hierarchy and Info Panel (the Shortcuts tab), or rebound on the Settings dialog's Shortcuts page,
+  which writes the same file through the Info Panel's save and applies the new keys at once
+  (`ShortcutManager.rebindShortcut`). Editor code never reads a key or a modifier with `isKeyClicked`, `isKeyDown`
+  or `isKeyHeld` to act on it; it adds a shortcut instead. The only exceptions are text entry (the name dialog, the
+  command console), the Settings dialog waiting for a rebind's keys, a dialog's own Enter and Escape, and the keys
+  of a modal gesture already under way (a transform's X, Y, Z, Enter and Escape).
 - **One route.** A pressed shortcut runs a `class` and `method` exactly as a menu button does, through
   `ElementHitSystem.executeAction`, on the instance registered in the tool's context, inside its crash boundary. A
   shortcut and its button therefore always do the same thing.

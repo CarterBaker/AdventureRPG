@@ -9,7 +9,8 @@ public class ShortcutHandle extends HandlePackage {
 
     /*
      * Persistent reference to one loaded editor shortcut. Registered and
-     * owned by ShortcutManager. Delegates all accessors through ShortcutData.
+     * owned by ShortcutManager. Delegates all accessors through ShortcutData,
+     * which a rebind replaces in place, so every reference keeps up.
      * A shortcut with an action is pressed on the frame its key goes down
      * with exactly its modifiers held, so Ctrl+S never also runs S; one
      * without is held for as long as its key and at least its modifiers are.

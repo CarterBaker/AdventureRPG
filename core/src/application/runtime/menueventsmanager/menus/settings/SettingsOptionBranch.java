@@ -9,13 +9,13 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import engine.root.BranchPackage;
-import engine.root.EngineSetting;
 
 public class SettingsOptionBranch extends BranchPackage {
 
     /*
      * Fills the Display, Graphics, Main Menu and Gameplay tabs and the
-     * Controls tab's mouse section, and writes each change into Settings.
+     * Controls tab's mouse section, and writes each change into Settings
+     * through SettingsValueUtility, the model every settings menu shares.
      * Display, field of view, both tree detail distances and every
      * post-processing effect take effect at once through SettingsSystem, the
      * trees redrawing only those crossing the line, and sensitivity is read
@@ -130,7 +130,8 @@ public class SettingsOptionBranch extends BranchPackage {
                 RuntimeSetting.MENU_SETTINGS_OPTION_ROW,
                 row -> {
                     row.findChildById(RuntimeSetting.ELEMENT_SETTINGS_ROW_LABEL).setFontText(option.getLabel());
-                    row.findChildById(RuntimeSetting.ELEMENT_SETTINGS_ROW_VALUE).setFontText(formatOption(option));
+                    row.findChildById(RuntimeSetting.ELEMENT_SETTINGS_ROW_VALUE)
+                            .setFontText(SettingsValueUtility.formatOption(settings, option));
                     row.findChildById(RuntimeSetting.ELEMENT_SETTINGS_ROW_PREVIOUS).setActionArgOverride(option.name());
                     row.findChildById(RuntimeSetting.ELEMENT_SETTINGS_ROW_NEXT).setActionArgOverride(option.name());
                 });
@@ -151,141 +152,12 @@ public class SettingsOptionBranch extends BranchPackage {
         if (session == null)
             return;
 
-        applyStep(session, option, step);
+        SettingsValueUtility.stepOption(settingsSystem, settings, option, step);
+
+        if (option.isWorldSetting())
+            session.markRenderSettingsChanged();
+
         settingsMenuBranch.refreshOptions(session);
-    }
-
-    private void applyStep(SettingsSessionStruct session, SettingsOption option, int step) {
-        switch (option) {
-            case FULLSCREEN -> {
-                settings.fullscreen = !settings.fullscreen;
-                settingsSystem.applyFullscreen();
-            }
-            case VSYNC -> {
-                settings.vsync = !settings.vsync;
-                settingsSystem.applyVsync();
-            }
-            case FIELD_OF_VIEW -> {
-                settings.FOV = Math.clamp(
-                        settings.FOV + step * RuntimeSetting.SETTINGS_FIELD_OF_VIEW_STEP,
-                        EngineSetting.FIELD_OF_VIEW_MIN,
-                        EngineSetting.FIELD_OF_VIEW_MAX);
-                settingsSystem.applyFieldOfView();
-            }
-            case RENDER_DISTANCE -> {
-                settings.maxRenderDistance = stepRenderDistance(settings.maxRenderDistance, step);
-                session.markRenderSettingsChanged();
-            }
-            case TERRAIN_DETAIL -> {
-                settings.detailRadius = Math.clamp(
-                        settings.detailRadius + step * RuntimeSetting.SETTINGS_TERRAIN_DETAIL_STEP,
-                        EngineSetting.DETAIL_RADIUS_MIN,
-                        EngineSetting.DETAIL_RADIUS_MAX);
-                session.markRenderSettingsChanged();
-            }
-            case TREE_DETAIL -> {
-                settings.treeDetailDistance = stepTreeDetail(settings.treeDetailDistance, step);
-                settingsSystem.applyTreeDetail();
-            }
-            case MACRO_TERRAIN -> {
-                settings.macroTerrain = !settings.macroTerrain;
-                session.markRenderSettingsChanged();
-            }
-            case MENU_CHUNK_STREAMING -> {
-                settings.menuChunkStreaming = !settings.menuChunkStreaming;
-                session.markRenderSettingsChanged();
-            }
-            case MENU_RENDER_DISTANCE -> {
-                settings.menuRenderDistance = stepRenderDistance(settings.menuRenderDistance, step);
-                session.markRenderSettingsChanged();
-            }
-            case MENU_TREE_DETAIL -> {
-                settings.menuTreeDetailDistance = stepTreeDetail(settings.menuTreeDetailDistance, step);
-                settingsSystem.applyTreeDetail();
-            }
-            case MENU_MACRO_TERRAIN -> {
-                settings.menuMacroTerrain = !settings.menuMacroTerrain;
-                session.markRenderSettingsChanged();
-            }
-            case OUTLINES -> {
-                settings.outlines = !settings.outlines;
-                settingsSystem.applyPostProcessing();
-            }
-            case OUTLINE_THICKNESS -> {
-                settings.outlineThickness = Math.clamp(
-                        settings.outlineThickness + step * RuntimeSetting.SETTINGS_OUTLINE_THICKNESS_STEP,
-                        EngineSetting.OUTLINE_THICKNESS_MIN,
-                        EngineSetting.OUTLINE_THICKNESS_MAX);
-                settingsSystem.applyPostProcessing();
-            }
-            case DEPTH_OF_FIELD -> {
-                settings.depthOfField = !settings.depthOfField;
-                settingsSystem.applyPostProcessing();
-            }
-            case DEPTH_OF_FIELD_THIRD_PERSON -> settings.depthOfFieldThirdPerson = !settings.depthOfFieldThirdPerson;
-            case ANTI_ALIASING -> {
-                settings.antiAliasing = !settings.antiAliasing;
-                settingsSystem.applyPostProcessing();
-            }
-            case BLOOM -> {
-                settings.bloom = !settings.bloom;
-                settingsSystem.applyPostProcessing();
-            }
-            case CAMERA_SHAKE -> settings.cameraShake = !settings.cameraShake;
-            case HEAD_BOB -> settings.headBob = !settings.headBob;
-        }
-    }
-
-    private int stepRenderDistance(int renderDistance, int step) {
-        return Math.clamp(
-                renderDistance + step * RuntimeSetting.SETTINGS_RENDER_DISTANCE_STEP,
-                EngineSetting.RENDER_DISTANCE_MIN,
-                EngineSetting.RENDER_DISTANCE_MAX);
-    }
-
-    private int stepTreeDetail(int treeDetailDistance, int step) {
-        return Math.clamp(
-                treeDetailDistance + step * RuntimeSetting.SETTINGS_TREE_DETAIL_STEP,
-                EngineSetting.TREE_DETAIL_DISTANCE_MIN,
-                EngineSetting.TREE_DETAIL_DISTANCE_MAX);
-    }
-
-    private String formatOption(SettingsOption option) {
-        return switch (option) {
-            case FULLSCREEN -> formatToggle(settings.fullscreen);
-            case VSYNC -> formatToggle(settings.vsync);
-            case FIELD_OF_VIEW -> String.format(RuntimeSetting.SETTINGS_FORMAT_FIELD_OF_VIEW, settings.FOV);
-            case RENDER_DISTANCE -> formatRenderDistance(settings.maxRenderDistance);
-            case TERRAIN_DETAIL -> String.format(
-                    RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
-                    settings.detailRadius);
-            case TREE_DETAIL -> String.format(RuntimeSetting.SETTINGS_FORMAT_CHUNKS, settings.treeDetailDistance);
-            case MACRO_TERRAIN -> formatToggle(settings.macroTerrain);
-            case MENU_CHUNK_STREAMING -> formatToggle(settings.menuChunkStreaming);
-            case MENU_RENDER_DISTANCE -> formatRenderDistance(settings.menuRenderDistance);
-            case MENU_TREE_DETAIL -> String.format(
-                    RuntimeSetting.SETTINGS_FORMAT_CHUNKS,
-                    settings.menuTreeDetailDistance);
-            case MENU_MACRO_TERRAIN -> formatToggle(settings.menuMacroTerrain);
-            case OUTLINES -> formatToggle(settings.outlines);
-            case OUTLINE_THICKNESS -> String.format(RuntimeSetting.SETTINGS_FORMAT_PIXELS, settings.outlineThickness);
-            case DEPTH_OF_FIELD -> formatToggle(settings.depthOfField);
-            case DEPTH_OF_FIELD_THIRD_PERSON -> formatToggle(settings.depthOfFieldThirdPerson);
-            case ANTI_ALIASING -> formatToggle(settings.antiAliasing);
-            case BLOOM -> formatToggle(settings.bloom);
-            case CAMERA_SHAKE -> formatToggle(settings.cameraShake);
-            case HEAD_BOB -> formatToggle(settings.headBob);
-        };
-    }
-
-    private String formatRenderDistance(int renderDistance) {
-        return String.format(
-                RuntimeSetting.SETTINGS_FORMAT_CHUNKS,
-                renderDistance / RuntimeSetting.SETTINGS_RENDER_DISTANCE_PER_RADIUS);
-    }
-
-    private String formatToggle(boolean enabled) {
-        return enabled ? RuntimeSetting.SETTINGS_VALUE_ON : RuntimeSetting.SETTINGS_VALUE_OFF;
     }
 
     // Sliders \\
@@ -310,109 +182,18 @@ public class SettingsOptionBranch extends BranchPackage {
         SettingsSlider slider = SettingsSlider.valueOf(sliderName);
         float fraction = (inputManager.getHoverMouseX(window) - track.getComputedLeft()) / track.getComputedW();
 
-        applyFraction(slider, Math.clamp(fraction, 0f, 1f));
+        SettingsValueUtility.setSliderFraction(settingsSystem, settings, slider, fraction);
         refreshSlider(track, slider);
-
-        if (slider.isPostProcessing())
-            settingsSystem.applyPostProcessing();
     }
 
     private void refreshSlider(ElementInstance track, SettingsSlider slider) {
 
-        float min = resolveMin(slider);
-        float range = resolveMax(slider) - min;
-        float fraction = range > 0f ? (resolveValue(slider) - min) / range : 0f;
+        float fraction = SettingsValueUtility.getSliderFraction(settings, slider);
 
         track.findChildById(RuntimeSetting.ELEMENT_SETTINGS_SLIDER_KNOB).setPositionOverride(new DimensionVector2Struct(
                 DimensionValueStruct.ofPercent(fraction * RuntimeSetting.SETTINGS_SLIDER_PERCENT_SCALE),
                 DimensionValueStruct.ofAbsolute(0f)));
-        track.findChildById(RuntimeSetting.ELEMENT_SETTINGS_SLIDER_VALUE).setFontText(formatSlider(slider));
-    }
-
-    private void applyFraction(SettingsSlider slider, float fraction) {
-
-        float min = resolveMin(slider);
-        float value = min + (resolveMax(slider) - min) * fraction;
-
-        switch (slider) {
-            case MOUSE_SENSITIVITY -> settings.mouseSensitivity = value;
-            case OUTLINE_STRENGTH -> settings.outlineStrength = value;
-            case DEPTH_OF_FIELD_STRENGTH -> settings.depthOfFieldStrength = value;
-            case DEPTH_OF_FIELD_BLUR -> settings.depthOfFieldBlur = value;
-            case DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH -> settings.depthOfFieldThirdPersonStrength = value;
-            case BLOOM_INTENSITY -> settings.bloomIntensity = value;
-            case BRIGHTNESS -> settings.brightness = value;
-            case CONTRAST -> settings.contrast = value;
-            case SATURATION -> settings.saturation = value;
-            case VIGNETTE -> settings.vignette = value;
-            case CHROMATIC_ABERRATION -> settings.chromaticAberration = value;
-            case FILM_GRAIN -> settings.filmGrain = value;
-            case CAMERA_SHAKE_INTENSITY -> settings.cameraShakeIntensity = value;
-        }
-    }
-
-    private float resolveValue(SettingsSlider slider) {
-        return switch (slider) {
-            case MOUSE_SENSITIVITY -> settings.mouseSensitivity;
-            case OUTLINE_STRENGTH -> settings.outlineStrength;
-            case DEPTH_OF_FIELD_STRENGTH -> settings.depthOfFieldStrength;
-            case DEPTH_OF_FIELD_BLUR -> settings.depthOfFieldBlur;
-            case DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH -> settings.depthOfFieldThirdPersonStrength;
-            case BLOOM_INTENSITY -> settings.bloomIntensity;
-            case BRIGHTNESS -> settings.brightness;
-            case CONTRAST -> settings.contrast;
-            case SATURATION -> settings.saturation;
-            case VIGNETTE -> settings.vignette;
-            case CHROMATIC_ABERRATION -> settings.chromaticAberration;
-            case FILM_GRAIN -> settings.filmGrain;
-            case CAMERA_SHAKE_INTENSITY -> settings.cameraShakeIntensity;
-        };
-    }
-
-    private float resolveMin(SettingsSlider slider) {
-        return switch (slider) {
-            case MOUSE_SENSITIVITY -> EngineSetting.MOUSE_SENSITIVITY_MIN;
-            case OUTLINE_STRENGTH -> EngineSetting.OUTLINE_STRENGTH_MIN;
-            case DEPTH_OF_FIELD_STRENGTH -> EngineSetting.DEPTH_OF_FIELD_STRENGTH_MIN;
-            case DEPTH_OF_FIELD_BLUR -> EngineSetting.DEPTH_OF_FIELD_BLUR_MIN;
-            case DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH -> EngineSetting.DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH_MIN;
-            case BLOOM_INTENSITY -> EngineSetting.BLOOM_INTENSITY_MIN;
-            case BRIGHTNESS -> EngineSetting.BRIGHTNESS_MIN;
-            case CONTRAST -> EngineSetting.CONTRAST_MIN;
-            case SATURATION -> EngineSetting.SATURATION_MIN;
-            case VIGNETTE -> EngineSetting.VIGNETTE_MIN;
-            case CHROMATIC_ABERRATION -> EngineSetting.CHROMATIC_ABERRATION_MIN;
-            case FILM_GRAIN -> EngineSetting.FILM_GRAIN_MIN;
-            case CAMERA_SHAKE_INTENSITY -> EngineSetting.CAMERA_SHAKE_INTENSITY_MIN;
-        };
-    }
-
-    private float resolveMax(SettingsSlider slider) {
-        return switch (slider) {
-            case MOUSE_SENSITIVITY -> EngineSetting.MOUSE_SENSITIVITY_MAX;
-            case OUTLINE_STRENGTH -> EngineSetting.OUTLINE_STRENGTH_MAX;
-            case DEPTH_OF_FIELD_STRENGTH -> EngineSetting.DEPTH_OF_FIELD_STRENGTH_MAX;
-            case DEPTH_OF_FIELD_BLUR -> EngineSetting.DEPTH_OF_FIELD_BLUR_MAX;
-            case DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH -> EngineSetting.DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH_MAX;
-            case BLOOM_INTENSITY -> EngineSetting.BLOOM_INTENSITY_MAX;
-            case BRIGHTNESS -> EngineSetting.BRIGHTNESS_MAX;
-            case CONTRAST -> EngineSetting.CONTRAST_MAX;
-            case SATURATION -> EngineSetting.SATURATION_MAX;
-            case VIGNETTE -> EngineSetting.VIGNETTE_MAX;
-            case CHROMATIC_ABERRATION -> EngineSetting.CHROMATIC_ABERRATION_MAX;
-            case FILM_GRAIN -> EngineSetting.FILM_GRAIN_MAX;
-            case CAMERA_SHAKE_INTENSITY -> EngineSetting.CAMERA_SHAKE_INTENSITY_MAX;
-        };
-    }
-
-    private String formatSlider(SettingsSlider slider) {
-        return switch (slider) {
-            case MOUSE_SENSITIVITY -> String.format(RuntimeSetting.SETTINGS_FORMAT_SENSITIVITY, resolveValue(slider));
-            case OUTLINE_STRENGTH, DEPTH_OF_FIELD_STRENGTH, DEPTH_OF_FIELD_BLUR, DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH,
-                    BLOOM_INTENSITY, BRIGHTNESS, CONTRAST, SATURATION, VIGNETTE, CHROMATIC_ABERRATION, FILM_GRAIN,
-                    CAMERA_SHAKE_INTENSITY -> String.format(
-                            RuntimeSetting.SETTINGS_FORMAT_PERCENT,
-                            resolveValue(slider) * RuntimeSetting.SETTINGS_SLIDER_PERCENT_SCALE);
-        };
+        track.findChildById(RuntimeSetting.ELEMENT_SETTINGS_SLIDER_VALUE)
+                .setFontText(SettingsValueUtility.formatSlider(settings, slider));
     }
 }

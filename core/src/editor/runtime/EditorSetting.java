@@ -7,7 +7,8 @@ public class EditorSetting {
 
     /*
      * Editor-only constants — chrome menus, cursors, input keys, menu entry
-     * point indices, layout persistence, tool tabs, the name dialog, console
+     * point indices, layout persistence, tool tabs, the name, export and
+     * settings dialogs, console
      * commands and the command drag between windows, the Dev window's time
      * units, editor shortcuts, the info pipeline's
      * schemas, hierarchy keys, and status text, the item editor's library and
@@ -37,12 +38,35 @@ public class EditorSetting {
     public static final String MENU_EDITOR_NAME_DIALOG = "editor/EditorWindow/NameDialog";
     public static final String MENU_EDITOR_EXPORT_DIALOG = "editor/EditorWindow/ExportDialog";
     public static final String MENU_EDITOR_LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";
+    public static final String MENU_EDITOR_SETTINGS_DIALOG = "editor/EditorWindow/SettingsDialog";
+    public static final String MENU_EDITOR_SETTINGS_TAB_GROUP = "editor/EditorWindow/settings_tab_group";
+    public static final String MENU_EDITOR_SETTINGS_TAB = "editor/EditorWindow/settings_tab";
+    public static final String MENU_EDITOR_SETTINGS_SECTION_HEADER = "editor/EditorWindow/settings_section_header";
+    public static final String MENU_EDITOR_SETTINGS_NOTE = "editor/EditorWindow/settings_note";
+    public static final String MENU_EDITOR_SETTINGS_OPTION_ROW = "editor/EditorWindow/settings_option_row";
+    public static final String MENU_EDITOR_SETTINGS_SLIDER_ROW = "editor/EditorWindow/settings_slider_row";
+    public static final String MENU_EDITOR_SETTINGS_CHANNEL_ROW = "editor/EditorWindow/settings_channel_row";
+    public static final String MENU_EDITOR_SETTINGS_BINDING_ROW = "editor/EditorWindow/settings_binding_row";
+    public static final String MENU_EDITOR_SETTINGS_SHORTCUT_ROW = "editor/EditorWindow/settings_shortcut_row";
+    public static final String MENU_EDITOR_SETTINGS_COLOR_ROW = "editor/EditorWindow/settings_color_row";
+    public static final String MENU_EDITOR_SETTINGS_ACTION_ROW = "editor/EditorWindow/settings_action_row";
 
     // Elements
     public static final String ELEMENT_LAYOUT_ITEM_LOAD = "layout_item_load";
     public static final String ELEMENT_LAYOUT_ITEM_SAVE = "layout_item_save";
     public static final String ELEMENT_LAYOUT_ITEM_DELETE = "layout_item_delete";
     public static final String ELEMENT_LAYOUT_ITEM_LABEL = "layout_item_label";
+    public static final String ELEMENT_SETTINGS_TAB_GROUP_LABEL = "settings_tab_group_label";
+    public static final String ELEMENT_SETTINGS_TAB_LABEL = "settings_tab_label";
+    public static final String ELEMENT_SETTINGS_TAB_MARKER = "settings_tab_marker";
+    public static final String ELEMENT_SETTINGS_ROW_LABEL = "settings_row_label";
+    public static final String ELEMENT_SETTINGS_ROW_VALUE = "settings_row_value";
+    public static final String ELEMENT_SETTINGS_ROW_PREVIOUS = "settings_row_previous";
+    public static final String ELEMENT_SETTINGS_ROW_NEXT = "settings_row_next";
+    public static final String ELEMENT_SETTINGS_SLIDER_TRACK = "settings_slider_track";
+    public static final String ELEMENT_SETTINGS_SLIDER_KNOB = "settings_slider_knob";
+    public static final String ELEMENT_SETTINGS_SLIDER_VALUE = "settings_slider_value";
+    public static final String ELEMENT_SETTINGS_COLOR_SWATCH = "settings_color_swatch";
 
     // Keys
     public static final int KEY_BACKSPACE = 259;
@@ -72,6 +96,9 @@ public class EditorSetting {
     public static final int ENTRY_EXPORT_DIALOG_TIME = 4;
     public static final int ENTRY_EXPORT_DIALOG_MESSAGE = 5;
     public static final int ENTRY_EXPORT_DIALOG_BUTTON = 6;
+    public static final int ENTRY_SETTINGS_DIALOG_TABS = 0;
+    public static final int ENTRY_SETTINGS_DIALOG_OPTIONS = 1;
+    public static final int ENTRY_SETTINGS_DIALOG_STATUS = 2;
 
     // Name Dialog
     public static final int NAME_INPUT_MAX_LENGTH = 32;
@@ -129,6 +156,79 @@ public class EditorSetting {
     public static final String EXPORT_DIALOG_FORMAT_MINUTES = "%d:%02d";
     public static final String EXPORT_DIALOG_FORMAT_HOURS = "%d:%02d:%02d";
 
+    // Settings Dialog — pages, sections and notes
+    public static final String SETTINGS_GROUP_EDITOR = "Editor";
+    public static final String SETTINGS_GROUP_DEV_MODE = "Dev Mode";
+    public static final String SETTINGS_TAB_GENERAL = "General";
+    public static final String SETTINGS_TAB_SHORTCUTS = "Shortcuts";
+    public static final String SETTINGS_TAB_COLORS = "Color Scheme";
+    public static final String SETTINGS_TAB_GRAPHICS = "Graphics";
+    public static final String SETTINGS_TAB_EFFECTS = "Effects";
+    public static final String SETTINGS_TAB_GAMEPLAY = "Gameplay";
+    public static final String SETTINGS_TAB_CONTROLS = "Controls";
+    public static final String SETTINGS_SECTION_PREVIEW_WORLD = "Preview World";
+    public static final String SETTINGS_SECTION_SURFACES = "Surfaces";
+    public static final String SETTINGS_SECTION_CONTROLS = "Controls";
+    public static final String SETTINGS_SECTION_TEXT = "Text";
+    public static final String SETTINGS_NOTE_WINDOW = "Sets the editor's own window";
+    public static final String SETTINGS_NOTE_SAVED = "Every setting is saved to EditorSettings when this dialog closes";
+    public static final String SETTINGS_NOTE_DEV_MODE = "Applies to every Dev Mode and Preview tab";
+    public static final String SETTINGS_NOTE_WORLD_APPLY = "World changes apply when this dialog closes";
+    public static final String SETTINGS_NOTE_CONTROLS = "Click an action, then press its new key or button";
+    public static final String SETTINGS_NOTE_SHORTCUTS =
+            "Click a shortcut, then press its new keys; it saves to its tool's file";
+    public static final String SETTINGS_NOTE_COLORS = "Click a color to edit it; the editor follows as you change it";
+
+    // Settings Dialog — the active tab and a row waiting for keys are tinted with the accent; a slider's knob moves
+    // in fixed steps
+    public static final float SETTINGS_TAB_ACTIVE_ALPHA = 0.32f;
+    public static final float SETTINGS_CAPTURE_ALPHA = 0.45f;
+    public static final int SETTINGS_SLIDER_STEPS = 200;
+
+    // Settings Dialog — status text
+    public static final String SETTINGS_STATUS_NONE = "";
+    public static final String SETTINGS_STATUS_CAPTURE_BINDING = "Press a key or mouse button, or Escape to cancel";
+    public static final String SETTINGS_STATUS_CAPTURE_PRESSED = "Press the new keys, or Escape to cancel";
+    public static final String SETTINGS_STATUS_CAPTURE_HELD =
+            "Press a key, or press and let go of modifiers, or Escape to cancel";
+    public static final String SETTINGS_STATUS_CONTROLS_RESET = "Controls reset to their defaults";
+    public static final String SETTINGS_STATUS_COLORS_RESET = "Color scheme reset to its defaults";
+    public static final String SETTINGS_STATUS_COLOR_RESET_SUFFIX = " reset to its default";
+
+    // Settings Dialog — shortcuts
+    public static final String SETTINGS_SHORTCUT_CAPTURE_PROMPT = "Press keys";
+    public static final String SETTINGS_SHORTCUT_HELD_SUFFIX = " (hold)";
+    public static final String SETTINGS_SHORTCUT_FORMAT_SAVED = "%s is now %s";
+    public static final String SETTINGS_SHORTCUT_FORMAT_CLASH = "%s is already %s in this tool";
+    public static final String SETTINGS_SHORTCUT_FORMAT_UNSAVED =
+            "%s has unsaved edits; save or revert it in the Info Panel first";
+    public static final String SETTINGS_SHORTCUT_FORMAT_MISSING = "%s is no longer in %s; reopen the editor to load it";
+    public static final String SETTINGS_SHORTCUT_REFUSED_PREFIX = "Not saved: ";
+
+    // Settings Dialog — color scheme
+    public static final String SETTINGS_COLOR_BACKGROUND = "Background";
+    public static final String SETTINGS_COLOR_PANEL = "Panel";
+    public static final String SETTINGS_COLOR_HEADER = "Header";
+    public static final String SETTINGS_COLOR_OUTLINE = "Outline";
+    public static final String SETTINGS_COLOR_SHADOW = "Shadow";
+    public static final String SETTINGS_COLOR_CONTROL = "Control";
+    public static final String SETTINGS_COLOR_CONTROL_HOVER = "Control Hover";
+    public static final String SETTINGS_COLOR_ACCENT = "Accent";
+    public static final String SETTINGS_COLOR_ACCENT_HOVER = "Accent Hover";
+    public static final String SETTINGS_COLOR_DANGER = "Danger";
+    public static final String SETTINGS_COLOR_TEXT = "Text";
+    public static final String SETTINGS_COLOR_TEXT_MUTED = "Muted Text";
+    public static final String SETTINGS_COLOR_TEXT_ON_ACCENT = "Text on Accent";
+    public static final String[] SETTINGS_COLOR_CHANNEL_LABELS = { "Red", "Green", "Blue", "Alpha" };
+    public static final String SETTINGS_ACTION_ENTER_HEX = "Enter Hex Value";
+    public static final String SETTINGS_ACTION_RESET_COLOR = "Reset to Default";
+    public static final String SETTINGS_ACTION_RESET_COLORS = "Reset Color Scheme";
+    public static final String SETTINGS_DIALOG_TITLE_HEX_PREFIX = "Hex Value of ";
+    public static final String SETTINGS_FORMAT_HEX = "#%02X%02X%02X%02X";
+    public static final String SETTINGS_HEX_PREFIX = "#";
+    public static final int SETTINGS_HEX_DIGITS_PER_CHANNEL = 2;
+    public static final int SETTINGS_HEX_RADIX = 16;
+
     // Tabs
     public static final String TAB_TITLE_COMMAND_CONSOLE = "Command Console";
     public static final String TAB_TITLE_ARPG_VIEWER = "ARPG Viewer";
@@ -149,6 +249,9 @@ public class EditorSetting {
     // Shortcuts
     public static final String SHORTCUT_PATH = "shortcuts";
     public static final String SHORTCUT_NAME_SEPARATOR = "/";
+    public static final String SHORTCUT_MODIFIER_CONTROL = "Ctrl";
+    public static final String SHORTCUT_MODIFIER_SHIFT = "Shift";
+    public static final String SHORTCUT_MODIFIER_ALT = "Alt";
 
     // Commands
     public static final String COMMAND_PATH = "commands";
@@ -916,6 +1019,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_ANIMATION_TREES = "AnimationTrees";
     public static final String INFO_SCHEMA_WORLDS = "Worlds";
     public static final String INFO_SCHEMA_SHIPS = "Ships";
+    public static final String INFO_SCHEMA_SHORTCUTS = "Shortcuts";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";

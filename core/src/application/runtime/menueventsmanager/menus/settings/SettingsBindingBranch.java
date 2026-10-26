@@ -5,15 +5,11 @@ import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.settingspipeline.settingssystem.SettingsSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
-import engine.input.Binding;
-import engine.input.BindingType;
 import engine.input.Input;
 import engine.input.InputCode;
 import engine.input.InputNameUtility;
 import engine.input.Keys;
 import engine.root.BranchPackage;
-import engine.root.EngineSetting;
-import engine.settings.KeyBindings;
 
 public class SettingsBindingBranch extends BranchPackage {
 
@@ -132,69 +128,13 @@ public class SettingsBindingBranch extends BranchPackage {
             return;
         }
 
-        InputCode pressed = resolvePressedCode(rawInput);
+        InputCode pressed = SettingsValueUtility.resolvePressedCode(rawInput);
 
         if (pressed == null)
             return;
 
-        rebind(session.getCapturingBinding(), pressed);
+        SettingsValueUtility.rebind(session.getCapturingBinding(), pressed);
         session.setCapturingBinding(null);
         settingsMenuBranch.refreshOptions(session);
-    }
-
-    private InputCode resolvePressedCode(Input rawInput) {
-
-        for (int key = 0; key < EngineSetting.INPUT_KEY_CODE_COUNT; key++) {
-
-            if (!rawInput.isKeyClicked(key))
-                continue;
-
-            InputCode inputCode = InputCode.key(key);
-
-            if (InputNameUtility.hasName(inputCode))
-                return inputCode;
-        }
-
-        for (int button = 0; button < EngineSetting.INPUT_MOUSE_BUTTON_COUNT; button++) {
-
-            if (!rawInput.isMouseClicked(button) || isMenuButton(button))
-                continue;
-
-            InputCode inputCode = InputCode.mouse(button);
-
-            if (InputNameUtility.hasName(inputCode))
-                return inputCode;
-        }
-
-        return null;
-    }
-
-    private boolean isMenuButton(int button) {
-
-        for (InputCode inputCode : KeyBindings.PRIMARY.getCodes())
-            if (inputCode.type == BindingType.BUTTON && inputCode.code == button)
-                return true;
-
-        return false;
-    }
-
-    // Rebind \\
-
-    private void rebind(SettingsBinding target, InputCode inputCode) {
-
-        InputCode[] previousCodes = target.getBinding().getCodes();
-
-        for (SettingsBinding settingsBinding : SettingsBinding.VALUES)
-            if (settingsBinding != target && isBoundTo(settingsBinding.getBinding(), inputCode))
-                settingsBinding.getBinding().set(previousCodes);
-
-        target.getBinding().set(inputCode);
-    }
-
-    private boolean isBoundTo(Binding binding, InputCode inputCode) {
-
-        InputCode[] codes = binding.getCodes();
-
-        return codes.length == 1 && codes[0].matches(inputCode);
     }
 }

@@ -4,11 +4,13 @@ import application.bootstrap.menupipeline.menumanager.ElementHitSystem;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import editor.bootstrap.shortcutpipeline.shortcut.ShortcutData;
 import editor.bootstrap.shortcutpipeline.shortcut.ShortcutHandle;
 import editor.bootstrap.shortcutpipeline.util.ShortcutModifier;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.menueventsmanager.menus.ExportDialogBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
+import editor.runtime.menueventsmanager.menus.settings.EditorSettingsBranch;
 import engine.input.Input;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
@@ -30,7 +32,9 @@ public class ShortcutManager extends ManagerPackage {
      * crash boundary. A tool reads a held shortcut by the ID its name
      * resolves to once, so a gesture's modifiers are bound in data like
      * every key. Two shortcuts of one tool on the same keys are rejected at
-     * load, and nothing is pressed while a dialog takes typed text.
+     * load, and nothing is pressed while a dialog takes typed text or the
+     * settings dialog is open. A shortcut rebound there takes its new keys in
+     * place, under the same ID, once its file is saved.
      */
 
     // Internal
@@ -40,6 +44,7 @@ public class ShortcutManager extends ManagerPackage {
     private ElementHitSystem elementHitSystem;
     private NameDialogBranch nameDialogBranch;
     private ExportDialogBranch exportDialogBranch;
+    private EditorSettingsBranch editorSettingsBranch;
 
     // Palette
     private Object2IntOpenHashMap<String> shortcutName2ShortcutID;
@@ -67,6 +72,7 @@ public class ShortcutManager extends ManagerPackage {
         this.elementHitSystem = get(ElementHitSystem.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
         this.exportDialogBranch = get(ExportDialogBranch.class);
+        this.editorSettingsBranch = get(EditorSettingsBranch.class);
     }
 
     @Override
@@ -108,16 +114,46 @@ public class ShortcutManager extends ManagerPackage {
             contextClass2PressedShortcuts.put(shortcutHandle.getContextClass(), pressedShortcuts);
         }
 
-        for (int i = 0; i < pressedShortcuts.size(); i++) {
+        ShortcutHandle clash = findPressedClash(
+                shortcutHandle,
+                shortcutHandle.getKey(),
+                shortcutHandle.getModifiers());
 
-            ShortcutHandle other = pressedShortcuts.get(i);
-
-            if (other.getKey() == shortcutHandle.getKey() && other.getModifiers() == shortcutHandle.getModifiers())
-                throwException("Shortcuts '" + other.getShortcutName() + "' and '"
-                        + shortcutHandle.getShortcutName() + "' are both pressed with the same keys in one tool.");
-        }
+        if (clash != null)
+            throwException("Shortcuts '" + clash.getShortcutName() + "' and '"
+                    + shortcutHandle.getShortcutName() + "' are both pressed with the same keys in one tool.");
 
         pressedShortcuts.add(shortcutHandle);
+    }
+
+    // Gives the shortcut new keys in place, under the same ID, so every tool reading it follows at once
+    public void rebindShortcut(int shortcutID, int key, int modifiers) {
+
+        ShortcutHandle shortcutHandle = getShortcutHandleFromShortcutID(shortcutID);
+        ShortcutData shortcutData = shortcutHandle.getShortcutData();
+
+        if (shortcutHandle.hasAction() && key == EngineSetting.INDEX_NOT_FOUND)
+            throwException("Shortcut '" + shortcutHandle.getShortcutName() + "' is pressed, so it needs a key.");
+
+        if (key == EngineSetting.INDEX_NOT_FOUND && modifiers == ShortcutModifier.NONE)
+            throwException("Shortcut '" + shortcutHandle.getShortcutName()
+                    + "' is held, so it needs a key or a modifier to hold.");
+
+        ShortcutHandle clash = findPressedClash(shortcutHandle, key, modifiers);
+
+        if (clash != null)
+            throwException("Shortcut '" + shortcutHandle.getShortcutName() + "' cannot take the keys of '"
+                    + clash.getShortcutName() + "' in the same tool.");
+
+        shortcutHandle.constructor(new ShortcutData(
+                shortcutData.getShortcutName(),
+                shortcutData.getShortcutID(),
+                shortcutData.getContextClass(),
+                key,
+                modifiers,
+                shortcutData.getActionClass(),
+                shortcutData.getActionMethod(),
+                shortcutData.getActionArg()));
     }
 
     // Update \\
@@ -168,12 +204,40 @@ public class ShortcutManager extends ManagerPackage {
         return window != null && window.getContext() != null ? window : null;
     }
 
-    // A dialog taking typed text keeps every key to itself
+    // A dialog taking typed text, or the settings dialog, keeps every key to itself
     private boolean isWithheld() {
-        return nameDialogBranch.isOpen() || exportDialogBranch.isOpen();
+        return nameDialogBranch.isOpen() || exportDialogBranch.isOpen() || editorSettingsBranch.isOpen();
     }
 
     // Accessible \\
+
+    // The pressed shortcut of the same tool already on these keys, other than the shortcut itself; null for none
+    public ShortcutHandle findPressedClash(ShortcutHandle shortcutHandle, int key, int modifiers) {
+
+        if (!shortcutHandle.hasAction())
+            return null;
+
+        ObjectArrayList<ShortcutHandle> pressedShortcuts = contextClass2PressedShortcuts.get(
+                shortcutHandle.getContextClass());
+
+        if (pressedShortcuts == null)
+            return null;
+
+        for (int i = 0; i < pressedShortcuts.size(); i++) {
+
+            ShortcutHandle other = pressedShortcuts.get(i);
+
+            if (other != shortcutHandle && other.getKey() == key && other.getModifiers() == modifiers)
+                return other;
+        }
+
+        return null;
+    }
+
+    // Every shortcut ID lies below this, in the order their files declare them
+    public int getShortcutIDCount() {
+        return shortcutID2ShortcutHandle.size();
+    }
 
     public boolean hasShortcut(String shortcutName) {
         return RegistryUtility.getHandle(shortcutName2ShortcutID, shortcutID2ShortcutHandle, shortcutName) != null;
