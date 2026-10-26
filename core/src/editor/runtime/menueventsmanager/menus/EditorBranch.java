@@ -14,8 +14,8 @@ public class EditorBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the editor toolbar. Window and tool operations
-     * open tabs in the clicked OS window; layout operations list, load, and name
-     * saved layouts.
+     * open tabs in the clicked OS window; layout operations list saved layouts
+     * and create, load, save over, and delete them.
      */
 
     // Internal
@@ -130,24 +130,36 @@ public class EditorBranch extends BranchPackage {
         menuManager.inject(
                 menu, EditorSetting.ENTRY_LAYOUTS_LIST, EditorSetting.MENU_EDITOR_LAYOUT_ITEM_TEMPLATE,
                 item -> {
-                    item.setActionArgOverride(layoutName);
-                    ElementInstance label = item.findChildById(EditorSetting.ELEMENT_LAYOUT_ITEM_LABEL);
-                    if (label != null)
-                        label.setFontText(layoutName);
+                    item.findChildById(EditorSetting.ELEMENT_LAYOUT_ITEM_LOAD).setActionArgOverride(layoutName);
+                    item.findChildById(EditorSetting.ELEMENT_LAYOUT_ITEM_SAVE).setActionArgOverride(layoutName);
+                    item.findChildById(EditorSetting.ELEMENT_LAYOUT_ITEM_DELETE).setActionArgOverride(layoutName);
+                    item.findChildById(EditorSetting.ELEMENT_LAYOUT_ITEM_LABEL).setFontText(layoutName);
                 });
+    }
+
+    // Layout Operations \\
+
+    public void openCreateLayoutDialog(WindowInstance window) {
+        nameDialogBranch.open(
+                window,
+                EditorSetting.DIALOG_TITLE_CREATE_LAYOUT,
+                layoutManager::isLayoutNameAvailable,
+                layoutManager::createLayout);
     }
 
     public void loadLayout(String layoutName) {
         layoutManager.loadLayout(layoutName);
     }
 
-    // Create Layout \\
+    public void saveLayout(String layoutName) {
+        layoutManager.saveLayout(layoutName);
+    }
 
-    public void openCreateLayoutDialog(WindowInstance window) {
+    public void deleteLayout(String layoutName, WindowInstance window) {
         nameDialogBranch.open(
                 window,
-                EditorSetting.DIALOG_TITLE_CREATE_LAYOUT,
-                layoutManager::isLayoutNameValid,
-                layoutManager::saveLayout);
+                EditorSetting.DIALOG_TITLE_DELETE_PREFIX + layoutName + EditorSetting.DIALOG_TITLE_DELETE_SUFFIX,
+                layoutName::equals,
+                confirmedName -> layoutManager.deleteLayout(layoutName));
     }
 }

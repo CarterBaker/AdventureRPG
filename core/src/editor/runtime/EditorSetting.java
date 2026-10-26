@@ -39,6 +39,9 @@ public class EditorSetting {
     public static final String MENU_EDITOR_LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";
 
     // Elements
+    public static final String ELEMENT_LAYOUT_ITEM_LOAD = "layout_item_load";
+    public static final String ELEMENT_LAYOUT_ITEM_SAVE = "layout_item_save";
+    public static final String ELEMENT_LAYOUT_ITEM_DELETE = "layout_item_delete";
     public static final String ELEMENT_LAYOUT_ITEM_LABEL = "layout_item_label";
 
     // Keys
