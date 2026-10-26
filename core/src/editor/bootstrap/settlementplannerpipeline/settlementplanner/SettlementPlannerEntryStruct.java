@@ -1,14 +1,14 @@
-package editor.bootstrap.worldeditorpipeline.worldplacement;
+package editor.bootstrap.settlementplannerpipeline.settlementplanner;
 
 import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import engine.root.StructPackage;
 
-public class WorldPlacementEntryStruct extends StructPackage {
+public class SettlementPlannerEntryStruct extends StructPackage {
 
     /*
-     * One thing the world editor can place by hand: whether it is a
-     * settlement or a single structure, its registry name, and the name shown
-     * for it.
+     * One thing the settlement planner can design and the World Editor place:
+     * whether it is a settlement or a single structure, its registry name,
+     * and the name shown for it.
      */
 
     // Identity
@@ -18,7 +18,7 @@ public class WorldPlacementEntryStruct extends StructPackage {
 
     // Constructor \\
 
-    public WorldPlacementEntryStruct(WorldPlacementKind kind, String name, String displayName) {
+    public SettlementPlannerEntryStruct(WorldPlacementKind kind, String name, String displayName) {
 
         // Identity
         this.kind = kind;
@@ -30,6 +30,10 @@ public class WorldPlacementEntryStruct extends StructPackage {
 
     public WorldPlacementKind getKind() {
         return kind;
+    }
+
+    public boolean isSettlement() {
+        return kind == WorldPlacementKind.SETTLEMENT;
     }
 
     public String getName() {

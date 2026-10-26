@@ -8,6 +8,7 @@ import editor.bootstrap.imagepipeline.ImagePipeline;
 import editor.bootstrap.infopipeline.InfoPipeline;
 import editor.bootstrap.itemeditorpipeline.ItemEditorPipeline;
 import editor.bootstrap.recorderpipeline.RecorderPipeline;
+import editor.bootstrap.settlementplannerpipeline.SettlementPlannerPipeline;
 import editor.bootstrap.shortcutpipeline.ShortcutPipeline;
 import editor.bootstrap.tabpipeline.TabPipeline;
 import editor.bootstrap.worldeditorpipeline.WorldEditorPipeline;
@@ -22,6 +23,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
      * the tab pipeline, the info pipeline behind every hierarchy tab and info
      * panel, the item editor pipeline shared by every item editor, the image
      * editing framework and the world editor pipeline built on it, the
+     * settlement planner pipeline whose design the world editor places, the
      * character, animation and animation tree editor pipelines, the command
      * pipeline that routes console commands to every Dev window, the
      * recorder pipeline that records, plays back and exports from a Dev
@@ -39,6 +41,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(ItemEditorPipeline.class);
         create(ImagePipeline.class);
         create(WorldEditorPipeline.class);
+        create(SettlementPlannerPipeline.class);
         create(CharacterEditorPipeline.class);
         create(AnimationEditorPipeline.class);
         create(AnimationTreeEditorPipeline.class);

@@ -144,6 +144,22 @@ public class WorldManager extends ManagerPackage {
         }
     }
 
+    // The placement nearest a world position within a radius, null when none stands that near
+    public WorldPlacementStruct findNearestPlacement(
+            WorldHandle worldHandle,
+            double worldX,
+            double worldZ,
+            double radiusBlocks) {
+
+        synchronized (worldID2Placements) {
+
+            WorldPlacementStruct[] placements = getPlacements(worldHandle);
+            int nearest = indexOfNearestPlacement(worldHandle, placements, worldX, worldZ, radiusBlocks);
+
+            return nearest == EngineSetting.INDEX_NOT_FOUND ? null : placements[nearest];
+        }
+    }
+
     // The placement nearest a world position within a radius taken away — null when none stands that near
     public WorldPlacementStruct removeNearestPlacement(
             WorldHandle worldHandle,
@@ -154,21 +170,7 @@ public class WorldManager extends ManagerPackage {
         synchronized (worldID2Placements) {
 
             WorldPlacementStruct[] placements = getPlacements(worldHandle);
-            int nearest = EngineSetting.INDEX_NOT_FOUND;
-            double nearestDistanceSq = radiusBlocks * radiusBlocks;
-
-            for (int i = 0; i < placements.length; i++) {
-
-                double deltaX = WorldWrapUtility.wrappedBlockDeltaX(worldHandle, placements[i].getWorldX(), worldX);
-                double deltaZ = WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, placements[i].getWorldZ(), worldZ);
-                double distanceSq = deltaX * deltaX + deltaZ * deltaZ;
-
-                if (distanceSq > nearestDistanceSq)
-                    continue;
-
-                nearestDistanceSq = distanceSq;
-                nearest = i;
-            }
+            int nearest = indexOfNearestPlacement(worldHandle, placements, worldX, worldZ, radiusBlocks);
 
             if (nearest == EngineSetting.INDEX_NOT_FOUND)
                 return null;
@@ -183,6 +185,58 @@ public class WorldManager extends ManagerPackage {
 
             return removed;
         }
+    }
+
+    // One placement swapped for another in its place — false when the placement no longer stands
+    public boolean replacePlacement(
+            WorldHandle worldHandle,
+            WorldPlacementStruct previous,
+            WorldPlacementStruct replacement) {
+
+        synchronized (worldID2Placements) {
+
+            WorldPlacementStruct[] placements = getPlacements(worldHandle);
+
+            for (int i = 0; i < placements.length; i++) {
+
+                if (placements[i] != previous)
+                    continue;
+
+                WorldPlacementStruct[] replaced = placements.clone();
+                replaced[i] = replacement;
+                publishPlacements(worldHandle, replaced);
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    private int indexOfNearestPlacement(
+            WorldHandle worldHandle,
+            WorldPlacementStruct[] placements,
+            double worldX,
+            double worldZ,
+            double radiusBlocks) {
+
+        int nearest = EngineSetting.INDEX_NOT_FOUND;
+        double nearestDistanceSq = radiusBlocks * radiusBlocks;
+
+        for (int i = 0; i < placements.length; i++) {
+
+            double deltaX = WorldWrapUtility.wrappedBlockDeltaX(worldHandle, placements[i].getWorldX(), worldX);
+            double deltaZ = WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, placements[i].getWorldZ(), worldZ);
+            double distanceSq = deltaX * deltaX + deltaZ * deltaZ;
+
+            if (distanceSq > nearestDistanceSq)
+                continue;
+
+            nearestDistanceSq = distanceSq;
+            nearest = i;
+        }
+
+        return nearest;
     }
 
     // The placements read back from the companion file, dropping every unsaved change

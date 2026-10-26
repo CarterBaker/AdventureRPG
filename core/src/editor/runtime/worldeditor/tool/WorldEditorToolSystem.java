@@ -16,7 +16,8 @@ public class WorldEditorToolSystem extends SystemPackage {
      * it on wherever the pointer goes, and releasing ends it as one undo step.
      * A placement tool instead acts once per click, on the exact position
      * under the pointer. Nothing begins while the view is being panned. The
-     * hovered pixel is kept for the brush outline and status line.
+     * hovered pixel is kept for the brush outline and status line, and the
+     * exact image position under the pointer for the placement footprint.
      */
 
     // Internal
@@ -28,6 +29,8 @@ public class WorldEditorToolSystem extends SystemPackage {
     private boolean hovering;
     private int hoveredX;
     private int hoveredY;
+    private double hoveredImageX;
+    private double hoveredImageY;
 
     // Stroke
     private boolean stroking;
@@ -56,6 +59,8 @@ public class WorldEditorToolSystem extends SystemPackage {
         double imageX = worldEditorViewSystem.screenToImageX(rawInput.getMouseX());
         double imageY = worldEditorViewSystem.screenToImageY(rawInput.getMouseY());
 
+        hoveredImageX = imageX;
+        hoveredImageY = imageY;
         hoveredX = (int) Math.floor(imageX);
         hoveredY = (int) Math.floor(imageY);
         hovering = editorInputSystem.isPointerActive()
@@ -103,5 +108,13 @@ public class WorldEditorToolSystem extends SystemPackage {
 
     public int getHoveredY() {
         return hoveredY;
+    }
+
+    public double getHoveredImageX() {
+        return hoveredImageX;
+    }
+
+    public double getHoveredImageY() {
+        return hoveredImageY;
     }
 }

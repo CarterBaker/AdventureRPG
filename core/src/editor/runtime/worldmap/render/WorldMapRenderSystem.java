@@ -15,9 +15,12 @@ import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
+import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.runtime.EditorSetting;
+import editor.runtime.placementicon.PlacementIconSystem;
 import editor.runtime.worldmap.WorldMapSetting;
 import editor.runtime.worldmap.view.WorldMapViewSystem;
 import engine.root.SystemPackage;
@@ -30,7 +33,8 @@ public class WorldMapRenderSystem extends SystemPackage {
     /*
      * Draws the world map into this window's scene target: one quad per draw
      * the engine's map resolved for this view this frame, each showing its
-     * part of a map tile texture, then the arrow marking the character, at the copy of its
+     * part of a map tile texture, then an icon for every hand placement of
+     * the world through PlacementIconSystem, then the arrow marking the character, at the copy of its
      * position nearest the view's centre and turned to its facing, or under the pointer while
      * it is being dragged. Each tile
      * carries the world region it covers and the shared overlay textures, so
@@ -47,7 +51,9 @@ public class WorldMapRenderSystem extends SystemPackage {
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
     private MapManager mapManager;
+    private WorldManager worldManager;
     private WorldMapViewSystem worldMapViewSystem;
+    private PlacementIconSystem placementIconSystem;
 
     // Render Target
     private FBOInstance sceneFbo;
@@ -102,7 +108,9 @@ public class WorldMapRenderSystem extends SystemPackage {
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
         this.mapManager = get(MapManager.class);
+        this.worldManager = get(WorldManager.class);
         this.worldMapViewSystem = get(WorldMapViewSystem.class);
+        this.placementIconSystem = get(PlacementIconSystem.class);
     }
 
     @Override
@@ -125,6 +133,7 @@ public class WorldMapRenderSystem extends SystemPackage {
 
         if (window.getWidth() > 0 && window.getHeight() > 0) {
             renderTiles(window);
+            renderPlacementIcons(window);
             renderMarker(window);
         }
 
@@ -185,6 +194,31 @@ public class WorldMapRenderSystem extends SystemPackage {
         tileModels.add(tileModel);
 
         return tileModel;
+    }
+
+    // Placements \\
+
+    // Every hand placement's icon, at the copy of its column nearest the view's centre
+    private void renderPlacementIcons(WindowInstance window) {
+
+        WorldHandle worldHandle = worldMapViewSystem.getWorldHandle();
+        WorldPlacementStruct[] placements = worldManager.getPlacements(worldHandle);
+        double blocksPerPixel = worldMapViewSystem.getBlocksPerPixel();
+        double halfWidth = window.getWidth() * 0.5;
+        double halfHeight = window.getHeight() * 0.5;
+
+        placementIconSystem.begin();
+
+        for (int i = 0; i < placements.length; i++)
+            placementIconSystem.push(
+                    window, sceneFbo, WorldMapSetting.DEPTH_PLACEMENTS,
+                    (float) (halfWidth + WorldWrapUtility.wrappedDelta(
+                            placements[i].getWorldX(), worldMapViewSystem.getCenterX(),
+                            worldHandle.getWorldScale().x) / blocksPerPixel),
+                    (float) (halfHeight - WorldWrapUtility.wrappedDelta(
+                            placements[i].getWorldZ(), worldMapViewSystem.getCenterZ(),
+                            worldHandle.getWorldScale().y) / blocksPerPixel),
+                    placements[i]);
     }
 
     // Marker \\

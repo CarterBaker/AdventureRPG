@@ -9,6 +9,7 @@ import application.bootstrap.mappipeline.map.MapViewStruct;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.layout.LayoutPlanStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -38,6 +39,9 @@ public class MapManager extends ManagerPackage {
      * until its fresh pixels upload, so edits sharpen in place. Views may also
      * show the shared day and night and weather overlays MapOverlayBranch
      * keeps over their tiles, and any map can ask where the players stand.
+     * The editor may hand over one preview layout, drawn on every tile it
+     * reaches as if it stood but never laid into the world; changing it marks
+     * the tiles under the old and the new one stale.
      */
 
     // Internal
@@ -63,6 +67,10 @@ public class MapManager extends ManagerPackage {
 
     // Live Edits
     private int shownBiomeRevision;
+
+    // Preview — read by tile workers, so a new one is published whole
+    private volatile WorldHandle previewWorldHandle;
+    private volatile LayoutPlanStruct previewLayout;
 
     // Scratch
     private ByteBuffer uploadBuffer;
@@ -302,10 +310,16 @@ public class MapManager extends ManagerPackage {
 
         double pixelBlocks = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
         int margin = EngineSetting.MAP_EDIT_MARGIN_PIXELS;
-        double minBlockX = (minPixelX - margin) * pixelBlocks;
-        double minBlockZ = (minPixelZ - margin) * pixelBlocks;
-        double maxBlockX = (maxPixelX + 1 + margin) * pixelBlocks;
-        double maxBlockZ = (maxPixelZ + 1 + margin) * pixelBlocks;
+
+        invalidateWorldBlocks(
+                (minPixelX - margin) * pixelBlocks,
+                (minPixelZ - margin) * pixelBlocks,
+                (maxPixelX + 1 + margin) * pixelBlocks,
+                (maxPixelZ + 1 + margin) * pixelBlocks);
+    }
+
+    // Every tile a block region reaches, measured with the lattice margin its generation samples beyond it
+    private void invalidateWorldBlocks(double minBlockX, double minBlockZ, double maxBlockX, double maxBlockZ) {
 
         for (MapTileInstance tile : key2MapTile.values()) {
 
@@ -319,6 +333,38 @@ public class MapManager extends ManagerPackage {
                             tileMinZ, tileMinZ + tileBlocks + reach * 2, minBlockZ, maxBlockZ, worldHeightBlocks))
                 tile.markStale();
         }
+    }
+
+    // Preview \\
+
+    // The one layout the editor previews, null for none, the tiles under the old and the new one regenerated
+    public void setPreviewLayout(WorldHandle previewWorld, LayoutPlanStruct layout) {
+
+        invalidatePreview();
+
+        this.previewLayout = null;
+        this.previewWorldHandle = previewWorld;
+        this.previewLayout = layout;
+
+        invalidatePreview();
+    }
+
+    private void invalidatePreview() {
+
+        LayoutPlanStruct layout = previewLayout;
+
+        if (layout == null || previewWorldHandle != worldHandle)
+            return;
+
+        invalidateWorldBlocks(layout.getMinX(), layout.getMinZ(), layout.getMaxX(), layout.getMaxZ());
+    }
+
+    // Worker — the previewed layout when it stands in this world, null otherwise
+    LayoutPlanStruct getPreviewLayout(WorldHandle tileWorldHandle) {
+
+        LayoutPlanStruct layout = previewLayout;
+
+        return layout != null && previewWorldHandle == tileWorldHandle ? layout : null;
     }
 
     // A rebuilt biome can change any part of the field, so every tile regenerates

@@ -241,6 +241,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
+    public static final String TAB_TITLE_SETTLEMENT_PLANNER = "Settlement Planner";
     public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
@@ -944,6 +945,52 @@ public class EditorSetting {
     public static final String WORLD_MAP_WEATHER_ON = "Weather On";
     public static final String WORLD_MAP_WEATHER_OFF = "Weather Off";
 
+    // Settlement Planner
+    public static final int SETTLEMENT_PLANNER_LAYOUT_DEFAULT = 1;
+    public static final String SETTLEMENT_PLANNER_ARCHITECTURE_BIOME = "Biome's choice";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_TYPE_LIVE = "Settlement live: ";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_TYPE_REFUSED = "Settlement not applied: ";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_RELEASED = "No longer editing a placement";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_UNBUILDABLE = "No architecture builds ";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_NO_ARCHITECTURE = "A structure has no architecture to choose";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_NO_LAYOUT = "Only a settlement has layouts";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_NO_TURN = "A settlement is not turned; choose another layout";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_PREVIEWING = "Previewing at the view's centre";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_UNKNOWN = "The planner has nothing named ";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_EDITING = "Editing ";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_NOT_APPLIED = "Nothing buildable is chosen";
+    public static final String SETTLEMENT_PLANNER_STATUS_SEPARATOR = "  |  ";
+    public static final String SETTLEMENT_PLANNER_STATUS_EDITING = "Editing at ";
+    public static final String SETTLEMENT_PLANNER_STATUS_PREVIEW = "Preview at ";
+    public static final String SETTLEMENT_PLANNER_STATUS_X = "X ";
+    public static final String SETTLEMENT_PLANNER_STATUS_Z = "  Z ";
+    public static final String SETTLEMENT_PLANNER_STATUS_NOTHING = "Nothing to design";
+    public static final String SETTLEMENT_PLANNER_STATUS_TURNS = "Turns ";
+    public static final String SETTLEMENT_PLANNER_STATUS_NO_ARCHITECTURE = "No architecture";
+    public static final String SETTLEMENT_PLANNER_STATUS_CELL_LAYOUT = "Cell layout";
+    public static final String SETTLEMENT_PLANNER_STATUS_LAYOUT = "Layout ";
+    public static final String SETTLEMENT_PLANNER_STATUS_PLANNING = "Planning...";
+    public static final String SETTLEMENT_PLANNER_STATUS_BUILDINGS = "Buildings ";
+    public static final String SETTLEMENT_PLANNER_STATUS_ROADS = ", roads ";
+    public static final String SETTLEMENT_PLANNER_STATUS_WALLED = ", walled";
+
+    // Placement Icons — one icon per hand placement on every map, a house for a settlement and a banner turned the
+    // way a structure faces, the placement the Settlement Planner edits in its highlight
+    public static final String PLACEMENT_ICON_MESH = "editor/EditorViewportQuad";
+    public static final String PLACEMENT_ICON_MATERIAL = "editor/PlacementIconMaterial";
+    public static final String PLACEMENT_ICON_UNIFORM_SHAPE = "u_iconShape";
+    public static final String PLACEMENT_ICON_UNIFORM_FILL_COLOR = "u_fillColor";
+    public static final String PLACEMENT_ICON_UNIFORM_CENTER = "u_markerCenter";
+    public static final String PLACEMENT_ICON_UNIFORM_DIRECTION = "u_markerDirection";
+    public static final String PLACEMENT_ICON_UNIFORM_SCALE = "u_markerScale";
+    public static final float PLACEMENT_ICON_SHAPE_SETTLEMENT = 0f;
+    public static final float PLACEMENT_ICON_SHAPE_STRUCTURE = 1f;
+    public static final float PLACEMENT_ICON_SIZE_PIXELS = 12f;
+    public static final float PLACEMENT_ICON_EDITED_SIZE_PIXELS = 16f;
+    public static final float[] PLACEMENT_ICON_COLOR_SETTLEMENT = { 0.95f, 0.78f, 0.32f, 1f };
+    public static final float[] PLACEMENT_ICON_COLOR_STRUCTURE = { 0.45f, 0.72f, 0.95f, 1f };
+    public static final float[] PLACEMENT_ICON_COLOR_EDITED = { 1f, 0.42f, 0.32f, 1f };
+
     // Image Editing
     public static final String IMAGE_FORMAT = "png";
     public static final String IMAGE_TEMP_SUFFIX = ".tmp";
@@ -959,6 +1006,7 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_TOOL_FILL = "Fill";
     public static final String WORLD_EDITOR_TOOL_PICK = "Pick";
     public static final String WORLD_EDITOR_TOOL_PLACE = "Place";
+    public static final String WORLD_EDITOR_TOOL_EDIT = "Edit";
     public static final String WORLD_EDITOR_TOOL_CLEAR = "Clear";
     public static final String WORLD_EDITOR_TOOL_SMOOTH = "Smooth";
     public static final String WORLD_EDITOR_LAYER_BIOMES = "Biomes";
@@ -972,13 +1020,13 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_MESSAGE_SMOOTH_HEIGHTS_ONLY = "Smooth paints the height layer only";
     public static final double WORLD_EDITOR_CLEAR_RADIUS_BLOCKS = 384.0;
     public static final int WORLD_EDITOR_PLACEMENT_REACH_PIXELS = 5;
-    public static final String WORLD_EDITOR_PLACEABLE_SETTLEMENT = "Settlement: ";
-    public static final String WORLD_EDITOR_PLACEABLE_STRUCTURE = "Structure: ";
-    public static final String WORLD_EDITOR_STATUS_TURNS = "Turns ";
     public static final String WORLD_EDITOR_STATUS_NO_PLACEABLE = "Nothing to place";
     public static final String WORLD_EDITOR_MESSAGE_PLACED = "Placed ";
     public static final String WORLD_EDITOR_MESSAGE_CLEARED = "Cleared ";
-    public static final String WORLD_EDITOR_MESSAGE_NOTHING_TO_CLEAR = "No placement near the pointer";
+    public static final String WORLD_EDITOR_MESSAGE_NOTHING_NEAR = "No placement near the pointer";
+    public static final String WORLD_EDITOR_MESSAGE_EDITING = "Editing in the Settlement Planner: ";
+    public static final String WORLD_EDITOR_MESSAGE_CELL_HELD = "This settlement cell already holds ";
+    public static final String WORLD_EDITOR_MESSAGE_PLACEMENT_GONE = "The edited placement no longer stands";
     public static final String WORLD_EDITOR_MESSAGE_PLACEMENTS_RELOAD_FAILED = "Could not reload placements of ";
     public static final String WORLD_EDITOR_PLAYERS_ON = "Players On";
     public static final String WORLD_EDITOR_PLAYERS_OFF = "Players Off";
@@ -1020,6 +1068,8 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_WORLDS = "Worlds";
     public static final String INFO_SCHEMA_SHIPS = "Ships";
     public static final String INFO_SCHEMA_SHORTCUTS = "Shortcuts";
+    public static final String INFO_SCHEMA_SETTLEMENTS = "Settlements";
+    public static final String INFO_SCHEMA_STRUCTURES = "Structures";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";

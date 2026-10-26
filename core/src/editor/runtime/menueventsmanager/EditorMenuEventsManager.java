@@ -13,6 +13,7 @@ import editor.runtime.menueventsmanager.menus.NameDialogBranch;
 import editor.runtime.menueventsmanager.menus.ProfilerBranch;
 import editor.runtime.menueventsmanager.menus.RecorderBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
+import editor.runtime.menueventsmanager.menus.SettlementPlannerBranch;
 import editor.runtime.menueventsmanager.menus.WorldEditorBranch;
 import editor.runtime.menueventsmanager.menus.WorldMapBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsBranch;
@@ -46,6 +47,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(ProfilerBranch.class);
         create(WorldMapBranch.class);
         create(WorldEditorBranch.class);
+        create(SettlementPlannerBranch.class);
         create(CharacterEditorBranch.class);
         create(AnimationEditorBranch.class);
         create(AnimationTreeEditorBranch.class);

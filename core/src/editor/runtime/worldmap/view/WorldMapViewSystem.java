@@ -309,6 +309,15 @@ public class WorldMapViewSystem extends SystemPackage {
 
     // Management \\
 
+    // The view let go of the character and set on a block column at a zoom
+    public void focus(double worldX, double worldZ, double zoomBlocksPerPixel) {
+
+        following = false;
+        centerX = worldX;
+        centerZ = worldZ;
+        blocksPerPixel = zoomBlocksPerPixel;
+    }
+
     public void toggleFollow() {
         following = !following;
     }

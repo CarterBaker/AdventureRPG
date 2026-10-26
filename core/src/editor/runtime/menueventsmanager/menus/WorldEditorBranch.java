@@ -1,6 +1,7 @@
 package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.worldeditor.WorldEditorContext;
@@ -13,17 +14,20 @@ public class WorldEditorBranch extends BranchPackage {
      * action works on the shared world images and their hand placements,
      * except the player marker toggle, which targets the editor its button
      * was clicked in; biome rows carry their biome's name and height rows
-     * their level.
+     * their level. Choosing and turning what is placed works on the
+     * Settlement Planner's shared design.
      */
 
     // Internal
     private WorldEditorManager worldEditorManager;
+    private SettlementPlannerManager settlementPlannerManager;
 
     // Base \\
 
     @Override
     protected void get() {
         this.worldEditorManager = get(WorldEditorManager.class);
+        this.settlementPlannerManager = get(SettlementPlannerManager.class);
     }
 
     // Image \\
@@ -70,20 +74,24 @@ public class WorldEditorBranch extends BranchPackage {
         worldEditorManager.setTool(WorldEditorTool.PLACE);
     }
 
+    public void selectEditTool() {
+        worldEditorManager.setTool(WorldEditorTool.EDIT);
+    }
+
     public void selectClearTool() {
         worldEditorManager.setTool(WorldEditorTool.CLEAR);
     }
 
     public void previousPlaceable() {
-        worldEditorManager.cyclePlaceable(-1);
+        settlementPlannerManager.cycleEntry(-1);
     }
 
     public void nextPlaceable() {
-        worldEditorManager.cyclePlaceable(1);
+        settlementPlannerManager.cycleEntry(1);
     }
 
     public void turnPlacement() {
-        worldEditorManager.turnPlacement();
+        settlementPlannerManager.turn();
     }
 
     public void shrinkBrush() {

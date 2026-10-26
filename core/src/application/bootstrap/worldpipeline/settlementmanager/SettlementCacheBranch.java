@@ -21,13 +21,15 @@ class SettlementCacheBranch extends BranchPackage {
      * work itself runs outside the lock, on whatever thread first asks;
      * when two threads race to the same answer the first one stored wins,
      * and both are the same since every answer is a pure function of the
-     * world. A change to hand placements or to any biome raises the
-     * revision, so every cell settled before it is settled again.
+     * world. A change to hand placements, to any biome or to any settlement
+     * type raises the revision, so every cell settled before it is settled
+     * again.
      */
 
     // Internal
     private WorldManager worldManager;
     private BiomeManager biomeManager;
+    private SettlementManager settlementManager;
     private SettlementSiteBranch settlementSiteBranch;
     private SettlementPlanBranch settlementPlanBranch;
     private SettlementLinkBranch settlementLinkBranch;
@@ -46,6 +48,7 @@ class SettlementCacheBranch extends BranchPackage {
     protected void get() {
         this.worldManager = get(WorldManager.class);
         this.biomeManager = get(BiomeManager.class);
+        this.settlementManager = get(SettlementManager.class);
         this.settlementSiteBranch = get(SettlementSiteBranch.class);
         this.settlementPlanBranch = get(SettlementPlanBranch.class);
         this.settlementLinkBranch = get(SettlementLinkBranch.class);
@@ -170,9 +173,11 @@ class SettlementCacheBranch extends BranchPackage {
         return cell != null && cell.getWorldHandle() == worldHandle && cell.getRevision() == revision;
     }
 
-    // Hand placements and biomes together, so a change to either settles every cell again
+    // Hand placements, settlement types and biomes together, so a change to any settles every cell again; the
+    // first two only ever rise, so their sum changes whenever either does
     private long resolveRevision() {
-        return Coordinate2Long.pack(worldManager.getPlacementRevision(), biomeManager.getRevision());
+        return Coordinate2Long.pack(
+                worldManager.getPlacementRevision() + settlementManager.getRevision(), biomeManager.getRevision());
     }
 
     // Wrap \\

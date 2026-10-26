@@ -90,6 +90,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openWorldEditor(window.getGLWindow());
     }
 
+    public void openSettlementPlanner(WindowInstance window) {
+        tabManager.openSettlementPlanner(window.getGLWindow());
+    }
+
     public void openConsole(WindowInstance window) {
         tabManager.openConsole(window.getGLWindow());
     }

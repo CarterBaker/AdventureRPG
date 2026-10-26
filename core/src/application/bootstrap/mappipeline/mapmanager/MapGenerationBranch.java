@@ -2,6 +2,7 @@ package application.bootstrap.mappipeline.mapmanager;
 
 import application.bootstrap.mappipeline.map.MapTileInstance;
 import application.bootstrap.mappipeline.util.MapShadeUtility;
+import application.bootstrap.worldpipeline.layout.LayoutPlanStruct;
 import application.bootstrap.worldpipeline.layout.LayoutSurfaceKind;
 import application.bootstrap.worldpipeline.layout.LayoutSurfaceStruct;
 import application.bootstrap.worldpipeline.layoutmanager.LayoutManager;
@@ -26,8 +27,8 @@ public class MapGenerationBranch extends BranchPackage {
      * one texel beyond the tile all round, so each texel finds its slope; then
      * each texel is shaded as land or water, the sea and still water alike
      * deepening below their own surfaces. Once the lattice is fine enough to
-     * show a building, the settlements and roads reaching the tile are
-     * gathered and laid over it: roads recolor the ground and structures,
+     * show a building, the settlements and roads reaching the tile, and the
+     * layout the editor previews, are gathered and laid over it: roads recolor the ground and structures,
      * walls and bridges stand at their own heights in their own colors, so
      * the map shades them like the land. The tile raises its generated flag
      * only once its pixels are whole.
@@ -38,6 +39,7 @@ public class MapGenerationBranch extends BranchPackage {
     private WorldGenerationManager worldGenerationManager;
     private SettlementManager settlementManager;
     private LayoutManager layoutManager;
+    private MapManager mapManager;
     private MapTileAsyncContainer mapTileAsyncContainer;
 
     // Base \\
@@ -53,6 +55,7 @@ public class MapGenerationBranch extends BranchPackage {
         this.worldGenerationManager = get(WorldGenerationManager.class);
         this.settlementManager = get(SettlementManager.class);
         this.layoutManager = get(LayoutManager.class);
+        this.mapManager = get(MapManager.class);
     }
 
     // Generation \\
@@ -123,7 +126,8 @@ public class MapGenerationBranch extends BranchPackage {
 
     // Layouts \\
 
-    // Every settlement and road reaching the lattice, gathered only while it is fine enough to show a building
+    // Every settlement and road reaching the lattice, and the previewed layout, which the surface sample keeps to
+    // its own bounds, gathered only while it is fine enough to show a building
     private void gatherLayouts(
             MapTileAsyncContainer scratch,
             WorldHandle worldHandle,
@@ -141,6 +145,11 @@ public class MapGenerationBranch extends BranchPackage {
         settlementManager.collectLayouts(
                 worldHandle, latticeX - spacing, latticeZ - spacing,
                 latticeX + span + spacing, latticeZ + span + spacing, scratch.layouts);
+
+        LayoutPlanStruct previewLayout = mapManager.getPreviewLayout(worldHandle);
+
+        if (previewLayout != null)
+            scratch.layouts.add(previewLayout);
     }
 
     // What the gathered layouts show at one lattice point, laid over the land sampled there

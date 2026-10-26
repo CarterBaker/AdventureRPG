@@ -9,9 +9,9 @@ public enum WorldEditorTool {
      * or on the height layer the selected level, along the drag, Fill floods
      * the run of one color under the pointer with it, Pick selects the biome
      * or level that paints the pixel under the pointer, Smooth softens the
-     * height layer along the drag, Place stands the selected settlement or
-     * structure on the block column under the pointer, and Clear takes away
-     * the hand placement nearest it.
+     * height layer along the drag, Place stands the Settlement Planner's
+     * design on the block column under the pointer, Edit brings the hand
+     * placement nearest it into the planner, and Clear takes it away.
      */
 
     BRUSH(EditorSetting.WORLD_EDITOR_TOOL_BRUSH, false),
@@ -19,6 +19,7 @@ public enum WorldEditorTool {
     PICK(EditorSetting.WORLD_EDITOR_TOOL_PICK, false),
     SMOOTH(EditorSetting.WORLD_EDITOR_TOOL_SMOOTH, false),
     PLACE(EditorSetting.WORLD_EDITOR_TOOL_PLACE, true),
+    EDIT(EditorSetting.WORLD_EDITOR_TOOL_EDIT, true),
     CLEAR(EditorSetting.WORLD_EDITOR_TOOL_CLEAR, true);
 
     // Internal

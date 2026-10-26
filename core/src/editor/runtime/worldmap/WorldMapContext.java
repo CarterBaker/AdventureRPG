@@ -1,6 +1,7 @@
 package editor.runtime.worldmap;
 
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.placementicon.PlacementIconSystem;
 import editor.runtime.worldmap.menu.WorldMapMenuSystem;
 import editor.runtime.worldmap.render.WorldMapRenderSystem;
 import editor.runtime.worldmap.view.WorldMapViewSystem;
@@ -13,7 +14,9 @@ public class WorldMapContext extends ContextPackage {
      * only views and draws: the engine's map streams from a few tiles for the
      * whole world down to single blocks as it zooms, generated on the fly from
      * the terrain, with the real chunks a preview has loaded drawn in once it
-     * reaches them. With no preview open it shows the active world. An arrow
+     * reaches them. With no preview open it shows the active world. Every
+     * hand placement shows as an icon, and the Settlement Planner's design
+     * is drawn where it would stand. An arrow
      * marks the character's position and facing, and the view follows it
      * until dragged; dragging the arrow itself moves the character to
      * wherever it is dropped. The shared day and night and weather can be shown over
@@ -23,6 +26,7 @@ public class WorldMapContext extends ContextPackage {
     // Internal
     private EditorInputSystem editorInputSystem;
     private WorldMapViewSystem worldMapViewSystem;
+    private PlacementIconSystem placementIconSystem;
     private WorldMapRenderSystem worldMapRenderSystem;
     private WorldMapMenuSystem worldMapMenuSystem;
 
@@ -32,6 +36,7 @@ public class WorldMapContext extends ContextPackage {
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
         this.worldMapViewSystem = create(WorldMapViewSystem.class);
+        this.placementIconSystem = create(PlacementIconSystem.class);
         this.worldMapRenderSystem = create(WorldMapRenderSystem.class);
         this.worldMapMenuSystem = create(WorldMapMenuSystem.class);
     }

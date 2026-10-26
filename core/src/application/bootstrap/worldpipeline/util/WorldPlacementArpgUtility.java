@@ -15,8 +15,9 @@ public final class WorldPlacementArpgUtility extends EngineUtility {
      * The one reader and writer of a world's hand-picked placements in its
      * companion file. Each entry names its "kind", settlement or structure,
      * the "name" of what it stands up, an optional "architecture" a
-     * settlement is built in, the block column "x" and "z" it stands at, and
-     * the clockwise quarter turns "rotation" a structure takes.
+     * settlement is built in, an optional numbered "layout" a settlement is
+     * planned from, the block column "x" and "z" it stands at, and the
+     * clockwise quarter turns "rotation" a structure takes.
      */
 
     // Read \\
@@ -42,16 +43,23 @@ public final class WorldPlacementArpgUtility extends EngineUtility {
                 ArpgUtility.validateString(placementArpg, "kind"), WorldPlacementKind.class);
         String name = ArpgUtility.validateString(placementArpg, "name");
         int quarterTurns = ArpgUtility.getInt(placementArpg, "rotation", 0);
+        int layout = ArpgUtility.getInt(placementArpg, "layout", EngineSetting.WORLD_PLACEMENT_LAYOUT_CELL);
 
         if (quarterTurns < 0 || quarterTurns >= EngineSetting.STRUCTURE_QUARTER_TURN_COUNT)
             throwException("World \"" + worldName + "\" placement of \"" + name + "\" has rotation " + quarterTurns
                     + " — rotation must be between 0 and " + (EngineSetting.STRUCTURE_QUARTER_TURN_COUNT - 1)
                     + " clockwise quarter turns.");
 
+        if (layout < EngineSetting.WORLD_PLACEMENT_LAYOUT_CELL || layout > EngineSetting.WORLD_PLACEMENT_LAYOUT_MAX)
+            throwException("World \"" + worldName + "\" placement of \"" + name + "\" has layout " + layout
+                    + " — layout must be between " + EngineSetting.WORLD_PLACEMENT_LAYOUT_CELL + " and "
+                    + EngineSetting.WORLD_PLACEMENT_LAYOUT_MAX + ", 0 growing the layout its cell would.");
+
         return new WorldPlacementStruct(
                 kind,
                 name,
                 ArpgUtility.getString(placementArpg, "architecture", ""),
+                layout,
                 ArpgUtility.validateInt(placementArpg, "x"),
                 ArpgUtility.validateInt(placementArpg, "z"),
                 quarterTurns);
@@ -80,6 +88,9 @@ public final class WorldPlacementArpgUtility extends EngineUtility {
 
         if (placement.hasArchitecture())
             placementArpg.addProperty("architecture", placement.getArchitectureName());
+
+        if (placement.hasLayout())
+            placementArpg.addProperty("layout", placement.getLayout());
 
         placementArpg.addProperty("x", placement.getWorldX());
         placementArpg.addProperty("z", placement.getWorldZ());

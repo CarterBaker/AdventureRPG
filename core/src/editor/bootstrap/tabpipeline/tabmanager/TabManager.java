@@ -25,6 +25,7 @@ import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.recorder.RecorderContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
+import editor.runtime.settlementplanner.SettlementPlannerContext;
 import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.textureviewer.TextureViewerContext;
 import editor.runtime.worldeditor.WorldEditorContext;
@@ -154,6 +155,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openWorldEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_WORLD_EDITOR, WorldEditorContext.class, osWindow);
+    }
+
+    public TabHandle openSettlementPlanner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_SETTLEMENT_PLANNER, SettlementPlannerContext.class, osWindow);
     }
 
     public TabHandle openConsole(WindowInstance osWindow) {

@@ -25,7 +25,8 @@ class SettlementSiteBranch extends BranchPackage {
      * Async — settles whether a settlement stands in one settlement cell, and
      * what it is. A settlement placed by hand in the cell always stands, of
      * the type it names, in the architecture it names or else the one its
-     * biome builds it in, ignoring every rule. Otherwise, where the world
+     * biome builds it in, planned from the numbered layout it names or else
+     * the one its cell grows, ignoring every rule. Otherwise, where the world
      * grows settlements on its own, the cell rolls once whether one stands,
      * its centre falls a margin inside the cell, its biome picks one of the
      * architectures it allows, the architecture picks one of the settlement
@@ -63,12 +64,10 @@ class SettlementSiteBranch extends BranchPackage {
     // The settlement standing in a cell, null when none does
     SettlementSiteStruct resolveSite(WorldHandle worldHandle, int cellX, int cellZ) {
 
-        WorldPlacementStruct[] placements = worldManager.getPlacements(worldHandle);
+        WorldPlacementStruct placement = findPlacedSettlement(worldHandle, cellX, cellZ);
 
-        for (int i = 0; i < placements.length; i++)
-            if (placements[i].getKind() == WorldPlacementKind.SETTLEMENT
-                    && isInCell(worldHandle, placements[i], cellX, cellZ))
-                return resolvePlacedSite(worldHandle, placements[i], cellX, cellZ);
+        if (placement != null)
+            return resolvePlacedSite(worldHandle, placement, cellX, cellZ);
 
         if (!worldHandle.hasNaturalSettlements())
             return null;
@@ -76,12 +75,35 @@ class SettlementSiteBranch extends BranchPackage {
         return resolveNaturalSite(worldHandle, cellX, cellZ);
     }
 
+    // The settlement a hand placement stands up, settled in whichever cell its column falls in
+    SettlementSiteStruct resolvePlacementSite(WorldHandle worldHandle, WorldPlacementStruct placement) {
+        return resolvePlacedSite(
+                worldHandle, placement,
+                resolveCell(WorldWrapUtility.wrapBlockX(worldHandle, placement.getWorldX())),
+                resolveCell(WorldWrapUtility.wrapBlockZ(worldHandle, placement.getWorldZ())));
+    }
+
+    // The first settlement placed by hand in a cell, null when none is
+    WorldPlacementStruct findPlacedSettlement(WorldHandle worldHandle, int cellX, int cellZ) {
+
+        WorldPlacementStruct[] placements = worldManager.getPlacements(worldHandle);
+
+        for (int i = 0; i < placements.length; i++)
+            if (placements[i].getKind() == WorldPlacementKind.SETTLEMENT
+                    && isInCell(worldHandle, placements[i], cellX, cellZ))
+                return placements[i];
+
+        return null;
+    }
+
     private boolean isInCell(WorldHandle worldHandle, WorldPlacementStruct placement, int cellX, int cellZ) {
+        return resolveCell(WorldWrapUtility.wrapBlockX(worldHandle, placement.getWorldX())) == cellX
+                && resolveCell(WorldWrapUtility.wrapBlockZ(worldHandle, placement.getWorldZ())) == cellZ;
+    }
 
-        int cellSize = EngineSetting.SETTLEMENT_CELL_SIZE_BLOCKS;
-
-        return WorldWrapUtility.wrapBlockX(worldHandle, placement.getWorldX()) / cellSize == cellX
-                && WorldWrapUtility.wrapBlockZ(worldHandle, placement.getWorldZ()) / cellSize == cellZ;
+    // The settlement cell a wrapped block column falls in, along either axis
+    int resolveCell(long wrappedBlock) {
+        return (int) (wrappedBlock / EngineSetting.SETTLEMENT_CELL_SIZE_BLOCKS);
     }
 
     // Placed \\
@@ -105,9 +127,12 @@ class SettlementSiteBranch extends BranchPackage {
                 ? resolveArchitecture(placement.getArchitectureName(), worldHandle.getWorldName())
                 : resolvePlacedArchitecture(worldHandle, settlementHandle, centerX, centerZ);
 
+        long seed = placement.hasLayout()
+                ? resolveLayoutSeed(placement.getLayout())
+                : resolveSeed(worldHandle, cellX, cellZ);
+
         return new SettlementSiteStruct(
-                settlementHandle, architectureHandle, cellX, cellZ, centerX, centerZ,
-                resolveSeed(worldHandle, cellX, cellZ), true);
+                settlementHandle, architectureHandle, cellX, cellZ, centerX, centerZ, seed, true);
     }
 
     // The first architecture the biome allows that builds the type, else the first of all that does
@@ -235,6 +260,11 @@ class SettlementSiteBranch extends BranchPackage {
 
     private long resolveSeed(WorldHandle worldHandle, int cellX, int cellZ) {
         return BiomeFieldUtility.hashCell(worldHandle.getSeed() ^ EngineSetting.SETTLEMENT_PLAN_SALT, cellX, cellZ);
+    }
+
+    // A numbered layout plans the same settlement in any world and any cell
+    private long resolveLayoutSeed(int layout) {
+        return BiomeFieldUtility.hashCell(EngineSetting.SETTLEMENT_LAYOUT_SALT, layout, 0);
     }
 
     private float roll(long seed, int cellX, int cellZ, long salt) {

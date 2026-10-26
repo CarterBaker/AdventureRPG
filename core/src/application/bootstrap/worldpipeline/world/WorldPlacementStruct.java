@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.world;
 
+import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
 public class WorldPlacementStruct extends StructPackage {
@@ -8,15 +9,17 @@ public class WorldPlacementStruct extends StructPackage {
      * One hand-picked thing a world stands up at an exact block column,
      * persisted by name in the world's companion file: a settlement or a
      * structure, the architecture a settlement is built in, empty to take the
-     * one its biome picks, and the clockwise quarter turns a structure takes.
-     * A hand-placed settlement replaces whatever would have grown in its
-     * cell, and ignores every rule a grown one keeps.
+     * one its biome picks, the numbered layout a settlement is planned from,
+     * 0 to take the one its cell would grow, and the clockwise quarter turns
+     * a structure takes. A hand-placed settlement replaces whatever would
+     * have grown in its cell, and ignores every rule a grown one keeps.
      */
 
     // Identity
     private final WorldPlacementKind kind;
     private final String name;
     private final String architectureName;
+    private final int layout;
 
     // Position
     private final long worldX;
@@ -29,6 +32,7 @@ public class WorldPlacementStruct extends StructPackage {
             WorldPlacementKind kind,
             String name,
             String architectureName,
+            int layout,
             long worldX,
             long worldZ,
             int quarterTurns) {
@@ -37,6 +41,7 @@ public class WorldPlacementStruct extends StructPackage {
         this.kind = kind;
         this.name = name;
         this.architectureName = architectureName;
+        this.layout = layout;
 
         // Position
         this.worldX = worldX;
@@ -60,6 +65,14 @@ public class WorldPlacementStruct extends StructPackage {
 
     public boolean hasArchitecture() {
         return !architectureName.isEmpty();
+    }
+
+    public int getLayout() {
+        return layout;
+    }
+
+    public boolean hasLayout() {
+        return layout != EngineSetting.WORLD_PLACEMENT_LAYOUT_CELL;
     }
 
     public long getWorldX() {

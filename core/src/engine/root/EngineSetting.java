@@ -1574,6 +1574,11 @@ public class EngineSetting {
     public static final long SETTLEMENT_PLAN_SALT = 0xD1B84F2763AC059EL;
     public static final long SETTLEMENT_SITE_SALT = 0x57E2C9A0B3F6184DL;
     public static final long SETTLEMENT_TYPE_SALT = 0xA98D3C6F207E51B4L;
+    public static final long SETTLEMENT_LAYOUT_SALT = 0x2C7E5A93D1F04B68L;
+
+    // World Placements — a hand placement's numbered layout, 0 growing the one its settlement cell would
+    public static final int WORLD_PLACEMENT_LAYOUT_CELL = 0;
+    public static final int WORLD_PLACEMENT_LAYOUT_MAX = 9999;
 
     // Tree Parts — the four parts every tree species is drawn with, and the texture corner each carries
     public static final int TREE_PART_BARK = 0;

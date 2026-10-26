@@ -34,7 +34,8 @@ public class WorldMapSetting {
 
     // Render Order
     public static final int DEPTH_TILES = 0;
-    public static final int DEPTH_MARKER = 1;
+    public static final int DEPTH_PLACEMENTS = 1;
+    public static final int DEPTH_MARKER = 2;
 
     // View
     public static final double DEFAULT_BLOCKS_PER_PIXEL = 4.0;

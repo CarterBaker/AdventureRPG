@@ -12,12 +12,12 @@ import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager
 import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
+import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
 import editor.bootstrap.worldeditorpipeline.worldheight.WorldHeightEntryStruct;
-import editor.bootstrap.worldeditorpipeline.worldplacement.WorldPlacementEntryStruct;
 import editor.runtime.EditorSetting;
 import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
@@ -42,9 +42,10 @@ public class WorldEditorManager extends ManagerPackage {
      * both layers together. Biome edits from the Info Panel reach the engine,
      * and biome selection stays in step with the hierarchy, through
      * WorldBiomeBranch, and tree species edits reach it through
-     * WorldTreeBranch. Settlements and structures hand-picked onto the world,
-     * and their palette, are kept through WorldPlacementBranch and saved and
-     * reloaded with the images.
+     * WorldTreeBranch. Settlements and structures hand-picked onto the world
+     * are kept through WorldPlacementBranch and saved and reloaded with the
+     * images; what is placed, and the placement being edited, is the
+     * Settlement Planner's design.
      */
 
     // Internal
@@ -54,6 +55,7 @@ public class WorldEditorManager extends ManagerPackage {
     private WorldStreamManager worldStreamManager;
     private RiverManager riverManager;
     private ImageManager imageManager;
+    private SettlementPlannerManager settlementPlannerManager;
     private WorldBiomeBranch worldBiomeBranch;
     private WorldHeightBranch worldHeightBranch;
     private WorldPlacementBranch worldPlacementBranch;
@@ -115,6 +117,7 @@ public class WorldEditorManager extends ManagerPackage {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.riverManager = get(RiverManager.class);
         this.imageManager = get(ImageManager.class);
+        this.settlementPlannerManager = get(SettlementPlannerManager.class);
     }
 
     // Update \\
@@ -190,6 +193,14 @@ public class WorldEditorManager extends ManagerPackage {
         mapManager.invalidateWorldPixels(editedWorldHandle, minPixelX, minPixelY, maxPixelX, maxPixelY);
         worldStreamManager.requestLiveRebuild(editedWorldHandle, minPixelX, minPixelY, maxPixelX, maxPixelY);
         riverManager.invalidateNetwork(editedWorldHandle);
+    }
+
+    // Every map tile and preview chunk of a world regenerated, as after a change that can reach anywhere in it
+    public void restreamWorld(WorldHandle editedWorldHandle) {
+
+        Pixmap world = editedWorldHandle.getWorld();
+
+        restreamPixels(editedWorldHandle, 0, 0, world.getWidth() - 1, world.getHeight() - 1);
     }
 
     // Layers \\
@@ -407,20 +418,16 @@ public class WorldEditorManager extends ManagerPackage {
 
         switch (activeTool) {
             case PLACE -> worldPlacementBranch.place(world, imageX, imageY);
+            case EDIT -> worldPlacementBranch.edit(world, imageX, imageY);
             case CLEAR -> worldPlacementBranch.clear(world, imageX, imageY);
             default -> {
             }
         }
     }
 
-    public void cyclePlaceable(int step) {
-        worldPlacementBranch.cycle(step);
-        notifyChanged();
-    }
-
-    public void turnPlacement() {
-        worldPlacementBranch.turn();
-        notifyChanged();
+    // The Settlement Planner's live change to the placement it edits, returning why it was refused or null
+    public String replacePlacement(WorldPlacementStruct previous, WorldPlacementStruct replacement) {
+        return worldPlacementBranch.replace(getWorldHandle(), previous, replacement);
     }
 
     public WorldPlacementStruct[] getPlacements() {
@@ -477,7 +484,7 @@ public class WorldEditorManager extends ManagerPackage {
             return;
         }
 
-        setStatusMessage(worldPlacementBranch.reload(worldHandle, image.getWidth(), image.getHeight())
+        setStatusMessage(worldPlacementBranch.reload(worldHandle)
                 ? EditorSetting.WORLD_EDITOR_MESSAGE_RELOADED + image.getImageName()
                 : EditorSetting.WORLD_EDITOR_MESSAGE_PLACEMENTS_RELOAD_FAILED + image.getImageName());
     }
@@ -535,13 +542,7 @@ public class WorldEditorManager extends ManagerPackage {
     }
 
     private void appendPlacementStatus(StringBuilder status) {
-
-        WorldPlacementEntryStruct placeable = worldPlacementBranch.getSelected();
-
-        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
-                .append(placeable != null ? placeable.getDisplayName() : EditorSetting.WORLD_EDITOR_STATUS_NO_PLACEABLE)
-                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(EditorSetting.WORLD_EDITOR_STATUS_TURNS)
-                .append(worldPlacementBranch.getQuarterTurns());
+        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(settlementPlannerManager.describeDesign());
     }
 
     public String describePixel(int pixelX, int pixelY) {
