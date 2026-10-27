@@ -14,6 +14,7 @@ import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
 import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
+import editor.bootstrap.worldeditorpipeline.util.WorldEditorMode;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
@@ -32,7 +33,8 @@ public class WorldEditorManager extends ManagerPackage {
      * its biome image and its height layer, each opened through ImageManager
      * on the world's own pixels so generation reads every stroke at once, the
      * layer being painted, the palette of biomes the image can paint, the
-     * selected biome, tool and brush radius, and the status line. The height
+     * selected biome, the mode, Paint or Settlements, with the tool each mode
+     * keeps, the brush radius, and the status line. The height
      * layer's palette and selected level are kept through WorldHeightBranch.
      * Each edited region of either layer is handed to MapManager, which
      * regenerates only the map tiles it reaches, and to WorldStreamManager,
@@ -44,8 +46,8 @@ public class WorldEditorManager extends ManagerPackage {
      * WorldBiomeBranch, and tree species edits reach it through
      * WorldTreeBranch. Settlements and structures hand-picked onto the world
      * are kept through WorldPlacementBranch and saved and reloaded with the
-     * images; what is placed, and the placement being edited, is the
-     * Settlement Planner's design.
+     * images; what is placed, by a tool or dropped from the planner, and the
+     * placement being edited, is the Settlement Planner's design.
      */
 
     // Internal
@@ -74,7 +76,8 @@ public class WorldEditorManager extends ManagerPackage {
     private int paletteRevision;
 
     // Brush
-    private WorldEditorTool activeTool;
+    private WorldEditorMode activeMode;
+    private WorldEditorTool[] modeTools;
     private int brushRadius;
     private String selectedBiomeName;
     private ImageBrushStruct brush;
@@ -104,7 +107,10 @@ public class WorldEditorManager extends ManagerPackage {
         this.paletteBiomeRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Brush
-        this.activeTool = WorldEditorTool.BRUSH;
+        this.activeMode = WorldEditorMode.PAINT;
+        this.modeTools = new WorldEditorTool[WorldEditorMode.values().length];
+        this.modeTools[WorldEditorMode.PAINT.ordinal()] = WorldEditorTool.BRUSH;
+        this.modeTools[WorldEditorMode.SETTLEMENTS.ordinal()] = WorldEditorTool.PLACE;
         this.brushRadius = EditorSetting.WORLD_EDITOR_BRUSH_RADIUS_DEFAULT;
         this.brush = new ImageBrushStruct();
     }
@@ -286,11 +292,29 @@ public class WorldEditorManager extends ManagerPackage {
             notifyPaletteChanged();
     }
 
+    // Modes \\
+
+    public void toggleMode() {
+        selectMode(activeMode.toggle());
+    }
+
+    private void selectMode(WorldEditorMode mode) {
+
+        if (mode == activeMode)
+            return;
+
+        endStrokes();
+        this.activeMode = mode;
+        notifyChanged();
+    }
+
     // Tools \\
 
+    // A tool becomes its mode's tool, and its mode the one worked in
     public void setTool(WorldEditorTool tool) {
 
-        this.activeTool = tool;
+        this.modeTools[tool.getMode().ordinal()] = tool;
+        selectMode(tool.getMode());
         notifyChanged();
     }
 
@@ -306,7 +330,7 @@ public class WorldEditorManager extends ManagerPackage {
 
         ImageDocumentInstance image = getActiveImage();
 
-        switch (activeTool) {
+        switch (getTool()) {
 
             case BRUSH -> {
                 if (refreshBrush())
@@ -337,7 +361,9 @@ public class WorldEditorManager extends ManagerPackage {
 
     public void continueStroke(int pixelX, int pixelY) {
 
-        if (activeTool == WorldEditorTool.BRUSH || activeTool == WorldEditorTool.SMOOTH)
+        WorldEditorTool tool = getTool();
+
+        if (tool == WorldEditorTool.BRUSH || tool == WorldEditorTool.SMOOTH)
             imageManager.continueStroke(getActiveImage(), pixelX, pixelY, brush);
     }
 
@@ -416,18 +442,48 @@ public class WorldEditorManager extends ManagerPackage {
 
         WorldHandle world = getWorldHandle();
 
-        switch (activeTool) {
+        switch (getTool()) {
             case PLACE -> worldPlacementBranch.place(world, imageX, imageY);
-            case EDIT -> worldPlacementBranch.edit(world, imageX, imageY);
+            case SELECT -> worldPlacementBranch.select(imageX, imageY);
+            case MOVE -> worldPlacementBranch.move(imageX, imageY);
             case CLEAR -> worldPlacementBranch.clear(world, imageX, imageY);
             default -> {
             }
         }
     }
 
+    // The Settlement Planner's design stood at an image position, as the Place tool or a drop from the planner does
+    public void placeDesign(double imageX, double imageY) {
+        worldPlacementBranch.place(getWorldHandle(), imageX, imageY);
+    }
+
     // The Settlement Planner's live change to the placement it edits, returning why it was refused or null
     public String replacePlacement(WorldPlacementStruct previous, WorldPlacementStruct replacement) {
         return worldPlacementBranch.replace(getWorldHandle(), previous, replacement);
+    }
+
+    // One exact placement taken away, returning why it was not or null once it is gone
+    public String removePlacement(WorldPlacementStruct placement) {
+        return worldPlacementBranch.remove(getWorldHandle(), placement);
+    }
+
+    // Every hand placement standing in one world image pixel, in the order they were placed
+    public void collectPlacementsInPixel(int pixelX, int pixelY, ObjectArrayList<WorldPlacementStruct> output) {
+        worldPlacementBranch.collectInPixel(getWorldHandle(), pixelX, pixelY, output);
+    }
+
+    // The block column under an image position, in image pixels with fractions kept
+    public long toBlock(double imagePosition) {
+        return worldPlacementBranch.toBlock(imagePosition);
+    }
+
+    // The world image pixel a placement stands in
+    public int toPixelX(WorldPlacementStruct placement) {
+        return worldPlacementBranch.toPixelX(getWorldHandle(), placement);
+    }
+
+    public int toPixelY(WorldPlacementStruct placement) {
+        return worldPlacementBranch.toPixelY(getWorldHandle(), placement);
     }
 
     public WorldPlacementStruct[] getPlacements() {
@@ -514,14 +570,15 @@ public class WorldEditorManager extends ManagerPackage {
         if (image.isDirty() || getHeightImage().isDirty())
             status.append(EditorSetting.WORLD_EDITOR_DIRTY_MARKER);
 
-        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeLayer.getLabel())
-                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeTool.getLabel());
+        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeMode.getLabel());
 
-        if (activeTool.isPlacement())
+        if (activeMode == WorldEditorMode.SETTLEMENTS)
             appendPlacementStatus(status);
         else
-            status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(EditorSetting.WORLD_EDITOR_STATUS_RADIUS)
-                    .append(brushRadius)
+            status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeLayer.getLabel())
+                    .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(getTool().getLabel())
+                    .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
+                    .append(EditorSetting.WORLD_EDITOR_STATUS_RADIUS).append(brushRadius)
                     .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
                     .append(describeSelection());
 
@@ -542,7 +599,8 @@ public class WorldEditorManager extends ManagerPackage {
     }
 
     private void appendPlacementStatus(StringBuilder status) {
-        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(settlementPlannerManager.describeDesign());
+        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(getTool().getLabel())
+                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(settlementPlannerManager.describeDesign());
     }
 
     public String describePixel(int pixelX, int pixelY) {
@@ -588,8 +646,13 @@ public class WorldEditorManager extends ManagerPackage {
         return selectedBiomeName;
     }
 
+    public WorldEditorMode getMode() {
+        return activeMode;
+    }
+
+    // The tool of the mode worked in
     public WorldEditorTool getTool() {
-        return activeTool;
+        return modeTools[activeMode.ordinal()];
     }
 
     public int getBrushRadius() {

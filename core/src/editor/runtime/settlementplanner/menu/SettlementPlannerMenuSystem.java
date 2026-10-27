@@ -5,6 +5,8 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.worldpipeline.world.WorldPlacementKind;
+import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.settlementplannerpipeline.settlementplanner.SettlementPlannerArchitectureStruct;
@@ -20,14 +22,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class SettlementPlannerMenuSystem extends SystemPackage {
 
     /*
-     * Opens the Settlement Planner toolbar and its two lists over the map.
-     * The catalogue lists every settlement type and then every structure,
-     * one row each with a swatch in its icon's color and its name, and the
-     * architecture list every architecture the chosen settlement can be
-     * built in, led by the biome's own choice; the chosen row of each is
-     * highlighted and every row carries its index. The lists are rebuilt only
-     * when the planner's rows change, and the status line, naming the design,
-     * its site and what it plans to, only when the planner changes.
+     * Opens the Settlement Planner toolbar and its three columns. The
+     * catalogue lists every settlement type and then every structure, one
+     * row each with a swatch in its icon's color and its name, every row
+     * taken hold of to drag onto a World Editor; the design column lists the
+     * architectures the chosen settlement can be built in, led by the
+     * biome's own choice, under its layout or turns; the placed column lists
+     * every placement in the pixel last selected, under the edited
+     * placement's name, coordinates and what it plans to. The chosen row of
+     * each list is highlighted and every row carries its index. The lists
+     * are rebuilt only when the planner's rows change, and the labels only
+     * when the planner changes.
      */
 
     // Internal
@@ -41,6 +46,7 @@ public class SettlementPlannerMenuSystem extends SystemPackage {
     // Rows
     private ObjectArrayList<ElementInstance> entryElements;
     private ObjectArrayList<ElementInstance> architectureElements;
+    private ObjectArrayList<ElementInstance> placedElements;
     private MenuColorStruct settlementSwatch;
     private MenuColorStruct structureSwatch;
     private int shownRowRevision;
@@ -56,6 +62,7 @@ public class SettlementPlannerMenuSystem extends SystemPackage {
         // Rows
         this.entryElements = new ObjectArrayList<>();
         this.architectureElements = new ObjectArrayList<>();
+        this.placedElements = new ObjectArrayList<>();
         this.settlementSwatch = toSwatchColor(EditorSetting.PLACEMENT_ICON_COLOR_SETTLEMENT);
         this.structureSwatch = toSwatchColor(EditorSetting.PLACEMENT_ICON_COLOR_STRUCTURE);
         this.shownRowRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -93,6 +100,7 @@ public class SettlementPlannerMenuSystem extends SystemPackage {
         shownRowRevision = settlementPlannerManager.getRowRevision();
         refreshEntries();
         refreshArchitectures();
+        refreshPlaced();
     }
 
     // Status \\
@@ -104,10 +112,17 @@ public class SettlementPlannerMenuSystem extends SystemPackage {
 
         shownRevision = settlementPlannerManager.getRevision();
 
-        ElementInstance label = toolbarMenu.getEntryPoint(SettlementPlannerSetting.ENTRY_STATUS);
+        setEntryText(SettlementPlannerSetting.ENTRY_STATUS, settlementPlannerManager.getStatusText());
+        setEntryText(SettlementPlannerSetting.ENTRY_DESIGN, settlementPlannerManager.describeValues());
+        setEntryText(SettlementPlannerSetting.ENTRY_EDITED, settlementPlannerManager.describeEdited());
+    }
+
+    private void setEntryText(int entry, String text) {
+
+        ElementInstance label = toolbarMenu.getEntryPoint(entry);
 
         if (label != null)
-            label.setFontText(settlementPlannerManager.getStatusText());
+            label.setFontText(text);
     }
 
     // Rows \\
@@ -133,6 +148,16 @@ public class SettlementPlannerMenuSystem extends SystemPackage {
             architectureElements.add(injectArchitecture(architectures.get(i), i));
     }
 
+    private void refreshPlaced() {
+
+        ejectRows(SettlementPlannerSetting.ENTRY_PLACED, placedElements);
+
+        ObjectArrayList<WorldPlacementStruct> placements = settlementPlannerManager.getPlacementsHere();
+
+        for (int i = 0; i < placements.size(); i++)
+            placedElements.add(injectPlaced(placements.get(i), i));
+    }
+
     private void ejectRows(int entryPoint, ObjectArrayList<ElementInstance> elements) {
 
         for (int i = 0; i < elements.size(); i++)
@@ -151,7 +176,7 @@ public class SettlementPlannerMenuSystem extends SystemPackage {
         return menuManager.inject(
                 toolbarMenu, SettlementPlannerSetting.ENTRY_ENTRIES, template,
                 element -> {
-                    element.setActionArgOverride(Integer.toString(index));
+                    element.setOnDragArgOverride(Integer.toString(index));
 
                     ElementInstance swatch = element.findChildById(SettlementPlannerSetting.ELEMENT_ENTRY_SWATCH);
                     ElementInstance label = element.findChildById(SettlementPlannerSetting.ELEMENT_ENTRY_LABEL);
@@ -180,6 +205,32 @@ public class SettlementPlannerMenuSystem extends SystemPackage {
 
                     if (label != null)
                         label.setFontText(architecture.getDisplayName());
+                });
+    }
+
+    private ElementInstance injectPlaced(WorldPlacementStruct placement, int index) {
+
+        String template = settlementPlannerManager.isEdited(placement)
+                ? SettlementPlannerSetting.TEMPLATE_PLACED_ROW_SELECTED
+                : SettlementPlannerSetting.TEMPLATE_PLACED_ROW;
+        MenuColorStruct swatchColor = placement.getKind() == WorldPlacementKind.SETTLEMENT
+                ? settlementSwatch
+                : structureSwatch;
+        String text = settlementPlannerManager.describePlacement(placement);
+
+        return menuManager.inject(
+                toolbarMenu, SettlementPlannerSetting.ENTRY_PLACED, template,
+                element -> {
+                    element.setActionArgOverride(Integer.toString(index));
+
+                    ElementInstance swatch = element.findChildById(SettlementPlannerSetting.ELEMENT_PLACED_SWATCH);
+                    ElementInstance label = element.findChildById(SettlementPlannerSetting.ELEMENT_PLACED_LABEL);
+
+                    if (swatch != null)
+                        swatch.setColorOverride(swatchColor);
+
+                    if (label != null)
+                        label.setFontText(text);
                 });
     }
 

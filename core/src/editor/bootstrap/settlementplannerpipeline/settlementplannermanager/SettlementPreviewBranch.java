@@ -18,16 +18,16 @@ class SettlementPreviewBranch extends BranchPackage {
 
     /*
      * Shows a design that does not stand yet on every map, exactly as it
-     * would stand at the planner's site. A request plans it on the WorldMap
-     * pool, a settlement through the same path generation plans a hand
-     * placement by and a structure as a layout of its one lot, and once the
-     * plan is back on the main thread it is handed to MapManager as the
-     * preview layout, which redraws only the tiles it reaches. Only one plan
-     * runs at a time and a newer request supersedes it, so a burst of changes
-     * plans once more at most. A design already standing in the world, the
-     * placement being edited, is planned for its summary alone and never
-     * shown twice. The finished plan is counted for the planner's summary:
-     * its buildings, its roads and whether it is walled.
+     * would stand where it is carried over the World Editor. A request plans
+     * it on the WorldMap pool, a settlement through the same path generation
+     * plans a hand placement by and a structure as a layout of its one lot,
+     * and once the plan is back on the main thread it is handed to MapManager
+     * as the preview layout, which redraws only the tiles it reaches. Only
+     * one plan runs at a time and a newer request supersedes it, so a burst
+     * of changes plans once more at most. A design already standing in the
+     * world, the placement being edited, is planned for its summary alone and
+     * never shown twice. The finished plan is counted for the planner's
+     * summary: its buildings, its roads and whether it is walled.
      */
 
     // Internal

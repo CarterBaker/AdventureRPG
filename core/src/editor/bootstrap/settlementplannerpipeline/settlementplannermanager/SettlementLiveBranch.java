@@ -60,8 +60,8 @@ class SettlementLiveBranch extends BranchPackage {
             return;
         }
 
-        if (settlementPlannerManager.getSiteWorldHandle() != null)
-            worldEditorManager.restreamWorld(settlementPlannerManager.getSiteWorldHandle());
+        if (settlementPlannerManager.getWorldHandle() != null)
+            worldEditorManager.restreamWorld(settlementPlannerManager.getWorldHandle());
 
         settlementPlannerManager.refreshCatalogue();
         settlementPlannerManager.setStatusMessage(

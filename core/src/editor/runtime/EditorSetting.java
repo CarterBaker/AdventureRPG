@@ -127,6 +127,8 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_RENAME_RECORDING = "Rename Recording";
     public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
     public static final String DIALOG_TITLE_KEY_VALUE = "Key Value";
+    public static final String DIALOG_TITLE_PLACEMENT_X = "Placement X";
+    public static final String DIALOG_TITLE_PLACEMENT_Z = "Placement Z";
 
     // Export Dialog — the bar fills in fixed steps; the text refreshes a few times a second of real time, and the
     // time left is estimated once a few frames have been made
@@ -239,11 +241,13 @@ public class EditorSetting {
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
+    public static final String TAB_TITLE_PALETTE = "Palette";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
     public static final String TAB_TITLE_SETTLEMENT_PLANNER = "Settlement Planner";
     public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
+    public static final String TAB_TITLE_TOOLS = "Tools";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
 
@@ -951,20 +955,23 @@ public class EditorSetting {
     public static final String SETTLEMENT_PLANNER_MESSAGE_TYPE_LIVE = "Settlement live: ";
     public static final String SETTLEMENT_PLANNER_MESSAGE_TYPE_REFUSED = "Settlement not applied: ";
     public static final String SETTLEMENT_PLANNER_MESSAGE_RELEASED = "No longer editing a placement";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_NOTHING_EDITED =
+            "Select a placement in the World Editor first";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_MOVED = "Moved";
+    public static final String SETTLEMENT_PLANNER_MESSAGE_REMOVED = "Removed ";
     public static final String SETTLEMENT_PLANNER_MESSAGE_UNBUILDABLE = "No architecture builds ";
     public static final String SETTLEMENT_PLANNER_MESSAGE_NO_ARCHITECTURE = "A structure has no architecture to choose";
     public static final String SETTLEMENT_PLANNER_MESSAGE_NO_LAYOUT = "Only a settlement has layouts";
     public static final String SETTLEMENT_PLANNER_MESSAGE_NO_TURN = "A settlement is not turned; choose another layout";
-    public static final String SETTLEMENT_PLANNER_MESSAGE_PREVIEWING = "Previewing at the view's centre";
     public static final String SETTLEMENT_PLANNER_MESSAGE_UNKNOWN = "The planner has nothing named ";
     public static final String SETTLEMENT_PLANNER_MESSAGE_EDITING = "Editing ";
     public static final String SETTLEMENT_PLANNER_MESSAGE_NOT_APPLIED = "Nothing buildable is chosen";
     public static final String SETTLEMENT_PLANNER_STATUS_SEPARATOR = "  |  ";
-    public static final String SETTLEMENT_PLANNER_STATUS_EDITING = "Editing at ";
-    public static final String SETTLEMENT_PLANNER_STATUS_PREVIEW = "Preview at ";
-    public static final String SETTLEMENT_PLANNER_STATUS_X = "X ";
+    public static final String SETTLEMENT_PLANNER_STATUS_COLUMN_X = "  X ";
     public static final String SETTLEMENT_PLANNER_STATUS_Z = "  Z ";
     public static final String SETTLEMENT_PLANNER_STATUS_NOTHING = "Nothing to design";
+    public static final String SETTLEMENT_PLANNER_STATUS_NOTHING_EDITED =
+            "Nothing selected: drag a catalogue row onto the World Editor, or select there";
     public static final String SETTLEMENT_PLANNER_STATUS_TURNS = "Turns ";
     public static final String SETTLEMENT_PLANNER_STATUS_NO_ARCHITECTURE = "No architecture";
     public static final String SETTLEMENT_PLANNER_STATUS_CELL_LAYOUT = "Cell layout";
@@ -1006,9 +1013,12 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_TOOL_FILL = "Fill";
     public static final String WORLD_EDITOR_TOOL_PICK = "Pick";
     public static final String WORLD_EDITOR_TOOL_PLACE = "Place";
-    public static final String WORLD_EDITOR_TOOL_EDIT = "Edit";
+    public static final String WORLD_EDITOR_TOOL_SELECT = "Select";
+    public static final String WORLD_EDITOR_TOOL_MOVE = "Move";
     public static final String WORLD_EDITOR_TOOL_CLEAR = "Clear";
     public static final String WORLD_EDITOR_TOOL_SMOOTH = "Smooth";
+    public static final String WORLD_EDITOR_MODE_PAINT = "Paint";
+    public static final String WORLD_EDITOR_MODE_SETTLEMENTS = "Settlements";
     public static final String WORLD_EDITOR_LAYER_BIOMES = "Biomes";
     public static final String WORLD_EDITOR_LAYER_HEIGHTS = "Heights";
     public static final int WORLD_EDITOR_HEIGHT_LEVEL_STEP = 16;
@@ -1025,6 +1035,10 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_MESSAGE_CLEARED = "Cleared ";
     public static final String WORLD_EDITOR_MESSAGE_NOTHING_NEAR = "No placement near the pointer";
     public static final String WORLD_EDITOR_MESSAGE_EDITING = "Editing in the Settlement Planner: ";
+    public static final String WORLD_EDITOR_MESSAGE_NOTHING_HERE = "No placement in this pixel";
+    public static final String WORLD_EDITOR_MESSAGE_PICK_HERE =
+            " placed in this pixel; pick one in the Settlement Planner";
+    public static final String WORLD_EDITOR_MESSAGE_MOVED = "Moved the edited placement";
     public static final String WORLD_EDITOR_MESSAGE_CELL_HELD = "This settlement cell already holds ";
     public static final String WORLD_EDITOR_MESSAGE_PLACEMENT_GONE = "The edited placement no longer stands";
     public static final String WORLD_EDITOR_MESSAGE_PLACEMENTS_RELOAD_FAILED = "Could not reload placements of ";

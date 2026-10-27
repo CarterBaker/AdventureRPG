@@ -43,8 +43,9 @@ public class WorldEditorRenderSystem extends SystemPackage {
      * black and white heightmap it is, partly see-through so every level lines
      * up with the land beneath. Then comes the
      * brush's outline over the pixels a stroke at the pointer would cover,
-     * or, while placing, a ring as wide as the Settlement Planner's design
-     * around the column it would stand on, an icon for every hand-placed
+     * or, while placing, moving or carrying a design from the Settlement
+     * Planner, a ring as wide as its design around the column it would stand
+     * on, an icon for every hand-placed
      * settlement and structure through PlacementIconSystem, and, while
      * shown, an arrow for every player at their place and facing. Marker
      * quads are pooled with their own materials.
@@ -208,7 +209,8 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
         WorldEditorTool tool = worldEditorManager.getTool();
 
-        if (!worldEditorToolSystem.isHovering() || (tool != WorldEditorTool.BRUSH && tool != WorldEditorTool.SMOOTH))
+        if (!worldEditorToolSystem.isHovering() || worldEditorToolSystem.isDropping()
+                || (tool != WorldEditorTool.BRUSH && tool != WorldEditorTool.SMOOTH))
             return;
 
         int radius = worldEditorManager.getBrushRadius();
@@ -228,8 +230,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
         int radiusBlocks = settlementPlannerManager.getFootprintRadiusBlocks();
 
-        if (!worldEditorToolSystem.isHovering() || worldEditorManager.getTool() != WorldEditorTool.PLACE
-                || radiusBlocks <= 0)
+        if (!worldEditorToolSystem.isHovering() || !isStanding() || radiusBlocks <= 0)
             return;
 
         double radius = radiusBlocks / resolvePixelBlocks();
@@ -240,6 +241,15 @@ public class WorldEditorRenderSystem extends SystemPackage {
         footprintModel.getMaterial().setUniform(WorldEditorSetting.UNIFORM_VIEW_RECT, viewRect);
 
         renderManager.pushRenderCall(footprintModel, sceneFbo, WorldEditorSetting.DEPTH_BRUSH, window);
+    }
+
+    // True while a click or a drop would stand the design under the pointer
+    private boolean isStanding() {
+
+        WorldEditorTool tool = worldEditorManager.getTool();
+
+        return worldEditorToolSystem.isDropping() || tool == WorldEditorTool.PLACE
+                || tool == WorldEditorTool.MOVE && settlementPlannerManager.hasEditedPlacement();
     }
 
     // Markers \\

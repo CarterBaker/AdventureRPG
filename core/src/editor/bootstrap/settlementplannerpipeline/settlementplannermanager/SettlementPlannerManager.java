@@ -2,16 +2,14 @@ package editor.bootstrap.settlementplannerpipeline.settlementplannermanager;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import application.bootstrap.worldpipeline.biome.BiomeHandle;
-import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.settlementplannerpipeline.settlementplanner.SettlementPlannerArchitectureStruct;
 import editor.bootstrap.settlementplannerpipeline.settlementplanner.SettlementPlannerEntryStruct;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.EditorSetting;
-import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -19,28 +17,26 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class SettlementPlannerManager extends ManagerPackage {
 
     /*
-     * Owns the settlement planner's shared design: which settlement type or
-     * structure it stands up, the architecture a settlement is built in, the
-     * numbered layout it is planned from, the quarter turns a structure takes,
-     * and the site in the active world where it is shown, first the world's
-     * first hand placement or else the dry land nearest its middle. While
-     * nothing is being edited the design is previewed at the site on every
-     * map, through SettlementPreviewBranch, without standing in the world.
-     * The World Editor places the design wherever it is clicked, and its Edit
-     * tool brings a standing placement back here: from then on every change
-     * to its architecture, layout or turns is applied to that placement live,
-     * through the World Editor, so the world, its maps and its preview
-     * terrain follow at once. Choosing another settlement or structure, or
-     * New, lets the placement go and designs afresh at the site, and Preview
-     * Here moves the site. The planner's maps reframe whenever the site or
-     * the chosen entry changes. Settlement type edits from the Info Panel go live
+     * Owns the settlement planner's shared design, chosen the way a brush is:
+     * which settlement type or structure it stands up, the architecture a
+     * settlement is built in, the numbered layout it is planned from and the
+     * quarter turns a structure takes. The World Editor stands the design
+     * wherever its Place tool clicks or the design is dragged from the
+     * planner and dropped, previewed on every map through
+     * SettlementPreviewBranch while it is carried over the canvas. A placed,
+     * selected or picked placement is edited from then on: every change to
+     * its architecture, layout or turns, and every move to exact coordinates,
+     * is applied to it live through the World Editor, so the world, its maps
+     * and its preview terrain follow at once. Every placement in the world
+     * image pixel last selected, or in the edited placement's own, is listed
+     * to pick from. Choosing another settlement or structure, or Deselect,
+     * lets the placement go. Settlement type edits from the Info Panel go live
      * through SettlementLiveBranch, and the catalogue of what can be designed
      * is kept by SettlementCatalogueBranch.
      */
 
     // Internal
     private WorldManager worldManager;
-    private BiomeManager biomeManager;
     private WorldEditorManager worldEditorManager;
     private SettlementCatalogueBranch settlementCatalogueBranch;
     private SettlementPreviewBranch settlementPreviewBranch;
@@ -52,18 +48,28 @@ public class SettlementPlannerManager extends ManagerPackage {
     private int layout;
     private int quarterTurns;
 
-    // Site
-    private WorldHandle siteWorldHandle;
-    private long siteX;
-    private long siteZ;
+    // World
+    private WorldHandle worldHandle;
     private WorldPlacementStruct editedPlacement;
     private int shownPlacementRevision;
+
+    // Here
+    private ObjectArrayList<WorldPlacementStruct> placementsHere;
+    private boolean hasHere;
+    private int herePixelX;
+    private int herePixelY;
+
+    // Drag
+    private boolean dragging;
+    private WindowInstance dragWindow;
+    private boolean dropShown;
+    private int dropPixelX;
+    private int dropPixelY;
 
     // Status
     private String statusMessage;
     private int revision;
     private int rowRevision;
-    private int frameRevision;
 
     // Base \\
 
@@ -78,14 +84,16 @@ public class SettlementPlannerManager extends ManagerPackage {
         // Design
         this.layout = EditorSetting.SETTLEMENT_PLANNER_LAYOUT_DEFAULT;
 
-        // Site
+        // World
         this.shownPlacementRevision = EngineSetting.INDEX_NOT_FOUND;
+
+        // Here
+        this.placementsHere = new ObjectArrayList<>();
     }
 
     @Override
     protected void get() {
         this.worldManager = get(WorldManager.class);
-        this.biomeManager = get(BiomeManager.class);
         this.worldEditorManager = get(WorldEditorManager.class);
     }
 
@@ -95,67 +103,28 @@ public class SettlementPlannerManager extends ManagerPackage {
     protected void update() {
 
         syncWorld();
-        syncEditedPlacement();
+        syncPlacements();
     }
 
-    // The planner designs for the active world, sited on its first placement or else the dry land nearest its centre
+    // The planner designs for the active world, nothing of another world kept
     private void syncWorld() {
 
         WorldHandle activeWorld = worldManager.getActiveWorld();
 
-        if (activeWorld == siteWorldHandle)
+        if (activeWorld == worldHandle)
             return;
 
-        WorldPlacementStruct[] placements = worldManager.getPlacements(activeWorld);
-
-        this.siteWorldHandle = activeWorld;
+        this.worldHandle = activeWorld;
         this.editedPlacement = null;
+        this.hasHere = false;
+        placementsHere.clear();
         settlementCatalogueBranch.gatherArchitectures(getSelectedEntry());
         rowRevision++;
-
-        if (placements.length > 0)
-            moveSite(placements[0].getWorldX(), placements[0].getWorldZ());
-        else
-            siteOnLand(activeWorld);
-
-        requestPreview();
+        requestSummary();
     }
 
-    // The centre of the world image pixel nearest its middle that is not painted as sea, searched ring by ring
-    private void siteOnLand(WorldHandle worldHandle) {
-
-        Pixmap world = worldHandle.getWorld();
-        int centerX = world.getWidth() / 2;
-        int centerZ = world.getHeight() / 2;
-        int maxRing = Math.max(centerX, centerZ);
-
-        for (int ring = 0; ring <= maxRing; ring++)
-            for (int offsetZ = -ring; offsetZ <= ring; offsetZ++)
-                for (int offsetX = -ring; offsetX <= ring; offsetX += Math.abs(offsetZ) == ring ? 1 : ring * 2)
-                    if (isLand(worldHandle, centerX + offsetX, centerZ + offsetZ)) {
-                        moveSite(toBlock(centerX + offsetX), toBlock(centerZ + offsetZ));
-                        return;
-                    }
-
-        moveSite(toBlock(centerX), toBlock(centerZ));
-    }
-
-    private boolean isLand(WorldHandle worldHandle, int pixelX, int pixelZ) {
-
-        BiomeHandle biome = biomeManager.getPaintedBiome(worldHandle, pixelX, pixelZ);
-
-        return biome != null && !biome.hasOceanWater();
-    }
-
-    private long toBlock(int pixel) {
-
-        long pixelBlocks = (long) EngineSetting.CHUNKS_PER_PIXEL * EngineSetting.CHUNK_SIZE;
-
-        return pixel * pixelBlocks + pixelBlocks / 2;
-    }
-
-    // A placement reloaded or cleared away from under the planner is let go, its design kept at the site
-    private void syncEditedPlacement() {
+    // A placement reloaded or cleared away from under the planner is let go, and the pixel's list gathered again
+    private void syncPlacements() {
 
         int placementRevision = worldManager.getPlacementRevision();
 
@@ -166,11 +135,13 @@ public class SettlementPlannerManager extends ManagerPackage {
 
         if (editedPlacement != null && !stands(editedPlacement))
             detach();
+
+        refreshHere();
     }
 
     private boolean stands(WorldPlacementStruct placement) {
 
-        WorldPlacementStruct[] placements = worldManager.getPlacements(siteWorldHandle);
+        WorldPlacementStruct[] placements = worldManager.getPlacements(worldHandle);
 
         for (int i = 0; i < placements.length; i++)
             if (placements[i] == placement)
@@ -194,13 +165,12 @@ public class SettlementPlannerManager extends ManagerPackage {
         this.architectureIndex = 0;
         settlementCatalogueBranch.gatherArchitectures(entries.get(index));
         rowRevision++;
-        frameRevision++;
 
         if (!settlementCatalogueBranch.isBuildable(entries.get(index)))
             setStatusMessage(
                     EditorSetting.SETTLEMENT_PLANNER_MESSAGE_UNBUILDABLE + entries.get(index).getDisplayName());
 
-        requestPreview();
+        requestSummary();
     }
 
     public void cycleEntry(int step) {
@@ -217,7 +187,7 @@ public class SettlementPlannerManager extends ManagerPackage {
         settlementCatalogueBranch.refreshEntries();
         settlementCatalogueBranch.gatherArchitectures(getSelectedEntry());
         rowRevision++;
-        requestPreview();
+        requestSummary();
     }
 
     // Architecture \\
@@ -284,66 +254,6 @@ public class SettlementPlannerManager extends ManagerPackage {
         applyDesign();
     }
 
-    // Site \\
-
-    // The design shown at another column of the active world, any placement being edited let go
-    public void previewAt(double worldX, double worldZ) {
-
-        letGo();
-        moveSite((long) Math.floor(worldX), (long) Math.floor(worldZ));
-        setStatusMessage(EditorSetting.SETTLEMENT_PLANNER_MESSAGE_PREVIEWING);
-        requestPreview();
-    }
-
-    // The placement being edited let go; the design stays where it stood, previewed
-    public void detach() {
-        if (letGo())
-            requestPreview();
-    }
-
-    private boolean letGo() {
-
-        if (editedPlacement == null)
-            return false;
-
-        this.editedPlacement = null;
-        setStatusMessage(EditorSetting.SETTLEMENT_PLANNER_MESSAGE_RELEASED);
-
-        return true;
-    }
-
-    // A standing placement brought into the planner, every later change to the design applied to it live
-    public void editPlacement(WorldPlacementStruct placement) {
-
-        int index = settlementCatalogueBranch.indexOfEntry(placement.getKind(), placement.getName());
-
-        if (index == EngineSetting.INDEX_NOT_FOUND) {
-            setStatusMessage(EditorSetting.SETTLEMENT_PLANNER_MESSAGE_UNKNOWN + placement.getName());
-            return;
-        }
-
-        this.entryIndex = index;
-        settlementCatalogueBranch.gatherArchitectures(getSelectedEntry());
-        this.architectureIndex = Math.max(0, settlementCatalogueBranch.indexOfArchitecture(
-                placement.getArchitectureName()));
-        this.layout = placement.getLayout();
-        this.quarterTurns = placement.getQuarterTurns();
-        this.editedPlacement = placement;
-        rowRevision++;
-
-        moveSite(placement.getWorldX(), placement.getWorldZ());
-        setStatusMessage(EditorSetting.SETTLEMENT_PLANNER_MESSAGE_EDITING + getSelectedEntry().getDisplayName());
-        requestPreview();
-    }
-
-    private void moveSite(long worldX, long worldZ) {
-
-        this.siteX = worldX;
-        this.siteZ = worldZ;
-        frameRevision++;
-        notifyChanged();
-    }
-
     public void editType() {
 
         SettlementPlannerEntryStruct entry = getSelectedEntry();
@@ -354,6 +264,232 @@ public class SettlementPlannerManager extends ManagerPackage {
         settlementLiveBranch.selectInHierarchy(
                 entry.isSettlement() ? EditorSetting.INFO_SCHEMA_SETTLEMENTS : EditorSetting.INFO_SCHEMA_STRUCTURES,
                 entry.getName());
+    }
+
+    // Selection \\
+
+    // The placement being edited let go; the design stays as it was
+    public void detach() {
+        if (letGo())
+            requestSummary();
+    }
+
+    private boolean letGo() {
+
+        if (editedPlacement == null)
+            return false;
+
+        this.editedPlacement = null;
+        rowRevision++;
+        setStatusMessage(EditorSetting.SETTLEMENT_PLANNER_MESSAGE_RELEASED);
+
+        return true;
+    }
+
+    // A standing placement brought into the planner, every later change to the design applied to it live
+    public void editPlacement(WorldPlacementStruct placement) {
+
+        if (!loadDesign(placement)) {
+            setStatusMessage(EditorSetting.SETTLEMENT_PLANNER_MESSAGE_UNKNOWN + placement.getName());
+            return;
+        }
+
+        this.editedPlacement = placement;
+        this.hasHere = true;
+        refreshHere();
+        setStatusMessage(EditorSetting.SETTLEMENT_PLANNER_MESSAGE_EDITING + getSelectedEntry().getDisplayName());
+        requestSummary();
+    }
+
+    // The design taken from a placement, false when the catalogue has nothing by its name
+    private boolean loadDesign(WorldPlacementStruct placement) {
+
+        int index = settlementCatalogueBranch.indexOfEntry(placement.getKind(), placement.getName());
+
+        if (index == EngineSetting.INDEX_NOT_FOUND)
+            return false;
+
+        this.entryIndex = index;
+        settlementCatalogueBranch.gatherArchitectures(getSelectedEntry());
+        this.architectureIndex = Math.max(0, settlementCatalogueBranch.indexOfArchitecture(
+                placement.getArchitectureName()));
+        this.layout = placement.getLayout();
+        this.quarterTurns = placement.getQuarterTurns();
+        rowRevision++;
+
+        return true;
+    }
+
+    // Every placement in one world image pixel listed, the first of them edited; how many stand there
+    public int selectPixel(int pixelX, int pixelY) {
+
+        this.hasHere = true;
+        this.herePixelX = pixelX;
+        this.herePixelY = pixelY;
+        worldEditorManager.collectPlacementsInPixel(pixelX, pixelY, placementsHere);
+        rowRevision++;
+
+        if (placementsHere.isEmpty()) {
+            detach();
+            return 0;
+        }
+
+        int count = placementsHere.size();
+        editPlacement(placementsHere.get(0));
+
+        return count;
+    }
+
+    public void selectPlacedHere(int index) {
+        if (index >= 0 && index < placementsHere.size())
+            editPlacement(placementsHere.get(index));
+    }
+
+    // The list follows the edited placement's own pixel, or else stays on the pixel last selected
+    private void refreshHere() {
+
+        if (!hasHere)
+            return;
+
+        if (editedPlacement != null) {
+            this.herePixelX = worldEditorManager.toPixelX(editedPlacement);
+            this.herePixelY = worldEditorManager.toPixelY(editedPlacement);
+        }
+
+        worldEditorManager.collectPlacementsInPixel(herePixelX, herePixelY, placementsHere);
+        rowRevision++;
+    }
+
+    // Placement \\
+
+    // The edited placement stood on another block column, returning why it was refused or null once it stands
+    public String moveEditedPlacement(long worldX, long worldZ) {
+
+        if (editedPlacement == null)
+            return EditorSetting.SETTLEMENT_PLANNER_MESSAGE_NOTHING_EDITED;
+
+        return applyDesignAt(worldX, worldZ);
+    }
+
+    public boolean isCoordinateValid(String text) {
+
+        if (editedPlacement == null)
+            return false;
+
+        try {
+            Long.parseLong(text.trim());
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    public void setEditedX(String text) {
+        if (isCoordinateValid(text))
+            reportMove(moveEditedPlacement(Long.parseLong(text.trim()), editedPlacement.getWorldZ()));
+    }
+
+    public void setEditedZ(String text) {
+        if (isCoordinateValid(text))
+            reportMove(moveEditedPlacement(editedPlacement.getWorldX(), Long.parseLong(text.trim())));
+    }
+
+    private void reportMove(String refusal) {
+        setStatusMessage(refusal != null ? refusal : EditorSetting.SETTLEMENT_PLANNER_MESSAGE_MOVED);
+    }
+
+    // The edited placement's coordinates written so the coordinate dialog can start from them
+    public String formatEditedX() {
+        return editedPlacement != null ? Long.toString(editedPlacement.getWorldX()) : "";
+    }
+
+    public String formatEditedZ() {
+        return editedPlacement != null ? Long.toString(editedPlacement.getWorldZ()) : "";
+    }
+
+    public void removeEditedPlacement() {
+
+        if (!requireEditedPlacement())
+            return;
+
+        WorldPlacementStruct removed = editedPlacement;
+        String refusal = worldEditorManager.removePlacement(removed);
+
+        if (refusal != null) {
+            setStatusMessage(refusal);
+            return;
+        }
+
+        this.editedPlacement = null;
+        setStatusMessage(EditorSetting.SETTLEMENT_PLANNER_MESSAGE_REMOVED + removed.getName());
+        requestSummary();
+    }
+
+    // True while a placement is edited; otherwise says so in the status line
+    public boolean requireEditedPlacement() {
+
+        if (editedPlacement != null)
+            return true;
+
+        setStatusMessage(EditorSetting.SETTLEMENT_PLANNER_MESSAGE_NOTHING_EDITED);
+
+        return false;
+    }
+
+    // Drag \\
+
+    // An entry taken hold of in the catalogue becomes the design and is carried until let go
+    public void beginDrag(int index, WindowInstance window) {
+
+        if (dragging)
+            return;
+
+        selectEntry(index);
+
+        this.dragging = true;
+        this.dragWindow = window;
+        this.dropShown = false;
+    }
+
+    // The carried design previewed on every map at the column under the pointer, planned again per pixel crossed
+    public void hoverDrop(int pixelX, int pixelY, long worldX, long worldZ) {
+
+        if (!dragging || worldHandle == null || dropShown && pixelX == dropPixelX && pixelY == dropPixelY)
+            return;
+
+        WorldPlacementStruct design = createPlacement(worldX, worldZ);
+
+        if (design == null)
+            return;
+
+        this.dropShown = true;
+        this.dropPixelX = pixelX;
+        this.dropPixelY = pixelY;
+        settlementPreviewBranch.request(worldHandle, design, true);
+    }
+
+    // The carry let go, its preview taken off the maps
+    public void endDrag() {
+
+        if (!dragging)
+            return;
+
+        this.dragging = false;
+        this.dragWindow = null;
+
+        if (!dropShown)
+            return;
+
+        this.dropShown = false;
+        requestSummary();
+    }
+
+    public boolean isDragging() {
+        return dragging;
+    }
+
+    public WindowInstance getDragWindow() {
+        return dragWindow;
     }
 
     // Design \\
@@ -379,44 +515,53 @@ public class SettlementPlannerManager extends ManagerPackage {
                 settlement ? 0 : quarterTurns);
     }
 
-    // A changed design applied to the placement being edited, or else previewed at the site
+    // A changed design applied to the placement being edited; refused, the design goes back to what stands
     private void applyDesign() {
 
-        if (editedPlacement == null || siteWorldHandle == null) {
-            requestPreview();
+        if (editedPlacement == null) {
+            notifyChanged();
             return;
         }
 
-        WorldPlacementStruct design = createPlacement(editedPlacement.getWorldX(), editedPlacement.getWorldZ());
+        String refusal = applyDesignAt(editedPlacement.getWorldX(), editedPlacement.getWorldZ());
+
+        if (refusal == null)
+            return;
+
+        loadDesign(editedPlacement);
+        setStatusMessage(refusal);
+    }
+
+    // The design swapped in for the edited placement at a block column, returning why it was refused or null
+    private String applyDesignAt(long worldX, long worldZ) {
+
+        WorldPlacementStruct design = createPlacement(worldX, worldZ);
         String refusal = design != null
                 ? worldEditorManager.replacePlacement(editedPlacement, design)
                 : EditorSetting.SETTLEMENT_PLANNER_MESSAGE_NOT_APPLIED;
 
-        if (refusal != null) {
-            this.editedPlacement = null;
-            setStatusMessage(refusal);
-        } else
+        if (refusal == null)
             this.editedPlacement = design;
 
-        requestPreview();
+        requestSummary();
+
+        return refusal;
     }
 
-    // The design planned where it stands or would stand, shown on the maps unless it already stands
-    private void requestPreview() {
+    // The edited placement planned for its summary, nothing previewed when none is edited
+    private void requestSummary() {
 
         notifyChanged();
 
-        if (siteWorldHandle == null)
+        if (worldHandle == null)
             return;
 
-        WorldPlacementStruct design = editedPlacement != null ? editedPlacement : createPlacement(siteX, siteZ);
-
-        if (design == null) {
+        if (editedPlacement == null) {
             settlementPreviewBranch.clear();
             return;
         }
 
-        settlementPreviewBranch.request(siteWorldHandle, design, editedPlacement == null);
+        settlementPreviewBranch.request(worldHandle, editedPlacement, false);
     }
 
     // Status \\
@@ -435,16 +580,6 @@ public class SettlementPlannerManager extends ManagerPackage {
 
         StringBuilder status = new StringBuilder(describeDesign());
 
-        status.append(EditorSetting.SETTLEMENT_PLANNER_STATUS_SEPARATOR)
-                .append(editedPlacement != null
-                        ? EditorSetting.SETTLEMENT_PLANNER_STATUS_EDITING
-                        : EditorSetting.SETTLEMENT_PLANNER_STATUS_PREVIEW)
-                .append(EditorSetting.SETTLEMENT_PLANNER_STATUS_X).append(siteX)
-                .append(EditorSetting.SETTLEMENT_PLANNER_STATUS_Z).append(siteZ)
-                .append(EditorSetting.SETTLEMENT_PLANNER_STATUS_SEPARATOR);
-
-        appendSummary(status);
-
         if (statusMessage != null)
             status.append(EditorSetting.SETTLEMENT_PLANNER_STATUS_SEPARATOR).append(statusMessage);
 
@@ -459,23 +594,56 @@ public class SettlementPlannerManager extends ManagerPackage {
         if (entry == null)
             return EditorSetting.SETTLEMENT_PLANNER_STATUS_NOTHING;
 
-        StringBuilder description = new StringBuilder(entry.getDisplayName())
-                .append(EditorSetting.SETTLEMENT_PLANNER_STATUS_SEPARATOR);
+        return entry.getDisplayName() + EditorSetting.SETTLEMENT_PLANNER_STATUS_SEPARATOR + describeValues();
+    }
+
+    // The design's own values: a settlement's architecture and layout, a structure's turns
+    public String describeValues() {
+
+        SettlementPlannerEntryStruct entry = getSelectedEntry();
+
+        if (entry == null)
+            return EditorSetting.SETTLEMENT_PLANNER_STATUS_NOTHING;
 
         if (!entry.isSettlement())
-            return description.append(EditorSetting.SETTLEMENT_PLANNER_STATUS_TURNS).append(quarterTurns).toString();
+            return EditorSetting.SETTLEMENT_PLANNER_STATUS_TURNS + quarterTurns;
 
         ObjectArrayList<SettlementPlannerArchitectureStruct> architectures = settlementCatalogueBranch
                 .getArchitectures();
-
-        description.append(architectureIndex < architectures.size()
+        StringBuilder values = new StringBuilder(architectureIndex < architectures.size()
                 ? architectures.get(architectureIndex).getDisplayName()
                 : EditorSetting.SETTLEMENT_PLANNER_STATUS_NO_ARCHITECTURE)
                 .append(EditorSetting.SETTLEMENT_PLANNER_STATUS_SEPARATOR);
 
         return layout == EngineSetting.WORLD_PLACEMENT_LAYOUT_CELL
-                ? description.append(EditorSetting.SETTLEMENT_PLANNER_STATUS_CELL_LAYOUT).toString()
-                : description.append(EditorSetting.SETTLEMENT_PLANNER_STATUS_LAYOUT).append(layout).toString();
+                ? values.append(EditorSetting.SETTLEMENT_PLANNER_STATUS_CELL_LAYOUT).toString()
+                : values.append(EditorSetting.SETTLEMENT_PLANNER_STATUS_LAYOUT).append(layout).toString();
+    }
+
+    // The edited placement, where it stands and what it plans to, or how to have one
+    public String describeEdited() {
+
+        if (editedPlacement == null)
+            return EditorSetting.SETTLEMENT_PLANNER_STATUS_NOTHING_EDITED;
+
+        StringBuilder description = new StringBuilder(describePlacement(editedPlacement))
+                .append(EditorSetting.SETTLEMENT_PLANNER_STATUS_SEPARATOR);
+
+        appendSummary(description);
+
+        return description.toString();
+    }
+
+    // A placement's shown name and exact block column
+    public String describePlacement(WorldPlacementStruct placement) {
+
+        int index = settlementCatalogueBranch.indexOfEntry(placement.getKind(), placement.getName());
+        String name = index != EngineSetting.INDEX_NOT_FOUND
+                ? settlementCatalogueBranch.getEntries().get(index).getDisplayName()
+                : placement.getName();
+
+        return name + EditorSetting.SETTLEMENT_PLANNER_STATUS_COLUMN_X + placement.getWorldX()
+                + EditorSetting.SETTLEMENT_PLANNER_STATUS_Z + placement.getWorldZ();
     }
 
     private void appendSummary(StringBuilder status) {
@@ -517,6 +685,10 @@ public class SettlementPlannerManager extends ManagerPackage {
         return architectureIndex;
     }
 
+    public ObjectArrayList<WorldPlacementStruct> getPlacementsHere() {
+        return placementsHere;
+    }
+
     public boolean isDesigningSettlement() {
 
         SettlementPlannerEntryStruct entry = getSelectedEntry();
@@ -536,16 +708,12 @@ public class SettlementPlannerManager extends ManagerPackage {
         return placement == editedPlacement;
     }
 
-    public WorldHandle getSiteWorldHandle() {
-        return siteWorldHandle;
+    public boolean hasEditedPlacement() {
+        return editedPlacement != null;
     }
 
-    public long getSiteX() {
-        return siteX;
-    }
-
-    public long getSiteZ() {
-        return siteZ;
+    public WorldHandle getWorldHandle() {
+        return worldHandle;
     }
 
     public int getRevision() {
@@ -554,10 +722,5 @@ public class SettlementPlannerManager extends ManagerPackage {
 
     public int getRowRevision() {
         return rowRevision;
-    }
-
-    // Raised whenever the site moves or another entry is chosen, so the planner's maps frame the design again
-    public int getFrameRevision() {
-        return frameRevision;
     }
 }

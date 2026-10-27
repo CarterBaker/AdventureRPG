@@ -144,22 +144,6 @@ public class WorldManager extends ManagerPackage {
         }
     }
 
-    // The placement nearest a world position within a radius, null when none stands that near
-    public WorldPlacementStruct findNearestPlacement(
-            WorldHandle worldHandle,
-            double worldX,
-            double worldZ,
-            double radiusBlocks) {
-
-        synchronized (worldID2Placements) {
-
-            WorldPlacementStruct[] placements = getPlacements(worldHandle);
-            int nearest = indexOfNearestPlacement(worldHandle, placements, worldX, worldZ, radiusBlocks);
-
-            return nearest == EngineSetting.INDEX_NOT_FOUND ? null : placements[nearest];
-        }
-    }
-
     // The placement nearest a world position within a radius taken away — null when none stands that near
     public WorldPlacementStruct removeNearestPlacement(
             WorldHandle worldHandle,
@@ -176,15 +160,41 @@ public class WorldManager extends ManagerPackage {
                 return null;
 
             WorldPlacementStruct removed = placements[nearest];
-            WorldPlacementStruct[] shrunk = new WorldPlacementStruct[placements.length - 1];
-
-            System.arraycopy(placements, 0, shrunk, 0, nearest);
-            System.arraycopy(placements, nearest + 1, shrunk, nearest, placements.length - nearest - 1);
-
-            publishPlacements(worldHandle, shrunk);
+            removePlacementAt(worldHandle, placements, nearest);
 
             return removed;
         }
+    }
+
+    // One exact placement taken away — false when it no longer stands
+    public boolean removePlacement(WorldHandle worldHandle, WorldPlacementStruct placement) {
+
+        synchronized (worldID2Placements) {
+
+            WorldPlacementStruct[] placements = getPlacements(worldHandle);
+
+            for (int i = 0; i < placements.length; i++) {
+
+                if (placements[i] != placement)
+                    continue;
+
+                removePlacementAt(worldHandle, placements, i);
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    private void removePlacementAt(WorldHandle worldHandle, WorldPlacementStruct[] placements, int index) {
+
+        WorldPlacementStruct[] shrunk = new WorldPlacementStruct[placements.length - 1];
+
+        System.arraycopy(placements, 0, shrunk, 0, index);
+        System.arraycopy(placements, index + 1, shrunk, index, placements.length - index - 1);
+
+        publishPlacements(worldHandle, shrunk);
     }
 
     // One placement swapped for another in its place — false when the placement no longer stands

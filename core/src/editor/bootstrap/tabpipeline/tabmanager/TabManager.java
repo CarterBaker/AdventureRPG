@@ -21,6 +21,7 @@ import editor.runtime.dev.DevContext;
 import editor.runtime.hierarchy.HierarchyContext;
 import editor.runtime.infopanel.InfoPanelContext;
 import editor.runtime.itemeditor.ItemEditorContext;
+import editor.runtime.palette.PaletteContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.recorder.RecorderContext;
 import editor.runtime.EditorSecondaryWindowContext;
@@ -28,6 +29,7 @@ import editor.runtime.EditorSetting;
 import editor.runtime.settlementplanner.SettlementPlannerContext;
 import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.textureviewer.TextureViewerContext;
+import editor.runtime.tools.ToolsContext;
 import editor.runtime.worldeditor.WorldEditorContext;
 import editor.runtime.worldmap.WorldMapContext;
 import engine.root.ContextPackage;
@@ -159,6 +161,14 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openSettlementPlanner(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_SETTLEMENT_PLANNER, SettlementPlannerContext.class, osWindow);
+    }
+
+    public TabHandle openTools(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_TOOLS, ToolsContext.class, osWindow);
+    }
+
+    public TabHandle openPalette(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_PALETTE, PaletteContext.class, osWindow);
     }
 
     public TabHandle openConsole(WindowInstance osWindow) {

@@ -6,16 +6,17 @@ import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.worldeditor.WorldEditorContext;
 import engine.root.BranchPackage;
+import engine.util.arpg.ArpgUtility;
 
 public class WorldEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the World Editor toolbar and palette. Every
-     * action works on the shared world images and their hand placements,
-     * except the player marker toggle, which targets the editor its button
-     * was clicked in; biome rows carry their biome's name and height rows
-     * their level. Choosing and turning what is placed works on the
-     * Settlement Planner's shared design.
+     * Menu event handlers for the World Editor toolbar, the Tools tab and the
+     * Palette tab. Every action works on the shared world images and their
+     * hand placements, except the player marker toggle, which targets the
+     * editor its button was clicked in; tool rows carry their tool's name,
+     * biome rows their biome's name and height rows their level. Choosing and
+     * turning what is placed works on the Settlement Planner's shared design.
      */
 
     // Internal
@@ -52,34 +53,14 @@ public class WorldEditorBranch extends BranchPackage {
         worldEditorManager.toggleLayer();
     }
 
+    public void toggleMode() {
+        worldEditorManager.toggleMode();
+    }
+
     // Tools \\
 
-    public void selectBrushTool() {
-        worldEditorManager.setTool(WorldEditorTool.BRUSH);
-    }
-
-    public void selectFillTool() {
-        worldEditorManager.setTool(WorldEditorTool.FILL);
-    }
-
-    public void selectPickTool() {
-        worldEditorManager.setTool(WorldEditorTool.PICK);
-    }
-
-    public void selectSmoothTool() {
-        worldEditorManager.setTool(WorldEditorTool.SMOOTH);
-    }
-
-    public void selectPlaceTool() {
-        worldEditorManager.setTool(WorldEditorTool.PLACE);
-    }
-
-    public void selectEditTool() {
-        worldEditorManager.setTool(WorldEditorTool.EDIT);
-    }
-
-    public void selectClearTool() {
-        worldEditorManager.setTool(WorldEditorTool.CLEAR);
+    public void selectTool(String toolName) {
+        worldEditorManager.setTool(ArpgUtility.toEnum(toolName, WorldEditorTool.class));
     }
 
     public void previousPlaceable() {

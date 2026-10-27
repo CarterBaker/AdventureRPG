@@ -16,7 +16,8 @@ public class WorldMapContext extends ContextPackage {
      * the terrain, with the real chunks a preview has loaded drawn in once it
      * reaches them. With no preview open it shows the active world. Every
      * hand placement shows as an icon, and the Settlement Planner's design
-     * is drawn where it would stand. An arrow
+     * is drawn where it would stand while it is carried over the World
+     * Editor. An arrow
      * marks the character's position and facing, and the view follows it
      * until dragged; dragging the arrow itself moves the character to
      * wherever it is dropped. The shared day and night and weather can be shown over

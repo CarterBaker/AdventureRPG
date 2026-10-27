@@ -12,16 +12,20 @@ import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.Settl
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class WorldPlacementBranch extends BranchPackage {
 
     /*
      * Hand-picks what stands where in the world, and is the one place a hand
      * placement is added, swapped or taken away. Place stands the Settlement
-     * Planner's design on the exact block column under the pointer and hands
-     * it back to the planner to keep editing, Edit brings the hand placement
-     * nearest the pointer into the planner, and Clear takes it away. The
-     * planner's live changes to the placement it edits are swapped in here.
+     * Planner's design on the exact block column under the pointer, or where
+     * it is dropped from the planner, and hands it back to the planner to
+     * keep editing, Select hands the planner every placement in the pixel
+     * under the pointer to pick from, Move stands the placement the planner
+     * edits on the column under the pointer, and Clear takes away the
+     * placement nearest it. The planner's live changes to the placement it
+     * edits are swapped in here, and the placement it removes taken away.
      * A settlement cell holds one hand-placed settlement, so a second is
      * refused. Every change goes to WorldManager at once and restreams the
      * map and the preview terrain it can reach, since a settlement's roads
@@ -74,19 +78,27 @@ class WorldPlacementBranch extends BranchPackage {
         worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_PLACED + placement.getName());
     }
 
-    // The hand placement nearest an image position brought into the planner to edit
-    void edit(WorldHandle worldHandle, double imageX, double imageY) {
+    // Every hand placement in the image pixel under a position handed to the planner, the first of them edited
+    void select(double imageX, double imageY) {
 
-        WorldPlacementStruct placement = worldManager.findNearestPlacement(
-                worldHandle, toBlock(imageX), toBlock(imageY), EditorSetting.WORLD_EDITOR_CLEAR_RADIUS_BLOCKS);
+        int count = settlementPlannerManager.selectPixel((int) Math.floor(imageX), (int) Math.floor(imageY));
 
-        if (placement == null) {
-            worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_NEAR);
+        if (count == 0) {
+            worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_HERE);
             return;
         }
 
-        settlementPlannerManager.editPlacement(placement);
-        worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_EDITING + placement.getName());
+        worldEditorManager.setStatusMessage(count > 1
+                ? count + EditorSetting.WORLD_EDITOR_MESSAGE_PICK_HERE
+                : EditorSetting.WORLD_EDITOR_MESSAGE_EDITING + settlementPlannerManager.describeDesign());
+    }
+
+    // The placement the planner edits stood on the block column under an image position instead
+    void move(double imageX, double imageY) {
+
+        String refusal = settlementPlannerManager.moveEditedPlacement(toBlock(imageX), toBlock(imageY));
+
+        worldEditorManager.setStatusMessage(refusal != null ? refusal : EditorSetting.WORLD_EDITOR_MESSAGE_MOVED);
     }
 
     // The hand placement nearest an image position taken away
@@ -102,6 +114,18 @@ class WorldPlacementBranch extends BranchPackage {
 
         restream(worldHandle, removed);
         worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_CLEARED + removed.getName());
+    }
+
+    // One exact placement taken away, returning why it was not, or null once it is gone
+    String remove(WorldHandle worldHandle, WorldPlacementStruct placement) {
+
+        if (!worldManager.removePlacement(worldHandle, placement))
+            return EditorSetting.WORLD_EDITOR_MESSAGE_PLACEMENT_GONE;
+
+        restream(worldHandle, placement);
+        worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_CLEARED + placement.getName());
+
+        return null;
     }
 
     // One placement swapped for another, returning why it was refused, or null once it stands
@@ -140,13 +164,39 @@ class WorldPlacementBranch extends BranchPackage {
     // Every map tile and preview chunk a placement's settlement and roads can reach regenerated
     private void restream(WorldHandle worldHandle, WorldPlacementStruct placement) {
 
-        double pixelBlocks = resolvePixelBlocks();
         int reach = EditorSetting.WORLD_EDITOR_PLACEMENT_REACH_PIXELS;
-        int pixelX = (int) Math.floor(WorldWrapUtility.wrapBlockX(worldHandle, placement.getWorldX()) / pixelBlocks);
-        int pixelY = (int) Math.floor(WorldWrapUtility.wrapBlockZ(worldHandle, placement.getWorldZ()) / pixelBlocks);
+        int pixelX = toPixelX(worldHandle, placement);
+        int pixelY = toPixelY(worldHandle, placement);
 
         worldEditorManager.restreamPixels(
                 worldHandle, pixelX - reach, pixelY - reach, pixelX + reach, pixelY + reach);
+    }
+
+    // Pixel \\
+
+    void collectInPixel(
+            WorldHandle worldHandle,
+            int pixelX,
+            int pixelY,
+            ObjectArrayList<WorldPlacementStruct> output) {
+
+        WorldPlacementStruct[] placements = worldManager.getPlacements(worldHandle);
+
+        output.clear();
+
+        for (int i = 0; i < placements.length; i++)
+            if (toPixelX(worldHandle, placements[i]) == pixelX && toPixelY(worldHandle, placements[i]) == pixelY)
+                output.add(placements[i]);
+    }
+
+    int toPixelX(WorldHandle worldHandle, WorldPlacementStruct placement) {
+        return (int) Math.floor(
+                WorldWrapUtility.wrapBlockX(worldHandle, placement.getWorldX()) / resolvePixelBlocks());
+    }
+
+    int toPixelY(WorldHandle worldHandle, WorldPlacementStruct placement) {
+        return (int) Math.floor(
+                WorldWrapUtility.wrapBlockZ(worldHandle, placement.getWorldZ()) / resolvePixelBlocks());
     }
 
     // Disk \\
@@ -184,7 +234,7 @@ class WorldPlacementBranch extends BranchPackage {
 
     // Utility \\
 
-    private long toBlock(double imagePosition) {
+    long toBlock(double imagePosition) {
         return (long) Math.floor(imagePosition * resolvePixelBlocks());
     }
 

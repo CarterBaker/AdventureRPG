@@ -7,8 +7,8 @@ public class WorldEditorSetting {
     /*
      * Constants used only by WorldEditorContext — its viewport mesh and
      * materials, the height overlay's opacity, zoom limits, mouse bindings, and
-     * toolbar menu with its biome and height palettes. The images, their
-     * brush and their palettes are the editor's.
+     * toolbar menu. The images, their brush and their palettes are the
+     * editor's.
      */
 
     // Meshes
@@ -52,19 +52,8 @@ public class WorldEditorSetting {
 
     // Menus
     public static final String MENU_TOOLBAR = "editor/WorldEditor/Toolbar";
-    public static final String TEMPLATE_BIOME_ROW = "editor/WorldEditor/world_editor_biome_row";
-    public static final String TEMPLATE_BIOME_ROW_SELECTED = "editor/WorldEditor/world_editor_biome_row_selected";
-    public static final String TEMPLATE_HEIGHT_ROW = "editor/WorldEditor/world_editor_height_row";
-    public static final String TEMPLATE_HEIGHT_ROW_SELECTED = "editor/WorldEditor/world_editor_height_row_selected";
     public static final int ENTRY_STATUS = 0;
-    public static final int ENTRY_BIOMES = 1;
-    public static final int ENTRY_PLAYERS_LABEL = 2;
-    public static final int ENTRY_PALETTE_TITLE = 3;
-    public static final int ENTRY_LAYER_LABEL = 4;
-
-    // Elements
-    public static final String ELEMENT_BIOME_LABEL = "world_editor_biome_label";
-    public static final String ELEMENT_BIOME_SWATCH = "world_editor_biome_swatch";
-    public static final String ELEMENT_HEIGHT_LABEL = "world_editor_height_label";
-    public static final String ELEMENT_HEIGHT_SWATCH = "world_editor_height_swatch";
+    public static final int ENTRY_PLAYERS_LABEL = 1;
+    public static final int ENTRY_LAYER_LABEL = 2;
+    public static final int ENTRY_MODE_LABEL = 3;
 }
