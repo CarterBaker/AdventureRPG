@@ -22,10 +22,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WorldMapViewSystem extends SystemPackage {
 
     /*
-     * Where the world map looks and what it follows. The map shows the world
-     * of the first streaming grid with a focal entity, or the active world
-     * while no preview is open, north up, and tracks that character's
-     * position and facing every frame through the engine's map markers. It
+     * Where the world map looks and what it follows. The map shows the
+     * active world and only it, never a world of the editor's own such as
+     * the biome planner's, north up, and tracks the character of the first
+     * streaming grid standing in it, its position and facing every frame
+     * through the engine's map markers. It
      * also holds which shared overlays, day and night and weather, this map
      * shows. Scrolling zooms about the pointer, from a few pixels per block
      * out to the whole world, and dragging pans; panning lets go of the
@@ -144,19 +145,18 @@ public class WorldMapViewSystem extends SystemPackage {
         Object[] elements = grids.elements();
         int size = grids.size();
 
+        worldHandle = worldManager.getActiveWorld();
         grid = null;
 
         for (int i = 0; i < size; i++) {
 
             GridInstance candidate = (GridInstance) elements[i];
 
-            if (candidate.getFocalEntity() != null && candidate.getWorldHandle() != null) {
+            if (candidate.getFocalEntity() != null && candidate.getWorldHandle() == worldHandle) {
                 grid = candidate;
                 break;
             }
         }
-
-        worldHandle = grid != null ? grid.getWorldHandle() : worldManager.getActiveWorld();
     }
 
     private void resolvePlayer() {

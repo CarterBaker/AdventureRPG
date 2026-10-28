@@ -12,6 +12,8 @@ import application.runtime.weather.PrecipitationSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
 import editor.runtime.biomeviewer.menu.BiomeViewerMenuSystem;
+import editor.runtime.biomeviewer.minimap.BiomeViewerMinimapSystem;
+import editor.runtime.biomeviewer.pause.BiomeViewerPauseSystem;
 import editor.runtime.biomeviewer.view.BiomeViewerSystem;
 import engine.root.ContextPackage;
 
@@ -25,7 +27,9 @@ public class BiomeViewerContext extends ContextPackage {
      * the systems the game draws a world with and nothing that plays it: no
      * main menu, character, fighting or creatures. Biomes are made in the
      * Hierarchy, Info Panel and Biome Planner; every change there regenerates
-     * what this tab shows.
+     * what this tab shows. It opens paused with the cursor free; Pause or
+     * Fly hands it the camera and Pause again lets go. A minimap in the
+     * corner shows where the camera stands over the planner's grid.
      */
 
     // Viewer — created first so the player is sent to the planner's world before it spawns
@@ -46,6 +50,8 @@ public class BiomeViewerContext extends ContextPackage {
 
     // Menu
     private BiomeViewerMenuSystem biomeViewerMenuSystem;
+    private BiomeViewerMinimapSystem biomeViewerMinimapSystem;
+    private BiomeViewerPauseSystem biomeViewerPauseSystem;
 
     // Internal \\
 
@@ -70,5 +76,13 @@ public class BiomeViewerContext extends ContextPackage {
 
         // Menu
         this.biomeViewerMenuSystem = create(BiomeViewerMenuSystem.class);
+        this.biomeViewerMinimapSystem = create(BiomeViewerMinimapSystem.class);
+        this.biomeViewerPauseSystem = create(BiomeViewerPauseSystem.class);
+    }
+
+    // Management \
+
+    public void resume() {
+        biomeViewerPauseSystem.resume();
     }
 }
