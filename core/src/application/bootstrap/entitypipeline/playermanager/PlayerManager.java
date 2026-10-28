@@ -22,6 +22,7 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
@@ -207,8 +208,8 @@ public class PlayerManager extends ManagerPackage {
 
     // Spawn \\
 
-    public EntityInstance spawnPlayer(WindowInstance window, RawInputHandle rawInput) {
-        EntityInstance player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE);
+    public EntityInstance spawnPlayer(WindowInstance window, RawInputHandle rawInput, WorldHandle worldHandle) {
+        EntityInstance player = entityManager.spawnEntity(EngineSetting.DEFAULT_PLAYER_RACE, worldHandle);
         int windowID = window.getWindowID();
         windowID2Player.put(windowID, player);
         windowID2Camera.put(windowID, window.getActiveCamera());

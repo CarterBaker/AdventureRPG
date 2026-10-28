@@ -6,6 +6,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.input.EditorInputSystem;
@@ -22,8 +23,9 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     /*
      * Turns this tab's pointer and keys into mesh edits while a mesh mode is
      * open. A click picks the vertex under the pointer and a drag selects a
-     * box, Shift adding and Ctrl taking away; in Weights mode a brush tool
-     * paints or smooths instead. A transform the panel asks for — by its
+     * box, Shift adding and Ctrl taking away; in Weights mode the Brush and
+     * Erase tools stroke the weights instead. Each mesh mode is a tool canvas
+     * of ToolManager's while this tab is open. A transform the panel asks for — by its
      * button or its shortcut, G, R or S — holds the selection to the
      * pointer: X, Y and Z lock it to an axis, Ctrl snaps it, a click or Enter
      * confirms and a right click or Escape puts it back. The tab's shortcuts
@@ -38,6 +40,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     private CharacterEditorManager characterEditorManager;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private ShortcutManager shortcutManager;
+    private ToolManager toolManager;
 
     // Shortcuts
     private int addSelectionShortcutID;
@@ -100,6 +103,17 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
+        this.toolManager = get(ToolManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        toolManager.openCanvas(context.getWindow(), characterEditorManager);
+    }
+
+    @Override
+    protected void dispose() {
+        toolManager.closeCanvas(context.getWindow());
     }
 
     @Override
@@ -204,8 +218,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
     private void press(RawInputHandle rawInput) {
 
-        if (characterEditorManager.getMode() == CharacterEditorMode.WEIGHTS
-                && characterEditorManager.getWeightTool().isBrush()) {
+        if (characterEditorManager.isBrushTool()) {
             characterEditorManager.beginStroke();
             this.stroking = true;
             applyStroke(rawInput);
@@ -545,8 +558,6 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
     // Whether the weight brush shows under the pointer
     public boolean isBrushShown() {
-        return characterEditorManager.getMode() == CharacterEditorMode.WEIGHTS
-                && characterEditorManager.getWeightTool().isBrush()
-                && (stroking || editorInputSystem.isPointerActive());
+        return characterEditorManager.isBrushTool() && (stroking || editorInputSystem.isPointerActive());
     }
 }

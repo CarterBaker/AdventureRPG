@@ -8,16 +8,17 @@ public class EditorSetting {
     /*
      * Editor-only constants — chrome menus, cursors, input keys, menu entry
      * point indices, layout persistence, tool tabs, the name, export and
-     * settings dialogs, console
-     * commands and the command drag between windows, the Dev window's time
-     * units, editor shortcuts, the info pipeline's
+     * settings dialogs, console commands and the command drag between windows,
+     * the Dev window's time units, editor shortcuts, the info pipeline's
      * schemas, hierarchy keys, and status text, the item editor's library and
-     * status text, the image editing framework's history and files, the world
-     * map's status text and overlay toggles, the world editor's brush and
-     * status text, the character viewport shared by the character, animation
-     * and animation tree editors, those editors' files, steps and status
-     * text, the character editor's mesh and weight tools, and the recorder's
-     * files, sampling, export, video containers and status text.
+     * status text, the image editing framework's history, files and brush
+     * stamping, the brush presets and the shared tools with their canvases and
+     * brush sizes, the biome planner's grid, the world map's status text and
+     * overlay toggles, the world editor's palette and status text, the
+     * character viewport shared by the character, animation and animation tree
+     * editors, those editors' files, steps and status text, the character
+     * editor's mesh and weight tools, and the recorder's files, sampling,
+     * export, video containers and status text.
      */
 
     // Cursors
@@ -236,6 +237,9 @@ public class EditorSetting {
     public static final String TAB_TITLE_ARPG_VIEWER = "ARPG Viewer";
     public static final String TAB_TITLE_ANIMATION_EDITOR = "Animation Editor";
     public static final String TAB_TITLE_ANIMATION_TREE_EDITOR = "Animation Tree Editor";
+    public static final String TAB_TITLE_BIOME_PLANNER = "Biome Planner";
+    public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
+    public static final String TAB_TITLE_BRUSHES = "Brushes";
     public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
@@ -582,10 +586,8 @@ public class EditorSetting {
 
     // Character Editor — weight panel keys; every weight action shares the prefix
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_PREFIX = "weight_";
-    public static final String CHARACTER_EDITOR_KEY_WEIGHT_TOOL = "brush_tool";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_TARGET = "brush_weight";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH = "brush_strength";
-    public static final String CHARACTER_EDITOR_KEY_BRUSH_RADIUS = "brush_radius";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_ASSIGN = "weight_assign";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_ADD = "weight_add";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_SUBTRACT = "weight_subtract";
@@ -609,10 +611,6 @@ public class EditorSetting {
     public static final float CHARACTER_EDITOR_PART_SIZE_MAX = 2f;
     public static final float CHARACTER_EDITOR_WEIGHT_STEP_FINE = 0.05f;
     public static final float CHARACTER_EDITOR_WEIGHT_STRENGTH_DEFAULT = 0.5f;
-    public static final float CHARACTER_EDITOR_BRUSH_RADIUS_DEFAULT = 40f;
-    public static final float CHARACTER_EDITOR_BRUSH_RADIUS_MIN = 4f;
-    public static final float CHARACTER_EDITOR_BRUSH_RADIUS_MAX = 400f;
-    public static final float CHARACTER_EDITOR_BRUSH_RADIUS_STEP = 5f;
 
     // Character Mesh — geometry; positions key on the decimal grid in this many signed bits per axis
     public static final int CHARACTER_MESH_KEY_BITS = 21;
@@ -628,7 +626,7 @@ public class EditorSetting {
     public static final String CHARACTER_MESH_BONE_SUFFIX_LEFT = "_l";
     public static final String CHARACTER_MESH_BONE_SUFFIX_RIGHT = "_r";
 
-    // Character Editor — mesh tools, shapes and transforms
+    // Character Editor — mesh shapes and transforms
     public static final String CHARACTER_EDITOR_SHAPE_PLANE = "Plane";
     public static final String CHARACTER_EDITOR_SHAPE_BOX = "Box";
     public static final String CHARACTER_EDITOR_SHAPE_CYLINDER = "Cylinder";
@@ -636,9 +634,6 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_TRANSFORM_GRAB = "Grab";
     public static final String CHARACTER_EDITOR_TRANSFORM_ROTATE = "Rotate";
     public static final String CHARACTER_EDITOR_TRANSFORM_SCALE = "Scale";
-    public static final String CHARACTER_EDITOR_WEIGHT_TOOL_SELECT = "Select";
-    public static final String CHARACTER_EDITOR_WEIGHT_TOOL_PAINT = "Paint";
-    public static final String CHARACTER_EDITOR_WEIGHT_TOOL_SMOOTH = "Smooth";
 
     // Character Editor — mesh panel text
     public static final String CHARACTER_EDITOR_HEADER_PARTS = "Parts";
@@ -686,7 +681,6 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_REDO = "Redo  (Ctrl+Y)";
     public static final String CHARACTER_EDITOR_LABEL_SAVE_MESH = "Save Mesh";
     public static final String CHARACTER_EDITOR_LABEL_REVERT_MESH = "Revert Mesh";
-    public static final String CHARACTER_EDITOR_LABEL_TOOL = "Tool";
     public static final String CHARACTER_EDITOR_LABEL_STRENGTH = "Strength";
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_ASSIGN = "Assign Weight";
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_ADD = "Add 0.05";
@@ -1004,19 +998,68 @@ public class EditorSetting {
     public static final int IMAGE_HISTORY_MAX_STEPS = 64;
     public static final long IMAGE_HISTORY_MAX_PIXELS = 16777216L;
     public static final int IMAGE_SMOOTH_REACH_PIXELS = 1;
+    public static final float IMAGE_BRUSH_EDGE_PIXELS = 0.5f;
+    public static final int IMAGE_BRUSH_RANDOM_SEED = 0x2545F491;
+    public static final float IMAGE_BRUSH_RANDOM_SCALE = 1f / (1 << 24);
+
+    // Brushes — presets load from this directory, the default one standing in for any deleted
+    public static final String BRUSH_PATH = "brushes";
+    public static final String BRUSH_DEFAULT = "Basic";
+    public static final String BRUSH_MESSAGE_REFUSED = "Brush not applied: ";
+    public static final String BRUSH_SHAPE_ROUND = "Round";
+    public static final String BRUSH_SHAPE_SQUARE = "Square";
+    public static final String BRUSH_SHAPE_DIAMOND = "Diamond";
+    public static final String BRUSH_MODE_PAINT = "Paint";
+    public static final String BRUSH_MODE_SMOOTH = "Smooth";
+    public static final String BRUSH_MODE_SWIRL = "Swirl";
+    public static final String BRUSH_MODE_SCATTER = "Scatter";
+    public static final String BRUSH_KEY_HARDNESS = "hardness";
+    public static final String BRUSH_KEY_OPACITY = "opacity";
+    public static final String BRUSH_KEY_DENSITY = "density";
+    public static final String BRUSH_KEY_SPACING = "spacing";
+    public static final String BRUSH_KEY_TWIST = "twist";
+    public static final String BRUSH_LABEL_HARDNESS = "Hardness";
+    public static final String BRUSH_LABEL_OPACITY = "Opacity";
+    public static final String BRUSH_LABEL_DENSITY = "Density";
+    public static final String BRUSH_LABEL_SPACING = "Spacing";
+    public static final String BRUSH_LABEL_TWIST = "Twist";
+    public static final float BRUSH_UNIT_STEP = 0.05f;
+    public static final float BRUSH_TWIST_STEP = 15f;
+    public static final float BRUSH_TWIST_MAX = 360f;
+    public static final float BRUSH_SPACING_MIN = 0.05f;
+    public static final float BRUSH_HARDNESS_DEFAULT = 1f;
+    public static final float BRUSH_OPACITY_DEFAULT = 1f;
+    public static final float BRUSH_DENSITY_DEFAULT = 1f;
+    public static final float BRUSH_SPACING_DEFAULT = 0.1f;
+    public static final float BRUSH_TWIST_DEFAULT = 90f;
+    public static final double BRUSH_VALUE_PRECISION = 100.0;
+
+    // Tools — sizes are brush radii, in image pixels on the world's layers and window pixels on a character
+    public static final String TOOL_SELECT = "Select";
+    public static final String TOOL_BRUSH = "Brush";
+    public static final String TOOL_ERASE = "Erase";
+    public static final String TOOL_FILL = "Fill";
+    public static final String TOOL_PICK = "Pick";
+    public static final String TOOL_PLACE = "Place";
+    public static final String TOOL_WALL = "Wall";
+    public static final String TOOL_CANVAS_BIOMES = "World Biomes";
+    public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
+    public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
+    public static final String TOOL_CANVAS_CHARACTER_MESH = "Character Mesh";
+    public static final String TOOL_CANVAS_CHARACTER_WEIGHTS = "Character Weights";
+    public static final String TOOL_CANVAS_ITEM = "Item";
+    public static final float TOOL_IMAGE_SIZE_MIN = 0f;
+    public static final float TOOL_IMAGE_SIZE_MAX = 32f;
+    public static final float TOOL_IMAGE_SIZE_STEP = 1f;
+    public static final float TOOL_IMAGE_SIZE_DEFAULT = 1f;
+    public static final float TOOL_SCREEN_SIZE_MIN = 4f;
+    public static final float TOOL_SCREEN_SIZE_MAX = 400f;
+    public static final float TOOL_SCREEN_SIZE_STEP = 5f;
+    public static final float TOOL_SCREEN_SIZE_DEFAULT = 40f;
+    public static final String TOOL_STATUS_SIZE = "Size ";
+    public static final String TOOL_MESSAGE_MODE_REFUSED = " brushes cannot stroke here";
 
     // World Editor
-    public static final int WORLD_EDITOR_BRUSH_RADIUS_DEFAULT = 1;
-    public static final int WORLD_EDITOR_BRUSH_RADIUS_MAX = 32;
-    public static final int WORLD_EDITOR_BRUSH_RADIUS_MIN = 0;
-    public static final String WORLD_EDITOR_TOOL_BRUSH = "Brush";
-    public static final String WORLD_EDITOR_TOOL_FILL = "Fill";
-    public static final String WORLD_EDITOR_TOOL_PICK = "Pick";
-    public static final String WORLD_EDITOR_TOOL_PLACE = "Place";
-    public static final String WORLD_EDITOR_TOOL_SELECT = "Select";
-    public static final String WORLD_EDITOR_TOOL_MOVE = "Move";
-    public static final String WORLD_EDITOR_TOOL_CLEAR = "Clear";
-    public static final String WORLD_EDITOR_TOOL_SMOOTH = "Smooth";
     public static final String WORLD_EDITOR_MODE_PAINT = "Paint";
     public static final String WORLD_EDITOR_MODE_SETTLEMENTS = "Settlements";
     public static final String WORLD_EDITOR_LAYER_BIOMES = "Biomes";
@@ -1027,18 +1070,16 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_HEIGHT_LOWER = "Lower ";
     public static final String WORLD_EDITOR_HEIGHT_PERCENT = "%";
     public static final String WORLD_EDITOR_HEIGHT_NEUTRAL = "Neutral";
-    public static final String WORLD_EDITOR_MESSAGE_SMOOTH_HEIGHTS_ONLY = "Smooth paints the height layer only";
     public static final double WORLD_EDITOR_CLEAR_RADIUS_BLOCKS = 384.0;
     public static final int WORLD_EDITOR_PLACEMENT_REACH_PIXELS = 5;
     public static final String WORLD_EDITOR_STATUS_NO_PLACEABLE = "Nothing to place";
     public static final String WORLD_EDITOR_MESSAGE_PLACED = "Placed ";
     public static final String WORLD_EDITOR_MESSAGE_CLEARED = "Cleared ";
     public static final String WORLD_EDITOR_MESSAGE_NOTHING_NEAR = "No placement near the pointer";
-    public static final String WORLD_EDITOR_MESSAGE_EDITING = "Editing in the Settlement Planner: ";
-    public static final String WORLD_EDITOR_MESSAGE_NOTHING_HERE = "No placement in this pixel";
-    public static final String WORLD_EDITOR_MESSAGE_PICK_HERE =
-            " placed in this pixel; pick one in the Settlement Planner";
-    public static final String WORLD_EDITOR_MESSAGE_MOVED = "Moved the edited placement";
+    public static final String WORLD_EDITOR_MESSAGE_MOVED = "Moved the selection";
+    public static final String WORLD_EDITOR_MESSAGE_SELECTED = " selected";
+    public static final String WORLD_EDITOR_MESSAGE_DELETED = "Deleted ";
+    public static final String WORLD_EDITOR_MESSAGE_NOTHING_SELECTED = "Nothing selected";
     public static final String WORLD_EDITOR_MESSAGE_CELL_HELD = "This settlement cell already holds ";
     public static final String WORLD_EDITOR_MESSAGE_PLACEMENT_GONE = "The edited placement no longer stands";
     public static final String WORLD_EDITOR_MESSAGE_PLACEMENTS_RELOAD_FAILED = "Could not reload placements of ";
@@ -1046,7 +1087,6 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_PLAYERS_OFF = "Players Off";
     public static final String WORLD_EDITOR_DIRTY_MARKER = "*";
     public static final String WORLD_EDITOR_STATUS_SEPARATOR = "  |  ";
-    public static final String WORLD_EDITOR_STATUS_RADIUS = "Radius ";
     public static final String WORLD_EDITOR_STATUS_NO_BIOME = "No biome selected";
     public static final String WORLD_EDITOR_STATUS_X = "X ";
     public static final String WORLD_EDITOR_STATUS_Y = "  Y ";
@@ -1064,6 +1104,16 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_MESSAGE_BIOME_RETIRED = "Biome retired: ";
     public static final String WORLD_EDITOR_MESSAGE_TREE_LIVE = "Tree live: ";
     public static final String WORLD_EDITOR_MESSAGE_TREE_REFUSED = "Tree not applied: ";
+
+    // Biome Planner — a grid this many cells a side, each cell this many world image pixels a side
+    public static final String BIOME_PLANNER_WORLD_NAME = "EditorBiomePlanner";
+    public static final int BIOME_PLANNER_GRID_SIDE = 3;
+    public static final int BIOME_PLANNER_CELL_PIXELS = 4;
+    public static final int BIOME_PLANNER_EMPTY_COLOR = 0x000000FF;
+    public static final String BIOME_PLANNER_STATUS_CENTRE = "Centre: ";
+    public static final String BIOME_PLANNER_MESSAGE_CENTRE = "The centre is always the selected biome";
+    public static final String BIOME_PLANNER_MESSAGE_PAINTED = "Painted ";
+    public static final String BIOME_PLANNER_MESSAGE_RESET = "Every cell follows the centre";
 
     // Item Library
     public static final String ITEM_EDITOR_MESH_DIRECTORY = "items";
@@ -1084,6 +1134,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_SHORTCUTS = "Shortcuts";
     public static final String INFO_SCHEMA_SETTLEMENTS = "Settlements";
     public static final String INFO_SCHEMA_STRUCTURES = "Structures";
+    public static final String INFO_SCHEMA_BRUSHES = "Brushes";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";
@@ -1197,10 +1248,6 @@ public class EditorSetting {
     public static final String ITEM_EDITOR_STATUS_BRUSH = "Brush: ";
     public static final String ITEM_EDITOR_STATUS_NO_ITEM = "No item open. Pick one in the Hierarchy or press New.";
     public static final String ITEM_EDITOR_TEXTURE_SEPARATOR = "  :  ";
-    public static final String ITEM_EDITOR_TOOL_PLACE = "Place";
-    public static final String ITEM_EDITOR_TOOL_WALL = "Wall";
-    public static final String ITEM_EDITOR_TOOL_ERASE = "Erase";
-    public static final String ITEM_EDITOR_TOOL_PAINT = "Paint";
     public static final String ITEM_EDITOR_MESSAGE_SAVED = "Saved ";
     public static final String ITEM_EDITOR_MESSAGE_RELOADED = "Reloaded ";
     public static final String ITEM_EDITOR_MESSAGE_CREATED = "Created ";

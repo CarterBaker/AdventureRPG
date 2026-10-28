@@ -7,6 +7,9 @@ import application.runtime.RuntimeContext;
 import editor.runtime.animationeditor.AnimationEditorContext;
 import editor.runtime.animationtreeeditor.AnimationTreeEditorContext;
 import editor.runtime.arpgviewer.ArpgViewerContext;
+import editor.runtime.biomeplanner.BiomePlannerContext;
+import editor.runtime.biomeviewer.BiomeViewerContext;
+import editor.runtime.brushes.BrushesContext;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
@@ -165,6 +168,18 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openTools(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_TOOLS, ToolsContext.class, osWindow);
+    }
+
+    public TabHandle openBrushes(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_BRUSHES, BrushesContext.class, osWindow);
+    }
+
+    public TabHandle openBiomePlanner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_BIOME_PLANNER, BiomePlannerContext.class, osWindow);
+    }
+
+    public TabHandle openBiomeViewer(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_BIOME_VIEWER, BiomeViewerContext.class, osWindow);
     }
 
     public TabHandle openPalette(WindowInstance osWindow) {

@@ -4,7 +4,6 @@ import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorWeightTool;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -74,8 +73,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_MESH_SNAP,
                     EditorSetting.CHARACTER_EDITOR_KEY_PART_SIZE,
                     EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET,
-                    EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH,
-                    EditorSetting.CHARACTER_EDITOR_KEY_BRUSH_RADIUS -> true;
+                    EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH -> true;
             default -> false;
         };
     }
@@ -87,8 +85,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL,
                     EditorSetting.CHARACTER_EDITOR_KEY_PART_SHAPE,
                     EditorSetting.CHARACTER_EDITOR_KEY_PART_TEXTURE,
-                    EditorSetting.CHARACTER_EDITOR_KEY_FACE_TEXTURE,
-                    EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TOOL -> true;
+                    EditorSetting.CHARACTER_EDITOR_KEY_FACE_TEXTURE -> true;
             default -> false;
         };
     }
@@ -213,7 +210,6 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_PART_SIZE -> characterEditorManager.getPartSize();
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET -> characterEditorManager.getWeightTarget();
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH -> characterEditorManager.getWeightStrength();
-            case EditorSetting.CHARACTER_EDITOR_KEY_BRUSH_RADIUS -> characterEditorManager.getBrushRadius();
             default -> 0f;
         };
     }
@@ -247,13 +243,8 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                             EditorSetting.CHARACTER_EDITOR_PART_SIZE_MAX)));
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET -> characterEditorManager.setWeightTarget(
                     CharacterViewUtility.round(CharacterViewUtility.clamp(value, 0f, 1f)));
-            case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH -> characterEditorManager.setWeightStrength(
+            default -> characterEditorManager.setWeightStrength(
                     CharacterViewUtility.round(CharacterViewUtility.clamp(value, 0f, 1f)));
-            default -> characterEditorManager.setBrushRadius(
-                    CharacterViewUtility.round(CharacterViewUtility.clamp(
-                            value,
-                            EditorSetting.CHARACTER_EDITOR_BRUSH_RADIUS_MIN,
-                            EditorSetting.CHARACTER_EDITOR_BRUSH_RADIUS_MAX)));
         }
     }
 
@@ -264,7 +255,6 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_MESH_RADIUS -> EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_MESH_SNAP -> EditorSetting.CHARACTER_EDITOR_MESH_SNAP_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_PART_SIZE -> EditorSetting.CHARACTER_EDITOR_SIZE_STEP;
-            case EditorSetting.CHARACTER_EDITOR_KEY_BRUSH_RADIUS -> EditorSetting.CHARACTER_EDITOR_BRUSH_RADIUS_STEP;
             default -> EditorSetting.CHARACTER_EDITOR_WEIGHT_STEP_FINE;
         };
     }
@@ -291,10 +281,6 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     CharacterEditorShape.VALUES[Math.floorMod(
                             characterEditorManager.getPartShape().ordinal() + direction,
                             CharacterEditorShape.VALUES.length)]);
-            case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TOOL -> characterEditorManager.setWeightTool(
-                    CharacterEditorWeightTool.VALUES[Math.floorMod(
-                            characterEditorManager.getWeightTool().ordinal() + direction,
-                            CharacterEditorWeightTool.VALUES.length)]);
             case EditorSetting.CHARACTER_EDITOR_KEY_PART_TEXTURE -> cyclePartTexture(direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_FACE_TEXTURE -> cycleFaceTexture(direction);
             default -> {
@@ -309,7 +295,6 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL -> toYesNo(
                     characterEditorManager.isProportional());
             case EditorSetting.CHARACTER_EDITOR_KEY_PART_SHAPE -> characterEditorManager.getPartShape().getLabel();
-            case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TOOL -> characterEditorManager.getWeightTool().getLabel();
             case EditorSetting.CHARACTER_EDITOR_KEY_PART_TEXTURE -> toTextureText(resolvePartTexture());
             case EditorSetting.CHARACTER_EDITOR_KEY_FACE_TEXTURE -> toTextureText(resolveDocument() != null
                     ? characterSculptBranch.findSelectedFaceTexture(resolveDocument())

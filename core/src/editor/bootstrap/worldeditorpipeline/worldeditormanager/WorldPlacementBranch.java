@@ -21,11 +21,11 @@ class WorldPlacementBranch extends BranchPackage {
      * placement is added, swapped or taken away. Place stands the Settlement
      * Planner's design on the exact block column under the pointer, or where
      * it is dropped from the planner, and hands it back to the planner to
-     * keep editing, Select hands the planner every placement in the pixel
-     * under the pointer to pick from, Move stands the placement the planner
-     * edits on the column under the pointer, and Clear takes away the
-     * placement nearest it. The planner's live changes to the placement it
-     * edits are swapped in here, and the placement it removes taken away.
+     * keep editing, and Erase takes away the placement nearest the pointer.
+     * The planner's live changes to the placement it edits, and every move
+     * of the Select tool's selection, are swapped in here, and the
+     * placements they remove taken away. Selecting a settlement type or a
+     * structure in the Hierarchy turns the World Editor to placing.
      * A settlement cell holds one hand-placed settlement, so a second is
      * refused. Every change goes to WorldManager at once and restreams the
      * map and the preview terrain it can reach, since a settlement's roads
@@ -53,6 +53,16 @@ class WorldPlacementBranch extends BranchPackage {
         this.settlementPlannerManager = get(SettlementPlannerManager.class);
     }
 
+    @Override
+    protected void awake() {
+        infoManager.addSelectionListener(
+                EditorSetting.INFO_SCHEMA_SETTLEMENTS,
+                entry -> worldEditorManager.showPlacements());
+        infoManager.addSelectionListener(
+                EditorSetting.INFO_SCHEMA_STRUCTURES,
+                entry -> worldEditorManager.showPlacements());
+    }
+
     // Placement \\
 
     // The planner's design stood on the block column under an image position, and edited from then on
@@ -76,29 +86,6 @@ class WorldPlacementBranch extends BranchPackage {
         restream(worldHandle, placement);
         settlementPlannerManager.editPlacement(placement);
         worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_PLACED + placement.getName());
-    }
-
-    // Every hand placement in the image pixel under a position handed to the planner, the first of them edited
-    void select(double imageX, double imageY) {
-
-        int count = settlementPlannerManager.selectPixel((int) Math.floor(imageX), (int) Math.floor(imageY));
-
-        if (count == 0) {
-            worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_HERE);
-            return;
-        }
-
-        worldEditorManager.setStatusMessage(count > 1
-                ? count + EditorSetting.WORLD_EDITOR_MESSAGE_PICK_HERE
-                : EditorSetting.WORLD_EDITOR_MESSAGE_EDITING + settlementPlannerManager.describeDesign());
-    }
-
-    // The placement the planner edits stood on the block column under an image position instead
-    void move(double imageX, double imageY) {
-
-        String refusal = settlementPlannerManager.moveEditedPlacement(toBlock(imageX), toBlock(imageY));
-
-        worldEditorManager.setStatusMessage(refusal != null ? refusal : EditorSetting.WORLD_EDITOR_MESSAGE_MOVED);
     }
 
     // The hand placement nearest an image position taken away

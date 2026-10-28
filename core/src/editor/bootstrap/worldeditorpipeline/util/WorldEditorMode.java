@@ -8,7 +8,8 @@ public enum WorldEditorMode {
      * What the world editor's canvas is working on: Paint, the world's
      * images, painted with the biome and height palette, or Settlements, the
      * settlements and structures placed by hand on the world, chosen in the
-     * Settlement Planner. Each mode keeps its own tool.
+     * Settlement Planner. The mode follows what is selected to work on, so
+     * it is never chosen by hand.
      */
 
     PAINT(EditorSetting.WORLD_EDITOR_MODE_PAINT),
@@ -27,10 +28,5 @@ public enum WorldEditorMode {
 
     public String getLabel() {
         return label;
-    }
-
-    // The two modes take turns
-    public WorldEditorMode toggle() {
-        return this == PAINT ? SETTLEMENTS : PAINT;
     }
 }

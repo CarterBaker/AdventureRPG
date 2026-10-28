@@ -13,6 +13,7 @@ import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
+import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Direction3Vector;
@@ -27,7 +28,8 @@ public class PlacementIconSystem extends SystemPackage {
      * world its context shows, at the window position the view works out: a
      * house, upright, for a settlement and a banner turned the way it faces
      * for a structure, each in its own color, and the placement the
-     * Settlement Planner is editing larger and in its highlight. Icon quads
+     * Settlement Planner is editing, and every placement the World Editor's
+     * Select tool holds, larger and in its highlight. Icon quads
      * are pooled with their own materials and grow only to the most icons a
      * frame has needed; begin() hands the pool out again each frame.
      */
@@ -38,6 +40,7 @@ public class PlacementIconSystem extends SystemPackage {
     private MaterialManager materialManager;
     private RenderManager renderManager;
     private SettlementPlannerManager settlementPlannerManager;
+    private WorldEditorManager worldEditorManager;
 
     // Models
     private MeshHandle quadMesh;
@@ -77,6 +80,7 @@ public class PlacementIconSystem extends SystemPackage {
         this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
         this.settlementPlannerManager = get(SettlementPlannerManager.class);
+        this.worldEditorManager = get(WorldEditorManager.class);
     }
 
     @Override
@@ -100,7 +104,8 @@ public class PlacementIconSystem extends SystemPackage {
             float screenY,
             WorldPlacementStruct placement) {
 
-        boolean edited = settlementPlannerManager.isEdited(placement);
+        boolean edited = settlementPlannerManager.isEdited(placement)
+                || worldEditorManager.isPlacementSelected(placement);
         boolean settlement = placement.getKind() == WorldPlacementKind.SETTLEMENT;
         float width = window.getWidth();
         float height = window.getHeight();

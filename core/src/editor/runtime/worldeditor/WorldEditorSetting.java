@@ -6,9 +6,9 @@ public class WorldEditorSetting {
 
     /*
      * Constants used only by WorldEditorContext — its viewport mesh and
-     * materials, the height overlay's opacity, zoom limits, mouse bindings, and
-     * toolbar menu. The images, their brush and their palettes are the
-     * editor's.
+     * materials, the height overlay's opacity, zoom limits, mouse bindings and
+     * selection reach, the held shortcuts its selection reads, and toolbar
+     * menu. The images, their brush and their palettes are the editor's.
      */
 
     // Meshes
@@ -28,6 +28,7 @@ public class WorldEditorSetting {
     public static final String UNIFORM_MARKER_CENTER = "u_markerCenter";
     public static final String UNIFORM_MARKER_DIRECTION = "u_markerDirection";
     public static final String UNIFORM_MARKER_SCALE = "u_markerScale";
+    public static final String UNIFORM_BRUSH_SHAPE = "u_shape";
 
     // Render Order
     public static final int DEPTH_IMAGE = 0;
@@ -49,6 +50,14 @@ public class WorldEditorSetting {
     // Mouse
     public static final int BUTTON_APPLY = Buttons.LEFT;
     public static final int BUTTON_PAN = Buttons.RIGHT;
+
+    // Selection — window pixels a press travels before it drags, and how near a click picks a placement
+    public static final float DRAG_PIXELS = 4f;
+    public static final float SELECT_REACH_PIXELS = 12f;
+
+    // Shortcuts — held modifiers the selection reads
+    public static final String SHORTCUT_ADD_SELECTION = "WorldEditor/AddSelection";
+    public static final String SHORTCUT_SUBTRACT_SELECTION = "WorldEditor/SubtractSelection";
 
     // Menus
     public static final String MENU_TOOLBAR = "editor/WorldEditor/Toolbar";

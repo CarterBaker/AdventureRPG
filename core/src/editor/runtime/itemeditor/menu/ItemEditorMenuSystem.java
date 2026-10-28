@@ -10,6 +10,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.runtime.itemeditor.ItemEditorSetting;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -20,8 +21,8 @@ public class ItemEditorMenuSystem extends SystemPackage {
 
     /*
      * Opens the Item Editor toolbar and parts panel over the viewport. When the
-     * editor's revision moves it rewrites the status line and lists the active
-     * item's parts, one row per part showing its name and texture, with the
+     * editor's revision or the tools' moves it rewrites the status line, which
+     * names the tool in use, and lists the active item's parts, one row per part showing its name and texture, with the
      * selected part highlighted and every row carrying its part index.
      */
 
@@ -29,6 +30,7 @@ public class ItemEditorMenuSystem extends SystemPackage {
     private MenuManager menuManager;
     private FBOManager fboManager;
     private ItemEditorManager itemEditorManager;
+    private ToolManager toolManager;
 
     // Menus
     private MenuInstance toolbarMenu;
@@ -38,6 +40,7 @@ public class ItemEditorMenuSystem extends SystemPackage {
 
     // Status
     private int shownRevision;
+    private int shownToolRevision;
 
     // Base \\
 
@@ -49,6 +52,7 @@ public class ItemEditorMenuSystem extends SystemPackage {
 
         // Status
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.shownToolRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
     @Override
@@ -56,6 +60,7 @@ public class ItemEditorMenuSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
         this.itemEditorManager = get(ItemEditorManager.class);
+        this.toolManager = get(ToolManager.class);
     }
 
     @Override
@@ -72,10 +77,11 @@ public class ItemEditorMenuSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        if (itemEditorManager.getRevision() == shownRevision)
+        if (itemEditorManager.getRevision() == shownRevision && toolManager.getRevision() == shownToolRevision)
             return;
 
         shownRevision = itemEditorManager.getRevision();
+        shownToolRevision = toolManager.getRevision();
 
         ElementInstance statusLabel = toolbarMenu.getEntryPoint(ItemEditorSetting.ENTRY_STATUS);
 

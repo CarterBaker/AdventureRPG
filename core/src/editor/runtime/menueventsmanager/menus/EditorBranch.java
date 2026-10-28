@@ -98,6 +98,18 @@ public class EditorBranch extends BranchPackage {
         tabManager.openTools(window.getGLWindow());
     }
 
+    public void openBrushes(WindowInstance window) {
+        tabManager.openBrushes(window.getGLWindow());
+    }
+
+    public void openBiomePlanner(WindowInstance window) {
+        tabManager.openBiomePlanner(window.getGLWindow());
+    }
+
+    public void openBiomeViewer(WindowInstance window) {
+        tabManager.openBiomeViewer(window.getGLWindow());
+    }
+
     public void openPalette(WindowInstance window) {
         tabManager.openPalette(window.getGLWindow());
     }

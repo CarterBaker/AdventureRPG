@@ -69,4 +69,15 @@ public final class PackedColorUtility extends EngineUtility {
                 green(from) + (green(to) - green(from)) * t,
                 blue(from) + (blue(to) - blue(from)) * t);
     }
+
+    // Unpack \\
+
+    // The opaque Color a packed color stands for, each channel in [0, 1]
+    public static Color toColor(int packed) {
+        return new Color(
+                red(packed) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                green(packed) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                blue(packed) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
+                EngineSetting.COLOR_CHANNEL_MAX);
+    }
 }

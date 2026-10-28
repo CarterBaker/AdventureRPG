@@ -13,13 +13,14 @@ public class WorldEditorContext extends ContextPackage {
     /*
      * Editor tab for the world's canvas, one image pixel per biome cell of
      * the world. Reads input, pans and zooms the view, turns the pointer into
-     * image pixels for the active tool of the mode it works in, Paint or
-     * Settlements, draws the image with the brush or the design's footprint
-     * and an icon for every hand placement, and shows the toolbar and status
-     * line, with every player's marker when shown. A design dragged from the
-     * Settlement Planner is stood where it is dropped. The tools, the biome
-     * palette and the design are chosen in their own tabs; the image, its
-     * history and every live update live in the editor and engine.
+     * image pixels for the tool chosen for what it works on, painting the
+     * world's layers or placing settlements and structures, draws the image
+     * with the brush or the design's footprint and an icon for every hand
+     * placement, and shows the toolbar and status line, with every player's
+     * marker when shown. A design dragged from the Settlement Planner is
+     * stood where it is dropped. The tools, brushes, biome palette and design
+     * are chosen in their own tabs; the image, its history and every live
+     * update live in the editor and engine.
      */
 
     // Internal

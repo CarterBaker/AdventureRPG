@@ -6,9 +6,10 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
-import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
-import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
-import editor.runtime.EditorSetting;
+import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
+import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.tools.ToolsSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -18,27 +19,28 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ToolsMenuSystem extends SystemPackage {
 
     /*
-     * Opens the Tools menu: one row per World Editor tool under its mode's
-     * header, the tool in use highlighted and every row carrying its tool's
-     * name, and the brush size between its buttons. The rows are rebuilt only
-     * when the tool in use changes, and the size label only when it does.
+     * Opens the Tools menu: under the name of what the tools target works on,
+     * one row per tool it takes, the tool in use highlighted and every row
+     * carrying its tool's name, and below them the brush size and the brush
+     * preset between their buttons, or a dash where the canvas takes no
+     * brush. Everything is rebuilt only when the tools or the brushes move.
      */
 
     // Internal
     private MenuManager menuManager;
     private FBOManager fboManager;
-    private WorldEditorManager worldEditorManager;
+    private ToolManager toolManager;
+    private BrushManager brushManager;
 
     // Menus
     private MenuInstance toolsMenu;
 
     // Rows
-    private WorldEditorTool[] tools;
     private ObjectArrayList<ElementInstance> toolElements;
-    private WorldEditorTool shownTool;
 
     // Status
-    private int shownRadius;
+    private int shownToolRevision;
+    private int shownBrushRevision;
 
     // Base \\
 
@@ -46,18 +48,19 @@ public class ToolsMenuSystem extends SystemPackage {
     protected void create() {
 
         // Rows
-        this.tools = WorldEditorTool.values();
         this.toolElements = new ObjectArrayList<>();
 
         // Status
-        this.shownRadius = EngineSetting.INDEX_NOT_FOUND;
+        this.shownToolRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.shownBrushRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
     @Override
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
-        this.worldEditorManager = get(WorldEditorManager.class);
+        this.toolManager = get(ToolManager.class);
+        this.brushManager = get(BrushManager.class);
     }
 
     @Override
@@ -74,53 +77,49 @@ public class ToolsMenuSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        refreshRadius();
-
-        if (worldEditorManager.getTool() == shownTool)
+        if (toolManager.getRevision() == shownToolRevision && brushManager.getRevision() == shownBrushRevision)
             return;
 
-        shownTool = worldEditorManager.getTool();
-        refreshTools();
-    }
+        shownToolRevision = toolManager.getRevision();
+        shownBrushRevision = brushManager.getRevision();
 
-    // Status \\
+        ToolCanvas canvas = toolManager.getCanvas();
 
-    private void refreshRadius() {
-
-        int radius = worldEditorManager.getBrushRadius();
-
-        if (radius == shownRadius)
-            return;
-
-        shownRadius = radius;
-
-        ElementInstance label = toolsMenu.getEntryPoint(ToolsSetting.ENTRY_RADIUS);
-
-        if (label != null)
-            label.setFontText(EditorSetting.WORLD_EDITOR_STATUS_RADIUS + radius);
+        refreshTools(canvas);
+        setEntryText(ToolsSetting.ENTRY_TITLE, canvas != null ? canvas.getLabel() : ToolsSetting.TITLE_NO_CANVAS);
+        setEntryText(ToolsSetting.ENTRY_SIZE, describeSize(canvas));
+        setEntryText(ToolsSetting.ENTRY_BRUSH, canvas != null && canvas.takesBrush()
+                ? brushManager.getActiveBrush().getDisplayName()
+                : ToolsSetting.NO_VALUE);
     }
 
     // Rows \\
 
-    private void refreshTools() {
+    private void refreshTools(ToolCanvas canvas) {
 
         for (int i = 0; i < toolElements.size(); i++)
-            menuManager.eject(toolsMenu, resolveEntry(tools[i]), toolElements.get(i));
+            menuManager.eject(toolsMenu, ToolsSetting.ENTRY_TOOLS, toolElements.get(i));
 
         toolElements.clear();
 
+        if (canvas == null)
+            return;
+
+        EditorTool[] tools = canvas.getTools();
+        EditorTool selected = toolManager.getTool(canvas);
+
         for (int i = 0; i < tools.length; i++)
-            toolElements.add(injectTool(tools[i]));
+            toolElements.add(injectTool(tools[i], tools[i] == selected));
     }
 
-    private ElementInstance injectTool(WorldEditorTool tool) {
+    private ElementInstance injectTool(EditorTool tool, boolean selected) {
 
-        String template = tool == shownTool
+        String template = selected
                 ? ToolsSetting.TEMPLATE_TOOL_ROW_SELECTED
                 : ToolsSetting.TEMPLATE_TOOL_ROW;
 
         return menuManager.inject(
-                toolsMenu, resolveEntry(tool), template,
+                toolsMenu, ToolsSetting.ENTRY_TOOLS, template,
                 element -> {
                     element.setActionArgOverride(ArpgUtility.toEnumName(tool));
 
@@ -131,9 +130,21 @@ public class ToolsMenuSystem extends SystemPackage {
                 });
     }
 
-    // Utility \\
+    // Status \\
 
-    private int resolveEntry(WorldEditorTool tool) {
-        return ToolsSetting.ENTRY_MODE_TOOLS[tool.getMode().ordinal()];
+    private String describeSize(ToolCanvas canvas) {
+
+        if (canvas == null || !canvas.takesBrush())
+            return ToolsSetting.NO_VALUE;
+
+        return ToolsSetting.SIZE_PREFIX + Math.round(toolManager.getSize(canvas));
+    }
+
+    private void setEntryText(int entry, String text) {
+
+        ElementInstance label = toolsMenu.getEntryPoint(entry);
+
+        if (label != null)
+            label.setFontText(text);
     }
 }

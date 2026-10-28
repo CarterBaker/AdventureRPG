@@ -4,6 +4,8 @@ import java.util.Arrays;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
+import editor.bootstrap.brushpipeline.util.BrushMode;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
@@ -12,9 +14,12 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorWeightTool;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
+import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
+import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -27,7 +32,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class CharacterEditorManager extends ManagerPackage {
+public class CharacterEditorManager extends ManagerPackage implements ToolCanvasProvider {
 
     /*
      * Owns the character editor's shared state — the open entity templates,
@@ -37,14 +42,19 @@ public class CharacterEditorManager extends ManagerPackage {
      * through it, and every change to an open template, made here or in the
      * Info Panel, rebuilds its preview live. The Mesh and Weights modes edit
      * the rigged mesh of the part picked — the body or a default feature —
-     * with the tool options, the transform asked for and the brush held
-     * here, and Save and Revert carry every open mesh's changes with the
-     * template's. Edits, previews, mesh files, selection, sculpting, weights,
+     * with the tool options and the transform asked for held here, and are
+     * each a tool canvas: their tool and brush size are ToolManager's and the
+     * weight brush strokes with BrushManager's preset in use, Brush drawing
+     * toward the target weight, Erase toward none and a smoothing preset
+     * blending either way. Save and Revert carry every open mesh's changes
+     * with the template's. Edits, previews, mesh files, selection, sculpting, weights,
      * history, panel values and panel rows each live in their own branch.
      */
 
     // Internal
     private InfoManager infoManager;
+    private ToolManager toolManager;
+    private BrushManager brushManager;
     private CharacterEditBranch characterEditBranch;
     private CharacterPreviewBranch characterPreviewBranch;
     private CharacterPropertyBranch characterPropertyBranch;
@@ -91,10 +101,8 @@ public class CharacterEditorManager extends ManagerPackage {
     private boolean requestedAxisSet;
 
     // Weights
-    private CharacterEditorWeightTool weightTool;
     private float weightTarget;
     private float weightStrength;
-    private float brushRadius;
 
     // Scratch
     private ObjectArrayList<String> partKeys;
@@ -150,10 +158,8 @@ public class CharacterEditorManager extends ManagerPackage {
         this.requestedAxis = new Vector3();
 
         // Weights
-        this.weightTool = CharacterEditorWeightTool.SELECT;
         this.weightTarget = 1f;
         this.weightStrength = EditorSetting.CHARACTER_EDITOR_WEIGHT_STRENGTH_DEFAULT;
-        this.brushRadius = EditorSetting.CHARACTER_EDITOR_BRUSH_RADIUS_DEFAULT;
 
         // Scratch
         this.partKeys = new ObjectArrayList<>();
@@ -163,6 +169,8 @@ public class CharacterEditorManager extends ManagerPackage {
     @Override
     protected void get() {
         this.infoManager = get(InfoManager.class);
+        this.toolManager = get(ToolManager.class);
+        this.brushManager = get(BrushManager.class);
     }
 
     @Override
@@ -517,9 +525,16 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Strokes \\
 
+    // A stroke begins only with a preset the weights can take, so a refused one never opens an undo step
     public void beginStroke() {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
+        BrushMode brushMode = brushManager.getActiveBrush().getMode();
+
+        if (!ToolCanvas.CHARACTER_WEIGHTS.supports(brushMode)) {
+            setStatusMessage(brushMode.getLabel() + EditorSetting.TOOL_MESSAGE_MODE_REFUSED);
+            return;
+        }
 
         if (document != null)
             characterWeightBranch.beginStroke(document);
@@ -533,10 +548,14 @@ public class CharacterEditorManager extends ManagerPackage {
         if (document == null || !document.hasOpenStep())
             return;
 
-        if (weightTool == CharacterEditorWeightTool.PAINT)
-            characterWeightBranch.paint(document, selectedBoneIndex, vertices, strengths, weightTarget);
-        else
+        if (brushManager.getActiveBrush().getMode() == BrushMode.SMOOTH) {
             characterWeightBranch.blur(document, vertices, strengths);
+            return;
+        }
+
+        float target = toolManager.getTool(ToolCanvas.CHARACTER_WEIGHTS) == EditorTool.ERASE ? 0f : weightTarget;
+
+        characterWeightBranch.paint(document, selectedBoneIndex, vertices, strengths, target);
     }
 
     public void endStroke() {
@@ -670,12 +689,6 @@ public class CharacterEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
-    void setWeightTool(CharacterEditorWeightTool weightTool) {
-
-        this.weightTool = weightTool;
-        notifyChanged();
-    }
-
     void setWeightTarget(float weightTarget) {
 
         this.weightTarget = weightTarget;
@@ -685,12 +698,6 @@ public class CharacterEditorManager extends ManagerPackage {
     void setWeightStrength(float weightStrength) {
 
         this.weightStrength = weightStrength;
-        notifyChanged();
-    }
-
-    void setBrushRadius(float brushRadius) {
-
-        this.brushRadius = brushRadius;
         notifyChanged();
     }
 
@@ -845,10 +852,6 @@ public class CharacterEditorManager extends ManagerPackage {
         return partTextureName;
     }
 
-    public CharacterEditorWeightTool getWeightTool() {
-        return weightTool;
-    }
-
     public float getWeightTarget() {
         return weightTarget;
     }
@@ -857,8 +860,20 @@ public class CharacterEditorManager extends ManagerPackage {
         return weightStrength;
     }
 
+    // What the viewport's tools work on: the mesh or its weights while a mesh mode is open, nothing otherwise
+    @Override
+    public ToolCanvas getToolCanvas() {
+        return mode.getToolCanvas();
+    }
+
+    // True while the weights are open and the tool chosen for them strokes
+    public boolean isBrushTool() {
+        return mode == CharacterEditorMode.WEIGHTS && toolManager.getTool(ToolCanvas.CHARACTER_WEIGHTS).isStroke();
+    }
+
+    // The weight brush's radius, in window pixels
     public float getBrushRadius() {
-        return brushRadius;
+        return toolManager.getSize(ToolCanvas.CHARACTER_WEIGHTS);
     }
 
     public int getRevision() {

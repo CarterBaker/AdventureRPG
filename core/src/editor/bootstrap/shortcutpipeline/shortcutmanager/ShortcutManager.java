@@ -8,9 +8,11 @@ import editor.bootstrap.shortcutpipeline.shortcut.ShortcutData;
 import editor.bootstrap.shortcutpipeline.shortcut.ShortcutHandle;
 import editor.bootstrap.shortcutpipeline.util.ShortcutModifier;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.runtime.menueventsmanager.menus.ExportDialogBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsBranch;
+import editor.runtime.tools.ToolsContext;
 import engine.input.Input;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
@@ -34,13 +36,17 @@ public class ShortcutManager extends ManagerPackage {
      * every key. Two shortcuts of one tool on the same keys are rejected at
      * load, and nothing is pressed while a dialog takes typed text or the
      * settings dialog is open. A shortcut rebound there takes its new keys in
-     * place, under the same ID, once its file is saved.
+     * place, under the same ID, once its file is saved. The Tools panel's
+     * shortcuts are the shared tool keys: they also work in every window
+     * ToolManager counts as a tool window, after that window's own, so a
+     * window's own key wins where the two share one.
      */
 
     // Internal
     private WindowManager windowManager;
     private InputManager inputManager;
     private TabManager tabManager;
+    private ToolManager toolManager;
     private ElementHitSystem elementHitSystem;
     private NameDialogBranch nameDialogBranch;
     private ExportDialogBranch exportDialogBranch;
@@ -69,6 +75,7 @@ public class ShortcutManager extends ManagerPackage {
         this.windowManager = get(WindowManager.class);
         this.inputManager = get(InputManager.class);
         this.tabManager = get(TabManager.class);
+        this.toolManager = get(ToolManager.class);
         this.elementHitSystem = get(ElementHitSystem.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
         this.exportDialogBranch = get(ExportDialogBranch.class);
@@ -166,14 +173,28 @@ public class ShortcutManager extends ManagerPackage {
         if (window == null || isWithheld())
             return;
 
-        ObjectArrayList<ShortcutHandle> pressedShortcuts = contextClass2PressedShortcuts.get(
-                window.getContext().getClass());
-
-        if (pressedShortcuts == null)
-            return;
-
         Input input = inputManager.getRawInput(window);
         int heldModifiers = ShortcutModifier.resolveHeld(input);
+
+        ObjectArrayList<ShortcutHandle> ownShortcuts = contextClass2PressedShortcuts.get(
+                window.getContext().getClass());
+
+        if (runPressed(ownShortcuts, window, input, heldModifiers))
+            return;
+
+        if (toolManager.isToolWindow(window))
+            runPressed(contextClass2PressedShortcuts.get(ToolsContext.class), window, input, heldModifiers);
+    }
+
+    // The first of the shortcuts pressed this frame run; false when none was
+    private boolean runPressed(
+            ObjectArrayList<ShortcutHandle> pressedShortcuts,
+            WindowInstance window,
+            Input input,
+            int heldModifiers) {
+
+        if (pressedShortcuts == null)
+            return false;
 
         for (int i = 0; i < pressedShortcuts.size(); i++) {
 
@@ -187,8 +208,10 @@ public class ShortcutManager extends ManagerPackage {
                     shortcut.getActionMethod(),
                     shortcut.getActionArg(),
                     window);
-            return;
+            return true;
         }
+
+        return false;
     }
 
     // The window the keys belong to: the focused one, or the content of the tab whose chrome is focused

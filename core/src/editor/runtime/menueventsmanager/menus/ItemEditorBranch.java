@@ -2,7 +2,6 @@ package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
-import editor.bootstrap.itemeditorpipeline.util.ItemEditorTool;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 
@@ -13,7 +12,8 @@ public class ItemEditorBranch extends BranchPackage {
      * action works on the shared active item; new items and parts, and part
      * renames, are named through the name dialog, and deleting an item asks
      * for its name to be typed back as confirmation. Part rows carry their
-     * part index.
+     * part index. The tools are chosen through ToolBranch, as every editor's
+     * are.
      */
 
     // Internal
@@ -58,24 +58,6 @@ public class ItemEditorBranch extends BranchPackage {
                 EditorSetting.DIALOG_TITLE_DELETE_PREFIX + localName + EditorSetting.DIALOG_TITLE_DELETE_SUFFIX,
                 itemEditorManager::isActiveItemName,
                 confirmedName -> itemEditorManager.deleteActiveItem());
-    }
-
-    // Tools \\
-
-    public void selectPlaceTool() {
-        itemEditorManager.setTool(ItemEditorTool.PLACE);
-    }
-
-    public void selectWallTool() {
-        itemEditorManager.setTool(ItemEditorTool.WALL);
-    }
-
-    public void selectEraseTool() {
-        itemEditorManager.setTool(ItemEditorTool.ERASE);
-    }
-
-    public void selectPaintTool() {
-        itemEditorManager.setTool(ItemEditorTool.PAINT);
     }
 
     // Parts \\

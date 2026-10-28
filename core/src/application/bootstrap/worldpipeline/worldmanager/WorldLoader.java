@@ -4,6 +4,7 @@ import java.io.File;
 
 import application.bootstrap.worldpipeline.util.WorldElevationUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
@@ -15,7 +16,8 @@ class WorldLoader extends LoaderPackage {
      * Scans the world map directory for PNG files and loads each one into
      * WorldManager via WorldBuilder. World name is derived from the file
      * stem. Companion ARPG and height layer are resolved by WorldBuilder; a
-     * height layer image is never a world of its own.
+     * height layer image is never a world of its own. A virtual world the
+     * editor asks for is built and added the same way, over its own image.
      */
 
     // Internal
@@ -68,6 +70,14 @@ class WorldLoader extends LoaderPackage {
     }
 
     // On-Demand \\
+
+    WorldHandle buildVirtual(String worldName, Pixmap world) {
+
+        WorldHandle handle = internalBuilder.buildVirtual(worldName, world);
+        worldManager.addWorld(handle);
+
+        return handle;
+    }
 
     void request(String worldName) {
 

@@ -1,5 +1,8 @@
 package editor.bootstrap.imagepipeline.imagemanager;
 
+import editor.bootstrap.brushpipeline.brush.BrushHandle;
+import editor.bootstrap.brushpipeline.util.BrushField;
+import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imageregion.ImageRegionStruct;
@@ -13,13 +16,20 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 class ImageEditBranch extends BranchPackage {
 
     /*
-     * Performs every change to an image's pixels. A brush stamps a disc of
-     * its radius, a stroke stamps every pixel along its path, and a fill
-     * floods the four-connected run of one color. A smoothing brush sets each
-     * pixel of its disc to the average of the square of pixels around it, so
-     * every stamp softens what it covers a little more. Coordinates wrap on an
-     * image whose edges wrap and are clipped on any other. Every pixel that
-     * actually changes is recorded for undo and grows the caller's region.
+     * Performs every change to an image's pixels. A brush stamps its preset's
+     * tip around a pixel, each covered pixel taking the strength the preset
+     * has there and only the preset's density of them touched, and a stroke
+     * stamps along its path once every spacing, keeping the gap from one
+     * drag to the next. Paint lays the brush's color down, Smooth softens
+     * toward the pixel's square, Swirl turns the tip's pixels about its
+     * centre by the preset's twist and Scatter shuffles them. Where the image
+     * blends, strength fades a pixel toward what it takes; where it does not,
+     * strength is the chance the pixel takes it whole, Smooth takes the
+     * commonest color around and Scatter only moves colors, so no color the
+     * image could not hold is ever written. A fill floods the four-connected
+     * run of one color. Coordinates wrap on an image whose edges wrap and
+     * are clipped on any other. Every pixel that actually changes is recorded
+     * for undo and grows the caller's region.
      */
 
     // Internal
@@ -27,12 +37,23 @@ class ImageEditBranch extends BranchPackage {
 
     // Scratch
     private IntArrayList fillStack;
+    private IntArrayList tipPixels;
+    private int[] neighbourColors;
+    private int[] neighbourCounts;
+    private int randomState;
 
     // Base \\
 
     @Override
     protected void create() {
+
+        int side = EditorSetting.IMAGE_SMOOTH_REACH_PIXELS * 2 + 1;
+
         this.fillStack = new IntArrayList();
+        this.tipPixels = new IntArrayList();
+        this.neighbourColors = new int[side * side];
+        this.neighbourCounts = new int[side * side];
+        this.randomState = EditorSetting.IMAGE_BRUSH_RANDOM_SEED;
     }
 
     @Override
@@ -42,31 +63,32 @@ class ImageEditBranch extends BranchPackage {
 
     // Brush \\
 
+    // A stamp every spacing from where the stroke stands toward a pixel, the stroke left on its last stamp
     void stroke(
             ImageDocumentInstance document,
-            int fromX,
-            int fromY,
             int toX,
             int toY,
             ImageBrushStruct brush,
             ImageRegionStruct region) {
 
-        int steps = Math.max(Math.abs(toX - fromX), Math.abs(toY - fromY));
+        int fromX = document.getStrokeX();
+        int fromY = document.getStrokeY();
+        float length = (float) Math.hypot(toX - fromX, toY - fromY);
+        float spacing = BrushUtility.resolveSpacing(brush.getBrush(), brush.getRadius());
+        int stamps = (int) (length / spacing);
 
-        for (int step = 1; step <= steps; step++) {
+        for (int i = 1; i <= stamps; i++) {
 
-            float t = step / (float) steps;
+            float t = i * spacing / length;
+            int x = Math.round(fromX + (toX - fromX) * t);
+            int y = Math.round(fromY + (toY - fromY) * t);
 
-            stamp(
-                    document,
-                    Math.round(fromX + (toX - fromX) * t),
-                    Math.round(fromY + (toY - fromY) * t),
-                    brush,
-                    region);
+            stamp(document, x, y, brush, region);
+            document.moveStroke(x, y);
         }
     }
 
-    // Covers every pixel whose centre lies within half a pixel past the radius, so small discs stay round
+    // The tip's pixels are read before any is written, so Swirl and Scatter move what was there
     void stamp(
             ImageDocumentInstance document,
             int centerX,
@@ -74,22 +96,97 @@ class ImageEditBranch extends BranchPackage {
             ImageBrushStruct brush,
             ImageRegionStruct region) {
 
+        BrushHandle preset = brush.getBrush();
         int radius = brush.getRadius();
-        int reachSq = radius * radius + radius;
+        float reach = radius + EditorSetting.IMAGE_BRUSH_EDGE_PIXELS;
+        float density = preset.getValue(BrushField.DENSITY);
+
+        captureTip(document, centerX, centerY, radius);
 
         for (int dy = -radius; dy <= radius; dy++) {
             for (int dx = -radius; dx <= radius; dx++) {
 
-                if (dx * dx + dy * dy > reachSq)
+                float strength = BrushUtility.resolveStrength(preset, dx, dy, reach);
+
+                if (strength <= 0f || nextRandom() >= density)
                     continue;
 
                 int x = centerX + dx;
                 int y = centerY + dy;
-                int color = brush.isSmoothing() ? averagePixel(document, x, y) : brush.getColor();
 
-                writePixel(document, x, y, color, region);
+                writePixel(document, x, y, resolveColor(document, brush, x, y, dx, dy, strength), region);
             }
         }
+    }
+
+    private void captureTip(ImageDocumentInstance document, int centerX, int centerY, int radius) {
+
+        tipPixels.clear();
+
+        for (int dy = -radius; dy <= radius; dy++)
+            for (int dx = -radius; dx <= radius; dx++)
+                tipPixels.add(readPixel(document, centerX + dx, centerY + dy));
+    }
+
+    private int resolveColor(
+            ImageDocumentInstance document,
+            ImageBrushStruct brush,
+            int x,
+            int y,
+            int dx,
+            int dy,
+            float strength) {
+
+        int before = readTip(brush.getRadius(), dx, dy);
+        boolean blending = brush.isBlending();
+
+        return switch (brush.getBrush().getMode()) {
+            case PAINT -> blend(before, brush.getColor(), strength, blending);
+            case SMOOTH -> blend(
+                    before,
+                    blending ? averagePixel(document, x, y) : commonestPixel(document, x, y),
+                    strength,
+                    blending);
+            case SWIRL -> swirlPixel(document, brush, x - dx, y - dy, dx, dy, strength);
+            case SCATTER -> blend(before, tipPixels.getInt(randomIndex(tipPixels.size())), strength, false);
+        };
+    }
+
+    // Faded by strength where the image blends, otherwise taken whole with strength as its chance
+    private int blend(int before, int target, float strength, boolean blending) {
+
+        if (!blending)
+            return nextRandom() < strength ? target : before;
+
+        return (PackedColorUtility.mix(before >>> Byte.SIZE, target >>> Byte.SIZE, strength) << Byte.SIZE)
+                | (before & EngineSetting.PACKED_COLOR_CHANNEL_MASK);
+    }
+
+    // The pixel the tip's twist carries here, turned further the stronger the tip is at this pixel
+    private int swirlPixel(
+            ImageDocumentInstance document,
+            ImageBrushStruct brush,
+            int centerX,
+            int centerY,
+            int dx,
+            int dy,
+            float strength) {
+
+        double angle = -Math.toRadians(brush.getBrush().getValue(BrushField.TWIST)) * strength;
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        int sourceX = (int) Math.round(dx * cos - dy * sin);
+        int sourceY = (int) Math.round(dx * sin + dy * cos);
+        int radius = brush.getRadius();
+
+        if (Math.abs(sourceX) <= radius && Math.abs(sourceY) <= radius)
+            return readTip(radius, sourceX, sourceY);
+
+        return readPixel(document, centerX + sourceX, centerY + sourceY);
+    }
+
+    private int readTip(int radius, int dx, int dy) {
+        return tipPixels.getInt((dy + radius) * (radius * 2 + 1) + dx + radius);
     }
 
     // Each color channel averaged over the pixel's square, keeping the pixel's own alpha; pixels are RGBA8888
@@ -115,6 +212,57 @@ class ImageEditBranch extends BranchPackage {
 
         return (PackedColorUtility.pack(red / count, green / count, blue / count) << Byte.SIZE)
                 | (readPixel(document, x, y) & EngineSetting.PACKED_COLOR_CHANNEL_MASK);
+    }
+
+    // The color found most often in the pixel's square, the pixel's own winning a tie
+    private int commonestPixel(ImageDocumentInstance document, int x, int y) {
+
+        int reach = EditorSetting.IMAGE_SMOOTH_REACH_PIXELS;
+        int own = readPixel(document, x, y);
+        int distinct = 0;
+        int commonest = own;
+        int commonestCount = 0;
+
+        for (int dy = -reach; dy <= reach; dy++) {
+            for (int dx = -reach; dx <= reach; dx++) {
+
+                int color = readPixel(document, x + dx, y + dy);
+                int slot = 0;
+
+                while (slot < distinct && neighbourColors[slot] != color)
+                    slot++;
+
+                if (slot == distinct) {
+                    neighbourColors[distinct] = color;
+                    neighbourCounts[distinct++] = 0;
+                }
+
+                int count = ++neighbourCounts[slot];
+
+                if (count > commonestCount || (count == commonestCount && color == own)) {
+                    commonest = color;
+                    commonestCount = count;
+                }
+            }
+        }
+
+        return commonest;
+    }
+
+    // Random \\
+
+    // A xorshift step, uniform in [0, 1); brushes need no stronger randomness and allocate nothing
+    private float nextRandom() {
+
+        randomState ^= randomState << 13;
+        randomState ^= randomState >>> 17;
+        randomState ^= randomState << 5;
+
+        return (randomState >>> Byte.SIZE) * EditorSetting.IMAGE_BRUSH_RANDOM_SCALE;
+    }
+
+    private int randomIndex(int size) {
+        return Math.min(size - 1, (int) (nextRandom() * size));
     }
 
     // Fill \\

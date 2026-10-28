@@ -8,7 +8,10 @@ import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
-import editor.bootstrap.itemeditorpipeline.util.ItemEditorTool;
+import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
+import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -17,11 +20,12 @@ import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ItemEditorManager extends ManagerPackage {
+public class ItemEditorManager extends ManagerPackage implements ToolCanvasProvider {
 
     /*
-     * Owns the item editor's shared state — open item meshes, the active item,
-     * tool, and brush texture, and the status line. Items themselves are ARPG
+     * Owns the item editor's shared state — open item meshes, the active item
+     * and brush texture, and the status line. Every Item Editor is one tool
+     * canvas, its tool chosen through ToolManager. Items themselves are ARPG
      * entries owned by InfoManager: selecting one there opens the mesh it
      * names here, starting a fresh model when that mesh has no file yet, and
      * new and deleted items go through it, as do their saves, so an item the
@@ -36,6 +40,7 @@ public class ItemEditorManager extends ManagerPackage {
     // Internal
     private TextureManager textureManager;
     private InfoManager infoManager;
+    private ToolManager toolManager;
     private ItemLibraryBranch itemLibraryBranch;
     private ItemEditBranch itemEditBranch;
 
@@ -45,7 +50,6 @@ public class ItemEditorManager extends ManagerPackage {
 
     // Active
     private ItemDocumentInstance activeDocument;
-    private ItemEditorTool activeTool;
     private String brushTextureName;
 
     // Status
@@ -63,15 +67,13 @@ public class ItemEditorManager extends ManagerPackage {
 
         // Palette
         this.meshName2ItemDocument = new Object2ObjectOpenHashMap<>();
-
-        // Active
-        this.activeTool = ItemEditorTool.PLACE;
     }
 
     @Override
     protected void get() {
         this.textureManager = get(TextureManager.class);
         this.infoManager = get(InfoManager.class);
+        this.toolManager = get(ToolManager.class);
     }
 
     @Override
@@ -338,16 +340,16 @@ public class ItemEditorManager extends ManagerPackage {
 
     // Tools \\
 
-    public void setTool(ItemEditorTool tool) {
-
-        this.activeTool = tool;
-        notifyChanged();
+    // Every Item Editor works on its item
+    @Override
+    public ToolCanvas getToolCanvas() {
+        return ToolCanvas.ITEM;
     }
 
     public void applyTool(SubVoxelHitStruct hit) {
 
         if (activeDocument != null)
-            itemEditBranch.applyTool(activeDocument, activeTool, hit, brushTextureName);
+            itemEditBranch.applyTool(activeDocument, getTool(), hit, brushTextureName);
     }
 
     // Brush \\
@@ -408,8 +410,8 @@ public class ItemEditorManager extends ManagerPackage {
         return activeDocument != null;
     }
 
-    public ItemEditorTool getTool() {
-        return activeTool;
+    public EditorTool getTool() {
+        return toolManager.getTool(ToolCanvas.ITEM);
     }
 
     public int getRevision() {
@@ -446,6 +448,6 @@ public class ItemEditorManager extends ManagerPackage {
 
         status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(part.getPartName());
         status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(part.getTextureName());
-        status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(activeTool.getLabel());
+        status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(getTool().getLabel());
     }
 }

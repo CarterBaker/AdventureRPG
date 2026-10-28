@@ -4,7 +4,8 @@ import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
-import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
+import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
+import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import engine.assets.camera.CameraInstance;
@@ -21,17 +22,19 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
     /*
      * Places the character's mesh parts where this tab's viewport shows them
-     * while a mesh mode is open: every vertex of every worn part skinned on
-     * the CPU by the pose the preview strikes, exactly as the shader skins
-     * it. From those positions it projects vertices onto the window, finds
-     * the active part's vertex nearest the pointer, the ones inside a box or
-     * under a brush, and — unless X-Ray is on — leaves out any a worn face
-     * hides from the camera. Positions are refreshed each frame and again on
-     * demand after an edit; their storage only ever grows.
+     * while a mesh mode is open: every vertex of every worn part skinned on the
+     * CPU by the pose the preview strikes, exactly as the shader skins it. From
+     * those positions it projects vertices onto the window, finds the active
+     * part's vertex nearest the pointer, the ones inside a box or under the
+     * brush preset's tip at the strength it has there, and — unless X-Ray is on
+     * — leaves out any a worn face hides from the camera. Positions are
+     * refreshed each frame and again on demand after an edit; their storage
+     * only ever grows.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
+    private BrushManager brushManager;
     private CharacterViewPoseSystem characterViewPoseSystem;
 
     // Parts
@@ -63,6 +66,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     @Override
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
+        this.brushManager = get(BrushManager.class);
         this.characterViewPoseSystem = get(CharacterViewPoseSystem.class);
     }
 
@@ -228,7 +232,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         }
     }
 
-    // Every visible vertex of the active part under a round brush, each with the strength it falls off to there
+    // Every visible vertex of the active part under the preset's tip, each with the strength the tip has there
     public void collectBrush(
             float pixelX,
             float pixelY,
@@ -248,9 +252,8 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
             if (!project(getX(v), getY(v), getZ(v), screenScratch))
                 continue;
 
-            float dx = screenScratch.x - pixelX;
-            float dy = screenScratch.y - pixelY;
-            float falloff = CharacterMeshUtility.falloff((float) Math.sqrt(dx * dx + dy * dy), radius);
+            float falloff = BrushUtility.resolveStrength(
+                    brushManager.getActiveBrush(), screenScratch.x - pixelX, screenScratch.y - pixelY, radius);
 
             if (falloff > 0f && isVisible(v)) {
                 vertices.add(v);

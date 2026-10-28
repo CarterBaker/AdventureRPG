@@ -7,7 +7,7 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
-import editor.bootstrap.itemeditorpipeline.util.ItemEditorTool;
+import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -18,8 +18,11 @@ class ItemEditBranch extends BranchPackage {
     /*
      * Performs every change to an item's model, its cubes and its walls alike.
      * An edit that would push the item past the mesh vertex limit is undone
-     * and refused, so a saved item can always be loaded by the game. With a
-     * brush texture chosen, Place, Wall and Paint build with the part using
+     * and refused, so a saved item can always be loaded by the game. Place
+     * adds a cube of the selected part, Wall a double-sided wall on the
+     * struck face or, near its edge, standing on that edge, Erase removes the
+     * struck cube or wall, and Brush moves it into the selected part. With a
+     * brush texture chosen, Place, Wall and Brush build with the part using
      * that texture, creating it when none does.
      */
 
@@ -39,7 +42,7 @@ class ItemEditBranch extends BranchPackage {
 
     void applyTool(
             ItemDocumentInstance document,
-            ItemEditorTool tool,
+            EditorTool tool,
             SubVoxelHitStruct hit,
             String brushTextureName) {
 
@@ -47,7 +50,9 @@ class ItemEditBranch extends BranchPackage {
             case PLACE -> place(document, hit, brushTextureName);
             case WALL -> wall(document, hit, brushTextureName);
             case ERASE -> erase(document, hit);
-            case PAINT -> paint(document, hit, brushTextureName);
+            case BRUSH -> paint(document, hit, brushTextureName);
+            default -> {
+            }
         }
     }
 

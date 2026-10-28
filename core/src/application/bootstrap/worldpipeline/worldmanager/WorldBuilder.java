@@ -15,6 +15,7 @@ import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector2Int;
+import engine.util.registry.RegistryUtility;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -31,7 +32,11 @@ class WorldBuilder extends BuilderPackage {
      * own, are read from it too.
      * The height layer beside the world image is read with it and must match
      * its size; a world without one gets a neutral layer, written to disk only
-     * once the editor saves what is painted on it.
+     * once the editor saves what is painted on it. A virtual world is built
+     * over an image held in memory instead, for the editor's previews: it has
+     * no files, a neutral height layer, every default, a seed taken from its
+     * name so it generates the same each time, and nothing placed or grown
+     * on it.
      */
 
     // Internal
@@ -118,6 +123,35 @@ class WorldBuilder extends BuilderPackage {
                 seed,
                 placements,
                 naturalSettlements);
+
+        WorldHandle handle = create(WorldHandle.class);
+        handle.constructor(data);
+
+        return handle;
+    }
+
+    WorldHandle buildVirtual(String worldName, Pixmap pixmap) {
+
+        WorldData data = new WorldData(
+                worldName,
+                worldManager.registerWorldName(worldName),
+                null,
+                pixmap,
+                calculateWorldScale(pixmap),
+                null,
+                WorldElevationUtility.createNeutralLayer(pixmap.getWidth(), pixmap.getHeight()),
+                EngineSetting.DEFAULT_GRAVITY_MULTIPLIER,
+                new Vector3(
+                        EngineSetting.DEFAULT_GRAVITY_X,
+                        EngineSetting.DEFAULT_GRAVITY_Y,
+                        EngineSetting.DEFAULT_GRAVITY_Z),
+                EngineSetting.DEFAULT_CALENDAR_NAME,
+                EngineSetting.DEFAULT_WORLD_ROTATION_SPEED,
+                EngineSetting.DEFAULT_AXIAL_TILT_DEGREES,
+                EngineSetting.DEFAULT_PLANETARY_OFFSET,
+                RegistryUtility.toNameSeed(worldName),
+                new ObjectArrayList<>(),
+                false);
 
         WorldHandle handle = create(WorldHandle.class);
         handle.constructor(data);

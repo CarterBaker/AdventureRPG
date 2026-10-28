@@ -21,8 +21,9 @@ public class WorldEditorMenuSystem extends SystemPackage {
      * Opens the World Editor toolbar and status line over the canvas. The
      * status line names the image, mode, tool and what it paints or places,
      * with the pixel, biome and height under the pointer, and rewrites only
-     * on change, as do the mode, layer and player marker buttons' labels. The
-     * tools and the palette are shown in their own tabs.
+     * on change, as do the mode the editor follows and the layer and player
+     * marker buttons' labels. The tools, the brushes and the palette are
+     * shown in their own tabs.
      */
 
     // Internal

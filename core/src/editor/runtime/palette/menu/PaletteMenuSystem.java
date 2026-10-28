@@ -12,7 +12,6 @@ import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.bootstrap.worldeditorpipeline.worldheight.WorldHeightEntryStruct;
 import editor.runtime.palette.PaletteSetting;
-import engine.graphics.color.Color;
 import engine.graphics.color.PackedColorUtility;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -163,10 +162,6 @@ public class PaletteMenuSystem extends SystemPackage {
     // Utility \\
 
     private MenuColorStruct toSwatchColor(int packedColor) {
-        return new MenuColorStruct(new Color(
-                PackedColorUtility.red(packedColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
-                PackedColorUtility.green(packedColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
-                PackedColorUtility.blue(packedColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX,
-                EngineSetting.COLOR_CHANNEL_MAX));
+        return new MenuColorStruct(PackedColorUtility.toColor(packedColor));
     }
 }

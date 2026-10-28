@@ -2,6 +2,7 @@ package editor.runtime.menueventsmanager;
 
 import editor.runtime.menueventsmanager.menus.AnimationEditorBranch;
 import editor.runtime.menueventsmanager.menus.AnimationTreeEditorBranch;
+import editor.runtime.menueventsmanager.menus.BiomePlannerBranch;
 import editor.runtime.menueventsmanager.menus.CharacterEditorBranch;
 import editor.runtime.menueventsmanager.menus.CommandConsoleBranch;
 import editor.runtime.menueventsmanager.menus.ConsoleBranch;
@@ -13,6 +14,7 @@ import editor.runtime.menueventsmanager.menus.NameDialogBranch;
 import editor.runtime.menueventsmanager.menus.ProfilerBranch;
 import editor.runtime.menueventsmanager.menus.RecorderBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
+import editor.runtime.menueventsmanager.menus.ToolBranch;
 import editor.runtime.menueventsmanager.menus.SettlementPlannerBranch;
 import editor.runtime.menueventsmanager.menus.WorldEditorBranch;
 import editor.runtime.menueventsmanager.menus.WorldMapBranch;
@@ -46,8 +48,10 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(CommandConsoleBranch.class);
         create(ProfilerBranch.class);
         create(WorldMapBranch.class);
+        create(ToolBranch.class);
         create(WorldEditorBranch.class);
         create(SettlementPlannerBranch.class);
+        create(BiomePlannerBranch.class);
         create(CharacterEditorBranch.class);
         create(AnimationEditorBranch.class);
         create(AnimationTreeEditorBranch.class);

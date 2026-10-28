@@ -1,36 +1,40 @@
 package editor.bootstrap.imagepipeline.imagebrush;
 
+import editor.bootstrap.brushpipeline.brush.BrushHandle;
 import engine.root.StructPackage;
 
 public class ImageBrushStruct extends StructPackage {
 
     /*
-     * What a stroke paints with: an RGBA8888 color and a round tip, every
-     * pixel within radius of the stroke's path, so radius zero paints single
-     * pixels. A smoothing brush paints no color of its own but blends every
-     * pixel it covers with its neighbours. Owned and kept current by the tool
-     * that paints with it.
+     * What a stroke paints with: the brush preset whose tip, falloff,
+     * density, spacing and mode it stamps, the RGBA8888 color a painting
+     * brush lays down, its radius in pixels, so radius zero stamps single
+     * pixels, and whether the image's colors can blend. On an image whose
+     * colors name things, as a biome map's do, every mode only ever writes a
+     * color already there or the brush's own, dithering where it would fade.
+     * Owned and kept current by the tool that paints with it.
      */
 
     // Brush
+    private BrushHandle brush;
     private int color;
     private int radius;
-    private boolean smoothing;
+    private boolean blending;
 
     // Management \\
 
-    public void set(int color, int radius) {
+    public void set(BrushHandle brush, int color, int radius, boolean blending) {
+        this.brush = brush;
         this.color = color;
         this.radius = radius;
-        this.smoothing = false;
-    }
-
-    public void setSmoothing(int radius) {
-        this.radius = radius;
-        this.smoothing = true;
+        this.blending = blending;
     }
 
     // Accessible \\
+
+    public BrushHandle getBrush() {
+        return brush;
+    }
 
     public int getColor() {
         return color;
@@ -40,7 +44,7 @@ public class ImageBrushStruct extends StructPackage {
         return radius;
     }
 
-    public boolean isSmoothing() {
-        return smoothing;
+    public boolean isBlending() {
+        return blending;
     }
 }

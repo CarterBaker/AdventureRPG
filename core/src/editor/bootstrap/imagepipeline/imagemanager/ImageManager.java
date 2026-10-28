@@ -109,8 +109,7 @@ public class ImageManager extends ManagerPackage {
             return;
 
         editRegion.clear();
-        imageEditBranch.stroke(document, document.getStrokeX(), document.getStrokeY(), x, y, brush, editRegion);
-        document.moveStroke(x, y);
+        imageEditBranch.stroke(document, x, y, brush, editRegion);
         notifyEdited(document, editRegion);
     }
 

@@ -11,7 +11,6 @@ import application.bootstrap.progressionpipeline.progressionmanager.ProgressionM
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
-import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
@@ -27,7 +26,7 @@ public class EntityManager extends ManagerPackage {
      * Owns the entity template palette and drives the entity bootstrap
      * pipeline. Handles on-demand template loading and provides the
      * spawnEntity() factory for creating runtime EntityInstances from
-     * template handles, in a random chunk of the active world or at a place
+     * template handles, in a random chunk of the world given or at a place
      * given, each one entering combat and progression as it spawns, starting
      * at the first level, and despawnEntity(), its mirror, which takes the
      * entity out of both and off every vehicle. rerollEntity() rolls an
@@ -41,7 +40,6 @@ public class EntityManager extends ManagerPackage {
      */
 
     // Internal
-    private WorldManager worldManager;
     private BehaviorManager behaviorManager;
     private CombatManager combatManager;
     private VehicleManager vehicleManager;
@@ -67,7 +65,6 @@ public class EntityManager extends ManagerPackage {
     protected void get() {
 
         // Internal
-        this.worldManager = get(WorldManager.class);
         this.behaviorManager = get(BehaviorManager.class);
         this.combatManager = get(CombatManager.class);
         this.vehicleManager = get(VehicleManager.class);
@@ -137,11 +134,13 @@ public class EntityManager extends ManagerPackage {
         return templateNames;
     }
 
-    public EntityInstance spawnEntity(EntityHandle entityHandle) {
-
-        WorldHandle activeWorld = worldManager.getActiveWorld();
-
-        return spawnEntity(entityHandle, activeWorld, WorldPositionUtility.getRandomChunk(activeWorld), new Vector3());
+    // An entity standing in a random chunk of the world given
+    public EntityInstance spawnEntity(String templateName, WorldHandle worldHandle) {
+        return spawnEntity(
+                getEntityHandleFromTemplateName(templateName),
+                worldHandle,
+                WorldPositionUtility.getRandomChunk(worldHandle),
+                new Vector3());
     }
 
     // The one way an entity enters the world — standing at a chunk-local position in the chunk given
@@ -170,10 +169,6 @@ public class EntityManager extends ManagerPackage {
         progressionManager.resetBeing(entityInstance, EngineSetting.IDENTITY_NONE);
 
         return entityInstance;
-    }
-
-    public EntityInstance spawnEntity(String templateName) {
-        return spawnEntity(getEntityHandleFromTemplateName(templateName));
     }
 
     // An entity standing at a chunk-local position to be drawn only — it never fights, levels or acts on the world

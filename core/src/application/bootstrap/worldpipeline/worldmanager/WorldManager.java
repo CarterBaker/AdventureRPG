@@ -6,6 +6,7 @@ import application.bootstrap.worldpipeline.util.WorldPlacementArpgUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
+import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
@@ -25,7 +26,9 @@ public class WorldManager extends ManagerPackage {
      * companion file on first use and changed only through here: generation
      * threads read an immutable snapshot, every change bumps the placement
      * revision so whatever was planned from the old ones is planned again,
-     * and reloading reads them back from the companion file.
+     * and reloading reads them back from the companion file. The editor can
+     * add a virtual world, built in memory over an image it keeps painting,
+     * which streams like any other but is never saved.
      */
 
     // Palette
@@ -282,5 +285,14 @@ public class WorldManager extends ManagerPackage {
 
     public void request(String worldName) {
         ((WorldLoader) internalLoader).request(worldName);
+    }
+
+    // A world held only in memory over an image its owner keeps, registered by name like any other
+    public WorldHandle createVirtualWorld(String worldName, Pixmap world) {
+
+        if (hasWorld(worldName))
+            throwException("Cannot create virtual world \"" + worldName + "\": a world by that name exists.");
+
+        return ((WorldLoader) internalLoader).buildVirtual(worldName, world);
     }
 }

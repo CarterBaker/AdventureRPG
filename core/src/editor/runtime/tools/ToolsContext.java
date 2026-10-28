@@ -6,11 +6,12 @@ import engine.root.ContextPackage;
 public class ToolsContext extends ContextPackage {
 
     /*
-     * Editor tab holding the tools other tabs work with, the way a toolbox
-     * does: every World Editor tool listed under its mode, Paint or
-     * Settlements, the one in use highlighted, and the brush size. Choosing a
-     * tool here chooses it, and its mode, for every World Editor at once; the
-     * tools themselves live in the editor.
+     * Editor tab holding the tools, the way a paint program's toolbox does:
+     * the tools of whichever window was worked in last, under the name of
+     * what that window works on, the one in use highlighted, with the brush
+     * size and preset its strokes use. Choosing a tool here chooses it for
+     * that window's canvas, and the shared tool keys are this tab's
+     * shortcuts; the tools themselves live in the editor.
      */
 
     // Internal

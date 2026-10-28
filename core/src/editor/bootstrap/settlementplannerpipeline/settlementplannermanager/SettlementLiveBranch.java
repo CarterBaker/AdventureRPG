@@ -1,6 +1,7 @@
 package editor.bootstrap.settlementplannerpipeline.settlementplannermanager;
 
 import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
+import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
@@ -17,7 +18,8 @@ class SettlementLiveBranch extends BranchPackage {
      * and preview terrain restream, and the planner shows its design anew.
      * An edit the engine refuses leaves the type as it was and reports why,
      * in the planner's status and the log. The planner's Edit Type opens the
-     * designed settlement or structure in the hierarchy, where it is edited.
+     * designed settlement or structure in the hierarchy, where it is edited,
+     * and one selected there becomes the planner's design.
      */
 
     // Internal
@@ -38,7 +40,16 @@ class SettlementLiveBranch extends BranchPackage {
 
     @Override
     protected void awake() {
+
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_SETTLEMENTS, this::rebuildSettlement);
+        infoManager.addSelectionListener(
+                EditorSetting.INFO_SCHEMA_SETTLEMENTS,
+                entry -> settlementPlannerManager.selectEntryByName(
+                        WorldPlacementKind.SETTLEMENT, entry.getEntryName()));
+        infoManager.addSelectionListener(
+                EditorSetting.INFO_SCHEMA_STRUCTURES,
+                entry -> settlementPlannerManager.selectEntryByName(
+                        WorldPlacementKind.STRUCTURE, entry.getEntryName()));
     }
 
     // Selection \\

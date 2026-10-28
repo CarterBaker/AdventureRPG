@@ -2,21 +2,20 @@ package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
-import editor.bootstrap.worldeditorpipeline.util.WorldEditorTool;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.worldeditor.WorldEditorContext;
 import engine.root.BranchPackage;
-import engine.util.arpg.ArpgUtility;
 
 public class WorldEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the World Editor toolbar, the Tools tab and the
+     * Menu event handlers for the World Editor toolbar and keys and the
      * Palette tab. Every action works on the shared world images and their
      * hand placements, except the player marker toggle, which targets the
-     * editor its button was clicked in; tool rows carry their tool's name,
-     * biome rows their biome's name and height rows their level. Choosing and
-     * turning what is placed works on the Settlement Planner's shared design.
+     * editor its button was clicked in; biome rows carry their biome's name
+     * and height rows their level. Choosing and turning what is placed works
+     * on the Settlement Planner's shared design. The tools themselves are
+     * chosen through ToolBranch, as every editor's are.
      */
 
     // Internal
@@ -53,14 +52,10 @@ public class WorldEditorBranch extends BranchPackage {
         worldEditorManager.toggleLayer();
     }
 
-    public void toggleMode() {
-        worldEditorManager.toggleMode();
-    }
+    // Placement \\
 
-    // Tools \\
-
-    public void selectTool(String toolName) {
-        worldEditorManager.setTool(ArpgUtility.toEnum(toolName, WorldEditorTool.class));
+    public void deleteSelection() {
+        worldEditorManager.deleteSelection();
     }
 
     public void previousPlaceable() {
@@ -73,14 +68,6 @@ public class WorldEditorBranch extends BranchPackage {
 
     public void turnPlacement() {
         settlementPlannerManager.turn();
-    }
-
-    public void shrinkBrush() {
-        worldEditorManager.resizeBrush(-1);
-    }
-
-    public void growBrush() {
-        worldEditorManager.resizeBrush(1);
     }
 
     public void togglePlayers(WindowInstance window) {

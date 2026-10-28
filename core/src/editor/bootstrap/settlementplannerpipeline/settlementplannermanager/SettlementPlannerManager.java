@@ -3,6 +3,7 @@ package editor.bootstrap.settlementplannerpipeline.settlementplannermanager;
 import java.util.concurrent.ThreadLocalRandom;
 
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -160,6 +161,7 @@ public class SettlementPlannerManager extends ManagerPackage {
             return;
 
         letGo();
+        worldEditorManager.showPlacements();
 
         this.entryIndex = index;
         this.architectureIndex = 0;
@@ -171,6 +173,15 @@ public class SettlementPlannerManager extends ManagerPackage {
                     EditorSetting.SETTLEMENT_PLANNER_MESSAGE_UNBUILDABLE + entries.get(index).getDisplayName());
 
         requestSummary();
+    }
+
+    // The catalogue entry a settlement type or structure selected in the Hierarchy names, if it is a new one
+    void selectEntryByName(WorldPlacementKind kind, String name) {
+
+        int index = settlementCatalogueBranch.indexOfEntry(kind, name);
+
+        if (index != EngineSetting.INDEX_NOT_FOUND && index != entryIndex)
+            selectEntry(index);
     }
 
     public void cycleEntry(int step) {
@@ -318,26 +329,6 @@ public class SettlementPlannerManager extends ManagerPackage {
         rowRevision++;
 
         return true;
-    }
-
-    // Every placement in one world image pixel listed, the first of them edited; how many stand there
-    public int selectPixel(int pixelX, int pixelY) {
-
-        this.hasHere = true;
-        this.herePixelX = pixelX;
-        this.herePixelY = pixelY;
-        worldEditorManager.collectPlacementsInPixel(pixelX, pixelY, placementsHere);
-        rowRevision++;
-
-        if (placementsHere.isEmpty()) {
-            detach();
-            return 0;
-        }
-
-        int count = placementsHere.size();
-        editPlacement(placementsHere.get(0));
-
-        return count;
     }
 
     public void selectPlacedHere(int index) {

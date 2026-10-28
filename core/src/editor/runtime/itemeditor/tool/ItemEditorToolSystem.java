@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.runtime.itemeditor.ItemEditorSetting;
 import editor.runtime.input.EditorInputSystem;
 import engine.root.SystemPackage;
@@ -13,8 +14,9 @@ import engine.util.mathematics.vectors.Vector3;
 public class ItemEditorToolSystem extends SystemPackage {
 
     /*
-     * Casts the pointer into the active item each frame and applies the active
-     * tool on click. Nothing is cast while the pointer is off the viewport or
+     * Casts the pointer into the active item each frame and applies the tool
+     * chosen for the item on click, this window being one of ToolManager's
+     * canvases while it is open. Nothing is cast while the pointer is off the viewport or
      * the orbit button is held. The last hit is kept for the cursor.
      */
 
@@ -22,6 +24,7 @@ public class ItemEditorToolSystem extends SystemPackage {
     private ItemEditorManager itemEditorManager;
     private SubVoxelManager subVoxelManager;
     private EditorInputSystem editorInputSystem;
+    private ToolManager toolManager;
 
     // Pointer
     private SubVoxelHitStruct hit;
@@ -44,6 +47,17 @@ public class ItemEditorToolSystem extends SystemPackage {
         this.itemEditorManager = get(ItemEditorManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
         this.editorInputSystem = get(EditorInputSystem.class);
+        this.toolManager = get(ToolManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        toolManager.openCanvas(context.getWindow(), itemEditorManager);
+    }
+
+    @Override
+    protected void dispose() {
+        toolManager.closeCanvas(context.getWindow());
     }
 
     // Update \\
