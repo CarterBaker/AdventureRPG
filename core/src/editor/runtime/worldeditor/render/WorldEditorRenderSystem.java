@@ -48,10 +48,11 @@ public class WorldEditorRenderSystem extends SystemPackage {
      * own shape, over the pixels a stroke at the pointer would cover, or,
      * while placing or carrying a design from the Settlement Planner, a ring
      * as wide as its design around the column it would stand on, the box the
-     * Select tool is dragging, an icon for every hand-placed settlement and
-     * structure through PlacementIconSystem, those being moved drawn where
-     * they would stand, and, while shown, an arrow for every player at their
-     * place and facing. Marker quads are pooled with their own materials.
+     * Select tool is dragging, an icon for every hand-placed settlement,
+     * structure and camera through PlacementIconSystem, those being moved
+     * drawn where they would stand, and, while shown, an arrow for every
+     * player at their place and facing. Marker quads are pooled with their
+     * own materials.
      */
 
     // Internal

@@ -4,6 +4,7 @@ import editor.bootstrap.animationeditorpipeline.AnimationEditorPipeline;
 import editor.bootstrap.animationtreeeditorpipeline.AnimationTreeEditorPipeline;
 import editor.bootstrap.biomeplannerpipeline.BiomePlannerPipeline;
 import editor.bootstrap.brushpipeline.BrushPipeline;
+import editor.bootstrap.cameraplannerpipeline.CameraPlannerPipeline;
 import editor.bootstrap.charactereditorpipeline.CharacterEditorPipeline;
 import editor.bootstrap.commandpipeline.CommandPipeline;
 import editor.bootstrap.imagepipeline.ImagePipeline;
@@ -28,7 +29,8 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
      * takes tools shares, the item editor pipeline shared by every item
      * editor, the image editing framework and the world editor pipeline built
      * on it, the settlement planner pipeline whose design the world editor
-     * places, the biome planner pipeline whose small world the biome viewer
+     * places, the camera planner pipeline whose cameras the main menu looks
+     * out from, the biome planner pipeline whose small world the biome viewer
      * flies over, the character, animation and animation tree editor
      * pipelines, the command pipeline that routes console commands to every
      * Dev window, the recorder pipeline that records, plays back and exports
@@ -49,6 +51,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(ImagePipeline.class);
         create(WorldEditorPipeline.class);
         create(SettlementPlannerPipeline.class);
+        create(CameraPlannerPipeline.class);
         create(BiomePlannerPipeline.class);
         create(CharacterEditorPipeline.class);
         create(AnimationEditorPipeline.class);

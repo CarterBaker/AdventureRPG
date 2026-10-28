@@ -94,6 +94,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openSettlementPlanner(window.getGLWindow());
     }
 
+    public void openCameraPlanner(WindowInstance window) {
+        tabManager.openCameraPlanner(window.getGLWindow());
+    }
+
     public void openTools(WindowInstance window) {
         tabManager.openTools(window.getGLWindow());
     }

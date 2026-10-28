@@ -10,8 +10,9 @@ uniform float u_iconShape;
 out vec4 FragColor;
 
 // A hand placement's icon, filled and outlined, with edges softened over one
-// pixel: a house standing upright for a settlement, u_iconShape 0, or a
-// banner whose point faces along local +y for a structure, u_iconShape 1.
+// pixel: a house standing upright for a settlement, u_iconShape 0, a banner
+// whose point faces along local +y for a structure, u_iconShape 1, or a
+// camera whose lens opens along local +y for a camera, u_iconShape 2.
 // Shaped by the signed distance to the chosen outline's six corners.
 
 const int ICON_CORNER_COUNT = 6;
@@ -32,8 +33,18 @@ const vec2 BANNER_CORNERS[ICON_CORNER_COUNT] = vec2[](
     vec2(-0.65, -0.85),
     vec2(-0.65,  0.4));
 
+const vec2 CAMERA_CORNERS[ICON_CORNER_COUNT] = vec2[](
+    vec2(-0.85,  0.85),
+    vec2( 0.85,  0.85),
+    vec2( 0.3,  -0.1),
+    vec2( 0.3,  -0.85),
+    vec2(-0.3,  -0.85),
+    vec2(-0.3,  -0.1));
+
 vec2 iconCorner(int index) {
-    return u_iconShape < 0.5 ? HOUSE_CORNERS[index] : BANNER_CORNERS[index];
+    return u_iconShape < 0.5 ? HOUSE_CORNERS[index]
+        : u_iconShape < 1.5 ? BANNER_CORNERS[index]
+        : CAMERA_CORNERS[index];
 }
 
 float signedDistanceToIcon(vec2 point) {

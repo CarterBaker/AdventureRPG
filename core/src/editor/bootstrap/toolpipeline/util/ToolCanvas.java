@@ -37,6 +37,10 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_SETTLEMENTS,
             new EditorTool[] { EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE },
             false),
+    CAMERAS(
+            EditorSetting.TOOL_CANVAS_CAMERAS,
+            new EditorTool[] { EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE },
+            false),
     CHARACTER_MESH(
             EditorSetting.TOOL_CANVAS_CHARACTER_MESH,
             new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },

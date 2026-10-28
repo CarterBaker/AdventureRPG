@@ -10,6 +10,7 @@ import editor.runtime.arpgviewer.ArpgViewerContext;
 import editor.runtime.biomeplanner.BiomePlannerContext;
 import editor.runtime.biomeviewer.BiomeViewerContext;
 import editor.runtime.brushes.BrushesContext;
+import editor.runtime.cameraplanner.CameraPlannerContext;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
@@ -164,6 +165,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openSettlementPlanner(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_SETTLEMENT_PLANNER, SettlementPlannerContext.class, osWindow);
+    }
+
+    public TabHandle openCameraPlanner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CAMERA_PLANNER, CameraPlannerContext.class, osWindow);
     }
 
     public TabHandle openTools(WindowInstance osWindow) {

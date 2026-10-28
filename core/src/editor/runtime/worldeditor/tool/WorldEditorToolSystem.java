@@ -9,7 +9,6 @@ import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
-import editor.bootstrap.worldeditorpipeline.util.WorldEditorMode;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.worldeditor.WorldEditorSetting;
@@ -141,7 +140,7 @@ public class WorldEditorToolSystem extends SystemPackage {
             return;
         }
 
-        if (worldEditorManager.getMode() == WorldEditorMode.SETTLEMENTS) {
+        if (worldEditorManager.getMode().isPlacing()) {
             worldEditorManager.applyPlacement(hoveredImageX, hoveredImageY);
             return;
         }

@@ -3,7 +3,6 @@ package application.bootstrap.worldpipeline.worldmanager;
 import java.io.File;
 
 import application.bootstrap.worldpipeline.util.WorldPlacementArpgUtility;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import engine.assets.image.Pixmap;
@@ -25,8 +24,10 @@ public class WorldManager extends ManagerPackage {
      * Also owns every world's live hand-picked placements, seeded from its
      * companion file on first use and changed only through here: generation
      * threads read an immutable snapshot, every change bumps the placement
-     * revision so whatever was planned from the old ones is planned again,
-     * and reloading reads them back from the companion file. The editor can
+     * revision, and a change to a placement generation stands up bumps the
+     * generation revision too, so whatever was planned from the old ones is
+     * planned again while a camera moving plans nothing anew. Reloading reads
+     * them back from the companion file. The editor can
      * add a virtual world, built in memory over an image it keeps painting,
      * which streams like any other but is never saved.
      */
@@ -41,6 +42,7 @@ public class WorldManager extends ManagerPackage {
     // Placement — every world's live snapshot, guarded by worldID2Placements
     private Int2ObjectOpenHashMap<WorldPlacementStruct[]> worldID2Placements;
     private volatile int placementRevision;
+    private volatile int generationRevision;
 
     // Internal \\
 
@@ -143,29 +145,7 @@ public class WorldManager extends ManagerPackage {
             System.arraycopy(placements, 0, grown, 0, placements.length);
             grown[placements.length] = placement;
 
-            publishPlacements(worldHandle, grown);
-        }
-    }
-
-    // The placement nearest a world position within a radius taken away — null when none stands that near
-    public WorldPlacementStruct removeNearestPlacement(
-            WorldHandle worldHandle,
-            double worldX,
-            double worldZ,
-            double radiusBlocks) {
-
-        synchronized (worldID2Placements) {
-
-            WorldPlacementStruct[] placements = getPlacements(worldHandle);
-            int nearest = indexOfNearestPlacement(worldHandle, placements, worldX, worldZ, radiusBlocks);
-
-            if (nearest == EngineSetting.INDEX_NOT_FOUND)
-                return null;
-
-            WorldPlacementStruct removed = placements[nearest];
-            removePlacementAt(worldHandle, placements, nearest);
-
-            return removed;
+            publishPlacements(worldHandle, grown, placement.getKind().isGenerated());
         }
     }
 
@@ -197,7 +177,7 @@ public class WorldManager extends ManagerPackage {
         System.arraycopy(placements, 0, shrunk, 0, index);
         System.arraycopy(placements, index + 1, shrunk, index, placements.length - index - 1);
 
-        publishPlacements(worldHandle, shrunk);
+        publishPlacements(worldHandle, shrunk, placements[index].getKind().isGenerated());
     }
 
     // One placement swapped for another in its place — false when the placement no longer stands
@@ -217,39 +197,16 @@ public class WorldManager extends ManagerPackage {
 
                 WorldPlacementStruct[] replaced = placements.clone();
                 replaced[i] = replacement;
-                publishPlacements(worldHandle, replaced);
+                publishPlacements(
+                        worldHandle,
+                        replaced,
+                        previous.getKind().isGenerated() || replacement.getKind().isGenerated());
 
                 return true;
             }
 
             return false;
         }
-    }
-
-    private int indexOfNearestPlacement(
-            WorldHandle worldHandle,
-            WorldPlacementStruct[] placements,
-            double worldX,
-            double worldZ,
-            double radiusBlocks) {
-
-        int nearest = EngineSetting.INDEX_NOT_FOUND;
-        double nearestDistanceSq = radiusBlocks * radiusBlocks;
-
-        for (int i = 0; i < placements.length; i++) {
-
-            double deltaX = WorldWrapUtility.wrappedBlockDeltaX(worldHandle, placements[i].getWorldX(), worldX);
-            double deltaZ = WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, placements[i].getWorldZ(), worldZ);
-            double distanceSq = deltaX * deltaX + deltaZ * deltaZ;
-
-            if (distanceSq > nearestDistanceSq)
-                continue;
-
-            nearestDistanceSq = distanceSq;
-            nearest = i;
-        }
-
-        return nearest;
     }
 
     // The placements read back from the companion file, dropping every unsaved change
@@ -262,15 +219,20 @@ public class WorldManager extends ManagerPackage {
 
         synchronized (worldID2Placements) {
             publishPlacements(worldHandle, WorldPlacementArpgUtility.parsePlacements(
-                    worldArpg, worldHandle.getWorldName()).toArray(new WorldPlacementStruct[0]));
+                    worldArpg, worldHandle.getWorldName()).toArray(new WorldPlacementStruct[0]), true);
         }
 
         return true;
     }
 
-    private void publishPlacements(WorldHandle worldHandle, WorldPlacementStruct[] placements) {
+    // The placements made current, the generation revision bumped only when generation reads what changed
+    private void publishPlacements(WorldHandle worldHandle, WorldPlacementStruct[] placements, boolean generated) {
+
         worldID2Placements.put(worldHandle.getWorldID(), placements);
         placementRevision++;
+
+        if (generated)
+            generationRevision++;
     }
 
     private File resolveCompanionFile(WorldHandle worldHandle) {
@@ -279,6 +241,10 @@ public class WorldManager extends ManagerPackage {
 
     public int getPlacementRevision() {
         return placementRevision;
+    }
+
+    public int getGenerationRevision() {
+        return generationRevision;
     }
 
     // On-Demand \\

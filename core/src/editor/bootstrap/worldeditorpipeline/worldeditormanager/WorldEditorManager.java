@@ -10,6 +10,7 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
+import editor.bootstrap.cameraplannerpipeline.cameraplannermanager.CameraPlannerManager;
 import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
@@ -21,6 +22,7 @@ import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.bootstrap.toolpipeline.util.ToolOption;
+import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
 import editor.bootstrap.worldeditorpipeline.worldheight.WorldHeightEntryStruct;
@@ -38,11 +40,12 @@ public class WorldEditorManager extends ManagerPackage {
      * its biome image and its height layer, each opened through ImageManager
      * on the world's own pixels so generation reads every stroke at once, the
      * layer being painted, the palette of biomes the image can paint, the
-     * selected biome, the mode, Paint or Settlements, and the status line.
-     * The mode follows what is being worked on: selecting a biome or a height
-     * paints, selecting a settlement or structure in the Hierarchy or the
-     * Settlement Planner places. Every World Editor works on one tool canvas,
-     * its tool and options kept by ToolManager for the layer painted or for
+     * selected biome, the mode, Paint, Settlements or Cameras, and the status
+     * line. The mode follows what is being worked on: selecting a biome or a
+     * height paints, selecting a settlement or structure in the Hierarchy or
+     * the Settlement Planner places those, and working in the Camera Planner
+     * places cameras. Every World Editor works on one tool canvas, its tool
+     * and options kept by ToolManager for the layer painted or for the mode
      * placing, and every stroke is made with BrushManager's brush in use and
      * the tool's own strength and twist, dithered on the biome image, whose
      * colors name biomes, and blended on the height layer. The height
@@ -56,10 +59,11 @@ public class WorldEditorManager extends ManagerPackage {
      * both layers together. Biome edits from the Info Panel reach the engine,
      * and biome selection stays in step with the hierarchy, through
      * WorldBiomeBranch, and tree species edits reach it through
-     * WorldTreeBranch. Settlements and structures hand-picked onto the world
-     * are kept through WorldPlacementBranch and saved and reloaded with the
-     * images; what is placed, by a tool or dropped from the planner, and the
-     * placement being edited, is the Settlement Planner's design.
+     * WorldTreeBranch. Settlements, structures and cameras hand-picked onto
+     * the world are kept through WorldPlacementBranch and saved and reloaded
+     * with the images; what is placed, by a tool or dropped from a planner,
+     * is the design of the planner the mode places for, and each placement
+     * picked is edited by the planner that designs its kind.
      */
 
     // Internal
@@ -70,6 +74,7 @@ public class WorldEditorManager extends ManagerPackage {
     private RiverManager riverManager;
     private ImageManager imageManager;
     private SettlementPlannerManager settlementPlannerManager;
+    private CameraPlannerManager cameraPlannerManager;
     private ToolManager toolManager;
     private BrushManager brushManager;
     private WorldBiomeBranch worldBiomeBranch;
@@ -145,6 +150,7 @@ public class WorldEditorManager extends ManagerPackage {
         this.riverManager = get(RiverManager.class);
         this.imageManager = get(ImageManager.class);
         this.settlementPlannerManager = get(SettlementPlannerManager.class);
+        this.cameraPlannerManager = get(CameraPlannerManager.class);
         this.toolManager = get(ToolManager.class);
         this.brushManager = get(BrushManager.class);
     }
@@ -327,7 +333,13 @@ public class WorldEditorManager extends ManagerPackage {
         show(WorldEditorMode.SETTLEMENTS, activeLayer);
     }
 
-    // The single call site of every mode and layer change, ending any stroke under way first
+    // Placing cameras, as working in the Camera Planner asks for
+    public void showCameras() {
+        show(WorldEditorMode.CAMERAS, activeLayer);
+    }
+
+    // The single call site of every mode and layer change, ending any stroke under way first; a selection belongs
+    // to the mode it was made in
     private void show(WorldEditorMode mode, WorldEditorLayer layer) {
 
         if (mode == activeMode && layer == activeLayer)
@@ -335,7 +347,7 @@ public class WorldEditorManager extends ManagerPackage {
 
         endStrokes();
 
-        if (mode != WorldEditorMode.SETTLEMENTS)
+        if (mode != activeMode)
             worldSelectionBranch.clear();
 
         boolean layerChanged = layer != activeLayer;
@@ -351,9 +363,9 @@ public class WorldEditorManager extends ManagerPackage {
 
     // Tools \\
 
-    // What every World Editor works on: the layer painted, or the placements
+    // What every World Editor works on: the layer painted, or the placements the mode places
     public ToolCanvas getToolCanvas() {
-        return activeMode == WorldEditorMode.SETTLEMENTS ? ToolCanvas.SETTLEMENTS : activeLayer.getToolCanvas();
+        return activeMode.isPlacing() ? activeMode.getToolCanvas() : activeLayer.getToolCanvas();
     }
 
     public void beginStroke(int pixelX, int pixelY) {
@@ -489,12 +501,40 @@ public class WorldEditorManager extends ManagerPackage {
         }
     }
 
-    // The Settlement Planner's design stood at an image position, as the Place tool or a drop from the planner does
+    // The placing mode's design stood at an image position, as the Place tool or a drop from a planner does
     public void placeDesign(double imageX, double imageY) {
         worldPlacementBranch.place(getWorldHandle(), imageX, imageY);
     }
 
-    // The Settlement Planner's live change to the placement it edits, returning why it was refused or null
+    // The design of the planner the mode places for, standing at a block column, null when nothing is chosen
+    WorldPlacementStruct createDesign(long worldX, long worldZ) {
+        return activeMode == WorldEditorMode.CAMERAS
+                ? cameraPlannerManager.createNewPlacement(worldX, worldZ)
+                : settlementPlannerManager.createPlacement(worldX, worldZ);
+    }
+
+    // A placement handed to the planner that designs its kind, edited there from then on
+    void editPlacement(WorldPlacementStruct placement) {
+        if (placement.getKind() == WorldPlacementKind.CAMERA)
+            cameraPlannerManager.editPlacement(placement);
+        else
+            settlementPlannerManager.editPlacement(placement);
+    }
+
+    // The placement edited by the planner the mode places for let go
+    void detachPlacement() {
+        if (activeMode == WorldEditorMode.CAMERAS)
+            cameraPlannerManager.detach();
+        else
+            settlementPlannerManager.detach();
+    }
+
+    // True for the placement either planner edits
+    public boolean isPlacementEdited(WorldPlacementStruct placement) {
+        return settlementPlannerManager.isEdited(placement) || cameraPlannerManager.isEdited(placement);
+    }
+
+    // A planner's live change to the placement it edits, returning why it was refused or null
     public String replacePlacement(WorldPlacementStruct previous, WorldPlacementStruct replacement) {
         return worldPlacementBranch.replace(getWorldHandle(), previous, replacement);
     }
@@ -504,9 +544,13 @@ public class WorldEditorManager extends ManagerPackage {
         return worldPlacementBranch.remove(getWorldHandle(), placement);
     }
 
-    // Every hand placement standing in one world image pixel, in the order they were placed
-    public void collectPlacementsInPixel(int pixelX, int pixelY, ObjectArrayList<WorldPlacementStruct> output) {
-        worldPlacementBranch.collectInPixel(getWorldHandle(), pixelX, pixelY, output);
+    // Every hand placement a mode holds standing in one world image pixel, in the order they were placed
+    public void collectPlacementsInPixel(
+            WorldEditorMode mode,
+            int pixelX,
+            int pixelY,
+            ObjectArrayList<WorldPlacementStruct> output) {
+        worldPlacementBranch.collectInPixel(getWorldHandle(), mode, pixelX, pixelY, output);
     }
 
     // The block column under an image position, in image pixels with fractions kept
@@ -529,7 +573,7 @@ public class WorldEditorManager extends ManagerPackage {
 
     // Selection \\
 
-    // The placement nearest an image position within a reach in image pixels, null when none stands that near
+    // The placement the mode holds nearest an image position within a reach in image pixels, null when none is near
     public WorldPlacementStruct findPlacementNear(double imageX, double imageY, double reachPixels) {
         return worldSelectionBranch.findNear(getWorldHandle(), imageX, imageY, reachPixels);
     }
@@ -554,7 +598,7 @@ public class WorldEditorManager extends ManagerPackage {
 
     // Everything selected taken away, only while placing
     public void deleteSelection() {
-        if (activeMode == WorldEditorMode.SETTLEMENTS)
+        if (activeMode.isPlacing())
             worldSelectionBranch.delete(getWorldHandle());
     }
 
@@ -644,7 +688,7 @@ public class WorldEditorManager extends ManagerPackage {
 
         status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeMode.getLabel());
 
-        if (activeMode == WorldEditorMode.SETTLEMENTS)
+        if (activeMode.isPlacing())
             appendPlacementStatus(status);
         else
             status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeLayer.getLabel())
@@ -674,7 +718,10 @@ public class WorldEditorManager extends ManagerPackage {
 
     private void appendPlacementStatus(StringBuilder status) {
         status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(getTool().getLabel())
-                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(settlementPlannerManager.describeDesign());
+                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
+                .append(activeMode == WorldEditorMode.CAMERAS
+                        ? cameraPlannerManager.describeDesign()
+                        : settlementPlannerManager.describeDesign());
     }
 
     public String describePixel(int pixelX, int pixelY) {

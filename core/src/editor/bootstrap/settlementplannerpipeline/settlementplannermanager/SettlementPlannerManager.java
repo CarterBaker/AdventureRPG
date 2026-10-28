@@ -9,6 +9,7 @@ import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.settlementplannerpipeline.settlementplanner.SettlementPlannerArchitectureStruct;
 import editor.bootstrap.settlementplannerpipeline.settlementplanner.SettlementPlannerEntryStruct;
+import editor.bootstrap.worldeditorpipeline.util.WorldEditorMode;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -349,7 +350,8 @@ public class SettlementPlannerManager extends ManagerPackage {
             this.herePixelY = worldEditorManager.toPixelY(editedPlacement);
         }
 
-        worldEditorManager.collectPlacementsInPixel(herePixelX, herePixelY, placementsHere);
+        worldEditorManager.collectPlacementsInPixel(
+                WorldEditorMode.SETTLEMENTS, herePixelX, herePixelY, placementsHere);
         rowRevision++;
     }
 

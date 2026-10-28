@@ -13,7 +13,8 @@ public class PlayerRenderSystem extends SystemPackage {
      * Resolves this window's player entity, camera and hidden head bone, and
      * hands them to EntityRenderSystem.pushCharacter(), which does all
      * character rendering, in the frame of the chunk the player stands in. A
-     * player flying as a free camera is not drawn.
+     * player flying as a free camera is not drawn, nor one carried under the
+     * view its main menu looks out from.
      */
 
     // Internal
@@ -37,7 +38,8 @@ public class PlayerRenderSystem extends SystemPackage {
 
         int windowID = context.getWindow().getWindowID();
 
-        if (!playerManager.hasPlayerForWindow(windowID) || playerManager.isFreeCameraForWindow(windowID))
+        if (!playerManager.hasPlayerForWindow(windowID) || playerManager.isFreeCameraForWindow(windowID)
+                || playerManager.isMenuViewForWindow(windowID))
             return;
 
         EntityInstance player = playerManager.getPlayerForWindow(windowID);

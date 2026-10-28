@@ -194,6 +194,10 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_KEY_VALUE = "Key Value";
     public static final String DIALOG_TITLE_PLACEMENT_X = "Placement X";
     public static final String DIALOG_TITLE_PLACEMENT_Z = "Placement Z";
+    public static final String DIALOG_TITLE_CAMERA_NAME = "Camera Name";
+    public static final String DIALOG_TITLE_CAMERA_HEIGHT = "Camera Height";
+    public static final String DIALOG_TITLE_CAMERA_YAW = "Camera Yaw";
+    public static final String DIALOG_TITLE_CAMERA_PITCH = "Camera Pitch";
 
     // Export Dialog — the bar fills in fixed steps; the text refreshes a few times a second of real time, and the
     // time left is estimated once a few frames have been made
@@ -307,6 +311,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_BIOME_PLANNER = "Biome Planner";
     public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
     public static final String TAB_TITLE_BRUSHES = "Brushes";
+    public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
     public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
@@ -1039,8 +1044,37 @@ public class EditorSetting {
     public static final String SETTLEMENT_PLANNER_STATUS_ROADS = ", roads ";
     public static final String SETTLEMENT_PLANNER_STATUS_WALLED = ", walled";
 
-    // Placement Icons — one icon per hand placement on every map, a house for a settlement and a banner turned the
-    // way a structure faces, the placement the Settlement Planner edits in its highlight
+    // Camera Planner — the view a new camera starts with, how far each step moves it, and its status line
+    public static final String CAMERA_PLANNER_DEFAULT_NAME = "Camera";
+    public static final String CAMERA_PLANNER_NAME_SEPARATOR = " ";
+    public static final float CAMERA_PLANNER_DEFAULT_HEIGHT = 16f;
+    public static final float CAMERA_PLANNER_DEFAULT_YAW = 0f;
+    public static final float CAMERA_PLANNER_DEFAULT_PITCH = -10f;
+    public static final float CAMERA_PLANNER_HEIGHT_STEP = 2f;
+    public static final float CAMERA_PLANNER_YAW_STEP = 15f;
+    public static final float CAMERA_PLANNER_PITCH_STEP = 5f;
+    public static final String CAMERA_PLANNER_VALUE_FORMAT = "%.1f";
+    public static final String CAMERA_PLANNER_MESSAGE_PLACING = "Placing cameras: click the World Editor with Place";
+    public static final String CAMERA_PLANNER_MESSAGE_RELEASED = "No longer editing a camera";
+    public static final String CAMERA_PLANNER_MESSAGE_NOTHING_EDITED = "Select a camera first";
+    public static final String CAMERA_PLANNER_MESSAGE_EDITING = "Editing ";
+    public static final String CAMERA_PLANNER_MESSAGE_MOVED = "Moved";
+    public static final String CAMERA_PLANNER_MESSAGE_REMOVED = "Removed ";
+    public static final String CAMERA_PLANNER_MESSAGE_PREVIEWING = "Previewing the main menu from ";
+    public static final String CAMERA_PLANNER_PREVIEW_RANDOM = "a random camera";
+    public static final String CAMERA_PLANNER_STATUS_SEPARATOR = "  |  ";
+    public static final String CAMERA_PLANNER_STATUS_COLUMN_X = "  X ";
+    public static final String CAMERA_PLANNER_STATUS_Z = "  Z ";
+    public static final String CAMERA_PLANNER_STATUS_HEIGHT = "Height ";
+    public static final String CAMERA_PLANNER_STATUS_YAW = "  Yaw ";
+    public static final String CAMERA_PLANNER_STATUS_PITCH = "  Pitch ";
+    public static final String CAMERA_PLANNER_STATUS_COUNT = "Cameras the main menu picks from at random: ";
+    public static final String CAMERA_PLANNER_STATUS_NONE = "No cameras: the main menu looks out over its player";
+    public static final String CAMERA_PLANNER_STATUS_NOTHING_EDITED =
+            "Nothing selected: place a camera on the World Editor, or pick one from the list";
+
+    // Placement Icons — one icon per hand placement on every map, a house for a settlement, a banner turned the way
+    // a structure faces and a camera turned the way it looks, the placement a planner edits in its highlight
     public static final String PLACEMENT_ICON_MESH = "editor/EditorViewportQuad";
     public static final String PLACEMENT_ICON_MATERIAL = "editor/PlacementIconMaterial";
     public static final String PLACEMENT_ICON_UNIFORM_SHAPE = "u_iconShape";
@@ -1050,10 +1084,12 @@ public class EditorSetting {
     public static final String PLACEMENT_ICON_UNIFORM_SCALE = "u_markerScale";
     public static final float PLACEMENT_ICON_SHAPE_SETTLEMENT = 0f;
     public static final float PLACEMENT_ICON_SHAPE_STRUCTURE = 1f;
+    public static final float PLACEMENT_ICON_SHAPE_CAMERA = 2f;
     public static final float PLACEMENT_ICON_SIZE_PIXELS = 12f;
     public static final float PLACEMENT_ICON_EDITED_SIZE_PIXELS = 16f;
     public static final float[] PLACEMENT_ICON_COLOR_SETTLEMENT = { 0.95f, 0.78f, 0.32f, 1f };
     public static final float[] PLACEMENT_ICON_COLOR_STRUCTURE = { 0.45f, 0.72f, 0.95f, 1f };
+    public static final float[] PLACEMENT_ICON_COLOR_CAMERA = { 0.58f, 0.9f, 0.52f, 1f };
     public static final float[] PLACEMENT_ICON_COLOR_EDITED = { 1f, 0.42f, 0.32f, 1f };
 
     // Image Editing
@@ -1099,6 +1135,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
+    public static final String TOOL_CANVAS_CAMERAS = "World Cameras";
     public static final String TOOL_CANVAS_CHARACTER_MESH = "Character Mesh";
     public static final String TOOL_CANVAS_CHARACTER_WEIGHTS = "Character Weights";
     public static final String TOOL_CANVAS_ITEM = "Item";
@@ -1133,6 +1170,7 @@ public class EditorSetting {
     // World Editor
     public static final String WORLD_EDITOR_MODE_PAINT = "Paint";
     public static final String WORLD_EDITOR_MODE_SETTLEMENTS = "Settlements";
+    public static final String WORLD_EDITOR_MODE_CAMERAS = "Cameras";
     public static final String WORLD_EDITOR_LAYER_BIOMES = "Biomes";
     public static final String WORLD_EDITOR_LAYER_HEIGHTS = "Heights";
     public static final int WORLD_EDITOR_HEIGHT_LEVEL_STEP = 16;

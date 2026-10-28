@@ -7,6 +7,7 @@ import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
+import application.bootstrap.entitypipeline.player.MenuViewStruct;
 import application.bootstrap.entitypipeline.player.PlayerCameraStruct;
 import application.bootstrap.entitypipeline.player.PlayerGestureStruct;
 import application.bootstrap.entitypipeline.player.UseTargetStruct;
@@ -23,6 +24,7 @@ import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
@@ -32,11 +34,13 @@ import engine.assets.camera.CameraInstance;
 import engine.input.Keys;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class PlayerManager extends ManagerPackage {
 
@@ -66,8 +70,13 @@ public class PlayerManager extends ManagerPackage {
      * of any vehicle and is dropped onto the ground of the column it was sent
      * to, by the same check that verifies a spawn. A held window's player and
      * camera are left exactly as something else places them — a recording
-     * playing back — until the hold is let go. Each window's player position
-     * reaches its draw through a window draw step added to RenderManager.
+     * playing back — until the hold is let go. While a window's main menu
+     * looks out over the world, hovered or not, MenuViewBranch seats its
+     * camera at one of the world's hand-placed cameras, the player carried to
+     * that camera's column and dropped onto its ground by the same check, so
+     * the world streams around the view and the camera never starts inside
+     * the ground. Each window's player position reaches its draw through a
+     * window draw step added to RenderManager.
      */
 
     // Internal
@@ -83,6 +92,7 @@ public class PlayerManager extends ManagerPackage {
     private PlayerBufferSystem internalBufferSystem;
     private FirstPersonBranch firstPersonBranch;
     private CameraShakeBranch cameraShakeBranch;
+    private MenuViewBranch menuViewBranch;
     private PlacementManager placementManager;
     private CombatManager combatManager;
     private VehicleControlSystem vehicleControlSystem;
@@ -118,6 +128,10 @@ public class PlayerManager extends ManagerPackage {
     // z: the share of the screen height the character fills
     private Int2ObjectOpenHashMap<Vector3> windowID2PreviewFraming;
 
+    // Per-window menu view — the view each window's main menu looks out from, and every window holding one
+    private Int2ObjectOpenHashMap<MenuViewStruct> windowID2MenuView;
+    private IntArrayList menuViewWindowIDs;
+
     // Scratch
     private Vector3 cameraPosition;
     private Vector3 cameraOffset;
@@ -135,6 +149,7 @@ public class PlayerManager extends ManagerPackage {
         this.internalBufferSystem = create(PlayerBufferSystem.class);
         this.firstPersonBranch = create(FirstPersonBranch.class);
         this.cameraShakeBranch = create(CameraShakeBranch.class);
+        this.menuViewBranch = create(MenuViewBranch.class);
         this.placementManager = create(PlacementManager.class);
 
         this.windowID2Player = new Int2ObjectOpenHashMap<>();
@@ -156,6 +171,9 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2CharacterPreview = new Int2BooleanOpenHashMap();
         this.windowID2CharacterPreviewYaw = new Int2FloatOpenHashMap();
         this.windowID2PreviewFraming = new Int2ObjectOpenHashMap<>();
+
+        this.windowID2MenuView = new Int2ObjectOpenHashMap<>();
+        this.menuViewWindowIDs = new IntArrayList();
 
         this.cameraPosition = new Vector3();
         this.cameraOffset = new Vector3();
@@ -190,6 +208,8 @@ public class PlayerManager extends ManagerPackage {
         if (windowID2Player.isEmpty())
             return;
 
+        updateMenuViews();
+
         WindowInstance activeWindow = windowManager.getHoveredWindow();
 
         if (activeWindow == null)
@@ -200,7 +220,8 @@ public class PlayerManager extends ManagerPackage {
         CameraInstance camera = windowID2Camera.get(windowID);
         RawInputHandle raw = windowID2RawInput.get(windowID);
 
-        if (player == null || camera == null || raw == null || windowID2Held.get(windowID))
+        if (player == null || camera == null || raw == null || windowID2Held.get(windowID)
+                || windowID2MenuView.containsKey(windowID))
             return;
 
         calculatePlayerPosition(windowID, player, camera, raw);
@@ -249,6 +270,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2CharacterPreview.remove(windowID);
         windowID2CharacterPreviewYaw.remove(windowID);
         windowID2PreviewFraming.remove(windowID);
+        endMenuView(windowID);
 
         if (player != null)
             entityManager.despawnEntity(player);
@@ -311,6 +333,76 @@ public class PlayerManager extends ManagerPackage {
 
         verifyPlayerPositionForWindow(windowID);
         internalBufferSystem.updatePlayerPosition(worldPositionStruct);
+    }
+
+    // The window's player stands at the top of a world block column, as teleportPlayerForWindow() stands it
+    private void teleportPlayerToColumn(int windowID, long blockX, long blockZ) {
+        teleportPlayerForWindow(
+                windowID,
+                Coordinate2Long.pack(
+                        (int) Math.floorDiv(blockX, EngineSetting.CHUNK_SIZE),
+                        (int) Math.floorDiv(blockZ, EngineSetting.CHUNK_SIZE)),
+                (int) Math.floorMod(blockX, EngineSetting.CHUNK_SIZE),
+                (int) Math.floorMod(blockZ, EngineSetting.CHUNK_SIZE));
+    }
+
+    // Menu View \\
+
+    // The window's camera looks out from one of its world's cameras, chosen now, until endMenuView()
+    public void beginMenuView(int windowID) {
+
+        EntityInstance player = windowID2Player.get(windowID);
+
+        if (player == null || windowID2MenuView.containsKey(windowID))
+            return;
+
+        windowID2MenuView.put(windowID, new MenuViewStruct(menuViewBranch.chooseCamera(player)));
+        menuViewWindowIDs.add(windowID);
+    }
+
+    public void endMenuView(int windowID) {
+        if (windowID2MenuView.remove(windowID) != null)
+            menuViewWindowIDs.rem(windowID);
+    }
+
+    // Every menu view shows this camera while it is pinned, null letting each go back to its own
+    public void pinMenuCamera(WorldPlacementStruct camera) {
+        menuViewBranch.pin(camera);
+    }
+
+    public boolean isMenuViewForWindow(int windowID) {
+        return windowID2MenuView.containsKey(windowID);
+    }
+
+    private void updateMenuViews() {
+        for (int i = 0; i < menuViewWindowIDs.size(); i++)
+            updateMenuView(menuViewWindowIDs.getInt(i));
+    }
+
+    // The player carried to the shown camera's column whenever it stands elsewhere, and the camera seated above it
+    private void updateMenuView(int windowID) {
+
+        if (windowID2Held.get(windowID))
+            return;
+
+        EntityInstance player = windowID2Player.get(windowID);
+        CameraInstance camera = windowID2Camera.get(windowID);
+        MenuViewStruct menuView = windowID2MenuView.get(windowID);
+        WorldPlacementStruct shown = menuViewBranch.resolveCamera(menuView);
+
+        if (!menuView.isAnchoredAt(shown.getWorldX(), shown.getWorldZ())) {
+            teleportPlayerToColumn(windowID, shown.getWorldX(), shown.getWorldZ());
+            menuView.anchor(shown.getWorldX(), shown.getWorldZ());
+        }
+
+        cameraShakeBranch.calm(camera, windowID2CameraState.get(windowID));
+
+        if (windowID2VerifyPlayerPosition.get(windowID))
+            windowID2VerifyPlayerPosition.put(
+                    windowID,
+                    verifyPlayerPosition(player, player.getWorldPositionStruct()));
+
+        menuViewBranch.seat(player, camera, shown);
     }
 
     // Player \\

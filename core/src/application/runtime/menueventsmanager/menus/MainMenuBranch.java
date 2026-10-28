@@ -1,5 +1,6 @@
 package application.runtime.menueventsmanager.menus;
 
+import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.savepipeline.savemanager.SaveManager;
@@ -22,11 +23,14 @@ public class MainMenuBranch extends BranchPackage {
      * main menu opens over the world. Opening the menu points this window's
      * grid at the main menu's range and closing it at the play range, so the
      * world behind the menu streams only as far as its own settings allow;
-     * the creator streams the play world its preview stands in.
+     * the creator streams the play world its preview stands in. The world
+     * behind the menu is seen through one of the world's hand-placed
+     * cameras, chosen at random each time it is shown, through PlayerManager.
      */
 
     // Internal
     private MenuManager menuManager;
+    private PlayerManager playerManager;
     private SaveManager saveManager;
     private SettingsSystem settingsSystem;
     private WorldSystem worldSystem;
@@ -38,6 +42,7 @@ public class MainMenuBranch extends BranchPackage {
 
         // Internal
         this.menuManager = get(MenuManager.class);
+        this.playerManager = get(PlayerManager.class);
         this.saveManager = get(SaveManager.class);
         this.settingsSystem = get(SettingsSystem.class);
         this.worldSystem = get(WorldSystem.class);
@@ -59,9 +64,11 @@ public class MainMenuBranch extends BranchPackage {
 
     public void streamMenuWorld() {
         worldSystem.useRange(settingsSystem.getMenuRange());
+        playerManager.beginMenuView(context.getWindow().getWindowID());
     }
 
     public void streamPlayWorld() {
+        playerManager.endMenuView(context.getWindow().getWindowID());
         worldSystem.useRange(settingsSystem.getPlayRange());
     }
 

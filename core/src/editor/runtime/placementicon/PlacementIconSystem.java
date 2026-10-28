@@ -12,7 +12,6 @@ import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
 import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
-import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
@@ -26,12 +25,13 @@ public class PlacementIconSystem extends SystemPackage {
     /*
      * Draws one simple icon per hand placement for whichever view of the
      * world its context shows, at the window position the view works out: a
-     * house, upright, for a settlement and a banner turned the way it faces
-     * for a structure, each in its own color, and the placement the
-     * Settlement Planner is editing, and every placement the World Editor's
-     * Select tool holds, larger and in its highlight. Icon quads
-     * are pooled with their own materials and grow only to the most icons a
-     * frame has needed; begin() hands the pool out again each frame.
+     * house, upright, for a settlement, a banner turned the way it faces for
+     * a structure and a camera turned the way it looks for a camera, each
+     * kind in its own shape and color, and the placement a planner is
+     * editing, and every placement the World Editor's Select tool holds,
+     * larger and in its highlight. Icon quads are pooled with their own
+     * materials and grow only to the most icons a frame has needed; begin()
+     * hands the pool out again each frame.
      */
 
     // Internal
@@ -39,7 +39,6 @@ public class PlacementIconSystem extends SystemPackage {
     private ModelManager modelManager;
     private MaterialManager materialManager;
     private RenderManager renderManager;
-    private SettlementPlannerManager settlementPlannerManager;
     private WorldEditorManager worldEditorManager;
 
     // Models
@@ -52,9 +51,11 @@ public class PlacementIconSystem extends SystemPackage {
     private Vector2 iconCenter;
     private Vector2 iconDirection;
     private Vector2 iconScale;
-    private Vector4 settlementColor;
-    private Vector4 structureColor;
     private Vector4 editedColor;
+
+    // Kinds — each kind of placement's shape and color, by the kind's ordinal
+    private float[] kind2Shape;
+    private Vector4[] kind2Color;
 
     // Base \\
 
@@ -68,9 +69,19 @@ public class PlacementIconSystem extends SystemPackage {
         this.iconCenter = new Vector2();
         this.iconDirection = new Vector2();
         this.iconScale = new Vector2();
-        this.settlementColor = toColor(EditorSetting.PLACEMENT_ICON_COLOR_SETTLEMENT);
-        this.structureColor = toColor(EditorSetting.PLACEMENT_ICON_COLOR_STRUCTURE);
         this.editedColor = toColor(EditorSetting.PLACEMENT_ICON_COLOR_EDITED);
+
+        // Kinds
+        this.kind2Shape = new float[WorldPlacementKind.VALUES.length];
+        this.kind2Shape[WorldPlacementKind.SETTLEMENT.ordinal()] = EditorSetting.PLACEMENT_ICON_SHAPE_SETTLEMENT;
+        this.kind2Shape[WorldPlacementKind.STRUCTURE.ordinal()] = EditorSetting.PLACEMENT_ICON_SHAPE_STRUCTURE;
+        this.kind2Shape[WorldPlacementKind.CAMERA.ordinal()] = EditorSetting.PLACEMENT_ICON_SHAPE_CAMERA;
+        this.kind2Color = new Vector4[WorldPlacementKind.VALUES.length];
+        this.kind2Color[WorldPlacementKind.SETTLEMENT.ordinal()] = toColor(
+                EditorSetting.PLACEMENT_ICON_COLOR_SETTLEMENT);
+        this.kind2Color[WorldPlacementKind.STRUCTURE.ordinal()] = toColor(
+                EditorSetting.PLACEMENT_ICON_COLOR_STRUCTURE);
+        this.kind2Color[WorldPlacementKind.CAMERA.ordinal()] = toColor(EditorSetting.PLACEMENT_ICON_COLOR_CAMERA);
     }
 
     @Override
@@ -79,7 +90,6 @@ public class PlacementIconSystem extends SystemPackage {
         this.modelManager = get(ModelManager.class);
         this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
-        this.settlementPlannerManager = get(SettlementPlannerManager.class);
         this.worldEditorManager = get(WorldEditorManager.class);
     }
 
@@ -104,9 +114,9 @@ public class PlacementIconSystem extends SystemPackage {
             float screenY,
             WorldPlacementStruct placement) {
 
-        boolean edited = settlementPlannerManager.isEdited(placement)
+        boolean edited = worldEditorManager.isPlacementEdited(placement)
                 || worldEditorManager.isPlacementSelected(placement);
-        boolean settlement = placement.getKind() == WorldPlacementKind.SETTLEMENT;
+        int kind = placement.getKind().ordinal();
         float width = window.getWidth();
         float height = window.getHeight();
         float size = edited
@@ -118,29 +128,40 @@ public class PlacementIconSystem extends SystemPackage {
 
         iconCenter.set(screenX / width * 2f - 1f, screenY / height * 2f - 1f);
         iconScale.set(size / width * 2f, size / height * 2f);
-
-        // A house stands upright; a banner faces its structure's front, world z running down the window
-        Direction3Vector facing = settlement
-                ? Direction3Vector.SOUTH
-                : StructurePlacementUtility.rotateDirection(Direction3Vector.NORTH, placement.getQuarterTurns());
-
-        iconDirection.set(facing.x, -facing.z);
+        resolveFacing(placement);
 
         MaterialInstance material = acquireIconModel(drawn).getMaterial();
         material.setUniform(EditorSetting.PLACEMENT_ICON_UNIFORM_CENTER, iconCenter);
         material.setUniform(EditorSetting.PLACEMENT_ICON_UNIFORM_DIRECTION, iconDirection);
         material.setUniform(EditorSetting.PLACEMENT_ICON_UNIFORM_SCALE, iconScale);
-        material.setUniform(
-                EditorSetting.PLACEMENT_ICON_UNIFORM_SHAPE,
-                settlement
-                        ? EditorSetting.PLACEMENT_ICON_SHAPE_SETTLEMENT
-                        : EditorSetting.PLACEMENT_ICON_SHAPE_STRUCTURE);
+        material.setUniform(EditorSetting.PLACEMENT_ICON_UNIFORM_SHAPE, kind2Shape[kind]);
         material.setUniform(
                 EditorSetting.PLACEMENT_ICON_UNIFORM_FILL_COLOR,
-                edited ? editedColor : settlement ? settlementColor : structureColor);
+                edited ? editedColor : kind2Color[kind]);
 
         renderManager.pushRenderCall(iconModels.get(drawn), fbo, depth, window);
         drawn++;
+    }
+
+    // A house stands upright, a banner faces its structure's front and a camera looks along its yaw, world z
+    // running down the window
+    private void resolveFacing(WorldPlacementStruct placement) {
+
+        switch (placement.getKind()) {
+
+            case SETTLEMENT -> iconDirection.set(Direction3Vector.SOUTH.x, -Direction3Vector.SOUTH.z);
+
+            case STRUCTURE -> {
+                Direction3Vector facing = StructurePlacementUtility.rotateDirection(
+                        Direction3Vector.NORTH, placement.getQuarterTurns());
+                iconDirection.set(facing.x, -facing.z);
+            }
+
+            case CAMERA -> {
+                double yaw = Math.toRadians(placement.getYaw());
+                iconDirection.set((float) Math.sin(yaw), -(float) Math.cos(yaw));
+            }
+        }
     }
 
     private ModelInstance acquireIconModel(int index) {

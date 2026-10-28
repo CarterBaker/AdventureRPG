@@ -1583,6 +1583,14 @@ public class EngineSetting {
     public static final int WORLD_PLACEMENT_LAYOUT_CELL = 0;
     public static final int WORLD_PLACEMENT_LAYOUT_MAX = 9999;
 
+    // Menu Cameras — how far above the ground of its column a camera placement may look out from and the one turn
+    // its yaw is held to; the view the main menu takes above the column its player stands on in a world without one
+    public static final float MENU_CAMERA_HEIGHT_MAX = 256f;
+    public static final float MENU_CAMERA_YAW_TURN = 360f;
+    public static final float MENU_CAMERA_DEFAULT_HEIGHT = 24f;
+    public static final float MENU_CAMERA_DEFAULT_YAW = 0f;
+    public static final float MENU_CAMERA_DEFAULT_PITCH = -12f;
+
     // Tree Parts — the four parts every tree species is drawn with, and the texture corner each carries
     public static final int TREE_PART_BARK = 0;
     public static final int TREE_PART_WOOD = 1;

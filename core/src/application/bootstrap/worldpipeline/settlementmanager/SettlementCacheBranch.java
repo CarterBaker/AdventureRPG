@@ -173,11 +173,11 @@ class SettlementCacheBranch extends BranchPackage {
         return cell != null && cell.getWorldHandle() == worldHandle && cell.getRevision() == revision;
     }
 
-    // Hand placements, settlement types and biomes together, so a change to any settles every cell again; the
-    // first two only ever rise, so their sum changes whenever either does
+    // Hand placements generation stands up, settlement types and biomes together, so a change to any settles every
+    // cell again; the first two only ever rise, so their sum changes whenever either does
     private long resolveRevision() {
         return Coordinate2Long.pack(
-                worldManager.getPlacementRevision() + settlementManager.getRevision(), biomeManager.getRevision());
+                worldManager.getGenerationRevision() + settlementManager.getRevision(), biomeManager.getRevision());
     }
 
     // Wrap \\

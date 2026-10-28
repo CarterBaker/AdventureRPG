@@ -11,8 +11,12 @@ public class WorldPlacementStruct extends StructPackage {
      * structure, the architecture a settlement is built in, empty to take the
      * one its biome picks, the numbered layout a settlement is planned from,
      * 0 to take the one its cell would grow, and the clockwise quarter turns
-     * a structure takes. A hand-placed settlement replaces whatever would
-     * have grown in its cell, and ignores every rule a grown one keeps.
+     * a structure takes. A camera is named only to tell it apart, and
+     * carries its view instead: how many blocks above the ground of its
+     * column it looks out from, and its yaw and pitch in degrees, yaw turning
+     * from +z toward +x and pitch raising the view. A hand-placed settlement
+     * replaces whatever would have grown in its cell, and ignores every rule
+     * a grown one keeps.
      */
 
     // Identity
@@ -26,6 +30,11 @@ public class WorldPlacementStruct extends StructPackage {
     private final long worldZ;
     private final int quarterTurns;
 
+    // View
+    private final float height;
+    private final float yaw;
+    private final float pitch;
+
     // Constructor \\
 
     public WorldPlacementStruct(
@@ -36,6 +45,20 @@ public class WorldPlacementStruct extends StructPackage {
             long worldX,
             long worldZ,
             int quarterTurns) {
+        this(kind, name, architectureName, layout, worldX, worldZ, quarterTurns, 0f, 0f, 0f);
+    }
+
+    public WorldPlacementStruct(
+            WorldPlacementKind kind,
+            String name,
+            String architectureName,
+            int layout,
+            long worldX,
+            long worldZ,
+            int quarterTurns,
+            float height,
+            float yaw,
+            float pitch) {
 
         // Identity
         this.kind = kind;
@@ -47,6 +70,19 @@ public class WorldPlacementStruct extends StructPackage {
         this.worldX = worldX;
         this.worldZ = worldZ;
         this.quarterTurns = quarterTurns;
+
+        // View
+        this.height = height;
+        this.yaw = yaw;
+        this.pitch = pitch;
+    }
+
+    // Copy \\
+
+    // The same placement stood on another block column, everything else kept
+    public WorldPlacementStruct moveTo(long movedX, long movedZ) {
+        return new WorldPlacementStruct(
+                kind, name, architectureName, layout, movedX, movedZ, quarterTurns, height, yaw, pitch);
     }
 
     // Accessible \\
@@ -85,5 +121,17 @@ public class WorldPlacementStruct extends StructPackage {
 
     public int getQuarterTurns() {
         return quarterTurns;
+    }
+
+    public float getHeight() {
+        return height;
+    }
+
+    public float getYaw() {
+        return yaw;
+    }
+
+    public float getPitch() {
+        return pitch;
     }
 }

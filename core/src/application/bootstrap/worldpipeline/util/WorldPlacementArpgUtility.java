@@ -16,8 +16,10 @@ public final class WorldPlacementArpgUtility extends EngineUtility {
      * companion file. Each entry names its "kind", settlement or structure,
      * the "name" of what it stands up, an optional "architecture" a
      * settlement is built in, an optional numbered "layout" a settlement is
-     * planned from, the block column "x" and "z" it stands at, and the
-     * clockwise quarter turns "rotation" a structure takes.
+     * planned from, the block column "x" and "z" it stands at, the
+     * clockwise quarter turns "rotation" a structure takes, and a camera's
+     * view: the "height" above the ground it looks out from, its "yaw" and
+     * its "pitch". Every optional field left at its default is not written.
      */
 
     // Read \\
@@ -44,6 +46,9 @@ public final class WorldPlacementArpgUtility extends EngineUtility {
         String name = ArpgUtility.validateString(placementArpg, "name");
         int quarterTurns = ArpgUtility.getInt(placementArpg, "rotation", 0);
         int layout = ArpgUtility.getInt(placementArpg, "layout", EngineSetting.WORLD_PLACEMENT_LAYOUT_CELL);
+        float height = ArpgUtility.getFloat(placementArpg, "height", 0f);
+        float yaw = ArpgUtility.getFloat(placementArpg, "yaw", 0f);
+        float pitch = ArpgUtility.getFloat(placementArpg, "pitch", 0f);
 
         if (quarterTurns < 0 || quarterTurns >= EngineSetting.STRUCTURE_QUARTER_TURN_COUNT)
             throwException("World \"" + worldName + "\" placement of \"" + name + "\" has rotation " + quarterTurns
@@ -55,6 +60,20 @@ public final class WorldPlacementArpgUtility extends EngineUtility {
                     + " — layout must be between " + EngineSetting.WORLD_PLACEMENT_LAYOUT_CELL + " and "
                     + EngineSetting.WORLD_PLACEMENT_LAYOUT_MAX + ", 0 growing the layout its cell would.");
 
+        if (height < 0f || height > EngineSetting.MENU_CAMERA_HEIGHT_MAX)
+            throwException("World \"" + worldName + "\" placement of \"" + name + "\" has height " + height
+                    + " — height must be between 0 and " + EngineSetting.MENU_CAMERA_HEIGHT_MAX
+                    + " blocks above the ground.");
+
+        if (yaw < 0f || yaw >= EngineSetting.MENU_CAMERA_YAW_TURN)
+            throwException("World \"" + worldName + "\" placement of \"" + name + "\" has yaw " + yaw
+                    + " — yaw must be at least 0 and below " + EngineSetting.MENU_CAMERA_YAW_TURN + " degrees.");
+
+        if (Math.abs(pitch) > EngineSetting.CAMERA_MAX_PITCH_DEGREES)
+            throwException("World \"" + worldName + "\" placement of \"" + name + "\" has pitch " + pitch
+                    + " — pitch must be between " + -EngineSetting.CAMERA_MAX_PITCH_DEGREES + " and "
+                    + EngineSetting.CAMERA_MAX_PITCH_DEGREES + " degrees.");
+
         return new WorldPlacementStruct(
                 kind,
                 name,
@@ -62,7 +81,10 @@ public final class WorldPlacementArpgUtility extends EngineUtility {
                 layout,
                 ArpgUtility.validateInt(placementArpg, "x"),
                 ArpgUtility.validateInt(placementArpg, "z"),
-                quarterTurns);
+                quarterTurns,
+                height,
+                yaw,
+                pitch);
     }
 
     // Write \\
@@ -97,6 +119,15 @@ public final class WorldPlacementArpgUtility extends EngineUtility {
 
         if (placement.getQuarterTurns() != 0)
             placementArpg.addProperty("rotation", placement.getQuarterTurns());
+
+        if (placement.getHeight() != 0f)
+            placementArpg.addProperty("height", placement.getHeight());
+
+        if (placement.getYaw() != 0f)
+            placementArpg.addProperty("yaw", placement.getYaw());
+
+        if (placement.getPitch() != 0f)
+            placementArpg.addProperty("pitch", placement.getPitch());
 
         return placementArpg;
     }
