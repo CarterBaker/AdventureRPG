@@ -27,8 +27,11 @@ public class Lwjgl3Application {
      * alike. The main window is fitted to its saved monitor's work area before
      * it is shown, and fullscreen and vsync switch at runtime. The main window
      * takes the configuration's frame — border, resizing and a transparent
-     * framebuffer — and every later window the defaults; a main window with
-     * its display mode locked never switches fullscreen. Once the loop ends
+     * framebuffer — and every later window the main window's border and the
+     * defaults otherwise; a main window with its display mode locked never
+     * switches fullscreen. A close asked for in code takes the same path as
+     * the OS close button, so the main window's close callback always runs
+     * before it closes. Once the loop ends
      * every window, callback and GLFW itself is let go and the engine detaches
      * its kernel, so another application can run in the same JVM.
      */
@@ -41,6 +44,8 @@ public class Lwjgl3Application {
     private final int glMajor;
     private final int glMinor;
     private final boolean displayModeLocked;
+    private final boolean decorated;
+    private final BooleanSupplier closeCallback;
     private int swapInterval;
 
     // Secondary Windows
@@ -79,6 +84,8 @@ public class Lwjgl3Application {
         this.glMajor = config.getGlMajor();
         this.glMinor = config.getGlMinor();
         this.displayModeLocked = config.isDisplayModeLocked();
+        this.decorated = config.isDecorated();
+        this.closeCallback = config.getCloseCallback();
         this.swapInterval = config.isVsync() ? 1 : 0;
         applyWindowHints(glMajor, glMinor);
         applyFrameHints(config);
@@ -121,7 +128,7 @@ public class Lwjgl3Application {
         EngineContext.gl30 = gl;
         EngineContext.gl40 = gl;
 
-        registerCallbacks(mainHandle, input, config.getCloseCallback());
+        registerCallbacks(mainHandle, input);
         registerPlacementCallbacks();
         GLFW.glfwShowWindow(mainHandle);
 
@@ -166,7 +173,7 @@ public class Lwjgl3Application {
         GLFW.glfwDestroyWindow(handle);
     }
 
-    private void registerCallbacks(long handle, Lwjgl3Input inp, BooleanSupplier closeCallback) {
+    private void registerCallbacks(long handle, Lwjgl3Input inp) {
 
         GLFW.glfwSetFramebufferSizeCallback(handle, (w, width, height) -> {
             if (handle == mainHandle)
@@ -177,12 +184,12 @@ public class Lwjgl3Application {
         GLFW.glfwSetScrollCallback(handle, (w, dx, dy) -> inp.onScroll(dx, dy));
         GLFW.glfwSetKeyCallback(handle, (w, k, s, a, m) -> inp.onKey(k, a));
         GLFW.glfwSetCharCallback(handle, (w, cp) -> inp.onChar(cp));
+        GLFW.glfwSetWindowCloseCallback(handle, w -> GLFW.glfwSetWindowShouldClose(w, confirmClose(w)));
+    }
 
-        if (closeCallback != null)
-            GLFW.glfwSetWindowCloseCallback(handle, w -> {
-                if (!closeCallback.getAsBoolean())
-                    GLFW.glfwSetWindowShouldClose(w, false);
-            });
+    // Only the main window asks before closing; a refused close leaves it open
+    private boolean confirmClose(long handle) {
+        return handle != mainHandle || closeCallback == null || closeCallback.getAsBoolean();
     }
 
     private void registerPlacementCallbacks() {
@@ -419,14 +426,16 @@ public class Lwjgl3Application {
     public long newWindow(String title, int width, int height) {
 
         applyWindowHints(glMajor, glMinor);
+        GLFW.glfwWindowHint(GLFW.GLFW_DECORATED, decorated ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
         long handle = GLFW.glfwCreateWindow(width, height, title, 0L, mainHandle);
+        GLFW.glfwDefaultWindowHints();
 
         if (handle == 0L)
             EngineUtility.throwException("Failed to create secondary window: " + title);
 
         Lwjgl3Input windowInput = new Lwjgl3Input(handle);
         windowInput.initCursors();
-        registerCallbacks(handle, windowInput, null);
+        registerCallbacks(handle, windowInput);
         secondaryHandles.add(handle);
         handle2Input.put(handle, windowInput);
 
@@ -449,6 +458,11 @@ public class Lwjgl3Application {
     void onWindowMoved(long handle) {
         if (handle == mainHandle)
             captureWindowedBounds();
+    }
+
+    public void requestClose(long handle) {
+        if (confirmClose(handle))
+            GLFW.glfwSetWindowShouldClose(handle, true);
     }
 
     public void exit() {

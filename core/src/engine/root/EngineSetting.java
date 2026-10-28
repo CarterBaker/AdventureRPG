@@ -329,8 +329,11 @@ public class EngineSetting {
     public static final long PROFILER_UNSTAMPED = Long.MIN_VALUE;
 
     // Window & Display
+    public static final int CURSOR_DEFAULT = 0;
     public static final int CURSOR_RESIZE_H = 1;
     public static final int CURSOR_RESIZE_V = 2;
+    public static final int CURSOR_RESIZE_NWSE = 3;
+    public static final int CURSOR_RESIZE_NESW = 4;
     public static final int MIN_WINDOW_DIMENSION = 64;
     public static final int WINDOW_POSITION_UNSET = Integer.MIN_VALUE;
     public static final String WINDOW_TITLE = "TerraArcana";

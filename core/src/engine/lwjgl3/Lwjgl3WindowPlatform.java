@@ -28,7 +28,9 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
      * is reapplied to every OS window. Hover is the OS's own answer, so a
      * window covered by another never claims the cursor. Transparency is read
      * from the window itself, and mouse passthrough hands the cursor to
-     * whatever lies behind.
+     * whatever lies behind. Frame calls act on the window's OS state, and a
+     * close asked for in code goes through the application exactly as the OS
+     * close button does.
      */
 
     // Application
@@ -250,6 +252,125 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
 
         GLFW.glfwSetWindowPos(window.getNativeHandle(), screenX, screenY);
         syncScreenPosition(window);
+    }
+
+    // Frame — OS-level window state, bounds in screen units \\
+
+    @Override
+    public void getScreenBounds(WindowInstance window, float[] out) {
+
+        if (!window.hasNativeHandle()) {
+            out[0] = 0f;
+            out[1] = 0f;
+            out[2] = 0f;
+            out[3] = 0f;
+            return;
+        }
+
+        posScratchX.clear();
+        posScratchY.clear();
+        sizeScratchW.clear();
+        sizeScratchH.clear();
+        GLFW.glfwGetWindowPos(window.getNativeHandle(), posScratchX, posScratchY);
+        GLFW.glfwGetWindowSize(window.getNativeHandle(), sizeScratchW, sizeScratchH);
+        out[0] = posScratchX.get(0);
+        out[1] = posScratchY.get(0);
+        out[2] = sizeScratchW.get(0);
+        out[3] = sizeScratchH.get(0);
+    }
+
+    // Moving and sizing in one call keeps every edge not being dragged still
+    @Override
+    public void setScreenBounds(WindowInstance window, int screenX, int screenY, int width, int height) {
+
+        if (!window.hasNativeHandle() || width <= 0 || height <= 0)
+            return;
+
+        GLFW.glfwSetWindowMonitor(
+                window.getNativeHandle(),
+                0L,
+                screenX,
+                screenY,
+                width,
+                height,
+                GLFW.GLFW_DONT_CARE);
+        syncScreenPosition(window);
+    }
+
+    // The work area of the monitor holding the point, false when no monitor holds it
+    @Override
+    public boolean getWorkArea(float screenX, float screenY, float[] out) {
+
+        PointerBuffer monitors = GLFW.glfwGetMonitors();
+
+        if (monitors == null)
+            return false;
+
+        for (int i = 0; i < monitors.limit(); i++) {
+
+            posScratchX.clear();
+            posScratchY.clear();
+            sizeScratchW.clear();
+            sizeScratchH.clear();
+            GLFW.glfwGetMonitorWorkarea(monitors.get(i), posScratchX, posScratchY, sizeScratchW, sizeScratchH);
+
+            int areaX = posScratchX.get(0);
+            int areaY = posScratchY.get(0);
+            int areaWidth = sizeScratchW.get(0);
+            int areaHeight = sizeScratchH.get(0);
+
+            if (screenX < areaX || screenX >= areaX + areaWidth || screenY < areaY || screenY >= areaY + areaHeight)
+                continue;
+
+            out[0] = areaX;
+            out[1] = areaY;
+            out[2] = areaWidth;
+            out[3] = areaHeight;
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean isMaximized(WindowInstance window) {
+        return window.hasNativeHandle()
+                && GLFW.glfwGetWindowAttrib(window.getNativeHandle(), GLFW.GLFW_MAXIMIZED) == GLFW.GLFW_TRUE;
+    }
+
+    @Override
+    public void setMaximized(WindowInstance window, boolean maximized) {
+
+        if (!window.hasNativeHandle())
+            return;
+
+        if (maximized)
+            GLFW.glfwMaximizeWindow(window.getNativeHandle());
+        else
+            GLFW.glfwRestoreWindow(window.getNativeHandle());
+    }
+
+    @Override
+    public void minimizeWindow(WindowInstance window) {
+
+        if (!window.hasNativeHandle())
+            return;
+
+        GLFW.glfwIconifyWindow(window.getNativeHandle());
+    }
+
+    @Override
+    public boolean isFullscreen(WindowInstance window) {
+        return window.hasNativeHandle() && GLFW.glfwGetWindowMonitor(window.getNativeHandle()) != 0L;
+    }
+
+    @Override
+    public void requestClose(WindowInstance window) {
+
+        if (!window.hasNativeHandle())
+            return;
+
+        application.requestClose(window.getNativeHandle());
     }
 
     // Transparency \\

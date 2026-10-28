@@ -88,6 +88,8 @@ public class Settings {
     public float[] uiColorTextMuted = { 0.576f, 0.604f, 0.659f, 1.0f };
     public float[] uiColorTextOnAccent = { 1.0f, 1.0f, 1.0f, 1.0f };
     public float[] uiColorDanger = { 0.898f, 0.302f, 0.302f, 1.0f };
+    public float[] uiColorFrame = { 0.110f, 0.118f, 0.141f, 1.0f };
+    public float[] uiColorFrameOutline = { 0.231f, 0.251f, 0.294f, 1.0f };
 
     // Bindings — Game Movement
     public int[] bindMoveForward = { Keys.W };

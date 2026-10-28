@@ -10,7 +10,9 @@ public interface WindowPlatform {
      * destroying windows, GL context switching, input lookup per OS window,
      * cursor, placement, display mode and vsync, whether a window is the one
      * uppermost under the cursor, and for a transparent window whether it lets
-     * the cursor through to whatever lies behind it.
+     * the cursor through to whatever lies behind it. A window that draws its
+     * own frame minimizes, maximizes, closes and reads and sets its bounds in
+     * screen units through the frame calls.
      */
 
     void openWindow(WindowInstance window);
@@ -38,6 +40,22 @@ public interface WindowPlatform {
     void placeWindow(WindowInstance window, int screenX, int screenY, int width, int height);
 
     void moveWindow(WindowInstance window, int screenX, int screenY);
+
+    void getScreenBounds(WindowInstance window, float[] out);
+
+    void setScreenBounds(WindowInstance window, int screenX, int screenY, int width, int height);
+
+    boolean getWorkArea(float screenX, float screenY, float[] out);
+
+    boolean isMaximized(WindowInstance window);
+
+    void setMaximized(WindowInstance window, boolean maximized);
+
+    void minimizeWindow(WindowInstance window);
+
+    boolean isFullscreen(WindowInstance window);
+
+    void requestClose(WindowInstance window);
 
     boolean isTransparent(WindowInstance window);
 

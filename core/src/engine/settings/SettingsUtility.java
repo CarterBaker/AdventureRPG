@@ -166,6 +166,8 @@ public class SettingsUtility extends EngineUtility {
         settings.uiColorTextMuted = sanitizeColor(settings.uiColorTextMuted, defaults.uiColorTextMuted);
         settings.uiColorTextOnAccent = sanitizeColor(settings.uiColorTextOnAccent, defaults.uiColorTextOnAccent);
         settings.uiColorDanger = sanitizeColor(settings.uiColorDanger, defaults.uiColorDanger);
+        settings.uiColorFrame = sanitizeColor(settings.uiColorFrame, defaults.uiColorFrame);
+        settings.uiColorFrameOutline = sanitizeColor(settings.uiColorFrameOutline, defaults.uiColorFrameOutline);
     }
 
     private static float[] sanitizeColor(float[] color, float[] fallback) {

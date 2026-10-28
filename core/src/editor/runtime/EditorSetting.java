@@ -2,12 +2,14 @@ package editor.runtime;
 
 import application.runtime.RuntimeSetting;
 import engine.input.Buttons;
+import engine.root.EngineSetting;
 
 public class EditorSetting {
 
     /*
-     * Editor-only constants — chrome menus, cursors, input keys, menu entry
-     * point indices, layout persistence, tool tabs, the name, export and
+     * Editor-only constants — chrome menus, the window frame, cursors, input
+     * keys, menu entry point indices, layout persistence, tool tabs, the name,
+     * export and
      * settings dialogs, console commands and the command drag between windows,
      * the Dev window's time units, editor shortcuts, the info pipeline's
      * schemas, hierarchy keys, and status text, the item editor's library and
@@ -32,10 +34,72 @@ public class EditorSetting {
     // Resize
     public static final float RESIZE_EDGE_TOLERANCE = 8f;
 
+    // Frame — every editor window draws its own; a press this close to an edge resizes from it, and along an edge
+    // this close to a corner from the corner too, in screen units. Two presses on the title bar this close together
+    // maximize or restore it, and a maximized window dragged this far restores under the cursor
+    public static final float FRAME_RESIZE_BORDER = 4f;
+    public static final float FRAME_RESIZE_CORNER = 12f;
+    public static final long FRAME_DOUBLE_PRESS_MILLIS = 400L;
+    public static final float FRAME_RESTORE_DISTANCE = 6f;
+
+    // Frame — the edges a gesture holds, as bits; a move holds all four
+    public static final int FRAME_EDGE_NONE = 0;
+    public static final int FRAME_EDGE_LEFT = 1;
+    public static final int FRAME_EDGE_RIGHT = 2;
+    public static final int FRAME_EDGE_TOP = 4;
+    public static final int FRAME_EDGE_BOTTOM = 8;
+    public static final int FRAME_EDGES_X = FRAME_EDGE_LEFT | FRAME_EDGE_RIGHT;
+    public static final int FRAME_EDGES_Y = FRAME_EDGE_TOP | FRAME_EDGE_BOTTOM;
+    public static final int FRAME_EDGES_ALL = FRAME_EDGES_X | FRAME_EDGES_Y;
+
+    // Frame — a window let go of this close to its monitor's work area edge snaps to it, and along an edge this close
+    // to a corner into the corner; the top edge alone maximizes. Each area is left, top, right and bottom as shares
+    // of the work area, indexed by the edges' bits, null where nothing snaps
+    public static final float FRAME_SNAP_REACH = 8f;
+    public static final float FRAME_SNAP_CORNER = 64f;
+    public static final int FRAME_SNAP_MAXIMIZE = FRAME_EDGE_TOP;
+    public static final float[][] FRAME_SNAP_AREAS = {
+            null,
+            { 0f, 0f, 0.5f, 1f },
+            { 0.5f, 0f, 1f, 1f },
+            null,
+            null,
+            { 0f, 0f, 0.5f, 0.5f },
+            { 0.5f, 0f, 1f, 0.5f },
+            null,
+            null,
+            { 0f, 0.5f, 0.5f, 1f },
+            { 0.5f, 0.5f, 1f, 1f },
+            null,
+            null,
+            null,
+            null,
+            null };
+
+    // Frame — the cursor shown for each set of held edges, indexed by its bits
+    public static final int[] FRAME_EDGE_CURSORS = {
+            EngineSetting.CURSOR_DEFAULT,
+            EngineSetting.CURSOR_RESIZE_H,
+            EngineSetting.CURSOR_RESIZE_H,
+            EngineSetting.CURSOR_DEFAULT,
+            EngineSetting.CURSOR_RESIZE_V,
+            EngineSetting.CURSOR_RESIZE_NWSE,
+            EngineSetting.CURSOR_RESIZE_NESW,
+            EngineSetting.CURSOR_DEFAULT,
+            EngineSetting.CURSOR_RESIZE_V,
+            EngineSetting.CURSOR_RESIZE_NESW,
+            EngineSetting.CURSOR_RESIZE_NWSE,
+            EngineSetting.CURSOR_DEFAULT,
+            EngineSetting.CURSOR_DEFAULT,
+            EngineSetting.CURSOR_DEFAULT,
+            EngineSetting.CURSOR_DEFAULT,
+            EngineSetting.CURSOR_DEFAULT };
+
     // Menus
     public static final String MENU_EDITOR_BASE = "editor/EditorWindow/Base";
     public static final String MENU_EDITOR_SECONDARY = "editor/EditorWindow/Secondary";
     public static final String MENU_EDITOR_TOOLBAR = "editor/EditorWindow/Toolbar";
+    public static final String MENU_EDITOR_TITLE_BAR = "editor/EditorWindow/TitleBar";
     public static final String MENU_EDITOR_NAME_DIALOG = "editor/EditorWindow/NameDialog";
     public static final String MENU_EDITOR_EXPORT_DIALOG = "editor/EditorWindow/ExportDialog";
     public static final String MENU_EDITOR_LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";
@@ -173,6 +237,7 @@ public class EditorSetting {
     public static final String SETTINGS_SECTION_SURFACES = "Surfaces";
     public static final String SETTINGS_SECTION_CONTROLS = "Controls";
     public static final String SETTINGS_SECTION_TEXT = "Text";
+    public static final String SETTINGS_SECTION_FRAME = "Window Frame";
     public static final String SETTINGS_NOTE_WINDOW = "Sets the editor's own window";
     public static final String SETTINGS_NOTE_SAVED = "Every setting is saved to EditorSettings when this dialog closes";
     public static final String SETTINGS_NOTE_DEV_MODE = "Applies to every Dev Mode and Preview tab";
@@ -222,6 +287,8 @@ public class EditorSetting {
     public static final String SETTINGS_COLOR_TEXT = "Text";
     public static final String SETTINGS_COLOR_TEXT_MUTED = "Muted Text";
     public static final String SETTINGS_COLOR_TEXT_ON_ACCENT = "Text on Accent";
+    public static final String SETTINGS_COLOR_FRAME = "Title Bar";
+    public static final String SETTINGS_COLOR_FRAME_OUTLINE = "Window Border";
     public static final String[] SETTINGS_COLOR_CHANNEL_LABELS = { "Red", "Green", "Blue", "Alpha" };
     public static final String SETTINGS_ACTION_ENTER_HEX = "Enter Hex Value";
     public static final String SETTINGS_ACTION_RESET_COLOR = "Reset to Default";
@@ -1730,5 +1797,4 @@ public class EditorSetting {
     public static final float TAB_STRIP_ACTIVE_ALPHA = 0.32f;
     public static final String TAB_TITLE_DEV = "Dev Mode";
     public static final String TAB_TITLE_PREVIEW = "Preview";
-    public static final String WINDOW_TITLE_EDITOR_SECONDARY = "Secondary";
 }

@@ -22,7 +22,9 @@ public enum ThemeColor {
     TEXT,
     TEXT_MUTED,
     TEXT_ON_ACCENT,
-    DANGER;
+    DANGER,
+    FRAME,
+    FRAME_OUTLINE;
 
     public static ThemeColor fromString(String s) {
         return switch (s.toLowerCase()) {
@@ -39,6 +41,8 @@ public enum ThemeColor {
             case "text_muted" -> TEXT_MUTED;
             case "text_on_accent" -> TEXT_ON_ACCENT;
             case "danger" -> DANGER;
+            case "frame" -> FRAME;
+            case "frame_outline" -> FRAME_OUTLINE;
             default -> null;
         };
     }
@@ -58,6 +62,8 @@ public enum ThemeColor {
             case TEXT_MUTED -> settings.uiColorTextMuted;
             case TEXT_ON_ACCENT -> settings.uiColorTextOnAccent;
             case DANGER -> settings.uiColorDanger;
+            case FRAME -> settings.uiColorFrame;
+            case FRAME_OUTLINE -> settings.uiColorFrameOutline;
         };
     }
 }

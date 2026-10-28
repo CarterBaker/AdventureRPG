@@ -327,7 +327,7 @@ public class TabManager extends ManagerPackage {
     // OS Window Lifecycle \\
     public WindowInstance openSecondaryOsWindow() {
         WindowInstance osWindow = windowManager.openWindow(
-                EditorSetting.WINDOW_TITLE_EDITOR_SECONDARY,
+                EngineSetting.LAUNCHER_EDITOR_WINDOW_TITLE,
                 EditorSecondaryWindowContext.class);
         registerOsWindow(osWindow);
         return osWindow;

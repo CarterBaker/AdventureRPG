@@ -6,8 +6,10 @@ import engine.root.EngineSetting;
 public class Lwjgl3LauncherEditor {
 
     /*
-     * Entry point for the editor. Output goes to the session log, readable in
-     * the editor's Console tab and written to the log directory on any error.
+     * Entry point for the editor. Every editor window opens without the OS
+     * border and draws its own frame from the editor's colors. Output goes to
+     * the session log, readable in the editor's Console tab and written to the
+     * log directory on any error.
      */
 
     // Entry \\
@@ -19,7 +21,7 @@ public class Lwjgl3LauncherEditor {
         if (StartupHelper.startNewJvmIfRequired())
             return;
 
-        Lwjgl3LauncherUtility.launch(
+        Lwjgl3LauncherUtility.launchFramed(
                 EngineSetting.LOG_SESSION_EDITOR,
                 EngineSetting.EDITOR_SETTINGS_FILE_NAME,
                 EngineSetting.LAUNCHER_EDITOR_WINDOW_TITLE,

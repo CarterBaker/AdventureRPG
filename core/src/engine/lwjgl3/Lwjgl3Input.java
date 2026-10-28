@@ -49,6 +49,8 @@ class Lwjgl3Input implements Input {
     private long cursorDefault;
     private long cursorResizeH;
     private long cursorResizeV;
+    private long cursorResizeNWSE;
+    private long cursorResizeNESW;
 
     // Scroll State — accumulated this frame, reset in endFrame()
     private float scrollX;
@@ -152,12 +154,16 @@ class Lwjgl3Input implements Input {
         this.cursorDefault = GLFW.glfwCreateStandardCursor(GLFW.GLFW_ARROW_CURSOR);
         this.cursorResizeH = GLFW.glfwCreateStandardCursor(GLFW.GLFW_HRESIZE_CURSOR);
         this.cursorResizeV = GLFW.glfwCreateStandardCursor(GLFW.GLFW_VRESIZE_CURSOR);
+        this.cursorResizeNWSE = GLFW.glfwCreateStandardCursor(GLFW.GLFW_RESIZE_NWSE_CURSOR);
+        this.cursorResizeNESW = GLFW.glfwCreateStandardCursor(GLFW.GLFW_RESIZE_NESW_CURSOR);
     }
 
     public void setCursorShape(long windowHandle, int shape) {
         long cursor = switch (shape) {
             case EngineSetting.CURSOR_RESIZE_H -> cursorResizeH;
             case EngineSetting.CURSOR_RESIZE_V -> cursorResizeV;
+            case EngineSetting.CURSOR_RESIZE_NWSE -> cursorResizeNWSE;
+            case EngineSetting.CURSOR_RESIZE_NESW -> cursorResizeNESW;
             default -> cursorDefault;
         };
         GLFW.glfwSetCursor(windowHandle, cursor);
@@ -167,6 +173,8 @@ class Lwjgl3Input implements Input {
         GLFW.glfwDestroyCursor(cursorDefault);
         GLFW.glfwDestroyCursor(cursorResizeH);
         GLFW.glfwDestroyCursor(cursorResizeV);
+        GLFW.glfwDestroyCursor(cursorResizeNWSE);
+        GLFW.glfwDestroyCursor(cursorResizeNESW);
 
         for (long cursor : spriteCursorCache.values())
             GLFW.glfwDestroyCursor(cursor);

@@ -5,21 +5,23 @@ import application.bootstrap.menupipeline.menumanager.ElementHitSystem;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import editor.runtime.EditorSetting;
 import editor.runtime.dock.EditorDockSystem;
 import engine.root.SystemPackage;
 
 public class EditorToolbarSystem extends SystemPackage {
 
     /*
-     * Owns the editor toolbar, which only the main window carries. The toolbar
-     * lives in its own logical window so its dropdowns composite above tabs.
-     * Each frame it is kept sized to the OS window, re-raised whenever anything
-     * has been brought up over it, and given an input rect: the strip above
-     * the dock canvas while idle, so it never covers the tabs hover and focus
-     * resolve against, and the whole window while one of its dropdowns is
-     * hovered open. Only input changes — the toolbar is never resized for it,
-     * so its FBO and layout stay stable.
+     * Owns the toolbar along the top of an editor window, which doubles as the
+     * window's title bar: the context picks its menu through openToolbar(), so
+     * the main window's carries the editor's menus and a secondary window's
+     * only its title, and both carry the frame's controls and border. The
+     * toolbar lives in its own logical window so its dropdowns and the border
+     * composite above tabs. Each frame it is kept sized to the OS window,
+     * re-raised whenever anything has been brought up over it, and given an
+     * input rect: the strip above the dock canvas while idle, so it never
+     * covers the tabs hover and focus resolve against, and the whole window
+     * while one of its dropdowns is hovered open. Only input changes — the
+     * toolbar is never resized for it, so its FBO and layout stay stable.
      */
 
     // Internal
@@ -42,13 +44,14 @@ public class EditorToolbarSystem extends SystemPackage {
     }
 
     @Override
-    protected void awake() {
-        this.toolbarMenu = menuManager.openMenuWindow(EditorSetting.MENU_EDITOR_TOOLBAR, context.getWindow());
-    }
-
-    @Override
     protected void dispose() {
         menuManager.closeMenuWindow(toolbarMenu);
+    }
+
+    // Management \\
+
+    public void openToolbar(String menuName) {
+        this.toolbarMenu = menuManager.openMenuWindow(menuName, context.getWindow());
     }
 
     // Update \\

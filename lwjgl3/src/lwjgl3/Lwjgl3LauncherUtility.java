@@ -23,10 +23,11 @@ class Lwjgl3LauncherUtility extends EngineUtility {
      * Resolves the game directory, opens the session log, loads settings,
      * builds the GLFW window configuration, and runs the engine the entry
      * point supplies until the application exits, handing the engine back. A
-     * windowed engine saves its window placement on close; a borderless one
-     * opens transparent, fixed and centred, never switches fullscreen, and
-     * leaves the game's placement alone, so engines can run one after another
-     * in the same JVM.
+     * windowed engine saves its window placement on close, and a framed one is
+     * windowed the same way but opens every window without the OS border, so
+     * its own menus draw the frame; a borderless one opens transparent, fixed
+     * and centred, never switches fullscreen, and leaves the game's placement
+     * alone, so engines can run one after another in the same JVM.
      */
 
     // Launch \\
@@ -47,6 +48,21 @@ class Lwjgl3LauncherUtility extends EngineUtility {
                 settingsFileName,
                 engineFactory,
                 settings -> buildConfig(settings, title),
+                true,
+                requiredDirectories);
+    }
+
+    static <T extends EnginePackage> T launchFramed(
+            String logSession,
+            String settingsFileName,
+            String title,
+            Supplier<T> engineFactory,
+            String... requiredDirectories) {
+        return run(
+                logSession,
+                settingsFileName,
+                engineFactory,
+                settings -> buildFramedConfig(settings, title),
                 true,
                 requiredDirectories);
     }
@@ -135,6 +151,14 @@ class Lwjgl3LauncherUtility extends EngineUtility {
 
         if (settings.fullscreen)
             config.setFullscreenMode(Lwjgl3Configuration.getDisplayMode());
+
+        return config;
+    }
+
+    private static Lwjgl3Configuration buildFramedConfig(Settings settings, String title) {
+
+        Lwjgl3Configuration config = buildConfig(settings, title);
+        config.setDecorated(false);
 
         return config;
     }
