@@ -170,8 +170,6 @@ class CharacterMeshRowBranch extends BranchPackage {
 
         rows.add(CharacterViewRowStruct.header(characterEditorManager.getSelectedBoneName()));
         addNumber(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET, EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT);
-        addNumber(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH,
-                EditorSetting.CHARACTER_EDITOR_LABEL_STRENGTH);
         addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_ASSIGN,
                 EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_ASSIGN);
         addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_ADD, EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_ADD);

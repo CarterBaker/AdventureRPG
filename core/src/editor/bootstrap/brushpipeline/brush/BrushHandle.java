@@ -1,16 +1,15 @@
 package editor.bootstrap.brushpipeline.brush;
 
 import editor.bootstrap.brushpipeline.util.BrushField;
-import editor.bootstrap.brushpipeline.util.BrushMode;
 import editor.bootstrap.brushpipeline.util.BrushShape;
 import engine.root.HandlePackage;
 
 public class BrushHandle extends HandlePackage {
 
     /*
-     * Persistent reference to one brush preset. Registered and owned by
+     * Persistent reference to one brush. Registered and owned by
      * BrushManager. Delegates all accessors through BrushData, which a live
-     * edit of the preset replaces in place, so every tool holding it strokes
+     * edit of the brush replaces in place, so every tool holding it strokes
      * with the edit at once.
      */
 
@@ -41,10 +40,6 @@ public class BrushHandle extends HandlePackage {
 
     public BrushShape getShape() {
         return brushData.getShape();
-    }
-
-    public BrushMode getMode() {
-        return brushData.getMode();
     }
 
     public float getValue(BrushField field) {

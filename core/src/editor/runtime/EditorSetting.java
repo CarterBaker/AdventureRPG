@@ -587,7 +587,6 @@ public class EditorSetting {
     // Character Editor — weight panel keys; every weight action shares the prefix
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_PREFIX = "weight_";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_TARGET = "brush_weight";
-    public static final String CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH = "brush_strength";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_ASSIGN = "weight_assign";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_ADD = "weight_add";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_SUBTRACT = "weight_subtract";
@@ -610,7 +609,6 @@ public class EditorSetting {
     public static final float CHARACTER_EDITOR_PART_SIZE_MIN = 0.005f;
     public static final float CHARACTER_EDITOR_PART_SIZE_MAX = 2f;
     public static final float CHARACTER_EDITOR_WEIGHT_STEP_FINE = 0.05f;
-    public static final float CHARACTER_EDITOR_WEIGHT_STRENGTH_DEFAULT = 0.5f;
 
     // Character Mesh — geometry; positions key on the decimal grid in this many signed bits per axis
     public static final int CHARACTER_MESH_KEY_BITS = 21;
@@ -681,7 +679,6 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_REDO = "Redo  (Ctrl+Y)";
     public static final String CHARACTER_EDITOR_LABEL_SAVE_MESH = "Save Mesh";
     public static final String CHARACTER_EDITOR_LABEL_REVERT_MESH = "Revert Mesh";
-    public static final String CHARACTER_EDITOR_LABEL_STRENGTH = "Strength";
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_ASSIGN = "Assign Weight";
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_ADD = "Add 0.05";
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_SUBTRACT = "Subtract 0.05";
@@ -1002,52 +999,47 @@ public class EditorSetting {
     public static final int IMAGE_BRUSH_RANDOM_SEED = 0x2545F491;
     public static final float IMAGE_BRUSH_RANDOM_SCALE = 1f / (1 << 24);
 
-    // Brushes — presets load from this directory, the default one standing in for any deleted
+    // Brushes — loaded from this directory, the default one standing in for any deleted
     public static final String BRUSH_PATH = "brushes";
     public static final String BRUSH_DEFAULT = "Basic";
     public static final String BRUSH_MESSAGE_REFUSED = "Brush not applied: ";
     public static final String BRUSH_SHAPE_ROUND = "Round";
     public static final String BRUSH_SHAPE_SQUARE = "Square";
     public static final String BRUSH_SHAPE_DIAMOND = "Diamond";
-    public static final String BRUSH_MODE_PAINT = "Paint";
-    public static final String BRUSH_MODE_SMOOTH = "Smooth";
-    public static final String BRUSH_MODE_SWIRL = "Swirl";
-    public static final String BRUSH_MODE_SCATTER = "Scatter";
     public static final String BRUSH_KEY_HARDNESS = "hardness";
-    public static final String BRUSH_KEY_OPACITY = "opacity";
     public static final String BRUSH_KEY_DENSITY = "density";
     public static final String BRUSH_KEY_SPACING = "spacing";
-    public static final String BRUSH_KEY_TWIST = "twist";
-    public static final String BRUSH_LABEL_HARDNESS = "Hardness";
-    public static final String BRUSH_LABEL_OPACITY = "Opacity";
-    public static final String BRUSH_LABEL_DENSITY = "Density";
-    public static final String BRUSH_LABEL_SPACING = "Spacing";
-    public static final String BRUSH_LABEL_TWIST = "Twist";
-    public static final float BRUSH_UNIT_STEP = 0.05f;
-    public static final float BRUSH_TWIST_STEP = 15f;
-    public static final float BRUSH_TWIST_MAX = 360f;
-    public static final float BRUSH_SPACING_MIN = 0.05f;
+    public static final float BRUSH_FIELD_MIN = 0.05f;
     public static final float BRUSH_HARDNESS_DEFAULT = 1f;
-    public static final float BRUSH_OPACITY_DEFAULT = 1f;
     public static final float BRUSH_DENSITY_DEFAULT = 1f;
     public static final float BRUSH_SPACING_DEFAULT = 0.1f;
-    public static final float BRUSH_TWIST_DEFAULT = 90f;
-    public static final double BRUSH_VALUE_PRECISION = 100.0;
 
     // Tools — sizes are brush radii, in image pixels on the world's layers and window pixels on a character
     public static final String TOOL_SELECT = "Select";
     public static final String TOOL_BRUSH = "Brush";
     public static final String TOOL_ERASE = "Erase";
+    public static final String TOOL_SMOOTH = "Smooth";
+    public static final String TOOL_SWIRL = "Swirl";
+    public static final String TOOL_SCATTER = "Scatter";
     public static final String TOOL_FILL = "Fill";
     public static final String TOOL_PICK = "Pick";
     public static final String TOOL_PLACE = "Place";
     public static final String TOOL_WALL = "Wall";
+    public static final String TOOL_MOVE = "Move";
+    public static final String TOOL_ROTATE = "Rotate";
+    public static final String TOOL_SCALE = "Scale";
+    public static final String TOOL_CUT = "Cut";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
     public static final String TOOL_CANVAS_CHARACTER_MESH = "Character Mesh";
     public static final String TOOL_CANVAS_CHARACTER_WEIGHTS = "Character Weights";
     public static final String TOOL_CANVAS_ITEM = "Item";
+    public static final String TOOL_CANVAS_RECORDER = "Recorder Timeline";
+    public static final String TOOL_OPTION_SIZE = "Size";
+    public static final String TOOL_OPTION_STRENGTH = "Strength";
+    public static final String TOOL_OPTION_TWIST = "Twist";
+    public static final float TOOL_OPTION_PRECISION = 100f;
     public static final float TOOL_IMAGE_SIZE_MIN = 0f;
     public static final float TOOL_IMAGE_SIZE_MAX = 32f;
     public static final float TOOL_IMAGE_SIZE_STEP = 1f;
@@ -1056,8 +1048,20 @@ public class EditorSetting {
     public static final float TOOL_SCREEN_SIZE_MAX = 400f;
     public static final float TOOL_SCREEN_SIZE_STEP = 5f;
     public static final float TOOL_SCREEN_SIZE_DEFAULT = 40f;
+    public static final float TOOL_STRENGTH_STEP = 0.05f;
+    public static final float TOOL_STRENGTH_DEFAULT = 1f;
+    public static final float TOOL_WEIGHT_STRENGTH_DEFAULT = 0.2f;
+    public static final float TOOL_TWIST_STEP = 15f;
+    public static final float TOOL_TWIST_MAX = 360f;
+    public static final float TOOL_TWIST_DEFAULT = 90f;
     public static final String TOOL_STATUS_SIZE = "Size ";
-    public static final String TOOL_MESSAGE_MODE_REFUSED = " brushes cannot stroke here";
+
+    // Tool State — the tools as they were left, kept beside the layouts in the editor's bin directory
+    public static final String TOOL_STATE_FILE_NAME = "EditorTools";
+    public static final String TOOL_STATE_KEY_BRUSH = "brush";
+    public static final String TOOL_STATE_KEY_CANVASES = "canvases";
+    public static final String TOOL_STATE_KEY_TOOL = "tool";
+    public static final String TOOL_STATE_KEY_OPTIONS = "options";
 
     // World Editor
     public static final String WORLD_EDITOR_MODE_PAINT = "Paint";
@@ -1619,8 +1623,6 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_PLACED = "Placed ";
     public static final String RECORDER_STATUS_MOVED = "Moved ";
     public static final String RECORDER_STATUS_CUT = "Cut ";
-    public static final String RECORDER_STATUS_CUT_TOOL_ON = "Cut tool on: click a clip to cut it there";
-    public static final String RECORDER_STATUS_CUT_TOOL_OFF = "Cut tool off";
     public static final String RECORDER_STATUS_CUT_TOO_NEAR = "Too near the clip's end to cut there";
     public static final String RECORDER_STATUS_STAMPED = "Stamped ";
     public static final String RECORDER_STATUS_TRIMMED = "Trimmed ";

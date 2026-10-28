@@ -1,12 +1,13 @@
 package editor.runtime.charactereditor.sculpt;
 
 import application.kernel.inputpipeline.input.RawInputHandle;
+import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
+import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
-import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.input.EditorInputSystem;
@@ -23,16 +24,16 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     /*
      * Turns this tab's pointer and keys into mesh edits while a mesh mode is
      * open. A click picks the vertex under the pointer and a drag selects a
-     * box, Shift adding and Ctrl taking away; in Weights mode the Brush and
-     * Erase tools stroke the weights instead. Each mesh mode is a tool canvas
-     * of ToolManager's while this tab is open. A transform the panel asks for — by its
-     * button or its shortcut, G, R or S — holds the selection to the
-     * pointer: X, Y and Z lock it to an axis, Ctrl snaps it, a click or Enter
-     * confirms and a right click or Escape puts it back. The tab's shortcuts
-     * run here only with the pointer over the view and nothing under way,
-     * each the panel's own action by its row key, so a key and its button do
-     * exactly the same thing; the modifiers a selection and a transform read
-     * are held shortcuts too.
+     * box, Shift adding and Ctrl taking away; in Mesh mode the Move, Rotate and
+     * Scale tools drag the selection instead, letting go to confirm, and in
+     * Weights mode the Brush, Erase and Smooth tools stroke the weights. A
+     * transform the panel asks for — by its button or its shortcut, G, R or S —
+     * holds the selection to the pointer: X, Y and Z lock it to an axis, Ctrl
+     * snaps it, a click or Enter confirms and a right click or Escape puts it
+     * back. The tab's shortcuts run here only with the pointer over the view
+     * and nothing under way, each the panel's own action by its row key, so a
+     * key and its button do exactly the same thing; the modifiers a selection
+     * and a transform read are held shortcuts too.
      */
 
     // Internal
@@ -40,7 +41,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     private CharacterEditorManager characterEditorManager;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private ShortcutManager shortcutManager;
-    private ToolManager toolManager;
+    private BrushManager brushManager;
 
     // Shortcuts
     private int addSelectionShortcutID;
@@ -55,9 +56,12 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
     // Stroke
     private boolean stroking;
+    private float strokeX;
+    private float strokeY;
 
     // Transform
     private CharacterEditorTransform transform;
+    private boolean draggingTransform;
     private int transformAxis;
     private boolean customAxis;
     private Vector3 axisVector;
@@ -103,17 +107,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
-        this.toolManager = get(ToolManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        toolManager.openCanvas(context.getWindow(), characterEditorManager);
-    }
-
-    @Override
-    protected void dispose() {
-        toolManager.closeCanvas(context.getWindow());
+        this.brushManager = get(BrushManager.class);
     }
 
     @Override
@@ -178,6 +172,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
             characterEditorManager.endStroke();
 
         this.transform = null;
+        this.draggingTransform = false;
         this.stroking = false;
         this.pressed = false;
         this.boxSelecting = false;
@@ -216,12 +211,26 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
     // Selection \\
 
+    // A transform tool drags the selection; with nothing selected it picks as Select does
     private void press(RawInputHandle rawInput) {
+
+        CharacterEditorTransform toolTransform = characterEditorManager.getToolTransform();
+
+        if (toolTransform != null) {
+
+            startTransform(toolTransform, rawInput);
+            this.draggingTransform = transform != null;
+
+            if (draggingTransform)
+                return;
+        }
 
         if (characterEditorManager.isBrushTool()) {
             characterEditorManager.beginStroke();
             this.stroking = true;
-            applyStroke(rawInput);
+            this.strokeX = rawInput.getMouseX();
+            this.strokeY = rawInput.getMouseY();
+            stamp(strokeX, strokeY);
             return;
         }
 
@@ -295,20 +304,43 @@ public class CharacterEditorSculptSystem extends SystemPackage {
             return;
         }
 
-        applyStroke(rawInput);
+        continueStroke(rawInput.getMouseX(), rawInput.getMouseY());
     }
 
-    // The brush's strength scaled by the frame's length, so a stroke paints at the same rate however fast it runs
-    private void applyStroke(RawInputHandle rawInput) {
+    // A stamp every spacing from the last toward the pointer, the stroke left on its last stamp, as an image stroke is
+    private void continueStroke(float mouseX, float mouseY) {
 
-        float strength = characterEditorManager.getWeightStrength()
-                * Math.min(1f, internal.getDeltaTime() * CharacterEditorSetting.BRUSH_RATE);
+        float dx = mouseX - strokeX;
+        float dy = mouseY - strokeY;
+        float length = (float) Math.sqrt(dx * dx + dy * dy);
+        float spacing = BrushUtility.resolveSpacing(
+                brushManager.getActiveBrush(), characterEditorManager.getBrushRadius());
+        int stamps = (int) (length / spacing);
+
+        for (int i = 1; i <= stamps; i++) {
+
+            float t = i * spacing / length;
+
+            stamp(strokeX + dx * t, strokeY + dy * t);
+        }
+
+        if (stamps == 0)
+            return;
+
+        float travelled = stamps * spacing / length;
+
+        this.strokeX += dx * travelled;
+        this.strokeY += dy * travelled;
+    }
+
+    // One stamp of the weight brush, at the tool's strength scaled by how much of the tip covers each vertex
+    private void stamp(float x, float y) {
 
         characterEditorMeshViewSystem.collectBrush(
-                rawInput.getMouseX(),
-                rawInput.getMouseY(),
+                x,
+                y,
                 characterEditorManager.getBrushRadius(),
-                strength,
+                characterEditorManager.getBrushStrength(),
                 hits,
                 strengths);
 
@@ -353,24 +385,32 @@ public class CharacterEditorSculptSystem extends SystemPackage {
             resolvePlaneHit(startHit);
     }
 
+    // A dragged transform confirms when the button is let go, a held one on a click or Enter
     private void updateTransform(RawInputHandle rawInput) {
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE)
                 || rawInput.isButtonClicked(CharacterEditorSetting.BUTTON_CANCEL)) {
             characterEditorManager.cancelTransform();
-            this.transform = null;
+            endTransform();
             return;
         }
 
         lockAxis(rawInput);
         applyTransform(rawInput);
 
-        if (rawInput.isButtonClicked(CharacterEditorSetting.BUTTON_SELECT)
+        boolean released = draggingTransform && !rawInput.isButtonHeld(CharacterEditorSetting.BUTTON_SELECT);
+
+        if (released || rawInput.isButtonClicked(CharacterEditorSetting.BUTTON_SELECT)
                 || rawInput.isKeyClicked(EditorSetting.KEY_ENTER)
                 || rawInput.isKeyClicked(EditorSetting.KEY_ENTER_NUMPAD)) {
             characterEditorManager.confirmTransform();
-            this.transform = null;
+            endTransform();
         }
+    }
+
+    private void endTransform() {
+        this.transform = null;
+        this.draggingTransform = false;
     }
 
     // X, Y or Z holds the transform to that axis, the same key again frees it

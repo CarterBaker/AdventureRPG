@@ -8,7 +8,6 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
-import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorMode;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
@@ -21,8 +20,8 @@ public class WorldEditorToolSystem extends SystemPackage {
 
     /*
      * Turns the pointer into the image pixel under it each frame and drives
-     * the tool ToolManager keeps for what the World Editor works on, this
-     * window being one of its canvases while it is open. A click on the image
+     * the tool ToolManager keeps for what the World Editor works on. A click
+     * on the image
      * begins a stroke, dragging carries it on wherever the pointer goes, and
      * releasing ends it as one undo step. While placing, Place and Erase act
      * once per click on the exact position under the pointer, and Select
@@ -43,7 +42,6 @@ public class WorldEditorToolSystem extends SystemPackage {
     private InputManager inputManager;
     private WindowManager windowManager;
     private ShortcutManager shortcutManager;
-    private ToolManager toolManager;
     private WorldEditorManager worldEditorManager;
     private SettlementPlannerManager settlementPlannerManager;
     private WorldEditorViewSystem worldEditorViewSystem;
@@ -83,15 +81,9 @@ public class WorldEditorToolSystem extends SystemPackage {
         this.inputManager = get(InputManager.class);
         this.windowManager = get(WindowManager.class);
         this.shortcutManager = get(ShortcutManager.class);
-        this.toolManager = get(ToolManager.class);
         this.worldEditorManager = get(WorldEditorManager.class);
         this.settlementPlannerManager = get(SettlementPlannerManager.class);
         this.worldEditorViewSystem = get(WorldEditorViewSystem.class);
-    }
-
-    @Override
-    protected void awake() {
-        toolManager.openCanvas(context.getWindow(), worldEditorManager);
     }
 
     @Override
@@ -107,7 +99,6 @@ public class WorldEditorToolSystem extends SystemPackage {
     @Override
     protected void dispose() {
         endStroke();
-        toolManager.closeCanvas(context.getWindow());
     }
 
     // Update \\

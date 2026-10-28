@@ -252,7 +252,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
             if (!project(getX(v), getY(v), getZ(v), screenScratch))
                 continue;
 
-            float falloff = BrushUtility.resolveStrength(
+            float falloff = BrushUtility.resolveCoverage(
                     brushManager.getActiveBrush(), screenScratch.x - pixelX, screenScratch.y - pixelY, radius);
 
             if (falloff > 0f && isVisible(v)) {

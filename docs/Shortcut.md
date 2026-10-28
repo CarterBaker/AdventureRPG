@@ -21,12 +21,15 @@ modifier in any editor tool. The root `CLAUDE.md` still applies in full.
   or its tab's chrome — holds focus, and never while the name or export dialog is open.
 - **Exact chords.** A pressed shortcut fires when its key goes down with exactly its modifiers held, so Ctrl+S never
   also runs S. Two pressed shortcuts of one tool on the same chord fail at load.
-- **Shared tool keys.** `assets/shortcuts/Tools.arpg` names `ToolsContext`: its keys choose the editor's generic tools
-  (`V` Select, `B` Brush, `E` Erase, `F` Fill, `I` Pick, `P` Place, `W` Wall), resize the brush (`[` and `]`) and step
-  through brush presets (`-` and `=`). Besides the Tools tab, they work in every window `ToolManager` counts as a tool
-  window — each canvas (World Editor, Item Editor, Character Editor) and the Brushes tab — after that window's own
-  keys, so a window's own shortcut wins where both use a key (the Character Editor's `E` extrudes, `F` makes a face).
-  Rebinding one on the Settings dialog's Shortcuts page rebinds it in every editor at once.
+- **Shared tool keys.** `assets/shortcuts/Tools.arpg` names `ToolsContext` and is marked `"shared": true`: its keys
+  choose the editor's generic tools (`V` Select, `B` Brush, `E` Erase, `S` Smooth, `Q` Swirl, `J` Scatter, `F` Fill,
+  `I` Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut), resize the brush (`[` and `]`)
+  and step through the brushes (`-` and `=`). Besides the Tools tab, they work in every window `ToolManager` counts as
+  a tool window — each canvas (World Editor, Item Editor, Character Editor, Recorder) and the Brushes tab, each opened
+  there by its `ToolCanvasSystem` — after that window's own keys, so a window's own shortcut wins where both use a key
+  (the Character Editor's `E` extrudes and `S` scales; the Recorder's `F`, `B` and `T` keep their own actions). A tool
+  a canvas does not take is ignored there. Rebinding one on the Settings dialog's Shortcuts page rebinds it in every
+  editor at once.
 
 ---
 
@@ -55,6 +58,8 @@ modifier in any editor tool. The root `CLAUDE.md` still applies in full.
 - A pressed shortcut's method may take a `String` (the `arg`) and a `WindowInstance` (the tool's window). It gets no
   menu or element. A bad class or method fails at boot, naming the shortcut.
 - A held shortcut has no action and needs a key or at least one modifier.
+- `"shared": true` makes a file's pressed shortcuts also work in every window `ToolManager` opens, after that
+  window's own. Only the tools' own file should be shared.
 - A shortcut's registered name is the file's name, a `/`, then its own: `Recorder/ExtendSelection`.
 
 ---

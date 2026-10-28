@@ -16,20 +16,20 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 class ImageEditBranch extends BranchPackage {
 
     /*
-     * Performs every change to an image's pixels. A brush stamps its preset's
-     * tip around a pixel, each covered pixel taking the strength the preset
-     * has there and only the preset's density of them touched, and a stroke
-     * stamps along its path once every spacing, keeping the gap from one
-     * drag to the next. Paint lays the brush's color down, Smooth softens
-     * toward the pixel's square, Swirl turns the tip's pixels about its
-     * centre by the preset's twist and Scatter shuffles them. Where the image
+     * Performs every change to an image's pixels. A stroke stamps its brush's
+     * tip around a pixel, each covered pixel taken by the stroke's strength
+     * scaled by how much of the tip covers it, and only the tip's density of
+     * them touched, stamping along its path once every spacing and keeping the
+     * gap from one drag to the next. Paint lays the stroke's color down, Smooth
+     * softens toward the pixel's square, Swirl turns the tip's pixels about its
+     * centre by the stroke's twist and Scatter shuffles them. Where the image
      * blends, strength fades a pixel toward what it takes; where it does not,
      * strength is the chance the pixel takes it whole, Smooth takes the
      * commonest color around and Scatter only moves colors, so no color the
      * image could not hold is ever written. A fill floods the four-connected
-     * run of one color. Coordinates wrap on an image whose edges wrap and
-     * are clipped on any other. Every pixel that actually changes is recorded
-     * for undo and grows the caller's region.
+     * run of one color. Coordinates wrap on an image whose edges wrap and are
+     * clipped on any other. Every pixel that actually changes is recorded for
+     * undo and grows the caller's region.
      */
 
     // Internal
@@ -88,7 +88,7 @@ class ImageEditBranch extends BranchPackage {
         }
     }
 
-    // The tip's pixels are read before any is written, so Swirl and Scatter move what was there
+    // A moving stroke reads the tip's pixels before any is written, so Swirl and Scatter move what was there
     void stamp(
             ImageDocumentInstance document,
             int centerX,
@@ -96,17 +96,18 @@ class ImageEditBranch extends BranchPackage {
             ImageBrushStruct brush,
             ImageRegionStruct region) {
 
-        BrushHandle preset = brush.getBrush();
+        BrushHandle tip = brush.getBrush();
         int radius = brush.getRadius();
         float reach = radius + EditorSetting.IMAGE_BRUSH_EDGE_PIXELS;
-        float density = preset.getValue(BrushField.DENSITY);
+        float density = tip.getValue(BrushField.DENSITY);
 
-        captureTip(document, centerX, centerY, radius);
+        if (brush.getStroke().isMoving())
+            captureTip(document, centerX, centerY, radius);
 
         for (int dy = -radius; dy <= radius; dy++) {
             for (int dx = -radius; dx <= radius; dx++) {
 
-                float strength = BrushUtility.resolveStrength(preset, dx, dy, reach);
+                float strength = BrushUtility.resolveCoverage(tip, dx, dy, reach) * brush.getStrength();
 
                 if (strength <= 0f || nextRandom() >= density)
                     continue;
@@ -137,10 +138,10 @@ class ImageEditBranch extends BranchPackage {
             int dy,
             float strength) {
 
-        int before = readTip(brush.getRadius(), dx, dy);
+        int before = readPixel(document, x, y);
         boolean blending = brush.isBlending();
 
-        return switch (brush.getBrush().getMode()) {
+        return switch (brush.getStroke()) {
             case PAINT -> blend(before, brush.getColor(), strength, blending);
             case SMOOTH -> blend(
                     before,
@@ -172,7 +173,7 @@ class ImageEditBranch extends BranchPackage {
             int dy,
             float strength) {
 
-        double angle = -Math.toRadians(brush.getBrush().getValue(BrushField.TWIST)) * strength;
+        double angle = -Math.toRadians(brush.getTwist()) * strength;
         double cos = Math.cos(angle);
         double sin = Math.sin(angle);
         int sourceX = (int) Math.round(dx * cos - dy * sin);

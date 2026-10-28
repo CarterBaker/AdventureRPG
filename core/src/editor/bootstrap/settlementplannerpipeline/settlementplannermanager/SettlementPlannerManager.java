@@ -175,10 +175,12 @@ public class SettlementPlannerManager extends ManagerPackage {
         requestSummary();
     }
 
-    // The catalogue entry a settlement type or structure selected in the Hierarchy names, if it is a new one
+    // A settlement type or structure selected in the Hierarchy: the World Editor places, and a new one is designed
     void selectEntryByName(WorldPlacementKind kind, String name) {
 
         int index = settlementCatalogueBranch.indexOfEntry(kind, name);
+
+        worldEditorManager.showPlacements();
 
         if (index != EngineSetting.INDEX_NOT_FOUND && index != entryIndex)
             selectEntry(index);

@@ -1,5 +1,8 @@
 package editor.runtime.charactereditor;
 
+import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
+import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.charactereditor.menu.CharacterEditorMenuSystem;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.overlay.CharacterEditorOverlaySystem;
@@ -10,9 +13,10 @@ import editor.runtime.characterview.panel.CharacterViewPanelSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.toolcanvas.ToolCanvasSystem;
 import engine.root.ContextPackage;
 
-public class CharacterEditorContext extends ContextPackage {
+public class CharacterEditorContext extends ContextPackage implements ToolCanvasProvider {
 
     /*
      * Editor tab for shaping a character: its default features, skin and
@@ -23,10 +27,12 @@ public class CharacterEditorContext extends ContextPackage {
      * CharacterEditorManager, template edits in InfoManager and mesh edits in
      * their files; this tab reads input, orbits the camera, poses the
      * preview, picks and transforms vertices, draws the preview with its mesh
-     * overlay, and shows the toolbar and panels.
+     * overlay, and shows the toolbar and panels. While a mesh mode is open the
+     * tab is a tool canvas, the mesh or its weights.
      */
 
     // Internal
+    private CharacterEditorManager characterEditorManager;
     private EditorInputSystem editorInputSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
     private CharacterViewCameraSystem characterViewCameraSystem;
@@ -37,6 +43,7 @@ public class CharacterEditorContext extends ContextPackage {
     private CharacterViewRenderSystem characterViewRenderSystem;
     private CharacterViewPanelSystem characterViewPanelSystem;
     private CharacterEditorMenuSystem characterEditorMenuSystem;
+    private ToolCanvasSystem toolCanvasSystem;
 
     // Internal \\
 
@@ -52,10 +59,23 @@ public class CharacterEditorContext extends ContextPackage {
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
         this.characterEditorMenuSystem = create(CharacterEditorMenuSystem.class);
+        this.toolCanvasSystem = create(ToolCanvasSystem.class);
+    }
+
+    @Override
+    protected void get() {
+        this.characterEditorManager = get(CharacterEditorManager.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Tools \\
+
+    @Override
+    public ToolCanvas getToolCanvas() {
+        return characterEditorManager.getToolCanvas();
     }
 }

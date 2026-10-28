@@ -2,7 +2,6 @@ package editor.bootstrap.brushpipeline.brushmanager;
 
 import editor.bootstrap.brushpipeline.brush.BrushData;
 import editor.bootstrap.brushpipeline.util.BrushField;
-import editor.bootstrap.brushpipeline.util.BrushMode;
 import editor.bootstrap.brushpipeline.util.BrushShape;
 import engine.root.BuilderPackage;
 import engine.util.arpg.ArpgObjectStruct;
@@ -11,11 +10,11 @@ import engine.util.arpg.ArpgUtility;
 class BrushBuilder extends BuilderPackage {
 
     /*
-     * Parses one brush preset's ARPG object into BrushData, from its file at
-     * boot or from the Info Panel's live copy while it is edited. Every field
-     * is optional: an empty or missing display name falls back to the
-     * preset's name, the shape to round, the mode to paint, and each number
-     * to its field's default, held to the field's range.
+     * Parses one brush's ARPG object into BrushData, from its file at boot or
+     * from the Info Panel's live copy while it is edited. Every field is
+     * optional: an empty or missing display name falls back to the brush's
+     * name, the shape to round, and each number to its field's default, held
+     * to the field's range.
      */
 
     // Internal
@@ -48,7 +47,6 @@ class BrushBuilder extends BuilderPackage {
                 brushManager.registerBrushName(brushName),
                 displayName.isEmpty() ? brushName : displayName,
                 ArpgUtility.getEnum(brushArpg, "shape", BrushShape.class, BrushShape.ROUND),
-                ArpgUtility.getEnum(brushArpg, "mode", BrushMode.class, BrushMode.PAINT),
                 values);
     }
 }

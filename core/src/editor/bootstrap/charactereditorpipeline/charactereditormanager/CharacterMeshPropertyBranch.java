@@ -72,8 +72,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_MESH_RADIUS,
                     EditorSetting.CHARACTER_EDITOR_KEY_MESH_SNAP,
                     EditorSetting.CHARACTER_EDITOR_KEY_PART_SIZE,
-                    EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET,
-                    EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH -> true;
+                    EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET -> true;
             default -> false;
         };
     }
@@ -209,7 +208,6 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_MESH_SNAP -> characterEditorManager.getSnapStep();
             case EditorSetting.CHARACTER_EDITOR_KEY_PART_SIZE -> characterEditorManager.getPartSize();
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET -> characterEditorManager.getWeightTarget();
-            case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_STRENGTH -> characterEditorManager.getWeightStrength();
             default -> 0f;
         };
     }
@@ -241,9 +239,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                             value,
                             EditorSetting.CHARACTER_EDITOR_PART_SIZE_MIN,
                             EditorSetting.CHARACTER_EDITOR_PART_SIZE_MAX)));
-            case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET -> characterEditorManager.setWeightTarget(
-                    CharacterViewUtility.round(CharacterViewUtility.clamp(value, 0f, 1f)));
-            default -> characterEditorManager.setWeightStrength(
+            default -> characterEditorManager.setWeightTarget(
                     CharacterViewUtility.round(CharacterViewUtility.clamp(value, 0f, 1f)));
         }
     }

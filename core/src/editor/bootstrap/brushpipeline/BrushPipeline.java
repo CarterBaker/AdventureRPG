@@ -6,9 +6,8 @@ import engine.root.PipelinePackage;
 public class BrushPipeline extends PipelinePackage {
 
     /*
-     * Registers the editor's brush presets, the one set every tool that
-     * strokes reads its shape, falloff, density and mode from, whichever
-     * window it strokes in.
+     * Registers the editor's brushes, the tips every tool that strokes
+     * stamps with, whichever window it strokes in.
      */
 
     // Internal \\

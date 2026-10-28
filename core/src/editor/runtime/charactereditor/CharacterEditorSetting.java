@@ -45,11 +45,10 @@ public class CharacterEditorSetting {
     public static final String SHORTCUT_SUBTRACT_SELECTION = "CharacterEditor/SubtractSelection";
     public static final String SHORTCUT_SNAP = "CharacterEditor/Snap";
 
-    // Mesh Input — pointer distances in pixels, the brush rate per second and transform snapping
+    // Mesh Input — pointer distances in pixels and transform snapping
     public static final float PICK_RADIUS_PIXELS = 10f;
     public static final float DRAG_PIXELS = 4f;
     public static final float SCALE_MIN_PIXELS = 4f;
-    public static final float BRUSH_RATE = 8f;
     public static final float SNAP_DEGREES = 15f;
     public static final float SNAP_SCALE = 0.1f;
     public static final float RAY_EPSILON = 0.00001f;

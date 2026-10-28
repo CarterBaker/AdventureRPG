@@ -24,8 +24,7 @@ class WorldPlacementBranch extends BranchPackage {
      * keep editing, and Erase takes away the placement nearest the pointer.
      * The planner's live changes to the placement it edits, and every move
      * of the Select tool's selection, are swapped in here, and the
-     * placements they remove taken away. Selecting a settlement type or a
-     * structure in the Hierarchy turns the World Editor to placing.
+     * placements they remove taken away.
      * A settlement cell holds one hand-placed settlement, so a second is
      * refused. Every change goes to WorldManager at once and restreams the
      * map and the preview terrain it can reach, since a settlement's roads
@@ -53,15 +52,6 @@ class WorldPlacementBranch extends BranchPackage {
         this.settlementPlannerManager = get(SettlementPlannerManager.class);
     }
 
-    @Override
-    protected void awake() {
-        infoManager.addSelectionListener(
-                EditorSetting.INFO_SCHEMA_SETTLEMENTS,
-                entry -> worldEditorManager.showPlacements());
-        infoManager.addSelectionListener(
-                EditorSetting.INFO_SCHEMA_STRUCTURES,
-                entry -> worldEditorManager.showPlacements());
-    }
 
     // Placement \\
 

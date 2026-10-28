@@ -1,20 +1,13 @@
 package editor.bootstrap.brushpipeline.brushmanager;
 
-import java.util.function.Consumer;
-
 import editor.bootstrap.brushpipeline.brush.BrushData;
 import editor.bootstrap.brushpipeline.brush.BrushHandle;
-import editor.bootstrap.brushpipeline.util.BrushField;
-import editor.bootstrap.brushpipeline.util.BrushMode;
-import editor.bootstrap.brushpipeline.util.BrushShape;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.root.UtilityPackage.InternalException;
-import engine.util.arpg.ArpgObjectStruct;
-import engine.util.arpg.ArpgUtility;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -22,15 +15,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class BrushManager extends ManagerPackage {
 
     /*
-     * Owns every brush preset and the one in use, shared by every tool and
-     * window the way a paint program's brush is. Presets load from ARPG, one
-     * to a file, and are listed by their display names. They are content
-     * like any other: the Hierarchy and Info Panel edit, create, copy and
-     * delete them, and every change reaches here live, rebuilding the preset
-     * in place under its ID, so a stroke under way takes the edit at once.
-     * The Brushes panel's quick changes to the preset in use go through the
-     * Info Panel the same way, leaving it unsaved there until it is saved.
-     * The preset in use falls back to the default when it is deleted.
+     * Owns every brush and the one in use, shared by every stroking tool and
+     * window the way a paint program's brush is. A brush is only a tip: its
+     * shape and how hard, dense and widely spaced it stamps; what a stroke
+     * does, and how strongly and widely, is the tool's. Brushes load from
+     * ARPG, one to a file, and are listed by their display names. They are
+     * content like any other: the Hierarchy and Info Panel edit, create, copy
+     * and delete them, and every change reaches here live, rebuilding the
+     * brush in place under its ID, so a stroke under way takes the edit at
+     * once. The brush in use falls back to the default when it is deleted.
      */
 
     // Internal
@@ -81,7 +74,7 @@ public class BrushManager extends ManagerPackage {
                 brushName2BrushID, brushID2BrushHandle, brushName, EngineSetting.REGISTRY_INT_ID_COUNT);
     }
 
-    // A preset built for the first time is listed; one built again takes its new data in place
+    // A brush built for the first time is listed; one built again takes its new data in place
     void addBrushData(BrushData brushData) {
 
         BrushHandle brushHandle = RegistryUtility.getHandle(brushID2BrushHandle, brushData.getBrushID());
@@ -111,7 +104,7 @@ public class BrushManager extends ManagerPackage {
         }
     }
 
-    // A deleted preset leaves the list; whoever strokes with it moves to the default
+    // A deleted brush leaves the list; whoever strokes with it moves to the default
     private void retireBrush(InfoEntryStruct entry) {
 
         BrushHandle brushHandle = RegistryUtility.getHandle(
@@ -130,9 +123,12 @@ public class BrushManager extends ManagerPackage {
 
     public void selectBrush(String brushName) {
 
+        if (!hasBrush(brushName))
+            return;
+
         BrushHandle brushHandle = getBrushHandleFromBrushName(brushName);
 
-        if (brushHandle == activeBrush || !brushes.contains(brushHandle))
+        if (brushHandle == activeBrush)
             return;
 
         this.activeBrush = brushHandle;
@@ -145,40 +141,6 @@ public class BrushManager extends ManagerPackage {
 
         if (!brushes.isEmpty())
             selectBrush(brushes.get(Math.floorMod(index + step, brushes.size())).getBrushName());
-    }
-
-    // The preset in use opened in the Hierarchy and Info Panel, where every field of it is edited
-    public void editActiveBrush() {
-        infoManager.selectEntry(
-                EditorSetting.INFO_SCHEMA_BRUSHES, activeBrush.getBrushName(), activeBrush.getBrushName());
-    }
-
-    // Quick Edit \\
-
-    public void setShape(BrushShape shape) {
-        editBrush(brushArpg -> brushArpg.addProperty("shape", ArpgUtility.toEnumName(shape)));
-    }
-
-    public void setMode(BrushMode mode) {
-        editBrush(brushArpg -> brushArpg.addProperty("mode", ArpgUtility.toEnumName(mode)));
-    }
-
-    // One of the preset's numbers moved a step, held to its range and kept to the panel's precision
-    public void stepValue(BrushField field, int direction) {
-
-        float value = field.clamp(activeBrush.getValue(field) + direction * field.getStep());
-        double rounded = Math.round(value * EditorSetting.BRUSH_VALUE_PRECISION)
-                / EditorSetting.BRUSH_VALUE_PRECISION;
-
-        editBrush(brushArpg -> brushArpg.addProperty(field.getKey(), rounded));
-    }
-
-    private void editBrush(Consumer<ArpgObjectStruct> editor) {
-        infoManager.editEntry(
-                EditorSetting.INFO_SCHEMA_BRUSHES,
-                activeBrush.getBrushName(),
-                activeBrush.getBrushName(),
-                editor);
     }
 
     // Status \\
@@ -197,6 +159,14 @@ public class BrushManager extends ManagerPackage {
             throwException("Brush not found: \"" + brushName + "\"");
 
         return brushHandle;
+    }
+
+    // True for a brush listed under a name, false for none or one deleted
+    public boolean hasBrush(String brushName) {
+
+        BrushHandle brushHandle = RegistryUtility.getHandle(brushName2BrushID, brushID2BrushHandle, brushName);
+
+        return brushHandle != null && brushes.contains(brushHandle);
     }
 
     public ObjectArrayList<BrushHandle> getBrushes() {

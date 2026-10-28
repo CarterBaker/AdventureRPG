@@ -32,8 +32,8 @@ public class RecorderBranch extends BranchPackage {
      * selects instead, or on an empty lane moves the playhead there. Holding
      * Shift lets a drag go free of the timeline's edges. Every modifier a drag
      * or the wheel reads is a held shortcut, resolved once from its name, so
-     * each is bound in the Recorder's shortcut file. While the cut tool is
-     * on, the recorder is told every frame where it would cut with the pointer
+     * each is bound in the Recorder's shortcut file. While the Cut tool is
+     * chosen, the recorder is told every frame where it would cut with the pointer
      * over the lanes. The wheel over the lanes, the ruler, the Keys rows'
      * strips or the Keys graph zooms about the pointer, and with Shift, or
      * scrolled sideways, moves the view along; with Ctrl on the graph it zooms
@@ -295,10 +295,6 @@ public class RecorderBranch extends BranchPackage {
 
     public void zoomFit() {
         recorderManager.fitView();
-    }
-
-    public void toggleCut() {
-        recorderManager.toggleCutTool();
     }
 
     // Panes \\

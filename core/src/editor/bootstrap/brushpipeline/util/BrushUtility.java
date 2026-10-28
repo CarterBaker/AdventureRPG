@@ -6,21 +6,22 @@ import engine.root.EngineUtility;
 public class BrushUtility extends EngineUtility {
 
     /*
-     * Stateless brush arithmetic every stroking tool shares: the strength a
-     * preset stamps at an offset from its centre, full opacity across its
-     * hard core easing smoothly to nothing at the edge of its shape, and the
-     * gap between two stamps of a stroke for a tip of a given radius.
+     * Stateless brush arithmetic every stroking tool shares: how much of a
+     * tip covers an offset from its centre, all of it across the hard core
+     * easing smoothly to none at the edge of its shape, for the tool to scale
+     * by its own strength, and the gap between two stamps of a stroke for a
+     * tip of a given radius.
      */
 
-    // Strength \\
+    // Coverage \\
 
     // Zero outside the tip; a radius of zero covers only the centre
-    public static float resolveStrength(BrushHandle brush, float dx, float dy, float radius) {
+    public static float resolveCoverage(BrushHandle brush, float dx, float dy, float radius) {
 
         float distance = brush.getShape().measure(dx, dy);
 
         if (radius <= 0f)
-            return distance <= 0f ? brush.getValue(BrushField.OPACITY) : 0f;
+            return distance <= 0f ? 1f : 0f;
 
         float reach = distance / radius;
 
@@ -28,14 +29,13 @@ public class BrushUtility extends EngineUtility {
             return 0f;
 
         float hardness = brush.getValue(BrushField.HARDNESS);
-        float opacity = brush.getValue(BrushField.OPACITY);
 
         if (reach <= hardness)
-            return opacity;
+            return 1f;
 
         float t = (1f - reach) / (1f - hardness);
 
-        return opacity * t * t * (3f - 2f * t);
+        return t * t * (3f - 2f * t);
     }
 
     // Spacing \\

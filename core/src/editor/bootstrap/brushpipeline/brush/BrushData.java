@@ -1,17 +1,15 @@
 package editor.bootstrap.brushpipeline.brush;
 
 import editor.bootstrap.brushpipeline.util.BrushField;
-import editor.bootstrap.brushpipeline.util.BrushMode;
 import editor.bootstrap.brushpipeline.util.BrushShape;
 import engine.root.DataPackage;
 
 public class BrushData extends DataPackage {
 
     /*
-     * Immutable definition of one brush preset: its name, which is its file's
-     * path, and its registry ID; the name it is listed by; the shape of its
-     * tip and what it does to what lies under it; and one value per
-     * BrushField, indexed by the field's ordinal.
+     * Immutable definition of one brush: its name, which is its file's path,
+     * and its registry ID; the name it is listed by; the shape of its tip; and
+     * one value per BrushField, indexed by the field's ordinal.
      */
 
     // Identity
@@ -21,7 +19,6 @@ public class BrushData extends DataPackage {
 
     // Tip
     private final BrushShape shape;
-    private final BrushMode mode;
     private final float[] values;
 
     // Constructor \\
@@ -31,7 +28,6 @@ public class BrushData extends DataPackage {
             int brushID,
             String displayName,
             BrushShape shape,
-            BrushMode mode,
             float[] values) {
 
         // Identity
@@ -41,7 +37,6 @@ public class BrushData extends DataPackage {
 
         // Tip
         this.shape = shape;
-        this.mode = mode;
         this.values = values;
     }
 
@@ -61,10 +56,6 @@ public class BrushData extends DataPackage {
 
     public BrushShape getShape() {
         return shape;
-    }
-
-    public BrushMode getMode() {
-        return mode;
     }
 
     public float getValue(BrushField field) {

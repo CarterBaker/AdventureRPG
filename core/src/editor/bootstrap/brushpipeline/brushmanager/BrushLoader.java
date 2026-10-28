@@ -13,10 +13,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class BrushLoader extends LoaderPackage {
 
     /*
-     * Scans the brush directory and builds every preset into BrushManager,
-     * one preset to a file, named by its path. The manager requests them all
-     * at once before any tool strokes, and hands every live edit of a preset
-     * back here to be built the same way.
+     * Scans the brush directory and builds every brush into BrushManager, one
+     * brush to a file, named by its path. The manager requests them all at
+     * once before any tool strokes, and hands every live edit of a brush back
+     * here to be built the same way.
      */
 
     // Internal

@@ -12,7 +12,6 @@ import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.runtime.menueventsmanager.menus.ExportDialogBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsBranch;
-import editor.runtime.tools.ToolsContext;
 import engine.input.Input;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
@@ -36,10 +35,10 @@ public class ShortcutManager extends ManagerPackage {
      * every key. Two shortcuts of one tool on the same keys are rejected at
      * load, and nothing is pressed while a dialog takes typed text or the
      * settings dialog is open. A shortcut rebound there takes its new keys in
-     * place, under the same ID, once its file is saved. The Tools panel's
-     * shortcuts are the shared tool keys: they also work in every window
-     * ToolManager counts as a tool window, after that window's own, so a
-     * window's own key wins where the two share one.
+     * place, under the same ID, once its file is saved. A file marked shared
+     * holds keys that also work in every window ToolManager opens, the shared
+     * tool keys, after that window's own, so a window's own key wins where the
+     * two share one.
      */
 
     // Internal
@@ -57,6 +56,7 @@ public class ShortcutManager extends ManagerPackage {
     private ObjectArrayList<ShortcutHandle> shortcutID2ShortcutHandle;
     private Object2ObjectOpenHashMap<Class<? extends ContextPackage>, ObjectArrayList<ShortcutHandle>>
             contextClass2PressedShortcuts;
+    private ObjectArrayList<Class<? extends ContextPackage>> sharedContextClasses;
 
     // Base \\
 
@@ -67,6 +67,7 @@ public class ShortcutManager extends ManagerPackage {
         this.shortcutName2ShortcutID = RegistryUtility.createNameIndex();
         this.shortcutID2ShortcutHandle = RegistryUtility.createPalette();
         this.contextClass2PressedShortcuts = new Object2ObjectOpenHashMap<>();
+        this.sharedContextClasses = new ObjectArrayList<>();
         create(ShortcutLoader.class);
     }
 
@@ -107,6 +108,12 @@ public class ShortcutManager extends ManagerPackage {
 
         if (shortcutHandle.hasAction())
             addPressedShortcut(shortcutHandle);
+    }
+
+    // A file's keys made to work in every window ToolManager opens as well as in its own tool
+    void shareContext(Class<? extends ContextPackage> contextClass) {
+        if (!sharedContextClasses.contains(contextClass))
+            sharedContextClasses.add(contextClass);
     }
 
     private void addPressedShortcut(ShortcutHandle shortcutHandle) {
@@ -179,11 +186,17 @@ public class ShortcutManager extends ManagerPackage {
         ObjectArrayList<ShortcutHandle> ownShortcuts = contextClass2PressedShortcuts.get(
                 window.getContext().getClass());
 
-        if (runPressed(ownShortcuts, window, input, heldModifiers))
+        if (runPressed(ownShortcuts, window, input, heldModifiers) || !toolManager.isToolWindow(window))
             return;
 
-        if (toolManager.isToolWindow(window))
-            runPressed(contextClass2PressedShortcuts.get(ToolsContext.class), window, input, heldModifiers);
+        for (int i = 0; i < sharedContextClasses.size(); i++) {
+
+            ObjectArrayList<ShortcutHandle> sharedShortcuts = contextClass2PressedShortcuts.get(
+                    sharedContextClasses.get(i));
+
+            if (runPressed(sharedShortcuts, window, input, heldModifiers))
+                return;
+        }
     }
 
     // The first of the shortcuts pressed this frame run; false when none was

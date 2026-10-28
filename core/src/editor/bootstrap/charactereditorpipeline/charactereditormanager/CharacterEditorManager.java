@@ -4,8 +4,6 @@ import java.util.Arrays;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
-import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
-import editor.bootstrap.brushpipeline.util.BrushMode;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
@@ -16,10 +14,10 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
-import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
+import editor.bootstrap.toolpipeline.util.ToolOption;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -32,29 +30,29 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class CharacterEditorManager extends ManagerPackage implements ToolCanvasProvider {
+public class CharacterEditorManager extends ManagerPackage {
 
     /*
-     * Owns the character editor's shared state — the open entity templates,
-     * the active one, the panel mode and selection, and how the preview
-     * stands, is built and is colored. Templates are ARPG entries owned by
-     * InfoManager: selecting one there opens it here, every edit goes back
-     * through it, and every change to an open template, made here or in the
-     * Info Panel, rebuilds its preview live. The Mesh and Weights modes edit
-     * the rigged mesh of the part picked — the body or a default feature —
-     * with the tool options and the transform asked for held here, and are
-     * each a tool canvas: their tool and brush size are ToolManager's and the
-     * weight brush strokes with BrushManager's preset in use, Brush drawing
-     * toward the target weight, Erase toward none and a smoothing preset
-     * blending either way. Save and Revert carry every open mesh's changes
-     * with the template's. Edits, previews, mesh files, selection, sculpting, weights,
-     * history, panel values and panel rows each live in their own branch.
+     * Owns the character editor's shared state — the open entity templates, the
+     * active one, the panel mode and selection, and how the preview stands, is
+     * built and is colored. Templates are ARPG entries owned by InfoManager:
+     * selecting one there opens it here, every edit goes back through it, and
+     * every change to an open template, made here or in the Info Panel,
+     * rebuilds its preview live. The Mesh and Weights modes edit the rigged
+     * mesh of the part picked — the body or a default feature — with the tool
+     * options and the transform asked for held here, and are each a tool canvas
+     * whose tool and options are ToolManager's: on the mesh Move, Rotate and
+     * Scale drag the selection, and on the weights the brush strokes with
+     * BrushManager's brush in use, Brush drawing toward the target weight,
+     * Erase toward none and Smooth blending between neighbours. Save and Revert
+     * carry every open mesh's changes with the template's. Edits, previews,
+     * mesh files, selection, sculpting, weights, history, panel values and
+     * panel rows each live in their own branch.
      */
 
     // Internal
     private InfoManager infoManager;
     private ToolManager toolManager;
-    private BrushManager brushManager;
     private CharacterEditBranch characterEditBranch;
     private CharacterPreviewBranch characterPreviewBranch;
     private CharacterPropertyBranch characterPropertyBranch;
@@ -102,7 +100,6 @@ public class CharacterEditorManager extends ManagerPackage implements ToolCanvas
 
     // Weights
     private float weightTarget;
-    private float weightStrength;
 
     // Scratch
     private ObjectArrayList<String> partKeys;
@@ -159,7 +156,6 @@ public class CharacterEditorManager extends ManagerPackage implements ToolCanvas
 
         // Weights
         this.weightTarget = 1f;
-        this.weightStrength = EditorSetting.CHARACTER_EDITOR_WEIGHT_STRENGTH_DEFAULT;
 
         // Scratch
         this.partKeys = new ObjectArrayList<>();
@@ -170,7 +166,6 @@ public class CharacterEditorManager extends ManagerPackage implements ToolCanvas
     protected void get() {
         this.infoManager = get(InfoManager.class);
         this.toolManager = get(ToolManager.class);
-        this.brushManager = get(BrushManager.class);
     }
 
     @Override
@@ -525,16 +520,9 @@ public class CharacterEditorManager extends ManagerPackage implements ToolCanvas
 
     // Strokes \\
 
-    // A stroke begins only with a preset the weights can take, so a refused one never opens an undo step
     public void beginStroke() {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
-        BrushMode brushMode = brushManager.getActiveBrush().getMode();
-
-        if (!ToolCanvas.CHARACTER_WEIGHTS.supports(brushMode)) {
-            setStatusMessage(brushMode.getLabel() + EditorSetting.TOOL_MESSAGE_MODE_REFUSED);
-            return;
-        }
 
         if (document != null)
             characterWeightBranch.beginStroke(document);
@@ -548,14 +536,15 @@ public class CharacterEditorManager extends ManagerPackage implements ToolCanvas
         if (document == null || !document.hasOpenStep())
             return;
 
-        if (brushManager.getActiveBrush().getMode() == BrushMode.SMOOTH) {
+        EditorTool tool = toolManager.getTool(ToolCanvas.CHARACTER_WEIGHTS);
+
+        if (tool == EditorTool.SMOOTH) {
             characterWeightBranch.blur(document, vertices, strengths);
             return;
         }
 
-        float target = toolManager.getTool(ToolCanvas.CHARACTER_WEIGHTS) == EditorTool.ERASE ? 0f : weightTarget;
-
-        characterWeightBranch.paint(document, selectedBoneIndex, vertices, strengths, target);
+        characterWeightBranch.paint(
+                document, selectedBoneIndex, vertices, strengths, tool == EditorTool.ERASE ? 0f : weightTarget);
     }
 
     public void endStroke() {
@@ -692,12 +681,6 @@ public class CharacterEditorManager extends ManagerPackage implements ToolCanvas
     void setWeightTarget(float weightTarget) {
 
         this.weightTarget = weightTarget;
-        notifyChanged();
-    }
-
-    void setWeightStrength(float weightStrength) {
-
-        this.weightStrength = weightStrength;
         notifyChanged();
     }
 
@@ -856,12 +839,12 @@ public class CharacterEditorManager extends ManagerPackage implements ToolCanvas
         return weightTarget;
     }
 
-    public float getWeightStrength() {
-        return weightStrength;
+    // How strongly the weight brush strokes, the Strength option of the tool in use
+    public float getBrushStrength() {
+        return toolManager.getOption(ToolCanvas.CHARACTER_WEIGHTS, ToolOption.STRENGTH);
     }
 
     // What the viewport's tools work on: the mesh or its weights while a mesh mode is open, nothing otherwise
-    @Override
     public ToolCanvas getToolCanvas() {
         return mode.getToolCanvas();
     }
@@ -873,7 +856,14 @@ public class CharacterEditorManager extends ManagerPackage implements ToolCanvas
 
     // The weight brush's radius, in window pixels
     public float getBrushRadius() {
-        return toolManager.getSize(ToolCanvas.CHARACTER_WEIGHTS);
+        return toolManager.getOption(ToolCanvas.CHARACTER_WEIGHTS, ToolOption.SIZE);
+    }
+
+    // The transform the mesh's tool drags, null while the tool in use is not one
+    public CharacterEditorTransform getToolTransform() {
+        return mode == CharacterEditorMode.MESH
+                ? CharacterEditorTransform.forTool(toolManager.getTool(ToolCanvas.CHARACTER_MESH))
+                : null;
     }
 
     public int getRevision() {

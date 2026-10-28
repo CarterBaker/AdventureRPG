@@ -21,9 +21,10 @@ class ItemEditBranch extends BranchPackage {
      * and refused, so a saved item can always be loaded by the game. Place
      * adds a cube of the selected part, Wall a double-sided wall on the
      * struck face or, near its edge, standing on that edge, Erase removes the
-     * struck cube or wall, and Brush moves it into the selected part. With a
-     * brush texture chosen, Place, Wall and Brush build with the part using
-     * that texture, creating it when none does.
+     * struck cube or wall, Brush moves it into the selected part and Pick
+     * selects the part it belongs to. With a brush texture chosen, Place, Wall
+     * and Brush build with the part using that texture, creating it when none
+     * does.
      */
 
     // Internal
@@ -51,6 +52,7 @@ class ItemEditBranch extends BranchPackage {
             case WALL -> wall(document, hit, brushTextureName);
             case ERASE -> erase(document, hit);
             case BRUSH -> paint(document, hit, brushTextureName);
+            case PICK -> pick(document, hit);
             default -> {
             }
         }
@@ -89,6 +91,19 @@ class ItemEditBranch extends BranchPackage {
             return;
 
         build(document, brushTextureName, partIndex -> editTarget(document, hit, partIndex));
+    }
+
+    // The part the struck cube or wall belongs to made the selected part, as an eyedropper takes up a color
+    private void pick(ItemDocumentInstance document, SubVoxelHitStruct hit) {
+
+        if (!hit.hasTarget())
+            return;
+
+        SubVoxelModelStruct model = document.getModel();
+
+        itemEditorManager.selectPart(hit.isTargetWall()
+                ? model.getWallPart(hit.getTargetAxis(), hit.getTargetX(), hit.getTargetY(), hit.getTargetZ())
+                : model.getCellPart(hit.getTargetX(), hit.getTargetY(), hit.getTargetZ()));
     }
 
     private boolean editTarget(ItemDocumentInstance document, SubVoxelHitStruct hit, int partIndex) {

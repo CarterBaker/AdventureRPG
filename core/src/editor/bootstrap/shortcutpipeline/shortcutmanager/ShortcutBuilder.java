@@ -20,7 +20,8 @@ class ShortcutBuilder extends BuilderPackage {
     /*
      * Parses one shortcut ARPG file into a ShortcutHandle per entry of its
      * "pressed" and "held". The file names the tool context its shortcuts
-     * work in by its class. Every shortcut needs a name, qualified by the
+     * work in by its class, and "shared" makes them work in every window
+     * that takes the tools too. Every shortcut needs a name, qualified by the
      * file's own; "key" names a key as the editor reads it out, ignoring
      * case, and "modifiers" the modifiers held with it. A pressed shortcut
      * needs a key and the "class" and "method" it runs, with "arg" as the
@@ -46,6 +47,9 @@ class ShortcutBuilder extends BuilderPackage {
         Class<? extends ContextPackage> contextClass = parseContextClass(
                 ArpgUtility.validateString(arpg, "context"), setName);
         ObjectArrayList<ShortcutHandle> shortcutHandles = new ObjectArrayList<>();
+
+        if (ArpgUtility.getBoolean(arpg, "shared", false))
+            shortcutManager.shareContext(contextClass);
 
         if (ArpgUtility.hasArray(arpg, "pressed")) {
 

@@ -10,6 +10,8 @@ import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
+import editor.bootstrap.toolpipeline.util.ToolOption;
+import editor.runtime.EditorSetting;
 import editor.runtime.tools.ToolsSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -21,9 +23,11 @@ public class ToolsMenuSystem extends SystemPackage {
     /*
      * Opens the Tools menu: under the name of what the tools target works on,
      * one row per tool it takes, the tool in use highlighted and every row
-     * carrying its tool's name, and below them the brush size and the brush
-     * preset between their buttons, or a dash where the canvas takes no
-     * brush. Everything is rebuilt only when the tools or the brushes move.
+     * carrying its tool's name; and under that tool's name, one row per
+     * option both it and the canvas have, its value between buttons carrying
+     * the option's name, then, for a tool that strokes, the brush it strokes
+     * with between the buttons that step through the brushes. Everything is
+     * rebuilt only when the tools or the brushes move.
      */
 
     // Internal
@@ -37,6 +41,7 @@ public class ToolsMenuSystem extends SystemPackage {
 
     // Rows
     private ObjectArrayList<ElementInstance> toolElements;
+    private ObjectArrayList<ElementInstance> optionElements;
 
     // Status
     private int shownToolRevision;
@@ -49,6 +54,7 @@ public class ToolsMenuSystem extends SystemPackage {
 
         // Rows
         this.toolElements = new ObjectArrayList<>();
+        this.optionElements = new ObjectArrayList<>();
 
         // Status
         this.shownToolRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -84,29 +90,29 @@ public class ToolsMenuSystem extends SystemPackage {
         shownBrushRevision = brushManager.getRevision();
 
         ToolCanvas canvas = toolManager.getCanvas();
+        EditorTool tool = canvas != null ? toolManager.getTool(canvas) : null;
 
-        refreshTools(canvas);
-        setEntryText(ToolsSetting.ENTRY_TITLE, canvas != null ? canvas.getLabel() : ToolsSetting.TITLE_NO_CANVAS);
-        setEntryText(ToolsSetting.ENTRY_SIZE, describeSize(canvas));
-        setEntryText(ToolsSetting.ENTRY_BRUSH, canvas != null && canvas.takesBrush()
-                ? brushManager.getActiveBrush().getDisplayName()
-                : ToolsSetting.NO_VALUE);
-    }
-
-    // Rows \\
-
-    private void refreshTools(ToolCanvas canvas) {
-
-        for (int i = 0; i < toolElements.size(); i++)
-            menuManager.eject(toolsMenu, ToolsSetting.ENTRY_TOOLS, toolElements.get(i));
-
-        toolElements.clear();
+        clear(toolElements, ToolsSetting.ENTRY_TOOLS);
+        clear(optionElements, ToolsSetting.ENTRY_OPTIONS);
+        setEntryText(
+                ToolsSetting.ENTRY_CANVAS_TITLE,
+                canvas != null ? canvas.getLabel() : ToolsSetting.TITLE_NO_CANVAS);
+        setEntryText(ToolsSetting.ENTRY_TOOL_TITLE, tool != null
+                ? tool.getLabel() + ToolsSetting.TITLE_OPTIONS_SUFFIX
+                : ToolsSetting.TITLE_NO_OPTIONS);
 
         if (canvas == null)
             return;
 
+        refreshTools(canvas, tool);
+        refreshOptions(canvas, tool);
+    }
+
+    // Tools \\
+
+    private void refreshTools(ToolCanvas canvas, EditorTool selected) {
+
         EditorTool[] tools = canvas.getTools();
-        EditorTool selected = toolManager.getTool(canvas);
 
         for (int i = 0; i < tools.length; i++)
             toolElements.add(injectTool(tools[i], tools[i] == selected));
@@ -122,22 +128,62 @@ public class ToolsMenuSystem extends SystemPackage {
                 toolsMenu, ToolsSetting.ENTRY_TOOLS, template,
                 element -> {
                     element.setActionArgOverride(ArpgUtility.toEnumName(tool));
-
-                    ElementInstance label = element.findChildById(ToolsSetting.ELEMENT_TOOL_LABEL);
-
-                    if (label != null)
-                        label.setFontText(tool.getLabel());
+                    setChildText(element, ToolsSetting.ELEMENT_TOOL_LABEL, tool.getLabel());
                 });
     }
 
-    // Status \\
+    // Options \\
 
-    private String describeSize(ToolCanvas canvas) {
+    // Every option both the tool and the canvas have, then the brush for a tool that strokes with one
+    private void refreshOptions(ToolCanvas canvas, EditorTool tool) {
 
-        if (canvas == null || !canvas.takesBrush())
-            return ToolsSetting.NO_VALUE;
+        ToolOption[] options = tool.getOptions();
 
-        return ToolsSetting.SIZE_PREFIX + Math.round(toolManager.getSize(canvas));
+        for (int i = 0; i < options.length; i++)
+            if (canvas.findOption(options[i]) != null)
+                optionElements.add(injectOption(options[i], toolManager.getOption(canvas, options[i])));
+
+        if (tool.isStroke() && canvas.takesBrush())
+            optionElements.add(menuManager.inject(
+                    toolsMenu, ToolsSetting.ENTRY_OPTIONS, ToolsSetting.TEMPLATE_BRUSH_ROW,
+                    element -> setChildText(
+                            element,
+                            ToolsSetting.ELEMENT_BRUSH_LABEL,
+                            brushManager.getActiveBrush().getDisplayName())));
+    }
+
+    private ElementInstance injectOption(ToolOption option, float value) {
+
+        String arg = ArpgUtility.toEnumName(option);
+
+        return menuManager.inject(
+                toolsMenu, ToolsSetting.ENTRY_OPTIONS, ToolsSetting.TEMPLATE_OPTION_ROW,
+                element -> {
+                    setChildText(element, ToolsSetting.ELEMENT_OPTION_LABEL, option.getLabel());
+                    setChildText(element, ToolsSetting.ELEMENT_OPTION_VALUE, formatValue(value));
+                    setChildArg(element, ToolsSetting.ELEMENT_OPTION_LOWER, arg);
+                    setChildArg(element, ToolsSetting.ELEMENT_OPTION_RAISE, arg);
+                });
+    }
+
+    // Whole numbers as they are, fractions to the precision their steps move them by
+    private String formatValue(float value) {
+
+        float precision = EditorSetting.TOOL_OPTION_PRECISION;
+
+        return value == Math.round(value)
+                ? Integer.toString(Math.round(value))
+                : Float.toString(Math.round(value * precision) / precision);
+    }
+
+    // Utility \\
+
+    private void clear(ObjectArrayList<ElementInstance> elements, int entry) {
+
+        for (int i = 0; i < elements.size(); i++)
+            menuManager.eject(toolsMenu, entry, elements.get(i));
+
+        elements.clear();
     }
 
     private void setEntryText(int entry, String text) {
@@ -146,5 +192,21 @@ public class ToolsMenuSystem extends SystemPackage {
 
         if (label != null)
             label.setFontText(text);
+    }
+
+    private void setChildText(ElementInstance element, String childID, String text) {
+
+        ElementInstance child = element.findChildById(childID);
+
+        if (child != null)
+            child.setFontText(text);
+    }
+
+    private void setChildArg(ElementInstance element, String childID, String arg) {
+
+        ElementInstance child = element.findChildById(childID);
+
+        if (child != null)
+            child.setActionArgOverride(arg);
     }
 }

@@ -47,11 +47,10 @@ public class RecorderPanelSystem extends SystemPackage {
      * out of view, and what is being dragged shows where it would land — a
      * span on the lane it would really take, or a line at the moment an edge,
      * a cut or a node would move to — from positions built the first time each
-     * is needed, so neither playback nor a drag allocates; the cut tool shows
-     * the same line where it would cut under the pointer, and its button says
-     * whether it is on. The clock text, the export's progress, a timeline
-     * still growing under a take and a resized timeline refresh a few times a
-     * second.
+     * is needed, so neither playback nor a drag allocates; the Cut tool shows
+     * the same line where it would cut under the pointer. The clock text, the
+     * export's progress, a timeline still growing under a take and a resized
+     * timeline refresh a few times a second.
      */
 
     // Internal
@@ -69,7 +68,6 @@ public class RecorderPanelSystem extends SystemPackage {
     private ElementInstance rangeEndMarker;
     private ElementInstance dragGhost;
     private ElementInstance viewLabel;
-    private ElementInstance cutLabel;
     private ElementInstance progressLabel;
 
     // Panes
@@ -189,7 +187,6 @@ public class RecorderPanelSystem extends SystemPackage {
         this.rangeEndMarker = requireEntryPoint(RecorderSetting.ENTRY_RANGE_END);
         this.dragGhost = requireEntryPoint(RecorderSetting.ENTRY_DRAG_GHOST);
         this.viewLabel = requireEntryPoint(RecorderSetting.ENTRY_VIEW);
-        this.cutLabel = requireEntryPoint(RecorderSetting.ENTRY_CUT_LABEL);
         this.keysPanel = requireEntryPoint(RecorderSetting.ENTRY_KEYS_PANEL);
         this.takesPanel = requireEntryPoint(RecorderSetting.ENTRY_TAKES_PANEL);
         this.clipPanel = requireEntryPoint(RecorderSetting.ENTRY_CLIP_PANEL);
@@ -244,7 +241,6 @@ public class RecorderPanelSystem extends SystemPackage {
 
     private void refreshAll() {
         refreshStatus();
-        refreshTools();
         refreshRecordings();
         refreshSettings();
         refreshTakes();
@@ -285,10 +281,6 @@ public class RecorderPanelSystem extends SystemPackage {
 
     private void refreshStatus() {
         statusLabel.setFontText(recorderManager.getStatusText());
-    }
-
-    private void refreshTools() {
-        cutLabel.setFontText(recorderManager.isCutting() ? RecorderSetting.TEXT_CUT_ON : RecorderSetting.TEXT_CUT_OFF);
     }
 
     private void refreshClock() {

@@ -8,7 +8,6 @@ import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
-import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
@@ -20,21 +19,21 @@ import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ItemEditorManager extends ManagerPackage implements ToolCanvasProvider {
+public class ItemEditorManager extends ManagerPackage {
 
     /*
      * Owns the item editor's shared state — open item meshes, the active item
-     * and brush texture, and the status line. Every Item Editor is one tool
-     * canvas, its tool chosen through ToolManager. Items themselves are ARPG
-     * entries owned by InfoManager: selecting one there opens the mesh it
+     * and brush texture, and the status line. The tool every Item Editor
+     * applies is the one ToolManager keeps for the item. Items themselves are
+     * ARPG entries owned by InfoManager: selecting one there opens the mesh it
      * names here, starting a fresh model when that mesh has no file yet, and
      * new and deleted items go through it, as do their saves, so an item the
      * game could not load is refused there and an item still in use cannot be
-     * deleted. A mesh is saved before the definition naming it, and its file
-     * is only removed once no content names it. Meshes stay open with their
-     * edits until saved, deleted, or the editor closes. New items join the
-     * active item's definition file, or the editor's own when nothing is open.
-     * Disk access and model edits each live in their own branch.
+     * deleted. A mesh is saved before the definition naming it, and its file is
+     * only removed once no content names it. Meshes stay open with their edits
+     * until saved, deleted, or the editor closes. New items join the active
+     * item's definition file, or the editor's own when nothing is open. Disk
+     * access and model edits each live in their own branch.
      */
 
     // Internal
@@ -339,12 +338,6 @@ public class ItemEditorManager extends ManagerPackage implements ToolCanvasProvi
     }
 
     // Tools \\
-
-    // Every Item Editor works on its item
-    @Override
-    public ToolCanvas getToolCanvas() {
-        return ToolCanvas.ITEM;
-    }
 
     public void applyTool(SubVoxelHitStruct hit) {
 

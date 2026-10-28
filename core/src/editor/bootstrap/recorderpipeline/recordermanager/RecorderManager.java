@@ -34,6 +34,9 @@ import editor.bootstrap.recorderpipeline.recording.VideoFormat;
 import editor.bootstrap.recorderpipeline.util.RecordingCurveUtility;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
+import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.dev.DevContext;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -61,8 +64,9 @@ public class RecorderManager extends ManagerPackage {
      * the bin and is laid on the timeline where it was recorded, over every
      * clip it was recorded against. Takes are laid again by dragging them from
      * the bin, and clips are moved by dragging, trimmed by dragging an edge or
-     * at the playhead, cut in two at the playhead or with the cut tool
-     * wherever it is pressed, stamped, muted, given or stripped of channels,
+     * at the playhead, cut in two at the playhead or, with the Cut tool
+     * chosen for the timeline in the Tools panel, wherever it is pressed,
+     * stamped, muted, given or stripped of channels,
      * and removed, each by one method here; what is dragged snaps to the
      * timeline's edges, and the cut tool shows where it would cut under the
      * pointer. A press on the lanes is read once, where it began, for what it
@@ -99,6 +103,7 @@ public class RecorderManager extends ManagerPackage {
 
     // Internal
     private TabManager tabManager;
+    private ToolManager toolManager;
     private WorldManager worldManager;
     private ClockManager clockManager;
     private NpcManager npcManager;
@@ -147,7 +152,6 @@ public class RecorderManager extends ManagerPackage {
     private RecordingDragStruct drag;
 
     // Cut
-    private boolean cutting;
     private int cutHoverClip;
     private float cutHoverTime;
 
@@ -260,6 +264,7 @@ public class RecorderManager extends ManagerPackage {
     @Override
     protected void get() {
         this.tabManager = get(TabManager.class);
+        this.toolManager = get(ToolManager.class);
         this.worldManager = get(WorldManager.class);
         this.clockManager = get(ClockManager.class);
         this.npcManager = get(NpcManager.class);
@@ -939,18 +944,12 @@ public class RecorderManager extends ManagerPackage {
 
     // Cut \\
 
-    // The cut tool turned on or off; while it is on a press on a clip cuts it instead of taking hold of it
-    public void toggleCutTool() {
-
-        this.cutting = !cutting;
-        clearCutHover();
-        setStatus(cutting ? EditorSetting.RECORDER_STATUS_CUT_TOOL_ON : EditorSetting.RECORDER_STATUS_CUT_TOOL_OFF);
-    }
-
     // Where the cut tool would cut with the pointer where it is now, nowhere when it is over no clip
     public void hoverCut(float time, int lane, float secondsPerPixel, boolean snapping) {
 
-        int clipIndex = cutting && canEditTimeline() ? recording.findClipAt(time, lane) : EngineSetting.INDEX_NOT_FOUND;
+        int clipIndex = isCutting() && canEditTimeline()
+                ? recording.findClipAt(time, lane)
+                : EngineSetting.INDEX_NOT_FOUND;
 
         this.cutHoverClip = clipIndex;
 
@@ -1067,7 +1066,7 @@ public class RecorderManager extends ManagerPackage {
 
         int clipIndex = canEditTimeline() ? recording.findClipAt(time, lane) : EngineSetting.INDEX_NOT_FOUND;
 
-        if (cutting && clipIndex != EngineSetting.INDEX_NOT_FOUND) {
+        if (isCutting() && clipIndex != EngineSetting.INDEX_NOT_FOUND) {
             beginDrag(RecorderDragKind.CUT, clipIndex, EngineSetting.INDEX_NOT_FOUND,
                     window, pressX, pressY, time, 0f);
             landCut(time, EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel);
@@ -2714,13 +2713,14 @@ public class RecorderManager extends ManagerPackage {
         return drag;
     }
 
+    // True while the Cut tool is chosen for the timeline; a press on a clip then cuts it instead of taking hold of it
     public boolean isCutting() {
-        return cutting;
+        return toolManager.getTool(ToolCanvas.RECORDER) == EditorTool.CUT;
     }
 
-    // The clip the cut tool is over, -1 for none
+    // The clip the cut tool is over, -1 for none or while it is not chosen
     public int getCutHoverClip() {
-        return cutHoverClip;
+        return isCutting() ? cutHoverClip : EngineSetting.INDEX_NOT_FOUND;
     }
 
     public float getCutHoverTime() {

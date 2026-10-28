@@ -5,7 +5,7 @@ import editor.runtime.EditorSetting;
 public enum BrushShape {
 
     /*
-     * The tip a brush stamps: a disc, a square or a diamond. Each measures
+     * The outline of a brush's tip: a disc, a square or a diamond. Each measures
      * how far an offset lies from the tip's centre in its own metric, so an
      * offset at distance one from the centre lies on the tip's edge whatever
      * its shape. The ordinal is the shape index the brush outline shader

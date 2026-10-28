@@ -87,10 +87,9 @@ public class RecorderSetting {
     public static final int ENTRY_KEY_INSPECTOR = 22;
     public static final int ENTRY_TAKES_PANEL = 23;
     public static final int ENTRY_CLIP_PANEL = 24;
-    public static final int ENTRY_CUT_LABEL = 25;
-    public static final int ENTRY_ASSETS_PANEL = 26;
-    public static final int ENTRY_ASSETS_TITLE = 27;
-    public static final int ENTRY_ASSET_ROWS = 28;
+    public static final int ENTRY_ASSETS_PANEL = 25;
+    public static final int ENTRY_ASSETS_TITLE = 26;
+    public static final int ENTRY_ASSET_ROWS = 27;
 
     // Timeline — positions across the view as a percentage of it; a drag's ghost may reach a view's width past
     // either side, where the lanes' mask hides it
@@ -161,8 +160,6 @@ public class RecorderSetting {
     public static final String TEXT_GESTURE_MOVE_HINT = "Drag it along the clip to move it";
     public static final String TEXT_NODE_SHARED = "Node edits change the take, and every clip of it";
     public static final String TEXT_VIEW_FIT = "Whole timeline";
-    public static final String TEXT_CUT_OFF = "Cut";
-    public static final String TEXT_CUT_ON = "Cutting";
 
     // Text — Keys
     public static final String TEXT_KEYS_TITLE = "Keys";
