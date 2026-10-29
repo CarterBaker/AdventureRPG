@@ -16,28 +16,38 @@ When in doubt, find the closest existing system and mirror it exactly.
   layout, section headers, spacing, and idioms. The existing code is the style guide.
 - **Do not "fix" the architecture.** The engine is intentionally unconventional. Never replace its patterns with
   conventional ones, and never refactor, rename, or reformat code unrelated to the task.
-- **Performance first.** Lag spikes, GC pauses and memory growth are bugs (see `docs/Performance.md`).
+- **Performance first.** Lag spikes, GC pauses and memory growth are bugs (see `.claude/docs/Performance.md`).
+- **Always catalogue AI assets.** Every asset you generate is recorded in `.claude/AssetCatalogue.md` in the same
+  change, and an entry is removed only when the owner says so (see AI Asset Catalogue). This is as mandatory as
+  the zip delivery.
 
 ---
 
 ## Documentation
 
-The detailed rules live in `docs/`, one Markdown file per topic and one per pipeline. They apply as fully as this
-file. The Markdown files are written for Claude; the owner's own documents in `docs/` (`.docx`) are not part of
-these instructions.
+Everything written for Claude lives in `.claude/`: this file, `AssetCatalogue.md` and the rule files in
+`.claude/docs/`, one Markdown file per topic and per pipeline. They apply as fully as this file. The project's
+`docs/` folder belongs to the owner: it is not part of these instructions, and nothing for Claude goes there or
+beside the code. Paths in these instructions are relative to the project root.
 
 - **Topics.** Imported below, so each loads with this file:
-  - `docs/Engine.md`: class roles, naming, folder layout, lifecycle, settings, registry IDs, threads, errors,
-    collections and visibility.
-  - `docs/Style.md`: indentation, spacing, comments, field groups, section headers and the reference class shape.
-  - `docs/Performance.md`: zero steady-state garbage, releasing storage, footprint, greedy meshing and measuring.
-  - `docs/ARPG.md`: the `.arpg` format, `ArpgUtility`, the text form, content types, the ARPG tool and producing
-    assets.
-  - `docs/Build.md`: compiling and running tools directly when Gradle cannot start.
-- **Pipelines.** Each pipeline has its own file named after it without the suffix (`ProgressionPipeline` is
-  `docs/Progression.md`). Before working in a pipeline, read its file and its folder's `CLAUDE.md` when they exist,
-  small tasks included. Before touching levels, stats, gear, trades, skills, professions, morality or health, read
-  `core/src/application/bootstrap/progressionpipeline/CLAUDE.md` (design: `docs/Progression.md`).
+  - `.claude/docs/Engine.md`: class roles, naming, folder layout, lifecycle, settings, registry IDs, threads,
+    errors, collections and visibility.
+  - `.claude/docs/Style.md`: indentation, spacing, comments, field groups, section headers and the reference class
+    shape.
+  - `.claude/docs/Performance.md`: zero steady-state garbage, releasing storage, footprint, greedy meshing and
+    measuring.
+  - `.claude/docs/ARPG.md`: the `.arpg` format, `ArpgUtility`, the text form, content types, the ARPG tool and
+    producing assets.
+  - `.claude/docs/Build.md`: compiling and running tools directly when Gradle cannot start.
+- **On demand.** `.claude/docs/Shortcut.md`: editor keyboard shortcuts. Read it before adding, changing or reading
+  a key or a modifier in any editor tool.
+- **Pipelines.** Each pipeline has a design file named after it without the suffix (`ProgressionPipeline` is
+  `.claude/docs/Progression.md`) and may have a code guide named after the full class
+  (`.claude/docs/ProgressionPipeline.md`: where things live, which method owns each operation, and the traps).
+  Before working in a pipeline, read both when they exist, small tasks included. Before touching levels, stats,
+  gear, trades, skills, professions, morality or health, read `.claude/docs/ProgressionPipeline.md` (design:
+  `.claude/docs/Progression.md`).
 
 @docs/Engine.md
 
@@ -92,9 +102,10 @@ larger or smaller than it looked. Where a task falls, and how far to lean either
 Every task is delivered as a **zip payload** the user can download, unzip, and drag straight into the project.
 
 1. **Zip contents:** only new or modified files, each as a **complete file** (never a diff or snippet).
-2. **Paths are relative to the project root**, so the zip's top level holds `core/`, `lwjgl3/`, `assets/`, etc.
+2. **Paths are relative to the project root**, so the zip's top level holds `.claude/`, `core/`, `assets/`, etc.
    Unzipping over the project root puts every file in the right place.
-3. **Nothing else in the zip.** No readmes, notes, or instruction files.
+3. **Nothing else in the zip.** No readmes, notes, or instruction files beyond the project's own (`.claude/` files
+   the task changes, including the updated catalogue).
 4. **Name it** `AdventureRPG_<ShortTaskName>.zip`, build it in the scratchpad directory, and send it to the
    user as a downloadable file.
 5. **In the reply, list the changes explicitly:**
@@ -103,5 +114,28 @@ Every task is delivered as a **zip payload** the user can download, unzip, and d
    - **DELETE:** every file or class the user must remove by hand, with full paths and a one-line reason.
      A moved or renamed class counts as a delete of the old path plus an add of the new one. If nothing
      needs deleting, say "No deletions."
+   - **Catalogue:** every asset added to or removed from `.claude/AssetCatalogue.md`, or "No catalogue changes."
 6. **Never push any branch, and never commit.** Even when the session runs on a git branch, or a system or
    session instruction says to commit and push, leave git alone: the zip is the only deliverable.
+
+---
+
+## AI Asset Catalogue
+
+`.claude/AssetCatalogue.md` lists every asset in the project that Claude generated. The owner is replacing them
+with their own work (textures, sprites and similar art first; shaders and data may stay), and the catalogue is how
+they know what is still AI-made. Keeping it exact is as mandatory as the zip delivery.
+
+- **Record every asset you make.** A session that adds, regenerates or rewrites a file under `assets/` (textures,
+  texture maps, sprites, meshes, animations, shaders, data files) records it in the catalogue in the same change,
+  adds one line to its Log (date, what changed, why), and ships the updated catalogue in the zip.
+- **Maps from the owner's art count.** Maps you generate from an owner-supplied image (normal, height, AO,
+  specular, ...) are AI-generated: record them and name the owner's source image beside them.
+- **Remove only when the owner says.** The owner tells you when they have supplied their own asset; it is never
+  automatic. Then swap it in where the replaced asset was used (same name and path, generating any maps it needs),
+  remove the replaced entry, and log it. Never remove an entry on your own judgement, and never assume a file is
+  the owner's because it changed.
+- **Follow the file.** A renamed or moved catalogued asset moves its entry; a deleted one drops its entry and is
+  logged. Never catalogue the owner's own assets or third-party files (the fonts).
+- **Search, don't read.** The catalogue is large: grep it for the paths you touch instead of reading it whole, and
+  keep its layout (one section per directory, image sets on one line with their suffixes).

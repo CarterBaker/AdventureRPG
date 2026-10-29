@@ -1,7 +1,7 @@
 # Editor Shortcuts
 
 How the editor's keyboard shortcuts work and how to add one. Read it before adding, changing or reading a key or a
-modifier in any editor tool. The root `CLAUDE.md` still applies in full.
+modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
 
 ---
 
@@ -74,7 +74,8 @@ modifier in any editor tool. The root `CLAUDE.md` still applies in full.
    (`EditorSetting.RECORDER_SHORTCUT_*`, `CharacterEditorSetting.SHORTCUT_*`), resolve it once in `start()` with
    `ShortcutManager.getShortcutIDFromShortcutName`, and read it with `ShortcutManager.isHeld(id, window)`.
 3. **A new tool.** Add `assets/shortcuts/<Tool>.arpg` naming the tool's context class. Nothing else registers it.
-4. Seal the file with the ARPG tool (`docs/ARPG.md`) and boot the editor once: every action is resolved at load.
+4. Seal the file with the ARPG tool (`.claude/docs/ARPG.md`) and boot the editor once: every action is resolved at
+   load.
 
 ---
 

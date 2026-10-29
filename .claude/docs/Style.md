@@ -1,7 +1,7 @@
 # Style
 
 How code is laid out: indentation, spacing, comments, field groups and section headers, with the reference shape
-every class follows. Read it before writing or changing any Java code. The root `CLAUDE.md` still applies in full.
+every class follows. Read it before writing or changing any Java code. `.claude/CLAUDE.md` still applies in full.
 
 ---
 

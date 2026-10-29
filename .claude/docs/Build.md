@@ -1,7 +1,7 @@
 # Build
 
 How to compile and run the project's tools when Gradle cannot start. Read it when a change needs compiling or a tool
-needs running and `gradlew` fails. The root `CLAUDE.md` still applies in full.
+needs running and `gradlew` fails. `.claude/CLAUDE.md` still applies in full.
 
 ---
 

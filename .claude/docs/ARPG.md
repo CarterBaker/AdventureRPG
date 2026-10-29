@@ -1,7 +1,7 @@
 # ARPG Data Files
 
 The `.arpg` file format, the code that reads and writes it, the text form, the content types and the ARPG tool.
-Read it before reading, writing or producing any `.arpg` file or touching `engine.util.arpg`. The root `CLAUDE.md`
+Read it before reading, writing or producing any `.arpg` file or touching `engine.util.arpg`. `.claude/CLAUDE.md`
 still applies in full.
 
 ---
@@ -127,7 +127,7 @@ Wrap a path containing spaces in single quotes inside `--args`
 file back and compare it with the source before reporting success. `convert` also migrates old user files: point
 it at `Documents/My Games/AdventureRPG`.
 
-If Gradle cannot start, run the tool from a direct compile (see `docs/Build.md`).
+If Gradle cannot start, run the tool from a direct compile (see `.claude/docs/Build.md`).
 
 ## Producing or changing an asset on request
 

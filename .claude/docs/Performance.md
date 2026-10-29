@@ -1,7 +1,7 @@
 # Performance
 
 The rules that keep frame time flat and memory small. Read it before any change to rendering, meshing, world
-generation, per-frame or async work, or anything that allocates or stores bulk data. The root `CLAUDE.md` still
+generation, per-frame or async work, or anything that allocates or stores bulk data. `.claude/CLAUDE.md` still
 applies in full.
 
 ---

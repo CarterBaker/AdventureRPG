@@ -1,7 +1,7 @@
 # Engine Rules
 
 The class roles, layout, lifecycle, settings, registry and conventions every Java change follows. Read it before
-writing or changing any Java code. The root `CLAUDE.md` still applies in full.
+writing or changing any Java code. `.claude/CLAUDE.md` still applies in full.
 
 ---
 
@@ -29,7 +29,7 @@ writing or changing any Java code. The root `CLAUDE.md` still applies in full.
   - Put each constant in exactly one settings file. If more than one context needs it, it belongs in
     `EngineSetting`.
 - **Data-driven content** lives in `.arpg` files and goes through the Loader/Builder pattern, with every read,
-  write and validation routed through `ArpgUtility` (see `docs/ARPG.md`). There is no Gson and no JSON
+  write and validation routed through `ArpgUtility` (see `.claude/docs/ARPG.md`). There is no Gson and no JSON
   library; never add one.
 - **Registry IDs are assigned, never hashed.** A manager owns a `name2ID` map (`RegistryUtility.createNameIndex()`)
   and an `ID2Handle` `ObjectArrayList` palette (`RegistryUtility.createPalette()`, slot 0 reserved as the sentinel).

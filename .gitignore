@@ -172,3 +172,4 @@ Thumbs.db
 *.rtf
 /projects
 /prompts
+/.claude/prompts

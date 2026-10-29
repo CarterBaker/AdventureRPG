@@ -1,7 +1,7 @@
 # Progression Pipeline — Instructions for Claude
 
-The progression and statistics system. The design and every formula are in `docs/Progression.md`. This file says
-where things live, which method owns each operation, and the traps. The root `CLAUDE.md` still applies in full.
+The progression and statistics system. The design and every formula are in `.claude/docs/Progression.md`. This file
+says where things live, which method owns each operation, and the traps. `.claude/CLAUDE.md` still applies in full.
 
 ---
 
