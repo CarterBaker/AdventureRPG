@@ -23,7 +23,8 @@ class WeatherMapBufferSystem extends SystemPackage {
     /*
      * Packs each grid's weather window into its WeatherMapData UBO in
      * LATE_UPDATE. Cloud archetypes in the window become altitude-ordered
-     * layers with their settings in world blocks, and every cell packs
+     * layers with their settings in world blocks, the share of rain each
+     * layer carries packed four layers to a vec4, and every cell packs
      * per-layer coverage and density into one ivec4.
      */
 
@@ -43,6 +44,7 @@ class WeatherMapBufferSystem extends SystemPackage {
     private Vector4[] layerShape;
     private Vector4[] layerNoise;
     private Vector4[] layerSurface;
+    private Vector4[] layerPrecipitation;
 
     // Scratch
     private final WeatherWindowStruct windowScratch = new WeatherWindowStruct();
@@ -52,6 +54,7 @@ class WeatherMapBufferSystem extends SystemPackage {
     private float[] cellCoverage;
     private float[] cellDensityWeighted;
     private float[] cellDensityWeight;
+    private float[] slotPrecipitation;
 
     // Base \\
 
@@ -73,11 +76,13 @@ class WeatherMapBufferSystem extends SystemPackage {
         this.layerShape = allocate(maxLayers);
         this.layerNoise = allocate(maxLayers);
         this.layerSurface = allocate(maxLayers);
+        this.layerPrecipitation = allocate(maxLayers / EngineSetting.WEATHER_MAP_LAYERS_PER_COMPONENT);
 
         // Scratch
         this.cellCoverage = new float[maxLayers];
         this.cellDensityWeighted = new float[maxLayers];
         this.cellDensityWeight = new float[maxLayers];
+        this.slotPrecipitation = new float[maxLayers];
     }
 
     @Override
@@ -126,6 +131,7 @@ class WeatherMapBufferSystem extends SystemPackage {
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_SHAPE, layerShape);
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_NOISE, layerNoise);
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_SURFACE, layerSurface);
+        weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_PRECIPITATION, layerPrecipitation);
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_MAP_ORIGIN, mapOrigin);
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_DOME, dome);
         weatherMapUBO.updateUniform(EngineSetting.UNIFORM_WEATHER_LAYER_COUNT, layerCount);
@@ -231,6 +237,27 @@ class WeatherMapBufferSystem extends SystemPackage {
                     shapeOriginScratch.y,
                     cloud.getCoverageBias(),
                     cloud.getSilhouetteSoftness());
+        }
+
+        writeLayerPrecipitation();
+    }
+
+    private void writeLayerPrecipitation() {
+
+        Arrays.fill(slotPrecipitation, 0f);
+
+        for (int slot = 0; slot < layerCount; slot++)
+            slotPrecipitation[slot] = layerHandles[slot].getPrecipitation();
+
+        for (int i = 0; i < layerPrecipitation.length; i++) {
+
+            int first = i * EngineSetting.WEATHER_MAP_LAYERS_PER_COMPONENT;
+
+            layerPrecipitation[i].set(
+                    slotPrecipitation[first],
+                    slotPrecipitation[first + 1],
+                    slotPrecipitation[first + 2],
+                    slotPrecipitation[first + 3]);
         }
     }
 

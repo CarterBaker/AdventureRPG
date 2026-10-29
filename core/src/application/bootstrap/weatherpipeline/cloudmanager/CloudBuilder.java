@@ -20,6 +20,8 @@ class CloudBuilder extends BuilderPackage {
      * depth, and "baseAltitudeKm" its base above sea level, all in real-world
      * kilometres so the same archetype sits correctly in a world of any
      * scale. "elongation" stretches the width along the prevailing flow.
+     * "precipitation" is the share of a weather's rain the archetype carries:
+     * only clouds that carry some ever rain, and only beneath themselves.
      */
 
     // Internal
@@ -58,6 +60,8 @@ class CloudBuilder extends BuilderPackage {
                 arpg, "silhouetteSoftness", EngineSetting.DEFAULT_CLOUD_SILHOUETTE_SOFTNESS);
         float baseAltitudeKm = parseFloat(arpg, "baseAltitudeKm", EngineSetting.DEFAULT_CLOUD_BASE_ALTITUDE_KM);
         float driftSpeedScale = parseFloat(arpg, "driftSpeedScale", EngineSetting.DEFAULT_CLOUD_DRIFT_SPEED_SCALE);
+        float precipitation = parseUnitFloat(
+                arpg, cloudName, "precipitation", EngineSetting.DEFAULT_CLOUD_PRECIPITATION);
 
         CloudData cloudData = new CloudData(
                 cloudName,
@@ -74,7 +78,8 @@ class CloudBuilder extends BuilderPackage {
                 coverageBias,
                 silhouetteSoftness,
                 baseAltitudeKm,
-                driftSpeedScale);
+                driftSpeedScale,
+                precipitation);
 
         CloudHandle cloudHandle = create(CloudHandle.class);
         cloudHandle.constructor(cloudData);

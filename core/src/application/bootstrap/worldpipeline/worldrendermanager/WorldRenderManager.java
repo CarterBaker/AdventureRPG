@@ -61,13 +61,14 @@ public class WorldRenderManager extends ManagerPackage {
      * deferred lighting, with the grid's light and sky data and the scene it
      * refracts and reflects bound on each push. Every other material whose
      * shader reads the cloud noise, for the clouds' shadows, has it bound on
-     * each push. pushSurfaceModel() and pushWaterModel() are the single call
-     * sites for both, shared by chunks, megas and macros. Trees are entries
-     * of their own beside the terrain — a chunk's full trees, a mega's
-     * stand-ins — drawn whenever the terrain they belong to is, so a tree
-     * that changes reuploads only itself. Until a mega's stand-ins land, the
-     * trees its chunks still hold stand in for them, so no forest blinks out
-     * as the player walks away from it.
+     * each push with the grid's sunlight and weather map, since the shared
+     * buffers behind those blocks are never written. pushSurfaceModel() and
+     * pushWaterModel() are the single call sites for both, shared by chunks,
+     * megas and macros. Trees are entries of their own beside the terrain —
+     * a chunk's full trees, a mega's stand-ins — drawn whenever the terrain
+     * they belong to is, so a tree that changes reuploads only itself. Until
+     * a mega's stand-ins land, the trees its chunks still hold stand in for
+     * them, so no forest blinks out as the player walks away from it.
      */
 
     // Internal
@@ -391,19 +392,26 @@ public class WorldRenderManager extends ManagerPackage {
                 if (entry.usesOceanData)
                     pushWaterModel(entry.modelInstance, grid, window);
                 else
-                    pushSurfaceModel(entry.modelInstance, worldFbo, window);
+                    pushSurfaceModel(entry.modelInstance, grid, worldFbo, window);
             }
         }
     }
 
     // Surface \\
 
-    void pushSurfaceModel(ModelInstance modelInstance, FBOInstance worldFbo, WindowInstance window) {
+    void pushSurfaceModel(
+            ModelInstance modelInstance,
+            GridInstance grid,
+            FBOInstance worldFbo,
+            WindowInstance window) {
 
         MaterialInstance material = modelInstance.getMaterial();
 
-        if (material.getUniform(EngineSetting.UNIFORM_CLOUD_NOISE) != null)
+        if (material.getUniform(EngineSetting.UNIFORM_CLOUD_NOISE) != null) {
             material.setUniform(EngineSetting.UNIFORM_CLOUD_NOISE, cloudManager.getCloudNoiseTexture());
+            material.setUBO(grid.getSunLightUBO());
+            material.setUBO(grid.getWeatherMapUBO());
+        }
 
         renderManager.pushRenderCall(modelInstance, worldFbo, EngineSetting.DEFAULT_RENDER_DEPTH, window);
     }

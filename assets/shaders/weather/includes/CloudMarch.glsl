@@ -6,11 +6,13 @@
 #include "includes/WeatherMapUtility.glsl"
 #include "weather/includes/CloudDome.glsl"
 #include "weather/includes/CloudVisual.glsl"
+#include "weather/includes/CloudRain.glsl"
 
 /*
- * Finds where a ray from the camera first meets solid cloud, and the fog
- * around a camera standing inside one. A layer is a column of cloud over its
- * shape field (WeatherMapUtility), so nothing is integrated along the ray: it
+ * Finds where a ray from the camera first meets solid cloud, the rain shafts
+ * hanging beneath rain-bearing cloud in front of it, and the fog around a
+ * camera standing inside one. A layer is a column of cloud over its shape
+ * field (WeatherMapUtility), so no cloud is integrated along the ray: it
  * steps through the layer's shell reading only the cheap, unbumped column,
  * which always contains the true cloud, until it lands inside one; there it
  * checks the bumped column and bisects onto the true surface. Every cloud is
@@ -23,16 +25,16 @@
  * one crisp edge rather than a dither of hits and misses. A camera inside a
  * cloud sees no surfaces at all, only the cloud's fog, read from the same
  * bumped column the surface is drawn from, so the fog starts exactly where
- * the camera passes through the surface. The engine prepends every include to
- * every stage of a program, so nothing here touches fragment-only built-ins;
- * callers pass the jitter in.
+ * the camera passes through the surface. Only the rain is integrated, in a
+ * short march under the rain clouds' undersides (CloudRain). The engine
+ * prepends every include to every stage of a program, so nothing here
+ * touches fragment-only built-ins; callers pass the jitter in.
  */
 
 const int   CLOUD_MARCH_STEP_BUDGET  = 64;
 const int   CLOUD_MARCH_REFINE_STEPS = 5;
 
 const float CLOUD_MARCH_EPSILON                = 0.001;
-const float CLOUD_MARCH_MIN_THICKNESS_BLOCKS   = 1.0;
 const float CLOUD_MARCH_STEP_THICKNESS_RATIO   = 0.15;
 const float CLOUD_MARCH_STEP_FEATURE_RATIO     = 0.5;
 const float CLOUD_MARCH_DISTANCE_STEP_RATIO    = 0.02;
@@ -45,23 +47,14 @@ const float CLOUD_MARCH_JITTER_SCALE           = 0.25;
 const float CLOUD_MARCH_NORMAL_OFFSET_RATIO    = 0.2;
 const float CLOUD_MARCH_UNBOUNDED_DISTANCE     = 1.0e30;
 
+const int   RAIN_SHAFT_STEPS      = 24;
+const float RAIN_SHAFT_HAZE_SHARE = 0.7;
+
 const float CLOUD_FOG_DENSITY_PER_BLOCK  = 0.15;
 const float CLOUD_FOG_EDGE_DENSITY_SHARE = 0.3;
 const float CLOUD_FOG_EDGE_BLOCKS        = 4.0;
 
 // ── Layers ─────────────────────────────────────────────────────────────────
-
-float resolveCloudLayerBaseAltitude(int layer) {
-    return u_weatherLayerShape[layer].x - u_weatherDome.y;
-}
-
-float resolveCloudLayerCurvature(int layer) {
-    return resolveCloudDomeCurvature(resolveCloudLayerBaseAltitude(layer));
-}
-
-float resolveCloudLayerThickness(int layer) {
-    return max(u_weatherLayerShape[layer].y, CLOUD_MARCH_MIN_THICKNESS_BLOCKS);
-}
 
 // The step a layer needs near the camera to resolve both its depth and its
 // clouds.
@@ -269,6 +262,60 @@ vec3 shadeCloudHit(vec3 rayDir, int layer, CloudHit hit) {
     return shadeCloudSurface(
         resolveCloudLight(rayDir), resolveCloudLayerAlbedo(layer), resolveCloudSurfaceNormal(layer, rayDir, hit),
         clamp(columnHeight, 0.0, 1.0), column.crease, u_weatherLayerShape[layer].w, length(rayDir.xz) * hit.t);
+}
+
+// ── Rain Shafts ────────────────────────────────────────────────────────────
+
+// Rain falling beneath the rain-bearing clouds along the ray, out to tLimit:
+// where it begins (x) and its optical depth (y). Only the stretch of the ray
+// below some rain cloud's highest underside is walked, in steps that lengthen
+// with distance from the start of that stretch, offset per pixel by the
+// caller's jitter. Far shafts thin into the haze as their clouds do.
+vec2 resolveRainShaft(vec3 rayDir, float tLimit, float jitter) {
+    int   layerCount = min(u_weatherLayerCount, WEATHER_MAP_MAX_LAYERS);
+    float tEnter     = CLOUD_DOME_NO_HIT;
+    float tExit      = 0.0;
+
+    for (int layer = 0; layer < layerCount; layer++) {
+        if (resolveCloudLayerPrecipitation(layer) <= CLOUD_MARCH_EPSILON)
+        continue;
+
+        float ceiling = resolveCloudLayerBaseAltitude(layer)
+        + resolveCloudLayerUndersideCeiling(layer) * resolveCloudLayerThickness(layer);
+        vec2  below;
+
+        if (!intersectCloudDome(ceiling, resolveCloudLayerCurvature(layer), rayDir, below) || below.y <= 0.0)
+        continue;
+
+        tEnter = min(tEnter, max(below.x, 0.0));
+        tExit  = max(tExit, min(below.y, tLimit));
+    }
+
+    if (tExit <= tEnter)
+    return vec2(0.0);
+
+    float span     = tExit - tEnter;
+    float stepNorm = span / float(RAIN_SHAFT_STEPS * RAIN_SHAFT_STEPS);
+    float start    = tExit;
+    float depth    = 0.0;
+
+    for (int s = 0; s < RAIN_SHAFT_STEPS; s++) {
+        float along = (float(s) + jitter) / float(RAIN_SHAFT_STEPS);
+        float t     = tEnter + span * along * along;
+        float dt    = float(2 * s + 1) * stepNorm;
+        vec3  point = rayDir * t;
+        float cover = resolveCloudRainCover(point, vec2(0.0));
+
+        if (cover <= CLOUD_MARCH_EPSILON)
+        continue;
+
+        float haze = resolveCloudHaze(length(point.xz)) * RAIN_SHAFT_HAZE_SHARE;
+
+        start  = min(start, max(t - dt * 0.5, tEnter));
+        depth += cover * CLOUD_RAIN_SHAFT_DENSITY_PER_BLOCK * (1.0 - haze) * dt;
+    }
+
+    return depth > 0.0 ? vec2(start, depth) : vec2(0.0);
 }
 
 // ── Fog ────────────────────────────────────────────────────────────────────

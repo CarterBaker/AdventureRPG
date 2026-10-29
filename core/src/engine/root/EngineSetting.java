@@ -575,6 +575,7 @@ public class EngineSetting {
     public static final String UNIFORM_WEATHER_LAYER_COLOR = "u_weatherLayerColor";
     public static final String UNIFORM_WEATHER_LAYER_COUNT = "u_weatherLayerCount";
     public static final String UNIFORM_WEATHER_LAYER_NOISE = "u_weatherLayerNoise";
+    public static final String UNIFORM_WEATHER_LAYER_PRECIPITATION = "u_weatherLayerPrecipitation";
     public static final String UNIFORM_WEATHER_LAYER_SHAPE = "u_weatherLayerShape";
     public static final String UNIFORM_WEATHER_LAYER_SURFACE = "u_weatherLayerSurface";
     public static final String UNIFORM_WEATHER_MAP_ORIGIN = "u_weatherMapOrigin";
@@ -2042,6 +2043,7 @@ public class EngineSetting {
     public static final float DEFAULT_CLOUD_ELONGATION = 1.5f;
     public static final float DEFAULT_CLOUD_FULLNESS = 0.7f;
     public static final float DEFAULT_CLOUD_NOISE_WARP_STRENGTH = 0.6f;
+    public static final float DEFAULT_CLOUD_PRECIPITATION = 0.0f;
     public static final float DEFAULT_CLOUD_SATURATION = 1.0f;
     public static final float DEFAULT_CLOUD_SCALE_KM = 2.0f;
     public static final float DEFAULT_CLOUD_SILHOUETTE_SOFTNESS = 0.08f;

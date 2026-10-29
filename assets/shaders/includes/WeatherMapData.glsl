@@ -41,6 +41,9 @@ uniform sampler2D u_cloudNoise;
 // weatherLayerSurface: xy = shape noise origin in blocks, already carried by
 //                      the flow and wrapped into the shape period,
 //                      z = coverage bias, w = silhouette softness
+// weatherLayerPrecipitation: the share of a weather's rain each layer
+//                      carries, 0 for a cloud that never rains; layer n in
+//                      vector n / 4, component n % 4
 // weatherMapOrigin:    xy = offset from a position to its place on the window
 //                      in blocks, z = cell size in blocks, w = shape period —
 //                      the blocks after which every layer's shape noise
@@ -55,6 +58,7 @@ layout(std140) uniform WeatherMapData {
     vec4  u_weatherLayerShape[WEATHER_MAP_MAX_LAYERS];
     vec4  u_weatherLayerNoise[WEATHER_MAP_MAX_LAYERS];
     vec4  u_weatherLayerSurface[WEATHER_MAP_MAX_LAYERS];
+    vec4  u_weatherLayerPrecipitation[WEATHER_MAP_MAX_LAYERS / WEATHER_MAP_LAYERS_PER_COMPONENT];
     vec4  u_weatherMapOrigin;
     vec2  u_weatherDome;
     int   u_weatherLayerCount;

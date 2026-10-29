@@ -19,8 +19,9 @@
  * is its horizontal offset, so the map slides across the dome with the flow.
  */
 
-const float CLOUD_DOME_EPSILON = 0.0001;
-const float CLOUD_DOME_NO_HIT  = 1.0e30;
+const float CLOUD_DOME_EPSILON              = 0.0001;
+const float CLOUD_DOME_NO_HIT               = 1.0e30;
+const float CLOUD_DOME_MIN_THICKNESS_BLOCKS = 1.0;
 
 float resolveCloudDomeCameraAltitude() {
     return u_cameraPosition.y - u_weatherDome.y;
@@ -129,6 +130,27 @@ vec3 resolveCloudDomeNormal(vec3 relativePosition, float curvature) {
         2.0 * curvature * relativePosition.x,
         1.0,
         2.0 * curvature * relativePosition.z));
+}
+
+// ── Layers ─────────────────────────────────────────────────────────────────
+
+float resolveCloudLayerBaseAltitude(int layer) {
+    return u_weatherLayerShape[layer].x - u_weatherDome.y;
+}
+
+float resolveCloudLayerCurvature(int layer) {
+    return resolveCloudDomeCurvature(resolveCloudLayerBaseAltitude(layer));
+}
+
+float resolveCloudLayerThickness(int layer) {
+    return max(u_weatherLayerShape[layer].y, CLOUD_DOME_MIN_THICKNESS_BLOCKS);
+}
+
+// World height of a point heightFraction up a layer, over a ground point
+// horizontalOffset away from the camera, as the dome bends it down there.
+float resolveCloudLayerWorldHeight(int layer, float heightFraction, vec2 horizontalOffset) {
+    return u_weatherLayerShape[layer].x + heightFraction * resolveCloudLayerThickness(layer)
+    - resolveCloudLayerCurvature(layer) * dot(horizontalOffset, horizontalOffset);
 }
 
 #endif

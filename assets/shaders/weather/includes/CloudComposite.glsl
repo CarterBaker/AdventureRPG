@@ -5,7 +5,9 @@
  * Lays the weather pass's clouds over a surface another pass draws. Beside
  * its premultiplied cloud color, the weather pass writes a distance target:
  * x = distance along the view ray to the cloud surface it drew in that pixel,
- * y = density per block of the fog around a camera standing inside a cloud.
+ * y = density per block of the fog around a camera standing inside a cloud,
+ * z and w = where the rain shafts in front of that cloud begin along the ray
+ * and their optical depth, which the precipitation pass lays (CloudRain).
  * Clouds are solid, so a surface takes exactly the clouds standing in front
  * of it. The weather target is drawn at reduced resolution, so each of the
  * four texels around a pixel counts only when its own cloud is nearer than

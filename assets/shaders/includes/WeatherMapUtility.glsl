@@ -137,6 +137,12 @@ vec2 resolveCloudLayerRepeats(int layer) {
     return max(floor(lattice / CLOUD_NOISE_SHAPE_CELLS + 0.5), vec2(1.0));
 }
 
+// Share of a weather's rain a layer carries, 0 for a cloud that never rains.
+float resolveCloudLayerPrecipitation(int layer) {
+    vec4 shares = u_weatherLayerPrecipitation[layer / WEATHER_MAP_LAYERS_PER_COMPONENT];
+    return shares[layer % WEATHER_MAP_LAYERS_PER_COMPONENT];
+}
+
 float resolveCloudLayerFeatureSize(int layer) {
     return u_weatherMapOrigin.w / (resolveCloudLayerRepeats(layer).y * CLOUD_NOISE_SHAPE_CELLS);
 }

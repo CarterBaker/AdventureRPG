@@ -6,11 +6,13 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
+import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
 import application.runtime.postprocessing.PostEffectsSystem;
 import application.runtime.water.WaterSystem;
 import application.runtime.world.WorldSystem;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
 public class PrecipitationSystem extends SystemPackage {
@@ -24,7 +26,10 @@ public class PrecipitationSystem extends SystemPackage {
      * hard, and where it is sheltered are all resolved per grid by
      * PrecipitationManager. Drops stop at the water surface too, read from the
      * water target's depth, and nothing falls while the camera is under the
-     * sea.
+     * sea. Drops fall only beneath the rain-bearing clouds of the grid's
+     * weather map, read through the cloud noise, and the rain shafts the
+     * weather pass writes into its distance target are laid beneath them, so
+     * that target is rendered first.
      */
 
     // Internal
@@ -34,6 +39,8 @@ public class PrecipitationSystem extends SystemPackage {
     private PostEffectsSystem postEffectsSystem;
     private WorldSystem worldSystem;
     private WaterSystem waterSystem;
+    private WeatherSystem weatherSystem;
+    private CloudManager cloudManager;
 
     // Render Target
     private PassInstance precipitationPass;
@@ -49,6 +56,8 @@ public class PrecipitationSystem extends SystemPackage {
         this.postEffectsSystem = get(PostEffectsSystem.class);
         this.worldSystem = get(WorldSystem.class);
         this.waterSystem = get(WaterSystem.class);
+        this.weatherSystem = get(WeatherSystem.class);
+        this.cloudManager = get(CloudManager.class);
     }
 
     @Override
@@ -60,6 +69,15 @@ public class PrecipitationSystem extends SystemPackage {
         MaterialInstance mat = precipitationPass.getModelInstance().getMaterial();
         mat.setUniform(RuntimeSetting.UNIFORM_SCENE_DEPTH, worldSystem.getWorldFbo().getDepthTexture());
         mat.setUniform(RuntimeSetting.UNIFORM_WATER_DEPTH, waterSystem.getWaterFbo().getDepthTexture());
+        mat.setUniform(
+                RuntimeSetting.UNIFORM_CLOUD_DISTANCE,
+                weatherSystem.getWeatherFbo().getColorTexture(RuntimeSetting.ATTACHMENT_DISTANCE));
+        mat.setUniform(EngineSetting.UNIFORM_CLOUD_NOISE, cloudManager.getCloudNoiseTexture());
+    }
+
+    @Override
+    protected void update() {
+        renderManager.ensureFboRendered(weatherSystem.getWeatherFbo(), context.getWindow());
     }
 
     @Override
@@ -90,6 +108,7 @@ public class PrecipitationSystem extends SystemPackage {
         mat.setUBO(grid.getTimeDataUBO());
         mat.setUBO(grid.getSkyColorUBO());
         mat.setUBO(grid.getPrecipitationDataUBO());
+        mat.setUBO(grid.getWeatherMapUBO());
     }
 
     // Accessible \\

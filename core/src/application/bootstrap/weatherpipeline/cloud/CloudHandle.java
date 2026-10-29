@@ -84,6 +84,10 @@ public class CloudHandle extends HandlePackage {
         return cloudData.getDriftSpeedScale();
     }
 
+    public float getPrecipitation() {
+        return cloudData.getPrecipitation();
+    }
+
     // Cloud Type Registry \\
 
     public void assignCloudTypeIndex(int cloudTypeIndex) {

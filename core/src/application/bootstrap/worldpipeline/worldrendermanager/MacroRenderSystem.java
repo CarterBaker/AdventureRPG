@@ -237,7 +237,7 @@ class MacroRenderSystem extends SystemPackage {
                 continue;
 
             refreshCoverage(macro, grid);
-            worldRenderManager.pushSurfaceModel(macro.getModelInstance(), worldFbo, window);
+            worldRenderManager.pushSurfaceModel(macro.getModelInstance(), grid, worldFbo, window);
         }
     }
 

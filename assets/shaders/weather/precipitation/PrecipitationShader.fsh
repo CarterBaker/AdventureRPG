@@ -9,9 +9,16 @@ out vec4 fragColor;
 #include "includes/SkyColorData.glsl"
 #include "includes/PrecipitationData.glsl"
 #include "includes/NoiseUtility.glsl"
+#include "includes/WeatherMapData.glsl"
+#include "includes/WeatherMapUtility.glsl"
+#include "weather/includes/CloudDome.glsl"
+#include "weather/includes/CloudRain.glsl"
 
 uniform sampler2D u_sceneDepth;
 uniform sampler2D u_waterDepth;
+
+// The weather pass's distance target: its cloud surfaces and rain shafts (CloudComposite).
+uniform sampler2D u_cloudDistance;
 
 /*
  * Fullscreen rain and snow, anchored to the world. A drop carried sideways at
@@ -26,9 +33,13 @@ uniform sampler2D u_waterDepth;
  * neighbouring bands cross-fade rather than pop. Near drops read as distinct
  * streaks; far ones thin to lines narrower than a pixel whose opacity falls
  * with the share of the pixel they cover. A drop is skipped behind the scene
- * depth and wherever it lies beneath the top of its block column, so nothing
- * falls in front of terrain, through a roof, or into a cave. Written
- * premultiplied for the composite.
+ * depth or a cloud surface and wherever it lies beneath the top of its block
+ * column, so nothing falls in front of terrain, through a roof, or into a
+ * cave. Drops fall only beneath a rain-bearing cloud and below its underside
+ * (CloudRain), thinning out toward its edge, so no rain falls from clear sky
+ * or above the cloud it comes from. Beneath the drops lie the rain shafts the
+ * weather pass found hanging under every rain cloud in view, a dark mist that
+ * shows a storm from far off. Written premultiplied for the composite.
  */
 
 struct PrecipitationKind {
@@ -69,6 +80,10 @@ const float PRECIPITATION_COVERAGE_LIMIT  = 0.99;
 const float PRECIPITATION_ZENITH_SHARE    = 0.4;
 const float PRECIPITATION_NO_SCENE        = 1.0e30;
 
+const float RAIN_SHAFT_SHADE        = 0.55;
+const float RAIN_SHAFT_SATURATION   = 0.4;
+const vec3  RAIN_SHAFT_LUMA_WEIGHTS = vec3(0.299, 0.587, 0.114);
+
 const float RAIN_HEAD_SHARE    = 0.3;
 const float RAIN_BRIGHTNESS    = 1.1;
 const float SNOW_SWAY_ASPECT   = 0.7;
@@ -88,6 +103,14 @@ float resolveSceneDistance(vec2 uv) {
     vec4 view = u_inverseProjection * vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
 
     return length(view.xyz / view.w);
+}
+
+// Distance to the cloud surface the weather pass drew along this pixel, if any.
+float resolveCloudSurfaceDistance(vec2 uv) {
+    ivec2 size  = textureSize(u_cloudDistance, 0);
+    float cloud = texelFetch(u_cloudDistance, clamp(ivec2(uv * vec2(size)), ivec2(0), size - 1), 0).x;
+
+    return cloud > 0.0 ? cloud : PRECIPITATION_NO_SCENE;
 }
 
 // ── Shelter ────────────────────────────────────────────────────────────────
@@ -171,10 +194,17 @@ float resolveDropCoordinate(PrecipitationKind kind, float height, float spacing,
     return (height + u_time * kind.fallSpeed) / spacing + phase;
 }
 
-// Only a share of a column's drops fall at all, so no column reads as an
-// evenly spaced string of drops.
-bool isDropFalling(PrecipitationKind kind, vec2 cellId, float drop, float seed) {
-    return hash31(vec3(cellId, seed + drop * PRECIPITATION_DROP_SEED)) <= kind.dropShare;
+// A drop's lot, 0 to 1: only drops whose lot lies within the share of a
+// column the kind lets fall fall at all, so no column reads as an evenly
+// spaced string of drops.
+float resolveDropLot(vec2 cellId, float drop, float seed) {
+    return hash31(vec3(cellId, seed + drop * PRECIPITATION_DROP_SEED));
+}
+
+// Beneath a rain cloud the share narrows with the cloud's cover, so its rain
+// thins out toward its edge, and nothing falls in the clear or above it.
+bool isDropRainedOn(PrecipitationKind kind, vec3 relativePosition, float lot) {
+    return lot <= kind.dropShare * resolveCloudRainCover(relativePosition, vec2(1.0, 0.0));
 }
 
 // ── Rain ───────────────────────────────────────────────────────────────────
@@ -194,14 +224,16 @@ float resolveRainDrop(
     float extent     = spacing * kind.streakShare;
     float head       = extent * RAIN_HEAD_SHARE;
     float streak     = smoothstep(0.0, head, along) * (1.0 - smoothstep(head, extent, along));
+    float lot        = resolveDropLot(cellId, floor(coordinate), seed);
 
-    if (streak <= PRECIPITATION_EPSILON || !isDropFalling(kind, cellId, floor(coordinate), seed))
+    if (streak <= PRECIPITATION_EPSILON || lot > kind.dropShare)
     return 0.0;
 
     float footprint = max(kind.dropRadius, pixelAngle * t);
     float across    = (1.0 - smoothstep(0.0, footprint, length(dir * t - closest))) * kind.dropRadius / footprint;
 
-    if (across <= PRECIPITATION_EPSILON || isSheltered(u_cameraPosition + closest))
+    if (across <= PRECIPITATION_EPSILON || isSheltered(u_cameraPosition + closest)
+    || !isDropRainedOn(kind, closest, lot))
     return 0.0;
 
     return across * streak * resolveBandWeight(band, t);
@@ -219,8 +251,9 @@ float resolveSnowFlake(
 
     float coordinate = resolveDropCoordinate(kind, u_cameraPosition.y + closest.y, spacing, phase);
     float drop       = floor(coordinate + 0.5);
+    float lot        = resolveDropLot(cellId, drop, seed);
 
-    if (!isDropFalling(kind, cellId, drop, seed))
+    if (lot > kind.dropShare)
     return 0.0;
 
     float swayPhase = hash31(vec3(cellId, seed + drop * PRECIPITATION_DROP_SEED + SNOW_SWAY_SEED));
@@ -237,7 +270,8 @@ float resolveSnowFlake(
     float disc      = (1.0 - smoothstep(footprint * SNOW_FLAKE_CORE, footprint, length(flake - dir * t)))
     * cover * cover;
 
-    if (disc <= PRECIPITATION_EPSILON || isSheltered(u_cameraPosition + flake))
+    if (disc <= PRECIPITATION_EPSILON || isSheltered(u_cameraPosition + flake)
+    || !isDropRainedOn(kind, flake, lot))
     return 0.0;
 
     return disc * resolveBandWeight(band, t);
@@ -342,24 +376,32 @@ void main() {
     float pixelAngle = length(fwidth(dir));
     float intensity  = u_precipitationState.x;
     float snow       = u_precipitationState.y;
+    vec2  uv         = v_screenPos * 0.5 + 0.5;
+    vec2  shaft      = sampleRainShaft(u_cloudDistance, uv);
+    bool  falling    = intensity > PRECIPITATION_EPSILON;
 
-    if (intensity <= PRECIPITATION_EPSILON)
+    if (!falling && shaft.y <= PRECIPITATION_EPSILON)
     discard;
 
-    float sceneDistance = resolveSceneDistance(v_screenPos * 0.5 + 0.5);
-    float rain          = snow < 1.0
-    ? integratePrecipitation(PRECIPITATION_RAIN, dir, pixelAngle, intensity, sceneDistance)
+    float sceneDistance = resolveSceneDistance(uv);
+    float shaftCover    = resolveRainShaftOpacity(shaft, sceneDistance);
+    float dropDistance  = min(sceneDistance, resolveCloudSurfaceDistance(uv));
+    float rain          = falling && snow < 1.0
+    ? integratePrecipitation(PRECIPITATION_RAIN, dir, pixelAngle, intensity, dropDistance)
     : 0.0;
-    float flakes        = snow > 0.0
-    ? integratePrecipitation(PRECIPITATION_SNOW, dir, pixelAngle, intensity, sceneDistance)
+    float flakes        = falling && snow > 0.0
+    ? integratePrecipitation(PRECIPITATION_SNOW, dir, pixelAngle, intensity, dropDistance)
     : 0.0;
     float coverage      = mix(rain, flakes, snow);
 
-    if (coverage <= PRECIPITATION_EPSILON)
+    if (coverage <= PRECIPITATION_EPSILON && shaftCover <= PRECIPITATION_EPSILON)
     discard;
 
-    vec3 skyLight = mix(u_skyHorizonColor, u_skyZenithColor, PRECIPITATION_ZENITH_SHARE);
-    vec3 color    = skyLight * mix(RAIN_BRIGHTNESS, SNOW_BRIGHTNESS, snow);
+    vec3  skyLight   = mix(u_skyHorizonColor, u_skyZenithColor, PRECIPITATION_ZENITH_SHARE);
+    vec3  dropColor  = skyLight * mix(RAIN_BRIGHTNESS, SNOW_BRIGHTNESS, snow);
+    vec3  shaftColor = mix(vec3(dot(skyLight, RAIN_SHAFT_LUMA_WEIGHTS)), skyLight, RAIN_SHAFT_SATURATION)
+    * RAIN_SHAFT_SHADE;
+    float shaftShown = shaftCover * (1.0 - coverage);
 
-    fragColor = vec4(color * coverage, coverage);
+    fragColor = vec4(dropColor * coverage + shaftColor * shaftShown, coverage + shaftShown);
 }

@@ -8,11 +8,11 @@ public class CloudData extends DataPackage {
     /*
      * Immutable "Cloud Settings" for one named cloud archetype, loaded from
      * ARPG. Every value the weather shader needs to draw this archetype as a
-     * layer of the sky — tint, shape, noise, placement, and motion — lives
-     * here and only here. Sizes and elevations are real-world kilometres,
-     * converted into blocks at the fixed cloud scale (WeatherScaleUtility)
-     * when the weather map is written. CloudHandle wraps this class and
-     * delegates every accessor to it.
+     * layer of the sky — tint, shape, noise, placement, motion, and how much
+     * rain falls from it — lives here and only here. Sizes and elevations are
+     * real-world kilometres, converted into blocks at the fixed cloud scale
+     * (WeatherScaleUtility) when the weather map is written. CloudHandle
+     * wraps this class and delegates every accessor to it.
      */
 
     // Identity
@@ -44,6 +44,9 @@ public class CloudData extends DataPackage {
     // Motion
     private final float driftSpeedScale;
 
+    // Precipitation — share of a weather's rain it carries
+    private final float precipitation;
+
     // Constructor \\
 
     public CloudData(
@@ -61,7 +64,8 @@ public class CloudData extends DataPackage {
             float coverageBias,
             float silhouetteSoftness,
             float baseAltitudeKm,
-            float driftSpeedScale) {
+            float driftSpeedScale,
+            float precipitation) {
 
         this.cloudName = cloudName;
         this.cloudID = cloudID;
@@ -78,6 +82,7 @@ public class CloudData extends DataPackage {
         this.silhouetteSoftness = silhouetteSoftness;
         this.baseAltitudeKm = baseAltitudeKm;
         this.driftSpeedScale = driftSpeedScale;
+        this.precipitation = precipitation;
     }
 
     // Accessible \\
@@ -140,5 +145,9 @@ public class CloudData extends DataPackage {
 
     public float getDriftSpeedScale() {
         return driftSpeedScale;
+    }
+
+    public float getPrecipitation() {
+        return precipitation;
     }
 }
