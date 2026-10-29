@@ -28,7 +28,8 @@ When in doubt, find the closest existing system and mirror it exactly.
 Everything written for Claude lives in `.claude/`: this file, `AssetCatalogue.md` and the rule files in
 `.claude/docs/`, one Markdown file per topic and per pipeline. They apply as fully as this file. The project's
 `docs/` folder belongs to the owner: it is not part of these instructions, and nothing for Claude goes there or
-beside the code. Paths in these instructions are relative to the project root.
+beside the code. `.claude/assets/` is the owner's asset folder (see AI Asset Catalogue). Paths in these
+instructions are relative to the project root.
 
 - **Topics.** Imported below, so each loads with this file:
   - `.claude/docs/Engine.md`: class roles, naming, folder layout, lifecycle, settings, registry IDs, threads,
@@ -129,13 +130,17 @@ they know what is still AI-made. Keeping it exact is as mandatory as the zip del
 - **Record every asset you make.** A session that adds, regenerates or rewrites a file under `assets/` (textures,
   texture maps, sprites, meshes, animations, shaders, data files) records it in the catalogue in the same change,
   adds one line to its Log (date, what changed, why), and ships the updated catalogue in the zip.
-- **Maps from the owner's art count.** Maps you generate from an owner-supplied image (normal, height, AO,
-  specular, ...) are AI-generated: record them and name the owner's source image beside them.
-- **Remove only when the owner says.** The owner tells you when they have supplied their own asset; it is never
-  automatic. Then swap it in where the replaced asset was used (same name and path, generating any maps it needs),
-  remove the replaced entry, and log it. Never remove an entry on your own judgement, and never assume a file is
-  the owner's because it changed.
+- **Maps from the owner's art are the owner's.** Maps you generate from an owner-supplied image (normal, height,
+  AO, specular, ...) are shipment-ready and are not catalogued.
+- **`.claude/assets/` is the owner's.** It holds the owner's shipment-ready art, sound and third-party libraries.
+  It is read-only: copy what a task needs into `assets/` (converted to the engine's naming and format), never edit,
+  move or delete anything inside it, and never put generated files there. When a library asset you use requires
+  attribution or carries a usage restriction, tell the owner in the reply.
+- **Remove only when the owner says.** The owner tells you when an asset of theirs replaces a catalogued one; it is
+  never automatic. Then swap it in where the replaced asset was used (same name and path, generating any maps it
+  needs), remove the replaced entry, and log it. Never remove an entry on your own judgement, and never assume a
+  file is the owner's because it changed.
 - **Follow the file.** A renamed or moved catalogued asset moves its entry; a deleted one drops its entry and is
-  logged. Never catalogue the owner's own assets or third-party files (the fonts).
+  logged. Never catalogue the owner's own assets or third-party files (the fonts, libraries in `.claude/assets/`).
 - **Search, don't read.** The catalogue is large: grep it for the paths you touch instead of reading it whole, and
   keep its layout (one section per directory, image sets on one line with their suffixes).

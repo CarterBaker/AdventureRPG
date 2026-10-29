@@ -4,7 +4,8 @@ Every asset in this project that Claude generated. The owner replaces these with
 file is the record of what is still AI-made. The rules for keeping it are in `.claude/CLAUDE.md` under
 "AI Asset Catalogue". An entry leaves this file only when the owner says their own asset has replaced it.
 
-Not listed (third-party, not AI-generated): the fonts `assets/fonts/IMFellEnglish.ttf` and
+Not listed: the owner's assets and libraries in `.claude/assets/` and anything copied from them, maps generated from
+the owner's art (the owner's by rule), and the third-party fonts `assets/fonts/IMFellEnglish.ttf` and
 `assets/fonts/MontserratAlternates.ttf`.
 
 ---
@@ -15,6 +16,8 @@ One line per session that changed this file: the date, what was added or removed
 
 - 2026-10-29: Catalogue created. Every file under `assets/` recorded as AI-generated (2187 images, 172 shaders,
   1436 data files), the two fonts excepted.
+- 2026-10-29: Rule change. Maps generated from the owner's art are the owner's and are not catalogued;
+  `.claude/assets/` added as the owner's asset folder.
 
 ---
 
