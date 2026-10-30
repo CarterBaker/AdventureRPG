@@ -10,8 +10,9 @@ import org.lwjgl.openal.ALC;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALCCapabilities;
 import org.lwjgl.stb.STBVorbis;
+import org.lwjgl.stb.STBVorbisInfo;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.system.libc.LibCStdlib;
+import org.lwjgl.system.MemoryUtil;
 
 import engine.audio.Audio;
 import engine.root.EngineSetting;
@@ -140,23 +141,32 @@ class Lwjgl3Audio implements Audio {
 
     // Decoding \\
 
-    public short[] decodeVorbis(String path, int[] format) {
+    public short[] decodeVorbis(String path, float maxSeconds, int[] format) {
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
 
-            IntBuffer channels = stack.mallocInt(1);
-            IntBuffer sampleRate = stack.mallocInt(1);
-            ShortBuffer decoded = STBVorbis.stb_vorbis_decode_filename(path, channels, sampleRate);
+            long decoder = STBVorbis.stb_vorbis_open_filename(path, stack.mallocInt(1), null);
 
-            if (decoded == null)
+            if (decoder == MemoryUtil.NULL)
                 return null;
 
-            short[] samples = new short[decoded.remaining()];
+            STBVorbisInfo info = STBVorbis.stb_vorbis_get_info(decoder, STBVorbisInfo.malloc(stack));
+            int channels = info.channels();
+            int sampleRate = info.sample_rate();
+            long frames = STBVorbis.stb_vorbis_stream_length_in_samples(decoder);
 
-            decoded.get(samples);
-            LibCStdlib.free(decoded);
-            format[EngineSetting.SOUND_VORBIS_FORMAT_CHANNELS] = channels.get(0);
-            format[EngineSetting.SOUND_VORBIS_FORMAT_SAMPLE_RATE] = sampleRate.get(0);
+            if (maxSeconds > 0f)
+                frames = Math.min(frames, (long) Math.ceil(maxSeconds * sampleRate));
+
+            ShortBuffer decoded = MemoryUtil.memAllocShort(Math.toIntExact(frames * channels));
+            short[] samples = new short[STBVorbis.stb_vorbis_get_samples_short_interleaved(
+                    decoder, channels, decoded) * channels];
+
+            decoded.get(0, samples);
+            MemoryUtil.memFree(decoded);
+            STBVorbis.stb_vorbis_close(decoder);
+            format[EngineSetting.SOUND_VORBIS_FORMAT_CHANNELS] = channels;
+            format[EngineSetting.SOUND_VORBIS_FORMAT_SAMPLE_RATE] = sampleRate;
             return samples;
         }
     }

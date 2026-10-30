@@ -107,8 +107,8 @@ add it to the schema in the same change. Keys a schema does not declare are show
 | (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `CommandBuilder`, `SubVoxelArpgUtility`) |
 
 Sprite and world companions sit beside their PNG with the same stem (`sprites/menus/Button.arpg` next to
-`Button.png`; `worlds/TerraArcana.arpg` next to `TerraArcana.png`). Sound companions sit beside their WAV or OGG
-the same way (`sounds/interface/Click.arpg` next to `Click.wav`); a sound without one plays with every default.
+`Button.png`; `worlds/TerraArcana.arpg` next to `TerraArcana.png`). Sound companions sit beside their OGG the same
+way (`sounds/interface/Click.arpg` next to `Click.ogg`); a sound without one plays with every default.
 
 ## The ARPG tool
 

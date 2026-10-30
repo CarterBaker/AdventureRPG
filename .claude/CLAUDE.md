@@ -138,9 +138,9 @@ they know what is still AI-made. Keeping it exact is as mandatory as the zip del
   attribution or carries a usage restriction, tell the owner in the reply.
 - **`.claude/catalogue/` is the owner's personal library.** It stays on the owner's PC and is gitignored, so you
   never see it. `.claude/assets/Catalogue.txt` lists every file in it (paths relative to the folder), written by
-  the owner running `.claude/Catalogue.bat`; never edit that list by hand. When a task needs a library file,
-  choose it from the list by name and path, and ask the owner to copy those exact files into `.claude/assets/`.
-  Never ask for the whole library to be committed.
+  the owner; never edit that list by hand. When a task needs a library file, choose it from the list by name and
+  path, and ask the owner to copy those exact files into `.claude/assets/`. Never ask for the whole library to be
+  committed.
 - **Remove only when the owner says.** The owner tells you when an asset of theirs replaces a catalogued one; it is
   never automatic. Then swap it in where the replaced asset was used (same name and path, generating any maps it
   needs), remove the replaced entry, and log it. Never remove an entry on your own judgement, and never assume a

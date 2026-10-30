@@ -238,10 +238,7 @@ public class EngineSetting {
     public static final String SETTLEMENT_PATH = "settlements";
     public static final String SHADER_PATH = "shaders";
     public static final String SKILL_PATH = "skills";
-    public static final String SOUND_VORBIS_EXTENSION = "ogg";
-    public static final String SOUND_WAV_EXTENSION = "wav";
-    public static final ObjectArraySet<String> SOUND_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] {
-        SOUND_WAV_EXTENSION, SOUND_VORBIS_EXTENSION });
+    public static final String SOUND_FILE_EXTENSION = "ogg";
     public static final String SOUND_PATH = "sounds";
     public static final String SPRITE_PATH = "sprites";
     public static final String STAT_PATH = "stats";
@@ -492,25 +489,10 @@ public class EngineSetting {
     public static final float SOUND_SHIP_GROUND_SECONDS = 1.2f;
     public static final float SOUND_PROJECTILE_SPEED_LOUD = 20f;
 
-    // Sound Decoding — the RIFF chunks and sample formats a WAV file is read by
+    // Sound Decoding — where the backend writes a decoded file's format
     public static final int SOUND_VORBIS_FORMAT_FIELDS = 2;
     public static final int SOUND_VORBIS_FORMAT_CHANNELS = 0;
     public static final int SOUND_VORBIS_FORMAT_SAMPLE_RATE = 1;
-    public static final String SOUND_WAV_RIFF = "RIFF";
-    public static final String SOUND_WAV_WAVE = "WAVE";
-    public static final String SOUND_WAV_FORMAT_CHUNK = "fmt ";
-    public static final String SOUND_WAV_DATA_CHUNK = "data";
-    public static final int SOUND_WAV_HEADER_BYTES = 12;
-    public static final int SOUND_WAV_CHUNK_HEADER_BYTES = 8;
-    public static final int SOUND_WAV_FORMAT_MIN_BYTES = 16;
-    public static final int SOUND_WAV_EXTENSIBLE_SUBFORMAT_OFFSET = 24;
-    public static final int SOUND_WAV_FORMAT_PCM = 1;
-    public static final int SOUND_WAV_FORMAT_FLOAT = 3;
-    public static final int SOUND_WAV_FORMAT_EXTENSIBLE = 0xFFFE;
-    public static final int SOUND_WAV_SIGNED_8_BIT_OFFSET = 128;
-    public static final float SOUND_WAV_8_BIT_SCALE = 128f;
-    public static final float SOUND_WAV_24_BIT_SCALE = 8_388_608f;
-    public static final float SOUND_WAV_32_BIT_SCALE = 2_147_483_648f;
 
     // Input & Bindings
     public static final int BINDING_MOUSE_CODE_OFFSET = 1000;

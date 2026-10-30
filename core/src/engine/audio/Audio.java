@@ -56,7 +56,7 @@ public interface Audio {
 
     // Decoding \\
 
-    // Every sample of the file interleaved, its channel count and sample rate written to the format given, null when
-    // the file cannot be decoded
-    short[] decodeVorbis(String path, int[] format);
+    // The file's samples interleaved, no more than the seconds given of them when that is above nothing, its channel
+    // count and sample rate written to the format given; null when the file cannot be decoded
+    short[] decodeVorbis(String path, float maxSeconds, int[] format);
 }

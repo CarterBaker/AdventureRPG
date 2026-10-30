@@ -94,11 +94,12 @@ its window's world). Runtime systems play what only their window hears.
 
 ## Files
 
-- Sounds live under `assets/sounds/`, as `.wav` (8/16/24/32-bit PCM or 32-bit float, plain or extensible) or `.ogg`
-  (Vorbis). The path below `sounds/` without the extension is the sound's name. Two files with one name are an error.
-  Long generated loops and music are Ogg; one-shots are WAV.
+- Every sound is Ogg Vorbis (`.ogg`, `SOUND_FILE_EXTENSION`), small enough to commit. `SoundLoader` refuses any other
+  file under `assets/sounds/` but a companion `.arpg`, and the game will not start until it is converted. The path
+  below `sounds/` without the extension is the sound's name. Generate new sounds straight to Ogg Vorbis at 48 kHz.
 - Every sound is decoded once at load into 16-bit samples at no more than `SOUND_MAX_SAMPLE_RATE`, uploaded and let
-  go; no CPU copy is kept. A spatial sound, or one marked `mono`, is downmixed.
+  go; no CPU copy is kept. A sound with a `length` is decoded no further than it needs. A spatial sound, or one
+  marked `mono`, is downmixed.
 - A companion `.arpg` beside the file (schema `Sounds.arpg`) sets `category` (`music`, `effect`, `ambient`,
   `interface`, `voice`), `volume`, `pitch`, `loop`, `spatial`, `mono`, `length` (seconds kept from the start),
   `loopCrossfade` (seconds of tail faded into the head of a looping sound; 0 for a file already seamless),
@@ -110,11 +111,11 @@ its window's world). Runtime systems play what only their window hears.
 
 ## The owner's library
 
-`.claude/ImportSounds.bat` copies the library sounds the game uses from `.claude/catalogue/` into `assets/sounds/`
-under their engine names, beside the companions already in place, and lists any it cannot find. To use another
-library sound: add a `call :import "<path below .claude\catalogue>" "<engine name>.wav"` line, write its companion
-(`length`, `mono` and `loopCrossfade` keep long or surround recordings small and seamless) and name it in a cue.
-Library sounds are the owner's: never catalogue them, only their companions and cues.
+Library sounds the game uses are copied from `.claude/catalogue/` into `assets/sounds/` under their engine names,
+beside the companions already in place, and converted to Ogg Vorbis before the game runs. To use another library
+sound: name its library path and engine name for the owner, write its companion (`length`, `mono` and
+`loopCrossfade` keep long or surround recordings small and seamless) and name it in a cue. Library sounds are the
+owner's: never catalogue them, only their companions and cues.
 
 ## Code map
 

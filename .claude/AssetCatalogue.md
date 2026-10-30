@@ -25,10 +25,12 @@ One line per session that changed this file: the date, what was added or removed
   sound clip bars) and `EditorWindow.arpg` (Sound Library entry).
 - 2026-10-30: Full game audio. Added 159 generated placeholder sounds (footsteps per surface, movement, water,
   combat, blocks, items, trees, weather, ambience, ships, cannons, chests, progression, vitality, interface and three
-  music pieces), a companion `.arpg` for every sound the game plays (generated or imported by the bat), 106 sound
+  music pieces), a companion `.arpg` for every sound the game plays (generated or imported from the library), 106 sound
   cues under `assets/soundcues/` and the `SoundCues.arpg` schema; rewrote `TerraArcanaBlocks.arpg` and every covering
   (surface sounds), `Cannons.arpg` and `Furniture.arpg` (action cues), the game menus (open, close and click cues),
   `Launcher.arpg` (manifest) and the `Blocks`, `Coverings`, `Items` and `Sounds` schemas.
+- 2026-10-30: Sounds are Ogg Vorbis only. The 134 generated `.wav` sounds under `assets/sounds/` renamed to `.ogg`,
+  converted on the owner's PC.
 
 ---
 
@@ -1129,7 +1131,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ## Sounds (161 files)
 
 Audio the sound pipeline loads from `assets/sounds/`, each beside its companion `.arpg` (listed under Data Files).
-Sounds the import bat copies from `.claude/catalogue/` are the owner's library and are not listed.
+Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the owner's library and are not listed.
 
 ### `assets/sounds/ambience/`
 
@@ -1137,83 +1139,83 @@ Sounds the import bat copies from `.claude/catalogue/` are the owner's library a
 
 ### `assets/sounds/blocks/dirt/`
 
-`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
-`Place_C.wav`
+`Break_A.ogg`, `Break_B.ogg`, `Break_C.ogg`, `Dig_A.ogg`, `Dig_B.ogg`, `Dig_C.ogg`, `Place_A.ogg`, `Place_B.ogg`,
+`Place_C.ogg`
 
 ### `assets/sounds/blocks/glass/`
 
-`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
-`Place_C.wav`
+`Break_A.ogg`, `Break_B.ogg`, `Break_C.ogg`, `Dig_A.ogg`, `Dig_B.ogg`, `Dig_C.ogg`, `Place_A.ogg`, `Place_B.ogg`,
+`Place_C.ogg`
 
 ### `assets/sounds/blocks/leaves/`
 
-`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
-`Place_C.wav`
+`Break_A.ogg`, `Break_B.ogg`, `Break_C.ogg`, `Dig_A.ogg`, `Dig_B.ogg`, `Dig_C.ogg`, `Place_A.ogg`, `Place_B.ogg`,
+`Place_C.ogg`
 
 ### `assets/sounds/blocks/stone/`
 
-`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
-`Place_C.wav`
+`Break_A.ogg`, `Break_B.ogg`, `Break_C.ogg`, `Dig_A.ogg`, `Dig_B.ogg`, `Dig_C.ogg`, `Place_A.ogg`, `Place_B.ogg`,
+`Place_C.ogg`
 
 ### `assets/sounds/blocks/wood/`
 
-`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
-`Place_C.wav`
+`Break_A.ogg`, `Break_B.ogg`, `Break_C.ogg`, `Dig_A.ogg`, `Dig_B.ogg`, `Dig_C.ogg`, `Place_A.ogg`, `Place_B.ogg`,
+`Place_C.ogg`
 
 ### `assets/sounds/combat/`
 
-`Death.wav`, `HitFlesh_A.wav`, `HitFlesh_B.wav`, `HitFlesh_C.wav`, `HitWood_A.wav`, `HitWood_B.wav`, `HitWood_C.wav`,
-`Swing_A.wav`, `Swing_B.wav`, `Swing_C.wav`, `SwingHeavy_A.wav`, `SwingHeavy_B.wav`, `SwingHeavy_C.wav`, `Throw_A.wav`,
-`Throw_B.wav`, `Throw_C.wav`
+`Death.ogg`, `HitFlesh_A.ogg`, `HitFlesh_B.ogg`, `HitFlesh_C.ogg`, `HitWood_A.ogg`, `HitWood_B.ogg`, `HitWood_C.ogg`,
+`Swing_A.ogg`, `Swing_B.ogg`, `Swing_C.ogg`, `SwingHeavy_A.ogg`, `SwingHeavy_B.ogg`, `SwingHeavy_C.ogg`, `Throw_A.ogg`,
+`Throw_B.ogg`, `Throw_C.ogg`
 
 ### `assets/sounds/footsteps/dirt/`
 
-`Dirt_A.wav`, `Dirt_B.wav`, `Dirt_C.wav`, `Dirt_D.wav`
+`Dirt_A.ogg`, `Dirt_B.ogg`, `Dirt_C.ogg`, `Dirt_D.ogg`
 
 ### `assets/sounds/footsteps/grass/`
 
-`Grass_A.wav`, `Grass_B.wav`, `Grass_C.wav`, `Grass_D.wav`
+`Grass_A.ogg`, `Grass_B.ogg`, `Grass_C.ogg`, `Grass_D.ogg`
 
 ### `assets/sounds/footsteps/gravel/`
 
-`Gravel_A.wav`, `Gravel_B.wav`, `Gravel_C.wav`, `Gravel_D.wav`
+`Gravel_A.ogg`, `Gravel_B.ogg`, `Gravel_C.ogg`, `Gravel_D.ogg`
 
 ### `assets/sounds/footsteps/leaves/`
 
-`Leaves_A.wav`, `Leaves_B.wav`, `Leaves_C.wav`, `Leaves_D.wav`
+`Leaves_A.ogg`, `Leaves_B.ogg`, `Leaves_C.ogg`, `Leaves_D.ogg`
 
 ### `assets/sounds/footsteps/sand/`
 
-`Sand_A.wav`, `Sand_B.wav`, `Sand_C.wav`, `Sand_D.wav`
+`Sand_A.ogg`, `Sand_B.ogg`, `Sand_C.ogg`, `Sand_D.ogg`
 
 ### `assets/sounds/footsteps/stone/`
 
-`Stone_A.wav`, `Stone_B.wav`, `Stone_C.wav`, `Stone_D.wav`
+`Stone_A.ogg`, `Stone_B.ogg`, `Stone_C.ogg`, `Stone_D.ogg`
 
 ### `assets/sounds/footsteps/water/`
 
-`Water_A.wav`, `Water_B.wav`, `Water_C.wav`, `Water_D.wav`
+`Water_A.ogg`, `Water_B.ogg`, `Water_C.ogg`, `Water_D.ogg`
 
 ### `assets/sounds/footsteps/wood/`
 
-`Wood_A.wav`, `Wood_B.wav`, `Wood_C.wav`, `Wood_D.wav`
+`Wood_A.ogg`, `Wood_B.ogg`, `Wood_C.ogg`, `Wood_D.ogg`
 
 ### `assets/sounds/furnishings/`
 
-`ChestClose.wav`, `ChestOpen.wav`
+`ChestClose.ogg`, `ChestOpen.ogg`
 
 ### `assets/sounds/interface/`
 
-`Click.wav`, `Close.wav`, `Confirm.wav`, `Error.wav`
+`Click.ogg`, `Close.ogg`, `Confirm.ogg`, `Error.ogg`
 
 ### `assets/sounds/items/`
 
-`BagClose.wav`, `BagOpen.wav`, `Drop_A.wav`, `Drop_B.wav`, `Equip_A.wav`, `Equip_B.wav`, `EquipMetal_A.wav`,
-`EquipMetal_B.wav`, `Pickup_A.wav`, `Pickup_B.wav`
+`BagClose.ogg`, `BagOpen.ogg`, `Drop_A.ogg`, `Drop_B.ogg`, `Equip_A.ogg`, `Equip_B.ogg`, `EquipMetal_A.ogg`,
+`EquipMetal_B.ogg`, `Pickup_A.ogg`, `Pickup_B.ogg`
 
 ### `assets/sounds/movement/`
 
-`Jump_A.wav`, `Jump_B.wav`, `Land_A.wav`, `Land_B.wav`, `LandHard_A.wav`, `LandHard_B.wav`
+`Jump_A.ogg`, `Jump_B.ogg`, `Land_A.ogg`, `Land_B.ogg`, `LandHard_A.ogg`, `LandHard_B.ogg`
 
 ### `assets/sounds/music/`
 
@@ -1221,28 +1223,28 @@ Sounds the import bat copies from `.claude/catalogue/` are the owner's library a
 
 ### `assets/sounds/progression/`
 
-`LevelUp.ogg`, `Profession.ogg`, `Skill.wav`
+`LevelUp.ogg`, `Profession.ogg`, `Skill.ogg`
 
 ### `assets/sounds/trees/`
 
-`Chop_A.wav`, `Chop_B.wav`, `Chop_C.wav`, `Fall.ogg`, `Land.ogg`
+`Chop_A.ogg`, `Chop_B.ogg`, `Chop_C.ogg`, `Fall.ogg`, `Land.ogg`
 
 ### `assets/sounds/vehicles/ship/`
 
-`Anchor.ogg`, `HullCreak.ogg`, `HullImpact_A.ogg`, `HullImpact_B.ogg`, `Rudder_A.wav`, `Rudder_B.wav`, `SailLuff.ogg`
+`Anchor.ogg`, `HullCreak.ogg`, `HullImpact_A.ogg`, `HullImpact_B.ogg`, `Rudder_A.ogg`, `Rudder_B.ogg`, `SailLuff.ogg`
 
 ### `assets/sounds/vitality/`
 
-`Defeat.ogg`, `Heartbeat.wav`
+`Defeat.ogg`, `Heartbeat.ogg`
 
 ### `assets/sounds/water/`
 
-`Splash_A.wav`, `Splash_B.wav`, `Splash_C.wav`, `SplashBig_A.wav`, `SplashBig_B.wav`, `SplashBig_C.wav`,
-`SwimStroke_A.wav`, `SwimStroke_B.wav`, `SwimStroke_C.wav`, `Underwater.ogg`
+`Splash_A.ogg`, `Splash_B.ogg`, `Splash_C.ogg`, `SplashBig_A.ogg`, `SplashBig_B.ogg`, `SplashBig_C.ogg`,
+`SwimStroke_A.ogg`, `SwimStroke_B.ogg`, `SwimStroke_C.ogg`, `Underwater.ogg`
 
 ### `assets/sounds/weapons/`
 
-`Fizzle.wav`, `Load.wav`, `Prime.wav`
+`Fizzle.ogg`, `Load.ogg`, `Prime.ogg`
 
 ### `assets/sounds/weather/`
 

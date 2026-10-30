@@ -4,16 +4,18 @@ import java.io.File;
 
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 class SoundLoader extends LoaderPackage {
 
     /*
-     * Scans the sound directory for every WAV and Ogg Vorbis file and loads
-     * each into SoundManager; a companion ARPG file beside a sound is read by
-     * the builder, never queued itself. Supports on-demand loading for sounds
-     * not yet in the palette while the loader lives.
+     * Scans the sound directory for every Ogg Vorbis file and loads each
+     * into SoundManager; a companion ARPG file beside a sound is read by the
+     * builder, never queued itself, and any other file is refused, so every
+     * sound the game holds is in the one format. Supports on-demand loading
+     * for sounds not yet in the palette while the loader lives.
      */
 
     // Internal
@@ -44,16 +46,17 @@ class SoundLoader extends LoaderPackage {
 
         FileUtility.verifyDirectory(root, "Sound root directory not found: " + root.getAbsolutePath());
 
-        for (File file : FileUtility.collectFiles(root, EngineSetting.SOUND_FILE_EXTENSIONS)) {
+        for (File file : FileUtility.collectFiles(root)) {
 
-            String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+            if (ArpgUtility.isArpgFile(file))
+                continue;
 
-            if (resourceName2File.containsKey(resourceName))
-                throwException("Duplicate sound name: '" + resourceName + "' is both '"
-                        + resourceName2File.get(resourceName).getName() + "' and '" + file.getName()
-                        + "'. Keep one file per sound name.");
+            if (!FileUtility.getExtension(file).equals(EngineSetting.SOUND_FILE_EXTENSION))
+                throwException("Sound file '" + file.getAbsolutePath() + "' is not an Ogg Vorbis file. Every sound "
+                        + "under '" + EngineSetting.SOUND_PATH + "' is a '." + EngineSetting.SOUND_FILE_EXTENSION
+                        + "' file; convert it and remove the original.");
 
-            resourceName2File.put(resourceName, file);
+            resourceName2File.put(FileUtility.getPathWithFileNameWithoutExtension(root, file), file);
             queueFile(file);
         }
     }
