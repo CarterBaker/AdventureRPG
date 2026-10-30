@@ -104,8 +104,8 @@ larger or smaller than it looked. Where a task falls, and how far to lean either
 
 Every task is delivered as **`AdventureRPG_Delivery.zip`**. The owner drops it into `.claude/` and runs
 `.claude/Delivery.bat`, which deletes, unpacks and copies what the zip's manifest lists, records the delivery in
-`.claude/Version.md`, refreshes `.claude/assets/Catalogue.txt`, converts sounds to `.ogg`, and then deletes the zip.
-The zip is gitignored, and the bat never commits.
+`.claude/Version.md`, refreshes `.claude/assets/Catalogue.txt`, converts sounds to `.ogg`, deletes the zip and
+pushes the delivery status (see Version). The zip is gitignored, and the bat never commits the project.
 
 1. **Zip contents:** only new or modified files, each as a **complete file** (never a diff or snippet), plus the
    manifest `Delivery.txt`.
@@ -152,13 +152,17 @@ The zip is gitignored, and the bat never commits.
 ## Version
 
 `.claude/Version.md` holds `Delivery: <number>`, the last delivery applied to the project, and a log of every
-delivery. Only `Delivery.bat` writes it; never edit or ship it. GitHub's `main` is the only copy of the project you
-see, so it is how you know whether the owner committed and pushed.
+delivery. Only `Delivery.bat` writes it; never edit or ship it. You see two copies on GitHub: the one on `main`
+(what the owner pushed) and the one the bat pushes alone, on every run, to the hidden ref `refs/delivery/status`
+(what the owner's PC has applied). That ref is not a branch: nothing merges it, and the owner never sees it.
 
 - **Check at the start of every session and before building every delivery:** `git fetch origin main` and read
-  `Delivery:` from `origin/main:.claude/Version.md` (0 when the file is absent).
-- **Tell the owner at once,** before anything else in the reply, when that number is lower than the last delivery you
-  sent in this session: that delivery is not on GitHub yet, and they must commit and push it.
+  `Delivery:` from `origin/main:.claude/Version.md`; then `git fetch origin refs/delivery/status` and read it from
+  `FETCH_HEAD:Version.md`. A missing file or ref counts as 0.
+- **Tell the owner at once,** before anything else in the reply, when the status number is higher than `main`'s
+  (delivery N is applied on their PC but not pushed: they must commit and push it), or when `main`'s is lower than the
+  last delivery you sent in this session (it is not applied or not pushed yet). Build nothing until `main` catches up,
+  unless the owner says to go ahead.
 - **Build on current code.** `BASE` is the delivery the work is built on: `main`'s number in a fresh session, or
   your last delivery in this session while its files are still in your working tree. When `main` is ahead of your
   working tree, bring the tree up to `main` before building.

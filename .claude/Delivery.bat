@@ -5,9 +5,10 @@ rem Applies a delivery from Claude, then keeps the asset library list and the so
 rem AdventureRPG_Delivery.zip into this folder and run this file: it deletes the files its Delivery.txt lists, unpacks
 rem the zip over the project, copies the listed files from .claude\assets or .claude\catalogue into assets\, records
 rem the delivery in .claude\Version.md, lists .claude\catalogue into .claude\assets\Catalogue.txt and converts every
-rem sound under assets\sounds to .ogg. Without a zip it only lists the catalogue and converts the sounds. It never
-rem commits: commit and push afterwards, so Claude builds the next delivery from current code. The block below is
-rem read whole before it runs, so a delivery may replace this file while it runs.
+rem sound under assets\sounds to .ogg. Without a zip it only lists the catalogue and converts the sounds. Every run
+rem pushes Version.md alone to the hidden ref refs/delivery/status, so Claude sees what this PC has applied; it never
+rem commits the project: commit and push afterwards, so Claude builds the next delivery from current code. The block
+rem below is read whole before it runs, so a delivery may replace this file while it runs.
 
 set "CLAUDE=%~dp0"
 set "SELF=%~f0"
@@ -37,6 +38,9 @@ $manifestName = 'Delivery.txt'
 $zipFilter = 'AdventureRPG_Delivery*.zip'
 $soundExtensions = @('.wav', '.flac', '.mp3', '.aif', '.aiff')
 $protectedPaths = @('.git', '.claude/assets', '.claude/catalogue', '.claude/Version.md')
+$statusRemote = 'origin'
+$statusRef = 'refs/delivery/status'
+$statusIndex = Join-Path $env:TEMP 'AdventureRPG_StatusIndex'
 
 # Paths \\
 
@@ -203,8 +207,8 @@ function Write-Delivery($manifest) {
         '# Version',
         '',
         'The last delivery applied to this project. `.claude/Delivery.bat` writes this file each time it applies a',
-        'delivery; never edit it by hand. Claude reads it from `main` on GitHub to know whether the last delivery was',
-        'committed and pushed.',
+        'delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with',
+        'the one on `main` to know whether the last delivery applied was committed and pushed.',
         '',
         "Delivery: $($manifest.Delivery)",
         "Task: $($manifest.Task)",
@@ -234,6 +238,7 @@ function Invoke-Git {
     }
 
     if ($LASTEXITCODE -ne 0) { return $null }
+    if ($null -eq $output) { return '' }
     return $output
 }
 
@@ -266,6 +271,49 @@ function Show-GitReminder {
     if ($changed.Count -gt 0 -or ($null -ne $ahead -and [int] $ahead -gt 0)) {
         Write-Host 'Commit and push them, so Claude builds the next delivery from current code.'
     }
+}
+
+function New-StatusCommit {
+
+    if (Test-Path -LiteralPath $statusIndex) { Remove-Item -LiteralPath $statusIndex -Force }
+    $env:GIT_INDEX_FILE = $statusIndex
+
+    try {
+        $blob = Invoke-Git hash-object -w -- $versionFile
+        if ($null -eq $blob) { return $null }
+        if ($null -eq (Invoke-Git update-index --add --cacheinfo "100644,$blob,Version.md")) { return $null }
+
+        $tree = Invoke-Git write-tree
+        if ($null -eq $tree) { return $null }
+
+        return Invoke-Git commit-tree $tree -m "Delivery $(Get-Delivery)"
+    }
+    finally {
+        Remove-Item -LiteralPath Env:GIT_INDEX_FILE
+        if (Test-Path -LiteralPath $statusIndex) { Remove-Item -LiteralPath $statusIndex -Force }
+    }
+}
+
+function Push-Status {
+
+    $ErrorActionPreference = 'Continue'
+    if (-not (Test-Path -LiteralPath $versionFile)) { return }
+
+    $commit = New-StatusCommit
+    if ($null -eq $commit) {
+        Write-Host 'Could not record the delivery status: Git is missing or has no user name and email.' `
+            -ForegroundColor Red
+        return
+    }
+
+    & git -C $root push --force --quiet $statusRemote "${commit}:$statusRef"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host 'Could not push the delivery status to GitHub. It is pushed again on the next run.' `
+            -ForegroundColor Red
+        return
+    }
+
+    Write-Host "Told GitHub this PC has applied delivery $(Get-Delivery)."
 }
 
 # Delivery \\
@@ -528,6 +576,7 @@ try {
         Write-CatalogueList
         Convert-Sounds
         Write-Host ''
+        Push-Status
         Show-GitReminder
     }
 }
