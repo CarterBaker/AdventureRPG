@@ -66,8 +66,11 @@ desktop.ini
 *#*#
 /.kotlin/
 
-## Personal asset library (listed in .claude/assets/Catalogue.txt by .claude/Catalogue.bat):
+## Personal asset library (listed in .claude/assets/Catalogue.txt by .claude/Delivery.bat):
 /.claude/catalogue/
+
+## Deliveries from Claude (applied and deleted by .claude/Delivery.bat):
+/.claude/AdventureRPG_Delivery*.zip
 
 ## Runtime logs:
 /logs/

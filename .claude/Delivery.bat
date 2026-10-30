@@ -21,16 +21,16 @@ set "SELF=%~f0"
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
 $utf8 = New-Object Text.UTF8Encoding $false
-$claude = (Resolve-Path -LiteralPath $env:CLAUDE).Path.TrimEnd('\')
+$claude = (Get-Item -LiteralPath $env:CLAUDE).FullName.TrimEnd('\')
 $root = Split-Path -Parent $claude
 $library = Join-Path $claude 'assets'
 $catalogue = Join-Path $claude 'catalogue'
 $catalogueList = Join-Path $library 'Catalogue.txt'
 $versionFile = Join-Path $claude 'Version.md'
 $sounds = Join-Path $root 'assets\sounds'
-$staging = Join-Path $env:TEMP 'AdventureRPG_Delivery'
 $tools = Join-Path $env:LOCALAPPDATA 'AdventureRPG'
 $ffmpegUrl = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip'
 $manifestName = 'Delivery.txt'
@@ -70,12 +70,20 @@ function Get-LibraryPath([string] $relative) {
     return Join-Path $claude $relative.Replace('/', '\')
 }
 
-function Copy-ProjectFile([string] $source, [string] $relative) {
+function New-ProjectTarget([string] $relative) {
 
     $target = Get-ProjectPath $relative
-
     [IO.Directory]::CreateDirectory((Split-Path -Parent $target)) | Out-Null
-    [IO.File]::Copy($source, $target, $true)
+
+    return $target
+}
+
+function Copy-ProjectFile([string] $source, [string] $relative) {
+    [IO.File]::Copy($source, (New-ProjectTarget $relative), $true)
+}
+
+function Write-ProjectEntry($entry, [string] $relative) {
+    [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, (New-ProjectTarget $relative), $true)
 }
 
 function Remove-ProjectFile([string] $relative) {
@@ -103,7 +111,7 @@ function Get-Number([string] $value, [string] $what) {
     return $number
 }
 
-function Read-Manifest([string] $file) {
+function Read-Manifest([string] $text) {
 
     $manifest = @{
         Delivery = -1
@@ -114,7 +122,7 @@ function Read-Manifest([string] $file) {
     }
     $lineNumber = 0
 
-    foreach ($line in [IO.File]::ReadAllLines($file, $utf8)) {
+    foreach ($line in $text.Split([char]10)) {
 
         $lineNumber++
         $entry = $line.Trim()
@@ -274,17 +282,30 @@ function Get-DeliveryZip {
     return $zips[0]
 }
 
-function Get-ZipFiles {
+function Read-ZipText($entry) {
+
+    $reader = New-Object IO.StreamReader($entry.Open(), $utf8)
+    try {
+        return $reader.ReadToEnd()
+    }
+    finally {
+        $reader.Dispose()
+    }
+}
+
+function Get-ZipFiles($archive) {
 
     $files = New-Object 'Collections.Generic.List[object]'
 
-    foreach ($file in Get-ChildItem -LiteralPath $staging -Recurse -File) {
+    foreach ($entry in $archive.Entries) {
 
-        $relative = $file.FullName.Substring($staging.Length + 1).Replace('\', '/')
+        if ($entry.Name -eq '') { continue }
+
+        $relative = Get-RelativePath $entry.FullName 'A zip entry'
         if ($relative -eq $manifestName) { continue }
         if (Test-Protected $relative) { throw "The zip holds '$relative', which a delivery never writes" }
 
-        $files.Add((New-Object PSObject -Property @{ Source = $file.FullName; Target = $relative }))
+        $files.Add((New-Object PSObject -Property @{ Entry = $entry; Target = $relative }))
     }
 
     return ,$files
@@ -342,18 +363,28 @@ function Confirm-Delivery($manifest, $zipFiles, $uncommitted) {
 
 function Invoke-Delivery($zip) {
 
-    if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }
-    Expand-Archive -LiteralPath $zip.FullName -DestinationPath $staging
+    $archive = [IO.Compression.ZipFile]::OpenRead($zip.FullName)
+    try {
+        $applied = Install-Delivery $zip $archive
+    }
+    finally {
+        $archive.Dispose()
+    }
 
-    $manifestFile = Join-Path $staging $manifestName
-    if (-not (Test-Path -LiteralPath $manifestFile -PathType Leaf)) { throw "$($zip.Name) has no $manifestName" }
+    if ($applied) { Remove-Item -LiteralPath $zip.FullName -Force }
+    return $applied
+}
 
-    $manifest = Read-Manifest $manifestFile
-    $zipFiles = Get-ZipFiles
+function Install-Delivery($zip, $archive) {
+
+    $manifestEntry = $archive.GetEntry($manifestName)
+    if ($null -eq $manifestEntry) { throw "$($zip.Name) has no $manifestName" }
+
+    $manifest = Read-Manifest (Read-ZipText $manifestEntry)
+    $zipFiles = Get-ZipFiles $archive
     $uncommitted = @(Test-Delivery $manifest $zipFiles)
 
     if (-not (Confirm-Delivery $manifest $zipFiles $uncommitted)) {
-        Remove-Item -LiteralPath $staging -Recurse -Force
         Write-Host 'Cancelled. Nothing was changed.'
         return $false
     }
@@ -364,14 +395,11 @@ function Invoke-Delivery($zip) {
         if (Test-Path -LiteralPath (Get-ProjectPath $relative) -PathType Leaf) { Remove-ProjectFile $relative }
         else { Write-Host "Already gone: $relative" }
     }
-    foreach ($file in $zipFiles) { Copy-ProjectFile $file.Source $file.Target }
+    foreach ($file in $zipFiles) { Write-ProjectEntry $file.Entry $file.Target }
     foreach ($copy in $manifest.Copies) { Copy-ProjectFile (Get-LibraryPath $copy.Source) $copy.Target }
 
     Write-Delivery $manifest
     $script:partial = $false
-
-    Remove-Item -LiteralPath $staging -Recurse -Force
-    Remove-Item -LiteralPath $zip.FullName -Force
 
     Write-Host ''
     $counts = "deleted $($manifest.Deletes.Count), wrote $($zipFiles.Count), copied $($manifest.Copies.Count)"
@@ -388,7 +416,7 @@ function Write-CatalogueList {
         return
     }
 
-    $catalogueRoot = (Resolve-Path -LiteralPath $catalogue).Path.TrimEnd('\')
+    $catalogueRoot = (Get-Item -LiteralPath $catalogue).FullName.TrimEnd('\')
     $files = @(Get-ChildItem -LiteralPath $catalogueRoot -Recurse -File |
                ForEach-Object { $_.FullName.Substring($catalogueRoot.Length + 1).Replace('\', '/') } | Sort-Object)
     $text = if ($files.Count) { ($files -join [char]10) + [char]10 } else { '' }

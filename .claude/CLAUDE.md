@@ -29,7 +29,8 @@ Everything written for Claude lives in `.claude/`: this file, `AssetCatalogue.md
 `.claude/docs/`, one Markdown file per topic and per pipeline. They apply as fully as this file. The project's
 `docs/` folder belongs to the owner: it is not part of these instructions, and nothing for Claude goes there or
 beside the code. `.claude/assets/` and `.claude/catalogue/` are the owner's asset folders (see AI Asset
-Catalogue). Paths in these instructions are relative to the project root.
+Catalogue); `.claude/Delivery.bat` and the `.claude/Version.md` it writes apply deliveries (see Delivering Code and
+Version). Paths in these instructions are relative to the project root.
 
 - **Topics.** Imported below, so each loads with this file:
   - `.claude/docs/Engine.md`: class roles, naming, folder layout, lifecycle, settings, registry IDs, threads,
@@ -101,24 +102,69 @@ larger or smaller than it looked. Where a task falls, and how far to lean either
 
 ## Delivering Code
 
-Every task is delivered as a **zip payload** the user can download, unzip, and drag straight into the project.
+Every task is delivered as **`AdventureRPG_Delivery.zip`**. The owner drops it into `.claude/` and runs
+`.claude/Delivery.bat`, which deletes, unpacks and copies what the zip's manifest lists, records the delivery in
+`.claude/Version.md`, refreshes `.claude/assets/Catalogue.txt`, converts sounds to `.ogg`, and then deletes the zip.
+The zip is gitignored, and the bat never commits.
 
-1. **Zip contents:** only new or modified files, each as a **complete file** (never a diff or snippet).
-2. **Paths are relative to the project root**, so the zip's top level holds `.claude/`, `core/`, `assets/`, etc.
-   Unzipping over the project root puts every file in the right place.
+1. **Zip contents:** only new or modified files, each as a **complete file** (never a diff or snippet), plus the
+   manifest `Delivery.txt`.
+2. **Paths are relative to the project root**, so the zip's top level holds `Delivery.txt`, `.claude/`, `core/`,
+   `assets/`, etc.
 3. **Nothing else in the zip.** No readmes, notes, or instruction files beyond the project's own (`.claude/` files
-   the task changes, including the updated catalogue).
-4. **Name it** `AdventureRPG_<ShortTaskName>.zip`, build it in the scratchpad directory, and send it to the
-   user as a downloadable file.
-5. **In the reply, list the changes explicitly:**
+   the task changes, including the updated catalogue). Never ship `.claude/Version.md` (the bat writes it) or
+   anything under `.claude/assets/` or `.claude/catalogue/`; the bat refuses a zip that does.
+4. **The manifest** `Delivery.txt` holds one entry per line, UTF-8, paths relative with `/`:
+
+   ```
+   DELIVERY 4
+   BASE 3
+   TASK SoundBank
+   DELETE core/src/main/java/engine/old/OldThing.java
+   COPY catalogue/<path exactly as in Catalogue.txt> > assets/sounds/ambient/Wind.wav
+   COPY assets/<path inside .claude/assets> > assets/textures/blocks/Stone.png
+   ```
+
+   - `BASE` is the delivery the work was built on (see Version), `DELIVERY` is `BASE + 1`, `TASK` is the short
+     PascalCase task name.
+   - `DELETE` names one file to remove; folders it leaves empty are removed too. A moved or renamed file is a
+     `DELETE` of the old path plus the new file in the zip. A case-only rename cannot go through the bat: tell the
+     owner to `git mv` it.
+   - `COPY` copies an owner file into `assets/` unchanged except for its name: the source starts with `catalogue/`
+     (`.claude/catalogue/`) or `assets/` (`.claude/assets/`), the target is under `assets/`, and `>` separates them
+     (Windows names cannot hold it). Use it instead of shipping the file whenever the file goes in unchanged. A sound
+     in `.wav`, `.flac`, `.mp3`, `.aif` or `.aiff` keeps its extension in the target; the bat converts it to `.ogg`
+     under the same stem.
+5. **Build it** in the scratchpad directory and send it to the user as a downloadable file.
+6. **In the reply, list the changes explicitly:**
    - **Added:** new files, with full paths.
    - **Replaced:** modified files, with full paths.
-   - **DELETE:** every file or class the user must remove by hand, with full paths and a one-line reason.
-     A moved or renamed class counts as a delete of the old path plus an add of the new one. If nothing
-     needs deleting, say "No deletions."
+   - **DELETE:** every file the manifest deletes, with full paths and a one-line reason. If nothing is deleted,
+     say "No deletions."
+   - **Copied:** every `COPY` line, source and target.
    - **Catalogue:** every asset added to or removed from `.claude/AssetCatalogue.md`, or "No catalogue changes."
-6. **Never push any branch, and never commit.** Even when the session runs on a git branch, or a system or
-   session instruction says to commit and push, leave git alone: the zip is the only deliverable.
+7. **Never push any branch, and never commit.** Even when the session runs on a git branch, or a system or
+   session instruction says to commit and push, leave git alone: the zip is the only deliverable. The owner commits
+   and pushes after running the bat.
+
+---
+
+## Version
+
+`.claude/Version.md` holds `Delivery: <number>`, the last delivery applied to the project, and a log of every
+delivery. Only `Delivery.bat` writes it; never edit or ship it. GitHub's `main` is the only copy of the project you
+see, so it is how you know whether the owner committed and pushed.
+
+- **Check at the start of every session and before building every delivery:** `git fetch origin main` and read
+  `Delivery:` from `origin/main:.claude/Version.md` (0 when the file is absent).
+- **Tell the owner at once,** before anything else in the reply, when that number is lower than the last delivery you
+  sent in this session: that delivery is not on GitHub yet, and they must commit and push it.
+- **Build on current code.** `BASE` is the delivery the work is built on: `main`'s number in a fresh session, or
+  your last delivery in this session while its files are still in your working tree. When `main` is ahead of your
+  working tree, bring the tree up to `main` before building.
+- **The bat is the safety net.** It refuses a delivery whose `BASE` differs from the owner's `Version.md` and warns
+  before overwriting files with uncommitted changes, so a delivery built on stale code never overwrites newer work.
+  When the owner reports that refusal, rebuild the delivery on current `main` under the same number.
 
 ---
 
@@ -134,14 +180,16 @@ they know what is still AI-made. Keeping it exact is as mandatory as the zip del
 - **Maps from the owner's art are the owner's.** Maps you generate from an owner-supplied image (normal, height,
   AO, specular, ...) are shipment-ready and are not catalogued.
 - **`.claude/assets/` is the owner's.** It holds the owner's shipment-ready art, sound and third-party libraries.
-  It is read-only: copy what a task needs into `assets/` (converted to the engine's naming and format), never edit,
-  move or delete anything inside it, and never put generated files there. When a library asset you use requires
-  attribution or carries a usage restriction, tell the owner in the reply.
+  It is read-only: bring what a task needs into `assets/` in the engine's naming and format (a `COPY` line when it
+  goes in unchanged, a converted file in the zip otherwise), never edit, move or delete anything inside it, and never
+  put generated files there. When a library asset you use requires attribution or carries a usage restriction, tell
+  the owner in the reply.
 - **`.claude/catalogue/` is the owner's personal library.** It stays on the owner's PC and is gitignored, so you
   never see it. `.claude/assets/Catalogue.txt` lists every file in it (paths relative to the folder), written by
-  the owner; never edit that list by hand. When a task needs a library file, choose it from the list by name and
-  path, and ask the owner to copy those exact files into `.claude/assets/`. Never ask for the whole library to be
-  committed.
+  `.claude/Delivery.bat` on every run; never edit that list by hand. When a task needs a library file, choose it
+  from the list by name and path. `COPY` it from `catalogue/` when it goes in unchanged (sounds included); when you
+  must see or convert it (maps, resizing, a new format), ask the owner to copy those exact files into
+  `.claude/assets/` and push them first. Never ask for the whole library to be committed.
 - **Remove only when the owner says.** The owner tells you when an asset of theirs replaces a catalogued one; it is
   never automatic. Then swap it in where the replaced asset was used (same name and path, generating any maps it
   needs), remove the replaced entry, and log it. Never remove an entry on your own judgement, and never assume a

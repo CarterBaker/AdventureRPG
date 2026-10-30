@@ -2,8 +2,8 @@ Implement the complete texture streaming system below for AdventureRPG in this o
 without stopping between parts and without asking questions: every decision is already made below. It is a large,
 cross-cutting task: read every system it touches, trace every caller, use subagents for broad searches, and follow
 CLAUDE.md and every file in docs/ exactly (Engine, Style, Performance, ARPG, Build). Deliver everything as one zip,
-AdventureRPG_TextureStreaming.zip, per CLAUDE.md's "Delivering Code" rules, with the full Added / Replaced /
-DELETE lists. Never commit or push.
+AdventureRPG_Delivery.zip with TASK TextureStreaming, per CLAUDE.md's "Delivering Code" rules, with the full Added /
+Replaced / DELETE lists. Never commit or push.
 
 # Goal
 

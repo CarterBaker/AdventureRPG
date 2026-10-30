@@ -1,5 +1,0 @@
-DELIVERY 1
-BASE 0
-TASK DeliveryWorkflow
-DELETE .claude/Catalogue.bat
-DELETE .claude/ConvertSounds.bat
