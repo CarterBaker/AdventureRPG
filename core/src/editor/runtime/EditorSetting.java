@@ -325,6 +325,8 @@ public class EditorSetting {
     public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
     public static final String TAB_TITLE_TOOLS = "Tools";
+    public static final String TAB_TITLE_TREE_PLANNER = "Tree Planner";
+    public static final String TAB_TITLE_TREE_VIEWER = "Tree Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
 
@@ -1224,6 +1226,32 @@ public class EditorSetting {
     public static final String BIOME_PLANNER_MESSAGE_CENTRE = "The centre is always the selected biome";
     public static final String BIOME_PLANNER_MESSAGE_PAINTED = "Painted ";
     public static final String BIOME_PLANNER_MESSAGE_RESET = "Every cell follows the centre";
+
+    // Tree Planner — the seed its preview starts from, the age it grows its tree to and how far one step moves it,
+    // the room between the tiers of its row in reaches of the species, never less than a few blocks, the least height
+    // a frame takes, the precision a stepped decimal is kept to, and its status and messages
+    public static final long TREE_PLANNER_FIRST_SEED = 1L;
+    public static final float TREE_PLANNER_AGE_DEFAULT = 1f;
+    public static final float TREE_PLANNER_AGE_MIN = 0.05f;
+    public static final float TREE_PLANNER_AGE_STEP = 0.1f;
+    public static final float TREE_PLANNER_TIER_SPACING_REACHES = 2.2f;
+    public static final float TREE_PLANNER_TIER_MIN_SPACING_BLOCKS = 4f;
+    public static final float TREE_PLANNER_MIN_FRAME_BLOCKS = 2f;
+    public static final int TREE_PLANNER_VALUE_PRECISION = 10000;
+    public static final String TREE_PLANNER_VALUE_FORMAT = "%.2f";
+    public static final float TREE_PLANNER_PERCENT = 100f;
+    public static final String TREE_PLANNER_PERCENT_SIGN = "%";
+    public static final String TREE_PLANNER_STATUS_TREE = "Tree: ";
+    public static final String TREE_PLANNER_STATUS_AGE = "  ·  Age ";
+    public static final String TREE_PLANNER_STATUS_SEED = "  ·  Seed ";
+    public static final String TREE_PLANNER_STATUS_NONE = "No tree selected — pick one in the list or the Hierarchy";
+    public static final String TREE_PLANNER_MESSAGE_SET = "Set ";
+    public static final String TREE_PLANNER_MESSAGE_SAVED = "Saved ";
+    public static final String TREE_PLANNER_MESSAGE_SAVE_FAILED = "Could not save ";
+    public static final String TREE_PLANNER_MESSAGE_REVERTED = "Reverted ";
+    public static final String TREE_PLANNER_MESSAGE_RESEEDED = "Grown from a new seed";
+    public static final String TREE_PLANNER_MESSAGE_AGED = "Grown to a new age";
+    public static final String TREE_PLANNER_MESSAGE_NO_TREE = "Select a tree first";
 
     // Item Library
     public static final String ITEM_EDITOR_MESH_DIRECTORY = "items";

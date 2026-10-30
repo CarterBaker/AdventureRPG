@@ -1757,6 +1757,7 @@ public class EngineSetting {
     public static final int TREE_WOOD_PADDING_FLOATS = 5;
 
     // Tree Defaults — every optional field of a tree species file
+    public static final float TREE_DEFAULT_ACCENT_CHANCE = 0f;
     public static final String TREE_DEFAULT_BARK_COLOR = "#FFFFFF";
     public static final int TREE_DEFAULT_BARK_SUB_VOXELS = 2;
     public static final String TREE_DEFAULT_BARK_TEXTURE = "items/standard/OakBark";
@@ -1773,6 +1774,7 @@ public class EngineSetting {
     public static final float TREE_DEFAULT_CROWN_START = 0.35f;
     public static final String TREE_DEFAULT_FORM = "broadleaf";
     public static final float TREE_DEFAULT_GROWTH_DAYS = 20f;
+    public static final float TREE_DEFAULT_HANG_BLOCKS = 0f;
     public static final String TREE_DEFAULT_LEAF_COLOR = "#FFFFFF";
     public static final float TREE_DEFAULT_LEAF_DENSITY = 0.8f;
     public static final float TREE_DEFAULT_LEAF_RADIUS_BLOCKS = 2f;
@@ -2653,12 +2655,18 @@ public class EngineSetting {
     public static final float VEHICLE_DOWNFLOOD_UPRIGHTNESS = 0.75f;
     public static final float VEHICLE_DRAG_LINEAR_SPEED = 0.5f;
     public static final float VEHICLE_DRY_FLOOD_LIMIT = 0.5f;
+    public static final float VEHICLE_FREE_RUDDER_GAIN = 0.1f;
     public static final String VEHICLE_ITEM_MATERIAL = "items/VehicleItemMaterial";
     public static final float VEHICLE_MAX_SPEED = 30f;
     public static final float VEHICLE_MAX_SPIN = 3f;
+    public static final float VEHICLE_PROPELLED_HOIST = 0.05f;
     public static final float VEHICLE_PUMP_UPRIGHTNESS = 0.85f;
+    public static final int VEHICLE_QUAD_INT_STRIDE = 1 + QUAD_VERTEX_COUNT * AXIS_COUNT;
+    public static final int VEHICLE_QUAD_SIDES = 2;
     public static final int VEHICLE_RENDER_CHUNK_RADIUS = 12;
     public static final float VEHICLE_SAIL_FURLED_SCALE = 0.08f;
+    public static final String VEHICLE_SAVED_PREFIX = "saved/";
+    public static final String VEHICLE_SAVE_DIRECTORY = "Vehicles";
     public static final float VEHICLE_SWAMP_SHARE = 0.5f;
     public static final int VEHICLE_SUB_STEPS = 4;
     public static final float VEHICLE_WATER_DENSITY = 1.025f;
@@ -2704,19 +2712,21 @@ public class EngineSetting {
     public static final float VEHICLE_GROUND_STIFFNESS = 200f;
 
     // Vehicle Riders
+    public static final float VEHICLE_CLIMB_CREST_HEIGHT = 0.5f;
+    public static final float VEHICLE_CLIMB_NONE = -Float.MAX_VALUE;
     public static final float VEHICLE_CLIMB_SIDESTEP_SHARE = 0.4f;
     public static final float VEHICLE_CLIMB_SPEED = 2.4f;
     public static final float VEHICLE_HELM_SLACK = 1f;
     public static final float VEHICLE_HULL_PROBE_HEIGHT = 0.25f;
     public static final int VEHICLE_LADDER_REACH_SUB_VOXELS = 8;
     public static final float VEHICLE_RIDER_REACH = 2f;
+    public static final float VEHICLE_RIDER_UNSTICK_LIMIT = 0.5f;
 
     // Vehicle Defaults
     public static final float DEFAULT_VEHICLE_ANCHOR_DROP = 6f;
     public static final float DEFAULT_VEHICLE_ANCHOR_HOLD = 0.6f;
     public static final float DEFAULT_VEHICLE_BRACE_LIMIT_DEGREES = 50f;
     public static final float DEFAULT_VEHICLE_BRACE_RATE_DEGREES = 8f;
-    public static final float DEFAULT_VEHICLE_DOOR_OPEN_DEGREES = 90f;
     public static final float DEFAULT_VEHICLE_FLOOD_RATE = 0.06f;
     public static final float DEFAULT_VEHICLE_HEAVE_DRAG = 0.4f;
     public static final float DEFAULT_VEHICLE_HOIST_SECONDS = 6f;
@@ -2727,16 +2737,12 @@ public class EngineSetting {
     public static final float DEFAULT_VEHICLE_SAIL_FORCE = 20f;
     public static final float DEFAULT_VEHICLE_SWAY_DRAG = 0.1f;
 
-    // Ships — ship files, where they are kept, and the vehicles they are registered as
+    // Ships — ship names, problems and the triangle limit
     public static final String SHIP_LINK_NONE = "";
     public static final int SHIP_NAME_MAX_LENGTH = 24;
     public static final String SHIP_NAME_NONE = "";
-    public static final String SHIP_PATH = "ships";
     public static final String SHIP_PROBLEM_NONE = "";
-    public static final String SHIP_SAVE_DIRECTORY = "Ships";
-    public static final String SHIP_SAVED_VEHICLE_PREFIX = "saved/";
     public static final int SHIP_TRIANGLE_LIMIT = 24000;
-    public static final String SHIP_VEHICLE_PREFIX = "ships/";
 
     // Ship Sheet — octants, the half-block partial blocks a ship is drawn in, every deck on one sheet
     public static final int SHIP_AFT_MARGIN = 4;
@@ -2765,10 +2771,15 @@ public class EngineSetting {
     public static final int SHIP_BULWARK_HEIGHT = 2;
     public static final int SHIP_DECKHOUSE_HEIGHT = 4;
     public static final int SHIP_FITTING_OCTANTS = 2;
+    public static final int SHIP_GUN_PORT_HEIGHT = 2;
     public static final int SHIP_HALF_WALL_HEIGHT = 2;
+    public static final int SHIP_HATCH_MAX_OCTANTS = 16;
+    public static final int SHIP_HATCH_OCTANTS = 2;
+    public static final int SHIP_LADDER_HANDHOLD = 2;
     public static final int SHIP_OPENING_REACH = 3;
     public static final int SHIP_PORCH_DEPTH = 3;
     public static final int SHIP_PORCH_RAIL_HEIGHT = 2;
+    public static final int SHIP_STAIR_HEADROOM = 2;
     public static final int SHIP_STAIR_MAX_RISE = 12;
     public static final int SHIP_STAIR_WIDTH = 2;
     public static final int SHIP_WINDOW_HEIGHT = 2;
@@ -2791,6 +2802,7 @@ public class EngineSetting {
     public static final int SHIP_BOWSPRIT_INBOARD = 4;
     public static final float SHIP_BOWSPRIT_LENGTH_SHARE = 0.2f;
     public static final int SHIP_BOWSPRIT_MAX_LENGTH = 40;
+    public static final int SHIP_BOWSPRIT_MIN_HULL_LENGTH = 24;
     public static final int SHIP_BOWSPRIT_MIN_LENGTH = 8;
     public static final int SHIP_BOWSPRIT_RUN = 3;
     public static final int SHIP_CROWS_NEST_GAP = 2;
@@ -2806,6 +2818,7 @@ public class EngineSetting {
     public static final int SHIP_MAST_OCTANTS = 2;
     public static final int SHIP_MAST_SPACING_OCTANTS = 6;
     public static final int SHIP_MAX_MASTS = 5;
+    public static final int SHIP_ROPE_HALF_WIDTH = 1;
     public static final int SHIP_SAIL_CLEARANCE = 5;
     public static final int SHIP_SAIL_MIN_HALF_SPAN = 16;
     public static final int SHIP_SAIL_OFFSET = 4;
@@ -2818,9 +2831,25 @@ public class EngineSetting {
     public static final int SHIP_YARD_OVERHANG = 4;
 
     // Ship Fittings — sub-voxels unless named octants
+    public static final int SHIP_ANCHOR_ARM_SUB_VOXELS = 6;
+    public static final float SHIP_ANCHOR_BELOW_KEEL = 4f;
+    public static final int SHIP_ANCHOR_FLUKE_SUB_VOXELS = 4;
+    public static final float SHIP_ANCHOR_LENGTH_PER_ANCHOR = 12f;
+    public static final int SHIP_ANCHOR_OUTBOARD_SUB_VOXELS = 4;
+    public static final float SHIP_ANCHOR_SETBACK_SHARE = 0.15f;
+    public static final int SHIP_ANCHOR_SHANK_SUB_VOXELS = 16;
+    public static final String SHIP_CANNON_FURNISHING = "ship/Cannon";
     public static final int SHIP_CAPSTAN_BAR_REACH = 14;
     public static final int SHIP_CAPSTAN_DRUM_HEIGHT = 12;
+    public static final int SHIP_DOOR_FACING_TURN = 1;
     public static final String SHIP_DOOR_FURNISHING = "ship/Door";
+    public static final int SHIP_FITTING_BOX_STRIDE = BOX_INT_STRIDE + 1;
+    public static final int SHIP_FITTING_SPIN = BOX_INT_STRIDE;
+    public static final float SHIP_HATCH_OPEN_DEGREES = 110f;
+    public static final int SHIP_LADDER_INSET_SUB_VOXELS = 1;
+    public static final int SHIP_LADDER_RAIL_SUB_VOXELS = 2;
+    public static final int SHIP_MAX_ANCHORS = 4;
+    public static final float SHIP_PORT_OPEN_DEGREES = 80f;
     public static final int SHIP_RUDDER_DEPTH = 2;
     public static final int SHIP_RUDDER_HALF_THICKNESS = 3;
     public static final int SHIP_WHEEL_HANDLE_REACH = 12;
@@ -2829,13 +2858,20 @@ public class EngineSetting {
     public static final int SHIP_WHEEL_THICKNESS = 2;
 
     // Ship Parts
+    public static final String SHIP_PART_ANCHOR = "Anchor";
     public static final String SHIP_PART_BOTTOM = "Bottom";
     public static final String SHIP_PART_BOWSPRIT = "Bowsprit";
     public static final String SHIP_PART_BULWARK = "Bulwark";
+    public static final String SHIP_PART_CABLE = "AnchorCable";
     public static final String SHIP_PART_CAPSTAN = "Capstan";
     public static final String SHIP_PART_DECKS = "Decks";
+    public static final String SHIP_PART_GLASS = "Glass";
+    public static final String SHIP_PART_HATCH = "Hatch";
     public static final String SHIP_PART_HULL = "Hull";
+    public static final String SHIP_PART_LADDERS = "Ladders";
+    public static final String SHIP_PART_LADDER_RAILS = "LadderRails";
     public static final String SHIP_PART_PORCH = "Porch";
+    public static final String SHIP_PART_PORT_LID = "PortLid";
     public static final String SHIP_PART_RAILS = "Rails";
     public static final String SHIP_PART_RUDDER = "Rudder";
     public static final String SHIP_PART_SHROUDS_SUFFIX = "Shrouds";
@@ -2851,8 +2887,12 @@ public class EngineSetting {
     // Ship Textures — every material a ship is built of, with what a block of it weighs in tonnes as it is built
     // into an octant: planking, spars and rope far thinner than the octant they fill
     public static final String SHIP_TEXTURE_DECK = "items/standard/OakPlanks";
+    public static final String SHIP_TEXTURE_GLASS = "items/standard/ShipGlass";
     public static final String SHIP_TEXTURE_HULL = "items/standard/Oak";
-    public static final String SHIP_TEXTURE_ROPE = "items/standard/Leather";
+    public static final String SHIP_TEXTURE_IRON = "items/standard/Iron";
+    public static final String SHIP_TEXTURE_RATLINES = "items/standard/Ratlines";
+    public static final String SHIP_TEXTURE_ROPE = "items/standard/Rope";
+    public static final String SHIP_TEXTURE_RUNGS = "items/standard/Rungs";
     public static final String SHIP_TEXTURE_SAIL = "items/standard/Canvas";
     public static final String SHIP_TEXTURE_SPAR = "items/standard/PineHeartwood";
     public static final String SHIP_TEXTURE_WALL = "items/standard/OakHeartwood";
@@ -2898,8 +2938,12 @@ public class EngineSetting {
     public static final int SHIPWRIGHT_INK_FITTING = 0xD07A1EFF;
     public static final int SHIPWRIGHT_INK_FLOOR = 0xC8A876C0;
     public static final int SHIPWRIGHT_INK_FURNITURE = 0x7A4C9AFF;
+    public static final int SHIPWRIGHT_INK_GHOST = 0x52B8F0A0;
+    public static final int SHIPWRIGHT_INK_GHOST_BLOCKED = 0xD03030A0;
     public static final int SHIPWRIGHT_INK_HALF_WALL = 0xA07A50FF;
+    public static final int SHIPWRIGHT_INK_HATCH = 0x8C6A3EFF;
     public static final int SHIPWRIGHT_INK_HULL = 0x1F3A68FF;
+    public static final int SHIPWRIGHT_INK_LADDER = 0x5A8A3AFF;
     public static final int SHIPWRIGHT_INK_MAST = 0x101010FF;
     public static final int SHIPWRIGHT_INK_PICKED_MAST = 0xE0B030FF;
     public static final int SHIPWRIGHT_INK_RAIL = 0x4A3020FF;
@@ -2924,8 +2968,8 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TOOL_DECK = "Deck";
     public static final String SHIPWRIGHT_TOOL_FURNITURE = "Furniture";
     public static final String SHIPWRIGHT_TOOL_MASTS = "Masts";
-    public static final String SHIPWRIGHT_TOOL_OPENINGS = "Doors & Windows";
-    public static final String SHIPWRIGHT_TOOL_STAIRS = "Stairs";
+    public static final String SHIPWRIGHT_TOOL_OPENINGS = "Openings";
+    public static final String SHIPWRIGHT_TOOL_STAIRS = "Stairs & Ladders";
     public static final String SHIPWRIGHT_TOOL_WALLS = "Walls";
 
     // Shipwright Problems — what keeps a ship from being built
@@ -2934,7 +2978,12 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_PROBLEM_DECK_EMPTY = " is empty: draw it or remove it";
     public static final String SHIPWRIGHT_PROBLEM_DECK_FLOATING = " has a piece not resting on the deck below it";
     public static final String SHIPWRIGHT_PROBLEM_FURNISHING_UNKNOWN = "No furnishing is named ";
+    public static final String SHIPWRIGHT_PROBLEM_HATCH_BOTTOM = "A hatch cannot lie in the bottom deck";
+    public static final String SHIPWRIGHT_PROBLEM_HATCH_FLOOR = "A hatch must lie in open floor over open room below";
     public static final String SHIPWRIGHT_PROBLEM_HELM_FLOOR = "The helm must stand on open floor";
+    public static final String SHIPWRIGHT_PROBLEM_LADDER_BLOCKED = "A ladder runs into the hull or a wall";
+    public static final String SHIPWRIGHT_PROBLEM_LADDER_FLOOR = "A ladder must stand on open floor";
+    public static final String SHIPWRIGHT_PROBLEM_LADDER_NO_FLOOR = "A ladder has no floor above it to climb to";
     public static final String SHIPWRIGHT_PROBLEM_MAST_BLOCKED = "A mast stands in a stair or a wall";
     public static final String SHIPWRIGHT_PROBLEM_MAST_NO_HULL = "A mast stands where there is no hull";
     public static final String SHIPWRIGHT_PROBLEM_NO_HULL = "Draw the bottom deck first";
@@ -2952,6 +3001,7 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_PROBLEM_WALL_FLOOR = "A wall must stand on open floor";
 
     // Shipwright Refusals — why a change, a save or a launch was not made
+    public static final String SHIPWRIGHT_REFUSAL_CAPSTAN = "Set a capstan down before saving";
     public static final String SHIPWRIGHT_REFUSAL_DECKS_FULL = "No more decks can be laid";
     public static final String SHIPWRIGHT_REFUSAL_HELM = "Set a helm down before saving";
     public static final String SHIPWRIGHT_REFUSAL_LAST_DECK = "A ship needs at least one deck";
@@ -3043,7 +3093,9 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TEXT_DOOR = "Door";
     public static final String SHIPWRIGHT_TEXT_FULL_WALL = "Full walls";
     public static final String SHIPWRIGHT_TEXT_HALF_WALL = "Half walls";
+    public static final String SHIPWRIGHT_TEXT_HATCH = "Hatch";
     public static final String SHIPWRIGHT_TEXT_HELM = "Helm";
+    public static final String SHIPWRIGHT_TEXT_LADDER = "Ladder";
     public static final String SHIPWRIGHT_TEXT_MIRRORED = "Mirrored port and starboard";
     public static final String SHIPWRIGHT_TEXT_NEST = "crow's nest";
     public static final String SHIPWRIGHT_TEXT_NOT_AFLOAT = "Not afloat";
@@ -3138,6 +3190,12 @@ public class EngineSetting {
             * SUB_VOXEL_RESOLUTION;
     public static final int SUB_VOXEL_EMPTY_CELL = 0;
     public static final int SUB_VOXEL_FACE_COUNT = 6;
+    public static final int SUB_VOXEL_FACE_NEGATIVE_X = 3;
+    public static final int SUB_VOXEL_FACE_NEGATIVE_Y = 5;
+    public static final int SUB_VOXEL_FACE_NEGATIVE_Z = 2;
+    public static final int SUB_VOXEL_FACE_POSITIVE_X = 1;
+    public static final int SUB_VOXEL_FACE_POSITIVE_Y = 4;
+    public static final int SUB_VOXEL_FACE_POSITIVE_Z = 0;
     public static final float SUB_VOXEL_IMPORT_EPSILON = 1e-6f;
     public static final float SUB_VOXEL_IMPORT_RAY_Y = 0.0137f;
     public static final float SUB_VOXEL_IMPORT_RAY_Z = 0.0071f;

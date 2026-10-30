@@ -18,6 +18,8 @@ import editor.runtime.menueventsmanager.menus.ProfilerBranch;
 import editor.runtime.menueventsmanager.menus.RecorderBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
 import editor.runtime.menueventsmanager.menus.ToolBranch;
+import editor.runtime.menueventsmanager.menus.TreePlannerBranch;
+import editor.runtime.menueventsmanager.menus.TreeViewerBranch;
 import editor.runtime.menueventsmanager.menus.SettlementPlannerBranch;
 import editor.runtime.menueventsmanager.menus.SoundLibraryBranch;
 import editor.runtime.menueventsmanager.menus.WorldEditorBranch;
@@ -59,6 +61,8 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(CameraPlannerBranch.class);
         create(BiomePlannerBranch.class);
         create(BiomeViewerBranch.class);
+        create(TreePlannerBranch.class);
+        create(TreeViewerBranch.class);
         create(CharacterEditorBranch.class);
         create(AnimationEditorBranch.class);
         create(AnimationTreeEditorBranch.class);

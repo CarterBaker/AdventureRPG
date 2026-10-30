@@ -210,8 +210,8 @@ class TreeArpgUtility extends EngineUtility {
         if (accentTextureName.isEmpty())
             accentTextureName = textureName;
         int accentColor = parseColor(leafArpg, "accent_color", EngineSetting.TREE_DEFAULT_LEAF_COLOR, treeName);
-        float accentChance = ArpgUtility.getFloat(leafArpg, "accent_chance", 0f);
-        float hangBlocks = ArpgUtility.getFloat(leafArpg, "hang_blocks", 0f);
+        float accentChance = ArpgUtility.getFloat(leafArpg, "accent_chance", EngineSetting.TREE_DEFAULT_ACCENT_CHANCE);
+        float hangBlocks = ArpgUtility.getFloat(leafArpg, "hang_blocks", EngineSetting.TREE_DEFAULT_HANG_BLOCKS);
 
         if (radiusBlocks < 0f)
             throw fail(treeName, "\"leaves\" \"radius_blocks\" must not be negative.");

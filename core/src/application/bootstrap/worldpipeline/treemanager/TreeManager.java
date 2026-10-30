@@ -5,11 +5,13 @@ import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.combat.BlowOutcome;
 import application.bootstrap.combatpipeline.combat.BlowStruct;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
+import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.worldpipeline.tree.TreeCastStruct;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreePaletteHandle;
+import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
 import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
 import application.bootstrap.worldpipeline.util.TreeDistributionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -43,10 +45,13 @@ public class TreeManager extends ManagerPackage {
      * beyond that, so a tree that changes redraws only itself. It is the one way anything
      * touches a tree: castTree() finds what a ray meets, strikeTree() lands a
      * blow on it, collectWoodBoxes() gives movement the wood to collide
-     * with, and plant() roots a seed. Each frame it publishes the game day
-     * for the streaming threads, grows the trees whose stage has come, and
-     * carries every felled piece through its fall; while the game is paused
-     * nothing grows or falls. Tree IDs are assigned in registration order.
+     * with, and plant() roots a seed. buildShapeGeometry() draws a shape
+     * whole apart from any chunk, and uploadTreeMeshes() puts such geometry
+     * on the GPU, for whatever shows a tree on its own. Each frame it
+     * publishes the game day for the streaming threads, grows the trees
+     * whose stage has come, and carries every felled piece through its fall;
+     * while the game is paused nothing grows or falls. Tree IDs are assigned
+     * in registration order.
      */
 
     // Internal
@@ -58,6 +63,7 @@ public class TreeManager extends ManagerPackage {
     private TreeSiteBranch treeSiteBranch;
     private TreePlacementBranch treePlacementBranch;
     private TreeSpaceBranch treeSpaceBranch;
+    private TreeMeshBranch treeMeshBranch;
     private TreeChopBranch treeChopBranch;
     private TreeFallBranch treeFallBranch;
     private TreeGrowthBranch treeGrowthBranch;
@@ -95,6 +101,7 @@ public class TreeManager extends ManagerPackage {
         this.treePlacementBranch = create(TreePlacementBranch.class);
         this.treeSpaceBranch = create(TreeSpaceBranch.class);
         create(TreeRebuildBranch.class);
+        this.treeMeshBranch = create(TreeMeshBranch.class);
         this.treeFallBranch = create(TreeFallBranch.class);
         this.treeChopBranch = create(TreeChopBranch.class);
         this.treeGrowthBranch = create(TreeGrowthBranch.class);
@@ -253,6 +260,23 @@ public class TreeManager extends ManagerPackage {
     // A seed of a species set into the ground, rooting in the block above — false when one already stands there
     public boolean plant(TreeHandle treeHandle, WorldHandle worldHandle, long anchorX, long anchorZ, int baseY) {
         return treePlantBranch.plant(treeHandle, worldHandle, anchorX, anchorZ, baseY);
+    }
+
+    // Geometry \\
+
+    // Any thread — a shape drawn whole, its wood and leaves appended in blocks from the centre of its root
+    public void buildShapeGeometry(TreeShapeStruct shape, FloatArrayList bark, FloatArrayList leaves) {
+        treeMeshBranch.buildShape(shape, bark, leaves);
+    }
+
+    // Main thread — tree geometry in the chunk vertex layout uploaded as meshes, each cut before the mesh vertex
+    // limit
+    public void uploadTreeMeshes(FloatArrayList vertices, ObjectArrayList<MeshInstance> out) {
+        treeMeshBranch.uploadMeshes(vertices, out);
+    }
+
+    public void disposeTreeMeshes(ObjectArrayList<MeshInstance> meshes) {
+        treeMeshBranch.disposeMeshes(meshes);
     }
 
     // Accessible \\

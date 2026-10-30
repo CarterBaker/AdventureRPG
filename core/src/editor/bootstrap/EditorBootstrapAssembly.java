@@ -16,6 +16,7 @@ import editor.bootstrap.shortcutpipeline.ShortcutPipeline;
 import editor.bootstrap.soundlibrarypipeline.SoundLibraryPipeline;
 import editor.bootstrap.tabpipeline.TabPipeline;
 import editor.bootstrap.toolpipeline.ToolPipeline;
+import editor.bootstrap.treeplannerpipeline.TreePlannerPipeline;
 import editor.bootstrap.worldeditorpipeline.WorldEditorPipeline;
 import editor.runtime.menueventsmanager.EditorMenuEventsManager;
 import engine.root.AssemblyPackage;
@@ -32,12 +33,13 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
      * on it, the settlement planner pipeline whose design the world editor
      * places, the camera planner pipeline whose cameras the main menu looks
      * out from, the biome planner pipeline whose small world the biome viewer
-     * flies over, the character, animation and animation tree editor
-     * pipelines, the command pipeline that routes console commands to every
-     * Dev window, the recorder pipeline that records, plays back and exports
-     * from a Dev window, the shortcut pipeline that runs every tool's keys,
-     * and the one set of editor menu branches the toolbar, every tab's
-     * chrome, and every tool route their callbacks to.
+     * flies over, the tree planner pipeline whose row of a species at every
+     * detail the tree viewer shows, the character, animation and animation
+     * tree editor pipelines, the command pipeline that routes console
+     * commands to every Dev window, the recorder pipeline that records,
+     * plays back and exports from a Dev window, the shortcut pipeline that
+     * runs every tool's keys, and the one set of editor menu branches the
+     * toolbar, every tab's chrome, and every tool route their callbacks to.
      */
 
     // Internal \\
@@ -54,6 +56,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(SettlementPlannerPipeline.class);
         create(CameraPlannerPipeline.class);
         create(BiomePlannerPipeline.class);
+        create(TreePlannerPipeline.class);
         create(CharacterEditorPipeline.class);
         create(AnimationEditorPipeline.class);
         create(AnimationTreeEditorPipeline.class);

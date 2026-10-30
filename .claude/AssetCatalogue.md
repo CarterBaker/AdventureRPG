@@ -35,10 +35,17 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-10-30: Tree performance and fades. Added `shaders/trees/includes/TreeFade.glsl` (dithered hand-over between a
   tree's looks); rewrote `TreeBarkShader.fsh`, `TreeLeafShader.fsh` (fade) and `TreeLeafSprig.glsl` (far leaves read
   as solid foliage without tracing blades).
+- 2026-10-30: Tree Planner and Tree Viewer. Added the menus `TreePlanner.arpg` and `TreeViewer.arpg`, the shaders
+  `editor/treeviewer/TreeViewerBarkShader` and `TreeViewerLeafShader` (`.arpg` and `.fsh`) with `TreeViewerLight.glsl`,
+  and the materials `TreeViewerBarkMaterial.arpg` and `TreeViewerLeafMaterial.arpg`; regenerated `EditorWindow.arpg`
+  (Tree Planner and Tree Viewer entries in the World menu).
+- 2026-10-30: Vehicles (recorded again after the tree change overwrote this file). Added the textures `Ratlines`,
+  `Rope`, `Rungs` and `ShipGlass` under `textures/items/standard/` and the test ship `vehicles/Galleon.arpg`; removed
+  `schemas/Ships.arpg` and `ships/Sloop.arpg`, deleted when ships became vehicles.
 
 ---
 
-## Textures and Sprites (2194 files)
+## Textures and Sprites (2198 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -308,16 +315,16 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `Glass`: A
 - `Gneiss`: A
 - `Gold`: A
+- `GoldOre`: A
 - `GoldenSand`: A
 - `GoldenSandstone`: A
-- `GoldOre`: A
 - `Granite`: A
 - `GraniteScree`: A
 - `GraphiteOre`: A
 - `Gravel`: A
 - `GreenMarble`: A
-- `GreenockiteOre`: A
 - `GreenSlate`: A
+- `GreenockiteOre`: A
 - `Greenstone`: A
 - `GreyClay`: A
 - `GreyMud`: A
@@ -353,8 +360,8 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `Laterite`: A
 - `LauriteOre`: A
 - `LautariteOre`: A
-- `LeadedWindow`: A
 - `LeadOre`: A
+- `LeadedWindow`: A
 - `LeafLitter`: A
 - `Leather`: A
 - `LeavesAcacia`: A
@@ -437,8 +444,8 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `Pebbles`: A
 - `Pegmatite`: A
 - `PelagicClay`: A
-- `Peridotite`: A
 - `PeridotOre`: A
+- `Peridotite`: A
 - `PetrifiedWood`: A
 - `PhosphateOre`: A
 - `Phyllite`: A
@@ -462,9 +469,10 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `PyriteOre`: A
 - `PyrochloreOre`: A
 - `QuartzCrystal`: A
-- `Quartzite`: A
 - `QuartzOre`: A
 - `QuartzSand`: A
+- `Quartzite`: A
+- `Ratlines`: A
 - `RealgarOre`: A
 - `RedClay`: A
 - `RedEarth`: A
@@ -483,10 +491,12 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `RockSalt`: A
 - `RockyDirt`: A
 - `RootedEarth`: A
+- `Rope`: A
 - `RoquesiteOre`: A
 - `RoseQuartzOre`: A
 - `Ruby`: A
 - `RubyOre`: A
+- `Rungs`: A
 - `RutileOre`: A
 - `SaltCrust`: A
 - `SaltpeterOre`: A
@@ -516,6 +526,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `Shale`: A
 - `ShellSand`: A
 - `Shingle`: A
+- `ShipGlass`: A
 - `SideriteOre`: A
 - `Silt`: A
 - `Siltstone`: A
@@ -948,7 +959,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (173 files)
+## Shaders (176 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -984,6 +995,10 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/editor/textureviewer/`
 
 `TextureViewerAtlasShader.fsh`, `TextureViewerAtlasShader.vsh`
+
+### `assets/shaders/editor/treeviewer/`
+
+`TreeViewerBarkShader.fsh`, `TreeViewerLeafShader.fsh`, `TreeViewerLight.glsl`
 
 ### `assets/shaders/editor/worldeditor/`
 
@@ -1255,7 +1270,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1721 files)
+## Data Files (1726 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -1995,8 +2010,9 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `CharacterViewMarkerMaterial.arpg`, `CharacterViewMarkerSelectedMaterial.arpg`, `ItemEditorCursorEraseMaterial.arpg`,
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
 `ItemEditorModelMaterial.arpg`, `PlacementIconMaterial.arpg`, `TextureViewerAtlasMaterial.arpg`,
-`WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`, `WorldEditorImageMaterial.arpg`,
-`WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
+`TreeViewerBarkMaterial.arpg`, `TreeViewerLeafMaterial.arpg`, `WorldEditorBrushMaterial.arpg`,
+`WorldEditorHeightMaterial.arpg`, `WorldEditorImageMaterial.arpg`, `WorldMapMarkerMaterial.arpg`,
+`WorldMapTileMaterial.arpg`
 
 ### `assets/materials/fonts/`
 
@@ -2058,8 +2074,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePlanner.arpg`, `BiomeViewer.arpg`,
 `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`,
 `EditorWindow.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`, `Palette.arpg`, `Profiler.arpg`, `Recorder.arpg`,
-`SettlementPlanner.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`, `WorldEditor.arpg`,
-`WorldMap.arpg`
+`SettlementPlanner.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`,
+`TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`
 
@@ -2213,10 +2229,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `Blocks.arpg`, `Brushes.arpg`, `Calendars.arpg`, `CaveBiomes.arpg`, `Clouds.arpg`, `Contents.arpg`, `Coverings.arpg`,
 `DamageTypes.arpg`, `Deeds.arpg`, `Entities.arpg`, `FBOs.arpg`, `Features.arpg`, `Furnishings.arpg`, `Genders.arpg`,
 `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Npcs.arpg`, `Passes.arpg`, `Professions.arpg`, `Rigs.arpg`,
-`Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Ships.arpg`, `Shortcuts.arpg`, `Skills.arpg`,
-`SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`,
-`TextureAliases.arpg`, `Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Trees.arpg`, `UBOs.arpg`,
-`Vehicles.arpg`, `Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`
+`Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Shortcuts.arpg`, `Skills.arpg`, `SoundCues.arpg`,
+`Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`, `TextureAliases.arpg`,
+`Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Trees.arpg`, `UBOs.arpg`, `Vehicles.arpg`,
+`Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`
 
 ### `assets/seasons/`
 
@@ -2254,6 +2270,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/shaders/editor/textureviewer/`
 
 `TextureViewerAtlasShader.arpg`
+
+### `assets/shaders/editor/treeviewer/`
+
+`TreeViewerBarkShader.arpg`, `TreeViewerLeafShader.arpg`
 
 ### `assets/shaders/editor/worldeditor/`
 
@@ -2350,10 +2370,6 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/shaders/weather/standard/`
 
 `WeatherShader.arpg`
-
-### `assets/ships/`
-
-`Sloop.arpg`
 
 ### `assets/shortcuts/`
 
@@ -2700,6 +2716,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `MoonLightData.arpg`, `NaturalNoiseData.arpg`, `OceanData.arpg`, `OrthoData.arpg`, `PlayerPositionData.arpg`,
 `PostProcessData.arpg`, `PrecipitationData.arpg`, `SettingsData.arpg`, `SkyColorData.arpg`, `SliceData.arpg`,
 `SSAOData.arpg`, `SunLightData.arpg`, `SurfaceStandard.arpg`, `TimeData.arpg`, `WeatherMapData.arpg`, `WindData.arpg`
+
+### `assets/vehicles/`
+
+`Galleon.arpg`
 
 ### `assets/weapons/`
 

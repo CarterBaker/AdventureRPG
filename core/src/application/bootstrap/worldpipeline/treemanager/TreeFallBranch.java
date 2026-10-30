@@ -2,14 +2,8 @@ package application.bootstrap.worldpipeline.treemanager;
 
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
-import application.bootstrap.geometrypipeline.mesh.MeshInstance;
-import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
-import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
-import application.bootstrap.geometrypipeline.subvoxel.SubVoxelQuadListStruct;
-import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
-import application.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import application.bootstrap.worldpipeline.tree.TreeFallInstance;
 import application.bootstrap.worldpipeline.tree.TreeFallState;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
@@ -17,8 +11,6 @@ import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreeLogStruct;
 import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
-import application.bootstrap.worldpipeline.util.TreeMeshUtility;
-import application.bootstrap.worldpipeline.util.TreeRasterUtility;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -27,7 +19,6 @@ import engine.util.mathematics.quaternions.Quaternion;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 class TreeFallBranch extends BranchPackage {
 
@@ -48,9 +39,7 @@ class TreeFallBranch extends BranchPackage {
 
     // Internal
     private TreeRebuildBranch treeRebuildBranch;
-    private SubVoxelManager subVoxelManager;
-    private MeshManager meshManager;
-    private ChunkStreamManager chunkStreamManager;
+    private TreeMeshBranch treeMeshBranch;
     private ItemManager itemManager;
     private ProjectileManager projectileManager;
     private ThreadHandle threadHandle;
@@ -99,9 +88,7 @@ class TreeFallBranch extends BranchPackage {
     @Override
     protected void get() {
         this.treeRebuildBranch = get(TreeRebuildBranch.class);
-        this.subVoxelManager = get(SubVoxelManager.class);
-        this.meshManager = get(MeshManager.class);
-        this.chunkStreamManager = get(ChunkStreamManager.class);
+        this.treeMeshBranch = get(TreeMeshBranch.class);
         this.itemManager = get(ItemManager.class);
         this.projectileManager = get(ProjectileManager.class);
         this.threadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
@@ -145,41 +132,10 @@ class TreeFallBranch extends BranchPackage {
     // Worker — the piece drawn whole, in blocks from the centre of its tree's root
     private void buildGeometry(TreeFallInstance fall) {
 
-        TreeShapeStruct piece = fall.getPiece();
-        SubVoxelGridStruct grid = new SubVoxelGridStruct();
-        SubVoxelQuadListStruct quads = new SubVoxelQuadListStruct();
-        ObjectArrayList<TreeHandle> partSpecies = new ObjectArrayList<>();
         FloatArrayList bark = new FloatArrayList();
         FloatArrayList leaves = new FloatArrayList();
-        FloatArrayList hiders = new FloatArrayList();
-        int rootX = (int) Math.ceil(-piece.getMinX()) + EngineSetting.TREE_GEOMETRY_MARGIN_BLOCKS;
-        int rootY = (int) Math.ceil(-piece.getMinY()) + EngineSetting.TREE_GEOMETRY_MARGIN_BLOCKS;
-        int rootZ = (int) Math.ceil(-piece.getMinZ()) + EngineSetting.TREE_GEOMETRY_MARGIN_BLOCKS;
-        int sizeX = (rootX + (int) Math.ceil(piece.getMaxX()) + EngineSetting.TREE_GEOMETRY_MARGIN_BLOCKS) * resolution;
-        int sizeY = (rootY + (int) Math.ceil(piece.getMaxY()) + EngineSetting.TREE_GEOMETRY_MARGIN_BLOCKS) * resolution;
-        int sizeZ = (rootZ + (int) Math.ceil(piece.getMaxZ()) + EngineSetting.TREE_GEOMETRY_MARGIN_BLOCKS) * resolution;
 
-        partSpecies.add(piece.getTreeHandle());
-
-        if (!piece.getNodes().isEmpty()) {
-
-            TreeRasterUtility.rasterize(piece, rootX, rootY, rootZ, 0, 0, 0, sizeX, sizeY, sizeZ, 0, grid);
-            subVoxelManager.meshGrid(grid, null, quads);
-            TreeMeshUtility.collectHiders(
-                    piece,
-                    (rootX + EngineSetting.TREE_ROOT_CENTER_BLOCKS) * resolution, rootY * resolution,
-                    (rootZ + EngineSetting.TREE_ROOT_CENTER_BLOCKS) * resolution, hiders);
-            TreeMeshUtility.emitWood(
-                    grid, quads, partSpecies, hiders,
-                    -(rootX + EngineSetting.TREE_ROOT_CENTER_BLOCKS), -rootY,
-                    -(rootZ + EngineSetting.TREE_ROOT_CENTER_BLOCKS), bark);
-        }
-
-        TreeMeshUtility.emitLeaves(
-                piece, 0f, 0f, 0f,
-                -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE,
-                Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, leaves);
-
+        treeMeshBranch.buildShape(fall.getPiece(), bark, leaves);
         fall.publishGeometry(bark, leaves);
     }
 
@@ -206,8 +162,8 @@ class TreeFallBranch extends BranchPackage {
         if (!fall.isBuilt())
             return;
 
-        uploadMeshes(fall.getBuiltBark(), fall.getBarkMeshes());
-        uploadMeshes(fall.getBuiltLeaves(), fall.getLeafMeshes());
+        treeMeshBranch.uploadMeshes(fall.getBuiltBark(), fall.getBarkMeshes());
+        treeMeshBranch.uploadMeshes(fall.getBuiltLeaves(), fall.getLeafMeshes());
         treeRebuildBranch.rebuildTree(fall.getTree(), true);
 
         fall.setAngle(EngineSetting.TREE_FALL_START_RADIANS, 0f);
@@ -270,8 +226,8 @@ class TreeFallBranch extends BranchPackage {
             return;
 
         shatter(fall);
-        disposeMeshes(fall.getBarkMeshes());
-        disposeMeshes(fall.getLeafMeshes());
+        treeMeshBranch.disposeMeshes(fall.getBarkMeshes());
+        treeMeshBranch.disposeMeshes(fall.getLeafMeshes());
         fall.setState(TreeFallState.DONE);
     }
 
@@ -396,48 +352,6 @@ class TreeFallBranch extends BranchPackage {
                 spinScratch,
                 EngineSetting.TREE_DROP_SPIN_RATE,
                 orientationScratch);
-    }
-
-    // Meshes \\
-
-    // Geometry in the chunk vertex layout uploaded as meshes, each cut before the mesh vertex limit
-    private void uploadMeshes(FloatArrayList vertices, ObjectArrayList<MeshInstance> out) {
-
-        int stride = EngineSetting.CHUNK_VERTEX_FLOAT_COUNT;
-        int quadFloats = stride * EngineSetting.QUAD_VERTEX_COUNT;
-        int quadsPerMesh = EngineSetting.MESH_VERT_LIMIT / EngineSetting.QUAD_VERTEX_COUNT;
-        int quadCount = vertices.size() / quadFloats;
-
-        for (int first = 0; first < quadCount; first += quadsPerMesh) {
-
-            int count = Math.min(quadsPerMesh, quadCount - first);
-            FloatArrayList meshVertices = new FloatArrayList(count * quadFloats);
-            ShortArrayList indices = new ShortArrayList(count * EngineSetting.QUAD_INDEX_COUNT);
-
-            meshVertices.addElements(0, vertices.elements(), first * quadFloats, count * quadFloats);
-
-            for (int quad = 0; quad < count; quad++) {
-
-                int base = quad * EngineSetting.QUAD_VERTEX_COUNT;
-
-                indices.add((short) base);
-                indices.add((short) (base + 1));
-                indices.add((short) (base + 2));
-                indices.add((short) base);
-                indices.add((short) (base + 2));
-                indices.add((short) (base + 3));
-            }
-
-            out.add(meshManager.createMesh(chunkStreamManager.getChunkVAO(), meshVertices, indices));
-        }
-    }
-
-    private void disposeMeshes(ObjectArrayList<MeshInstance> meshes) {
-
-        for (int i = 0; i < meshes.size(); i++)
-            meshManager.removeMesh(meshes.get(i));
-
-        meshes.clear();
     }
 
     // Accessible \\

@@ -35,6 +35,8 @@ import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.soundlibrary.SoundLibraryContext;
 import editor.runtime.textureviewer.TextureViewerContext;
 import editor.runtime.tools.ToolsContext;
+import editor.runtime.treeplanner.TreePlannerContext;
+import editor.runtime.treeviewer.TreeViewerContext;
 import editor.runtime.worldeditor.WorldEditorContext;
 import editor.runtime.worldmap.WorldMapContext;
 import engine.root.ContextPackage;
@@ -186,6 +188,14 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openBiomeViewer(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_BIOME_VIEWER, BiomeViewerContext.class, osWindow);
+    }
+
+    public TabHandle openTreePlanner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_TREE_PLANNER, TreePlannerContext.class, osWindow);
+    }
+
+    public TabHandle openTreeViewer(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_TREE_VIEWER, TreeViewerContext.class, osWindow);
     }
 
     public TabHandle openPalette(WindowInstance osWindow) {
