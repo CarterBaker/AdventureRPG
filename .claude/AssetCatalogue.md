@@ -31,6 +31,7 @@ One line per session that changed this file: the date, what was added or removed
   `Launcher.arpg` (manifest) and the `Blocks`, `Coverings`, `Items` and `Sounds` schemas.
 - 2026-10-30: Sounds are Ogg Vorbis only. The 134 generated `.wav` sounds under `assets/sounds/` renamed to `.ogg`,
   converted on the owner's PC.
+- 2026-10-30: Removed `sounds/interface/Confirm.ogg` and its companion `Confirm.arpg`: no cue or code plays it.
 
 ---
 
@@ -1128,7 +1129,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 `WeatherShader.fsh`
 
-## Sounds (161 files)
+## Sounds (160 files)
 
 Audio the sound pipeline loads from `assets/sounds/`, each beside its companion `.arpg` (listed under Data Files).
 Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the owner's library and are not listed.
@@ -1206,7 +1207,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 
 ### `assets/sounds/interface/`
 
-`Click.ogg`, `Close.ogg`, `Confirm.ogg`, `Error.ogg`
+`Click.ogg`, `Close.ogg`, `Error.ogg`
 
 ### `assets/sounds/items/`
 
@@ -1251,7 +1252,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1722 files)
+## Data Files (1721 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2535,7 +2536,7 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/sounds/interface/`
 
-`Click.arpg`, `Close.arpg`, `Confirm.arpg`, `Error.arpg`, `WindowOpen.arpg`
+`Click.arpg`, `Close.arpg`, `Error.arpg`, `WindowOpen.arpg`
 
 ### `assets/sounds/items/`
 

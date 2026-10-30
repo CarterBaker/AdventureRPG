@@ -67,7 +67,7 @@ if exist "%TARGET%" (
     exit /b 0
 )
 
-"%FFMPEG%" -nostdin -v error -i "%~1" -map_metadata -1 -c:a libvorbis -q:a 5 -ar 48000 "%TARGET%"
+"%FFMPEG%" -nostdin -v error -i "%~1" -map 0:a:0 -map_metadata -1 -c:a libvorbis -q:a 5 -ar 48000 "%TARGET%"
 if errorlevel 1 (
     echo Failed: "%~1"
     if exist "%TARGET%" del "%TARGET%"
